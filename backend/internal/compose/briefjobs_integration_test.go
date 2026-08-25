@@ -168,11 +168,11 @@ func TestOvernightPassSkipsAWorkspaceWhoseDealsLiveInTheIncumbent(t *testing.T) 
 	morning := time.Date(2026, 6, 4, 7, 0, 0, 0, time.UTC)
 	b.now = morning
 
-	// An overlay workspace keeps its deals in the incumbent, so a run assembled
+	// An overlay installation keeps its deals in the incumbent, so a run assembled
 	// from these tables would be an empty queue — which reads on the screen
 	// exactly like a quiet morning while being a different fact entirely.
 	if _, err := integration.OwnerConn(t).Exec(context.Background(),
-		`UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = 'hubspot' WHERE id = $1`, b.WS); err != nil {
+		`UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`); err != nil {
 		t.Fatal(err)
 	}
 

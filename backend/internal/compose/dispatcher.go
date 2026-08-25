@@ -21,7 +21,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
 )
 
-// sorModeCacheTTL bounds how long a resolved workspace.x_sor_mode answer
+// sorModeCacheTTL bounds how long a resolved overlay_mode.sor_mode answer
 // is reused before Dispatcher re-checks the workspace row. A workspace
 // flip (overlay.Service.Connect/Disconnect) is a rare, human-initiated
 // admin action — not hot-path traffic — so a few seconds of dispatch
@@ -38,8 +38,8 @@ import (
 // where no such local hook can exist.
 const sorModeCacheTTL = 5 * time.Second
 
-// sorModeCacheEntry caches one workspace's resolved x_sor_mode answer
-// (overlay==true means workspace.x_sor_mode='overlay') until expiresAt.
+// sorModeCacheEntry caches one the installation's resolved mode answer
+// (overlay==true means overlay_mode.sor_mode='overlay') until expiresAt.
 type sorModeCacheEntry struct {
 	overlay   bool
 	expiresAt time.Time
@@ -48,7 +48,7 @@ type sorModeCacheEntry struct {
 // Dispatcher is the per-workspace System-of-Record router (design.md
 // §4.2/§4.6): every datasource verb is forwarded to native (this
 // process's own SoR modules) or to overlayProvider (the read-through
-// mirror), chosen per call by the calling context's workspace.x_sor_mode
+// mirror), chosen per call by the calling context's overlay_mode.sor_mode
 // — never guessed, never sticky across workspaces. It is itself a
 // datasource.SystemOfRecordProvider, so it drops into every existing
 // seam-injection point (registry.go, workflows.go, server.go's
@@ -58,7 +58,7 @@ type Dispatcher struct {
 	overlay *overlay.Provider
 	pool    *pgxpool.Pool
 	now     func() time.Time
-	// queryMode reads one workspace's x_sor_mode from the workspace row.
+	// queryMode reads one workspace's sor_mode from the overlay_mode row.
 	// Injected for the same reason now is (P3: no real dependency in a
 	// cache-behaviour test) — it is the seam that lets a unit test prove the
 	// write path ignores the cache, which is precisely the property that
@@ -116,7 +116,7 @@ func (d *Dispatcher) isOverlay(ctx context.Context) (bool, error) {
 }
 
 // isOverlayUncached answers the same question as isOverlay, but never from
-// the cache: it reads workspace.x_sor_mode fresh and refreshes the cached
+// the cache: it reads overlay_mode.sor_mode fresh and refreshes the cached
 // entry with what it found.
 //
 // The name says what it does, not who calls it, because two different classes
@@ -158,7 +158,7 @@ func (d *Dispatcher) isOverlayUncached(ctx context.Context) (bool, error) {
 	return isOverlay, nil
 }
 
-// Invalidate drops one workspace's cached x_sor_mode answer — called by
+// Invalidate drops one workspace's cached mode answer — called by
 // the composition layer when overlay.Service commits a mode flip, so
 // this process's next dispatch re-reads the row instead of serving the
 // old mode for the remainder of the TTL.
@@ -168,7 +168,7 @@ func (d *Dispatcher) Invalidate(wsID ids.UUID) {
 	d.mu.Unlock()
 }
 
-// overlayModeFor answers whether wsID's workspace.x_sor_mode is
+// overlayModeFor answers whether wsID's overlay_mode.sor_mode is
 // 'overlay', served from the TTL cache when fresh and re-queried
 // otherwise.
 
@@ -191,7 +191,7 @@ func (d *Dispatcher) overlayModeFor(ctx context.Context, wsID ids.UUID) (bool, e
 	return isOverlay, nil
 }
 
-// queryOverlayMode reads workspace.x_sor_mode straight from the workspace row,
+// queryOverlayMode reads overlay_mode.sor_mode straight from the workspace row,
 // on a connection of its own because a dispatch has no transaction to borrow.
 func (d *Dispatcher) queryOverlayMode(ctx context.Context, wsID ids.UUID) (bool, error) {
 	var overlaid bool
@@ -226,7 +226,7 @@ func (d *Dispatcher) queryOverlayMode(ctx context.Context, wsID ids.UUID) (bool,
 // is equally unfiltered.
 func overlayModeOf(ctx context.Context, q rowQuerier, wsID ids.UUID) (bool, error) {
 	var mode string
-	if err := q.QueryRow(ctx, `SELECT x_sor_mode FROM workspace WHERE id = $1`, wsID).Scan(&mode); err != nil {
+	if err := q.QueryRow(ctx, `SELECT sor_mode FROM overlay_mode`).Scan(&mode); err != nil {
 		return false, err
 	}
 	return mode == "overlay", nil
@@ -239,7 +239,7 @@ type rowQuerier interface {
 }
 
 // Read dispatches to the overlay mirror or the native SoR modules per
-// ctx's workspace.x_sor_mode.
+// ctx's overlay_mode.sor_mode.
 func (d *Dispatcher) Read(ctx context.Context, ref datasource.EntityRef) (datasource.Record, error) {
 	ov, err := d.isOverlay(ctx)
 	if err != nil {
@@ -252,7 +252,7 @@ func (d *Dispatcher) Read(ctx context.Context, ref datasource.EntityRef) (dataso
 }
 
 // Search dispatches to the overlay mirror or the native SoR modules per
-// ctx's workspace.x_sor_mode.
+// ctx's overlay_mode.sor_mode.
 func (d *Dispatcher) Search(ctx context.Context, q datasource.SearchQuery) (datasource.SearchResult, error) {
 	ov, err := d.isOverlay(ctx)
 	if err != nil {
@@ -265,7 +265,7 @@ func (d *Dispatcher) Search(ctx context.Context, q datasource.SearchQuery) (data
 }
 
 // ListObjects dispatches to the overlay mirror or the native SoR
-// modules per ctx's workspace.x_sor_mode.
+// modules per ctx's overlay_mode.sor_mode.
 func (d *Dispatcher) ListObjects(ctx context.Context) ([]datasource.ObjectDef, error) {
 	ov, err := d.isOverlay(ctx)
 	if err != nil {
@@ -278,7 +278,7 @@ func (d *Dispatcher) ListObjects(ctx context.Context) ([]datasource.ObjectDef, e
 }
 
 // ListFields dispatches to the overlay mirror or the native SoR modules
-// per ctx's workspace.x_sor_mode.
+// per ctx's overlay_mode.sor_mode.
 func (d *Dispatcher) ListFields(ctx context.Context, entity datasource.EntityType) ([]datasource.FieldDef, error) {
 	ov, err := d.isOverlay(ctx)
 	if err != nil {
@@ -291,7 +291,7 @@ func (d *Dispatcher) ListFields(ctx context.Context, entity datasource.EntityTyp
 }
 
 // RunReport dispatches to the overlay mirror or the native SoR modules
-// per ctx's workspace.x_sor_mode; overlay has no incumbent analogue and
+// per ctx's overlay_mode.sor_mode; overlay has no incumbent analogue and
 // always answers apperrors.ErrUnsupportedBySoR (design.md §4.5).
 func (d *Dispatcher) RunReport(ctx context.Context, plan datasource.ReportPlan) (datasource.ReportResult, error) {
 	ov, err := d.isOverlay(ctx)
@@ -305,7 +305,7 @@ func (d *Dispatcher) RunReport(ctx context.Context, plan datasource.ReportPlan) 
 }
 
 // StageSemantic dispatches to the overlay mirror or the native SoR
-// modules per ctx's workspace.x_sor_mode.
+// modules per ctx's overlay_mode.sor_mode.
 func (d *Dispatcher) StageSemantic(ctx context.Context, stageID ids.UUID) (string, ids.UUID, error) {
 	ov, err := d.isOverlay(ctx)
 	if err != nil {
@@ -318,7 +318,7 @@ func (d *Dispatcher) StageSemantic(ctx context.Context, stageID ids.UUID) (strin
 }
 
 // Create dispatches to the overlay mirror or the native SoR modules per
-// ctx's workspace.x_sor_mode. The mutating verbs here resolve the mode
+// ctx's overlay_mode.sor_mode. The mutating verbs here resolve the mode
 // UNCACHED (isOverlayUncached); see its doc for why a write cannot take the
 // cached answer an ordinary read happily takes. Overlay serves update
 // and archive; every other write verb it declares unsupported and refuses at
@@ -335,7 +335,7 @@ func (d *Dispatcher) Create(ctx context.Context, in datasource.CreateInput) (dat
 }
 
 // Update dispatches to the overlay mirror or the native SoR modules per
-// ctx's workspace.x_sor_mode; see Create's doc on the uncached mode read.
+// ctx's overlay_mode.sor_mode; see Create's doc on the uncached mode read.
 func (d *Dispatcher) Update(ctx context.Context, in datasource.UpdateInput) (datasource.EntityRef, error) {
 	ov, err := d.isOverlayUncached(ctx)
 	if err != nil {
@@ -349,7 +349,7 @@ func (d *Dispatcher) Update(ctx context.Context, in datasource.UpdateInput) (dat
 // resolve the mode itself to choose between the native module handler and the
 // overlay path before it can dispatch at all.
 //
-// Without it that shadow would read workspace.x_sor_mode twice per mutation:
+// Without it that shadow would read overlay_mode.sor_mode twice per mutation:
 // once to route, once inside this dispatch. Both reads are fresh, so the
 // second is not a correctness gain, only a second round trip — and
 // isOverlayUncached's own contract is that a mutation boundary pays ONE.
@@ -364,7 +364,7 @@ func (d *Dispatcher) updateInMode(ctx context.Context, ov bool, in datasource.Up
 }
 
 // AdvanceDeal dispatches to the overlay mirror or the native SoR
-// modules per ctx's workspace.x_sor_mode; see Create's doc on the uncached
+// modules per ctx's overlay_mode.sor_mode; see Create's doc on the uncached
 // mode read.
 func (d *Dispatcher) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealInput) (datasource.EntityRef, error) {
 	ov, err := d.isOverlayUncached(ctx)
@@ -378,7 +378,7 @@ func (d *Dispatcher) AdvanceDeal(ctx context.Context, in datasource.AdvanceDealI
 }
 
 // Merge dispatches to the overlay mirror or the native SoR modules per
-// ctx's workspace.x_sor_mode; see Create's doc on the uncached mode read.
+// ctx's overlay_mode.sor_mode; see Create's doc on the uncached mode read.
 func (d *Dispatcher) Merge(ctx context.Context, in datasource.MergeInput) (datasource.EntityRef, error) {
 	ov, err := d.isOverlayUncached(ctx)
 	if err != nil {
@@ -391,7 +391,7 @@ func (d *Dispatcher) Merge(ctx context.Context, in datasource.MergeInput) (datas
 }
 
 // PromoteLead dispatches to the overlay mirror or the native SoR
-// modules per ctx's workspace.x_sor_mode; see Create's doc on the uncached
+// modules per ctx's overlay_mode.sor_mode; see Create's doc on the uncached
 // mode read.
 func (d *Dispatcher) PromoteLead(ctx context.Context, id ids.UUID, trigger string, evidenceNote *string) (datasource.EntityRef, bool, error) {
 	ov, err := d.isOverlayUncached(ctx)
@@ -405,7 +405,7 @@ func (d *Dispatcher) PromoteLead(ctx context.Context, id ids.UUID, trigger strin
 }
 
 // Freshness dispatches to the overlay mirror or the native SoR modules
-// per ctx's workspace.x_sor_mode; overlay's own Freshness is a metered
+// per ctx's overlay_mode.sor_mode; overlay's own Freshness is a metered
 // force-fresh read, native's is trivially authoritative.
 func (d *Dispatcher) Freshness(ctx context.Context, ref datasource.EntityRef) (datasource.FreshnessInfo, error) {
 	ov, err := d.isOverlay(ctx)

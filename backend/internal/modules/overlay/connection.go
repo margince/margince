@@ -226,7 +226,7 @@ func (s *Service) WithLogger(log *slog.Logger) *Service {
 
 // Connect seals in.Token into the vault, then — in one transaction —
 // inserts the incumbent_connection row (write shape: domain row + Audit
-// + Emit) and flips workspace.x_sor_mode/x_incumbent together (the
+// + Emit) and flips the overlay_mode row together (the
 // x_overlay_iff_incumbent CHECK demands both change in the same
 // statement). Gated by auth.Require("overlay_connection", ActionCreate):
 // connecting is destructive workspace-wide config (it will later purge
@@ -417,7 +417,7 @@ func (s *Service) insertConnection(ctx context.Context, in ConnectInput, ref key
 			return scanErr
 		}
 
-		activated, actErr := activateConnection(ctx, tx, id, in, ws, connectedAt, "create", nil)
+		activated, actErr := activateConnection(ctx, tx, id, in, connectedAt, "create", nil)
 		if actErr != nil {
 			return actErr
 		}

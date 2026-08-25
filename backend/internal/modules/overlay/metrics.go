@@ -76,7 +76,10 @@ SELECT object_class, min(last_synced_at) FROM overlay_mirror GROUP BY object_cla
 // DueOverlayConnections already takes.
 func SourceLagByClass(ctx context.Context, pool *pgxpool.Pool, now func() time.Time) (map[string]time.Duration, error) {
 	// rls-exempt: fleet enumeration — workspace is not itself workspace-scoped.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL AND x_sor_mode = 'overlay' ORDER BY created_at`)
+	rows, err := pool.Query(ctx, `SELECT id FROM workspace
+		 WHERE archived_at IS NULL
+		   AND EXISTS (SELECT 1 FROM overlay_mode WHERE sor_mode = 'overlay')
+		 ORDER BY created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("overlay: listing overlay-mode workspaces for source-lag: %w", err)
 	}

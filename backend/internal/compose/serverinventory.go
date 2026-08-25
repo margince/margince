@@ -370,7 +370,7 @@ type Server struct {
 	// sorDispatch is the per-workspace native/overlay provider dispatch:
 	// the ONE instance both the ADR-0055 admission layer (contractAPI's
 	// agentGate) and the overlay-mode human read shadows (overlayread.go)
-	// ride, so a workspace's resolved x_sor_mode is cached once, not per
+	// ride, so a the installation's resolved mode is cached once, not per
 	// consumer. Assembled in newServer, before the options run, so
 	// WithKeyvault can hand its Invalidate to overlay.Service as the
 	// mode-flip observer (a connect/disconnect drops the cached mode

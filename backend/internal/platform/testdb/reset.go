@@ -104,7 +104,7 @@ const resetTables = `
 	  AND c.relkind = 'r'
 	  AND c.relname NOT LIKE 'schema_migrations_%'
 	  AND c.relname <> 'river_migration'
-	  AND c.relname NOT IN ('activity_kind', 'channel_provider', 'lead_source', 'lead_disqualify_reason', 'field_mask')`
+	  AND c.relname NOT IN ('activity_kind', 'channel_provider', 'lead_source', 'lead_disqualify_reason', 'field_mask', 'overlay_mode')`
 
 // reclaimSlack is how much a table may grow past its empty size before a reset
 // TRUNCATEs it instead of DELETEing it. Growth, not absolute size, is the
@@ -201,6 +201,9 @@ func resetWithin(ctx context.Context, tx execQuerier) error {
 	// and search_path-independent.
 	if _, err := tx.Exec(ctx, `DELETE FROM `+strings.Join(tables, `; DELETE FROM `)+`;`); err != nil {
 		return fmt.Errorf("emptying data tables: %w", err)
+	}
+	if err := resetInstallationSingletons(ctx, tx); err != nil {
+		return err
 	}
 	if err := restartSequences(ctx, tx); err != nil {
 		return err
@@ -436,4 +439,30 @@ func queryIdents(ctx context.Context, q execQuerier, sql string) ([]string, erro
 		return nil, err
 	}
 	return idents, nil
+}
+
+// resetInstallationSingletons returns the one-row tables a migration seeds to
+// their declared defaults.
+//
+// overlay_mode is the installation's system-of-record mode. It is spared the
+// DELETE batch above — deleting it would leave the installation with no mode at
+// all, and the dispatcher's first read would fail with "no rows in result set",
+// surfacing as a 500 on an unrelated write with nothing pointing back here. But
+// sparing it alone is the other half of the same bug: a suite that flips the
+// installation into overlay mode would leave it there for whatever ran next.
+// The row has to survive AND be the default, so it is spared and then reset.
+//
+// Guarded on the table existing because it belongs to the fork-owned custom
+// namespace (ADR-0054 §7): a tree composed without the overlay pack has no such
+// table, and a reset there has nothing to put back.
+func resetInstallationSingletons(ctx context.Context, tx execQuerier) error {
+	if _, err := tx.Exec(ctx, `
+		DO $$ BEGIN
+			IF to_regclass('public.overlay_mode') IS NOT NULL THEN
+				UPDATE overlay_mode SET sor_mode = DEFAULT, incumbent = DEFAULT;
+			END IF;
+		END $$`); err != nil {
+		return fmt.Errorf("returning the installation's overlay mode to its default: %w", err)
+	}
+	return nil
 }

@@ -20,7 +20,7 @@ import (
 )
 
 // Archive dispatches to the overlay mirror or the native SoR modules
-// per ctx's workspace.x_sor_mode; see Create's doc on overlay's write
+// per ctx's overlay_mode.sor_mode; see Create's doc on overlay's write
 // gap.
 func (d *Dispatcher) Archive(ctx context.Context, ref datasource.EntityRef) (datasource.EntityRef, error) {
 	return d.ArchiveAt(ctx, datasource.ArchiveInput{Ref: ref})

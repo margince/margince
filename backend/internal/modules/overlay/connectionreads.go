@@ -54,7 +54,10 @@ type DueOverlayConnection struct {
 // not stop the rest of the fleet from being enumerated.
 func DueOverlayConnections(ctx context.Context, pool *pgxpool.Pool) ([]DueOverlayConnection, error) {
 	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; this reads every tenant before entering each workspace's own GUC.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL AND x_sor_mode = 'overlay' ORDER BY created_at`)
+	rows, err := pool.Query(ctx, `SELECT id FROM workspace
+		 WHERE archived_at IS NULL
+		   AND EXISTS (SELECT 1 FROM overlay_mode WHERE sor_mode = 'overlay')
+		 ORDER BY created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("overlay: listing overlay-mode workspaces: %w", err)
 	}
@@ -132,7 +135,9 @@ func WorkspaceForPortal(ctx context.Context, pool *pgxpool.Pool, incumbent, incu
 		return ids.WorkspaceID{}, apperrors.ErrNotFound
 	}
 	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; this reads every tenant before entering each workspace's own GUC to probe its connection.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL AND x_sor_mode = 'overlay'`)
+	rows, err := pool.Query(ctx, `SELECT id FROM workspace
+		 WHERE archived_at IS NULL
+		   AND EXISTS (SELECT 1 FROM overlay_mode WHERE sor_mode = 'overlay')`)
 	if err != nil {
 		return ids.WorkspaceID{}, fmt.Errorf("overlay: listing overlay-mode workspaces for portal binding: %w", err)
 	}

@@ -53,6 +53,13 @@ var preservedResetTables = map[string]bool{
 	// installation configuration and secrets
 	"setting": true, "vault_secret": true, "ai_call_config": true,
 	"embed_store_binding": true,
+	// The installation's system-of-record mode, on the same footing as
+	// `setting`: one row a migration seeds, not a record of anybody's
+	// customers. The sweep must not DELETE it — overlay.RevertToNative runs
+	// after the sweep and returns it to native, and an UPDATE against a row the
+	// sweep had removed would touch nothing, report "not reverted", and leave
+	// the installation with no mode at all for the dispatcher to read.
+	"overlay_mode": true,
 	// The derived channel-provider registry: installation-global reference data,
 	// not this workspace's records, on the SAME footing as `setting` above — a
 	// reset that cleared it would leave the installation unable to recognise the

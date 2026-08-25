@@ -313,7 +313,7 @@ func (f flipEstate) nativeEstateRows(t *testing.T) map[string]int {
 func (f flipEstate) workspaceMode(t *testing.T) (mode string, incumbent *string) {
 	t.Helper()
 	if err := f.e.Owner.QueryRow(context.Background(),
-		`SELECT x_sor_mode, x_incumbent FROM workspace WHERE id = $1`, f.wsID).Scan(&mode, &incumbent); err != nil {
+		`SELECT sor_mode, incumbent FROM overlay_mode`).Scan(&mode, &incumbent); err != nil {
 		t.Fatalf("reading workspace mode: %v", err)
 	}
 	return mode, incumbent

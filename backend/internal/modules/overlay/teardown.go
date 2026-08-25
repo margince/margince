@@ -98,7 +98,7 @@ func (s *Service) Disconnect(ctx context.Context) error {
 		if err := purgeMirror(ctx, tx); err != nil {
 			return err
 		}
-		if _, err := RevertToNative(ctx, tx, ws); err != nil {
+		if _, err := RevertToNative(ctx, tx); err != nil {
 			return err
 		}
 		return nil
@@ -127,9 +127,9 @@ func (s *Service) Disconnect(ctx context.Context) error {
 // on and would otherwise leave the workspace claiming to read from an
 // incumbent it no longer has a connection to.
 //
-// The reset then runs identity.ResetWorkspaceConfig, which restores every
-// non-preserved column on the workspace row to its declared default — these
-// two among them, so they are written again. That ordering is required, not
+// The reset does not write the mode again afterwards: since ADR-0091 the mode
+// is overlay_mode's, and nothing else restores it. This call is the only thing
+// that reverts it, which makes its ordering load-bearing rather than
 // incidental: whether the
 // installation was in overlay mode is only knowable before something writes
 // the column, and only this call reports it.
@@ -144,18 +144,14 @@ func (s *Service) Disconnect(ctx context.Context) error {
 // Idempotent by predicate: a workspace already native reports false and is not
 // written, so a caller need not ask the mode first.
 //
-// ws is the workspace the caller's transaction is bound to, and it is a
-// PARAMETER because this function cannot discover it: it runs inside a
-// transaction somebody else opened, and only that caller knows what bound it.
-// Reading the request context here instead would answer for a handle pinned
-// elsewhere, and a wrong id is worse than no id — the statement is idempotent
-// by predicate, so it would match no row and report (false, nil), which reads
-// exactly like a workspace that was already native.
-func RevertToNative(ctx context.Context, tx pgx.Tx, ws ids.UUID) (bool, error) {
+// It takes no workspace. overlay_mode holds one row for the installation
+// (ADR-0061), so the statement has nothing to select it by and cannot be
+// pointed at the wrong one — which is what the workspace-id parameter existed
+// to prevent while the mode lived on the workspace row.
+func RevertToNative(ctx context.Context, tx pgx.Tx) (bool, error) {
 	tag, err := tx.Exec(ctx, `
-		UPDATE workspace SET x_sor_mode = 'native', x_incumbent = NULL
-		WHERE id = $1
-		  AND x_sor_mode <> 'native'`, ws)
+		UPDATE overlay_mode SET sor_mode = 'native', incumbent = NULL
+		 WHERE sor_mode <> 'native'`)
 	if err != nil {
 		return false, fmt.Errorf("overlay: flipping the workspace back to native mode: %w", err)
 	}

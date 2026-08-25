@@ -8,7 +8,7 @@ package overlay
 // SourceLagByClass's own real-Postgres proof: the fleet-wide, rls-exempt
 // walk over every overlay-mode workspace (metrics.go's own doc — it has
 // no one workspace's request context to scope a WithWorkspaceTx to)
-// needs a real workspace.x_sor_mode='overlay' row and a real
+// needs a real overlay_mode.sor_mode='overlay' row and a real
 // overlay_mirror row to fold over, so this is integration-only exactly
 // like DueOverlayConnections' own suite.
 

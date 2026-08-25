@@ -336,7 +336,7 @@ func agentActorCtx(ws, user ids.UUID) context.Context {
 // routed the very same patch to the incumbent: the write reaches a third
 // party's CRM with the confirm-first gate believing it never left our
 // boundary. This drives that exact skew: warm the cache as native, flip
-// x_sor_mode underneath with no invalidation, and assert the gate still
+// the mode underneath with no invalidation, and assert the gate still
 // holds.
 func TestOverlayUpdateRecordEgressGateIgnoresAStaleNativeModeCache(t *testing.T) {
 	e := integration.Setup(t)
@@ -354,7 +354,7 @@ func TestOverlayUpdateRecordEgressGateIgnoresAStaleNativeModeCache(t *testing.T)
 	// Flip to overlay the way a connect does, but WITHOUT Invalidate — the
 	// state a second replica is in for the rest of the TTL.
 	if _, err := integration.OwnerConn(t).Exec(ctx,
-		`UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = 'hubspot' WHERE id = $1`, ws); err != nil {
+		`UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`); err != nil {
 		t.Fatalf("flipping the workspace to overlay mode: %v", err)
 	}
 

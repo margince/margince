@@ -29,8 +29,7 @@ func seedOverlayWorkspace(ctx context.Context, t *testing.T, pool *pgxpool.Pool)
 	t.Helper()
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `
-			UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = 'hubspot'
-			WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid`); err != nil {
+			UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`); err != nil {
 			return err
 		}
 		_, err := tx.Exec(ctx, `
@@ -436,13 +435,12 @@ func TestCompleteFlipFlipsModeOnceAndKeepsConnection(t *testing.T) {
 		var incumbent *string
 		var connStatus string
 		if err := tx.QueryRow(ctx, `
-			SELECT x_sor_mode, x_incumbent FROM workspace
-			WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid`,
+			SELECT sor_mode, incumbent FROM overlay_mode`,
 		).Scan(&mode, &incumbent); err != nil {
 			return err
 		}
 		if mode != "native" || incumbent != nil {
-			t.Errorf("workspace after flip = %s/%v, want native with x_incumbent cleared (DS-AC-5)", mode, incumbent)
+			t.Errorf("mode after flip = %s/%v, want native with the incumbent cleared (DS-AC-5)", mode, incumbent)
 		}
 		if err := tx.QueryRow(ctx, `SELECT status FROM incumbent_connection`).Scan(&connStatus); err != nil {
 			return err
@@ -501,8 +499,7 @@ func TestDisconnectRefusesARunningImportButNeverALatchedFreeze(t *testing.T) {
 			return err
 		}
 		if err := tx.QueryRow(ctx, `
-			SELECT x_sor_mode FROM workspace
-			WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid`,
+			SELECT sor_mode FROM overlay_mode`,
 		).Scan(&mode); err != nil {
 			return err
 		}

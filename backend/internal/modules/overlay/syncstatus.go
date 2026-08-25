@@ -59,7 +59,7 @@ const (
 // apperrors.ErrModeNotOverlay (404 mode_not_overlay) for a workspace that
 // never connected an incumbent — these ops have no SoR-mode equivalent
 // (crm.yaml's own doc comment on the /overlay cluster). It reads
-// workspace.x_sor_mode directly rather than incumbent_connection's own
+// overlay_mode.sor_mode directly rather than incumbent_connection's own
 // status, the same source of truth compose.Dispatcher's isOverlay uses,
 // so a workspace mid-teardown (connection revoked, mode not yet flipped
 // back — Disconnect flips both in the SAME transaction, so this window
@@ -71,23 +71,22 @@ func (s *Service) requireOverlayMode(ctx context.Context) error {
 }
 
 // resolveOverlayMode reads the workspace's x_sor_mode AND its active
-// incumbent (x_incumbent) in ONE query, so the mode gate and the incumbent
-// the budget snapshot keys on come from a single consistent read — a
-// concurrent disconnect (which flips both in one transaction) can never
-// let Budget pass the mode gate on the old mode and then snapshot the new,
-// empty incumbent. It reads workspace directly (the same source
-// compose.Dispatcher's isOverlay uses), returning ErrModeNotOverlay for a
-// workspace not in overlay mode. The returned incumbent is non-empty
-// whenever mode == "overlay".
+// incumbent in ONE query, so the mode gate and the incumbent the budget
+// snapshot keys on come from a single consistent read — a concurrent
+// disconnect (which flips both in one statement) can never let Budget pass
+// the mode gate on the old mode and then snapshot the new, empty incumbent.
+// It reads overlay_mode directly (the same source compose.Dispatcher's
+// isOverlay uses), returning ErrModeNotOverlay when the installation is not
+// in overlay mode. The returned incumbent is non-empty whenever
+// mode == "overlay".
+//
+// It takes no workspace: overlay_mode holds one row for the installation
+// (ADR-0061), so there is nothing to select it by.
 func (s *Service) resolveOverlayMode(ctx context.Context) (incumbent string, err error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return "", errors.New("overlay: sync-status/budget/reconcile called outside a workspace context")
-	}
 	var mode string
 	err = database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT x_sor_mode, coalesce(x_incumbent, '') FROM workspace WHERE id = $1`, wsID,
+			`SELECT sor_mode, coalesce(incumbent, '') FROM overlay_mode`,
 		).Scan(&mode, &incumbent)
 	})
 	if err != nil {

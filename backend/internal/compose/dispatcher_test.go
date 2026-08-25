@@ -8,7 +8,7 @@ package compose
 // provider without ever needing a real Postgres. This works by seeding
 // the TTL cache directly (a package-internal test's own privilege) with
 // overlay=true for a fixed workspace, so isOverlay never has to query
-// workspace.x_sor_mode — and by handing Dispatcher an
+// overlay_mode.sor_mode — and by handing Dispatcher an
 // overlay.NewProvider(nil, nil), which answers a clean, well-defined
 // error for every verb (proven by provider_test.go) rather than ever
 // touching a mirror store. d.native is left nil: the overlay=true seed

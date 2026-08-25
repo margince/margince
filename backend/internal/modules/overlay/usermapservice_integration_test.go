@@ -8,7 +8,7 @@ package overlay
 // The admin user-map SERVICE against a real, migrated Postgres. The gate order
 // (grant, human, overlay mode, fenced store) and the derivation of the page
 // are unit-tested in handlers_usermap_test.go; what needs a database is
-// everything that reads workspace.x_sor_mode, the mapping tables, or the
+// everything that reads overlay_mode.sor_mode, the mapping tables, or the
 // disconnect fence — none of which can be faked without faking the very
 // mechanism under test.
 
@@ -85,7 +85,7 @@ func TestUserMapSurfaceIs404InNativeMode(t *testing.T) {
 }
 
 // disconnectUnderARequestHoldingAStaleMode runs the real teardown and then
-// restores ONLY workspace.x_sor_mode/x_incumbent — everything the teardown
+// restores ONLY the overlay_mode row — everything the teardown
 // purged stays purged, and the connection stays revoked.
 //
 // That reproduces the one interleaving the disconnect fence exists for, and
@@ -102,7 +102,7 @@ func disconnectUnderARequestHoldingAStaleMode(ctx context.Context, t *testing.T,
 		t.Fatalf("Disconnect: %v", err)
 	}
 	if _, err := testOwnerConn(t).Exec(ctx,
-		`UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = 'hubspot' WHERE id = $1`, ws); err != nil {
+		`UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`); err != nil {
 		t.Fatalf("restoring the mode the in-flight request already read: %v", err)
 	}
 }

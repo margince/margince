@@ -194,7 +194,7 @@ func (w *briefGenerateWorkspaceWorker) assembleFor(ctx context.Context, wsID, us
 func (w *briefGenerateWorkspaceWorker) repsDueTheirMorning(ctx context.Context, wsID ids.UUID, now time.Time) ([]ids.UUID, error) {
 	var due []ids.UUID
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		overlay, err := overlayModeOf(ctx, tx, wsID)
+		overlay, err := overlayModeOf(ctx, tx)
 		if err != nil {
 			return fmt.Errorf("resolving the workspace's system-of-record mode: %w", err)
 		}
