@@ -15,6 +15,7 @@ package integration_test
 // shipped once already with a defect no store test could have seen.
 
 import (
+	"context"
 	"crypto/rand"
 	"net/http"
 	"net/url"
@@ -369,5 +370,50 @@ func TestInstallationSetupNeedsBothABindingAndItsKey(t *testing.T) {
 	// Both halves present: now it is configured.
 	if step := aiStep(t); !step.Configured {
 		t.Error("the AI step still reads unconfigured with a binding AND its key stored")
+	}
+}
+
+// A stored app whose secret will not open is a DIFFERENT answer from one that
+// was never configured, and the connect surface has to say so.
+//
+// 501 would tell an operator this deployment does not serve Gmail at all, and
+// send them to configure a second app while the one they already stored sits
+// there unopenable — the actual repair is the vault root key, or re-entering the
+// secret. So the branch exists to avoid exactly that, and this holds it.
+//
+// The fault is injected at the vault rather than mocked: dropping the sealed
+// bytes is what a rotated root key or a restored-without-the-vault database
+// looks like from here, and it exercises the real unseal failing for the real
+// reason.
+func TestAStoredAppWhoseSecretWillNotOpenIsNotReportedAsUnconfigured(t *testing.T) {
+	e := setupGoogleAppWithEnvApp(t)
+	secret := httpSecret
+	if status := e.Call(t, "PUT", "/v1/installation/google-app",
+		crmcontracts.GoogleAppInput{ClientId: httpClientID, ClientSecret: &secret}, nil, nil); status != http.StatusNoContent {
+		t.Fatalf("PUT google-app → %d, want 204", status)
+	}
+	// It works before the fault, or what follows proves nothing.
+	if status := e.Call(t, "POST", "/v1/connectors/gmail/connect", nil, nil, nil); status != http.StatusOK {
+		t.Fatalf("connect with a readable stored app → %d, want 200", status)
+	}
+
+	if _, err := apptest.EarlyPool(t).Exec(context.Background(), `DELETE FROM vault_secret`); err != nil {
+		t.Fatalf("dropping the sealed secret: %v", err)
+	}
+
+	status := e.Call(t, "POST", "/v1/connectors/gmail/connect", nil, nil, nil)
+	if status == http.StatusNotImplemented {
+		t.Error("connect answered 501 for an app that IS stored but cannot be opened — that sends an operator to create a second app instead of repairing the vault")
+	}
+	if status == http.StatusOK {
+		t.Error("connect answered 200 with a secret it could not unseal; the consent URL would carry a client id whose secret no exchange can use")
+	}
+
+	// And the installation still reports the app as configured: it IS, and
+	// saying otherwise would invite an operator to store a duplicate rather than
+	// fix what is wrong.
+	var app crmcontracts.GoogleApp
+	if s := e.Call(t, "GET", "/v1/installation/google-app", nil, nil, &app); s != http.StatusOK || !app.Configured {
+		t.Errorf("after the secret was lost the app reads %+v (status %d), want still configured", app, s)
 	}
 }
