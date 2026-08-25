@@ -1118,6 +1118,7 @@ export const en = {
   "co.work.targetEnd": "due to end {date}",
   "co.work.stalled": "Nothing has been filed against this deal in the last 60 days.",
   "co.work.quiet": "Nothing has been filed against this project since {when}.",
+  "co.work.neverTouched": "Nothing has ever been filed against this project.",
   "co.work.overdueTask": "{who} was supposed to \u2018{title}\u2019 by {date} and has not.",
   "co.work.overdueTaskUnnamed": "\u2018{title}\u2019 was due {date} and is still open.",
   "co.work.owesUs": "{who} said: \u2018{body}\u2019",

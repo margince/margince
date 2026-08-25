@@ -1073,6 +1073,7 @@ export const vi = {
   "co.work.targetEnd": "d\u1ef1 ki\u1ebfn k\u1ebft th\u00fac {date}",
   "co.work.stalled": "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho th\u01b0\u01a1ng v\u1ee5 n\u00e0y trong 60 ng\u00e0y qua.",
   "co.work.quiet": "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y t\u1eeb {when}.",
+  "co.work.neverTouched": "Ch\u01b0a t\u1eebng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y.",
   "co.work.overdueTask": "{who} \u0111\u00e1ng l\u1ebd ph\u1ea3i \u2018{title}\u2019 tr\u01b0\u1edbc {date} nh\u01b0ng ch\u01b0a l\u00e0m.",
   "co.work.overdueTaskUnnamed": "\u2018{title}\u2019 \u0111\u1ebfn h\u1ea1n {date} v\u00e0 v\u1eabn c\u00f2n m\u1edf.",
   "co.work.owesUs": "{who} n\u00f3i: \u2018{body}\u2019",

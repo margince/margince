@@ -1081,6 +1081,7 @@ export const de = {
   "co.work.targetEnd": "Ende geplant {date}",
   "co.work.stalled": "Zu diesem Deal wurde seit 60 Tagen nichts erfasst.",
   "co.work.quiet": "Zu diesem Projekt wurde seit {when} nichts erfasst.",
+  "co.work.neverTouched": "Zu diesem Projekt wurde noch nie etwas erfasst.",
   "co.work.overdueTask": "{who} sollte \u201a{title}\u2018 bis {date} erledigen und hat es nicht getan.",
   "co.work.overdueTaskUnnamed": "\u201a{title}\u2018 war am {date} f\u00e4llig und ist offen.",
   "co.work.owesUs": "{who} sagte: \u201a{body}\u2018",

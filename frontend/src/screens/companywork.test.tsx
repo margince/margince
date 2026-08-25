@@ -179,6 +179,31 @@ describe("the account's work in flight", () => {
     ).toBeTruthy();
   });
 
+  it("says a never-touched project has never been touched, not that it is quiet since never", () => {
+    draw(view({ projects: [{ ...project, quiet: true }] }));
+
+    // The server measures a never-touched project's quiet from the day it was
+    // opened, and the payload carries no created_at. One template over
+    // last_activity_at would print the relative formatter's "never" into a
+    // "since" slot.
+    expect(
+      screen.getByText("Nothing has ever been filed against this project."),
+    ).toBeTruthy();
+    expect(screen.queryByText(/since never/i)).toBeNull();
+  });
+
+  it("dates the silence when the project has been touched before", () => {
+    draw(
+      view({
+        projects: [
+          { ...project, quiet: true, last_activity_at: "2026-05-20T09:00:00Z" },
+        ],
+      }),
+    );
+
+    expect(screen.getByText(/Nothing has been filed against this project since/)).toBeTruthy();
+  });
+
   it("shows the stall only when there is no reason that explains it", () => {
     draw(
       view({

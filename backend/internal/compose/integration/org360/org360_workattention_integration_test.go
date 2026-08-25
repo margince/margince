@@ -14,6 +14,7 @@ package org360
 // gate refuses.
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -24,6 +25,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/projects"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // overdueAt is a due date safely behind the read's pinned clock, and
@@ -291,4 +293,149 @@ func projectAttention(t *testing.T, view crmcontracts.Organization360, projectID
 		t.Fatal("the project carries no reason, though a commitment on it is open")
 	}
 	return *row.Attention
+}
+
+func TestOrg360_ACommitmentNeedsThePersonGrantAndNotOnlyTheRowScope(t *testing.T) {
+	e := integration.Setup(t)
+	orgID := e.SeedOrg(t, "Person-blind Account", nil)
+	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
+		Name: "Depot fit-out", OrganizationID: ids.From[ids.OrganizationKind](orgID), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating the project: %v", err)
+	}
+	projectID := ids.UUID(project.Id)
+	personID := e.SeedPerson(t, "Ida Keller", nil)
+	body := "we'll confirm the depot slot once facilities sign off"
+	recordClaim(t, e, personID, projectID, body, "open", false)
+
+	// The claim names a PERSON and its row carries their name and what they
+	// said. Row scope alone admits nobody to people — it narrows a set the
+	// object grant has already opened, and for an unbounded actor it is no
+	// predicate at all — so a reader without person:read must be refused
+	// rather than handed both.
+	view, err := org360Service(e).Assemble(
+		e.As(e.Rep1, []ids.UUID{e.Team1}, org360NoPersonPerms),
+		ids.From[ids.OrganizationKind](orgID))
+	if err != nil {
+		t.Fatalf("assembling the 360: %v", err)
+	}
+	row := findProject(t, view, projectID)
+	if row.Attention != nil {
+		t.Fatalf("a reader without person:read got %q", row.Attention.Title)
+	}
+	if view.AttentionWithheld == nil || !*view.AttentionWithheld {
+		t.Fatal("the payload does not say the reasons were withheld")
+	}
+}
+
+func TestOrg360_ACommitmentByAnInvisiblePersonIsReportedRatherThanDropped(t *testing.T) {
+	e := integration.Setup(t)
+	orgID := e.SeedOrg(t, "Scoped Account", nil)
+	project, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
+		Name: "Depot fit-out", OrganizationID: ids.From[ids.OrganizationKind](orgID), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating the project: %v", err)
+	}
+	projectID := ids.UUID(project.Id)
+	// Captured PRIVATELY by somebody else. Customer identity is otherwise
+	// workspace-readable, so capture privacy is the thing that actually hides
+	// a person from a colleague — an owner change alone does not.
+	other := e.Rep3
+	personID := e.SeedPerson(t, "Ida Keller", &other)
+	recordClaim(t, e, personID, projectID,
+		"we'll confirm the depot slot once facilities sign off", "open", false)
+	e.WsExec(t, `UPDATE person SET visibility = 'owner' WHERE id = $1`, personID)
+
+	view, err := org360Service(e).Assemble(
+		e.As(e.Rep1, []ids.UUID{e.Team1}, org360OwnScopePerms),
+		ids.From[ids.OrganizationKind](orgID))
+	if err != nil {
+		t.Fatalf("assembling the 360: %v", err)
+	}
+	// The commitment is correctly absent — but silence alone would read as a
+	// project with nothing outstanding, which is what the flag exists to
+	// prevent. Present and unexplained beats absent and misread.
+	row := findProject(t, view, projectID)
+	if row.Attention != nil {
+		t.Fatalf("an out-of-scope person's claim reached the page as %q", row.Attention.Title)
+	}
+	if view.AttentionWithheld == nil || !*view.AttentionWithheld {
+		t.Fatal("a claim was dropped for row scope and the payload does not say so")
+	}
+}
+
+// org360NoPersonPerms may read the account, its projects and its activities,
+// and may not read people at all.
+var org360NoPersonPerms = principal.Permissions{
+	RoleKeys: []string{"rep"},
+	Objects: map[string]principal.ObjectGrant{
+		"organization":          {Read: true},
+		"project":               {Read: true},
+		"activity":              {Read: true},
+		"relationship":          {Read: true},
+		"installation_settings": {Read: true},
+	},
+	RowScope: principal.RowScopeAll,
+}
+
+// org360OwnScopePerms holds every grant this card reads and is bounded to its
+// own rows — the reader for whom a colleague's privately captured contact is
+// invisible rather than forbidden.
+var org360OwnScopePerms = principal.Permissions{
+	RoleKeys: []string{"rep"},
+	Objects: map[string]principal.ObjectGrant{
+		"organization":          {Read: true},
+		"person":                {Read: true},
+		"project":               {Read: true},
+		"deal":                  {Read: true},
+		"activity":              {Read: true},
+		"relationship":          {Read: true},
+		"installation_settings": {Read: true},
+	},
+	RowScope: principal.RowScopeOwn,
+}
+
+func TestOrg360_ClosedProjectsOverflowingTheCapDoNotClaimMoreWorkInFlight(t *testing.T) {
+	e := integration.Setup(t)
+	orgID := e.SeedOrg(t, "Portfolio Account", nil)
+	// One project in flight and enough closed ones to overflow the cap. The
+	// card's order puts the closed ones last, so the cap cuts only history —
+	// and a page reporting "1+ in flight" off a bare overflow flag would say
+	// this account has live work it does not have.
+	live, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
+		Name: "Depot fit-out", OrganizationID: ids.From[ids.OrganizationKind](orgID), Source: "manual",
+	})
+	if err != nil {
+		t.Fatalf("creating the live project: %v", err)
+	}
+	for i := range 25 {
+		closed, err := e.Projects.CreateProject(e.Admin(), projects.CreateProjectInput{
+			Name:           fmt.Sprintf("Finished %d", i),
+			OrganizationID: ids.From[ids.OrganizationKind](orgID), Source: "manual",
+		})
+		if err != nil {
+			t.Fatalf("creating a closed project: %v", err)
+		}
+		// Through the real writer: a closed project carries a reason the
+		// schema insists on, and a hand-set phase never produces one.
+		if _, err := e.Projects.AdvanceProjectPhase(e.Admin(),
+			ids.From[ids.ProjectKind](ids.UUID(closed.Id)),
+			projects.AdvanceProjectPhaseInput{ToPhase: "closed", Reason: ptrTo("delivered")},
+		); err != nil {
+			t.Fatalf("closing a project: %v", err)
+		}
+	}
+
+	view := assemble(t, e, orgID)
+	if view.ProjectsPage == nil {
+		t.Fatal("no projects page, so the card cannot tell a full list from a cut one")
+	}
+	if view.ProjectsPage.HasMore {
+		t.Error("the page reports more work in flight, though every project the cap cut is closed")
+	}
+	if findProject(t, view, ids.UUID(live.Id)).Phase == crmcontracts.Organization360ProjectPhaseClosed {
+		t.Fatal("the live project is missing from the page, so the assertion above is vacuous")
+	}
 }

@@ -56,9 +56,9 @@ const projectCardOrder = `ORDER BY CASE p.phase
 
 // ListProjectsForOrganizationTx lists the company's unarchived projects under
 // the caller's project row scope, work in motion first. The bool is whether
-// the account has MORE than the cap — a reader counting the returned rows
-// would otherwise report a portfolio account's project count as exactly the
-// cap, which is a number that account does not have.
+// the cap cut a project that is still IN FLIGHT — a reader counting the
+// returned rows would otherwise report a portfolio account's live work as
+// exactly the cap, which is a number that account does not have.
 func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]ProjectCard, bool, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
 		return nil, false, err
@@ -98,10 +98,16 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 	if err != nil {
 		return nil, false, err
 	}
-	if len(cards) > projectSurfaceCap {
-		return cards[:projectSurfaceCap], true, nil
+	if len(cards) <= projectSurfaceCap {
+		return cards, false, nil
 	}
-	return cards, false, nil
+	// What was cut, not merely THAT something was. projectCardOrder puts the
+	// closed projects last, so a portfolio account with one live project and
+	// twenty-five closed ones overflows the cap without dropping a single
+	// thing in flight — and a caller reporting "1+ in flight" off a bare
+	// overflow flag would overstate the work on the account.
+	dropped := cards[projectSurfaceCap]
+	return cards[:projectSurfaceCap], dropped.Phase != crmcontracts.Organization360ProjectPhaseClosed, nil
 }
 
 // ListProjectsForPersonTx lists the unarchived projects a person is part of:

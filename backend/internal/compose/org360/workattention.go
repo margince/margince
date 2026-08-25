@@ -54,46 +54,53 @@ type overdueTask struct {
 // reason may come from a task and a project's from a conversation, and split
 // between the two sections that would be two half-copies of one set read.
 //
-// A caller without the activity grant gets the rows without reasons and a
-// payload that SAYS the reasons are missing. This is why the denial is
-// swallowed here rather than named in sections_omitted: the deals and the
-// projects are present and true, and reporting them as withheld would hide
-// the pipeline from a reader who may read it.
+// A caller who could not be given every reason gets the rows anyway, and a
+// payload that SAYS reasons are missing. This is why a denial is swallowed
+// here rather than named in sections_omitted: the deals and the projects are
+// present and true, and reporting them as withheld would hide the pipeline
+// from a reader who may read it.
 //
-// The flag covers a PARTIAL refusal too — a caller who may read the tasks but
-// not the people the commitments were made by keeps the reasons that were
-// derived and is still told some are missing. Half the reasons with no such
-// line would read as "these rows have nothing to explain", which is the one
-// thing this card must never say by accident.
+// Two shapes of incompleteness reach this flag, and both must. A refused
+// grant is the loud one. The quiet one is a claim made by a person outside
+// the caller's row scope: the store drops that row and says so, because a
+// project silently missing its commitment reads as a project with nothing
+// outstanding — which is the one thing this card must never say by accident.
 func (a *assembly) readWorkAttention() error {
 	dealIDs, projects := attentionTargets(a.out)
 	if len(dealIDs) == 0 && len(projects) == 0 {
 		return nil
 	}
-	err := a.decorateWorkAttention(dealIDs, projects)
+	complete, err := a.decorateWorkAttention(dealIDs, projects)
 	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		complete, err = false, nil
+	}
+	if err != nil {
+		return err
+	}
+	if !complete {
 		withheld := true
 		a.out.AttentionWithheld = &withheld
-		return nil
 	}
-	return err
+	return nil
 }
 
-func (a *assembly) decorateWorkAttention(dealIDs []ids.UUID, projects []ids.ProjectID) error {
+// decorateWorkAttention hangs the facts, and reports whether it could derive
+// every one it went looking for.
+func (a *assembly) decorateWorkAttention(dealIDs []ids.UUID, projects []ids.ProjectID) (bool, error) {
 	if err := auth.Require(a.ctx, "activity", principal.ActionRead); err != nil {
-		return err
+		return false, err
 	}
 	dealTasks, err := overdueTasksBy(a.ctx, a.tx, a.orgID, "deal_id", dealIDs, a.now)
 	if err != nil {
-		return err
+		return false, err
 	}
 	projectTasks, err := overdueTasksBy(a.ctx, a.tx, a.orgID, "project_id", projectUUIDs(projects), a.now)
 	if err != nil {
-		return err
+		return false, err
 	}
-	commitments, err := a.svc.people.CommitmentsTheirsForProjects(a.ctx, a.tx, projects, a.now)
+	commitments, complete, err := a.svc.people.CommitmentsTheirsForProjects(a.ctx, a.tx, projects, a.now)
 	if err != nil {
-		return err
+		return false, err
 	}
 	if a.out.Deals != nil {
 		for i := range a.out.Deals.Data {
@@ -112,7 +119,7 @@ func (a *assembly) decorateWorkAttention(dealIDs []ids.UUID, projects []ids.Proj
 			row.Attention = attention
 		}
 	}
-	return nil
+	return complete, nil
 }
 
 // attentionTargets is what the page has in flight: the open deals and the

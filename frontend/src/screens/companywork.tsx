@@ -346,9 +346,15 @@ function ProjectLine({
       ) : (
         project.quiet && (
           <StatusLine>
-            {t("co.work.quiet", {
-              when: relativeDays(project.last_activity_at, t),
-            })}
+            {/* Two sentences, because a project nobody has EVER filed against
+                has no "since" to name. The server measures its quiet from the
+                day it was opened, and the payload carries no created_at — so
+                a single template would print "since never". */}
+            {project.last_activity_at
+              ? t("co.work.quiet", {
+                  when: relativeDays(project.last_activity_at, t),
+                })
+              : t("co.work.neverTouched")}
           </StatusLine>
         )
       )}
