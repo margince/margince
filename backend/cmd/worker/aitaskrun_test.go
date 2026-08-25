@@ -96,12 +96,11 @@ func TestProbeCompleterWantsExactlyOneBinding(t *testing.T) {
 		cfg  aiTaskFlags
 	}{
 		{"none at all", aiTaskFlags{}},
-		{"a routing file and the fake, which disagree about what answers", aiTaskFlags{routingPath: "r.yaml", fakeBrain: true}},
-		{"a routing file and a pinned model", aiTaskFlags{routingPath: "r.yaml", modelSpec: "p:m"}},
+		{"a pinned model and the fake, which disagree about what answers", aiTaskFlags{modelSpec: "p:m", fakeBrain: true}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			if _, _, err := probeCompleter(tc.cfg, ai.TaskRateExtract); err == nil {
-				t.Fatal("want a refusal naming the three flags")
+				t.Fatal("want a refusal naming the two flags")
 			}
 		})
 	}
@@ -186,13 +185,6 @@ func TestProbeRunsASiteEndToEndOverTheFake(t *testing.T) {
 	}
 	if req.System == "" || len(req.Messages) == 0 {
 		t.Error("the dumped request must carry the system prompt and payload the site built")
-	}
-}
-
-func TestProbeCompleterReportsAnUnreadableRoutingFile(t *testing.T) {
-	cfg := aiTaskFlags{routingPath: filepath.Join(t.TempDir(), "absent.yaml")}
-	if _, _, err := probeCompleter(cfg, ai.TaskRateExtract); err == nil {
-		t.Fatal("an unreadable routing file must be refused, not silently ignored")
 	}
 }
 

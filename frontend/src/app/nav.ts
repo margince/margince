@@ -10,6 +10,7 @@ import {
   type LucideIcon,
   Merge,
   Sparkles,
+  Sun,
   UserPlus,
   Users,
 } from "lucide-react";
@@ -40,7 +41,7 @@ export {
 // structure and collapse to hairline rules at 64px, so the collapsed rail is the
 // flat list WDS-NAV-1 describes.
 //
-// It carries twelve rows against upstream's own ten, and not as a superset:
+// It carries thirteen rows against upstream's own ten, and not as a superset:
 // Duplicates, Filters & views and Projects are destinations here, Automations is not.
 // Automations is set-and-forget configuration and now lives inside Settings →
 // AI, which is where the product already offered a second door to it; the dedupe
@@ -94,6 +95,12 @@ export const NAV_GROUPS: readonly NavGroup[] = [
   {
     headingKey: "nav.group.work",
     items: [
+      // The day's own surface, and the first row of the group it summarises:
+      // every other row here is one producer's queue, and this one is what a
+      // reader opens when the question is "what needs me?" rather than "show me
+      // the approvals". It leads the group for that reason — a summary placed
+      // under the things it summarises is a footnote.
+      { screen: "today", labelKey: "nav.today", icon: Sun },
       // The board, not a bullseye: this route opens a column per stage with the
       // deals standing in them, and `Target` drew a goal — which is what a quota
       // surface would be. A reader scanning five glyphs on a phone bar with no
@@ -140,7 +147,7 @@ export const NAV: readonly NavItem[] = NAV_GROUPS.flatMap(
 export const BADGE_SCREENS: ReadonlySet<Screen> = new Set(["tasks", "inbox"]);
 
 // At phone width the sidebar becomes a bottom bar, which fits four thumb-sized
-// destinations plus More — twelve would need horizontal scrolling, and a nav you
+// destinations plus More — thirteen would need horizontal scrolling, and a nav you
 // have to scroll is a nav you cannot see. Decisions is non-negotiable here: the
 // 390px approval path is required for V1.
 export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([

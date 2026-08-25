@@ -16,6 +16,7 @@ import {
   ListTable as ListSurface,
   type ListView,
 } from "../design-system/listtable";
+import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, useMe, useSorMode } from "./common";
@@ -395,7 +396,7 @@ export function ListTable<Row>({
   // a change: setFilter deletes a composite param and re-adds it, which moves
   // its insertion order without moving what it selects.
   const narrowKey = JSON.stringify(
-    Object.entries(query.filters).sort(([a], [b]) => a.localeCompare(b)),
+    Object.entries(query.filters).sort(([a], [b]) => stable(a, b)),
   );
   // Rebuilt every render, on purpose: a dial must show what is chosen the
   // moment its options arrive. Nothing resets on this — `narrowKey` is the

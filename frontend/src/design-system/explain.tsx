@@ -1,6 +1,11 @@
 import { Info } from "lucide-react";
 import { useState } from "react";
-import { type ExplainedMoney, formatDate, formatMoney } from "../format/format";
+import {
+  type ExplainedMoney,
+  formatDate,
+  formatMoney,
+  formatRate,
+} from "../format/format";
 import { useLocale, useT } from "../i18n";
 
 // "Explain this number" (B-EP09.18, ADR-0004): a converted aggregate opens
@@ -52,7 +57,7 @@ export function ExplainNumber({
                 </span>
                 <span className="t-small">
                   {t("explain.rate", {
-                    rate: row.rate,
+                    rate: formatRate(row.rate, locale),
                     date: formatDate(row.rateDate, locale, workspaceZone),
                   })}
                 </span>

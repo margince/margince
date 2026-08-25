@@ -240,7 +240,7 @@ function SpeakerPanel({
               onChange={() => setChoice(speaker.label)}
               label={`${speaker.label} · ${t("settings.voice.speakerDetail", {
                 words: formatNumber(speaker.words, locale),
-                turns: speaker.turns,
+                turns: formatNumber(speaker.turns, locale),
               })}`}
             />
           </li>

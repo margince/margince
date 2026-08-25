@@ -43,7 +43,7 @@ import {
   confidenceLevel,
   EvidenceChip,
 } from "../design-system/trust";
-import { formatDateTime, formatMoney } from "../format/format";
+import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -928,6 +928,7 @@ function SiteReadPanel({
   readId,
 }: Readonly<{ orgId: string; readId: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const reportQuery = useQuery({
     queryKey: ["site-read", orgId, readId],
     queryFn: async () => {
@@ -985,7 +986,7 @@ function SiteReadPanel({
             report.pages.length === 1
               ? "deepread.pagesSoFar.one"
               : "deepread.pagesSoFar.other",
-            { count: report.pages.length },
+            { count: formatNumber(report.pages.length, locale) },
           )}
         </span>
         {terminal && (
@@ -994,7 +995,7 @@ function SiteReadPanel({
               (report.fact_count ?? 0) === 1
                 ? "deepread.factCount.one"
                 : "deepread.factCount.other",
-              { count: report.fact_count ?? 0 },
+              { count: formatNumber(report.fact_count ?? 0, locale) },
             )}
           </span>
         )}
@@ -1023,7 +1024,9 @@ function SiteReadPanel({
           <span className="t-small">
             {report.proposal_ids.length === 1
               ? t("deepread.proposalsOne")
-              : t("deepread.proposals", { count: report.proposal_ids.length })}
+              : t("deepread.proposals", {
+                  count: formatNumber(report.proposal_ids.length, locale),
+                })}
           </span>
           <Button small onClick={() => navigate({ screen: "inbox" })}>
             {t("enrich.toInbox")}
@@ -1255,7 +1258,9 @@ function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
       </dl>
       {rollup.restricted_excluded.length > 0 && (
         <p className="t-caption" style={{ marginTop: 10 }}>
-          {t("rollup.excluded", { count: rollup.restricted_excluded.length })}
+          {t("rollup.excluded", {
+            count: formatNumber(rollup.restricted_excluded.length, locale),
+          })}
         </p>
       )}
       <p className="t-caption" style={{ marginTop: 10 }}>
@@ -1515,6 +1520,7 @@ function FactCategory({
   onOpenHistory?: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [expanded, setExpanded] = useState(false);
   const hidden = group.facts.length - FACT_PREVIEW;
   const shown = expanded ? group.facts : group.facts.slice(0, FACT_PREVIEW);
@@ -1535,7 +1541,9 @@ function FactCategory({
         <Button small onClick={() => setExpanded(!expanded)}>
           {expanded
             ? t("co.facts.showLess")
-            : t("co.facts.showAll", { count: group.facts.length })}
+            : t("co.facts.showAll", {
+                count: formatNumber(group.facts.length, locale),
+              })}
         </Button>
       )}
     </div>
@@ -1547,6 +1555,7 @@ function FactsCard({
   onOpenHistory,
 }: Readonly<{ orgId: string; onOpenHistory?: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const factsQuery = useQuery({
     queryKey: ["org-facts", orgId],
     queryFn: async () => {
@@ -1580,7 +1589,7 @@ function FactsCard({
 
   return (
     <Card title={t("org.facts")} style={{ marginBottom: "var(--space-4)" }}>
-      {groupFacts(facts).map((group) => (
+      {groupFacts(facts, t, locale).map((group) => (
         <FactCategory
           key={group.category}
           orgId={orgId}

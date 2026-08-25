@@ -6,7 +6,9 @@ import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { stable } from "../format/collate";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { dealRecordKeys } from "./activitykeys";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
@@ -45,6 +47,7 @@ export function DealBulkBar({
   onDone: (outcomes: readonly DealBulkOutcome[]) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [ownerId, setOwnerId] = useState("");
   const [stageId, setStageId] = useState("");
@@ -60,12 +63,12 @@ export function DealBulkBar({
   // stage chosen for rows that are no longer selected. A verb armed for one
   // selection must not fire at another, so the pickers clear when the
   // membership changes.
-  // Sorted in "en" rather than the reader's locale: this string is compared
-  // against itself to detect a changed selection, so the ordering has to be a
-  // property of the ids and of nothing else.
+  // `stable`, not the reader's collation: this string is compared against
+  // itself to detect a changed selection, so the ordering has to be a property
+  // of the ids and of nothing else.
   const selectionKey = deals
     .map((deal) => deal.id)
-    .sort((a, b) => a.localeCompare(b, "en"))
+    .sort(stable)
     .join(",");
   const [armedFor, setArmedFor] = useState(selectionKey);
   if (armedFor !== selectionKey) {
@@ -195,7 +198,7 @@ export function DealBulkBar({
   return (
     <>
       <span className="t-caption">
-        {t("deals.bulkSelected", { count: deals.length })}
+        {t("deals.bulkSelected", { count: formatNumber(deals.length, locale) })}
       </span>
       <Select
         aria-label={t("deals.bulkOwner")}
@@ -255,7 +258,7 @@ export function DealBulkBar({
           deals.length === 1
             ? "deals.bulkArchiveConfirmTitle.one"
             : "deals.bulkArchiveConfirmTitle.other",
-          { count: deals.length },
+          { count: formatNumber(deals.length, locale) },
         )}
         confirmLabel={t("deals.bulkArchive")}
         confirmVariant="danger"
@@ -269,7 +272,9 @@ export function DealBulkBar({
       </ConfirmModal>
       {failed.length > 0 && (
         <span className="t-caption" style={{ color: "var(--danger)" }}>
-          {t("deals.bulkFailed", { count: failed.length })}{" "}
+          {t("deals.bulkFailed", {
+            count: formatNumber(failed.length, locale),
+          })}{" "}
           {failed
             .map((outcome) => `${outcome.name}: ${outcome.error}`)
             .join(" · ")}

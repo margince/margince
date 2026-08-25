@@ -6,7 +6,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Card, EmptyState, Skeleton } from "../design-system/atoms";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import "./network.css";
 import {
@@ -121,7 +121,7 @@ export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
               {colleague.strength_bucket !== "none" && (
                 <span className="t-caption">
                   {t("network.interactions", {
-                    count: colleague.interactions_90d,
+                    count: formatNumber(colleague.interactions_90d, locale),
                   })}
                 </span>
               )}
@@ -141,6 +141,7 @@ export function PersonNetworkCard({ id }: Readonly<{ id: string }>) {
 /** What is wrong with how this deal is covered, and why. */
 export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const overlay = useSorMode() === "overlay";
   const query = useQuery({
     queryKey: ["deal-coverage", id],
@@ -195,7 +196,7 @@ export function DealCoverageCard({ id }: Readonly<{ id: string }>) {
               {risk.days_since_touch != null && (
                 <span className="t-mono net-risk-days">
                   {t("coverage.daysSinceTouch", {
-                    days: risk.days_since_touch,
+                    days: formatNumber(risk.days_since_touch, locale),
                   })}
                 </span>
               )}

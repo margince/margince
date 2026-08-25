@@ -31,7 +31,7 @@ describe("conversationReducer happy path", () => {
             kind: "narration",
             id: "pages:3",
             i18nKey: "ob.conv.read.pages",
-            params: { pages: 3 },
+            params: { pages: "3" },
           },
         },
       ],
@@ -362,7 +362,7 @@ describe("narration replace-in-place", () => {
           kind: "narration",
           id: "r1:pages",
           i18nKey: "ob.conv.read.pages",
-          params: { pages },
+          params: { pages: String(pages) },
         },
       }) satisfies ConversationEvent;
     let state = run([
@@ -393,7 +393,7 @@ describe("narration replace-in-place", () => {
     const updated = state.thread.find((entry) => entry.id === stampedId);
     expect(updated).toMatchObject({
       kind: "narration",
-      params: { pages: 7 },
+      params: { pages: "7" },
     });
     expect(state.thread.at(-1)?.id.endsWith(":r1:field:industry")).toBe(true);
   });
@@ -414,7 +414,7 @@ describe("thread cap", () => {
           kind: "narration",
           id: `n:${index}`,
           i18nKey: "ob.conv.read.pages",
-          params: { pages: index },
+          params: { pages: String(index) },
         },
       });
     }

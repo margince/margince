@@ -10,7 +10,11 @@ import {
 } from "../design-system/briefitem";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime, formatMoneyOrAbsent } from "../format/format";
+import {
+  formatDateTime,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -27,8 +31,9 @@ import {
 
 /** One brief card's vocabulary. */
 function briefLabels(
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+  t: (key: MessageKey, params?: Record<string, string>) => string,
   evidenceCount: number,
+  locale: Parameters<typeof formatNumber>[1],
 ): BriefItemLabels {
   return {
     rank: t("home.brief.rank"),
@@ -43,7 +48,9 @@ function briefLabels(
     evidence:
       evidenceCount === 1
         ? t("home.evidenceOne")
-        : t("home.evidence", { count: evidenceCount }),
+        : t("home.evidence", {
+            count: formatNumber(evidenceCount, locale),
+          }),
     evidenceNone: t("home.evidenceNone"),
     openDeal: t("home.openDeal"),
     act: t("home.act"),
@@ -103,7 +110,7 @@ export function TodaySection({
         footer={
           brief && brief.items.length > 0 ? (
             <span className="home-honesty t-caption">
-              {honestCountLine(t, brief)}
+              {honestCountLine(t, brief, locale)}
             </span>
           ) : undefined
         }
@@ -171,7 +178,7 @@ function TodayBody({
         <BriefItemCard
           key={item.id}
           item={item}
-          labels={briefLabels(t, item.evidence_ids.length)}
+          labels={briefLabels(t, item.evidence_ids.length, locale)}
           // `revenueBasisNote` is deliberately not passed. The run carries
           // `revenue_norm_minor` but not the currency it is in, and the base
           // currency lives on a settings read this page does not make — a sixth
@@ -181,7 +188,9 @@ function TodayBody({
           dealName={deals.find((deal) => deal.id === item.deal_id)?.name}
           amount={amountOf(item.deal_id, deals, locale)}
           formatPercent={(fraction) =>
-            t("home.pct", { pct: Math.round(fraction * 100) })
+            t("home.pct", {
+              pct: formatNumber(Math.round(fraction * 100), locale),
+            })
           }
           formatInstant={(utcIso) =>
             formatDateTime(utcIso, locale, viewerZone())
@@ -214,16 +223,19 @@ function TodayBody({
 
 /** What the ranked run left out, said out loud. */
 function honestCountLine(
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+  t: (key: MessageKey, params?: Record<string, string>) => string,
   brief: MorningBrief,
+  locale: Parameters<typeof formatNumber>[1],
 ): string {
   if (brief.candidate_count > brief.items.length) {
     return t("home.overflow", {
-      shown: brief.items.length,
-      count: brief.candidate_count,
+      shown: formatNumber(brief.items.length, locale),
+      count: formatNumber(brief.candidate_count, locale),
     });
   }
-  return t("home.honestShort", { count: brief.candidate_count });
+  return t("home.honestShort", {
+    count: formatNumber(brief.candidate_count, locale),
+  });
 }
 
 /** One deal's money, or nothing where the page has not read the deal. */

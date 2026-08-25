@@ -13,7 +13,9 @@ import {
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { stable } from "../format/collate";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
@@ -38,13 +40,9 @@ const PREVIEW_OBJECTS = [
 
 function useAccessPreview(role: Role, teamIds: string[]) {
   return useQuery({
-    // "en", not the reader's locale: this is a cache key, so the same set of
-    // teams has to spell the same key wherever it is read.
-    queryKey: [
-      "access-preview",
-      role,
-      [...teamIds].sort((a, b) => a.localeCompare(b, "en")).join(","),
-    ],
+    // `stable`, not the reader's collation: this is a cache key, so the same
+    // set of teams has to spell the same key wherever it is read.
+    queryKey: ["access-preview", role, [...teamIds].sort(stable).join(",")],
     queryFn: async (): Promise<AccessPreview> => {
       const { data, error } = await api.POST("/users/access-preview", {
         body: { role, team_ids: teamIds },
@@ -123,6 +121,7 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
 
 export function TeamsCard() {
   const t = useT();
+  const { locale } = useLocale();
   const qc = useQueryClient();
   // The shared roster read, not a second query of this card's own. Both spell
   // the same list under the same cache key, so whichever mounted first decided
@@ -185,7 +184,7 @@ export function TeamsCard() {
                       (team.member_count ?? 0) === 1
                         ? "users.memberCount.one"
                         : "users.memberCount.other",
-                      { count: team.member_count ?? 0 },
+                      { count: formatNumber(team.member_count ?? 0, locale) },
                     )}
                     control={
                       <Button

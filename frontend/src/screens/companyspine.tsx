@@ -24,6 +24,7 @@ import {
   calendarDaysBetween,
   formatDateAbbrev,
   formatMoneyCompact,
+  formatNumber,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import "./companyspine.css";
@@ -159,7 +160,7 @@ function silence(view: Organization360, ctx: Ctx): Stop | undefined {
   return {
     key: "silence",
     tone: "gap",
-    when: ctx.t("co.spine.days", { count: days }),
+    when: ctx.t("co.spine.days", { count: formatNumber(days, ctx.locale) }),
     title: everReplied
       ? ctx.t("co.spine.quietSince")
       : ctx.t("co.spine.neverReplied"),
@@ -260,7 +261,9 @@ function pipelineValue(view: Organization360, ctx: Ctx): ReactNode {
     commercial.open_pipeline_minor_base == null ||
     !commercial.base_currency
   ) {
-    return ctx.t("co.spine.unpriced", { count: commercial.open_count });
+    return ctx.t("co.spine.unpriced", {
+      count: formatNumber(commercial.open_count, ctx.locale),
+    });
   }
   // formatMoneyCompact, not a formatter of this file's own: the app has one
   // locale mapping and one minor-unit table, and a second Intl call here

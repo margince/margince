@@ -5,7 +5,6 @@ package compose
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -17,19 +16,16 @@ import (
 // answer it at all. Both are refused before anything is built.
 func TestTaskProbeBrainWantsExactlyOneBinding(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		routing string
-		spec    string
-		fake    bool
+		name string
+		spec string
+		fake bool
 	}{
-		{"nothing at all", "", "", false},
-		{"a routing file and the fake", "r.yaml", "", true},
-		{"a routing file and a pinned model", "r.yaml", "p:m", false},
-		{"a pinned model and the fake", "", "p:m", true},
+		{"nothing at all", "", false},
+		{"a pinned model and the fake", "p:m", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, _, err := TaskProbeBrain(tc.routing, tc.spec, tc.fake, ai.TaskRateExtract); err == nil {
-				t.Fatal("want a refusal naming the three ways to bind a model")
+			if _, _, err := TaskProbeBrain(tc.spec, tc.fake, ai.TaskRateExtract); err == nil {
+				t.Fatal("want a refusal naming the two ways to bind a model")
 			}
 		})
 	}
@@ -38,7 +34,7 @@ func TestTaskProbeBrainWantsExactlyOneBinding(t *testing.T) {
 // The fake must be nameable in the banner: a run that spent nothing must never
 // be mistaken for one that did.
 func TestTaskProbeBrainServesTheOfflineFake(t *testing.T) {
-	complete, banner, err := TaskProbeBrain("", "", true, ai.TaskRateExtract)
+	complete, banner, err := TaskProbeBrain("", true, ai.TaskRateExtract)
 	if err != nil {
 		t.Fatalf("the fake alone is a complete binding: %v", err)
 	}
@@ -64,23 +60,16 @@ func TestTaskProbeBrainServesTheOfflineFake(t *testing.T) {
 
 func TestTaskProbeBrainRefusesAMalformedModelOverride(t *testing.T) {
 	for _, spec := range []string{"justamodel", ":model", "provider:"} {
-		if _, _, err := TaskProbeBrain("", spec, false, ai.TaskRateExtract); err == nil {
+		if _, _, err := TaskProbeBrain(spec, false, ai.TaskRateExtract); err == nil {
 			t.Errorf("--model %q is not provider:model and must be refused", spec)
 		}
-	}
-}
-
-func TestTaskProbeBrainReportsAnUnreadableRoutingFile(t *testing.T) {
-	absent := filepath.Join(t.TempDir(), "absent.yaml")
-	if _, _, err := TaskProbeBrain(absent, "", false, ai.TaskRateExtract); err == nil {
-		t.Fatal("an unreadable routing file must be refused, not silently ignored")
 	}
 }
 
 // A pinned model binds ONE tier, and every task's ladder falls through to it —
 // so the override serves whichever task the probe names.
 func TestTaskProbeBrainPinsOneModelForEveryLane(t *testing.T) {
-	cfg, banner, err := taskProbeRouting("", "someprovider:some-model")
+	cfg, banner, err := taskProbeRouting("someprovider:some-model")
 	if err != nil {
 		t.Fatalf("taskProbeRouting: %v", err)
 	}
@@ -93,5 +82,32 @@ func TestTaskProbeBrainPinsOneModelForEveryLane(t *testing.T) {
 	}
 	if cfg.Embeddings.Provider != ai.ProviderFake {
 		t.Errorf("embeddings = %q; a chat override must not drag a real embedder in", cfg.Embeddings.Provider)
+	}
+}
+
+// A cloud --model must reach the key sitting in the environment.
+//
+// This is the whole reason the lane still runs: --ai-routing used to bind the
+// credential lookup on the way in (LoadRoutingFile called WithKeys), so when it
+// was the alternative, a config with a nil lookup here went unnoticed. With
+// --model the only way to bind these lanes, a nil lookup means cloudKey answers
+// "" for every provider and SelectBrain fails closed with "BYOK key required" —
+// while the key is right there, unread.
+func TestAPinnedCloudModelReadsItsKeyFromTheEnvironment(t *testing.T) {
+	const provider, key = "anthropic", "sk-ant-probe"
+	t.Setenv("ANTHROPIC_API_KEY", key)
+
+	// Through the real entry point, not pinnedModelRouting directly: the defect
+	// this pins is a missing binding BETWEEN the two, and a test that called the
+	// helper and then bound keys itself would prove nothing about the caller.
+	if _, _, err := TaskProbeBrain(provider+":claude-probe-model", false, ai.TaskRateExtract); err != nil {
+		t.Fatalf("a cloud --model with its key in the environment must build a router, got %v", err)
+	}
+
+	// The other arm, so this cannot pass by the router having stopped checking:
+	// with the key absent it must still fail closed.
+	t.Setenv("ANTHROPIC_API_KEY", "")
+	if _, _, err := TaskProbeBrain(provider+":claude-probe-model", false, ai.TaskRateExtract); err == nil {
+		t.Fatal("a cloud --model with NO key must fail closed — Margince provides no inference, so a missing BYOK key is a refusal")
 	}
 }

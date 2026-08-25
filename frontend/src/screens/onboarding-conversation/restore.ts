@@ -1,4 +1,6 @@
 import type { components } from "../../api/schema";
+import { formatNumber } from "../../format/format";
+import type { Locale } from "../../i18n";
 import type { NarrationEntry, ResumePoint } from "./conversation-types";
 
 // Session restore as a pure decision: server state in, a start plan out.
@@ -35,6 +37,10 @@ export type RestoreInputs = Readonly<{
   /** The OAuth return deep link (#/onboarding/connect/...) lands mid-journey
    * and must reopen the connect act, exactly like the classic coordinator. */
   routeConnect: boolean;
+  /** The recap entries below are sentences a person reads, and the counts in
+   * them are rendered here rather than at the renderer — a ThreadEntry's
+   * params hold already-formatted strings. */
+  locale: Locale;
 }>;
 
 export type RestorePlan =
@@ -64,7 +70,7 @@ const adoptableReadStates = new Set<CompanySiteRead["status"]>([
   "reading",
 ]);
 
-function readRecap(read: CompanySiteRead): NarrationEntry[] {
+function readRecap(read: CompanySiteRead, locale: Locale): NarrationEntry[] {
   const host = new URL(read.root_url).hostname;
   if (read.status === "ready" || read.status === "partial") {
     return [
@@ -72,7 +78,10 @@ function readRecap(read: CompanySiteRead): NarrationEntry[] {
         kind: "narration",
         id: "recap:read-terminal",
         i18nKey: "ob.conv.recap.readTerminal",
-        params: { host, count: read.profile_fields.length },
+        params: {
+          host,
+          count: formatNumber(read.profile_fields.length, locale),
+        },
       },
     ];
   }
@@ -82,7 +91,7 @@ function readRecap(read: CompanySiteRead): NarrationEntry[] {
         kind: "narration",
         id: "recap:read-reading",
         i18nKey: "ob.conv.recap.readReading",
-        params: { host, pages: read.pages_read ?? 0 },
+        params: { host, pages: formatNumber(read.pages_read ?? 0, locale) },
       },
     ];
   }
@@ -136,7 +145,7 @@ function recapEntries(
   memberPath: boolean,
   target: ResumePoint,
 ): NarrationEntry[] {
-  const { state, profile, voice } = inputs;
+  const { state, profile, voice, locale } = inputs;
   const entries: NarrationEntry[] = [
     { kind: "narration", id: "recap:back", i18nKey: "ob.conv.recap.back" },
   ];
@@ -177,14 +186,16 @@ function recapEntries(
       kind: "narration",
       id: "recap:corpus",
       i18nKey: "ob.conv.recap.corpus",
-      params: { words: voice?.summary?.total_words ?? 0 },
+      params: {
+        words: formatNumber(voice?.summary?.total_words ?? 0, locale),
+      },
     });
   }
   return entries;
 }
 
 export function restorePlan(inputs: RestoreInputs): RestorePlan {
-  const { state, profile, read, routeConnect } = inputs;
+  const { state, profile, read, routeConnect, locale } = inputs;
   // "complete" is the wizard row's own word, and it can outrun the record it
   // claims: the state row and the company profile are separate writes, and the
   // connect act persists completion without requiring a saved profile. An
@@ -215,7 +226,7 @@ export function restorePlan(inputs: RestoreInputs): RestorePlan {
       resumeTarget: null,
       adoptRead:
         read !== null && adoptableReadStates.has(read.status) ? read : null,
-      recap: read !== null ? readRecap(read) : [],
+      recap: read !== null ? readRecap(read, locale) : [],
     };
   }
   const target: ResumePoint =

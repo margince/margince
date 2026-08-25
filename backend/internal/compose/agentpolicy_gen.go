@@ -165,6 +165,7 @@ var agentPolicies = map[string]agentPolicy{
 	"GET /v1/attachments":                                                {Op: "listAttachments", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/attachments/{id}":                                           {Op: "downloadAttachment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/attachments/{id}/extraction":                                {Op: "getAttachmentExtraction", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"GET /v1/attention":                                                  {Op: "getAttention", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/audit-log":                                                  {Op: "listAuditLog", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/auth/capabilities":                                          {Op: "getAuthCapabilities", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"GET /v1/automations/{id}/runs":                                      {Op: "listAutomationRuns", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

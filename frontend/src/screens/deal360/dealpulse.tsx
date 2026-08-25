@@ -18,7 +18,11 @@
 
 import type { components } from "../../api/schema";
 import { useRecordZone } from "../../app/recordzone";
-import { calendarDaysBetween, formatDayMonth } from "../../format/format";
+import {
+  calendarDaysBetween,
+  formatDayMonth,
+  formatNumber,
+} from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 
 type DealStatusCard = components["schemas"]["DealStatusCard"];
@@ -77,7 +81,7 @@ export function DealPulse({
       <span className="d360-pulse-rest">
         {t("deal.pulse.wroteOn", {
           date: formatDayMonth(waiting.at, locale, zone),
-          days,
+          days: formatNumber(days, locale),
         })}
       </span>
     </p>

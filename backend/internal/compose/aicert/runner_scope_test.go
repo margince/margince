@@ -43,7 +43,8 @@ func TestCertifyTaskRecordsTheNarrowestScopeItsSitesCover(t *testing.T) {
 				scores = append(scores, scoreJSON(90))
 			}
 			rec, err := certifyTask(wsContext(t), ai.TaskSummarize, scenarios, censusOfSites(t, tc.sites...),
-				ai.FakeRoutingConfig(), "", 1, quietLogger(), &certifyHooks{
+				ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+				ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 					candidateOpts: []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(replies...))},
 					judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(scores...))},
 				})
@@ -79,7 +80,8 @@ func TestCertifyTaskRecordsTheScopeTheCaseDeclares(t *testing.T) {
 
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize,
 		[]Scenario{testScenarioOnSite(site.Variant, site.Variant, wideBands)},
-		census, ai.FakeRoutingConfig(), "", 1, quietLogger(), &certifyHooks{
+		census, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script("the widget is blue and durable"))},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(scoreJSON(90)))},
 		})

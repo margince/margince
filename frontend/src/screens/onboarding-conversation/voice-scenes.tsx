@@ -5,7 +5,8 @@ import type { components } from "../../api/schema";
 import { Button, Disclosure } from "../../design-system/atoms";
 import { MarginceCoreScene } from "../../design-system/margince-core";
 import { usePrefersReducedMotion } from "../../design-system/motion";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { type Locale, useLocale, useT } from "../../i18n";
 import type { VoiceInsightsData } from "../voice-insights";
 import { parseVoiceInsights } from "../voice-insights";
 import { ACCEPTED_CORPUS_ATTR, VOICE_MIN_WORDS } from "../voice-intake-core";
@@ -139,14 +140,19 @@ function VoiceHeroBand() {
 // never fire at a moment the button disagrees with.
 function useFloorReachedAnnouncement(ready: boolean, words: number): string {
   const t = useT();
+  const { locale } = useLocale();
   const [message, setMessage] = useState("");
   const wasReady = useRef(ready);
   useEffect(() => {
     if (ready && !wasReady.current) {
-      setMessage(t("ob.conv.voice.meterReady", { words }));
+      setMessage(
+        t("ob.conv.voice.meterReady", {
+          words: formatNumber(words, locale),
+        }),
+      );
     }
     wasReady.current = ready;
-  }, [ready, words, t]);
+  }, [ready, words, t, locale]);
   return message;
 }
 
@@ -165,19 +171,22 @@ function VoiceCorpusFloorMeter({
   ready,
 }: Readonly<{ words: number; ready: boolean }>) {
   const t = useT();
+  const { locale } = useLocale();
   const announcement = useFloorReachedAnnouncement(ready, words);
+  const shown = formatNumber(words, locale);
+  const floor = formatNumber(VOICE_MIN_WORDS, locale);
   return (
     <div className="ob-voice-meter">
       <progress
         className="ob-voice-meter-bar"
         value={Math.min(words, VOICE_MIN_WORDS)}
         max={VOICE_MIN_WORDS}
-        aria-label={t("ob.conv.voice.meterLabel", { min: VOICE_MIN_WORDS })}
+        aria-label={t("ob.conv.voice.meterLabel", { min: floor })}
       />
       <p className="ob-voice-meter-line">
         {ready
-          ? t("ob.conv.voice.meterReady", { words })
-          : t("ob.conv.voice.meterProgress", { words, min: VOICE_MIN_WORDS })}
+          ? t("ob.conv.voice.meterReady", { words: shown })
+          : t("ob.conv.voice.meterProgress", { words: shown, min: floor })}
       </p>
       {/* Visually hidden: the visible line above already carries this exact
           sentence once the floor clears, so this only exists to say it out
@@ -222,6 +231,7 @@ export function VoiceCollectScene({
   startError: string | null;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const words = summary?.total_words ?? 0;
   // The floor alone — never `canBuild`, which also folds in a request in
   // flight. A meter that dims for a busy corpus it has already cleared
@@ -311,11 +321,11 @@ export function VoiceCollectScene({
                   <small>
                     {entry.transcript
                       ? t("ob.conv.voice.manifestKept", {
-                          kept: entry.keptWords,
-                          total: entry.inputWords,
+                          kept: formatNumber(entry.keptWords, locale),
+                          total: formatNumber(entry.inputWords, locale),
                         })
                       : t("ob.conv.voice.manifestWords", {
-                          words: entry.keptWords,
+                          words: formatNumber(entry.keptWords, locale),
                         })}
                   </small>
                 </span>
@@ -336,7 +346,9 @@ export function VoiceCollectScene({
         <p>
           {canBuild
             ? t("ob.conv.voice.footReady")
-            : t("ob.conv.voice.footFloor", { min: VOICE_MIN_WORDS })}
+            : t("ob.conv.voice.footFloor", {
+                min: formatNumber(VOICE_MIN_WORDS, locale),
+              })}
         </p>
         <div className="ob-voice-foot-acts">
           <Button small variant="ghost" onClick={onSkip}>
@@ -455,6 +467,7 @@ export function VoiceBuildScene({
   model: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const reached = stage === null ? -1 : BUILD_STAGES.indexOf(stage);
   // A queued build (no stage yet) shows nothing claimed; each reached stage
   // is one quarter, and the last stage completes only when the build does.
@@ -480,8 +493,8 @@ export function VoiceBuildScene({
       <h2>{t("ob.conv.voice.buildingTitle")}</h2>
       <p className="ob-voice-building-meta">
         {t("ob.conv.voice.buildingMeta", {
-          words: summary?.total_words ?? 0,
-          sources,
+          words: formatNumber(summary?.total_words ?? 0, locale),
+          sources: formatNumber(sources, locale),
         })}
       </p>
       <p className="ob-voice-building-model">
@@ -639,6 +652,7 @@ const SENTENCE_HIGH_BOUND = 30;
 function sentenceDimension(
   meanSentence: number,
   t: ReturnType<typeof useT>,
+  locale: Locale,
 ): MeasuredDimension {
   const value =
     meanSentence < SENTENCE_TERSE_MAX
@@ -661,7 +675,9 @@ function sentenceDimension(
     poleLow: t("ob.conv.voice.dimSentencePoleLow"),
     poleHigh: t("ob.conv.voice.dimSentencePoleHigh"),
     fraction,
-    evidence: t("ob.conv.voice.dimSentenceEvidence", { count: meanSentence }),
+    evidence: t("ob.conv.voice.dimSentenceEvidence", {
+      count: formatNumber(meanSentence, locale),
+    }),
   };
 }
 
@@ -672,10 +688,11 @@ function sentenceDimension(
 function measuredDimensions(
   data: VoiceInsightsData,
   t: ReturnType<typeof useT>,
+  locale: Locale,
 ): readonly MeasuredDimension[] {
   return data.meanSentence === null
     ? []
-    : [sentenceDimension(data.meanSentence, t)];
+    : [sentenceDimension(data.meanSentence, t, locale)];
 }
 
 // A readout, not a control: no input, no drag handle, nothing focusable — a
@@ -712,6 +729,7 @@ function VoiceDimensionsCard({
   sources: number | null;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <div className="ob-voice-result-card">
       <div className="ob-voice-dims-head">
@@ -719,15 +737,22 @@ function VoiceDimensionsCard({
           {t("ob.conv.voice.dimensionsTitle")}
         </span>
         <span className="ob-voice-dims-count">
-          {t("ob.conv.voice.dimensionsCount", { count: dimensions.length })}
+          {t("ob.conv.voice.dimensionsCount", {
+            count: formatNumber(dimensions.length, locale),
+          })}
         </span>
       </div>
       {(words !== null || sources !== null) && (
         <p className="ob-voice-dims-meta">
-          {words !== null && t("voice.insights.statWords", { count: words })}
+          {words !== null &&
+            t("voice.insights.statWords", {
+              count: formatNumber(words, locale),
+            })}
           {words !== null && sources !== null ? " · " : ""}
           {sources !== null &&
-            t("voice.insights.statSources", { count: sources })}
+            t("voice.insights.statSources", {
+              count: formatNumber(sources, locale),
+            })}
         </p>
       )}
       <div className="ob-voice-dims-list">
@@ -807,8 +832,9 @@ function VoiceAvoidCard({ avoid }: Readonly<{ avoid: readonly string[] }>) {
  */
 function VoiceResultBoard({ data }: Readonly<{ data: VoiceInsightsData }>) {
   const t = useT();
+  const { locale } = useLocale();
   const hasThinking = data.thinking !== null || data.identity !== null;
-  const dimensions = measuredDimensions(data, t);
+  const dimensions = measuredDimensions(data, t, locale);
   // The sample's own "why" line borrows the same signature-move names the
   // moves card lists in full below, at the reference's own granularity — a
   // short joined phrase, not the identity summary (which now leads the

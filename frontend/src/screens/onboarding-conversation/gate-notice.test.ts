@@ -191,7 +191,7 @@ describe("why the reader is back at the gate", () => {
         kind: "narration",
         id: "3:recap:read-reading",
         i18nKey: "ob.conv.recap.readReading",
-        params: { host: "gradion.com", pages: 4 },
+        params: { host: "gradion.com", pages: "4" },
       },
     ]);
     expect(gateNoticeFor({ ...input, state })).toBeUndefined();

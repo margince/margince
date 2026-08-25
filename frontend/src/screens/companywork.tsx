@@ -30,6 +30,7 @@ import {
 import {
   formatDate,
   formatMoneyOrAbsent,
+  formatNumber,
   relativeDays,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -170,6 +171,7 @@ export function CompanyWorkCard({
  */
 function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const since = newActivities(view);
   const first = firstVisit(view);
   const withheld = (view?.sections_omitted?.length ?? 0) > 0;
@@ -186,7 +188,7 @@ function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
         <span className="t-caption">
           {t(
             since === 1 ? "co.read.newActivityOne" : "co.read.newActivityMany",
-            { count: since },
+            { count: formatNumber(since, locale) },
           )}
         </span>
       )}
@@ -331,6 +333,7 @@ function WorkGroup({
  */
 function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (!view?.deals || !view.projects) {
     return null;
   }
@@ -341,8 +344,8 @@ function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   return (
     <span className="t-small">
       {capped
-        ? t("co.work.countAtLeast", { count })
-        : t("co.work.count", { count })}
+        ? t("co.work.countAtLeast", { count: formatNumber(count, locale) })
+        : t("co.work.count", { count: formatNumber(count, locale) })}
     </span>
   );
 }
@@ -434,7 +437,7 @@ function ProjectLine({
                 a single template would print "since never". */}
             {project.last_activity_at
               ? t("co.work.quiet", {
-                  when: relativeDays(project.last_activity_at, t),
+                  when: relativeDays(project.last_activity_at, t, locale),
                 })
               : t("co.work.neverTouched")}
           </StatusLine>
