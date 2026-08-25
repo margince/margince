@@ -525,6 +525,24 @@ describe("AgentRail", () => {
     expect(row.textContent).toContain("2");
   });
 
+  // The dedupe read takes ONE page. A full page is a floor, not a total, and
+  // printing it flat told a workspace with two hundred open pairs it had fifty
+  // — a number that did not move as the reader cleared them.
+  it("marks the duplicates count as a floor when the page is full", async () => {
+    const user = userEvent.setup();
+    stubAgentRailApi({
+      dedupe: () =>
+        jsonResponse({
+          data: Array.from({ length: 50 }, (_, i) => CANDIDATE(`d-${i}`)),
+          page: { has_more: true, next_cursor: "more" },
+        }),
+    });
+    const { container } = render(ROUTE);
+    await openPanel(user, container);
+    const row = screen.getByRole("link", { name: /^Duplicate pairs open/ });
+    expect(row.textContent).toContain("50+");
+  });
+
   // Absence, not zero: a count nobody has computed yet must not be printed —
   // neither as the section's own badge nor as a row in the panel. Asserted
   // before the approvals fetch ever settles, which is the state a status

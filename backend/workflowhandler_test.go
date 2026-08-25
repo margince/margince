@@ -51,7 +51,9 @@ var writeMethodNames = map[string]bool{
 	"Create": true, "Update": true, "Delete": true,
 	"Exec":  true,
 	"Stage": true, "AddMember": true, "Notify": true,
-	"Audit": true, "AuditWithEvidence": true, "Emit": true,
+	"Audit": true, "AuditWithEvidence": true,
+	"AuditEvent": true, "AuditEventWithEvidence": true,
+	"Emit": true,
 }
 
 // writeFuncNames are package-level (non-selector) calls that apply an

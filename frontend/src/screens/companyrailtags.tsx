@@ -9,6 +9,11 @@ import { useT } from "../i18n";
 import { ListAction, TagAction } from "./companyactions";
 import { useCompanyReadOnlyReason } from "./companyheader";
 import { SectionSummary, sectionAnswered } from "./companyrailshared";
+// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
+// are defined in company360.css. Imported HERE rather than left to the caller:
+// it works today only because the company record page pulls that stylesheet in
+// for its own sake, so this file renders unstyled anywhere else.
+import "./company360.css";
 
 // TagsSection (companyrail.tsx's own section, split into this file so the
 // rail stays under the 500-line ceiling): the lists this account belongs to

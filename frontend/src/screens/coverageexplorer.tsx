@@ -10,7 +10,9 @@ import {
   Skeleton,
   TableScroll,
 } from "../design-system/atoms";
-import { useT } from "../i18n";
+import { forReader } from "../format/collate";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type StrengthBucket, useOrganizationGraph } from "./connections";
 import { incompleteGraph } from "./record360";
@@ -86,6 +88,7 @@ function CoverageGrid({
   contacts,
 }: Readonly<{ orgId: string; contacts: readonly Contact[] }>) {
   const t = useT();
+  const { locale } = useLocale();
   // Read only when somebody opens the explorer: a graph query on every company
   // page load is what the on-demand route-in read already avoids.
   const query = useOrganizationGraph(orgId);
@@ -97,8 +100,8 @@ function CoverageGrid({
   usePublishSelection(selected.length);
 
   const colleagues = useMemo(
-    () => colleaguesFrom(graph, contacts),
-    [graph, contacts],
+    () => colleaguesFrom(graph, contacts, locale),
+    [graph, contacts, locale],
   );
 
   if (query.isPending) {
@@ -169,7 +172,9 @@ function CoverageGrid({
       </div>
       {shown.length >= COLUMN_CAP && (
         <p className="t-caption">
-          {t("acctCoverage.columnCap", { cap: COLUMN_CAP })}
+          {t("acctCoverage.columnCap", {
+            cap: formatNumber(COLUMN_CAP, locale),
+          })}
         </p>
       )}
       {/* `TableScroll` rather than a wrapper of this screen's own: an
@@ -255,6 +260,7 @@ function CoverageGrid({
 function colleaguesFrom(
   graph: ReturnType<typeof useOrganizationGraph>["data"],
   contacts: readonly Contact[],
+  locale: Locale,
 ): ColleagueCoverage[] {
   if (!graph || !Array.isArray(graph.nodes)) {
     return [];
@@ -283,10 +289,11 @@ function colleaguesFrom(
     }
     byColleague.set(edge.from, entry);
   }
-  // Widest coverage first, then by name so equal colleagues come back in a
-  // stable order rather than the payload's.
+  // Widest coverage first, then by name — `forReader`, because these are
+  // colleagues' names and a reader scans them as an alphabet: theirs.
   return [...byColleague.values()].sort(
-    (a, b) => b.bands.size - a.bands.size || a.label.localeCompare(b.label),
+    (a, b) =>
+      b.bands.size - a.bands.size || forReader(a.label, b.label, locale),
   );
 }
 

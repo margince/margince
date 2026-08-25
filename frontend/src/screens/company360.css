@@ -1276,6 +1276,15 @@
   color: var(--textContent);
   overflow-wrap: anywhere;
 }
+/* The route reading is two NAMES and the separator between them, so it wraps as
+   one run rather than breaking a name off its link. `inline` (not flex) because
+   the pair sits inside a `<dd>` that already wraps its text, and a flex box
+   there would stop the arrow ever falling to the second line with the name it
+   points at. */
+.today-route {
+  display: inline;
+}
+
 /* What the reading could not see before making its claim, trailing the answer
    it qualifies. */
 .today-reading-note {
@@ -1499,4 +1508,24 @@
 /* The staged reading is about the row above it and spans the whole panel. */
 .rec-reading {
   display: block;
+}
+
+/* A section subhead inside the Company 360 card: the label on the left, and
+   whatever the section counts on the right. It is what lets a reader tell
+   four readings apart inside one card. */
+.co-360-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: 0;
+}
+
+/* A section's own verbs, on their own row under it — they belong to the
+   section rather than to the card, whose header band names the record. */
+.co-360-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
 }

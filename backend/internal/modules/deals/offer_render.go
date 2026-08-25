@@ -224,12 +224,15 @@ func (s *Store) SetPdfAssetRef(ctx context.Context, id ids.OfferID, ref string, 
 			oldRef = existing.PdfAssetRef
 		}
 		p := storekit.NewPatch()
-		p.Set("pdf_asset_ref", nil, ref)
+		// The ref this render supersedes is the same value reclamation is handed
+		// below, read from the row the lock is holding — so the audit row and the
+		// blob the caller deletes name the same superseded object.
+		p.Set("pdf_asset_ref", existing.PdfAssetRef, ref)
 		if err := p.ApplyWithVersion(ctx, tx, "offer", id.UUID, expectedVersion); err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID,
-			nil, map[string]any{"pdf_asset_ref": ref}); err != nil {
+			p.Before(), p.After()); err != nil {
 			return fmt.Errorf("audit offer render: %w", err)
 		}
 		var err2 error

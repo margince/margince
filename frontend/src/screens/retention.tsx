@@ -17,7 +17,8 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import {
   problemMessageOf,
   QueryGate,
@@ -101,6 +102,7 @@ function PolicyRow({
   onDelete: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const editorTitleId = useId();
   const [editing, setEditing] = useState(false);
@@ -166,7 +168,9 @@ function PolicyRow({
         value={
           <span className="retention-answer">
             <span className="t-small">
-              {t("retention.windowDays", { days: policy.retain_days })}
+              {t("retention.windowDays", {
+                days: formatNumber(policy.retain_days, locale),
+              })}
             </span>
             <Badge>{t(actionLabelKey(policy.action))}</Badge>
             <Badge tone={effectTone(effect)}>{t(effectLabelKey(effect))}</Badge>

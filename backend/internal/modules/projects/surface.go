@@ -79,8 +79,14 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 	if err != nil {
 		return nil, false, err
 	}
+	// Bound BEFORE the query call rather than inside it: `arg` appends to
+	// `args`, and Go does not order that append against the `args...`
+	// expansion in the same call. It appends first today; a compiler free to
+	// expand first would hand pgx one argument fewer than the statement's
+	// placeholders name.
+	columns := projectCardColumns(arg(DefaultProjectQuietDays))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT `+projectCardColumns(arg(DefaultProjectQuietDays))+`
+		SELECT `+columns+`
 		  FROM project p
 		  LEFT JOIN app_user u ON u.id = p.owner_id AND u.status = 'active' AND u.archived_at IS NULL
 		 WHERE EXISTS (
@@ -140,8 +146,9 @@ func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID
 	if err != nil {
 		return nil, err
 	}
+	columns := projectCardColumns(arg(DefaultProjectQuietDays))
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT `+projectCardColumns(arg(DefaultProjectQuietDays))+`
+		SELECT `+columns+`
 		  FROM project p
 		  LEFT JOIN app_user u ON u.id = p.owner_id AND u.status = 'active' AND u.archived_at IS NULL
 		 WHERE p.archived_at IS NULL AND (%[2]s)

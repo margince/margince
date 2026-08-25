@@ -65,7 +65,15 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 	}
 	var out IssuedDOI
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "person", personID.UUID); err != nil {
+		// Live, for the same reason Record refuses a grant against an archived
+		// subject: a double opt-in is a GRANT flow — the token exists so the
+		// subject can confirm one — so issuing it for a person the installation
+		// was told to forget is the same lawful-basis claim by a slower route.
+		//
+		// The `archived_at IS NULL` on the purpose read below is a different
+		// question and does not cover this one: it asks whether the PURPOSE is
+		// live, not whether the subject is.
+		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
 		var requiresDOI bool
@@ -91,11 +99,34 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 		// consent_doi_token rows are a security artifact, not a kernel
 		// entity, so the row id stays untyped.
 		var tokenRowID ids.UUID
-		if err := tx.QueryRow(ctx, `
+		// The subject's liveness rides the INSERT as well as the probe above,
+		// and it is worth being exact about what that buys. It closes the
+		// window between the probe and this statement — an erasure committing
+		// there would otherwise mint a live invitation to grant consent for
+		// somebody the installation has just been told to forget, and the token
+		// would work. It does NOT close the window between this statement and
+		// COMMIT; an erasure landing there still wins, and closing that needs a
+		// row lock on the subject rather than a predicate.
+		//
+		// So this is a narrowing, not a proof, and it is the only statement in
+		// the module that carries one — every other EnsureWritableLive site is
+		// probe-then-write and takes the same residual risk unremarked. Both
+		// halves are tracked on #2574, which decides lock-versus-predicate for
+		// the primitive rather than leaving each statement to answer it.
+		//
+		// No row means the subject went while we were deciding, which is the
+		// answer the probe would have given a moment earlier, so it refuses the
+		// same way rather than failing on a scan.
+		err = tx.QueryRow(ctx, `
 			INSERT INTO consent_doi_token (person_id, purpose_id, token_hash, issued_at, expires_at)
-			VALUES ($1, $2, $3, $4, $5)
+			SELECT $1, $2, $3, $4, $5
+			 WHERE EXISTS (SELECT 1 FROM person WHERE id = $1 AND archived_at IS NULL)
 			RETURNING id`,
-			personID, purposeID, hashDOIToken(token), issued, issued.Add(doiTokenTTL)).Scan(&tokenRowID); err != nil {
+			personID, purposeID, hashDOIToken(token), issued, issued.Add(doiTokenTTL)).Scan(&tokenRowID)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		if err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "consent_doi_token", tokenRowID, nil, map[string]any{

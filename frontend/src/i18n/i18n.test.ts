@@ -21,9 +21,12 @@ import { vi as viCatalog } from "./vi";
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
   // The product name of the buyer surface, and a title that is only the
-  // deal's own name in a placeholder.
+  // deal's own name in a placeholder. "Company 360" is the same kind of
+  // thing: the record page's own name, beside deal360.title which the
+  // product already keeps in English for the sibling record.
   "room.card.title",
   "deal360.title",
+  "co.360.title",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",
@@ -262,6 +265,23 @@ describe("i18n catalogs", () => {
 
   it("an unknown placeholder is left visible, never silently dropped", () => {
     expect(translate("en", "trust.agentTag", {})).toBe("Automated by {agent}");
+  });
+
+  it("refuses a raw number as a param, because nobody would have grouped it", () => {
+    // The gate for locale-blind figures, and it is the COMPILER rather than a
+    // sweep: a number handed to a catalog sentence reaches it through string
+    // coercion, which renders "1234" for a German reader whose every other
+    // figure on the page reads "1.234". Narrowing this parameter to strings
+    // makes every such site a build failure, so a new one cannot be written.
+    //
+    // Asserted here because the narrowing is invisible in the rendered output —
+    // it is the kind of type that gets widened back by the next author who
+    // meets it as an inconvenience, and nothing else would notice.
+    // @ts-expect-error a magnitude must be formatted (format/format.ts) first
+    translate("en", "person.strip.days", { count: 96 });
+    expect(translate("en", "person.strip.days", { count: "96" })).toContain(
+      "96",
+    );
   });
 
   it("the default locale is en (A100: en-GB)", () => {

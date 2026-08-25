@@ -12,53 +12,21 @@ import {
 
 const t = (
   key: Parameters<typeof translate>[1],
-  params?: Record<string, string | number>,
+  params?: Record<string, string>,
 ) => translate("en", key, params);
-
-// Every kind the server can stage. This is `decisionGrants` in
-// backend/internal/modules/approvals/authority.go — a kind absent from THAT
-// map is refused before it is ever written, so it is the whole vocabulary a
-// reader can meet. Restated here because the frontend cannot read it at
-// runtime, and pinned by the test below so it cannot drift silently: two kinds
-// added upstream reached a German list in English before this existed.
-const STAGEABLE_KINDS = [
-  "advance_deal",
-  "ai_model_rate_proposal",
-  "archive_record",
-  "book_meeting",
-  "capture_counterparty",
-  "close_date_correction",
-  "coldstart",
-  "create_record",
-  "deal_follow_up",
-  "deepread",
-  "enrich",
-  "fx_rate_proposal",
-  "held_draft",
-  "lifecycle_change",
-  "merge_records",
-  "org_name_promotion",
-  "progress_deal",
-  "project_attribution",
-  "promote_lead",
-  "quota_release",
-  "send_email",
-  "send_offer",
-  "share_record",
-  "site_lead",
-  "transcript_proposal",
-  "update_record",
-] as const;
 
 describe("what a staged proposal is called", () => {
   // Over LOCALES, not a chosen pair: a locale whose label leaked the raw
   // identifier would pass a two-locale sweep, and the byte-equality guard in
   // i18n.test.ts only flags values EQUAL to English — an identifier-shaped
   // translation differs from English, so nothing else in the suite sees it.
-  it("has a label for every kind the server can stage, in every shipped locale", () => {
-    const missing = STAGEABLE_KINDS.filter((kind) => !(kind in KIND_LABEL));
-    expect(missing, "kinds the reader would meet unlabelled").toEqual([]);
-    for (const kind of STAGEABLE_KINDS) {
+  // WHICH kinds must be here is the server's to say, and
+  // backend/frontendapprovalkinds_test.go holds that both ways against the
+  // grant maps themselves. What this covers is the half a Go test cannot
+  // read: that every label actually says something, in every locale we ship.
+  it("gives every labelled kind real words, in every shipped locale", () => {
+    expect(Object.keys(KIND_LABEL).length).toBeGreaterThan(0);
+    for (const kind of Object.keys(KIND_LABEL)) {
       for (const locale of LOCALES) {
         const label = translate(locale, KIND_LABEL[kind]);
         expect(label.trim(), `${kind} in ${locale}`).not.toBe("");
@@ -117,10 +85,9 @@ describe("what a reader may change before accepting", () => {
     }
   });
 
-  it("declares a policy only for a kind the server can stage", () => {
+  it("declares a policy only for a kind this surface labels", () => {
     const unknown = Object.keys(EDITABLE_FIELDS).filter(
-      (kind) =>
-        !STAGEABLE_KINDS.includes(kind as (typeof STAGEABLE_KINDS)[number]),
+      (kind) => !(kind in KIND_LABEL),
     );
     expect(
       unknown,

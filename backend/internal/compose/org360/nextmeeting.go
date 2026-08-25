@@ -34,7 +34,9 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // meetingParticipantLimit caps the attendee list. A meeting with more names
@@ -73,6 +75,22 @@ func nextMeetingSection(
 	if err != nil {
 		return nil, err
 	}
+	// WHO is in the room is a fact about PEOPLE, and the meeting's own grant
+	// does not open it. A caller holding activity but not person may learn a
+	// meeting is booked — that is an activity fact — and may not be handed the
+	// attendees' names, so the list comes back empty for them rather than the
+	// section disappearing whole.
+	//
+	// auth.Require, not the row scope below: ScopeClauseFor narrows a set the
+	// OBJECT grant has already opened and returns no predicate at all for an
+	// unbounded actor, so a scope clause on its own admits everybody.
+	namesReadable := true
+	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
+		if !errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil, err
+		}
+		namesReadable = false
+	}
 	// Row-scoped per PERSON, not per meeting: the meeting is visible through any
 	// of its links, so a rep who reaches it through their own contact must not
 	// be handed the names of a colleague's contacts who were also in the room.
@@ -82,9 +100,16 @@ func nextMeetingSection(
 	// captured email makes its sender `from` and `attendee`, a reply adds `to` —
 	// and each is its own row. The question here is who is in the room, and the
 	// answer for a person is once.
-	personVisible, err := scopeClause(ctx, "person", "p", arg)
-	if err != nil {
-		return nil, err
+	// Built only when the names are readable: `scopeClause` APPENDS its
+	// operands to `args` as it goes, so a clause built and then thrown away
+	// leaves its arguments behind and the statement's placeholder count no
+	// longer matches what pgx is handed.
+	personVisible := scopeNone
+	if namesReadable {
+		personVisible, err = scopeClause(ctx, "person", "p", arg)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	var (

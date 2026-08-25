@@ -16,15 +16,22 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
 )
 
-// The objects a delimited file may carry. `lead` — not `person` — is what a
-// bulk prospect file creates: ADR-0008's anti-pollution rule is that
-// machine-sourced rows land as leads and are promoted by a human, and IEM-AC-7
-// asserts it by number. A file of people already known to the business is
-// imported as leads and promoted, not smuggled past qualification by the choice
-// of an enum value.
+// The objects a delimited file may carry.
+//
+// `lead` and `person` are two answers to one question about a file of humans,
+// and the caller picks per run. `lead` stays the right answer for a
+// machine-sourced list — those rows land unworked and a human promotes the ones
+// worth keeping. `person` is for a file the business already knows: a migration
+// off another CRM, a corrected export coming back, a customer list from a system
+// being retired. Routing those through the lead table would force a human to
+// re-approve records nobody doubts.
+//
+// `person` bypasses nothing. It runs the same identity ladder every other person
+// create runs, and an email already belonging to someone else refuses the row.
 const (
 	ObjectLead         = "lead"
 	ObjectOrganization = "organization"
+	ObjectPerson       = "person"
 	// ConnectorCSV is the direct migrate-in connector this source serves
 	// (UC-E11-03). Its sibling constants name the flip's own sources.
 	ConnectorCSV = "csv"

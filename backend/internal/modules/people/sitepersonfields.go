@@ -128,7 +128,7 @@ func (s *Store) applySitePersonFieldsTx(ctx context.Context, tx pgx.Tx, orgID id
 	}
 
 	sourceRef := siteFieldSource + ":" + in.SourceURL
-	applied, err := fillSitePersonFields(ctx, tx, personID, sourceRef, by, in)
+	applied, previous, values, err := fillSitePersonFields(ctx, tx, personID, sourceRef, by, in)
 	if err != nil {
 		return false, err
 	}
@@ -139,8 +139,15 @@ func (s *Store) applySitePersonFieldsTx(ctx context.Context, tx pgx.Tx, orgID id
 		return true, nil
 	}
 
-	auditID, err := storekit.Audit(ctx, tx, actionUpdate, entityPerson, personID.UUID,
-		nil, map[string]any{auditKeyFields: applied, "source_ref": sourceRef})
+	// The images carry the fields the page filled and what each held before,
+	// which for this writer is nothing: every fill here is guarded — the
+	// evidence rows by ON CONFLICT DO NOTHING, the title column by IS NULL — so
+	// a field that landed had no prior value. WHICH page said so is context
+	// about the mutation and rides evidence, because a source folded into the
+	// after-image projects as a change to a field of that name.
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, actionUpdate, entityPerson, personID.UUID,
+		previous, values,
+		map[string]any{auditKeySource: siteFieldSource, "source_ref": sourceRef})
 	if err != nil {
 		return false, fmt.Errorf("people: auditing the site person fill: %w", err)
 	}
@@ -212,8 +219,13 @@ func matchSitePerson(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, i
 // The published EMAIL is deliberately never written. It is a matching key here,
 // not a fill: adding an address to an existing person changes who that record
 // is reachable as, and the site is not authority for that.
-func fillSitePersonFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID, sourceRef, by string, in SitePersonFields) ([]string, error) {
+// It answers the fields it wrote, in the order it wrote them, and the audit
+// images those fields carry — an explicit null per field before, the written
+// value after. Field history projects per field from those, so neither can be a
+// list of names.
+func fillSitePersonFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID, sourceRef, by string, in SitePersonFields) ([]string, map[string]any, map[string]any, error) {
 	var applied []string
+	previous, values := map[string]any{}, map[string]any{}
 	write := func(field, value string) error {
 		value = strings.TrimSpace(value)
 		if value == "" {
@@ -236,14 +248,15 @@ func fillSitePersonFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 			return err
 		}
 		applied = append(applied, field)
+		previous[field], values[field] = nil, value
 		return nil
 	}
 
 	if err := write("role", in.Role); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	if err := write("linkedin", in.LinkedinURL); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	// The title column carries the role for display. Fill-only-empty: the NULL
 	// predicate is the CAS, so an occupied title stands whoever set it — and
@@ -254,11 +267,12 @@ func fillSitePersonFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		tag, err := tx.Exec(ctx, `
 			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL AND archived_at IS NULL`, personID, role)
 		if err != nil {
-			return nil, fmt.Errorf("people: site person title fill: %w", err)
+			return nil, nil, nil, fmt.Errorf("people: site person title fill: %w", err)
 		}
 		if tag.RowsAffected() > 0 {
 			applied = append(applied, "title")
+			previous["title"], values["title"] = nil, role
 		}
 	}
-	return applied, nil
+	return applied, previous, values, nil
 }

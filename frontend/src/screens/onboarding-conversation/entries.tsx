@@ -3,7 +3,8 @@ import { ChevronDown, CircleAlert, CircleCheck, Clock } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { Avatar, Button } from "../../design-system/atoms";
 import { Logomark } from "../../design-system/logomark";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useMe } from "../common";
 import type {
@@ -21,13 +22,11 @@ type NarrationEntry = Extract<ThreadEntry, { kind: "narration" }>;
 type UserEntry = Extract<ThreadEntry, { kind: "user" }>;
 type OutcomeEntry = Extract<ThreadEntry, { kind: "outcome" }>;
 
-type Translate = ReturnType<typeof useT>;
-
 function resolvedParams(
-  t: Translate,
-  params: Record<string, string | number> | undefined,
+  t: Translator,
+  params: Record<string, string> | undefined,
   paramKeys: Record<string, MessageKey> | undefined,
-): Record<string, string | number> {
+): Record<string, string> {
   const translated = Object.fromEntries(
     Object.entries(paramKeys ?? {}).map(([name, key]) => [name, t(key)]),
   );
@@ -200,6 +199,7 @@ export function ActivityGroup({
   entries,
 }: Readonly<{ entries: readonly NarrationEntry[] }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const latest = entries.at(-1);
   if (latest === undefined) {
@@ -216,7 +216,11 @@ export function ActivityGroup({
       >
         <i aria-hidden />
         <span>{textOf(latest)}</span>
-        <b>{t("ob.conv.activity.steps", { count: entries.length })}</b>
+        <b>
+          {t("ob.conv.activity.steps", {
+            count: formatNumber(entries.length, locale),
+          })}
+        </b>
         <ChevronDown aria-hidden />
       </button>
       {open && (

@@ -2,9 +2,10 @@ import { useId } from "react";
 import type { components } from "../api/schema";
 import { Button, EmptyState, Modal, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
-import { ApprovalRow, useApprovalTokenSink } from "./inbox";
+import { ApprovalRow, useDecisionSink } from "./inbox";
 import { useTargetApprovals } from "./inbox.queries";
 
 // What is waiting on a decision FOR THIS ACCOUNT, where the account is being
@@ -53,6 +54,7 @@ export function DecisionsChip({
   onOpen,
 }: Readonly<{ view?: Organization360; onOpen: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const count = pendingApprovals(view).length;
   if (count === 0) {
     return null;
@@ -62,7 +64,7 @@ export function DecisionsChip({
   // them: this opens a queue, it does not decide anything.
   return (
     <Button small variant="ghost" onClick={onOpen}>
-      {t("co.decisions.open", { count })}
+      {t("co.decisions.open", { count: formatNumber(count, locale) })}
     </Button>
   );
 }
@@ -77,8 +79,9 @@ export function CompanyApprovalsPanel({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
-  const sink = useApprovalTokenSink();
+  const sink = useDecisionSink();
   // The panel reads the account's OWN queue rather than the capped page the
   // 360 carries for the chip count, so deciding through it cannot strand the
   // remainder behind a workspace-wide inbox the reader never asked for. The
@@ -112,7 +115,7 @@ export function CompanyApprovalsPanel({
         <section key={group.kind} className="co-part">
           <Eyebrow as="h3">
             {t("co.decisions.group", {
-              count: group.approvals.length,
+              count: formatNumber(group.approvals.length, locale),
               kind: approvalKindLabel(group.kind, t),
             })}
           </Eyebrow>
@@ -120,14 +123,12 @@ export function CompanyApprovalsPanel({
             <ApprovalRow
               key={approval.id}
               approval={approval}
-              onApproved={sink.onApproved}
               onAlreadyDecided={sink.onAlreadyDecided}
               extraInvalidateKeys={extraInvalidateKeys}
             />
           ))}
         </section>
       ))}
-      {sink.tokenModal}
     </Modal>
   );
 }

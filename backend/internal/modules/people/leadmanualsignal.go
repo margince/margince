@@ -100,12 +100,9 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 		if superseded {
 			return &FactorAutoSourcedError{Factor: in.Factor}
 		}
-		// One LIVE band per factor: re-setting replaces. The superseded rows
-		// stay, which is why this deletes only the live one.
-		if _, err := tx.Exec(ctx,
-			`DELETE FROM lead_manual_signal WHERE lead_id = $1 AND factor = $2 AND superseded_at IS NULL`,
-			leadID, in.Factor); err != nil {
-			return fmt.Errorf("replace manual signal: %w", err)
+		before, err := replaceLiveManualSignal(ctx, tx, leadID, in.Factor)
+		if err != nil {
+			return err
 		}
 		row := tx.QueryRow(ctx,
 			`INSERT INTO lead_manual_signal (lead_id, factor, band, points, signal_kind, confidence, reason, set_by)
@@ -116,10 +113,13 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 		if err := scanManualSignal(row, &out); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "lead", leadID.UUID, nil,
-			map[string]any{auditKeyManualSignal: map[string]any{
-				fieldKeyFactor: in.Factor, "band": in.Band, "points": points, fieldKeyReason: in.Reason,
-			}})
+		// What the factor held before is the input this one replaced — read out
+		// of the row it withdrew, not re-queried, so the two describe one
+		// transaction. A factor nobody had answered records an explicit null:
+		// "there was no input" and "nobody looked" are different answers.
+		auditID, err := storekit.Audit(ctx, tx, "update", "lead", leadID.UUID,
+			before,
+			map[string]any{auditKeyManualSignal: manualSignalImage(in.Factor, in.Band, points, in.Reason)})
 		if err != nil {
 			return err
 		}
@@ -134,6 +134,40 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 		return crmcontracts.LeadManualSignal{}, err
 	}
 	return out, nil
+}
+
+// replaceLiveManualSignal withdraws the live band for one factor and answers
+// what it held. One LIVE band per factor: re-setting replaces. The superseded
+// rows stay, which is why this deletes only the live one.
+//
+// The prior state comes back from the DELETE itself rather than from a read
+// before it: a separate SELECT would describe the row as some other statement
+// left it, and the audit row would then claim a transition that never happened.
+func replaceLiveManualSignal(ctx context.Context, tx pgx.Tx, leadID ids.LeadID, factor string) (map[string]any, error) {
+	var band, reason string
+	var points int
+	err := tx.QueryRow(ctx,
+		`DELETE FROM lead_manual_signal WHERE lead_id = $1 AND factor = $2 AND superseded_at IS NULL
+		 RETURNING band, points, reason`, leadID, factor).Scan(&band, &points, &reason)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// A factor nobody had answered records an explicit null: "there was no
+		// input" and "nobody looked" are different answers, and only the first
+		// is what this branch means.
+		return map[string]any{auditKeyManualSignal: nil}, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("replace manual signal: %w", err)
+	}
+	return map[string]any{auditKeyManualSignal: manualSignalImage(factor, band, points, reason)}, nil
+}
+
+// manualSignalImage is the audit shape of one human-supplied factor, spelled
+// once so the before and after images of a replacement cannot describe the same
+// row differently.
+func manualSignalImage(factor, band string, points int, reason string) map[string]any {
+	return map[string]any{
+		fieldKeyFactor: factor, "band": band, "points": points, fieldKeyReason: reason,
+	}
 }
 
 // ListLeadManualSignals returns the stored qualification evidence exactly as

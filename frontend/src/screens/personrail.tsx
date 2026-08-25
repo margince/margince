@@ -31,8 +31,9 @@ import {
   type SectionState,
   SurfaceState,
 } from "../design-system/surfacestate";
-import { formatDayMonth, relativeDays } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { stable } from "../format/collate";
+import { formatDayMonth, formatNumber, relativeDays } from "../format/format";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import { useProviderLabel } from "./channelproviders";
 import {
   ProblemError,
@@ -564,12 +565,12 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
   // identity as a new search space and clears the picker's candidates —
   // so the set only gets a new identity when the set of ids it names
   // actually changes.
-  // "en" rather than the reader's locale, because this string is only ever
-  // compared against a previous rendering of itself: whose locale produced it
-  // must not be part of the answer.
+  // `stable` rather than the reader's collation, because this string is only
+  // ever compared against a previous rendering of itself: whose locale produced
+  // it must not be part of the answer.
   const connectedOrgKey = employments
     .map((employment) => employment.organization_id)
-    .sort((a, b) => a.localeCompare(b, "en"))
+    .sort(stable)
     .join(",");
   const connectedOrgIds = useMemo(
     () => (connectedOrgKey === "" ? [] : connectedOrgKey.split(",")),
@@ -976,6 +977,7 @@ function RelationshipPulse({
   onExplain,
 }: Readonly<{ view: Person360; onExplain: () => void }>) {
   const t = useT();
+  const { locale } = useLocale();
   const hidden = withheldSections(view);
   const inbound = view.last_inbound_at;
   const outbound = view.last_outbound_at;
@@ -1007,11 +1009,15 @@ function RelationshipPulse({
       />
       <Row
         label={t("person.rail.lastReply")}
-        value={reading(sinceWords(inbound, t), hidden.lastTouch, t)}
+        value={reading(sinceWords(inbound, t, locale), hidden.lastTouch, t)}
       />
       <Row
         label={t("person.rail.coverage")}
-        value={reading(colleagueWords(colleagues, t), hidden.network, t)}
+        value={reading(
+          colleagueWords(colleagues, t, locale),
+          hidden.network,
+          t,
+        )}
       />
       <Row
         label={t("person.rail.trend")}
@@ -1031,10 +1037,14 @@ function RelationshipPulse({
   );
 }
 
-function colleagueWords(count: number, t: ReturnType<typeof useT>): string {
+function colleagueWords(
+  count: number,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
   return count === 1
     ? t("person.rail.colleagueOne")
-    : t("person.rail.colleagues", { count });
+    : t("person.rail.colleagues", { count: formatNumber(count, locale) });
 }
 
 function trendWord(view: Person360, t: ReturnType<typeof useT>): string {
@@ -1067,6 +1077,7 @@ function WhoKnows({
   firstName,
 }: Readonly<{ view: Person360; firstName: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const colleagues = view.network?.colleagues ?? [];
   return (
     <Disclosure
@@ -1089,7 +1100,7 @@ function WhoKnows({
                 {/* The PROOF, never a ranking nobody can check: six unanswered
                     sends must not read as stronger than two real exchanges. */}
                 {t("person.rail.exchanges", {
-                  count: colleague.interactions_90d,
+                  count: formatNumber(colleague.interactions_90d, locale),
                 })}
               </span>
             </span>
@@ -1104,7 +1115,13 @@ function WhoKnows({
 
 function SignalsAndRisks({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
-  const { signals, skipped } = derivedSignals(view, withheldSections(view), t);
+  const { locale } = useLocale();
+  const { signals, skipped } = derivedSignals(
+    view,
+    withheldSections(view),
+    t,
+    locale,
+  );
   return (
     <Disclosure className="pe-sect" open summary={t("person.rail.signals")}>
       <SurfaceState
@@ -1148,18 +1165,23 @@ function derivedSignals(
   view: Person360,
   hidden: Withheld,
   t: ReturnType<typeof useT>,
+  locale: Locale,
 ): Readonly<{ signals: ReadonlyArray<Signal>; skipped: boolean }> {
   const out: Signal[] = [];
   let skipped = hidden.lastTouch;
   const quiet = hidden.lastTouch ? null : daysSince(view.last_inbound_at);
   if (quiet != null && quiet > 14) {
     out.push({
-      text: t("person.rail.noReplyDays", { count: quiet }),
+      text: t("person.rail.noReplyDays", {
+        count: formatNumber(quiet, locale),
+      }),
       tone: "bad",
     });
   } else if (quiet != null) {
     out.push({
-      text: t("person.rail.repliedDaysAgo", { count: quiet }),
+      text: t("person.rail.repliedDaysAgo", {
+        count: formatNumber(quiet, locale),
+      }),
       tone: "good",
     });
   }
@@ -1308,6 +1330,7 @@ function verdictClass(verdict: string | undefined): string {
 // it — this is the glance, the Activity tab is the ledger.
 function RecentActivity({ view }: Readonly<{ view: Person360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   // The section's own emptiness is decided BEFORE the rows are defaulted: an
   // absent list and an empty one collapse into the same `[]` here, and that
   // collapse is what turns "you may not read the timeline" into "nothing has
@@ -1328,7 +1351,7 @@ function RecentActivity({ view }: Readonly<{ view: Person360 }>) {
           <div className="pe-rail-row" key={row.id}>
             <span className="pe-rail-label">{row.subject ?? row.kind}</span>
             <span className="pe-rail-value-muted">
-              {sinceWords(row.occurred_at, t)}
+              {sinceWords(row.occurred_at, t, locale)}
             </span>
           </div>
         ))}
@@ -1376,7 +1399,8 @@ function daysSince(at: string | null | undefined): number | null {
 // call sites in this file read better with it.
 function sinceWords(
   at: string | null | undefined,
-  t: ReturnType<typeof useT>,
+  t: Translator,
+  locale: Locale,
 ): string {
-  return relativeDays(at, t);
+  return relativeDays(at, t, locale);
 }

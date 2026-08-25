@@ -4,8 +4,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query";
-import { TriangleAlert } from "lucide-react";
-import { type ReactNode, useCallback, useEffect, useId, useState } from "react";
+import { type ReactNode, useCallback, useId, useState } from "react";
 import { api } from "../api/client";
 import {
   approvalDotTier,
@@ -42,9 +41,10 @@ import {
   EvidenceChip,
   ProvenanceTag,
 } from "../design-system/trust";
-import { formatDateTime } from "../format/format";
-import { formatCountdown, type Translator, useNow } from "../format/now";
+import { formatDateTime, formatNumber } from "../format/format";
+import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
+import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -229,10 +229,10 @@ function ApprovalDetailModal({
 }
 
 // The row-local decide outcomes that KEEP the row mounted: a generic error
-// and the version-skew re-stage state. The success token (AC-4) and the
-// already-decided note (AC-6) are deliberately NOT here — both fire a pending
-// invalidation that unmounts this row, so they are surfaced at screen level
-// (InboxScreen) where they survive the refetch.
+// and the version-skew re-stage state. The already-decided note (AC-6) is
+// deliberately NOT here — it fires a pending invalidation that unmounts this
+// row, so it is surfaced at screen level (InboxScreen) where it survives the
+// refetch.
 function DecideOutcome({
   decide,
   skew,
@@ -270,103 +270,24 @@ function DecideOutcome({
   );
 }
 
-// The screen-level "shown once" approval-token surface (AC-4). Rendered by
-// InboxScreen/HomeScreen — NOT the row — so the pending invalidation that
-// unmounts the just-approved row cannot take the token with it. This is the
-// most consequential irrecoverable state on the surface, so it leads with a
-// strong heading + a warn-tinted banner, not a small gray caption.
-function TokenOnceModal({
-  token,
-  onClose,
-}: Readonly<{ token: string | null; onClose: () => void }>) {
-  const t = useT();
-  const headingId = useId();
-  const [copied, setCopied] = useState(false);
-  // A fresh token clears the previous "copied" acknowledgement (referencing
-  // `token` in the body keeps it a genuine effect dependency).
-  useEffect(() => {
-    if (token != null) {
-      setCopied(false);
-    }
-  }, [token]);
-  const handleCopy = () => {
-    if (!token) {
-      return;
-    }
-    const clip = navigator.clipboard;
-    if (!clip) {
-      setCopied(false);
-      return;
-    }
-    clip.writeText(token).then(
-      () => setCopied(true),
-      () => setCopied(false),
-    );
-  };
-  return (
-    <Modal open={token != null} onClose={onClose} labelledBy={headingId}>
-      <h2
-        id={headingId}
-        className="t-h2"
-        style={{ color: "var(--textPrimary)", marginBottom: 10 }}
-      >
-        {t("inbox.tokenTitle")}
-      </h2>
-      <div
-        style={{
-          display: "flex",
-          gap: 8,
-          alignItems: "center",
-          background: "var(--warnBg)",
-          border: "1px solid var(--warnBorder)",
-          borderRadius: "var(--r-sm)",
-          padding: "8px 10px",
-          marginBottom: 10,
-        }}
-      >
-        <TriangleAlert size={16} color="var(--warn)" aria-hidden />
-        <span className="t-caption" style={{ color: "var(--warn)" }}>
-          {t("inbox.tokenOnce")}
-        </span>
-      </div>
-      <p className="t-mono" style={{ wordBreak: "break-all" }}>
-        {token}
-      </p>
-      <div className="actions">
-        <Button small onClick={handleCopy}>
-          {copied ? t("inbox.copied") : t("inbox.copy")}
-        </Button>
-        <Button small variant="primary" onClick={onClose}>
-          {t("inbox.tokenDone")}
-        </Button>
-      </div>
-    </Modal>
-  );
-}
-
-// Shared decision sink (AC-4/AC-6, cross-surface): owns the screen-level state
-// that must OUTLIVE the row that triggered it (a decide invalidates the
-// pending list, unmounting the row) — the once-shown approval token and the
-// "already decided by someone else" note. BOTH InboxScreen and HomeScreen
-// consume it so either surface catches the minted token AND shows the honest
-// already-decided note; neither may live in ApprovalRow (it unmounts).
-export function useApprovalTokenSink(): {
-  onApproved: (approvalId: string, token: string) => void;
+// Shared decision sink (AC-6, cross-surface): owns the screen-level state that
+// must OUTLIVE the row that triggered it — a decide invalidates the pending
+// list, which unmounts the row before it could render its own note. BOTH
+// InboxScreen and HomeScreen consume it so either surface shows the honest
+// already-decided note; it may not live in ApprovalRow (it unmounts).
+//
+// The approve response still carries an approval token. It is not shown to
+// anybody: an agent redeems its own staging by re-issuing the call under
+// `X-Approval-Token`, and the runner's resume path loads the staged proposal
+// server-side — so no human has ever needed to carry the string, while being
+// handed an irrecoverable secret made every approval look like a key ceremony.
+export function useDecisionSink(): {
   onAlreadyDecided: () => void;
-  tokenModal: ReactNode;
   decidedNote: ReactNode;
 } {
   const t = useT();
-  const [token, setToken] = useState<string | null>(null);
   const [alreadyDecided, setAlreadyDecided] = useState(false);
-  const onApproved = useCallback(
-    (_approvalId: string, minted: string) => setToken(minted),
-    [],
-  );
   const onAlreadyDecided = useCallback(() => setAlreadyDecided(true), []);
-  const tokenModal = (
-    <TokenOnceModal token={token} onClose={() => setToken(null)} />
-  );
   const decidedNote = alreadyDecided ? (
     <Card
       as="div"
@@ -386,7 +307,7 @@ export function useApprovalTokenSink(): {
       </Button>
     </Card>
   ) : null;
-  return { onApproved, onAlreadyDecided, tokenModal, decidedNote };
+  return { onAlreadyDecided, decidedNote };
 }
 
 // The words the decision card needs, in this surface's own vocabulary.
@@ -417,10 +338,12 @@ function rowLabels(t: Translator): DecisionCardLabels {
 
 // The status chip's words. Spelled per surface like every other label bag here:
 // what a countdown or a verdict is CALLED belongs to the screen showing it.
-function statusLabels(t: Translator): DecisionStatusLabels {
+function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
   return {
     expiresIn: (msRemaining) =>
-      t("inbox.expiresIn", { countdown: formatCountdown(msRemaining, t) }),
+      t("inbox.expiresIn", {
+        countdown: formatCountdown(msRemaining, t, locale),
+      }),
     approved: t("inbox.status.approved"),
     rejected: t("inbox.status.rejected"),
     expired: t("inbox.status.expired"),
@@ -511,16 +434,14 @@ function StagedEditor({
 export function ApprovalRow({
   approval,
   decided,
-  onApproved,
   onAlreadyDecided,
   extraInvalidateKeys,
 }: Readonly<{
   approval: Approval;
   decided?: boolean;
-  // Lift the just-minted token / the already-decided signal to a surface that
-  // survives this row's unmount (the pending invalidation drops it). Optional
-  // so HomeScreen can reuse the row without a screen-level surface.
-  onApproved?: (approvalId: string, token: string) => void;
+  // Lift the already-decided signal to a surface that survives this row's
+  // unmount (the pending invalidation drops it). Optional so HomeScreen can
+  // reuse the row without a screen-level surface.
   onAlreadyDecided?: () => void;
   // Reads outside the approvals list that a decision also changes. A record
   // page carrying its own count of what is waiting has to re-read it, and only
@@ -528,6 +449,7 @@ export function ApprovalRow({
   extraInvalidateKeys?: readonly QueryKey[];
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
   const tierMap = useAgentTierMap();
@@ -567,12 +489,7 @@ export function ApprovalRow({
       }
       return data;
     },
-    onSuccess: (data) => {
-      // Lift the token FIRST — the parent state is set before the invalidation
-      // below unmounts this row, so the screen-level surface always receives it.
-      if (data?.approval_token) {
-        onApproved?.(approval.id, data.approval_token);
-      }
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
@@ -654,7 +571,7 @@ export function ApprovalRow({
             approval={approval}
             decided={!!decided}
             now={now}
-            labels={statusLabels(t)}
+            labels={statusLabels(t, locale)}
           />
         </>
       }
@@ -814,6 +731,7 @@ function BundleExpiryChip({
   now,
 }: Readonly<{ live: readonly Approval[]; now: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (live.length === 0) {
     return <Badge tone="danger">{t("inbox.expired")}</Badge>;
   }
@@ -827,7 +745,7 @@ function BundleExpiryChip({
   return (
     <Badge tone={decisionUrgencyTone(remaining)}>
       {t("inbox.bundle.expiresIn", {
-        countdown: formatCountdown(remaining, t),
+        countdown: formatCountdown(remaining, t, locale),
       })}
     </Badge>
   );
@@ -847,19 +765,18 @@ type BundleVerdict = "approve" | "reject";
 function BundleCard({
   bundleId,
   members,
-  onApproved,
   onAlreadyDecided,
   onDecided,
 }: Readonly<{
   bundleId: string;
   members: readonly Approval[];
-  onApproved?: (approvalId: string, token: string) => void;
   onAlreadyDecided?: () => void;
   // Lifts the per-member report to a surface that survives this card's unmount:
   // the decision invalidates the pending list, which takes the card with it.
   onDecided: (verdict: BundleVerdict, decision: BundleDecision) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
   const tierMap = useAgentTierMap();
@@ -936,7 +853,9 @@ function BundleCard({
       </div>
       <p className="t-h2">{subject}</p>
       <p className="t-small approval-bundle-why">
-        {t("inbox.bundle.why", { count: members.length })}
+        {t("inbox.bundle.why", {
+          count: formatNumber(members.length, locale),
+        })}
       </p>
       {live.length > 0 && (
         <div className="approval-gate">
@@ -950,14 +869,18 @@ function BundleCard({
             pending={decide.isPending}
             onClick={() => setConfirming("approve")}
           >
-            {t("inbox.bundle.approveAll", { count: live.length })}
+            {t("inbox.bundle.approveAll", {
+              count: formatNumber(live.length, locale),
+            })}
           </Button>
           <Button
             small
             disabled={decide.isPending}
             onClick={() => setConfirming("reject")}
           >
-            {t("inbox.bundle.rejectAll", { count: live.length })}
+            {t("inbox.bundle.rejectAll", {
+              count: formatNumber(live.length, locale),
+            })}
           </Button>
         </div>
       )}
@@ -968,7 +891,9 @@ function BundleCard({
       )}
       <Disclosure
         className="approval-bundle-open"
-        summary={t("inbox.bundle.members", { count: members.length })}
+        summary={t("inbox.bundle.members", {
+          count: formatNumber(members.length, locale),
+        })}
       >
         {/* A list, not an indent: the count and the boundaries of the group have
             to reach a reader who is hearing this page rather than seeing it. */}
@@ -977,7 +902,6 @@ function BundleCard({
             <li key={member.id}>
               <ApprovalRow
                 approval={member}
-                onApproved={onApproved}
                 onAlreadyDecided={onAlreadyDecided}
               />
             </li>
@@ -987,7 +911,9 @@ function BundleCard({
       <ConfirmModal
         open={confirming === "approve"}
         onClose={() => setConfirming(null)}
-        title={t("inbox.bundle.approveAll", { count: live.length })}
+        title={t("inbox.bundle.approveAll", {
+          count: formatNumber(live.length, locale),
+        })}
         confirmLabel={t("trust.accept")}
         pending={decide.isPending}
         onConfirm={() => send("approve", "")}
@@ -997,7 +923,9 @@ function BundleCard({
       <ConfirmModal
         open={confirming === "reject"}
         onClose={() => setConfirming(null)}
-        title={t("inbox.bundle.rejectAll", { count: live.length })}
+        title={t("inbox.bundle.rejectAll", {
+          count: formatNumber(live.length, locale),
+        })}
         confirmLabel={t("inbox.reject")}
         confirmVariant="danger"
         pending={decide.isPending}
@@ -1072,7 +1000,11 @@ function outcomeCounts(decision: BundleDecision): Map<BundleOutcome, number> {
 // claim the response does not make: a member that had lapsed, one somebody else
 // had already answered, and one whose follow-on change failed to land each came
 // back saying so, and each is a different thing for the reader to do next.
-function outcomeLines(result: BundleResult, t: Translator): string[] {
+function outcomeLines(
+  result: BundleResult,
+  t: Translator,
+  locale: Locale,
+): string[] {
   const counts = outcomeCounts(result.decision);
   const lines: string[] = [];
   const decided = counts.get("decided") ?? 0;
@@ -1082,7 +1014,7 @@ function outcomeLines(result: BundleResult, t: Translator): string[] {
         result.verdict === "approve"
           ? "inbox.bundle.result.approved"
           : "inbox.bundle.result.rejected",
-        { count: decided },
+        { count: formatNumber(decided, locale) },
       ),
     );
   }
@@ -1090,7 +1022,11 @@ function outcomeLines(result: BundleResult, t: Translator): string[] {
     const count = counts.get(outcome) ?? 0;
     if (count > 0) {
       const keys = OUTCOME_KEYS[outcome];
-      lines.push(t(count === 1 ? keys.one : keys.other, { count }));
+      lines.push(
+        t(count === 1 ? keys.one : keys.other, {
+          count: formatNumber(count, locale),
+        }),
+      );
     }
   }
   return lines;
@@ -1111,14 +1047,15 @@ function outcomeTone(decision: BundleDecision): "danger" | "warn" | "success" {
 
 // What the decision actually did, member by member.
 //
-// Screen-level, like the minted token, because the decision invalidates the
-// pending list and unmounts the card that made it.
+// Screen-level, like the already-decided note, because the decision
+// invalidates the pending list and unmounts the card that made it.
 function BundleOutcomeNote({
   result,
   onDismiss,
 }: Readonly<{ result: BundleResult; onDismiss: () => void }>) {
   const t = useT();
-  const lines = outcomeLines(result, t);
+  const { locale } = useLocale();
+  const lines = outcomeLines(result, t, locale);
   // A report with nothing in it says nothing: a call that decided no member
   // answers 404, so there is no honest sentence to put in an empty box here.
   if (lines.length === 0) {
@@ -1146,12 +1083,10 @@ function BundleOutcomeNote({
 // The pending queue: one card per act, one row per proposal staged alone.
 function PendingList({
   approvals,
-  onApproved,
   onAlreadyDecided,
   onBundleDecided,
 }: Readonly<{
   approvals: readonly Approval[];
-  onApproved: (approvalId: string, token: string) => void;
   onAlreadyDecided: () => void;
   onBundleDecided: (verdict: BundleVerdict, decision: BundleDecision) => void;
 }>) {
@@ -1163,7 +1098,6 @@ function PendingList({
             key={item.bundleId}
             bundleId={item.bundleId}
             members={item.members}
-            onApproved={onApproved}
             onAlreadyDecided={onAlreadyDecided}
             onDecided={onBundleDecided}
           />
@@ -1171,7 +1105,6 @@ function PendingList({
           <ApprovalRow
             key={item.approval.id}
             approval={item.approval}
-            onApproved={onApproved}
             onAlreadyDecided={onAlreadyDecided}
           />
         ),
@@ -1183,12 +1116,10 @@ function PendingList({
 export function InboxScreen() {
   const t = useT();
   const [tab, setTab] = useState<"pending" | "decided">("pending");
-  // Screen-level surfaces that must outlive the row that triggered them (a
-  // decide invalidates the pending list, unmounting the row): the once-shown
-  // approval token (AC-4, via the shared sink) and the "already decided by
-  // someone else" note (AC-6).
-  const { onApproved, onAlreadyDecided, tokenModal, decidedNote } =
-    useApprovalTokenSink();
+  // A screen-level surface that must outlive the row that triggered it (a
+  // decide invalidates the pending list, unmounting the row): the "already
+  // decided by someone else" note (AC-6).
+  const { onAlreadyDecided, decidedNote } = useDecisionSink();
   // The per-member report of a bundle decision, held here for the same reason:
   // the decision unmounts the card that made it.
   const [bundleResult, setBundleResult] = useState<BundleResult | null>(null);
@@ -1223,7 +1154,6 @@ export function InboxScreen() {
             <div className="approval-queue arrive-stack">
               <PendingList
                 approvals={page.data}
-                onApproved={onApproved}
                 onAlreadyDecided={onAlreadyDecided}
                 onBundleDecided={(verdict, decision) =>
                   setBundleResult({ verdict, decision })
@@ -1241,7 +1171,6 @@ export function InboxScreen() {
                   key={approval.id}
                   approval={approval}
                   decided
-                  onApproved={onApproved}
                   onAlreadyDecided={onAlreadyDecided}
                 />
               ))}
@@ -1249,7 +1178,6 @@ export function InboxScreen() {
           )
         }
       </QueryGate>
-      {tokenModal}
     </div>
   );
 }

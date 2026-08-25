@@ -38,63 +38,25 @@ func (s *Store) UpdatePipeline(ctx context.Context, id ids.PipelineID, in Update
 	}
 	var out crmcontracts.Pipeline
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
-		// The row lock makes the version read and the update below one
-		// race-free unit.
-		if _, err := storekit.LockRow(ctx, tx, "pipeline", id.UUID, storekit.LiveOnly); err != nil {
+		// The row lock makes the read below and the update one race-free unit.
+		lock, err := storekit.LockRow(ctx, tx, "pipeline", id.UUID, storekit.LiveOnly)
+		if err != nil {
 			return err
 		}
-		var version int64
-		err := tx.QueryRow(ctx, `SELECT version FROM pipeline WHERE id = $1 AND archived_at IS NULL`, id).Scan(&version)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		current, err := readPipelineConfig(ctx, tx, id)
 		if err != nil {
-			return fmt.Errorf("read pipeline before update: %w", err)
+			return err
 		}
-		if in.IfVersion != nil && *in.IfVersion != version {
+		if in.IfVersion != nil && *in.IfVersion != current.version {
 			return apperrors.ErrVersionSkew
 		}
-		// Exactly one default pipeline: promoting this one demotes the
-		// incumbent in the same transaction.
-		if in.IsDefault != nil && *in.IsDefault {
-			if _, err := tx.Exec(ctx,
-				`UPDATE pipeline SET is_default = false WHERE is_default AND id <> $1`, id); err != nil {
-				return fmt.Errorf("demote incumbent default pipeline: %w", err)
+		// An update naming no field changes nothing, and an audit row for it
+		// would record a transition that never happened.
+		if patch := pipelineUpdatePatch(current, in); !patch.Empty() {
+			promoting := in.IsDefault != nil && *in.IsDefault
+			if err := writePipelineUpdate(ctx, tx, lock, id, patch, promoting); err != nil {
+				return err
 			}
-		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE pipeline SET
-			  name = coalesce($2, name),
-			  is_default = coalesce($3, is_default),
-			  position = coalesce($4, position)
-			WHERE id = $1`,
-			id, in.Name, in.IsDefault, in.Position); err != nil {
-			return fmt.Errorf("update pipeline: %w", err)
-		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "pipeline", id.UUID, nil, map[string]any{
-			"name": in.Name, "is_default": in.IsDefault, "position": in.Position,
-		})
-		if err != nil {
-			return fmt.Errorf("audit pipeline update: %w", err)
-		}
-		// changed_fields reports only what this PATCH actually touched — a
-		// nil pointer is an omitted field, not a change to null (the
-		// omitted-not-null discipline every other emit site follows), so a
-		// rename-only update never publishes is_default/position as null.
-		changed := map[string]any{}
-		if in.Name != nil {
-			changed["name"] = *in.Name
-		}
-		if in.IsDefault != nil {
-			changed["is_default"] = *in.IsDefault
-		}
-		if in.Position != nil {
-			changed["position"] = *in.Position
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventPipelineUpdated{
-			ChangedFields: changed,
-		}); err != nil {
-			return fmt.Errorf("emit pipeline.updated: %w", err)
 		}
 		if out, err = readPipeline(ctx, tx, id); err != nil {
 			return fmt.Errorf("read updated pipeline: %w", err)
@@ -102,6 +64,36 @@ func (s *Store) UpdatePipeline(ctx context.Context, id ids.PipelineID, in Update
 		return nil
 	})
 	return out, err
+}
+
+// writePipelineUpdate commits the patch, its audit row and the one
+// pipeline.updated event as a unit. The event's changed_fields is the patch's
+// after-image, so the trail and the wire body report the same touched fields,
+// and the before-image beside it says what each of them held first.
+func writePipelineUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
+	id ids.PipelineID, patch *storekit.Patch, promoting bool,
+) error {
+	// Exactly one default pipeline: promoting this one demotes the incumbent
+	// in the same transaction.
+	if promoting {
+		if _, err := tx.Exec(ctx,
+			`UPDATE pipeline SET is_default = false WHERE is_default AND id <> $1`, id); err != nil {
+			return fmt.Errorf("demote incumbent default pipeline: %w", err)
+		}
+	}
+	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
+		return fmt.Errorf("update pipeline: %w", err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "pipeline", id.UUID, patch.Before(), patch.After())
+	if err != nil {
+		return fmt.Errorf("audit pipeline update: %w", err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventPipelineUpdated{
+		ChangedFields: patch.After(),
+	}); err != nil {
+		return fmt.Errorf("emit pipeline.updated: %w", err)
+	}
+	return nil
 }
 
 type CreateStageInput struct {
@@ -265,64 +257,23 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		if err != nil {
 			return err
 		}
-		// The row lock makes the version read and the update below one
-		// race-free unit.
-		if _, err := storekit.LockRow(ctx, tx, "stage", id.UUID, storekit.LiveOnly); err != nil {
+		// The row lock makes the read below and the update one race-free unit.
+		lock, err := storekit.LockRow(ctx, tx, "stage", id.UUID, storekit.LiveOnly)
+		if err != nil {
 			return err
 		}
-		var version int64
-		err = tx.QueryRow(ctx,
-			`SELECT version FROM stage WHERE id = $1 AND archived_at IS NULL`, id).
-			Scan(&version)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
+		current, err := readStageConfig(ctx, tx, id)
 		if err != nil {
-			return fmt.Errorf("read stage before update: %w", err)
+			return err
 		}
-		if in.IfVersion != nil && *in.IfVersion != version {
+		if in.IfVersion != nil && *in.IfVersion != current.version {
 			return apperrors.ErrVersionSkew
 		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE stage SET
-			  name = coalesce($2, name),
-			  position = coalesce($3, position),
-			  semantic = coalesce($4, semantic),
-			  win_probability = CASE
-			    WHEN $4 = 'won' THEN 100
-			    WHEN $4 = 'lost' THEN 0
-			    ELSE coalesce($5, win_probability) END
-			WHERE id = $1`,
-			id, in.Name, in.Position, in.Semantic, in.WinProbability); err != nil {
-			if storekit.IsUniqueViolation(err) {
-				return apperrors.ErrConflict
-			}
-			return fmt.Errorf("update stage: %w", err)
-		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "stage", id.UUID, nil, map[string]any{
-			"name": in.Name, "position": in.Position, stageSemanticField: in.Semantic, "win_probability": in.WinProbability,
-		})
-		if err != nil {
-			return fmt.Errorf("audit stage update: %w", err)
-		}
-		// A reorder is a pipeline-level fact (pipeline.updated with the
-		// position delta); a name/semantic/probability edit is a stage-level
-		// fact (stage.updated). A single settings save can carry BOTH (the
-		// UI sends position alongside the edited fields), so emit each fact
-		// the update actually touched — they are NOT mutually exclusive.
-		// Treating them as exclusive dropped stage.updated whenever a position
-		// rode along, so a name/semantic change silently never reached
-		// subscribers.
-		if in.Position != nil {
-			if err := storekit.EmitEvent(ctx, tx, auditID, pipelineID.UUID, crmcontracts.PublicEventPipelineUpdated{
-				ChangedFields: map[string]any{"stage_positions": map[string]any{id.String(): *in.Position}},
-			}); err != nil {
-				return fmt.Errorf("emit pipeline reorder: %w", err)
-			}
-		}
-		if in.Name != nil || in.Semantic != nil || in.WinProbability != nil {
-			if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, stageUpdatedPayload(pipelineID, in)); err != nil {
-				return fmt.Errorf("emit stage update: %w", err)
+		// An update naming no field changes nothing, and an audit row for it
+		// would record a transition that never happened.
+		if patch := stageUpdatePatch(current, in); !patch.Empty() {
+			if err := writeStageUpdate(ctx, tx, lock, id, pipelineID, patch, in); err != nil {
+				return err
 			}
 		}
 		if out, err = readStage(ctx, tx, id, storekit.IncludeArchived); err != nil {
@@ -331,6 +282,45 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 		return nil
 	})
 	return out, err
+}
+
+// writeStageUpdate commits the patch, its audit row and the events this save
+// earned. The audit images come from the patch, so `before` holds what each
+// touched column really held and neither image mentions a column left alone.
+func writeStageUpdate(ctx context.Context, tx pgx.Tx, lock storekit.RowLock,
+	id ids.StageID, pipelineID ids.PipelineID, patch *storekit.Patch, in UpdateStageInput,
+) error {
+	if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
+		if storekit.IsUniqueViolation(err) {
+			return apperrors.ErrConflict
+		}
+		return fmt.Errorf("update stage: %w", err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", "stage", id.UUID, patch.Before(), patch.After())
+	if err != nil {
+		return fmt.Errorf("audit stage update: %w", err)
+	}
+	// A reorder is a pipeline-level fact (pipeline.updated with the
+	// position delta); a name/semantic/probability edit is a stage-level
+	// fact (stage.updated). A single settings save can carry BOTH (the
+	// UI sends position alongside the edited fields), so emit each fact
+	// the update actually touched — they are NOT mutually exclusive.
+	// Treating them as exclusive dropped stage.updated whenever a position
+	// rode along, so a name/semantic change silently never reached
+	// subscribers.
+	if in.Position != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, pipelineID.UUID, crmcontracts.PublicEventPipelineUpdated{
+			ChangedFields: map[string]any{"stage_positions": map[string]any{id.String(): *in.Position}},
+		}); err != nil {
+			return fmt.Errorf("emit pipeline reorder: %w", err)
+		}
+	}
+	if in.Name != nil || in.Semantic != nil || in.WinProbability != nil {
+		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, stageUpdatedPayload(pipelineID, in)); err != nil {
+			return fmt.Errorf("emit stage update: %w", err)
+		}
+	}
+	return nil
 }
 
 // stageUpdatedPayload builds the stage.updated wire payload from
@@ -342,26 +332,16 @@ func (s *Store) UpdateStage(ctx context.Context, id ids.StageID, in UpdateStageI
 // body rather than marshaled as null.
 //
 // A terminal semantic forces the committed win_probability (won → 100,
-// lost → 0) in the same UPDATE, so the payload MUST reflect that committed
-// value, not the caller's input — otherwise a subscriber would see a
-// win_probability that never hit the row.
+// lost → 0), so the payload MUST reflect that committed value, not the
+// caller's input — otherwise a subscriber would see a win_probability that
+// never hit the row. It reads that value from committedWinProbability, the
+// same call the patch binds, rather than deriving it a second time.
 func stageUpdatedPayload(pipelineID ids.PipelineID, in UpdateStageInput) crmcontracts.PublicEventStageUpdated {
-	winProbability := in.WinProbability
-	if in.Semantic != nil {
-		switch StageSemantic(*in.Semantic) {
-		case SemanticWon:
-			won := 100
-			winProbability = &won
-		case SemanticLost:
-			lost := 0
-			winProbability = &lost
-		}
-	}
 	return crmcontracts.PublicEventStageUpdated{
 		PipelineId:     openapi_types.UUID(pipelineID.UUID),
 		Name:           in.Name,
 		Semantic:       in.Semantic,
-		WinProbability: winProbability,
+		WinProbability: committedWinProbability(in),
 	}
 }
 

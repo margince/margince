@@ -87,17 +87,21 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 			id, in.Subject, in.Body, in.OccurredAt, in.DueAt, in.RemindAt, in.AssigneeID, in.IsDone); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, nil, updateDelta(in))
+		// Read back BEFORE auditing: done_at is stamped by the statement above
+		// and a transcript body is renormalized on the way in, so the row is the
+		// only place that says what this write actually stored.
+		out, err = readActivity(ctx, tx, id, storekit.LiveOnly)
 		if err != nil {
 			return err
 		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
-			ChangedFields: activityUpdatedChangedFields(in),
-		}); err != nil {
+		before, after := storekit.ChangedColumns(activityColumnImage(current), activityColumnImage(out))
+		auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, before, after)
+		if err != nil {
 			return err
 		}
-		out, err = readActivity(ctx, tx, id, storekit.LiveOnly)
-		return err
+		return storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventActivityUpdated{
+			ChangedFields: activityUpdatedChangedFields(in),
+		})
 	})
 	return out, err
 }
@@ -382,38 +386,14 @@ func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.Activit
 	return nil
 }
 
-func updateDelta(in UpdateActivityInput) map[string]any {
-	delta := map[string]any{}
-	if in.Subject != nil {
-		delta[fieldSubject] = *in.Subject
-	}
-	if in.Body != nil {
-		delta["body"] = true // presence, not content — bodies can be large
-	}
-	if in.OccurredAt != nil {
-		delta["occurred_at"] = *in.OccurredAt
-	}
-	if in.DueAt != nil {
-		delta["due_at"] = *in.DueAt
-	}
-	if in.RemindAt != nil {
-		delta["remind_at"] = *in.RemindAt
-	}
-	if in.AssigneeID != nil {
-		delta["assignee_id"] = *in.AssigneeID
-	}
-	if in.IsDone != nil {
-		delta["is_done"] = *in.IsDone
-	}
-	return delta
-}
-
-// activityUpdatedChangedFields is UpdateActivity's typed sibling of
-// updateDelta (which still feeds the audit_log row unchanged): the same
-// touched/untouched decisions, projected onto activity.updated's BOUNDED
-// changed_fields struct rather than an open map. body carries a presence
-// flag, never the content — bodies can be large and are never echoed onto
-// the wire.
+// activityUpdatedChangedFields projects the patch's touched/untouched decisions
+// onto activity.updated's BOUNDED changed_fields struct. body carries a presence
+// flag, never the content — bodies can be large and are never echoed onto the
+// wire.
+//
+// It reads the REQUEST while the audit image reads the row, and the two are not
+// interchangeable: an event announces which fields a caller asked to change, an
+// audit image records what the row then held.
 func activityUpdatedChangedFields(in UpdateActivityInput) crmcontracts.PublicEventActivityChangedFields {
 	var fields crmcontracts.PublicEventActivityChangedFields
 	if in.Subject != nil {

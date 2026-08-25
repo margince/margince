@@ -33,6 +33,7 @@ export function CallDetailPanel({
   captureEnabled,
 }: Readonly<{ id: string; captureEnabled: boolean }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [exporting, setExporting] = useState(false);
   const query = useQuery({
     queryKey: ["ai-call", id],
@@ -77,7 +78,9 @@ export function CallDetailPanel({
               <li key={attempt.attempt}>
                 <span className="t-mono">#{attempt.attempt}</span>{" "}
                 {attempt.attempt_reason || "—"} ·{" "}
-                {t("aicalls.ms", { value: attempt.latency_ms })}
+                {t("aicalls.ms", {
+                  value: formatNumber(attempt.latency_ms, locale),
+                })}
                 {attempt.error_sentinel && (
                   <Badge tone="danger">{attempt.error_sentinel}</Badge>
                 )}
@@ -301,6 +304,7 @@ function FragmentRow({
   tokens: string;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const panelId = useId();
   return (
     <>
@@ -350,7 +354,12 @@ function FragmentRow({
             )}
             {call.calls_attempted > 1 && (
               <Badge>
-                {t("aicalls.badge.retries", { count: call.calls_attempted })}
+                {/* An attempt counter, not a quantity: it names which try this
+                    call is on, and a grouped "1.234" would read as a figure
+                    rather than a position on the retry ladder. */}
+                {t("aicalls.badge.retries", {
+                  count: String(call.calls_attempted),
+                })}
               </Badge>
             )}
           </div>
@@ -359,7 +368,9 @@ function FragmentRow({
           {call.tier} · {call.provider}/{call.served_model}
         </td>
         <td>{tokens}</td>
-        <td>{t("aicalls.ms", { value: call.latency_ms })}</td>
+        <td>
+          {t("aicalls.ms", { value: formatNumber(call.latency_ms, locale) })}
+        </td>
       </tr>
       {expanded && (
         <tr>

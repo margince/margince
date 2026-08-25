@@ -2,9 +2,11 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
+import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelPlate, PanelRow } from "../design-system/panel";
-import { formatDateTime } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { stable } from "../format/collate";
+import { formatDateTime, formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   ENGAGEMENT_LABELS,
@@ -13,6 +15,7 @@ import {
   type SuggestionAction,
   useSuggestionsBody,
 } from "./company360";
+import { EntityRef } from "./entityref";
 import { signalKindLabel } from "./record360";
 
 // "Today on this account" — the record's daily brief, and the only part of
@@ -73,7 +76,11 @@ type Organization360 = components["schemas"]["Organization360"];
 type TodayItem = {
   key: string;
   label: string;
-  headline: string;
+  // A NODE, not a string, because a reading that names a record links to it:
+  // the route reading names a contact, and a name a reader cannot open is a
+  // name they have to go and search for. Every other reading still hands a
+  // plain string, which is a node.
+  headline: ReactNode;
   // What the reading could not see before making its claim, drawn quieter
   // than the claim itself. Only a reading whose honesty depends on it carries
   // one; it is not a slot for a second sentence.
@@ -105,6 +112,9 @@ export function TodayOnThisAccount({
   onOpenRecord,
   onPerform,
   onOpenTasks,
+  sections,
+  foot,
+  spine,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
@@ -125,6 +135,26 @@ export function TodayOnThisAccount({
   // Where the footer's commitment reading leads. Absent for a caller with no
   // Tasks tab of its own.
   onOpenTasks?: () => void;
+  // The account's story as a thread, above everything else in the card: where
+  // it stands is the question a reader opens the record with, and four
+  // labelled sections answered it only after they had read all four.
+  spine?: ReactNode;
+  // What the card's footer carries BESIDE the day's own countdown: what moved
+  // on the account since the reader was last here. It belongs to the account
+  // rather than to any one section, so it rides in the card's footer band
+  // rather than inside a section that would then be claiming it.
+  foot?: ReactNode;
+  // The rest of the Company 360 — what is in flight, the commercial figures,
+  // what happened lately — under this card's own chrome.
+  //
+  // They hang here rather than as four cards down the column because a reader
+  // asked for ONE reading of the account, and because this is the page's
+  // accent card: four accent cards is no accent at all, and four plain ones
+  // beside it made the move-to-make look like one section of five.
+  //
+  // A slot rather than an import, so this file keeps knowing only about the
+  // day's brief. The page decides what the account's whole reading contains.
+  sections?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -139,21 +169,49 @@ export function TodayOnThisAccount({
     onPerform,
   });
 
+  // The day's brief is one section of this card, so neither of its own
+  // failures may take the rest of the account's reading down with it: the
+  // sections below read from the same payload and are perfectly able to
+  // render while the brief says it could not be assembled.
+  //
+  // The subhead rides with all three, because a skeleton or an error under no
+  // name is a reader unable to tell WHICH of the four readings is missing.
+  const subhead = (
+    <PanelBody className="co-360-head">
+      <Eyebrow as="h3">{t("today.title")}</Eyebrow>
+    </PanelBody>
+  );
   if (loading) {
     return (
-      <Panel title={t("today.title")} tone="accent" className="co-lead">
+      <Panel
+        title={t("co.360.title")}
+        tone="accent"
+        className="co-lead"
+        footer={foot}
+      >
+        {spine}
+        {subhead}
         <PanelBody>
           <Skeleton width="100%" height={64} />
         </PanelBody>
+        {sections}
       </Panel>
     );
   }
   if (failed || !view) {
     return (
-      <Panel title={t("today.title")} tone="accent" className="co-lead">
+      <Panel
+        title={t("co.360.title")}
+        tone="accent"
+        className="co-lead"
+        footer={foot}
+      >
+        {spine}
+        {subhead}
         <PanelBody>
           <EmptyState>{t("today.failed")}</EmptyState>
         </PanelBody>
+        {sections}
       </Panel>
     );
   }
@@ -162,11 +220,12 @@ export function TodayOnThisAccount({
     view,
     t,
     when: (at: string) => formatDateTime(at, locale, recordZone),
+    locale,
   };
   const lead = whoseMove(ctx);
   const items = todayContextItems(ctx);
   const manualMoves = manualMoveRows({ view, t, onPrepareMeeting, onDraftTo });
-  const commitment = nextCommitmentLine(view, t);
+  const commitment = nextCommitmentLine(view, locale, t);
   const hasContext = lead !== null || items.length > 0;
   const hasMoves = suggestions.ready || manualMoves.length > 0;
   const footer = briefFooter(commitment, suggestions.footer);
@@ -183,8 +242,17 @@ export function TodayOnThisAccount({
           </Button>
         )
       }
-      footer={footer}
+      footer={
+        (footer || foot) && (
+          <>
+            {footer}
+            {foot}
+          </>
+        )
+      }
     >
+      {spine}
+      {subhead}
       {!hasContext && !hasMoves ? (
         // Not "nothing to do": the brief read everything it can read and
         // found nothing that needs a person today. That is a real answer
@@ -202,6 +270,7 @@ export function TodayOnThisAccount({
       {(view.sections_omitted?.length ?? 0) > 0 && (
         <TodayWithheld view={view} />
       )}
+      {sections}
     </Panel>
   );
 }
@@ -232,15 +301,19 @@ function briefFooter(
   );
 }
 
-// The panel's name, and how many moves are waiting behind it. The count
+// The card's name, and how many moves are waiting behind it. The count
 // answers "how much is on me here" before the reader has read a single row,
-// and it counts what is DRAWN — a count that included advice the panel
+// and it counts what is DRAWN — a count that included advice the card
 // withheld would send a reader looking for rows that are not there.
+//
+// The name is the RECORD's, not this section's: everything the page reads
+// about the account now hangs under it, and the day's brief says so under its
+// own subhead below.
 function TodayTitle({ moves }: Readonly<{ moves: number }>) {
   const t = useT();
   return (
     <>
-      {t("today.title")}
+      {t("co.360.title")}
       {moves > 0 && <Badge tone="accent">{moves}</Badge>}
     </>
   );
@@ -349,9 +422,21 @@ function manualMoveRows({
     );
   }
   if (meeting && onPrepareMeeting) {
-    const who = meeting.participants
-      .map((participant) => participant.display_name)
-      .join(", ");
+    // Each attendee links to their own record: a rep preparing for a meeting
+    // reads the guest list to decide who to look up, and a name they have to
+    // retype into search is the one step this row exists to save.
+    const who =
+      meeting.participants.length > 0 &&
+      meeting.participants.map((participant, at) => (
+        <span key={participant.person_id}>
+          {at > 0 && ", "}
+          <EntityRef
+            kind="person"
+            id={participant.person_id}
+            name={participant.display_name}
+          />
+        </span>
+      ));
     rows.push(
       <PanelRow key="move:meeting" className="co-move">
         <span className="co-move-body">
@@ -448,26 +533,23 @@ function TodayWithheld({ view }: Readonly<{ view: Organization360 }>) {
 // null. The alternative — one function branching over every source — was
 // the shape that made the ordering invisible inside the conditions.
 function todayContextItems(ctx: TodayContext): TodayItem[] {
-  return [
-    bookedMeeting(ctx),
-    bestRoute(ctx),
-    lastInteraction(ctx),
-    openRisk(ctx),
-  ].filter((item): item is TodayItem => item !== null);
+  return [bookedMeeting(ctx), bestRoute(ctx), openRisk(ctx)].filter(
+    (item): item is TodayItem => item !== null,
+  );
 }
 
 // Whose move it is, and how long it has been. Lifted from the state strip's
 // own engagement tile rather than re-derived: the strip no longer draws it
 // (it is a DATED reading, not the account's standing state), and the brief
 // reads the same `state_strip.engagement` field the strip used to.
-function whoseMove({ view, t }: TodayContext): TodayLead | null {
+function whoseMove({ view, t, locale }: TodayContext): TodayLead | null {
   const engagement = view.state_strip?.engagement;
   if (!engagement) {
     return null;
   }
   return {
     headline: t(ENGAGEMENT_LABELS[engagement.state]),
-    note: silenceNote(view, t),
+    note: silenceNote(view, locale, t),
     tone: ENGAGEMENT_TONE[engagement.state],
   };
 }
@@ -483,6 +565,7 @@ function whoseMove({ view, t }: TodayContext): TodayLead | null {
 // trust in the whole panel.
 function silenceNote(
   view: Organization360,
+  locale: Locale,
   t: TodayContext["t"],
 ): string | undefined {
   const engagement = view.state_strip?.engagement;
@@ -495,7 +578,9 @@ function silenceNote(
   );
   // Same day, or a clock that disagrees with itself: "no answer in 0 days"
   // reads as a fault, and there is nothing yet to report.
-  return days > 0 ? t("today.silence.days", { count: days }) : undefined;
+  return days > 0
+    ? t("today.silence.days", { count: formatNumber(days, locale) })
+    : undefined;
 }
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
@@ -526,12 +611,41 @@ function bestRoute({ view, t }: TodayContext): TodayItem | null {
   return {
     key: `route:${best.person_id}`,
     label: t("today.tile.route"),
-    headline: t("today.route.headline", {
-      colleague: route.display_name,
-      contact: best.full_name,
-    }),
+    // Built as markup rather than through the template, because the contact
+    // half is a link: `useT` returns a string and cannot carry an element.
+    // The arrow stays the template's, so the one place that decides how a
+    // route reads is still the catalog.
+    headline: (
+      <span className="today-route">
+        <EntityRef kind="user" id={route.user_id} name={route.display_name} />
+        {/* The separator the catalog spells, read out of the template rather
+            than typed here — a locale that writes the route another way round
+            still owns how it reads. */}
+        <span aria-hidden="true">{routeSeparator(t)}</span>
+        <EntityRef kind="person" id={best.person_id} name={best.full_name} />
+      </span>
+    ),
     qualifier: routeQualifier(view, t),
   };
+}
+
+/**
+ * What sits between the two names in a route reading.
+ *
+ * The catalog's own template is the authority ("{colleague} → {contact}"),
+ * so this renders it with both placeholders empty and keeps what is left. The
+ * alternative was a glyph typed into this file, which is a second place
+ * deciding how a route reads and the one a translator cannot reach.
+ *
+ * A template a locale rewrote without a middle falls back to an arrow: the two
+ * names run together otherwise, and a reading with no separator says the
+ * colleague IS the contact.
+ */
+function routeSeparator(t: TodayContext["t"]): string {
+  const between = t("today.route.headline", { colleague: "", contact: "" });
+  // Kept verbatim, spaces included: the template's own spacing is what sets
+  // the two names apart, and trimming it would butt them together.
+  return between.trim() ? between : " \u2192 ";
 }
 
 // What this reading did NOT see before calling something best. The contact
@@ -555,7 +669,7 @@ function byStrengthThenId(
   b: Organization360Contact,
 ): number {
   const delta = (b.strength?.score ?? 0) - (a.strength?.score ?? 0);
-  return delta !== 0 ? delta : a.person_id.localeCompare(b.person_id);
+  return delta !== 0 ? delta : stable(a.person_id, b.person_id);
 }
 
 // The deal actually in play used to be a context tile here. It moved to the
@@ -590,71 +704,16 @@ function openRisk({ view, t }: TodayContext): TodayItem | null {
   };
 }
 
-// The kinds that are an EXCHANGE with the account. The 360's timeline section
-// is unfiltered — it carries tasks and meetings from the same table — and a
-// task is something we wrote to ourselves rather than something that was said.
-const EXCHANGE_KINDS: ReadonlySet<string> = new Set([
-  "email",
-  "call",
-  "meeting",
-  "note",
-  "message",
-]);
-
-/**
- * What was last said, and when.
- *
- * The subject of the most recent exchange, which is the one reading a rep
- * opens the page for that no other tile carries: the footer's commitment
- * reading says what we OWE, this says what was SAID.
- *
- * The pulse line under the title still names both directions with their dates,
- * and this does not replace it. The two answer different questions — the pulse
- * is who wrote last, which is the direction a rep acts on, and one tile could
- * only ever show the later of the two. This is what the exchange was ABOUT.
- *
- * TWO FILTERS, and neither is cosmetic. The timeline carries every activity
- * kind, so without them the head of the list can be a TASK — whose subject
- * this file refuses to render twice — or a meeting scheduled for next week,
- * which `occurred_at DESC` sorts to the top and which has not been said yet.
- *
- * A FACT: the subject is what the activity says, quoted rather than judged.
- * The builder returns null both when the section was withheld and when nothing
- * has been logged; it cannot tell those apart, and the withheld footer below
- * is what tells a reader they are missing what was said.
- */
-function lastInteraction({ view, t, when }: TodayContext): TodayItem | null {
-  const latest = (view.activities?.data ?? []).find(
-    (activity) =>
-      EXCHANGE_KINDS.has(activity.kind) &&
-      Boolean(activity.subject) &&
-      // Already happened, as of the read the rest of this page describes.
-      Boolean(activity.occurred_at) &&
-      (activity.occurred_at as string) <= view.as_of,
-  );
-  if (!latest?.subject) {
-    return null;
-  }
-  return {
-    key: `interaction:${latest.id}`,
-    label: t("today.tile.lastInteraction"),
-    headline: latest.occurred_at
-      ? t("today.exchange.subjectWhen", {
-          subject: latest.subject,
-          when: when(latest.occurred_at),
-        })
-      : latest.subject,
-  };
-}
-
 type TodayContext = {
   view: Organization360;
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+  t: ReturnType<typeof useT>;
   // Dates are formatted at the presentation edge, so a builder is handed the
-  // formatter rather than the reader's locale: none of them chooses a format,
-  // and one that could would be the second place this page decides how a date
-  // looks.
+  // formatter rather than choosing one: `when` is the only place this page
+  // decides how a date looks. The locale beside it is for FIGURES only — a
+  // count reaches the catalog already written the reader's way, and there is
+  // no format left for a builder to pick.
   when: (at: string) => string;
+  locale: Locale;
 };
 
 type Organization360Contact = NonNullable<

@@ -17,6 +17,7 @@ import type { MessageKey } from "../i18n/en";
 import { humanizeToken } from "./audit";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import "./consent.css";
+import { stable } from "../format/collate";
 
 // The Art. 7 proof log (G-4) + the double-opt-in redeem field (G-5) for the
 // Person 360. GET /people/{id}/consent already returns {state, events}; this
@@ -117,7 +118,7 @@ function ConsentProofLog({ events }: Readonly<{ events: ConsentEvent[] }>) {
     return <EmptyState>{t("consent.proofEmpty")}</EmptyState>;
   }
   const ordered = [...events].sort((a, b) =>
-    b.occurred_at.localeCompare(a.occurred_at),
+    stable(b.occurred_at, a.occurred_at),
   );
   return (
     <Card as="div" inset className="consent-proof-log">

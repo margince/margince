@@ -249,6 +249,38 @@ func (s *Store) ListDedupeCandidates(ctx context.Context, in DedupeQueueInput) (
 	return rows, next, nil
 }
 
+// CountOpenDedupeCandidates is how many open pairs THIS caller can see.
+//
+// It exists because a count is a read. The digest reported one workspace-wide
+// number to every reader, which tells an own-scope rep how many duplicate
+// pairs exist among records they may not open — the existence-hiding rule the
+// queue itself keeps by requiring both sides visible. Sharing
+// dedupeVisibilityClause rather than restating the predicate is what keeps the
+// badge and the list answering the same question: a count that disagreed with
+// the page under it would send a reader looking for rows that were never
+// theirs.
+func (s *Store) CountOpenDedupeCandidates(ctx context.Context) (int, error) {
+	if err := requireDedupeRead(ctx, ""); err != nil {
+		return 0, err
+	}
+	query := `SELECT count(*) FROM dedupe_candidate WHERE disposition = $1 AND archived_at IS NULL`
+	args := []any{dispositionOpen}
+	visClause, err := dedupeVisibilityClause(ctx, func(v any) int { args = append(args, v); return len(args) })
+	if err != nil {
+		return 0, err
+	}
+	if visClause != "" {
+		query += " AND " + visClause
+	}
+	var open int
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, query, args...).Scan(&open)
+	}); err != nil {
+		return 0, fmt.Errorf("people: counting open dedupe candidates: %w", err)
+	}
+	return open, nil
+}
+
 // GetDedupeCandidate reads one row with its full evidence. Both sides of
 // the pair must pass the caller's row scope — the evidence names them
 // both, so a pair with an out-of-scope side reads as absent (404,

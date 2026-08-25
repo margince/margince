@@ -209,7 +209,7 @@ export const Thread: Story = {
           kind: "narration",
           id: "0:pages:5",
           i18nKey: "ob.conv.read.pages",
-          params: { pages: 5 },
+          params: { pages: "5" },
         },
         narration,
         question,

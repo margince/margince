@@ -17,9 +17,13 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { SurfaceState } from "../design-system/surfacestate";
 import { localDateTimeValue } from "../format/calendarday";
-import { formatDateTime, isRenderableZone } from "../format/format";
+import {
+  formatDateTime,
+  formatNumber,
+  isRenderableZone,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   isVersionSkewOf,
@@ -172,7 +176,8 @@ function Moment({
 /** The To line, with the rest counted rather than listed. */
 function recipientLine(
   send: ScheduledSend,
-  t: ReturnType<typeof useT>,
+  t: Translator,
+  locale: Locale,
 ): string {
   const [first, ...rest] = send.to;
   if (!first) {
@@ -183,7 +188,10 @@ function recipientLine(
   }
   return rest.length === 0
     ? first
-    : t("sched.recipientsMore", { first, count: rest.length });
+    : t("sched.recipientsMore", {
+        first,
+        count: formatNumber(rest.length, locale),
+      });
 }
 
 // The whole write, row identity included. The `mutationFn` takes it as a
@@ -281,6 +289,7 @@ function SendRow({
   onWithdraw: (send: ScheduledSend) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const actionable = STILL_MOVABLE.has(send.status);
   const heldReasonKey = send.held_reason
     ? HELD_REASON_LABEL[send.held_reason]
@@ -297,7 +306,7 @@ function SendRow({
       >
         <span style={{ flex: 1, minWidth: "12rem" }}>
           <strong>{send.subject}</strong>
-          <span className="t-caption"> · {recipientLine(send, t)}</span>
+          <span className="t-caption"> · {recipientLine(send, t, locale)}</span>
           <br />
           <Moment send={send} readerZone={readerZone} />
         </span>

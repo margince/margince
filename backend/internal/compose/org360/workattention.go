@@ -61,11 +61,18 @@ type overdueTask struct {
 // present and true, and reporting them as withheld would hide the pipeline
 // from a reader who may read it.
 //
-// Two shapes of incompleteness reach this flag, and both must. A refused
+// Two shapes of incompleteness reach this flag today. A refused activity
 // grant is the loud one. The quiet one is a claim made by a person outside
 // the caller's row scope: the store drops that row and says so, because a
 // project silently missing its commitment reads as a project with nothing
 // outstanding — which is the one thing this card must never say by accident.
+//
+// A THIRD does not reach it yet: an overdue task or a claim whose EVIDENCE
+// activity falls outside the caller's activity row scope is dropped by
+// auth.ActivityContentClause inside the queries below, which report only
+// their rows and not what they filtered. Such a row reads as a piece of work
+// with nothing outstanding. Closing it means those queries reporting their
+// own drops, the same way the person scope already does.
 func (a *assembly) readWorkAttention() error {
 	dealIDs, projects := attentionTargets(a.out)
 	if len(dealIDs) == 0 && len(projects) == 0 {
@@ -164,8 +171,9 @@ func projectUUIDs(projects []ids.ProjectID) []ids.UUID {
 //
 // The task must also reach the account: a link row alone would let a task
 // filed under a project this company shares with another reach a page it does
-// not belong to, so the walk is activities.OrgLinkedActivityExists rather than
-// a link test written here.
+// not belong to. That walk is activities.OrgLinkedActivityExists, called
+// rather than rewritten so a fourth link added to the model reaches this
+// reader with every other.
 //
 // Who the task is assigned to is read through identity.LiveMemberSQL, which is
 // the definition of "still works here" and belongs to the module that owns

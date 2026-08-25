@@ -4,6 +4,7 @@
 import { useMemo } from "react";
 import type { components } from "../api/schema";
 import { confidenceLevel } from "../design-system/trust";
+import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { type Locale, useT } from "../i18n";
 import { MAX_SELECTED_FACTS } from "./onboarding";
@@ -95,9 +96,7 @@ export function useFactSelection(
 // Highest confidence first, ties broken on the stable key so the default
 // selection does not reshuffle between renders of the same read.
 function byConfidence(a: CompanySiteReadFact, b: CompanySiteReadFact): number {
-  return (
-    b.confidence - a.confidence || a.value_key.localeCompare(b.value_key, "en")
-  );
+  return b.confidence - a.confidence || stable(a.value_key, b.value_key);
 }
 
 /**

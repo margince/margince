@@ -136,7 +136,15 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 			}
 			saved++
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "person", personID.UUID, nil,
+		// The claims land in person_profile_field, never on the person row, so
+		// there is no column image to carry — and quoting the values would put a
+		// second copy of the subject's data in a table the erasure treats as
+		// evidence. The image names WHICH fields a person accepted, a closed
+		// vocabulary the table constrains: a row whose before and after are both
+		// empty records that something happened and cannot say what. How many
+		// landed is context about the write and rides evidence.
+		auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "person", personID.UUID,
+			map[string]any{"research_claims_accepted": acceptedClaimFields(claims)},
 			map[string]any{"research_claims_saved": saved})
 		if err != nil {
 			return fmt.Errorf("audit the saved research: %w", err)
@@ -155,4 +163,15 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 		return 0, err
 	}
 	return saved, nil
+}
+
+// acceptedClaimFields is the audit image's list of what the human accepted —
+// the field names, which the table's own constraint closes, never the values
+// they carry.
+func acceptedClaimFields(claims []ResearchClaimInput) []string {
+	out := make([]string, 0, len(claims))
+	for _, claim := range claims {
+		out = append(out, claim.Field)
+	}
+	return out
 }

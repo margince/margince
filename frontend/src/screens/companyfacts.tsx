@@ -20,7 +20,7 @@
 // answers to one question, and the two disagree the moment somebody types.
 
 import type { components } from "../api/schema";
-import { formatMoney } from "../format/format";
+import { formatMoney, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { CompanyOwnerControl } from "./companyheader";
 import "./companyfacts.css";
@@ -114,6 +114,7 @@ function pricedTotal(
  */
 function InFlight({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (!view) {
     return <span className="co-facts-quiet">{t("co.facts.reading")}</span>;
   }
@@ -127,9 +128,19 @@ function InFlight({ view }: Readonly<{ view?: Organization360 }>) {
   if (deals === 0 && projects === 0) {
     return <span className="co-facts-quiet">{t("co.facts.nothing")}</span>;
   }
+  // Each half carries its own plural. One shared "{deals} deals · {projects}
+  // projects" printed "1 projects" on any account with a single project, and
+  // the two counts are independent — one can be singular while the other is
+  // not, so one template cannot serve both.
   return (
     <span>
-      {t("co.facts.counts", { deals, projects })}
+      {t(deals === 1 ? "co.facts.dealsOne" : "co.facts.dealsMany", {
+        count: formatNumber(deals, locale),
+      })}
+      {" · "}
+      {t(projects === 1 ? "co.facts.projectsOne" : "co.facts.projectsMany", {
+        count: formatNumber(projects, locale),
+      })}
       {(view.deals.page.has_more || view.projects_page?.has_more) &&
         ` ${t("co.facts.atLeast")}`}
     </span>

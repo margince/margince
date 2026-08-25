@@ -201,136 +201,6 @@ describe("the context line, and which record each reading picks", () => {
     consent: {},
   };
 
-  // The 360 serves activities newest-first (ORDER BY occurred_at DESC), so the
-  // head of the list is the most recent and this tile makes no ordering
-  // decision of its own.
-  it("says what the last exchange was about, from the newest activity", () => {
-    show({
-      ...BASE,
-      activities: {
-        data: [
-          {
-            id: "act-1",
-            kind: "email",
-            is_done: false,
-            subject: "Questions about implementation capacity",
-            occurred_at: "2026-08-04T09:00:00Z",
-            source: "manual",
-            captured_by: "human:test",
-            created_at: "2026-08-04T09:00:00Z",
-            updated_at: "2026-08-04T09:00:00Z",
-          },
-          {
-            id: "act-2",
-            kind: "email",
-            is_done: false,
-            subject: "An older thread",
-            occurred_at: "2026-07-01T09:00:00Z",
-            source: "manual",
-            captured_by: "human:test",
-            created_at: "2026-07-01T09:00:00Z",
-            updated_at: "2026-07-01T09:00:00Z",
-          },
-        ],
-        page: { has_more: false, next_cursor: null },
-      },
-    });
-
-    expect(screen.getByText("Last exchange")).toBeTruthy();
-    expect(
-      screen.getByText(/Questions about implementation capacity/),
-    ).toBeTruthy();
-    expect(screen.queryByText(/An older thread/)).toBeNull();
-  });
-
-  // The timeline is unfiltered: tasks live in the same table and sort by the
-  // same column. A task is something we wrote to ourselves, and this file
-  // already refuses to render a task subject twice.
-  it("skips a task when picking what was last said", () => {
-    show({
-      ...BASE,
-      activities: {
-        data: [
-          {
-            id: "act-task",
-            kind: "task",
-            is_done: false,
-            subject: "Chase the signature",
-            occurred_at: "2026-08-06T09:00:00Z",
-            source: "manual",
-            captured_by: "human:test",
-            created_at: "2026-08-06T09:00:00Z",
-            updated_at: "2026-08-06T09:00:00Z",
-          },
-          {
-            id: "act-mail",
-            kind: "email",
-            is_done: false,
-            subject: "Questions about capacity",
-            occurred_at: "2026-08-04T09:00:00Z",
-            source: "manual",
-            captured_by: "human:test",
-            created_at: "2026-08-04T09:00:00Z",
-            updated_at: "2026-08-04T09:00:00Z",
-          },
-        ],
-        page: { has_more: false, next_cursor: null },
-      },
-    });
-
-    expect(screen.getByText(/Questions about capacity/)).toBeTruthy();
-    expect(screen.queryByText(/Chase the signature/)).toBeNull();
-  });
-
-  // `occurred_at DESC` sorts a meeting booked for next week to the head of the
-  // list. It has not been said yet, and the next-meeting tile already has it.
-  it("skips an activity that has not happened yet", () => {
-    show({
-      ...BASE,
-      activities: {
-        data: [
-          {
-            id: "act-future",
-            kind: "meeting",
-            is_done: false,
-            subject: "Executive alignment",
-            occurred_at: "2026-08-20T09:00:00Z",
-            source: "manual",
-            captured_by: "human:test",
-            created_at: "2026-08-01T09:00:00Z",
-            updated_at: "2026-08-01T09:00:00Z",
-          },
-          {
-            id: "act-past",
-            kind: "email",
-            is_done: false,
-            subject: "Where we landed on scope",
-            occurred_at: "2026-08-04T09:00:00Z",
-            source: "manual",
-            captured_by: "human:test",
-            created_at: "2026-08-04T09:00:00Z",
-            updated_at: "2026-08-04T09:00:00Z",
-          },
-        ],
-        page: { has_more: false, next_cursor: null },
-      },
-    });
-
-    expect(screen.getByText(/Where we landed on scope/)).toBeTruthy();
-    expect(screen.queryByText(/Executive alignment/)).toBeNull();
-  });
-
-  // A withheld activities section and a quiet account are different answers.
-  // "Nothing was said" invented from a section the caller may not read is the
-  // conclusion this page must never draw.
-  it("draws no exchange reading when there is nothing logged", () => {
-    show({
-      ...BASE,
-      activities: { data: [], page: { has_more: false, next_cursor: null } },
-    });
-    expect(screen.queryByText("Last exchange")).toBeNull();
-  });
-
   // What is owed lives in the panel's FOOTER now (nextCommitmentLine,
   // company360.tsx), not as a context tile — the count and the subject stay
   // out of it for the same reason the retired tile did: the next-steps card
@@ -404,7 +274,12 @@ describe("the context line, and which record each reading picks", () => {
         page: { has_more: false, next_cursor: null },
       },
     });
-    expect(screen.getByText("Lars → Sarah Cole")).toBeTruthy();
+    // Both names, and the CONTACT as a way through to their record: the
+    // reading names somebody a rep then has to go and read, and a name they
+    // must retype into search is the one step this row exists to save. The
+    // colleague stays plain text — a workspace user has no 360 to open.
+    expect(screen.getByText("Lars")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Sarah Cole" })).toBeTruthy();
     // The reading is the way IN, and nothing else. How many other colleagues
     // have written to the same contact is a fact about the CONTACT, and the
     // People tab is where a reader acts on it.

@@ -169,7 +169,8 @@ func TestCertifyTaskVoidsARecordWhenOneRunWasAnsweredByTwoModels(t *testing.T) {
 
 	sc := testScenarioOnSite("basic", retryVariant, wideBands)
 	_, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, retryCensus(t),
-		ai.FakeRoutingConfig(), "", 1, quietLogger(), &certifyHooks{
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		})
@@ -206,7 +207,8 @@ func certifiedTokens(t *testing.T, census *aitasks.Registry, sc Scenario, calls 
 		replies[i] = "the widget is blue and durable"
 	}
 	rec, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, census,
-		ai.FakeRoutingConfig(), "", 1, quietLogger(), &certifyHooks{
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(replies...))},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(ai.NewFakeClient().Script(scoreJSON(90)))},
 		})

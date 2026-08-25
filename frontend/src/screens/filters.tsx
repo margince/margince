@@ -18,7 +18,8 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryStates } from "./common";
 import { FilterBuilder } from "./filterbuilder";
@@ -275,6 +276,7 @@ function MatchCount({
   failed: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (failed) {
     // Silent: the results card below carries the reason in an assertive live
     // region, and announcing the same failure twice fragments it.
@@ -301,7 +303,7 @@ function MatchCount({
       aria-busy={stale}
       data-stale={stale ? "true" : undefined}
     >
-      {t(MATCH_LABEL[tab], { count })}
+      {t(MATCH_LABEL[tab], { count: formatNumber(count, locale) })}
     </span>
   );
 }

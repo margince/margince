@@ -21,7 +21,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
-import { formatMoney } from "../format/format";
+import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import {
   isVersionSkewOf,
@@ -1150,7 +1150,9 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
           {added.length > 0 && (
             <div>
               <p className="t-label">
-                {t("offer.diffAdded", { count: added.length })}
+                {t("offer.diffAdded", {
+                  count: formatNumber(added.length, locale),
+                })}
               </p>
               <ul>
                 {added.map((line) => (
@@ -1167,7 +1169,9 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
           {removed.length > 0 && (
             <div>
               <p className="t-label">
-                {t("offer.diffRemoved", { count: removed.length })}
+                {t("offer.diffRemoved", {
+                  count: formatNumber(removed.length, locale),
+                })}
               </p>
               <ul>
                 {removed.map((line) => (
@@ -1184,7 +1188,9 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
           {changed.length > 0 && (
             <div>
               <p className="t-label">
-                {t("offer.diffChanged", { count: changed.length })}
+                {t("offer.diffChanged", {
+                  count: formatNumber(changed.length, locale),
+                })}
               </p>
               <ul>
                 {changed.map((pair) =>

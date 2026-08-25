@@ -6,9 +6,15 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { PanelBody } from "../design-system/panel";
-import { formatDate, formatMoney } from "../format/format";
+import { stable } from "../format/collate";
+import { formatDate, formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { throwProblem } from "./common";
+// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
+// are defined in company360.css. Imported HERE rather than left to the caller:
+// it works today only because the company record page pulls that stylesheet in
+// for its own sake, so this file renders unstyled anywhere else.
+import "./company360.css";
 
 // The commercial relationship: what we last put in front of this account,
 // read from the SAME open deals the Deals tab already lists — so it is
@@ -137,7 +143,7 @@ export function leadingDeal(
   return [...deals].sort((a, b) => {
     const left = a.amount?.amount_minor ?? -1;
     const right = b.amount?.amount_minor ?? -1;
-    return right !== left ? right - left : a.deal_id.localeCompare(b.deal_id);
+    return right !== left ? right - left : stable(a.deal_id, b.deal_id);
   })[0];
 }
 
@@ -204,7 +210,9 @@ export function CompanyContractState({
   return (
     <PanelBody className="com-block">
       <span className="t-caption">
-        {t("contracts.state.title", { count: contracts.active_count })}
+        {t("contracts.state.title", {
+          count: formatNumber(contracts.active_count, locale),
+        })}
       </span>
       <span className="co-row-meta">
         {contractValues(contracts, locale, (amount) =>
@@ -216,8 +224,8 @@ export function CompanyContractState({
           contracts.priced_count < contracts.active_count && (
             <span className="t-caption">
               {t("contracts.state.partial", {
-                priced: contracts.priced_count,
-                total: contracts.active_count,
+                priced: formatNumber(contracts.priced_count, locale),
+                total: formatNumber(contracts.active_count, locale),
               })}
             </span>
           )}

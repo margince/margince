@@ -19,11 +19,11 @@ type AiProfile = components["schemas"]["AiProfile"];
 
 const en = (
   key: Parameters<typeof translate>[1],
-  params?: Record<string, string | number>,
+  params?: Record<string, string>,
 ) => translate("en", key, params);
 const de = (
   key: Parameters<typeof translate>[1],
-  params?: Record<string, string | number>,
+  params?: Record<string, string>,
 ) => translate("de", key, params);
 
 function profile(overrides: Partial<AiProfile>): AiProfile {
@@ -56,7 +56,7 @@ describe("configuredModelSummary", () => {
     });
     // inference_mode is the server's own aggregate call, not one this
     // function infers from the per-model tiers itself.
-    expect(configuredModelSummary(three, "unavailable", en)).toBe(
+    expect(configuredModelSummary(three, "unavailable", en, "en")).toBe(
       "3 models, running in the cloud",
     );
   });
@@ -68,10 +68,10 @@ describe("configuredModelSummary", () => {
         { tier: "local_small", provider: "ollama", model: "gemma3" },
       ],
     });
-    expect(configuredModelSummary(one, "unavailable", en)).toBe(
+    expect(configuredModelSummary(one, "unavailable", en, "en")).toBe(
       "1 model, running locally",
     );
-    expect(configuredModelSummary(one, "unavailable", de)).toBe(
+    expect(configuredModelSummary(one, "unavailable", de, "de")).toBe(
       "1 Modell, läuft lokal",
     );
   });
@@ -84,7 +84,7 @@ describe("configuredModelSummary", () => {
         { tier: "local_large", provider: "ollama", model: "llama3-70b" },
       ],
     });
-    expect(configuredModelSummary(mixed, "unavailable", en)).toBe(
+    expect(configuredModelSummary(mixed, "unavailable", en, "en")).toBe(
       "2 models, split between cloud and local",
     );
   });
@@ -96,7 +96,7 @@ describe("configuredModelSummary", () => {
         { tier: "premium", provider: "gemini", model: "gemini-3.5-flash" },
       ],
     });
-    expect(configuredModelSummary(dup, "unavailable", en)).toBe(
+    expect(configuredModelSummary(dup, "unavailable", en, "en")).toBe(
       "1 model, running in the cloud",
     );
   });
@@ -106,20 +106,20 @@ describe("configuredModelSummary", () => {
       configured_models: [],
       providers: ["anthropic", "gemini"],
     });
-    expect(configuredModelSummary(providersOnly, "unavailable", en)).toBe(
+    expect(configuredModelSummary(providersOnly, "unavailable", en, "en")).toBe(
       "2 providers configured",
     );
   });
 
   it("says nothing is configured rather than a false zero-count sentence", () => {
     const empty = profile({ configured_models: [], providers: [] });
-    expect(configuredModelSummary(empty, "unavailable", en)).toBe(
+    expect(configuredModelSummary(empty, "unavailable", en, "en")).toBe(
       "No model configured yet",
     );
   });
 
   it("hands back the unavailable label while the profile has not loaded", () => {
-    expect(configuredModelSummary(undefined, "unavailable", en)).toBe(
+    expect(configuredModelSummary(undefined, "unavailable", en, "en")).toBe(
       "unavailable",
     );
   });

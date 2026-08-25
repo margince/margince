@@ -7,11 +7,16 @@ import { Badge, Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import { type BriefSentence, SentenceList, WrittenBy } from "./record360";
+// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
+// are defined in company360.css. Imported HERE rather than left to the caller:
+// it works today only because the company record page pulls that stylesheet in
+// for its own sake, so this file renders unstyled anywhere else.
+import "./company360.css";
 
 type GrowthFit = components["schemas"]["OrganizationGrowthFit"];
 type Band = GrowthFit["band"];
@@ -190,6 +195,7 @@ export function GrowthFitPanel({
  */
 function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
   const t = useT();
+  const { locale } = useLocale();
   const { present, expected } = fit.data_completeness;
   return (
     <>
@@ -203,7 +209,10 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
           {/* Both counts, always. A proportion without its denominator is not a
               completeness figure. */}
           <span className="co-growth-fit-completeness">
-            {t("co.growthFit.completeness", { present, expected })}
+            {t("co.growthFit.completeness", {
+              present: formatNumber(present, locale),
+              expected: formatNumber(expected, locale),
+            })}
           </span>
         </p>
         {/* The cap and the next step qualify the BAND, so they stay in its

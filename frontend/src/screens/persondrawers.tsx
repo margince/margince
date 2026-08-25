@@ -22,8 +22,9 @@ import {
 } from "../design-system/projectpicker";
 import { RichText } from "../design-system/richtext";
 import { Select } from "../design-system/select";
+import { formatNumber } from "../format/format";
 import { webUrl } from "../format/weburl";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { refusalOf, SendRefusal, scheduleFields } from "./compose";
 import { useConsentPurposes } from "./consent";
@@ -891,6 +892,7 @@ export function PersonResearchDrawer({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [dismissed, setDismissed] = useState<ReadonlySet<number>>(new Set());
 
   const run = useQuery({
@@ -967,8 +969,8 @@ export function PersonResearchDrawer({
             </p>
             <p className="pe-today-foot">
               {t("person.research.stats", {
-                sources: run.data.sources_read ?? 0,
-                claims: claims.length,
+                sources: formatNumber(run.data.sources_read ?? 0, locale),
+                claims: formatNumber(claims.length, locale),
               })}
             </p>
             {claims.map((claim) => (
@@ -1033,7 +1035,9 @@ export function PersonResearchDrawer({
             disabled={claims.length === 0 || save.isPending}
             onClick={() => save.mutate()}
           >
-            {t("person.research.save", { count: claims.length })}
+            {t("person.research.save", {
+              count: formatNumber(claims.length, locale),
+            })}
           </Button>
         </div>
       </div>

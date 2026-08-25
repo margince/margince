@@ -85,14 +85,32 @@ const MARK_FADE = 0.16;
 /** Where the whole trace lives, and where a model gets bound. Same tab. */
 const AI_SETTINGS_HREF = "#/settings/admin/ai";
 
+/**
+ * A count read off ONE page of a keyset-paged list.
+ *
+ * The dedupe queue returns no total and this rail reads a single 50-row page,
+ * so a full page means "at least this many" and nothing more. Printing the
+ * page length flat reads as a total: a workspace with two hundred open pairs
+ * said "50", and the reader who cleared fifty of them found the number
+ * unmoved. (The approvals count beside it needs none of this — its query walks
+ * every page before counting.)
+ */
+type CappedCount = Readonly<{ seen: number; more: boolean }>;
+
+/** The count as the rail prints it: "50+" when the page was full. */
+function countLabel(count: CappedCount): string {
+  return count.more ? `${count.seen}+` : String(count.seen);
+}
+
 /** What the installation can actually tell us, and what it cannot. */
 type Signals = Readonly<{
-  /** Approvals staged for this human; undefined until the read answers. */
+  /** Approvals staged for this human; undefined until the read answers.
+   *  A true total — usePendingApprovals walks every page. */
   waiting: number | undefined;
   /** Sources the agent cannot reach, named as the reader knows them. */
   offline: readonly string[];
   /** Duplicate pairs the agent will not decide for itself; undefined until read. */
-  duplicates: number | undefined;
+  duplicates: CappedCount | undefined;
   /** Whether this deployment has a model bound at all. */
   ai: AiPosture;
   /** What the installation is entitled to; undefined when this seat may not
@@ -163,7 +181,12 @@ function useSignals(): Signals {
   const offline = (connectors.data?.data ?? [])
     .filter((connection) => connection.status !== "connected")
     .map((connection) => connection.account_label ?? connection.provider);
-  const duplicates = dedupe.data ? dedupe.data.data.length : undefined;
+  const duplicates = dedupe.data
+    ? {
+        seen: dedupe.data.data.length,
+        more: dedupe.data.page?.has_more ?? false,
+      }
+    : undefined;
 
   return {
     // Absent `data` means the read has not answered, or was refused. A 0 here
@@ -669,9 +692,9 @@ function AgentPanel({
               <a
                 className="arbox artile"
                 href="#/dedupe"
-                aria-label={`${LABELS.duplicatesRow} ${signals.duplicates}`}
+                aria-label={`${LABELS.duplicatesRow} ${countLabel(signals.duplicates)}`}
               >
-                <b>{signals.duplicates}</b>
+                <b>{countLabel(signals.duplicates)}</b>
                 <span>{LABELS.duplicatesRow}</span>
               </a>
             )}
@@ -834,8 +857,8 @@ function warningLine(signals: Signals): string {
   if (signals.license === "none" || signals.license === "refused") {
     return signals.licenseLine;
   }
-  if (signals.duplicates) {
-    return `${signals.duplicates} ${LABELS.duplicates}`;
+  if (signals.duplicates?.seen) {
+    return `${countLabel(signals.duplicates)} ${LABELS.duplicates}`;
   }
   return LABELS.review;
 }
@@ -917,8 +940,8 @@ function idleLines(
         ? `${signals.waiting} ${LABELS.waiting}`
         : undefined,
     duplicates:
-      signals.duplicates !== undefined && signals.duplicates > 0
-        ? `${signals.duplicates} ${LABELS.duplicatesIdle}`
+      signals.duplicates !== undefined && signals.duplicates.seen > 0
+        ? `${countLabel(signals.duplicates)} ${LABELS.duplicatesIdle}`
         : undefined,
     spend:
       spend.allowed && spend.minor !== undefined

@@ -314,7 +314,7 @@ func anonymizeSubjectRows(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 	if err := scrubSubjectFromGraph(ctx, tx, personID, emails, subjectName, linkedInHandles); err != nil {
 		return nil, err
 	}
-	if err := deletePreferenceToken(ctx, tx, personID); err != nil {
+	if err := deleteConsentCapabilities(ctx, tx, personID); err != nil {
 		return nil, err
 	}
 	wiped, err := anonymizeLeadTwins(ctx, tx, personID, emails)
@@ -402,24 +402,6 @@ func deleteSubjectIdentifierRows(ctx context.Context, tx pgx.Tx, personID ids.Pe
 		return nil, err
 	}
 	return linkedInHandles, nil
-}
-
-// deletePreferenceToken retires the subject's preference-center token. That
-// token is a live CAPABILITY over their consent record, not a stored
-// attribute of them: whoever holds the emailed List-Unsubscribe URL reads
-// their per-purpose state, withdraws, and grants — on an edge that binds a
-// system principal, so every RBAC gate downstream passes.
-//
-// Anonymize-in-place is why erasure has to reach it here rather than leaning
-// on the schema: the person row survives, so 0048's ON DELETE CASCADE never
-// fires, and an erased subject would keep accruing fresh person_consent,
-// consent_event, audit and outbox rows through the exact capability this
-// erasure certifies destroyed. Deleted rather than revoked, like the address
-// and phone rows beside it — a revoked row still holds the subject's person
-// link.
-func deletePreferenceToken(ctx context.Context, tx pgx.Tx, personID ids.PersonID) error {
-	_, err := tx.Exec(ctx, `DELETE FROM preference_token WHERE person_id = $1`, personID)
-	return err
 }
 
 // tombstoneCollateralScrubs stamps a per-record erase tombstone for each

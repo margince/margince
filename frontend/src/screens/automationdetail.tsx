@@ -14,7 +14,7 @@ import {
   SegmentedControl,
 } from "../design-system/atoms";
 import { AutonomyDot } from "../design-system/trust";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -283,6 +283,7 @@ export function AutomationPreview({
   automationId,
 }: Readonly<{ automationId: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [windowDays, setWindowDays] = useState<WindowOption>("30");
 
   // A preview is a pure read keyed on the selected window — so it is a query,
@@ -352,19 +353,23 @@ export function AutomationPreview({
               }}
             >
               <p className="t-body">
-                {t("auto.preview.matchesNow", { n: result.matches_now })}
+                {t("auto.preview.matchesNow", {
+                  n: formatNumber(result.matches_now, locale),
+                })}
               </p>
               <p className="t-small">
                 {result.would_have_fired == null
                   ? t("auto.preview.notComputable")
                   : t("auto.preview.wouldFire", {
-                      n: result.would_have_fired,
-                      days: result.window_days,
+                      n: formatNumber(result.would_have_fired, locale),
+                      days: formatNumber(result.window_days, locale),
                     })}
               </p>
               {hidden > 0 && (
                 <p className="t-small">
-                  {t("auto.preview.hidden", { n: hidden })}
+                  {t("auto.preview.hidden", {
+                    n: formatNumber(hidden, locale),
+                  })}
                 </p>
               )}
             </div>

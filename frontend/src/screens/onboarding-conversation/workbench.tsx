@@ -50,6 +50,7 @@ export function useConfiguredModel(): string {
 // can never name a different configuration.
 function useConfiguredModelSummary(): string {
   const t = useT();
+  const { locale } = useLocale();
   const profile = useQuery({
     queryKey: ["ai-profile"],
     queryFn: async (): Promise<AiProfile> => {
@@ -61,7 +62,12 @@ function useConfiguredModelSummary(): string {
     },
     staleTime: Number.POSITIVE_INFINITY,
   });
-  return configuredModelSummary(profile.data, t("ob.ai.runtimeUnavailable"), t);
+  return configuredModelSummary(
+    profile.data,
+    t("ob.ai.runtimeUnavailable"),
+    t,
+    locale,
+  );
 }
 
 /**
@@ -140,9 +146,11 @@ export function ConversationWorkbench({
     ? t("ob.conv.scene.detour")
     : current < 0
       ? undefined
-      : t("ob.conv.scene.step", {
-          n: current + 1,
-          m: steps.length,
+      : // A position in the rail, not a magnitude: never grouped, in any
+        // locale.
+        t("ob.conv.scene.step", {
+          n: String(current + 1),
+          m: String(steps.length),
           label: steps[current].label,
         });
   return (

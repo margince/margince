@@ -879,7 +879,11 @@ function DraftDisclosure({
       {provenance.voice_profile_version != null && (
         <>
           <p className="t-caption">
-            {t("compose.voiceVersion", { n: provenance.voice_profile_version })}
+            {/* A profile VERSION, never grouped: version 1234 is one
+                identifier, and "1.234" reads as a different one. */}
+            {t("compose.voiceVersion", {
+              n: String(provenance.voice_profile_version),
+            })}
           </p>
           {maturity === "provisional" && (
             <>

@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (27)
+## Parity (28)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -30,6 +30,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
+| `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
 | `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice: the server builds it in SQL (internal/compose/reportperiod.go) because that is what a report is actually cut by, and the browser builds it in TypeScript (frontend/src/format/fiscalyear.ts) to show an admin what the setting they are about to save will produce. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
 | `frontendminorunits_test.go` | H3 | The browser and the server must scale money by the SAME table, or the integer they exchange means two different amounts. |
@@ -47,7 +48,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 
-## Census (36)
+## Census (37)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -55,6 +56,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskcensus_test.go` | H3 | The census as a fitness function: the contract says which AI tasks ship and what their invocation sites are called, and this build must register exactly those. |
 | `aitaskrailcensus_test.go` | H2 | Every AI task this build can run reports into the AI-activity projection. |
 | `aitaskwiring_test.go` | H2 | The census says a site EXISTS; this says a process role runs it. |
+| `auditbeforeimage_test.go` | H2 | An audited update says what it changed FROM. |
 | `basecurrencyguard_test.go` | H2 | The base-currency lock as a fitness function. |
 | `bootcomposition_test.go` | H2 | The fitness gate on the boot sequence: a process role that composes extensions also records what it composed. |
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's OPTIONS. |

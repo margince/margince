@@ -14,7 +14,7 @@ import {
   sectionState,
 } from "../design-system/surfacestate";
 import { useTruncationTooltip } from "../design-system/tooltip";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemCodeOf, throwProblem } from "./common";
 import { worstOf } from "./company360";
@@ -31,6 +31,11 @@ import { TagsSection } from "./companyrailtags";
 import { byReach } from "./coverage";
 import { roleOf } from "./provider-status";
 import { signalKindLabel, signalTone } from "./record360";
+// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
+// are defined in company360.css. Imported HERE rather than left to the caller:
+// it works today only because the company record page pulls that stylesheet in
+// for its own sake, so this file renders unstyled anywhere else.
+import "./company360.css";
 
 // The record page's LEFT rail (mockup State A): the account's context,
 // beside the work rather than under it. Passed to RecordView's `rail` slot,
@@ -169,6 +174,7 @@ function HealthSection({
   loading,
 }: Readonly<{ view?: Organization360; orgId?: string; loading: boolean }>) {
   const t = useT();
+  const { locale } = useLocale();
   const health = view?.health;
   const payment = usePaymentHealth(orgId);
   const { overall, rated } = worstOf([
@@ -179,13 +185,15 @@ function HealthSection({
   const lines: string[] = [];
   if (health?.days_since_last_inbound != null) {
     lines.push(
-      t("co.health.sinceInbound", { days: health.days_since_last_inbound }),
+      t("co.health.sinceInbound", {
+        days: formatNumber(health.days_since_last_inbound, locale),
+      }),
     );
   }
   if (health?.reply_balance != null) {
     lines.push(
       t("co.health.replyBalance", {
-        percent: Math.round(health.reply_balance * 100),
+        percent: formatNumber(Math.round(health.reply_balance * 100), locale),
       }),
     );
   }
@@ -195,7 +203,7 @@ function HealthSection({
         health.active_contacts === 1
           ? "co.health.activeContacts.one"
           : "co.health.activeContacts.other",
-        { count: health.active_contacts },
+        { count: formatNumber(health.active_contacts, locale) },
       ),
     );
   }
@@ -205,7 +213,7 @@ function HealthSection({
         health.open_commitments === 1
           ? "co.health.openCommitments.one"
           : "co.health.openCommitments.other",
-        { count: health.open_commitments },
+        { count: formatNumber(health.open_commitments, locale) },
       ),
     );
   }

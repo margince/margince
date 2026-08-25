@@ -468,17 +468,3 @@ func DecisionGrantObjects(kind, targetType string) ([]string, error) {
 	}
 	return objects, nil
 }
-
-// KindHasDecisionGrants reports whether a stageable kind carries a
-// decision-grant mapping — its own, or one resolved from the staged target's
-// entity type. The composition layer's fitness test calls it for every
-// 🟡/dynamic tool in the registry: a tool that can stage an approval nobody is
-// mapped to decide would strand its stagings in a queue no inbox shows
-// (decidable fails closed on unknown kinds).
-func KindHasDecisionGrants(kind string) bool {
-	if _, ok := decisionGrants[kind]; ok {
-		return true
-	}
-	_, resolvedFromTarget := targetResolvedGrants[kind]
-	return resolvedFromTarget
-}

@@ -50,15 +50,15 @@ func storedConfidence(ctx context.Context, t *testing.T, e *dedupeEnv, personID 
 // fillFromSignature runs the machine pass that scores what it writes.
 func fillFromSignature(ctx context.Context, t *testing.T, e *dedupeEnv, personID ids.PersonID, f SignatureField) bool {
 	t.Helper()
-	var applied bool
+	var verdict signatureVerdict
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		applied, err = e.store.applySignatureField(ctx, tx, personID, "mailto:signature", f)
+		verdict, err = e.store.applySignatureField(ctx, tx, personID, "mailto:signature", f)
 		return err
 	}); err != nil {
 		t.Fatalf("apply the signature field %s: %v", f.Name, err)
 	}
-	return applied
+	return verdict.applied
 }
 
 // A machine read a page or a footer; the human read the evidence and chose.

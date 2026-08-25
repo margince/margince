@@ -219,6 +219,10 @@ func (stubs) RequestAttachmentAccess(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "RequestAttachmentAccess")
 }
 
+func (stubs) GetAttention(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAttention")
+}
+
 func (stubs) ListAuditLog(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAuditLogParams) {
 	httperr.NotImplemented(w, r, "ListAuditLog")
 }

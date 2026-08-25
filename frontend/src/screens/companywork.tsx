@@ -30,9 +30,16 @@ import {
 import {
   formatDate,
   formatMoneyOrAbsent,
+  formatNumber,
   relativeDays,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
+// The row shapes this card draws — `co-rowlink`, `co-row-meta` — are the
+// record page's, defined in company360.css. Imported here rather than left to
+// whichever screen happens to mount the card: without it the card renders
+// unstyled anywhere company360.css is not already on the page, which is what
+// Storybook showed — the meta parts ran together with no separator.
+import "./company360.css";
 import "./companywork.css";
 
 type Organization360 = components["schemas"]["Organization360"];
@@ -54,6 +61,7 @@ export function CompanyWorkCard({
   view,
   loading = false,
   onOpenRecord,
+  bare = false,
 }: Readonly<{
   view?: Organization360;
   // The composite read's own pending flag — see sectionState's own doc.
@@ -62,6 +70,11 @@ export function CompanyWorkCard({
   // receipt is cited from several cards and two owners would mean two
   // receipts open over each other.
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Render the sections without this card's own Panel, for a caller that
+  // holds the chrome. The Company 360 card does: this is one reading of the
+  // account among four, and a card inside a card is two borders around one
+  // list.
+  bare?: boolean;
 }>) {
   const t = useT();
   const deals = view?.deals;
@@ -80,14 +93,11 @@ export function CompanyWorkCard({
     liveWork(projects).length,
     loading,
   );
-  return (
-    <Panel
-      title={t("co.work.title")}
-      titleAction={<WorkCount view={view} />}
-      footer={<SinceLastVisit view={view} />}
-    >
+  const body = (
+    <>
       <WorkGroup
         label={t("co.work.deals")}
+        level={bare ? "h4" : "h3"}
         state={dealState}
         emptyLabel={t("co.work.noDeals")}
       >
@@ -97,6 +107,7 @@ export function CompanyWorkCard({
       </WorkGroup>
       <WorkGroup
         label={t("co.work.projects")}
+        level={bare ? "h4" : "h3"}
         state={projectState}
         emptyLabel={t("co.work.noProjects")}
       >
@@ -115,6 +126,29 @@ export function CompanyWorkCard({
           </p>
         </PanelBody>
       )}
+    </>
+  );
+  if (bare) {
+    // The count rides with the subhead rather than in a header band this
+    // card no longer owns, and the visit line moves to the whole card's
+    // footer — it is about the account, not about the work on it.
+    return (
+      <>
+        <PanelBody className="co-360-head">
+          <Eyebrow as="h3">{t("co.work.title")}</Eyebrow>
+          <WorkCount view={view} />
+        </PanelBody>
+        {body}
+      </>
+    );
+  }
+  return (
+    <Panel
+      title={t("co.work.title")}
+      titleAction={<WorkCount view={view} />}
+      footer={sinceLastVisitFooter(view)}
+    >
+      {body}
     </Panel>
   );
 }
@@ -123,18 +157,25 @@ export function CompanyWorkCard({
  * SinceLastVisit is what moved on this account while the reader was away, and
  * whether any of the account was withheld from them.
  *
- * It sat under the written account brief this card replaced, and it is not
- * about the brief — it is about the account, so it moves with the lead card
- * rather than going away with the prose. Withheld sections are named ONCE,
- * about the whole page, rather than as a refusal beside each line a reader
- * did not get.
+ * It is about the ACCOUNT rather than about any one section of it, so it sits
+ * in the footer of whichever card is the account's reading — this one when it
+ * stands alone, and the Company 360 card's own footer when this is a section
+ * of it.
+ *
+ * PRIVATE on purpose: both mounts reach it through sinceLastVisitFooter, and
+ * a caller that could put this element in a footer slot directly is the
+ * blank-band defect waiting to happen again. It already happened twice.
+ *
+ * Withheld sections are named ONCE, about the whole page, rather than as a
+ * refusal beside each line a reader did not get.
  */
 function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const since = newActivities(view);
   const first = firstVisit(view);
   const withheld = (view?.sections_omitted?.length ?? 0) > 0;
-  if (!first && since === 0 && !withheld) {
+  if (!speaksSinceLastVisit(view)) {
     return null;
   }
   return (
@@ -147,12 +188,43 @@ function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
         <span className="t-caption">
           {t(
             since === 1 ? "co.read.newActivityOne" : "co.read.newActivityMany",
-            { count: since },
+            { count: formatNumber(since, locale) },
           )}
         </span>
       )}
       {withheld && <span className="t-caption">{t("co.prep.withheld")}</span>}
     </p>
+  );
+}
+
+// The since-last-visit line for a footer slot, or nothing at all.
+//
+// UNDEFINED rather than an element that renders null, and that is the whole
+// point of this function existing: Panel draws its footer band on the slot's
+// truthiness, and an element is truthy whatever it renders — so handing it
+// `<SinceLastVisit/>` on an account with nothing to report costs the record a
+// blank row. Both mounts call this; passing the component straight into a
+// footer is the defect it exists to make unavailable.
+export function sinceLastVisitFooter(
+  view?: Organization360,
+): ReactNode | undefined {
+  return speaksSinceLastVisit(view) ? (
+    <SinceLastVisit view={view} />
+  ) : undefined;
+}
+
+// Whether there is a sentence to say at all — read by the component's own
+// guard and by the footer helper above, so the band and the sentence cannot
+// disagree about whether there is one.
+function speaksSinceLastVisit(view?: Organization360): boolean {
+  return (
+    firstVisit(view) ||
+    newActivities(view) > 0 ||
+    // Optional on BOTH hops: a composite that answered without the omission
+    // list names nothing withheld, and reading `.length` off the absent list
+    // throws where the whole record page then renders as "this view no longer
+    // works".
+    (view?.sections_omitted?.length ?? 0) > 0
   );
 }
 
@@ -209,11 +281,17 @@ function liveWork(projects?: readonly WorkProject[]): readonly WorkProject[] {
 // half says so where its rows would have been, so the other half still reads.
 function WorkGroup({
   label,
+  level,
   state,
   emptyLabel,
   children,
 }: Readonly<{
   label: string;
+  // Deals and Projects sit one level under whatever names this card. Standing
+  // alone that is the card title, an h2, so they are h3; as a section of the
+  // Company 360 card they are h4 — the outline nests rather than flattening
+  // into a row of equal siblings a screen reader cannot walk.
+  level: "h3" | "h4";
   state: ReturnType<typeof sectionState>;
   emptyLabel: string;
   children: ReactNode;
@@ -222,7 +300,7 @@ function WorkGroup({
     return (
       <>
         <PanelBody className="co-work-head">
-          <Eyebrow as="h3">{label}</Eyebrow>
+          <Eyebrow as={level}>{label}</Eyebrow>
         </PanelBody>
         {children}
       </>
@@ -230,7 +308,12 @@ function WorkGroup({
   }
   return (
     <PanelBody>
-      <SurfaceState label={label} state={state} emptyLabel={emptyLabel}>
+      <SurfaceState
+        label={label}
+        labelLevel={level}
+        state={state}
+        emptyLabel={emptyLabel}
+      >
         {null}
       </SurfaceState>
     </PanelBody>
@@ -250,6 +333,7 @@ function WorkGroup({
  */
 function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (!view?.deals || !view.projects) {
     return null;
   }
@@ -260,8 +344,8 @@ function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   return (
     <span className="t-small">
       {capped
-        ? t("co.work.countAtLeast", { count })
-        : t("co.work.count", { count })}
+        ? t("co.work.countAtLeast", { count: formatNumber(count, locale) })
+        : t("co.work.count", { count: formatNumber(count, locale) })}
     </span>
   );
 }
@@ -353,7 +437,7 @@ function ProjectLine({
                 a single template would print "since never". */}
             {project.last_activity_at
               ? t("co.work.quiet", {
-                  when: relativeDays(project.last_activity_at, t),
+                  when: relativeDays(project.last_activity_at, t, locale),
                 })
               : t("co.work.neverTouched")}
           </StatusLine>

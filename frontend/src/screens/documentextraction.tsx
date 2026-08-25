@@ -6,7 +6,7 @@ import { Button, TextInput } from "../design-system/atoms";
 import { EvidenceMark } from "../design-system/evidencemark";
 import type { ConfidenceLevel } from "../design-system/trust";
 import { StagingCard } from "../design-system/trust";
-import { formatMoney } from "../format/format";
+import { formatMoney, formatNumber } from "../format/format";
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -131,6 +131,7 @@ export function DocumentExtractionPanel({
   canAccept,
 }: Readonly<{ attachmentId: string; canAccept: boolean }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [edits, setEdits] = useState<Record<string, string>>({});
   const [accepted, setAccepted] = useState<number | null>(null);
@@ -220,7 +221,7 @@ export function DocumentExtractionPanel({
               "extraction.acceptedHeading.one",
               "extraction.acceptedHeading.other",
             ),
-            { count: accepted },
+            { count: formatNumber(accepted, locale) },
           )}
         </p>
       </section>
@@ -321,6 +322,7 @@ function ExtractionBody({
   acceptFailed: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
 
   if (extraction.status === "queued" || extraction.status === "running") {
     return <p className="t-caption">{t("extraction.reading")}</p>;
@@ -362,7 +364,7 @@ function ExtractionBody({
             "extraction.heading.one",
             "extraction.heading.other",
           ),
-          { count: extraction.fields.length },
+          { count: formatNumber(extraction.fields.length, locale) },
         )}
       </p>
       <ul className="extraction-fields">
@@ -390,7 +392,7 @@ function ExtractionBody({
                 "extraction.accept.one",
                 "extraction.accept.other",
               ),
-              { count: extraction.fields.length },
+              { count: formatNumber(extraction.fields.length, locale) },
             )}
           </Button>
           <Button variant="ghost" onClick={onDismiss}>
