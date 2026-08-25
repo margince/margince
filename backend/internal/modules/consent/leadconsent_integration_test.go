@@ -78,8 +78,7 @@ func setupLeadConsent(t *testing.T) *leadConsentEnv {
 	}
 	e.leadEmail = "lena-" + e.lead.String() + "@warm.example"
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		e.ws, "lc-"+e.ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,

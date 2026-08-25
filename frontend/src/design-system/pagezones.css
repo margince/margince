@@ -1,0 +1,46 @@
+/* PageZones — the page's columns: the work column, and the rails of context
+   beside it. Extracted verbatim from the record page's zones grid, which was
+   the only page that had one, so that a second page needing the same shape
+   reuses it rather than re-deriving the ratios and the folds.
+
+   The work column is the one that grows, so the rails keep a fixed share and
+   the layout folds to one column before either becomes unreadably narrow. */
+.page-zones {
+  display: grid;
+  gap: 16px;
+  align-items: start;
+}
+/* The story always gets the largest share, whichever rails exist. */
+.page-zones-both {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 5fr) minmax(0, 3fr);
+}
+.page-zones-rail {
+  grid-template-columns: minmax(0, 3fr) minmax(0, 7fr);
+}
+.page-zones-aside {
+  grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+}
+/* Every column is a grid item that has to be allowed to be NARROWER than its
+   widest child: a table, a long URL or an unbroken word otherwise pushes its
+   track past its share and the whole layout stops folding. `> *` rather than a
+   list of the three column classes — the component renders nothing else in
+   here, so the rule cannot go short when a column is added. */
+.page-zones > * {
+  min-width: 0;
+}
+@media (max-width: 1200px) {
+  .page-zones {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+  /* The story stays first and full width once the rails sit under it:
+     a rep opening an account reads what is happening, not the firmographics. */
+  .page-zones > .page-zones-main {
+    grid-column: 1 / -1;
+    order: -1;
+  }
+}
+@media (max-width: 720px) {
+  .page-zones {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

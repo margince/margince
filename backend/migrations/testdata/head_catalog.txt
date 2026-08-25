@@ -4353,11 +4353,9 @@ public.workspace acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/mar
 public.workspace.archived_at timestamp with time zone gen=- def=-
 public.workspace.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.workspace.id uuid NOT NULL gen=- def=uuidv7()
-public.workspace.slug text NOT NULL gen=- def=-
 public.workspace.trg_workspace_updated CREATE TRIGGER trg_workspace_updated BEFORE UPDATE ON public.workspace FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.workspace.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.workspace.workspace_pkey PRIMARY KEY (id)
-public.workspace.workspace_slug_unique UNIQUE (slug)
 public.workspace.workspace_x_incumbent_check CHECK (((x_incumbent IS NULL) OR (x_incumbent = ANY (ARRAY['hubspot'::text, 'salesforce'::text, 'dynamics'::text]))))
 public.workspace.workspace_x_sor_mode_check CHECK ((x_sor_mode = ANY (ARRAY['native'::text, 'overlay'::text])))
 public.workspace.x_incumbent text gen=- def=-
@@ -4373,6 +4371,5 @@ public.workspace_email_domain.workspace_email_domain_pkey PRIMARY KEY (domain)
 public.workspace_email_domain.workspace_email_domain_source_check CHECK ((source = ANY (ARRAY['admin'::text, 'mailbox'::text])))
 public.workspace_email_domain_pkey CREATE UNIQUE INDEX workspace_email_domain_pkey ON public.workspace_email_domain USING btree (domain)
 public.workspace_pkey CREATE UNIQUE INDEX workspace_pkey ON public.workspace USING btree (id)
-public.workspace_slug_unique CREATE UNIQUE INDEX workspace_slug_unique ON public.workspace USING btree (slug)
 schema ext acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner
 schema public acl=margince_owner=UC/margince_owner,margince_app=U/margince_owner

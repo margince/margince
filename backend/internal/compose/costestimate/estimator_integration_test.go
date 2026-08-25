@@ -117,8 +117,7 @@ func (e *estEnv) seedWorkspace(t *testing.T) (ids.UUID, context.Context) {
 	ctx := context.Background()
 	ws := ids.NewV7()
 	if _, err := e.owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		ws, "ce-"+ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatal(err)
 	}
 	return ws, principal.WithWorkspaceID(context.Background(), ws)

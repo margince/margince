@@ -151,10 +151,17 @@ const envTemplate = `# Margince settings.
 # OPENAI_COMPATIBLE_API_KEY=
 
 # ---------------------------------------------------------------------------
-# Attachments and logos (S3-compatible object storage)
+# Attachments and logos (object storage)
 #
-# Unset, uploads have nowhere to go. Any S3-compatible endpoint works.
+# Already working: attachments and company logos are kept in data/blobs inside
+# this folder, so nothing here needs setting. Point MARGINCE_BLOBSTORE_PATH
+# somewhere else to move them (an external disk, say), or set the endpoint
+# below to keep them in an S3-compatible service instead — the endpoint wins
+# over the path when both are set. A local store holds bytes for THIS machine
+# only: no replication, no signed URLs, and a second api replica cannot read a
+# directory it does not mount.
 # ---------------------------------------------------------------------------
+# MARGINCE_BLOBSTORE_PATH=
 # MARGINCE_BLOBSTORE_ENDPOINT=
 # MARGINCE_BLOBSTORE_ACCESS_KEY=
 # MARGINCE_BLOBSTORE_SECRET_KEY=

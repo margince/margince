@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind shape H2
+
 package backendarch
 
 // A module's READ spelling of a row gate is not a licence to write through it.

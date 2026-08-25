@@ -170,3 +170,96 @@ describe("a refused new thread", () => {
     expect(screen.queryByText(/dealroom\.open_thread/)).toBeNull();
   });
 });
+
+// A reader who may NOT write — a seller previewing the room, a read-only
+// seat, a closed room. What they see has to answer two questions at once:
+// that writing is refused, and WHERE writing would otherwise happen. Drawing
+// nothing answers only the first, and a rep previewing their own room then
+// cannot tell a commenting buyer's page from a read-only one, because the two
+// render identically.
+describe("a board nobody may write to", () => {
+  const REFUSAL = "A preview cannot write.";
+
+  it("still shows where a reply would go, refused and reasoned", () => {
+    draw({ refusal: REFUSAL });
+
+    const ask = screen.getByRole("button", {
+      name: "Ask about this document",
+    });
+    // Refused, not absent: the affordance is on the page and cannot be used.
+    expect(ask).toBeDisabled();
+    // And the reason reaches a screen reader from the control itself, rather
+    // than living only in prose somewhere below it.
+    const describedBy = ask.getAttribute("aria-describedby");
+    expect(describedBy).toBeTruthy();
+    const reason = document.getElementById(describedBy as string);
+    expect(reason?.textContent).toContain(REFUSAL);
+  });
+
+  // A room with no documents has no card to carry the affordance, and this is
+  // the case a rep previewing a NEW room lands on first. Before, they saw a
+  // sentence and nothing else, which is indistinguishable from a room where
+  // nobody may ever write.
+  it("shows the affordance in a room that has no documents yet", () => {
+    render(
+      <LocaleProvider initial="en">
+        <DocumentBoard
+          title="Documents"
+          sub="Everything shared with the buyer"
+          groups={[]}
+          documents={[]}
+          threads={[]}
+          empty="No documents yet"
+          verbs={{ mayRequireChange: false, refusal: REFUSAL }}
+        />
+      </LocaleProvider>,
+    );
+    const start = screen.getByRole("button", { name: "New thread" });
+    expect(start).toBeDisabled();
+    const reason = document.getElementById(
+      start.getAttribute("aria-describedby") as string,
+    );
+    expect(reason?.textContent).toContain(REFUSAL);
+  });
+
+  it("says the reason once, not under every document", () => {
+    // TWO documents: the count is what distinguishes "stated once and pointed
+    // at" from "repeated under each file", and with one document both spell
+    // the same number.
+    render(
+      <LocaleProvider initial="en">
+        <DocumentBoard
+          title="Documents"
+          sub="Everything shared with the buyer"
+          groups={[{ key: "contract", label: "Contract" }]}
+          documents={[DOCUMENT, { ...DOCUMENT, id: "doc-2", title: "Anhang" }]}
+          threads={[]}
+          empty="No documents yet"
+          verbs={{ mayRequireChange: false, refusal: REFUSAL }}
+        />
+      </LocaleProvider>,
+    );
+    // Both cards carry a refused control...
+    expect(
+      screen.getAllByRole("button", { name: "Ask about this document" }),
+    ).toHaveLength(2);
+    // ...and every one of them points at the SAME single sentence.
+    expect(screen.getAllByText(REFUSAL)).toHaveLength(1);
+    const ids = screen
+      .getAllByRole("button", { name: "Ask about this document" })
+      .map((b) => b.getAttribute("aria-describedby"));
+    expect(new Set(ids).size).toBe(1);
+  });
+
+  it("offers no composer at all when there is no reason to give", () => {
+    // No `refusal` and no `open`: nothing to say and nothing to press, so the
+    // board must not grow a dead control with an empty explanation. The room
+    // composer is the one that would, since it draws a button unconditionally
+    // once a refusal exists.
+    draw({});
+    expect(
+      screen.queryByRole("button", { name: "Ask about this document" }),
+    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "New thread" })).toBeNull();
+  });
+});

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H2
+
 package backendarch
 
 // A declared narrowing parameter is read by the handler it is declared on, or

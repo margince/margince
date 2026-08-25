@@ -196,7 +196,10 @@ func (s *Store) createOrJoinSiteRead(ctx context.Context, orgID *ids.Organizatio
 	var joined bool
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		if orgID != nil {
-			if err := auth.EnsureWritable(ctx, tx, "organization", orgID.UUID); err != nil {
+			// LIVE: a dossier is commissioned FOR a company, so an archived one
+			// has none to commission. The site_read row is the child here and
+			// the organization is its anchor.
+			if err := auth.EnsureWritableLive(ctx, tx, "organization", orgID.UUID); err != nil {
 				return err
 			}
 		}

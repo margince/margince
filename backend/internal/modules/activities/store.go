@@ -73,7 +73,7 @@ type Store struct {
 	// inbox; nil holds silently (WithHeldNotifier wires it).
 	heldNotifier HeldNotifier
 	// clock reads the current instant. Injected so the scheduling suites can
-	// pin a due moment and a missed window without sleeping (T11).
+	// pin a due moment and a missed window without sleeping (P3).
 	clock func() time.Time
 }
 

@@ -26,7 +26,10 @@ package main
 // re-uploads nor orphans objects.
 //
 // The phase is skipped, not failed, when no blobstore is configured: a seed
-// against a stack without MinIO should still produce every other record.
+// against a stack with no object storage should still produce every other
+// record. It goes through blobstore.FromEnv rather than an S3 client of its own,
+// so a LOCAL store counts — MARGINCE_BLOBSTORE_PATH pointed at the same
+// directory the api reads is a complete answer on a single machine.
 
 import (
 	"bytes"
@@ -60,7 +63,8 @@ func seedLogos(ctx context.Context, dsn, dataset string, c *client, orgIDs map[s
 	if !configured {
 		// No MinIO in this environment. Every other record still seeds, and
 		// saying so beats a silent zero.
-		fmt.Println("logos:         skipped — no blobstore configured (MARGINCE_BLOBSTORE_ENDPOINT)")
+		fmt.Println("logos:         skipped — no blobstore configured " +
+			"(MARGINCE_BLOBSTORE_ENDPOINT, or MARGINCE_BLOBSTORE_PATH for a local one)")
 		return 0, nil
 	}
 

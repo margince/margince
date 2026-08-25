@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind shape H1
+
 package backendarch
 
 // A unit's SQL addresses the unit's own tables.

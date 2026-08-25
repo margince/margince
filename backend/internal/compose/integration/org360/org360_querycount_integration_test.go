@@ -188,7 +188,12 @@ func TestOrganization360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// they are flat in the size of the account exactly like every section above.
 	// The flatness assertion higher up is what actually protects that; this
 	// number only records where the flat cost now sits.
-	const budget = 39
+	// 42 since the work-in-flight card: three reads that say why the account's
+	// deals and projects need a person — the overdue task per deal, the same
+	// per project, and the open commitment they made to us per project. Each
+	// is one statement over the whole page's ids, so the cost is flat in the
+	// number of deals and projects exactly like the sections they decorate.
+	const budget = 42
 	if smallCost > budget {
 		t.Errorf("one 360 issued %d queries, budget is %d", smallCost, budget)
 	}

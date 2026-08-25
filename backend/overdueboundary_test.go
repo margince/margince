@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind parity H1
+
 package backendarch
 
 // "Is this late?" is one question about one record, and a reader can ask it of a

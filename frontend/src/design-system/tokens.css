@@ -10,10 +10,26 @@
  * success stays a brighter grass-green than the brand emerald on purpose.
  */
 :root {
-  --bgPage: #fbfcfb;
+  /* The page is WHITE. It used to be #fbfcfb, and the near-white it was is now
+   * the SIDEBAR's ground — the two surfaces swapped so the chrome reads as the
+   * quieter of the pair and the reading surface is the brightest thing on
+   * screen. The mockup this palette was mirrored from says #fbfcfb here; that
+   * document is retired and this is the shipped choice, which tokens.test.ts
+   * pins in its place. */
+  --bgPage: #ffffff;
   --bgElevated: #ffffff;
   --bgCard: #eef1f0;
   --bgHover: #f3f6f4;
+  /* The sidebar's own ground: a shade off the page rather than the page's own
+   * white, so the application's left edge is visible without a second border.
+   * A token rather than `--bgCard` because the sidebar is not a card and must
+   * not follow one when card grounds are re-tuned. */
+  --bgSidebar: #fbfcfb;
+  /* The top strip, which the content scrolls UNDER: translucent over whatever
+   * passes beneath it, with an 8px blur behind it (app/topbar.css). Stated as
+   * an alpha colour rather than a solid because the blur is only visible where
+   * the ground is see-through. */
+  --bgTopbar: rgba(255, 255, 255, 0.9);
 
   --accent: #0b7a53;
   --accentLight: rgba(11, 122, 83, 0.09);
@@ -182,6 +198,16 @@
    * than repeated so the two cannot drift apart. */
   --phoneNavClearance: 64px;
 
+  /* How far a sticky element inside the content column must stand off the foot
+   * of the scroll area. The default is the plain 8px ledge, because most of the
+   * time nothing is floating down there; the app SHELL raises it to
+   * --phoneNavClearance for exactly the widths where it draws the fixed bottom
+   * nav, and lowers it again on the rail-less surfaces that never draw one
+   * (shell.css). Read this rather than a breakpoint of your own: a sticky bar
+   * that carries its own media query is a second opinion about where the nav
+   * is, and the two went out of step by 60px of viewport width. */
+  --stickyBottomInset: var(--space-2);
+
   --f-display: "Outfit", system-ui, sans-serif;
   --f-body: "DM Sans", system-ui, sans-serif;
   --f-mono: "JetBrains Mono", ui-monospace, monospace;
@@ -346,6 +372,11 @@
   --bgElevated: #142420;
   --bgCard: #1a2c26;
   --bgHover: #1f332c;
+  /* The dark theme's page is already darker than its cards, so the sidebar
+     keeps the elevated ground it has always had here — the light theme is the
+     one whose two surfaces swapped. */
+  --bgSidebar: #142420;
+  --bgTopbar: rgba(20, 36, 32, 0.9);
 
   --accent: #16a34a;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
@@ -459,6 +490,8 @@
     --bgElevated: #142420;
     --bgCard: #1a2c26;
     --bgHover: #1f332c;
+    --bgSidebar: #142420;
+    --bgTopbar: rgba(20, 36, 32, 0.9);
 
     --accent: #16a34a;
 

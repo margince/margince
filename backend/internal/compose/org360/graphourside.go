@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -74,17 +75,17 @@ func (g *graphAssembly) drawnContactIDs() []ids.UUID {
 	return out
 }
 
-// liveMemberWhere is the ONE spelling of "someone who still works here", for a
-// query that aliases app_user as u. It is the same pair the roster (GET /users)
-// lists by, so this card can never name a colleague the roster has already
-// dropped.
+// liveMemberWhere is identity's definition of "someone who still works here",
+// for a query that aliases app_user as u. It is not a second spelling: compose
+// may import a module, so this card asks the owner of app_user rather than
+// restating what the roster (GET /users) lists by, and cannot drift from it.
 //
-// Both halves matter, and neither implies the other: a suspended or deactivated
-// account keeps archived_at NULL, and owner_id and captured_by both survive the
-// day someone leaves. Every user node the graph draws renders this predicate —
-// the card exists to tell a rep who to ask for an intro, and a former colleague
-// is not an answer to that question.
-const liveMemberWhere = `u.status = 'active' AND u.archived_at IS NULL`
+// Every user node the graph draws renders this predicate — the card exists to
+// tell a rep who to ask for an intro, and a former colleague is not an answer
+// to that question.
+//
+// Held by: TestOnlyOneSpellingOfALiveMember (backend/livemember_test.go)
+var liveMemberWhere = identity.LiveMemberSQL("u")
 
 // readAccountOwner reads the live workspace member the account is assigned to.
 // It needs no row-scope clause of its own: the caller has already read the

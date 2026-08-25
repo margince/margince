@@ -13,7 +13,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { HomeScreen } from "./home";
 import { confidenceLevel, InboxScreen } from "./inbox";
 import { groupTask, TasksScreen } from "./tasks";
 
@@ -886,40 +885,6 @@ describe("InboxScreen — live expiry countdown (AC-7)", () => {
     // approval.status server-side.
     expect(screen.queryByRole("button", { name: "Accept" })).toBeNull();
     expect(screen.queryByRole("button", { name: "Reject" })).toBeNull();
-  });
-});
-
-describe("HomeScreen (B-EP09.12b)", () => {
-  it("ranks staged approvals first, reusing the inbox rows", async () => {
-    vi.stubGlobal("fetch", inboxBackend([]));
-    render(<HomeScreen />);
-    await waitFor(() =>
-      expect(screen.getByText("Waiting on you")).toBeTruthy(),
-    );
-    expect(screen.getByText("Send an email")).toBeTruthy();
-    expect(screen.getByText("Nothing sent yet")).toBeTruthy();
-  });
-
-  it("renders the honest generate card when no brief run exists yet", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input instanceof Request ? input.url : input);
-        if (url.includes("/digest")) {
-          return jsonResponse(
-            { title: "Not Found", code: "no_digest_yet" },
-            404,
-          );
-        }
-        if (url.includes("/brief")) {
-          return jsonResponse({ title: "Not Found" }, 404);
-        }
-        return jsonResponse({ data: [], page: { next_cursor: null } });
-      }),
-    );
-    render(<HomeScreen />);
-    await waitFor(() => expect(screen.getByText("No brief yet")).toBeTruthy());
-    expect(screen.getByText("Generate my first brief")).toBeTruthy();
   });
 });
 

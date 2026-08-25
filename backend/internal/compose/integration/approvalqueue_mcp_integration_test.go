@@ -260,3 +260,93 @@ func TestAReadOnlyPassportSeesTheQueueAndCannotAnswerIt(t *testing.T) {
 		t.Errorf("the proposal reads %q after a refused decision — something was written anyway", status)
 	}
 }
+
+// A passport does what its holder could do unaided. Relinking an activity onto
+// a person, a company or a deal is an association a member undoes in the app
+// with no ceremony, so it must not cost a human decision here either — while a
+// PROJECT destination stays confirm-first, because filing under a project
+// classifies the activity as commercial correspondence, which is write-once.
+//
+// Both halves are the point. relinkActivityTier has always said so; what it
+// could not do was make the auto-execute half reachable. auth/admit.go raises a
+// dynamic tier that resolves to auto-execute without naming the version it was
+// resolved from, and relink_activity answered no version at all — so EVERY
+// agent relink was raised, whatever its destination.
+//
+// Driven from claude.ai on 2026-08-25 that showed up as three approvals for one
+// logged meeting: the model attached the person, the company and the deal after
+// the fact, and each attach staged a card the app would never have asked for.
+func TestAnAgentRelinksToAPersonWithoutAskingAndStillStagesAProject(t *testing.T) {
+	q := setupQueue(t)
+	invoke := q.invoker(t, q.mintPassport(t, "relinking agent", "read", "write"))
+
+	var person struct {
+		ID string `json:"id"`
+	}
+	if status := q.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Relink Subject"}, nil, &person); status != http.StatusCreated {
+		t.Fatalf("create person → %d", status)
+	}
+	var org struct {
+		ID string `json:"id"`
+	}
+	if status := q.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Relink Account"}, nil, &org); status != http.StatusCreated {
+		t.Fatalf("create organization → %d", status)
+	}
+	var project struct {
+		ID string `json:"id"`
+	}
+	if status := q.Call(t, "POST", "/v1/projects", apptest.AnyMap{
+		"name": "Relink Engagement", "organization_id": org.ID,
+	}, nil, &project); status != http.StatusCreated {
+		t.Fatalf("create project → %d", status)
+	}
+
+	// An activity linked to nothing, which is the shape the live failure left
+	// behind: logged first, attached afterwards.
+	logged, err := invoke("log_activity", `{"kind":"note","body":"relink me"}`)
+	if err != nil {
+		t.Fatalf("log_activity: %v", err)
+	}
+	// The tool answers the governed envelope, not a bare record.
+	var loggedEnvelope struct {
+		Data struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(logged), &loggedEnvelope); err != nil {
+		t.Fatalf("reading the logged activity: %v", err)
+	}
+	activity := loggedEnvelope.Data
+	if activity.ID == "" {
+		t.Fatalf("log_activity named no activity id: %s", logged)
+	}
+
+	for _, destination := range []struct {
+		entityType string
+		entityID   string
+	}{
+		{"person", person.ID},
+		{"organization", org.ID},
+	} {
+		t.Run("a "+destination.entityType+" is relinked with no approval", func(t *testing.T) {
+			if _, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
+				`","entity_type":"`+destination.entityType+`","entity_id":"`+destination.entityID+`"}`); err != nil {
+				var staged *workflow.StagedApprovalError
+				if errors.As(err, &staged) {
+					t.Fatalf("relinking to a %s staged approval %s; a member does this in the app unasked",
+						destination.entityType, staged.ApprovalID)
+				}
+				t.Fatalf("relink to %s: %v", destination.entityType, err)
+			}
+		})
+	}
+
+	t.Run("a project still stages", func(t *testing.T) {
+		_, err := invoke("relink_activity", `{"activity_id":"`+activity.ID+
+			`","entity_type":"project","entity_id":"`+project.ID+`"}`)
+		var staged *workflow.StagedApprovalError
+		if !errors.As(err, &staged) {
+			t.Fatalf("relinking to a project → %v, want a staged approval — filing under a project is write-once", err)
+		}
+	})
+}

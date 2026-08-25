@@ -62,11 +62,7 @@ const Heading = "LANGUAGE\n"
 // nobody named, which is the failure this package exists to remove. English is
 // what these prompts produced before this package existed.
 func Rule(lang string) string {
-	name := englishName(lang)
-	if name == "" {
-		name = englishName(string(textlang.English))
-	}
-	return Heading + `Write every human-readable sentence of your output in ` + name + `.
+	return Heading + `Write every human-readable sentence of your output in ` + LanguageName(lang) + `.
 Write naturally in that language rather than translating English phrasing.
 Leave everything that is not a sentence exactly as it is given: JSON keys, enum
 and status values, ids, urls, email addresses, people's names, company names,
@@ -74,8 +70,23 @@ and any text you are quoting from a source. Translating one of those changes
 what it refers to.`
 }
 
+// LanguageName is the language's name in English, for any surface that tells
+// a model which language to write in — the prompt rule below, and the tool
+// surface that answers the same question to an agent running elsewhere.
+//
+// A code the product does not ship answers English, which is the fallback Rule
+// documents above and the one every caller wants: the surfaces that call this
+// hand the answer straight to a model, and a blank there instructs it in no
+// language at all.
+func LanguageName(lang string) string {
+	if name := englishName(lang); name != "" {
+		return name
+	}
+	return englishName(string(textlang.English))
+}
+
 // englishName is the language's name in English. Empty for anything the product
-// does not ship, which is what Rule refuses on.
+// does not ship, which is what LanguageName falls back on.
 func englishName(lang string) string {
 	switch textlang.Lang(lang) {
 	case textlang.English:

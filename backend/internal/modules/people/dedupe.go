@@ -39,6 +39,17 @@ const (
 	// DecisionFuzzyReview is a near-match at or above the threshold: a
 	// human compares the two records side by side. Never a merge.
 	DecisionFuzzyReview DedupeDecision = "fuzzy_review"
+	// DecisionNameCollisionReview is two records written with exactly the same
+	// name and no key in common. Like the fuzzy tier it is a question for a
+	// human and never a merge; unlike it, there is no probability involved —
+	// the names either match or they do not.
+	//
+	// It exists because the fuzzy tier cannot reach this pair. A perfect name
+	// contributes 0.55 of a 0.72 bar, so it clears only on employer agreement,
+	// and the create path has no employer to agree with: CreatePersonInput
+	// carries none. One person's second business card therefore landed as a new
+	// record in silence — the case this lane was added for.
+	DecisionNameCollisionReview DedupeDecision = "name_collision_review"
 	// DecisionNoMatch means create.
 	DecisionNoMatch DedupeDecision = "no_match"
 )
@@ -70,6 +81,23 @@ type PersonCandidate struct {
 	// CurrentPrimaryOrgID drives org_match = 1.0 when both sides share
 	// an employer. Nil when the candidate has no known employer yet.
 	CurrentPrimaryOrgID *ids.OrganizationID
+	// QueueNameCollisions asks for the name-collision lane, and it is OPT-IN
+	// because the answer it gives is only safe for one kind of caller.
+	//
+	// A caller that CREATES wants it: two records written the same way are a
+	// question worth putting to a human, and the worst case is a queue row
+	// somebody dismisses.
+	//
+	// A caller that ROUTES must not have it. Capture and the channel path ask
+	// "which existing person does this message belong to", and for them a
+	// PersonID is a delivery address. An unbound channel identity carrying a
+	// common name would name somebody it has no business naming, and a message
+	// would land on a stranger's timeline — a data leak dressed as a match.
+	//
+	// The distinction cannot be read off the candidate: both callers arrive with
+	// a name and no key. So it is stated by whoever knows what they will do with
+	// the answer.
+	QueueNameCollisions bool
 }
 
 // PersonResolution is PO-F-1's output: the decision, the person it names,
@@ -268,6 +296,13 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 	defer rows.Close()
 
 	best := PersonResolution{Decision: DecisionNoMatch}
+	// The best name-IDENTICAL row, tracked apart from the best-scoring one
+	// because they are not the same question and the winner of one is often not
+	// the winner of the other: a near-name at a matching employer outscores an
+	// exact name with no employer known, so reading the name lane off `best`
+	// would lose exactly the pair it exists to catch.
+	sameName := PersonResolution{Decision: DecisionNoMatch}
+	candidateKey := normalizeName(c.FullName)
 	for rows.Next() {
 		var row personCandidateRow
 		if err := rows.Scan(&row.id, &row.fullName, &row.orgID, &row.orgDomain, &row.mailDomains); err != nil {
@@ -280,6 +315,15 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 			(confidence == best.Confidence && best.PersonID != (ids.PersonID{}) && row.id.String() < best.PersonID.String()) {
 			best.Confidence, best.PersonID = confidence, row.id
 		}
+		if normalizeName(row.fullName) == candidateKey {
+			// Same tie-break as above, and for the same reason: two incumbents
+			// spelled identically must not shuffle the queue between runs.
+			if confidence > sameName.Confidence ||
+				(sameName.PersonID == (ids.PersonID{})) ||
+				(confidence == sameName.Confidence && row.id.String() < sameName.PersonID.String()) {
+				sameName.Confidence, sameName.PersonID = confidence, row.id
+			}
+		}
 	}
 	if err := rows.Err(); err != nil {
 		return PersonResolution{}, fmt.Errorf("drain person candidates: %w", err)
@@ -287,6 +331,32 @@ func fuzzyPerson(ctx context.Context, tx pgx.Tx, c PersonCandidate) (PersonResol
 	if best.Confidence >= dedupeReviewThreshold {
 		best.Decision = DecisionFuzzyReview
 		return best, nil
+	}
+	// THE NAME-COLLISION LANE. Two people in one workspace written exactly the
+	// same way are worth a human's glance even when nothing else agrees.
+	//
+	// It is a lane of its own rather than a lower threshold, and the difference
+	// is not cosmetic: the weights are shared with organization matching, so
+	// moving the bar to admit this pair would drag every company comparison down
+	// with it. An exact name is also not a probability — it either is the same
+	// string or it is not — so scoring it and comparing against a fuzzy bar was
+	// always the wrong instrument.
+	//
+	// WHY IT WAS UNREACHABLE. A perfect name scores 0.55·1.0 and the bar is
+	// 0.72, so the pair could only clear it on employer agreement. But
+	// CreatePersonInput carries no employer at all — the employment edge is a
+	// separate call made after the person exists — so at create time the org
+	// term is structurally 0, and a second business card for someone already in
+	// the workspace was created in silence every time.
+	//
+	// IT FLAGS, IT NEVER MERGES AND NEVER REFUSES. A father and son at one firm
+	// are a real pair of records that share a name and an employer, and an
+	// automatic rule that merged them would destroy data no undo restores. So
+	// this is a question put to a human, which is the same shape the phone lane
+	// already takes for a shared switchboard.
+	if c.QueueNameCollisions && sameName.PersonID != (ids.PersonID{}) {
+		sameName.Decision = DecisionNameCollisionReview
+		return sameName, nil
 	}
 	return PersonResolution{Decision: DecisionNoMatch}, nil
 }

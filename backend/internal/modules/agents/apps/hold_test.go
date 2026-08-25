@@ -15,6 +15,7 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -300,8 +301,67 @@ func TestTheRealProviderSendsItsPolicyWithTheDocument(t *testing.T) {
 	if contents.UI == nil {
 		t.Fatal("a view was read with no sandbox policy attached to the bytes")
 	}
-	if !contents.UI.CSP.Empty() || contents.UI.Permissions != (mcp.ResourcePermissions{}) {
-		t.Errorf("the read policy widens the sandbox: %+v", contents.UI)
+	if !contents.UI.CSP.Empty() {
+		t.Errorf("the read policy names an origin this view may reach: %+v", contents.UI.CSP)
+	}
+	// A product card asks for NO permission. Only the probe reads a position, and
+	// a card that declares a capability it never uses would carry it if its code
+	// were ever substituted. Compared as a whole value, so a permission arriving
+	// on this view later fails here rather than riding in unnoticed.
+	if want := (mcp.ResourcePermissions{}); contents.UI.Permissions != want {
+		t.Errorf("the read policy is not the declared one: got %+v, want %+v", contents.UI.Permissions, want)
+	}
+	// The claim this test carries: the two answers a host can get are the same
+	// one. A policy read from the catalogue would label the wrong document when
+	// two providers share a URI.
+	var listed *mcp.ResourceUI
+	for _, r := range p.Resources(context.Background()) {
+		if r.URI == AccountBriefURI {
+			listed = r.UI
+		}
+	}
+	if listed == nil {
+		t.Fatal("the view read above is not in the catalogue this provider publishes")
+	}
+	// reflect.DeepEqual rather than !=: ResourceCSP carries slices, so the whole
+	// policy is not a comparable type. The point is that the two answers agree in
+	// full, so comparing the whole value is what is wanted — field by field would
+	// stop covering a member added later, which is the drift this test exists for.
+	if !reflect.DeepEqual(*listed, *contents.UI) {
+		t.Errorf("the catalogue and the read disagree: listed %+v, read %+v", *listed, *contents.UI)
+	}
+
+	// And the SAME two questions for the one view whose policy differs. A policy
+	// that varies per view is a policy that can disagree per view, so the probe
+	// is where the catalogue-versus-read claim is actually load-bearing: a
+	// sandbox() reading anything other than the URI it was handed would show up
+	// here and nowhere else.
+	probe, err := p.ReadResource(context.Background(), GeoProbeURI)
+	if err != nil {
+		t.Fatalf("reading the probe view: %v", err)
+	}
+	if probe.UI == nil {
+		t.Fatal("the probe was read with no sandbox policy attached to the bytes")
+	}
+	if want := (mcp.ResourcePermissions{Geolocation: true}); probe.UI.Permissions != want {
+		t.Errorf("the probe's read policy is not the declared one: got %+v, want %+v", probe.UI.Permissions, want)
+	}
+	// Asking for a position does not buy an origin. The probe displays what it
+	// read and sends it nowhere, and an empty allowlist here is half of why.
+	if !probe.UI.CSP.Empty() {
+		t.Errorf("the probe names an origin it may reach: %+v", probe.UI.CSP)
+	}
+	var listedProbe *mcp.ResourceUI
+	for _, r := range p.Resources(context.Background()) {
+		if r.URI == GeoProbeURI {
+			listedProbe = r.UI
+		}
+	}
+	if listedProbe == nil {
+		t.Fatal("the probe is not in the catalogue this provider publishes")
+	}
+	if !reflect.DeepEqual(*listedProbe, *probe.UI) {
+		t.Errorf("the catalogue and the read disagree on the probe: listed %+v, read %+v", *listedProbe, *probe.UI)
 	}
 }
 

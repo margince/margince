@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind prohibition H3
+
 package backendarch
 
 // The negative-scope half of the formula-field boundary proof (RD-AC-7): a

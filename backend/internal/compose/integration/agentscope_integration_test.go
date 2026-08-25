@@ -46,7 +46,6 @@ type capRefusal struct {
 
 func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "enrich-scope"
 	apptest.BootstrapWorkspaceSession(t, e, "Enrich Scope", "enrich@fable.test", "Admin")
 
 	var org struct {
@@ -115,7 +114,6 @@ func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
 // cap and retry."
 func TestOfferSendRefusesAnyAgentAsHumanOnly(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "send-scope"
 	apptest.BootstrapWorkspaceSession(t, e, "Send Scope", "send@fable.test", "Admin")
 	dealID := offerFixture(t, e)
 

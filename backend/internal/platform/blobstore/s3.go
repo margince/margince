@@ -39,7 +39,7 @@ type s3Store struct {
 // `make db-up` returns) with a bounded connect retry, so readiness is the
 // store's responsibility, not the caller's.
 //
-//nolint:ireturn // the seam has two providers (memory + s3) behind one Store; returning the interface is the design.
+//nolint:ireturn // the seam has three providers (memory + filesystem + s3) behind one Store; returning the interface is the design.
 func New(ctx context.Context, cfg Config) (Store, error) {
 	if cfg.Endpoint == "" || cfg.Bucket == "" {
 		return nil, fmt.Errorf("blobstore: endpoint and bucket are required")

@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind reachability H2
+
 package backendarch
 
 // The store-entry-point admission rule as a fitness function: every
@@ -389,6 +391,7 @@ var entryPointsOutsideModules = gatekit.Waive(map[string]string{
 	"internal/compose/runnerservice.go":               "RunnerService.TickWorkspace and .HandleEvent — the agent runner's worker-loop and event-bus seams, which carry no human principal at all; that posture is what the module-side waivers spell out for their sweep entry points, and applying the same reasoning to compose needs the tier brought under the gate first",
 	"internal/platform/blobstore/memory.go":           "memoryStore's Put/Get/Delete/Health — a blobstore.Store driver, matched only because the receiver type name ends in \"Store\". It moves opaque bytes under a caller-supplied key and holds no record and no workspace column, so there is no RBAC object for this gate's rule to name",
 	"internal/platform/blobstore/s3.go":               "s3Store's Put/Get/Delete/Health — the same driver interface over S3, matched by the same receiver-name suffix; the admission that matters for a blob is taken by the module surface that mints its key, not by an object-storage client",
+	"internal/platform/blobstore/fs.go":               "fsStore's Put/Get/Delete/DeletePrefix/Health — the same driver interface over a local directory, matched by the same receiver-name suffix, and ratified on the same terms as its two siblings: the admission that matters for a blob is taken by the module surface that mints its key. What is different here is worth naming rather than hiding behind the sameness — a key becomes a PATH, so fsStore.path refuses an absolute or traversing key outright (ErrInvalidKey). That is not this gate's object rule; it is the key prefix that carries tenant isolation, and a traversal would walk through it and serve a different object than the row named",
 })
 
 // declaresStoreEntryPoint reports whether the file holds an entry point of the

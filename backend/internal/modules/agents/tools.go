@@ -350,14 +350,15 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
 			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider list_channel_providers names."},
-			"subject":{"type":"string"},"body":{"type":"string"},
+			"subject":{"type":"string","description":` + proseLanguageNote + `},
+			"body":{"type":"string","description":` + proseLanguageSeeSubject + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"What it is about; unlinked, it appears on no timeline."},
+				"description":"Every record this was about — the person, their company, the deal. All of them here, in this call: it writes them together and needs no approval."},
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),

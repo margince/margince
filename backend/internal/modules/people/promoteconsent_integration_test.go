@@ -78,8 +78,7 @@ func setupPromoteConsent(t *testing.T) *promoteConsentEnv {
 		newsletter: ids.NewV7(), updates: ids.NewV7(),
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		e.ws, "pc-"+e.ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,

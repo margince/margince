@@ -90,7 +90,7 @@ func Setup(t *testing.T) *Env {
 		Team1:     ids.NewV7(), Team2: ids.NewV7(),
 	}
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, 'authz')`, e.WS); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
 		t.Fatal(err)
 	}
 	seedInstallationIdentity(ctx, t, owner)

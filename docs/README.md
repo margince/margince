@@ -1,5 +1,12 @@
 # Margince documentation
 
+**Using the product rather than changing it?** The end-to-end walkthroughs for a
+rep or a delivery lead live in [`user-guide/`](../user-guide/README.md). This tree
+is mostly for the person changing the code — with one deliberate exception:
+`how-to/` carries product how-tos (working your pipeline, setting up projects,
+partner programs) beside the engineering ones, because a how-to is a thing you
+return to for one answer whichever audience you are in.
+
 Documentation for building and operating **Margince** — a governed, multi-tenant CRM (a Go `/v1` API
 backend; the Vite/React web UI ships separately). The docs follow the [Diátaxis](https://diataxis.fr/) split: **tutorials** to learn,
 **how-to** guides for tasks, **reference** for lookup, **explanation** for the *why*, plus
@@ -24,8 +31,6 @@ maps the codebase and links everything below.
 
 ### Tutorials — learn by doing
 - [getting-started.md](tutorials/getting-started.md) — clone → running instance with a bootstrapped workspace.
-- [run-a-partner-program.md](tutorials/run-a-partner-program.md) — what partner programs are and what you can do with them, then one deal from the introduction to the money it earns; no code.
-- [run-your-first-project.md](tutorials/run-your-first-project.md) — for the rep or delivery lead who works accounts in the app: one ERP rollout followed from the deal through delivery to close, with the key that files email and the AI scoped to the project; no code.
 
 ### How-to — accomplish a task
 - [add-an-endpoint.md](how-to/add-an-endpoint.md) — add or change an API operation (contract → gen → handler).
@@ -51,7 +56,7 @@ maps the codebase and links everything below.
 - [register-a-webhook.md](how-to/register-a-webhook.md) — register an HTTPS endpoint for Standard-Webhooks-signed, retried outbound delivery of contract-generated event payloads (curl or Settings → Integrations), and verify/inspect/replay a delivery.
 - [add-an-extension.md](how-to/add-an-extension.md) — ship a stable-tier extension unit (a jurisdiction pack) under `extensions/`, composed and verified.
 - [work-your-pipeline.md](how-to/work-your-pipeline.md) — sell with Margince: move a deal, close it (and what winning one requires), stalled deals, saved views, bulk actions, and how to read the pipeline numbers; no code.
-- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the pipeline; no code. Learning it for the first time? [tutorials/run-a-partner-program.md](tutorials/run-a-partner-program.md) walks one deal end to end.
+- [set-up-a-partner-program.md](how-to/set-up-a-partner-program.md) — the partner reference: what every field and every value means, and how to work the pipeline.
 - [set-up-projects.md](how-to/set-up-projects.md) — who can create, edit, archive and share a project; key conventions; when to create one (deal creation vs close-won); the fixed phase and stakeholder vocabularies; no code.
 - [run-a-project.md](how-to/run-a-project.md) — the project page section by section, phase moves, and every rule by which an email finds its project — including what filing does to retention; no code.
 - [build-the-desktop-app.md](how-to/build-the-desktop-app.md) — build the self-contained folder that runs the whole stack with no Docker, on macOS (`make desktop`) or Windows (`make desktop-win`), then run, configure and update an installation.
@@ -59,13 +64,25 @@ maps the codebase and links everything below.
 ### Reference — look it up
 - [modules.md](reference/modules.md) — the modules: what each owns, its tables, its HTTP surface.
 - [agent-tools.md](reference/agent-tools.md) — the governed tool catalog: every registered tool, its tier, the passport scope it spends, egress, and overlay-mode behaviour.
+- [mcp-info.md](reference/mcp-info.md) — the served MCP surface exactly as a client receives it, with `mcp-info.json` beside it as the same surface byte for byte. Generated from the running registry, never hand-edited; the generator fails the build when the committed copy and the served surface disagree. The largest page here by an order of magnitude — a lookup table, not something to read through.
+- [agent-tool-budget.md](reference/agent-tool-budget.md) — what each agent's tool menu costs in prompt tokens, agent by agent, against the published ceiling. Generated with its `.json` sibling, never hand-edited.
 - [supply-chain.md](reference/supply-chain.md) — the source-tree SBOMs, the license gate, keyless signing, and the pinned toolchain.
+
+Several reference pages are **generated** and say so in their own first lines —
+`mcp-info`, `agent-tool-budget`, `rbac-matrix`, `performance-budgets` and the
+`perfbench/` records. Do not hand-edit them, and do not try to shorten them: their
+length is a function of the surface they tabulate, which is why
+`backend/docspagelength_test.go` reads that marker and exempts them from the page
+budget rather than keeping its own list of which pages are generated.
+
 - [rbac-matrix.md](reference/rbac-matrix.md) — what each seeded role may do to each kind of record. Generated from the seeded policy, never hand-edited.
 - [performance-budgets.md](reference/performance-budgets.md) — every performance budget this product publishes, the last measurement taken for each, and the machine it was taken on. Generated by the `make bench-*` targets, never hand-edited. A RECORD rather than a gate, unlike the matrix above: a latency cannot be checked for drift, so what is held instead is that a budget nobody has measured says so rather than being left out.
 - [platform-toolkit.md](reference/platform-toolkit.md) — the reusable `platform/*` + `shared/*` utilities.
+- [gate-patterns.md](reference/gate-patterns.md) — the eight shapes a fitness gate comes in, how strong each can be, and how each one silently passes. Read it before writing a gate: [principles/derive-the-obligation.md](principles/derive-the-obligation.md) is the method, this is the menu.
+- [gate-inventory.md](reference/gate-inventory.md) — every gate in `backend/`, grouped by shape, with what it holds. Generated from the `//gate:kind` line each gate declares in its own file, never hand-edited.
 - [configuration.md](reference/configuration.md) — every binary flag and environment variable.
 - [make-targets.md](reference/make-targets.md) — every `make` target.
-- [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and [AGENTS.md](../AGENTS.md).)
+- [license-release-rule.md](reference/license-release-rule.md) — the BUSL Change-Date release-stamping rule. (The per-file SPDX license *header* rule is described in [backend-onboarding.md](explanation/backend-onboarding.md) and `AGENTS.md`.)
 
 ### Explanation — understand the why
 
@@ -106,8 +123,7 @@ maps the codebase and links everything below.
 **The product surface**
 
 - [frontend-architecture.md](explanation/frontend-architecture.md) — the SPA's layers, the shell and its nav rules, the colour and theme contract, the evidence mark, and the gates that fail a frontend push.
-- [company-record-page.md](explanation/company-record-page.md) — the company record page: one gated 360 read, the per-viewer account brief, Ask, record-derived suggestions, the visit baseline, and why view state carries no audit row.
-- [margince-conversational-workspace-concept.md](explanation/margince-conversational-workspace-concept.md) — the implemented unified Company onboarding conversation—optional live website research, website-free collection, scoped interaction safety, and in-workspace confirmation—plus the planned reusable Margince interaction framework.
+- [company-record-page.md](explanation/company-record-page.md) — the company record page: one gated 360 read, the work-in-flight card, Ask, record-derived suggestions, the visit baseline, and why view state carries no audit row.
 
 **Modes and extension**
 
@@ -126,4 +142,4 @@ maps the codebase and links everything below.
    grouped **Explanation** map above; *The platform spine* is the group that
    applies to almost every backend change. Working on the SPA instead? Start at
    [frontend-architecture.md](explanation/frontend-architecture.md).
-5. [CONTRIBUTING.md](../CONTRIBUTING.md) + [AGENTS.md](../AGENTS.md) — the PR loop and the binding engineering rules.
+5. [CONTRIBUTING.md](../CONTRIBUTING.md) + `AGENTS.md` — the PR loop and the binding engineering rules.

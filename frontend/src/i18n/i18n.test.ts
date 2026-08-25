@@ -34,6 +34,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "room.create.defaultTitle",
   "buyer.poweredBy",
   "buyer.poweredByMargince",
+  // A placeholder and a percent sign. Vietnamese writes a percentage the way
+  // English does — digits then the sign, no space — so the value is identical by
+  // agreement rather than by omission. German differs (it takes the space) and
+  // carries its own.
+  "home.pct",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
   "today.exchange.subjectWhen",

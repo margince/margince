@@ -90,7 +90,7 @@ func traceReadWorkspace(t *testing.T) (context.Context, ids.UUID, *database.DB, 
 	ctx := context.Background()
 	ws := ids.NewV7()
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`, ws, "tracread-"+ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatalf("seeding workspace: %v", err)
 	}
 	db := database.BindTo(pool, ids.From[ids.WorkspaceKind](ws))

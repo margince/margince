@@ -90,7 +90,7 @@ default.
 - **`src/design-system/README.md` is the catalog — read it before hand-rolling a
   control.** Every interactive control comes from that directory; a native
   `<select>` or a hand-rolled dropdown is a defect, and
-  `scripts/check-native-controls.sh` refuses one. `pnpm storybook` shows them all.
+  `make native-controls` refuses one. `pnpm storybook` shows them all.
 - `src/design-system/` — tokens (Ledger Green canon, pinned by
   `tokens.test.ts`) plus `brand.css`, the DERIVED layer: every value there is a
   `color-mix()` of a canonical token, never a new hex, so it follows the dark
@@ -182,6 +182,8 @@ default.
 - Staged / real / human-typed are three distinguishable styles, always.
   Confidence is never hidden. Absent data is omitted, never guessed.
 - Packaging: the app is a standalone static `dist/` build (`pnpm build`),
-  served separately from the API binary (which serves `/v1` only). How
+  served separately from the API binary, which embeds no SPA (and serves more
+  than `/v1` — probes, `/setup/*`, the public edge, webhooks, and `/mcp` with its
+  OAuth routes when enabled). How
   `dist/` is hosted — a static server, a CDN, or a reverse proxy in front
   of the API — is a deployment choice, not baked into the build.

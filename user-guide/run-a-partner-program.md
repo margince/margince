@@ -29,7 +29,7 @@ paid it.
 **This page explains how partner programs work and shows you one deal from
 start to finish.** For the setup form field by field — every role, every
 status, all ten relationship stages — see
-[how-to/set-up-a-partner-program.md](../how-to/set-up-a-partner-program.md).
+[how-to/set-up-a-partner-program.md](../docs/how-to/set-up-a-partner-program.md).
 
 ## The one thing to get right
 
@@ -73,7 +73,7 @@ either, so set it when you set the role.
 
 The rest of the form — certification, relationship stage, next step — is for
 managing the relationship rather than the money.
-[The how-to explains each one.](../how-to/set-up-a-partner-program.md)
+[The how-to explains each one.](../docs/how-to/set-up-a-partner-program.md)
 
 ## 2. Say who brought the deal
 
@@ -184,5 +184,5 @@ old one already paid.
 
 ## Where next
 
-- [Setting up partners, field by field](../how-to/set-up-a-partner-program.md)
-- [Working deals in general](../how-to/work-your-pipeline.md)
+- [Setting up partners, field by field](../docs/how-to/set-up-a-partner-program.md)
+- [Working deals in general](../docs/how-to/work-your-pipeline.md)

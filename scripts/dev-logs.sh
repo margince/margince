@@ -17,7 +17,15 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-log=".tmp/dev/${DEV_SLUG:-_base}/dev.log"
+# The same slug and the same state root `make dev` used, resolved by the same
+# code. This script composed the path itself until the state root moved out of
+# the worktree, and then looked for a file `make dev` no longer wrote — with a
+# "is the stack up?" message that named the wrong reason.
+# shellcheck source=scripts/lib-devstate.sh
+. "$PWD/scripts/lib-devstate.sh"
+
+slug="$(dev_resolve_slug "${DEV_SLUG:-}")" || exit 1
+log="$(dev_state_dir "$slug")/dev.log"
 role="${ROLE:-}"
 level="${LEVEL:-}"
 all="${ALL:-0}"
@@ -25,7 +33,7 @@ follow="${FOLLOW:-1}"
 lines="${N:-200}"
 
 if [[ ! -f "$log" ]]; then
-  echo "No dev log at ${log} — is the stack up? Start it with 'make dev'${DEV_SLUG:+ DEV_SLUG=$DEV_SLUG}." >&2
+  echo "No dev log at ${log} — is this worktree's stack up? Start it with 'make dev'${DEV_SLUG:+ DEV_SLUG=$DEV_SLUG}." >&2
   exit 1
 fi
 

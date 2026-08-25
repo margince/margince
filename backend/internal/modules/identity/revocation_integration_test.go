@@ -139,7 +139,7 @@ func setupRevocationEnv(t *testing.T, slug string) *revocationEnv {
 	// the id's RANDOM tail, not its leading bytes: those are a millisecond
 	// timestamp whose first 8 hex digits only change about once a minute, so
 	// two runs inside the same minute produced the same slug and the second
-	// one failed on workspace_slug_unique.
+	// one failed on the admin's unique email.
 	slug += "-" + ids.NewV7().String()[24:]
 
 	// createInstallation directly: the test database persists across

@@ -6,7 +6,10 @@
  *
  * It never scrolls: it is the first row of the content column's flex box and
  * the scroller is its sibling, which is cheaper than `position: sticky` and
- * cannot be defeated by a screen that establishes its own scroll container. */
+ * cannot be defeated by a screen that establishes its own scroll container. The
+ * page passes UNDER it all the same — the scroller reaches up behind the strip
+ * and pads its content clear of it (app/shell.css) — so the strip is
+ * translucent with a blur behind it and shows what is sliding past. */
 /* Three tracks, the outer two equal: the search sits at the centre of the
    CONTENT column and stays there whatever the two sides carry. In flow rather
    than absolutely positioned — a centred field taken out of the row leaves the
@@ -25,7 +28,15 @@
      begins exactly where this bar's rule ends. */
   height: var(--topbarH);
   padding: var(--space-2) var(--pageGutter);
-  background: var(--bgElevated);
+  /* Translucent over the page that scrolls beneath, with the blur that makes
+     text readable through it. `position: relative` + a z-index because the
+     scroller reaches up behind this strip: in flow but pulled up, it would
+     otherwise paint over the bar. Below the phone nav (30) and the modal
+     overlay (50), which may both cover the strip. */
+  position: relative;
+  z-index: 20;
+  background: var(--bgTopbar);
+  backdrop-filter: blur(8px);
   border-bottom: 1px solid var(--borderSubtle);
 }
 /* Where you are, beside the control that widens the room you are in. */
@@ -138,7 +149,7 @@
 /* What is waiting on this person. A bare glyph, like `.iconbtn` a row's verb:
    the strip is chrome, and a filled control here would out-shout the trail that
    says where the reader is. */
-.topbar-bell {
+.topbar-decisions {
   position: relative;
   display: grid;
   place-items: center;
@@ -149,17 +160,17 @@
   color: var(--textMeta);
   text-decoration: none;
 }
-.topbar-bell:hover {
+.topbar-decisions:hover {
   background: var(--bgHover);
   color: var(--textPrimary);
 }
-.topbar-bell:focus-visible {
+.topbar-decisions:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 1px;
 }
 /* On the glyph rather than beside it, so the count cannot widen the strip and
    push the search off centre as it grows. */
-.topbar-bellcount {
+.topbar-decisioncount {
   position: absolute;
   top: 0;
   right: 0;
@@ -249,7 +260,7 @@
   /* The bottom bar carries Approvals at this width — same queue, same bell, in
      the reach the thumb already covers. A second one up here would be the same
      count twice on a 390px row that has three things on it. */
-  .topbar-bell {
+  .topbar-decisions {
     display: none;
   }
 }

@@ -37,7 +37,6 @@ func TestMalformedCursorAnswersMalformedCursorEverywhere(t *testing.T) {
 	e := apptest.SetupApp(t)
 
 	apptest.BootstrapWorkspaceSession(t, e, "Cursor Probe", "admin@cursor.test", "Admin")
-	e.Slug = "cursor-probe"
 
 	// /lists/{id}/members needs a real list to point at.
 	var list apptest.AnyMap

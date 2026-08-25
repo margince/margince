@@ -21,8 +21,14 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 
 // Values verbatim from the mockups; comparison normalizes case, whitespace and
 // a leading zero before a decimal point so formatting is free but values are not.
+//
+// --bgPage is the ONE value that no longer matches the mockup, and deliberately:
+// the page is white and the near-white the mockup put here is the sidebar's
+// ground (--bgSidebar). The two surfaces swapped, the decision is the shipped
+// one, and this table is what pins it now that the mockup does not.
 const canonical: Record<string, string> = {
-  "--bgPage": "#FBFCFB",
+  "--bgPage": "#ffffff",
+  "--bgSidebar": "#FBFCFB",
   "--bgElevated": "#ffffff",
   "--bgCard": "#EEF1F0",
   "--bgHover": "#F3F6F4",

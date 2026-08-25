@@ -1392,6 +1392,7 @@ export interface paths {
         };
         /**
          * The standing account brief — what this account is, where it stands, and what changed.
+         * @deprecated
          * @description A short written brief over the same records the 360 serves, cached and reused
          *     until its inputs change.
          *
@@ -1421,6 +1422,7 @@ export interface paths {
         put?: never;
         /**
          * Regenerate this account's brief, ignoring the cached one.
+         * @deprecated
          * @description The explicit refresh behind the brief card's "outdated — refresh". It reads and
          *     writes only the cached brief: no record field changes, and nothing is sent.
          */
@@ -13071,6 +13073,41 @@ export interface components {
             /** @description champion | economic_buyer | blocker | influencer | user; empty when the edge records no role. */
             role: string;
         };
+        /**
+         * @description The ONE fact that explains why a piece of work in flight needs a person, picked
+         *     by the server so every reader of the account gets the same answer.
+         *
+         *     Deterministic, not written. The card that renders this reads a template over the
+         *     typed fields below — it never asks a model to phrase them. A model could say them
+         *     more warmly; it could not make them checkable, and a wrong figure on this card is
+         *     exactly the defect it exists to replace.
+         *
+         *     At most one per deal or project, in this order: an overdue task beats an overdue
+         *     commitment they made to us, which beats the newest such commitment.
+         */
+        Organization360WorkAttention: {
+            /**
+             * @description `overdue_task` — an open task on this work is past its due date.
+             *     `commitment_theirs` — they said in a captured conversation that they would do
+             *     something, and it is still open.
+             * @enum {string}
+             */
+            kind: "overdue_task" | "commitment_theirs";
+            /** @description The task's subject, or the claim's body verbatim. Never a paraphrase. */
+            title: string;
+            /** @description The assignee's or the debtor's display name. Null when the name is not this caller's to read, or the row names nobody — the card then writes the sentence without a name rather than showing an id. */
+            who?: string | null;
+            /**
+             * Format: date-time
+             * @description When it was due. Null on a commitment that named no date.
+             */
+            due_at?: string | null;
+            /**
+             * Format: uuid
+             * @description The captured conversation the claim was read from — the receipt a reader opens to check it.
+             */
+            source_activity_id?: string | null;
+        };
         Organization360Deal: {
             /** Format: uuid */
             deal_id: string;
@@ -13090,6 +13127,7 @@ export interface components {
             expected_close_date?: string | null;
             /** @description No linked activity inside the 60-day stall window. */
             stalled: boolean;
+            attention?: components["schemas"]["Organization360WorkAttention"];
         };
         /**
          * @description Where a project stands on the record page; the same ladder the project's own `phase` walks.
@@ -13112,6 +13150,10 @@ export interface components {
             owner_id?: string | null;
             /** @description The owner's display name; null when the project has no owner or the owner is no longer an active member. */
             owner_name?: string | null;
+            /** @description Nothing has been filed against this project for the module's quiet window, counted from its last activity or, when it has none, from the day it was opened. Computed server-side because the payload carries no created_at and the window is one number the product spells in one place. */
+            quiet: boolean;
+            /** @description Present on the company record page, which decorates the row from the account's own tasks and captured commitments. The person page carries the same project row without it — the question "why does this need a person" is asked of an account, not of a contact. */
+            attention?: components["schemas"]["Organization360WorkAttention"];
         };
         /** @description The account's open deals plus the two lifetime figures the header needs. */
         Organization360Deals: {
@@ -13322,6 +13364,10 @@ export interface components {
             deals?: components["schemas"]["Organization360Deals"];
             /** @description The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Organization360Project"][];
+            /** @description Whether `projects` was cut short. The list is capped, and a card that counted the rows and said "3 in flight" would state a number the account does not have. Absent exactly when `projects` is. */
+            projects_page?: components["schemas"]["PageInfo"];
+            /** @description The reader may not read this account's activities, so no `attention` was derived on any deal or project row. The rows themselves are still listed and still true — this says the reasons behind them are missing, which a card must show rather than let an unexplained row read as a settled one. */
+            attention_withheld?: boolean;
             strength?: components["schemas"]["OrganizationStrength"];
             activities?: components["schemas"]["ActivityListResponse"];
             tags?: components["schemas"]["Tag"][];

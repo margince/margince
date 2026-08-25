@@ -74,8 +74,7 @@ func setupSARIdentifiers(t *testing.T) *sarIdentifierEnv {
 	ws, user := ids.NewV7(), ids.NewV7()
 	person := ids.New[ids.PersonKind]()
 	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		ws, "sar-"+ws.String()); err != nil {
+		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := owner.Exec(ctx,

@@ -112,7 +112,6 @@ func TestSchemaIntrospectionServesDescriptors(t *testing.T) {
 
 func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "reports-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Reports E2E", "rep@fable.test", "Admin")
 
 	var org struct {

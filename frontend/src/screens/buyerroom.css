@@ -18,6 +18,18 @@
   gap: var(--space-6);
 }
 
+/* Flex items shrink by default, and this column is a flex item of a scroller
+   with a definite height. Without this the panels are compressed to fit the
+   viewport instead of the page growing, and `.panel`'s `overflow: hidden`
+   discards the remainder — measured at 1006x588, the documents panel drew
+   155px of 575px and the conversation 80px of 291px, so a buyer saw a
+   filename and no threads, no composer, and no scrollbar to reveal them.
+   The seller's room never hit this because `.wrap` is `flex: none`; the buyer
+   route is railless and has no `.wrap`. */
+.buyer-column > * {
+  flex: none;
+}
+
 .buyer-header h1 {
   margin: var(--space-2) 0 0;
 }

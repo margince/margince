@@ -24,7 +24,7 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 	// One read for the phase: which source ids already exist. Counting what
 	// this run genuinely created needs the before-state, and asking per
 	// activity was the seeder's worst quadratic.
-	seenSourceIDs := map[string]bool{}
+	seenSourceIDs := map[string]seededActivity{}
 	if mode != modeDryRun {
 		loaded, err := loadActivitySourceIDs(c)
 		if err != nil {
@@ -66,7 +66,7 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 			"kind":          act.Kind,
 			"occurred_at":   refs.timestamp(occurred),
 			"source":        seedSource,
-			"source_system": "seed",
+			"source_system": seedSourceSystem,
 			"source_id":     fmt.Sprintf("act-%d", i),
 			"links":         links,
 		}
@@ -93,7 +93,7 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 		// Idempotent on source_system+source_id, so a re-run replays the same
 		// row and the reply cannot tell a create from a convergence. The
 		// source ids present before this phase say what was genuinely absent.
-		before := seenSourceIDs[fmt.Sprintf("act-%d", i)]
+		_, before := seenSourceIDs[fmt.Sprintf("act-%d", i)]
 		if err := author.post("/v1/activities", body, nil); err != nil {
 			if _, ok := conflictingID(err); ok {
 				continue
@@ -113,6 +113,9 @@ func seedActivities(c *client, seats *sessions, cfg demoConfig, refs pipelineRef
 		if !before {
 			created++
 		}
+	}
+	if err := relinkActivitiesToProjects(c, cfg, refs, seenSourceIDs, mode); err != nil {
+		return created, err
 	}
 	return created, nil
 }
@@ -161,6 +164,12 @@ func activityLinks(c *client, refs pipelineRefs, act demoActivity, orgID string)
 		links = append(links, jsonBody{"entity_type": "deal", "entity_id": deal})
 		break // one deal: an account with two is ambiguous, and guessing wrong is worse than not guessing
 	}
+	// And the delivery work, so a project has a timeline rather than a start
+	// date and nothing else. One project per activity is not a style choice
+	// here: uq_activity_link_project makes it a database constraint.
+	if project := projectForActivity(refs, act); project != "" {
+		links = append(links, jsonBody{"entity_type": "project", "entity_id": project})
+	}
 	return links, nil
 }
 
@@ -170,26 +179,77 @@ func activityLinks(c *client, refs pipelineRefs, act demoActivity, orgID string)
 // stopped at 200 rows. Both halves were bugs waiting for scale: the search was
 // O(activities²) over a run, and the cap meant activity 201 was never found,
 // so a converging re-run filed a duplicate of it instead of recognising it.
-func loadActivitySourceIDs(c *client) (map[string]bool, error) {
-	seen := map[string]bool{}
+func loadActivitySourceIDs(c *client) (map[string]seededActivity, error) {
+	seen := map[string]seededActivity{}
 	err := c.getAll("/v1/activities", nil, func(raw json.RawMessage) error {
-		var rows []struct {
-			SourceID string `json:"source_id"`
-		}
-		if err := json.Unmarshal(raw, &rows); err != nil {
-			return err
-		}
-		for _, row := range rows {
-			if row.SourceID != "" {
-				seen[row.SourceID] = true
-			}
-		}
-		return nil
+		return indexSeededActivities(raw, seen)
 	})
 	if err != nil {
 		return nil, fmt.Errorf("listing activities: %w", err)
 	}
 	return seen, nil
+}
+
+// indexSeededActivities adds one page of activities to the index, keeping only
+// the rows this tool captured.
+func indexSeededActivities(raw json.RawMessage, seen map[string]seededActivity) error {
+	var rows []struct {
+		ID           string `json:"id"`
+		SourceSystem string `json:"source_system"`
+		SourceID     string `json:"source_id"`
+		OccurredAt   string `json:"occurred_at"`
+		Links        []struct {
+			EntityType string `json:"entity_type"`
+			EntityID   string `json:"entity_id"`
+		} `json:"links"`
+	}
+	if err := json.Unmarshal(raw, &rows); err != nil {
+		return err
+	}
+	for _, row := range rows {
+		// BOTH halves of the key, because source_id alone is not one.
+		// The database is unique on (source_system, source_id), and the
+		// seeder's own ids are "act-0", "act-1" — spellings a connector
+		// is free to use too. Keying on the id alone once only miscounted
+		// how many rows a run created; now that this map decides which
+		// activity gets relinked, the same collision would file somebody
+		// else's mail under a demo project and stamp it with six-year
+		// retention that cannot be lifted.
+		if row.SourceSystem != seedSourceSystem || row.SourceID == "" {
+			continue
+		}
+		found := seededActivity{ID: row.ID, OccurredAt: row.OccurredAt}
+		for _, link := range row.Links {
+			switch link.EntityType {
+			case "project":
+				found.ProjectID = link.EntityID
+			case "organization":
+				found.OrganizationID = link.EntityID
+			}
+		}
+		seen[row.SourceID] = found
+	}
+	return nil
+}
+
+// seededActivity is one activity already on file, as the reconciliation pass
+// needs to see it: its id, so it can be relinked, and the project it is filed
+// under, so a pass that has nothing to do does nothing.
+type seededActivity struct {
+	ID        string
+	ProjectID string
+	// OccurredAt is when the activity says it happened, as the server stored
+	// it. The reconciliation dates against THIS rather than against the
+	// dataset's days_ago offset: the offset is relative to the day the seeder
+	// runs, and occurred_at was frozen on the first run and never moves after
+	// it, so on any later day the two disagree.
+	OccurredAt string
+	// OrganizationID is the account this activity is filed on. The
+	// reconciliation checks it against the dataset entry before touching
+	// anything: source ids here are positional ("act-0", "act-1"), so
+	// reordering the activities array silently remaps which stored row an
+	// index names, and relinking the wrong one cannot be undone.
+	OrganizationID string
 }
 
 // seedLifecycle says where each account stands with us.
@@ -236,9 +296,15 @@ func seedLifecycle(c *client, cfg demoConfig, refs pipelineRefs, plan map[string
 				changed++
 				continue
 			}
-			current, version, err := organizationLifecycle(c, orgID)
+			current, version, source, err := organizationLifecycle(c, orgID)
 			if err != nil {
 				return changed, err
+			}
+			// A company whose record somebody else owns keeps the lifecycle
+			// stage it carries. Moving an account along the pipeline by hand is
+			// the demo's whole point; a re-seed must not walk it back.
+			if !seederOwns(source) {
+				continue
 			}
 			if current == stage {
 				continue
@@ -255,15 +321,16 @@ func seedLifecycle(c *client, cfg demoConfig, refs pipelineRefs, plan map[string
 	return changed, nil
 }
 
-func organizationLifecycle(c *client, orgID string) (stage string, version int, err error) {
+func organizationLifecycle(c *client, orgID string) (stage string, version int, source string, err error) {
 	var out struct {
 		Lifecycle string `json:"lifecycle"`
+		Source    string `json:"source"`
 		Version   int    `json:"version"`
 	}
 	if err := c.get("/v1/organizations/"+orgID, nil, &out); err != nil {
-		return "", 0, fmt.Errorf("reading organization %s: %w", orgID, err)
+		return "", 0, "", fmt.Errorf("reading organization %s: %w", orgID, err)
 	}
-	return out.Lifecycle, out.Version, nil
+	return out.Lifecycle, out.Version, out.Source, nil
 }
 
 // seedProducts fills the rate card the offers draw their line items from.

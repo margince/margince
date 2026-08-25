@@ -68,10 +68,7 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, orgID string, kinds ...str
 	t.Helper()
 	ctx := context.Background()
 	bundle, readID := ids.NewV7(), ids.NewV7()
-	var wsID, adminID string
-	if err := e.Owner.QueryRow(ctx, `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
+	var adminID string
 	if err := e.Owner.QueryRow(ctx,
 		`SELECT id FROM app_user WHERE is_agent = false ORDER BY created_at LIMIT 1`).Scan(&adminID); err != nil {
 		t.Fatalf("admin lookup: %v", err)
@@ -97,7 +94,6 @@ func stageBundleRows(t *testing.T, e *apptest.AppEnv, orgID string, kinds ...str
 // so per member rather than by a bare 409 that says nothing about which.
 func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "bundle-door"
 	apptest.BootstrapWorkspaceSession(t, e, "Bundle Door", "ada@bundle.test", "Ada Admin")
 
 	var org struct {
@@ -160,7 +156,6 @@ func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 // existence oracle the single-approval read already refuses to be.
 func TestAnUnknownBundleIsNotFoundThroughTheAPI(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "bundle-absent"
 	apptest.BootstrapWorkspaceSession(t, e, "Bundle Absent", "ada@absent.test", "Ada Admin")
 
 	if status := e.Call(t, "POST", "/v1/approval-bundles/"+ids.NewV7().String()+"/reject",
@@ -179,7 +174,6 @@ func TestAnUnknownBundleIsNotFoundThroughTheAPI(t *testing.T) {
 // prove.
 func TestABundleDecisionRefusesAReadOnlyPassport(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "bundle-passport"
 	apptest.BootstrapWorkspaceSession(t, e, "Bundle Passport", "ada@passport.test", "Ada Admin")
 
 	var org struct {

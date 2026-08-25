@@ -66,7 +66,6 @@ func setupConnectorWith(t *testing.T, extra ...compose.Option) *connectorEnv {
 			compose.WithMCPConnector(), compose.WithMCPResource(origin + "/mcp"),
 		}, extra...)
 	})
-	e.Slug = "mcp-connector" // slugify("MCP Connector")
 	apptest.BootstrapWorkspaceSession(t, e, "MCP Connector", "granter@fable.test", "Admin")
 	return &connectorEnv{AppEnv: e, origin: e.TS.URL}
 }

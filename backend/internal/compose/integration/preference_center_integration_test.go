@@ -48,7 +48,6 @@ func sendMarketing(t *testing.T, e *apptest.AppEnv, activityID, purpose, host, x
 		t.Fatal(err)
 	}
 	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("X-Workspace-Slug", e.Slug)
 	// The forgeable request-origin signals a proxied deployment would carry:
 	// the send must ignore ALL of them and use the configured base, or the
 	// tokenized link could be pointed at an attacker's domain.

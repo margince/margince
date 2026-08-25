@@ -12,10 +12,11 @@ enforces — so a command copied out of here works from either directory.
 |---|---|
 | `help` | List targets (the default goal) |
 | `install` | One-shot fresh-worktree setup (frontend deps + Go gate binaries + git hooks). The factory's `worktree-init` runs this by name |
-| `dev` | Full local stack: db-up + migrate + `cmd/api` + `cmd/worker` (always on: the outbox relay + Surface-B runner) + the app on `http://localhost:8080` (the api behind it on `:18080`, proxied through). **Sweeps first** (bare invocation): kills every margince api/worker/vite on the machine — recorded, orphaned, or from another checkout — evicts anything holding `:8080`, and drops stray `margince_dev_*` databases, so one stack runs and the app is always on `:8080`. Boots **cold** — the organization + admin bootstrapped from `config/margince.yaml` and nothing else, so onboarding and empty states are the default; `make seed-dev` adds the demo records on top. Returns when ready; the servers run in the background. `DEV_SLUG=<slug>` gives an isolated `margince_dev_<slug>` on slug-derived ports (two worktrees at once). Activates real AI routing only when every cloud provider bound in `config/ai-routing.yaml` has its BYOK key in the environment / `.env.local` (else the offline fake) |
+| `dev` | Full local stack: db-up + migrate + `cmd/api` + `cmd/worker` (always on: the outbox relay + Surface-B runner) + the app on `http://localhost:8080` (the api behind it on `:18080`, proxied through). Starts **this worktree's** stack only and touches no other (`make dev-sweep` is the machine-wide clear). A linked worktree claims its own database, Redis logical database, port pair and object bucket automatically; the primary worktree keeps the shared `margince` on `:8080`. Boots **cold** — the organization + admin bootstrapped from `config/margince.yaml` and nothing else, so onboarding and empty states are the default; `make seed-dev` adds the demo records on top. Returns when ready; the servers run in the background. `DEV_SLUG=<slug>` overrides the derived slug when you want a second stack inside one worktree. Activates real AI routing only when every cloud provider bound in `config/ai-routing.yaml` has its BYOK key in the environment / `.env.local` (else the offline fake) |
 | `dev-fresh` | `make dev-fresh [DEV_SLUG=<slug>]` — `dev` onto a **rebuilt** database: drops it, re-migrates, and boots the installation a first customer gets. Plain `dev` keeps whatever data is there, so a restart for a backend change never costs you a half-finished record |
-| `dev-stop` | `make dev-stop [DEV_SLUG=<slug>] [DROP=1]` — bare, it stops **every** dev stack on the machine and frees the ports (the mirror of what `dev` sweeps); with `DEV_SLUG` just that one. `DROP=1` also drops the per-slug `margince_dev_*` databases — never the shared `margince` |
-| `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]` — follow `.tmp/dev/<slug>/dev.log` coloured by process and severity. api, worker and Vite all append to that one file, so `make dev` tags each line with the process that wrote it. At `MARGINCE_LOG_LEVEL=debug` the writer also colours the tag and severity **in the file**, so a plain `tail -f` is readable on its own; at info level the file stays plain text so `grep` and editors see clean lines. This view strips whatever colour is there and repaints, so its filters work either way. The job-queue (River) heartbeat is hidden by default because at `MARGINCE_LOG_LEVEL=debug` it repeats every few seconds and pushes real lines off the screen; `ALL=1` restores it. `LEVEL` is a floor, so `LEVEL=warn` shows warnings **and** errors. A dev view only: the servers' own output is unchanged plain text for a log collector |
+| `dev-stop` | `make dev-stop [DEV_SLUG=<slug>] [DROP=1]` — stops **this worktree's** stack and frees its ports. `DROP=1` also drops its per-slug `margince_dev_*` database — never the shared `margince` |
+| `dev-sweep` | `make dev-sweep [DROP=1]` — clears **every** margince dev stack on the machine: every api/worker/vite, recorded, orphaned, or from another worktree, and their claims. `DROP=1` also drops every per-slug `margince_dev_*` database. This is the old bare-`make dev` behaviour, now explicit |
+| `dev-logs` | `make dev-logs [DEV_SLUG=<slug>] [ROLE=api\|worker\|fe\|boot] [LEVEL=debug\|info\|warn\|error] [ALL=1] [FOLLOW=0 N=<n>]` — follow this worktree's `dev.log` (under `$XDG_STATE_HOME/margince/dev/<slug>/`, or `_base/` for the primary worktree) coloured by process and severity. api, worker and Vite all append to that one file, so `make dev` tags each line with the process that wrote it. At `MARGINCE_LOG_LEVEL=debug` the writer also colours the tag and severity **in the file**, so a plain `tail -f` is readable on its own; at info level the file stays plain text so `grep` and editors see clean lines. This view strips whatever colour is there and repaints, so its filters work either way. The job-queue (River) heartbeat is hidden by default because at `MARGINCE_LOG_LEVEL=debug` it repeats every few seconds and pushes real lines off the screen; `ALL=1` restores it. `LEVEL` is a floor, so `LEVEL=warn` shows warnings **and** errors. A dev view only: the servers' own output is unchanged plain text for a log collector |
 | `db-up` / `infra-up` | Start the dev Postgres 16 (pgvector, port 15432) and Redis 7 (port 16379) containers, create the app role (`infra-up` is an alias) |
 | `db-init` | (Re)apply `scripts/db-init.sql` to the running Postgres |
 | `migrate` | Apply core + custom migrations with the owner DSN |
@@ -72,7 +73,7 @@ root gates (each is a small script; all merge-blocking):
 | `contract-breaking-check` | oasdiff severity gate on `api/crm.yaml` vs `origin/main` (breaking change fails; additive passes) |
 | `contract-frontend-drift` | The **third** regeneration a `backend/api/crm.yaml` change owes: `pnpm gen:api` writes `frontend/src/api/schema.d.ts` + `public-events.ts`, and until #1639 only the frontend lane enforced it — so a backend-only author could go green through the whole backend gate and strand the frontend types (#1573). Skips **loudly** when `pnpm` is absent (CI's `deterministic-gates` job installs Go only, and takes that path). The pull-request path is covered instead by `fe-quality`'s `fe-drift`, whose routing `TestTheContractReachesTheFrontendLane` pins. `fe-drift` runs this same script, so both lanes have one spelling. A `check-backend` prerequisite |
 | `test-contract-frontend-drift` | `contract-frontend-drift`'s own test: the skip is loud, goes to stderr, is the gate's only early exit, and the artifact census precedes it. A gate that may skip is a gate that can skip silently, which is the defect it was written for. A `check-backend` prerequisite |
-| `migration-versions` | Every migration version this branch adds is unclaimed on `origin/main` and sorts above the highest one there — per namespace, derived from `backend/migrations/*/`. Two PRs numbering against the same `main` each pass the per-tree loader test and collide only in the merge, which is how core `0240` (and `0248` the next day) ended up claimed twice and left `main` unable to load its own sequence. A version *below* the base's highest fails too, and is the worse case: the runner skips only what its ledger already names, so the migration still applies — but before the base's highest on a fresh database and after it on one already past that point, which leaves two schemas wherever the order matters. Overrides: `MIGRATION_VERSIONS_REQUIRE_BASE=1` (CI; a missing base ref is a broken checkout, not a skip), and a base ref as `$1` |
+| `migration-versions` | Every migration version this branch adds is unclaimed on `origin/main` and sorts above the highest one there — per namespace, derived from `backend/migrations/*/`. Two PRs numbering against the same `main` each pass the per-tree loader test and collide only in the merge, which is how core `0240` (and `0248` the next day) ended up claimed twice and left `main` unable to load its own sequence. A version *below* the base's highest fails too, and is the worse case: the runner skips only what its ledger already names, so the migration still applies — but before the base's highest on a fresh database and after it on one already past that point, which leaves two schemas wherever the order matters. Overrides: `MIGRATION_VERSIONS_REQUIRE_BASE=1` (CI; a missing base ref is a broken checkout, not a skip), and a base ref as `$1`. A baseline consolidation is the one legitimate exception and must DECLARE itself with `MIGRATION_VERSIONS_BASELINE_RESET=1`; the declaration is honored only where the namespace both collapses (fewer migrations than the base) and shares no `(version, name)` pair with it, so it goes inert on its own once the consolidation merges (self-tested by `test-migration-versions`). |
 | `test-lanes` | Hermetic-unit-lane check: no untagged test opens a real Postgres/Redis |
 | `env-reads` | OPS-CFG-2: nothing under `backend/internal` reads the environment — config is resolved once at the composition root and injected. Ratcheted via `scripts/env-read-waivers.txt` (pre-existing offenders may shrink, never grow; #1252 burns them down). `cmd/**`, `*_test.go`, `//go:build integration` harnesses and `platform/cliflags` are exempt |
 | `gofmt` | Every tracked hand-written Go file is gofmt-clean, in **every** module. Not redundant with `lint-modules`, which enforces the same rule through golangci: golangci needs a type-checkable package and the `fixtures/` units deliberately are not one, while gofmt only has to parse. So this is the one formatting check with no exceptions, and the cheap floor that holds when a module is temporarily unlintable. The file list comes from `git ls-files`, so a new module is covered the day it is committed; generated `*_gen.go`/`*.gen.go` are exempt (their generator owns their bytes) |
@@ -85,6 +86,7 @@ root gates (each is a small script; all merge-blocking):
 | `test-one-spelling` | Points the gate at a throwaway tree (so `make -j` cannot race the real one) and asserts its verdict on the unmodified repo plus nine planted cases: each of the three defects fires, an unrelated SQLSTATE-shaped literal does not, a waiver silences its own line and only that line, and the same tokens inside a line, block and inline-block comment stay silent |
 | `money-scale` | An amount in minor units is converted by the one owner of the ISO minor-unit table — `shared/kernel/values` in Go, `src/format/minorunits` in TypeScript — never by a hard-coded power of ten, which is wrong for VND/JPY/KRW (no minor unit) and KWD (three digits). The only gate reading both languages: the scale is a contract between them, and while only one side was currency-aware the two disagreed symmetrically and looked correct. Waived on the line with `// money-scale-exempt: <reason>` |
 | `test-money-scale` | Points that gate at a throwaway tree and asserts its verdict on the unmodified repo plus twenty-nine planted cases: divide, multiply and remainder fire in **both** languages and at every power the detector accepts (10, 100, 1000, 10000), including an expression the formatter wrapped across lines and an upper-case identifier; a percentage and a progress-bar width do not; the waiver silences its own line and only that line, a marker inside a string literal waives nothing, a template interpolation is judged as the code it is while the string around it is not, and a grouped literal past any minor unit does not fire; and a `fires` case must see an actual scale finding, so the gate exiting non-zero for an unrelated reason cannot pass for a detection |
+| `test-migration-versions` | Points that gate at throwaway git repositories and asserts its verdict on ten planted cases: each of the four defects it names fires (collision, sorts-below, duplicate-in-tree, undeclared consolidation), and every branch of the baseline-reset declaration is exercised — admitted for a real consolidation, refused for a survivor at the base's version AND name, refused for a one-for-one rename that does not collapse, and refused for a real collision. Each case also asserts a string the gate's own output must contain, so a gate broken such that it exits non-zero for an unrelated reason cannot pass for a detection; setup and mutation failures fail the case rather than leaving a clean tree that passes; and the harness unsets the gate's own switch and git's environment, because CI sets the reset declaration on the same step this target runs on |
 | `pkg-freeze` | Published-surface freeze (EXT-P3): apidiff on every `backend/pkg` package vs the merge target (`origin/$GITHUB_BASE_REF` in CI; locally the extensions integration branch, else `origin/main`). **Advisory before the first v1+ release tag** — incompatible changes print, never block (the surface is design-fluid). **Enforcing from v1.0.0** — incompatible changes and removed packages fail; a ratified change is its exact apidiff finding line in `scripts/pkg-freeze-allowlist.txt`, bound to the merge-base sha it was ratified against (superseded entries license nothing and warn); removals are never allowlistable. Overrides: `PKG_FREEZE_MODE=advisory\|enforce`, `PKG_FREEZE_BASE=<ref>` |
 
 ## Occasional
@@ -176,16 +178,32 @@ in `lastactivity_integration_test.go`.
 | `storybook` | The component workbench on `:6006` — the design-system catalog and the story surface `fe-uat` renders. Stories live beside their component as `<name>.stories.tsx` |
 | `fe-uat` | Change-scoped Storybook render+capture UAT for frontend-only diffs: renders THIS branch's changed component's stories in headless Chromium and screenshots them (no live stack, no DB). Fails on an unclean render, an unregistered story, or a changed component with no story. Artifact: `.tmp/fe-uat/manifest.json`. Deliberately **not** in `make check` — the fe-only UAT lane a coordinator runs instead of the full stack. `ARGS="--allow-missing"` |
 
-## Isolated stack per worktree
+## One stack per worktree
 
-`make dev DEV_SLUG=<slug>` runs a full stack that won't collide with another
-worktree's: the ONE shared infra (Postgres/Redis on `15432`/`16379`), but a
-private database `margince_dev_<slug>`, a private **Redis logical database**,
-and api/FE ports derived deterministically from the slug (the FE's `/v1` proxy
-follows the api via `BACKEND_PORT`). Logs + stop handle live under
-`.tmp/dev/<slug>/`. Bare `make dev` uses the shared `margince` database, Redis
-db 0, and the app on the base `:8080`. Stop either with
-`make dev-stop [DEV_SLUG=<slug>] [DROP=1]`.
+`make dev` runs a full stack that will not collide with another worktree's: the
+ONE shared infra (Postgres/Redis/MinIO on `15432`/`16379`/`29000`), but a private
+database, a private **Redis logical database**, a private object bucket, and its
+own api/FE port pair.
+
+Nothing has to be passed for that. A **linked worktree** derives its slug from
+its own directory name, so `.claude/worktrees/cfg-retire` gets
+`margince_dev_cfg-retire`. The **primary worktree** keeps the shared `margince`
+database, Redis db 0 and the app on the base `:8080`, because `make migrate`,
+`make seed-dev` and `make verify-boot` all target that database by name.
+`DEV_SLUG=<slug>` overrides the derived name when you want a second stack inside
+one worktree.
+
+Logs, pids and claims live under `$XDG_STATE_HOME/margince/dev/<slug>/`
+(`~/.local/state/...` by default), and the primary worktree's stack — which has
+no slug — uses `_base/` there. **One directory per machine, not per worktree**:
+that is load-bearing rather than tidy, because the registry below is only a
+registry if every worktree reads the same one. `DEV_SLUG=_base` is refused for
+the same reason, since it would land a second stack on the primary's own state.
+
+Every script that needs those paths gets them from `scripts/lib-devstate.sh`
+rather than composing them — `make dev-logs` spent one revision of this change
+looking for a file `make dev` no longer wrote, and reporting it as "is the stack
+up?".
 
 **The Redis index is isolation, not tidiness.** The stream names and consumer
 groups are constants (`gw:events:crm:*`, `cg:*`), so two stacks on one index
@@ -195,21 +213,52 @@ stack's event is gone, and a projection or accrual that never runs looks
 exactly like a broken feature — it cost a day and a wrongly-filed critical bug
 once.
 
-The instance serves 80 databases in three blocks: **0** is bare `make dev`,
-**1–63** the parallel integration lane (one per package, which `FLUSHDB`s), and
-**64–79** slugged stacks. A slug takes the lowest free index in its block,
-claimed under a lock and recorded in `.tmp/dev/<slug>/env`, so restarting a
-slug reclaims its own and two slugs never share one. Deliberately not the port
-hash: two hashes differing by a multiple of the block size would take different
-ports and the SAME database, a collision the port check cannot see. The startup
-banner prints the index. A 17th concurrent slugged stack is refused rather than
-doubled up.
+The instance serves 80 databases in three blocks: **0** is the primary
+worktree's stack, **1–63** the parallel integration lane (one per package, which
+`FLUSHDB`s), and **64–79** per-worktree stacks. A stack takes the lowest free
+index in its block, claimed under a lock and recorded in the machine-global
+registry, so restarting reclaims its own index and two stacks never share one. A
+17th concurrent stack is refused rather than doubled up.
 
-A slugged stack is the one thing `make dev`'s sweep does not perform — it
-sweeps nothing itself, so it can start alongside the base stack. But the next
-**bare** `make dev` takes it down and drops its database: exclusivity is the
-whole point of the sweep, and an isolated env is a deliberate, temporary
-exception to it.
+**Ports are claimed the same way, from 8081–8179 (api at +10000).** They used to
+be derived from `8080 + cksum(slug) % 1000`, and two hashes differing by a
+multiple of the block size took different ports and the SAME Redis database — a
+collision the port check could not see. A claim also skips a port some unrelated
+process is listening on, which a hash cannot.
+
+`make dev-stop [DEV_SLUG=<slug>] [DROP=1]` stops **this worktree's** stack;
+`DROP=1` also drops its per-slug database, never the shared `margince`.
+
+`make dev-sweep [DROP=1]` clears **every** stack on the machine — every
+api/worker/vite, recorded, orphaned, or belonging to another worktree — and is
+the only thing that does. It used to be what a bare `make dev` did on the way up,
+which made the routine command the destructive one: it killed every parallel
+session's stack and dropped databases another agent was mid-test against.
+
+## The API is a compiled binary, and Vite is not
+
+`make dev` runs two very different things. Vite hot-reloads the frontend, so a
+change under `frontend/src/` is in your browser by the time you have switched
+windows. **The API does not hot-reload.** It is a compiled Go binary, so every
+backend change — a new endpoint, a migration, a handler fix — needs `make dev`
+again before it reaches the browser at all.
+
+This is worth its own heading because of how it fails. The stale binary keeps
+answering perfectly happily, so the SPA calls endpoints it has never heard of and
+the app breaks in ways that look exactly like a bug in the code you just wrote. An
+old server is indistinguishable from a broken feature.
+
+The same shape catches you across branches, and this tree is often worked in
+several worktrees at once. So before you trust **any** manual test, confirm both:
+
+- `git branch --show-current` is the branch you think it is, and
+- the **API** process was started *after* your last backend change. That is the
+  one behind the app port — `:18080` for the primary worktree, a claimed port for
+  a linked one, both printed by the startup banner. The app port itself is Vite,
+  which hot-reloads, so its start time tells you nothing about the binary that
+  does not.
+
+Neither costs anything to check, and skipping them costs a debugging session.
 
 ## Root-only (craftsmanship gate)
 
@@ -221,6 +270,7 @@ exception to it.
 | `secret-scan` | No hardcoded credential reaches `main`: gitleaks over a clean `git archive HEAD` export, policy in `.gitleaks.toml`. Scans the committed tree, not the working tree — gitleaks ignores `.gitignore`, so an in-place scan would read a sibling worktree or your real `.env.local` and differ per machine. Installs nothing on your machine and needs no account: `scripts/gitleaks-pin.sh` fetches the version- and checksum-pinned scanner into `.tmp/` on first use, so the binary — and therefore the verdict — is the one CI's `secret-scan` job runs on every non-draft change |
 | `test-api-entrypoint` | Prove `scripts/deploy/api-entrypoint.sh` writes the bootstrap admin credential **only** onto an unprovisioned installation, retires one a previous boot left, and refuses to start when its probe cannot answer. Stubs `margince-migrate`/`margince-api` on `PATH`, so it needs no container and no database. Every failure on that path is silent — a credential written to a live installation looks exactly like one that was not — and the entrypoint runs where nobody is watching. CI runs it beside the secret gate |
 | `test-dev-dsn` | Prove `scripts/dev.sh` resolves its DSNs through the same names the binaries read (`MARGINCE_OWNER_DSN` / `MARGINCE_DSN`) after an explicit `OWNER_DSN`/`APP_DSN` argument, still names the database itself so a `DEV_SLUG` stack cannot land on the base one, carries a query string like `?sslmode=require` across the swap, and never echoes a DSN. Pure shell — no Docker, no database |
+| `test-dev-isolation` | Prove two worktrees get two stacks: the slug is derived from the worktree, the Redis logical database and the port pair are CLAIMED from one machine-global registry rather than hashed, a port with a foreign listener is skipped, an exhausted block is refused rather than doubled up, and the integration lane's template is per worktree. Pure shell — no Docker, no database |
 | `test-secret-scan` | Prove `secret-scan` still catches: plant a credential-shaped token in each file `.gitleaks.toml` exempts, and require the scan to fail anyway. An over-broad allowlist reports "no leaks found" exactly like a clean tree — this is the only thing that tells them apart. CI runs it right after the scan |
 | `check-craft-doc` | Assert AGENTS.md still carries its `## Craftsmanship` section — a cheap doc floor so the gate's rules cannot be silently unpinned from the rulebook. A `check-backend` prerequisite |
 
@@ -293,7 +343,7 @@ outranks the environment, so a value set in `.env.local` was inert for the whole
 dev stack before this.
 
 Two things the stack keeps for itself whatever DSN it is handed. It **names the
-database**, so `DEV_SLUG=x` reaches `margince_dev_x` on slug-derived ports and
+database**, so `DEV_SLUG=x` reaches `margince_dev_x` on its claimed ports and
 never the base database a supplied DSN happened to name. And `--fresh` still
 refuses when the effective owner DSN is not the compose Postgres, because it
 drops through the compose container while migrations follow the DSN. A query

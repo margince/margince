@@ -4,6 +4,9 @@
 package dealstatus
 
 import (
+	"bytes"
+	"encoding/json"
+	"strings"
 	"testing"
 	"time"
 
@@ -226,5 +229,137 @@ func TestAWithheldRowIsNeverNamedAsTheOperand(t *testing.T) {
 	f := facts{deal: openDeal(), now: testNow, timeline: []crmcontracts.Activity{withheldMail}}
 	if mv := decideMove(f); mv.Action == ActionDraftEmail {
 		t.Fatal("a withheld mail was offered as the one to answer")
+	}
+}
+
+// A deal nobody has contacted yet used to be told "Nothing has been logged on
+// this deal yet — agree the next step", which restates the empty timeline the
+// reader is already looking at. These tests pin the sentence that replaced it:
+// who to write to, and the count a reader can check it against.
+
+func TestTheFirstMoveOnAnUncontactedDealNamesWhoToOpenWith(t *testing.T) {
+	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+		{Role: "blocker", Name: "Patrick Ganzmann"},
+		{Role: "champion", Name: "Roland Martinez"},
+		{Role: "economic_buyer", Name: "Philipp Königs"},
+	}}
+
+	mv := decideMove(f)
+
+	if mv.Action != ActionDraftEmail {
+		t.Errorf("the move on an uncontacted deal is %q, not a first email", mv.Action)
+	}
+	if !strings.Contains(mv.Reason, "Roland Martinez") {
+		t.Errorf("the advice does not name who to open with: %q", mv.Reason)
+	}
+	if !strings.Contains(mv.Reason, "champion") {
+		t.Errorf("the advice does not say why that person: %q", mv.Reason)
+	}
+	// The count is what makes the sentence checkable against the page.
+	if !strings.Contains(mv.Reason, "3 people") {
+		t.Errorf("the advice does not say how many are named: %q", mv.Reason)
+	}
+}
+
+func TestTheFirstMoveNeverOpensWithTheBlocker(t *testing.T) {
+	// A deal whose ONLY named seat is the person most likely to refuse it. No
+	// advice is the right answer; naming them would be worse than silence.
+	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+		{Role: "blocker", Name: "Patrick Ganzmann"},
+	}}
+
+	mv := decideMove(f)
+
+	if mv.Action == ActionDraftEmail {
+		t.Error("the card told the rep to open the deal by writing to its blocker")
+	}
+	if strings.Contains(mv.Reason, "Patrick Ganzmann") {
+		t.Errorf("the blocker was named as the way in: %q", mv.Reason)
+	}
+}
+
+func TestTheFirstMoveTakesTheBestAvailableRole(t *testing.T) {
+	// No champion: the economic buyer is the next best answer, not a fallback
+	// to "agree the next step".
+	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+		{Role: "influencer", Name: "Ines Eschbacher"},
+		{Role: "economic_buyer", Name: "Philipp Königs"},
+	}}
+
+	mv := decideMove(f)
+
+	if !strings.Contains(mv.Reason, "Philipp Königs") {
+		t.Errorf("the economic buyer was not chosen over the influencer: %q", mv.Reason)
+	}
+	if !strings.Contains(mv.Reason, "economic buyer") {
+		t.Errorf("the role is not said in words a sentence can carry: %q", mv.Reason)
+	}
+}
+
+func TestASeatTheReaderMayNotNameStillCarriesItsRole(t *testing.T) {
+	// The reader holds deal:read without person:read, so the seam supplies the
+	// seats unnamed. The role is not the secret and the advice still works.
+	f := facts{deal: openDeal(), now: testNow, seats: []Seat{{Role: "champion"}}}
+
+	mv := decideMove(f)
+
+	if mv.Action != ActionDraftEmail {
+		t.Errorf("an unnamed champion produced no opening move: %q", mv.Action)
+	}
+	if !strings.Contains(mv.Reason, "champion") {
+		t.Errorf("the role was dropped along with the name: %q", mv.Reason)
+	}
+}
+
+func TestAContactedDealKeepsItsOwnMove(t *testing.T) {
+	// The opening move is for a deal with NO contact. Once somebody has
+	// written, the later rules own the answer and this must not displace them.
+	f := facts{
+		deal:     openDeal(),
+		now:      testNow,
+		timeline: []crmcontracts.Activity{inboundMail(testNow.Add(-24 * time.Hour))},
+		seats:    []Seat{{Role: "champion", Name: "Roland Martinez"}},
+	}
+
+	mv := decideMove(f)
+
+	if strings.Contains(mv.Reason, "Nobody has been contacted") {
+		t.Errorf("a deal with an inbound mail was called uncontacted: %q", mv.Reason)
+	}
+}
+
+func TestADealWithNoSeatsSaysNothingItCannotKnow(t *testing.T) {
+	// Nobody is named, so there is nobody to open with. The card falls back to
+	// its old sentence rather than inventing a person.
+	f := facts{deal: openDeal(), now: testNow}
+
+	mv := decideMove(f)
+
+	if mv.Action == ActionDraftEmail {
+		t.Error("the card advised writing an email on a deal with nobody to write to")
+	}
+}
+
+// `arguments` is typed as an object in the contract, so a move that takes no
+// operand ships an empty one.
+//
+// Asserted through the WIRE, not the Go value: a nil map behind a non-nil
+// pointer is invisible in Go — `mv.Arguments != nil` passes — and only
+// becomes `"arguments": null` when it is marshalled. A client that reads the
+// field as an object gets null where it indexes.
+func TestAMoveWithNoOperandShipsAnEmptyObjectNotNull(t *testing.T) {
+	f := facts{deal: openDeal(), now: testNow, seats: []Seat{
+		{Role: "champion", Name: "Roland Martinez"},
+	}}
+
+	encoded, err := json.Marshal(decideMove(f))
+	if err != nil {
+		t.Fatalf("marshalling the move: %v", err)
+	}
+	if bytes.Contains(encoded, []byte(`"arguments":null`)) {
+		t.Errorf("the move serialized arguments as null, which the contract types as an object: %s", encoded)
+	}
+	if !bytes.Contains(encoded, []byte(`"arguments":{}`)) {
+		t.Errorf("a move with no operand did not ship an empty object: %s", encoded)
 	}
 }

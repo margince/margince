@@ -214,7 +214,6 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 
 func TestAnOmittedRequiredIDIsNamedAndASuppliedOneStaysHidden(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "required-ids"
 	apptest.BootstrapWorkspaceSession(t, e, "Required IDs", "ids@fable.test", "Admin")
 
 	for name, tc := range requiredIDCases(seedRequiredIDFixtures(t, e), ids.NewV7().String()) {
@@ -296,7 +295,6 @@ func seedDealForRequiredIDs(t *testing.T, e *apptest.AppEnv) string {
 // one transport to one credential type.
 func TestAPassportReadsTheSameRefusalAsASessionForAnOmittedStage(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "required-ids-agent"
 	apptest.BootstrapWorkspaceSession(t, e, "Required IDs Agent", "agent-ids@fable.test", "Admin")
 	deal := seedDealForRequiredIDs(t, e)
 

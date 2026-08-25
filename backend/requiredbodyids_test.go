@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H3
+
 package backendarch
 
 // Every contract request body that declares a required id must be accounted for.

@@ -5,7 +5,6 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
 import {
-  AccountBrief,
   CommercialPanel,
   DealsCard,
   NextSteps,
@@ -15,6 +14,7 @@ import {
 } from "./company360";
 import { CompanyContractState } from "./companycommercial";
 import { LIFECYCLE_LABELS } from "./companylookups";
+import { CompanyWorkCard } from "./companywork";
 import { RELATIONSHIP_TYPE_LABELS } from "./organizations";
 import {
   installFetchStub,
@@ -127,6 +127,14 @@ const populated = {
         stage_name: "Proposal",
         amount: { amount_minor: 4_800_000, currency: "EUR" },
         stalled: false,
+        // The named reason. A deal carrying one never also reads "stalled":
+        // an overdue task IS a reason, and a stall is the absence of one.
+        attention: {
+          kind: "overdue_task",
+          title: "Send the retrofit quote",
+          who: "Ida Keller",
+          due_at: "2026-07-02T09:00:00Z",
+        },
       },
       {
         deal_id: "d-2",
@@ -141,6 +149,34 @@ const populated = {
     won_lifetime: { amount_minor: 12_000_000, currency: "EUR" },
     lost_count: 1,
   },
+  // Two projects, three of the work card's shapes: a commitment they made and
+  // have not kept, a project nobody has filed against, and one with neither.
+  projects: [
+    {
+      project_id: "pr-1",
+      name: "Depot fit-out",
+      key: "DEP-12",
+      phase: "delivering",
+      target_end_date: "2026-09-30",
+      quiet: false,
+      attention: {
+        kind: "commitment_theirs",
+        title: "we'll confirm the depot slot once facilities sign off",
+        who: "Ida Keller",
+        due_at: "2026-07-10T09:00:00Z",
+        source_activity_id: "a-1",
+      },
+    },
+    {
+      project_id: "pr-2",
+      name: "Telemetry pilot",
+      key: "TEL-3",
+      phase: "pursuing",
+      last_activity_at: "2026-05-20T09:00:00Z",
+      quiet: true,
+    },
+  ],
+  projects_page: page,
   activities: {
     data: [
       {
@@ -260,6 +296,10 @@ const withheld = {
   people: undefined,
   state_strip: undefined,
   sections_omitted: ["deals", "people", "state_strip"],
+  // The reasons are a separate grant from the rows: this reader can list the
+  // projects and cannot read the conversations behind them, so the card shows
+  // the rows and says the statuses are incomplete.
+  attention_withheld: true,
 } as unknown as View;
 
 // An account nobody has worked yet — every card in its own empty state.
@@ -272,6 +312,8 @@ const empty = {
     won_lifetime: { amount_minor: 0, currency: "EUR" },
     lost_count: 0,
   },
+  projects: [],
+  projects_page: page,
   activities: { data: [], page },
   next_steps: { data: [], page },
   // Nothing to advise on a dormant account: the card renders nothing at all,
@@ -291,63 +333,6 @@ function Cards({ view }: Readonly<{ view: View }>) {
   installFetchStub({
     "GET /me": meRoute({ organization: ["read", "update"] }),
     "GET /signals": () => jsonResponse({ data: [], page }),
-    // The brief is the card the stories exist to show. Unstubbed it fell
-    // through to the empty fallback, and all three stories rendered the same
-    // blank block instead of the three answers they are here to compare.
-    //
-    // Sentences sit inside `sections`, the real wire shape (OrganizationBrief):
-    // a flat top-level `sentences` array reads as `Array.isArray(sections)`
-    // false, so the panel falls to its unavailable state and every sentence
-    // below, deal citation included, renders nothing at all.
-    "GET /organizations/o-1/brief": () =>
-      jsonResponse({
-        organization_id: "o-1",
-        generated_at: "2026-07-13T09:00:00Z",
-        generated_by: "deterministic",
-        sections: view.people?.data?.length
-          ? [
-              {
-                kind: "snapshot",
-                sentences: [
-                  {
-                    text: "Relationship strength 62 across 2 known contact(s).",
-                    evidence: [
-                      { entity_type: "organization", entity_id: "o-1" },
-                    ],
-                  },
-                  {
-                    text: "What they sell: managed commerce hosting.",
-                    evidence: [
-                      { entity_type: "organization", entity_id: "o-1" },
-                    ],
-                  },
-                ],
-              },
-              {
-                kind: "next_step",
-                sentences: [
-                  {
-                    // The one place a citation carries the cited record's own
-                    // name rather than just its kind (company360.tsx's
-                    // Citations, chip.count === 1 && chip.name): the name
-                    // matches the deal the view already carries, the same way
-                    // a real writer only ever names a record it read.
-                    text: '"Fleet retrofit 2026" is next up for a follow-up call.',
-                    evidence: view.deals?.data?.length
-                      ? [
-                          {
-                            entity_type: "deal",
-                            entity_id: "d-1",
-                            name: "Fleet retrofit 2026",
-                          },
-                        ]
-                      : [],
-                  },
-                ],
-              },
-            ]
-          : [],
-      }),
     // The prepared questions answer from the account; the story serves the
     // deterministic floor, which is what a deployment with no model lane shows.
     "POST /organizations/o-1/ask": () =>
@@ -372,10 +357,10 @@ function Cards({ view }: Readonly<{ view: View }>) {
   return (
     <StoryProviders>
       <div style={{ display: "grid", gap: "var(--space-3)", maxWidth: 420 }}>
-        {/* The live page always wires an opener; without one every citation's
-            `isOpenable` is false and the named-deal chip below can never
-            take the branch that names it (company360.tsx's Citations). */}
-        <AccountBrief orgId="o-1" view={view} enabled onOpenRecord={() => {}} />
+        {/* The overview's lead card. The live page always wires an opener,
+            so the commitment lines here can link to the conversation they
+            were read from; without one they render as plain sentences. */}
+        <CompanyWorkCard view={view} onOpenRecord={() => {}} />
         {/* The contract standing rides in the panel's `extra` slot, which is
             the SAME component the Deals tab draws — an account's contracted
             value and renewal must not be able to say two things on two

@@ -249,6 +249,14 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		nativeOnlyIntroPath(sorMode, introPathLister(pool)),
 		nativeOnlyAtRisk(sorMode, atRiskLister(pool)))
 	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
+	// The location check (🟢), and the verb the probe card hangs off. It reads
+	// no record and takes no seam, so it registers unconditionally.
+	//
+	// TEMPORARY. It exists to answer one question — does a chat host let a
+	// Margince card read the device's position — which no document can answer
+	// and which has a different answer per host. Delete it and its view once the
+	// matrix is filled in; see apps.GeoProbeURI.
+	agents.RegisterGeoProbeTool(registry)
 	// The composed extension set's governed tools ride the same registry
 	// and admission gate as the core tools, registered last so a name that
 	// collides with a core verb fails loudly (RegisterExtensions stashed

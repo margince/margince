@@ -67,7 +67,7 @@ export default meta;
 type Story = StoryObj<typeof TopBar>;
 
 // What is waiting, handed to the sidebar AND to the bar — as the shell hands it
-// (app/shell.tsx). One queue, two readings of it: the Approvals row's badge in
+// (app/shell.tsx). One queue, two readings of it: the Decisions row's badge in
 // the panel and the bell's chip in the strip. A frame that fed the panel and left
 // the bar at nothing would draw the same queue as 12 and as empty at once, which
 // is the one thing a picture of this chrome must not do.
@@ -275,7 +275,7 @@ export const ListRouteCollapsed: Story = {
  * Nobody waiting, which is the state the bell is SILENT in.
  *
  * Every other frame here carries the shell's real counts, so the bell wears its
- * chip and the panel's Approvals row wears the same figure. This is the other
+ * chip and the panel's Decisions row wears the same figure. This is the other
  * half, and it is the half worth a frame of its own: at zero the chip is absent
  * rather than a small "0", because a badge that is on screen on every route with
  * nothing behind it is what teaches a reader to stop reading badges — and the one
@@ -432,7 +432,7 @@ export const Narrow: Story = {
  * a phone as on a desktop and stands on the same gutter as the content column
  * under it. What goes is the collapse control — there is no panel left to
  * collapse, so it is absent rather than disabled — and the bell, because the
- * bottom bar carries Approvals at this width and the same count twice on a 390px
+ * bottom bar carries Decisions at this width and the same count twice on a 390px
  * row reads as two queues. What stays is exactly what a phone reader cannot get
  * any other way: where they are, how to search, and who they are.
  *

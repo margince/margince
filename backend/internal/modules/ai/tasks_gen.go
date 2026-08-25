@@ -40,7 +40,7 @@ const (
 	TaskSiteFactExtract Task = "site_fact_extract"
 	// TaskSiteTriage is what a mail domain's own site says it IS, before any organization is created from it: a company, one person's site, or a mailbox vendor selling addresses to the public. Runs on the SEED PAGE ALONE and leads with a fast tier because its whole job is to stop the crawl early — a personal page answered here costs one page instead of twelve. The provider class is the live.fr trap: that site belongs to a real company (Microsoft's) which is emphatically not the sender's employer.
 	TaskSiteTriage Task = "site_triage"
-	// TaskSummarize is Three sites on the company view, all grounded prose over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision.
+	// TaskSummarize is Three sites on the company view, all grounded prose over what the VIEWER can already see, assembled per viewer because visibility is per viewer. org_brief — the standing account brief: what this account is, where it stands, what changed. Its operation is deprecated and the company record page no longer renders it — the page's lead card is now the account's work in flight, spelled from the records — but the assembly stays, because org_ask is served from the same handlers. org_ask — the prepared questions behind Ask Margince: the question is chosen from a fixed list rather than typed, because each one names the records its answer must be written from, which is what lets every sentence cite a record the reader could open themselves. org_dossier — what the COMPANY is, from its own recorded facts: deliberately not the account composite, because a dossier that could see the pipeline would describe the pipeline and the separation from the brief would collapse on the first prompt revision.
 	TaskSummarize Task = "summarize"
 	// TaskTranscript is Declared, not built (ADR-0074). Pasted transcript text is T2/untrusted per ai-operational-spec §1 when a site lands.
 	TaskTranscript Task = "transcript"
@@ -75,7 +75,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "544cfb6b68e9d4da931b0a60d438a4d83a05074d98fb1523af63af5390d6c827"
+const TaskContractHash = "b24df949152675911659509883eb61ada4a56c9508aa5b83745a459872efe31d"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed

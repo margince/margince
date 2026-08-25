@@ -77,7 +77,7 @@ func TestAC_TG_1_ConnectValidatesSealsAndRecordsAuditOnly(t *testing.T) {
 func (c *telegramEnv) assertTokenSealed(t *testing.T) {
 	t.Helper()
 	var credentialRef string
-	if err := apptest.InWorkspace(c.AppEnv, t, c.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT credential_ref FROM channel_connection WHERE id = $1`, c.conn.ID).Scan(&credentialRef)
 	}); err != nil {

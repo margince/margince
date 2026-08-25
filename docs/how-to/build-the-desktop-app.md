@@ -207,9 +207,30 @@ copy.
 Everything optional is off by default. Turn features on in `margince.env`
 next to the launcher — generated on first run with every supported setting
 documented and commented out, so it doubles as the reference for what exists:
-S3-compatible storage for attachments, Gmail/Outlook capture, outbound
-webhooks, log level, the port, and the credentials that drive the AI
-surfaces.
+Gmail/Outlook capture, outbound webhooks, log level, the port, and the
+credentials that drive the AI surfaces.
+
+Attachments and company logos are **not** in that list: they already work.
+The launcher keeps their bytes in `data/blobs` inside the folder, with the
+database and the rest of the user's records, so an update leaves them alone. Set
+`MARGINCE_BLOBSTORE_PATH` to move them elsewhere, or
+`MARGINCE_BLOBSTORE_ENDPOINT` to keep them in an S3-compatible service instead —
+the endpoint takes precedence when both are set. No S3 server is bundled and
+none is needed.
+
+**A backup is `data/` plus wherever the objects actually are.** Left at the
+default they are inside `data/`, so a copy of that directory is the whole
+installation's records; point `MARGINCE_BLOBSTORE_PATH` somewhere else and a copy
+of `data/` is a database whose attachment rows name bytes it does not contain.
+`margince.yaml`, `margince.env` and any `ai-routing.yaml` sit beside `data/` and
+are part of a restore too — they are not regenerated, and `margince.yaml` decides
+the organization this database belongs to.
+
+What a local store does not give is what a service would: no replication, no
+versioning, no signed URLs, and no sharing between machines of its own — put the
+directory on a mount two machines see and they see the same bytes, but nothing
+here arranges that or keeps them consistent. For one person's installation that
+is the whole requirement; for anything more, set the endpoint.
 
 ```
 # margince.env

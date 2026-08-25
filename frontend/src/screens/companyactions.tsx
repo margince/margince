@@ -207,7 +207,7 @@ async function resolveTagId(
     // than the name, or the workspace holds more tags than one listTags page
     // returns and the winner sits past the cap. listTags takes no name filter,
     // so a client cannot ask about that row directly — the reach for it is a
-    // contract gap, recorded in STATUS.md rather than looped around here.
+    // contract gap, open in issue 2473, rather than looped around here.
     throwProblem(error, t);
   }
   return winner;

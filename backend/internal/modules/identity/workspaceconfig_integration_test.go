@@ -42,10 +42,10 @@ var configBootstrap = InstallationBootstrap{
 // the path a first boot actually takes, so "what a fresh bootstrap leaves" is
 // the real thing rather than this file's idea of it — and returns its id.
 //
-// The database persists across binary runs, so the name (and the slug and
-// admin email derived from it) carries the id's random tail: the leading bytes
-// are a millisecond timestamp, and two runs inside the same minute would
-// collide on workspace_slug_unique.
+// The database persists across binary runs, so the name (and the admin email
+// derived from it) carries the id's random tail: the leading bytes are a
+// millisecond timestamp, and two runs inside the same minute would collide on
+// the admin's unique email.
 func seedConfigWorkspace(t *testing.T, pool *pgxpool.Pool, label string) ids.UUID {
 	t.Helper()
 	ctx := context.Background()
@@ -195,9 +195,27 @@ func TestPreservedWorkspaceColumnsAreRealAndExcluded(t *testing.T) {
 		if err := rows.Err(); err != nil {
 			return err
 		}
-		for name := range preservedWorkspaceColumns {
-			if !existing[name] {
-				t.Errorf("preserved column %q is not a current workspace column (renamed/dropped?) — a reset would start restoring what it names", name)
+		if len(existing) == 0 {
+			t.Fatal("the workspace table introspected to no columns at all — every name below would be reported missing, or none checked")
+		}
+		// Both maps, because both are keyed by column name and both rot the
+		// same silent way: a dropped column's entry simply stops matching.
+		// `name` outlived 0211 in the second one, and `slug` outlived its own
+		// drop in both, with nothing failing either time.
+		for _, list := range []struct {
+			what string
+			cols map[string]bool
+		}{
+			{"preserved column", preservedWorkspaceColumns},
+			{"per-installation column", perInstallationWorkspaceColumns},
+		} {
+			if len(list.cols) == 0 {
+				t.Errorf("the %s list is empty — this check read nothing and would pass however wrong the tree was", list.what)
+			}
+			for name := range list.cols {
+				if !existing[name] {
+					t.Errorf("%s %q is not a current workspace column (renamed/dropped?) — the name stops matching and reads as deliberately spared", list.what, name)
+				}
 			}
 		}
 		cols, err := workspaceConfigColumns(ctx, tx)
@@ -260,12 +278,18 @@ func TestEveryWorkspaceConfigColumnCanTakeItsDeclaredDefault(t *testing.T) {
 }
 
 // perInstallationWorkspaceColumns are the columns two installations differ in
-// by construction — the key, the name and slug each was created under, and the
-// timestamps of its own creation. Everything else on the row is either the
-// deployment configuration both were bootstrapped from or a setting at its
-// declared default, so the comparison below can hold them equal.
+// by construction — the key each was created under and the timestamps of its
+// own creation. Everything else on the row is either the deployment
+// configuration both were bootstrapped from or a setting at its declared
+// default, so the comparison below can hold them equal.
+//
+// It is short now because the row is: name went to `setting` with 0211, and
+// ADR-0091 retired the slug. Both outlived their columns in this list, which
+// is what TestPreservedWorkspaceColumnsAreRealAndExcluded now refuses — it
+// checks this map alongside preservedWorkspaceColumns, against
+// information_schema rather than the query under test.
 var perInstallationWorkspaceColumns = map[string]bool{
-	"id": true, "name": true, "slug": true, "created_at": true, "updated_at": true,
+	"id": true, "created_at": true, "updated_at": true,
 }
 
 // TestAResetWorkspaceMatchesAFreshlyBootstrappedOne is the rail for the
@@ -368,9 +392,13 @@ func TestResetWorkspaceConfigOnARowThatIsIdentityAndNothingElse(t *testing.T) {
 	ctx := context.Background()
 	ws := seedConfigWorkspace(t, pool, "core-only")
 
-	var nameBefore string
+	// updated_at is the witness, and a better one than a value comparison:
+	// trg_workspace_updated fires BEFORE UPDATE on this row, so ANY write moves
+	// it — including a write that put the same value back, which comparing a
+	// column against itself would not see.
+	var writtenBefore time.Time
 	if err := owner.QueryRow(ctx,
-		`SELECT slug FROM workspace WHERE id = $1`, ws).Scan(&nameBefore); err != nil {
+		`SELECT updated_at FROM workspace WHERE id = $1`, ws).Scan(&writtenBefore); err != nil {
 		t.Fatalf("reading the workspace: %v", err)
 	}
 
@@ -412,12 +440,13 @@ func TestResetWorkspaceConfigOnARowThatIsIdentityAndNothingElse(t *testing.T) {
 
 	// The schema is intact and the row untouched: the probe left no trace.
 	var mode string
-	var nameAfter string
+	var writtenAfter time.Time
 	if err := owner.QueryRow(ctx,
-		`SELECT x_sor_mode, slug FROM workspace WHERE id = $1`, ws).Scan(&mode, &nameAfter); err != nil {
+		`SELECT x_sor_mode, updated_at FROM workspace WHERE id = $1`, ws).Scan(&mode, &writtenAfter); err != nil {
 		t.Fatalf("the rollback did not restore the fork columns: %v", err)
 	}
-	if nameAfter != nameBefore {
-		t.Errorf("slug = %q, want %q — the probe wrote to the row it only meant to read", nameAfter, nameBefore)
+	if !writtenAfter.Equal(writtenBefore) {
+		t.Errorf("updated_at moved from %s to %s — the probe wrote to the row it only meant to read",
+			writtenBefore, writtenAfter)
 	}
 }

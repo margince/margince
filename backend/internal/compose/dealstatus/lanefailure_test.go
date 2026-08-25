@@ -25,7 +25,10 @@ import (
 	"testing"
 	"time"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
 
@@ -42,15 +45,28 @@ func (l *refusingLane) Complete(context.Context, model.Request) (model.Response,
 // real one would make two runs of the same test stamp different cards.
 func cardClock() time.Time { return time.Date(2026, 8, 24, 9, 0, 0, 0, time.UTC) }
 
-// cardFacts is the minimum a card can be written from.
+// cardFacts is the minimum a card can be written from AND asked about.
+//
+// The timeline row is load-bearing: write() does not ask a lane about a deal
+// with nothing to cite, because every sentence the model could return would be
+// dropped for want of a citation. A fixture with no activity therefore tests
+// the refusal-to-ask, not the lane, and these tests are about the lane.
 func cardFacts(t *testing.T) facts {
 	t.Helper()
 	return facts{
 		deal: crmcontracts.Deal{Name: "Nordwind", Status: "open"},
+		timeline: []crmcontracts.Activity{{
+			Id:         openapi_types.UUID(ids.NewV7()),
+			Kind:       "email",
+			Subject:    ptr("Angebot"),
+			OccurredAt: cardClock().Add(-48 * time.Hour),
+		}},
 		now:  cardClock(),
 		lang: "de",
 	}
 }
+
+func ptr[T any](v T) *T { return &v }
 
 func TestAWiredLaneThatDidNotAnswerIsReportedSoItsFallbackIsNotCached(t *testing.T) {
 	lane := &refusingLane{}
@@ -105,5 +121,48 @@ func TestACardHeldBackByTheCallFloorIsNotAFailure(t *testing.T) {
 	}
 	if laneFailed {
 		t.Error("a card held back by the call floor was reported as a lane failure")
+	}
+}
+
+// The lane is not asked about a deal with nothing to cite.
+//
+// This is a refusal to ask rather than a new degrade: with no timeline and no
+// open tasks the citable set is empty, keepGrounded drops every sentence for
+// want of a citation, and ParseStatus then refuses the empty story. The reply
+// was discarded whatever it said, so the call bought a model round-trip and up
+// to laneDeadline of the reader's wait to reach the floor already in hand.
+//
+// The pair is the point: the second half proves the guard is about the CITABLE
+// SET and not about deals in general, so a lane that can be used still is.
+func TestTheLaneIsNotAskedAboutADealWithNothingToCite(t *testing.T) {
+	lane := &refusingLane{}
+	s := &Service{lane: lane, now: cardClock}
+	f := cardFacts(t)
+	f.timeline = nil
+
+	card, laneFailed := s.write(context.Background(), f, decideMove(f), project(f, decideMove(f)), true)
+
+	if lane.asked {
+		t.Error("the lane was asked about a deal with nothing to cite, and its answer could only be discarded")
+	}
+	if laneFailed {
+		t.Error("not asking was reported as a lane failure, which would stop the floor being cached")
+	}
+	if card.GeneratedBy != crmcontracts.Deterministic {
+		t.Errorf("the card claims to be %q when no model wrote it", card.GeneratedBy)
+	}
+}
+
+func TestALaneIsStillAskedWhenThereIsSomethingToCite(t *testing.T) {
+	// The admit case. Without it the test above passes against a build that
+	// never asks a lane at all.
+	lane := &refusingLane{}
+	s := &Service{lane: lane, now: cardClock}
+	f := cardFacts(t)
+
+	s.write(context.Background(), f, decideMove(f), project(f, decideMove(f)), true)
+
+	if !lane.asked {
+		t.Error("a deal with a citable activity did not reach the lane")
 	}
 }

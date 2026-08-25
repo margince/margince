@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
+import { CompanyFacts } from "./companyfacts";
 import { CompanyActionBadges, CompanyIdentityLine } from "./companyheader";
 
 // Who wrote the record, beside when it was written. The tag has always been able
@@ -141,6 +142,14 @@ function renderLine() {
   renderInApp(<CompanyIdentityLine org={ORG} />);
 }
 
+// The owner control's mount. It sits in the record's facts box beside the
+// name rather than mid-sentence in the identity meta line — one component,
+// one mount, so the three roster states below are asserted where a reader
+// actually meets them.
+function renderFacts() {
+  renderInApp(<CompanyFacts org={ORG} />);
+}
+
 describe("who wrote this record", () => {
   it("names the author the roster can resolve", async () => {
     stub([
@@ -165,7 +174,7 @@ describe("who wrote this record", () => {
   });
 });
 
-// Who OWNS the record, on the same line and off the same roster read. The owner
+// Who OWNS the record, in its facts box and off the same roster read. The owner
 // has three states and the header used to have two: it read the owner through
 // the generic record reference, which paints the id whenever it has no name in
 // hand — so every company page opened with a uuid in its header and swapped it
@@ -173,7 +182,7 @@ describe("who wrote this record", () => {
 describe("who owns this record", () => {
   it("names the owner the roster can resolve", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
-    renderLine();
+    renderFacts();
 
     expect(await screen.findByText("Mira Voss")).toBeTruthy();
     expect(document.body.textContent).not.toContain("u-owner");
@@ -181,7 +190,7 @@ describe("who owns this record", () => {
 
   it("does not call the owner gone while the roster read is still in flight", async () => {
     const answer = stubRosterInFlight();
-    renderLine();
+    renderFacts();
 
     // "no longer in the user list" is a claim about a read that came back. Said
     // over one still running, it reports an owner as departed on the evidence
@@ -208,7 +217,7 @@ describe("who owns this record", () => {
 
   it("does not call the owner gone when the roster read failed", async () => {
     stubRosterRefused();
-    renderLine();
+    renderFacts();
 
     // A refused read excludes nobody. Reading it as "no longer in the user
     // list" turns a 403 into a fact about who owns this account, which is the
@@ -222,7 +231,7 @@ describe("who owns this record", () => {
 
   it("says the owner is outside the user list once the roster has answered without them", async () => {
     stub([]);
-    renderLine();
+    renderFacts();
 
     expect(await screen.findByText(en["ref.notInRoster"])).toBeTruthy();
     // An owner the roster cannot name is still not shown as a uuid: waiting

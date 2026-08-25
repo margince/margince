@@ -104,6 +104,20 @@ func TestDealCoverageFlagsAThreadlessDealAndExplainsWhy(t *testing.T) {
 	}
 	dealID, _ := deal["id"].(string)
 
+	// One captured touch, because the finding is deliberately held back until
+	// there is one: engagement needs a two-way exchange, so on a deal nobody
+	// has contacted EVERY seat is unengaged by construction and the warning
+	// would fire on every deal somebody just created. Seeding the touch keeps
+	// this test on the case it is named for — a deal that HAS been worked and
+	// is still single-threaded — rather than on the calendar.
+	var touch apptest.AnyMap
+	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+		"kind": "note", "body": "Kickoff call notes",
+		"links": []apptest.AnyMap{{"entity_type": "deal", "entity_id": dealID}},
+	}, nil, &touch); status != http.StatusCreated {
+		t.Fatalf("capturing a touch on the deal: %d", status)
+	}
+
 	var got dealCoverageDTO
 	if status := e.Call(t, "GET", "/v1/deals/"+dealID+"/coverage", nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("coverage status = %d, want 200", status)

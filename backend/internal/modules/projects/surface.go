@@ -33,9 +33,19 @@ type ProjectCard = crmcontracts.Organization360Project
 const projectSurfaceCap = 25
 
 // projectCardColumns is the SELECT both surface reads share, for a query that
-// aliases project as p and the owner as u.
-const projectCardColumns = `p.id, p.name, p.key, p.phase, p.last_activity_at, p.target_end_date, p.owner_id,
-	coalesce(u.display_name, '')`
+// aliases project as p and the owner as u. quietDaysPos binds the quiet
+// window, which is asked here rather than derived by the reader: the card
+// carries no created_at, and a client counting days from last_activity_at
+// alone would call a project nobody ever touched "active".
+//
+// A function rather than a constant so neither read can select the row
+// without the flag — a card missing `quiet` renders as a project that is not
+// quiet, which is the silent-wrong answer.
+func projectCardColumns(quietDaysPos int) string {
+	return `p.id, p.name, p.key, p.phase, p.last_activity_at, p.target_end_date, p.owner_id,
+	coalesce(u.display_name, ''),
+	` + ProjectInFlightSQL("p") + ` AND ` + ProjectQuietSQL("p", "now()", quietDaysPos)
+}
 
 // projectCardOrder puts the work in motion first: delivering, then pursuing,
 // then the initiatives, and closed projects last — a page reader wants what is
@@ -45,17 +55,20 @@ const projectCardOrder = `ORDER BY CASE p.phase
 	p.last_activity_at DESC NULLS LAST, p.created_at DESC, p.id`
 
 // ListProjectsForOrganizationTx lists the company's unarchived projects under
-// the caller's project row scope, work in motion first.
-func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]ProjectCard, error) {
+// the caller's project row scope, work in motion first. The bool is whether
+// the cap cut a project that is still IN FLIGHT — a reader counting the
+// returned rows would otherwise report a portfolio account's live work as
+// exactly the cap, which is a number that account does not have.
+func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID) ([]ProjectCard, bool, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionRead); err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	orgPos := arg(orgID)
 	scope, err := projectScopeBound(ctx, arg)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	// A card under a company DISCLOSES that this company and this project are
 	// working together, which is what the edge's own admission governs — the
@@ -64,10 +77,10 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 	// the company page.
 	edge, err := edgeBound(ctx, "c", arg)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT `+projectCardColumns+`
+		SELECT `+projectCardColumns(arg(DefaultProjectQuietDays))+`
 		  FROM project p
 		  LEFT JOIN app_user u ON u.id = p.owner_id AND u.status = 'active' AND u.archived_at IS NULL
 		 WHERE EXISTS (
@@ -77,11 +90,24 @@ func (s *Store) ListProjectsForOrganizationTx(ctx context.Context, tx pgx.Tx, or
 		              AND (`+edge+`))
 		   AND p.archived_at IS NULL AND (%s)
 		 `+projectCardOrder+`
-		 LIMIT %d`, orgPos, scope, projectSurfaceCap), args...)
+		 LIMIT %d`, orgPos, scope, projectSurfaceCap+1), args...)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
-	return collectProjectCards(rows)
+	cards, err := collectProjectCards(rows)
+	if err != nil {
+		return nil, false, err
+	}
+	if len(cards) <= projectSurfaceCap {
+		return cards, false, nil
+	}
+	// What was cut, not merely THAT something was. projectCardOrder puts the
+	// closed projects last, so a portfolio account with one live project and
+	// twenty-five closed ones overflows the cap without dropping a single
+	// thing in flight — and a caller reporting "1+ in flight" off a bare
+	// overflow flag would overstate the work on the account.
+	dropped := cards[projectSurfaceCap]
+	return cards[:projectSurfaceCap], dropped.Phase != crmcontracts.Organization360ProjectPhaseClosed, nil
 }
 
 // ListProjectsForPersonTx lists the unarchived projects a person is part of:
@@ -115,7 +141,7 @@ func (s *Store) ListProjectsForPersonTx(ctx context.Context, tx pgx.Tx, personID
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT `+projectCardColumns+`
+		SELECT `+projectCardColumns(arg(DefaultProjectQuietDays))+`
 		  FROM project p
 		  LEFT JOIN app_user u ON u.id = p.owner_id AND u.status = 'active' AND u.archived_at IS NULL
 		 WHERE p.archived_at IS NULL AND (%[2]s)
@@ -176,7 +202,7 @@ func scanProjectCard(row pgx.CollectableRow) (ProjectCard, error) {
 	var phase, ownerName string
 	var targetEnd *time.Time
 	if err := row.Scan(&id, &card.Name, &card.Key, &phase, &card.LastActivityAt,
-		&targetEnd, &ownerID, &ownerName); err != nil {
+		&targetEnd, &ownerID, &ownerName, &card.Quiet); err != nil {
 		return ProjectCard{}, err
 	}
 	card.ProjectId = openapi_types.UUID(id)

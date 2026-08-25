@@ -123,9 +123,12 @@ type BootstrapInput struct {
 }
 
 // normalize parse-don't-validates the tenant-root inputs in place. The slug
-// becomes the workspace's subdomain and the timezone drives every
-// date-boundary sweep — a malformed value here would haunt the whole tenant
-// lifetime, so it is rejected before any row is written.
+// names the agent seat's address and the timezone drives every date-boundary
+// sweep — a malformed value here would haunt the whole installation's
+// lifetime, so it is rejected before any row is written. The slug is no longer
+// a subdomain, and since ADR-0091 it is not stored either; it is still parsed
+// here because the address built from it outlives the bootstrap that derived
+// it.
 // The password bound, shared by every path that accepts one. Counted in RUNES:
 // a four-emoji password is sixteen bytes and would clear a byte floor of twelve
 // while being a quarter of the length the floor intends. Named here
@@ -353,7 +356,7 @@ func (s *Service) Authenticate(ctx context.Context, rawToken string) (Identity, 
 			   AND s.revoked_at IS NULL
 			   AND now() < s.idle_expires_at
 			   AND now() < s.expires_at
-			   AND u.status = 'active' AND u.archived_at IS NULL`,
+			   AND `+LiveMemberSQL("u")+``,
 			tokenHash, Name.Key()).Scan(&sessionID, &userID, &id.Email, &id.DisplayName, &id.SeatType, &id.MustChangePassword, &locale, &id.WorkspaceName)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound

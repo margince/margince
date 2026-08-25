@@ -153,7 +153,7 @@ func TestOverlayReadAndSyncEndToEnd(t *testing.T) {
 // (reconcile's on-demand sweep, once connected, always builds a REAL
 // hubspot.Adapter from the connection's own vaulted region+token — see
 // compose/jobs.go's reconcileConnection — so this suite never calls it
-// against a connected workspace; T11 bars real-network reliance in a test).
+// against a connected workspace; P3 bars real-network reliance in a test).
 func assertOverlayOpsGatedInNativeMode(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	for _, path := range []string{"/v1/overlay/sync-status", "/v1/overlay/budget"} {
@@ -197,9 +197,7 @@ func connectOverlayToTheFakeIncumbent(t *testing.T, e *apptest.AppEnv) (adminID,
 	if err != nil {
 		t.Fatalf("parsing admin user id: %v", err)
 	}
-	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsIDStr); err != nil {
-		t.Fatalf("looking up the workspace id: %v", err)
-	}
+	wsIDStr = apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	wsID, err = ids.Parse(wsIDStr)
 	if err != nil {
 		t.Fatalf("parsing workspace id: %v", err)

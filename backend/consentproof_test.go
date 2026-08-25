@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind reachability H2
+
 package backendarch
 
 // The Art. 7(1) demonstrability invariant as a fitness function: every

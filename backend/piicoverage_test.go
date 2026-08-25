@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H2
+
 package backendarch
 
 // PII reach as a fitness function. tableownership_test.go proves a package
@@ -45,6 +47,16 @@ type piiHandling struct {
 	// the plaintext wipe was deleted would keep that claim true while the
 	// content survived its window. These are the assignments the erasure IS.
 	retentionErasures []string
+	// retentionKeeps names columns the sweep deliberately does NOT clear on this
+	// table, where a sibling eraser does. retentionErasures can only report that
+	// a declared assignment went missing; it says nothing about one that
+	// APPEARS, so a decision to keep a column lives in a comment and reverses
+	// silently the first time somebody "completes" the statement from the
+	// fuller list beside it. That is why the data-layer guard
+	// activity_restriction_lift_erases exists at all. Naming
+	// the column here makes reversing the decision fail rather than pass, so it
+	// has to be an edit to this line and not a quiet widening.
+	retentionKeeps []string
 	// sarRead: SAR assembly must read this table into the export package.
 	// False only for opaque derived artifacts (vectors) that carry no
 	// human-readable PII to hand back — they are purged, never exported.
@@ -95,10 +107,42 @@ var piiTables = map[string]piiHandling{
 	// often. Purged, never exported — like the embedding, it is a machine
 	// artifact rather than anything the subject supplied.
 	"graph_interaction_edge": {erasureWrite: true, sarRead: false},
-	"activity":               {erasureWrite: true, sarRead: true},
-	"attachment":             {erasureWrite: true, sarRead: true},
-	"raw_capture":            {erasureWrite: true, sarRead: true},
-	"embedding":              {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
+	// The Art. 17 cascade reaches activity, so erasureWrite is what this table
+	// promises. retentionErasures is declared ANYWAY, because the nightly
+	// sweep's activity/erase action is a SECOND eraser of the same content and
+	// the two have already drifted once: the sweep cleared `body` and left
+	// `raw`, the re-parseable original, which is the same content one parse
+	// away. Nothing populates the column today, so nothing would have reported
+	// it — the first connector to store an original is what would have made it
+	// a leak.
+	//
+	// `counterparty_email` is absent from this list ON PURPOSE. Both sibling
+	// erasers clear it; the sweep keeps it, because the retention action's
+	// contract is that the RECORD of the meeting survives and its content goes,
+	// and who it was with is the record. Declared here so the difference is a
+	// decision somebody can find rather than an omission nobody can date.
+	"activity": {
+		erasureWrite: true,
+		sarRead:      true,
+		retentionErasures: []string{
+			"body = NULL",
+			"raw = NULL",
+			// The tombstone is part of the erasure, not decoration beside it:
+			// the row keeps saying a meeting happened while saying nothing
+			// about what was in it, and a sweep that stopped writing it would
+			// leave the old subject line standing.
+			"subject = $2",
+		},
+		// Columns a sibling eraser clears and the sweep deliberately does not.
+		// counterparty_email and the channel identity are the same ruling: the
+		// retention action keeps the RECORD of the event, and who it was with
+		// is the record rather than its content. field_provenance is not here
+		// because it is a different table — see its own entry.
+		retentionKeeps: []string{"counterparty_email", "source_id", "thread_key"},
+	},
+	"attachment":  {erasureWrite: true, sarRead: true},
+	"raw_capture": {erasureWrite: true, sarRead: true},
+	"embedding":   {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
 	// Field-level provenance names who captured which of the subject's
 	// fields from where — subject-linked metadata (B-E02.12).
 	"field_provenance": {erasureWrite: true, sarRead: true},
@@ -284,13 +328,132 @@ var erasureCascadeFiles = []string{
 // retention sweep can never be mistaken for an answer to an Art. 17 request.
 //
 // A LIST rather than one path, because the evaluator has already outgrown one
-// file once: splitting the AI-store sweeps out made three tables look
-// unswept, and a census keyed to a single filename reports a refactor as a
-// compliance regression.
+// file twice. Splitting the AI-store sweeps out made three tables look
+// unswept; then the per-action executors moved to retentionactions.go and the
+// list was not extended, so every assignment the sweep's OWN actions make —
+// activity/erase among them — was invisible to this gate. A census keyed to a
+// filename reports a refactor as a compliance regression, and worse reports
+// nothing at all when the refactor moves code OUT of the names it knows.
+//
+// It is still a list and not a glob over retention*.go, and that is the part
+// worth reading before "fixing" it. retentionrestricted.go is the RESTRICTION
+// LIFT — a different trigger — and it clears `counterparty_email`, which the
+// sweep deliberately keeps. Folding it in would let the lift's assignments
+// satisfy the sweep's declarations below, so a retentionErasures entry would
+// pass whether or not the sweep still made it: the gate would go quietly green
+// over exactly the divergence it exists to catch. Over-recognition is the
+// failure mode a glob buys here, and it is the one with no failing assertion
+// to notice it.
 var retentionSweepFiles = []string{
 	"internal/modules/privacy/retention.go",
 	"internal/modules/privacy/retentionai.go",
 	"internal/modules/privacy/retention_graph.go",
+	"internal/modules/privacy/retentionactions.go",
+}
+
+// sqlStatements splits one Go string literal into the statements it holds. A
+// literal is not a statement: several in this tree carry two, and a check that
+// read the literal whole would let a second statement's SET clause hide behind
+// the first one's.
+func sqlStatements(literal string) []string {
+	var out []string
+	for _, stmt := range strings.Split(literal, ";") {
+		if strings.TrimSpace(stmt) != "" {
+			out = append(out, collapsedSQL(stmt))
+		}
+	}
+	return out
+}
+
+// setAssignments returns the assignment list of one UPDATE — what sits between
+// SET and the clause that ends it — or "" when the statement has none.
+//
+// Scanned at PAREN DEPTH ZERO rather than matched with a lazy regex, and that
+// is the whole point of it being a scan. `SET redacted_fields = ARRAY(SELECT c
+// FROM unnest(…) WHERE c IS NOT NULL), counterparty_email = NULL` is a shape
+// this tree already writes (retentionrestricted.go), and a regex ending at the
+// first WHERE stops inside that subquery — so every assignment after it becomes
+// invisible and reordering the list, which nobody reviews as a compliance
+// change, turns the check off.
+func setAssignments(statement string) string {
+	low := strings.ToLower(statement)
+	i := strings.Index(low, " set ")
+	if i < 0 {
+		return ""
+	}
+	rest := statement[i+len(" set "):]
+	depth := 0
+	for pos := range rest {
+		switch rest[pos] {
+		case '(':
+			depth++
+		case ')':
+			depth--
+		}
+		if depth != 0 {
+			continue
+		}
+		for _, end := range []string{" where ", " from ", " returning "} {
+			if strings.HasPrefix(strings.ToLower(rest[pos:]), end) {
+				return rest[:pos]
+			}
+		}
+	}
+	return rest
+}
+
+// oneStatementCarries reports whether any single statement makes every declared
+// assignment. Declared assignments describe ONE erasure, so they are proven
+// against one statement — see the call site for why the union is not enough.
+func oneStatementCarries(statements []string, assignments []string) bool {
+	for _, stmt := range statements {
+		all := true
+		for _, assignment := range assignments {
+			all = all && strings.Contains(stmt, strings.ToLower(assignment))
+		}
+		if all {
+			return true
+		}
+	}
+	return false
+}
+
+// statementDestroying returns the sweep statement that would destroy column on
+// table, or "" if none does.
+//
+// It asks whether the column is ASSIGNED AT ALL rather than whether it is
+// assigned NULL: `col = NULL`, `col=NULL`, `col = CAST(NULL AS text)` and
+// `col = ”` are one act in four spellings, and a check that recognised one
+// would go quietly green on the other three. A retained column is one the sweep
+// does not write, so any write to it is the finding, and a DELETE of the row
+// counts because it takes the column with it.
+//
+// Held by TestTheRetainedColumnCheckSeesEveryDestructiveShape, which plants the
+// shapes an earlier version of this missed rather than trusting that the one
+// statement in the tree passes.
+func statementDestroying(statements []string, table, column string) string {
+	needle := regexp.MustCompile(`(?is)(?:\bSET\b|,)\s*` + regexp.QuoteMeta(strings.ToLower(column)) + `\s*=`)
+	for _, stmt := range statements {
+		// The statement has to write THIS table. The caller already groups
+		// statements by write target, but a helper that only answered
+		// correctly because its caller filtered first is one the next caller
+		// gets wrong — and `activity` and `activity_participant` both carry a
+		// counterparty column, so the confusion is available here today.
+		writesTable := false
+		for _, target := range sqlWriteTargets(stmt) {
+			writesTable = writesTable || target == table
+		}
+		if !writesTable {
+			continue
+		}
+		if deleteRe.MatchString(stmt) {
+			return stmt
+		}
+		if sets := setAssignments(stmt); sets != "" && needle.MatchString("SET "+strings.ToLower(sets)) {
+			return stmt
+		}
+	}
+	return ""
 }
 
 func TestErasureAndSARReachEveryPIITable(t *testing.T) {
@@ -306,10 +469,17 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 	// the declared erasure assignments are checked against the statement that
 	// erases THIS table rather than against retention.go as a whole.
 	sweeps := map[string]string{}
+	// Kept per STATEMENT as well, because the two checks below ask different
+	// questions of them. "Is this assignment still made" is answered by the
+	// concatenation; "does the sweep touch a column it promised not to" has to
+	// look inside one statement's SET clause, or a WHERE predicate naming the
+	// column in a neighbouring statement would answer for it.
+	sweepStatements := map[string][]string{}
 	for _, path := range retentionSweepFiles {
 		for _, lit := range sqlLiterals(t, path) {
 			for _, table := range sqlWriteTargets(lit) {
 				sweeps[table] += " " + collapsedSQL(lit)
+				sweepStatements[table] = append(sweepStatements[table], collapsedSQL(lit))
 			}
 		}
 	}
@@ -345,10 +515,37 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 			missing = append(missing, "PII table "+table+
 				" names the retention sweep as its eraser but declares no erasure assignments — list the SET clauses that ARE the wipe, so a metadata-only write cannot satisfy this gate")
 		}
-		for _, assignment := range h.retentionErasures {
-			if !strings.Contains(sweeps[table], strings.ToLower(assignment)) {
-				missing = append(missing, "the retention sweep no longer assigns `"+assignment+"` on PII table "+table+
-					" — the content it was written to erase now outlives its window; restore the assignment or amend the declared erasure")
+		// Checked against ONE statement rather than the union of every sweep
+		// statement that writes this table, because a declaration describes one
+		// act: the union would let two statements each making half of it pass,
+		// which is how an erasure gets split and stops being one.
+		//
+		// What this still cannot see, stated rather than implied: a statement
+		// satisfies a declaration by EXISTING. A second statement carrying the
+		// whole erasure — a helper nobody calls — would answer for an action
+		// that had stopped making it. Closing that needs call-graph
+		// reachability, which no SQL gate in this tree has and which the
+		// sweep's two kinds of entry point (the retentionActions executors and
+		// the evaluate*Retention passes) make more than a one-line derivation.
+		// The realistic drift — somebody deletes the assignment — is caught,
+		// because nothing else in the swept files carries these together.
+		if len(h.retentionErasures) > 0 && !oneStatementCarries(sweepStatements[table], h.retentionErasures) {
+			missing = append(missing, "no single retention-sweep statement on PII table "+table+
+				" carries all of "+strings.Join(h.retentionErasures, ", ")+
+				" — the content they were written to erase now outlives its window, or the erasure has been split across statements and the declaration no longer describes one act; restore the assignments or amend the declared erasure")
+		}
+		// A table that declares only retentionKeeps has no other tripwire: with
+		// no statements to read, statementDestroying answers "nothing destroys
+		// it" and the check turns itself off. That is the same regression the
+		// file list above has now had twice, arriving where nothing fails loud.
+		if len(h.retentionKeeps) > 0 && len(sweepStatements[table]) == 0 {
+			missing = append(missing, "PII table "+table+
+				" registers a column the sweep deliberately keeps, but the sweep no longer writes this table at all — the check has nothing to read and is passing vacuously; add the file that holds the sweep's statements to retentionSweepFiles, or drop the registration")
+		}
+		for _, column := range h.retentionKeeps {
+			if destroyer := statementDestroying(sweepStatements[table], table, column); destroyer != "" {
+				missing = append(missing, "the retention sweep now destroys `"+column+"` on PII table "+table+
+					" (`"+destroyer+"`), which is registered as a column it deliberately KEEPS — the retention action's contract is that the record of the event survives and its content goes. If that ruling has changed, move the column into retentionErasures in the same commit so the change is the declaration and not a side effect of it")
 			}
 		}
 		if h.sarRead && !reads[table] {

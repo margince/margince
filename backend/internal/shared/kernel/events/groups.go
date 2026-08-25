@@ -87,6 +87,18 @@ func Groups() []Group {
 		// keyed on the contact, and an account appearing enriches nobody
 		// until a person is filed against it, which is itself a person event.
 		{Name: "cg:person-auto-enrich", Streams: forEntities(personStreamEntity)},
+		// The prompt half of captured-organization auto-enrich (ADR-0072
+		// arc): an organization appearing or changing queues the workspace's
+		// enrich pass NOW instead of leaving a company created between two
+		// daily sweeps without a dossier for up to a day. Its own group
+		// rather than a second handler on cg:linkedin-match for the standing
+		// reason: that consumer belongs to search-adjacent matching, this one
+		// to capture enrichment, and the two must not share a cursor. It
+		// listens on the organization stream alone — the pass it queues
+		// re-derives which organizations are due from the database, so no
+		// other entity's event can make one due that this stream's events do
+		// not already announce.
+		{Name: "cg:org-auto-enrich", Streams: forEntities(organizationStreamEntity)},
 		// Automatic enrichment from a LICENSED provider (ADR-0101/PI-EVT-1).
 		// Its own group rather than a second handler on the pass above,
 		// because the two differ in what a failure costs: that one reads a

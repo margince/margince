@@ -53,7 +53,6 @@ func setupChannelSendNoGmail(t *testing.T) *channelSendEnv {
 		t.Fatalf("building the local vault: %v", err)
 	}
 	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(vault))
-	e.Slug = "channel-send-no-gmail-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Channel Send No-Gmail E2E", "rep@fable.test", "Admin")
 
 	c := &channelSendEnv{AppEnv: e}
@@ -64,9 +63,9 @@ func setupChannelSendNoGmail(t *testing.T) *channelSendEnv {
 		t.Fatalf("create person → %d", status)
 	}
 	c.personID = person.ID
-	if err := apptest.InWorkspace(e, t, e.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(e, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT (SELECT id FROM workspace ORDER BY created_at LIMIT 1), id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.ws, &c.user)
+			`SELECT id FROM app_user WHERE email = $1`, "rep@fable.test").Scan(&c.user)
 	}); err != nil {
 		t.Fatalf("resolving the acting human: %v", err)
 	}

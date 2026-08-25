@@ -151,7 +151,6 @@ func assertOfferTotalsAreDerived(t *testing.T, e *apptest.AppEnv, dealID string)
 
 func TestOfferProductSnapshotAndDerivedTotals(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "offers-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Offers E2E", "offers@fable.test", "Admin")
 	dealID := offerFixture(t, e)
 	productID := createRateCardProduct(t, e)
@@ -252,15 +251,10 @@ func exerciseDraftLineWrites(t *testing.T, e *apptest.AppEnv, offer offerBody) {
 
 func TestOfferLifecycleSendAcceptRegenerate(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "offers-life"
 	apptest.BootstrapWorkspaceSession(t, e, "Offers Life", "life@fable.test", "Admin")
 	dealID := offerFixture(t, e)
 
-	var wsID string
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&wsID); err != nil {
-		t.Fatal(err)
-	}
+	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 
 	// An empty draft has nothing to send.
 	var empty offerBody
@@ -426,7 +420,6 @@ func assertOfferEventTrail(t *testing.T, e *apptest.AppEnv) {
 // the behaviour that must not have regressed by tightening the agent side.
 func TestOfferSendIsHumanOnlyButTheHumanPathStillWorks(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "offers-agent"
 	apptest.BootstrapWorkspaceSession(t, e, "Offers Agent", "agent@fable.test", "Admin")
 	dealID := offerFixture(t, e)
 

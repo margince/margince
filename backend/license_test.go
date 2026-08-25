@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H3
+
 package backendarch
 
 // License-notice fitness function (business/12-license.md §5 "honest
@@ -19,7 +21,8 @@ import (
 	"testing"
 )
 
-// The locked header, in order, at the very top of the file (see STATUS.md).
+// The locked header, in order, at the very top of the file. AGENTS.md
+// § License headers is the rule; this is what enforces it.
 const spdxHeader = "// SPDX-License-Identifier: BUSL-1.1\n// SPDX-FileCopyrightText: 2026 Gradion\n"
 
 // The canonical machine-readable "generated file" marker (`go help

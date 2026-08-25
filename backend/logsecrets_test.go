@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind prohibition H2
+
 package backendarch
 
 // A credential reaches a log field only on the failure of the channel that was

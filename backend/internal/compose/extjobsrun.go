@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -198,7 +199,7 @@ func extensionJobActor(ctx context.Context, pool *pgxpool.Pool, ws ids.UUID) (id
 		// seat, so an empty answer says an operator archived or deactivated it.
 		return tx.QueryRow(ctx,
 			`SELECT id FROM app_user
-			  WHERE is_agent AND status = 'active' AND archived_at IS NULL
+			  WHERE is_agent AND `+identity.LiveMemberSQL("")+`
 			  ORDER BY created_at LIMIT 1`).Scan(&actor)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -278,7 +279,7 @@ func (w *extJobWorkspaceWorker) deriveAuthority(ctx context.Context, args extJob
 		// PrincipalAgent below would be an agent principal nobody granted.
 		return tx.QueryRow(ctx,
 			`SELECT seat_type FROM app_user
-			  WHERE id = $1 AND is_agent AND status = 'active' AND archived_at IS NULL`, args.Principal).Scan(&seat)
+			  WHERE id = $1 AND is_agent AND `+identity.LiveMemberSQL("")+``, args.Principal).Scan(&seat)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return principal.Principal{}, fmt.Errorf("%w (principal %s)", errStaleJobPrincipal, args.Principal)

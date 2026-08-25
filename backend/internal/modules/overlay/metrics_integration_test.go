@@ -56,7 +56,7 @@ func TestSourceLagByClassReportsTheOldestWatermarkPerClass(t *testing.T) {
 	// "assert against the real column via a raw workspace-scoped update"
 	// pattern connection_integration_test.go's queryRowWS uses for reads.
 	// With both watermarks fixed and the clock injected below, the reported
-	// lag is exact — no wall-clock read, no fudge tolerance (T11).
+	// lag is exact — no wall-clock read, no fudge tolerance (P3).
 	now := time.Date(2026, 7, 17, 12, 0, 0, 0, time.UTC)
 	oldSyncedAt := now.Add(-2 * time.Hour).Truncate(time.Millisecond)
 	newSyncedAt := now.Add(-30 * time.Minute).Truncate(time.Millisecond)

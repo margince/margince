@@ -17,13 +17,19 @@
 # out of reach; do not renumber back upward. `make check-host-ports` enforces
 # the floor, because the constraint is invisible in the number itself.
 #
-# The second constraint the floor does not cover: scripts/dev.sh gives each
-# `make dev DEV_SLUG=<slug>` stack a hash-derived port, `8080 + (hash % 1000)`
-# for the app and `18080 + …` for the api — so 8080–9079 and 18080–19079 are
-# BOTH spoken for, by one slug out of a thousand rather than reliably. That is
-# why MinIO is 29000/29001 and not the 19000/19001 the prefix pattern would
-# suggest: 19000 is inside the api's span, and the collision would surface only
-# for whichever engineer's slug happened to hash to 920.
+# The second constraint the floor does not cover: scripts/dev.sh spends two
+# spans of its own. The primary worktree's stack is fixed at 8080/18080, and
+# every other worktree CLAIMS a pair from 8081–8179 and 18081–18179 — so
+# 8080–8179 and 18080–18179 are both spoken for, reliably rather than
+# probabilistically. That is why MinIO is 29000/29001 rather than the
+# 19000/19001 the prefix pattern would suggest.
+#
+# The spans used to be 8080–9079 and 18080–19079, because a stack derived its
+# port from `8080 + (cksum(slug) % 1000)`. Claiming replaced hashing — a hash
+# gave two stacks different ports and the same Redis database whenever the two
+# hashes differed by a multiple of the block size, which no port check could
+# see — and the claimed range is narrower, so this is more headroom below
+# 29000 than before, never less.
 #
 # Images are digest-pinned to the multi-arch INDEX digest (works on both
 # arm64 dev machines and amd64 CI — CI's integration lane runs this same
@@ -165,7 +171,7 @@ services:
     #   1..63    the parallel integration lane, one per package
     #            (REDIS_DBS in scripts/test-integration-parallel.sh,
     #             testdb.RedisDBs — the two must agree)
-    #   64..79   DEV_SLUG stacks, one per slug (scripts/dev.sh)
+    #   64..79   per-worktree dev stacks, one per slug (scripts/dev.sh)
     # A slug sharing a db with a test package would have its streams FLUSHDB'd
     # mid-run, and the test would read a dev stack's events as its own.
     command: ["redis-server", "--databases", "80"]

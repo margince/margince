@@ -23,6 +23,11 @@ import (
 // is never ours to set.
 const seedSource = "seed:demo"
 
+// seedSourceSystem is the system half of the idempotency key on every row this
+// tool captures. Paired with a source_id it is what the database is unique on,
+// so anything that looks a seeded row up by id alone has only half a key.
+const seedSourceSystem = "seed"
+
 type counts struct {
 	orgsCreated, orgsExisting     int
 	peopleCreated, peopleExisting int
@@ -85,7 +90,7 @@ func seedPipeline(c *client, seats *sessions, cfg demoConfig, companies []compan
 	if err != nil {
 		return err
 	}
-	activities, err := seedActivities(c, seats, cfg, refs, mode)
+	projects, activities, err := seedDeliveryAndItsRecord(c, seats, cfg, &refs, plan, mode)
 	if err != nil {
 		return err
 	}
@@ -122,8 +127,9 @@ func seedPipeline(c *client, seats *sessions, cfg demoConfig, companies []compan
 		stakeholders: stakeholders, activities: activities,
 		contracts: paper.contracts, generatedContracts: paper.generatedContracts,
 		products: catalogue.products, offers: catalogue.offers,
-		documents: paper.documents, looseDocs: paper.looseDocs,
+		documents: paper.documents, looseDocs: paper.looseDocs, rooms: paper.rooms,
 		consents: consents, lifecycles: lifecycles, surfaces: catalogue.surfaces, fxRates: fxRates,
+		projects:     projects,
 		partnerEdges: catalogue.partnerEdges, relTypes: standing.relTypes,
 		dualPartners: standing.dualPartners, inventedPeople: inventedPeople, inventedLinks: inventedLinks,
 		ownedOrgs: ownedOrgs, ownedPeople: ownedPeople,
@@ -135,6 +141,7 @@ func seedPipeline(c *client, seats *sessions, cfg demoConfig, companies []compan
 type paperCounts struct {
 	contracts, generatedContracts int
 	documents, looseDocs          int
+	rooms                         dealRoomCounts
 }
 
 // seedPaper files the agreements and the documents that hang off them.
@@ -159,6 +166,12 @@ func seedPaper(c *client, cfg demoConfig, refs pipelineRefs, plan map[string]pro
 	if n.looseDocs, err = seedLooseDocuments(c, refs, plan, mode); err != nil {
 		return n, err
 	}
+	// The rooms come last of all: a room document points at an attachment on
+	// the DEAL, and the contract it renders has to be on file before its page
+	// can be rendered from it.
+	if n.rooms, err = seedDealRooms(c, cfg, refs, mode); err != nil {
+		return n, err
+	}
 	return n, nil
 }
 
@@ -172,8 +185,10 @@ type pipelineCounts struct {
 	contracts, generatedContracts int
 	products, offers              int
 	documents, looseDocs          int
+	rooms                         dealRoomCounts
 	consents, lifecycles          int
 	surfaces, fxRates             int
+	projects                      int
 	partnerEdges, relTypes        int
 	dualPartners                  int
 	inventedPeople, inventedLinks int
@@ -189,8 +204,11 @@ func reportPipeline(n pipelineCounts) {
 	fmt.Printf("products:      %d new\n", n.products)
 	fmt.Printf("offers:        %d new\n", n.offers)
 	fmt.Printf("documents:     %d uploaded (%d contract PDFs, %d account documents)\n", n.documents+n.looseDocs, n.documents, n.looseDocs)
+	fmt.Printf("deal rooms:    %d new (%d document(s), %d invited, %d thread(s), %d reply/replies)\n",
+		n.rooms.rooms, n.rooms.documents, n.rooms.participants, n.rooms.threads, n.rooms.comments)
 	fmt.Printf("fx rates:      %d loaded\n", n.fxRates)
-	fmt.Printf("surfaces:      %d new (tags, lists, custom fields, projects, quotas)\n", n.surfaces)
+	fmt.Printf("projects:      %d new\n", n.projects)
+	fmt.Printf("surfaces:      %d new (tags, lists, project staffing, quotas)\n", n.surfaces)
 	fmt.Printf("partner edges: %d new (referrals, co-sells, served accounts)\n", n.partnerEdges)
 	fmt.Printf("rel. types:    %d set (what each company IS to us)\n", n.relTypes)
 	fmt.Printf("dual partners: %d customer(s) also promoted to partner\n", n.dualPartners)

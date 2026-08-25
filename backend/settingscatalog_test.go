@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind census H3
+
 package backendarch
 
 // The settings-catalog fitness gates (ADR-0090/A135 §7). Moving a setting's

@@ -113,7 +113,7 @@ func TestAnOfferSnapshotNamesTheInstallationFromTheSetting(t *testing.T) {
 // The assertion turns on the zone STRING rather than on a date, deliberately.
 // Any two real zones agree about the date for part of every day, so a
 // date-based fixture would pass or fail by the hour the suite happened to run
-// — the flakiness T11 rules out. So the setting names a zone Postgres cannot
+// — the flakiness P3 rules out. So the setting names a zone Postgres cannot
 // resolve, written by raw SQL because that is how it gets past the validator
 // guarding the real write path. Only a reader that actually consults the
 // setting fails, and the failure names the zone it tried.

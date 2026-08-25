@@ -63,7 +63,45 @@ func manualDedupePerson(ctx context.Context, tx pgx.Tx, in CreatePersonInput) (P
 	if err := lockPhoneLane(ctx, tx, phones); err != nil {
 		return PersonResolution{}, err
 	}
-	return DedupePerson(ctx, tx, PersonCandidate{FullName: in.FullName, Emails: emails, Phones: phones})
+	if err := lockNameLane(ctx, tx, in.FullName); err != nil {
+		return PersonResolution{}, err
+	}
+	// QueueNameCollisions, because this caller creates rather than routes. A
+	// pair it names goes on the review queue and nowhere else — no message is
+	// delivered on the strength of it, so the worst case is a row a human
+	// dismisses. See PersonCandidate for why the routing callers must not ask.
+	return DedupePerson(ctx, tx, PersonCandidate{
+		FullName: in.FullName, Emails: emails, Phones: phones, QueueNameCollisions: true,
+	})
+}
+
+// lockNameLane makes the name lane's probe and the person row the create goes
+// on to write one indivisible step, for exactly the reason lockPhoneLane exists
+// and with exactly the same hole underneath.
+//
+// The name lane has no unique index and must not have one: two people really
+// can share a name, so the collision is a question and never a key. Nothing
+// structural is left. At READ COMMITTED two creates carrying the same name would
+// both read no committed incumbent, both fall to no-match, and both commit — two
+// live records with no dedupe_candidate row between them, and nothing writes one
+// afterwards, because every row on that queue comes from the path that detected
+// the collision. The lane exists to stop a silent duplicate, so a duplicate it
+// silently misses under contention is the lane not working.
+//
+// The key is the NORMALIZED name, which is what the lane compares. Locking the
+// raw string would let "Lucy Vo" and "LUCY VO" take different locks and race
+// each other, which is the pair most likely to be typed twice.
+//
+// Taken AFTER the phone lane and never interleaved with it: two lanes locked in
+// one fixed global order cannot deadlock, and phone-then-name is that order.
+// An empty name takes no lock — it can match nobody, since fuzzyPerson refuses a
+// nameless candidate before it scores.
+func lockNameLane(ctx context.Context, tx pgx.Tx, fullName string) error {
+	key := normalizeName(fullName)
+	if key == "" {
+		return nil
+	}
+	return storekit.LockWriteIdentity(ctx, tx, "person_full_name", key)
 }
 
 // phoneLaneKeys is the request's numbers in the form the phone lane
@@ -148,11 +186,50 @@ func (m PersonResolution) recordIfReview(ctx context.Context, tx pgx.Tx, created
 		}
 		return recordNearMatch(ctx, tx, entityPerson, createdID.UUID, m.PersonID.UUID, m.Confidence,
 			nearMatchEvidence(fieldFullName, createdName, incumbent, m.Confidence), source, by)
+	case DecisionNameCollisionReview:
+		// One person, a second business card, a different address: the case a
+		// rep actually hits, and the one the fuzzy tier cannot reach because a
+		// create carries no employer for its org term to agree with.
+		//
+		// The incumbent's name is read back rather than reused from the request
+		// so the evidence shows the two SPELLINGS a human will compare. They are
+		// equal after folding — that is what the lane matched on — but not
+		// necessarily equal on screen, and "Lucy Vo" beside "LUCY VO" is a
+		// reviewer's first clue about where the second record came from.
+		var incumbent string
+		if err := tx.QueryRow(ctx, `SELECT full_name FROM person WHERE id = $1`, m.PersonID).Scan(&incumbent); err != nil {
+			return fmt.Errorf("reading the person this name collides with: %w", err)
+		}
+		// The queue row only. No dedupe_near_match ledger line, because that
+		// ledger records the fuzzy tier's own scoring and this lane did not
+		// score: it compared two normalized strings. A line carrying a
+		// confidence would invite a reader to tune a threshold that had no part
+		// in the decision.
+		if _, err := recordDedupeCandidate(ctx, tx, entityPerson, createdID.UUID, m.PersonID.UUID,
+			m.Confidence, nameCollisionEvidence(createdName, incumbent, m.Confidence), source, by); err != nil {
+			return fmt.Errorf("record person name-collision candidate: %w", err)
+		}
+		return nil
 	case DecisionExactCollision:
 		return m.recordSharedPhone(ctx, tx, createdID, source, by)
 	default:
 		return nil
 	}
+}
+
+// nameCollisionEvidence names the axis this pair actually met on. The signal is
+// "collide" at its exact end — the two names are the same string once folded —
+// and the score carried is the fuzzy score the pair WOULD have had, which is
+// what sorts it in a queue beside genuinely fuzzy rows. It is evidence of how
+// little else agreed, not the reason the pair is here.
+func nameCollisionEvidence(created, incumbent string, confidence float64) []map[string]any {
+	return []map[string]any{{
+		evidenceFieldKey:  fieldFullName,
+		evidenceLeftKey:   created,
+		evidenceRightKey:  incumbent,
+		evidenceSignalKey: evidenceSignalCollide,
+		evidenceScoreKey:  confidence,
+	}}
 }
 
 // recordSharedPhone puts the pair behind an exact phone collision on the

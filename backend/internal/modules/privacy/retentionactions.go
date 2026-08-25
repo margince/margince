@@ -174,9 +174,24 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 // the special-category risk; the record of the meeting stays, its content goes
 // — including any attached recording/transcript file (objects first, so the
 // purge shares the person-erase durability guarantee).
+//
+// `raw` goes with `body`. It is the re-parseable original the schema names, so
+// clearing the parsed copy and leaving the source erases nothing — the content
+// is one parse away. Nothing in this tree populates the column, which is why
+// only a gate will ever notice if this stops: piicoverage_test.go declares the
+// assignments this statement IS.
+//
+// `counterparty_email` and the channel identity (`source_id`, `thread_key`)
+// deliberately stay, and that is where this statement parts company with its
+// two siblings. The retention action's contract is that the RECORD of the
+// meeting survives and its content goes, and who it was with is the record.
+// The difference is declared in piicoverage_test.go's retentionKeeps for
+// `activity`, so reversing it fails the gate rather than passing silently — the
+// data-layer guard `activity_restriction_lift_erases` exists because the same
+// kind of difference was once carried in prose and went short.
 func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	_, err := tx.Exec(ctx,
-		`UPDATE activity SET body = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
+		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
 		_, err = tx.Exec(ctx,
@@ -209,9 +224,23 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 	return err
 }
 
-// anonymizePersonRecord is the person/anonymize action: the same in-place
-// anonymization the eraser performs, minus the suppression list — the subject
-// may lawfully return.
+// anonymizePersonRecord is the person/anonymize action: it strips the subject's
+// own identifying fields and the rows that carry their addresses, so the record
+// stops naming them by any key it is resolved on. The subject may lawfully return, so no suppression entry is
+// written.
+//
+// It is NOT what the eraser does minus that entry. Tables the eraser clears are
+// untouched here — the raw captures and attachments their messages came from,
+// their lead rows and scores, their preference tokens, their deal-room seats.
+//
+// What survives is written down per table in
+// TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go),
+// which fails when the gap widens in either direction. That test compares which
+// TABLES each act writes and cannot see two acts clearing one table to
+// different depths, which is why the custom columns above are nulled here
+// deliberately rather than left for it to notice.
+//
+// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go)
 func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// The subject's addresses, read BEFORE person_email is deleted
 	// below. The graph structures name them by raw address as well as
@@ -231,13 +260,22 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		`SELECT coalesce(full_name, '') FROM person WHERE id = $1`, id).Scan(&subjectName); err != nil {
 		return err
 	}
-	_, err = tx.Exec(ctx, `
+	// The installation's own columns too. A custom field is where an operator
+	// puts what the fixed schema has no room for — a personal note, a private
+	// address, a handle — so leaving them would anonymize the name and keep
+	// whatever somebody wrote beside it. The eraser nulls them by the same
+	// means; a record that still carries them has not stopped naming anyone.
+	personCustom, err := subjectCustomColumns(ctx, tx, "person")
+	if err != nil {
+		return err
+	}
+	_, err = tx.Exec(ctx, fmt.Sprintf(`
 		UPDATE person SET first_name = NULL, last_name = NULL, full_name = $2,
 		  title = NULL, raw = NULL,
 		  address_line1 = NULL, address_line2 = NULL, address_city = NULL,
 		  address_region = NULL, address_postal_code = NULL, address_country = NULL,
-		  archived_at = coalesce(archived_at, now())
-		WHERE id = $1`, id, erasedName)
+		  archived_at = coalesce(archived_at, now())%s
+		WHERE id = $1`, nullColumnAssignments(personCustom)), id, erasedName)
 	if err == nil {
 		_, err = tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
 	}
@@ -276,6 +314,34 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	if err == nil {
 		_, err = tx.Exec(ctx,
 			`DELETE FROM embedding WHERE entity_type = 'person' AND entity_id = $1`, id)
+	}
+	if err == nil {
+		// A provenance row names where a field value came from — its source,
+		// who captured it, the evidence it was read out of — and it points at
+		// the fields the statements above just nulled. There is nothing in it
+		// to anonymize: what identifies the subject IS the record of where they
+		// were found. The eraser deletes it for that reason and so does this.
+		_, err = tx.Exec(ctx,
+			`DELETE FROM field_provenance WHERE object_type = 'person' AND object_id = $1`, id)
+	}
+	if err == nil {
+		// Feedback rows name this person as the subject an AI answer was judged
+		// about. The judgement is about them and cannot be held without them.
+		_, err = tx.Exec(ctx,
+			`DELETE FROM ai_feedback WHERE subject_type = 'person' AND subject_id = $1`, id)
+	}
+	if err == nil {
+		// Against the addresses READ AT THE TOP, not a subquery over
+		// person_email: those rows are already gone by here, so a subquery
+		// would match nothing and this statement would delete nothing while
+		// looking like it did.
+		//
+		// The ledger carries the address a message arrived at and the display
+		// name it arrived with, and it is the key a later capture re-matches
+		// on — left behind it keeps answering with the person this act just
+		// stopped naming.
+		_, err = tx.Exec(ctx, `
+			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
 	}
 	if err == nil {
 		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName)

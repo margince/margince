@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind shape H2
+
 package backendarch
 
 // Manifest-hash encoding fitness function (ADR-0069 §7): every hash a generated

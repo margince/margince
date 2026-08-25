@@ -188,11 +188,6 @@ func createBareOrganization(t *testing.T, e *apptest.AppEnv) string {
 // window and must not, which is the boundary the served figure rests on.
 func seedRequiredProfileFields(t *testing.T, e *apptest.AppEnv, orgID string) {
 	t.Helper()
-	var workspaceID ids.UUID
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&workspaceID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
 	// updated_at is written explicitly because the row's own trigger stamps
 	// now() on every write, so a backdated value cannot be produced by an
 	// UPDATE after the fact.
@@ -243,11 +238,6 @@ func readerByEmail(t *testing.T, e *apptest.AppEnv, email string) ids.UUID {
 // finds it, accepts it, and serves it.
 func giveTheCachedRowToAnotherReader(t *testing.T, e *apptest.AppEnv, orgID string, acting ids.UUID) {
 	t.Helper()
-	var workspaceID ids.UUID
-	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT id FROM workspace WHERE slug = $1`, e.Slug).Scan(&workspaceID); err != nil {
-		t.Fatalf("workspace lookup: %v", err)
-	}
 	other := ids.NewV7()
 	if _, err := e.Owner.Exec(context.Background(),
 		`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'grace@example.com', 'Grace')`, other); err != nil {

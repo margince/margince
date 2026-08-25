@@ -12,7 +12,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
-import { AccountBrief, AskSection } from "./company360";
+import { AskSection } from "./company360";
 import { CompanyScreen } from "./organizations";
 import { PersonMeetingBrief } from "./persondrawers";
 
@@ -39,12 +39,14 @@ const erp = {
   name: "ERP rollout",
   key: "ERP-27",
   phase: "delivering",
+  quiet: false,
 } as const;
 const migration = {
   project_id: "p-dc",
   name: "Datacentre migration",
   key: "DC-4",
   phase: "pursuing",
+  quiet: false,
 } as const;
 
 const view: Organization360 = {
@@ -62,12 +64,6 @@ const erpScope: ProjectScope = {
   total: 11,
 };
 
-const emptyBrief = {
-  organization_id: "o-1",
-  generated_at: "2026-08-13T09:00:00Z",
-  generated_by: "deterministic",
-  sections: [],
-};
 
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
@@ -272,39 +268,6 @@ describe("Ask about this account, scoped to a project", () => {
   });
 });
 
-describe("the account brief, scoped to a project", () => {
-  it("reads and rewrites the brief under the chosen project", async () => {
-    const seen = stubFetch({
-      "GET /organizations/o-1/brief": (s) =>
-        jsonResponse(
-          s.url.includes("project_id=p-erp")
-            ? { ...emptyBrief, scope: erpScope }
-            : emptyBrief,
-        ),
-      "POST /organizations/o-1/brief": () =>
-        jsonResponse({ ...emptyBrief, scope: erpScope }),
-    });
-    render(<AccountBrief orgId="o-1" view={view} enabled />);
-    // The standing brief is the whole account's: no project until chosen.
-    await waitFor(() => expect(seen).toHaveLength(1));
-    expect(seen[0].url).toBe("/organizations/o-1/brief");
-
-    const user = userEvent.setup();
-    await user.click(screen.getByRole("combobox", { name: "Project" }));
-    await user.click(screen.getByRole("option", { name: /ERP-27/ }));
-    await waitFor(() => expect(seen).toHaveLength(2));
-    expect(seen[1].url).toBe("/organizations/o-1/brief?project_id=p-erp");
-    expect(
-      await screen.findByText("Scoped to ERP-27 · 4 of 11 activities"),
-    ).toBeTruthy();
-
-    await user.click(screen.getByRole("button", { name: "Write it again" }));
-    await waitFor(() => expect(seen).toHaveLength(3));
-    expect(seen[2].method).toBe("POST");
-    expect(seen[2].url).toBe("/organizations/o-1/brief?project_id=p-erp");
-  });
-});
-
 describe("the meeting brief, scoped to a project", () => {
   const meetingBrief = (scope?: ProjectScope) => ({
     activity_id: "a-1",
@@ -392,7 +355,6 @@ describe("Prepare meeting on the company page", () => {
         jsonResponse(meFixture({ allow: { organization: ["read"] } })),
       "GET /organizations/o-1": () => jsonResponse(view.organization),
       "GET /organizations/o-1/360": () => jsonResponse(withMeeting),
-      "GET /organizations/o-1/brief": () => jsonResponse(emptyBrief),
       "GET /organizations/o-1/finance-summary": () =>
         jsonResponse({ organization_id: "o-1", state: "no_connection" }),
       "GET /activities/a-1/meeting-brief": () =>

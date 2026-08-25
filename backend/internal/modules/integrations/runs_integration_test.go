@@ -77,8 +77,7 @@ func setupRuns(t *testing.T, cfg runsConfig) *runsEnv {
 	e := &runsEnv{ws: ids.NewV7(), owner: owner,
 		mine: ids.New[ids.PersonKind](), theirs: ids.New[ids.PersonKind]()}
 
-	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id, slug) VALUES ($1, $2)`,
-		e.ws, "runs-"+e.ws.String()); err != nil {
+	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.ws); err != nil {
 		t.Fatal(err)
 	}
 	actor := ids.NewV7()

@@ -159,7 +159,7 @@ func (p *preflightEnv) scheduledStatus(t *testing.T, id ids.UUID) (string, strin
 		status string
 		reason *string
 	)
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status, held_reason FROM scheduled_send WHERE id = $1`, id).Scan(&status, &reason)
 	}); err != nil {
@@ -176,7 +176,7 @@ func (p *preflightEnv) scheduledStatus(t *testing.T, id ids.UUID) (string, strin
 func (p *preflightEnv) countDeliveries(t *testing.T) int {
 	t.Helper()
 	var n int
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM comms_outbound`).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting staged deliveries: %v", err)
@@ -215,7 +215,7 @@ func (p *preflightEnv) makeDue(t *testing.T, id ids.UUID) {
 // setDueAt places a message's moment exactly, for the cases about lateness.
 func (p *preflightEnv) setDueAt(t *testing.T, id ids.UUID, at time.Time) {
 	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE scheduled_send SET scheduled_at = $1 WHERE id = $2`, at.UTC(), id)
 		return err
@@ -390,7 +390,7 @@ func (p *preflightEnv) heldCardFor(t *testing.T, id ids.UUID) (heldCard, bool) {
 // could have moved it while a card sat in an inbox.
 func (p *preflightEnv) forceStatus(t *testing.T, id ids.UUID, status string) {
 	t.Helper()
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE scheduled_send SET status = $1, held_reason = NULL WHERE id = $2`, status, id)
 		return err
@@ -432,7 +432,7 @@ func (p *preflightEnv) rescheduleTo(t *testing.T, id ids.UUID, at time.Time) {
 func (p *preflightEnv) alarmsFor(t *testing.T, id ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM river_job
 			  WHERE kind = 'comms_scheduled_send'
@@ -446,7 +446,7 @@ func (p *preflightEnv) alarmsFor(t *testing.T, id ids.UUID) int {
 func (p *preflightEnv) rowVersion(t *testing.T, id ids.UUID) int64 {
 	t.Helper()
 	var version int64
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT version FROM scheduled_send WHERE id = $1`, id).Scan(&version)
 	}); err != nil {
@@ -474,7 +474,7 @@ func (p *preflightEnv) runRecovery(t *testing.T) error {
 func (p *preflightEnv) releasedActivity(t *testing.T, id ids.UUID) ids.UUID {
 	t.Helper()
 	var activityID ids.UUID
-	if err := apptest.InWorkspace(p.AppEnv, t, p.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(p.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT activity_id FROM scheduled_send WHERE id = $1`, id).Scan(&activityID)
 	}); err != nil {

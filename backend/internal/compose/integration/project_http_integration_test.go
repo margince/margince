@@ -395,7 +395,7 @@ func TestAReadSeatCannotWriteAProjectOverHTTP(t *testing.T) {
 		t.Fatalf("POST /projects → %d, want 201", status)
 	}
 
-	e.SetWorkspaceSeat(t, e.Slug, "read")
+	e.SetWorkspaceSeat(t, "read")
 
 	if status := e.Call(t, "GET", "/v1/projects/"+project.ID, nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("a read seat reading a project → %d, want 200", status)

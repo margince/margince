@@ -90,7 +90,7 @@ func (a *accountSendEnv) deliveryCount(t *testing.T) int {
 func (a *accountSendEnv) linkedActivities(t *testing.T) int {
 	t.Helper()
 	var n int
-	if err := apptest.InWorkspace(a.AppEnv, t, a.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(a.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
@@ -129,7 +129,7 @@ func TestAHumansAccountStartedSendLeavesWithoutAnApproval(t *testing.T) {
 func (a *accountSendEnv) pendingApprovals(t *testing.T) int {
 	t.Helper()
 	var n int
-	if err := apptest.InWorkspace(a.AppEnv, t, a.Slug, func(tx pgx.Tx) error {
+	if err := apptest.InWorkspace(a.AppEnv, t, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM approval WHERE kind = 'send_account_email'`).Scan(&n)
 	}); err != nil {

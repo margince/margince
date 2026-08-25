@@ -19,8 +19,12 @@
 
 set -euo pipefail
 
-API_BASE="${API_BASE:-http://localhost:8080}"
-WORKSPACE_SLUG="${WORKSPACE_SLUG:-demo-workspace}"
+# The stack THIS worktree runs, not whatever holds :8080 — from a linked
+# worktree those are different, and seeding the wrong one puts the records in a
+# database nobody is looking at. An explicit API_BASE still wins.
+# shellcheck source=scripts/lib-devstate.sh
+. "$(git rev-parse --show-toplevel)/scripts/lib-devstate.sh"
+API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
 # What the operator put in margince.yaml. Only ever used for the one login that
@@ -120,7 +124,7 @@ curl -fsS --max-time 10 "$API_BASE/readyz" >/dev/null 2>&1 \
   || fail "$API_BASE/readyz is not answering — start the stack first (make dev)"
 echo "  OK: $API_BASE is up"
 
-echo "== seed-dev: demo workspace ($WORKSPACE_SLUG) =="
+echo "== seed-dev: demo installation =="
 sign_in_as_admin
 
 # Demo records ride the same natural-key dedupe the product uses: a 201
@@ -183,4 +187,4 @@ ensure_deal "Acme Expansion" "$stage_id_qualified" 2500000
 ensure_deal "Globex Renewal" "$stage_id_proposal" 1200000
 
 echo ""
-echo "seed-dev: DONE — log in at $API_BASE with $ADMIN_EMAIL / $ADMIN_PASSWORD (workspace $WORKSPACE_SLUG)"
+echo "seed-dev: DONE — log in at $API_BASE with $ADMIN_EMAIL / $ADMIN_PASSWORD"

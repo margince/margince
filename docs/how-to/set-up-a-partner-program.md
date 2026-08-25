@@ -5,10 +5,10 @@ partners live in the app, how to make a company a partner, what every field on t
 and how to work the pipeline afterwards. The one thing you *cannot* do from the UI — changing
 the value lists themselves — is covered at the end.
 
-New to this? Start with
-[tutorials/run-a-partner-program.md](../tutorials/run-a-partner-program.md) — what partner
-programs are, what you can do with them, and one deal followed from the introduction to the
-money it earns. This guide is the reference you come back to for what a particular field means.
+New to partner programs?
+[Follow one deal from the introduction to the money it earns](../../user-guide/run-a-partner-program.md)
+first; this guide is the reference you come back to for what a particular field
+means.
 
 ## What a partner is in Margince
 

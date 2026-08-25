@@ -135,7 +135,7 @@ they are noise.
 - Implementation decisions — anything the specification left open that
   the code had to decide — are explained in the commit message and PR
   description that makes the change; git history is the record.
-- Session state and pickup points live in [STATUS.md](STATUS.md);
+- Open work lives in GitHub issues — there is no status file;
   start there, and read [AGENTS.md](AGENTS.md) for the binding
   engineering rules.
 - Defects and proposals go to GitHub issues, which are templated: a bug,

@@ -90,7 +90,7 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) erro
 			`UPDATE app_user
 			    SET password_hash = $2, failed_login_count = 0, locked_until = NULL,
 			        must_change_password = false
-			  WHERE id = $1 AND status = 'active' AND archived_at IS NULL`, userID, hash)
+			  WHERE id = $1 AND `+LiveMemberSQL("")+``, userID, hash)
 		if err != nil {
 			return err
 		}
@@ -133,7 +133,7 @@ func (s *Service) proveCurrentPassword(ctx context.Context, tx pgx.Tx, userID id
 	err := tx.QueryRow(ctx,
 		`SELECT coalesce(password_hash, ''), failed_login_count, locked_until, updated_at
 		   FROM app_user
-		  WHERE id = $1 AND status = 'active' AND archived_at IS NULL
+		  WHERE id = $1 AND `+LiveMemberSQL("")+`
 		  FOR UPDATE`, userID).
 		Scan(&stored, &lock.FailedCount, &lock.LockedUntil, &lock.LastFailure)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -180,7 +180,7 @@ func (s *Service) recordFailedChange(ctx context.Context, wsID ids.WorkspaceID, 
 		var state lockoutState
 		err := tx.QueryRow(ctx,
 			`SELECT failed_login_count, locked_until, updated_at FROM app_user
-			  WHERE id = $1 AND status = 'active' AND archived_at IS NULL
+			  WHERE id = $1 AND `+LiveMemberSQL("")+`
 			  FOR UPDATE`, userID).
 			Scan(&state.FailedCount, &state.LockedUntil, &state.LastFailure)
 		if errors.Is(err, pgx.ErrNoRows) {

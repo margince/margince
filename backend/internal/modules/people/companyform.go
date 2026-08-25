@@ -79,12 +79,22 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 		}
 		applied[field] = trimmed
 	}
-	// A legal name is the axis on which two records of one company converge, and
-	// this function is the only writer of that column a human drives — through
-	// the company form AND through a site-read confirmation, which is why the
-	// re-check lives here rather than at either call site. Both callers took the
-	// name lock in resolveOrCreateAnchor, ahead of the row lock, so the ordering
-	// already holds.
+	// A legal name is the axis on which two records of one company converge, so
+	// a rename has to ask whether it just created a duplicate.
+	//
+	// The re-check lives here rather than at either call site because BOTH of
+	// this function's callers need it — the company form and a site-read
+	// confirmation — and both took the name lock in resolveOrCreateAnchor ahead
+	// of the row lock, so the ordering already holds.
+	//
+	// It is NOT the only writer that a person sets in motion: accepting a
+	// coldstart read-back renames the same column through writeOrgColumn, and
+	// re-checks there. Seven call sites of recheckOrgNameForDuplicates each
+	// remembered the rule on their own, which is why the rule is now derived
+	// from the tree instead of asserted here.
+	//
+	// Held by: TestEveryOrganizationRenameReachesTheDuplicateRecheck
+	// (backend/orgrenamerecheck_test.go)
 	if renamed {
 		if err := recheckOrgNameForDuplicates(ctx, tx, orgID, by); err != nil {
 			return nil, err

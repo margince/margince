@@ -19,7 +19,6 @@ import (
 
 func TestPipelineStageConfigLifecycle(t *testing.T) {
 	e := apptest.SetupApp(t)
-	e.Slug = "cfg-e2e"
 	apptest.BootstrapWorkspaceSession(t, e, "Cfg E2E", "cfg@fable.test", "Admin")
 
 	var second struct {

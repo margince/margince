@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 56 |
-| Resources | 8 |
-| Tool catalog | 152.4 KB |
-| Resource catalog | 3.0 KB |
-| Approx. wire tokens | 39798 |
+| Tools | 57 |
+| Resources | 9 |
+| Tool catalog | 155.4 KB |
+| Resource catalog | 3.4 KB |
+| Approx. wire tokens | 40663 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 72.0 KB | 47% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 34.9 KB | 22% | Yes, every step |
-| Input schemas | 33.7 KB | 22% | Yes, every step |
-| _Names, annotations, punctuation_ | 11.8 KB | 7% | Partly |
-| **Description + input schema** | **68.6 KB** | **45%** | **the recurring cost** |
+| Output schemas | 73.0 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 35.9 KB | 23% | Yes, every step |
+| Input schemas | 34.4 KB | 22% | Yes, every step |
+| _Names, annotations, punctuation_ | 12.1 KB | 7% | Partly |
+| **Description + input schema** | **70.3 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -45,7 +45,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 
 ## Index
 
-### Resources (8)
+### Resources (9)
 
 - [`margince://capabilities`](#capabilities) — What this installation can do
 - [`margince://schema/query`](#query_vocabulary) — Workspace query vocabulary
@@ -55,8 +55,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/commitments.html`](#commitments_view) — Open commitments
 - [`ui://margince/handoff.html`](#handoff_view) — Delivery handoff
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
+- [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (56)
+### Tools (57)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
@@ -69,8 +70,9 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.7 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
+| [`check_location_support`](#check_location_support) | Can a card read this device's location | yes | [`ui://margince/geo-probe.html`](#geo_probe_view) | 1.8 KB |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 1.7 KB |
-| [`create_record`](#create_record) | Create a record |  |  | 2.7 KB |
+| [`create_record`](#create_record) | Create a record |  |  | 2.8 KB |
 | [`create_task`](#create_task) | Create a task |  |  | 2.2 KB |
 | [`decide_approval`](#decide_approval) | Approve or reject one staged action |  |  | 2.9 KB |
 | [`decide_approval_bundle`](#decide_approval_bundle) | Approve or reject one act's proposals together |  |  | 2.9 KB |
@@ -85,7 +87,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`list_pipelines`](#list_pipelines) | List pipelines and their stages | yes |  | 2.3 KB |
 | [`list_records`](#list_records) | List records | yes |  | 3.1 KB |
 | [`list_tags`](#list_tags) | List tags | yes |  | 1.6 KB |
-| [`log_activity`](#log_activity) | Log an activity |  |  | 2.9 KB |
+| [`log_activity`](#log_activity) | Log an activity |  |  | 3.4 KB |
 | [`merge_records`](#merge_records) | Merge two records |  |  | 2.4 KB |
 | [`prep_for_meeting`](#prep_for_meeting) | Prepare for a meeting | yes |  | 4.0 KB |
 | [`prepare_handoff`](#prepare_handoff) | Prepare a delivery handoff | yes | [`ui://margince/handoff.html`](#handoff_view) | 3.8 KB |
@@ -112,10 +114,10 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`send_account_email`](#send_account_email) | Start an email conversation from a record |  |  | 3.3 KB |
 | [`send_email`](#send_email) | Send an email |  |  | 3.0 KB |
 | [`send_message`](#send_message) | Reply on a channel conversation |  |  | 2.3 KB |
-| [`update_record`](#update_record) | Update a record |  |  | 3.6 KB |
+| [`update_record`](#update_record) | Update a record |  |  | 3.8 KB |
 | [`whats_slipping_this_week`](#whats_slipping_this_week) | What's slipping this week | yes | [`ui://margince/pipeline-review.html`](#pipeline_review_view) | 2.3 KB |
 | [`who_knows`](#who_knows) | Who knows this contact | yes | [`ui://margince/relationship-map.html`](#relationship_map_view) | 2.2 KB |
-| [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.5 KB |
+| [`whoami`](#whoami) | Who this passport acts for | yes |  | 1.8 KB |
 
 ## Resources
 
@@ -269,6 +271,35 @@ The deals at risk this week, worst first, with the evidence each risk claim rest
       "connectDomains": [],
       "frameDomains": [],
       "resourceDomains": []
+    },
+    "prefersBorder": true
+  }
+}
+```
+
+</details>
+
+### geo_probe_view
+
+`ui://margince/geo-probe.html` · text/html;profile=mcp-app
+
+**Location check**
+
+Whether this host lets a view read the device's position, and the browser's own words when it does not.
+
+<details><summary>Sandbox policy (<code>_meta.ui</code>)</summary>
+
+```json
+{
+  "ui": {
+    "csp": {
+      "baseUriDomains": [],
+      "connectDomains": [],
+      "frameDomains": [],
+      "resourceDomains": []
+    },
+    "permissions": {
+      "geolocation": {}
     },
     "prefersBorder": true
   }
@@ -1891,6 +1922,132 @@ Find when a host is free, so a time can be proposed to someone. It reads free/bu
 
 </details>
 
+### check_location_support
+
+**Can a card read this device's location**
+
+Find out whether this chat host lets a Margince card read the device's location, which is what would let a contact be tagged with the event you are standing at. It does not read a location and cannot: the answer comes from the card shown beside this result, and only after the person using it presses the button on that card. A host is free to refuse, and refusing is the expected outcome until one is shown not to. To record where something happened, put it in the activity you log with log_activity; this tool tags nothing and writes nothing. (Governance: runs immediately; requires passport scope "read".)
+
+Renders its result in [`ui://margince/geo-probe.html`](#geo_probe_view), visible to `model`, `app`.
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {},
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "answered_by": {
+          "type": "string"
+        },
+        "declared_permission": {
+          "type": "string"
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "answered_by",
+        "declared_permission",
+        "note"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
 ### commit_import
 
 **Commit an import**
@@ -2058,7 +2215,7 @@ Create a person, organization, deal, lead, project, activity or relationship tha
       "type": "string"
     },
     "fields": {
-      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost.",
+      "description": "The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "idempotency_key": {
@@ -4643,7 +4800,7 @@ The workspace's words for grouping records, with the tag_id apply_tag takes. Arc
 
 **Log an activity**
 
-Record something that happened — a call, a meeting, a note, a message — on the timeline of the records it was about. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope "write".)
+Record something that happened — a call, a meeting, a note, a message — on the records it was about: name every one of them in this call. A meeting is with a person, and also concerns their company and the deal it is for. It writes history and changes nothing else: no deal moves, no field updates, nobody is notified. Unlinked, it appears on no timeline, and adding a link afterwards is a second call — relink_activity — which a person has to approve when it files under a project. Use progress_deal when the same event also moves a deal, so move and note are one act; create_task for something still owed. Keep the activity id — draft_email, send_email and send_message identify a conversation by it. (Governance: runs immediately; requires passport scope "write".)
 
 <details><summary>Input schema</summary>
 
@@ -4652,6 +4809,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
   "additionalProperties": false,
   "properties": {
     "body": {
+      "description": "Prose a colleague reads. Same language rule as subject.",
       "type": "string"
     },
     "channel_provider": {
@@ -4687,7 +4845,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "links": {
-      "description": "What it is about; unlinked, it appears on no timeline.",
+      "description": "Every record this was about — the person, their company, the deal. All of them here, in this call: it writes them together and needs no approval.",
       "items": {
         "additionalProperties": false,
         "properties": {
@@ -4726,6 +4884,7 @@ Record something that happened — a call, a meeting, a note, a message — on t
       "type": "string"
     },
     "subject": {
+      "description": "Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
       "type": "string"
     }
   },
@@ -10369,7 +10528,7 @@ Change stored field values on a record that already exists — a corrected title
       "type": "string"
     },
     "fields": {
-      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost.",
+      "description": "Only sent fields change. Fields a human last edited are not applied: they are staged for approval and named in the result's staged_approval. The crm.yaml body for the record_type. The fields each record_type takes, which of them are REQUIRED, and their shapes are published at margince://schema/record-fields — that document, not this description, is what says what a write may name. An extra key must be cf_\u003cslug\u003e for a custom field; any other key is refused BY NAME and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. Any field holding a sentence — a description, a summary, a note — is written in whoami's prose_language, whatever language this conversation is in.",
       "type": "object"
     },
     "id": {
@@ -10882,7 +11041,7 @@ Renders its result in [`ui://margince/relationship-map.html`](#relationship_map_
 
 **Who this passport acts for**
 
-Name the human this passport acts for: their id, display name, email and language. It reads only, and answers this call's acting user — not a directory. acting_user_id is what owner_id and assignee_id take for "me". Write stored prose in locale when it is set. (Governance: runs immediately; requires passport scope "read".)
+Name the human this passport acts for: their id, display name, email and language. It reads only, and answers this call's acting user — not a directory. acting_user_id is what owner_id and assignee_id take for "me". prose_language is the language every stored sentence is written in — a note, a description, a summary — whatever language the conversation itself is in; it is always answered, where locale is absent until this person chooses one. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -10916,6 +11075,9 @@ Name the human this passport acts for: their id, display name, email and languag
         "locale": {
           "type": "string"
         },
+        "prose_language": {
+          "type": "string"
+        },
         "timezone": {
           "type": "string"
         }
@@ -10923,7 +11085,8 @@ Name the human this passport acts for: their id, display name, email and languag
       "required": [
         "acting_user_id",
         "display_name",
-        "email"
+        "email",
+        "prose_language"
       ],
       "type": "object"
     },
