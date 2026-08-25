@@ -219,7 +219,6 @@ internal/compose/projectattribution.go#const block at const attributionFieldActi
 internal/compose/queryseam.go#func queryRunner
 internal/compose/replydraft.go#type replyDrafter.envelope
 internal/compose/replydraftmodel.go#method replyDrafter.completeChecked
-internal/compose/report.go#const weightedAmountMinorExpr
 internal/compose/report.go#method reportSpec.fromClause
 internal/compose/report_winloss_integration_test.go#func TestAnUnsetFilterMeansTheSameThingOnBothDoors
 internal/compose/reportcatalog.go#func catalogFilterNames
