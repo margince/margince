@@ -10,7 +10,7 @@ import {
   type BoardRecord,
   PipelineBoard,
 } from "../design-system/composed";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -125,6 +125,7 @@ function LeadCard({
   };
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <button
       type="button"
@@ -153,7 +154,9 @@ function LeadCard({
         <span>
           {lead.next_task_subject ?? t("lead.noNextTask")}
           {lead.open_task_count
-            ? ` · ${t("lead.openTaskCount", { count: lead.open_task_count })}`
+            ? ` · ${t("lead.openTaskCount", {
+                count: formatNumber(lead.open_task_count, locale),
+              })}`
             : ""}
         </span>
       </span>
@@ -173,6 +176,7 @@ export function LeadBoard({
   loadMore: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const dragging = useRef<string | null>(null);
   const lastDragEnd = useRef(0);
@@ -247,7 +251,9 @@ export function LeadBoard({
       <PipelineBoard
         variant="plain"
         columns={columns}
-        countLabel={(count) => t("lead.boardCount", { count })}
+        countLabel={(count) =>
+          t("lead.boardCount", { count: formatNumber(count, locale) })
+        }
         renderCard={(card) => {
           const lead = leadsById.get(card.id);
           if (!lead) return null;

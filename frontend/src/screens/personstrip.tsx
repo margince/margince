@@ -5,6 +5,7 @@ import { StatStrip } from "../design-system/statstrip";
 import {
   formatDayMonth,
   formatMoneyCompact,
+  formatNumber,
   relativeDays,
 } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -46,20 +47,20 @@ export function PersonStrip({
       <StatCard
         label={t("person.strip.lastInbound")}
         value={reading(
-          relativeDays(view.last_inbound_at, t),
+          relativeDays(view.last_inbound_at, t, locale),
           omitted.has("last_touch"),
         )}
       />
       <StatCard
         label={t("person.strip.lastOutbound")}
         value={reading(
-          relativeDays(view.last_outbound_at, t),
+          relativeDays(view.last_outbound_at, t, locale),
           omitted.has("last_touch"),
         )}
       />
       <StatCard
         label={t("person.strip.reciprocity")}
-        value={reading(reciprocity(view, t), omitted.has("activities"))}
+        value={reading(reciprocity(view, t, locale), omitted.has("activities"))}
       />
       <StatCard
         label={t("person.strip.openDeal")}
@@ -84,7 +85,11 @@ export function PersonStrip({
 
 // Counts, not a score. A standalone number here would be the composite verdict
 // the face deliberately does not carry (ADR-0096 D1).
-function reciprocity(view: Person360, t: ReturnType<typeof useT>): string {
+function reciprocity(
+  view: Person360,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
   const rows = view.activities?.data ?? [];
   let inbound = 0;
   let outbound = 0;
@@ -96,7 +101,10 @@ function reciprocity(view: Person360, t: ReturnType<typeof useT>): string {
       outbound += 1;
     }
   }
-  return t("person.strip.inOut", { inbound, outbound });
+  return t("person.strip.inOut", {
+    inbound: formatNumber(inbound, locale),
+    outbound: formatNumber(outbound, locale),
+  });
 }
 
 function openDeal(

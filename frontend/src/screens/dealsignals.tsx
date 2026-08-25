@@ -16,7 +16,8 @@
 // is read rather than recomputed.
 
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useDealCoverage } from "./deal360/usedealcoverage";
 import type { Signal, SignalTone } from "./record360";
@@ -58,6 +59,7 @@ const RISK_LABELS: Record<DealCoverageRisk["kind"], MessageKey> = {
  */
 export function useDealSignals(dealId: string, enabled: boolean) {
   const t = useT();
+  const { locale } = useLocale();
   // The shared read, not a second useQuery over the same key. Three surfaces
   // ask this question and they agreed by luck while each spelled its own; see
   // deal360/usedealcoverage.tsx.
@@ -71,7 +73,9 @@ export function useDealSignals(dealId: string, enabled: boolean) {
         // renders its label alone rather than a blank where a number goes.
         figure:
           risk.days_since_touch != null
-            ? t("coverage.daysSinceTouch", { days: risk.days_since_touch })
+            ? t("coverage.daysSinceTouch", {
+                days: formatNumber(risk.days_since_touch, locale),
+              })
             : undefined,
         tone: RISK_TONE[risk.kind],
       }));

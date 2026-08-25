@@ -24,7 +24,7 @@ import {
 } from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { formatDateAbbrev } from "../format/format";
+import { formatDateAbbrev, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -205,6 +205,7 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
 
 function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   const t = useT();
+  const { locale } = useLocale();
   const explain = useQuery({
     queryKey: leadScoreKey(id),
     queryFn: async () => {
@@ -260,7 +261,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
       {overridden && (
         <span className="t-caption">
           {t("lead.scoreFactorsExplainMachine", {
-            score: current.score_computed,
+            score: formatNumber(current.score_computed, locale),
           })}
         </span>
       )}
@@ -283,7 +284,9 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
                 // The decay as arithmetic a reader can check: 25 halving
                 // every 14 days is why this row reads 12.5 today.
                 <span className="t-caption t-mono">
-                  {t("lead.scoreDecayed", { base: factor.base_points })}
+                  {t("lead.scoreDecayed", {
+                    base: formatNumber(factor.base_points, locale),
+                  })}
                 </span>
               )}
               {factor.source_activity_ids != null &&
@@ -293,7 +296,10 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
                   // count never claims more than they can see.
                   <span className="t-caption">
                     {t("lead.scoreSources", {
-                      count: factor.source_activity_ids.length,
+                      count: formatNumber(
+                        factor.source_activity_ids.length,
+                        locale,
+                      ),
                     })}
                   </span>
                 )}
@@ -304,8 +310,8 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
       <span className="t-caption t-mono">
         {t("lead.scoreReconciles", {
           raw: current.raw_sum.toFixed(2),
-          rounded: current.rounded_sum,
-          score: current.score_computed,
+          rounded: formatNumber(current.rounded_sum, locale),
+          score: formatNumber(current.score_computed, locale),
         })}
       </span>
     </div>
@@ -532,6 +538,7 @@ function LeadScorePanel({
   patch: { isPending: boolean; mutate: (body: UpdateLeadRequest) => void };
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const reasonBlank = reasonValue.trim() === "";
   const scoreBlank = scoreValue.trim() === "";
   const parsedScore = Number(scoreValue);
@@ -566,7 +573,9 @@ function LeadScorePanel({
           </p>
           {lead.score_computed != null && (
             <p className="t-caption">
-              {t("lead.machineScore", { score: lead.score_computed })}
+              {t("lead.machineScore", {
+                score: formatNumber(lead.score_computed, locale),
+              })}
             </p>
           )}
           <Button

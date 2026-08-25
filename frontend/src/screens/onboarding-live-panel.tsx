@@ -4,7 +4,8 @@
 import { Check, ChevronDown, Circle } from "lucide-react";
 import { type ReactNode, useState } from "react";
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { namedSiteReadKind } from "./common";
 import { skipReasonText } from "./onboarding";
@@ -177,13 +178,17 @@ export function CoverageCard({
   stoppedReason?: StoppedReason | null;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const rows = coverageRows(pages, warnings, stoppedReason ?? undefined, t);
   const read = pages.filter((page) => page.status === "fetched").length;
   const skipped = pages.filter((page) => page.status === "skipped").length;
   return (
     <DossierCard
       title={t("ob.live.cardCoverage")}
-      count={t("ob.live.countPages", { read, skipped })}
+      count={t("ob.live.countPages", {
+        read: formatNumber(read, locale),
+        skipped: formatNumber(skipped, locale),
+      })}
       done={rows.length === 0}
     >
       {rows.length === 0 ? (

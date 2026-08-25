@@ -65,15 +65,23 @@ import { INTL_LOCALE } from "./format";
 // against. The arms below assert the derived sets by name for that reason: a
 // gate whose subject is derived still has to prove the derivation arrived.
 //
-// OUT OF SCOPE, named rather than silently dropped: collation
-// (`localeCompare`) and locale-sensitive casing (`toLocaleLowerCase` /
-// `toLocaleUpperCase`). They are derived into the set below and then excluded,
-// because the right answer is per site and opposite in each direction — a
-// machine key must sort identically for every reader, so a pinned "en" is
-// CORRECT there, while a human-readable label must not. That is a ruling per
-// call site rather than a sweep. Tracked in `COLLATION_ISSUE`; once each site
-// there has one, `isRenderingMethod` stops excluding them and this gate holds
-// both halves.
+// COLLATION AND CASING ARE NOW IN SCOPE, and the exclusion that used to stand
+// here is the reason to say so out loud. `localeCompare` and
+// `toLocaleLowerCase` / `toLocaleUpperCase` were derived into the set and then
+// filtered back out, because the right answer is per site and opposite in each
+// direction — a machine key must sort identically for every reader, so a pinned
+// "en" is correct there, while a name in a list a person reads must follow that
+// reader's alphabet. Neither answer generalises, so no single formatter could be
+// demanded and the gate held one half of its own subject.
+//
+// `format/collate.ts` is what closed it: `forReader` for a list somebody reads,
+// `stable` for a key nobody reads, `foldForMatch` for a comparison. The ruling
+// is now the FUNCTION NAME at the call site, which is why the gate can be
+// absolute again — every site has been ruled, and outside `collate.ts` a bare
+// `localeCompare` or `toLocale*Case` is a site that skipped the ruling rather
+// than a site whose ruling was "leave it". `stable` is spelled from `<` and `>`
+// rather than delegating to `localeCompare(a, b, "en")` precisely so that this
+// gate needs no exception for the module that owns the answer.
 
 const here = dirname(fileURLToPath(import.meta.url));
 const srcRoot = join(here, "..");
@@ -87,14 +95,6 @@ const extensionsDir = resolve(frontendRoot, "..", "extensions");
 const formatModule = join(here, "format.ts");
 const collateModule = join(here, "collate.ts");
 const thisGate = fileURLToPath(import.meta.url);
-
-// Named so a reader of a finding can reach the open question rather than
-// guessing that collation was overlooked. The issue number and nothing else:
-// an earlier version carried a site COUNT, which nothing here derives and
-// nothing here checks — a number in a gate that no assertion holds is the same
-// stale claim this whole rule is about.
-const COLLATION_ISSUE =
-  "#2455 — collation and locale-sensitive casing need a ruling per call site";
 
 /**
  * The members of `Intl` that take a locales argument, asked of the runtime.
@@ -175,13 +175,6 @@ function localeMethods(): Map<string, number> {
   }
   return found;
 }
-
-// Collation and casing, excluded for the reason at the top of this file. A
-// decision about members that were FOUND, never a shorter search.
-const isRenderingMethod = (name: string): boolean =>
-  name !== "localeCompare" &&
-  name !== "toLocaleLowerCase" &&
-  name !== "toLocaleUpperCase";
 
 /**
  * Every file this gate judges: the app's own sources and every extension unit's
@@ -484,7 +477,6 @@ function findingsIn(
         const position = methods.get(name);
         if (
           position !== undefined &&
-          isRenderingMethod(name) &&
           !namesTheMapping(node.arguments?.[position], imported)
         ) {
           at(node, `.${name}()`);
@@ -568,10 +560,6 @@ describe("one locale for every rendered value", () => {
     // same bundle, so a sweep that quietly stopped at src/ would hold the core
     // to a standard the extension tier escapes.
     expect(files.some((path) => path.includes("/extensions/"))).toBe(true);
-    // The excluded half names where it went. A gate that narrows its own
-    // subject and says nothing about it reads exactly like one that found the
-    // tree clean.
-    expect(COLLATION_ISSUE).toMatch(/#\d+/);
   });
 
   it("derives the Intl formatters it gates, reaching the two it is about", () => {
@@ -607,12 +595,17 @@ describe("one locale for every rendered value", () => {
     // supportedLocalesOf has a `locales` parameter too and renders nothing. It
     // is excluded by its declaring interface's name, not by its own.
     expect(methods.has("supportedLocalesOf")).toBe(false);
-    // The rendering half is gated; collation and casing are the excluded half.
-    // If that line ever moves silently, the map above fails first.
-    expect([...methods.keys()].filter(isRenderingMethod).sort()).toEqual([
+    // NOTHING is filtered back out: every method the derivation finds is
+    // gated. This arm is what would fail if a future exclusion were slipped in
+    // — an exclusion is how this gate previously held one half of its own
+    // subject while reporting the whole tree clean.
+    expect([...methods.keys()].sort()).toEqual([
+      "localeCompare",
       "toLocaleDateString",
+      "toLocaleLowerCase",
       "toLocaleString",
       "toLocaleTimeString",
+      "toLocaleUpperCase",
     ]);
   });
 
@@ -689,6 +682,15 @@ describe("one locale for every rendered value", () => {
       { code: "let LF;", finding: false },
       { code: "LF = Intl.NumberFormat;", finding: false },
       { code: "const n = new LF(locale).format(1);", finding: true },
+      // Collation and casing, the half this gate used to filter back out. The
+      // pinned "en" is the shape that made the exclusion look reasonable: it is
+      // the RIGHT ordering for a machine key and the wrong one for a name a
+      // person reads, and the line cannot say which it is. `format/collate.ts`
+      // is where that gets said, so both spellings are findings here.
+      { code: 'const o = a.localeCompare(b, "en");', finding: true },
+      { code: "const p = a.localeCompare(b);", finding: true },
+      { code: "const q = name.toLocaleLowerCase();", finding: true },
+      { code: "const r = name.toLocaleUpperCase();", finding: true },
     ];
     // EVERY formatter the runtime reports, one line each, DERIVED — not a list
     // of names typed here. A hard-coded `Intl.DurationFormat` line was the
@@ -727,9 +729,6 @@ describe("one locale for every rendered value", () => {
       // The zone lookup constructs a formatter to read a zone and renders
       // nothing; zone-by-purpose.test.ts owns it.
       "const z = Intl.DateTimeFormat().resolvedOptions().timeZone;",
-      // Collation and casing are the excluded half.
-      'const s = a.localeCompare(b, "en");',
-      "const t = name.toLocaleLowerCase();",
       // A local named like a formatter, bound to something that is not Intl's.
       "const NumberFormat = ourOwnThing;",
       "const u = new NumberFormat(whatever);",

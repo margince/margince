@@ -8,7 +8,7 @@ import { Callout } from "../design-system/callout";
 import { PanelPlate } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -172,14 +172,15 @@ function SyncStatusPanel({
 // keep that function's branch count under the cognitive-complexity gate.
 function BudgetSourcesLine({
   sources,
-}: Readonly<{ sources: NonNullable<Budget["sources"]> }>) {
+  locale,
+}: Readonly<{ sources: NonNullable<Budget["sources"]>; locale: Locale }>) {
   const t = useT();
   return (
     <p className="t-small overlay-budget-detail">
       {t("overlay.budgetSources", {
-        forceFresh: sources.force_fresh ?? 0,
-        poller: sources.poller ?? 0,
-        capture: sources.capture ?? 0,
+        forceFresh: formatNumber(sources.force_fresh ?? 0, locale),
+        poller: formatNumber(sources.poller ?? 0, locale),
+        capture: formatNumber(sources.capture ?? 0, locale),
       })}
     </p>
   );
@@ -189,14 +190,18 @@ function BudgetSourcesLine({
 // same reason BudgetSourcesLine is.
 function BudgetSearchRow({
   search,
-}: Readonly<{ search: NonNullable<Budget["search"]> }>) {
+  locale,
+}: Readonly<{ search: NonNullable<Budget["search"]>; locale: Locale }>) {
   const t = useT();
   return (
     <div className="overlay-facts overlay-budget-detail">
       <span className="t-small">
         {t("overlay.budgetSearch", {
-          consumed: search.consumed ?? 0,
-          limit: search.limit ?? "—",
+          consumed: formatNumber(search.consumed ?? 0, locale),
+          limit:
+            search.limit === undefined
+              ? "—"
+              : formatNumber(search.limit, locale),
         })}
       </span>
       {search.band && (
@@ -210,7 +215,10 @@ function BudgetSearchRow({
 
 // The window's own figures. Split out of BudgetPanel so that function is the
 // state machine and this is the reading, rather than one function being both.
-function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
+function BudgetReading({
+  budget,
+  locale,
+}: Readonly<{ budget: Budget; locale: Locale }>) {
   const t = useT();
   const limit = budget.limit;
   const consumed = budget.consumed ?? 0;
@@ -245,8 +253,12 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
           />
         </div>
       )}
-      {budget.sources && <BudgetSourcesLine sources={budget.sources} />}
-      {budget.search && <BudgetSearchRow search={budget.search} />}
+      {budget.sources && (
+        <BudgetSourcesLine sources={budget.sources} locale={locale} />
+      )}
+      {budget.search && (
+        <BudgetSearchRow search={budget.search} locale={locale} />
+      )}
     </>
   );
 }
@@ -257,7 +269,10 @@ function BudgetReading({ budget }: Readonly<{ budget: Budget }>) {
 // came back empty" and "this deployment does not meter the incumbent" drew
 // exactly the same thing — nothing. The section keeps its place and names which
 // silence it is in.
-function BudgetPanel({ query }: Readonly<{ query: QueryLike<Budget> }>) {
+function BudgetPanel({
+  query,
+  locale,
+}: Readonly<{ query: QueryLike<Budget>; locale: Locale }>) {
   const t = useT();
   return (
     <section className="overlay-section">
@@ -275,7 +290,7 @@ function BudgetPanel({ query }: Readonly<{ query: QueryLike<Budget> }>) {
           state={readingState(query.isPending, query.data ? 1 : 0)}
           emptyLabel={t("overlay.budgetEmpty")}
         >
-          {query.data && <BudgetReading budget={query.data} />}
+          {query.data && <BudgetReading budget={query.data} locale={locale} />}
         </SurfaceState>
       )}
     </section>
@@ -305,7 +320,7 @@ export function OverlayLiveSection({
   return (
     <PanelPlate>
       <SyncStatusPanel query={sync} locale={locale} />
-      <BudgetPanel query={budget} />
+      <BudgetPanel query={budget} locale={locale} />
     </PanelPlate>
   );
 }

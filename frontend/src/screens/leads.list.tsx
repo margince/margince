@@ -8,7 +8,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ToastRegion, useToast } from "../design-system/toast";
-import { formatDateAbbrev } from "../format/format";
+import { formatDateAbbrev, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -412,7 +412,9 @@ function LeadsWorkbench({
               <span className="t-caption">
                 {lead.next_task_subject ?? t("lead.noNextTask")}
                 {lead.open_task_count
-                  ? ` · ${t("lead.openTaskCount", { count: lead.open_task_count })}`
+                  ? ` · ${t("lead.openTaskCount", {
+                      count: formatNumber(lead.open_task_count, locale),
+                    })}`
                   : ""}
                 {lead.next_task_due_at
                   ? ` · ${formatDateAbbrev(lead.next_task_due_at, locale, viewerZone())}`

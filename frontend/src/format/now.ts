@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import type { MessageKey } from "../i18n/en";
+import type { Locale, Translator } from "../i18n";
+import { formatNumber } from "./format";
 
 // AC-7 groundwork (feeds Task 10's live approvals-inbox countdown). useNow
 // is the ONLY place a real clock touches this codebase's rendering — every
@@ -26,12 +27,6 @@ export function useNow(intervalMs = 1000): number {
   return now;
 }
 
-// The shape of useT()'s bound translator: (key, params?) => string.
-export type Translator = (
-  key: MessageKey,
-  params?: Record<string, string | number>,
-) => string;
-
 const SECONDS_PER_MINUTE = 60;
 const MINUTES_PER_HOUR = 60;
 const HOURS_PER_DAY = 24;
@@ -45,7 +40,15 @@ const HOURS_PER_DAY = 24;
 // produces. The pair always answers "how long have I got" at the precision
 // that span deserves — seconds matter in the last minutes of an approval
 // window and are noise a day earlier.
-export function formatCountdown(msRemaining: number, t: Translator): string {
+//
+// Every unit is a MAGNITUDE, so each reaches the sentence through the reader's
+// own grouping. Only the day count can pass four digits, and it is the one a
+// long-lived window actually shows.
+export function formatCountdown(
+  msRemaining: number,
+  t: Translator,
+  locale: Locale,
+): string {
   if (msRemaining <= 0) {
     return t("countdown.expired");
   }
@@ -56,18 +59,18 @@ export function formatCountdown(msRemaining: number, t: Translator): string {
 
   if (days >= 1) {
     return t("countdown.daysHours", {
-      days,
-      hours: totalHours % HOURS_PER_DAY,
+      days: formatNumber(days, locale),
+      hours: formatNumber(totalHours % HOURS_PER_DAY, locale),
     });
   }
   if (totalHours >= 1) {
     return t("countdown.hoursMinutes", {
-      hours: totalHours,
-      minutes: totalMinutes % MINUTES_PER_HOUR,
+      hours: formatNumber(totalHours, locale),
+      minutes: formatNumber(totalMinutes % MINUTES_PER_HOUR, locale),
     });
   }
   return t("countdown.minutesSeconds", {
-    minutes: totalMinutes,
-    seconds: totalSeconds % SECONDS_PER_MINUTE,
+    minutes: formatNumber(totalMinutes, locale),
+    seconds: formatNumber(totalSeconds % SECONDS_PER_MINUTE, locale),
   });
 }

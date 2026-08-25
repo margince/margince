@@ -12,7 +12,7 @@ import {
   Skeleton,
 } from "../design-system/atoms";
 import { Panel, PanelRow } from "../design-system/panel";
-import { formatMoney } from "../format/format";
+import { formatMoney, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import {
   ProblemError,
@@ -95,9 +95,10 @@ export function PaceLine({
   attainment,
 }: Readonly<{ attainment: QuotaAttainment }>) {
   const t = useT();
+  const { locale } = useLocale();
   const state = paceState(attainment);
-  const pct = Math.round(attainment.attainment_pct);
-  const pace = Math.round(attainment.pace_pct);
+  const pct = formatNumber(Math.round(attainment.attainment_pct), locale);
+  const pace = formatNumber(Math.round(attainment.pace_pct), locale);
   const message =
     state === "met"
       ? t("quotas.pace.met", { pct })
@@ -171,8 +172,8 @@ function ExplainCard({
   const currency = attainment.currency;
   const sum = formatMoney(attainment.closed_won_minor, currency, locale);
   const target = formatMoney(attainment.target_minor, currency, locale);
-  const pct = Math.round(attainment.attainment_pct);
-  const count = attainment.contributing_deals.length;
+  const pct = formatNumber(Math.round(attainment.attainment_pct), locale);
+  const count = formatNumber(attainment.contributing_deals.length, locale);
   return (
     <Card inset id={id} title={t("explain.title")}>
       <div className="explain-lines">

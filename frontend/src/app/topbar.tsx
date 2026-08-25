@@ -1,6 +1,7 @@
 import { Layers, PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settings";
 import { AccountMenu } from "./account";
 import { SCREEN_ENTITY } from "./entity";
@@ -156,6 +157,7 @@ function TopBarSearch({
  */
 function DecisionsMark({ waiting }: Readonly<{ waiting?: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   const count = waiting ?? 0;
   return (
     <a
@@ -163,7 +165,7 @@ function DecisionsMark({ waiting }: Readonly<{ waiting?: number }>) {
       href={routeHash({ screen: "inbox" })}
       aria-label={
         count > 0
-          ? t("shell.approvalsWaiting", { count })
+          ? t("shell.approvalsWaiting", { count: formatNumber(count, locale) })
           : t("shell.approvals")
       }
     >

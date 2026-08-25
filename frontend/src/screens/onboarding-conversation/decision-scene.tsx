@@ -1,7 +1,8 @@
 import { Check } from "lucide-react";
 import { useId, useState } from "react";
 import { Button } from "../../design-system/atoms";
-import { useT } from "../../i18n";
+import { formatNumber } from "../../format/format";
+import { useLocale, useT } from "../../i18n";
 import type { ConversationQuestion } from "./conversation-machine";
 
 // A decision as the whole work surface: the question is the headline, the
@@ -39,6 +40,7 @@ export function DecisionScene({
   factsOf?: (value: string) => CandidateFacts | null;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const group = useId();
   const headline = useId();
   const [picked, setPicked] = useState("");
@@ -51,7 +53,9 @@ export function DecisionScene({
           <p className="ob-scene-sub">{t("ob.conv.scene.decisionSub")}</p>
         </div>
         <span className="ob-decision-count">
-          {t("ob.conv.scene.candidates", { count: question.options.length })}
+          {t("ob.conv.scene.candidates", {
+            count: formatNumber(question.options.length, locale),
+          })}
         </span>
       </div>
       <div

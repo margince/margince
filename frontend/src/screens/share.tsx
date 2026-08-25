@@ -25,7 +25,7 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -487,15 +487,13 @@ function ShareScreenBody({
         name: team.name,
         note: t(
           count === 1 ? "share.teamMembers.one" : "share.teamMembers.other",
-          {
-            count,
-          },
+          { count: formatNumber(count, locale) },
         ),
         kind: "team" as const,
       };
     });
     return [...users, ...teams];
-  }, [usersQuery.data, teamsQuery.data, t]);
+  }, [usersQuery.data, teamsQuery.data, t, locale]);
 
   const [term, setTerm] = useState("");
   const [subject, setSubject] = useState<RosterSubject | null>(null);
@@ -790,7 +788,7 @@ function ShareScreenBody({
                   expiryDays === 1
                     ? "share.expiryConsequence.one"
                     : "share.expiryConsequence.other",
-                  { days: expiryDays },
+                  { days: formatNumber(expiryDays, locale) },
                 )
               : t("share.expiryConsequenceNone")}
           </p>

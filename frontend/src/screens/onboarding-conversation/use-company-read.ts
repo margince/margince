@@ -104,6 +104,7 @@ export function useCompanyRead({
   proposalJoin,
   adoptedRead = null,
 }: UseCompanyReadArgs) {
+  const { locale } = useLocale();
   // A run the machine already owns at mount (a restore, or this act
   // remounting mid-read) is adopted: polling resumes for the machine's
   // active run instead of stranding it with no poller.
@@ -162,7 +163,7 @@ export function useCompanyRead({
       if (prevSnapshot.current === next || next.id !== readIdRef.current) {
         return;
       }
-      const events = diffSiteRead(prevSnapshot.current, next);
+      const events = diffSiteRead(prevSnapshot.current, next, locale);
       const freshTerminal = events.some((event) => event.kind === "flush");
       // A retired run the server moved on its own re-arms before its fresh
       // events land: a deferred read that resumed (queued/reading again) or
@@ -196,6 +197,7 @@ export function useCompanyRead({
       concludeFreshTerminal,
       dispatch,
       machine,
+      locale,
       queue,
       setDraft,
       setSelectedFactKeys,
@@ -333,7 +335,6 @@ export function useCompanyRead({
     });
   }, [siteRead.isError, dispatch, machine]);
 
-  const { locale } = useLocale();
   const promptLocale = onboardingLocale(locale);
   const proposal = useQuery({
     queryKey: ["onboarding-company-proposal", readId, promptLocale],
