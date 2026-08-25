@@ -420,8 +420,16 @@ func spellsSlotPredicate(sql string) bool {
 // A test is what a bracketed SEGMENT of the conjunct ends with — the segment
 // and not the whole conjunct, because the statement text is a fragment and a
 // predicate's last term carries whatever closes and follows it. A column list
-// puts a comma after the name or closes the list on it; an assignment puts an
-// equals sign before it.
+// puts a comma after the name; an assignment puts an equals sign before it; a
+// NEGATION asks the opposite question, which is "who does NOT hold the slot".
+//
+// One shape is knowingly over-reported: an INSERT whose column list is exactly
+// `(is_current_primary)`, where the closing bracket leaves a segment that reads
+// as a bare test. Distinguishing it would mean deciding whether an opening
+// bracket follows a keyword or a name, and getting THAT wrong drops the
+// contents of `NOT EXISTS (…)` — where five of the six statements this census
+// judges live. Over-reporting is a finding somebody dismisses; under-reporting
+// is a census that reads green over the defect and says nothing.
 func asksTheFlag(term string) bool {
 	for _, segment := range slotBrackets.Split(term, -1) {
 		trimmed := strings.TrimRight(segment, " \t\n")
@@ -430,9 +438,10 @@ func asksTheFlag(term string) bool {
 			continue
 		}
 		before := strings.TrimRight(trimmed[:at[0]], " \t\n")
-		if !strings.HasSuffix(before, ",") && !strings.HasSuffix(before, "=") {
-			return true
+		if strings.HasSuffix(before, ",") || strings.HasSuffix(before, "=") || strings.HasSuffix(before, "not") {
+			continue
 		}
+		return true
 	}
 	return false
 }
@@ -602,6 +611,13 @@ var slotProbes = []struct {
 	// A statement that merely WRITES the column names it in a list; naming is
 	// not asking.
 	{"the flag in an INSERT's column list", false, "", "\nfunc read() string {\n\treturn `INSERT INTO relationship (kind, person_id, is_current_primary, archived_at) SELECT 'employment', $1, true, NULL FROM person WHERE archived_at IS NULL`\n}"},
+	// The negation asks who does NOT hold the slot, which is the opposite
+	// question and not a second spelling of this one.
+	{"the flag negated", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE NOT is_current_primary AND archived_at IS NULL`\n}"},
+	// A guard inside NOT EXISTS, where five of the six judged statements live:
+	// the flag sits behind an opening bracket, and a detector that decided
+	// brackets by what precedes them would drop it.
+	{"a guard inside a NOT EXISTS subquery", true, "", "\nfunc read() string {\n\treturn `UPDATE relationship a SET x = 1 WHERE NOT EXISTS (SELECT 1 FROM relationship b WHERE b.is_current_primary AND b.archived_at IS NULL)`\n}"},
 }
 
 func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
