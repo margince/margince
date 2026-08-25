@@ -201,7 +201,7 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 		err = s.invalidateGraph(ctx, tx, id)
 	}
 	if err == nil {
-		err = s.eraser.eraseAttachments(ctx, tx, "retention: the policy erased this record", `entity_type = 'activity' AND entity_id = $1`, id)
+		err = s.eraser.eraseAttachments(ctx, tx, "retention: the policy erased this record", causeRetention, `entity_type = 'activity' AND entity_id = $1`, id)
 	}
 	if err == nil {
 		// A proposal read out of this body quotes it verbatim, so it ages out

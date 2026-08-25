@@ -415,10 +415,21 @@ func TestTheCollateralTypesAreTombstonedSoTheBoundaryReachesThem(t *testing.T) {
 			if err != nil {
 				t.Fatalf("ListAuditLog: %v", err)
 			}
+			// The create row must be THERE and withheld. Checking absence alone
+			// would pass on an empty page, or on a page holding only the
+			// tombstone — which carries no image to leak.
+			var found bool
 			for _, entry := range page.Entries {
+				if entry.Action != "create" {
+					continue
+				}
+				found = true
 				if strings.Contains(string(entry.After), "Sara Subject") {
 					t.Errorf("an erased %s still names the subject: %s", entityType, entry.After)
 				}
+			}
+			if !found {
+				t.Fatalf("the %s's create row is absent from the page, so this proved nothing", entityType)
 			}
 		})
 	}

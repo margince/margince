@@ -35,10 +35,12 @@ package backendarch
 // subjects lying outside the root — noise, not a proof. What Scope is used for
 // is its parsing and its refusal of a root that holds nothing.
 //
-// What it cannot see: a verb built at run time. `retentionactions.go` audits
-// under a column of the policy row, whose CHECK admits archive, anonymize and
-// erase — all three of which are judged below, so the runtime path reaches
-// nothing this gate has not already ruled on.
+// The one verb built at run time is judged too, rather than argued about.
+// `retentionactions.go` audits under a column of the policy row, so no walk can
+// read it from the source — but the DDL can: retention_policy_action_check names
+// exactly what that column may hold, and every one of those verbs goes through
+// the same judgement. Leaving it to a comment saying "those are all covered
+// anyway" would be a claim that stops being true the day the CHECK widens.
 
 import (
 	"go/ast"
@@ -80,12 +82,27 @@ func TestEveryPrivacyAuditVerbIsJudgedAScrubOrNot(t *testing.T) {
 		Subject: fileAuditsUnderAVerb,
 	}.Files(t)
 
+	var judged int
+
+	// The policy-driven verb, from the DDL that bounds it. A retention sweep
+	// audits under a column, and widening that CHECK without judging the new
+	// verb is exactly the silent gap this gate exists for.
+	for _, verb := range retentionPolicyVerbs(t) {
+		judged++
+		if scrub[verb] || privacyNonScrubVerbs.Waived(t, verb) {
+			continue
+		}
+		t.Errorf("retention_policy_action_check admits %q, which privacy audits under at run time, "+
+			"and nothing says whether it certifies a scrub.\n"+
+			"\tAdd it to fieldHistoryScrubActions, or to privacyNonScrubVerbs with what it does to the row.",
+			verb)
+	}
+
 	// Verbs resolve against the PACKAGE's constants, not each file's own.
 	// actionArchive is declared in recordhistory.go and written from erasure's
 	// neighbours; per-file resolution would leave those unresolvable, and an
 	// unresolvable verb is one this gate skips — the census failing short in the
 	// one direction that reports PASS.
-	var judged int
 	for _, parsed := range files {
 		for _, verb := range auditVerbsIn(parsed.File, consts) {
 			judged++
@@ -145,6 +162,17 @@ func scrubVerbSet(t *testing.T, consts map[string]string) map[string]bool {
 	})
 	if len(verbs) == 0 {
 		t.Fatalf("fieldHistoryScrubActions resolved to no verbs — this gate would pass over an empty boundary")
+	}
+	return verbs
+}
+
+// retentionPolicyVerbs is what a retention policy's action column may hold, read
+// from its CHECK — the only authority on a verb no source walk can resolve.
+func retentionPolicyVerbs(t *testing.T) []string {
+	t.Helper()
+	verbs, ok := tableCheckSets(t)["retention_policy.action"]
+	if !ok {
+		t.Fatal("retention_policy.action: no CHECK (col IN (...)) found — the runtime verb would go unjudged")
 	}
 	return verbs
 }

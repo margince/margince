@@ -34,7 +34,7 @@ var subjectAttachmentsWhere = `(entity_type = 'person' AND entity_id = $1)
 // orphaned with their only key gone. Erasure is rare and not latency-bound,
 // so the brief object-store I/O held under the transaction is an acceptable
 // trade for that durability guarantee.
-func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, reason, where string, args ...any) error {
+func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, reason, cause, where string, args ...any) error {
 	rows, err := tx.Query(ctx, `SELECT storage_key FROM attachment WHERE `+where, args...)
 	if err != nil {
 		return err
@@ -70,7 +70,7 @@ func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, reason, where 
 	if err != nil {
 		return err
 	}
-	return tombstoneCollateralScrubs(ctx, tx, "attachment", scrubbed, reason)
+	return tombstoneCollateralScrubs(ctx, tx, "attachment", scrubbed, reason, cause)
 }
 
 // scrubbedIDs runs a statement that returns the ids it scrubbed.

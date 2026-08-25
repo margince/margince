@@ -79,5 +79,5 @@ func redactScheduledSends(ctx context.Context, tx pgx.Tx, reason string, emails 
 	if err != nil {
 		return fmt.Errorf("redacting the scheduled messages addressed to the subject: %w", err)
 	}
-	return tombstoneCollateralScrubs(ctx, tx, "scheduled_send", scrubbed, reason)
+	return tombstoneCollateralScrubs(ctx, tx, "scheduled_send", scrubbed, reason, causePersonErasure)
 }
