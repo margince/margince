@@ -2208,6 +2208,7 @@ export const de = {
 
   "dedupe.viewExisting": "Vorhandenen Eintrag anzeigen",
 
+  "co.360.title": "Company 360",
   "today.title": "Heute bei diesem Account",
   "today.failed":
     "Das ließ sich nicht zusammenstellen. Der Rest der Seite zeigt weiterhin, was gelesen werden konnte.",

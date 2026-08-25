@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
+import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelPlate, PanelRow } from "../design-system/panel";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
@@ -105,6 +106,7 @@ export function TodayOnThisAccount({
   onOpenRecord,
   onPerform,
   onOpenTasks,
+  sections,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
@@ -125,6 +127,17 @@ export function TodayOnThisAccount({
   // Where the footer's commitment reading leads. Absent for a caller with no
   // Tasks tab of its own.
   onOpenTasks?: () => void;
+  // The rest of the Company 360 — what is in flight, the commercial figures,
+  // what happened lately — under this card's own chrome.
+  //
+  // They hang here rather than as four cards down the column because a reader
+  // asked for ONE reading of the account, and because this is the page's
+  // accent card: four accent cards is no accent at all, and four plain ones
+  // beside it made the move-to-make look like one section of five.
+  //
+  // A slot rather than an import, so this file keeps knowing only about the
+  // day's brief. The page decides what the account's whole reading contains.
+  sections?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -139,21 +152,27 @@ export function TodayOnThisAccount({
     onPerform,
   });
 
+  // The day's brief is one section of this card, so neither of its own
+  // failures may take the rest of the account's reading down with it: the
+  // sections below read from the same payload and are perfectly able to
+  // render while the brief says it could not be assembled.
   if (loading) {
     return (
-      <Panel title={t("today.title")} tone="accent" className="co-lead">
+      <Panel title={t("co.360.title")} tone="accent" className="co-lead">
         <PanelBody>
           <Skeleton width="100%" height={64} />
         </PanelBody>
+        {sections}
       </Panel>
     );
   }
   if (failed || !view) {
     return (
-      <Panel title={t("today.title")} tone="accent" className="co-lead">
+      <Panel title={t("co.360.title")} tone="accent" className="co-lead">
         <PanelBody>
           <EmptyState>{t("today.failed")}</EmptyState>
         </PanelBody>
+        {sections}
       </Panel>
     );
   }
@@ -185,6 +204,9 @@ export function TodayOnThisAccount({
       }
       footer={footer}
     >
+      <PanelBody className="co-360-head">
+        <Eyebrow as="h3">{t("today.title")}</Eyebrow>
+      </PanelBody>
       {!hasContext && !hasMoves ? (
         // Not "nothing to do": the brief read everything it can read and
         // found nothing that needs a person today. That is a real answer
@@ -202,6 +224,7 @@ export function TodayOnThisAccount({
       {(view.sections_omitted?.length ?? 0) > 0 && (
         <TodayWithheld view={view} />
       )}
+      {sections}
     </Panel>
   );
 }
@@ -232,15 +255,19 @@ function briefFooter(
   );
 }
 
-// The panel's name, and how many moves are waiting behind it. The count
+// The card's name, and how many moves are waiting behind it. The count
 // answers "how much is on me here" before the reader has read a single row,
-// and it counts what is DRAWN — a count that included advice the panel
+// and it counts what is DRAWN — a count that included advice the card
 // withheld would send a reader looking for rows that are not there.
+//
+// The name is the RECORD's, not this section's: everything the page reads
+// about the account now hangs under it, and the day's brief says so under its
+// own subhead below.
 function TodayTitle({ moves }: Readonly<{ moves: number }>) {
   const t = useT();
   return (
     <>
-      {t("today.title")}
+      {t("co.360.title")}
       {moves > 0 && <Badge tone="accent">{moves}</Badge>}
     </>
   );

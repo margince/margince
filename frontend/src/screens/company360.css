@@ -1500,3 +1500,23 @@
 .rec-reading {
   display: block;
 }
+
+/* A section subhead inside the Company 360 card: the label on the left, and
+   whatever the section counts on the right. It is what lets a reader tell
+   four readings apart inside one card. */
+.co-360-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: 0;
+}
+
+/* A section's own verbs, on their own row under it — they belong to the
+   section rather than to the card, whose header band names the record. */
+.co-360-verbs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  padding-top: var(--space-2);
+}

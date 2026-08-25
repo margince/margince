@@ -2194,6 +2194,7 @@ export const vi = {
 
   "dedupe.viewExisting": "Xem bản ghi hiện có",
 
+  "co.360.title": "Company 360",
   "today.title": "Hôm nay ở tài khoản này",
   "today.failed":
     "Không thể tổng hợp phần này. Phần còn lại của trang vẫn hiển thị những gì đọc được.",

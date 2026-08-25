@@ -758,10 +758,13 @@ describe("company view — a section still loading is not one that failed", () =
     renderCompany();
 
     await screen.findByText("Brandt Automotive GmbH");
-    const heading = screen.getByRole("heading", { name: "Commercial" });
+    // The Company 360 card holds every reading of the account, Commercial
+    // among them under its own subhead, so the card is the wrapper the
+    // skeleton and the settled figure both belong to.
+    const heading = screen.getByRole("heading", { name: /Company 360/ });
     const panel = heading.closest("section");
     if (!panel) {
-      throw new Error("the Commercial panel has no section wrapper");
+      throw new Error("the Company 360 card has no section wrapper");
     }
     await waitFor(() => expect(panel.querySelector(".skeleton")).toBeTruthy());
     expect(within(panel).queryByText(/Could not be loaded/)).toBeNull();

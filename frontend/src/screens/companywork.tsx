@@ -54,6 +54,7 @@ export function CompanyWorkCard({
   view,
   loading = false,
   onOpenRecord,
+  bare = false,
 }: Readonly<{
   view?: Organization360;
   // The composite read's own pending flag — see sectionState's own doc.
@@ -62,6 +63,11 @@ export function CompanyWorkCard({
   // receipt is cited from several cards and two owners would mean two
   // receipts open over each other.
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // Render the sections without this card's own Panel, for a caller that
+  // holds the chrome. The Company 360 card does: this is one reading of the
+  // account among four, and a card inside a card is two borders around one
+  // list.
+  bare?: boolean;
 }>) {
   const t = useT();
   const deals = view?.deals;
@@ -80,12 +86,8 @@ export function CompanyWorkCard({
     liveWork(projects).length,
     loading,
   );
-  return (
-    <Panel
-      title={t("co.work.title")}
-      titleAction={<WorkCount view={view} />}
-      footer={<SinceLastVisit view={view} />}
-    >
+  const body = (
+    <>
       <WorkGroup
         label={t("co.work.deals")}
         state={dealState}
@@ -115,6 +117,29 @@ export function CompanyWorkCard({
           </p>
         </PanelBody>
       )}
+    </>
+  );
+  if (bare) {
+    // The count rides with the subhead rather than in a header band this
+    // card no longer owns, and the visit line moves to the whole card's
+    // footer — it is about the account, not about the work on it.
+    return (
+      <>
+        <PanelBody className="co-360-head">
+          <Eyebrow as="h3">{t("co.work.title")}</Eyebrow>
+          <WorkCount view={view} />
+        </PanelBody>
+        {body}
+      </>
+    );
+  }
+  return (
+    <Panel
+      title={t("co.work.title")}
+      titleAction={<WorkCount view={view} />}
+      footer={<SinceLastVisit view={view} />}
+    >
+      {body}
     </Panel>
   );
 }

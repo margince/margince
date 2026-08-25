@@ -2232,6 +2232,7 @@ export const en = {
 
   "dedupe.viewExisting": "View existing record",
 
+  "co.360.title": "Company 360",
   "today.title": "Today on this account",
   "today.failed":
     "This could not be assembled. The rest of the page still shows what it could read.",

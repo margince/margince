@@ -189,25 +189,39 @@ test.describe("company record — the mockup's page shape", () => {
     );
   });
 
-  // "Today on this account" and "Worth doing next" merged into one daily
-  // brief (companytoday.tsx), which LEADS the overview column. The account's
-  // work in flight ("Was gerade läuft") follows it in the same column, in the
-  // slot a written account brief used to hold.
+  // ONE card holds every reading of the account: the day's brief, what is in
+  // flight, the commercial standing and what happened lately, each under its
+  // own subhead. What this pins is that they are SECTIONS of Company 360 and
+  // not cards of their own — the shape the overview was restructured into.
   //
   // Anchored on the rendered HEADING rather than a class: NextSteps draws a
   // bare `.card.co-card` with nothing to name it by, so a class assertion here
   // would pass against any page — including one that still renders it.
   // The strings are the German chrome the suite pins via `locale: de-DE`.
-  test("the overview renders the work in flight, but not next steps or the ask panel", async ({
+  test("the overview reads as one Company 360 card, not a column of them", async ({
     page,
   }) => {
     await openCompany(page, POPULATED_ORG as string);
-    await expect(
-      page.getByRole("heading", { name: "Was gerade läuft" }),
-    ).toHaveCount(1);
-    for (const heading of ["Nächste Schritte", "Diesen Account befragen"]) {
-      await expect(page.getByRole("heading", { name: heading })).toHaveCount(0);
+    const card = page.getByRole("heading", { name: /Company 360/ });
+    await expect(card).toHaveCount(1);
+    // Its sections are h3 subheads under that one h2, so the card's title is
+    // the only card-level heading among them.
+    for (const section of ["Was gerade läuft", "Heute bei diesem Account"]) {
+      await expect(
+        page.getByRole("heading", { name: section, level: 3 }),
+      ).toHaveCount(1);
     }
+    // Next steps is gone from this page — its open tasks are the day's brief
+    // and the Tasks tab now. Ask is NOT: it sits beside the 360 as its own
+    // card, because a question about the account is a different act from
+    // reading it, and this suite asserted its absence long after it moved
+    // here.
+    await expect(
+      page.getByRole("heading", { name: "Nächste Schritte" }),
+    ).toHaveCount(0);
+    await expect(
+      page.getByRole("heading", { name: "Diesen Account befragen" }),
+    ).toHaveCount(1);
   });
 
   // The brief asks for a move on the account, so it belongs to the tab a
@@ -220,6 +234,7 @@ test.describe("company record — the mockup's page shape", () => {
     await openCompany(page, POPULATED_ORG as string);
     const brief = page.getByRole("heading", {
       name: "Heute bei diesem Account",
+      level: 3,
     });
     await expect(brief).toBeVisible();
 
