@@ -14,8 +14,8 @@ package org360
 // project's from the project, and both point at the receipt.
 //
 // Deterministic on purpose. A model could phrase these more warmly; it could
-// not make them checkable, and that the written one was not is why this card
-// exists.
+// not make them checkable. The brief this replaced was not checkable, which is
+// why the page stopped drawing it.
 //
 // Three set-based queries for the whole page, never one per row: a record
 // page's cost may not grow with the size of the account, which
