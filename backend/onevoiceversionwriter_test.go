@@ -59,10 +59,19 @@ func TestVoiceVersionsHaveOneWriter(t *testing.T) {
 				total += n
 				where = append(where, fmt.Sprintf("%s (%d)", f.Path, n))
 			}
-			if total > 1 {
+			// EXACTLY one, not at most one. Zero is the direction a census
+			// fails silently in: the writer moved out of this scope, or the
+			// statement stopped being spelled whole, and a gate reading "no
+			// second writer" prints the same clean word it prints over a tree
+			// that is genuinely fine.
+			if total != 1 {
+				sites := "(no file under internal/modules/ai holds one)"
+				if len(where) > 0 {
+					sites = strings.Join(where, "\n\t")
+				}
 				t.Errorf("%s is written by %d INSERTs:\n\t%s\n\nOne writer owns the column list, so a column "+
 					"added to the table is a field nobody fills rather than a default nobody notices",
-					table, total, strings.Join(where, "\n\t"))
+					table, total, sites)
 			}
 		})
 	}
