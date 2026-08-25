@@ -23,8 +23,11 @@ package compose
 import (
 	"encoding/json"
 	"fmt"
+	"net/http"
 	"sort"
 	"strings"
+
+	"github.com/go-chi/chi/v5"
 )
 
 // summaryFieldLimit bounds how many body fields a summary enumerates. A
@@ -36,17 +39,134 @@ const summaryFieldLimit = 8
 // cannot crowd out the fields after it.
 const summaryValueLimit = 48
 
-// restSummary describes the staged call: the operation and its concrete
-// path, plus the request body's own top-level fields. A body-less action
-// route (send this offer, archive this record) names the operation alone —
-// which is the whole change, and says so.
-func restSummary(op, method, path string, body []byte) string {
-	head := fmt.Sprintf("%s (%s %s)", op, method, path)
+// restSummary describes the staged call: what it does to what, plus the
+// request body's own top-level fields. A body-less action route (send this
+// offer, archive this record) names the act alone — which is the whole change,
+// and says so.
+//
+// The head used to be the operationId and the concrete path —
+// "updateDeal (PATCH /v1/deals/018f2a10-0000-7000-8000-00000000000a)" — which
+// put a camelCase identifier and a uuid at the top of a card somebody had to
+// decide. Neither told them anything: the uuid names a record they cannot read
+// from it, and the operationId is the contract's word, not theirs. The tool
+// verb and the record type are already on the policy, and together they are the
+// sentence.
+func restSummary(pol agentPolicy, r *http.Request, body []byte) string {
+	head := actPhrase(pol, r.Method, r.URL.Path)
 	fields := summaryFields(body)
+	// A CREATE is routed by its parent — createOffer posts under the deal the
+	// offer would belong to — and the parent appears nowhere in the body. The
+	// old head carried it by accident, inside the path; naming it is what keeps
+	// an approver able to tell which deal they are pricing.
+	if pol.Tool == toolCreateRecord {
+		if parent := createdUnder(r); parent != "" {
+			fields = append([]string{"under=" + parent}, fields...)
+		}
+	}
 	if len(fields) == 0 {
 		return head
 	}
 	return head + ": " + strings.Join(fields, ", ")
+}
+
+// createdUnder is the record a nested create hangs off.
+//
+// The INNERMOST routed id, not `{id}`: a deal-room comment is posted to
+// /deal-rooms/{id}/threads/{threadId}/comments and belongs to the THREAD, so
+// naming the room would tell a reader which conversation it was in and not
+// which exchange. A flat create names no parent and returns empty.
+func createdUnder(r *http.Request) string {
+	rctx := chi.RouteContext(r.Context())
+	if rctx == nil {
+		return ""
+	}
+	// chi appends params in the order the pattern declares them, so the last
+	// one is the deepest.
+	keys := rctx.URLParams.Keys
+	for i := len(keys) - 1; i >= 0; i-- {
+		if value := rctx.URLParams.Values[i]; value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+// actPhrase names the act in words: "Update a deal", "Send an email".
+//
+// Falls back to the operation and its path when the policy declares no tool —
+// a route with no verb has nothing better to say, and the old shape is at least
+// unambiguous to whoever has to debug it.
+func actPhrase(pol agentPolicy, method, path string) string {
+	if pol.Tool == "" {
+		return fmt.Sprintf("%s (%s %s)", pol.Op, method, path)
+	}
+	// Some verbs cover two acts a reader must tell apart. `enrich` is both a
+	// one-page read and a whole-site crawl; `update_record` on a custom field
+	// is both retiring the field and changing what it offers. The verb cannot
+	// distinguish them — only the operation can, so where one is named here it
+	// wins.
+	if phrase, named := opPhrases[pol.Op]; named {
+		return phrase
+	}
+	verb := strings.ReplaceAll(pol.Tool, "_", " ")
+	// Only the GENERIC verbs need the record type to mean anything: "update
+	// record" says nothing until it says which. Every other verb already names
+	// its own object — "send email" told against `activity` would read as
+	// "Send email: activity", which is worse than the verb alone.
+	if pol.RecordType == "" || !genericVerbs[pol.Tool] {
+		return upperFirst(verb)
+	}
+	return fmt.Sprintf("%s %s", upperFirst(verb), recordNoun(pol.RecordType))
+}
+
+// recordNoun is the record type as a reader says it: the wire spells
+// `deal_room`, a person says "deal room".
+func recordNoun(record agentRecordType) string {
+	return strings.ReplaceAll(string(record), "_", " ")
+}
+
+// opPhrases names the acts whose VERB is not enough to tell them apart.
+//
+// Deliberately keyed by operation rather than by route: the operation is what
+// the contract declares and what the policy carries, and a route pattern would
+// be a second spelling of it. Held by TestNoTwoStageableActsShareAHeadline,
+// which fails when a new pair collides.
+var opPhrases = map[string]string{
+	opScrapeCompany:            "Read this company's website",
+	opDeepReadCompany:          "Read this company's whole site",
+	opRetireCustomField:        "Retire a custom field",
+	opUpdateCustomFieldOptions: "Change a custom field's options",
+}
+
+// The operations whose headline this file names.
+//
+// A typo here leaves an act sharing a headline with its sibling, which is the
+// exact defect opPhrases exists to prevent — so the names are checked against
+// the generated policy table rather than trusted.
+// Held by: TestNoTwoStageableActsShareAHeadline (this package).
+const (
+	opScrapeCompany            = "scrapeCompany"
+	opDeepReadCompany          = "deepReadCompany"
+	opRetireCustomField        = "retireCustomField"
+	opUpdateCustomFieldOptions = "updateCustomFieldOptions"
+)
+
+// genericVerbs are the tools whose name carries no record: they act on
+// whatever the route points at, so the record type is the other half of what
+// they do rather than a repetition of it.
+var genericVerbs = map[string]bool{
+	toolUpdateRecord:  true,
+	toolCreateRecord:  true,
+	toolArchiveRecord: true,
+	toolMergeRecords:  true,
+}
+
+// upperFirst capitalises the phrase, which is a sentence rather than a label.
+func upperFirst(phrase string) string {
+	if phrase == "" {
+		return phrase
+	}
+	return strings.ToUpper(phrase[:1]) + phrase[1:]
 }
 
 // summaryFields renders the body's top-level entries as key=value, sorted so
