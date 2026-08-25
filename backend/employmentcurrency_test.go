@@ -36,13 +36,11 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
 )
 
@@ -479,67 +477,6 @@ func firstSlotLine(sql string) string {
 		}
 	}
 	return strings.TrimSpace(lines[0])
-}
-
-// headCatalog is the generated shape of a freshly migrated database — the
-// index's own text, and therefore the only statement of what the slot
-// predicate IS. Deriving the expectation from it rather than restating the
-// predicate here is what keeps this gate from becoming a second copy of its
-// own subject: a migration that narrows the index fails this test instead of
-// leaving the helper quietly wrong.
-const headCatalog = "migrations/testdata/head_catalog.txt"
-
-// slotIndex is the unique index the helper exists to satisfy.
-const slotIndex = "uq_rel_current_primary_employer"
-
-// indexPredicate lifts the WHERE clause off a catalog line.
-var indexPredicate = regexp.MustCompile(`\sWHERE\s+(.*)$`)
-
-// printedSQLNoise is what Postgres prints that a hand-written predicate does not: the
-// parentheses it re-adds around every conjunct and the cast it resolves a
-// literal to. Removing it compares the two as PREDICATES rather than as text —
-// a text comparison loses to an equivalent spelling, and this one has two.
-var printedSQLNoise = regexp.MustCompile(`::text|[()]`)
-
-func TestTheCurrentPrimarySlotHelperMirrorsItsIndex(t *testing.T) {
-	catalog, err := os.ReadFile(headCatalog)
-	if err != nil {
-		t.Fatalf("reading %s: %v", headCatalog, err)
-	}
-	var predicate string
-	for _, line := range strings.Split(string(catalog), "\n") {
-		if !strings.Contains(line, slotIndex) || !strings.Contains(line, "CREATE UNIQUE INDEX") {
-			continue
-		}
-		match := indexPredicate.FindStringSubmatch(line)
-		if match == nil {
-			t.Fatalf("%s carries no WHERE clause in %s, so it is no longer a partial index and this "+
-				"helper has nothing to mirror:\n%s", slotIndex, headCatalog, line)
-		}
-		predicate = match[1]
-	}
-	if predicate == "" {
-		t.Fatalf("%s names no %s, so either the index is gone or the catalog is not what it was: "+
-			"this helper mirrors a predicate that has to exist", headCatalog, slotIndex)
-	}
-	if want, got := normalizedPredicate(predicate), normalizedPredicate(people.CurrentPrimarySlotSQL("")); want != got {
-		t.Errorf("people.%s renders %q, but %s is %q.\n\n"+
-			"The helper IS that index's predicate. A guard that asks a narrower question skips a write "+
-			"the index then refuses with a 409; a wider one skips a write the index would have accepted.",
-			currentPrimarySlotHelper, got, slotIndex, want)
-	}
-	// The aliased form is the same predicate with every column qualified, and
-	// nothing else — the shape four of the six call sites need.
-	if want, got := "b.", people.CurrentPrimarySlotSQL("b"); strings.Count(got, want) != 3 {
-		t.Errorf("people.%s(%q) = %q, want every one of the three columns qualified", currentPrimarySlotHelper, "b", got)
-	}
-}
-
-// normalizedPredicate reduces a predicate to what it asks: no Postgres
-// re-parenthesisation, no resolved cast, one space between tokens and one case
-// for the keywords.
-func normalizedPredicate(sql string) string {
-	return strings.Join(strings.Fields(printedSQLNoise.ReplaceAllString(sql, "")), " ")
 }
 
 // slotProbe is one planted statement and the answer the detector must give

@@ -102,13 +102,14 @@ func CurrentPrimaryEmploymentSQL(alias string) string {
 // relationship.go that empty the slot before a new row takes it. Every one of
 // them had spelled it by hand.
 //
-// Held by: TestTheCurrentPrimarySlotHelperMirrorsItsIndex (backend/employmentcurrency_test.go)
+// Held by: TestTheCurrentPrimarySlotHelperMirrorsItsIndex (backend/internal/modules/people/currentprimaryslot_test.go)
 // — it derives the expected predicate from uq_rel_current_primary_employer in
 // the migration head catalog, so the helper cannot drift from the index it
 // exists to satisfy.
 //
 // Two gates and not one, because either alone reads green over the defect that
-// shipped: TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling in the same file
+// shipped: TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling in
+// backend/employmentcurrency_test.go
 // reads every hand-written Go source for the FRAGMENT — the flag AND-ed with an
 // archived test, in either order — which is the shape that let six copies
 // through a census that only knew the whole predicate.
