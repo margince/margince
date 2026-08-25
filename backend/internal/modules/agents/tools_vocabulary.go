@@ -29,6 +29,7 @@ package agents
 // derived, stale the first time a workspace declared a custom field.
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 
@@ -94,7 +95,24 @@ func (t describeQueryVocabulary) Spec() mcp.ToolSpec {
 	}
 }
 
-func (t describeQueryVocabulary) Handle(ctx context.Context, _ json.RawMessage) (json.RawMessage, error) {
+func (t describeQueryVocabulary) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	// The arguments are decoded even though there are none to READ, because
+	// decodeArgs is what enforces the schema: without it a call carrying
+	// `{"target":"organisation"}` is accepted silently, and the caller then
+	// reads a whole-workspace vocabulary believing they asked about one record
+	// type. The declared `additionalProperties: false` is a promise this keeps.
+	//
+	// An ABSENT payload skips it, because for THIS tool that is the normal
+	// call: it takes no arguments, so a client sending none is correct.
+	// decodeArgs would answer "the payload is empty; send a JSON object
+	// carrying this operation's fields" — advice for a tool that has fields,
+	// and a refusal of the one call this tool is designed for.
+	if len(bytes.TrimSpace(in)) > 0 {
+		var args struct{}
+		if err := decodeArgs(in, &args); err != nil {
+			return nil, err
+		}
+	}
 	body, err := t.read.VocabularyDocument(ctx)
 	if err != nil {
 		return nil, err

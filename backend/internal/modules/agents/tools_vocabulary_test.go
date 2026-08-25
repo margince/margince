@@ -132,3 +132,34 @@ func TestNoReaderRegistersNoTool(t *testing.T) {
 		}
 	}
 }
+
+// An argument the schema forbids is REFUSED, not ignored.
+//
+// The handler reads no arguments, which made it tempting to skip decoding them
+// — and skipping it made `additionalProperties: false` a promise nothing kept.
+// A call carrying {"target":"organisation"} was accepted silently, and the
+// caller then read a whole-workspace vocabulary believing they had asked about
+// one record type.
+func TestAnArgumentTheSchemaForbidsIsRefused(t *testing.T) {
+	read := &fakeVocabulary{doc: `{"version":"v1","targets":[]}`}
+	_, err := describeQueryVocabulary{read: read}.
+		Handle(context.Background(), json.RawMessage(`{"target":"organisation"}`))
+	if err == nil {
+		t.Fatal("an unknown argument was accepted; the declared schema forbids it")
+	}
+	var bad *BadArgsError
+	if !errors.As(err, &bad) {
+		t.Errorf("err = %T(%v), want a BadArgsError naming the caller's own argument", err, err)
+	}
+	if read.runs != 0 {
+		t.Error("the vocabulary was composed for a call that should have been refused first")
+	}
+	// And the shapes a caller legitimately sends still work: no arguments at
+	// all, and an empty object.
+	for _, in := range []json.RawMessage{nil, json.RawMessage(`{}`)} {
+		if _, err := (describeQueryVocabulary{read: &fakeVocabulary{doc: `{}`}}).
+			Handle(context.Background(), in); err != nil {
+			t.Errorf("Handle(%s): %v — a call with no arguments is the normal call", in, err)
+		}
+	}
+}

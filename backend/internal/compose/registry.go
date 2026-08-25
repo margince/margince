@@ -183,11 +183,15 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// have no way to learn the right one. Same resolver, same document; the
 	// resource stays for the clients that prefer it.
 	//
-	// Deliberately NOT native-only. A vocabulary describes what may be ASKED,
-	// and an overlay workspace admits the same plans; it is the executor
-	// underneath that has no native rows, and refusing there is the answer
-	// query_workspace already gives in its own words.
-	agents.RegisterVocabularyTool(registry, search.NewQuerySchemaResource(queryVocabulary(pool)))
+	// It takes the SAME outermost overlay guard query_workspace does. A
+	// vocabulary looks answerable anywhere — it describes a grammar rather
+	// than reading rows — but in an overlay workspace the plans it teaches are
+	// refused outright, so serving it there advertises a field list nothing
+	// can execute.
+	agents.RegisterVocabularyTool(registry, nativeOnlyVocabularyReader{
+		mode:  sorMode,
+		inner: search.NewQuerySchemaResource(queryVocabulary(pool)),
+	})
 	// The morning brief. It ranks the rep's own open deals out of the native
 	// tables, which an overlay workspace has no rows in, so it takes the same
 	// outermost guard the other native-only engines do: "not available here"

@@ -63,7 +63,7 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 	// GROUP BY always returns exactly one row, and scanning that NULL into a
 	// float64 is an error rather than the not-found this function means. Found
 	// by the test for a city nobody is in.
-	var lat, lon *float64
+	var lat, lon, latSpread, lonSpread *float64
 	var located int
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		args := []any{key}
@@ -78,20 +78,57 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 		if err != nil {
 			return err
 		}
+		// geocode_status = 'ok' is REQUIRED, and it is the same predicate the
+		// radius query itself applies (querygeo.go). A row keeps its old point
+		// when its address changes and is stamped `stale` — "not queryable,
+		// deliberately" in geocode.go's own words — so averaging one in would
+		// measure this city from where a company USED to be. Coordinates that
+		// are merely non-NULL are not coordinates that are true.
+		//
+		// The SPREAD comes back with the centre, from the same scan: asking a
+		// second time would read a different row set under a concurrent write,
+		// and the check is only meaningful against the rows that produced this
+		// average.
 		return tx.QueryRow(ctx, `
-			SELECT avg(geocode_lat), avg(geocode_lon), count(*)
+			SELECT avg(geocode_lat), avg(geocode_lon),
+			       max(geocode_lat) - min(geocode_lat),
+			       max(geocode_lon) - min(geocode_lon),
+			       count(*)
 			  FROM organization
 			 WHERE archived_at IS NULL
+			   AND geocode_status = 'ok'
 			   AND geocode_lat IS NOT NULL
 			   AND geocode_lon IS NOT NULL
 			   AND lower(btrim(address_city)) = $1
 			   AND `+scope, args...).
-			Scan(&lat, &lon, &located)
+			Scan(&lat, &lon, &latSpread, &lonSpread, &located)
 	})
 	if err != nil {
 		return CachedPlace{}, false, fmt.Errorf("reading located companies for %q: %w", city, err)
 	}
 	if located == 0 || lat == nil || lon == nil {
+		return CachedPlace{}, false, nil
+	}
+	// A SPREAD TOO WIDE TO BE ONE CITY answers not-found rather than its own
+	// midpoint.
+	//
+	// Two things make a city name cover more than one place. Springfield is in
+	// dozens of states and Frankfurt is in two German states, and this lane
+	// compares the city text alone — it has no region or country to
+	// disambiguate with. And a longitude average is plain wrong across the
+	// antimeridian: 179 and -179 average to 0, which is the Gulf of Guinea.
+	//
+	// Both produce the same artefact — a centre far from every company that
+	// voted for it — and one check catches both, because a real city's
+	// companies sit within hundredths of a degree of each other.
+	//
+	// Refusing is the honest answer. The caller says
+	// distance_ranking_unavailable and asks by city name instead, rather than
+	// measuring 50 km around a point no company is near.
+	if latSpread != nil && *latSpread > maxCitySpreadDegrees {
+		return CachedPlace{}, false, nil
+	}
+	if lonSpread != nil && *lonSpread > maxCitySpreadDegrees {
 		return CachedPlace{}, false, nil
 	}
 	place := CachedPlace{Lat: *lat, Lon: *lon}
@@ -105,3 +142,19 @@ func (s *Store) LookupCity(ctx context.Context, city string) (CachedPlace, bool,
 // ProviderLocatedCompanies marks a point derived from this installation's own
 // located companies rather than fetched from a geocoding service.
 const ProviderLocatedCompanies = "located_companies"
+
+// maxCitySpreadDegrees is how far apart the companies sharing a city name may
+// sit before their midpoint stops being a place.
+//
+// ONE DEGREE — roughly 111 km of latitude, less of longitude at European
+// latitudes. An order of magnitude wider than any real city, and an order of
+// magnitude narrower than the artefacts it refuses. Measured on a real
+// installation, the widest genuine spread was 0.14° (Berlin, München), about
+// 12 km; two Frankfurts sit 5.9° apart, and a longitude average taken across
+// the antimeridian lands the midpoint a hemisphere from every company that
+// voted for it.
+//
+// A midpoint that fails this is not returned at all. Answering it would mean
+// measuring 50 km around a point no company is near — a wrong answer wearing a
+// working answer's clothes, which is the failure this surface exists to refuse.
+const maxCitySpreadDegrees = 1.0

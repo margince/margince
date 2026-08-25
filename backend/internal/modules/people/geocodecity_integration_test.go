@@ -127,3 +127,95 @@ func TestACityLookupFoldsCaseAndRefusesWhatItCannotAnswer(t *testing.T) {
 		t.Error("blank resolved to a point, so every company with no city would answer as one place")
 	}
 }
+
+// A stale point is not a point.
+//
+// A company keeps its old coordinates when its address changes, stamped
+// `stale` — "not queryable, deliberately" in geocode.go's own words, and the
+// same predicate the radius query itself applies. Averaging one in would
+// measure a city from where a company USED to be.
+func TestAStaleCoordinateIsNotAveragedIntoACity(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	locate := func(name, city string, lat, lon float64, status string) {
+		org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+			DisplayName: name, Source: "manual",
+			Address: &crmcontracts.Address{Line1: strPtr("Teststrasse 1"), City: strPtr(city)},
+		})
+		if err != nil {
+			t.Fatalf("seeding %q: %v", name, err)
+		}
+		orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+		addr, ok, err := e.store.AddressForGeocode(ctx, orgID)
+		if err != nil || !ok {
+			t.Fatalf("reading %q back: %v (found %v)", name, err, ok)
+		}
+		if err := e.store.RecordGeocode(ctx, orgID, status, &lat, &lon, "fake", addr.InputHash); err != nil {
+			t.Fatalf("locating %q: %v", name, err)
+		}
+	}
+
+	// One good point, and one stale point far enough away to move the average
+	// visibly if it were counted.
+	locate("Current Gmbh", "Bremen", 53.0800, 8.8000, GeocodeOK)
+	locate("Moved Away Gmbh", "Bremen", 53.5000, 9.2000, GeocodeStale)
+
+	place, ok, err := e.store.LookupCity(ctx, "Bremen")
+	if err != nil {
+		t.Fatalf("LookupCity: %v", err)
+	}
+	if !ok {
+		t.Fatal("the city resolved to nothing, though one company is properly located in it")
+	}
+	// The live company's own point, untouched by the stale one.
+	if math.Abs(place.Lat-53.0800) > 0.0001 || math.Abs(place.Lon-8.8000) > 0.0001 {
+		t.Errorf("Bremen resolved to %.4f,%.4f, want the one OK company's point (53.0800,8.8000) — "+
+			"a stale coordinate was averaged in", place.Lat, place.Lon)
+	}
+}
+
+// A name covering two places is not a place.
+//
+// Two Frankfurts, two Springfields, or a longitude average taken across the
+// antimeridian all produce the same artefact: a midpoint far from every company
+// that voted for it. Refusing is honest; answering measures a radius around
+// nowhere.
+func TestACityNameCoveringTwoPlacesResolvesToNeither(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	for _, row := range []struct {
+		name     string
+		lat, lon float64
+	}{
+		{"Frankfurt Main Gmbh", 50.1109, 8.6821},  // Frankfurt am Main
+		{"Frankfurt Oder Gmbh", 52.3412, 14.5506}, // Frankfurt (Oder), ~5.9° east
+	} {
+		org, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+			DisplayName: row.name, Source: "manual",
+			Address: &crmcontracts.Address{Line1: strPtr("Teststrasse 1"), City: strPtr("Frankfurt")},
+		})
+		if err != nil {
+			t.Fatalf("seeding %q: %v", row.name, err)
+		}
+		orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+		addr, ok, err := e.store.AddressForGeocode(ctx, orgID)
+		if err != nil || !ok {
+			t.Fatalf("reading %q back: %v (found %v)", row.name, err, ok)
+		}
+		if err := e.store.RecordGeocode(ctx, orgID, GeocodeOK,
+			&row.lat, &row.lon, "fake", addr.InputHash); err != nil {
+			t.Fatalf("locating %q: %v", row.name, err)
+		}
+	}
+
+	// Their midpoint is in the countryside near Leipzig, which is neither
+	// Frankfurt and is 200 km from both.
+	if _, ok, err := e.store.LookupCity(ctx, "Frankfurt"); err != nil {
+		t.Fatalf("LookupCity: %v", err)
+	} else if ok {
+		t.Error("a city name covering two places 5.9° apart answered their midpoint; " +
+			"a radius would then measure from a field between them")
+	}
+}

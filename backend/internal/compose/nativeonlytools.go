@@ -334,6 +334,38 @@ func nativeOnlyQueryRunner(mode overlayModeChecker, run agents.QueryRunner) agen
 	}
 }
 
+// nativeOnlyVocabularyReader guards describe_query_vocabulary, for exactly the
+// reason the plan executor above takes the same guard.
+//
+// The vocabulary describes what a plan may SAY, and that looked at first like
+// something answerable anywhere — a grammar, not a read of rows. It is not: in
+// an overlay workspace every plan is refused outright, so a vocabulary served
+// there advertises a field list nothing can execute. A caller would read the
+// fields, write a correct plan, and be told the tool is unsupported — having
+// spent a turn learning a language this workspace does not speak.
+//
+// One refusal is the honest shape: "not available here", once, rather than a
+// working description of an unavailable capability.
+//
+// A STRUCT rather than a decorating function, like nativeOnlyRetriever above:
+// a function handing back the interface hides which implementation the
+// composition wired, which is the whole readability of a composition root.
+type nativeOnlyVocabularyReader struct {
+	mode  overlayModeChecker
+	inner agents.VocabularyReader
+}
+
+func (v nativeOnlyVocabularyReader) VocabularyDocument(ctx context.Context) (json.RawMessage, error) {
+	overlay, err := v.mode.isOverlayUncached(ctx)
+	if err != nil {
+		return nil, err
+	}
+	if overlay {
+		return nil, apperrors.ErrUnsupportedBySoR
+	}
+	return v.inner.VocabularyDocument(ctx)
+}
+
 // nativeOnlyBriefReader guards read_brief. The brief ranks the rep's own open
 // deals out of the native tables, and an overlay workspace keeps its deals in
 // the incumbent — so the run would be assembled from rows this workspace does
