@@ -159,7 +159,7 @@ func (s *Service) Draft(
 // model can learn from what the rep changed — and recording a served draft is
 // a WRITE, which this operation does not perform.
 func wire(draft Draft, by crmcontracts.WrittenBy) crmcontracts.AccountEmailDraft {
-	aiWritten := by == crmcontracts.Model
+	aiWritten := by == crmcontracts.WrittenByModel
 	out := crmcontracts.AccountEmailDraft{
 		Subject:     draft.Subject,
 		Body:        draft.Body,

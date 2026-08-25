@@ -60,7 +60,7 @@ func TestTheReasonsNeverAppearInTheBody(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want model", by)
 	}
 	if len(draft.Reasoning) != 1 || draft.Reasoning[0].Label != "expansion offer" {
@@ -151,7 +151,7 @@ func TestAFailedLaneDegradesToTheFloorRatherThanErroring(t *testing.T) {
 			if err != nil {
 				t.Fatalf("a bad answer must degrade, not error: %v", err)
 			}
-			if by != crmcontracts.Deterministic {
+			if by != crmcontracts.WrittenByDeterministic {
 				t.Fatalf("generated_by = %q, want deterministic", by)
 			}
 			if draft.Subject == "" || draft.Body == "" {
@@ -219,7 +219,7 @@ func TestTheCallersOwnIntentIsOutsideTheFence(t *testing.T) {
 func TestDraftingNeverReturnsADraftRef(t *testing.T) {
 	// draft_ref exists so a served draft can be scored later, which is a
 	// write. This operation performs none, so the field stays null.
-	out := wire(Deterministic(sampleInput()), crmcontracts.Deterministic)
+	out := wire(Deterministic(sampleInput()), crmcontracts.WrittenByDeterministic)
 	if out.DraftRef != nil {
 		t.Fatalf("draft_ref = %v, want null: recording a served draft is a write", out.DraftRef)
 	}
@@ -239,7 +239,7 @@ func TestAFencedAnswerIsRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want model: a fenced answer degraded to the floor", by)
 	}
 	if draft.Subject != "Next steps" {

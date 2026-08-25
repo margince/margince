@@ -89,7 +89,7 @@ func TestEveryModelFailureDegradesToTheFloorAndSaysSo(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			got, by, laneFailed := WriteGrowthFit(context.Background(), tc.lane, in, true, at, string(textlang.English))
 
-			if by != crmcontracts.Deterministic {
+			if by != crmcontracts.WrittenByDeterministic {
 				t.Errorf("generated_by = %q, want deterministic — the model did not produce this", by)
 			}
 			if got.Band != crmcontracts.GrowthFitBandUnknown {
@@ -112,7 +112,7 @@ func TestAGroundedReplyIsServedAsTheModelsWithItsClaims(t *testing.T) {
 
 	got, by, _ := WriteGrowthFit(context.Background(), scriptedLane{reply: citing("strong", in)}, in, true, at, string(textlang.English))
 
-	if by != crmcontracts.Model {
+	if by != crmcontracts.WrittenByModel {
 		t.Fatalf("generated_by = %q, want model", by)
 	}
 	if got.Band != crmcontracts.GrowthFitBandStrong {
@@ -146,7 +146,7 @@ func TestTheCompletenessFloorOverrulesAConfidentModelAndWithholdsItsReasons(t *t
 	// Nothing the model produced survives — its band was discarded and its
 	// claims withheld — so attributing what is served to the model would pass
 	// the floor's answer off as the model's.
-	if by != crmcontracts.Deterministic {
+	if by != crmcontracts.WrittenByDeterministic {
 		t.Errorf("generated_by = %q, want deterministic — every word served here came from the counting", by)
 	}
 	if got.NextStep == "" {

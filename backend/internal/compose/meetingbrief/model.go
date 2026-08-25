@@ -94,7 +94,7 @@ const natureFact = string(crmcontracts.Fact)
 func Write(ctx context.Context, lane Completer, in Input, lang string) ([]Section, crmcontracts.WrittenBy) {
 	floor := Deterministic(in)
 	if lane == nil {
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
 	written, err := writeWithModel(ctx, lane, in, lang)
 	if err != nil {
@@ -102,14 +102,14 @@ func Write(ctx context.Context, lane Completer, in Input, lang string) ([]Sectio
 		// unavailable, over budget or answering unparseable JSON must not take
 		// the brief down with it: the reader gets the floor, and generated_by
 		// tells them which of the two they are reading.
-		return floor, crmcontracts.Deterministic
+		return floor, crmcontracts.WrittenByDeterministic
 	}
 	// A rewrite that dropped a section the floor had is not a rewrite, it is a
 	// shorter brief: a model returning one harmless sentence would otherwise
 	// take a revised offer or an open risk off the page and look like it
 	// worked. Anything the reply left out is restored from the floor, so the
 	// model can change how the brief READS and never what it COVERS.
-	return withFloorCoverage(written, floor), crmcontracts.Model
+	return withFloorCoverage(written, floor), crmcontracts.WrittenByModel
 }
 
 // withFloorCoverage puts back any section the model did not answer.
