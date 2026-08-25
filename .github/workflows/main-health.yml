@@ -139,6 +139,51 @@ jobs:
   frontend:
     uses: ./.github/workflows/_lane-frontend.yml
 
+  # The screen-acceptance lane, for the same reason the SPA lane above is here and
+  # with one difference that matters.
+  #
+  # On a pull request `uat` is gated on the change classifier: it runs only when
+  # the diff touches `frontend/`. That is right there and wrong here — a green
+  # verdict on main has to mean the screens actually render, and the classifier is
+  # precisely what let a broken one wait for somebody else's frontend PR to
+  # discover it. So this runs unconditionally against the tip, like every other
+  # lane in this workflow.
+  #
+  # It needs the SPA lane for the same fail-fast reason ci.yml gives: there is no
+  # point driving Playwright through a tree that does not typecheck or build.
+  uat:
+    name: uat (main)
+    timeout-minutes: 20
+    needs: [frontend]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    # This workflow runs in backend/ by default; the UAT harness is a root target.
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install deps and the Playwright Chromium browser
+        working-directory: frontend
+        # --ignore-scripts (githubactions:S6505): no lifecycle scripts run at
+        # install; esbuild ships prebuilt platform binaries as optional deps.
+        run: |
+          pnpm install --frozen-lockfile --ignore-scripts
+          pnpm exec playwright install --with-deps chromium
+      - name: Screen-acceptance UAT (build → preview → AC + axe)
+        run: make frontend-e2e
+
   # main's SonarCloud analysis, published from here.
   #
   # Nothing else publishes it. The push-to-main scan is gone (the merge queue was
@@ -240,12 +285,13 @@ jobs:
     # working one on every dashboard. Left out of this list, the job that exists
     # to publish main's verdict was the one job whose failure nobody was told
     # about.
-    needs: [gates, integration, frontend, sonar]
+    needs: [gates, integration, frontend, uat, sonar]
     if: >-
       !cancelled()
       && (needs.gates.result == 'failure'
       || needs.integration.result == 'failure'
       || needs.frontend.result == 'failure'
+      || needs.uat.result == 'failure'
       || needs.sonar.result == 'failure')
     runs-on: ubuntu-latest
     permissions:
@@ -281,6 +327,7 @@ jobs:
           MAIN_GATES_RESULT: ${{ needs.gates.result }}
           MAIN_INTEGRATION_RESULT: ${{ needs.integration.result }}
           MAIN_FRONTEND_RESULT: ${{ needs.frontend.result }}
+          MAIN_UAT_RESULT: ${{ needs.uat.result }}
           MAIN_SONAR_RESULT: ${{ needs.sonar.result }}
           MAIN_SUSPECTS: ${{ steps.range.outputs.suspects }}
         run: ./scripts/scheduled-report.sh
