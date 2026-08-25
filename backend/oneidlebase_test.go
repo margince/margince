@@ -121,17 +121,17 @@ func trimArgument(arg string) string {
 
 // namesIdleColumn reports whether one coalesce argument reads the column.
 //
-// Only the END of the name is required to be a boundary. What comes BEFORE it
-// is whatever qualifies the column — `d.`, or a `%[1]s` format verb that ends
-// in a letter, which is why a plain word-boundary match read the parameterised
-// spelling straight past. What comes after is a cast, a space or nothing, and
-// requiring that much keeps `last_activity_at_utc` from counting as this
-// column.
+// Both ends of the name have to be a boundary, and the two ends are asked
+// differently. After it comes a cast, a space or nothing, and requiring that
+// much keeps `last_activity_at_utc` from counting as this column. Before it
+// comes whatever qualifies the column — `d.`, or a `%[1]s` format verb whose
+// final letter is itself an identifier byte, which is why a plain
+// word-boundary match read the parameterised spelling straight past.
 func namesIdleColumn(arg, column string) bool {
 	lower := strings.ToLower(arg)
 	for at := strings.Index(lower, column); at >= 0; {
 		after := at + len(column)
-		if after == len(lower) || !isIdentifierByte(lower[after]) {
+		if qualifiedBefore(lower[:at]) && (after == len(lower) || !isIdentifierByte(lower[after])) {
 			return true
 		}
 		next := strings.Index(lower[after:], column)
@@ -141,6 +141,23 @@ func namesIdleColumn(arg, column string) bool {
 		at = after + next
 	}
 	return false
+}
+
+// formatVerb is a format verb standing where a table alias would — `%s`,
+// `%[1]s` — and it is the reason the leading boundary cannot simply be "not an
+// identifier byte": the verb's final letter is one.
+var formatVerb = regexp.MustCompile(`%(\[\d+\])?[a-z]$`)
+
+// qualifiedBefore reports whether what precedes the match leaves the column a
+// name of its own rather than the tail of a longer one. Without it
+// `previous_created_at` — a different column, and a snapshot of the wrong
+// instant — reads as the creation instant, and a coalesce over the two
+// previous_ columns is claimed as a second copy of a rule it does not spell.
+func qualifiedBefore(before string) bool {
+	if before == "" || !isIdentifierByte(before[len(before)-1]) {
+		return true
+	}
+	return formatVerb.MatchString(before)
 }
 
 func isIdentifierByte(b byte) bool {
@@ -433,6 +450,8 @@ func TestTheGateRecognisesEverySpellingOfTheIdleBase(t *testing.T) {
 			"func f() { q(`coalesce(last_activity_at, created_at, now())`) }",
 		"a longer column that merely starts the same way": "" +
 			"func f() { q(`coalesce(last_activity_at_utc, created_at_utc)`) }",
+		"a prefixed column that merely ends the same way": "" +
+			"func f() { q(`coalesce(previous_last_activity_at, previous_created_at)`) }",
 	}
 	for name, body := range nearMisses {
 		if spellsTheIdleBase("x.go", parseGateFixture(t, "package p\n"+body)) {
