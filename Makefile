@@ -23,14 +23,36 @@ GO ?= go
 DATASET_ROOT := $(or $(shell git rev-parse --path-format=absolute --git-common-dir 2>/dev/null | sed 's|/\.git$$||'),$(CURDIR))
 DATASET ?= $(abspath $(DATASET_ROOT)/../margince-demo-database)
 
-# The dev stack's owner DSN. Same value scripts/dev.sh uses; overridable for a
-# DEV_SLUG stack on another port.
-SEED_DSN ?= postgres://margince_owner:dev@localhost:15432/margince
+# The dev stack's owner DSN. Empty means THIS worktree's stack, named with the
+# rest of its identity in SEED_STACK below; set it to reach another one.
+SEED_DSN ?=
 
 # The dev stack's MinIO port. Same default scripts/dev.sh uses. seed-demo needs
 # it to upload the company logos: without a blobstore the seeder skips them and
 # every company renders as a placeholder initial.
 MINIO_PORT ?= 29000
+
+# The stack THIS worktree runs, in the three places a seed reaches it: the API
+# base its records go through, the database its SQL half writes, and the bucket
+# its logos and documents land in. `make dev` claims all three per worktree, and
+# a seed that resolved only some of them split one seed across two stacks. From
+# a linked worktree it resolved NONE of them, so both halves went to the primary
+# worktree's stack — silently, because :8080, `margince` and `margince-dev`
+# answer whoever asks.
+#
+# A shell prelude rather than $(shell …): the helpers REFUSE when this worktree
+# has no recorded stack, and $(shell) discards an exit status, which would turn
+# that refusal into an empty database name and seed the wrong place anyway. Each
+# answer lands in its own assignment so `set -e` sees the refusal — a helper
+# called inside another command's argument would fail unnoticed.
+SEED_STACK = set -e; . scripts/lib-devstate.sh; \
+  seed_api="$$(dev_app_base_url)"; \
+  seed_slug="$$(dev_resolve_slug "$(DEV_SLUG)")"; \
+  seed_bucket="$$(dev_bucket_for_slug "$$seed_slug")"; \
+  seed_db="$$(dev_database_name)"; \
+  seed_dsn="$(SEED_DSN)"; \
+  [ -n "$$seed_dsn" ] || \
+    seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db";
 
 .PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
@@ -287,20 +309,24 @@ seed-dev:
 ## people and facts, plus the invented commercial half. Stack must be running
 ## (make dev). Converges — a second run creates nothing. DATASET= points at the
 ## dataset checkout; SEED_ARGS= passes flags through (-dry-run, -limit N).
+## It fills THIS worktree's stack; a `-api` in SEED_ARGS lands after the
+## resolved one and so overrides it, the way the seeder's own flag parsing does.
 seed-demo:
 	@test -f "$(DATASET)/datasets/v1/demo.json" || { \
 	  echo "no demo dataset at $(DATASET) — clone margince-demo-database beside this repo, or pass DATASET=<path>" >&2; \
 	  exit 1; }
 	@test -f config/margince-admin-password || { \
 	  echo "no config/margince-admin-password — run make dev first" >&2; exit 1; }
+	@$(SEED_STACK) \
 	MARGINCE_SEED_PASSWORD="$$(cat config/margince-admin-password)" \
-	MARGINCE_SEED_DSN="$(SEED_DSN)" \
+	MARGINCE_SEED_DSN="$$seed_dsn" \
 	MARGINCE_BLOBSTORE_ENDPOINT="localhost:$(MINIO_PORT)" \
 	MARGINCE_BLOBSTORE_ACCESS_KEY=minioadmin \
 	MARGINCE_BLOBSTORE_SECRET_KEY=minioadmin \
-	MARGINCE_BLOBSTORE_BUCKET=margince-dev \
+	MARGINCE_BLOBSTORE_BUCKET="$$seed_bucket" \
 	MARGINCE_BLOBSTORE_REGION=us-east-1 \
-	$(MAKE) -C backend seed-demo DATASET="$(DATASET)" SEED_ARGS="$(SEED_ARGS)"
+	$(MAKE) -C backend seed-demo DATASET="$(DATASET)" \
+	  SEED_ARGS="-api $$seed_api $(SEED_ARGS)"
 
 ## verify-demo — re-run the demo seeder's verify pass against a running stack,
 ## writing nothing: every row owned, every person employed, every conversation
@@ -314,9 +340,11 @@ seed-demo:
 verify-demo:
 	@test -f config/margince-admin-password || { \
 	  echo "no config/margince-admin-password — run make dev first" >&2; exit 1; }
+	@$(SEED_STACK) \
 	MARGINCE_SEED_PASSWORD="$$(cat config/margince-admin-password)" \
-	MARGINCE_SEED_DSN="$(SEED_DSN)" \
-	$(MAKE) -C backend seed-demo DATASET="$(DATASET)" SEED_ARGS="-verify-only"
+	MARGINCE_SEED_DSN="$$seed_dsn" \
+	$(MAKE) -C backend seed-demo DATASET="$(DATASET)" \
+	  SEED_ARGS="-api $$seed_api -verify-only"
 
 ## verify-boot — prove a running, seeded stack end to end: seeded-admin
 ## login, seeded people visible over /v1, frontend production build.
@@ -514,7 +542,9 @@ bench-mobile:
 E2E_SHOT_DIR ?= /tmp/e2e-company
 e2e-company:
 	@mkdir -p "$(E2E_SHOT_DIR)"
-	cd frontend && BASE_URL=$${BASE_URL:-http://localhost:8080} \
+	@set -e; . scripts/lib-devstate.sh; \
+	app="$${BASE_URL:-}"; [ -n "$$app" ] || app="$$(dev_app_base_url)"; \
+	cd frontend && BASE_URL="$$app" \
 		E2E_SHOT_DIR="$(E2E_SHOT_DIR)" \
 		E2E_ORG_POPULATED="$(E2E_ORG_POPULATED)" \
 		E2E_ORG_SPARSE="$(E2E_ORG_SPARSE)" \

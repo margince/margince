@@ -146,6 +146,37 @@ check "http://localhost:8093 margince_dev_alpha" "$(cat "$probe_state/answer2")"
       "once the stack is recorded both halves name it — the API base takes the claimed port"
 rm -rf "$probe_state"
 
+echo "Makefile: a target that drives a live stack names it through the helpers"
+
+# The check above proves the HELPERS agree. It cannot prove anybody calls them,
+# and for a long time the demo seeder did not: `make seed-demo` carried :8080,
+# `margince` and `margince-dev` as literals, so from a linked worktree all three
+# halves — records, SQL and object bytes — went to the PRIMARY worktree's stack.
+# Nothing failed, because that stack answers whoever asks.
+#
+# So the corpus is READ from the Makefile rather than listed here: a recipe that
+# reaches a running stack is one that hands the seeder or Playwright a base URL,
+# and any future one is caught by the same scan. Listing the four known targets
+# would be a second copy of the Makefile, and would report PASS over a fifth.
+literals='localhost:8080|margince_owner:dev@[^"]*/margince"|BLOBSTORE_BUCKET=margince-dev( |$)'
+offenders="$(awk '
+    # A recipe line is TAB-indented; a target line is not. Track which recipe
+    # each line belongs to so the report names the target a reader must fix.
+    /^[a-zA-Z0-9_.-]+:/ { target = $0; sub(/:.*/, "", target) }
+    /^\t/               { print target "\t" $0 }
+' "$root/Makefile" | grep -Ei "$literals" | grep -v '^help\t' || true)"
+check "" "$offenders" \
+      "no recipe hardcodes the primary stack's URL, database or bucket — they come from lib-devstate.sh"
+
+# And the scan can still SEE one. A census that only ever reports clean is
+# indistinguishable from a census that stopped reading, so plant the defect that
+# was actually shipped and require the pattern to catch it.
+planted="$(printf 'seed-demo:\n\tBASE_URL=http://localhost:8080 pnpm e2e\n' \
+    | awk '/^[a-zA-Z0-9_.-]+:/ { t = $0; sub(/:.*/, "", t) } /^\t/ { print t "\t" $0 }' \
+    | grep -Ec "$literals" || true)"
+check "1" "$planted" \
+      "the scan recognises a hardcoded :8080 in a recipe — otherwise the clean result above means nothing"
+
 lift port_listeners
 lift read_registry
 lift pick_free_db

@@ -20,14 +20,20 @@
 
 set -euo pipefail
 
-API_BASE="${API_BASE:-http://localhost:8080}"
+# The stack THIS worktree runs, not whatever holds :8080. Both halves resolve
+# together — this script writes the deals and contacts through the API and the
+# accounting connection through psql, and a split between them lands the two in
+# different databases. Explicit values still win.
+# shellcheck source=scripts/lib-devstate.sh
+. "$(git rev-parse --show-toplevel)/scripts/lib-devstate.sh"
+API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
 COMPANY="${1:-Glazed Frog}"
 PGHOST="${PGHOST:-localhost}"
 PGPORT="${PGPORT:-15432}"
 PGUSER="${PGUSER:-margince_owner}"
-PGDATABASE="${PGDATABASE:-margince}"
+PGDATABASE="${PGDATABASE:-$(dev_database_name)}"
 export PGPASSWORD="${PGPASSWORD:-dev}"
 
 workdir="$(mktemp -d)"
