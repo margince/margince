@@ -23,6 +23,13 @@ import {
 // reach: the run an earlier visit left parked.
 function story(allow: Parameters<typeof meRoute>[0]) {
   return () => {
+    // A story states its own preconditions, including the absence of one.
+    // `PickedUpFromEarlier` plants a run id in storage, and storage outlives a
+    // story: the capture harness drives every story through ONE page, so the
+    // next one inherits it, the card reopens the wizard for a run this story
+    // never mentioned, and the dialog portals past the canvas — leaving a story
+    // named for the row asserting against an empty one.
+    globalThis.localStorage.removeItem("margince.import.run");
     installFetchStub({ "GET /me": meRoute(allow) });
     return (
       <StoryProviders>
@@ -35,9 +42,14 @@ function story(allow: Parameters<typeof meRoute>[0]) {
 // Opening the wizard. The verb is the card's only button, and it is in the
 // canvas — the dialog it opens is portalled to the body, past `canvasElement`.
 const openWizard: NonNullable<Story["play"]> = async ({ canvasElement }) => {
-  await userEvent
-    .setup()
-    .click(within(canvasElement).getByRole("button", { name: /Start/ }));
+  // findBy, not getBy: the row is drawn once `/me` answers, and `getByRole`
+  // reads the DOM as it stands the instant `play` runs. It found an empty
+  // canvas and reported "there are no accessible roles" — which reads as the
+  // card rendering nothing rather than as the query arriving early.
+  const verb = await within(canvasElement).findByRole("button", {
+    name: /Start/,
+  });
+  await userEvent.setup().click(verb);
 };
 
 const OPERATOR = { import_run: ["create", "read", "update"] } as const;
@@ -95,9 +107,9 @@ export const ChoosingAFileDark: Story = {
 // not know their last import stopped half-way cannot finish it, so the wizard
 // opens ITSELF for a run it picked up rather than waiting behind a verb.
 //
-// The reference it plants is self-clearing: every other story routes these reads
-// to the empty fallback, which is not a run in a state worth reopening, so the
-// card forgets it and shows its resting row.
+// The reference it plants OUTLIVES it — storage is not per-story — so the shared
+// helper above clears it rather than every other story trusting this one to
+// leave the page as it found it.
 export const PickedUpFromEarlier: Story = {
   render: () => {
     globalThis.localStorage.setItem("margince.import.run", "019ff-run");
