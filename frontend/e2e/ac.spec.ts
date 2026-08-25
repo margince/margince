@@ -1181,6 +1181,19 @@ async function expectNoAaViolations(page: Page, screen: string) {
   }
 }
 
+// The addresses this product answers that carry a VIEW as well as a
+// destination: a narrowed list, a record's tab, the decided queue, one report.
+// They are swept separately from CORE_SCREENS because each is a state a reader
+// reaches rather than a nav entry, and each draws chrome the bare screen does
+// not — the chips the filter fills in, the tab strip's pressed control, the
+// pager once a page is named.
+const ADDRESSED_VIEWS = [
+  "companies?q=brandt&sort=name",
+  "companies/o-brandt/tasks",
+  "inbox/decided",
+  "reports/forecast",
+];
+
 test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   for (const screen of CORE_SCREENS) {
     test(`no AA violations on #/${screen}`, async ({ page }) => {
@@ -1193,6 +1206,16 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       await expectShellRendered(page);
       await animationsSettled(page);
       await expectNoAaViolations(page, screen);
+    });
+  }
+
+  for (const view of ADDRESSED_VIEWS) {
+    test(`no AA violations on #/${view}`, async ({ page }) => {
+      await page.goto(`/#/${view}`);
+      await page.waitForLoadState("networkidle");
+      await expectShellRendered(page);
+      await animationsSettled(page);
+      await expectNoAaViolations(page, view);
     });
   }
 
