@@ -102,11 +102,6 @@ func (s *CSVSource) Counts(ctx context.Context) (map[string]int, error) {
 	return map[string]int{s.object: rows}, nil
 }
 
-// Associations answers empty, and that is the shape of the source rather than
-// an unfinished implementation: a flat file has no edges to detangle. A source
-// that carries them (HubSpot, Salesforce) implements this seam with content.
-func (s *CSVSource) Associations(context.Context) ([]Assoc, error) { return nil, nil }
-
 // Skipped reports the rows no page could deliver, with the line to open and the
 // reason. Never silent: a file half-ignored under a success message is worse
 // than a refusal.

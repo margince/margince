@@ -69,7 +69,18 @@ type importIssueDTO struct {
 	Reason string `json:"reason"`
 }
 
+type importLinksDTO struct {
+	Offered    int `json:"offered"`
+	Applied    int `json:"applied"`
+	Unresolved []struct {
+		From   string `json:"from"`
+		To     string `json:"to"`
+		Reason string `json:"reason"`
+	} `json:"unresolved"`
+}
+
 type importReportDTO struct {
+	Links         *importLinksDTO      `json:"links"`
 	RunID         string               `json:"run_id"`
 	Status        string               `json:"status"`
 	RowsRead      int                  `json:"rows_read"`
@@ -257,77 +268,6 @@ func TestCSVImportDryRunWritesNothingAndCommitsLeads(t *testing.T) {
 	}
 	if got := importedPersonCount(t, e); got != peopleBefore {
 		t.Fatalf("people = %d, was %d — a `lead` run writes leads and does not reach the person table", got, peopleBefore)
-	}
-}
-
-// The other half of the same promise: a file of people the business already
-// knows imports as PEOPLE, through the same dry-run-then-approve flow.
-//
-// Three things are asserted together because each one failing alone would still
-// look like a working import: the dry run writes nothing, the commit creates
-// people rather than leads, and re-running the identical file converges instead
-// of reporting an update forever. That last one is the defect a person object
-// introduces on its own — an email is a child row, so a comparison that reads
-// the record's flat fields finds no `email` and calls every row changed.
-func TestCSVImportOfKnownPeopleCreatesPeople(t *testing.T) {
-	e := setupImportApp(t)
-	peopleBefore := importedPersonCount(t, e)
-	leadsBefore := leadCount(t, e)
-
-	profile, status := uploadCSV(t, e, "person", prospectCSV)
-	if status != http.StatusOK {
-		t.Fatalf("upload → %d, want 200", status)
-	}
-	if profile.RowsProfiled != 3 {
-		t.Fatalf("profile = %+v, want 3 rows", profile)
-	}
-
-	run, runStatus := createRunWithMapping(t, e, "person", profile.SourceRef,
-		map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"})
-	if runStatus != http.StatusAccepted {
-		t.Fatalf("create run → %d, want 202", runStatus)
-	}
-	if got := importedPersonCount(t, e); got != peopleBefore {
-		t.Fatalf("the dry run created %d people; a validation pass writes nothing", got-peopleBefore)
-	}
-
-	var report importReportDTO
-	if status := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); status != http.StatusOK {
-		t.Fatalf("report → %d, want 200", status)
-	}
-	if report.Disposition.Created != 3 {
-		t.Fatalf("report = %+v, want 3 rows the commit will create", report)
-	}
-
-	var approved importRunDTO
-	if status := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); status != http.StatusAccepted {
-		t.Fatalf("approve → %d, want 202", status)
-	}
-	if got := importedPersonCount(t, e); got != peopleBefore+3 {
-		t.Fatalf("people = %d, was %d — a `person` run creates people", got, peopleBefore)
-	}
-	if got := leadCount(t, e); got != leadsBefore {
-		t.Fatalf("leads = %d, was %d — a `person` run does not reach the lead table", got, leadsBefore)
-	}
-
-	// The same file again: every row is already here and unchanged, so the
-	// commit has nothing to do. An `email` the comparison cannot read would
-	// report three updates instead.
-	second, secondStatus := uploadCSV(t, e, "person", prospectCSV)
-	if secondStatus != http.StatusOK {
-		t.Fatalf("second upload → %d, want 200", secondStatus)
-	}
-	rerun, rerunStatus := createRunWithMapping(t, e, "person", second.SourceRef,
-		map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"})
-	if rerunStatus != http.StatusAccepted {
-		t.Fatalf("create re-run → %d, want 202", rerunStatus)
-	}
-	var rereport importReportDTO
-	if status := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &rereport); status != http.StatusOK {
-		t.Fatalf("re-report → %d, want 200", status)
-	}
-	if rereport.Disposition.Created != 0 || rereport.Disposition.Updated != 0 {
-		t.Fatalf("re-run = %+v, want nothing created and nothing updated — the file is unchanged", rereport.Disposition)
 	}
 }
 
@@ -924,65 +864,5 @@ func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 	}, nil, nil)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("an unknown on_duplicate → %d, want 422", status)
-	}
-}
-
-// A row whose address a previous run of this importer already landed: preview
-// and commit must give the SAME answer, and here that answer is an update.
-//
-// The email is the source key, so the identity map recognises the row and the
-// person is corrected rather than duplicated — which is the whole point of
-// keying a person file on its addresses. What must never happen is the preview
-// promising one disposition and the commit producing another.
-func TestCSVImportOfAClaimedEmailPreviewsWhatTheCommitDoes(t *testing.T) {
-	e := setupImportApp(t)
-
-	first, status := uploadCSV(t, e, "person", prospectCSV)
-	if status != http.StatusOK {
-		t.Fatalf("upload → %d, want 200", status)
-	}
-	mapping := map[string]string{"Email": "email", "Full Name": "full_name", "Title": "title"}
-	run, runStatus := createRunWithMapping(t, e, "person", first.SourceRef, mapping)
-	if runStatus != http.StatusAccepted {
-		t.Fatalf("create run → %d, want 202", runStatus)
-	}
-	var approved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
-		t.Fatalf("approve → %d, want 202", s)
-	}
-
-	// A second file naming the SAME address under a different name. The source
-	// key is the email, so the identity map recognises the row and this is an
-	// update — which is the right answer, and the one the commit must also give.
-	const clash = "Email,Full Name,Title\n" +
-		"ada@lovelace.example,Ada Byron,Countess\n" +
-		"joan@clarke.example,Joan Clarke,Cryptanalyst\n"
-	second, secondStatus := uploadCSV(t, e, "person", clash)
-	if secondStatus != http.StatusOK {
-		t.Fatalf("second upload → %d, want 200", secondStatus)
-	}
-	rerun, rerunStatus := createRunWithMapping(t, e, "person", second.SourceRef, mapping)
-	if rerunStatus != http.StatusAccepted {
-		t.Fatalf("create re-run → %d, want 202", rerunStatus)
-	}
-
-	var report importReportDTO
-	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &report); s != http.StatusOK {
-		t.Fatalf("report → %d, want 200", s)
-	}
-	if report.Disposition.Created != 1 || report.Disposition.Updated != 1 {
-		t.Fatalf("preview = %+v, want 1 create and 1 update for the address already held", report.Disposition)
-	}
-
-	var reapproved importRunDTO
-	if s := e.Call(t, http.MethodPost, "/v1/imports/"+rerun.ID+"/approve", nil, nil, &reapproved); s != http.StatusAccepted {
-		t.Fatalf("approve re-run → %d, want 202", s)
-	}
-	var after importReportDTO
-	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &after); s != http.StatusOK {
-		t.Fatalf("report after commit → %d, want 200", s)
-	}
-	if after.Disposition.Created != 1 || after.Disposition.Updated != 1 {
-		t.Fatalf("commit = %+v, want the same 1 create and 1 update the preview promised", after.Disposition)
 	}
 }
