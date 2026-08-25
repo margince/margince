@@ -212,7 +212,11 @@ function speaksSinceLastVisit(view?: Organization360): boolean {
   return (
     firstVisit(view) ||
     newActivities(view) > 0 ||
-    (view?.sections_omitted.length ?? 0) > 0
+    // Optional on BOTH hops: a composite that answered without the omission
+    // list names nothing withheld, and reading `.length` off the absent list
+    // throws where the whole record page then renders as "this view no longer
+    // works".
+    (view?.sections_omitted?.length ?? 0) > 0
   );
 }
 
