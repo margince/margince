@@ -152,3 +152,33 @@ func TestRestSummaryDistinguishesNullFromEmpty(t *testing.T) {
 		t.Error("clearing a field and emptying it render identically")
 	}
 }
+
+// Every verb that can actually reach a decision card reads as a sentence.
+//
+// The corpus is derived rather than listed: a tool is stageable only when the
+// contract gives it a tier other than auto_execute, and it is exactly those
+// nine pairs whose summary a human ever sees. A verb added to that set with a
+// name that does not carry its own record — and no entry in genericVerbs —
+// would put "Do thing" on a card and drop which record it was about.
+func TestEveryStageableVerbNamesWhatItActsOn(t *testing.T) {
+	for key, pol := range agentPolicies {
+		if pol.Access != accessTool || pol.Tier == tierAutoExecute {
+			continue
+		}
+		phrase := actPhrase(pol, "POST", "/v1/x")
+		if phrase == "" {
+			t.Errorf("%s: staged calls render an empty headline", key)
+			continue
+		}
+		// Either the verb names its own object, or the record type is appended.
+		namesRecord := strings.Contains(phrase, recordNoun(pol.RecordType))
+		verbCarriesIt := pol.RecordType == "" ||
+			strings.Contains(strings.ReplaceAll(pol.Tool, "_", " "), string(pol.RecordType))
+		if !namesRecord && !verbCarriesIt && genericVerbs[pol.Tool] {
+			t.Errorf("%s: %q names neither the verb's object nor its record type", key, phrase)
+		}
+		if strings.Contains(phrase, "_") {
+			t.Errorf("%s: %q still carries a wire identifier", key, phrase)
+		}
+	}
+}
