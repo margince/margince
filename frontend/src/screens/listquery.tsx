@@ -154,7 +154,15 @@ export function withoutScreenDials(
   return rest;
 }
 
-/** `listDials` with the screen's own dials carried over from `carrying`. */
+/**
+ * `listDials` with the screen's own dials carried over from `carrying`.
+ *
+ * A dial the list dials ALREADY name wins over the live address. A saved deal
+ * view records the pipeline it was saved on, so applying one writes that
+ * pipeline through the list's own filter path; carrying the live address over
+ * the top of it left the reader looking at another board's stages with the
+ * saved view highlighted.
+ */
 export function mergeScreenDials(
   listDials: UrlParams,
   carrying: UrlParams,
@@ -166,7 +174,7 @@ export function mergeScreenDials(
   const merged = new Map(listDials);
   for (const dial of dials) {
     const value = carrying.get(dial);
-    if (value) {
+    if (value && !merged.has(dial)) {
       merged.set(dial, value);
     }
   }

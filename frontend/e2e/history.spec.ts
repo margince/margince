@@ -204,6 +204,29 @@ test("paging is in the address, and Back returns to the page you left", async ({
   await expect(page).toHaveURL(/[?&]page=2/);
 });
 
+test("a saved view moves the board to the pipeline it was saved on", async ({
+  page,
+}) => {
+  // The pipeline is a DRAWING dial: held in the address, held out of the
+  // request, and therefore carried across a list write rather than serialized
+  // by the list codec. Carrying it unconditionally overwrote the pipeline a
+  // saved view had just asked for, so the tab lit up while the board kept
+  // showing the previous pipeline's stages.
+  // The address already names a board — the state a reader is in the moment
+  // they press a view's tab, and the value that used to win over the view.
+  await page.goto("/#/deals?pipeline_id=pl");
+  await expect(page.getByRole("region", { name: "Qualify" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Partner deals" }).click();
+
+  // The address AND the board, because either alone is the defect: an address
+  // naming the view's pipeline over stage columns from the other one is exactly
+  // what a reader saw.
+  await expect(page).toHaveURL(/pipeline_id=pl-partner/);
+  await expect(page.getByRole("region", { name: "Referred" })).toBeVisible();
+  await expect(page.getByRole("region", { name: "Qualify" })).toHaveCount(0);
+});
+
 test("the leads board is an address", async ({ page }) => {
   await page.goto("/#/leads?view=board");
   await expect(page).toHaveURL(/view=board/);

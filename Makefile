@@ -55,7 +55,7 @@ MINIO_PORT ?= 29000
 # that refusal out. The rule is stated in the library rather than spelled in this
 # recipe, so it has one writer and a gate can reach it without a seeder.
 SEED_STACK = set -e; . scripts/lib-devstate.sh; \
-  seed_override="$$(dev_seed_override "$(SEED_DSN)" "$(SEED_API)" "$(SEED_BUCKET)")"; \
+  seed_override="$$(dev_seed_override "$(SEED_DSN)" "$(SEED_API)" "$(SEED_BUCKET)" "$(SEED_ARGS)")"; \
   if [ "$$seed_override" = "all" ]; then \
     seed_api="$(SEED_API)"; \
     seed_bucket="$(SEED_BUCKET)"; \
@@ -323,8 +323,9 @@ seed-dev:
 ## people and facts, plus the invented commercial half. Stack must be running
 ## (make dev). Converges — a second run creates nothing. DATASET= points at the
 ## dataset checkout; SEED_ARGS= passes flags through (-dry-run, -limit N).
-## It fills THIS worktree's stack; a `-api` in SEED_ARGS lands after the
-## resolved one and so overrides it, the way the seeder's own flag parsing does.
+## It fills THIS worktree's stack, and refuses a `-api` in SEED_ARGS: that moves
+## the API leg alone and leaves the database and bucket here. To seed another
+## stack, pass SEED_DSN, SEED_API and SEED_BUCKET together.
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
 # stack is resolved.

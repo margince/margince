@@ -198,10 +198,23 @@ for partial in "dsn:::" ":api::" "::bucket:"; do
           "a partial override ($partial) is refused rather than splitting one seed across two stacks"
 done
 
-# And the Makefile still ASKS. The rule refusing in a library nothing calls is
-# the same as no rule, and this is the seam the recipes go through.
-check "1" "$(grep -q 'seed_override=.*dev_seed_override' "$root/Makefile" && echo 1 || echo 0)" \
-      "the seed prelude asks the library, so the refusal reaches the recipes"
+# The seeder takes the API base as a flag too, so the same split arrives through
+# SEED_ARGS: `-api` there lands after the resolved one and wins, while the
+# database and the bucket stay this worktree's. A pass-through nobody reads is
+# how the three-name rule above was walked around.
+for flag in "-api http://other" "-api=http://other" "--api http://other" "-limit 5 -api http://other"; do
+    check "1" "$(dev_seed_override "" "" "" "$flag" >/dev/null 2>&1; echo $?)" \
+          "SEED_ARGS='$flag' is refused rather than moving the API leg alone"
+done
+check "none" "$(dev_seed_override "" "" "" "-dry-run -limit 5")" \
+      "the flags a seed run actually passes are still passed — the check is about -api, not about SEED_ARGS"
+
+# And the Makefile still ASKS, with the flags. The rule refusing in a library
+# nothing calls is the same as no rule, and this is the seam the recipes go
+# through; a prelude that dropped the fourth argument would silently stop
+# checking the flag path while every case above kept passing.
+check "1" "$(grep -q 'seed_override=.*dev_seed_override.*SEED_ARGS' "$root/Makefile" && echo 1 || echo 0)" \
+      "the seed prelude asks the library about the pass-through flags too"
 
 lift port_listeners
 lift read_registry
