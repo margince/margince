@@ -27,13 +27,13 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"math/rand/v2"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/backoff"
 )
 
 const (
@@ -76,18 +76,11 @@ func classifySweepError(err error) sweepErrorClass {
 	}
 }
 
-// sweepBackoffDelay is the transient-failure ladder for consecutiveFailures
-// prior failures: 2min·2^n capped at 4h, with ±20% jitter.
+// sweepBackoffDelay is this sweep's transient-failure ladder for
+// consecutiveFailures prior failures. The shape — double per failure, cap,
+// jitter — is shared; the two bounds are this sweep's own.
 func sweepBackoffDelay(consecutiveFailures int) time.Duration {
-	d := sweepBackoffBase
-	for i := 0; i < consecutiveFailures && d < sweepBackoffCap; i++ {
-		d *= 2
-	}
-	if d > sweepBackoffCap {
-		d = sweepBackoffCap
-	}
-	jitter := 0.8 + 0.4*rand.Float64() //nolint:gosec // G404: scheduling jitter, not key material — de-syncs a fleet that failed together
-	return time.Duration(float64(d) * jitter)
+	return backoff.Jittered(consecutiveFailures, sweepBackoffBase, sweepBackoffCap)
 }
 
 // RecordSweepSuccess resets the backoff for ctx's workspace: the next
