@@ -228,6 +228,12 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 		if errors.As(err, &dup) {
 			return migration.EnsureResult{Skipped: true, SkipReason: skipReasonDuplicateEmail}, nil
 		}
+		var takenDomain *people.DuplicateDomainError
+		if errors.As(err, &takenDomain) {
+			// The company half of the same case: a corrected file moving a domain
+			// onto a company that is not its owner.
+			return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
+		}
 		return migration.EnsureResult{}, err
 	}
 	w.updated++
@@ -365,11 +371,25 @@ func (w *csvWriters) createOrganization(ctx context.Context, row migration.Row) 
 		}
 		return ids.UUID(org.Id), nil
 	})
+	var dup *people.DuplicateDomainError
+	if errors.As(err, &dup) {
+		// A domain names ONE company across the estate, so a row claiming one
+		// another company already holds is refused by the store — the same shape
+		// a person's claimed email has. One bad row is a skip with a reason, not
+		// a failed run: the rest of the file still lands.
+		return migration.EnsureResult{Skipped: true, SkipReason: domainClaimedReason}, nil
+	}
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
 	return migration.EnsureResult{Created: true}, nil
 }
+
+// domainClaimedReason is what the report says for such a row. It names the
+// row's own value and nothing about the incumbent — not which company holds the
+// domain, nor whether the caller could have seen it.
+const domainClaimedReason = "this domain is already held by another company in the CRM, " +
+	"so the row cannot create a second company under it"
 
 // land commits one native record and its identity-map row in ONE transaction,
 // then caches the binding — after the commit, never inside it: an entry for a

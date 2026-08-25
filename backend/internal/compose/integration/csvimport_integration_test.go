@@ -24,6 +24,8 @@ import (
 	"mime/multipart"
 	"net/http"
 	"path"
+	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -864,5 +866,130 @@ func TestCSVImportRefusesAnUnknownDuplicatePolicy(t *testing.T) {
 	}, nil, nil)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("an unknown on_duplicate → %d, want 422", status)
+	}
+}
+
+// A company file's domain column lands, and a re-import of it converges.
+//
+// The convergence half is the one that catches the defect this shape invites: a
+// company holds its domains as child rows, so a comparison reading the record's
+// flat fields finds no `domain`, calls every row changed, and reports an update
+// forever. It also proves the spelling is normalized — the file says
+// "https://www.northwind.example/" and the store holds "northwind.example".
+func TestCSVImportLandsDomainsAndConverges(t *testing.T) {
+	e := setupImportApp(t)
+
+	const companies = "Company,Website\n" +
+		"Northwind,https://www.northwind.example/\n" +
+		"Contoso,contoso.example\n"
+	profile, status := uploadCSV(t, e, "organization", companies)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	if !slices.Contains(profile.Targets, "domain") {
+		t.Fatalf("targets = %v, want `domain` offered to a company file", profile.Targets)
+	}
+	mapping := map[string]string{"Company": "display_name", "Website": "domain"}
+
+	run, runStatus := createRunWithMapping(t, e, "organization", profile.SourceRef, mapping)
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	var approved importRunDTO
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", s)
+	}
+
+	var orgs struct {
+		Data []struct {
+			DisplayName string `json:"display_name"`
+			Domains     []struct {
+				Domain    string `json:"domain"`
+				IsPrimary bool   `json:"is_primary"`
+			} `json:"domains"`
+		} `json:"data"`
+	}
+	if s := e.Call(t, http.MethodGet, "/v1/organizations?limit=100", nil, nil, &orgs); s != http.StatusOK {
+		t.Fatalf("GET /v1/organizations → %d, want 200", s)
+	}
+	found := map[string]string{}
+	for _, org := range orgs.Data {
+		if len(org.Domains) > 0 {
+			found[org.DisplayName] = org.Domains[0].Domain
+		}
+	}
+	if found["Northwind"] != "northwind.example" {
+		t.Fatalf("Northwind domain = %q, want the URL reduced to its host", found["Northwind"])
+	}
+	if found["Contoso"] != "contoso.example" {
+		t.Fatalf("Contoso domain = %q, want it landed", found["Contoso"])
+	}
+
+	// The identical file again: nothing changed, so nothing is written. A domain
+	// the comparison could not read would report two updates instead.
+	second, secondStatus := uploadCSV(t, e, "organization", companies)
+	if secondStatus != http.StatusOK {
+		t.Fatalf("second upload → %d, want 200", secondStatus)
+	}
+	rerun, rerunStatus := createRunWithMapping(t, e, "organization", second.SourceRef, mapping)
+	if rerunStatus != http.StatusAccepted {
+		t.Fatalf("create re-run → %d, want 202", rerunStatus)
+	}
+	var report importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+rerun.ID+"/report", nil, nil, &report); s != http.StatusOK {
+		t.Fatalf("re-report → %d, want 200", s)
+	}
+	if report.Disposition.Created != 0 || report.Disposition.Updated != 0 {
+		t.Fatalf("re-run = %+v, want nothing created and nothing updated", report.Disposition)
+	}
+}
+
+// A domain another company already holds refuses the row, and says so.
+//
+// A domain names ONE company across the estate — that is what makes it a real
+// key, and what makes it the thing dedupe should match on. The row is a skip
+// with a reason; the rest of the file lands.
+func TestCSVImportRefusesADomainAnotherCompanyHolds(t *testing.T) {
+	e := setupImportApp(t)
+	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+		map[string]any{"display_name": "Northwind Traders", "domains": []map[string]any{
+			{"domain": "northwind.example", "is_primary": true},
+		}}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the incumbent → %d, want 201", status)
+	}
+
+	const companies = "Company,Website\n" +
+		"Northwind Copy,northwind.example\n" +
+		"Contoso,contoso.example\n"
+	profile, status := uploadCSV(t, e, "organization", companies)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "organization", profile.SourceRef,
+		map[string]string{"Company": "display_name", "Website": "domain"})
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+	var approved importRunDTO
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", s)
+	}
+
+	var report importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
+		t.Fatalf("report → %d, want 200", s)
+	}
+	if report.Disposition.Created != 1 || report.Disposition.Skipped != 1 {
+		t.Fatalf("disposition = %+v, want the clean row created and the taken domain skipped",
+			report.Disposition)
+	}
+	var named bool
+	for _, issue := range report.Issues {
+		if strings.Contains(issue.Reason, "already held by another company") {
+			named = true
+		}
+	}
+	if !named {
+		t.Fatalf("issues = %+v, want the skip to say the domain is already held", report.Issues)
 	}
 }
