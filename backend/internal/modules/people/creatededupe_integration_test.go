@@ -444,11 +444,18 @@ func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
 		{"untrimmed", "Ada Lindqvist", "  Ada Lindqvist  "},
 		{"accents", "Renée Bär", "Renee Bar"},
 		{"sharp s", "Anna Straße", "Anna Strasse"},
-		{"apostrophe", "Sean O'Brien", "Sean OBrien"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// The table's premise, asserted rather than skipped. A pair Go does
+			// NOT call equal owes this lane nothing, so it does not belong here
+			// at all — an apostrophe pair is the live example: the candidate
+			// query's third arm folds apostrophes and normalizeName does not,
+			// which is SQL admitting MORE than Go and is the safe direction.
+			// Skipping said the same thing silently, and the integration lane
+			// refuses a skip precisely because it reads exactly like a pass.
 			if normalizeName(tc.incumbent) != normalizeName(tc.second) {
-				t.Skipf("normalizeName does not call these equal, so the lane owes nothing: %q vs %q",
+				t.Fatalf("this table carries only pairs normalizeName calls equal, and %q vs %q is not one: "+
+					"drop the case, or fix normalizeName if Go is the side that is wrong",
 					tc.incumbent, tc.second)
 			}
 			e := setupDedupe(t)
