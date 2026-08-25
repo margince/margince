@@ -256,7 +256,7 @@ func auditLinkedInMatch(ctx context.Context, tx pgx.Tx, connectionID, personID i
 // one belongs to the member, and stamping it on every contact they confirm
 // would put the wrong person's address on the record.
 //
-// A connection imported before migration 0161 has no URL and writes nothing.
+// A connection imported before the URL column existed has no URL and writes nothing.
 // The confirmation still stands; only the copy is unavailable, and the caller
 // is told so rather than left to wonder.
 //
