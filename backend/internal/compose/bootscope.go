@@ -72,8 +72,8 @@ func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (con
 // compile-time literal joined to a caller-supplied fact name, and neither can be
 // NULL. That matters because pg_advisory_xact_lock is STRICT — a NULL argument
 // takes NO LOCK and returns NULL rather than raising, which is a guard reporting
-// success while holding nothing. The workspace-qualified form this replaced
-// could reach that state; this cannot.
+// success while holding nothing. The workspace-qualified form needed a COALESCE
+// to stay out of that state; with no GUC to read there is nothing to guard.
 const bootLedgerLock = `
 	SELECT pg_advisory_xact_lock(hashtext('margince:boot-ledger:' || $1)::bigint)`
 

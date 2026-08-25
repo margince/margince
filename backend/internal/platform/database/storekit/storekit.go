@@ -339,11 +339,7 @@ func MustWorkspace(ctx context.Context) ids.UUID {
 // through the same store path without deadlock.
 //
 // The key carries no workspace. One installation serves one organization
-// (ADR-0061), so the workspace it used to carry distinguished nothing, and
-// ADR-0091 §5 took it out. The dual-key window that transition ran through is
-// closed (#2528): it existed so a process on the pre-§5 build and one on the
-// new build would still meet on a lock during a rolling deploy, and no build
-// predating §5 was ever released, so there is nothing left to meet.
+// (ADR-0061), so a workspace in the key distinguishes nothing (ADR-0091 §5).
 func LockWriteIdentity(ctx context.Context, tx pgx.Tx, entityType, identity string) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(
 		$1 || ':' || $2, 0))`,
