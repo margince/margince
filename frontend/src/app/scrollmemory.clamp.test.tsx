@@ -57,10 +57,14 @@ function clamping(column: HTMLElement, range: Range): void {
 function Column({
   address,
   range,
-}: Readonly<{ address: string; range: Range }>) {
+  drawn = true,
+}: Readonly<{ address: string; range: Range; drawn?: boolean }>) {
   const column = useRef<HTMLDivElement>(null);
   const armed = useRef(false);
   useScrollMemory(column, address, "rows");
+  if (!drawn) {
+    return <div data-testid="board" />;
+  }
   return (
     <div
       // A callback ref, because the range has to be in place BEFORE the hook's
@@ -204,6 +208,59 @@ describe("a list's rows, remembered across a move", () => {
     await rowsArrive(second.container, range, 9000);
     expect(rowsOf(second.container).scrollTop).toBe(120);
     second.unmount();
+  });
+
+  it("restores rows that are drawn a render after the screen is", () => {
+    // A screen that opens on a board and draws its table only when the address
+    // asks for one has no rows on the first commit. A ref cannot report that
+    // they have appeared — it is filled in after the render that returns it — so
+    // an effect keyed on the ref object ran once against nothing and never again,
+    // and that screen had no scroll memory at all.
+    const range: Range = { content: 9000, visible: 400 };
+    const first = render(<Column address="#/deals" range={range} />);
+    readerScrollsTo(first.container, 2400);
+
+    const entry = window.history.state;
+    first.unmount();
+    window.history.pushState(null, "", "#/deals/d-1");
+    window.history.replaceState(entry, "", "#/deals");
+
+    const second = render(
+      <Column address="#/deals" range={range} drawn={false} />,
+    );
+    expect(
+      second.container.querySelector('[data-testid="board"]'),
+    ).toBeTruthy();
+
+    second.rerender(<Column address="#/deals" range={range} />);
+    expect(rowsOf(second.container).scrollTop).toBe(2400);
+    second.unmount();
+  });
+
+  it("stops reading an element once the reader has left the entry", () => {
+    // React hands a departing surface's DOM node to whatever renders in its
+    // place rather than building another, so the record's own table arrives in
+    // the element the list was scrolling — still carrying this lane's listener.
+    // Every table scrolls itself to the top on arrival, and that zero was filed
+    // under the LIST's entry.
+    const range: Range = { content: 9000, visible: 400 };
+    const list = render(<Column address="#/companies" range={range} />);
+    readerScrollsTo(list.container, 2400);
+
+    const entry = window.history.state;
+    // The reader opens a record: a new entry, and the element is now the
+    // record's, though this lane has not been torn down yet.
+    window.history.pushState(null, "", "#/companies/c-1");
+    act(() => {
+      rowsOf(list.container).scrollTop = 0;
+    });
+
+    // Back, and the list's own place is intact.
+    window.history.replaceState(entry, "", "#/companies");
+    list.unmount();
+    const back = render(<Column address="#/companies" range={range} />);
+    expect(rowsOf(back.container).scrollTop).toBe(2400);
+    back.unmount();
   });
 
   it("opens a list the reader has never seen at its first row", () => {

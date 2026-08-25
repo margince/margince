@@ -111,8 +111,27 @@ export function useScrollMemory(
     setEntry(historyEntryId());
   }, [address]);
 
+  // The element this lane scrolls, as a value the effect below can depend on.
+  //
+  // A ref cannot be one: it is filled in after the render that returns it, and
+  // an effect keyed on the ref OBJECT never re-runs when the element inside it
+  // appears or is replaced. That is not a corner case — a screen that opens on a
+  // board and draws its table only when the address asks for one has no rows at
+  // all on the first commit, so the effect ran once against nothing and never
+  // again. It cost that screen its scroll memory entirely, and intermittently,
+  // because whether the table is there on the first commit is a matter of timing.
+  //
+  // No dependency list, so this runs after EVERY render and asks one identity
+  // question. Setting state only when the answer changed is what keeps that from
+  // being a loop.
+  const [scroller, setScroller] = useState<HTMLElement | null>(null);
   useEffect(() => {
-    const scroller = column.current;
+    if (column.current !== scroller) {
+      setScroller(column.current);
+    }
+  });
+
+  useEffect(() => {
     if (!scroller) {
       return;
     }
@@ -123,8 +142,20 @@ export function useScrollMemory(
       if (wanted.current === null) {
         return;
       }
+      // Nor ours to WRITE once the reader has moved on: the element may now
+      // belong to the surface that replaced this one, and scrolling it would
+      // move a page the reader is currently reading.
+      if (historyEntryId() !== entry) {
+        wanted.current = null;
+        return;
+      }
       scroller.scrollTop = wanted.current;
-      if (scroller.scrollTop === wanted.current) {
+      // Within a pixel, not exactly: a scroll offset is fractional on a display
+      // whose device pixel ratio is not a whole number, and an equality test
+      // against the number asked for is then never satisfied. The restore never
+      // declared itself finished, so the reader's own scrolling went unrecorded
+      // and Back returned them to whatever the first clamp had been.
+      if (Math.abs(scroller.scrollTop - wanted.current) < 1) {
         // Landed, so the restore is over. From here the element belongs to the
         // reader again and what it holds is worth remembering.
         wanted.current = null;
@@ -145,11 +176,13 @@ export function useScrollMemory(
     // A wheel, a touch or a key cannot be produced by an assignment to
     // `scrollTop`, so as a signal it has no such gap.
     const takeOver = () => {
+      // The reader owns the position now, so stop aiming at the old one. What
+      // they are looking at IS the answer from here, so it is written down at
+      // once rather than waiting for a scroll event to carry it: a gesture that
+      // only relinquished left a window with nothing remembered at all, and a
+      // list torn down inside that window came back at its first row.
       wanted.current = null;
-      // The reader owns the position now, so stop aiming at the old one — and
-      // let go of it, or the guard below would keep treating their own scrolls
-      // as a clamp of an offset they have already overruled.
-      offsets.delete(place);
+      offsets.set(place, scroller.scrollTop);
     };
     for (const gesture of ["wheel", "touchstart", "keydown"] as const) {
       scroller.addEventListener(gesture, takeOver, { passive: true });
@@ -163,6 +196,17 @@ export function useScrollMemory(
       // A restore still in flight: what the element holds is a clamp on the way
       // to the offset already remembered, not a place anyone chose.
       if (wanted.current !== null) {
+        return;
+      }
+      // And only while the reader is still ON this entry. A surface that goes
+      // hands its DOM node to whatever renders in its place, and React reuses it
+      // rather than building another: opening a record from a list puts the
+      // record's OWN table in the element the list was scrolling, still carrying
+      // this listener. The record then scrolls its table to the top on arrival,
+      // as every table does, and that zero was filed under the list's entry —
+      // a reader who had scrolled a long way down came back to the first row.
+      // The element is no longer ours to read, whatever it still reports.
+      if (historyEntryId() !== entry) {
         return;
       }
       // Gone from the document, where every measurement answers zero. React
@@ -227,5 +271,5 @@ export function useScrollMemory(
       // it. Every guard that matters is inside `remember`.
       remember();
     };
-  }, [column, entry, lane]);
+  }, [scroller, entry, lane]);
 }

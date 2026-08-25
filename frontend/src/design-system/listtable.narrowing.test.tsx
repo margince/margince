@@ -12,7 +12,6 @@ import { narrowingSignature } from "./listtable";
 const DIALS = {
   search: "acme",
   chosen: { owner_id: "u-1", stalled: "true" },
-  activeView: 0,
   perPage: 25,
   sort: "-created_at",
   archived: false,
@@ -48,10 +47,9 @@ describe("what the table calls a narrowing", () => {
     );
   });
 
-  it("hears the search box, the view, the page size and the scope", () => {
+  it("hears the search box, the page size, the scope and the archived toggle", () => {
     for (const moved of [
       { search: "" },
-      { activeView: 1 },
       { perPage: 50 },
       { scopeKey: "mine" },
       { archived: true },

@@ -300,7 +300,6 @@ export function narrowingSignature(dials: {
   search?: string;
   narrowKey?: string;
   chosen: Readonly<Record<string, string>>;
-  activeView: number;
   perPage: number;
   sort?: string;
   archived?: boolean;
@@ -315,7 +314,6 @@ export function narrowingSignature(dials: {
   return JSON.stringify([
     dials.search ?? "",
     narrowedBy,
-    dials.activeView,
     dials.perPage,
     dials.sort ?? "",
     dials.archived ?? false,
@@ -750,7 +748,6 @@ export function ListTable<Row>({
     search: search?.value,
     narrowKey,
     chosen,
-    activeView,
     perPage,
     sort: sort?.value,
     archived: archived?.checked,
@@ -768,14 +765,15 @@ export function ListTable<Row>({
     }
     narrowedBy.current = narrowing;
     setPage(1);
-    // And to the top of them. Page one of a differently-narrowed list is a
-    // different set of rows, so an offset carried over from the old one puts the
-    // reader in the middle of an answer they have not seen the start of. The
-    // pager does this for its own moves (see `goto`); a narrowing is the other
-    // way the visible page changes underneath them.
-    if (scroller.current) {
-      scroller.current.scrollTop = 0;
-    }
+    // The PAGE and nothing else. Scrolling the rows back to the top belongs here
+    // by the same argument, and must not be done from here: this effect also
+    // fires on the way OUT, when the list gets a last render against an address
+    // that is no longer its own and every dial it reads is empty. The page
+    // survives that — it lives in the address and is derived again on the way
+    // back — while an offset written then is memory overwritten, and the reader
+    // returns to the top of a list they had scrolled a long way down. The pager
+    // scrolls to the top for its own moves, where the trigger is a press and
+    // cannot be a teardown.
   }, [narrowing]);
 
   // The overlay needs two numbers CSS cannot work out for itself: where the
