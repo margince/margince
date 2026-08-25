@@ -11,7 +11,8 @@ import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import { interactionIcon } from "./interactionchrome";
 
 // "Today with {first name}" (concept §5.5, ADR-0096 D2).
@@ -39,6 +40,7 @@ export function PersonToday({
   onAction: (action: PersonMomentAction) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   // The amber treatment is the finding itself — a relationship that stopped,
   // or a promise that is late — so it colours the card rather than a badge
   // inside it.
@@ -68,7 +70,7 @@ export function PersonToday({
               moment.evidence.length === 1
                 ? "person.today.source"
                 : "person.today.sources",
-              { count: moment.evidence.length },
+              { count: formatNumber(moment.evidence.length, locale) },
             )}
           </span>
           {moment.freshness_at && (
@@ -76,7 +78,7 @@ export function PersonToday({
               <span aria-hidden="true">·</span>
               <span>
                 {t("person.today.updated", {
-                  when: freshness(moment.freshness_at, t),
+                  when: freshness(moment.freshness_at, t, locale),
                 })}
               </span>
             </>
@@ -210,7 +212,11 @@ function evidenceIcon(type: string): ReactNode {
 
 // The reader judges the age themselves, so this says when rather than how
 // confident anything is. A deterministic rule shows no confidence meter.
-function freshness(at: string, t: ReturnType<typeof useT>): string {
+function freshness(
+  at: string,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
   const days = Math.floor((Date.now() - new Date(at).getTime()) / 86_400_000);
   if (days <= 0) {
     return t("person.today.freshToday");
@@ -218,7 +224,7 @@ function freshness(at: string, t: ReturnType<typeof useT>): string {
   if (days === 1) {
     return t("person.today.freshYesterday");
   }
-  return t("person.today.freshDaysAgo", { count: days });
+  return t("person.today.freshDaysAgo", { count: formatNumber(days, locale) });
 }
 
 // The quiet-success state renders through the same component: rung 10 is a

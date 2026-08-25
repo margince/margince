@@ -31,7 +31,9 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { forReader } from "../format/collate";
+import { formatNumber } from "../format/format";
+import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   LoadMoreButton,
@@ -411,6 +413,7 @@ type OwnerGroup = {
 function ownerGroups(
   entries: Entry[],
   directory: Owner[] | null,
+  locale: Locale,
 ): OwnerGroup[] {
   const known = new Map<string, Owner>();
   for (const owner of directory ?? []) {
@@ -440,8 +443,10 @@ function ownerGroups(
   return [...groups.values()].sort(
     (a, b) =>
       b.users.length - a.users.length ||
-      identityLabel(a.name, a.email, a.incumbentUserId).localeCompare(
+      forReader(
+        identityLabel(a.name, a.email, a.incumbentUserId),
         identityLabel(b.name, b.email, b.incumbentUserId),
+        locale,
       ),
   );
 }
@@ -456,10 +461,12 @@ function ByOwnerList({
   partial: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const { principal } = directory;
   const groups = ownerGroups(
     entries,
     directory.failure === null ? directory.owners : null,
+    locale,
   );
   const unmapped = entries.filter((entry) => !isMapped(entry)).length;
   if (groups.length === 0) {
@@ -486,7 +493,7 @@ function ByOwnerList({
               {group.users.length > 1 && (
                 <Badge tone="warn">
                   {t("overlay.userMap.sharedSeat", {
-                    count: group.users.length,
+                    count: formatNumber(group.users.length, locale),
                   })}
                 </Badge>
               )}
@@ -514,7 +521,7 @@ function ByOwnerList({
             unmapped === 1
               ? "overlay.userMap.unmappedCountOne"
               : "overlay.userMap.unmappedCount",
-            { count: unmapped },
+            { count: formatNumber(unmapped, locale) },
           )}
         </p>
       )}

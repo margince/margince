@@ -25,7 +25,7 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -474,28 +474,30 @@ function ShareScreenBody({
     // excludes them — a record is shared with people/teams, never an agent.
     const users = ((usersQuery.data ?? []) as User[])
       .filter((u) => !u.is_agent)
-      .map((u) => ({
-        id: u.id,
-        name: u.display_name,
-        note: u.email,
-        kind: "user" as const,
-      }));
-    const teams = ((teamsQuery.data ?? []) as Team[]).map((team) => {
-      const count = team.member_count ?? 0;
-      return {
-        id: team.id,
-        name: team.name,
-        note: t(
-          count === 1 ? "share.teamMembers.one" : "share.teamMembers.other",
-          {
-            count,
-          },
-        ),
-        kind: "team" as const,
-      };
-    });
+      .map(
+        (u): RosterSubject => ({
+          id: u.id,
+          name: u.display_name,
+          note: u.email,
+          kind: "user",
+        }),
+      );
+    const teams = ((teamsQuery.data ?? []) as Team[]).map(
+      (team): RosterSubject => {
+        const count = team.member_count ?? 0;
+        return {
+          id: team.id,
+          name: team.name,
+          note: t(
+            count === 1 ? "share.teamMembers.one" : "share.teamMembers.other",
+            { count: formatNumber(count, locale) },
+          ),
+          kind: "team",
+        };
+      },
+    );
     return [...users, ...teams];
-  }, [usersQuery.data, teamsQuery.data, t]);
+  }, [usersQuery.data, teamsQuery.data, t, locale]);
 
   const [term, setTerm] = useState("");
   const [subject, setSubject] = useState<RosterSubject | null>(null);
@@ -790,7 +792,7 @@ function ShareScreenBody({
                   expiryDays === 1
                     ? "share.expiryConsequence.one"
                     : "share.expiryConsequence.other",
-                  { days: expiryDays },
+                  { days: formatNumber(expiryDays, locale) },
                 )
               : t("share.expiryConsequenceNone")}
           </p>

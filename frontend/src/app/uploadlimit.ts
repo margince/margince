@@ -1,5 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
+import { INTL_LOCALE } from "../format/format";
+import type { Locale } from "../i18n";
 import { throwProblem } from "../screens/common";
 
 // The installation's own settings, and the one field on them a form has to act
@@ -72,7 +74,15 @@ export function useMaxUploadBytes(): number | undefined {
  * the reader who believed it would then be refused by a server that had already
  * told them twice, in two different numbers.
  */
-export function formatUploadLimit(bytes: number): string {
+export function formatUploadLimit(bytes: number, locale: Locale): string {
   const mb = bytes / 1_000_000;
-  return `${Number.isInteger(mb) ? mb : mb.toFixed(1)} MB`;
+  // Through Intl, so the decimal separator is the reader's own: a German reader
+  // shown "12.5 MB" reads twelve and a half as twelve-thousand-five-hundred,
+  // and the unit word rides Intl's vocabulary rather than a table here.
+  return new Intl.NumberFormat(INTL_LOCALE[locale], {
+    style: "unit",
+    unit: "megabyte",
+    unitDisplay: "short",
+    maximumFractionDigits: Number.isInteger(mb) ? 0 : 1,
+  }).format(mb);
 }

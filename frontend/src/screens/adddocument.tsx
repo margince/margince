@@ -20,7 +20,8 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { foldForMatch } from "../format/collate";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type AttachmentParent, uploadAttachment } from "./attachmentupload";
 import { problemMessageOf, throwProblem } from "./common";
@@ -190,7 +191,7 @@ async function walkAccountDeals(
   for (let page = 0; page < DEAL_SEARCH_PAGES; page += 1) {
     const answered = await fetchPage(cursor);
     for (const deal of answered.data) {
-      if (deal.name.toLocaleLowerCase().includes(needle)) {
+      if (foldForMatch(deal.name).includes(needle)) {
         matches.push({ id: deal.id, name: deal.name });
       }
     }
@@ -218,6 +219,7 @@ export function AddDocumentDialog({
   onClose: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const titleId = useId();
   const queryClient = useQueryClient();
 
@@ -245,7 +247,9 @@ export function AddDocumentDialog({
   // What this installation accepts, so an oversize file is refused here rather
   // than after every byte of it has crossed the wire.
   const maxUploadBytes = useMaxUploadBytes();
-  const limitLabel = maxUploadBytes ? formatUploadLimit(maxUploadBytes) : "";
+  const limitLabel = maxUploadBytes
+    ? formatUploadLimit(maxUploadBytes, locale)
+    : "";
 
   // One page of the account's deals, read through the query cache so a second
   // search re-uses what the first walked. Keyed by the CURSOR, because that is
@@ -284,7 +288,7 @@ export function AddDocumentDialog({
   // clear the list under them.
   const searchDeals = useCallback(
     (query: string) =>
-      walkAccountDeals(fetchDealPage, query.trim().toLocaleLowerCase()),
+      walkAccountDeals(fetchDealPage, foldForMatch(query.trim())),
     [fetchDealPage],
   );
 

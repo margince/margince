@@ -51,11 +51,13 @@ import { Select } from "../design-system/select";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { type Toast, ToastRegion, useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
+import { forReader, stable } from "../format/collate";
 import {
   formatDate,
   formatDuration,
   formatMoney,
   formatMoneyOrAbsent,
+  formatNumber,
 } from "../format/format";
 import { idleSince } from "../format/idlebase";
 import { toMajorUnits, toMinorUnits } from "../format/minorunits";
@@ -1998,7 +2000,9 @@ export function DealsScreen({
       <>
         {dealsQuery.data && (
           <p className="t-caption">
-            {t("board.count", { count: loadedDeals.length })}
+            {t("board.count", {
+              count: formatNumber(loadedDeals.length, locale),
+            })}
           </p>
         )}
         <QueryGate query={pipelinesQuery}>
@@ -2420,11 +2424,12 @@ function DealTable({
         return (a.amount_minor ?? 0) - (b.amount_minor ?? 0);
       }
       if (sortKey === "close") {
-        return (a.expected_close_date ?? "").localeCompare(
-          b.expected_close_date ?? "",
-        );
+        // ISO dates: `stable` sorts them chronologically and identically for
+        // everyone, which is what a date column is asked for.
+        return stable(a.expected_close_date ?? "", b.expected_close_date ?? "");
       }
-      return a.name.localeCompare(b.name);
+      // A deal's name, in a column a person reads as an alphabet — theirs.
+      return forReader(a.name, b.name, locale);
     };
     const rows = [...deals];
     rows.sort((a, b) => {
@@ -2432,7 +2437,7 @@ function DealTable({
       return descending ? -compare : compare;
     });
     return rows;
-  }, [deals, sortKey, descending, sortable]);
+  }, [deals, sortKey, descending, sortable, locale]);
 
   const sortBy = (key: typeof sortKey) => {
     if (key === sortKey) {

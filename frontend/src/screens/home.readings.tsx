@@ -3,7 +3,8 @@
 
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 
 // The day's readings, on one plate. The record pages read theirs the same way,
 // which is the point: a strip is read ACROSS as one comparison, and four
@@ -37,6 +38,7 @@ export function HomeReadingsStrip({
   quiet,
 }: HomeReadings) {
   const t = useT();
+  const { locale } = useLocale();
   // Nothing to compare is nothing to draw. With every reading unread the strip
   // rendered as an empty bordered plate — a card claiming a row of figures it
   // does not have, and now with a card's shadow under it.
@@ -66,7 +68,7 @@ export function HomeReadingsStrip({
                   decisions.expiringToday === 1
                     ? "home.readings.expiring.one"
                     : "home.readings.expiring.other",
-                  { count: decisions.expiringToday },
+                  { count: formatNumber(decisions.expiringToday, locale) },
                 )
               : t("home.readings.expiringNone")
           }
@@ -81,7 +83,7 @@ export function HomeReadingsStrip({
             open.currencies === 1
               ? "home.readings.currencies.one"
               : "home.readings.currencies.other",
-            { count: open.currencies },
+            { count: formatNumber(open.currencies, locale) },
           )}
         />
       )}
@@ -93,7 +95,9 @@ export function HomeReadingsStrip({
           detail={
             ranked.topPct === null
               ? t("home.readings.noRun")
-              : t("home.readings.topScore", { pct: ranked.topPct })
+              : t("home.readings.topScore", {
+                  pct: formatNumber(ranked.topPct, locale),
+                })
           }
         />
       )}

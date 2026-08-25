@@ -5,7 +5,8 @@ import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { useRoster } from "./entityref";
 import { leadWriteKeys } from "./leadkeys";
@@ -57,6 +58,7 @@ export function LeadBulkBar({
   onDone: (outcomes: readonly BulkOutcome[], action: BulkAction) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [ownerId, setOwnerId] = useState("");
   const roster = useRoster("user", true);
@@ -177,7 +179,7 @@ export function LeadBulkBar({
   return (
     <>
       <span className="t-caption">
-        {t("lead.bulkSelected", { count: leads.length })}
+        {t("lead.bulkSelected", { count: formatNumber(leads.length, locale) })}
       </span>
       <Select
         aria-label={t("lead.bulkOwner")}
@@ -224,7 +226,9 @@ export function LeadBulkBar({
       </Button>
       {failed.length > 0 && (
         <span className="t-caption" style={{ color: "var(--danger)" }}>
-          {t("lead.bulkFailed", { count: failed.length })}{" "}
+          {t("lead.bulkFailed", {
+            count: formatNumber(failed.length, locale),
+          })}{" "}
           {failed.map((o) => `${o.name}: ${o.error}`).join(" · ")}
         </span>
       )}

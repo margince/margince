@@ -14,6 +14,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Eyebrow } from "../design-system/eyebrow";
 import { StatStrip } from "../design-system/statstrip";
+import { stable } from "../format/collate";
 import { formatMoneyOrAbsent, MONEY_ABSENT } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -118,7 +119,7 @@ function byCurrency(
     bands.set(currency, [...(bands.get(currency) ?? []), row]);
   }
   return [...bands.entries()].sort(([left], [right]) =>
-    (left ?? "").localeCompare(right ?? ""),
+    stable(left ?? "", right ?? ""),
   );
 }
 
@@ -408,7 +409,7 @@ export function buildStageAggregates(
     .sort(
       (left, right) =>
         left.stagePosition - right.stagePosition ||
-        (left.currency ?? "").localeCompare(right.currency ?? ""),
+        stable(left.currency ?? "", right.currency ?? ""),
     );
 }
 

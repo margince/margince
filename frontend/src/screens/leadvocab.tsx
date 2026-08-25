@@ -10,7 +10,8 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import {
@@ -178,6 +179,7 @@ function LeadSourceRow({
   onRemove: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const count = source.lead_count ?? 0;
   const builtIn = source.system === true;
   // Built-ins and in-use sources deactivate instead: the server answers 409
@@ -207,7 +209,7 @@ function LeadSourceRow({
         }))}
       />
       <span className="t-caption lead-vocab-count">
-        {t("leadSources.leadCount", { count })}
+        {t("leadSources.leadCount", { count: formatNumber(count, locale) })}
       </span>
       <span className="lead-vocab-flags">
         {builtIn && <Badge>{t("leadSources.builtIn")}</Badge>}
@@ -229,7 +231,9 @@ function LeadSourceRow({
               title={
                 builtIn
                   ? t("leadSources.builtInKept")
-                  : t("leadSources.inUse", { count })
+                  : t("leadSources.inUse", {
+                      count: formatNumber(count, locale),
+                    })
               }
             >
               {t("leadSources.deactivateInstead")}
@@ -336,6 +340,7 @@ function AddSourceDialog({
 
 export function LeadSourcesCard() {
   const t = useT();
+  const { locale } = useLocale();
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
   const canRemove = useCanWrite("custom_field", "delete");
@@ -425,7 +430,7 @@ export function LeadSourcesCard() {
                       </span>
                       <span className="t-caption lead-vocab-count">
                         {t("leadSources.leadCount", {
-                          count: found.lead_count,
+                          count: formatNumber(found.lead_count, locale),
                         })}
                       </span>
                       <span className="lead-vocab-flags">
@@ -565,6 +570,7 @@ function useReasonMutations() {
 
 export function LeadDisqualifyReasonsCard() {
   const t = useT();
+  const { locale } = useLocale();
   const canCreate = useCanWrite("custom_field", "create");
   const canEdit = useCanWrite("custom_field", "update");
   const canRemove = useCanWrite("custom_field", "delete");
@@ -615,7 +621,9 @@ export function LeadDisqualifyReasonsCard() {
                             }
                           />
                           <span className="t-caption lead-vocab-count">
-                            {t("leadReasons.leadCount", { count })}
+                            {t("leadReasons.leadCount", {
+                              count: formatNumber(count, locale),
+                            })}
                           </span>
                           <span className="lead-vocab-flags">
                             {builtIn && (
@@ -647,7 +655,9 @@ export function LeadDisqualifyReasonsCard() {
                                   title={
                                     builtIn
                                       ? t("leadSources.builtInKept")
-                                      : t("leadReasons.inUse", { count })
+                                      : t("leadReasons.inUse", {
+                                          count: formatNumber(count, locale),
+                                        })
                                   }
                                 >
                                   {t("leadSources.deactivateInstead")}

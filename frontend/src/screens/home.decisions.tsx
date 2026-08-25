@@ -27,10 +27,10 @@ import {
 } from "../design-system/decisiondeck";
 import type { SectionState } from "../design-system/surfacestate";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { formatCountdown } from "../format/now";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { approvalKindLabel } from "./approvalkind";
 import {
@@ -61,12 +61,12 @@ function approvalsOf(item: DecisionDeckItem): readonly Approval[] {
 // than shared with the Decisions row for the same reason `deckLabels` is: what a
 // countdown is CALLED belongs to the screen showing it, and the deck's own
 // vocabulary is already divergent ("Later" is a verdict only it offers).
-function statusLabels(
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
-): DecisionStatusLabels {
+function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
   return {
     expiresIn: (msRemaining) =>
-      t("inbox.expiresIn", { countdown: formatCountdown(msRemaining, t) }),
+      t("inbox.expiresIn", {
+        countdown: formatCountdown(msRemaining, t, locale),
+      }),
     approved: t("inbox.status.approved"),
     rejected: t("inbox.status.rejected"),
     expired: t("inbox.status.expired"),
@@ -75,7 +75,7 @@ function statusLabels(
 
 /** The deck's vocabulary, in this surface's own words. */
 function deckLabels(
-  t: (key: MessageKey, params?: Record<string, string | number>) => string,
+  t: (key: MessageKey, params?: Record<string, string>) => string,
   locale: Parameters<typeof formatDateTime>[1],
 ): DecisionDeckLabels {
   const card: DecisionCardLabels = {
@@ -101,18 +101,18 @@ function deckLabels(
     keys: t("home.deck.keys"),
     behind: (count) =>
       t(count === 1 ? "home.deck.behind.one" : "home.deck.behind.other", {
-        count,
+        count: formatNumber(count, locale),
       }),
     staged: (count) =>
       t(count === 1 ? "home.deck.staged.one" : "home.deck.staged.other", {
-        count,
+        count: formatNumber(count, locale),
       }),
     commit: t("home.deck.commit"),
     unstage: t("home.deck.unstage"),
     clearedTitle: t("home.deck.clearedTitle"),
     cleared: (count) =>
       t(count === 1 ? "home.deck.cleared.one" : "home.deck.cleared.other", {
-        count,
+        count: formatNumber(count, locale),
       }),
     clearedTime: (atMs) =>
       t("home.deck.clearedTime", {
@@ -120,9 +120,9 @@ function deckLabels(
       }),
     empty: t("home.deck.empty"),
     bundleSummary: (members) =>
-      t("home.deck.bundleSummary", { count: members }),
+      t("home.deck.bundleSummary", { count: formatNumber(members, locale) }),
     bundleMembers: (members) =>
-      t("home.deck.bundleMembers", { count: members }),
+      t("home.deck.bundleMembers", { count: formatNumber(members, locale) }),
   };
 }
 
@@ -378,7 +378,7 @@ export function DecisionsSection({
                 approval={approval}
                 decided={false}
                 now={nowMs}
-                labels={statusLabels(t)}
+                labels={statusLabels(t, locale)}
               />
             </>
           ),

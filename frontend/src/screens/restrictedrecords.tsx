@@ -16,7 +16,7 @@ import { CardBoundary } from "../design-system/cardboundary";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -263,7 +263,7 @@ export function RestrictedRecordsCard() {
         (row.redacted_fields ?? []).length === 0
           ? t("restricted.nothingRedacted")
           : t("restricted.redactedCount", {
-              count: (row.redacted_fields ?? []).length,
+              count: formatNumber((row.redacted_fields ?? []).length, locale),
             }),
     },
   ];

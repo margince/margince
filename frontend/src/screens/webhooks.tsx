@@ -24,9 +24,9 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";
 import {
@@ -544,7 +544,7 @@ function deliveryResolvedAt(delivery: WebhookDelivery): string | null {
 }
 
 function deliveryColumns(
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string,
+  t: Translator,
   locale: ReturnType<typeof useLocale>["locale"],
   subscriptionId: string,
   canReplay: boolean,
@@ -678,7 +678,7 @@ function DeliveriesBody({
   subscriptionId: string;
   canReplay: boolean;
   locale: ReturnType<typeof useLocale>["locale"];
-  t: (key: MessageKey, vars?: Record<string, string | number>) => string;
+  t: Translator;
   loadMoreQuery: {
     hasNextPage: boolean;
     isFetchingNextPage: boolean;
@@ -701,13 +701,13 @@ function DeliveriesBody({
         >
           <SectionHeader
             title={t("webhooks.deliveries.deadLetterGroup", {
-              count: deadLettered.length,
+              count: formatNumber(deadLettered.length, locale),
             })}
             level={3}
           />
           <DataTable
             label={t("webhooks.deliveries.deadLetterGroup", {
-              count: deadLettered.length,
+              count: formatNumber(deadLettered.length, locale),
             })}
             columns={columns}
             rows={deadLettered}

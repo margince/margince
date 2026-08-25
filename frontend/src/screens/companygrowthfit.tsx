@@ -7,7 +7,7 @@ import { Badge, Button, EmptyState, PendingBody } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Meter } from "../design-system/readings";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
@@ -195,6 +195,7 @@ export function GrowthFitPanel({
  */
 function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
   const t = useT();
+  const { locale } = useLocale();
   const { present, expected } = fit.data_completeness;
   return (
     <>
@@ -208,7 +209,10 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
           {/* Both counts, always. A proportion without its denominator is not a
               completeness figure. */}
           <span className="co-growth-fit-completeness">
-            {t("co.growthFit.completeness", { present, expected })}
+            {t("co.growthFit.completeness", {
+              present: formatNumber(present, locale),
+              expected: formatNumber(expected, locale),
+            })}
           </span>
         </p>
         {/* The cap and the next step qualify the BAND, so they stay in its

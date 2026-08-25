@@ -9,7 +9,7 @@ import { navigate } from "../app/router";
 import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { ProvenanceTag } from "../design-system/trust";
-import { formatDateAbbrev } from "../format/format";
+import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
@@ -894,7 +894,7 @@ export function CompanyIdentityLine({
                 wayIn.contact_count === 1
                   ? "co.pulse.strengthTail.one"
                   : "co.pulse.strengthTail.other",
-                { count: wayIn.contact_count },
+                { count: formatNumber(wayIn.contact_count, locale) },
               )}
             </span>
           </>
