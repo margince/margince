@@ -93,6 +93,7 @@ const CANONICAL_ORDER = [
   "Leads",
   "Duplicates",
   "Filters & views",
+  "Today",
   "Pipeline",
   "Projects",
   "Tasks",
@@ -145,7 +146,7 @@ function railDisplay(container: HTMLElement, selector: string): string {
 }
 
 describe("WorkspaceRail (AC-shell-1/2)", () => {
-  it("renders the canonical 12 items in order, logomark → home", () => {
+  it("renders the canonical 13 items in order, logomark → home", () => {
     render(<WorkspaceRail route={{ screen: "deals" }} />);
     const brand = within(
       screen.getByRole("navigation", { name: "Primary navigation" }),

@@ -1,0 +1,89 @@
+/*
+ * Today — the day's one surface.
+ *
+ * Three stacked lanes with the same rhythm, so a reader learns the page once
+ * and then reads it by shape rather than by label. Every value here is a token:
+ * the surface has no colours of its own, which is what lets it be correct in
+ * both themes without a second set of rules.
+ */
+
+.today {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* The lead line carries the whole day in one sentence, so it is the largest
+ * type on the page and the only thing above the lanes. */
+.today-lead {
+  color: var(--textPrimary);
+  margin: 0 0 var(--space-2);
+  text-wrap: balance;
+}
+
+/* A withheld lane is said out loud, in the warn family rather than the danger
+ * one: nothing is broken, the reader is simply not being shown everything. */
+.today-withheld {
+  color: var(--warn);
+  margin: 0 0 var(--space-3);
+}
+
+.today-lane-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* A row is a headline with its supporting line, and the verbs pushed to the
+ * far edge so every button on the page sits on one vertical line — the reader's
+ * hand learns where to go once. */
+.today-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.today-row-text {
+  min-width: 0;
+}
+
+.today-row-title {
+  color: var(--textPrimary);
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.today-row-detail {
+  color: var(--textSecondary);
+  margin: var(--space-1) 0 0;
+}
+
+.today-row-verbs {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+}
+
+.today-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--textSecondary);
+  margin: 0;
+}
+
+/* On a phone the verbs drop under the text rather than squeezing the headline
+ * into a column two words wide. */
+@media (max-width: 640px) {
+  .today-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .today-row-verbs {
+    width: 100%;
+    justify-content: flex-end;
+  }
+}

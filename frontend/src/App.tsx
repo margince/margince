@@ -243,6 +243,11 @@ const TasksScreen = lazy(
     import("./screens/tasks").then((m) => ({ default: m.TasksScreen })),
   ),
 );
+const TodayScreen = lazy(
+  routed(() =>
+    import("./screens/today").then((m) => ({ default: m.TodayScreen })),
+  ),
+);
 
 // safeDecode tolerates malformed percent-encoding (e.g. a stray "%2" from a
 // hand-edited hash route): decodeURIComponent throws a URIError on bad
@@ -431,6 +436,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     leads: ({ id }) => (id ? <LeadScreen id={id} /> : <LeadsScreen />),
     deals: ({ id, id2 }) => <DealsRoute id={id} id2={id2} />,
     projects: ({ id }) => (id ? <ProjectScreen id={id} /> : <ProjectsScreen />),
+    today: () => <TodayScreen />,
     tasks: () => <TasksScreen />,
     inbox: () => <InboxScreen />,
     reports: () => <ReportsScreen />,
