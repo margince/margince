@@ -37,7 +37,7 @@ import (
 // element, which is this repo's convention for every package a gate targets. A
 // package whose name differs from its directory would need its own spelling.
 func References(file *ast.File, importPath, symbol string) bool {
-	qualifier, dotImported := importedAs(file, importPath)
+	qualifier, dotImported := ImportedAs(file, importPath)
 	inPackage := file.Name != nil && file.Name.Name == path.Base(importPath)
 	if qualifier == "" && !dotImported && !inPackage {
 		return false
@@ -73,10 +73,15 @@ func reachesSymbol(n ast.Node, qualifier, symbol string, bare bool) bool {
 	return false
 }
 
-// importedAs returns the identifier this file binds importPath to, and whether
+// ImportedAs returns the identifier this file binds importPath to, and whether
 // it was dot-imported. Both are empty/false when the file does not import it at
 // all, which is the cheap way to skip most of a tree.
-func importedAs(file *ast.File, importPath string) (qualifier string, dotImported bool) {
+//
+// Exported because a gate that must LOCATE calls, rather than merely ask whether
+// a file makes any, needs the same answer References needs: the qualifier is the
+// caller's choice, and a gate that assumes the canonical spelling stops seeing a
+// file that aliases the import.
+func ImportedAs(file *ast.File, importPath string) (qualifier string, dotImported bool) {
 	for _, spec := range file.Imports {
 		imported, err := strconv.Unquote(spec.Path.Value)
 		if err != nil || imported != importPath {

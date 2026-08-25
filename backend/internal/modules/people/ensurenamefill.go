@@ -48,12 +48,26 @@ func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 	// while its columns say Lars Jankowfsky is a fill that reported success and
 	// changed nothing a human can see — the defect this predicate closes.
 	// A full_name a person typed is longer or different, and is left alone.
-	// The sub-select in RETURNING reads the row's pre-update snapshot, so the
-	// one statement hands back both what full_name was and what it now is. Read
-	// separately afterwards it would name whatever the NEXT writer had put
-	// there, and the audit row would describe two transactions as one.
-	var previousFullName, fullName string
-	err := tx.QueryRow(ctx, `
+	//
+	// The row is LOCKED before it is read, so the value recorded as the before
+	// is the same one the CASE re-evaluates against. Read without the lock — as
+	// a sub-select in RETURNING — a human editing full_name between the two
+	// leaves this write recording their value as the after of a change it never
+	// made, which plants a machine claim on the field human precedence is
+	// arbitrated by.
+	var previousFullName string
+	err := tx.QueryRow(ctx,
+		`SELECT full_name FROM person WHERE id = $1 FOR UPDATE`, personID).Scan(&previousFullName)
+	// No row means the person is gone — erasure deletes it — so there is no
+	// name left to complete.
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return fmt.Errorf("people: reading the name person %s carries: %w", personID, err)
+	}
+	var fullName string
+	err = tx.QueryRow(ctx, `
 		UPDATE person
 		   SET first_name = $2,
 		       last_name  = $3,
@@ -62,8 +76,8 @@ func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID
 		       updated_at = now()
 		 WHERE id = $1
 		   AND first_name IS NULL AND last_name IS NULL
-		RETURNING (SELECT prior.full_name FROM person prior WHERE prior.id = $1), full_name`,
-		personID, parsed.First, parsed.Last, parsed.Full).Scan(&previousFullName, &fullName)
+		RETURNING full_name`,
+		personID, parsed.First, parsed.Last, parsed.Full).Scan(&fullName)
 	// No row is the guard doing its job, not a failure: the row already
 	// carried a name, and it is not this call's to replace.
 	if errors.Is(err, pgx.ErrNoRows) {

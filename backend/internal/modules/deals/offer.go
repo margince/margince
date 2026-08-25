@@ -219,6 +219,18 @@ func offerTotalsImage(f OfferFigures) map[string]any {
 	return map[string]any{"net_minor": f.NetMinor, "tax_minor": f.TaxMinor, "gross_minor": f.GrossMinor}
 }
 
+// lineFieldEvidence is what a line write contributes as context ABOUT the
+// offer update it causes: which line moved, and what that line's own fields
+// held on either side. It is evidence and never an image, because a key in
+// an offer's before/after is projected as a field OF THE OFFER — a line's
+// description landing there reads as the offer growing a description it
+// never had.
+//
+//craft:ignore naked-any a line image carries whatever SQL types its columns hold, exactly as the audit seam takes them
+func lineFieldEvidence(lineID ids.UUID, was, now map[string]any) map[string]any {
+	return map[string]any{"line_id": lineID, "line_before": was, "line_after": now}
+}
+
 // recomputeOfferTotals re-derives net/tax/gross from the offer's live
 // lines through the totals engine — the ONE writer of the stored totals,
 // called inside every transaction that touches a line. Only accepted

@@ -58,10 +58,12 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 	sourceRef := "activity:" + sourceActivity.String()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var appliedFields []string
-		// The person's own columns, as this pass found them and as it left
-		// them. Only a field with a column behind it appears: the rest live in
-		// person_profile_field, and naming them here would put a change on the
-		// record's history that the record does not carry.
+		// Every field this pass landed, as it found it and as it left it —
+		// keyed by the field name, whether it is a column of the person or a
+		// row of person_profile_field. The site and search fills record the
+		// sidecar fields the same way, and a field that projected as a change
+		// from one writer and as nothing from another would give one field two
+		// histories.
 		before, after := map[string]any{}, map[string]any{}
 		for _, f := range fields {
 			verdict, err := s.applySignatureField(ctx, tx, personID, sourceRef, f)
@@ -74,14 +76,13 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 			}
 			res.Applied++
 			appliedFields = append(appliedFields, f.Name)
-			if verdict.column != "" {
-				// Fill-only-empty: each column write carries its own IS NULL
-				// predicate, so a column this pass filled is one that held
-				// nothing. The image states that rather than leaving a reader
-				// to re-derive it from the statement.
-				before[verdict.column] = nil
-				after[verdict.column] = verdict.value
-			}
+			// Fill-only-empty: the evidence row lands on ON CONFLICT DO
+			// NOTHING and each column write carries its own emptiness
+			// predicate, so a field this pass filled is one that held nothing.
+			// The image states that rather than leaving a reader to re-derive
+			// it from the statement.
+			before[f.Name] = nil
+			after[f.Name] = verdict.value
 		}
 		if len(appliedFields) == 0 {
 			return nil
@@ -146,11 +147,10 @@ func readSignatureValue(f SignatureField) (string, bool) {
 }
 
 // signatureVerdict is what one gated field did to the record: whether it landed
-// at all, and the person COLUMN it filled when it filled one. A field that lands
-// only in the sidecar has no column, so the two are separate answers.
+// at all, and the value it landed — which is the value the audit image carries,
+// normalized, rather than the string the signature spelled.
 type signatureVerdict struct {
 	applied bool
-	column  string
 	value   string
 }
 
@@ -170,7 +170,7 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 		return signatureVerdict{}, err
 	}
 
-	verdict := signatureVerdict{applied: true}
+	verdict := signatureVerdict{applied: true, value: value}
 	switch f.Name {
 	case "title":
 		// Fill-only-empty: the NULL predicate is the CAS — an occupied
@@ -193,7 +193,6 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 			// applied — withdraw it and count the field skipped.
 			return signatureVerdict{}, revokeSignatureEvidence(ctx, tx, personID, f.Name)
 		}
-		verdict.column, verdict.value = "title", value
 	case "phone":
 		// A first phone only — a person with any live phone row keeps it.
 		tag, err := tx.Exec(ctx, `
@@ -208,9 +207,6 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 		if tag.RowsAffected() == 0 {
 			return signatureVerdict{}, revokeSignatureEvidence(ctx, tx, personID, f.Name)
 		}
-		// A phone is a person_phone ROW, not a column on the person, so it has
-		// no place in the record's column images; the applied-field list in
-		// evidence is where this write says it landed one.
 	}
 	// role / linkedin / org_name live only in the sidecar: no record column
 	// to fill, and org_name in particular must never touch an organization.

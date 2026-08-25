@@ -23,8 +23,10 @@ package backendarch
 // is the authority — an H2 walk cannot resolve a call reached through an
 // interface, a stored field, or a closure, nor an action argument built at
 // runtime (privacy/retentionactions.go passes a verb read from a database row).
-// The gate keeps the chokepoint the only door; the chokepoint catches what the
-// gate cannot see.
+// The gate censuses the direct writers of audit_log too, because the chokepoint
+// binds only what goes through it: the approvals module sends its own INSERT for
+// its own row. Between them, the gate says who writes the table and the
+// chokepoint says what a door will accept.
 //
 // Only `update` is judged. `archive` sites also pass an absent before-image and
 // are deliberately left alone: un-archiving is not a before-image replay but
@@ -153,9 +155,21 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/privacy/retentionactions.go:apply": "the verb is a column of the policy row being applied, read at run time; retention_policy_action_check admits only archive, anonymize and erase, so this site cannot reach update at all",
 })
 
+// directAuditLogWriters: files that send their own INSERT into audit_log rather
+// than calling a door. Every rule this gate and the chokepoint hold is built on
+// the doors, so a direct writer is outside both — and one nobody ratified is a
+// second spelling of the write nobody noticed.
+//
+// storekit itself is absent on purpose: it IS the doors, and its own statement
+// is what they reach.
+var directAuditLogWriters = gatekit.Waive(map[string]string{
+	"internal/modules/approvals/service.go": "the approval row's own lifecycle, which is not a record whose fields move: the statement writes no before or after column at all, so there is no image for the door's rule to be about",
+})
+
 func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 	defer eventShapedUpdates.AssertAllMatched(t)
 	defer unresolvableAuditActions.AssertAllMatched(t)
+	defer directAuditLogWriters.AssertAllMatched(t)
 
 	files := gatekit.Scope{
 		Roots:   []string{"internal"},
@@ -169,8 +183,17 @@ func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 
 	constantsByPackage := packageConstants(files)
 
-	var withBefore, eventShaped, unresolvable int
+	var withBefore, eventShaped, unresolvable, direct int
 	for _, parsed := range files {
+		if writesAuditLogDirectly(parsed.File) && !strings.Contains(parsed.Path, "/storekit/") {
+			direct++
+			if !directAuditLogWriters.Waived(t, filepath.Dir(parsed.Path)+"/"+filepath.Base(parsed.Path)) {
+				t.Errorf("%s writes audit_log with its own statement, so neither this gate's rule nor "+
+					"storekit's refusal reaches it.\n"+
+					"\tCall a door, or ratify the file in directAuditLogWriters with what its rows are.",
+					parsed.Path)
+			}
+		}
 		consts := constantsByPackage[filepath.Dir(parsed.Path)]
 		for _, site := range auditSitesIn(parsed) {
 			switch action, known := site.action(consts); {
@@ -209,10 +232,10 @@ func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
 	// Three counts, because the walk has three ways to fail short and one total
 	// would hide which. Each floor sits BELOW the real number, so a scan that
 	// stopped working fails instead of quietly finding nothing.
-	if withBefore < 80 || eventShaped+unresolvable < 15 {
-		t.Errorf("resolved %d image-carrying, %d occurrence-shaped and %d runtime-verb audit site(s) — "+
-			"one of the ways of finding a call has stopped working",
-			withBefore, eventShaped, unresolvable)
+	if withBefore < 80 || eventShaped+unresolvable < 15 || direct < 1 {
+		t.Errorf("resolved %d image-carrying, %d occurrence-shaped and %d runtime-verb audit site(s), "+
+			"and %d direct writer(s) of the table — one of the ways of finding a write has stopped working",
+			withBefore, eventShaped, unresolvable, direct)
 	}
 }
 
@@ -263,15 +286,25 @@ func resolveString(expr ast.Expr, consts map[string]string) (string, bool) {
 	}
 }
 
+// storekitPath is the package whose doors this gate judges. Named once, because
+// the subject predicate, the qualifier resolution and the direct-INSERT sweep
+// all have to mean the same package.
+const storekitPath = "github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+
 // fileReachesAnAuditDoor is the Scope subject, asked identically inside the
-// roots and outside them.
+// roots and outside them: a file that calls a door, or that writes audit_log
+// with its own statement.
 func fileReachesAnAuditDoor(path string, file *ast.File) bool {
 	if strings.HasSuffix(path, "_test.go") {
 		return false
 	}
+	if writesAuditLogDirectly(file) {
+		return true
+	}
+	qualifier := auditDoorQualifier(file)
 	found := false
 	ast.Inspect(file, func(n ast.Node) bool {
-		if _, isDoor := auditDoorAt(n); isDoor {
+		if _, isDoor := auditDoorAt(n, qualifier); isDoor {
 			found = true
 		}
 		return !found
@@ -279,7 +312,48 @@ func fileReachesAnAuditDoor(path string, file *ast.File) bool {
 	return found
 }
 
+// auditDoorQualifier is the name THIS file reaches storekit by. A gate that
+// assumed the canonical spelling would stop seeing a file that aliases the
+// import, and would report nothing rather than fail — the way a census fails
+// short. Empty means the file cannot reach the doors at all.
+func auditDoorQualifier(file *ast.File) string {
+	if file.Name != nil && file.Name.Name == "storekit" {
+		return ""
+	}
+	qualifier, dotImported := gatekit.ImportedAs(file, storekitPath)
+	if dotImported {
+		// A dot-import leaves the door bare. No file in this tree does it, and
+		// the gate would silently stop judging one that did.
+		return "."
+	}
+	return qualifier
+}
+
+// writesAuditLogDirectly reports whether a file sends its own INSERT into
+// audit_log. The doors are a chokepoint only for callers that use them, and a
+// module writing the table itself is outside every check built on them.
+func writesAuditLogDirectly(file *ast.File) bool {
+	found := false
+	ast.Inspect(file, func(n ast.Node) bool {
+		if found {
+			return false
+		}
+		if text, ok := gatekit.LiteralText(asExpr(n)); ok &&
+			strings.Contains(strings.ToUpper(text), "INSERT INTO AUDIT_LOG") {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+func asExpr(n ast.Node) ast.Expr {
+	expr, _ := n.(ast.Expr)
+	return expr
+}
+
 func auditSitesIn(parsed gatekit.ParsedFile) []auditSite {
+	qualifier := auditDoorQualifier(parsed.File)
 	var sites []auditSite
 	for _, decl := range parsed.File.Decls {
 		fn, isFunc := decl.(*ast.FuncDecl)
@@ -291,7 +365,7 @@ func auditSitesIn(parsed gatekit.ParsedFile) []auditSite {
 			if !isCall {
 				return true
 			}
-			door, isDoor := auditDoorAt(call.Fun)
+			door, isDoor := auditDoorAt(call.Fun, qualifier)
 			if !isDoor {
 				return true
 			}
@@ -308,13 +382,13 @@ func auditSitesIn(parsed gatekit.ParsedFile) []auditSite {
 }
 
 // auditDoorAt names the door a node calls, if it calls one.
-func auditDoorAt(n ast.Node) (string, bool) {
+func auditDoorAt(n ast.Node, qualifier string) (string, bool) {
 	selector, isSelector := n.(*ast.SelectorExpr)
 	if !isSelector {
 		return "", false
 	}
 	pkg, isIdent := selector.X.(*ast.Ident)
-	if !isIdent || pkg.Name != "storekit" {
+	if !isIdent || qualifier == "" || pkg.Name != qualifier {
 		return "", false
 	}
 	if _, isDoor := auditDoorsWithBeforeImage[selector.Sel.Name]; !isDoor {

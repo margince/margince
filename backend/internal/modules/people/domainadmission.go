@@ -18,9 +18,9 @@ package people
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -102,16 +102,21 @@ func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reaso
 	}
 	var stored BlockedDomain
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// The before-image is read first, because "who unblocked this, and what
-		// was it before" is the question this surface exists to answer. Without
-		// it admission_source says "human" but never WHICH human, and
-		// admission_at is overwritten on every change.
-		before, decided, err := beforeAdmissionImage(ctx, tx, base)
+		// The decision this write replaces comes back FROM the write, because
+		// "who unblocked this, and what was it before" is the question this
+		// surface exists to answer. Without it admission_source says "human"
+		// but never WHICH human, and admission_at is overwritten on every
+		// change.
+		before, applied, err := setDomainAdmissionTx(ctx, tx, base, admission, reason, AdmissionSourceHuman)
 		if err != nil {
 			return err
 		}
-		if err := setDomainAdmissionTx(ctx, tx, base, admission, reason, AdmissionSourceHuman); err != nil {
-			return err
+		if !applied {
+			// The sticky rule refuses a MACHINE overwrite of a human decision,
+			// and this path always writes as the human — so a decision that did
+			// not land means the row was never replaced, and the audit row below
+			// would describe a change the table does not carry.
+			return fmt.Errorf("people: the admission of %s was not recorded", base)
 		}
 		if admission == DomainAdmitted {
 			// Unblocking has to RE-ASK, not merely clear a flag. The domain was
@@ -142,7 +147,7 @@ func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reaso
 		// A first decision replaces nothing: there was no admission, no reason
 		// and nobody answerable for one. A later decision moved all three, and
 		// says what they were — which is the question this surface exists for.
-		if !decided {
+		if before == nil {
 			_, auditErr := storekit.AuditEvent(ctx, tx, "update", entityOrganization, stored.ID, after)
 			return auditErr
 		}
@@ -158,8 +163,30 @@ func (s *Store) SetDomainAdmission(ctx context.Context, domain, admission, reaso
 // setDomainAdmissionTx is SetDomainAdmission on the caller's transaction, for
 // the verdict engine, which must record the refusal in the same commit as the
 // verdict that concluded it.
-func setDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain, admission, reason, source string) error {
-	if _, err := tx.Exec(ctx, `
+//
+// It answers the decision it REPLACED — nil when the domain carried none — and
+// whether the sticky rule let this write through at all.
+//
+// The prior decision is read by the upsert ITSELF, in a CTE, under a lock on
+// the domain. The image decides which audit door the caller takes, so a second
+// decision committing between a separate read and this write would leave one
+// row claiming there was nothing before. The CTE alone does not close that: under
+// READ COMMITTED the ON CONFLICT re-check resolves against a row committed after
+// the CTE's snapshot was taken, so the lock is what makes the snapshot the same
+// answer the upsert acts on.
+func setDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain, admission, reason, source string) (map[string]any, bool, error) {
+	if err := lockDomainAdmissionTx(ctx, tx, domain); err != nil {
+		return nil, false, err
+	}
+	// A domain nobody has decided about carries a row with a NULL admission —
+	// the triage opens one on first contact — so the image is built from the
+	// admission itself rather than from the row's existence.
+	var priorJSON []byte
+	err := tx.QueryRow(ctx, `
+		WITH was AS (
+		  SELECT admission, admission_reason, admission_source
+		    FROM organization_domain_disposition WHERE domain = $1
+		)
 		INSERT INTO organization_domain_disposition (domain, status, admission, admission_reason, admission_source, admission_at)
 		VALUES (
 		        $1, $2, $3, $4, $5, now())
@@ -184,12 +211,39 @@ func setDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain, admission, rea
 		 -- must survive is the authority behind the row rather than which way
 		 -- it happened to point.
 		 WHERE organization_domain_disposition.admission_source IS DISTINCT FROM $6
-		    OR EXCLUDED.admission_source = $6`,
-		domain, DomainPending, admission, reason, source, AdmissionSourceHuman); err != nil {
-		return fmt.Errorf("people: recording the admission of %s: %w", domain, err)
+		    OR EXCLUDED.admission_source = $6
+		RETURNING (SELECT jsonb_build_object(
+		             'admission', was.admission,
+		             'admission_reason', coalesce(was.admission_reason, ''),
+		             'admission_source', coalesce(was.admission_source, ''))
+		             FROM was WHERE was.admission IS NOT NULL)`,
+		domain, DomainPending, admission, reason, source, AdmissionSourceHuman).Scan(&priorJSON)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		// The sticky rule declined this write: a machine may not overwrite a
+		// human's decision. Nothing moved, so there is no prior state to name.
+		return nil, false, nil
+	case err != nil:
+		return nil, false, fmt.Errorf("people: recording the admission of %s: %w", domain, err)
+	case priorJSON == nil:
+		return nil, true, nil
 	}
-	return nil
+	var prior map[string]any
+	if err := json.Unmarshal(priorJSON, &prior); err != nil {
+		return nil, false, fmt.Errorf("people: reading the decision %s carried before: %w", domain, err)
+	}
+	return prior, true, nil
 }
+
+// lockDomainAdmissionTx serializes every writer of one domain's admission, so
+// the decision a write replaces is read under the same lock that replaces it.
+func lockDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain string) error {
+	return storekit.LockWriteIdentity(ctx, tx, admissionWriteIdentity, domain)
+}
+
+// admissionWriteIdentity names the write identity a domain's admission
+// decisions serialize on.
+const admissionWriteIdentity = "domain_admission"
 
 // SuppressBulkSenderDomainTx refuses a domain a company because its mail was
 // judged bulk or automated, on the caller's transaction so the refusal commits
@@ -213,7 +267,11 @@ func (s *Store) SuppressBulkSenderDomainTx(ctx context.Context, tx pgx.Tx, domai
 	if consumerMail.IsConsumer(base) {
 		return nil
 	}
-	return setDomainAdmissionTx(ctx, tx, base, DomainSuppressed, reason, AdmissionSourceVerdict)
+	// The sticky rule may decline this write, which is the point of it: a
+	// human's decision stands. The verdict engine records its own conclusion
+	// either way, so which happened is not this caller's to report.
+	_, _, err = setDomainAdmissionTx(ctx, tx, base, DomainSuppressed, reason, AdmissionSourceVerdict)
+	return err
 }
 
 // reopenWithheldDispositionTx puts a withheld domain back in the sweep's path.
@@ -266,6 +324,11 @@ func admitClaimedDomainTx(ctx context.Context, tx pgx.Tx, domain string) error {
 	if !claimedByHuman(ctx) {
 		return nil
 	}
+	// The same lock the decision writer takes: this rewrites the admission a
+	// concurrent decision is reading as its before-image.
+	if err := lockDomainAdmissionTx(ctx, tx, base); err != nil {
+		return err
+	}
 	if _, err := tx.Exec(ctx, `
 		UPDATE organization_domain_disposition
 		   SET admission = $2, admission_source = $3, admission_at = now(),
@@ -276,94 +339,6 @@ func admitClaimedDomainTx(ctx context.Context, tx pgx.Tx, domain string) error {
 		return fmt.Errorf("people: admitting the claimed domain %s: %w", base, err)
 	}
 	return nil
-}
-
-// BlockedDomain is one domain's standing admission decision, as the admin list
-// shows it.
-type BlockedDomain struct {
-	// ID is the disposition row, which the audit trail names. Not on the wire:
-	// the domain is what an operator identifies a decision by.
-	ID             ids.UUID
-	Domain         string
-	Admission      string
-	Reason         string
-	Source         string
-	DecidedAt      time.Time
-	OrganizationID *ids.OrganizationID
-}
-
-// ListDomainAdmissions returns every domain carrying a decision, newest first —
-// the refusals the system made and the ones a human overrode.
-//
-// Read-gated rather than write-gated: every role may SEE why a company is
-// missing, while only admin/ops may change it. An operator who cannot find out
-// that a domain was refused has no way to know the CRM is not simply empty.
-func (s *Store) ListDomainAdmissions(ctx context.Context, limit int) ([]BlockedDomain, int, error) {
-	if err := auth.Require(ctx, entityOrganization, principal.ActionRead); err != nil {
-		return nil, 0, err
-	}
-	var out []BlockedDomain
-	var total int
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `
-			SELECT count(*) FROM organization_domain_disposition
-			 WHERE admission IS NOT NULL`).Scan(&total); err != nil {
-			return fmt.Errorf("people: counting domain admissions: %w", err)
-		}
-		rows, err := tx.Query(ctx, `
-			SELECT id, domain, admission, COALESCE(admission_reason, ''),
-			       COALESCE(admission_source, ''), admission_at, organization_id
-			  FROM organization_domain_disposition
-			 WHERE admission IS NOT NULL
-			 ORDER BY admission_at DESC
-			 LIMIT $1`, limit)
-		if err != nil {
-			return fmt.Errorf("people: listing domain admissions: %w", err)
-		}
-		// Collected BEFORE any per-row visibility query: the rows cursor holds
-		// the connection, and a second query on the same transaction while it
-		// is open answers "conn busy".
-		var orgIDs []*ids.UUID
-		for rows.Next() {
-			var d BlockedDomain
-			var orgID *ids.UUID
-			if err := rows.Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &orgID); err != nil {
-				rows.Close()
-				return fmt.Errorf("people: reading a domain admission: %w", err)
-			}
-			out = append(out, d)
-			orgIDs = append(orgIDs, orgID)
-		}
-		rows.Close()
-		if err := rows.Err(); err != nil {
-			return fmt.Errorf("people: listing domain admissions: %w", err)
-		}
-		for i, orgID := range orgIDs {
-			if orgID == nil {
-				continue
-			}
-			// The company id is withheld unless the caller could read that
-			// company. An organization captured from mail is owner-PRIVATE
-			// until a human promotes it, and that privacy does not yield to
-			// row_scope=all — so returning the id here would hand every
-			// colleague a pointer to a record the record's own endpoint
-			// correctly 404s. Same rule, and same VisibleTo check, as the
-			// duplicate-domain refusal in organization_domains.go.
-			visible, verr := auth.VisibleTo(ctx, tx, entityOrganization, *orgID)
-			if verr != nil {
-				return verr
-			}
-			if visible {
-				typed := ids.From[ids.OrganizationKind](*orgID)
-				out[i].OrganizationID = &typed
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		return nil, 0, err
-	}
-	return out, total, nil
 }
 
 // reopenAdmittedDomainTx puts a just-admitted domain back in the triage sweep's
@@ -397,30 +372,6 @@ func reopenAdmittedDomainTx(ctx context.Context, tx pgx.Tx, domain string, owner
 		return fmt.Errorf("people: re-opening the company question for %s: %w", domain, err)
 	}
 	return nil
-}
-
-// beforeAdmissionImage is the decision this write is about to replace, or nil
-// when the domain carried none.
-//
-// A domain nobody has decided about is the ordinary case and answers nil. Any
-// OTHER failure is returned, because the alternative is an audit row that says
-// "there was nothing before" for a change that overwrote something — a false
-// record of the one thing this image exists to prove.
-func beforeAdmissionImage(ctx context.Context, tx pgx.Tx, domain string) (image map[string]any, decided bool, err error) {
-	var admission, reason, source string
-	err = tx.QueryRow(ctx, `
-		SELECT COALESCE(admission, ''), COALESCE(admission_reason, ''), COALESCE(admission_source, '')
-		  FROM organization_domain_disposition WHERE domain = $1`, domain).
-		Scan(&admission, &reason, &source)
-	switch {
-	case errors.Is(err, pgx.ErrNoRows), err == nil && admission == "":
-		return nil, false, nil
-	case err != nil:
-		return nil, false, fmt.Errorf("people: reading the decision %s carried before: %w", domain, err)
-	}
-	return map[string]any{
-		"admission": admission, "admission_reason": reason, "admission_source": source,
-	}, true, nil
 }
 
 // readDomainAdmissionTx reads back what was actually stored, which is not what

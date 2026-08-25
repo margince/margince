@@ -116,14 +116,22 @@ func (s *OwnDomainStore) Add(ctx context.Context, raw string) (OwnDomain, error)
 	}
 	var out OwnDomain
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// Serialize this domain's registration before the row is read. The
+		// prior state chooses which audit door this write takes, and the CTE
+		// below does NOT close that window on its own: under READ COMMITTED the
+		// ON CONFLICT re-check resolves against a row a mailbox sync committed
+		// after the CTE's snapshot was taken, so the two would disagree and the
+		// row would claim there was nothing before. Every writer of the table
+		// takes it — the sync's seed and the removal as well as this.
+		if err := lockOwnDomain(ctx, tx, domain); err != nil {
+			return err
+		}
 		// The prior state, so the trail distinguishes "an admin registered a new
 		// domain" from "an admin confirmed a candidate a mailbox had seen".
 		//
 		// Read by the upsert itself, in a CTE: the statement that replaces the
-		// row is the only thing that can say what it replaced. A separate SELECT
-		// before it would be a different look at the table, and a concurrent
-		// registration committing in between would leave this row claiming there
-		// was nothing before — which is the very distinction it exists to draw.
+		// row is the only thing that can say what it replaced, and under the
+		// lock its snapshot is the same state the upsert acts on.
 		var priorSource *string
 		var priorVerified *bool
 		if err := tx.QueryRow(ctx, `
@@ -183,6 +191,12 @@ func (s *OwnDomainStore) Remove(ctx context.Context, raw string) error {
 		return nil
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The same lock the registration takes: a removal committing while a
+		// registration reads the prior state would leave that row naming a
+		// candidate the list no longer held.
+		if err := lockOwnDomain(ctx, tx, domain); err != nil {
+			return err
+		}
 		// The domain IS the key now (ADR-0091 §8 phase D): one installation, one
 		// list, and the unique index the insert above conflicts on says the same.
 		tag, err := tx.Exec(ctx,
@@ -202,6 +216,16 @@ func (s *OwnDomainStore) Remove(ctx context.Context, raw string) error {
 		return err
 	})
 }
+
+// lockOwnDomain serializes every writer of one own-domain entry, so the state
+// a registration replaces is read under the same lock that replaces it.
+func lockOwnDomain(ctx context.Context, tx pgx.Tx, domain string) error {
+	return storekit.LockWriteIdentity(ctx, tx, ownDomainWriteIdentity, domain)
+}
+
+// ownDomainWriteIdentity names the write identity an own-domain entry's writers
+// serialize on.
+const ownDomainWriteIdentity = "workspace_email_domain"
 
 // ValidOwnDomain vets a domain and returns its stored form.
 //
