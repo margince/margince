@@ -81,6 +81,8 @@ export const de = {
     "Nichts wartet auf dich — die Nacht hat {count} zum Anfangen herausgesucht.",
   "day.lead.ranOvernight":
     "Nichts wartet auf dich. Das ist über Nacht gelaufen.",
+  "day.lead.clearOfWhatWasRead":
+    "In den Bahnen auf dieser Seite wartet nichts.",
   "day.lead.clear": "Dein Tag ist frei.",
   "day.lead.partial":
     "Ein Teil deines Tages ist für dein Konto nicht sichtbar.",

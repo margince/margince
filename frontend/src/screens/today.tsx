@@ -99,6 +99,14 @@ function leadLine(
   if (day.done_for_you && day.done_for_you.length > 0) {
     return t("day.lead.ranOvernight");
   }
+  // "Clear" is the ONE line an absent lane can falsify, so it is the one that
+  // checks. Every branch above states something this page measured; "clear"
+  // states that nothing was found ANYWHERE, and a feed that never read the
+  // claims has not looked where promises live. The weaker line says only what
+  // is true — nothing is waiting among the lanes this page did read.
+  if (day.counts.commitments === undefined) {
+    return t("day.lead.clearOfWhatWasRead");
+  }
   return t("day.lead.clear");
 }
 

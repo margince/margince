@@ -90,6 +90,8 @@ export const vi = {
     "Không có gì chờ bạn — đêm qua đã chọn ra {count} việc để bắt đầu.",
   "day.lead.ranOvernight":
     "Không có gì cần bạn. Đây là những gì đã chạy qua đêm.",
+  "day.lead.clearOfWhatWasRead":
+    "Không có gì đang chờ trong các mục trên trang này.",
   "day.lead.clear": "Ngày của bạn không có gì.",
   "day.lead.partial": "Một phần ngày của bạn bị ẩn với tài khoản của bạn.",
   "day.lane.withheld": "Bị ẩn với tài khoản của bạn.",

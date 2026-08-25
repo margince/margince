@@ -13076,7 +13076,7 @@ type AttentionLanesOmitted string
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
 type AttentionCounts struct {
-	// Commitments Promises this rep made that are due by the end of today and still open.
+	// Commitments How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.

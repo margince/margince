@@ -84,6 +84,8 @@ export const en = {
   "day.lead.morningOnly":
     "Nothing waiting on you — the night picked out {count} to start with.",
   "day.lead.ranOvernight": "Nothing needs you. Here is what ran overnight.",
+  "day.lead.clearOfWhatWasRead":
+    "Nothing is waiting in the lanes on this page.",
   "day.lead.clear": "Your day is clear.",
   "day.lead.partial": "Part of your day is hidden from your account.",
   "day.lane.withheld": "Hidden from your account.",

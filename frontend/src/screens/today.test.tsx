@@ -455,6 +455,18 @@ describe("what the night left on the worklist", () => {
       screen.queryByText(/found nothing worth your first hour/),
     ).toBeNull();
   });
+  // An installation whose feed reads no claims sends NO commitments lane and no
+  // count — a different fact from "the rep owes nobody anything". Reading the
+  // absent count as zero would answer "your day is clear" for a page that never
+  // looked where promises live, which is the reassuring half of a question
+  // nobody asked.
+  it("does not call a day clear when nothing read the promises", async () => {
+    stub(emptyDay);
+    renderToday();
+
+    await screen.findByText("Nothing is waiting in the lanes on this page.");
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+  });
   // The same defect, one lane later, and caught the same way: the lead line
   // read "Your day is clear" directly above an OVERDUE promise. It repeats
   // because every new lane has to be added to a summary written before it, so
