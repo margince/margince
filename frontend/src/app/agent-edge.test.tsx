@@ -63,17 +63,20 @@ describe("the agent edge", () => {
     const mark = edge(container);
 
     expect(mark).not.toBeNull();
-    expect(mark?.hasAttribute("data-reading")).toBe(false);
+    expect(container.querySelector("canvas")).toBeNull();
     expect(mark?.hasAttribute("data-waiting")).toBe(false);
   });
 
-  it("marks reading, and stops marking it when the work stops", () => {
+  it("lights on reading, and goes dark again when the work stops", () => {
+    // The lit edge mounting IS the reading, so there is no attribute to check:
+    // an element that only exists while work is in flight cannot fall out of
+    // step with the fact it reports.
     const { container } = render(<AgentEdge />);
     act(() => publishAgentEdge({ reading: true, waiting: false }));
-    expect(edge(container)?.hasAttribute("data-reading")).toBe(true);
+    expect(container.querySelector("canvas")).not.toBeNull();
 
     act(() => publishAgentEdge({ reading: false, waiting: false }));
-    expect(edge(container)?.hasAttribute("data-reading")).toBe(false);
+    expect(container.querySelector("canvas")).toBeNull();
   });
 
   it("marks waiting without marking work, since nothing is in flight", () => {
@@ -84,22 +87,32 @@ describe("the agent edge", () => {
     act(() => publishAgentEdge({ reading: false, waiting: true }));
 
     expect(edge(container)?.hasAttribute("data-waiting")).toBe(true);
-    expect(edge(container)?.hasAttribute("data-reading")).toBe(false);
+    expect(container.querySelector("canvas")).toBeNull();
   });
 
   it("draws the lit edge only while the agent is reading", () => {
-    // A turning gradient and a blurred copy of it: cheap to composite, not free
-    // to have. A dark edge has nothing to say, so an idle screen must not be
-    // paying for it, and neither must a screen only waiting on an approval.
+    // A full-window fragment shader: cheap per frame, not free to have. A dark
+    // edge has nothing to say, so an idle screen must not be paying for it, and
+    // neither must a screen that is only waiting on an approval.
     const { container } = render(<AgentEdge />);
-    expect(container.querySelector(".agentedge-lit")).toBeNull();
+    expect(container.querySelector("canvas")).toBeNull();
 
     act(() => publishAgentEdge({ reading: true, waiting: false }));
-    expect(container.querySelector(".agentedge-ring")).not.toBeNull();
-    expect(container.querySelector(".agentedge-bloom")).not.toBeNull();
+    expect(container.querySelector("canvas")).not.toBeNull();
 
     act(() => publishAgentEdge({ reading: false, waiting: true }));
-    expect(container.querySelector(".agentedge-lit")).toBeNull();
+    expect(container.querySelector("canvas")).toBeNull();
+  });
+
+  it("wears the static rim where the shader cannot run", () => {
+    // jsdom answers `getContext("webgl2")` with null, which is the same answer a
+    // locked-down browser and a refused compile give. The edge still has to say
+    // the agent is working, so the fallback is a plain lit rim rather than
+    // nothing: a decoration that vanishes takes a reading with it.
+    const { container } = render(<AgentEdge />);
+    act(() => publishAgentEdge({ reading: true, waiting: false }));
+
+    expect(container.querySelector(".agentedge-still")).not.toBeNull();
   });
 
   it("takes no pointer and is hidden from a screen reader", () => {
@@ -118,8 +131,8 @@ describe("the agent edge", () => {
     const second = render(<AgentEdge />);
     act(() => publishAgentEdge({ reading: true, waiting: false }));
 
-    expect(edge(first.container)?.hasAttribute("data-reading")).toBe(true);
-    expect(edge(second.container)?.hasAttribute("data-reading")).toBe(true);
+    expect(first.container.querySelector("canvas")).not.toBeNull();
+    expect(second.container.querySelector("canvas")).not.toBeNull();
   });
 
   it("stops hearing the signal once it is gone", () => {

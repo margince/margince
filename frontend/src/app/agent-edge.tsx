@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useEffect, useRef, useState } from "react";
+import { usePrefersReducedMotion } from "../design-system/motion";
+import { createEdgeRenderer, type EdgeHues, readHue } from "./agent-edge-gl";
 import { useAgentEdge } from "./agent-edge-signal";
 import "./agent-edge.css";
 
@@ -17,9 +20,9 @@ import "./agent-edge.css";
  * the periphery of the whole window is where it shows, and it shows two separate
  * things:
  *
- * - **Reading.** The window's edge lights, and colour travels round it while work
- *   is in flight. It is the only thing here that moves, and it stops when the
- *   work does, so movement always means something is actually happening.
+ * - **Reading.** Waves travel the window's rim while work is in flight, with the
+ *   colour drifting inside them. It is the only thing here that moves, and it
+ *   stops when the work does, so movement always means something is happening.
  * - **Waiting.** Something is staged and needs a person. The margin closes into a
  *   complete contour and holds perfectly still. Stillness is the signal: a thing
  *   that cannot proceed should not look busy. It dissolves when the queue does.
@@ -36,8 +39,7 @@ export function AgentEdge() {
     <div
       className="agentedge"
       // Present or absent rather than "true"/"false": a CSS attribute selector
-      // matches on presence, and `data-reading="false"` would light the margin.
-      data-reading={reading ? "" : undefined}
+      // matches on presence, and `data-waiting="false"` would draw the contour.
       data-waiting={waiting ? "" : undefined}
       aria-hidden="true"
     >
@@ -47,133 +49,125 @@ export function AgentEdge() {
   );
 }
 
+/** Thirty a second. The waves are slow and the shader is the most expensive thing
+ *  on the surface; at a display's own rate this is the same picture drawn twice. */
+const FRAME_MS = 1000 / 30;
+
+/** How long the light takes to arrive and to leave, in seconds. Nothing here
+ *  appears or cuts: an edge that snapped on would read as a fault. */
+const FADE = 0.45;
+
 /**
- * The lit edge: drifting bodies of light, clipped to the window's rim.
+ * The lit edge.
  *
- * The light is BEHIND the edge and the edge is a window onto it. What changed
- * here, after several attempts that read as mechanical, is what the light is made
- * of and how it moves.
+ * A shader, and the third technique this surface has worn. The two before it were
+ * a masked band carrying moving gradients, then that band warped by an SVG
+ * turbulence filter. Both failed the same two tests, and for reasons no amount of
+ * tuning could reach:
  *
- * The whole rim is lit at once, by a gradient that does not move, so no side of
- * the window is ever waiting its turn. One soft arc travels over the top of that,
- * which is a swell passing through a lit edge rather than a light touring a dark
- * one: the difference is whether the frame is dark where the arc is not.
+ * - **The crests could not travel.** A gradient inside a band slides across the
+ *   window rather than along the edge, and a turbulence field cannot be slid along
+ *   a perimeter without popping when its loop comes round. Here the wave's phase
+ *   is a function of distance ALONG the rim, so travelling is what it does.
+ * - **It could not be smooth AND cheap.** Displacement moves whole pixels, so the
+ *   rim came out notched, and hiding that took blurs on both sides of the
+ *   displacement. Together with fifteen animated blurred elements that was enough
+ *   full-viewport filtering to make a fullscreen window stutter. The rim's edge is
+ *   now one `smoothstep` per fragment: smooth at any size, and one draw call.
  *
- * On top of that even light, five bodies vary it IN PLACE. Each drifts a few
- * percent of the window, no further, and swells on its own period; none of the
- * periods are related. Where two of them overlap the rim brightens, as they part it
- * dims, and because none of them goes anywhere the undulation happens everywhere
- * at once rather than sweeping past.
- *
- * The rim itself is warped as well, by the turbulence filter below, and that is
- * the other half of it: the bodies make the LIGHT undulate, the displacement makes
- * the EDGE undulate. Neither alone billows.
- *
- * The filter sits on the wrapper rather than on the rims. A filter applies to an
- * element before its own mask clips it, so displacing a rim directly warps the
- * light inside a dead-straight band; displacing the wrapper warps what the
- * children already cut.
+ * The whole thing is unmounted when the agent is not reading, so a quiet screen
+ * pays nothing at all.
  */
 function LitEdge() {
-  return (
-    <div className="agentedge-lit">
-      {/* Deepest first: the spill, which is the light the frame throws onto the
-          page. It is the one layer not clipped to a rim, and it is what makes the
-          rim look like a light rather than a coloured line. */}
-      <span className="agentedge-spill">
-        <Field />
-      </span>
-      {/* Then the near glow, then the crisp rim on top of its own light. Each
-          carries its own copy of the field: one field clipped at three widths
-          would be three rims of the same brightness rather than a falloff. */}
-      <span className="agentedge-bloom">
-        <Field />
-      </span>
-      <span className="agentedge-ring">
-        <Field />
-      </span>
-      {/* The pulse: one soft arc that DOES travel the perimeter, over the top of
-          the light that does not. On its own a travelling arc leaves the rest of
-          the frame dark until it comes round; over an already-lit rim it reads as
-          a swell passing through, which is the one kind of going-around motion
-          worth having here. */}
-      <span className="agentedge-pulse">
-        <span className="agentedge-sweep" />
-      </span>
-      <WabernFilter />
-    </div>
-  );
-}
+  const canvas = useRef<HTMLCanvasElement>(null);
+  const [live, setLive] = useState(false);
+  const reduced = usePrefersReducedMotion();
 
-/**
- * Five bodies of light, sized and coloured in the stylesheet.
- *
- * Five and not three: with too few, the gaps between them are long enough that a
- * stretch of rim goes dark for seconds at a time, which reads as flickering rather
- * than as billowing.
- */
-function Field() {
-  return (
-    <span className="agentedge-field">
-      <span className="agentedge-body agentedge-body-1" />
-      <span className="agentedge-body agentedge-body-2" />
-      <span className="agentedge-body agentedge-body-3" />
-      <span className="agentedge-body agentedge-body-4" />
-      <span className="agentedge-body agentedge-body-5" />
-    </span>
-  );
-}
+  useEffect(() => {
+    const element = canvas.current;
+    if (!element) {
+      return;
+    }
+    // The hues are read once per mount rather than per frame: a theme change
+    // remounts this (the signal clears on unmount), and `getComputedStyle` is a
+    // layout read that has no business in a draw loop.
+    const hues: EdgeHues = [
+      readHue("--teal"),
+      readHue("--orbJade"),
+      readHue("--orbMint"),
+      readHue("--orbLime"),
+      readHue("--orbAmber"),
+    ];
+    const renderer = createEdgeRenderer(element, hues);
+    setLive(renderer !== null);
+    if (!renderer) {
+      return;
+    }
 
-/**
- * The warp, and the reason the edge undulates rather than merely brightening.
- *
- * `feTurbulence` builds a smooth noise field and `feDisplacementMap` pushes every
- * pixel it is handed by what it finds there. What it is handed is the finished
- * rim, so the rim thickens in one stretch and thins in the next.
- *
- * The field itself drifts, slowly, on a long period. Displacing by a STILL field
- * gives a fixed set of curves for the light to slide through, which reads as
- * frosted glass rather than as anything moving.
- *
- * `scale` is capped by the bleed in agent-edge.css: displace further than the band
- * hangs past the viewport and the warp pulls the rim off the screen edge, which
- * shows up as gaps along a side.
- */
-function WabernFilter() {
+    let handle = 0;
+    let drawnAt = 0;
+    let born = 0;
+    let stopped = false;
+
+    const measure = () => {
+      renderer.resize(
+        window.innerWidth,
+        window.innerHeight,
+        window.devicePixelRatio || 1,
+      );
+    };
+
+    const tick = (now: number) => {
+      handle = requestAnimationFrame(tick);
+      if (born === 0) {
+        born = now;
+      }
+      if (now - drawnAt < FRAME_MS) {
+        return;
+      }
+      drawnAt = now;
+      const age = (now - born) / 1000;
+      // Reduced motion keeps the light and gives up the travel: the waves hold
+      // the shape they arrived in, which still says the agent is working.
+      renderer.draw({
+        time: reduced ? 0 : age,
+        level: Math.min(age / FADE, 1),
+      });
+    };
+
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.documentElement);
+    handle = requestAnimationFrame(tick);
+
+    // A context lost to a GPU reset is not recoverable in place: the program and
+    // the buffer are gone with it. Stopping AND reporting, because reporting
+    // alone would leave the loop drawing into a context that no longer exists.
+    const onLost = (event: Event) => {
+      event.preventDefault();
+      stopped = true;
+      cancelAnimationFrame(handle);
+      setLive(false);
+    };
+    element.addEventListener("webglcontextlost", onLost);
+
+    return () => {
+      element.removeEventListener("webglcontextlost", onLost);
+      observer.disconnect();
+      if (!stopped) {
+        cancelAnimationFrame(handle);
+      }
+      renderer.dispose();
+    };
+  }, [reduced]);
+
   return (
-    <svg className="agentedge-defs" aria-hidden="true">
-      <filter
-        id="agentedgewabern"
-        // Room to displace into: at the default filter region the outermost
-        // pixels have nowhere to move and the crests flatten against its edge.
-        x="-10%"
-        y="-10%"
-        width="120%"
-        height="120%"
-        colorInterpolationFilters="sRGB"
-      >
-        <feTurbulence
-          type="fractalNoise"
-          baseFrequency="0.0035 0.011"
-          numOctaves={2}
-          seed={9}
-          result="field"
-        >
-          <animate
-            attributeName="baseFrequency"
-            dur="19s"
-            values="0.0035 0.011;0.006 0.016;0.003 0.008;0.0035 0.011"
-            repeatCount="indefinite"
-          />
-        </feTurbulence>
-        <feDisplacementMap
-          in="SourceGraphic"
-          in2="field"
-          scale={9}
-          xChannelSelector="R"
-          yChannelSelector="G"
-        />
-      </filter>
-    </svg>
+    <canvas
+      ref={canvas}
+      // The static rim is what a host without WebGL2 wears. It carries no waves,
+      // which is honest: the fallback says the agent is working without claiming
+      // to show how.
+      className={live ? "agentedge-canvas" : "agentedge-canvas agentedge-still"}
+    />
   );
 }
