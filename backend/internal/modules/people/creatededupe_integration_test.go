@@ -444,11 +444,14 @@ func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
 		{"untrimmed", "Ada Lindqvist", "  Ada Lindqvist  "},
 		{"accents", "Renée Bär", "Renee Bar"},
 		{"sharp s", "Anna Straße", "Anna Strasse"},
-		{"apostrophe", "Sean O'Brien", "Sean OBrien"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// The table IS the claim that Go calls these equal, so a pair that
+			// stops being equal is the finding — not a row that quietly excuses
+			// itself and leaves the lane untested in the direction that matters.
 			if normalizeName(tc.incumbent) != normalizeName(tc.second) {
-				t.Skipf("normalizeName does not call these equal, so the lane owes nothing: %q vs %q",
+				t.Fatalf("normalizeName no longer calls %q and %q equal, so this row "+
+					"tests nothing: either the fold changed or the pair never belonged here",
 					tc.incumbent, tc.second)
 			}
 			e := setupDedupe(t)
