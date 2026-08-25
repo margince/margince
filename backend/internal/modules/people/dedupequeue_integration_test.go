@@ -707,3 +707,71 @@ func TestDedupeMergeArmKeepsItsOwnRefusal(t *testing.T) {
 		t.Fatalf("winner outside the pair = %v, want DedupeInputError", err)
 	}
 }
+
+// OpenCandidatesNaming answers a create's own question — "did I just get filed
+// against something?" — and it must answer it under the SAME visibility rule
+// the paged queue applies, not a looser one.
+//
+// The rule is that a pair surfaces only when BOTH sides are visible to the
+// caller, because the evidence snapshot quotes both records: naming a pair is a
+// read of them. A narrow read that skipped it would let a caller learn that a
+// record it may not see exists, and learn its id, by creating something that
+// collides with it — a disclosure through a write, which is the shape nobody
+// goes looking for.
+//
+// This also holds the placeholder arithmetic honest. The visibility clause
+// numbers its own parameters by appending to the arg slice, and this query
+// starts that slice at a different length than the paged one does. An off-by-one
+// there binds the wrong value rather than failing, and the symptom is exactly
+// the disclosure above.
+func TestOpenCandidatesNamingHidesAPairOutsideTheCallersRowScope(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	_, right := seedPersonPair(ctx, t, e, "Nam Owner", "nam@scope.test", "Namm Owner", "namm@scope.test", "scope.test")
+
+	// Capture-private to e.rep, the one state that still narrows a person read.
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `UPDATE person SET owner_id = $1, visibility = 'owner'`, e.rep)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	stranger, err := e.store.OpenCandidatesNaming(e.asOwnScoped(ids.NewV7()), entityPerson, right)
+	if err != nil {
+		t.Fatalf("an out-of-scope read must answer empty, not fail: %v", err)
+	}
+	if len(stranger) != 0 {
+		t.Fatalf("an own-scoped stranger is told about %d candidates naming a record it cannot see, want 0", len(stranger))
+	}
+
+	// And the owner is still told, or the check above passes for the wrong
+	// reason — a query that answers nobody hides nothing.
+	owner, err := e.store.OpenCandidatesNaming(ctx, entityPerson, right)
+	if err != nil {
+		t.Fatalf("the owner's read: %v", err)
+	}
+	if len(owner) != 1 {
+		t.Fatalf("the owner is told about %d candidates, want 1", len(owner))
+	}
+	if owner[0].LeftID != right && owner[0].RightID != right {
+		t.Errorf("the candidate names {%s, %s}, neither of which is the record asked about, %s",
+			owner[0].LeftID, owner[0].RightID, right)
+	}
+}
+
+// A record type with no dedupe queue is entitled to ask and be told nothing,
+// rather than to fail. create_record serves seven record types and only three
+// have a queue at all, so a refusal here would turn every deal create into an
+// error.
+func TestOpenCandidatesNamingIsSilentForARecordTypeWithNoQueue(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	rows, err := e.store.OpenCandidatesNaming(ctx, "deal", ids.NewV7())
+	if err != nil {
+		t.Fatalf("a record type with no queue must answer empty, not fail: %v", err)
+	}
+	if len(rows) != 0 {
+		t.Fatalf("got %d candidates for a type that has no queue, want 0", len(rows))
+	}
+}

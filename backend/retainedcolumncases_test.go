@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+//gate:kind falsification H1
+
 package backendarch
 
 // The retained-column check, driven with SYNTHETIC statements rather than the

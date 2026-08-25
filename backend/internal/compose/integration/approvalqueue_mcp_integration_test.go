@@ -350,3 +350,162 @@ func TestAnAgentRelinksToAPersonWithoutAskingAndStillStagesAProject(t *testing.T
 		}
 	})
 }
+
+// A create that files a duplicate for review SAYS SO, in the answer the caller
+// already reads.
+//
+// The defect this closes was not a missing guard — the guard fired. Asked to
+// create a person who already existed, the ladder filed the pair at confidence
+// 1.000 on a shared phone, and create_record answered with the record and
+// nothing else. The assistant driving it therefore told its user "the guard is
+// email-only", which was false, and argued for building a safeguard that was
+// already working.
+//
+// Both channels are asserted here because each carries what the other cannot: a
+// model reads the WARNING without being asked, and acts on the DATA — the other
+// record's id, which no sentence should make it parse out of prose.
+func TestACreateThatFilesADuplicateSaysSoInItsAnswer(t *testing.T) {
+	q := setupQueue(t)
+	invoke := q.invoker(t, q.mintPassport(t, "duplicate reporter", "read", "write"))
+
+	const shared = "+4930900000731"
+	first := answered[struct {
+		ID string `json:"id"`
+	}](t, mustInvoke(t, invoke, "create_record",
+		`{"record_type":"person","fields":{"full_name":"Rosa Lindqvist",`+
+			`"phones":[{"phone":"`+shared+`","phone_type":"mobile","is_primary":true}]}}`))
+
+	// The same human's second business card: one number in common, a different
+	// address, and no reason for the server to refuse — two people really can
+	// share a switchboard.
+	out := mustInvoke(t, invoke, "create_record",
+		`{"record_type":"person","fields":{"full_name":"Rosa Lindqvist",`+
+			`"emails":[{"email":"rosa@privat.test","email_type":"personal","is_primary":true}],`+
+			`"phones":[{"phone":"`+shared+`","phone_type":"work","is_primary":true}]}}`)
+
+	var envelope struct {
+		Trust    string `json:"trust"`
+		Evidence []struct {
+			RecordType string `json:"record_type"`
+			RecordID   string `json:"record_id"`
+		} `json:"evidence"`
+		Warnings []struct {
+			Code    string `json:"code"`
+			Message string `json:"message"`
+		} `json:"warnings"`
+		Data struct {
+			ID         string `json:"id"`
+			Duplicates []struct {
+				OtherRecordID string  `json:"other_record_id"`
+				Confidence    float64 `json:"confidence"`
+				Evidence      []struct {
+					Field  string `json:"field"`
+					Left   string `json:"left_value"`
+					Right  string `json:"right_value"`
+					Signal string `json:"signal"`
+				} `json:"evidence"`
+			} `json:"duplicate_candidates"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(out), &envelope); err != nil {
+		t.Fatalf("decoding the create answer: %v", err)
+	}
+
+	if envelope.Data.ID == first.ID {
+		t.Fatal("the second create returned the first record's id — a duplicate report must not become a merge")
+	}
+	if len(envelope.Data.Duplicates) != 1 {
+		t.Fatalf("the answer names %d duplicate candidates, want 1 — the pair was filed and the caller was not told",
+			len(envelope.Data.Duplicates))
+	}
+	dup := envelope.Data.Duplicates[0]
+	if dup.OtherRecordID != first.ID {
+		t.Errorf("the candidate names %s, want the record already here, %s", dup.OtherRecordID, first.ID)
+	}
+	// The evidence is what a caller reads out before offering a merge, so it has
+	// to name the axis and carry the values the matcher actually compared.
+	if len(dup.Evidence) == 0 {
+		t.Fatal("the candidate carries no evidence, so a caller has nothing to show a person")
+	}
+	if dup.Evidence[0].Field != "phone" || dup.Evidence[0].Left != shared {
+		t.Errorf("evidence = %+v, want the shared number %s on the phone axis", dup.Evidence[0], shared)
+	}
+
+	// And the sentence a model reads without being asked.
+	var warned bool
+	for _, w := range envelope.Warnings {
+		if w.Code == agents.CodeDuplicateFiled {
+			warned = true
+		}
+	}
+	if !warned {
+		t.Errorf("no %s warning on the answer, so a model summarising this call would report a clean create: %+v",
+			agents.CodeDuplicateFiled, envelope.Warnings)
+	}
+
+	// The disclosed record is CITED. Naming a record to an agent is handing it
+	// over, and this surface charges the read bound for that — a create that
+	// names five other records for the price of the one it wrote would be the
+	// cheapest read here, and repeating it walks the workspace for free.
+	var cited bool
+	for _, e := range envelope.Evidence {
+		if e.RecordID == first.ID {
+			cited = true
+		}
+	}
+	if !cited {
+		t.Errorf("the disclosed record %s is not in the answer's evidence, so it was handed over uncharged: %+v",
+			first.ID, envelope.Evidence)
+	}
+
+	// And the answer is labelled for what it carries. The evidence QUOTES the
+	// other record — a number, a name — and this call never read that row's
+	// provenance, so it cannot claim the tier of the record it just wrote.
+	if envelope.Trust != "t2" {
+		t.Errorf("trust = %q, want t2: the answer carries values off a record whose provenance it did not read",
+			envelope.Trust)
+	}
+}
+
+// The other half, and the one that keeps the report honest: a create that
+// collided with nothing says nothing. A surface that warned on every create
+// would be a surface nobody reads the warnings of.
+func TestACleanCreateCarriesNoDuplicateReport(t *testing.T) {
+	q := setupQueue(t)
+	invoke := q.invoker(t, q.mintPassport(t, "clean creator", "read", "write"))
+
+	out := mustInvoke(t, invoke, "create_record",
+		`{"record_type":"person","fields":{"full_name":"Ingeborg Sandvik",`+
+			`"emails":[{"email":"ingeborg@sandvik.test","email_type":"work","is_primary":true}]}}`)
+
+	var envelope struct {
+		Warnings []struct {
+			Code string `json:"code"`
+		} `json:"warnings"`
+		Data struct {
+			Duplicates []json.RawMessage `json:"duplicate_candidates"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal([]byte(out), &envelope); err != nil {
+		t.Fatalf("decoding the create answer: %v", err)
+	}
+	if len(envelope.Data.Duplicates) != 0 {
+		t.Errorf("a create that met nobody named %d duplicates", len(envelope.Data.Duplicates))
+	}
+	for _, w := range envelope.Warnings {
+		if w.Code == agents.CodeDuplicateFiled || w.Code == agents.CodeDuplicateCheckFailed {
+			t.Errorf("a clean create warned %q", w.Code)
+		}
+	}
+}
+
+// mustInvoke is one tool call that has to succeed, so a test reads as the
+// sequence it is about rather than as error handling between the steps.
+func mustInvoke(t *testing.T, invoke func(tool, args string) (string, error), tool, args string) string {
+	t.Helper()
+	out, err := invoke(tool, args)
+	if err != nil {
+		t.Fatalf("%s → %v", tool, err)
+	}
+	return out
+}

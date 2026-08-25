@@ -416,3 +416,65 @@ func TestANameNobodySharesLeavesTheQueueEmpty(t *testing.T) {
 			"a lane that queues everything is a queue nobody works", len(pairs))
 	}
 }
+
+// THE INVARIANT THE NAME LANE RESTS ON: any pair normalizeName calls equal must
+// reach the equality test, which means the SQL candidate query has to admit it.
+//
+// Those are two different normalizations. SQL folds with lower + unaccent;
+// normalizeName does Unicode FULL case folding, strips combining marks, and
+// TRIMS. namesim.go says outright they need not agree rune for rune, and that
+// was fine while SQL only narrowed a candidate set for a score — a row it missed
+// was never going to win. It is not fine for a lane that decides on equality: a
+// prefilter that is merely approximate can hide a row that would have been
+// exactly equal, and the lane then misses the duplicate it exists to catch,
+// quietly, in the direction of doing nothing.
+//
+// The untrimmed pair below is a real divergence and not a hypothetical one: Go
+// calls "  Ada Lindqvist  " and "Ada Lindqvist" equal, and a bare SQL comparison
+// does not. The trigram arm happens to rescue it, which is exactly why this test
+// exists — the lane must not depend on one approximate arm covering for another.
+func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
+	for _, tc := range []struct {
+		name      string
+		incumbent string
+		second    string
+	}{
+		{"identical", "Ada Lindqvist", "Ada Lindqvist"},
+		{"case differs", "Ada Lindqvist", "ADA LINDQVIST"},
+		{"untrimmed", "Ada Lindqvist", "  Ada Lindqvist  "},
+		{"accents", "Renée Bär", "Renee Bar"},
+		{"sharp s", "Anna Straße", "Anna Strasse"},
+		{"apostrophe", "Sean O'Brien", "Sean OBrien"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if normalizeName(tc.incumbent) != normalizeName(tc.second) {
+				t.Skipf("normalizeName does not call these equal, so the lane owes nothing: %q vs %q",
+					tc.incumbent, tc.second)
+			}
+			e := setupDedupe(t)
+			ctx := e.as()
+			first, err := e.store.CreatePerson(ctx, CreatePersonInput{
+				FullName: tc.incumbent, Source: "manual",
+				Emails: []PersonEmailInput{{Email: "first@lane.test", EmailType: "work", IsPrimary: true}},
+			})
+			if err != nil {
+				t.Fatalf("seed the incumbent: %v", err)
+			}
+			second, err := e.store.CreatePerson(ctx, CreatePersonInput{
+				FullName: tc.second, Source: "manual",
+				Emails: []PersonEmailInput{{Email: "second@lane.test", EmailType: "work", IsPrimary: true}},
+			})
+			if err != nil {
+				t.Fatalf("create the second record: %v", err)
+			}
+			pairs := openCandidatePairs(ctx, t, e, "person", ids.UUID(second.Id))
+			if len(pairs) != 1 {
+				t.Fatalf("%q against %q left %d candidates, want 1 — normalizeName calls these the same name, "+
+					"so the candidate query has to admit the row", tc.second, tc.incumbent, len(pairs))
+			}
+			if pairs[0].OtherID != ids.UUID(first.Id).String() {
+				t.Errorf("the candidate names %s, want the incumbent %s", pairs[0].OtherID, ids.UUID(first.Id))
+			}
+		})
+	}
+}
