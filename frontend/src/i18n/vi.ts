@@ -1057,29 +1057,39 @@ export const vi = {
   "co.facts.pipeline": "Pipeline \u0111ang m\u1edf",
   "co.facts.inFlight": "\u0110ang tri\u1ec3n khai",
   "co.facts.reading": "\u0110ang \u0111\u1ecdc\u2026",
-  "co.facts.noDeals": "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 \u0111ang m\u1edf",
+  "co.facts.noDeals":
+    "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 \u0111ang m\u1edf",
   "co.facts.unpriced": "Ch\u01b0a \u0111\u1ecbnh gi\u00e1",
   "co.facts.nothing": "Kh\u00f4ng c\u00f3 g\u00ec",
-  "co.facts.counts": "{deals} th\u01b0\u01a1ng v\u1ee5 \u00b7 {projects} d\u1ef1 \u00e1n",
+  "co.facts.counts":
+    "{deals} th\u01b0\u01a1ng v\u1ee5 \u00b7 {projects} d\u1ef1 \u00e1n",
   "co.facts.atLeast": "ho\u1eb7c h\u01a1n",
   "co.work.title": "\u0110ang tri\u1ec3n khai",
   "co.work.count": "{count} \u0111ang tri\u1ec3n khai",
   "co.work.countAtLeast": "{count}+ \u0111ang tri\u1ec3n khai",
   "co.work.deals": "Th\u01b0\u01a1ng v\u1ee5",
   "co.work.projects": "D\u1ef1 \u00e1n",
-  "co.work.noDeals": "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 n\u00e0o \u0111ang m\u1edf.",
-  "co.work.noProjects": "Kh\u00f4ng c\u00f3 d\u1ef1 \u00e1n n\u00e0o \u0111ang tri\u1ec3n khai.",
+  "co.work.noDeals":
+    "Kh\u00f4ng c\u00f3 th\u01b0\u01a1ng v\u1ee5 n\u00e0o \u0111ang m\u1edf.",
+  "co.work.noProjects":
+    "Kh\u00f4ng c\u00f3 d\u1ef1 \u00e1n n\u00e0o \u0111ang tri\u1ec3n khai.",
   "co.work.closes": "ch\u1ed1t {date}",
   "co.work.targetEnd": "d\u1ef1 ki\u1ebfn k\u1ebft th\u00fac {date}",
-  "co.work.stalled": "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho th\u01b0\u01a1ng v\u1ee5 n\u00e0y trong 60 ng\u00e0y qua.",
-  "co.work.quiet": "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y t\u1eeb {when}.",
-  "co.work.neverTouched": "Ch\u01b0a t\u1eebng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y.",
-  "co.work.overdueTask": "{who} \u0111\u00e1ng l\u1ebd ph\u1ea3i \u2018{title}\u2019 tr\u01b0\u1edbc {date} nh\u01b0ng ch\u01b0a l\u00e0m.",
-  "co.work.overdueTaskUnnamed": "\u2018{title}\u2019 \u0111\u1ebfn h\u1ea1n {date} v\u00e0 v\u1eabn c\u00f2n m\u1edf.",
+  "co.work.stalled":
+    "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho th\u01b0\u01a1ng v\u1ee5 n\u00e0y trong 60 ng\u00e0y qua.",
+  "co.work.quiet":
+    "Kh\u00f4ng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y t\u1eeb {when}.",
+  "co.work.neverTouched":
+    "Ch\u01b0a t\u1eebng c\u00f3 g\u00ec \u0111\u01b0\u1ee3c ghi nh\u1eadn cho d\u1ef1 \u00e1n n\u00e0y.",
+  "co.work.overdueTask":
+    "{who} \u0111\u00e1ng l\u1ebd ph\u1ea3i \u2018{title}\u2019 tr\u01b0\u1edbc {date} nh\u01b0ng ch\u01b0a l\u00e0m.",
+  "co.work.overdueTaskUnnamed":
+    "\u2018{title}\u2019 \u0111\u1ebfn h\u1ea1n {date} v\u00e0 v\u1eabn c\u00f2n m\u1edf.",
   "co.work.owesUs": "{who} n\u00f3i: \u2018{body}\u2019",
   "co.work.owesUsUnnamed": "H\u1ecd n\u00f3i: \u2018{body}\u2019",
   "co.work.wasDue": "\u2014 tr\u01b0\u1edbc {date}.",
-  "co.work.statusesWithheld": "B\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c \u0111\u1ecdc h\u1ed9i tho\u1ea1i c\u1ee7a kh\u00e1ch h\u00e0ng n\u00e0y, n\u00ean c\u00e1c d\u00f2ng tr\u00ean kh\u00f4ng k\u00e8m l\u00fd do.",
+  "co.work.statusesWithheld":
+    "B\u1ea1n kh\u00f4ng \u0111\u01b0\u1ee3c \u0111\u1ecdc h\u1ed9i tho\u1ea1i c\u1ee7a kh\u00e1ch h\u00e0ng n\u00e0y, n\u00ean c\u00e1c d\u00f2ng tr\u00ean kh\u00f4ng k\u00e8m l\u00fd do.",
   "co.brief.by.model": "Do Margince viết",
   "co.brief.by.deterministic": "Tổng hợp từ dữ liệu của bạn",
   "co.brief.generatedAt": "tính đến {when}",

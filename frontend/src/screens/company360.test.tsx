@@ -268,9 +268,7 @@ function NextStepsWithVerbs({
 }
 
 function renderWork(three60: ReturnType<typeof view>) {
-  render(
-    <CompanyWorkCard view={three60 as never} onOpenRecord={() => {}} />,
-  );
+  render(<CompanyWorkCard view={three60 as never} onOpenRecord={() => {}} />);
 }
 
 // The lead panel, rendered on its own: it moved out of AccountBrief so the

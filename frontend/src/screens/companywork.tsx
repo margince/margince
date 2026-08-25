@@ -16,10 +16,9 @@
 // the record it links to.
 
 import type { ReactNode } from "react";
-
-import { navigate } from "../app/router";
-import { useRecordZone } from "../app/recordzone";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
+import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
@@ -249,7 +248,7 @@ function WorkGroup({
  */
 function WorkCount({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
-  if (!view || !view.deals || !view.projects) {
+  if (!view?.deals || !view.projects) {
     return null;
   }
   const count = view.deals.data.length + liveWork(view.projects).length;
@@ -386,7 +385,9 @@ function AttentionLine({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
-  const due = attention.due_at ? formatDate(attention.due_at, locale, zone) : "";
+  const due = attention.due_at
+    ? formatDate(attention.due_at, locale, zone)
+    : "";
   if (attention.kind === "overdue_task") {
     return (
       <StatusLine tone="warn">

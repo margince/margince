@@ -64,7 +64,6 @@ const erpScope: ProjectScope = {
   total: 11,
 };
 
-
 function jsonResponse(body: unknown, status = 200): Response {
   return new Response(JSON.stringify(body), {
     status,
