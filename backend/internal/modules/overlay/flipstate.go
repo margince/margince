@@ -360,8 +360,8 @@ func (s *Service) CompleteFlip(ctx context.Context, runID ids.UUID, mode string)
 		// overlay_mode is a singleton with no uuid of its own to audit against,
 		// and inventing one to be a subject would be a key nothing else uses.
 		_, err = storekit.Audit(ctx, tx, "update", "workspace", ws,
-			map[string]any{"sor_mode": "overlay"},
-			map[string]any{"sor_mode": "native", "incumbent": nil, "import_run_id": runID.String(), "flip_mode": mode, "derivative_tier": "T1 (incumbent-derived reads re-tagged first-party by the cutover)"})
+			map[string]any{"sor_mode": modeOverlay},
+			map[string]any{"sor_mode": modeNative, "incumbent": nil, "import_run_id": runID.String(), "flip_mode": mode, "derivative_tier": "T1 (incumbent-derived reads re-tagged first-party by the cutover)"})
 		return err
 	})
 	if err != nil {

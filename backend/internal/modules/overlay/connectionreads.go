@@ -333,7 +333,7 @@ func overlayModeWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID,
 	if err := pool.QueryRow(ctx, `SELECT sor_mode FROM overlay_mode`).Scan(&mode); err != nil {
 		return nil, fmt.Errorf("overlay: reading the installation's system-of-record mode: %w", err)
 	}
-	if mode != "overlay" {
+	if mode != modeOverlay {
 		return nil, nil
 	}
 	// One installation, one organization (ADR-0061), so this is every live

@@ -92,7 +92,7 @@ func (s *Service) resolveOverlayMode(ctx context.Context) (incumbent string, err
 	if err != nil {
 		return "", fmt.Errorf("overlay: resolving workspace sor_mode: %w", err)
 	}
-	if mode != "overlay" {
+	if mode != modeOverlay {
 		return "", apperrors.ErrModeNotOverlay
 	}
 	return incumbent, nil
