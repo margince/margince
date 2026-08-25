@@ -40,18 +40,18 @@ function bandLabel(
   return t("aiusage.band.unknown");
 }
 
-// Month boundaries are computed in UTC on purpose: once a month is NAMED, its
+// monthAround is the first and last day of the month `offset` months from the
+// one `seed` names.
+//
+// The boundaries are computed in UTC on purpose: once a month is NAMED, its
 // first and last day are arithmetic on that name, and re-reading them through a
-// zone would shift the window off the month the reader asked for. The zone
-// question is only about which month "now" falls in, which is why the seed —
-// and only the seed — is read in the reader's own.
-function adjacentMonth(month: Month | null, offset: number): Month {
-  const readerMonth = month
-    ? month.from
-    : `${calendarMonth(new Date(), viewerZone())}-01`;
-  const seed = new Date(`${readerMonth}T00:00:00Z`);
+// zone would shift the window off the month that was asked for. The zone
+// question is only about which month "now" falls in, and only currentMonth
+// asks it.
+function monthAround(seed: string, offset: number): Month {
+  const named = new Date(`${seed}T00:00:00Z`);
   const first = new Date(
-    Date.UTC(seed.getUTCFullYear(), seed.getUTCMonth() + offset, 1),
+    Date.UTC(named.getUTCFullYear(), named.getUTCMonth() + offset, 1),
   );
   const last = new Date(
     Date.UTC(first.getUTCFullYear(), first.getUTCMonth() + 1, 0),
@@ -62,12 +62,28 @@ function adjacentMonth(month: Month | null, offset: number): Month {
   };
 }
 
+// The month the reader is in, as an explicit window.
+//
+// Explicit, rather than letting the server pick: an unbounded query returns the
+// server's UTC month (ai.Meter.UsageWindow), and a stepper counting from the
+// reader's month while the view came from UTC's disagrees with itself. In the
+// first hours of a month east of UTC that made Previous a no-op — reader-Sept
+// minus one is August, which is the month already on screen — and on the last
+// evening west of UTC it skipped a month entirely. One reading of "this month",
+// used for the first window and every step from it.
+function currentMonth(): Month {
+  return monthAround(`${calendarMonth(new Date(), viewerZone())}-01`, 0);
+}
+
+function adjacentMonth(month: Month, offset: number): Month {
+  return monthAround(month.from, offset);
+}
+
 // "This month" is the reader's month, not UTC's. In the first hours of a month
 // east of UTC the two disagree — the reader has turned the page and UTC has not
 // — and the page then refuses the Next arrow for a month they have already
 // left.
-function isCurrentMonth(month: Month | null): boolean {
-  if (month === null) return true;
+function isCurrentMonth(month: Month): boolean {
   return month.from.slice(0, 7) >= calendarMonth(new Date(), viewerZone());
 }
 
@@ -165,7 +181,7 @@ function AiUsageBody({
   onMonth,
 }: Readonly<{
   data: AiUsage;
-  month: Month | null;
+  month: Month;
   onMonth: (next: Month) => void;
 }>) {
   const t = useT();
@@ -299,13 +315,16 @@ export function AiUsageCard() {
   // this read on automation:update — a write verb guarding a GET, which is why
   // the seat ceiling stays out of it (capability.ts): a read seat may still read.
   const canSee = useCan("automation", "update");
-  const [month, setMonth] = useState<Month | null>(null);
+  // Read once, at mount: the reader's month is what this card is about, and
+  // recomputing it per render would churn the query key on the one day of the
+  // month it could change.
+  const [month, setMonth] = useState<Month>(currentMonth);
   const query = useQuery({
     enabled: canSee,
     queryKey: ["ai-usage", month],
     queryFn: async () => {
       const { data, error } = await api.GET("/ai/usage", {
-        params: { query: month ?? {} },
+        params: { query: month },
       });
       if (error) throwProblem(error);
       if (!data?.budget || !Array.isArray(data.days)) {

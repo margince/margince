@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
@@ -198,24 +198,36 @@ it("withholds the spend from a principal without the automation grant, and asks 
   expect(seen.some((url) => url.includes("/ai/usage"))).toBe(false);
 });
 
-// The month arrows, at the boundary where the reader's calendar and UTC's
-// disagree. 2026-08-31T20:00Z is already 1 September in Asia/Ho_Chi_Minh, so a
-// card that seeded from UTC would step back to July and would leave Next armed
-// for a month the reader has already left. Both are asserted, because the two
-// halves are one rule read twice and only the seed is zoned.
-it("steps back from the month the READER is in, not the one UTC is in", async () => {
+// The month window, at the boundary where the reader's calendar and UTC's
+// disagree. 2026-08-31T20:00Z is already 1 September in Asia/Ho_Chi_Minh.
+//
+// The FIRST window is asserted, not just the steps. An unbounded query returns
+// the server's UTC month, so a card that let the server choose and then stepped
+// from the reader's month would disagree with itself — Previous would land on
+// the month already on screen. One reading of "this month" is what is being
+// held here, and it takes three assertions to see it: where the card opens,
+// where one step back lands, and that there is nothing forward of the month the
+// reader is standing in.
+it("opens on the READER's month and steps from it, not from UTC's", async () => {
   // A frozen clock, because the wall clock is an INPUT to this card: it decides
   // which month "now" falls in, so a test that let it run would be asking a
   // different question on every run. steppedClock is the house way in — it is
   // what keeps an awaited userEvent from deadlocking against mocked timers, and
-  // the reason is written down where it lives.
+  // the reason is written down where that helper lives.
   const user = steppedClock();
   vi.setSystemTime(new Date("2026-08-31T20:00:00Z"));
   viewer.zone = "Asia/Ho_Chi_Minh";
   try {
     const { seen } = mount({ budget, days: [] });
 
-    // The card opens on the current month, so there is nothing later to show.
+    // September, the month the reader is in — not August, which is where UTC
+    // still is and where an unbounded query would have landed.
+    await waitFor(() =>
+      expect(
+        seen.some((url) => url.includes("from=2026-09-01&to=2026-09-30")),
+      ).toBe(true),
+    );
+    // And the card opens on the current month, so there is nothing later.
     expect(
       (await screen.findByLabelText("Next month")).hasAttribute("disabled"),
     ).toBe(true);
@@ -230,13 +242,6 @@ it("steps back from the month the READER is in, not the one UTC is in", async ()
     // Having stepped off the reader's month, Next is a real destination again.
     expect(screen.getByLabelText("Next month").hasAttribute("disabled")).toBe(
       false,
-    );
-
-    await user.click(screen.getByLabelText("Next month"));
-    await waitFor(() =>
-      expect(
-        seen.some((url) => url.includes("from=2026-09-01&to=2026-09-30")),
-      ).toBe(true),
     );
   } finally {
     vi.useRealTimers();

@@ -28,10 +28,15 @@ export function EconomyBanner() {
     enabled,
     staleTime: 5 * 60_000,
     queryFn: async () => {
-      // The reader's own today, not UTC's. The band this asks for is about
-      // the day they are having: east of UTC before the small hours, an ISO
-      // slice names yesterday and the banner reports a budget that has already
-      // been spent against a different day.
+      // A one-day window, and the day is the reader's own.
+      //
+      // The window is here to keep the response small — this banner reads only
+      // `budget.band`, and an unbounded query returns every day of the month
+      // with its per-task rows. It does NOT decide the band: that is a
+      // month-to-date figure the server computes for itself (ai.Meter's
+      // MonthTokens), and `from`/`to` never reach it. So the reader's day
+      // rather than UTC's is honesty about what the word "today" means here,
+      // not a fix for a wrong band — the band was never wrong.
       const today = calendarDay(new Date(), viewerZone());
       const { data, error } = await api.GET("/ai/usage", {
         params: { query: { from: today, to: today } },

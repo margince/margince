@@ -11,9 +11,10 @@ import { describe, expect, it } from "vitest";
 //
 // `new Date().toISOString().slice(0, 10)` looks like "today" and is not: east
 // of UTC in the small hours it names yesterday, west of UTC in the evening it
-// names tomorrow. The screens that carried it asked the AI-usage endpoint for
-// the wrong day's budget band and seeded FX effective dates a day off — both
-// invisible to whoever wrote them, because a machine on UTC agrees.
+// names tomorrow. The screens that carried it seeded FX and model-rate
+// effective dates a day off, and opened the AI-usage page on a month the reader
+// had already left — both invisible to whoever wrote them, because a machine on
+// UTC agrees.
 //
 // The same cut at `slice(0, 7)` is the month, and that is the half worth
 // naming: the census that found the day sites grepped for the day-length slice
@@ -45,9 +46,9 @@ const srcRoot = join(here, "..");
 // written about a different one — so the count is part of what is ratified, and
 // a third cut in a function ratified for two is a finding again.
 const deliberateUtcDays: Record<string, { sites: number; why: string }> = {
-  "screens/aiusage.tsx#adjacentMonth": {
+  "screens/aiusage.tsx#monthAround": {
     sites: 2,
-    why: "the two boundaries are read back off dates this function just built with Date.UTC(...) from a month it was given, so the round trip never touches a clock or a zone. Naming the month is the zoned question, and only the seed asks it",
+    why: "the two boundaries are read back off dates this function just built with Date.UTC(...) from the month it was given, so the round trip never touches a clock or a zone. Naming the month is the zoned question, and only currentMonth asks it",
   },
   "format/timezone.ts#shifted": {
     sites: 1,
