@@ -454,17 +454,20 @@ describe("company view — the verbs that change a section", () => {
     );
     renderCompany();
 
+    // The overview's own cards say it too, about the same missing grant, but
+    // they UNMOUNT when the tab opens — this page swaps its body rather than
+    // layering over it. So everything counted after the click is the deals
+    // tab's own answer, and the count is pinned EXACTLY rather than as "at
+    // least one": a floor would pass on a tab that rendered nothing while
+    // some other surface still spoke.
     await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
-    // Three surfaces say "withheld" about this reader's missing deal grant —
-    // the deals card, the overview's work card, and the facts box's pipeline
-    // figure — and each is answering a different question, so the assertion
-    // is that the section said so rather than which one did. What pins the
-    // DEALS tab specifically is the empty state it did NOT draw: "no open
-    // deal" is a claim about the account that this payload cannot support.
-    expect(
-      (await screen.findAllByText("Hidden — your role cannot read this"))
-        .length,
-    ).toBeGreaterThan(0);
+    await waitFor(() =>
+      expect(
+        screen.queryAllByText("Hidden — your role cannot read this"),
+      ).toHaveLength(3),
+    );
+    // And the empty state it did NOT draw: "no open deal" is a claim about
+    // the account that this payload cannot support.
     expect(screen.queryByText("No open deal on this account.")).toBeNull();
     // The absent button alone would prove nothing: the verb also renders null
     // while its pipeline read is in flight, so the assertion could pass on

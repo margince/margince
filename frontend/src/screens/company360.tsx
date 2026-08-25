@@ -1200,7 +1200,12 @@ export function RecentActivityPanel({
     state === "ready" ? (
       days.map((day) => (
         <div key={day.key} className="co-timeline-day">
-          <h3 className="co-timeline-day-heading t-eyebrow">{day.key}</h3>
+          {/* One level under whatever names this timeline: the card's own
+              title when it stands alone, the section subhead when it is a
+              section of the Company 360 card. */}
+          <Eyebrow as={bare ? "h4" : "h3"} className="co-timeline-day-heading">
+            {day.key}
+          </Eyebrow>
           <ul className="timeline">
             {day.entries.map((entry) => (
               <TimelineRow key={entry.id} entry={entry} zone={recordZone} />

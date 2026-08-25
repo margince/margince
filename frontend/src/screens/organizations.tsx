@@ -26,6 +26,7 @@ import {
   EvidenceMark,
   type EvidenceMarkSource,
 } from "../design-system/evidencemark";
+import { Eyebrow } from "../design-system/eyebrow";
 import type { ListChip } from "../design-system/listsurface";
 import { Panel, PanelBody } from "../design-system/panel";
 import { liveProjects } from "../design-system/projectpicker";
@@ -80,8 +81,6 @@ import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
 import { CompanyFacts } from "./companyfacts";
 import { CompanyFinanceCard } from "./companyfinance";
-import { Eyebrow } from "../design-system/eyebrow";
-import { PanelBody } from "../design-system/panel";
 import { GrowthFitPanel } from "./companygrowthfit";
 import {
   CompanyActionBadges,
@@ -99,7 +98,11 @@ import {
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
 import { TodayOnThisAccount } from "./companytoday";
-import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
+import {
+  CompanyWorkCard,
+  hasWorkInFlight,
+  sinceLastVisitFooter,
+} from "./companywork";
 import { ComposeModal, TimelineActions } from "./compose";
 import {
   CreateAction,
@@ -2637,24 +2640,19 @@ function CompanyOverviewStack({
           onOpenRecord={onOpenRecord}
           onPerform={onPerform}
           onOpenTasks={onOpenTasks}
+          foot={sinceLastVisitFooter(view)}
           sections={
             <>
               {/* What is moving, and for each piece the one reason it wants a
-                  person. The growth-fit reading takes its place on an account
-                  with nothing in flight — the question such an account is
-                  actually asking. */}
-              {hasWorkInFlight(view) ? (
+                  person. Absent on an account with nothing in flight, where
+                  the growth-fit card below answers the question such an
+                  account is actually asking instead. */}
+              {hasWorkInFlight(view) && (
                 <CompanyWorkCard
                   view={view}
                   loading={loading}
                   onOpenRecord={onOpenRecord}
                   bare
-                />
-              ) : (
-                <GrowthFitPanel
-                  orgId={org.id}
-                  enabled={!overlay}
-                  onOpenRecord={onOpenRecord}
                 />
               )}
               {/* The commercial standing: what the account is signed for, and
@@ -2676,6 +2674,20 @@ function CompanyOverviewStack({
               />
             </>
           }
+        />
+      )}
+      {/* Is this an account we should be selling to at all — the question an
+          account with nothing in flight is actually asking, and the reason
+          the work section above is absent for one.
+
+          Its own card rather than that section's substitute: it carries its
+          own attribution and its own reassess verb in a footer band, and a
+          section inside another card has no footer to put them in. */}
+      {!overlay && !hasWorkInFlight(view) && (
+        <GrowthFitPanel
+          orgId={org.id}
+          enabled={!overlay}
+          onOpenRecord={onOpenRecord}
         />
       )}
       {/* The money stays its OWN card rather than a section of the 360, for

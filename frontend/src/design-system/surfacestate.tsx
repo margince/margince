@@ -4,7 +4,7 @@
 import type { ReactNode } from "react";
 import { useT } from "../i18n";
 import { Button, PendingBody } from "./atoms";
-import { Eyebrow } from "./eyebrow";
+import { Eyebrow, type EyebrowElement } from "./eyebrow";
 import "./surfacestate.css";
 
 /**
@@ -155,6 +155,7 @@ export type SectionDetail = {
  */
 export function SurfaceState({
   label,
+  labelLevel = "h3",
   state,
   emptyLabel,
   loadingLabel,
@@ -163,6 +164,10 @@ export function SurfaceState({
   children,
 }: Readonly<{
   label?: string;
+  // What heading level the label is. h3 by default, which is what a section
+  // of a card is; a card that is itself a section of another passes h4, so
+  // the outline nests rather than flattening into a row of equal siblings.
+  labelLevel?: Extract<EyebrowElement, "h3" | "h4">;
   state: SectionState;
   emptyLabel: string;
   // What this section is waiting for, and how tall it will be when it arrives.
@@ -238,7 +243,7 @@ export function SurfaceState({
   }
   return (
     <section className="surfacestate-part" aria-label={label}>
-      <Eyebrow as="h3">{label}</Eyebrow>
+      <Eyebrow as={labelLevel}>{label}</Eyebrow>
       {body}
     </section>
   );

@@ -90,6 +90,7 @@ export function CompanyWorkCard({
     <>
       <WorkGroup
         label={t("co.work.deals")}
+        level={bare ? "h4" : "h3"}
         state={dealState}
         emptyLabel={t("co.work.noDeals")}
       >
@@ -99,6 +100,7 @@ export function CompanyWorkCard({
       </WorkGroup>
       <WorkGroup
         label={t("co.work.projects")}
+        level={bare ? "h4" : "h3"}
         state={projectState}
         emptyLabel={t("co.work.noProjects")}
       >
@@ -137,7 +139,7 @@ export function CompanyWorkCard({
     <Panel
       title={t("co.work.title")}
       titleAction={<WorkCount view={view} />}
-      footer={<SinceLastVisit view={view} />}
+      footer={sinceLastVisitFooter(view)}
     >
       {body}
     </Panel>
@@ -148,18 +150,24 @@ export function CompanyWorkCard({
  * SinceLastVisit is what moved on this account while the reader was away, and
  * whether any of the account was withheld from them.
  *
- * It sat under the written account brief this card replaced, and it is not
- * about the brief — it is about the account, so it moves with the lead card
- * rather than going away with the prose. Withheld sections are named ONCE,
- * about the whole page, rather than as a refusal beside each line a reader
- * did not get.
+ * It is about the ACCOUNT rather than about any one section of it, so it sits
+ * in the footer of whichever card is the account's reading — this one when it
+ * stands alone, and the Company 360 card's own footer when this is a section
+ * of it.
+ *
+ * PRIVATE on purpose: both mounts reach it through sinceLastVisitFooter, and
+ * a caller that could put this element in a footer slot directly is the
+ * blank-band defect waiting to happen again. It already happened twice.
+ *
+ * Withheld sections are named ONCE, about the whole page, rather than as a
+ * refusal beside each line a reader did not get.
  */
 function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
   const since = newActivities(view);
   const first = firstVisit(view);
   const withheld = (view?.sections_omitted?.length ?? 0) > 0;
-  if (!first && since === 0 && !withheld) {
+  if (!speaksSinceLastVisit(view)) {
     return null;
   }
   return (
@@ -178,6 +186,33 @@ function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
       )}
       {withheld && <span className="t-caption">{t("co.prep.withheld")}</span>}
     </p>
+  );
+}
+
+// The since-last-visit line for a footer slot, or nothing at all.
+//
+// UNDEFINED rather than an element that renders null, and that is the whole
+// point of this function existing: Panel draws its footer band on the slot's
+// truthiness, and an element is truthy whatever it renders — so handing it
+// `<SinceLastVisit/>` on an account with nothing to report costs the record a
+// blank row. Both mounts call this; passing the component straight into a
+// footer is the defect it exists to make unavailable.
+export function sinceLastVisitFooter(
+  view?: Organization360,
+): ReactNode | undefined {
+  return speaksSinceLastVisit(view) ? (
+    <SinceLastVisit view={view} />
+  ) : undefined;
+}
+
+// Whether there is a sentence to say at all — read by the component's own
+// guard and by the footer helper above, so the band and the sentence cannot
+// disagree about whether there is one.
+function speaksSinceLastVisit(view?: Organization360): boolean {
+  return (
+    firstVisit(view) ||
+    newActivities(view) > 0 ||
+    (view?.sections_omitted.length ?? 0) > 0
   );
 }
 
@@ -234,11 +269,17 @@ function liveWork(projects?: readonly WorkProject[]): readonly WorkProject[] {
 // half says so where its rows would have been, so the other half still reads.
 function WorkGroup({
   label,
+  level,
   state,
   emptyLabel,
   children,
 }: Readonly<{
   label: string;
+  // Deals and Projects sit one level under whatever names this card. Standing
+  // alone that is the card title, an h2, so they are h3; as a section of the
+  // Company 360 card they are h4 — the outline nests rather than flattening
+  // into a row of equal siblings a screen reader cannot walk.
+  level: "h3" | "h4";
   state: ReturnType<typeof sectionState>;
   emptyLabel: string;
   children: ReactNode;
@@ -247,7 +288,7 @@ function WorkGroup({
     return (
       <>
         <PanelBody className="co-work-head">
-          <Eyebrow as="h3">{label}</Eyebrow>
+          <Eyebrow as={level}>{label}</Eyebrow>
         </PanelBody>
         {children}
       </>
@@ -255,7 +296,12 @@ function WorkGroup({
   }
   return (
     <PanelBody>
-      <SurfaceState label={label} state={state} emptyLabel={emptyLabel}>
+      <SurfaceState
+        label={label}
+        labelLevel={level}
+        state={state}
+        emptyLabel={emptyLabel}
+      >
         {null}
       </SurfaceState>
     </PanelBody>

@@ -21,9 +21,12 @@ import { vi as viCatalog } from "./vi";
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
   // The product name of the buyer surface, and a title that is only the
-  // deal's own name in a placeholder.
+  // deal's own name in a placeholder. "Company 360" is the same kind of
+  // thing: the record page's own name, beside deal360.title which the
+  // product already keeps in English for the sibling record.
   "room.card.title",
   "deal360.title",
+  "co.360.title",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",

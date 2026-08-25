@@ -164,8 +164,9 @@ func projectUUIDs(projects []ids.ProjectID) []ids.UUID {
 //
 // The task must also reach the account: a link row alone would let a task
 // filed under a project this company shares with another reach a page it does
-// not belong to, so the walk is activities.OrgLinkedActivityExists rather than
-// a link test written here.
+// not belong to. That walk is activities.OrgLinkedActivityExists, called
+// rather than rewritten so a fourth link added to the model reaches this
+// reader with every other.
 //
 // Who the task is assigned to is read through identity.LiveMemberSQL, which is
 // the definition of "still works here" and belongs to the module that owns

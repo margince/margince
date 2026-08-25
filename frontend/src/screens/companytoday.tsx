@@ -107,6 +107,7 @@ export function TodayOnThisAccount({
   onPerform,
   onOpenTasks,
   sections,
+  foot,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
@@ -127,6 +128,11 @@ export function TodayOnThisAccount({
   // Where the footer's commitment reading leads. Absent for a caller with no
   // Tasks tab of its own.
   onOpenTasks?: () => void;
+  // What the card's footer carries BESIDE the day's own countdown: what moved
+  // on the account since the reader was last here. It belongs to the account
+  // rather than to any one section, so it rides in the card's footer band
+  // rather than inside a section that would then be claiming it.
+  foot?: ReactNode;
   // The rest of the Company 360 — what is in flight, the commercial figures,
   // what happened lately — under this card's own chrome.
   //
@@ -156,9 +162,23 @@ export function TodayOnThisAccount({
   // failures may take the rest of the account's reading down with it: the
   // sections below read from the same payload and are perfectly able to
   // render while the brief says it could not be assembled.
+  //
+  // The subhead rides with all three, because a skeleton or an error under no
+  // name is a reader unable to tell WHICH of the four readings is missing.
+  const subhead = (
+    <PanelBody className="co-360-head">
+      <Eyebrow as="h3">{t("today.title")}</Eyebrow>
+    </PanelBody>
+  );
   if (loading) {
     return (
-      <Panel title={t("co.360.title")} tone="accent" className="co-lead">
+      <Panel
+        title={t("co.360.title")}
+        tone="accent"
+        className="co-lead"
+        footer={foot}
+      >
+        {subhead}
         <PanelBody>
           <Skeleton width="100%" height={64} />
         </PanelBody>
@@ -168,7 +188,13 @@ export function TodayOnThisAccount({
   }
   if (failed || !view) {
     return (
-      <Panel title={t("co.360.title")} tone="accent" className="co-lead">
+      <Panel
+        title={t("co.360.title")}
+        tone="accent"
+        className="co-lead"
+        footer={foot}
+      >
+        {subhead}
         <PanelBody>
           <EmptyState>{t("today.failed")}</EmptyState>
         </PanelBody>
@@ -202,11 +228,16 @@ export function TodayOnThisAccount({
           </Button>
         )
       }
-      footer={footer}
+      footer={
+        (footer || foot) && (
+          <>
+            {footer}
+            {foot}
+          </>
+        )
+      }
     >
-      <PanelBody className="co-360-head">
-        <Eyebrow as="h3">{t("today.title")}</Eyebrow>
-      </PanelBody>
+      {subhead}
       {!hasContext && !hasMoves ? (
         // Not "nothing to do": the brief read everything it can read and
         // found nothing that needs a person today. That is a real answer
