@@ -127,7 +127,7 @@ func seatPersonOnQualifiedDeal(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	if err != nil {
 		return fmt.Errorf("seat the contact on the qualified deal: %w", err)
 	}
-	return emitRelationshipChange(ctx, tx, "create", rel)
+	return emitRelationshipChange(ctx, tx, "create", nil, rel)
 }
 
 // defaultQualifiedDealName is the deal name when the dialog sends none: the

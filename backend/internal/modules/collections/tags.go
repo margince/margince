@@ -185,7 +185,7 @@ func (s *Store) ApplyTag(ctx context.Context, tagID ids.TagID, entityType string
 		if err != nil {
 			return err
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "tag", tagID.UUID, nil, map[string]any{
+		_, err = storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{
 			"applied": map[string]any{"entity_type": entityType, "entity_id": entityID},
 		})
 		return err
@@ -246,7 +246,7 @@ func (s *Store) RemoveTag(ctx context.Context, tagID ids.TagID, entityType strin
 		if tag.RowsAffected() == 0 {
 			return nil
 		}
-		_, err = storekit.Audit(ctx, tx, "update", "tag", tagID.UUID, nil, map[string]any{
+		_, err = storekit.AuditEvent(ctx, tx, "update", "tag", tagID.UUID, map[string]any{
 			"removed": map[string]any{"entity_type": entityType, "entity_id": entityID},
 		})
 		return err

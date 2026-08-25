@@ -358,6 +358,13 @@ func seedDomainOfAddressTx(ctx context.Context, tx pgx.Tx, address string) error
 	if consumerMail.IsConsumer(domain) {
 		return nil
 	}
+	// The own-domain write lock, because the admin surface reads the prior
+	// state of this row to say what its registration replaced: a seed landing
+	// between that read and its upsert would leave the admin's audit row
+	// claiming the list held nothing.
+	if err := lockOwnDomain(ctx, tx, domain); err != nil {
+		return err
+	}
 	// Recorded unverified, always. Whether the domain is OURS is not a fact
 	// about this mailbox and is not frozen here — it is derived at read time
 	// from what the own company currently claims (trustedOwnDomainsTx). Writing

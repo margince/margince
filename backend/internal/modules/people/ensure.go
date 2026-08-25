@@ -404,68 +404,6 @@ func nameColumn(part string) *string {
 	return &part
 }
 
-// fillMissingPersonName completes a person the ladder landed on by exact
-// address, and completes ONLY what is missing.
-//
-// Every incumbent reached here already exists, so this is the one path that can
-// improve a record created before the parser — or by an import, or by hand with
-// only a full name typed in. It is strictly additive: each column carries its
-// own IS NULL guard, so a name a human entered is never rewritten by whatever a
-// mail header happens to spell, and re-running it converges instead of flapping
-// between two spellings of the same person.
-//
-// Unconfident parses write nothing: `schluepmann` is not evidence of a surname
-// with no given name, it is evidence that the local part did not say.
-func fillMissingPersonName(ctx context.Context, tx pgx.Tx, personID ids.PersonID, parsed ParsedName, res *EnsureCounterpartyResult) error {
-	if !parsed.Confident {
-		return nil
-	}
-	// BOTH columns must be empty, and both are written together. A parse is
-	// confident about the PAIR "Bob Jones" — grafting its surname onto a first
-	// name a human typed would build "Alice Jones", a person neither source ever
-	// named. The predicate is also the concurrency guard: a writer who filled
-	// either half between the dedupe read and this write keeps it, because
-	// Postgres re-checks the predicate after waiting on their lock.
-	// full_name moves WITH the split columns, and only when it is still the
-	// shorter thing the parser refused to split. A record displaying "Lars"
-	// while its columns say Lars Jankowfsky is a fill that reported success and
-	// changed nothing a human can see — the defect this predicate closes.
-	// A full_name a person typed is longer or different, and is left alone.
-	tag, err := tx.Exec(ctx, `
-		UPDATE person
-		   SET first_name = $2,
-		       last_name  = $3,
-		       full_name  = CASE WHEN full_name = $2 OR full_name = $3
-		                         THEN $4 ELSE full_name END,
-		       updated_at = now()
-		 WHERE id = $1
-		   AND first_name IS NULL AND last_name IS NULL`,
-		personID, parsed.First, parsed.Last, parsed.Full)
-	if err != nil {
-		return fmt.Errorf("people: filling the missing name of person %s: %w", personID, err)
-	}
-	// A zero count is the guard doing its job, not a failure: the row already
-	// carried a name, and it is not this call's to replace.
-	if tag.RowsAffected() == 0 {
-		return nil
-	}
-	// A mutation that changes a person's stored name is auditable like any other,
-	// and every audited mutation ships its event in the same transaction —
-	// without both, the row changes with no record of what did it and nothing
-	// downstream learns the name it was waiting for.
-	changed := map[string]any{"first_name": parsed.First, "last_name": parsed.Last}
-	auditID, err := storekit.Audit(ctx, tx, "update", entityPerson, personID.UUID, nil, changed)
-	if err != nil {
-		return err
-	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, personID.UUID,
-		crmcontracts.PublicEventPersonUpdated{ChangedFields: changed}); err != nil {
-		return err
-	}
-	res.NameFilled = true
-	return nil
-}
-
 // quarantineSuspect flags the cheap impersonation tells (ADR-0063): a
 // punycode domain (homoglyph vector) or a display name that embeds an
 // address on a DIFFERENT domain ("ceo@acme.com <attacker@evil.example>").

@@ -122,7 +122,7 @@ func TestEveryAuditVerbTheCodeWritesIsLegal(t *testing.T) {
 	// The first string argument after the transaction is the verb. A call that
 	// builds it from a variable is invisible here, which is why the write shape
 	// spells them as literals.
-	call := regexp.MustCompile(`storekit\.Audit\(\s*[A-Za-z0-9_.]+\s*,\s*[A-Za-z0-9_.]+\s*,\s*"([a-z_]+)"`)
+	call := regexp.MustCompile(`storekit\.Audit(?:Event)?(?:WithEvidence)?\(\s*[A-Za-z0-9_.]+\s*,\s*[A-Za-z0-9_.]+\s*,\s*"([a-z_]+)"`)
 
 	found := map[string][]string{}
 	for _, dir := range []string{"internal", "../extensions"} {

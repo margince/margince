@@ -144,7 +144,11 @@ func (s *Store) FinishExtractionRead(ctx context.Context, readID ids.UUID, outco
 		if err != nil {
 			return fmt.Errorf("finish extraction reading: %w", err)
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "attachment_extraction", readID, nil, map[string]any{
+		// AuditEvent, not Audit: the claim proves the row was running under this
+		// worker, but a reading's state is a job's own progress, not a field
+		// anyone set — and a document is re-read by starting a new attempt,
+		// never by putting a finished one back to running.
+		auditID, err := storekit.AuditEvent(ctx, tx, "update", "attachment_extraction", readID, map[string]any{
 			"status": outcome.Status, "grounded": groundedCount(outcome.Fields),
 		})
 		if err != nil {

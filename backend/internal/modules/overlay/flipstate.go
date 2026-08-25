@@ -231,12 +231,21 @@ const (
 // incumbent sync is a governance-relevant act, so who latched (and who
 // released) the workspace is on the record, like every other lifecycle
 // write in this module.
+// auditFreeze records a change to the mirror's freeze state. A first seal has no
+// prior state — nothing was frozen — so it records the occurrence; a reseal or a
+// release moved a value the row already held, and says what it was.
 func auditFreeze(ctx context.Context, tx pgx.Tx, before, after map[string]any) error {
 	var connID ids.UUID
 	if err := tx.QueryRow(ctx, `SELECT id FROM incumbent_connection`).Scan(&connID); err != nil {
 		return fmt.Errorf("overlay: resolving the connection to audit the mirror freeze: %w", err)
 	}
-	if _, err := storekit.Audit(ctx, tx, "update", "incumbent_connection", connID, before, after); err != nil {
+	var err error
+	if before == nil {
+		_, err = storekit.AuditEvent(ctx, tx, "update", "incumbent_connection", connID, after)
+	} else {
+		_, err = storekit.Audit(ctx, tx, "update", "incumbent_connection", connID, before, after)
+	}
+	if err != nil {
 		return fmt.Errorf("overlay: auditing the mirror freeze: %w", err)
 	}
 	return nil

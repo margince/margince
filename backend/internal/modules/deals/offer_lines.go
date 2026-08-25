@@ -232,11 +232,16 @@ func (s *Store) AddOfferLineItem(ctx context.Context, offerID ids.OfferID, in Of
 		if err := insertOfferLine(ctx, tx, offerID, current.Currency, in); err != nil {
 			return err
 		}
-		if err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
+		totals, err := recomputeOfferTotals(ctx, tx, offerID)
+		if err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "offer", offerID.UUID,
-			nil, map[string]any{"line_added": true}); err != nil {
+		// What the added line MOVED on the offer is the three money columns;
+		// that a line was added is context about the mutation, so it lands in
+		// evidence rather than as a field the offer never had.
+		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
+			map[string]any{"line_added": true}); err != nil {
 			return fmt.Errorf("audit line add: %w", err)
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {
@@ -278,7 +283,7 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			return err
 		}
 
-		sets, args, before, after, line := buildOfferLinePatch(lineID, in, curPosition, curDescription, curUnit, line)
+		sets, args, lineBefore, lineAfter, line := buildOfferLinePatch(lineID, in, curPosition, curDescription, curUnit, line)
 		// Validate the resulting line's math up front (422, not a CHECK 500).
 		if _, err := LineTotals(line); err != nil {
 			return err
@@ -295,10 +300,18 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			}
 			return fmt.Errorf("apply line patch: %w", err)
 		}
-		if err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
+		totals, err := recomputeOfferTotals(ctx, tx, offerID)
+		if err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "offer", offerID.UUID, before, after); err != nil {
+		// A line edit re-derives the offer's money, so the three money columns
+		// are the offer's own transition — recorded whether or not the edit
+		// moved them, because "the totals stood still" is a claim only a
+		// recorded pair can make. The line's own field patch is context about
+		// the write and lands in evidence.
+		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
+			lineFieldEvidence(lineID, lineBefore, lineAfter)); err != nil {
 			return fmt.Errorf("audit line update: %w", err)
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {
@@ -405,12 +418,17 @@ func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly)
 			return err
 		}
-		if err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
+		totals, err := recomputeOfferTotals(ctx, tx, offerID)
+		if err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "offer", offerID.UUID,
-			map[string]any{"line_id": lineID, "proposal_state": ProposalStaged},
-			map[string]any{"line_id": lineID, "proposal_state": ProposalAccepted}); err != nil {
+		// Acceptance is what makes the line count, so the offer's money moves
+		// here; the state the line left behind is context about the write.
+		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
+			lineFieldEvidence(lineID,
+				map[string]any{"proposal_state": ProposalStaged},
+				map[string]any{"proposal_state": ProposalAccepted})); err != nil {
 			return fmt.Errorf("audit line accept: %w", err)
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {
@@ -442,11 +460,15 @@ func (s *Store) RemoveOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if tag.RowsAffected() == 0 {
 			return apperrors.ErrNotFound
 		}
-		if err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
+		totals, err := recomputeOfferTotals(ctx, tx, offerID)
+		if err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "offer", offerID.UUID,
-			map[string]any{"line_id": lineID}, map[string]any{"line_removed": true}); err != nil {
+		// Which line went is context about the write; what the removal did to
+		// the offer is the three money columns.
+		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
+			map[string]any{"line_id": lineID, "line_removed": true}); err != nil {
 			return fmt.Errorf("audit line remove: %w", err)
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {

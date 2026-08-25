@@ -159,7 +159,12 @@ func (s *FeedbackStore) Record(ctx context.Context, in RecordInput) error {
 		// The after-image records the claim and the verdict, never the value
 		// the model asserted: the ledger does not keep that and neither does
 		// its audit trail.
-		_, err = storekit.Audit(ctx, tx, "update", "ai_feedback", id, nil, map[string]any{
+		//
+		// AuditEvent, not Audit: the upsert as readily creates the ledger row as
+		// replaces one, so what this records is that a human decided, not a
+		// field moving. Where a verdict did stand, it was written through this
+		// same door and its own audit row is where it is still readable.
+		_, err = storekit.AuditEvent(ctx, tx, "update", "ai_feedback", id, map[string]any{
 			"subject_type": in.SubjectType,
 			"subject_id":   in.SubjectID.String(),
 			"claim_kind":   in.ClaimKind,

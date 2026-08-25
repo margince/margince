@@ -19,7 +19,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -96,12 +95,13 @@ func (s *Store) SetOrganizationLogo(ctx context.Context, id ids.OrganizationID, 
 		// it is the one place that can hand back the object its own write
 		// supersedes. Reading it separately afterwards would name whatever the
 		// NEXT resolve had since put there.
-		var previous *string
+		var previous, previousOrigin *string
 		err = tx.QueryRow(ctx, `
 			UPDATE organization SET logo_object_key = $2, logo_origin = $3
 			WHERE id = $1 AND archived_at IS NULL
-			RETURNING (SELECT o.logo_object_key FROM organization o WHERE o.id = $1)`,
-			id, objectKey, originURL).Scan(&previous)
+			RETURNING (SELECT o.logo_object_key FROM organization o WHERE o.id = $1),
+			          (SELECT o.logo_origin FROM organization o WHERE o.id = $1)`,
+			id, objectKey, originURL).Scan(&previous, &previousOrigin)
 		if errors.Is(err, pgx.ErrNoRows) {
 			// Visible above but not updatable here: the row was archived
 			// between the two statements. Nothing to record.
@@ -112,7 +112,7 @@ func (s *Store) SetOrganizationLogo(ctx context.Context, id ids.OrganizationID, 
 		}
 		written = true
 		supersededKey = supersededObject(previous, objectKey)
-		return recordLogoWrite(ctx, tx, id, originURL, by)
+		return recordLogoWrite(ctx, tx, id, previousOrigin, originURL, by)
 	})
 	if err != nil {
 		return false, nil, err
@@ -284,18 +284,20 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids
 	if held {
 		return releaseParkedSiteReadLogo(ctx, tx, readID, reclaim)
 	}
-	tag, err := tx.Exec(ctx, `
+	var previousOrigin *string
+	err = tx.QueryRow(ctx, `
 		UPDATE organization SET logo_object_key = $2, logo_origin = $3
-		WHERE id = $1 AND archived_at IS NULL AND logo_object_key IS NULL`,
-		orgID, *objectKey, *originURL)
-	if err != nil {
-		return nil, fmt.Errorf("bind the website read's logo: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
+		WHERE id = $1 AND archived_at IS NULL AND logo_object_key IS NULL
+		RETURNING (SELECT o.logo_origin FROM organization o WHERE o.id = $1)`,
+		orgID, *objectKey, *originURL).Scan(&previousOrigin)
+	if errors.Is(err, pgx.ErrNoRows) {
 		// The record already wears a mark, or was archived under this
 		// confirmation: the same decline as a human-held field, and the same
 		// parked object left over.
 		return releaseParkedSiteReadLogo(ctx, tx, readID, reclaim)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("bind the website read's logo: %w", err)
 	}
 	// Handed over, not shared: the record is the object's one reference now.
 	// Two rows naming one key would let a later resolve of this organization
@@ -312,7 +314,7 @@ func bindSiteReadLogo(ctx context.Context, tx pgx.Tx, readID ids.UUID, orgID ids
 	// draft: provenance is written once and never re-derived, and a machine mark
 	// recorded under a person's name would make the human-precedence guard
 	// refuse every later resolve for a logo nobody chose.
-	if err := recordLogoWrite(ctx, tx, orgID, *originURL, companySiteReadCapturedBy); err != nil {
+	if err := recordLogoWrite(ctx, tx, orgID, previousOrigin, *originURL, companySiteReadCapturedBy); err != nil {
 		return nil, err
 	}
 	return unadopted, nil
@@ -359,34 +361,6 @@ func supersededObject(previous *string, objectKey string) *string {
 		return nil
 	}
 	return previous
-}
-
-// recordLogoWrite completes the logo write's shape: the field's provenance,
-// the audit row, and the organization.updated event that links both into the
-// trace. It runs inside the caller's transaction, so the mark and the record
-// of who set it commit together or not at all.
-func recordLogoWrite(ctx context.Context, tx pgx.Tx, id ids.OrganizationID, originURL, by string) error {
-	if err := storekit.StampFields(ctx, tx, "organization", id.UUID, companySourceSiteRead, by,
-		[]storekit.FieldStamp{{Field: logoFieldName, EvidenceRef: &originURL}}); err != nil {
-		return err
-	}
-	delta := map[string]any{logoFieldName: originURL}
-	auditID, err := storekit.Audit(ctx, tx, "update", "organization", id.UUID, nil, map[string]any{
-		auditKeySource: companySourceSiteRead, auditKeySourceURL: originURL,
-		auditKeyFields: delta,
-	})
-	if err != nil {
-		return fmt.Errorf("audit organization logo: %w", err)
-	}
-	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, crmcontracts.PublicEventOrganizationUpdated{
-		ChangedFields: map[string]any{
-			eventKeyDelta:  map[string]any{auditKeyFields: delta},
-			auditKeySource: companySourceSiteRead, auditKeySourceURL: originURL,
-		},
-	}); err != nil {
-		return fmt.Errorf("emit organization.updated: %w", err)
-	}
-	return nil
 }
 
 // LogoHeldByHuman answers whether a person set this organization's logo, for a

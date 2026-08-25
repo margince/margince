@@ -386,7 +386,11 @@ func (s *Store) FinishTranscriptRead(ctx context.Context, readID ids.UUID, outco
 		if tag.RowsAffected() != 1 {
 			return fmt.Errorf("%w: transcript read %s is not running", apperrors.ErrConflict, readID)
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "transcript_read", readID, nil, map[string]any{
+		// AuditEvent, not Audit: the compare-and-set above proves the row was
+		// running, so a prior state exists — it is simply a run record's own
+		// progress rather than a field a person edited, and nothing would ever
+		// be restored to it.
+		if _, err := storekit.AuditEvent(ctx, tx, "update", "transcript_read", readID, map[string]any{
 			"status": outcome.Status, "proposals": len(proposals),
 		}); err != nil {
 			return fmt.Errorf("audit transcript read finish: %w", err)

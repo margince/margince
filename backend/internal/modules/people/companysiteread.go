@@ -106,12 +106,11 @@ func (s *Store) ConfirmCompanySiteRead(ctx context.Context, in ConfirmCompanySit
 }
 
 type siteReadConfirmation struct {
-	organizationID ids.OrganizationID
-	created        bool
-	appliedSite    map[string]any
-	appliedHuman   map[string]any
-	appliedFacts   []map[string]any
-	proposalIDs    []ids.UUID
+	target       anchorTarget
+	appliedSite  map[string]any
+	appliedHuman map[string]any
+	appliedFacts []map[string]any
+	proposalIDs  []ids.UUID
 }
 
 func (s *Store) confirmCompanySiteReadTx(
@@ -144,7 +143,7 @@ func (s *Store) confirmCompanySiteReadTx(
 	if err != nil {
 		return Company{}, nil, err
 	}
-	confirmation.proposalIDs, err = stageConfirmedSiteReadPeople(ctx, tx, confirmation.organizationID, read, stagePeople)
+	confirmation.proposalIDs, err = stageConfirmedSiteReadPeople(ctx, tx, confirmation.target.id, read, stagePeople)
 	if err != nil {
 		return Company{}, nil, err
 	}
@@ -156,11 +155,11 @@ func (s *Store) confirmCompanySiteReadTx(
 	// anchor publishes organization.created; the outbox ships a single entity's
 	// rows in insert order, so binding first would hand a consumer an update for
 	// an organization it has not been told about yet.
-	unadoptedLogo, err := bindSiteReadLogo(ctx, tx, read.ID, confirmation.organizationID, in.ReclaimUnadoptedLogo)
+	unadoptedLogo, err := bindSiteReadLogo(ctx, tx, read.ID, confirmation.target.id, in.ReclaimUnadoptedLogo)
 	if err != nil {
 		return Company{}, nil, err
 	}
-	company, err := readCompany(ctx, tx, confirmation.organizationID)
+	company, err := readCompany(ctx, tx, confirmation.target.id)
 	if err != nil {
 		return Company{}, nil, err
 	}
@@ -187,10 +186,11 @@ func applySiteReadConfirmation(
 	in ConfirmCompanySiteReadInput,
 	by string,
 ) (siteReadConfirmation, error) {
-	orgID, created, err := resolveOrCreateAnchor(ctx, tx, in.DisplayName, by)
+	target, err := resolveOrCreateAnchor(ctx, tx, in.DisplayName, by)
 	if err != nil {
 		return siteReadConfirmation{}, err
 	}
+	orgID := target.id
 	siteFields, humanFields := splitConfirmedProfile(read.ProfileFields, read.LegalEntities, in)
 	appliedSite, err := applyEvidenceFieldsWithOverwrite(ctx, tx, workspaceID(ctx), orgID,
 		companySourceSiteRead, companySiteReadCapturedBy, siteFields, in.overwriteProfileFields)
@@ -216,11 +216,10 @@ func applySiteReadConfirmation(
 	}
 	appliedFacts = append(appliedFacts, humanFacts...)
 	return siteReadConfirmation{
-		organizationID: orgID,
-		created:        created,
-		appliedSite:    appliedSite,
-		appliedHuman:   appliedHuman,
-		appliedFacts:   appliedFacts,
+		target:       target,
+		appliedSite:  appliedSite,
+		appliedHuman: appliedHuman,
+		appliedFacts: appliedFacts,
 	}, nil
 }
 
@@ -275,10 +274,19 @@ func stageConfirmedSiteReadPeople(
 
 func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, confirmation siteReadConfirmation) error {
 	action := actionUpdate
-	if confirmation.created {
+	if confirmation.target.created {
 		action = actionCreate
 	}
-	auditID, err := storekit.Audit(ctx, tx, action, "organization", confirmation.organizationID.UUID, nil, map[string]any{
+	before, after, err := anchorSaveImages(ctx, tx, confirmation.target)
+	if err != nil {
+		return err
+	}
+	// before/after carry the RECORD's own column images and nothing else. Which
+	// page was read, which draft was confirmed and which fields the human kept
+	// are context ABOUT the confirmation and ride audit_log.evidence, because
+	// anything placed in the images is projected by field history as a change
+	// to a field of that name (storekit.AuditWithEvidence).
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "organization", confirmation.target.id.UUID, before, after, map[string]any{
 		auditKeySource: companySourceSiteRead, auditKeySourceURL: read.SeedURL,
 		auditKeyFields: confirmation.appliedSite, "human_fields": confirmation.appliedHuman,
 		auditKeyFacts: confirmation.appliedFacts, "site_read_id": read.ID, "draft_version": read.DraftVersion,
@@ -287,7 +295,7 @@ func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, c
 		return fmt.Errorf("audit company site-read confirmation: %w", err)
 	}
 	payload := siteReadConfirmationPayload(read, confirmation)
-	if err := storekit.EmitEvent(ctx, tx, auditID, confirmation.organizationID.UUID, payload); err != nil {
+	if err := storekit.EmitEvent(ctx, tx, auditID, confirmation.target.id.UUID, payload); err != nil {
 		return fmt.Errorf("emit %s: %w", payload.EventType(), err)
 	}
 	// coalesce, because "staged nobody" is an EMPTY list and not an unknown
@@ -298,7 +306,7 @@ func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, c
 	if _, err := tx.Exec(ctx, `UPDATE site_read
 		SET organization_id = $2, proposal_ids = coalesce($3, '{}'::uuid[]),
 		    confirmed_at = now(), updated_at = now()
-		WHERE id = $1`, read.ID, confirmation.organizationID, confirmation.proposalIDs); err != nil {
+		WHERE id = $1`, read.ID, confirmation.target.id, confirmation.proposalIDs); err != nil {
 		return fmt.Errorf("mark website read confirmed: %w", err)
 	}
 	return nil
@@ -320,7 +328,7 @@ func siteReadConfirmationPayload(read SiteRead, confirmation siteReadConfirmatio
 		"human_fields": confirmation.appliedHuman,
 		auditKeyFacts:  confirmation.appliedFacts,
 	}
-	if confirmation.created {
+	if confirmation.target.created {
 		source := companySourceSiteRead
 		sourceURL := read.SeedURL
 		siteReadID := openapi_types.UUID(read.ID)
