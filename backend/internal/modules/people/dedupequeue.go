@@ -88,7 +88,16 @@ type dedupeCursor struct {
 	ID         ids.UUID `json:"id"`
 }
 
-func encodeDedupeCursor(c dedupeCursor) string { return storekit.EncodeOpaque(c) }
+// encodeDedupeCursor renders the queue's position. It has no error channel to
+// a caller mid-page, and the position is a float and a uuid — nothing here can
+// fail to marshal. An empty token would be refused on the way back in.
+func encodeDedupeCursor(c dedupeCursor) string {
+	token, err := storekit.EncodeOpaque(c)
+	if err != nil {
+		return ""
+	}
+	return token
+}
 
 func decodeDedupeCursor(token string) (dedupeCursor, error) {
 	c, err := storekit.DecodeOpaque[dedupeCursor](token)

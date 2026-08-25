@@ -183,11 +183,11 @@ func (p *Provider) Search(ctx context.Context, q datasource.SearchQuery) (dataso
 		}
 		out.Records = append(out.Records, records...)
 		if next != "" {
-			return sweepResumesAt(out, et, next), nil
+			return sweepResumesAt(out, et, next)
 		}
 		inner = ""
 		if len(out.Records) >= limit && i+1 < len(types) {
-			return sweepResumesAt(out, types[i+1], ""), nil
+			return sweepResumesAt(out, types[i+1], "")
 		}
 	}
 	return out, nil
@@ -319,10 +319,13 @@ func resumeIndex(walk []datasource.EntityType, stream string) int {
 // sweepResumesAt finishes a page that stopped short of the walk's end: the
 // position to continue from, and the flag that says one exists. They are set
 // together and only together.
-func sweepResumesAt(out datasource.SearchResult, et datasource.EntityType, inner string) datasource.SearchResult {
-	out.NextCursor = storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: inner})
-	out.HasMore = true
-	return out
+func sweepResumesAt(out datasource.SearchResult, et datasource.EntityType, inner string) (datasource.SearchResult, error) {
+	cursor, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: inner})
+	if err != nil {
+		return datasource.SearchResult{}, err
+	}
+	out.NextCursor, out.HasMore = cursor, true
+	return out, nil
 }
 
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {

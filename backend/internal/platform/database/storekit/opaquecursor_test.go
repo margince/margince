@@ -23,7 +23,11 @@ type position struct {
 func TestAPositionSurvivesTheRoundTrip(t *testing.T) {
 	at := time.Date(2026, 8, 25, 9, 30, 0, 0, time.UTC)
 	want := position{Score: 0.75, Kind: "person", ID: ids.NewV7(), CreatedAt: &at}
-	got, err := storekit.DecodeOpaque[position](storekit.EncodeOpaque(want))
+	token, err := storekit.EncodeOpaque(want)
+	if err != nil {
+		t.Fatalf("minting a token: %v", err)
+	}
+	got, err := storekit.DecodeOpaque[position](token)
 	if err != nil {
 		t.Fatalf("decoding a token this package minted: %v", err)
 	}
@@ -49,7 +53,11 @@ func TestAScoreKeepsEveryBitAcrossTheEnvelope(t *testing.T) {
 		math.SmallestNonzeroFloat64,
 		1e-300,
 	} {
-		got, err := storekit.DecodeOpaque[position](storekit.EncodeOpaque(position{Score: score}))
+		token, err := storekit.EncodeOpaque(position{Score: score})
+		if err != nil {
+			t.Fatalf("minting a score of %v: %v", score, err)
+		}
+		got, err := storekit.DecodeOpaque[position](token)
 		if err != nil {
 			t.Fatalf("decoding a score of %v: %v", score, err)
 		}
@@ -68,7 +76,7 @@ func TestATokenThisPackageDidNotMintIsTheClientsMistake(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			token := "not-base64-!!"
 			if name == "base64 of something that is not JSON" {
-				token = storekit.EncodeOpaque("a string is valid JSON")[:4] + "____"
+				token = "X19fXw"
 			}
 			if _, err := storekit.DecodeOpaque[position](token); !errors.As(err, new(*storekit.MalformedCursorError)) {
 				t.Errorf("decoding %q gave %v, want MalformedCursorError — httperr answers 422 on that "+
@@ -92,5 +100,20 @@ func TestAnEmptyDocumentDecodesToAZeroPositionRatherThanARefusal(t *testing.T) {
 		if got != (position{}) {
 			t.Errorf("decoding %q = %+v, want the zero position", token, got)
 		}
+	}
+}
+
+// The failure that is not obvious: a position carrying an instant Postgres can
+// store but JSON cannot write. Swallowing it would hand a caller an empty token
+// beside "there is more" — a page a client can ask for and never receive.
+func TestAnInstantJSONCannotWriteIsAnErrorRatherThanAnEmptyToken(t *testing.T) {
+	beyond := time.Date(294276, 1, 1, 0, 0, 0, 0, time.UTC)
+	token, err := storekit.EncodeOpaque(position{CreatedAt: &beyond})
+	if err == nil {
+		t.Fatalf("a year-294276 instant encoded to %q; Postgres stores that timestamp and JSON has no "+
+			"form for it, so the token would be empty and the page unreachable", token)
+	}
+	if token != "" {
+		t.Errorf("the failed mint returned %q, want no token at all", token)
 	}
 }

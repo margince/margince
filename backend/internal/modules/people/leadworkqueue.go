@@ -38,7 +38,14 @@ const (
 	leadQueueRankInactive
 )
 
-func encodeLeadQueueCursor(cursor leadQueueCursor) string { return storekit.EncodeOpaque(cursor) }
+// encodeLeadQueueCursor renders the queue's position, and it can genuinely
+// fail: the position carries two instants read off rows, and a timestamp
+// outside year 0..9999 — which Postgres stores and this product never writes —
+// has no JSON form. The caller answers the read rather than paging past a
+// position it cannot name.
+func encodeLeadQueueCursor(cursor leadQueueCursor) (string, error) {
+	return storekit.EncodeOpaque(cursor)
+}
 
 func decodeLeadQueueCursor(token string) (leadQueueCursor, error) {
 	cursor, err := storekit.DecodeOpaque[leadQueueCursor](token)
@@ -193,9 +200,13 @@ func (s *Store) readLeadQueuePage(ctx context.Context, query string, args []any,
 	if len(leads) > limit {
 		leads = leads[:limit]
 		last := leads[limit-1]
-		page = storekit.Page{HasMore: true, NextCursor: encodeLeadQueueCursor(leadQueueCursor{
+		next, err := encodeLeadQueueCursor(leadQueueCursor{
 			AsOf: asOf, Rank: ranks[limit-1], Score: last.Score, CreatedAt: last.CreatedAt, ID: ids.UUID(last.Id),
-		})}
+		})
+		if err != nil {
+			return nil, storekit.Page{}, err
+		}
+		page = storekit.Page{HasMore: true, NextCursor: next}
 	}
 	if leads == nil {
 		leads = []crmcontracts.Lead{}

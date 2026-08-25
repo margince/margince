@@ -108,12 +108,28 @@ func (s *MirrorStore) List(ctx context.Context, objectClass, cursor string, limi
 // 422 rather than falling through to a 500 and sending an admin looking for an
 // outage that is not there.
 func encodeMirrorCursor(externalID string) string {
-	return storekit.EncodeOpaque(externalID)
+	token, err := storekit.EncodeOpaque(externalID)
+	if err != nil {
+		return ""
+	}
+	return token
 }
 
 func decodeMirrorCursor(cursor string) (string, error) {
 	if cursor == "" {
 		return "", nil
 	}
-	return storekit.DecodeOpaque[string](cursor)
+	externalID, err := storekit.DecodeOpaque[string](cursor)
+	if err != nil {
+		return "", err
+	}
+	// A token that decodes to nothing is not the start of the list. `null` and
+	// `""` both unmarshal cleanly into an empty string, and an empty string is
+	// how the caller above spells "first page" — so without this a token
+	// nobody minted silently RESTARTS the walk instead of being refused, and
+	// the client pages the mirror from the top believing it resumed.
+	if externalID == "" {
+		return "", &storekit.MalformedCursorError{}
+	}
+	return externalID, nil
 }

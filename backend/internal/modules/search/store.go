@@ -372,7 +372,15 @@ type rankedCursor struct {
 	ID    ids.UUID
 }
 
-func encodeCursor(c rankedCursor) string { return storekit.EncodeOpaque(c) }
+// encodeCursor renders the ranked position. Score, type and id cannot fail to
+// marshal; an empty token would be refused on the way back in.
+func encodeCursor(c rankedCursor) string {
+	token, err := storekit.EncodeOpaque(c)
+	if err != nil {
+		return ""
+	}
+	return token
+}
 
 func decodeCursor(s string) (rankedCursor, error) {
 	c, err := storekit.DecodeOpaque[rankedCursor](s)

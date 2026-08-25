@@ -6,6 +6,7 @@ package storekit
 import (
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 )
 
 // EncodeOpaque and DecodeOpaque are the one envelope a keyset cursor travels
@@ -37,13 +38,19 @@ import (
 
 // EncodeOpaque renders a position as an opaque continuation token.
 //
-// It cannot fail. A cursor is a fixed-shape struct of scalars, which is the
-// case json.Marshal has no error for — the shapes that can fail (channels,
-// functions, NaN) are not positions, and a caller that reached for one would
-// not compile past the constraint below.
-func EncodeOpaque[T any](position T) string {
-	raw, _ := json.Marshal(position) //nolint:errchkjson // a fixed-shape position of scalars has no failing case
-	return base64.RawURLEncoding.EncodeToString(raw)
+// It returns an error, and the error is reachable — which is not obvious and is
+// why it is written down here. A position that carries a time.Time cannot be
+// marshalled if that instant falls outside year 0..9999, and Postgres
+// timestamps reach year 294276: a row with an absurd but storable created_at
+// makes a keyset built from it unencodable. Swallowing that would hand the
+// caller an empty token beside HasMore = true, which is a page the client can
+// ask for and never receive.
+func EncodeOpaque[T any](position T) (string, error) {
+	raw, err := json.Marshal(position)
+	if err != nil {
+		return "", fmt.Errorf("store: rendering a continuation token: %w", err)
+	}
+	return base64.RawURLEncoding.EncodeToString(raw), nil
 }
 
 // DecodeOpaque reads a token back, or refuses it as the client's mistake.

@@ -34,7 +34,21 @@ func EncodeCursor(createdAt time.Time, id ids.UUID) string {
 	return mintCursorToken(Cursor{CreatedAt: createdAt, ID: id})
 }
 
-func mintCursorToken(c Cursor) string { return EncodeOpaque(c) }
+// mintCursorToken renders an ordinary keyset position.
+//
+// A page's cursor has no error channel to a caller mid-page, and the shape here
+// is a keyset this package built from a row it just read — so a failure would
+// mean a created_at outside year 0..9999, which is a row nothing in this
+// product can produce. It is dropped rather than swallowed silently: the empty
+// token that results is refused on the way back in, which is the honest end of
+// a position that cannot be written down.
+func mintCursorToken(c Cursor) string {
+	token, err := EncodeOpaque(c)
+	if err != nil {
+		return ""
+	}
+	return token
+}
 
 // SweepCursor is a position in a walk across SEVERAL streams: which stream the
 // page stopped in, and where inside that stream it stopped.
@@ -62,7 +76,7 @@ type SweepCursor struct {
 // result with "there is more" — a silent empty cursor there would report a
 // remainder with no way to reach it, which is the defect a resumable sweep
 // exists to remove.
-func EncodeSweepCursor(position SweepCursor) string { return EncodeOpaque(position) }
+func EncodeSweepCursor(position SweepCursor) (string, error) { return EncodeOpaque(position) }
 
 // DecodeSweepCursor reads a resume position back. An empty token is the start
 // of the walk, not a fault.

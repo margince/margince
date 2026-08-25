@@ -133,14 +133,14 @@ func (p *Provider) sweep(ctx context.Context, types []datasource.EntityType, q d
 		}
 		// This type still has rows the page did not reach: resume INSIDE it.
 		if next != "" {
-			return withResumePosition(out, et, next), nil
+			return withResumePosition(out, et, next)
 		}
 		// It is exhausted. If the page is full and any type is left, resume at
 		// the start of the next one; a full page on the LAST type is simply a
 		// complete answer, and claiming more would be the same lie inverted.
 		inner = ""
 		if len(out.Records) >= limit && i+1 < len(types) {
-			return withResumePosition(out, types[i+1], ""), nil
+			return withResumePosition(out, types[i+1], "")
 		}
 	}
 	return out, nil
@@ -234,10 +234,13 @@ func resumePosition(walk []datasource.EntityType, resumeAt datasource.EntityType
 // withResumePosition finishes a page that stopped short of the walk's end:
 // the position to continue from, and the flag that says one exists. They are
 // set together and only together, which is the whole of the invariant.
-func withResumePosition(out datasource.SearchResult, et datasource.EntityType, inner string) datasource.SearchResult {
-	out.NextCursor = storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: inner})
-	out.HasMore = true
-	return out
+func withResumePosition(out datasource.SearchResult, et datasource.EntityType, inner string) (datasource.SearchResult, error) {
+	cursor, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: inner})
+	if err != nil {
+		return datasource.SearchResult{}, err
+	}
+	out.NextCursor, out.HasMore = cursor, true
+	return out, nil
 }
 
 // resumeStream reads the position a cursor names, refusing one this package
