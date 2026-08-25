@@ -347,6 +347,14 @@ export function useListQuery<Row>({
       return;
     }
     seeded.current = true;
+    if (currentParams().size > 0) {
+      // The address already says what the list should be — a reload, a link
+      // somebody was sent, or Back onto a list this mount did not narrow.
+      // Writing the opening state over it would throw away exactly what was
+      // asked for, and a reload is where that is most obvious: the reader
+      // watches their own filter vanish.
+      return;
+    }
     setParams(paramsFromListQuery(opening, opening));
   }, [overlay, opening, setParams]);
 
