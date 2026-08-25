@@ -205,7 +205,7 @@ func (c extensionCore) refuseOverlay(ctx context.Context) error {
 	// seams. Stronger: the mode and the write it guards are then the same
 	// transaction, so the answer cannot go stale between them — the dispatcher's
 	// own read narrows that window and cannot close it.
-	overlaid, err := overlayModeOf(ctx, c.tx, workspace)
+	overlaid, err := overlayModeOf(ctx, c.tx)
 	if err != nil {
 		// Logged here and NOT returned: the text of a failed workspace read is
 		// a relation name and a SQL state, and a unit is not a reader those are

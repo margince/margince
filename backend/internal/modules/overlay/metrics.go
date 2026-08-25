@@ -25,7 +25,6 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -76,16 +75,9 @@ SELECT object_class, min(last_synced_at) FROM overlay_mirror GROUP BY object_cla
 // DueOverlayConnections already takes.
 func SourceLagByClass(ctx context.Context, pool *pgxpool.Pool, now func() time.Time) (map[string]time.Duration, error) {
 	// rls-exempt: fleet enumeration — workspace is not itself workspace-scoped.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace
-		 WHERE archived_at IS NULL
-		   AND EXISTS (SELECT 1 FROM overlay_mode WHERE sor_mode = 'overlay')
-		 ORDER BY created_at`)
+	workspaces, err := overlayModeWorkspaces(ctx, pool)
 	if err != nil {
 		return nil, fmt.Errorf("overlay: listing overlay-mode workspaces for source-lag: %w", err)
-	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("overlay: collecting overlay-mode workspace ids: %w", err)
 	}
 
 	oldest := make(map[string]time.Time)

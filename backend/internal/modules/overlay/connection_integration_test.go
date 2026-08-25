@@ -127,8 +127,8 @@ func TestConnectSealsTheTokenAndFlipsTheWorkspaceToOverlay(t *testing.T) {
 		t.Errorf("vault returned %q, want the original token", sealed)
 	}
 
-	// The workspace flip: x_sor_mode/x_incumbent change together (the
-	// x_overlay_iff_incumbent CHECK).
+	// The mode flip: sor_mode/incumbent change together (the
+	// overlay_mode_overlay_iff_incumbent CHECK).
 	var sorMode string
 	var incumbentCol *string
 	queryRowWS(ctx, t, pool,
@@ -286,7 +286,7 @@ func TestConnectAfterDisconnectRevivesTheConnection(t *testing.T) {
 		t.Fatalf("overlay_tombstone rows = %d, want 0 — a reconnect clears what teardown suppressed", tombstones)
 	}
 	if mode != "overlay" {
-		t.Fatalf("x_sor_mode = %q, want overlay", mode)
+		t.Fatalf("sor_mode = %q, want overlay", mode)
 	}
 }
 

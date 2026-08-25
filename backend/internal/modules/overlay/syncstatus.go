@@ -70,7 +70,7 @@ func (s *Service) requireOverlayMode(ctx context.Context) error {
 	return err
 }
 
-// resolveOverlayMode reads the workspace's x_sor_mode AND its active
+// resolveOverlayMode reads the installation's sor_mode AND its active
 // incumbent in ONE query, so the mode gate and the incumbent the budget
 // snapshot keys on come from a single consistent read — a concurrent
 // disconnect (which flips both in one statement) can never let Budget pass

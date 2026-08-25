@@ -141,7 +141,7 @@ type Service struct {
 	projectionFingerprints map[string]string
 	incumbent              func(region, token string) Incumbent
 	log                    *slog.Logger
-	// modeFlipped observes a committed x_sor_mode flip (Connect →
+	// modeFlipped observes a committed mode flip (Connect →
 	// overlay, Disconnect → native) so a mode-caching read dispatcher
 	// can drop its entry instead of serving the OLD mode for a cache
 	// TTL. nil means no observer is composed — the flip still commits.
@@ -176,7 +176,7 @@ func (s *Service) WithFlipImportProbe(fn func(ctx context.Context, tx pgx.Tx) (b
 	return s
 }
 
-// notifyModeFlip reports a committed x_sor_mode flip to the composed
+// notifyModeFlip reports a committed mode flip to the composed
 // observer, if any.
 func (s *Service) notifyModeFlip(workspaceID ids.UUID) {
 	if s.modeFlipped != nil {
@@ -227,7 +227,7 @@ func (s *Service) WithLogger(log *slog.Logger) *Service {
 // Connect seals in.Token into the vault, then — in one transaction —
 // inserts the incumbent_connection row (write shape: domain row + Audit
 // + Emit) and flips the overlay_mode row together (the
-// x_overlay_iff_incumbent CHECK demands both change in the same
+// overlay_mode_overlay_iff_incumbent CHECK demands both change in the same
 // statement). Gated by auth.Require("overlay_connection", ActionCreate):
 // connecting is destructive workspace-wide config (it will later purge
 // the mirror on Disconnect and flips sor_mode for every seat), so it is
@@ -286,7 +286,7 @@ func (s *Service) Connect(ctx context.Context, in ConnectInput) (Connection, err
 	if reconnect {
 		out, err = s.reconnectConnection(ctx, in, ref, accountID, ws)
 	} else {
-		out, err = s.insertConnection(ctx, in, ref, accountID, ws)
+		out, err = s.insertConnection(ctx, in, ref, accountID)
 	}
 	if err != nil {
 		// Clean up the just-sealed ref ONLY on the unique-violation path: a lost
@@ -398,7 +398,7 @@ func incumbentConnectedPayload(incumbent, region string, scopes []string, status
 // shape both branches share (Audit + Emit + the workspace mode flip), all
 // in one database.WithWorkspaceTx. There is no prior state to record, so
 // the audit action is "create" and before is nil.
-func (s *Service) insertConnection(ctx context.Context, in ConnectInput, ref keyvault.Ref, accountID string, ws ids.UUID) (Connection, error) {
+func (s *Service) insertConnection(ctx context.Context, in ConnectInput, ref keyvault.Ref, accountID string) (Connection, error) {
 	var out Connection
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var id ids.UUID

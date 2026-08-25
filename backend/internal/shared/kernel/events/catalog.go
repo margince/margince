@@ -145,7 +145,7 @@ func ExtensionStream() string {
 // catalog is the enumerable V1 event catalog (events.md §5.1–§5.10, plus
 // the §5.11 signal lifecycle): each type's home stream entity and current
 // payload schema version. §5.10 (overlay mirror) is overlay-mode-only —
-// these types are only ever emitted for a workspace with x_sor_mode =
+// these types are only ever emitted for an installation with overlay_mode.sor_mode =
 // 'overlay' — and the remaining §5.11 type (forecast.period_closed) rides
 // E09 — deferred with its work package.
 //

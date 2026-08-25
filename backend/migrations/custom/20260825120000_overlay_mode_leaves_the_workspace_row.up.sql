@@ -20,12 +20,22 @@
 -- the mode NATIVE — CompleteFlip writes the mode and does not touch the
 -- connection — so three states are reachable: never connected, connected in
 -- overlay mode, and flipped to native with the connection still live.
+-- Bounded before anything touches `workspace`: the read below takes ACCESS
+-- SHARE on it and the ALTER at the end takes ACCESS EXCLUSIVE, on a table this
+-- migration did not create. The down half bounds itself at the same point.
+SET LOCAL lock_timeout = '3s';
+
 CREATE TABLE overlay_mode (
     -- The singleton shape core uses for embed_store_binding, not the
-    -- `UNIQUE (btree((true)))` its neighbour incumbent_connection uses. That
-    -- one admits zero rows, which is right for a connection that may not
-    -- exist; the mode always exists, so a primary key over a column that can
-    -- only be true says exactly one row and says it structurally.
+    -- `UNIQUE (btree((true)))` its neighbours in this pack use, because that
+    -- one needs a column to hang the index off: incumbent_connection already
+    -- carries a uuid id, and this table would have to invent one nothing
+    -- references. A boolean that can only be true is the whole key.
+    --
+    -- Either shape gives AT MOST one row. The other half — that a row EXISTS —
+    -- is what the readers depend on, and it is held by the delete guard below
+    -- rather than by the three exclusion lists that spare this table from the
+    -- sweeps. Those lists are an optimisation; the guard is the rule.
     singleton  boolean     NOT NULL DEFAULT true,
     sor_mode   text        NOT NULL DEFAULT 'native',
     incumbent  text,
@@ -45,11 +55,48 @@ CREATE TRIGGER trg_overlay_mode_updated
     BEFORE UPDATE ON overlay_mode
     FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+-- The row is not deletable. Every reader of the mode scans this one row, and a
+-- missing row is not a state any of them can answer: the dispatcher would have
+-- no system of record to choose, and the fleet walkers would read "no
+-- installation is in overlay mode" from a database that has simply lost the
+-- fact. Before this guard, three separate exclusion lists — the production
+-- sweep's preservedResetTables, testdb's resetTables, and the teardown suite's
+-- retainedByDesign — were the only thing standing between a DELETE and that
+-- state, and a fourth sweep site would have had to find all three.
+--
+-- Same posture as the append-only ledgers (audit_log_immutable), for the same
+-- reason: a rule the database refuses beats a rule three lists remember.
+CREATE FUNCTION overlay_mode_undeletable() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $fn$
+BEGIN
+  RAISE EXCEPTION 'overlay_mode holds the installation''s system-of-record mode and always has exactly one row; it is updated, never deleted'
+    USING ERRCODE = 'check_violation';
+END; $fn$;
+
+CREATE TRIGGER trg_overlay_mode_undeletable
+    BEFORE DELETE ON overlay_mode
+    FOR EACH ROW EXECUTE FUNCTION overlay_mode_undeletable();
+
+-- More than one live workspace has no single mode to carry, and the DROP three
+-- statements below makes the loss unrecoverable. identity.InstallationWorkspace
+-- already refuses to serve such a database (ErrMultipleWorkspaces), so this
+-- refuses to migrate it rather than silently keeping the oldest row's mode and
+-- discarding the rest.
+DO $$
+DECLARE live int;
+BEGIN
+    SELECT count(*) INTO live FROM workspace WHERE archived_at IS NULL;
+    IF live > 1 THEN
+        RAISE EXCEPTION 'overlay_mode: % live workspaces, so there is no single system-of-record mode to carry onto the installation row. Resolve to one live workspace first (or rebuild with make dev-fresh); this migration will not choose between them.', live;
+    END IF;
+END $$;
+
 -- Carry the installation's current mode across, from the workspace the
--- resolver would name (identity.activeWorkspaces: live rows only, and this
--- installation has exactly one). A database with no live workspace — a fresh
--- one, mid-bootstrap — takes the column default instead, which is the same
--- 'native' a fresh workspace row would have carried.
+-- resolver would name (identity.activeWorkspaces: live rows only, and the
+-- guard above has established there is at most one). A database with no live
+-- workspace — a fresh one, mid-bootstrap — takes the column default instead,
+-- which is the same 'native' a fresh workspace row would have carried.
 INSERT INTO overlay_mode (sor_mode, incumbent)
 SELECT x_sor_mode, x_incumbent
   FROM workspace
@@ -61,12 +108,8 @@ INSERT INTO overlay_mode (sor_mode, incumbent)
 SELECT 'native', NULL
  WHERE NOT EXISTS (SELECT 1 FROM overlay_mode);
 
--- Bounded, because DROP COLUMN takes ACCESS EXCLUSIVE on a table this
--- migration did not create. The three CHECK constraints go with the columns:
--- each references only the two being dropped, x_overlay_iff_incumbent
--- included.
-SET LOCAL lock_timeout = '3s';
-
+-- The three CHECK constraints go with the columns: each references only the two
+-- being dropped, x_overlay_iff_incumbent included.
 ALTER TABLE workspace
     DROP COLUMN x_sor_mode,
     DROP COLUMN x_incumbent;

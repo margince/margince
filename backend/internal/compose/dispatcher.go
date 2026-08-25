@@ -38,7 +38,7 @@ import (
 // where no such local hook can exist.
 const sorModeCacheTTL = 5 * time.Second
 
-// sorModeCacheEntry caches one the installation's resolved mode answer
+// sorModeCacheEntry caches the installation's resolved mode answer
 // (overlay==true means overlay_mode.sor_mode='overlay') until expiresAt.
 type sorModeCacheEntry struct {
 	overlay   bool
@@ -58,7 +58,7 @@ type Dispatcher struct {
 	overlay *overlay.Provider
 	pool    *pgxpool.Pool
 	now     func() time.Time
-	// queryMode reads one workspace's sor_mode from the overlay_mode row.
+	// queryMode reads the installation's sor_mode from the overlay_mode row.
 	// Injected for the same reason now is (P3: no real dependency in a
 	// cache-behaviour test) — it is the seam that lets a unit test prove the
 	// write path ignores the cache, which is precisely the property that
@@ -191,13 +191,13 @@ func (d *Dispatcher) overlayModeFor(ctx context.Context, wsID ids.UUID) (bool, e
 	return isOverlay, nil
 }
 
-// queryOverlayMode reads overlay_mode.sor_mode straight from the workspace row,
+// queryOverlayMode reads overlay_mode.sor_mode straight from the overlay_mode row,
 // on a connection of its own because a dispatch has no transaction to borrow.
 func (d *Dispatcher) queryOverlayMode(ctx context.Context, wsID ids.UUID) (bool, error) {
 	var overlaid bool
 	err := database.WithInfraTx(ctx, d.pool, func(tx pgx.Tx) error {
 		var readErr error
-		overlaid, readErr = overlayModeOf(ctx, tx, wsID)
+		overlaid, readErr = overlayModeOf(ctx, tx)
 		return readErr
 	})
 	if err != nil {
@@ -224,7 +224,7 @@ func (d *Dispatcher) queryOverlayMode(ctx context.Context, wsID ids.UUID) (bool,
 // workspace-bound WithWorkspaceTx — there is no workspace_id column on workspace
 // itself to scope by, and reading it from inside a workspace-bound transaction
 // is equally unfiltered.
-func overlayModeOf(ctx context.Context, q rowQuerier, wsID ids.UUID) (bool, error) {
+func overlayModeOf(ctx context.Context, q rowQuerier) (bool, error) {
 	var mode string
 	if err := q.QueryRow(ctx, `SELECT sor_mode FROM overlay_mode`).Scan(&mode); err != nil {
 		return false, err

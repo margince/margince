@@ -120,29 +120,28 @@ func (s *Service) Disconnect(ctx context.Context) error {
 	return nil
 }
 
-// RevertToNative returns the bound workspace to native mode inside the
-// caller's transaction, reporting whether it had to. It is the ONE spelling of
-// that flip as an intentional act: Disconnect's teardown takes it, and so does
-// the non-production data reset, which sweeps every table overlay mode depends
-// on and would otherwise leave the workspace claiming to read from an
-// incumbent it no longer has a connection to.
+// RevertToNative returns the installation to native mode inside the caller's
+// transaction, reporting whether it had to. It is the ONE spelling of that flip
+// as an intentional act: Disconnect's teardown takes it, and so does the
+// non-production data reset, which sweeps every table overlay mode depends on
+// and would otherwise leave the installation claiming to read from an incumbent
+// it no longer has a connection to.
 //
-// The reset does not write the mode again afterwards: since ADR-0091 the mode
-// is overlay_mode's, and nothing else restores it. This call is the only thing
-// that reverts it, which makes its ordering load-bearing rather than
-// incidental: whether the
-// installation was in overlay mode is only knowable before something writes
-// the column, and only this call reports it.
+// It is the ONLY thing that reverts the mode. The data reset spares
+// overlay_mode from its table sweep (compose/datasweep.go) precisely so this
+// call has a row to update, and nothing writes the mode again afterwards — so
+// whether the installation WAS in overlay mode is knowable only here, and only
+// from this call's return.
 //
-// Both columns move in one statement because the schema admits no intermediate
-// state (the x_overlay_iff_incumbent CHECK: a mode of 'overlay' and a non-NULL
-// x_incumbent are the same fact). It is exported because these are overlay's
-// own fork-owned columns on a table identity owns — the write belongs to this
-// module wherever it is called from, which is what
-// TestEveryPackageOnlyWritesTablesItOwns holds.
+// Both values move in one statement because the schema admits no intermediate
+// state (overlay_mode_overlay_iff_incumbent: a mode of 'overlay' and a non-NULL
+// incumbent are the same fact). It is exported because overlay owns
+// overlay_mode outright — this module's own table in its own fork-owned
+// namespace — so the write belongs here wherever it is called from, which is
+// what TestEveryPackageOnlyWritesTablesItOwns holds.
 //
-// Idempotent by predicate: a workspace already native reports false and is not
-// written, so a caller need not ask the mode first.
+// Idempotent by predicate: an installation already native reports false and is
+// not written, so a caller need not ask the mode first.
 //
 // It takes no workspace. overlay_mode holds one row for the installation
 // (ADR-0061), so the statement has nothing to select it by and cannot be

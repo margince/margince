@@ -621,7 +621,7 @@ func TestAcceptance_OVA_AC_1_TeardownPurges(t *testing.T) {
 	// mirror — proving no incumbent-derived data is reachable through the
 	// real seam, not merely absent from the tables a direct count checks.
 	// A FRESH Dispatcher is built here rather than reusing the one above:
-	// Dispatcher intentionally caches a the installation's resolved mode
+	// Dispatcher intentionally caches the installation's resolved mode
 	// for a few seconds (dispatcher.go's own sorModeCacheTTL doc — a
 	// deliberate, documented lag budget for a rare admin action, not a
 	// bug), so the SAME instance queried moments ago would still answer

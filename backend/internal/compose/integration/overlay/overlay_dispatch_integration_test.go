@@ -109,14 +109,20 @@ func TestDispatcherRoutesOverlayWorkspaceReadsToTheOverlayProvider(t *testing.T)
 	}
 }
 
-// seedOverlayModeWorkspace mints a fresh workspace whose x_sor_mode is
-// 'overlay' from creation (the x_overlay_iff_incumbent CHECK requires
-// x_incumbent set in the same statement) plus one human app_user, via
-// the owner connection — the same "direct SQL, owner role bypasses RLS"
-// pattern integration.SeedRow uses elsewhere in this harness. It opens its own
-// owner connection (via integration.OwnerConn) rather than reusing the caller's
-// integration.Env, since this workspace is intentionally a SECOND, independent
-// tenant from the harness's own default fixture.
+// seedOverlayModeWorkspace mints a fresh workspace, puts the INSTALLATION into
+// overlay mode, and seeds one human app_user — all through the owner
+// connection, the same "direct SQL, owner role bypasses RLS" pattern
+// integration.SeedRow uses elsewhere in this harness.
+//
+// The mode and the incumbent move in one statement because
+// overlay_mode_overlay_iff_incumbent admits no intermediate state.
+//
+// It opens its own owner connection (integration.OwnerConn) rather than reusing
+// the caller's integration.Env, because the workspace it mints is a second row
+// independent of the harness's default fixture. The MODE, though, is not
+// second: ADR-0091 moved it off the workspace row, so there is one for the
+// installation and this call flips it for every test in the package until
+// testdb.Reset returns it to native.
 func seedOverlayModeWorkspace(t *testing.T) (ws, user ids.UUID) {
 	t.Helper()
 	owner := integration.OwnerConn(t)

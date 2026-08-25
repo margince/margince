@@ -35,7 +35,7 @@ import (
 // It names no workspace. The mode it flips lives in overlay_mode, which holds
 // one row for the installation (ADR-0061), so there is nothing to select it by
 // — which is the point of the move: this module now writes its own table
-// instead of two fork-owned columns on one identity owns.
+// instead of two fork-owned columns on a table identity owns.
 func activateConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, in ConnectInput, connectedAt time.Time, action string, before map[string]any) (Connection, error) {
 	after := map[string]any{
 		auditFieldIncumbent: in.Incumbent,
@@ -51,10 +51,19 @@ func activateConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, in ConnectI
 		incumbentConnectedPayload(in.Incumbent, in.Region, leastPrivilegeHubSpotScopes, statusActive)); emitErr != nil {
 		return Connection{}, fmt.Errorf("overlay: emitting incumbent.connected: %w", emitErr)
 	}
-	if _, updErr := tx.Exec(ctx, `
+	// The count is checked for the reason its two siblings check theirs
+	// (RevertToNative reports it, CompleteFlip maps zero to ErrConflict): with
+	// no row to update this would seal the token, commit the connection, emit
+	// incumbent.connected and report success, while the installation never
+	// entered overlay mode at all.
+	tag, updErr := tx.Exec(ctx, `
 		UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = $1`,
-		in.Incumbent); updErr != nil {
+		in.Incumbent)
+	if updErr != nil {
 		return Connection{}, fmt.Errorf("overlay: flipping the installation into overlay mode: %w", updErr)
+	}
+	if tag.RowsAffected() != 1 {
+		return Connection{}, fmt.Errorf("overlay: flipping the installation into overlay mode wrote %d rows, want 1 — overlay_mode holds the installation's one mode row", tag.RowsAffected())
 	}
 	return Connection{
 		Incumbent:   in.Incumbent,

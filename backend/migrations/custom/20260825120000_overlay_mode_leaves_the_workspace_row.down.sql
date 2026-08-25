@@ -1,10 +1,10 @@
 -- Restore x_sor_mode and x_incumbent on the workspace row, and the three CHECKs
 -- that governed them, exactly as the overlay baseline declared them.
 --
--- The columns come back with their defaults first so the row satisfies
--- x_overlay_iff_incumbent at every instant: 'native' with a NULL incumbent is
--- the one pair that holds before any backfill. The constraints are added after
--- the values are restored, for the same reason.
+-- The constraints are added AFTER the values are restored, so no intermediate
+-- state is ever checked: the columns arrive at 'native' with a NULL incumbent,
+-- the backfill moves them together, and only then does
+-- x_overlay_iff_incumbent start judging the pair.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE workspace
@@ -12,8 +12,10 @@ ALTER TABLE workspace
     ADD COLUMN x_incumbent text;
 
 -- The mode returns to the workspace the up half took it from. Every other
--- workspace row — an archived predecessor, say — keeps the default, which is
--- what it would have carried anyway: the up half read only the live one.
+-- workspace row — an archived predecessor, say — comes back at the default
+-- rather than at whatever it held before: the up half read only the live one,
+-- so an archived workspace's mode does not survive up-then-down. Nothing reads
+-- it, which is why that is acceptable and not merely unnoticed.
 UPDATE workspace w
    SET x_sor_mode  = m.sor_mode,
        x_incumbent = m.incumbent
@@ -28,3 +30,4 @@ ALTER TABLE workspace
         CHECK ((x_sor_mode = 'overlay') = (x_incumbent IS NOT NULL));
 
 DROP TABLE overlay_mode;
+DROP FUNCTION overlay_mode_undeletable();

@@ -352,7 +352,7 @@ func TestOverlayFlipPreflightBlocksHonestly(t *testing.T) {
 	}
 
 	if mode, _ := f.workspaceMode(t); mode != "overlay" {
-		t.Fatalf("x_sor_mode = %s, want overlay (unchanged)", mode)
+		t.Fatalf("sor_mode = %s, want overlay (unchanged)", mode)
 	}
 	for object, n := range f.nativeEstateRows(t) {
 		if n != 0 {
@@ -462,7 +462,7 @@ func TestOverlayFlipFreshSyncExecute(t *testing.T) {
 	// Mode flipped: native, incumbent cleared (DS-AC-5), connection kept.
 	mode, incumbent := f.workspaceMode(t)
 	if mode != "native" || incumbent != nil {
-		t.Fatalf("workspace = %s/%v, want native with x_incumbent cleared", mode, incumbent)
+		t.Fatalf("workspace = %s/%v, want native with the incumbent cleared", mode, incumbent)
 	}
 	if connStatus := f.connectionStatus(t); connStatus != "active" {
 		t.Fatalf("connection = %s, want active (retirement revokes it later)", connStatus)
@@ -605,7 +605,7 @@ func TestOverlayFlipEmergencyCutover(t *testing.T) {
 	}
 
 	if mode, _ := f.workspaceMode(t); mode != "native" {
-		t.Fatalf("x_sor_mode after emergency cutover = %s, want native", mode)
+		t.Fatalf("sor_mode after emergency cutover = %s, want native", mode)
 	}
 	counts := f.nativeEstateRows(t)
 	if counts["person"] != 3 || counts["deal"] != 2 {

@@ -327,7 +327,7 @@ func (s *Service) FlipSnapshot(ctx context.Context) (FlipSnapshot, error) {
 
 // CompleteFlip is the cutover's mode change (B-E18.27's last step): ONE
 // transaction flips overlay_mode.sor_mode to native and clears
-// x_incumbent — the x_overlay_iff_incumbent CHECK demands both move
+// the incumbent — the overlay_mode_overlay_iff_incumbent CHECK demands both move
 // together, so the incumbent_connection row deliberately SURVIVES, still
 // active, no longer authoritative (UC-E18-05 precondition: retirement
 // revokes it later, and disconnect-after-flip still tears the mirror
