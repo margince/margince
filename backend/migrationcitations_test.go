@@ -7,7 +7,12 @@
 
 package backendarch
 
-// A comment that cites a migration by number must cite one that exists.
+// No file acquires a citation of a migration version that does not exist.
+//
+// The ideal behind that is simpler — every citation should resolve — but the
+// backlog is recorded rather than swept, so what this HOLDS is the narrower
+// claim: the citations already registered stay, and a file gains no citation of
+// a version it does not already cite.
 //
 // The citations do real work: `custom/20260716120000 is the fork-owned seam`
 // tells a reader WHERE to go and see why. When the file behind a citation is
@@ -132,7 +137,7 @@ var updateCitationRegister = flag.Bool("update-citations", false,
 
 func TestEveryCitedMigrationExists(t *testing.T) {
 	known := knownMigrationVersions(t)
-	found, scanned, skipped := scanTreeForCitations(t, known)
+	found, unread, scanned, skipped := scanTreeForCitations(t, known)
 	// A census that read a fraction of the tree must not report the same word
 	// for it. Under a sparse checkout every skip-worktree file vanishes with no
 	// signal.
@@ -148,7 +153,7 @@ func TestEveryCitedMigrationExists(t *testing.T) {
 	}
 
 	if *updateCitationRegister {
-		pruneCitationRegister(t, recorded, present)
+		pruneCitationRegister(t, recorded, present, unread)
 		return
 	}
 
@@ -166,9 +171,10 @@ func TestEveryCitedMigrationExists(t *testing.T) {
 
 	var stale []string
 	for key := range recorded {
-		if !present[key] {
-			stale = append(stale, key)
+		if present[key] || unread[registerEntryPath(key)] {
+			continue
 		}
+		stale = append(stale, key)
 	}
 	sort.Strings(stale)
 	for _, s := range stale {
@@ -283,8 +289,13 @@ func (c citationRef) String() string {
 //
 // EVERY tracked file, with no extension allowlist: an unmeasured prefilter in
 // front of a census is what CLAUDE.md rule 8 forbids by name.
-func scanTreeForCitations(t *testing.T, known map[string]map[string]bool) (found []citationRef, scanned, skipped int) {
+func scanTreeForCitations(t *testing.T, known map[string]map[string]bool) (found []citationRef, unread map[string]bool, scanned, skipped int) {
 	t.Helper()
+	// Paths the scan did not read. A prune consults it, because an entry whose
+	// file was merely unreadable is not an entry the tree has stopped carrying
+	// — deleting it would quietly empty the register for whatever happened to
+	// be missing at that moment.
+	unread = map[string]bool{}
 	for _, f := range trackedFiles(t) {
 		// A symlink is skipped rather than followed. os.ReadFile follows one,
 		// and a tracked symlink pointing outside the worktree would make this
@@ -292,6 +303,7 @@ func scanTreeForCitations(t *testing.T, known map[string]map[string]bool) (found
 		// public repository whose CI logs are public.
 		if f.symlink || citationScanExempt(f.path) {
 			skipped++
+			unread[f.path] = true
 			continue
 		}
 		body, err := os.ReadFile(filepath.Join("..", f.path))
@@ -300,6 +312,7 @@ func scanTreeForCitations(t *testing.T, known map[string]map[string]bool) (found
 			// (submodule) reads as a directory.
 			if os.IsNotExist(err) || strings.Contains(err.Error(), "is a directory") {
 				skipped++
+				unread[f.path] = true
 				continue
 			}
 			t.Fatalf("reading %s: %v", f.path, err)
@@ -308,7 +321,7 @@ func scanTreeForCitations(t *testing.T, known map[string]map[string]bool) (found
 		found = append(found, danglingCitationsIn(f.path, string(body), known)...)
 	}
 	sort.Slice(found, func(i, j int) bool { return found[i].key() < found[j].key() })
-	return found, scanned, skipped
+	return found, unread, scanned, skipped
 }
 
 // citationScanExempt reports a path this gate does not read.
@@ -443,6 +456,17 @@ func versionAlreadyClaimed(claimed [][2]int, start int) bool {
 	return false
 }
 
+// registerEntryPath is the path half of a register key, which is everything
+// before the namespace and version it ends with.
+func registerEntryPath(key string) string {
+	if i := strings.LastIndex(key, " "); i > 0 {
+		if j := strings.LastIndex(key[:i], " "); j > 0 {
+			return key[:j]
+		}
+	}
+	return key
+}
+
 // carriesVersion reports whether the cited version exists in the namespace the
 // citation named. An UNQUALIFIED citation names none, so the union is the honest
 // pool — narrowing it to one namespace would invent a claim the text never made.
@@ -550,11 +574,14 @@ func registerEntries(t *testing.T, path string) []string {
 
 // pruneCitationRegister rewrites the register with the entries the tree still
 // has, and names every line it removed.
-func pruneCitationRegister(t *testing.T, recorded, present map[string]bool) {
+func pruneCitationRegister(t *testing.T, recorded, present, unread map[string]bool) {
 	t.Helper()
 	var keep, removed []string
 	for key := range recorded {
-		if present[key] {
+		// Kept when the citation is still there, and ALSO when its file could
+		// not be read: an unread file has not stopped citing anything, and a
+		// prune run mid-rebase would otherwise delete entries wholesale.
+		if present[key] || unread[registerEntryPath(key)] {
 			keep = append(keep, key)
 			continue
 		}
