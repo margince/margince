@@ -56,6 +56,22 @@ script gates — but none of them can tell that the perfectly good
 component you just wrote already existed under a different name. That part is
 yours.
 
+### Indigo is a claim about provenance
+
+`--ai` / `--aiLight` / `--aiMed` / `--aiText` mark **information or an action
+proposed by an agent rather than by a person** — decision cards, staged values,
+the orb and the lit margin included. One colour, one meaning: it is never
+decoration, and tinting a card indigo because it looked good tells every reader
+something false about who decided. `1.5px dashed var(--aiMed)` means staged and
+not yet accepted; the dashes going solid is acceptance. Text on `--aiLight` takes
+`--aiText`, never `--ai`, which fails AA on its own family's ground.
+`--orbAmber` / `--orbRed` / `--orbGrey` are OUTCOME, not provenance, and stay put.
+
+Why, plus the token table and the provenance triad:
+[`src/design-system/README.md`](src/design-system/README.md). `check-ds-purity.sh`
+holds that colours come from tokens; nothing can tell you the token you picked
+means the wrong thing.
+
 ## A test may not depend on how busy the machine is
 
 The frontend suite has produced two distinct flake families, and reading them
@@ -103,7 +119,7 @@ a number, so `wait()` schedules a real `setTimeout` and every simulated keystrok
 and click yields a macrotask (`user-event` 14.6.3, `utils/misc/wait.js:9`). A
 test's cost therefore scales with its interaction count, on a queue it shares
 with every other jsdom suite, which is what pushes the interaction-heavy screen
-suites past vitest's 5s default under contention (#1144, open).
+suites past vitest's 5s default under contention (#1144, closed; recurs in #2661).
 
 The cost is per event, not per `setup()`, so constructing an instance per
 interaction is not itself the expense. Do it once per test anyway: one instance

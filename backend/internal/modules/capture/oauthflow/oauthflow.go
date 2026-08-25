@@ -18,10 +18,10 @@ import (
 	"io"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
 )
 
@@ -243,7 +243,7 @@ func (c *Client) token(ctx context.Context, form url.Values) (tokenResponse, err
 	// Retry-After and let the registry back off, rather than parking the
 	// connection as rejected. Classified on status before the body matters.
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return tokenResponse{}, &connector.RateLimitedError{RetryAfter: retryAfter(resp)}
+		return tokenResponse{}, &connector.RateLimitedError{RetryAfter: retryafter.Of(resp)}
 	}
 	if resp.StatusCode >= 400 && resp.StatusCode < 500 {
 		return tokenResponse{}, &connector.ProviderError{
@@ -265,15 +265,4 @@ func (c *Client) token(ctx context.Context, form url.Values) (tokenResponse, err
 		return tokenResponse{}, fmt.Errorf("%s: decoding token response: %w", c.cfg.Provider, c.cfg.Unreachable)
 	}
 	return tok, nil
-}
-
-// retryAfter parses the token endpoint's Retry-After (delta-seconds); zero
-// when absent, leaving the registry's own backoff to take over.
-func retryAfter(resp *http.Response) time.Duration {
-	if s := resp.Header.Get("Retry-After"); s != "" {
-		if secs, err := strconv.Atoi(s); err == nil && secs > 0 {
-			return time.Duration(secs) * time.Second
-		}
-	}
-	return 0
 }

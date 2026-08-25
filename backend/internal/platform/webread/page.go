@@ -22,10 +22,15 @@ import (
 // declared, and the raw byte count (for the crawl's total byte budget — the
 // stripped text under-counts what was transferred).
 type Page struct {
-	URL   string
-	Text  string
-	Links []string
-	Bytes int
+	URL string
+	// FinalURL is where the body actually came from: the requested URL unless
+	// the server redirected, in which case it names the last hop. A crawler
+	// deciding what counts as on-site must judge by this one — the requested
+	// host may only forward.
+	FinalURL string
+	Text     string
+	Links    []string
+	Bytes    int
 	// OGImage is the og:image the page declared (absolute), or "" when it
 	// declared none.
 	OGImage string
@@ -74,12 +79,13 @@ func (f *Fetcher) FetchPage(ctx context.Context, rawURL string) (Page, error) {
 	}
 	ogImage, icons := extractHeadAssets(body, base)
 	return Page{
-		URL:     rawURL,
-		Text:    StripTags(body),
-		Links:   extractLinks(body, base),
-		Bytes:   len(body),
-		OGImage: ogImage,
-		Icons:   icons,
+		URL:      rawURL,
+		FinalURL: base.String(),
+		Text:     StripTags(body),
+		Links:    extractLinks(body, base),
+		Bytes:    len(body),
+		OGImage:  ogImage,
+		Icons:    icons,
 	}, nil
 }
 

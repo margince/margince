@@ -54,6 +54,10 @@ type fakeSitePage struct {
 	text   string
 	links  []string
 	robots bool
+	// finalURL is where this page's body "came from" — set it to model a
+	// redirect; empty means the page answered where it was asked, which is
+	// what webread.FetchPage reports for an unredirected fetch.
+	finalURL string
 	// ogImage and icons are the visual identity this page declares, the
 	// input the logo resolve ranks over.
 	ogImage string
@@ -87,8 +91,12 @@ func (s *fakeSite) FetchPage(_ context.Context, rawURL string) (webread.Page, er
 	if page.robots {
 		return webread.Page{}, webread.ErrRobotsDisallowed
 	}
+	finalURL := page.finalURL
+	if finalURL == "" {
+		finalURL = rawURL
+	}
 	return webread.Page{
-		URL: rawURL, Text: page.text, Links: page.links, Bytes: len(page.text),
+		URL: rawURL, FinalURL: finalURL, Text: page.text, Links: page.links, Bytes: len(page.text),
 		OGImage: page.ogImage, Icons: page.icons,
 	}, nil
 }

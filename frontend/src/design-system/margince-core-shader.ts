@@ -33,6 +33,10 @@ export const CORE_FRAG = `#version 300 es
 precision highp float;
 out vec4 outColor;
 
+/* How much of the ball's body a dark page gets, and how much of its bloom. */
+#define DARKBODY 0.62
+#define DARKGLOW 0.55
+
 uniform vec2  iResolution;
 uniform vec2  uMouse;      // -1..1, eased. zero at rail size: a 34px ball has
                            // no parallax to give and jitters if asked for one
@@ -45,6 +49,8 @@ uniform vec3  uTintCol;    // the stopped-state colour: amber, grey or red
 uniform float uIngest;     // 0..1 the inward "pulling material in" sweep
 uniform float uPaper;      // 0 = the ball glows on a dark surface,
                            // 1 = it goes opaque and dark on light paper
+uniform vec3  uWork[5];    // the ribbon palette, read off the tokens
+uniform vec3  uBody[2];    // the ball's own base gradient, read off the tokens
 
 const float R  = 1.0;      // orb radius in world units
 const float PI = 3.14159265;
@@ -75,7 +81,7 @@ bool hitSphere(vec3 ro, vec3 rd, float r, out float t0, out float t1){
    rho is anchored so every loop passes exactly through a shared focus F, which
    is what makes them all cross at one bright point. */
 float band(vec3 u, vec3 C, vec3 F, float phase, float width,
-           float wob1, float wob2, out float rim){
+           float wob1, float wob2, float wob3, out float rim){
   rim = 0.0;
 
   vec3 e1 = F - dot(F, C) * C;
@@ -88,11 +94,29 @@ float band(vec3 u, vec3 C, vec3 F, float phase, float width,
   float rho  = acos(clamp(dot(u, C), -1.0, 1.0)); // angle out from C
   float rho0 = acos(clamp(dot(F, C), -1.0, 1.0)); // ... at the focus
 
-  float target = rho0 + wob1 * cos(phi + phase) + wob2 * cos(2.0 * phi - 1.7 * phase);
+  /* The ribbon's path.
+     Two harmonics at 1x and 2x are rationally related, so the path closed on
+     itself every lap and the eye learned it: a machined loop rather than
+     something alive. The third term sits at an irrational-ish 1.618x on a phase
+     of its own, so the three never come back into register and the shape a
+     reader sees is never quite the one they saw before.
+
+     And the wobble BREATHES. A fixed amplitude is the other half of why this
+     read as mechanism: a real thing is not equally agitated all the time. The
+     amplitude is seeded off this loop's own geometry (dot(C, F)), so five
+     ribbons breathe out of step with each other rather than pulsing together. */
+  float life = 0.78 + 0.22 * sin(phase * 0.37 + dot(C, F) * 3.1);
+  float target = rho0 + life * (wob1 * cos(phi + phase)
+                              + wob2 * cos(2.0 * phi - 1.7 * phase)
+                              + wob3 * cos(1.618 * phi + 0.73 * phase));
   float tn = abs(rho - target);
 
-  /* paddle: wide over part of the sweep, gone over the rest */
-  float swell = 0.5 + 0.5 * sin(phi + phase * 0.6);
+  /* paddle: wide over part of the sweep, gone over the rest.
+     The sweep is phase-MODULATED rather than a plain sine: a sine is symmetric,
+     so the paddle opened and closed at the same rate and the ribbon looked like
+     it was being driven. This leans the opening away from the closing. */
+  float swell = 0.5 + 0.5 * sin(phi + phase * 0.6
+                                + 0.35 * sin(2.0 * phi - phase * 0.31));
   float sw4 = swell * swell * swell * swell;
   float w = width * (0.18 + 0.82 * sw4);
   float gate = smoothstep(0.02, 0.30, sw4);   // the band simply ends
@@ -146,22 +170,32 @@ void main(){
 
   /* ---------- ribbons ---------- */
   vec3 CEN[5], COL[5];
-  float SHELL[5], WIDTH[5], WOB1[5], WOB2[5], PHASE[5], GAIN[5];
+  float SHELL[5], WIDTH[5], WOB1[5], WOB2[5], WOB3[5], PHASE[5], GAIN[5];
   float FADE[5];   // ingest: how present each ribbon is on its way in
 
-  /* emerald, mint, amber as the single warm note, mint again, pale mint */
-  vec3 BASE[5];
-  BASE[0] = vec3(0.024, 0.404, 0.259);
-  BASE[1] = vec3(0.204, 0.827, 0.600);
-  BASE[2] = vec3(0.941, 0.663, 0.231);
-  BASE[3] = vec3(0.204, 0.827, 0.600);
-  BASE[4] = vec3(0.298, 0.804, 0.643);
+  /* The working palette, mirroring the orb family in tokens.css: deep indigo,
+     the glow tone, amber as the single warm note, the glow again, the bright
+     end. Amber survives the move to indigo here for the reason it survives it
+     there, that one warm ribbon is what keeps five cool ones legible as five.
 
-  SHELL[0]=0.78; WIDTH[0]=0.310; WOB1[0]= 0.26; WOB2[0]= 0.11; GAIN[0]=3.3;
-  SHELL[1]=0.90; WIDTH[1]=0.250; WOB1[1]=-0.31; WOB2[1]= 0.08; GAIN[1]=2.7;
-  SHELL[2]=0.66; WIDTH[2]=0.350; WOB1[2]= 0.34; WOB2[2]=-0.13; GAIN[2]=2.9;
-  SHELL[3]=0.92; WIDTH[3]=0.215; WOB1[3]=-0.22; WOB2[3]= 0.09; GAIN[3]=3.2;
-  SHELL[4]=0.84; WIDTH[4]=0.180; WOB1[4]= 0.29; WOB2[4]=-0.10; GAIN[4]=1.8;
+     Arrives as a UNIFORM, read off the tokens on the host side (the engine
+     reads the document once per loop start and hands the numbers down), so a
+     repaint in tokens.css moves the ball. The literals still standing further
+     down this file are LIGHT rather than palette: near-white speculars, the
+     hot core between the ribbons, the lip, the sheen. Those describe how the
+     object is lit, not what colour it is, which is why they stay literal. */
+  vec3 BASE[5];
+  BASE[0] = uWork[0];
+  BASE[1] = uWork[1];
+  BASE[2] = uWork[2];
+  BASE[3] = uWork[3];
+  BASE[4] = uWork[4];
+
+  SHELL[0]=0.78; WIDTH[0]=0.310; WOB1[0]= 0.26; WOB2[0]= 0.11; WOB3[0]= 0.07; GAIN[0]=3.3;
+  SHELL[1]=0.90; WIDTH[1]=0.250; WOB1[1]=-0.31; WOB2[1]= 0.08; WOB3[1]=-0.09; GAIN[1]=2.7;
+  SHELL[2]=0.66; WIDTH[2]=0.350; WOB1[2]= 0.34; WOB2[2]=-0.13; WOB3[2]= 0.11; GAIN[2]=2.9;
+  SHELL[3]=0.92; WIDTH[3]=0.215; WOB1[3]=-0.22; WOB2[3]= 0.09; WOB3[3]= 0.06; GAIN[3]=3.2;
+  SHELL[4]=0.84; WIDTH[4]=0.180; WOB1[4]= 0.29; WOB2[4]=-0.10; WOB3[4]=-0.08; GAIN[4]=1.8;
 
   /* the shared focus every loop is threaded through. it drifts, so the crossing
      wanders around the middle instead of being pinned to it */
@@ -238,7 +272,7 @@ void main(){
 
         float rim;
         float v = band(u, CEN[j], FOCUS, PHASE[j], WIDTH[j] * (1.0 + 0.45 * uLevel),
-                       WOB1[j], WOB2[j], rim);
+                       WOB1[j], WOB2[j], WOB3[j], rim);
         if(v <= 0.0 && rim <= 0.0) continue;
 
         /* the far side of the shell shows through the near side, dimmer */
@@ -269,7 +303,7 @@ void main(){
       }
       float heat = 1.0 + 1.4 * uLevel + 1.5 * uIngest * arrive;
       /* tinted, not white, and small: a big white core swallows the ribbons */
-      acc += vec3(0.72, 0.98, 0.88)
+      acc += vec3(0.80, 0.82, 1.00)
            * (exp(-pow(cd / 0.022, 2.0)) * 0.65 + exp(-pow(cd / 0.080, 2.0)) * 0.16) * heat;
     }
 
@@ -291,17 +325,17 @@ void main(){
 
     float edge = smoothstep(0.55, 1.0, 1.0 - ndv);
     body *= 1.0 - 0.42 * edge;
-    body += mix(vec3(0.24, 0.52, 0.44), uTintCol * 0.6, uTint) * fres * 0.16;
+    body += mix(vec3(0.30, 0.32, 0.62), uTintCol * 0.6, uTint) * fres * 0.16;
 
     /* a distinct hairline ring all the way round the ball */
     float lip = smoothstep(0.988, 1.0, 1.0 - ndv);
-    body += vec3(0.62, 0.98, 0.86) * lip * 0.08;
+    body += vec3(0.72, 0.74, 1.00) * lip * 0.08;
 
     /* one broad tinted sheen. never white: a white highlight on a coloured body
        reads as plastic */
     vec3 L = normalize(vec3(-0.55, 0.72, 0.62) + vec3(uMouse * 0.35, 0.0));
     vec3 H = normalize(L - rd);
-    body += vec3(0.74, 1.00, 0.90) * pow(max(dot(n, H), 0.0), 26.0) * 0.18;
+    body += vec3(0.82, 0.84, 1.00) * pow(max(dot(n, H), 0.0), 26.0) * 0.18;
 
     /* Everything above is emissive, so on a dark surface the ball is ADDED to
        whatever hosts it and its coverage is its own brightness. On paper the
@@ -313,7 +347,7 @@ void main(){
     vec2 gdir = normalize(n.xy + vec2(1e-5));
     float grad = 0.5 + 0.5 * dot(gdir, normalize(vec2(-0.7, 0.7)));   // TL to BR
 
-    vec3 ball = mix(vec3(0.030, 0.085, 0.075), vec3(0.055, 0.145, 0.115), grad);
+    vec3 ball = mix(uBody[0], uBody[1], grad);
     ball = mix(ball, uTintCol * vec3(0.30, 0.13, 0.09), uTint * 0.85);
     /* a sphere still has to turn away from the light, or it reads as a disc */
     ball *= 0.68 + 0.42 * ndv;
@@ -323,8 +357,19 @@ void main(){
     float px = 1.5 / iResolution.y;
     float solid = 1.0 - smoothstep(sr - px, sr + px, bgr);
 
-    col   = mix(body, ball + body, uPaper);
-    alpha = mix(cov, solid, uPaper);
+    /* The body is not a paper dress. It used to be: on a dark surface the
+       ribbons hung in transparency with nothing behind them, so the Core was a
+       different OBJECT between the two themes rather than the same one lit
+       differently, and the indigo a reader is being taught to recognise was the
+       one thing missing exactly where the ball is most prominent.
+
+       Quieter on dark than on paper (DARKBODY), because a dark page is already
+       dark and a body at full weight there is a hole in it rather than a sphere
+       on it. The silhouette comes in with it: coverage taken from brightness
+       alone would show the body only where a ribbon happens to be bright, which
+       is a ball with gaps in it. */
+    col   = mix(body + ball * DARKBODY, ball + body, uPaper);
+    alpha = mix(max(cov, solid), solid, uPaper);
   }
 
   /* ---------- rim stroke and outer glow, analytic ---------- */
@@ -347,14 +392,18 @@ void main(){
   /* and the light it throws outward. On paper the same falloff is the shade the
      object casts, so it darkens instead of adding. */
   float outer = max(bgr - sr, 0.0);
-  vec3 glowTint = mix(rimCol, vec3(0.10, 0.55, 0.42), 0.45);
+  vec3 glowTint = mix(rimCol, vec3(0.20, 0.22, 0.62), 0.45);
   /* Tight and quiet: this is the light the ball throws, and a wide bloom on a
      surface that packs the Core next to other things is a smudge on them rather
      than an atmosphere around it. */
   float glowA = (exp(-outer * 44.0) * 0.10 + exp(-outer * 14.0) * 0.018)
-              * (0.60 + 0.40 * uLevel);
+              * (0.60 + 0.40 * uLevel)
+  /* Less of it on dark. A bloom is light ADDED to what is behind it, so the same
+     amount that reads as a quiet atmosphere on paper reads as a smear on a dark
+     page, where there is nothing bright for it to fall off against. */
+              * mix(DARKGLOW, 1.0, uPaper);
   float lit = 1.0 - uPaper;
-  col   = mix(col, mix(glowTint, vec3(0.02, 0.06, 0.05), uPaper), (1.0 - alpha) * glowA);
+  col   = mix(col, mix(glowTint, vec3(0.030, 0.032, 0.075), uPaper), (1.0 - alpha) * glowA);
   alpha = max(alpha, glowA * mix(1.0, 0.35, uPaper));
   col  *= 1.0 - 0.10 * lit * smoothstep(0.5, 1.5, bgr);
 

@@ -38,8 +38,9 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 		page, err = c.fetchPaced(ctx, pacer, seedURL)
 	}
 	if err == nil || errors.Is(err, webread.ErrRobotsDisallowed) {
-		c.applyCrawlDelay(pacer, seedURL)
-		return seedURL, page, err
+		answered := answeredSeedURL(seedURL, page)
+		c.applyCrawlDelay(pacer, answered)
+		return answered, page, err
 	}
 	for _, candidate := range seedFallbacks(seedURL) {
 		if ctx.Err() != nil {
@@ -53,8 +54,9 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 			retryPage, retryErr = c.fetchPaced(ctx, pacer, candidate)
 		}
 		if retryErr == nil {
-			c.applyCrawlDelay(pacer, candidate)
-			return candidate, retryPage, nil
+			answered := answeredSeedURL(candidate, retryPage)
+			c.applyCrawlDelay(pacer, answered)
+			return answered, retryPage, nil
 		}
 		// A refusal is the site's answer, not a spelling that failed to
 		// resolve. Every remaining candidate is the SAME site under another
@@ -65,6 +67,19 @@ func (c *siteCrawler) fetchSeed(ctx context.Context, pacer crawlPacer, seedURL s
 		}
 	}
 	return seedURL, webread.Page{}, err
+}
+
+// answeredSeedURL is the URL the seed's body actually came from. The fetch
+// follows redirects the ladder never sees — a domain answering 301 onto
+// another host "answers" in the ladder's eyes while serving nothing itself —
+// so the crawl boundary, the probe origin and the favicon derivation must all
+// name the destination, not the forwarder. A page without a final URL — the
+// robots-refused seed carries none — answers where it was asked.
+func answeredSeedURL(requested string, page webread.Page) string {
+	if page.FinalURL != "" {
+		return page.FinalURL
+	}
+	return requested
 }
 
 // seedFallbacks returns the other spellings of a seed worth trying, in order,

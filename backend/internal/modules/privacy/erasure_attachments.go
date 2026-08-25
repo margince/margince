@@ -14,6 +14,8 @@ import (
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
 // subjectAttachmentsWhere selects the attachments Art. 17 erasure removes for
@@ -32,7 +34,7 @@ var subjectAttachmentsWhere = `(entity_type = 'person' AND entity_id = $1)
 // orphaned with their only key gone. Erasure is rare and not latency-bound,
 // so the brief object-store I/O held under the transaction is an acceptable
 // trade for that durability guarantee.
-func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, where string, args ...any) error {
+func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, reason, cause, where string, args ...any) error {
 	rows, err := tx.Query(ctx, `SELECT storage_key FROM attachment WHERE `+where, args...)
 	if err != nil {
 		return err
@@ -59,8 +61,32 @@ func (e *Eraser) eraseAttachments(ctx context.Context, tx pgx.Tx, where string, 
 			}
 		}
 	}
-	if _, err := tx.Exec(ctx, `DELETE FROM attachment WHERE `+where, args...); err != nil {
+	// RETURNING, because the rows are gone after this and the audit images they
+	// left behind are not. An attachment's create image carries the FILENAME the
+	// uploader typed, which routinely names the subject; audit_log is
+	// append-only, so the only thing that puts that name out of reach is a
+	// tombstone the spine's readers stop at.
+	scrubbed, err := scrubbedIDs(ctx, tx, `DELETE FROM attachment WHERE `+where+` RETURNING id`, args...)
+	if err != nil {
 		return err
 	}
-	return nil
+	return tombstoneCollateralScrubs(ctx, tx, "attachment", scrubbed, reason, cause)
+}
+
+// scrubbedIDs runs a statement that returns the ids it scrubbed.
+func scrubbedIDs(ctx context.Context, tx pgx.Tx, sql string, args ...any) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, sql, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var scrubbed []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, err
+		}
+		scrubbed = append(scrubbed, id)
+	}
+	return scrubbed, rows.Err()
 }
