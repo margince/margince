@@ -435,6 +435,8 @@ func startProjectionLanes(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Cl
 	// matcher above and the same reason: matching only at write time means every
 	// later arrival is a match nobody will ever make.
 	startPersonAutoEnrich(ctx, pool, rdb, background, logger, stdout)
+
+	startOrgAutoEnrichTrigger(ctx, pool, rdb, background, logger, stdout)
 }
 
 // startWebhookLane starts the cg:webhooks delivery consumer, whose deliverer is
