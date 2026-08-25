@@ -86,8 +86,27 @@ func Audit(ctx context.Context, tx pgx.Tx, action, entityType string, entityID i
 //
 //craft:ignore naked-any the audit seam: before/after images are each entity's own snapshot shape, serialized to jsonb
 func AuditWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType string, entityID ids.UUID, before, after any, evidence map[string]any) (ids.UUID, error) {
+	if action == auditActionUpdate && AbsentImage(before) {
+		// A writer holding the row and recording nothing it held is a writer
+		// that did not look, and the row it lands says a field changed without
+		// saying from what — which nothing can recover afterwards, because an
+		// audit row cannot be written after the fact. A write that genuinely has
+		// no prior state says so by calling AuditEvent.
+		//
+		// Judged the way marshalOrNil judges it, so a typed nil map — the shape
+		// a store assembles an image in — is caught rather than let through as
+		// present and stored as SQL NULL.
+		return ids.Nil, fmt.Errorf(
+			"store: auditing an update of %s with no before-image: record what the fields held, "+
+				"or call AuditEvent if this write has no prior state", entityType)
+	}
 	return writeAuditRow(ctx, tx, action, entityType, entityID, before, after, evidence)
 }
+
+// auditActionUpdate is the one verb the before-image rule binds. archive and the
+// rest are left alone: un-archiving is not a replay of an image but a per-type
+// decision about what that record's archive took down with it.
+const auditActionUpdate = "update"
 
 // withExtensionAttribution adds the bound extension attribution to a write's
 // evidence, and refuses a caller that tried to write the reserved member
