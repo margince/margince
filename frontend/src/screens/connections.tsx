@@ -18,6 +18,11 @@ import { useT } from "../i18n";
 import { throwProblem } from "./common";
 import "./connections.css";
 import { EntityRef } from "./entityref";
+// The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
+// are defined in company360.css. Imported HERE rather than left to the caller:
+// it works today only because the company record page pulls that stylesheet in
+// for its own sake, so this file renders unstyled anywhere else.
+import "./company360.css";
 
 // The connections card: this account's one-hop neighbourhood — its contacts,
 // its open deals and their stakeholders, its parent, children and partner
