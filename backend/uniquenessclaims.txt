@@ -215,7 +215,6 @@ internal/compose/persondraft/service.go#const aiDisclosure
 internal/compose/persondraft/write.go#func writeChecked
 internal/compose/pipelinetrace/rungs.go#func unavailable
 internal/compose/project360/sectionswork.go#var entityTypeProject
-internal/compose/projectattribution.go#const block at const attributionFieldActivity
 internal/compose/queryseam.go#func queryRunner
 internal/compose/replydraft.go#type replyDrafter.envelope
 internal/compose/replydraftmodel.go#method replyDrafter.completeChecked
@@ -264,7 +263,6 @@ internal/modules/activities/orgscope.go#func ActivityWithinProject
 internal/modules/activities/orgscope.go#func OrgLinkedActivityExists
 internal/modules/activities/pipelinefacts.go#const kindEmail
 internal/modules/activities/projectcoverage.go#type ProjectActivityFacts.Attributed
-internal/modules/activities/projectcoverage.go#type ProjectActivityFacts.AwaitingDecision
 internal/modules/activities/projectcoverage.go#type ProjectActivityFacts.OpenCommitments
 internal/modules/activities/projectcoverage.go#type ProjectActivityFacts.UnattributedNearby
 internal/modules/activities/retentionstamp.go#const retentionClassCorrespondence

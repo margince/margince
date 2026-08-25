@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 57 |
 | Resources | 9 |
-| Tool catalog | 157.2 KB |
+| Tool catalog | 157.1 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 41117 |
+| Approx. wire tokens | 41103 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 73.8 KB | 46% | **No** — a result's shape, never listed to a model |
+| Output schemas | 73.7 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 36.5 KB | 23% | Yes, every step |
 | Input schemas | 34.8 KB | 22% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.1 KB | 7% | Partly |
@@ -100,7 +100,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 2.8 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
-| [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.3 KB |
+| [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.2 KB |
 | [`read_record`](#read_record) | Read a record | yes |  | 2.0 KB |
 | [`relink_activities`](#relink_activities) | Re-associate a set of activities to a record |  |  | 2.0 KB |
 | [`relink_activity`](#relink_activity) | Re-associate an activity to a record |  |  | 2.3 KB |
@@ -7926,16 +7926,12 @@ Read one project's whole page: company, phase history with time per phase, deals
             "attributed": {
               "type": "integer"
             },
-            "awaiting_decision": {
-              "type": "integer"
-            },
             "unattributed_nearby": {
               "type": "integer"
             }
           },
           "required": [
             "attributed",
-            "awaiting_decision",
             "unattributed_nearby"
           ],
           "type": "object"

@@ -34,6 +34,9 @@ const kindProjectGoneQuiet = "project_gone_quiet"
 // not an alarm.
 const severityWarn = "warn"
 
+// auditFieldProject is the audit row's key for the project a finding is about.
+const auditFieldProject = "project_id"
+
 // quietProject is one project the rule fired on.
 type quietProject struct {
 	ProjectID      ids.UUID
@@ -105,7 +108,7 @@ func WriteProjectQuietSignals(ctx context.Context, tx pgx.Tx, now time.Time) (Gh
 			Fingerprint:    fingerprintOf(kindProjectGoneQuiet, project.ProjectID.String(), project.QuietSince.UTC().Format(time.RFC3339Nano)),
 			Audit: map[string]any{
 				paramKind: kindProjectGoneQuiet, "days_silent": days,
-				attributionFieldProject: project.ProjectID.String(), "quiet_since": project.QuietSince.UTC(),
+				auditFieldProject: project.ProjectID.String(), "quiet_since": project.QuietSince.UTC(),
 			},
 		}, now)
 		if err != nil {

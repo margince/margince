@@ -153,7 +153,6 @@ export function projectMock(input: {
       coverage: {
         attributed: filed.length,
         unattributed_nearby: 0,
-        awaiting_decision: 0,
       },
       rollups: {
         open_deal_value: { amount_minor: sum("open"), currency: "EUR" },

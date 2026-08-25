@@ -1,0 +1,65 @@
+-- The project attribution ladder's uncertain rung is retired.
+--
+-- A message is filed under a project when a human said so: a project key in the
+-- subject, a sibling already filed in the same thread, or a deal that belongs to
+-- the project. The rung this drops did none of that — it proposed the account's
+-- sole live project, or the nearest by embedding, and asked a human to confirm a
+-- guess. Founder decision: the key is it, and the system never guesses.
+--
+-- This migration drops the table and NOTHING else. In particular it does not
+-- touch the project_attribution approvals still standing in inboxes, and that
+-- restraint is the point rather than an omission.
+--
+-- Retiring an approval is a domain write: the status change carries an audit row
+-- and an approval.decided event in ONE transaction, because a consumer waiting
+-- on that offer — an agent run, an event subscriber — learns it closed from the
+-- event and from nothing else. A bare UPDATE here would move 42 rows to a
+-- terminal status with no audit trail and no event, which is exactly the split
+-- the write shape exists to prevent.
+--
+-- The existing expiry sweep already does it correctly, and it selects on
+-- `status = 'pending' AND expires_at <= now()` without looking at the kind
+-- (expiresweep.go). These offers carry the ordinary 72h TTL, so the sweep
+-- reaches them on its own within that window and writes the full shape. Nothing
+-- has to be done to them here.
+--
+-- Those offers leave the inbox at once, without waiting for the sweep. The kind
+-- no longer has a decision-grant mapping, so decisionGrantsFor errors on it and
+-- `decidable` answers false — and the inbox LIST is gated on the same predicate
+-- as the decision, so the cards stop being listed and stop being decidable in
+-- the same moment. A reader sees them gone; the rows stay pending until the
+-- sweep reaches them and writes the proper terminal record.
+
+-- Dropped in the SAME release that removes the code, rather than one release
+-- later, and that is a judgement worth stating because the usual answer for a
+-- shipped table is the two-step. A rolling deploy can leave an old worker
+-- running against the new schema — the release check runs at worker START only
+-- (docs/deployment.md), so restarting the api alone does not restart it.
+--
+-- What that old worker could still do here is bounded to nothing that matters:
+--
+--   The only READER is Project 360's awaiting_decision count, served by the api
+--   — and the api is the role that applies this migration at its own boot, so
+--   it is never stale against the schema it installed.
+--
+--   The only WRITER is the retired rung, reached solely through
+--   attributeProject, which exists to swallow attribution faults: a failure
+--   there writes a system_log row and returns, and the message stays on the
+--   timeline. An old worker would log a fault instead of raising a card that
+--   this release is retiring anyway.
+--
+--   The one UPDATE is reached only by deciding a project_attribution card, and
+--   those stop being decidable the moment the new api drops the kind's grant
+--   mapping.
+--
+-- So the two-step would keep a dead table, and a tableownership entry naming a
+-- module that no longer writes it, to protect a path already designed to fail
+-- harmlessly. If a future retirement's old code could CORRUPT rather than fault,
+-- that trade goes the other way — this reasoning is about this table.
+--
+-- DROP takes an exclusive lock on a table this migration did not create.
+-- Bounded so a transaction holding a conflicting lock fails this migration fast
+-- rather than stalling every write to that table for as long as it would queue.
+SET LOCAL lock_timeout = '3s';
+
+DROP TABLE IF EXISTS project_link_candidate;

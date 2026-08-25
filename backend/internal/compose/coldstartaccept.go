@@ -62,11 +62,6 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store))
-	// Both halves, like the held message below: a "no" here has work to do —
-	// the candidate ledger records the refusal — where most proposals' "no" is
-	// the absence of an effect.
-	svc.WithEffect(approvals.KindProjectAttribution, projectAttributionConfirmEffect(svc))
-	svc.WithDeclinedEffect(approvals.KindProjectAttribution, projectAttributionDeclineEffect())
 	// A held message is the one kind with BOTH halves registered, because its
 	// subject is already waiting: Accept re-arms it, Reject abandons it, and a
 	// card whose buttons only dismissed it would report a decision the message
@@ -96,9 +91,15 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 // registration because the two services run in different processes — the
 // sweep is a worker job — and a hook registered only on the deciding one
 // would be absent exactly where the expiry happens.
+//
+// No kind registers one today. Project attribution was the only one that did —
+// its expiry released the candidate row it had reserved — and that whole rung
+// is retired. The sweep still runs and still expires overdue stagings of every
+// kind; what no longer exists is a kind with cleanup of its own to do when the
+// window closes. The builder stays because the sweep needs a service and the
+// next kind that owns expiry state registers here.
 func expiringApprovalsService(pool *pgxpool.Pool) *approvals.Service {
-	return approvals.NewService(InstallationDB(pool)).
-		WithExpiredEffect(approvals.KindProjectAttribution, projectAttributionExpiredEffect())
+	return approvals.NewService(InstallationDB(pool))
 }
 
 // coldstartAcceptEffect builds the approvals.ApprovedEffect compose
