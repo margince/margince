@@ -155,16 +155,6 @@ func LockSubjectKeys(ctx context.Context, tx pgx.Tx, keys []ChannelIdentityKey, 
 			hash); err != nil {
 			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure: %w", err)
 		}
-		// Plus the legacy workspace-qualified key, for the rolling-deploy
-		// window LockWriteIdentity explains. This is the site where that
-		// window costs the most: a lock PER IDENTIFIER, so an erasure over a
-		// subject with many accounts and addresses holds twice the slots.
-		if _, err := tx.Exec(ctx, `
-			SELECT pg_advisory_xact_lock(hashtextextended(
-				coalesce(current_setting('app.workspace_id', true), '') || ':' || $1, 0))`,
-			hash); err != nil {
-			return fmt.Errorf("storekit: locking a subject identifier against a concurrent erasure (legacy key): %w", err)
-		}
 	}
 	return nil
 }

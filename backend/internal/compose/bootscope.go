@@ -68,22 +68,14 @@ func bootLedgerScope(ctx context.Context, pool *pgxpool.Pool, actor string) (con
 // tree, and a collision there serializes two unrelated boot paths for the
 // length of a transaction.
 //
-// The COALESCE that used to guard it moved to bootLedgerLockLegacy below, where
-// it is still load-bearing: pg_advisory_xact_lock is STRICT, so a NULL argument
-// takes NO LOCK and returns NULL rather than raising, and an unset GUC would
-// leave the serialization silently absent — a guard reporting success while
-// holding nothing.
+// It reads no GUC, so there is no unset-GUC case to guard: the argument is a
+// compile-time literal joined to a caller-supplied fact name, and neither can be
+// NULL. That matters because pg_advisory_xact_lock is STRICT — a NULL argument
+// takes NO LOCK and returns NULL rather than raising, which is a guard reporting
+// success while holding nothing. The workspace-qualified form this replaced
+// could reach that state; this cannot.
 const bootLedgerLock = `
 	SELECT pg_advisory_xact_lock(hashtext('margince:boot-ledger:' || $1)::bigint)`
-
-// bootLedgerLockLegacy is the workspace-qualified key the previous release took,
-// held alongside the one above for the rolling-deploy window that
-// storekit.LockWriteIdentity explains. coalesce because pg_advisory_xact_lock is
-// STRICT: an unset GUC would make the argument NULL, take NO lock, and leave the
-// serialization silently absent.
-const bootLedgerLockLegacy = `
-	SELECT pg_advisory_xact_lock(
-		hashtext($1 || coalesce(current_setting('app.workspace_id', true), ''))::bigint)`
 
 // installationMarker identifies THIS installation inside a boot observation's
 // detail payload.

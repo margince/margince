@@ -264,13 +264,6 @@ func lockFreemailDomain(ctx context.Context, tx pgx.Tx, domain string) error {
 		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' || $1)::bigint)`, domain); err != nil {
 		return fmt.Errorf("capture: serializing the decision about %s: %w", domain, err)
 	}
-	// Plus the legacy workspace-qualified key, for the rolling-deploy window
-	// storekit.LockWriteIdentity explains.
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:consumer-mail:' ||
-			current_setting('app.workspace_id', true) || ':' || $1)::bigint)`, domain); err != nil {
-		return fmt.Errorf("capture: serializing the decision about %s (legacy key): %w", domain, err)
-	}
 	return nil
 }
 
