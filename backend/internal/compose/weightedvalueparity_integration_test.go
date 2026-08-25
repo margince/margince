@@ -62,10 +62,13 @@ func TestTheTwoSpellingsOfWeightedValueAgree(t *testing.T) {
 		// multiply wraps before the division would have widened it.
 		{"the largest amount the column can hold, passed through", math.MaxInt64, 100},
 		{"the smallest amount the column can hold, passed through", math.MinInt64, 100},
-		// Rounding at the extreme: half of MaxInt64 is not an integer, so the
-		// two sides must agree about which way the last minor unit goes.
+		// Rounding at the extreme: MaxInt64 is odd, so half of it is not an
+		// integer and the two sides must agree about which way the last minor
+		// unit goes. MinInt64 is even, so its half is exact — that case is not
+		// the rounding decision mirrored, it is the SIGN carried to the bottom
+		// of the range, where a native negation would be the thing to overflow.
 		{"half of the largest amount, where the last unit is decided by rounding", math.MaxInt64, 50},
-		{"half of the smallest amount, the same decision mirrored", math.MinInt64, 50},
+		{"half of the smallest amount, which is exact and only tests the sign", math.MinInt64, 50},
 		// The case that separates exact scaling from a numeric DIVISION, which
 		// computes to a selected scale and rounds there. The exact product is
 		// 4230000000000000016.45; a quotient this large is rendered at one

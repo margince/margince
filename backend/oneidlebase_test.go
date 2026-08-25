@@ -31,6 +31,11 @@ package backendarch
 // through a helper of its own), so it is a net under the two known shapes
 // rather than a proof of uniqueness.
 //
+// A THIRD ARGUMENT does not make it a different rule. created_at is NOT NULL,
+// so nothing after it can ever fire — `coalesce(last_activity_at, created_at,
+// now())` is this rule with a decoration on the end, and a census that required
+// exactly two arguments could be evaded by one dead word.
+//
 // The REVERSED coalesce is a subject too, deliberately. `coalesce(created_at,
 // last_activity_at)` reads to the naked eye like the same clause and is not:
 // created_at is NOT NULL, so the fallback never fires and the expression is a
@@ -68,11 +73,18 @@ var idleBaseColumns = []string{"last_activity_at", "created_at"}
 func spellsIdleBaseSQL(text string) bool {
 	for _, at := range coalesceCall.FindAllStringIndex(text, -1) {
 		args, ok := balancedArguments(text[at[1]:])
-		if !ok || len(args) != 2 {
+		if !ok || len(args) < len(idleBaseColumns) {
 			continue
 		}
+		// The FIRST TWO arguments, and only those. A third arm is not a
+		// different rule: created_at is NOT NULL, so nothing after it can ever
+		// fire and `coalesce(last_activity_at, created_at, now())` is the idle
+		// base with a decoration on the end. Requiring exactly two arguments
+		// made one dead trailing argument a complete evasion. But the pair has
+		// to come first — `coalesce(now(), last_activity_at, created_at)` asks
+		// a different question, and its answer is usually now().
 		named := map[string]bool{}
-		for _, arg := range args {
+		for _, arg := range args[:len(idleBaseColumns)] {
 			for _, column := range idleBaseColumns {
 				if namesIdleColumn(arg, column) {
 					named[column] = true
@@ -416,6 +428,8 @@ func TestTheGateRecognisesEverySpellingOfTheIdleBase(t *testing.T) {
 			"func f() { q(`coalesce(` + p + `last_activity_at, ` + p + `created_at)`) }",
 		"the reversed order, which never falls back at all": "" +
 			"func f() { q(`SELECT coalesce(created_at, last_activity_at) FROM deal`) }",
+		"a trailing arm that can never fire, which decorates the rule rather than changing it": "" +
+			"func f() { q(`coalesce(last_activity_at, created_at, now())`) }",
 		"the explicit else form, where the fallback lives in the branch's other arm": "" +
 			"func f() time.Time {\n\tif d.LastActivityAt != nil {\n\t\treturn *d.LastActivityAt\n" +
 			"\t} else {\n\t\treturn d.CreatedAt\n\t}\n}",
@@ -446,8 +460,8 @@ func TestTheGateRecognisesEverySpellingOfTheIdleBase(t *testing.T) {
 			"func f() { q(`coalesce(last_activity_at, now())`) }",
 		"a coalesce naming one column twice, which pairs with nothing": "" +
 			"func f() { q(`coalesce(a.created_at, b.created_at)`) }",
-		"a three-argument coalesce, which is a different rule": "" +
-			"func f() { q(`coalesce(last_activity_at, created_at, now())`) }",
+		"a coalesce whose first arm is something else entirely": "" +
+			"func f() { q(`coalesce(now(), last_activity_at, created_at)`) }",
 		"a longer column that merely starts the same way": "" +
 			"func f() { q(`coalesce(last_activity_at_utc, created_at_utc)`) }",
 		"a prefixed column that merely ends the same way": "" +
