@@ -3,11 +3,15 @@ import {
   type Dispatch,
   type ReactNode,
   type SetStateAction,
+  useCallback,
   useEffect,
+  useMemo,
+  useRef,
   useState,
 } from "react";
 import { FIRST_PAGE } from "../api/client";
 import { navigate, type Route, routeHash } from "../app/router";
+import { currentParams, type UrlParams, useUrlParams } from "../app/urlstate";
 import { Button } from "../design-system/atoms";
 import {
   type ListChip,
@@ -54,6 +58,121 @@ export type ListQuery = {
 
 /** The page sizes the footer offers; the first is the default. */
 export const LIST_PAGE_SIZES = [25, 50, 100] as const;
+
+/**
+ * The page size `value` names, or undefined for anything else.
+ *
+ * An address is text a person can edit, so `per=7` and `per=banana` are both
+ * ordinary. Neither is an error worth showing anybody — the list simply opens
+ * at the size it would have opened at — but neither may become a request
+ * either, because `listFetchLimit` divides by it.
+ */
+function pageSizeOf(value: string | undefined): number | undefined {
+  return LIST_PAGE_SIZES.find((size) => String(size) === value);
+}
+
+/**
+ * The list's own dials, and the names they go by in the address.
+ *
+ * `q`, `sort` and `include_archived` are the WIRE's own spellings, because a
+ * filter chip's key already IS a wire param name — `...query.filters` is spread
+ * straight onto the request — so the address and the endpoint describe a
+ * narrowed list in one vocabulary instead of two that have to be kept in step.
+ * Every other key in the address is therefore a filter, with no list of them
+ * kept here: a screen that adds a chip gets an addressable one for free, and a
+ * table of known filters would be a second copy of every screen's chip set.
+ *
+ * `per` is the exception and has no wire spelling, because a rendered page size
+ * is a choice about drawing rather than about which rows exist. It is the
+ * list's own name, which is why a filter param may not be called `per`.
+ */
+const PER_PAGE_PARAM = "per";
+const LIST_OWN_PARAMS: ReadonlySet<string> = new Set([
+  "q",
+  "sort",
+  "include_archived",
+  PER_PAGE_PARAM,
+]);
+
+/**
+ * The query `params` describes, with `opening` standing where it says nothing.
+ *
+ * An address that carries any dial at all is the WHOLE truth about the list:
+ * filters are replaced rather than merged, because a reader who cleared the
+ * owner chip and shared the link must not have it put back by the screen's
+ * default. `opening` therefore only stands in for an address that says nothing
+ * whatsoever, and only until this list has written its own opening state there.
+ */
+export function listQueryFromParams(
+  params: UrlParams,
+  opening: ListQuery,
+  /**
+   * Whether this list has already written its opening state to the address.
+   *
+   * Until it has, a bare address means "just arrived" and the screen's own
+   * answers apply. Once it has, a bare address means the reader cleared
+   * everything — which is a different list, and on a screen that opens
+   * pre-narrowed (the leads queue opens on a rep's OWN leads) it is the whole
+   * behaviour of the owner chip's "all".
+   */
+  seeded: boolean,
+): ListQuery {
+  const filters: Record<string, string> = {};
+  for (const [key, value] of params) {
+    if (!LIST_OWN_PARAMS.has(key)) {
+      filters[key] = value;
+    }
+  }
+  // An address carrying a dial, or a reader who has turned one, has EXPRESSED
+  // what the list should be. Only a reader who has expressed nothing at all
+  // gets the screen's opening answers.
+  const expressed = seeded || params.size > 0;
+  return {
+    q: params.get("q") ?? "",
+    // No sort in an EXPRESSED address means the server's own order, not the
+    // screen's. The two are different lists — a saved view that names no sort
+    // asks for the former — and absence can only spell one of them, which is
+    // why the writer below spells a sort out even when it is the default one.
+    sort: params.get("sort") ?? (expressed ? "" : opening.sort),
+    includeArchived: params.get("include_archived") === "true",
+    filters: expressed ? filters : opening.filters,
+    perPage: pageSizeOf(params.get(PER_PAGE_PARAM)) ?? opening.perPage,
+  };
+}
+
+/**
+ * The address `query` produces: every dial that is NOT at its default.
+ *
+ * A default left out is what keeps a shared link about what the reader chose.
+ * `#/companies?q=acme` says one thing; the same address carrying the page size
+ * and `include_archived=false` says the same thing while hiding it, and invites
+ * the next reader to think three dials were turned.
+ *
+ * SORT is the exception, and is written even when it is the screen's own: an
+ * unsorted list is a state a reader can reach — a saved view that names no
+ * sort asks for the server's order rather than this screen's — and absence
+ * cannot spell both that and "whatever this list opens in". So absence is kept
+ * for the one that has no other spelling, and the ordinary sort says its name.
+ */
+export function paramsFromListQuery(
+  query: ListQuery,
+  opening: ListQuery,
+): UrlParams {
+  const params = new Map<string, string>(Object.entries(query.filters));
+  if (query.q) {
+    params.set("q", query.q);
+  }
+  if (query.sort) {
+    params.set("sort", query.sort);
+  }
+  if (query.includeArchived) {
+    params.set("include_archived", "true");
+  }
+  if (query.perPage !== opening.perPage) {
+    params.set(PER_PAGE_PARAM, String(query.perPage));
+  }
+  return params;
+}
 
 /** The most rows one list read may ask for (the contract's CAP-PAGE ceiling). */
 const MAX_ROWS_PER_READ = 200;
@@ -164,27 +283,94 @@ export function useListQuery<Row>({
   ) => Promise<ListPage<Row>>;
   initialSort?: string;
   /**
-   * Filters the list opens on. Read once, when the state is seeded: a filter
-   * that only becomes known later (the viewer's own id, say) must arrive
-   * through setQuery instead, because this initialiser never runs again.
+   * Filters the list opens on, for a reader who has not narrowed it themselves.
+   * A filter that only becomes known later (the viewer's own id, say) may
+   * arrive on any render: it is what a BARE address means, not a value read
+   * once, so the list picks it up when it turns up.
    */
   initialFilters?: Readonly<Record<string, string>>;
 }>) {
   // In overlay mode the incumbent mirror refuses sort/filter dials (422), so
-  // list reads must carry neither: seed an empty sort (ListTable hides the
-  // controls to match). Native mode keeps the screen's default sort.
+  // list reads must carry neither: an empty sort (ListTable hides the controls
+  // to match) and no filters. Native mode keeps the screen's default sort.
   const overlay = useSorMode() === "overlay";
-  const [query, setQuery] = useState<ListQuery>({
-    q: "",
-    sort: overlay ? "" : (initialSort ?? ""),
-    includeArchived: false,
-    // Overlay withholds filters for the same reason it withholds sort: the
-    // incumbent mirror answers 422 to both. A screen that opens on a narrowed
-    // list opens unnarrowed there rather than sending a dial the mirror
-    // refuses.
-    filters: overlay ? {} : (initialFilters ?? {}),
-    perPage: LIST_PAGE_SIZES[0],
-  });
+  const [params, setParams] = useUrlParams();
+  const opening = useMemo<ListQuery>(
+    () => ({
+      q: "",
+      sort: overlay ? "" : (initialSort ?? ""),
+      includeArchived: false,
+      // Overlay withholds filters for the same reason it withholds sort: the
+      // incumbent mirror answers 422 to both. A screen that opens on a narrowed
+      // list opens unnarrowed there rather than sending a dial the mirror
+      // refuses.
+      filters: overlay ? {} : (initialFilters ?? {}),
+      perPage: LIST_PAGE_SIZES[0],
+    }),
+    [overlay, initialSort, initialFilters],
+  );
+
+  // Whether the list's opening state has been spelled into the address yet.
+  //
+  // A bare address has two meanings nothing in it can tell apart: "I have just
+  // arrived" and "I cleared everything". Rather than carry a flag that decides
+  // between them — which changes what an unchanged address MEANS, and so can
+  // move without anything re-rendering — the opening state is WRITTEN to the
+  // address on arrival. After that a bare address has one meaning: nothing is
+  // set, because the reader unset it.
+  const seeded = useRef(false);
+
+  // The query is DERIVED from the address rather than mirrored into state
+  // beside it. Two copies would need an effect to reconcile them, and that
+  // effect is where Back breaks: the address moves first, the state follows a
+  // frame later, and whichever the list reads in between is the wrong one.
+  // Derived, Back is just another address, and there is nothing to reconcile.
+  //
+  // Overlay reads the address for nothing, because the mirror refuses every
+  // dial in it. A pasted link therefore opens an unnarrowed list there instead
+  // of a 422 the reader cannot act on.
+  const query = useMemo(
+    () =>
+      overlay ? opening : listQueryFromParams(params, opening, seeded.current),
+    [overlay, params, opening],
+  );
+
+  // Spell the opening state into the address, once, on arrival.
+  //
+  // It runs before the reader can turn anything (an effect on mount), and the
+  // guard is what keeps it from putting a filter back after they cleared the
+  // last one. A screen whose opening state is already the default writes
+  // nothing, and needs to: for that screen a bare address never meant anything
+  // else.
+  useEffect(() => {
+    if (seeded.current || overlay) {
+      return;
+    }
+    seeded.current = true;
+    setParams(paramsFromListQuery(opening, opening));
+  }, [overlay, opening, setParams]);
+
+  const setQuery = useCallback(
+    (update: SetStateAction<ListQuery>) => {
+      if (overlay) {
+        return;
+      }
+      const next =
+        typeof update === "function"
+          ? // Read from the LIVE address, never from this render's snapshot: a
+            // debounced write must not carry a query from before the sort the
+            // reader changed while it was settling, and two writes in one
+            // handler — pressing a saved view restores four dials — must
+            // compose rather than the last one landing alone.
+            update(
+              listQueryFromParams(currentParams(), opening, seeded.current),
+            )
+          : update;
+      setParams(paramsFromListQuery(next, opening));
+    },
+    [overlay, opening, setParams],
+  );
+
   const infinite = useInfiniteQuery({
     queryKey: [key, query],
     queryFn: ({ pageParam }) => fetchPage(query, pageParam),

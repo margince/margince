@@ -296,30 +296,83 @@ export function forgetHashCredential(screen: Screen, credential: string): void {
   }
 }
 
-function subscribe(onChange: () => void): () => void {
-  const addressChanged = () => {
-    // A second link pasted into an open tab is a hash change and nothing else:
-    // the screen does not remount for one, and whatever renders next is decided
-    // above the route. So the credential comes out of the new address before
-    // React is told there is one.
-    takeFromHash();
-    onChange();
-  };
-  globalThis.addEventListener("hashchange", addressChanged);
-  return () => globalThis.removeEventListener("hashchange", addressChanged);
+// Everything watching the address. Kept here rather than one `hashchange`
+// listener per reader, because the app also has to be told about a move it made
+// ITSELF: `hashchange` is delivered asynchronously, so between a write and the
+// browser's event the screen still renders the address it has just left. That
+// gap is invisible for a whole-page move — the screen re-renders either way —
+// and not for a dial, where the list would fetch the previous query first.
+const watchers = new Set<() => void>();
+
+function announce(): void {
+  // A copy, so a watcher that unsubscribes while being told does not change the
+  // set underneath the loop.
+  for (const watcher of [...watchers]) {
+    watcher();
+  }
 }
 
-export function useRoute(): Route {
-  // Taken during this component's FIRST render, ahead of the snapshot below, so
-  // the address React routes on is the scrubbed one and nothing can render with
-  // a credential still in the bar. An effect would be late by exactly the gate
-  // this exists for: it runs after that gate has rendered, and the gate is what
-  // stops the screen mounting to scrub it at all.
+function addressChanged(): void {
+  // A second link pasted into an open tab is a hash change and nothing else:
+  // the screen does not remount for one, and whatever renders next is decided
+  // above the route. So the credential comes out of the new address before
+  // React is told there is one.
+  takeFromHash();
+  announce();
+}
+
+function subscribe(onChange: () => void): () => void {
+  if (watchers.size === 0) {
+    globalThis.addEventListener("hashchange", addressChanged);
+  }
+  watchers.add(onChange);
+  return () => {
+    watchers.delete(onChange);
+    if (watchers.size === 0) {
+      globalThis.removeEventListener("hashchange", addressChanged);
+    }
+  };
+}
+
+/**
+ * Tell the address store the hash moved, for a move this app made itself.
+ *
+ * Only app/urlstate.ts needs it: it writes the address directly, so nothing has
+ * dispatched anything yet. A second announcement when the browser's own
+ * `hashchange` lands costs nothing — the snapshot is a string, and an unchanged
+ * one re-renders nobody.
+ */
+export function announceAddressChanged(): void {
+  announce();
+}
+
+/**
+ * The whole address, as a value that changes when the reader navigates.
+ *
+ * Exported because an address has two halves with two owners. The PATH names
+ * what is on screen and is this module's; the QUERY names which VIEW of it —
+ * how a list is narrowed, ordered and paged — and belongs to app/urlstate.ts.
+ * Both must re-render on the same event, and a second subscription to
+ * `hashchange` would be a second answer to where the reader is.
+ */
+export function useHash(): string {
+  // Taken during the FIRST render of whoever reads the address, ahead of the
+  // snapshot below, so the address React routes on is the scrubbed one and
+  // nothing can render with a credential still in the bar. An effect would be
+  // late by exactly the gate this exists for: it runs after that gate has
+  // rendered, and the gate is what stops the screen mounting to scrub it at all.
+  //
+  // It lives HERE rather than in useRoute because the query half has its own
+  // reader now (app/urlstate.ts), and a scrub that only one of the two
+  // performed would depend on which of them a screen happened to call first.
   useState(takeFromHash);
-  const hash = useSyncExternalStore(
+  return useSyncExternalStore(
     subscribe,
     () => globalThis.location.hash,
     () => "",
   );
-  return parseHash(hash);
+}
+
+export function useRoute(): Route {
+  return parseHash(useHash());
 }
