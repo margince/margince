@@ -56,7 +56,9 @@ test("a project is created, a deal is attached, the win starts delivery, the tim
   // what a key is for, and a bare text match would pass on the explanation
   // alone — which renders whether or not the project actually got a key.
   await expect(
-    page.locator(".t-mono").filter({ hasText: new RegExp(`^${MOCK_MINTED_KEY}$`) }),
+    page
+      .locator(".t-mono")
+      .filter({ hasText: new RegExp(`^${MOCK_MINTED_KEY}$`) }),
   ).toBeVisible();
   await expect(
     page.getByRole("heading", { level: 1, name: "Brandt ERP" }),

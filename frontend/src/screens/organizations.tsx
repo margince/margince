@@ -74,12 +74,6 @@ import { CompanyDocumentsCard } from "./companydocuments";
 import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
 import { CompanyFacts } from "./companyfacts";
-import {
-  COMPANY_TABS,
-  type CompanyTab,
-  companyTabRoute,
-  isCompanyTab,
-} from "./companytab";
 import { CompanyFinanceCard } from "./companyfinance";
 import { GrowthFitPanel } from "./companygrowthfit";
 import {
@@ -98,6 +92,12 @@ import {
 import { CompanyProjects } from "./companyprojects";
 import { CompanyRail } from "./companyrail";
 import { CompanySpine } from "./companyspine";
+import {
+  COMPANY_TABS,
+  type CompanyTab,
+  companyTabRoute,
+  isCompanyTab,
+} from "./companytab";
 import { TodayOnThisAccount } from "./companytoday";
 import {
   CompanyWorkCard,
