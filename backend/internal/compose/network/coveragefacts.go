@@ -19,6 +19,7 @@ import (
 
 	peoplemod "github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -52,18 +53,15 @@ type dealFacts struct {
 
 // readDealFacts loads the deal row the rules decide on.
 //
-// The last touch falls back to the deal's creation, which is the same
-// coalesce every stalled-deal surface in this codebase takes: a deal nothing
-// has ever touched has been silent since the day somebody wrote it down, and
-// treating that as "no data" would hide the oldest untouched deals — exactly
-// the ones the rule is for.
+// The last touch is idlebase.SQL — the same fallback the stalled rule
+// measures from, not a second coalesce that agrees with it by inspection.
 func readDealFacts(ctx context.Context, tx pgx.Tx, dealID ids.DealID) (dealFacts, error) {
 	var out dealFacts
 	var org *ids.UUID
-	err := tx.QueryRow(ctx, `
-		SELECT status, organization_id, coalesce(last_activity_at, created_at),
+	err := tx.QueryRow(ctx, fmt.Sprintf(`
+		SELECT status, organization_id, %s,
 		       last_activity_at IS NOT NULL
-		  FROM deal WHERE id = $1`, dealID).Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched)
+		  FROM deal WHERE id = $1`, idlebase.SQL("")), dealID).Scan(&out.status, &org, &out.lastTouchAt, &out.everTouched)
 	if err != nil {
 		return out, fmt.Errorf("network: reading the deal a coverage view describes: %w", err)
 	}

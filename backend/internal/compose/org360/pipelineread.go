@@ -20,6 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -202,9 +203,9 @@ func openPipeline(
 			 LIMIT 1
 		) live ON true
 		%s
-		ORDER BY coalesce(d.last_activity_at, d.created_at), d.id`,
+		ORDER BY %s, d.id`,
 		fmt.Sprintf("$%d", basePos), fmt.Sprintf("$%d", basePos), fmt.Sprintf("$%d", asOfPos),
-		openDealsWhere(orgPos, dealScope)), args...)
+		openDealsWhere(orgPos, dealScope), idlebase.SQL("d")), args...)
 	if err != nil {
 		return pipeline{}, fmt.Errorf("read the account's open pipeline: %w", err)
 	}
@@ -222,10 +223,7 @@ func openPipeline(
 		r.stalled = deals.IsStalled(status, createdAt, lastActivityAt, waitUntil, now)
 		// The same base IsStalled measures from, so the fingerprint moves exactly
 		// when the stall the rep judged is replaced by a new one.
-		r.idleSince = createdAt
-		if lastActivityAt != nil {
-			r.idleSince = *lastActivityAt
-		}
+		r.idleSince = idlebase.Since(createdAt, lastActivityAt)
 		return r, nil
 	})
 	if err != nil {

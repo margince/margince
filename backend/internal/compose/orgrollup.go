@@ -116,7 +116,14 @@ func currentQuarterBounds(now time.Time, loc *time.Location, fiscalStartMonth in
 	return start, end
 }
 
-// weightedValue rounds baseMinor × winProbability/100 half away from
+// weightedValue is the account roll-up's spelling of formulas §6, and the
+// declared mirror of report.go's weightedAmountMinorExpr: the report engine
+// folds the same figure into an SQL aggregate, which this path has no
+// aggregate to fold into. TestTheTwoSpellingsOfWeightedValueAgree
+// (weightedvalueparity_integration_test.go) runs both over the same cases and
+// fails in either direction.
+//
+// It rounds baseMinor × winProbability/100 half away from
 // zero, in EXACT big.Int arithmetic — never a native int64 multiply.
 // amount_minor is contract-unbounded, so baseMinor×winProbability can
 // exceed int64 before the division ever runs; a silent wraparound there

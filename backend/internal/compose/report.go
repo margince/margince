@@ -50,13 +50,23 @@ const (
 	joinStageForWinProbability = "JOIN stage s ON s.id = t.stage_id"
 	colWinProbability          = "s.win_probability"
 
-	// weightedAmountMinorExpr is the one spelling of "weighted value" (formulas
-	// §6, AC-F1): round PER DEAL, half away from zero, so a roll-up over it
-	// equals the sum of its own rows exactly. Shared by every spec that joins
-	// stage for win_probability, so the forecast report and any other
-	// per-stage weighted figure cannot drift apart. The multiply casts to
+	// weightedAmountMinorExpr is the REPORT ENGINE's spelling of "weighted
+	// value" (formulas §6, AC-F1): round PER DEAL, half away from zero, so a
+	// roll-up over it equals the sum of its own rows exactly. Shared by every
+	// spec that joins stage for win_probability, so the forecast report and any
+	// other per-stage weighted figure read this one expression. The multiply casts to
 	// numeric first — amount_minor is an unbounded bigint, and bigint × smallint
 	// overflows before the /100.0 below would otherwise widen it.
+	//
+	// The account roll-up computes the same figure in Go (weightedValue, in
+	// orgrollup.go), over converted per-deal amounts it holds in memory with no
+	// aggregate to fold them into. Neither side can become the other: an
+	// aggregate cannot call into Go, and Go cannot make Postgres round for it.
+	// They are a declared mirror, held in both directions by
+	// TestTheTwoSpellingsOfWeightedValueAgree and
+	// TestNeitherSpellingOfWeightedValueWrapsWhenTheResultDoesNotFit
+	// (weightedvalueparity_integration_test.go), which embed this constant so
+	// an edit here is what runs there.
 	weightedAmountMinorExpr = "round((t.amount_minor::numeric * s.win_probability) / 100.0)::bigint"
 	// fieldWeightedAmountMinor is the API-facing measure name every spec that
 	// defines weightedAmountMinorExpr registers it under.
