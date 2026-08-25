@@ -400,4 +400,17 @@ describe("whether the card holds the lead slot at all", () => {
       hasWorkInFlight(view({ projects: [{ ...project, phase: "closed" }] })),
     ).toBe(false);
   });
+
+  // The contract marks `sections_omitted` required, and this card was the only
+  // reader in the tree that believed it — every other one guards the field.
+  // A payload without it took the WHOLE account page down through the error
+  // boundary, because this runs before the card renders and decides which card
+  // the slot gets. A read that names no omissions withholds nothing, which is
+  // the safe reading: "there is none" understates rather than inventing work.
+  it("survives a payload that names no omissions at all", () => {
+    const partial = view();
+    delete (partial as Partial<Organization360>).sections_omitted;
+    expect(() => hasWorkInFlight(partial)).not.toThrow();
+    expect(hasWorkInFlight(partial)).toBe(false);
+  });
 });

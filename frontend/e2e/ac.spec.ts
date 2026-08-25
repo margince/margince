@@ -1135,13 +1135,18 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   // the fixed nav surface — so it gets its own test rather than reshaping that
   // list for one parameterised route.
   //
-  // This mock harness has no /organizations/{id}/360 route, so the read the
-  // record depends on for its strip, tabs bodies and rail 404s and the page
-  // renders in its own honest failure state throughout — the header, the tab
-  // strip and every section's "could not be loaded" wording, never a blank or
-  // a spinner stuck mid-load. That is still real chrome worth a sweep: this
-  // covers the shell around the record, not the loaded content a live run
-  // would need to reach.
+  // This mock harness has no /organizations/{id}/360 route, and its fallback
+  // answers an empty PAGE with 200 rather than 404 — so the read the record
+  // depends on for its strip, tabs bodies and rail succeeds with a body that
+  // carries none of the fields a 360 promises. The page renders in its own
+  // honest failure state throughout: the header, the tab strip and every
+  // section's "could not be loaded" wording, never a blank or a spinner stuck
+  // mid-load. That is still real chrome worth a sweep, and the wrong-shaped
+  // 200 is worth MORE than the 404 this comment used to claim — it is how a
+  // reader meets a server one release out of step, and it caught a card that
+  // read a promised field without guarding it and took the whole page down.
+  // This covers the shell around the record, not the loaded content a live
+  // run would need to reach.
   test("no AA violations on #/companies/<id>", async ({ page }) => {
     await page.goto("/#/companies/o-brandt");
     await page.waitForLoadState("networkidle");
