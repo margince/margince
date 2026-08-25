@@ -41,7 +41,7 @@ export {
 // structure and collapse to hairline rules at 64px, so the collapsed rail is the
 // flat list WDS-NAV-1 describes.
 //
-// It carries twelve rows against upstream's own ten, and not as a superset:
+// It carries thirteen rows against upstream's own ten, and not as a superset:
 // Duplicates, Filters & views and Projects are destinations here, Automations is not.
 // Automations is set-and-forget configuration and now lives inside Settings →
 // AI, which is where the product already offered a second door to it; the dedupe
@@ -147,7 +147,7 @@ export const NAV: readonly NavItem[] = NAV_GROUPS.flatMap(
 export const BADGE_SCREENS: ReadonlySet<Screen> = new Set(["tasks", "inbox"]);
 
 // At phone width the sidebar becomes a bottom bar, which fits four thumb-sized
-// destinations plus More — twelve would need horizontal scrolling, and a nav you
+// destinations plus More — thirteen would need horizontal scrolling, and a nav you
 // have to scroll is a nav you cannot see. Decisions is non-negotiable here: the
 // 390px approval path is required for V1.
 export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
