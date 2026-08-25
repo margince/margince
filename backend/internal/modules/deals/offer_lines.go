@@ -232,11 +232,16 @@ func (s *Store) AddOfferLineItem(ctx context.Context, offerID ids.OfferID, in Of
 		if err := insertOfferLine(ctx, tx, offerID, current.Currency, in); err != nil {
 			return err
 		}
-		if err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
+		totals, err := recomputeOfferTotals(ctx, tx, offerID)
+		if err != nil {
 			return err
 		}
-		if _, err := storekit.Audit(ctx, tx, "update", "offer", offerID.UUID,
-			nil, map[string]any{"line_added": true}); err != nil {
+		// What the added line MOVED on the offer is the three money columns;
+		// that a line was added is context about the mutation, so it lands in
+		// evidence rather than as a field the offer never had.
+		if _, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
+			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
+			map[string]any{"line_added": true}); err != nil {
 			return fmt.Errorf("audit line add: %w", err)
 		}
 		if out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly); err != nil {
@@ -295,7 +300,7 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			}
 			return fmt.Errorf("apply line patch: %w", err)
 		}
-		if err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
+		if _, err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "offer", offerID.UUID, before, after); err != nil {
@@ -405,7 +410,7 @@ func (s *Store) AcceptOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 			out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly)
 			return err
 		}
-		if err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
+		if _, err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "offer", offerID.UUID,
@@ -442,7 +447,7 @@ func (s *Store) RemoveOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if tag.RowsAffected() == 0 {
 			return apperrors.ErrNotFound
 		}
-		if err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
+		if _, err := recomputeOfferTotals(ctx, tx, offerID); err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "offer", offerID.UUID,

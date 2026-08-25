@@ -20,7 +20,7 @@ import (
 // The body is carried whole. It is the field a reader most often wants back,
 // and "the body changed" without the text is a history entry nobody can act on.
 //
-// Reading content off this row is sound because the only caller reaches it past
+// Reading content off this row is sound because every caller reaches it past
 // EnsureActivityWritable, whose first act is EnsureActivityContentVisibleLive:
 // a principal who may edit the activity may read its content, so the row here is
 // never a withheld one with its subject and body nulled out.

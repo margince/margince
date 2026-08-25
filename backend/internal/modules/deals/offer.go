@@ -122,7 +122,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	if err := insertOfferLines(ctx, tx, id, in.Currency, in.LineItems); err != nil {
 		return crmcontracts.Offer{}, err
 	}
-	if err := recomputeOfferTotals(ctx, tx, id); err != nil {
+	if _, err := recomputeOfferTotals(ctx, tx, id); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 
@@ -205,41 +205,72 @@ func nextOfferNumber(ctx context.Context, tx pgx.Tx, wsID ids.UUID) (string, err
 	return fmt.Sprintf("A-%d", next), nil
 }
 
+// offerTotalsChange is the transition recomputeOfferTotals wrote to the
+// offer's three stored money columns: what the row held, and what it now
+// holds. One derivation answers both audit images, so a caller never re-sums
+// a total the UPDATE has already landed — two spellings of one number are
+// two numbers.
+type offerTotalsChange struct{ Before, After OfferFigures }
+
+// offerTotalsImage renders one side of that transition as an audit image,
+// keyed by the column names, so field history reads three money fields moving
+// on the offer rather than a shape only this package understands.
+func offerTotalsImage(f OfferFigures) map[string]any {
+	return map[string]any{"net_minor": f.NetMinor, "tax_minor": f.TaxMinor, "gross_minor": f.GrossMinor}
+}
+
 // recomputeOfferTotals re-derives net/tax/gross from the offer's live
 // lines through the totals engine — the ONE writer of the stored totals,
 // called inside every transaction that touches a line. Only accepted
 // lines count: a staged AI proposal must never move a total (E03.21a).
-func recomputeOfferTotals(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) error {
+func recomputeOfferTotals(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) (offerTotalsChange, error) {
+	lines, err := statefulOfferLines(ctx, tx, offerID)
+	if err != nil {
+		return offerTotalsChange{}, err
+	}
+	totals, err := OfferTotals(acceptedLines(lines))
+	if err != nil {
+		return offerTotalsChange{}, err
+	}
+	// `was` is the offer as this statement's snapshot found it. RETURNING
+	// answers the values the UPDATE has just written, so joining the pre-write
+	// image is the only way to read what the three columns held — and reading
+	// it here keeps the one writer of the totals the one witness to the move.
+	var prior OfferFigures
+	if err := tx.QueryRow(ctx,
+		`UPDATE offer o SET net_minor = $2, tax_minor = $3, gross_minor = $4
+		   FROM offer was
+		  WHERE o.id = $1 AND was.id = o.id
+		  RETURNING was.net_minor, was.tax_minor, was.gross_minor`,
+		offerID, totals.NetMinor, totals.TaxMinor, totals.GrossMinor).
+		Scan(&prior.NetMinor, &prior.TaxMinor, &prior.GrossMinor); err != nil {
+		return offerTotalsChange{}, fmt.Errorf("store recomputed totals: %w", err)
+	}
+	return offerTotalsChange{Before: prior, After: totals}, nil
+}
+
+// statefulOfferLines reads every line on the offer with its proposal state,
+// which is what decides whether it counts toward a total.
+func statefulOfferLines(ctx context.Context, tx pgx.Tx, offerID ids.OfferID) ([]statefulOfferLine, error) {
 	rows, err := tx.Query(ctx,
 		`SELECT quantity::text, unit_price_minor, discount_pct::text, tax_rate::text, proposal_state
 		 FROM offer_line_item WHERE offer_id = $1`, offerID)
 	if err != nil {
-		return fmt.Errorf("read lines for totals: %w", err)
+		return nil, fmt.Errorf("read lines for totals: %w", err)
 	}
 	defer rows.Close()
 	var lines []statefulOfferLine
 	for rows.Next() {
 		var l statefulOfferLine
 		if err := rows.Scan(&l.Line.Quantity, &l.Line.UnitPriceMinor, &l.Line.DiscountPct, &l.Line.TaxRate, &l.State); err != nil {
-			return err
+			return nil, err
 		}
 		lines = append(lines, l)
 	}
 	if err := rows.Err(); err != nil {
-		return err
+		return nil, err
 	}
-	rows.Close()
-
-	totals, err := OfferTotals(acceptedLines(lines))
-	if err != nil {
-		return err
-	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE offer SET net_minor = $2, tax_minor = $3, gross_minor = $4 WHERE id = $1`,
-		offerID, totals.NetMinor, totals.TaxMinor, totals.GrossMinor); err != nil {
-		return fmt.Errorf("store recomputed totals: %w", err)
-	}
-	return nil
+	return lines, nil
 }
 
 // visibleOffer loads one offer and applies the deal-derived row scope:

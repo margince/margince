@@ -295,12 +295,12 @@ func isAbsentImageExpr(call *ast.CallExpr, _ *ast.File) bool {
 }
 
 // packageConstants collects every package-level string constant in the tree,
-// grouped by the directory that declares it — which is the package, since Go
-// puts one package in one directory.
+// grouped by the directory that declares it. Go puts a package in a directory,
+// so the directory is the resolution scope.
 //
 // By PACKAGE and not by file, because that is where the verbs live that are not
-// written as literals. `actionUpdate` is declared once in a package and used
-// from a dozen files in it; resolving only a file's own declarations would call
+// written as literals. `actionUpdate` is a package-level constant used from
+// many files in that package; resolving only a file's own declarations would call
 // those sites unresolvable, and an unresolvable site gets RATIFIED. That would
 // turn "we could not read this verb" into a standing waiver over sites whose
 // verb is plainly `update` — the census failing short into the one bucket that

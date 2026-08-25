@@ -392,10 +392,11 @@ func marshalOrNil(v any) ([]byte, error) {
 	return json.Marshal(v)
 }
 
-// AbsentImage reports whether an audit image says nothing — the one spelling of
-// the question, because three readers ask it and a second spelling would let
-// them disagree about the same value. It answers what the COLUMN will hold: an
-// image this is true of reaches audit_log as SQL NULL.
+// AbsentImage reports whether an audit image says nothing. It answers what the
+// COLUMN will hold: an image this is true of reaches audit_log as SQL NULL.
+//
+// Callers ask it rather than testing nil themselves so that the writer, the
+// image narrower and the refusal all read the same value the same way.
 //
 // Both halves are load-bearing. An untyped nil is the obvious absence; a typed
 // one is the dangerous absence, because a caller that builds its image in a
