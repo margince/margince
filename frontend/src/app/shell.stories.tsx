@@ -174,7 +174,6 @@ function SidebarExample({
       <main className="main">
         <TopBar
           route={{ screen: "deals" }}
-          counts={COUNTS}
           collapsed={collapsed}
           onToggle={() => setCollapsed((current) => !current)}
           onOpenSearch={openSearch}
@@ -455,7 +454,6 @@ function LevelExample({
         <TopBar
           route={{ screen: "settings", id: tab, id2: sub }}
           section={{ ...SETTINGS_SECTION, activeId: tab }}
-          counts={COUNTS}
           collapsed={collapsed}
           onToggle={() => setCollapsed((current) => !current)}
           onOpenSearch={openSearch}
@@ -553,7 +551,6 @@ function PhoneSectionExample() {
         <TopBar
           route={route}
           section={SETTINGS_SECTION}
-          counts={COUNTS}
           collapsed={false}
           onOpenSearch={openSearch}
         />
@@ -633,12 +630,7 @@ function PhoneSheetExample() {
     <div className="app railexpanded">
       <WorkspaceRail route={route} counts={COUNTS} />
       <main className="main">
-        <TopBar
-          route={route}
-          counts={COUNTS}
-          collapsed={false}
-          onOpenSearch={openSearch}
-        />
+        <TopBar route={route} collapsed={false} onOpenSearch={openSearch} />
         <div className="scroll">
           <PageTitle route={route} />
           <div className="wrap">

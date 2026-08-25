@@ -64,10 +64,12 @@ type CompanyProfile = components["schemas"]["CompanyProfile"];
 // which stands INSIDE the scroller and scrolls with the page because it belongs
 // to the document, and the agent, which floats at the column's foot.
 
-// The attention counts the whole chrome reads — the rail badges them and the
-// agent at the foot of the column reports the same numbers. They are the levels'
-// own currency (app/subnav.ts), named here for the shell because App.tsx hands
-// them in at that seam.
+// The attention counts the rail badges on the rows a level declares badgeable.
+// They are the levels' own currency (app/subnav.ts), named here for the shell
+// because this is the seam a caller hands them in at. No caller does today: the
+// primary level badges nothing (app/nav.ts BADGE_SCREENS) now that the queues
+// that had counts are lanes inside Today, which reports its numbers on the page.
+// The prop stays because a deeper level declaring `badgeIds` needs this door.
 export type ShellCounts = NavCounts;
 
 const COLLAPSE_KEY = "margince.sidebarCollapsed";
@@ -396,13 +398,11 @@ export function SettingsRail(props: Readonly<RailProps>) {
  */
 function SettingsTopBar({
   route,
-  counts,
   collapsed,
   onToggle,
   onOpenSearch,
 }: Readonly<{
   route: Route;
-  counts?: ShellCounts;
   collapsed: boolean;
   onToggle: () => void;
   onOpenSearch: () => void;
@@ -412,7 +412,6 @@ function SettingsTopBar({
     <TopBar
       route={route}
       section={section}
-      counts={counts}
       collapsed={collapsed}
       onToggle={onToggle}
       onOpenSearch={onOpenSearch}
@@ -778,7 +777,6 @@ export function Shell({
         {leveled ? (
           <SettingsTopBar
             route={route}
-            counts={counts}
             collapsed={collapsed}
             onToggle={toggle}
             onOpenSearch={onOpenSearch}
@@ -786,7 +784,6 @@ export function Shell({
         ) : (
           <TopBar
             route={route}
-            counts={counts}
             collapsed={collapsed}
             onToggle={toggle}
             onOpenSearch={onOpenSearch}

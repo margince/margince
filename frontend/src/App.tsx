@@ -31,7 +31,7 @@ import {
   routeIdentity,
   type Screen,
 } from "./app/router";
-import { Shell, type ShellCounts, useRoute } from "./app/shell";
+import { Shell, useRoute } from "./app/shell";
 import { UnsavedGuard } from "./app/unsaved";
 import {
   Card,
@@ -49,7 +49,6 @@ import {
 } from "./screens/auth";
 import { AuthProbeError, consumeAuthExitNotice, useMe } from "./screens/common";
 import { ForcedPasswordChangeScreen } from "./screens/forcedpassword";
-import { InboxScreen, usePendingApprovals } from "./screens/inbox";
 import { OnboardingScreen, useCompany } from "./screens/onboarding";
 import { isPersonTab } from "./screens/persontab";
 import { ReleaseSkewScreen, useSkewedApiRelease } from "./screens/releaseskew";
@@ -64,11 +63,10 @@ import { fetchSetupStatus, SetupClaimScreen } from "./screens/setupclaim";
 // product: a screen's code arrives when somebody navigates to it.
 //
 // What stays STATIC is what a first paint genuinely needs — the shell, the auth
-// surfaces, the router — plus the two screens whose hooks the shell itself calls
-// (screens/inbox's approval count, screens/onboarding's company probe). A module
-// that is imported statically anywhere lands in the entry chunk whatever a
-// dynamic import elsewhere says, so splitting those two would cost a round-trip
-// and save nothing.
+// surfaces, the router — plus screens/onboarding, whose company probe the shell
+// itself calls. A module that is imported statically anywhere lands in the entry
+// chunk whatever a dynamic import elsewhere says, so splitting it would cost a
+// round-trip and save nothing.
 // Every route chunk, registered as it is declared. A screen is split so the
 // login screen does not carry the app, and warmed once a session exists so a
 // reader past that point never pays the fetch on a click — splitting alone
@@ -121,11 +119,6 @@ const DealRoomPage = lazy(
     import("./screens/dealroompage").then((m) => ({
       default: m.DealRoomPage,
     })),
-  ),
-);
-const DedupeScreen = lazy(
-  routed(() =>
-    import("./screens/dedupe").then((m) => ({ default: m.DedupeScreen })),
   ),
 );
 const FiltersScreen = lazy(
@@ -236,11 +229,6 @@ const SettingsScreen = lazy(
 const ShareScreen = lazy(
   routed(() =>
     import("./screens/share").then((m) => ({ default: m.ShareScreen })),
-  ),
-);
-const TasksScreen = lazy(
-  routed(() =>
-    import("./screens/tasks").then((m) => ({ default: m.TasksScreen })),
   ),
 );
 const TodayScreen = lazy(
@@ -437,8 +425,6 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     deals: ({ id, id2 }) => <DealsRoute id={id} id2={id2} />,
     projects: ({ id }) => (id ? <ProjectScreen id={id} /> : <ProjectsScreen />),
     today: () => <TodayScreen />,
-    tasks: () => <TasksScreen />,
-    inbox: () => <InboxScreen />,
     reports: () => <ReportsScreen />,
     ai: () => <AskAiScreen />,
     // The screen resolves its own address, because which entry an address names
@@ -447,7 +433,6 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     settings: (args) => (
       <SettingsScreen route={{ screen: "settings", ...args }} />
     ),
-    dedupe: () => <DedupeScreen />,
     // The object rides the URL so a filter surface can be linked to; an
     // unknown segment falls back to contacts inside the screen rather than
     // rendering a page with no vocabulary to offer.
@@ -864,13 +849,11 @@ function AuthedApp({
   );
 }
 
-// The shell plus its live badge counts. This is a separate component so the
-// approvals read mounts only once a session exists — calling it beside the
-// auth probe would fire an unauthenticated request on the login path.
-//
-// A badge counts only what wants attention: approvals
-// waiting. Tasks will join it once there is a due-count to read; until then the
-// slot renders nothing rather than a fabricated number.
+// The shell for a reader who has a session. It is a separate component so the
+// route warm-up runs only once past the login screen, and so a badge read added
+// back here fires no unauthenticated request on the login path. No primary-nav
+// row badges today (app/nav.ts BADGE_SCREENS): Today reports its own counts on
+// the page rather than on its row.
 // Fetches the route chunks in the background, once, for a reader who is past
 // the login screen. It runs at idle so it never competes with the screen the
 // reader is actually looking at, and with a deadline so a busy tab cannot defer
@@ -925,15 +908,7 @@ function AuthedShell({
   onOpenSearch,
 }: Readonly<{ children: ReactNode; onOpenSearch: () => void }>) {
   useWarmRouteChunks();
-  const pending = usePendingApprovals();
-  const counts: ShellCounts | undefined = pending.data
-    ? { inbox: pending.data.data.length }
-    : undefined;
-  return (
-    <Shell counts={counts} onOpenSearch={onOpenSearch}>
-      {children}
-    </Shell>
-  );
+  return <Shell onOpenSearch={onOpenSearch}>{children}</Shell>;
 }
 
 // The rail-less page frame (same shape Shell renders for onboarding/booking),

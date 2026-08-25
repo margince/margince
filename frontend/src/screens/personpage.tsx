@@ -601,7 +601,7 @@ function PersonActions({
         <CalendarDays size={15} aria-hidden="true" />{" "}
         {t("person.action.meetings")}
       </Button>
-      <Button onClick={() => navigate({ screen: "tasks" })}>
+      <Button onClick={() => navigate({ screen: "today" })}>
         <CheckSquare size={15} aria-hidden="true" />{" "}
         {t("person.action.addTask")}
       </Button>

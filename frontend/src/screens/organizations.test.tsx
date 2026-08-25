@@ -271,8 +271,8 @@ describe("company-360 deep read", () => {
     expect(screen.queryByText("Pages read")).toBeNull();
     expect(screen.queryByText("brandt.example/team")).toBeNull();
 
-    await userEvent.click(screen.getByRole("button", { name: "Open inbox" }));
-    expect(window.location.hash).toBe("#/inbox");
+    await userEvent.click(screen.getByRole("button", { name: "Open Today" }));
+    expect(window.location.hash).toBe("#/today");
   });
 
   it("renders the honest 422 detail when the org has no website on file", async () => {

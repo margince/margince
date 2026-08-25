@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { type Locale, LocaleProvider } from "../i18n";
@@ -17,13 +18,21 @@ function jsonResponse(body: unknown): Response {
   });
 }
 
-function stub(day: Attention) {
+// The day, plus the one approval the decision lane fetches whole.
+//
+// The feed sends a lane's worth of each item; deciding a staged proposal needs
+// the rest of it, so the lane reads the single approval it is showing. A test
+// that served only the feed would render a card stuck loading forever.
+function stub(day: Attention, approval?: unknown) {
   vi.stubGlobal(
     "fetch",
     vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input instanceof Request ? input.url : input);
       if (url.includes("/attention")) {
         return jsonResponse(day);
+      }
+      if (approval && /\/approvals\/[^/]+$/.test(url.split("?")[0])) {
+        return jsonResponse(approval);
       }
       return jsonResponse({ data: [] });
     }),
@@ -52,6 +61,11 @@ const emptyDay: Attention = {
 };
 
 afterEach(() => {
+  // Unmount as well as unstub. Vitest does not clear the DOM between tests
+  // unless it is told to, so a second render puts TWO of the same card on the
+  // page and every query by role finds both — which reads as "the component
+  // rendered twice" rather than "the last test is still on screen".
+  cleanup();
   vi.unstubAllGlobals();
 });
 
@@ -77,8 +91,11 @@ describe("what the day's surface offers", () => {
     });
     renderToday();
     await screen.findByText("Moved the Acme close date to 27 Sep");
+    // A receipt reports a finished act, so it carries no verb at all: there is
+    // nothing to decide, and nothing to complete.
     expect(screen.queryByRole("button", { name: "Decide" })).toBeNull();
-    expect(screen.getByRole("button", { name: "View" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "Merge them" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Done" })).toBeNull();
   });
 
   // A queue whose only verbs are "done" and nothing teaches a reader to leave
@@ -104,29 +121,52 @@ describe("what the day's surface offers", () => {
     expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
   });
 
+  // The decision lane shows ONE decision at a time and draws it whole, so a
+  // staged proposal arrives as the same row the record surfaces draw — with the
+  // verbs that answer it, not a link to somewhere it can be answered.
   it("asks for a decision on something staged", async () => {
-    stub({
-      ...emptyDay,
-      needs_you: [
-        {
-          id: "ap-2",
-          source: "approval",
-          kind: "send_email",
-          title: "Send the follow-up to Anna Weber",
-          actions: ["decide"],
-        },
-      ],
-      counts: { needs_you: 1, planned: 0 },
-    });
+    stub(
+      {
+        ...emptyDay,
+        needs_you: [
+          {
+            id: "ap-2",
+            source: "approval",
+            kind: "send_email",
+            title: "Send the follow-up to Anna Weber",
+            actions: ["decide"],
+          },
+        ],
+        counts: { needs_you: 1, planned: 0 },
+      },
+      // The whole approval, as `GET /approvals/{id}` answers it. Every field
+      // the contract marks required is here on purpose: a stub that omits one
+      // is testing a payload the server cannot send.
+      {
+        id: "ap-2",
+        kind: "send_email",
+        status: "pending",
+        summary: "Send the follow-up to Anna Weber",
+        proposed_by: "agent:runner",
+        created_at: "2026-08-25T08:00:00Z",
+        proposed_change: {},
+        target_entity_type: "person",
+        target_entity_id: "11111111-1111-4111-8111-111111111111",
+      },
+    );
     renderToday();
-    await screen.findByText("Send the follow-up to Anna Weber");
-    expect(screen.getByRole("button", { name: "Decide" })).toBeTruthy();
+    // The verb that ANSWERS it, on the page the reader is already on.
+    expect(await screen.findByRole("button", { name: "Accept" })).toBeTruthy();
   });
 
-  // A duplicate pair carries no server-written sentence, because that sentence
-  // has no language on the server. The client writes it — and must, or the row
-  // is a blank line with a button beside it.
-  it("writes the line for a duplicate pair itself", async () => {
+  // A duplicate is DECIDED here, not described here.
+  //
+  // The surface this replaced said "two companies look like the same one, 92%
+  // match" and sent the reader to another screen to find out which two — so the
+  // percentage was the whole of what they were given, and a percentage is not
+  // something a person can answer. Both records are named, and the verb that
+  // merges them is on the card.
+  it("names both records and merges them in place", async () => {
     stub({
       ...emptyDay,
       needs_you: [
@@ -136,14 +176,49 @@ describe("what the day's surface offers", () => {
           kind: "organization",
           confidence: 0.92,
           actions: ["merge"],
+          pair: {
+            left: {
+              id: "org-1",
+              label: "Acme Logistik GmbH",
+              detail: "acme.example",
+            },
+            right: {
+              id: "org-2",
+              label: "Acme Logistik",
+              detail: "acme-log.example",
+            },
+            evidence: [
+              {
+                field: "display_name",
+                signal: "collide",
+                left_value: "Acme Logistik GmbH",
+                right_value: "Acme Logistik",
+              },
+            ],
+          },
         },
       ],
       counts: { needs_you: 1, planned: 0, duplicates_open: 1 },
     });
     renderToday();
-    await screen.findByText("Two companies look like the same one");
-    expect(screen.getByText("92% match")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Review" })).toBeTruthy();
+    // The two records, by name — the thing the old row could not say. Each
+    // name appears twice on purpose: once as the side a reader picks, once in
+    // the evidence row that shows what collided, so these count the side tiles.
+    const sides = await screen.findAllByText(/^Acme Logistik( GmbH)?$/, {
+      selector: ".merge-side-name",
+    });
+    expect(sides.map((node) => node.textContent)).toEqual([
+      "Acme Logistik GmbH",
+      "Acme Logistik",
+    ]);
+    // The comparison in the reader's words, never the database's column name.
+    expect(screen.getByText("Company name")).toBeTruthy();
+    expect(screen.queryByText("display_name")).toBeNull();
+    // And the decision itself, here.
+    expect(screen.getByRole("button", { name: "Merge them" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: "Different records" }),
+    ).toBeTruthy();
   });
 
   // A lane the reader may not see must SAY so, and the page must stop claiming
@@ -184,6 +259,11 @@ describe("what the day's surface offers", () => {
           kind: "organization",
           confidence: 0.92,
           actions: ["merge"],
+          pair: {
+            left: { id: "org-1", label: "Acme Logistik GmbH" },
+            right: { id: "org-2", label: "Acme Logistik" },
+            evidence: [],
+          },
         },
       ],
     });
@@ -192,6 +272,9 @@ describe("what the day's surface offers", () => {
     expect(
       screen.getByText("5.678 Dubletten-Paare insgesamt offen"),
     ).toBeTruthy();
+    // The queue position is a magnitude too, and it is the newest one on the
+    // page — the focus lane counts a reader through a queue of any size.
+    expect(screen.getByText("Entscheidung 1 von 1.234")).toBeTruthy();
     // A percentage is a magnitude too, and below the grouping threshold it
     // reads the same in both notations — asserted so the site is covered by
     // name rather than by being too small to disagree.
@@ -218,5 +301,64 @@ describe("what the day's surface offers", () => {
     });
     renderToday();
     await screen.findByText("2 decisions are waiting on you.");
+  });
+});
+
+describe("what the day's surface does when the server says no", () => {
+  // Found by clicking, not by a test: the server refuses some merges for
+  // reasons a reader can act on — the workspace's own company cannot be merged
+  // into another — and the first version swallowed every one of them. What a
+  // person saw was a button that did nothing, which is the exact failure this
+  // surface was built to end.
+  it("says why a refused merge was refused", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input instanceof Request ? input.url : input);
+        if (url.includes("/disposition") || init?.method === "POST") {
+          return new Response(
+            JSON.stringify({
+              type: "https://errors.gradion.com/validation_error",
+              title: "Unprocessable Entity",
+              status: 422,
+              detail: "this is the workspace's own company",
+            }),
+            {
+              status: 422,
+              headers: { "content-type": "application/problem+json" },
+            },
+          );
+        }
+        if (url.includes("/attention")) {
+          return jsonResponse({
+            ...emptyDay,
+            counts: { needs_you: 1, planned: 0 },
+            needs_you: [
+              {
+                id: "dc-9",
+                source: "dedupe_candidate",
+                kind: "organization",
+                confidence: 1,
+                actions: ["merge"],
+                pair: {
+                  left: { id: "org-a", label: "Gradion" },
+                  right: { id: "org-b", label: "Gradion GmbH" },
+                  evidence: [],
+                },
+              },
+            ],
+          });
+        }
+        return jsonResponse({ data: [] });
+      }),
+    );
+    renderToday();
+    // A winner first: merge is refused without one, so the click that reaches
+    // the server is the one this test is about.
+    await user.click((await screen.findAllByRole("radio"))[0]);
+    await user.click(screen.getByRole("button", { name: "Merge them" }));
+    // The server's own words, not a generic apology.
+    expect(await screen.findByText(/workspace's own company/)).toBeTruthy();
   });
 });

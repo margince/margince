@@ -14,13 +14,17 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// needsYouCap bounds the decision lane.
+// needsYouPage is how many decisions one read carries.
 //
-// A queue whose whole promise is "this is what needs you" has to be finishable,
-// and review quality falls off a cliff long before a scrolling list does. The
-// count beside the lane reports the true total, so a bounded lane hides nothing
-// — it only refuses to present forty decisions as one sitting.
-const needsYouCap = 9
+// The surface decides ONE item at a time and pulls the next as each is
+// answered, so this is a prefetch depth rather than a ceiling on the day's work:
+// the reader reaches every decision, a page at a time, and the count beside the
+// lane always reports the true total.
+//
+// An earlier version capped the lane at nine with no way to continue while
+// reporting ninety beside it. Nothing was reachable past the ninth, and the two
+// numbers on screen contradicted each other.
+const needsYouPage = 10
 
 // plannedCap bounds today's agreed work for the same reason. Higher than the
 // decision lane because reading a task costs less than deciding one.
@@ -49,18 +53,43 @@ type ApprovalQuery struct {
 	Limit  int
 }
 
-// Duplicates is the dedupe queue, read through the people module. Both halves
-// carry that module's both-sides-visible rule; nothing here re-derives it.
+// Duplicates is the dedupe queue, read through the people module. Every method
+// carries that module's both-sides-visible rule; nothing here re-derives it.
+//
+// Describe names the two records of a pair. It is separate from OpenCandidates
+// because naming a record is a READ of that record: the queue row proves a pair
+// was detected, never that this reader may see what it points at.
 type Duplicates interface {
 	OpenCandidates(ctx context.Context, limit int) ([]DuplicatePair, error)
 	CountOpen(ctx context.Context) (int, error)
+	Describe(ctx context.Context, entityType string, id ids.UUID) (RecordFace, error)
 }
 
-// DuplicatePair is one open candidate, already reduced to what a card shows.
+// DuplicatePair is one open candidate: the pair, and what the detector saw.
 type DuplicatePair struct {
 	ID         ids.UUID
 	EntityType string
 	Confidence float64
+	LeftID     ids.UUID
+	RightID    ids.UUID
+	Evidence   []FieldComparison
+}
+
+// FieldComparison is one row of the detection-time snapshot.
+type FieldComparison struct {
+	Field  string
+	Left   *string
+	Right  *string
+	Signal string
+}
+
+// RecordFace is how much of a record a merge decision needs: enough to tell the
+// two sides apart, and nothing more.
+type RecordFace struct {
+	Label        string
+	Detail       string
+	CreatedAt    *time.Time
+	RelatedCount *int
 }
 
 // Tasks is the open-task read, through the activities module.
@@ -177,11 +206,17 @@ type laneCount struct {
 // decisions is the needs_you lane: staged approvals and open duplicate pairs,
 // the two things on this surface a person alone may answer.
 //
-// Duplicates lead. A merge cannot be undone — the product has no unmerge — and
-// putting the one irreversible verb on the page after a list of reversible ones
-// would rank by producer instead of by stakes.
+// Both producers are read to the full page depth and then INTERLEAVED, so one
+// of them cannot bury the other. Reading each to depth and concatenating looks
+// equivalent and is not: with eleven open pairs and a page of ten, every slot
+// went to duplicates and seventy-nine staged approvals were unreachable from
+// the surface that exists to reach them.
+//
+// Duplicates take the first slot of each round. A merge is the one verb here
+// the product cannot undo, so it leads on stakes — but it leads by one place,
+// not by the whole page.
 func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, laneCount, error) {
-	pairs, err := s.duplicates.OpenCandidates(ctx, needsYouCap)
+	pairs, err := s.duplicates.OpenCandidates(ctx, needsYouPage)
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -189,7 +224,7 @@ func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, 
 	if err != nil {
 		return nil, laneCount{}, err
 	}
-	staged, err := s.approvals.ListWire(ctx, ApprovalQuery{Status: "pending", Limit: needsYouCap})
+	staged, err := s.approvals.ListWire(ctx, ApprovalQuery{Status: "pending", Limit: needsYouPage})
 	if err != nil {
 		return nil, laneCount{}, err
 	}
@@ -198,18 +233,40 @@ func (s *Service) decisions(ctx context.Context) ([]crmcontracts.AttentionItem, 
 		return nil, laneCount{}, err
 	}
 
-	items := make([]crmcontracts.AttentionItem, 0, len(pairs)+len(staged))
+	duplicates := make([]crmcontracts.AttentionItem, 0, len(pairs))
 	for _, pair := range pairs {
-		items = append(items, duplicateItem(pair))
+		item, err := s.duplicateItem(ctx, pair)
+		if err != nil {
+			return nil, laneCount{}, err
+		}
+		duplicates = append(duplicates, item)
 	}
+	approvals := make([]crmcontracts.AttentionItem, 0, len(staged))
 	for _, approval := range staged {
-		items = append(items, approvalItem(approval))
+		approvals = append(approvals, approvalItem(approval))
 	}
-	total := openPairs + openStaged
-	if len(items) > needsYouCap {
-		items = items[:needsYouCap]
+	return interleave(duplicates, approvals, needsYouPage),
+		laneCount{items: openPairs + openStaged, duplicates: openPairs},
+		nil
+}
+
+// interleave takes from `first` then `second` in turn, up to `limit`, and drains
+// whichever still has items once the other runs dry.
+//
+// The alternation is what keeps a lane honest when one producer floods: a
+// morning's import can raise a hundred duplicate pairs, and the reader still
+// meets their staged decisions on the first screen.
+func interleave(first, second []crmcontracts.AttentionItem, limit int) []crmcontracts.AttentionItem {
+	out := make([]crmcontracts.AttentionItem, 0, limit)
+	for i := 0; len(out) < limit && (i < len(first) || i < len(second)); i++ {
+		if i < len(first) {
+			out = append(out, first[i])
+		}
+		if len(out) < limit && i < len(second) {
+			out = append(out, second[i])
+		}
 	}
-	return items, laneCount{items: total, duplicates: openPairs}, nil
+	return out
 }
 
 // planned is today's agreed work, overdue first.

@@ -84,20 +84,17 @@ afterEach(() => {
   window.localStorage.clear();
 });
 
-// The route id never changes with a label: `deals` presents as Pipeline and
-// `inbox` as Decisions, which names a governance surface rather than a mailbox.
+// The route id never changes with a label: `deals` presents as Pipeline, which
+// names the board this row opens.
 const CANONICAL_ORDER = [
   "Home",
   "Contacts",
   "Companies",
   "Leads",
-  "Duplicates",
   "Filters & views",
   "Today",
   "Pipeline",
   "Projects",
-  "Tasks",
-  "Decisions",
   "Reports",
   "Ask Margince",
 ];
@@ -204,26 +201,16 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     },
   );
 
-  it("renders count badges only for provided positive counts", () => {
+  // AC-shell-1e: a badge counts only what wants attention, and the primary level
+  // declares no such row today (BADGE_SCREENS is empty — the queues that had
+  // counts are lanes inside Today, which reports them on the page). A count for
+  // ANY destination must therefore draw nothing: this bites if BADGE_SCREENS is
+  // dropped and every screen starts rendering ambient totals again.
+  it("draws no badge on the primary level, whatever counts it is given", () => {
     const { container } = render(
       <WorkspaceRail
         route={{ screen: "home" }}
-        counts={{ tasks: 4, inbox: 0 }}
-      />,
-    );
-    const badges = container.querySelectorAll(".count");
-    expect(badges).toHaveLength(1);
-    expect(badges[0].textContent).toBe("4");
-  });
-
-  // AC-shell-1e: a badge counts only what wants attention. Pipeline and Leads
-  // carry no badge even when a count is supplied — this bites if BADGE_SCREENS
-  // is dropped and every screen starts rendering ambient totals again.
-  it("ignores counts for screens that are not attention surfaces", () => {
-    const { container } = render(
-      <WorkspaceRail
-        route={{ screen: "home" }}
-        counts={{ deals: 13, leads: 7, contacts: 248 }}
+        counts={{ today: 4, deals: 13, leads: 7, contacts: 248 }}
       />,
     );
     expect(container.querySelectorAll(".count")).toHaveLength(0);
