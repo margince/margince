@@ -260,6 +260,49 @@ describe("the edge's draw loop", () => {
     expect(renderer.frames.at(-1)?.level).toBe(1);
   });
 
+  it("turns the travelling head off for a reader who asked for less movement", () => {
+    // Holding the clock still does not stop the head, it PARKS it: at time zero
+    // the comet sits at the start of the perimeter and burns in that one corner,
+    // thickening the rim and brightening the halo there. So the head has to be
+    // switched off rather than merely frozen, or reduced motion buys a permanent
+    // asymmetric hotspot in place of an even rim.
+    const paint = clock();
+    const renderer = recorder();
+    start(renderer, { reduced: true });
+    paint.run(1000, 1000 / 60);
+
+    expect(renderer.frames.length).toBeGreaterThan(5);
+    for (const frame of renderer.frames) {
+      expect(frame.beam).toBe(0);
+    }
+  });
+
+  it("draws the travelling head when movement is allowed", () => {
+    const paint = clock();
+    const renderer = recorder();
+    start(renderer);
+    paint.run(1000, 1000 / 60);
+
+    expect(renderer.frames.at(-1)?.beam).toBe(1);
+  });
+
+  it("opens dark when the caller is already leaving", () => {
+    // A loop opens with its light asked for, which is right for the common case
+    // and wrong for a rebuild that happens mid-departure: a motion-preference
+    // change while the edge was fading used to hand back a loop that relit and
+    // stayed lit, because the caller's `lit` had not CHANGED and so nothing told
+    // the replacement about it.
+    const paint = clock();
+    const renderer = recorder();
+    const dark = vi.fn();
+    const { loop } = start(renderer, { onDark: dark });
+    loop?.setLit(false);
+    paint.run(FADE * 1000 * 3, 1000 / 60);
+
+    expect(renderer.frames.at(-1)?.level).toBe(0);
+    expect(dark).toHaveBeenCalledOnce();
+  });
+
   it("re-measures when the window changes size", () => {
     const paint = clock();
     const renderer = recorder();

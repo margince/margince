@@ -147,6 +147,9 @@ export function runEdgeLoop(
     renderer.draw({
       time: options.reduced ? 0 : (now - born) / 1000,
       level,
+      // Holding the clock still parks the travelling head in a corner rather
+      // than stopping it, so the head has to be turned off explicitly.
+      beam: options.reduced ? 0 : 1,
     });
     if (target === 0 && level === 0 && !wentDark) {
       // Once. The caller unmounts on this, and a second call would arrive after

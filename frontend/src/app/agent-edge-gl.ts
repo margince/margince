@@ -22,6 +22,14 @@ export type EdgeFrame = Readonly<{
   time: number;
   /** 0 while dark, 1 while fully lit: the fade lives here, not in CSS opacity. */
   level: number;
+  /**
+   * How much of the travelling head to draw: 1 normally, 0 under reduced motion.
+   *
+   * Per frame rather than fixed at construction because it is the loop that knows
+   * about motion preference, and because a test can then read what the loop
+   * asked for without a GPU.
+   */
+  beam: number;
 }>;
 
 export type EdgeRenderer = Readonly<{
@@ -141,6 +149,7 @@ export function createEdgeRenderer(
   const uLevel = gl.getUniformLocation(program, "uLevel");
   const uThick = gl.getUniformLocation(program, "uThick");
   gl.uniform1f(uThick, THICKNESS);
+  const uBeam = gl.getUniformLocation(program, "uBeam");
   // Through a Float32Array rather than casting the tuples: `uniform3fv` wants a
   // mutable float list, and an assertion to get one would be a claim about a
   // readonly value that is simply untrue.
@@ -182,9 +191,10 @@ export function createEdgeRenderer(
       gl.uniform2f(uRes, width, height);
       gl.uniform1f(uDpr, ratio);
     },
-    draw({ time, level }) {
+    draw({ time, level, beam }) {
       gl.uniform1f(uTime, time);
       gl.uniform1f(uLevel, level);
+      gl.uniform1f(uBeam, beam);
       // No clear: every fragment is written, and the blend is over transparent
       // black, so clearing would be a full-screen write for nothing.
       gl.drawArrays(gl.TRIANGLES, 0, 3);

@@ -394,19 +394,63 @@ describe("AgentRail", () => {
   // case below still carries it. Issue 2679 carries where the absent licence
   // should be surfaced instead, which is not nowhere.
   it("rests rather than warning when the installation has no licence", async () => {
-    stubAgentRailApi({ license: () => jsonResponse(LICENSE("absent")) });
+    // The licence answer is HELD and then released, and that is the whole
+    // difference between this test and one that proves nothing. The posture hook
+    // reads undefined until the query lands, and derive() calls that idle -- so
+    // asserting "not warning" against a live stub can pass before the absent
+    // licence has been seen at all, which is a green test for an assertion never
+    // made. Holding the response makes the first assertion about the state
+    // BEFORE the answer, and the second about the state after it.
+    let release: () => void = () => {};
+    const answered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    let delivered = false;
+    stubAgentRailApi({
+      license: async () => {
+        await answered;
+        delivered = true;
+        return jsonResponse(LICENSE("absent"));
+      },
+    });
     const { container } = render(ROUTE);
     await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).not.toBe(
-        "warning",
-      ),
+      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
     );
-    expect(block(container).getAttribute("data-core-state")).toBe("idle");
+
+    release();
+    await waitFor(() => expect(delivered).toBe(true));
+    // The absent licence has now been answered and read, and the section still
+    // rests. That the answer REACHES derive() at all is proven by the refused
+    // case below, which is the same construction and does turn amber: without
+    // that pair, an assertion of "still idle" could not tell a licence that was
+    // seen and shrugged off from one that never arrived.
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
+    );
   });
 
   it("goes to warning when the licence is refused", async () => {
-    stubAgentRailApi({ license: () => jsonResponse(LICENSE("rejected")) });
+    // Held and released like the case above, and this is the half that makes the
+    // pair mean something: the same pipeline, the same timing, and this one DOES
+    // reach warning. So "still idle" up there is a licence that was read and
+    // deliberately not escalated, rather than one that never landed.
+    let release: () => void = () => {};
+    const answered = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    stubAgentRailApi({
+      license: async () => {
+        await answered;
+        return jsonResponse(LICENSE("rejected"));
+      },
+    });
     const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
+    );
+
+    release();
     await waitFor(() =>
       expect(block(container).getAttribute("data-core-state")).toBe("warning"),
     );

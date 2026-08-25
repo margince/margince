@@ -96,6 +96,12 @@ function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
   // reads it, and a const is not hoisted.
   const onDarkRef = useRef(onDark);
   onDarkRef.current = onDark;
+  // `lit` is read by the effect that BUILDS the loop, and that effect must not
+  // rebuild when `lit` changes: rebuilding the GL program is the one thing this
+  // component exists to avoid. A ref is how the builder sees the current value
+  // without taking it as a dependency.
+  const litRef = useRef(lit);
+  litRef.current = lit;
 
   useEffect(() => {
     const element = canvas.current;
@@ -124,10 +130,21 @@ function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
       // A context lost to a GPU reset is not recoverable in place: the program
       // and the buffer went with it, so the honest picture of what this machine
       // can draw is the static rim.
-      onLost: () => setLive(false),
-      onDark: onDarkRef.current,
+      onLost: () => {
+        // The handle goes too. A stopped loop still referenced here would be
+        // asked to setLit(false) later, would do nothing, and would never report
+        // going dark, which leaves the canvas mounted for the life of the page.
+        loop.current = null;
+        setLive(false);
+      },
+      onDark: () => onDarkRef.current(),
     });
     loop.current = started;
+    // A fresh loop opens with its light asked for. When this rebuild happened
+    // while the edge was already on its way out (a motion-preference change
+    // mid-fade), the replacement relit and stayed lit, because the effect below
+    // only runs when `lit` CHANGES and it had not.
+    started?.setLit(litRef.current);
     setLive(started !== null);
     return () => {
       started?.stop();
@@ -135,18 +152,25 @@ function LitEdge({ lit, onDark }: { lit: boolean; onDark: () => void }) {
     };
   }, [reduced]);
 
+  // `live` is a dependency, not decoration: losing the context clears the loop
+  // while `lit` may already be false, and without re-running here nothing would
+  // ever report the edge dark and the static rim would outlive the work.
   useEffect(() => {
-    if (loop.current) {
-      loop.current.setLit(lit);
+    const running = loop.current;
+    // Gated on `live` as well as the handle, which is what makes the dependency
+    // real rather than a nudge: `live` IS the answer to "is there a shader to
+    // dim", and it turns false the moment the context is lost.
+    if (live && running) {
+      running.setLit(lit);
       return;
     }
-    // No shader on this host, so there is no light to take down: the static rim
-    // has nothing to dim and holding it would leave a rim on screen after the
-    // work stopped. Report immediately and let the caller unmount.
+    // No shader to dim, either because this host has none or because the context
+    // was just lost. Holding the rim would leave it on screen after the work
+    // stopped, so report at once and let the caller unmount.
     if (!lit) {
       onDarkRef.current();
     }
-  }, [lit]);
+  }, [lit, live]);
 
   return (
     <canvas

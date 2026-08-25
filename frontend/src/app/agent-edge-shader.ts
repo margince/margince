@@ -35,6 +35,7 @@ uniform float uDpr;      // device pixels per CSS pixel, so widths stay in CSS p
 uniform float uTime;     // seconds since the edge lit
 uniform float uLevel;    // 0..1 fade in and out, so nothing appears or cuts
 uniform float uThick;    // the rim's resting thickness, CSS px
+uniform float uBeam;     // 1 normally, 0 for a reader who asked for less movement
 uniform vec3  uHueA;     // cool
 uniform vec3  uHueB;
 uniform vec3  uHueC;
@@ -179,7 +180,13 @@ void main() {
   // inf reaching a mix() that would have discarded it still yields NaN.
   float back = exp(min(rel, 0.0) / tail);
   float front = exp(-max(rel, 0.0) / nose);
-  float beam = min(back, front);
+  // Scaled to nothing under reduced motion, and that is a correctness fix rather
+  // than a preference. The loop holds t at zero to stop the motion, which pins
+  // the head at along == 0: the comet does not disappear, it PARKS in one corner
+  // and burns there, thickening the rim and brightening the halo at that corner
+  // for as long as the edge is lit. A reader who asked for less movement was
+  // getting a permanent asymmetric hotspot instead of an even rim.
+  float beam = min(back, front) * uBeam;
 
   // The rim's thickness undulates with the wave, so the crests are visible as
   // the edge swelling and thinning rather than as a stripe moving inside it.
