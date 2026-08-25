@@ -9,25 +9,22 @@ package compose
 // folds the pages into a labeled corpus, and extracts it in ONE model
 // call (chunked only for outsized sites) through the no-guess evidence
 // gate — company fields, category facts, published people, and the
-// site's legal-entity census. The gated findings are staged as ONE
-// "deepread" proposal whose acceptance lands both halves in one
+// site's legal-entity census. The gated findings LAND directly, in one
 // transaction: profile fields fill-empty exactly like a quick scrape,
-// category facts land in organization_fact. The dossier (people's
-// site_read row) is the transparency surface the SPA polls: live phase
-// and page counts while running, then what was read, what was skipped
-// and why, and the proposals the findings staged.
+// category facts land in organization_fact. Nobody is asked to confirm a
+// read they pressed the button for — the write is marked as model-derived
+// and stays reversible instead. Published PEOPLE are the exception and
+// still stage as leads. The dossier (people's site_read row) is the
+// transparency surface the SPA polls: live phase and page counts while
+// running, then what was read and what it found.
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
@@ -36,7 +33,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/webread"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -325,100 +321,6 @@ func (w *siteDeepReadWorker) progressiveCallbacks(ctx context.Context, readID id
 		}
 	}
 	return progress, publishDraft
-}
-
-// stageProposals stages everything the read evidenced: the ONE deepread
-// proposal first (when any field or fact survived), then one thin
-// site_lead per published person — the dossier's proposal_ids keep
-// that order.
-//
-// They share ONE approval bundle, because they are one act. Without it the
-// inbox shows a company's facts and each person the site published as unrelated
-// questions, and the only thing that knew they were asked together was the
-// dossier's own proposal_ids list — which no inbox reader can see. The bundle
-// is minted before anything is staged, so a lead the already-on-file probe skips
-// leaves no hole: a bundle is what the act PROPOSED, not what it happened to
-// insert.
-func (w *siteDeepReadWorker) stageProposals(ctx context.Context, readID ids.UUID, claim people.SiteReadClaim, mergedFields []evidencedField, mergedFacts []people.DeepReadFact, mergedPeople []sitePerson, pagesRead int) ([]ids.UUID, error) {
-	bundleID := ids.NewV7()
-	var proposalIDs []ids.UUID
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		// BOTH kinds this act stages, locked in one canonically ordered
-		// statement before it stages either, and before the leads pass takes
-		// its own narrower one.
-		//
-		// The order that matters is the transaction's, not each statement's.
-		// Staging the facts first joins a `deepread` row; staging the leads then
-		// joins `site_lead` rows — and because re-proposing REBUNDLES what it
-		// joins, a bundle ends up holding both kinds with different ages, which
-		// a decision walks as one interleaved (created_at, id) sequence. Two
-		// ordered runs, one per kind, are not one order: the decision can hold a
-		// lead this act is about to want while waiting for a facts row this act
-		// already holds.
-		// The claim's account is what everything below files under, and the
-		// pre-lock is the FIRST thing to need it — before this, a claim with no
-		// account reached the staging calls that dereference it only when there
-		// was something to stage, so an empty read was a silent no-op. It stays
-		// one.
-		if claim.OrganizationID == nil {
-			return fmt.Errorf("compose: site read %s claims no account to file its proposals under", readID)
-		}
-		if err := w.approvals.LockPendingGroupInTx(ctx, tx, *claim.OrganizationID,
-			deepReadProposalKind, siteLeadProposalKind); err != nil {
-			return err
-		}
-		if len(mergedFields)+len(mergedFacts) > 0 {
-			approvalID, err := w.stage(ctx, tx, readID, claim, mergedFields, mergedFacts, pagesRead, bundleID)
-			if err != nil {
-				return fmt.Errorf("staging the proposal: %w", err)
-			}
-			proposalIDs = []ids.UUID{approvalID.UUID}
-		}
-		leads, err := w.stageSiteLeadsInTx(ctx, tx, readID, claim, mergedPeople, bundleID)
-		if err != nil {
-			return err
-		}
-		proposalIDs = append(proposalIDs, leads...)
-		return nil
-	})
-	if err != nil {
-		return nil, err
-	}
-	return proposalIDs, nil
-}
-
-// stage records the merged findings as ONE "deepread" proposal carrying
-// both halves of the read — the profile fields the existing fill-empty
-// machinery applies and the category facts bound for organization_fact —
-// plus the dossier id, so the accept effect links the landed facts back
-// to the read that evidenced them.
-func (w *siteDeepReadWorker) stage(ctx context.Context, tx pgx.Tx, readID ids.UUID, claim people.SiteReadClaim, mergedFields []evidencedField, mergedFacts []people.DeepReadFact, pagesRead int, bundleID ids.UUID) (ids.ApprovalID, error) {
-	if claim.OrganizationID == nil {
-		return ids.ApprovalID{}, errors.New("site deep read: an unbound onboarding draft cannot stage an organization approval")
-	}
-	fields := deepReadFields(mergedFields)
-	proposedChange, err := json.Marshal(people.DeepReadProposal{
-		OrganizationID: ids.From[ids.OrganizationKind](*claim.OrganizationID),
-		SourceURL:      claim.SeedURL,
-		SiteReadID:     readID,
-		Fields:         fields,
-		Facts:          mergedFacts,
-	})
-	if err != nil {
-		return ids.ApprovalID{}, err
-	}
-	digest := sha256.Sum256(proposedChange)
-	approvalID, err := w.approvals.StageOrJoinPendingInTx(ctx, tx, approvals.StageInput{
-		Kind:           deepReadProposalKind,
-		ProposedChange: proposedChange,
-		DiffHash:       hex.EncodeToString(digest[:]),
-		TargetType:     enrichTargetType,
-		TargetID:       *claim.OrganizationID,
-		Summary:        fmt.Sprintf("Deep site read of %s: %d fields, %d facts from %d pages", claim.SeedURL, len(mergedFields), len(mergedFacts), pagesRead),
-		JoinPending:    true,
-		BundleID:       bundleID,
-	})
-	return approvalID, err
 }
 
 // siteReadLegalEntities projects the gated census onto the dossier shape.

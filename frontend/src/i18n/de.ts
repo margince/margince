@@ -2100,19 +2100,11 @@ export const de = {
   "home.snooze": "Zurückstellen",
   "home.snoozedState": "zurückgestellt",
 
-  "enrich.title": "Von der Website lesen",
-  "enrich.sub":
-    "belegt oder weggelassen — füllt nur leere Felder, und nur nach deiner Freigabe",
-  "enrich.cta": "Jetzt lesen",
-  "enrich.reading": "Liest…",
-  "enrich.staged":
-    "Vorgemerkt — noch nichts geschrieben. Übernimm es im Eingang; nur leere Felder werden gefüllt.",
   "enrich.toInbox": "Eingang öffnen",
-  "enrich.from": "gelesen von {url}",
 
   "deepread.title": "Ganze Website lesen",
   "deepread.sub":
-    "Liest bis zu 12 Seiten der Firmenwebsite. Funde werden zur Prüfung vorgemerkt — nichts wird geschrieben, bis du übernimmst.",
+    "Liest die Firmenwebsite und trägt ein, was dort steht. Nur leere Felder werden gefüllt, alles ist als von der Website gelesen markiert, und du kannst es rückgängig machen.",
   "deepread.cta": "Ganze Website lesen",
   "deepread.starting": "Startet…",
   "deepread.unavailable":
@@ -2134,13 +2126,6 @@ export const de = {
   "deepread.stopDeadline": "Zeitlimit",
   "deepread.factCount.one": "{count} belegter Fakt vorgemerkt",
   "deepread.factCount.other": "{count} belegte Fakten vorgemerkt",
-  "deepread.pagesRead": "Gelesene Seiten",
-  "deepread.skippedPages": "Übersprungene Seiten",
-  "deepread.skipRobots": "robots.txt",
-  "deepread.skipOffDomain": "außerhalb der Domain",
-  "deepread.skipPageCap": "Seitenlimit",
-  "deepread.skipByteCap": "Größenlimit",
-  "deepread.skipUnreadable": "nicht lesbar",
   "deepread.proposals": "{count} Vorschläge warten auf deine Prüfung",
   "deepread.proposalsOne": "1 Vorschlag wartet auf deine Prüfung",
   "deepread.kindHome": "Startseite",
