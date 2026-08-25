@@ -5,7 +5,6 @@ package compose
 
 import (
 	"context"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -17,19 +16,16 @@ import (
 // answer it at all. Both are refused before anything is built.
 func TestTaskProbeBrainWantsExactlyOneBinding(t *testing.T) {
 	for _, tc := range []struct {
-		name    string
-		routing string
-		spec    string
-		fake    bool
+		name string
+		spec string
+		fake bool
 	}{
-		{"nothing at all", "", "", false},
-		{"a routing file and the fake", "r.yaml", "", true},
-		{"a routing file and a pinned model", "r.yaml", "p:m", false},
-		{"a pinned model and the fake", "", "p:m", true},
+		{"nothing at all", "", false},
+		{"a pinned model and the fake", "p:m", true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			if _, _, err := TaskProbeBrain(tc.routing, tc.spec, tc.fake, ai.TaskRateExtract); err == nil {
-				t.Fatal("want a refusal naming the three ways to bind a model")
+			if _, _, err := TaskProbeBrain(tc.spec, tc.fake, ai.TaskRateExtract); err == nil {
+				t.Fatal("want a refusal naming the two ways to bind a model")
 			}
 		})
 	}
@@ -38,7 +34,7 @@ func TestTaskProbeBrainWantsExactlyOneBinding(t *testing.T) {
 // The fake must be nameable in the banner: a run that spent nothing must never
 // be mistaken for one that did.
 func TestTaskProbeBrainServesTheOfflineFake(t *testing.T) {
-	complete, banner, err := TaskProbeBrain("", "", true, ai.TaskRateExtract)
+	complete, banner, err := TaskProbeBrain("", true, ai.TaskRateExtract)
 	if err != nil {
 		t.Fatalf("the fake alone is a complete binding: %v", err)
 	}
@@ -64,23 +60,16 @@ func TestTaskProbeBrainServesTheOfflineFake(t *testing.T) {
 
 func TestTaskProbeBrainRefusesAMalformedModelOverride(t *testing.T) {
 	for _, spec := range []string{"justamodel", ":model", "provider:"} {
-		if _, _, err := TaskProbeBrain("", spec, false, ai.TaskRateExtract); err == nil {
+		if _, _, err := TaskProbeBrain(spec, false, ai.TaskRateExtract); err == nil {
 			t.Errorf("--model %q is not provider:model and must be refused", spec)
 		}
-	}
-}
-
-func TestTaskProbeBrainReportsAnUnreadableRoutingFile(t *testing.T) {
-	absent := filepath.Join(t.TempDir(), "absent.yaml")
-	if _, _, err := TaskProbeBrain(absent, "", false, ai.TaskRateExtract); err == nil {
-		t.Fatal("an unreadable routing file must be refused, not silently ignored")
 	}
 }
 
 // A pinned model binds ONE tier, and every task's ladder falls through to it —
 // so the override serves whichever task the probe names.
 func TestTaskProbeBrainPinsOneModelForEveryLane(t *testing.T) {
-	cfg, banner, err := taskProbeRouting("", "someprovider:some-model")
+	cfg, banner, err := taskProbeRouting("someprovider:some-model")
 	if err != nil {
 		t.Fatalf("taskProbeRouting: %v", err)
 	}

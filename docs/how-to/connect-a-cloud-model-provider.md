@@ -77,19 +77,16 @@ tiers:
 >
 > A seed is consumed **once**, at bootstrap, so editing it after a database
 > exists changes nothing — `make dev-fresh` re-runs the bootstrap, and Settings →
-> AI rebinds a stack that is already up. `config/ai-routing.example.yaml` remains
-> the annotated reference for the shape, schema-validated in any editor with a
-> YAML language server (autocomplete, enum checks, hover docs) against
-> `config/ai-routing.schema.json`.
+> AI rebinds a stack that is already up. The shape a binding has — `profile` plus
+> a `tiers` map — is schema-validated in any editor with a YAML language server
+> (autocomplete, enum checks, hover docs) against `config/ai-routing.schema.json`.
 >
-> **One key, every open-weight model:** `config/ai-routing.openrouter.example.yaml`
-> is a ready-made `openai_compatible` binding for OpenRouter, with three
-> candidates per tier ordered EU → China → USA and each filtered to models that
-> declare both `structured_outputs` and `tools`. Paste its body under
-> `seeds.ai_routing` for a fresh install, or point a certification run straight at
-> it with `MARGINCE_AI_ROUTING=$PWD/config/ai-routing.openrouter.example.yaml` —
-> `make e2e-ai` reads a file deliberately, so the flag still means something
-> there.
+> **One key, every open-weight model:** bind `openai_compatible` with
+> `base_url: https://openrouter.ai/api` and one `OPENAI_COMPATIBLE_API_KEY`, and
+> a single OpenRouter key reaches every open-weight model. Filter candidates to
+> models declaring both `structured_outputs` and `tools`. To certify one rather
+> than bind it, `make e2e-ai` takes the model outright:
+> `MODEL=openai_compatible:<slug> BASE_URL=https://openrouter.ai/api`.
 
 ## 3. Bind the embeddings lane separately
 

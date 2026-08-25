@@ -29,6 +29,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/aicert"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
 )
 
 // TestE2ECertify runs one certification pass against the configured
@@ -41,9 +42,18 @@ func TestE2ECertify(t *testing.T) {
 		t.Fatal("TestE2ECertify requires MARGINCE_AICERT=1 (set by `make e2e-ai`) — " +
 			"this lane costs real tokens and real network, so it never runs implicitly")
 	}
-	routingPath := os.Getenv("MARGINCE_AI_ROUTING")
-	if routingPath == "" {
-		t.Fatal("MARGINCE_AI_ROUTING is required — name the routing config to certify against")
+	// The binding is stated outright. There is no routing file to inherit one
+	// from any more, and a certification record should name the model it
+	// measured rather than whatever a file on the runner's disk happened to say.
+	binding, err := aicert.ParseBinding(os.Getenv("MARGINCE_AICERT_MODEL"), os.Getenv("MARGINCE_AICERT_BASE_URL"))
+	if err != nil {
+		t.Fatalf("MARGINCE_AICERT_MODEL: %v", err)
+	}
+	// The judge is a SECOND model on purpose: one grading itself is certified by
+	// construction. Run refuses the two being equal before a call is paid for.
+	judge, err := aicert.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), os.Getenv("MARGINCE_AICERT_JUDGE_BASE_URL"))
+	if err != nil {
+		t.Fatalf("MARGINCE_AICERT_JUDGE_MODEL: %v", err)
 	}
 
 	// repeats stays 0 (Run's own "default to 3" per RunnerConfig.Repeats'
@@ -67,13 +77,14 @@ func TestE2ECertify(t *testing.T) {
 	}
 
 	cfg := aicert.RunnerConfig{
-		Census:      census,
-		RoutingPath: routingPath,
-		TaskFilter:  os.Getenv("MARGINCE_AICERT_TASK"),
-		Override:    os.Getenv("MARGINCE_AICERT_MODEL"),
-		Repeats:     repeats,
-		CorpusDir:   "corpus",
-		RecordDir:   "records",
+		Census:       census,
+		Binding:      binding,
+		JudgeBinding: judge,
+		Profile:      ai.Profile(os.Getenv("MARGINCE_AICERT_PROFILE")),
+		TaskFilter:   os.Getenv("MARGINCE_AICERT_TASK"),
+		Repeats:      repeats,
+		CorpusDir:    "corpus",
+		RecordDir:    "records",
 		// MARGINCE_AICERT_TRACE names a directory for the payload trace
 		// (every candidate+judge request/response, ai_call_payload shape);
 		// unset = no trace. `make e2e-ai` sets it to the repo-root
