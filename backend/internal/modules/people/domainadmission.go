@@ -420,6 +420,15 @@ func actingHuman(ctx context.Context) *ids.UUID {
 // plenty on somebody's behalf, but it may not record a judgement that later
 // machine decisions are then forbidden to revisit.
 func claimedByHuman(ctx context.Context) bool {
+	// A BULK write is not a person at a form, whoever approved it. Someone who
+	// approved a file of twelve thousand companies did not make twelve thousand
+	// judgements about domains capture had refused, and the sentence this lift
+	// writes — "a person put this domain on a company they created" — would not
+	// be true of any of them. The import says so on its way in; every other
+	// caller leaves the marker unset and is unaffected.
+	if IsBulkWrite(ctx) {
+		return false
+	}
 	actor, ok := principal.Actor(ctx)
 	// PrincipalHuman is the field that answers this, and it is what
 	// auth.RequireHuman reads. OnBehalfOf looked like the same question and is
@@ -427,4 +436,25 @@ func claimedByHuman(ctx context.Context) bool {
 	// testing it would refuse a refusal-lift to a person who really did claim
 	// the domain.
 	return ok && actor.Type == principal.PrincipalHuman && !actor.UserID.IsZero()
+}
+
+// bulkWriteKey marks a write as one of many, made under a single approval.
+type bulkWriteKey struct{}
+
+// WithBulkWrite marks this context as a bulk write: many records landing under
+// one human's single decision, rather than one record a human is looking at.
+//
+// It exists for one question — whether a claim is strong enough to lift a
+// standing domain refusal — and answers it no. A refusal is a decision somebody
+// made about one domain, and only an equally specific claim should overturn it.
+// Importing a spreadsheet is not that, however senior the person who approved
+// the run.
+func WithBulkWrite(ctx context.Context) context.Context {
+	return context.WithValue(ctx, bulkWriteKey{}, true)
+}
+
+// IsBulkWrite reports whether this write is part of a bulk operation.
+func IsBulkWrite(ctx context.Context) bool {
+	marked, _ := ctx.Value(bulkWriteKey{}).(bool)
+	return marked
 }

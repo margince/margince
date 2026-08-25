@@ -37,7 +37,7 @@ func personCreateFrom(fields map[string]string, source string) people.CreatePers
 	}
 	in.FirstName = importString(fields, "first_name")
 	in.LastName = importString(fields, "last_name")
-	in.Title = importString(fields, "title")
+	in.Title = importString(fields, fieldTitle)
 	in.Address = addressFrom(fields)
 	in.Emails = personEmailsFrom(fields)
 	return in
@@ -51,7 +51,7 @@ func personUpdateFrom(changed map[string]string) people.UpdatePersonInput {
 		FullName:  importString(changed, fieldFullName),
 		FirstName: importString(changed, "first_name"),
 		LastName:  importString(changed, "last_name"),
-		Title:     importString(changed, "title"),
+		Title:     importString(changed, fieldTitle),
 		Address:   addressFrom(changed),
 	}
 	in.Emails = personEmailsFrom(changed)
