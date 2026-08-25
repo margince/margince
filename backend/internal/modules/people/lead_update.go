@@ -132,6 +132,77 @@ func (s *Store) UpdateLead(ctx context.Context, id ids.LeadID, in UpdateLeadInpu
 	return out, err
 }
 
+// CapturedLeadFields is what an inbound message knew about a lead that already
+// exists. Every field is optional in practice: a provider payload carries what
+// it carries.
+type CapturedLeadFields struct {
+	FullName    string
+	Email       string
+	CompanyName string
+	Title       string
+}
+
+// FillEmptyLeadFieldsTx folds captured values onto a lead, filling ONLY the
+// fields the lead does not already have.
+//
+// A captured value never overwrites one already there. The incumbent's value
+// may have been typed by a person, and an inbound message carries no evidence
+// that it knows better — the same rule the enrich and cold-start accepts keep,
+// and what makes accepting the card safe enough to offer at all.
+//
+// The comparison happens HERE, inside the caller's transaction, rather than in
+// the seam that calls it. A caller reading the lead first and patching second
+// would leave a window in which a person's edit lands between the two and is
+// then overwritten by a value this rule exists to keep out.
+//
+// Writing nothing is a normal outcome, not a failure: a lead that already
+// carries everything the message knew is a lead the fold has no work on.
+//
+// `active` is the workspace's custom-field catalog, fetched by the caller
+// BEFORE its transaction opened. Reading it here would open a second connection
+// inside somebody else's transaction — it commits separately and can deadlock
+// undetectably against a lock that transaction holds.
+func (s *Store) FillEmptyLeadFieldsTx(ctx context.Context, tx pgx.Tx, id ids.LeadID,
+	in CapturedLeadFields, active CustomColumns,
+) error {
+	if err := auth.Require(ctx, "lead", principal.ActionUpdate); err != nil {
+		return err
+	}
+	current, err := readLead(ctx, tx, id, storekit.LiveOnly, active.cols)
+	if err != nil {
+		return err
+	}
+	patch := emptyFieldPatch(current, in)
+	if patch.FullName == nil && patch.CompanyName == nil && patch.Title == nil {
+		return nil
+	}
+	_, err = s.updateLeadTx(ctx, tx, id, patch, active.cols)
+	return err
+}
+
+// emptyFieldPatch is the sparse patch: a captured value for every field the
+// lead lacks, and nothing for the rest.
+//
+// Email is deliberately absent. It is the lead's dedupe key and the reason this
+// collision was detected at all, so the incumbent necessarily has one — a
+// captured address could only ever be a second address, which is an employment
+// question rather than a blank to fill.
+func emptyFieldPatch(current crmcontracts.Lead, in CapturedLeadFields) UpdateLeadInput {
+	var patch UpdateLeadInput
+	if in.FullName != "" && blank(current.FullName) {
+		patch.FullName = &in.FullName
+	}
+	if in.CompanyName != "" && blank(current.CompanyName) {
+		patch.CompanyName = &in.CompanyName
+	}
+	if in.Title != "" && blank(current.Title) {
+		patch.Title = &in.Title
+	}
+	return patch
+}
+
+func blank(value *string) bool { return value == nil || *value == "" }
+
 // updateLeadTx runs the visibility gate, the sparse-patch fold, the write
 // shape, and the cleared-override recompute for one lead update inside the
 // caller's transaction. active names the workspace's custom-field columns

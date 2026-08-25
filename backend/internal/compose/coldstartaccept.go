@@ -59,6 +59,7 @@ func approvalsServiceWithEffects(pool *pgxpool.Pool) *approvals.Service {
 	svc.WithEffect(siteLeadProposalKind, siteLeadAcceptEffect(svc, newCaptureSink(pool, CaptureConfig{})))
 	svc.WithEffect(counterpartyProposalKind, counterpartyAcceptEffect(svc, store, activities.NewStore(InstallationDB(pool)), capture.NewPendingStore(InstallationDB(pool)), newDomainTriageTrigger(pool, slog.Default())))
 	svc.WithEffect(orgNameProposalKind, orgNameAcceptEffect(svc, store))
+	svc.WithEffect(captureCollisionKind, captureCollisionAcceptEffect(svc, store))
 	svc.WithEffect(linkedInMatchKind, linkedInMatchAcceptEffect(svc, store))
 	svc.WithEffect(lifecycleProposalKind, lifecycleAcceptEffect(svc, store))
 	// Both halves, like the held message below: a "no" here has work to do —

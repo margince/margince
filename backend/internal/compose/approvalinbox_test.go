@@ -129,6 +129,10 @@ func TestEveryReleasableKindSaysWhetherItsReleaseSends(t *testing.T) {
 		"deal_follow_up": true, "transcript_proposal": true,
 		"fx_rate_proposal": true, "ai_model_rate_proposal": true,
 		"project_attribution": true,
+		// A captured record that collided with a lead already here: accepting
+		// folds the message's fields onto that lead. It writes one record and
+		// puts nothing on the wire.
+		"merge_records": true,
 	}
 	kinds := decidingApprovalsService(nil, SendPath{}, nil).EffectKinds()
 	if len(kinds) == 0 {
