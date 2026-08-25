@@ -12,15 +12,24 @@ package compose
 // thing a spreadsheet carries.
 //
 // Resolving a company by name is the whole risk of this file, and the rule is
-// deliberately unforgiving: exactly one live visible organization must normalize
-// equal, or no link is written. Nothing here scores, ranks or breaks a tie. The
-// argument is the one csvtargetid.go makes at length for the `id` column — the
-// dedupe ladder blurs on purpose, which is right when it proposes a review to a
-// human and is a way to attach a person to the wrong employer when it decides a
-// write. `organization` has no unique index on its name (dedupeorg.go says so in
-// as many words: "two organizations may legitimately share a name"), so an
-// ambiguous name is a real state and the honest answer to it is to link nothing
-// and say which name was ambiguous.
+// deliberately unforgiving: exactly one live visible organization must carry the
+// name AS WRITTEN, or no link is written. Nothing here scores, ranks or breaks a
+// tie. The argument is the one csvtargetid.go makes at length for the `id`
+// column — the dedupe ladder blurs on purpose, which is right when it proposes a
+// review to a human and is a way to attach a person to the wrong employer when
+// it decides a write.
+//
+// NormalizeOrgName is deliberately NOT the comparison, and that is the one thing
+// to keep straight when reading this file. It strips legal suffixes, so `Acme
+// Inc` and `Acme GmbH` normalize alike — which is exactly right for asking "should
+// a human look at these two" and exactly wrong for deciding a write, because
+// those are two different legal entities and picking either would be a guess. The
+// comparison here folds case and spacing and nothing else.
+//
+// `organization` has no unique index on its name (dedupeorg.go says so in as many
+// words: "two organizations may legitimately share a name"), so an ambiguous name
+// is a real state and the honest answer is to link nothing and say which name was
+// ambiguous.
 
 import (
 	"context"
@@ -69,7 +78,7 @@ type employerResolution struct {
 // exists — an existence oracle over a colleague's owner-private estate, probed
 // one spreadsheet row at a time. That is the posture csvcollision.go documents.
 func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employerResolution, error) {
-	normalized := people.NormalizeOrgName(name)
+	normalized := employerKey(name)
 	if normalized == "" {
 		return employerResolution{reason: "the company column is empty, so the row names no employer"}, nil
 	}
@@ -89,6 +98,19 @@ func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employer
 	default:
 		return employerResolution{id: hit.id, found: true}, nil
 	}
+}
+
+// employerKey folds a company name for comparison: case and surrounding space,
+// and nothing else.
+//
+// Deliberately weaker than NormalizeOrgName. That one strips legal suffixes so a
+// review queue can ask a human about `Acme Inc` and `Acme GmbH`; using it here
+// would answer that question by writing, and the two names are two companies
+// until somebody says otherwise. A file spelling a company differently from the
+// CRM does not link, which is a missing link the report names rather than a wrong
+// one nobody sees.
+func employerKey(name string) string {
+	return strings.ToLower(strings.Join(strings.Fields(name), " "))
 }
 
 // employerCandidate is one normalized name's answer: the company, and how many
@@ -156,7 +178,7 @@ func (w *csvWriters) employerIndex(ctx context.Context) (map[string]employerCand
 			}
 			seen := map[string]bool{}
 			for _, raw := range names {
-				key := people.NormalizeOrgName(raw)
+				key := employerKey(raw)
 				if key == "" || seen[key] {
 					// One company answering to one key once: a company whose
 					// display and legal names normalize alike must not make
@@ -222,8 +244,17 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 		Source:           w.provenanceOf(a.FromID + "→" + a.ToID),
 	}); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
-			// Already linked: a resumed run replaying its association phase
-			// re-offers an edge that landed on the earlier attempt.
+			// The edge is unique per (person, organization), so a conflict means
+			// one is already there. Reported as APPLIED because the run's promise
+			// is the end state — this person is linked to this company — and a
+			// resumed run replaying its association phase must converge rather
+			// than accumulate failures.
+			//
+			// It does NOT distinguish an edge this run wrote from one a human
+			// wrote last year: both leave the estate in the state the file asked
+			// for, and telling them apart would need a read the writer does not
+			// take. What it must not do is claim a write that did not happen, so
+			// the disclosure says linked rather than created.
 			return migration.AssocResult{Applied: true}, nil
 		}
 		return migration.AssocResult{}, fmt.Errorf("import: linking %s to %q: %w", a.FromID, a.ToID, err)

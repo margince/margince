@@ -230,3 +230,95 @@ func TestCSVImportLinksPeopleToTheirEmployers(t *testing.T) {
 		t.Fatalf("people = %d, want all 3 — a row's employer not resolving must not lose the person", got)
 	}
 }
+
+// A company whose legal form differs from the file's is NOT the same company.
+//
+// This is the finding that makes the difference between a review queue and a
+// write. NormalizeOrgName strips legal suffixes, so `Acme Inc` and `Acme GmbH`
+// normalize alike — right for asking a human "are these two the same?", wrong
+// for deciding it. Two different legal entities linked by a guess is a wrong
+// answer nobody sees; a missing link is one the report names.
+func TestCSVImportDoesNotLinkAcrossLegalForms(t *testing.T) {
+	e := setupImportApp(t)
+	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+		map[string]any{"display_name": "Northwind GmbH"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the company → %d, want 201", status)
+	}
+
+	const contacts = "Email,Full Name,Company\nada@x.test,Ada Lovelace,Northwind Inc\n"
+	profile, status := uploadCSV(t, e, "person", contacts)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "person", profile.SourceRef, map[string]string{
+		"Email": "email", "Full Name": "full_name", "Company": "organization_name",
+	})
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+
+	var report importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
+		t.Fatalf("report → %d, want 200", s)
+	}
+	if report.Links == nil || len(report.Links.Unresolved) != 1 {
+		t.Fatalf("links = %+v, want the differently-spelled company reported unresolved", report.Links)
+	}
+	if !strings.Contains(report.Links.Unresolved[0].Reason, "Northwind Inc") {
+		t.Fatalf("reason = %q, want it to name the company as the FILE spells it",
+			report.Links.Unresolved[0].Reason)
+	}
+}
+
+// A row the commit will refuse takes its employer link down with it.
+//
+// The person is never created, so there is nobody to link. A preview counting
+// that link as resolvable would promise something the commit cannot do, which is
+// the disagreement the whole dry run exists to prevent.
+func TestCSVImportDoesNotPromiseLinksForRowsThatWillNotLand(t *testing.T) {
+	e := setupImportApp(t)
+	if status := e.Call(t, http.MethodPost, "/v1/organizations",
+		map[string]any{"display_name": "Analytical Engines"}, nil, nil); status != http.StatusCreated {
+		t.Fatalf("creating the company → %d, want 201", status)
+	}
+
+	// The second row's address is malformed, so the store refuses it before the
+	// write transaction opens — and the preview already knows that.
+	const contacts = "Email,Full Name,Company\n" +
+		"ada@x.test,Ada Lovelace,Analytical Engines\n" +
+		"not-an-address,Broken Row,Analytical Engines\n"
+	profile, status := uploadCSV(t, e, "person", contacts)
+	if status != http.StatusOK {
+		t.Fatalf("upload → %d, want 200", status)
+	}
+	run, runStatus := createRunWithMapping(t, e, "person", profile.SourceRef, map[string]string{
+		"Email": "email", "Full Name": "full_name", "Company": "organization_name",
+	})
+	if runStatus != http.StatusAccepted {
+		t.Fatalf("create run → %d, want 202", runStatus)
+	}
+
+	var report importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &report); s != http.StatusOK {
+		t.Fatalf("report → %d, want 200", s)
+	}
+	if report.Links == nil || report.Links.Offered != 2 {
+		t.Fatalf("links = %+v, want both rows counted as asking for a link", report.Links)
+	}
+	if len(report.Links.Unresolved) != 1 {
+		t.Fatalf("unresolved = %+v, want the refused row's link reported as unmakeable",
+			report.Links.Unresolved)
+	}
+
+	var approved importRunDTO
+	if s := e.Call(t, http.MethodPost, "/v1/imports/"+run.ID+"/approve", nil, nil, &approved); s != http.StatusAccepted {
+		t.Fatalf("approve → %d, want 202", s)
+	}
+	var after importReportDTO
+	if s := e.Call(t, http.MethodGet, "/v1/imports/"+run.ID+"/report", nil, nil, &after); s != http.StatusOK {
+		t.Fatalf("report after commit → %d, want 200", s)
+	}
+	if after.Links == nil || after.Links.Applied != 1 {
+		t.Fatalf("applied = %+v, want the one link the preview promised", after.Links)
+	}
+}

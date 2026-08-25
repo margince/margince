@@ -36,7 +36,7 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 		report.Objects[i].Collisions = append(report.Objects[i].Collisions, p.collisions...)
 		report.Objects[i].Duplicates += p.duplicates
 	}
-	return withPredictedLinks(ctx, source, writers, report)
+	return withPredictedLinks(ctx, source, writers, report, p.absent)
 }
 
 // withPredictedLinks answers, before anything is written, how many of the
@@ -55,7 +55,9 @@ func refinePrediction(ctx context.Context, source *migration.CSVSource, writers 
 // be worse than saying nothing. The asymmetry is deliberate: a preview reports
 // what it can honestly know, and claiming more is the preview/commit disagreement
 // this whole pass exists to prevent.
-func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writers *csvWriters, report migration.Report) (migration.Report, error) {
+func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writers *csvWriters,
+	report migration.Report, absent []string,
+) (migration.Report, error) {
 	edges, err := source.Associations(ctx)
 	if err != nil {
 		return migration.Report{}, err
@@ -63,8 +65,24 @@ func withPredictedLinks(ctx context.Context, source *migration.CSVSource, writer
 	if len(edges) == 0 {
 		return report, nil
 	}
+	// A row the commit will refuse lands no person, so its employer link cannot
+	// be written either. Counting it as resolvable would promise a link whose
+	// person is never there — preview says "linked", commit says "nobody to link
+	// to", which is the disagreement this whole pass exists to prevent.
+	willNotLand := make(map[string]bool, len(absent))
+	for _, id := range absent {
+		willNotLand[id] = true
+	}
 	resolvable := 0
 	for _, edge := range edges {
+		if willNotLand[edge.FromID] {
+			report.AssociationsSkipped = append(report.AssociationsSkipped, migration.SkippedAssoc{
+				From:   edge.FromType + "/" + edge.FromID,
+				To:     edge.ToType + "/" + edge.ToID,
+				Reason: "this row will not be imported, so there is nobody to link to " + edge.ToID,
+			})
+			continue
+		}
 		resolved, err := writers.resolveEmployer(ctx, edge.ToID)
 		if err != nil {
 			return migration.Report{}, err
@@ -105,6 +123,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 			case predictUnchanged:
 				p.unchanged++
 			case predictUnwritable:
+				p.absent = append(p.absent, row.ExternalID)
 				// Disclosed as a skip rather than counted as a create: the
 				// commit will refuse this row, and the report exists to say so
 				// before a human approves it.
@@ -113,6 +132,7 @@ func predictPages(ctx context.Context, source *migration.CSVSource, writers *csv
 					Reason:     refusal,
 				})
 			case predictCollidesSkipped:
+				p.absent = append(p.absent, row.ExternalID)
 				// The run asked to skip duplicates, so this row is a skip and
 				// the preview says so — the commit must not be the first place
 				// a person learns the row did not land.
@@ -185,6 +205,10 @@ type prediction struct {
 	// already holds. Kept apart from skipped because each is counted in
 	// created — see the disposition arithmetic above.
 	collisions []migration.SkippedRow
+	// absent are the rows the commit will NOT land — refused outright, or a
+	// duplicate this run asked to skip. Their employer links cannot be written,
+	// so the preview must not count them as resolvable.
+	absent []string
 	// duplicates counts the same rows. It is reported to the human as its own
 	// number ("100 companies, 94 duplicates") and never summed with the four.
 	duplicates int
