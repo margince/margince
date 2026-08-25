@@ -72,16 +72,43 @@ func EmploymentIsCurrentSQL(date string) string {
 // second definition and fails there.
 //
 // READERS, not every mention of the column. The uniqueness guards must stay
-// date-BLIND and deliberately do — `employmentedge.go`, `domaintriageresolve.go`
-// and both merge relink paths ask "is the flag already taken" to keep
-// uq_rel_current_primary_employer satisfied, and that index's own predicate
-// knows nothing about dates. A guard that used this helper would think the slot
-// was free while the index still held it, and answer 409 instead of skipping.
-// Two different questions about one column; this one is "who works there now".
+// date-BLIND and deliberately do — that is the OTHER question about this
+// column, and CurrentPrimarySlotSQL below is its one spelling. A guard that
+// used this helper would think the slot was free while the index still held
+// it, and answer 409 instead of skipping. Two different questions about one
+// column; this one is "who works there now".
 func CurrentPrimaryEmploymentSQL(alias string) string {
 	prefix := ""
 	if alias != "" {
 		prefix = alias + "."
 	}
 	return storekit.SQLf("%sis_current_primary AND %s", prefix, EmploymentIsCurrentSQL(prefix+"ended_at"))
+}
+
+// CurrentPrimarySlotSQL is the other question about `is_current_primary`:
+// WHICH ROW HOLDS THE SLOT that uq_rel_current_primary_employer keeps unique
+// per person. It is the index's own predicate, and so it is date-BLIND —
+// asking it with EmploymentIsCurrentSQL would read a person serving notice as
+// having freed the slot while the index still held it, and the write that
+// followed would 409 instead of skipping.
+//
+// `alias` is the relationship table's alias at the call site, or "" when the
+// statement does not alias it.
+//
+// Held by: TestTheCurrentPrimarySlotPredicateMirrorsItsIndex (backend/internal/modules/people/currentprimaryslot_test.go)
+// — it derives the expectation from uq_rel_current_primary_employer in the
+// migration head catalog, so this cannot drift from the index it exists to
+// satisfy.
+//
+// Two gates and not one, because either alone reads green over a second
+// spelling: TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling in
+// backend/employmentcurrency_test.go reads every hand-written Go source for the
+// FRAGMENT — the flag sharing a conjunction with an archived test — which a
+// census that knows only the whole predicate cannot see.
+func CurrentPrimarySlotSQL(alias string) string {
+	prefix := ""
+	if alias != "" {
+		prefix = alias + "."
+	}
+	return storekit.SQLf("%skind = 'employment' AND %sis_current_primary AND %sarchived_at IS NULL", prefix, prefix, prefix)
 }

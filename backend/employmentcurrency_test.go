@@ -121,7 +121,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		// test that hand-writes an employment currency test is still a finding
 		// and there is no reason to stop looking at the ones that do not plant
 		// anything.
-		if filepath.Base(path) == "employmentcurrency_test.go" {
+		if filepath.ToSlash(path) == slotProbeFile {
 			continue
 		}
 		file, err := parser.ParseFile(fset, path, nil, 0)
@@ -340,6 +340,318 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 			}
 			if !tc.fires && hit {
 				t.Errorf("the detector reported a statement that asks the one definition, or asks nothing:\n%s", tc.src)
+			}
+		})
+	}
+}
+
+// The OTHER question about is_current_primary: which row holds the slot
+// uq_rel_current_primary_employer keeps unique. It is date-BLIND, so it cannot
+// share EmploymentIsCurrentSQL — a guard that asked "are they still employed"
+// would read a person serving notice as having freed a slot the index still
+// holds, and the write behind it would 409 instead of skipping.
+//
+// Six statements asked it by hand. The census above could not see any of them:
+// it judges a hand-written test on `ended_at`, and these spell neither the
+// helper nor that column. So this is a second detector over the same tree, for
+// the FRAGMENT — the flag AND-ed with an archived test — which is the shape
+// that hid six copies from a census that only knew whole predicates.
+
+// currentPrimarySlotPredicate names the helper this census requires, so the
+// report can point at it.
+const currentPrimarySlotPredicate = "CurrentPrimarySlotSQL"
+
+// slotBlockedByTheModuleDAG ratifies the statement that cannot adopt the
+// helper today, for the architectural reason above and not for want of
+// somebody getting round to it: projects may not import people (ADR-0054 §3).
+//
+// Its own declaration and not a share of blockedByTheModuleDAG: a Waivers set
+// records what reached it, and AssertAllMatched belongs to exactly one census —
+// two sweeping the same set would make whichever ran first report false
+// staleness.
+var slotBlockedByTheModuleDAG = gatekit.Waive(map[string]string{
+	"internal/modules/projects/surface.go": "projects cannot import people (ADR-0054 §3); the predicate must move tier first",
+})
+
+// spellsSlotPredicate reports whether a statement tests the flag and an
+// archived test IN ONE CONJUNCTION — which is the slot predicate, however it is
+// spelled.
+//
+// It works on conjunctive CHUNKS rather than on a two-term pattern, because
+// every shape a two-term pattern misses is a respelling somebody writes without
+// noticing: the two halves in the other order, another conjunct sitting between
+// them (`b.is_current_primary AND b.id <> a.id AND b.archived_at IS NULL` — the
+// merge copy was one edit from that), `= true` or `IS TRUE` instead of the bare
+// flag, and lower-case keywords. A text comparison loses to an equivalent
+// spelling, and there are four of them here.
+//
+// Splitting on OR first is what keeps the create path out. Its guard is
+// deliberately WIDER than the slot — `archived_at IS NULL AND (still employed
+// OR is_current_primary)` — and there the flag and the archived test are in
+// different groups, which is a different question rather than a copy of this
+// one. Brackets are TRIMMED from a term rather than treated as separators: a
+// bracket is where a conjunction nests, not where it ends, and a split on them
+// missed `is_current_primary AND (archived_at IS NULL AND person_id = $1)`.
+func spellsSlotPredicate(sql string) bool {
+	for _, group := range slotOr.Split(strings.ToLower(sql), -1) {
+		flag, archived := false, false
+		for _, term := range slotAnd.Split(group, -1) {
+			if asksTheFlag(term) {
+				flag = true
+			}
+			if slotArchivedTerm.MatchString(term) {
+				archived = true
+			}
+		}
+		if flag && archived {
+			return true
+		}
+	}
+	return false
+}
+
+// asksTheFlag reports whether a conjunct TESTS the flag, which is the only
+// mention of it that makes a statement a guard. Two other mentions exist and
+// neither is one: an INSERT's column list NAMES it, and a merge relink ASSIGNS
+// it (`SET is_current_primary = a.is_current_primary AND NOT EXISTS (…)`) —
+// there the flag is the value being carried across, and the guard is the
+// EXISTS beside it.
+//
+// A test is what a bracketed SEGMENT of the conjunct ends with — the segment
+// and not the whole conjunct, because the statement text is a fragment and a
+// predicate's last term carries whatever closes and follows it. A column list
+// puts a comma after the name; an assignment puts an equals sign before it; a
+// NEGATION asks the opposite question, which is "who does NOT hold the slot".
+//
+// One shape is knowingly over-reported: an INSERT whose column list is exactly
+// `(is_current_primary)`, where the closing bracket leaves a segment that reads
+// as a bare test. Distinguishing it would mean deciding whether an opening
+// bracket follows a keyword or a name, and getting THAT wrong drops the
+// contents of `NOT EXISTS (…)` — where five of the six statements this census
+// judges live. Over-reporting is a finding somebody dismisses; under-reporting
+// is a census that reads green over the defect and says nothing.
+func asksTheFlag(term string) bool {
+	for _, segment := range slotBrackets.Split(term, -1) {
+		trimmed := strings.TrimRight(segment, " \t\n")
+		at := slotFlagTail.FindStringIndex(trimmed)
+		if at == nil || at[1] != len(trimmed) {
+			continue
+		}
+		before := strings.TrimRight(trimmed[:at[0]], " \t\n")
+		if strings.HasSuffix(before, ",") || strings.HasSuffix(before, "=") || strings.HasSuffix(before, "not") {
+			continue
+		}
+		return true
+	}
+	return false
+}
+
+var (
+	// slotOr ends a conjunction; slotAnd separates the terms inside one. Both
+	// are bounded so `or` does not match inside `organization_id`.
+	slotOr  = regexp.MustCompile(`\bor\b`)
+	slotAnd = regexp.MustCompile(`\band\b`)
+
+	// slotBrackets ends a segment inside a conjunct — see asksTheFlag.
+	slotBrackets = regexp.MustCompile(`[()]`)
+
+	// slotFlagTail is the flag asked as a boolean, in every spelling this
+	// dialect offers, anchored to the END of a conjunct — see asksTheFlag.
+	slotFlagTail = regexp.MustCompile(`(\w+\.)?is_current_primary(\s*=\s*true|\s+is\s+true)?$`)
+
+	// slotArchivedTerm is unanchored, because the statement text a census reads
+	// is a fragment: a conjunct carries whatever surrounds it — a SELECT before
+	// it, an ON CONFLICT after. There is no column-list ambiguity to guard
+	// against here the way there is for the flag, since a column list names
+	// `archived_at` and never tests it.
+	slotArchivedTerm = regexp.MustCompile(`(\w+\.)?archived_at\s+is\s+null\b`)
+)
+
+// slotProbeFile plants the probes below, which are deliberate defects. Named by
+// PATH and not by basename: a basename skip silently exempts any future file
+// that takes the same name anywhere in the tree.
+const slotProbeFile = "employmentcurrency_test.go"
+
+// slotColumn is what makes a statement a candidate at all, and it is the floor
+// this census counts against: `is_current_primary` is a relationship column and
+// nothing else in this schema carries it, so no kind-scoping is needed and none
+// is done — scoping to `kind = 'employment'` would have dropped every adopted
+// site, since the kind now lives inside the helper.
+var slotColumn = regexp.MustCompile(`(?i)is_current_primary`)
+
+func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
+	// A ratification that stops matching describes a site that has moved or
+	// been fixed, and leaving it quietly re-exempts whatever takes its name.
+	defer slotBlockedByTheModuleDAG.AssertAllMatched(t)
+
+	fset := token.NewFileSet()
+	var findings []string
+	judged := 0
+	for _, path := range handWrittenGoSources(t) {
+		if filepath.ToSlash(path) == employmentCurrencyOwner {
+			continue
+		}
+		// This file plants the probes below, which are deliberate defects.
+		if filepath.ToSlash(path) == slotProbeFile {
+			continue
+		}
+		file, err := parser.ParseFile(fset, path, nil, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		scope := helperScope{
+			qualifier: importAliasOf(file, "github.com/gradionhq/margince/backend/internal/modules/people"),
+			inside:    file.Name != nil && file.Name.Name == "people",
+			names:     map[string]bool{currentPrimarySlotPredicate: true},
+		}
+		for _, decl := range file.Decls {
+			for _, sql := range slotStatements(decl, scope) {
+				judged++
+				if !spellsSlotPredicate(sql) {
+					continue
+				}
+				if slotBlockedByTheModuleDAG.Waived(t, filepath.ToSlash(path)) {
+					continue
+				}
+				findings = append(findings, fmt.Sprintf("%s: %s", path, firstSlotLine(sql)))
+			}
+		}
+	}
+	if judged < 5 {
+		t.Fatalf("only %d statement(s) naming is_current_primary were judged, so this census covered almost nothing", judged)
+	}
+	if len(findings) == 0 {
+		return
+	}
+	t.Errorf("these statements spell the current-primary slot predicate by hand:\n  %s\n\n"+
+		"people.%s is the one spelling, and it mirrors uq_rel_current_primary_employer's own "+
+		"predicate — including the kind, which is part of that index. Call it.",
+		strings.Join(findings, "\n  "), currentPrimarySlotPredicate)
+}
+
+// slotStatements returns the SQL statements in a declaration that name the
+// slot column, flattened so a helper call contributes its NAME and a
+// concatenated fragment is judged with the statement it belongs to.
+func slotStatements(decl ast.Decl, people helperScope) []string {
+	var out []string
+	seen := map[ast.Node]bool{}
+	ast.Inspect(decl, func(n ast.Node) bool {
+		if seen[n] {
+			return false
+		}
+		text, ok := flattenSQL(n, seen, people)
+		if !ok || !slotColumn.MatchString(text) {
+			return true
+		}
+		out = append(out, text)
+		return true
+	})
+	return out
+}
+
+// firstSlotLine points the report at the offending line rather than dumping
+// the whole statement. The fragment itself may straddle a line break — that is
+// how two of the six copies were written — so the flag's own line is what is
+// reported when no single line carries the whole match.
+func firstSlotLine(sql string) string {
+	lines := strings.Split(sql, "\n")
+	for _, line := range lines {
+		if slotColumn.MatchString(line) {
+			return strings.TrimSpace(line)
+		}
+	}
+	return strings.TrimSpace(lines[0])
+}
+
+// slotProbe is one planted statement and the answer the detector must give
+// for it. Every case is a shape the census would read green over if the
+// detector stopped seeing it — the census itself passes identically over a
+// clean tree and over a detector that has stopped detecting.
+var slotProbes = []struct {
+	name  string
+	fires bool
+	mode  string
+	src   string
+}{
+	{"the bare form that shipped", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND person_id = $1 AND is_current_primary AND archived_at IS NULL`\n}"},
+	{"the aliased form", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.is_current_primary AND b.archived_at IS NULL`\n}"},
+	// The mirrored conjunction is the same predicate written the other way
+	// round, and a census that reads one direction lets it through.
+	{"the two halves in the other order", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.archived_at IS NULL AND b.is_current_primary`\n}"},
+	{"the fragment split across a concatenation", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary AND ` + `archived_at IS NULL`\n}"},
+	// A helper call claims its whole subtree, so a lookalike from another
+	// package would have hidden a hand-written fragment inside its arguments.
+	{"a lookalike helper from another package", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE ` + other.CurrentPrimarySlotSQL(\"b.is_current_primary AND b.archived_at IS NULL\")\n}"},
+	{"a bare helper name in a file that does not import people", true, "noimport", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE ` + CurrentPrimarySlotSQL(\"b.is_current_primary AND b.archived_at IS NULL\")\n}"},
+
+	{"the real helper, qualified", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.person_id = $1 AND ` + people.CurrentPrimarySlotSQL(\"b\")\n}"},
+	{"the real helper, unqualified inside people", false, "people", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE person_id = $1 AND ` + CurrentPrimarySlotSQL(\"\")\n}"},
+	// The create path's guard is deliberately WIDER than the slot: it refuses
+	// the flag when the person has any employment that is current OR flagged,
+	// which is not the index's predicate and must not be rewritten as it.
+	{"the wider create-path guard, where the flag sits inside an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND person_id = $2 AND archived_at IS NULL AND (` + EmploymentIsCurrentSQL(\"ended_at\") + ` OR is_current_primary)`\n}"},
+	{"the flag with no archived test beside it", false, "", "\nfunc read() string {\n\treturn `UPDATE relationship SET is_current_primary = coalesce($3, is_current_primary)`\n}"},
+
+	// Four spellings a two-term pattern missed, each verified green against it
+	// before this detector was rewritten to work on conjunctive chunks.
+	{"another conjunct sitting between the two halves", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.is_current_primary AND b.id <> $1 AND b.archived_at IS NULL`\n}"},
+	{"the flag compared to true rather than asked", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary = true AND archived_at IS NULL`\n}"},
+	{"the flag asked with IS TRUE", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary IS TRUE AND archived_at IS NULL`\n}"},
+	{"lower-case keywords", true, "", "\nfunc read() string {\n\treturn `select 1 from relationship where is_current_primary and archived_at is null`\n}"},
+	// The archived test belongs to the OTHER side of an OR, so the flag is not
+	// AND-ed with it and this is not the slot predicate.
+	{"the two halves on opposite sides of an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary OR archived_at IS NULL`\n}"},
+	// A bracket is where a conjunction NESTS, not where it ends. A detector
+	// that ended a group at every bracket read this as two groups and missed
+	// the guard sitting whole inside them.
+	{"the second half inside a bracketed conjunction", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary AND (archived_at IS NULL AND person_id = $1)`\n}"},
+	// The merge relinks CARRY the flag across rather than testing it; the
+	// guard beside them is the EXISTS, which calls the helper.
+	{"the flag as the value of an assignment", false, "", "\nfunc read() string {\n\treturn `UPDATE relationship a SET is_current_primary = a.is_current_primary AND NOT EXISTS (SELECT 1 FROM relationship b WHERE b.person_id = $2) WHERE a.person_id = $1 AND a.archived_at IS NULL`\n}"},
+	// A statement that merely WRITES the column names it in a list; naming is
+	// not asking.
+	{"the flag in an INSERT's column list", false, "", "\nfunc read() string {\n\treturn `INSERT INTO relationship (kind, person_id, is_current_primary, archived_at) SELECT 'employment', $1, true, NULL FROM person WHERE archived_at IS NULL`\n}"},
+	// The negation asks who does NOT hold the slot, which is the opposite
+	// question and not a second spelling of this one.
+	{"the flag negated", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE NOT is_current_primary AND archived_at IS NULL`\n}"},
+	// A guard inside NOT EXISTS, where five of the six judged statements live:
+	// the flag sits behind an opening bracket, and a detector that decided
+	// brackets by what precedes them would drop it.
+	{"a guard inside a NOT EXISTS subquery", true, "", "\nfunc read() string {\n\treturn `UPDATE relationship a SET x = 1 WHERE NOT EXISTS (SELECT 1 FROM relationship b WHERE b.is_current_primary AND b.archived_at IS NULL)`\n}"},
+}
+
+func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
+	fset := token.NewFileSet()
+	for _, tc := range slotProbes {
+		t.Run(tc.name, func(t *testing.T) {
+			head := "package probe\n"
+			names := map[string]bool{currentPrimarySlotPredicate: true}
+			scope := helperScope{qualifier: "people", names: names}
+			switch tc.mode {
+			case "people":
+				head, scope = "package people\n", helperScope{inside: true, names: names}
+			case "noimport":
+				scope = helperScope{names: names}
+			default:
+				head += "import \"github.com/gradionhq/margince/backend/internal/modules/people\"\n"
+			}
+			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
+			if err != nil {
+				t.Fatalf("the probe does not parse, so it proves nothing: %v", err)
+			}
+			hit := false
+			for _, decl := range file.Decls {
+				for _, sql := range slotStatements(decl, scope) {
+					if spellsSlotPredicate(sql) {
+						hit = true
+					}
+				}
+			}
+			if tc.fires && !hit {
+				t.Errorf("the detector missed a hand-spelled slot predicate — the census would read green over this:\n%s", tc.src)
+			}
+			if !tc.fires && hit {
+				t.Errorf("the detector reported a statement that calls the one spelling, or asks a different question:\n%s", tc.src)
 			}
 		})
 	}

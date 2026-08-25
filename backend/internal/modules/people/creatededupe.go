@@ -88,16 +88,18 @@ func manualDedupePerson(ctx context.Context, tx pgx.Tx, in CreatePersonInput) (P
 // the collision. The lane exists to stop a silent duplicate, so a duplicate it
 // silently misses under contention is the lane not working.
 //
-// The key is the NORMALIZED name, which is what the lane compares. Locking the
-// raw string would let "Lucy Vo" and "LUCY VO" take different locks and race
-// each other, which is the pair most likely to be typed twice.
+// The key is NormalizePersonName, which is what the lane compares — the same
+// call fuzzyPerson makes, because a lock keyed differently from the comparison
+// it guards is decorative. Locking the raw string would let "Lucy Vo" and
+// "LUCY VO" take different locks and race each other, which is the pair most
+// likely to be typed twice.
 //
 // Taken AFTER the phone lane and never interleaved with it: two lanes locked in
 // one fixed global order cannot deadlock, and phone-then-name is that order.
 // An empty name takes no lock — it can match nobody, since fuzzyPerson refuses a
 // nameless candidate before it scores.
 func lockNameLane(ctx context.Context, tx pgx.Tx, fullName string) error {
-	key := normalizeName(fullName)
+	key := NormalizePersonName(fullName)
 	if key == "" {
 		return nil
 	}

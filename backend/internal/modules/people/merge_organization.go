@@ -346,8 +346,8 @@ func relinkOrgEdges(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.Organ
 		UPDATE relationship a SET organization_id = $2,
 		  is_current_primary = a.is_current_primary AND NOT EXISTS (
 		    SELECT 1 FROM relationship b
-		    WHERE b.person_id = a.person_id AND b.kind = 'employment'
-		      AND b.is_current_primary AND b.archived_at IS NULL AND b.id <> a.id)
+		    WHERE b.person_id = a.person_id AND b.id <> a.id
+		      AND `+CurrentPrimarySlotSQL("b")+`)
 		WHERE a.organization_id = $1 AND a.archived_at IS NULL`, sourceID, targetID); err != nil {
 		return err
 	}

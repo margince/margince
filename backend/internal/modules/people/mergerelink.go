@@ -56,16 +56,20 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	// would vanish at a merge nobody expected to lose it — and the row would
 	// then outlive the merged-away record's own archival.
 	//
-	// ON CONFLICT DO NOTHING because the uniqueness is (person, field): where
-	// the survivor already holds that field, theirs is the one a human has
-	// been reading, and the merged-away copy is dropped rather than allowed to
-	// overwrite it.
+	// The one write of this table that is not writePersonProfileField, because it is
+	// not a fill: it re-homes rows that already exist, whole and unexamined,
+	// and it moves ALL of a person's fields in one statement rather than
+	// deciding one. The precedence is the same rule stated there — a
+	// merged-away copy claims a field the survivor has not answered and never
+	// replaces one — and the conflict target NAMES the uniqueness it relies
+	// on, so a future constraint on this table cannot silently start swallowing
+	// a different collision here.
 	if _, err = tx.Exec(ctx, `
 		INSERT INTO person_profile_field
 		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
 		SELECT $2, field, value, evidence_snippet, source_ref, confidence, source, captured_by
 		  FROM person_profile_field WHERE person_id = $1
-		ON CONFLICT DO NOTHING`, sourceID.UUID, targetID.UUID); err != nil {
+		ON CONFLICT (person_id, field) DO NOTHING`, sourceID.UUID, targetID.UUID); err != nil {
 		return counts, fmt.Errorf("relink enrichment fields: %w", err)
 	}
 	if _, err = tx.Exec(ctx,

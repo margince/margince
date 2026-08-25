@@ -433,26 +433,76 @@ func TestANameNobodySharesLeavesTheQueueEmpty(t *testing.T) {
 // calls "  Ada Lindqvist  " and "Ada Lindqvist" equal, and a bare SQL comparison
 // does not. The trigram arm happens to rescue it, which is exactly why this test
 // exists — the lane must not depend on one approximate arm covering for another.
-func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
-	for _, tc := range []struct {
-		name      string
-		incumbent string
-		second    string
-	}{
-		{"identical", "Ada Lindqvist", "Ada Lindqvist"},
-		{"case differs", "Ada Lindqvist", "ADA LINDQVIST"},
-		{"untrimmed", "Ada Lindqvist", "  Ada Lindqvist  "},
-		{"accents", "Renée Bär", "Renee Bar"},
-		{"sharp s", "Anna Straße", "Anna Strasse"},
-	} {
+// goEqualNamePair is one pair the person key calls equal, and the two tests
+// below both read this list: one asks whether the lane SEES the pair, the other
+// asks whether the arm that guarantees it does. Two lists would let the arm's
+// guarantee be asserted over a smaller set than the lane's.
+type goEqualNamePair struct {
+	name      string
+	incumbent string
+	second    string
+}
+
+var goEqualNamePairs = []goEqualNamePair{
+	{"identical", "Ada Lindqvist", "Ada Lindqvist"},
+	{"case differs", "Ada Lindqvist", "ADA LINDQVIST"},
+	{"untrimmed", "Ada Lindqvist", "  Ada Lindqvist  "},
+	{"accents", "Renée Bär", "Renee Bar"},
+	{"sharp s", "Anna Straße", "Anna Strasse"},
+	// Reflowed internal whitespace, which is how a name copied off a crawled
+	// page arrives.
+	{"internal whitespace", "Ada Lindqvist", "Ada  Lindqvist"},
+	{"internal whitespace and accents", "Éva Ő", "Eva  O"},
+	// Greek final sigma: full folding maps ς onto σ, lower() does not, so this
+	// pair is one person in Go and — until the arm folded it too — two in SQL.
+	{"greek final sigma", "Οδυσσεύς Παππάς", "ΟΔΥΣΣΕΥΣ ΠΑΠΠΑΣ"},
+}
+
+// The arm's own claim, asked of the arm. The reachability test below cannot ask
+// it: the candidate query ORs three arms and the trigram one answers first, so a
+// pair reaches the lane whether or not this arm admits it — every pair here does
+// reach it with the arm reverted. What the arm exists for is that the lane not
+// DEPEND on a similarity threshold, and only a direct question holds that.
+func TestTheNameKeyArmAdmitsEveryGoEqualPair(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	for _, tc := range goEqualNamePairs {
 		t.Run(tc.name, func(t *testing.T) {
-			// The table IS the claim that Go calls these equal, so a pair that
-			// stops being equal is the finding — not a row that quietly excuses
-			// itself and leaves the lane untested in the direction that matters.
-			if normalizeName(tc.incumbent) != normalizeName(tc.second) {
-				t.Fatalf("normalizeName no longer calls %q and %q equal, so this row "+
-					"tests nothing: either the fold changed or the pair never belonged here",
-					tc.incumbent, tc.second)
+			if NormalizePersonName(tc.incumbent) != NormalizePersonName(tc.second) {
+				t.Fatalf("NormalizePersonName does not call %q and %q equal, so this row asserts nothing "+
+					"about the arm — fix the key or drop the row", tc.incumbent, tc.second)
+			}
+			var admitted bool
+			if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+				return tx.QueryRow(ctx,
+					`SELECT `+personNameKeySQL("$1")+` = `+personNameKeySQL("$2"),
+					tc.incumbent, tc.second).Scan(&admitted)
+			}); err != nil {
+				t.Fatalf("ask the arm about %q and %q: %v", tc.incumbent, tc.second, err)
+			}
+			if !admitted {
+				t.Errorf("the name-key arm does not admit %q against %q, which the person key calls "+
+					"one name — the lane is left depending on the trigram arm's threshold for this pair",
+					tc.second, tc.incumbent)
+			}
+		})
+	}
+}
+
+func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
+	for _, tc := range goEqualNamePairs {
+		t.Run(tc.name, func(t *testing.T) {
+			// A FATAL guard, not a skip. The guard asks the key the lane
+			// decides on, and a row the key does not call equal is a row this
+			// table has no business carrying: it asserts nothing and says so
+			// to nobody. One row sat here in exactly that state — an
+			// apostrophe pair the fold never touched — and a skip is also how
+			// the five real rows would go quiet if the key ever stopped
+			// folding case or accents, which is the failure this file's own
+			// comment warns about, aimed at the test instead of the lane.
+			if NormalizePersonName(tc.incumbent) != NormalizePersonName(tc.second) {
+				t.Fatalf("NormalizePersonName does not call %q and %q equal, so this row asserts nothing "+
+					"about the lane — fix the key or drop the row", tc.incumbent, tc.second)
 			}
 			e := setupDedupe(t)
 			ctx := e.as()
@@ -472,7 +522,7 @@ func TestEveryNameGoCallsEqualReachesTheNameLane(t *testing.T) {
 			}
 			pairs := openCandidatePairs(ctx, t, e, "person", ids.UUID(second.Id))
 			if len(pairs) != 1 {
-				t.Fatalf("%q against %q left %d candidates, want 1 — normalizeName calls these the same name, "+
+				t.Fatalf("%q against %q left %d candidates, want 1 — NormalizePersonName calls these the same name, "+
 					"so the candidate query has to admit the row", tc.second, tc.incumbent, len(pairs))
 			}
 			if pairs[0].OtherID != ids.UUID(first.Id).String() {
