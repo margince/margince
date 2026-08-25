@@ -72,7 +72,18 @@ const (
 //
 // Empty is a result, not a default: it would mean every audited update in the
 // tree records what it changed from.
-var eventShapedUpdates = gatekit.Waive(map[string]string{})
+var eventShapedUpdates = gatekit.Waive(map[string]string{
+	"internal/modules/collections/tags.go:ApplyTag": "the tag row is untouched; the write inserts a taggable link, " +
+		"and the after image names the record it now points at.",
+	"internal/modules/collections/tags.go:RemoveTag": "the tag row is untouched; the write deletes a taggable link, " +
+		"and the after image names the record it stopped pointing at.",
+	"internal/modules/collections/members.go:AddMember": "the list row is untouched; the write inserts a membership, " +
+		"and the after image names the record that joined.",
+	"internal/modules/webhooks/store.go:RotateSecret": "the new signing secret replaces a value that must never be " +
+		"copied into audit_log, so the after image carries the fact of the rotation and neither secret.",
+	"internal/modules/webhooks/deliverystore.go:requireReplay": "the subscription is unchanged; the write records that " +
+		"a delivery was re-attempted, and the after image names which one.",
+})
 
 // unresolvableAuditActions: call sites whose action argument this walk cannot
 // reduce to a constant, keyed by `path:function`. Each entry states that

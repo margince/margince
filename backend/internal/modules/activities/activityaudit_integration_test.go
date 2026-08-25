@@ -1,0 +1,180 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//go:build integration
+
+package activities
+
+// What a PATCH on an activity writes into audit_log.before.
+//
+// Read against the real column rather than the Go value the store returned: the
+// image is a jsonb document, and the question these tests ask is what a later
+// reader — field history, and anything that restores a value — will find there.
+
+import (
+	"context"
+	"encoding/json"
+	"testing"
+
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+)
+
+// auditImagesFor reads the images of the newest update row for one activity.
+func auditImagesFor(t *testing.T, e *sendEnv, activityID ids.UUID) (before, after map[string]any) {
+	t.Helper()
+	var beforeJSON, afterJSON []byte
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT before, after FROM audit_log
+		  WHERE entity_type = 'activity' AND entity_id = $1 AND action = 'update'
+		  ORDER BY occurred_at DESC, id DESC LIMIT 1`, activityID,
+	).Scan(&beforeJSON, &afterJSON); err != nil {
+		t.Fatalf("reading the audit row: %v", err)
+	}
+	if beforeJSON == nil {
+		t.Fatal("before is SQL NULL — the row cannot say what the edit changed from")
+	}
+	if err := json.Unmarshal(beforeJSON, &before); err != nil {
+		t.Fatalf("before is not an object: %v", err)
+	}
+	if err := json.Unmarshal(afterJSON, &after); err != nil {
+		t.Fatalf("after is not an object: %v", err)
+	}
+	return before, after
+}
+
+func loggedNote(t *testing.T, e *sendEnv, ctx context.Context, subject, body string) crmcontracts.Activity {
+	t.Helper()
+	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
+		Kind: "note", Subject: &subject, Body: &body, Source: "ui",
+	})
+	if err != nil {
+		t.Fatalf("LogActivityInputFrom: %v", err)
+	}
+	activity, _, err := e.store(nil).LogActivity(ctx, in)
+	if err != nil {
+		t.Fatalf("LogActivity: %v", err)
+	}
+	return activity
+}
+
+// The body is the field a reader most often wants back, and it was the one the
+// image never held: it was recorded as the literal `true`, so the row said
+// somebody edited the body and could not say what it had been.
+func TestAPatchedBodyRecordsTheTextItReplaced(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	activity := loggedNote(t, e, ctx, "Kickoff", "the original text")
+
+	revised := "the revised text"
+	if _, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)),
+		UpdateActivityInput{Body: &revised}); err != nil {
+		t.Fatalf("UpdateActivity: %v", err)
+	}
+
+	before, after := auditImagesFor(t, e, ids.UUID(activity.Id))
+	if before["body"] != "the original text" {
+		t.Errorf("before[body] = %v, want the text the edit replaced", before["body"])
+	}
+	if after["body"] != revised {
+		t.Errorf("after[body] = %v, want %q", after["body"], revised)
+	}
+}
+
+// A field the patch did not touch must not appear in either image. Field history
+// reads every key in the pair, so an untouched column carried through publishes
+// a change nobody made.
+func TestAnUntouchedFieldStaysOutOfBothImages(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	activity := loggedNote(t, e, ctx, "Kickoff", "the original text")
+
+	renamed := "Kickoff, revised"
+	if _, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)),
+		UpdateActivityInput{Subject: &renamed}); err != nil {
+		t.Fatalf("UpdateActivity: %v", err)
+	}
+
+	before, after := auditImagesFor(t, e, ids.UUID(activity.Id))
+	if before["subject"] != "Kickoff" {
+		t.Errorf("before[subject] = %v, want the replaced subject", before["subject"])
+	}
+	if _, carried := before["body"]; carried {
+		t.Errorf("body reached the before image on a subject-only edit: %v", before)
+	}
+	if _, carried := after["body"]; carried {
+		t.Errorf("body reached the after image on a subject-only edit: %v", after)
+	}
+}
+
+// done_at is stamped by the UPDATE statement, from the database's clock. The
+// image is read back from the row for exactly this: a completion records the
+// moment the row actually holds, and reopening records its removal, neither of
+// which the incoming patch could have supplied.
+func TestCompletingATaskRecordsTheStampTheRowReceived(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	subject := "Send the deck"
+	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
+		Kind: "task", Subject: &subject, Source: "ui",
+	})
+	if err != nil {
+		t.Fatalf("LogActivityInputFrom: %v", err)
+	}
+	activity, _, err := e.store(nil).LogActivity(ctx, in)
+	if err != nil {
+		t.Fatalf("LogActivity: %v", err)
+	}
+
+	done := true
+	updated, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)),
+		UpdateActivityInput{IsDone: &done})
+	if err != nil {
+		t.Fatalf("UpdateActivity: %v", err)
+	}
+	if updated.DoneAt == nil {
+		t.Fatal("completion did not stamp done_at; the rest of this test proves nothing")
+	}
+
+	before, after := auditImagesFor(t, e, ids.UUID(activity.Id))
+	if before["is_done"] != false || after["is_done"] != true {
+		t.Errorf("is_done image = %v -> %v, want false -> true", before["is_done"], after["is_done"])
+	}
+	if before["done_at"] != nil {
+		t.Errorf("before[done_at] = %v, want nil — the task was not done", before["done_at"])
+	}
+	if after["done_at"] == nil {
+		t.Error("after[done_at] is absent, so the image did not record the stamp the row received")
+	}
+}
+
+// A transcript body is renormalized on the way in. The after image is read back
+// from the row so it records the canonical form actually stored, not the raw
+// text the caller sent.
+func TestATranscriptPatchRecordsTheNormalizedBodyTheRowHolds(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	raw, sourceSystem := "Anna: hello", "transcript"
+	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
+		Kind: "call", Body: &raw, SourceSystem: &sourceSystem, Source: "ui",
+	})
+	if err != nil {
+		t.Fatalf("LogActivityInputFrom: %v", err)
+	}
+	activity, _, err := e.store(nil).LogActivity(ctx, in)
+	if err != nil {
+		t.Fatalf("LogActivity: %v", err)
+	}
+
+	unnormalized := "Anna: hello   \r\nBen: hi\r\n"
+	if _, err := e.store(nil).UpdateActivity(ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)),
+		UpdateActivityInput{Body: &unnormalized}); err != nil {
+		t.Fatalf("UpdateActivity: %v", err)
+	}
+
+	_, after := auditImagesFor(t, e, ids.UUID(activity.Id))
+	if after["body"] != "Anna: hello\nBen: hi" {
+		t.Errorf("after[body] = %v, want the normalized form the row stores", after["body"])
+	}
+}
