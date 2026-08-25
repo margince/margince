@@ -28,6 +28,7 @@
 package backoff
 
 import (
+	"math"
 	"math/rand/v2"
 	"time"
 )
@@ -73,5 +74,19 @@ func Jittered(priorFailures int, base, ceiling time.Duration) time.Duration {
 	// is to be unpredictable to no one in particular — a cryptographic source
 	// would cost entropy to buy a property nothing here needs.
 	jitter := jitterLow + jitterWidth*rand.Float64() //nolint:gosec // G404: scheduling jitter, not key material — de-syncs a fleet that failed together
-	return time.Duration(float64(delay) * jitter)
+	// The spread can carry the delay ABOVE the ceiling — up to 1.2× it — which
+	// is deliberate: the cap bounds the ladder, not the noise on top of it. But
+	// a ceiling near the top of the Duration range overflows on this multiply,
+	// and what happens then is ARCHITECTURE-DEPENDENT: converting an
+	// out-of-range float to an integer is implementation-defined in Go, and
+	// arm64 saturates to MaxInt64 while amd64 wraps to a negative. A developer
+	// on Apple silicon cannot reproduce the failure their CI runner sees.
+	//
+	// So the question is asked in float64, where there is room to hold the
+	// answer, before it is narrowed back.
+	spread := float64(delay) * jitter
+	if spread >= float64(math.MaxInt64) {
+		return time.Duration(math.MaxInt64)
+	}
+	return time.Duration(spread)
 }

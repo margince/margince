@@ -109,14 +109,18 @@ func TestABaseThatIsNotPositiveIsNoLadderAtAll(t *testing.T) {
 func TestABaseNearTheDurationCeilingDoesNotOverflowIntoANegativeWait(t *testing.T) {
 	huge := time.Duration(1) << 62
 	roof := time.Duration(math.MaxInt64)
-	for _, priorFailures := range []int{1, 2, 10} {
-		got := backoff.Jittered(priorFailures, huge, roof)
-		if got <= 0 {
-			t.Errorf("Jittered(%d, 1<<62, MaxInt64) = %v; the double overflowed past the clamp",
-				priorFailures, got)
-		}
-		if got > roof {
-			t.Errorf("Jittered(%d, 1<<62, MaxInt64) = %v, above the ceiling", priorFailures, got)
+	// REPEATED, because the overflow depends on the draw: at this ceiling a
+	// jitter below 1.0 fits and one above it does not, so a handful of calls
+	// pass or fail by luck. A test whose subject is randomness has to ask
+	// enough times to see both sides — 200 draws leaves the chance of never
+	// sampling the upper half beyond vanishing.
+	for _, priorFailures := range []int{0, 1, 2, 10} {
+		for range 200 {
+			got := backoff.Jittered(priorFailures, huge, roof)
+			if got <= 0 {
+				t.Fatalf("Jittered(%d, 1<<62, MaxInt64) = %v; the arithmetic overflowed and a scheduler "+
+					"asked to wait this retries instantly", priorFailures, got)
+			}
 		}
 	}
 }
