@@ -142,13 +142,40 @@ function isoSliceSites(path: string, source: string): Finding[] {
   return found;
 }
 
+// The census parses with the TypeScript compiler, which costs more per file
+// than the whole rest of this suite, so it is asked only of files that COULD
+// hold a finding. The filter is `toISOString` and nothing else: the detector
+// compares that identifier's text, so a file the filter drops provably cannot
+// match — the prefilter is strictly wider than what it stands in front of,
+// which is the direction a skip may go and the only one.
+function couldSliceAnIso(source: string): boolean {
+  return source.includes("toISOString");
+}
+
 describe("a calendar day is never cut out of an ISO string", () => {
   const files = sourceFiles(srcRoot);
+
+  // Swept once and shared. Two tests reading the tree separately is the same
+  // walk paid for twice, and the second one is what pushed this suite past its
+  // timeout under a loaded runner.
+  const findings = files.flatMap((path) => {
+    const source = readFileSync(path, "utf8");
+    return couldSliceAnIso(source) ? isoSliceSites(path, source) : [];
+  });
 
   it("walks a tree that holds source", () => {
     // A census passes by finding nothing, which is also what it does over an
     // empty walk. The floor is what tells the two apart.
     expect(files.length).toBeGreaterThan(100);
+  });
+
+  it("does not drop a file the detector would have matched", () => {
+    // The prefilter is where a census goes blind, so it is asked directly:
+    // every shape the detector recognises must survive it.
+    expect(
+      couldSliceAnIso("const day = new Date().toISOString().slice(0, 10);"),
+    ).toBe(true);
+    expect(couldSliceAnIso("const initials = name.slice(0, 2);")).toBe(false);
   });
 
   it("recognises the shape it was written for", () => {
@@ -180,21 +207,14 @@ describe("a calendar day is never cut out of an ISO string", () => {
   });
 
   it("finds no unratified site", () => {
-    const offenders = files
-      .flatMap((path) => {
-        const source = readFileSync(path, "utf8");
-        return isoSliceSites(path, source);
-      })
-      .filter((finding) => !(finding.key in deliberateUtcDays));
+    const offenders = findings.filter(
+      (finding) => !(finding.key in deliberateUtcDays),
+    );
     expect(offenders).toEqual([]);
   });
 
   it("keeps no waiver that has stopped covering a site", () => {
-    const live = new Set(
-      files.flatMap((path) =>
-        isoSliceSites(path, readFileSync(path, "utf8")).map((f) => f.key),
-      ),
-    );
+    const live = new Set(findings.map((f) => f.key));
     const stale = Object.keys(deliberateUtcDays).filter(
       (key) => !live.has(key),
     );
