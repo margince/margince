@@ -388,15 +388,20 @@ describe("AgentRail", () => {
     });
   });
 
-  // The licence is the non-critical fault: it still works, and somebody
-  // should do something about it eventually.
-  it("goes to warning when the installation has no licence", async () => {
+  // An installation that never had a licence is NOT a fault: that is the state
+  // every demo and every fresh dev stack is in, and an orb that is amber for all
+  // of them has stopped saying anything. Asked-and-refused is the fault, and the
+  // case below still carries it. Issue 2679 carries where the absent licence
+  // should be surfaced instead, which is not nowhere.
+  it("rests rather than warning when the installation has no licence", async () => {
     stubAgentRailApi({ license: () => jsonResponse(LICENSE("absent")) });
     const { container } = render(ROUTE);
     await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("warning"),
+      expect(block(container).getAttribute("data-core-state")).not.toBe(
+        "warning",
+      ),
     );
-    await settlesOnLine(container, "No license");
+    expect(block(container).getAttribute("data-core-state")).toBe("idle");
   });
 
   it("goes to warning when the licence is refused", async () => {
