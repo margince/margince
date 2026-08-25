@@ -41,6 +41,7 @@ func TestEveryVoiceVersionColumnCarriesItsOwnField(t *testing.T) {
 	predecessor := 41
 	row := voiceVersionRow{
 		profileVersion: 42, status: "candidate", voiceProfileMD: "# voice",
+		profileJSON: "the-profile", statsJSON: "the-stats", evaluation: "the-evaluation",
 		sourceHash: "sha-of-the-sources", sourceCount: 7, reason: "the sources moved",
 		predecessorVersion: &predecessor, modelProvider: "a-provider", modelName: "a-model",
 		builderVersion: "builder-9", activationPolicyVersion: "policy-3",
@@ -49,6 +50,12 @@ func TestEveryVoiceVersionColumnCarriesItsOwnField(t *testing.T) {
 		now: time.Date(2026, 3, 4, 5, 6, 8, 0, time.UTC),
 	}
 	want := map[string]any{
+		// The three JSON payloads are `any`, so a swap between them is the
+		// swap this test exists for that the compiler cannot refuse. Each gets
+		// a value only it could hold.
+		"profile_json":              "the-profile",
+		"stats_json":                "the-stats",
+		"evaluation_json":           "the-evaluation",
 		"profile_version":           42,
 		"status":                    "candidate",
 		"voice_profile_md":          "# voice",

@@ -144,20 +144,31 @@ func TestEveryConsentWriteInTheCarryFileBelongsToTheCarry(t *testing.T) {
 // save from a carry where the file-keyed waiver above cannot.
 var reKeyedConsent = regexp.MustCompile(`(?is)UPDATE\s+(person_consent|consent_event)\b[^;]*?\bSET\s+%\[\d+\]s\s*=`)
 
-// TestOnlyTheCarryReKeysAConsentRow sweeps wider than the scope above — every
-// module, waiver or not — because the waiver ratifies a FILE and the obligation
-// is about statements.
+// TestOnlyTheCarryReKeysAConsentRow sweeps EVERY module, waiver or not, because
+// the waiver above ratifies a file and this obligation is about statements.
+//
+// The root is the whole module tier rather than the carry's own file. Rooting
+// it at the file would have made the sweep tautological: gatekit reports what
+// lies outside the roots, so a second re-key added anywhere else would be the
+// only thing it could see — and a re-key added to the consent module, which the
+// scope above waives wholesale, is exactly the copy this is here to catch.
 func TestOnlyTheCarryReKeysAConsentRow(t *testing.T) {
-	subject := func(_ string, file *ast.File) bool { return holdsMatchingLiteral(file, reKeyedConsent) }
 	scope := gatekit.Scope{
-		Roots:   []string{"internal/modules/people/consentcarry.go"},
-		Subject: subject,
+		Roots:   []string{"internal/modules"},
+		Subject: func(_ string, file *ast.File) bool { return holdsMatchingLiteral(file, reKeyedConsent) },
 		Exempt:  gatekit.Waive(map[string]string{}),
 	}
 	inside := scope.Files(t)
-	if len(inside) != 1 {
-		t.Errorf("the re-keying statement appears in %d file(s) inside the carry, want exactly one: a "+
-			"census that finds none reports the clean word over a carry that has moved out of it", len(inside))
+	var where []string
+	for _, f := range inside {
+		where = append(where, f.Path)
+	}
+	if len(inside) != 1 || where[0] != theCarryFile {
+		t.Errorf("consent rows are re-keyed in %d file(s):\n\t%s\n\nExactly one, and it must be %s. "+
+			"Re-keying a consent row is what makes a write a carry rather than a record of a decision, so "+
+			"a second one is a second answer to what happens to a withdrawal when its record retires — and "+
+			"none at all means the carry has moved and this gate is reading an empty tree",
+			len(inside), strings.Join(where, "\n\t"), theCarryFile)
 	}
 }
 
