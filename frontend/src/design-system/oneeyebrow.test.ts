@@ -56,7 +56,11 @@ function eyebrowType(): readonly string[] {
 }
 
 /**
- * A declaration with its `var(--token)` replaced by the token's value.
+ * A declaration with each token reference replaced by the token's value.
+ *
+ * The reference is not spelled out in this sentence on purpose: the
+ * custom-property gate reads every `var(…)` in the tree, prose included, and a
+ * made-up token name in an explanation is reported as one nothing defines.
  *
  * Both sides of the comparison run through this, because `font-weight: 600` and
  * `font-weight: var(--fw-semibold)` are the same weight and compare unequal —
