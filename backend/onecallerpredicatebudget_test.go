@@ -34,8 +34,10 @@ package backendarch
 // every production caller passes a named constant.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
+	"math"
 	"strconv"
 	"strings"
 	"testing"
@@ -61,16 +63,25 @@ var callerPredicateBudgetScope = gatekit.Scope{
 }
 
 func TestTheCallerPredicateBudgetIsDeclaredOnce(t *testing.T) {
-	inside := callerPredicateBudgetScope.Files(t)
-	if len(inside) > 1 {
-		var where []string
-		for _, f := range inside {
-			where = append(where, f.Path)
+	// EXACTLY one DECLARATION, not one file. A file is the wrong unit twice
+	// over: two declarations in one file are two numbers and would report as
+	// one, and zero of them reads the same as a clean tree — the direction a
+	// census must not fail in.
+	total := 0
+	var where []string
+	for _, f := range callerPredicateBudgetScope.Files(t) {
+		n := countCallerPredicateBudgets(f.File)
+		total += n
+		where = append(where, fmt.Sprintf("%s (%d)", f.Path, n))
+	}
+	if total != 1 {
+		sites := "(no file under internal/platform/database declares one)"
+		if len(where) > 0 {
+			sites = strings.Join(where, "\n\t")
 		}
-		t.Errorf("a five-second caller-predicate budget is declared in %d files inside the package that "+
-			"owns it:\n\t%s\n\nOne number, so a preview and a plan cannot come to disagree about how long "+
-			"somebody is made to wait. Take database.CallerPredicateBudget", len(inside),
-			strings.Join(where, "\n\t"))
+		t.Errorf("a five-second caller-predicate budget is declared %d time(s):\n\t%s\n\nOne number, so a "+
+			"preview and a plan cannot come to disagree about how long somebody is made to wait. Take "+
+			"database.CallerPredicateBudget", total, sites)
 	}
 }
 
@@ -87,11 +98,14 @@ func TestTheGateAgreesWithTheConstantItGuards(t *testing.T) {
 // declaresACallerPredicateBudget reports whether a file declares a duration
 // constant worth the caller-predicate ceiling under a name that says budget.
 func declaresACallerPredicateBudget(_ string, file *ast.File) bool {
-	found := false
+	return countCallerPredicateBudgets(file) > 0
+}
+
+// countCallerPredicateBudgets counts them, because the file is the wrong unit:
+// two in one file are two numbers that can drift apart.
+func countCallerPredicateBudgets(file *ast.File) int {
+	total := 0
 	ast.Inspect(file, func(n ast.Node) bool {
-		if found {
-			return false
-		}
 		spec, ok := n.(*ast.ValueSpec)
 		if !ok {
 			return true
@@ -101,12 +115,12 @@ func declaresACallerPredicateBudget(_ string, file *ast.File) bool {
 				continue
 			}
 			if d, ok := durationOf(spec.Values[at]); ok && d == callerPredicateBudget {
-				found = true
+				total++
 			}
 		}
-		return !found
+		return true
 	})
-	return found
+	return total
 }
 
 // durationOf evaluates `<n> * time.<Unit>` — the only shape a duration constant
@@ -126,9 +140,13 @@ func durationOf(expr ast.Expr) (time.Duration, bool) {
 	if !ok || literal.Kind != token.INT {
 		return 0, false
 	}
+	// A literal too large for an int64 is not "not a duration" — it is a
+	// duration this reader cannot judge, and answering false would let it
+	// through as a non-subject. Nothing in this tree writes one, so the honest
+	// answer is to treat it as a subject and let the count report the file.
 	n, err := strconv.ParseInt(literal.Value, 0, 64)
 	if err != nil {
-		return 0, false
+		return time.Duration(math.MaxInt64), true
 	}
 	scale, ok := durationUnit(unit)
 	if !ok {

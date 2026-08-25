@@ -34,6 +34,7 @@ package backendarch
 // not swept here. None carries the shape today.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"strconv"
@@ -52,42 +53,89 @@ var downloadHeaderScope = gatekit.Scope{
 }
 
 func TestADownloadsHeadersAreSpelledOnce(t *testing.T) {
-	inside := downloadHeaderScope.Files(t)
-	if len(inside) > 1 {
-		var where []string
-		for _, f := range inside {
-			where = append(where, f.Path)
+	// EXACTLY one WRITE, not one file. A file is the wrong unit twice over:
+	// two writes in one file are two spellings reported as one, and zero of
+	// them reads the same as a clean tree.
+	total := 0
+	var where []string
+	for _, f := range downloadHeaderScope.Files(t) {
+		n := countDownloadDispositions(f.File)
+		total += n
+		where = append(where, fmt.Sprintf("%s (%d)", f.Path, n))
+	}
+	if total != 1 {
+		sites := "(no file under internal/platform/httperr writes one)"
+		if len(where) > 0 {
+			sites = strings.Join(where, "\n\t")
 		}
-		t.Errorf("a download's disposition is written in %d files inside the package that owns it:\n\t%s\n\n"+
+		t.Errorf("a download's disposition is written %d time(s):\n\t%s\n\n"+
 			"One spelling of the header trio, so a handler cannot agree with the others by inspection and "+
 			"then drift on the quoting, the disposition or the omitted Content-Length. Build an "+
-			"httperr.Download and call WriteHeaders", len(inside), strings.Join(where, "\n\t"))
+			"httperr.Download and call WriteHeaders", total, sites)
 	}
 }
 
 // setsADownloadDisposition reports whether a file writes Content-Disposition
 // onto a response's header map.
 func setsADownloadDisposition(_ string, file *ast.File) bool {
-	found := false
+	return countDownloadDispositions(file) > 0
+}
+
+// countDownloadDispositions counts the writes, because the file is the wrong
+// unit: two in one file are two spellings that can drift apart.
+func countDownloadDispositions(file *ast.File) int {
+	hoisted := headerMapsIn(file)
+	total := 0
 	ast.Inspect(file, func(n ast.Node) bool {
-		if found {
-			return false
+		if isResponseHeaderSet(n, "Content-Disposition", hoisted) {
+			total++
 		}
-		if isResponseHeaderSet(n, "Content-Disposition") {
-			found = true
-		}
-		return !found
+		return true
 	})
-	return found
+	return total
+}
+
+// headerMapsIn names the locals holding a response's header map — `h :=
+// w.Header()`. Without them the two-line spelling is a write this census
+// cannot see, and hoisting the map is what an author does the moment a handler
+// sets more than one header.
+func headerMapsIn(file *ast.File) map[string]bool {
+	named := map[string]bool{}
+	ast.Inspect(file, func(n ast.Node) bool {
+		assign, ok := n.(*ast.AssignStmt)
+		if !ok || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
+			return true
+		}
+		name, ok := assign.Lhs[0].(*ast.Ident)
+		if !ok || !isHeaderCall(assign.Rhs[0]) {
+			return true
+		}
+		named[name.Name] = true
+		return true
+	})
+	return named
+}
+
+// isHeaderCall matches `<expr>.Header()`.
+func isHeaderCall(expr ast.Expr) bool {
+	call, ok := expr.(*ast.CallExpr)
+	if !ok || len(call.Args) != 0 {
+		return false
+	}
+	accessor, ok := call.Fun.(*ast.SelectorExpr)
+	return ok && accessor.Sel.Name == "Header"
 }
 
 // isResponseHeaderSet matches `<expr>.Header().Set("<name>", …)`.
 //
-// The receiver of Set must itself be a call to Header, which is what separates
-// a response's header map from a MIME part's: `header.Set("Content-Disposition",
-// …)` on a textproto.MIMEHeader is the same method name on a different thing,
-// and both live in this tree.
-func isResponseHeaderSet(n ast.Node, name string) bool {
+// The receiver of Set must be a response's header map — reached inline as
+// `w.Header()`, or through a local this file assigned that call to. That is
+// what separates it from a MIME part's: `header.Set("Content-Disposition", …)`
+// on a textproto.MIMEHeader is the same method name on a different thing, and
+// both live in this tree. Tracking the local is what stops the two-line
+// spelling — which is what an author writes the moment a handler sets more
+// than one header — from being a write this census cannot see.
+func isResponseHeaderSet(n ast.Node, name string, hoisted map[string]bool) bool {
 	call, ok := n.(*ast.CallExpr)
 	if !ok || len(call.Args) == 0 {
 		return false
@@ -96,13 +144,13 @@ func isResponseHeaderSet(n ast.Node, name string) bool {
 	if !ok || set.Sel.Name != "Set" {
 		return false
 	}
-	header, ok := set.X.(*ast.CallExpr)
-	if !ok {
-		return false
-	}
-	accessor, ok := header.Fun.(*ast.SelectorExpr)
-	if !ok || accessor.Sel.Name != "Header" || len(header.Args) != 0 {
-		return false
+	// Either the map is reached inline — `w.Header().Set(…)` — or through a
+	// local this file assigned it to.
+	if !isHeaderCall(set.X) {
+		receiver, isIdent := set.X.(*ast.Ident)
+		if !isIdent || !hoisted[receiver.Name] {
+			return false
+		}
 	}
 	literal, ok := call.Args[0].(*ast.BasicLit)
 	if !ok || literal.Kind != token.STRING {
@@ -124,6 +172,8 @@ func TestTheDownloadHeaderCensusStillSeesItsSubject(t *testing.T) {
 		"a disposition set on something that is not called w": "" +
 			"func f(rw http.ResponseWriter) { rw.Header().Set(\"Content-Disposition\", d) }",
 	}
+	subjects["the two-line spelling, through a local holding the header map"] = "" +
+		"func f(w http.ResponseWriter) {\n\th := w.Header()\n\th.Set(\"Content-Disposition\", d)\n}"
 	for name, body := range subjects {
 		if !setsADownloadDisposition("x.go", parseGateFixture(t, "package p\n"+body)) {
 			t.Errorf("the census no longer recognises %s, so it is guarding nothing", name)
@@ -139,6 +189,8 @@ func TestTheDownloadHeaderCensusStillSeesItsSubject(t *testing.T) {
 			"func f(w http.ResponseWriter) { w.Header().Set(\"Content-Type\", \"application/json\") }",
 		"a read of the request's own disposition": "" +
 			"func f(r *http.Request) string { return r.Header.Get(\"Content-Disposition\") }",
+		"a Set on a local that holds a MIME part, not a response's map": "" +
+			"func f(part textproto.MIMEHeader) { part.Set(\"Content-Disposition\", d) }",
 	}
 	for name, body := range nearMisses {
 		if setsADownloadDisposition("x.go", parseGateFixture(t, "package p\n"+body)) {

@@ -131,6 +131,7 @@ func filesComposingTheSharedRules(t *testing.T) []string {
 	t.Helper()
 	const root = "."
 	var out []string
+	var dotImports []string
 	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -147,6 +148,9 @@ func filesComposingTheSharedRules(t *testing.T) []string {
 		if parseErr != nil {
 			return parseErr
 		}
+		if dotImportsDraftRules(parsed) {
+			dotImports = append(dotImports, rel)
+		}
 		if readsTheSharedRules(parsed) {
 			out = append(out, rel)
 		}
@@ -155,8 +159,25 @@ func filesComposingTheSharedRules(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("sweeping internal/compose for the shared rules block: %v", err)
 	}
+	for _, path := range dotImports {
+		t.Errorf("%s dot-imports draftrules, which puts Shared in the file's own scope as a bare "+
+			"identifier. The sweep reads selectors, so this file would drop out of the census and its "+
+			"prompt would be governed by nothing — import it under a name", path)
+	}
 	sort.Strings(out)
 	return out
+}
+
+// dotImportsDraftRules reports the shape the census cannot read.
+func dotImportsDraftRules(file *ast.File) bool {
+	const path = "internal/compose/draftrules"
+	for _, imported := range file.Imports {
+		if strings.HasSuffix(strings.Trim(imported.Path.Value, `"`), path) &&
+			imported.Name != nil && imported.Name.Name == "." {
+			return true
+		}
+	}
+	return false
 }
 
 // readsTheSharedRules reports whether the file holds a `draftrules.Shared`
@@ -193,6 +214,15 @@ func localNameForDraftRules(file *ast.File) (string, bool) {
 			continue
 		}
 		if imported.Name != nil {
+			// A dot import puts Shared in the file's own scope, where it is a
+			// bare identifier and not a selector — the shape below cannot see
+			// it, so such a file would drop OUT of the census and its prompt
+			// would be governed by nothing. Nothing in this tree dot-imports;
+			// refusing is how it stays that way, rather than the sweep quietly
+			// getting smaller.
+			if imported.Name.Name == "." {
+				return "", false
+			}
 			return imported.Name.Name, true
 		}
 		return "draftrules", true

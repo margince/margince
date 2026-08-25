@@ -49,16 +49,16 @@ func TestOnlyOnePathReachesAToolHandle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("parsing %s: %v", name, err)
 		}
+		// Every REFERENCE to .Handle, not every call of it. A method value —
+		// `run := tool.Handle` — reaches the tool with none of the guarding
+		// above and is not a CallExpr at all, so a census that matched only
+		// calls would report the clean word over it.
 		ast.Inspect(parsed, func(n ast.Node) bool {
-			call, ok := n.(*ast.CallExpr)
-			if !ok {
-				return true
-			}
-			selector, ok := call.Fun.(*ast.SelectorExpr)
+			selector, ok := n.(*ast.SelectorExpr)
 			if !ok || selector.Sel.Name != "Handle" {
 				return true
 			}
-			sites = append(sites, fmt.Sprintf("%s:%d", name, fset.Position(call.Pos()).Line))
+			sites = append(sites, fmt.Sprintf("%s:%d", name, fset.Position(selector.Pos()).Line))
 			return true
 		})
 	}
