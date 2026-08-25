@@ -85,6 +85,7 @@ components:
   deals:       { in: internal/modules/deals }
   projects:    { in: internal/modules/projects }
   dealrooms:   { in: internal/modules/dealrooms }
+  knowledge:   { in: internal/modules/knowledge }
   finance:     { in: internal/modules/finance }
   integrations: { in: [internal/modules/integrations, internal/modules/integrations/**] }
   activities:  { in: internal/modules/activities }
@@ -168,6 +169,9 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   dealrooms:
+    mayDependOn: [contracts, platform]
+    canUse: [pgx, oapi]
+  knowledge:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   projects:
