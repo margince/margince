@@ -51,7 +51,7 @@ numbers appear here when releases start.
 
   The pricing gate moved with its subject. It asserted that every binding the
   shipped EXAMPLES named was priced by `SeedModelRates`; with the examples gone
-  it now reads `seeds.ai_routing` out of the shipped margince yamls, which is
+  it now reads `seeds.ai_routing` out of the shipped Margince YAML files, which is
   what a fresh installation actually boots bound to.
 
 

@@ -168,7 +168,7 @@ counts; a DNS name does not, since what it resolves to can change after boot.
 | `http 404` on `…/v1/v1/chat/completions` or `…/v1/v1/responses` | `base_url` includes a `/v1` segment — drop it (§2 caveat); the adapter adds it. |
 | Boot error *"profile sovereign forbids cloud provider …"* | A cloud provider is bound under `profile: sovereign`. Switch to `eu_hosted`/`cloud_frontier`, or bind that tier to `ollama`/`vllm`. |
 | Boot error *"needs an api key — set X_API_KEY …"* | The bound cloud provider's key env var is unset. Export the one the error names (e.g. `GEMINI_API_KEY`). |
-| Boot error *"field api_key not found"* | You put an `api_key:` in the routing file — remove it; the key comes from the env var (see the table above). |
+| Boot error *"field api_key not found"* | You put an `api_key:` in the `seeds.ai_routing` binding — remove it; the key comes from the env var (see the table above). |
 | Boot error *"needs a base_url …"* | `openai_compatible` has no `base_url`. Add the vendor host root (no `/v1`). |
 | `http 404` on `/embeddings` | That `openai_compatible` vendor is chat-only. Rebind `embeddings:` to a lane-serving vendor or a local `bge-m3` (§3). |
 | Embed error *"returned N vectors of width W, need 1×D"* | On `openai_compatible` the adapter never sends `dimensions`, so `dimensions:` must equal the model's NATIVE width (§3). Set it to `W`. |

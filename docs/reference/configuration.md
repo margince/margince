@@ -380,9 +380,9 @@ pipeline in memory — no Postgres, no Redis, no staging — and prints every
 intermediate: pages with skip reasons, every extracted field/fact with its
 evidence, every finding the gate DROPPED (with why), merge decisions, and
 per-model-call token/latency telemetry. Exactly one model selection is
-required: `--ai-routing <yaml>`, `--model provider:model` (e.g.
-`anthropic:claude-opus-4-8` — needs the provider's BYOK env key), or
-`--ai-fake` (crawl dry-run). `--max-pages/--max-bytes/--wall` override the
+required: `--model provider:model` (e.g. `anthropic:claude-opus-4-8` — needs
+the provider's BYOK env key) or `--ai-fake` (crawl dry-run). This lane opens no
+database, so it never reads the installation's stored binding. `--max-pages/--max-bytes/--wall` override the
 caps per run; `--json <path|->` writes a diffable machine-readable report;
 `--dump-pages <dir>` saves each page's reduced text.
 

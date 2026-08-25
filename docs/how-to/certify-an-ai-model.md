@@ -62,13 +62,16 @@ to add a task or a site rather than certify one that exists, see
 3. No database. The lane runs on the DB-less local router, so `make db-up` is
    not required.
 
-## 1. Certify the task you run today
+## 1. Certify a task
 
 ```bash
-make e2e-ai TASK=cold_start
+make e2e-ai TASK=cold_start \
+  MODEL=gemini:gemini-3.1-flash-lite \
+  JUDGE=anthropic:claude-sonnet-4-6
 ```
 
-This certifies **the task's current binding** in your routing config. It runs
+This certifies **the model you name**, not any binding this installation holds —
+the lane opens no database and reads none. It runs
 every scenario in the task's corpus `N` times (an odd number, with response
 caching off so every run is a fresh model call), judges each answer, and prints
 the verdict:
@@ -109,15 +112,18 @@ a task's result back down per site.
 
 ## 2. Benchmark a candidate swap
 
-Certify a *different* model against the same corpus, without editing your
-routing config:
+Certify a *different* model against the same corpus — change `MODEL=`, leave
+`JUDGE=` where it is:
 
 ```bash
-make e2e-ai TASK=cold_start MODEL=gemini:gemini-3.1-flash-lite
+make e2e-ai TASK=cold_start \
+  MODEL=gemini:gemini-3.1-flash-lite \
+  JUDGE=anthropic:claude-sonnet-4-6
 ```
 
-`MODEL=provider:model` overrides only the candidate; the **judge stays on its
-own pinned `cert_judge` binding** (never the candidate's), so a cheaper
+`MODEL=` is the candidate and `JUDGE=` the model that grades it. They must
+differ — the run refuses them being equal before paying for a call, because a
+model grading itself is certified by construction — so a cheaper
 candidate can't grade itself lenient. Certify both the incumbent and the
 candidate, then compare their records before you change the binding.
 
@@ -208,7 +214,9 @@ doesn't tell you *why*. Turn on the payload trace to read exactly what each
 model saw and said:
 
 ```bash
-make e2e-ai TASK=enrich          # trace is ON by default
+make e2e-ai TASK=enrich \
+  MODEL=gemini:gemini-3.1-flash-lite \
+  JUDGE=anthropic:claude-sonnet-4-6   # trace is ON by default
 ```
 
 Every candidate **and** judge call is dumped to a JSONL file under the

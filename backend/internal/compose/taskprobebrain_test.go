@@ -84,3 +84,30 @@ func TestTaskProbeBrainPinsOneModelForEveryLane(t *testing.T) {
 		t.Errorf("embeddings = %q; a chat override must not drag a real embedder in", cfg.Embeddings.Provider)
 	}
 }
+
+// A cloud --model must reach the key sitting in the environment.
+//
+// This is the whole reason the lane still runs: --ai-routing used to bind the
+// credential lookup on the way in (LoadRoutingFile called WithKeys), so when it
+// was the alternative, a config with a nil lookup here went unnoticed. With
+// --model the only way to bind these lanes, a nil lookup means cloudKey answers
+// "" for every provider and SelectBrain fails closed with "BYOK key required" —
+// while the key is right there, unread.
+func TestAPinnedCloudModelReadsItsKeyFromTheEnvironment(t *testing.T) {
+	const provider, key = "anthropic", "sk-ant-probe"
+	t.Setenv("ANTHROPIC_API_KEY", key)
+
+	// Through the real entry point, not pinnedModelRouting directly: the defect
+	// this pins is a missing binding BETWEEN the two, and a test that called the
+	// helper and then bound keys itself would prove nothing about the caller.
+	if _, _, err := TaskProbeBrain(provider+":claude-probe-model", false, ai.TaskRateExtract); err != nil {
+		t.Fatalf("a cloud --model with its key in the environment must build a router, got %v", err)
+	}
+
+	// The other arm, so this cannot pass by the router having stopped checking:
+	// with the key absent it must still fail closed.
+	t.Setenv("ANTHROPIC_API_KEY", "")
+	if _, _, err := TaskProbeBrain(provider+":claude-probe-model", false, ai.TaskRateExtract); err == nil {
+		t.Fatal("a cloud --model with NO key must fail closed — Margince provides no inference, so a missing BYOK key is a refusal")
+	}
+}

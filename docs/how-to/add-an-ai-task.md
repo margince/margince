@@ -217,7 +217,10 @@ and it caps how much of the site one certification run can cover:
    — read that first, or the run fails on a missing key.
 
    ```
-   make e2e-ai TASK=<your task>      # real calls, billed to YOUR api key
+   # real calls, billed to YOUR api key; MODEL and JUDGE are both required
+   make e2e-ai TASK=<your task> \
+     MODEL=gemini:gemini-3.1-flash-lite \
+     JUDGE=anthropic:claude-sonnet-4-6
    make e2e-ai-report                # free: band, scope, binding, counts
    ```
 

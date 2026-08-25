@@ -21,6 +21,7 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/gradionhq/margince/backend/internal/platform/config"
 	"github.com/gradionhq/margince/backend/internal/platform/webread"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -449,9 +450,16 @@ func pinnedModelRouting(modelSpec string) (ai.RoutingConfig, error) {
 	if !found || provider == "" || modelName == "" {
 		return ai.RoutingConfig{}, fmt.Errorf("--model wants provider:model (e.g. anthropic:claude-sonnet-4-6), got %q", modelSpec)
 	}
-	return ai.RoutingConfig{
+	cfg := ai.RoutingConfig{
 		Profile:    ai.ProfileCloudFrontier,
 		Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierCheapCloud: {Provider: provider, Model: modelName}},
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: ai.ProviderConfig{Provider: ai.ProviderFake}},
-	}, nil
+	}
+	// Bound to the environment, or a cloud --model cannot run: with a nil lookup
+	// cloudKey answers "" for every provider and SelectBrain fails closed with
+	// "BYOK key required" — while the key sits in the environment, unread. The
+	// retired routing file bound this on the way in (LoadRoutingFile called
+	// WithKeys), which is why the gap survived: --model was one of three ways to
+	// bind these lanes, and now it is the only one.
+	return cfg.WithKeys(config.FromOS), nil
 }
