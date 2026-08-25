@@ -3,7 +3,7 @@ import { navigate } from "../app/router";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -42,7 +42,11 @@ type LaneShape = Readonly<{
 // The lead line: the largest true thing about the day, written here rather than
 // on the server because the server has no language. A reader who reads only
 // this line should still know whether to worry.
-function leadLine(day: Attention, t: ReturnType<typeof useT>): string {
+function leadLine(
+  day: Attention,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
   // A day with a lane missing from it is not a day this line may summarise:
   // "your day is clear" and "part of it is hidden from you" cannot both be on
   // one page, and the reader would believe the reassuring one.
@@ -54,10 +58,12 @@ function leadLine(day: Attention, t: ReturnType<typeof useT>): string {
     return t("day.lead.oneDecision");
   }
   if (decisions > 1) {
-    return t("day.lead.decisions", { count: decisions });
+    return t("day.lead.decisions", { count: formatNumber(decisions, locale) });
   }
   if (day.counts.planned > 0) {
-    return t("day.lead.plannedOnly", { count: day.counts.planned });
+    return t("day.lead.plannedOnly", {
+      count: formatNumber(day.counts.planned, locale),
+    });
   }
   if (day.done_for_you && day.done_for_you.length > 0) {
     return t("day.lead.ranOvernight");
@@ -107,7 +113,9 @@ function itemDetail(
     return item.detail;
   }
   if (item.confidence != null) {
-    return t("day.match", { percent: Math.round(item.confidence * 100) });
+    return t("day.match", {
+      percent: formatNumber(Math.round(item.confidence * 100), locale),
+    });
   }
   if (item.occurred_at) {
     return formatDateTime(item.occurred_at, locale, zone);
@@ -330,6 +338,7 @@ function TodayLanes({
   complete: ReturnType<typeof useTaskUpdate>;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const needsYou = day.needs_you ?? [];
   const planned = day.planned ?? [];
   const done = day.done_for_you ?? [];
@@ -346,7 +355,7 @@ function TodayLanes({
   };
   return (
     <>
-      <p className="t-h2 today-lead">{leadLine(day, t)}</p>
+      <p className="t-h2 today-lead">{leadLine(day, t, locale)}</p>
       <Lane
         shape={{
           title: t("day.needsYou"),
@@ -393,7 +402,9 @@ function TodayLanes({
       {day.counts.duplicates_open != null && day.counts.duplicates_open > 0 && (
         <p className="t-caption today-foot">
           <GitMerge size={14} aria-hidden />
-          {t("day.duplicatesOpen", { count: day.counts.duplicates_open })}
+          {t("day.duplicatesOpen", {
+            count: formatNumber(day.counts.duplicates_open, locale),
+          })}
         </p>
       )}
     </>
