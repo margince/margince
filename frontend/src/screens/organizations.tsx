@@ -78,6 +78,7 @@ import { DossierPanel } from "./companydossier";
 import { type CitedRecord, EvidenceModal } from "./companyevidence";
 import { CompanyFinanceCard } from "./companyfinance";
 import { GrowthFitPanel } from "./companygrowthfit";
+import { CompanyFacts } from "./companyfacts";
 import { CompanyWorkCard, hasWorkInFlight } from "./companywork";
 import {
   CompanyActionBadges,
@@ -2139,10 +2140,14 @@ function CompanyPage({
           />
         </>
       }
-      // Lifecycle and owner read as part of the account's own line rather than
-      // as a column beside it, so they travel with the identity in `pulse`
-      // and this record passes no `controls` at all. The verbs still sit on
-      // the identity's own row, which is what `actionsInline` asks for.
+      // The account's standing as a column beside the name: what the open
+      // pipeline is worth, how much work is in flight, and whose account it
+      // is. The owner control lives HERE now rather than mid-sentence in the
+      // identity meta line — the same component, moved rather than copied.
+      //
+      // Lifecycle stays in `nameBadge`, where it is edited. A read-only copy
+      // of it in this box would be a second answer to one question.
+      controls={<CompanyFacts org={org} view={view} />}
       actionsInline
       band={<CompanyBand org={org} view={view} overlay={overlay} t={t} />}
       // The account's context, beside the work rather than under it (mockup

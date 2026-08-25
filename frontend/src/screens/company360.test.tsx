@@ -457,9 +457,17 @@ describe("company view — the verbs that change a section", () => {
     renderCompany();
 
     await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
+    // Three surfaces say "withheld" about this reader's missing deal grant —
+    // the deals card, the overview's work card, and the facts box's pipeline
+    // figure — and each is answering a different question, so the assertion
+    // is that the section said so rather than which one did. What pins the
+    // DEALS tab specifically is the empty state it did NOT draw: "no open
+    // deal" is a claim about the account that this payload cannot support.
     expect(
-      await screen.findByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+      (await screen.findAllByText("Hidden — your role cannot read this"))
+        .length,
+    ).toBeGreaterThan(0);
+    expect(screen.queryByText("No open deal on this account.")).toBeNull();
     // The absent button alone would prove nothing: the verb also renders null
     // while its pipeline read is in flight, so the assertion could pass on
     // that transient state with the guard deleted. What pins the guard is

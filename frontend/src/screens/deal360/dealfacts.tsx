@@ -8,8 +8,8 @@
 // readings strip, the stage was only the chip row below the fold, and the
 // owner was on no part of the page at all — so "whose deal is this" could not
 // be answered without opening Edit. This is RecordView's `controls` slot, the
-// same one the company page puts its standing in, so the two records read the
-// same way.
+// same one the company record draws its own facts box in (companyfacts.tsx),
+// so the two records read the same way.
 //
 // Read-only on purpose. Stage and owner are both writable through Edit deal,
 // and a control here that looked editable but only navigated would be worse
