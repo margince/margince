@@ -11,6 +11,8 @@ import (
 	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
+
+	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 )
 
 // The string metric behind the dedupe fuzzy tier (PO-F-1/PO-F-2
@@ -214,4 +216,20 @@ func jaro(a, b string) float64 {
 
 	m := float64(matches)
 	return (m/float64(len(ra)) + m/float64(len(rb)) + (m-float64(transpositions)/2)/m) / 3
+}
+
+// personNameKeySQL is the SQL side of NormalizePersonName: the two properties a
+// bare comparison lacks. Both sides of the equality arm in fuzzyPerson call it,
+// so that comparison cannot fold its two halves with different normalizations
+// of the same name.
+//
+// Not a mirror of the Go key — it deliberately is not one. SQL's lower and Go's
+// Unicode full fold are different normalizations, and this arm exists so the
+// lane does not rely on either being a superset of the other. What it DOES owe
+// is every property the Go key has that plain SQL text comparison does not: the
+// trim, and the collapse of internal whitespace, because a name a crawled page
+// reflowed across a line break is Go-equal to the same name typed by hand and
+// would otherwise be invisible to the arm that guarantees the lane sees it.
+func personNameKeySQL(expr string) string {
+	return storekit.SQLf(`btrim(regexp_replace(f_fold_apostrophes(lower(%s)), '\s+', ' ', 'g'))`, expr)
 }

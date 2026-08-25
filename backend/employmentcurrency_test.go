@@ -121,7 +121,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 		// test that hand-writes an employment currency test is still a finding
 		// and there is no reason to stop looking at the ones that do not plant
 		// anything.
-		if filepath.Base(path) == "employmentcurrency_test.go" {
+		if filepath.ToSlash(path) == slotProbeFile {
 			continue
 		}
 		file, err := parser.ParseFile(fset, path, nil, 0)
@@ -373,15 +373,48 @@ var slotBlockedByTheModuleDAG = gatekit.Waive(map[string]string{
 	"internal/modules/projects/surface.go": "projects cannot import people (ADR-0054 §3); the predicate must move tier first",
 })
 
-// slotFragment matches the flag AND-ed with an archived test, in BOTH orders.
+// spellsSlotPredicate reports whether a statement tests the flag and an
+// archived test IN ONE CONJUNCTION — which is the slot predicate, however it is
+// spelled.
 //
-// Both, because a census that reads one direction of a two-way comparison lets
-// the mirrored form through, and the mirrored form is a respelling somebody
-// writes without noticing they have written one. An optional alias on each half
-// independently: the sites that shipped aliased both, one and neither.
-var slotFragment = regexp.MustCompile(
-	`(\w+\.)?is_current_primary\s+AND\s+(\w+\.)?archived_at\s+IS\s+NULL` +
-		`|(\w+\.)?archived_at\s+IS\s+NULL\s+AND\s+(\w+\.)?is_current_primary`)
+// It works on conjunctive CHUNKS rather than on a two-term pattern, because
+// every shape a two-term pattern misses is a respelling somebody writes without
+// noticing: the two halves in the other order, another conjunct sitting between
+// them (`b.is_current_primary AND b.id <> a.id AND b.archived_at IS NULL` — the
+// merge copy was one edit from that), `= true` or `IS TRUE` instead of the bare
+// flag, and lower-case keywords. A text comparison loses to an equivalent
+// spelling, and there are four of them here.
+//
+// Splitting on OR and on parentheses is what keeps the create path out. Its
+// guard is deliberately WIDER than the slot — `archived_at IS NULL AND (still
+// employed OR is_current_primary)` — and that is a different question, not a
+// hand-spelled copy of this one: the flag never shares a conjunction with the
+// archived test there.
+func spellsSlotPredicate(sql string) bool {
+	for _, chunk := range slotChunks.Split(strings.ToLower(sql), -1) {
+		if slotFlagTest.MatchString(chunk) && slotArchivedTest.MatchString(chunk) {
+			return true
+		}
+	}
+	return false
+}
+
+var (
+	// slotChunks ends a conjunction: a parenthesis or an OR starts a different
+	// one, and two terms on opposite sides of either are not AND-ed together.
+	slotChunks = regexp.MustCompile(`[()]|\bor\b`)
+
+	// slotFlagTest is the flag asked as a boolean, in every spelling this
+	// dialect offers.
+	slotFlagTest = regexp.MustCompile(`(\w+\.)?is_current_primary(\s*=\s*true|\s+is\s+true)?\b`)
+
+	slotArchivedTest = regexp.MustCompile(`(\w+\.)?archived_at\s+is\s+null`)
+)
+
+// slotProbeFile plants the probes below, which are deliberate defects. Named by
+// PATH and not by basename: a basename skip silently exempts any future file
+// that takes the same name anywhere in the tree.
+const slotProbeFile = "employmentcurrency_test.go"
 
 // slotColumn is what makes a statement a candidate at all, and it is the floor
 // this census counts against: `is_current_primary` is a relationship column and
@@ -403,7 +436,7 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 			continue
 		}
 		// This file plants the probes below, which are deliberate defects.
-		if filepath.Base(path) == "employmentcurrency_test.go" {
+		if filepath.ToSlash(path) == slotProbeFile {
 			continue
 		}
 		file, err := parser.ParseFile(fset, path, nil, 0)
@@ -418,7 +451,7 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 		for _, decl := range file.Decls {
 			for _, sql := range slotStatements(decl, scope) {
 				judged++
-				if !slotFragment.MatchString(sql) {
+				if !spellsSlotPredicate(sql) {
 					continue
 				}
 				if slotBlockedByTheModuleDAG.Waived(t, filepath.ToSlash(path)) {
@@ -467,11 +500,6 @@ func slotStatements(decl ast.Decl, people helperScope) []string {
 func firstSlotLine(sql string) string {
 	lines := strings.Split(sql, "\n")
 	for _, line := range lines {
-		if slotFragment.MatchString(line) {
-			return strings.TrimSpace(line)
-		}
-	}
-	for _, line := range lines {
 		if slotColumn.MatchString(line) {
 			return strings.TrimSpace(line)
 		}
@@ -507,6 +535,16 @@ var slotProbes = []struct {
 	// which is not the index's predicate and must not be rewritten as it.
 	{"the wider create-path guard, where the flag sits inside an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE kind = 'employment' AND person_id = $2 AND archived_at IS NULL AND (` + EmploymentIsCurrentSQL(\"ended_at\") + ` OR is_current_primary)`\n}"},
 	{"the flag with no archived test beside it", false, "", "\nfunc read() string {\n\treturn `UPDATE relationship SET is_current_primary = coalesce($3, is_current_primary)`\n}"},
+
+	// Four spellings a two-term pattern missed, each verified green against it
+	// before this detector was rewritten to work on conjunctive chunks.
+	{"another conjunct sitting between the two halves", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship b WHERE b.is_current_primary AND b.id <> $1 AND b.archived_at IS NULL`\n}"},
+	{"the flag compared to true rather than asked", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary = true AND archived_at IS NULL`\n}"},
+	{"the flag asked with IS TRUE", true, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary IS TRUE AND archived_at IS NULL`\n}"},
+	{"lower-case keywords", true, "", "\nfunc read() string {\n\treturn `select 1 from relationship where is_current_primary and archived_at is null`\n}"},
+	// The archived test belongs to the OTHER side of an OR, so the flag is not
+	// AND-ed with it and this is not the slot predicate.
+	{"the two halves on opposite sides of an OR", false, "", "\nfunc read() string {\n\treturn `SELECT 1 FROM relationship WHERE is_current_primary OR archived_at IS NULL`\n}"},
 }
 
 func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
@@ -531,7 +569,7 @@ func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
 			hit := false
 			for _, decl := range file.Decls {
 				for _, sql := range slotStatements(decl, scope) {
-					if slotFragment.MatchString(sql) {
+					if spellsSlotPredicate(sql) {
 						hit = true
 					}
 				}

@@ -34,11 +34,21 @@ const slotIndex = "uq_rel_current_primary_employer"
 // indexPredicate lifts the WHERE clause off a catalog line.
 var indexPredicate = regexp.MustCompile(`\sWHERE\s+(.*)$`)
 
-// printedSQLNoise is what Postgres prints that a hand-written predicate does not: the
-// parentheses it re-adds around every conjunct and the cast it resolves a
-// literal to. Removing it compares the two as PREDICATES rather than as text —
-// a text comparison loses to an equivalent spelling, and this one has two.
+// printedSQLNoise is what Postgres prints that a hand-written predicate does
+// not: the parentheses it re-adds around every conjunct and the cast it
+// resolves a literal to. Removing it compares the two as PREDICATES rather than
+// as text — a text comparison loses to an equivalent spelling, and this one has
+// two.
+//
+// Dropping parentheses is only sound while the predicate is a flat conjunction,
+// which is why the comparison below refuses to run over an OR rather than
+// quietly answering: `A AND (B OR C)` and `(A AND B) OR C` reduce to the same
+// text once the brackets are gone, so a mirror that kept going could pass a
+// helper that asks a different question.
 var printedSQLNoise = regexp.MustCompile(`::text|[()]`)
+
+// disjunction is the shape this comparison cannot judge.
+var disjunction = regexp.MustCompile(`(?i)\bOR\b`)
 
 func TestTheCurrentPrimarySlotHelperMirrorsItsIndex(t *testing.T) {
 	catalog, err := os.ReadFile(headCatalog)
@@ -61,6 +71,11 @@ func TestTheCurrentPrimarySlotHelperMirrorsItsIndex(t *testing.T) {
 		t.Fatalf("%s names no %s, so either the index is gone or the catalog is not what it was: "+
 			"this helper mirrors a predicate that has to exist", headCatalog, slotIndex)
 	}
+	if disjunction.MatchString(predicate) {
+		t.Fatalf("%s now carries an OR (%s), and this comparison strips parentheses — it cannot tell "+
+			"`A AND (B OR C)` from `(A AND B) OR C`. Compare the predicates structurally before trusting it again",
+			slotIndex, predicate)
+	}
 	if want, got := normalizedPredicate(predicate), normalizedPredicate(CurrentPrimarySlotSQL("")); want != got {
 		t.Errorf("%s renders %q, but %s is %q.\n\n"+
 			"The helper IS that index's predicate. A guard that asks a narrower question skips a write "+
@@ -75,8 +90,11 @@ func TestTheCurrentPrimarySlotHelperMirrorsItsIndex(t *testing.T) {
 }
 
 // normalizedPredicate reduces a predicate to what it asks: no Postgres
-// re-parenthesisation, no resolved cast, one space between tokens and one case
-// for the keywords.
+// re-parenthesisation, no resolved cast, and one space between tokens.
+//
+// Case is NOT folded, deliberately. The catalog and the helper both spell SQL
+// keywords upper-case, and folding here would hide a helper that stopped doing
+// so — the mirror is also what a reader greps for when they want the predicate.
 func normalizedPredicate(sql string) string {
 	return strings.Join(strings.Fields(printedSQLNoise.ReplaceAllString(sql, "")), " ")
 }

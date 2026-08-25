@@ -74,22 +74,32 @@ func verbatimOrEmpty(claimed, pageText string) string {
 	return claimed
 }
 
-// siteLeadSourceID is the lead's idempotency key under source_system
-// "siteread": the ORGANIZATION plus people.NormalizePersonName of the name
-// (plus a published email when the site prints one, so two distinct people
-// who share a name stay distinct). Keyed on the org, not the page URL, so the
-// same person is the same lead whether they were found on /team or /about,
-// and whether a later crawl's page layout moved — a page-URL key would
-// duplicate them.
+// sitePersonIdentity is WHO a published person is, for every step of a site
+// read that has to decide whether two claims are one person: the page lane's
+// per-page fold, the cross-page merge, and the cross-read lead key below.
 //
 // The name goes through the module's key and not a local casefold: this is a
-// person's identity across reads, so it is the same question people asks when
-// it decides whether a captured contact is somebody already stored.
-func siteLeadSourceID(orgID ids.UUID, name, publishedEmail string) string {
-	key := orgID.String() + "|" + people.NormalizePersonName(name)
+// person's identity, so it is the same question people asks when it decides
+// whether a captured contact is somebody already stored. That key UNACCENTS,
+// which is what makes "José Silva" and "Jose Silva" one person — and is also
+// why the printed address is part of the identity rather than a late
+// tie-break. Two real colleagues whose names differ only by an accent print
+// two addresses, and a fold that stopped at the name would keep one of them
+// and drop the other before the address was ever consulted.
+func sitePersonIdentity(name, publishedEmail string) string {
+	key := people.NormalizePersonName(name)
 	if e := strings.ToLower(strings.TrimSpace(publishedEmail)); e != "" {
 		key += "|" + e
 	}
-	digest := sha256.Sum256([]byte(key))
+	return key
+}
+
+// siteLeadSourceID is the lead's idempotency key under source_system
+// "siteread": the ORGANIZATION plus sitePersonIdentity. Keyed on the org, not
+// the page URL, so the same person is the same lead whether they were found on
+// /team or /about, and whether a later crawl's page layout moved — a page-URL
+// key would duplicate them.
+func siteLeadSourceID(orgID ids.UUID, name, publishedEmail string) string {
+	digest := sha256.Sum256([]byte(orgID.String() + "|" + sitePersonIdentity(name, publishedEmail)))
 	return hex.EncodeToString(digest[:])
 }

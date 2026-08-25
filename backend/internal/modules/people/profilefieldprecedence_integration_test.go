@@ -143,3 +143,43 @@ func TestAnAcceptanceReplacesAMachineFillAndItsScore(t *testing.T) {
 			"person's decision had been scored by a model that never saw it", *score)
 	}
 }
+
+// The writer's liveness predicate refuses a row and SAYS SO, which is the half
+// its four callers' counters rest on.
+//
+// Reached the only way it can be reached deterministically: from inside the
+// transaction, with the person archived between the entry gate and the write.
+// That is exactly the window the predicate exists for — at READ COMMITTED each
+// statement takes a fresh snapshot, so an erasure that commits after
+// EnsureWritableLive is visible to the INSERT that follows it. Before the
+// predicate, the acceptance path could not have been in this position at all;
+// with it, a caller that ignored the answer would count a claim that is not
+// there, put that number in the audit row, and publish it on the outbox.
+func TestARefusedWriteReportsThatItDidNotLand(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	personID, _ := e.seedEmployedPerson(ctx, t,
+		"Tore Aas", "tore@refused.test", "Aas AS", "refused.test")
+
+	var landed bool
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`UPDATE person SET archived_at = now() WHERE id = $1`, personID); err != nil {
+			return err
+		}
+		var err error
+		landed, err = writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
+			Field: "role", Value: "Owner", EvidenceSnippet: "Tore Aas owns the company.",
+			SourceRef: "https://refused.test/about", Source: researchSource, CapturedBy: "human:probe",
+		}, replaceOnAcceptance)
+		return err
+	}); err != nil {
+		t.Fatalf("run the write against an archived person: %v", err)
+	}
+	if landed {
+		t.Error("the writer reported a row landed on an archived person")
+	}
+	if rows := claimRowsFor(ctx, t, e, personID); rows != 0 {
+		t.Errorf("rows for the archived person = %d, want 0", rows)
+	}
+}

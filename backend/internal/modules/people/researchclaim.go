@@ -30,6 +30,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -115,11 +116,23 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 			// claim, its quote and the document behind it, and chose it.
 			// updated_at and version are the trigger's
 			// (trg_person_profile_field_updated), so nothing here names them.
-			if _, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
+			landed, err := writePersonProfileField(ctx, tx, personID, personProfileFieldRow{
 				Field: claim.Field, Value: claim.Value, EvidenceSnippet: claim.Quote,
 				SourceRef: claim.SourceURL, Source: researchSource, CapturedBy: by,
-			}, replaceOnAcceptance); err != nil {
+			}, replaceOnAcceptance)
+			if err != nil {
 				return fmt.Errorf("save the research claim %q: %w", claim.Field, err)
+			}
+			if !landed {
+				// An acceptance REPLACES, so the only way a row does not land
+				// is the writer's liveness predicate refusing it: an erasure
+				// committed between EnsureWritableLive above and this
+				// statement, which at READ COMMITTED is a fresh snapshot. The
+				// whole acceptance fails rather than counting a claim that is
+				// not there — the count rides the audit row and the outbox
+				// event, so a saved++ here would record a mutation that never
+				// happened, on the one table whose purpose is traceability.
+				return apperrors.ErrNotFound
 			}
 			saved++
 		}

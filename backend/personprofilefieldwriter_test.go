@@ -32,11 +32,20 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
 )
 
-// personProfileFieldInsert matches a write of the table, in either spelling the
-// tree uses: the column list on the same line as the table, or on the next.
+// personProfileFieldWrite matches a write of the table.
+//
 // Whitespace-tolerant rather than line-based, because two of the five copies
 // wrapped after the table name and a line-keyed census would have seen three.
-var personProfileFieldInsert = regexp.MustCompile(`INSERT\s+INTO\s+person_profile_field`)
+// Case-insensitive, because SQL is, and a census that is not loses to the same
+// statement typed in lower case.
+//
+// UPDATE as well as INSERT: the precedence rule is what happens to a row that
+// is already there, and a second writer spelled `UPDATE person_profile_field
+// SET value = …` answers that question without ever reaching a conflict
+// clause. No such statement exists in the tree today, which is exactly when a
+// census is cheap to widen. DELETE stays out — erasure and the retention sweep
+// clear this table deliberately, and that is somebody else's rule.
+var personProfileFieldWrite = regexp.MustCompile(`(?i)(INSERT\s+INTO|UPDATE)\s+person_profile_field`)
 
 // personProfileFieldOwner is where the writer this census requires lives. Its
 // own statement is the definition rather than a copy of it.
@@ -45,11 +54,22 @@ const personProfileFieldOwner = "internal/modules/people/personprofilefieldwrite
 // bulkRelinkIsNotAFill ratifies the merge carry-over, which is the one write of
 // this table that writePersonProfileField cannot serve.
 //
-// Keyed by FILE, so a second statement appearing in mergerelink.go is still a
-// finding: the ratification covers the write that exists, not the topic.
+// Keyed by file AND by the SHAPE that makes it exempt. A file key alone
+// ratifies the topic rather than the instance: it would exempt every future
+// write in mergerelink.go, including a plain VALUES insert with a hand-picked
+// conflict clause, which is the defect this census exists for. isCarryOver
+// decides the second half of the key, so a statement that stops being a
+// carry-over stops being waived.
 var bulkRelinkIsNotAFill = gatekit.Waive(map[string]string{
-	"internal/modules/people/mergerelink.go": "re-homes existing rows whole at a merge, all of a person's fields in one statement, rather than deciding one fill — it examines no value and writes none of its own",
+	"internal/modules/people/mergerelink.go#carry-over": "re-homes existing rows whole at a merge, all of a person's fields in one statement, rather than deciding one fill — it examines no value and writes none of its own",
 })
+
+// isCarryOver reports whether a write takes its rows FROM this table rather
+// than from values a caller decided. That is the whole of what makes the merge
+// relink a different act from a fill, so it is what the waiver is keyed on.
+func isCarryOver(sql string) bool { return carryOverSource.MatchString(sql) }
+
+var carryOverSource = regexp.MustCompile(`(?is)INSERT\s+INTO\s+person_profile_field.*\bFROM\s+person_profile_field\b`)
 
 func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 	// A ratification that stops matching describes a write that has moved or
@@ -80,10 +100,10 @@ func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
 		for _, decl := range file.Decls {
 			for _, sql := range personProfileFieldStatements(decl) {
 				judged++
-				if !personProfileFieldInsert.MatchString(sql) {
+				if !personProfileFieldWrite.MatchString(sql) {
 					continue
 				}
-				if bulkRelinkIsNotAFill.Waived(t, filepath.ToSlash(path)) {
+				if isCarryOver(sql) && bulkRelinkIsNotAFill.Waived(t, filepath.ToSlash(path)+"#carry-over") {
 					continue
 				}
 				findings = append(findings, fmt.Sprintf("%s: %s", path, firstPersonProfileFieldLine(sql)))
@@ -157,6 +177,28 @@ var personProfileFieldProbes = []struct {
 	{"a read of the table", false, "\nfunc read() string {\n\treturn `SELECT value FROM person_profile_field WHERE person_id = $1`\n}"},
 	{"the erasure delete", false, "\nfunc erase() string {\n\treturn `DELETE FROM person_profile_field WHERE person_id = $1`\n}"},
 	{"a join naming the table", false, "\nfunc read() string {\n\treturn `SELECT 1 FROM person p JOIN person_profile_field f ON f.person_id = p.id AND f.field = 'org_name'`\n}"},
+
+	// Two shapes that escaped the first detector, each verified green against
+	// it before this one was widened.
+	{"the same insert in lower case", true, "\nfunc write() string {\n\treturn `insert into person_profile_field (person_id, field, value) values ($1, $2, $3) on conflict (person_id, field) do update set value = excluded.value`\n}"},
+	// An UPDATE answers the precedence question — what happens to a row that
+	// is already there — without ever reaching a conflict clause.
+	{"a second writer spelled as an UPDATE", true, "\nfunc write() string {\n\treturn `UPDATE person_profile_field SET value = $2 WHERE person_id = $1 AND field = 'role'`\n}"},
+}
+
+// The waiver's second half, read directly: a file key alone would ratify the
+// topic, and this is what makes it ratify the instance.
+func TestOnlyACarryOverIsRatifiedInTheMergeRelink(t *testing.T) {
+	carryOver := "INSERT INTO person_profile_field\n  (person_id, field, value)\n  SELECT $2, field, value\n    FROM person_profile_field WHERE person_id = $1\n  ON CONFLICT (person_id, field) DO NOTHING"
+	if !isCarryOver(carryOver) {
+		t.Error("the merge relink's own statement is not recognised as a carry-over, so its waiver ratifies nothing")
+	}
+	// The shape the file waiver used to exempt: a fill, with a hand-picked
+	// conflict clause, sitting in the ratified file.
+	fill := "INSERT INTO person_profile_field (person_id, field, value)\n  VALUES ($1, $2, $3)\n  ON CONFLICT (person_id, field) DO UPDATE SET value = EXCLUDED.value"
+	if isCarryOver(fill) {
+		t.Error("a plain fill is read as a carry-over, so the merge relink's waiver still exempts the whole file")
+	}
 }
 
 func TestTheProfileFieldWriteDetectorSeesWhatItClaimsTo(t *testing.T) {
@@ -170,7 +212,7 @@ func TestTheProfileFieldWriteDetectorSeesWhatItClaimsTo(t *testing.T) {
 			hit := false
 			for _, decl := range file.Decls {
 				for _, sql := range personProfileFieldStatements(decl) {
-					if personProfileFieldInsert.MatchString(sql) {
+					if personProfileFieldWrite.MatchString(sql) {
 						hit = true
 					}
 				}

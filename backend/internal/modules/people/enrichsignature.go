@@ -145,8 +145,15 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 	case "title":
 		// Fill-only-empty: the NULL predicate is the CAS — an occupied
 		// title (human or otherwise) is never touched (GATE-AI-4).
+		//
+		// archived_at, for the same reason writePersonProfileField carries it:
+		// this column is the DISPLAY half of the evidence row above, and the
+		// two must refuse together. An erasure that commits between them would
+		// otherwise leave the evidence refused and the erased person's title
+		// written back — the fill split across two statements, and only one of
+		// them looking.
 		tag, err := tx.Exec(ctx, `
-			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL`, personID, value)
+			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL AND archived_at IS NULL`, personID, value)
 		if err != nil {
 			return false, fmt.Errorf("people: signature title fill: %w", err)
 		}

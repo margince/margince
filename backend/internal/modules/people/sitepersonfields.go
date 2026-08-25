@@ -246,10 +246,13 @@ func fillSitePersonFields(ctx context.Context, tx pgx.Tx, personID ids.PersonID,
 		return nil, err
 	}
 	// The title column carries the role for display. Fill-only-empty: the NULL
-	// predicate is the CAS, so an occupied title stands whoever set it.
+	// predicate is the CAS, so an occupied title stands whoever set it — and
+	// archived_at, so this half refuses exactly when the evidence row above
+	// does. Without it an erasure committing between the two statements leaves
+	// the evidence refused and the erased person's title written back.
 	if role := strings.TrimSpace(in.Role); role != "" {
 		tag, err := tx.Exec(ctx, `
-			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL`, personID, role)
+			UPDATE person SET title = $2 WHERE id = $1 AND title IS NULL AND archived_at IS NULL`, personID, role)
 		if err != nil {
 			return nil, fmt.Errorf("people: site person title fill: %w", err)
 		}
