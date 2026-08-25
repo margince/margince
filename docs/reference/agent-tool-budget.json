@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 57,
-    "tokens": 17352,
+    "tokens": 17533,
     "median_tool_tokens": 275,
-    "mean_tool_tokens": 304
+    "mean_tool_tokens": 307
   },
   "agents": [
     {
@@ -41,9 +41,9 @@
         "review_commitments",
         "whats_slipping_this_week"
       ],
-      "tokens": 2272,
+      "tokens": 2330,
       "percent_of_ceiling": 9,
-      "headroom_tokens": 14728,
+      "headroom_tokens": 14670,
       "dangling_cross_references": [
         "at_risk_relationships → account_coverage",
         "at_risk_relationships → intro_path_to",
@@ -71,15 +71,15 @@
     },
     {
       "name": "update_record",
-      "tokens": 565
+      "tokens": 603
+    },
+    {
+      "name": "log_activity",
+      "tokens": 588
     },
     {
       "name": "send_account_email",
       "tokens": 545
-    },
-    {
-      "name": "log_activity",
-      "tokens": 530
     },
     {
       "name": "resolve_entities",
@@ -106,6 +106,10 @@
       "tokens": 431
     },
     {
+      "name": "create_record",
+      "tokens": 429
+    },
+    {
       "name": "query_workspace",
       "tokens": 402
     },
@@ -116,10 +120,6 @@
     {
       "name": "search_records",
       "tokens": 392
-    },
-    {
-      "name": "create_record",
-      "tokens": 391
     },
     {
       "name": "enrich",
@@ -278,12 +278,12 @@
       "tokens": 148
     },
     {
-      "name": "list_tags",
-      "tokens": 102
+      "name": "whoami",
+      "tokens": 136
     },
     {
-      "name": "whoami",
-      "tokens": 88
+      "name": "list_tags",
+      "tokens": 102
     },
     {
       "name": "read_import_report",

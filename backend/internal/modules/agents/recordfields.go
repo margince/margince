@@ -118,9 +118,8 @@ const recordFieldsDescription = "The crm.yaml body for the record_type. The fiel
 	RecordFieldsURI + " — that document, not this description, is what says what a write may " +
 	"name. An extra key must be cf_<slug> for a custom field; any other key is refused BY NAME " +
 	"and never dropped in silence, so a wrong guess is answered with the vocabulary rather than lost. " +
-	"Any field holding a sentence a colleague will read — a description, a summary, a note — is " +
-	"written in the language whoami reports as prose_language, whatever language this conversation " +
-	"is in; names and quoted text are never translated."
+	"Any field holding a sentence — a description, a summary, a note — is written in whoami's " +
+	"prose_language, whatever language this conversation is in."
 
 // customFieldPrefix is the only shape an extra key may take: the
 // customfields engine derives every column it adds as cf_<slug>, so a key
@@ -217,7 +216,16 @@ const timestampNote = `,"description":"RFC 3339 WITH a zone offset (…T16:35:00
 // It names no language itself. These specs are compiled once and served to
 // every installation, so the value is whoami's to resolve per caller and this
 // text's job is to send the model there.
-const proseLanguageNote = `"Prose a colleague will read. Write it in the language whoami reports as prose_language, whatever language this conversation is in. Do not translate names, company names or quoted text."`
+//
+// Two lines rather than one repeated: every byte here is re-sent on every step
+// of every Surface-B run and held by every client for a whole session, and the
+// same forty words twice made log_activity the second most expensive tool on
+// the surface. The second field names the first instead of restating it.
+const proseLanguageNote = `"Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text."`
+
+// proseLanguageSeeSubject points a second prose argument at the rule above
+// rather than paying for it twice.
+const proseLanguageSeeSubject = `"Prose a colleague reads. Same language rule as subject."`
 
 // stageIDNote is appended to every stage-id argument the tool surface takes.
 // Two tools declared it as a bare format:uuid, which named the requirement

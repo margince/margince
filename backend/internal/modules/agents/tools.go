@@ -351,7 +351,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
 			"channel_provider":{"type":"string","description":"Required when kind is \"message\", else refused; a provider list_channel_providers names."},
 			"subject":{"type":"string","description":` + proseLanguageNote + `},
-			"body":{"type":"string","description":` + proseLanguageNote + `},
+			"body":{"type":"string","description":` + proseLanguageSeeSubject + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
 			"direction":{"type":"string","enum":["inbound","outbound"]},
 			"due_at":{"type":"string","format":"date-time"` + timestampNote + `},

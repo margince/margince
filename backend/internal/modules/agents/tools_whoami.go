@@ -71,7 +71,7 @@ func (t whoami) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
 		Name: "whoami", Title: "Who this passport acts for", Version: toolVersionV1,
 		Description:   whoamiCopy.render(),
-		RequiredScope: principal.ScopeRead, Tier: mcp.TierAutoExecute,
+		RequiredScope: principal.ScopeRead, SelfDescribing: true, Tier: mcp.TierAutoExecute,
 		InputSchema:  schema(`{"type":"object","properties":{},"additionalProperties":false}`),
 		OutputSchema: schemaFor[WhoamiResult](),
 	}

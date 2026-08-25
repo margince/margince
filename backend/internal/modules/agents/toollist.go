@@ -56,6 +56,13 @@ func invocableByCaller(ctx context.Context, spec mcp.ToolSpec) bool {
 	if p.Type != principal.PrincipalAgent {
 		return true
 	}
+	// A tool answering who the caller is stays offered whatever the passport
+	// is scoped to do; mcp.ToolSpec.SelfDescribing says why, and the
+	// admission gate reads the same flag so the listing cannot offer what the
+	// gate would then refuse.
+	if spec.SelfDescribing {
+		return true
+	}
 	return p.Scopes.Has(spec.RequiredScope)
 }
 
