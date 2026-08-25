@@ -4,11 +4,12 @@
 package ai
 
 import (
+	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"gopkg.in/yaml.v3"
 )
 
 func TestPriceCall(t *testing.T) {
@@ -107,23 +108,38 @@ func TestSeedModelRatesLocalsAreZero(t *testing.T) {
 	}
 }
 
-// TestSeedModelRatesPricesEveryBindingTheShippedExamplesName derives the
+// TestSeedModelRatesPricesEveryBindingTheShippedSeedsName derives the
 // obligation from the tree rather than from a list somebody remembers to
 // update: a call whose (provider, model) has no rate row reports UNPRICED,
-// which is a materially different signal from FREE, and an example config an
-// operator copies verbatim must not produce one. The examples' commented
-// alternates are presented as one-line swaps, so they carry rows too — this
-// gate can only reach the active bindings the parser returns.
-func TestSeedModelRatesPricesEveryBindingTheShippedExamplesName(t *testing.T) {
+// which is a materially different signal from FREE, and a binding this repo
+// ships for an operator to boot on must not produce one.
+//
+// The corpus moved with the artefact. It used to be the example ROUTING files;
+// those are retired, and what a fresh installation now boots bound to is
+// `seeds.ai_routing` in the shipped margince yamls. Same obligation, read off
+// whatever the tree actually ships — a vanilla config that deliberately binds
+// nothing contributes nothing and is not a failure.
+func TestSeedModelRatesPricesEveryBindingTheShippedSeedsName(t *testing.T) {
 	priced := map[string]bool{}
 	for _, r := range SeedModelRates(seedRatesTestDay) {
 		priced[r.Provider+"/"+r.ModelID] = true
 	}
-	for _, path := range exampleRoutingFiles(t) {
-		cfg, err := LoadRoutingFile(path, config.Static(nil))
-		if err != nil {
-			t.Fatalf("%s no longer parses: %v", path, err)
+	paths, err := filepath.Glob("../../../../config/margince*.yaml")
+	if err != nil {
+		t.Fatalf("globbing the shipped configs: %v", err)
+	}
+	// NOT a tolerated zero: the tree ships margince yamls, so an empty glob
+	// means the path moved and this gate went blind while still reporting PASS.
+	if len(paths) == 0 {
+		t.Fatal("no config/margince*.yaml found — the corpus moved and this gate is checking nothing")
+	}
+	bound := 0
+	for _, path := range paths {
+		cfg, ok := seedRoutingIn(t, path)
+		if !ok {
+			continue // a config that binds nothing owes nothing
 		}
+		bound++
 		// The embeddings lane is not a Tier, so the two are walked as
 		// labelled bindings rather than forced into one map.
 		bindings := map[string]ProviderConfig{"embeddings": cfg.Embeddings.ProviderConfig}
@@ -137,4 +153,41 @@ func TestSeedModelRatesPricesEveryBindingTheShippedExamplesName(t *testing.T) {
 			}
 		}
 	}
+	// The dev config binds a real ladder, so a run where NOTHING bound means the
+	// seeds block moved or stopped parsing — and this gate would report PASS
+	// having read no binding at all.
+	if bound == 0 {
+		t.Fatal("no shipped config declared seeds.ai_routing — the gate read no binding and would pass regardless")
+	}
+}
+
+// seedRoutingIn reads seeds.ai_routing out of a shipped margince yaml and parses
+// it as the binding it is. ok=false for a config that declares none, which is
+// the vanilla posture and not a failure.
+func seedRoutingIn(t *testing.T, path string) (RoutingConfig, bool) {
+	t.Helper()
+	raw, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("reading %s: %v", path, err)
+	}
+	var doc struct {
+		Seeds struct {
+			AIRouting yaml.Node `yaml:"ai_routing"`
+		} `yaml:"seeds"`
+	}
+	if err := yaml.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("%s is not parseable yaml: %v", path, err)
+	}
+	if doc.Seeds.AIRouting.IsZero() {
+		return RoutingConfig{}, false
+	}
+	inner, err := yaml.Marshal(&doc.Seeds.AIRouting)
+	if err != nil {
+		t.Fatalf("%s: re-encoding seeds.ai_routing: %v", path, err)
+	}
+	cfg, err := ParseRouting(inner)
+	if err != nil {
+		t.Fatalf("%s: seeds.ai_routing no longer parses as a binding: %v", path, err)
+	}
+	return cfg, true
 }

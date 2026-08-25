@@ -331,33 +331,14 @@ func pageOfRequest(req model.Request) string {
 // retries, budget bands, secret stripping).
 //
 //nolint:ireturn // the completer seam is the point: three providers (routed, override, fake) behind the one interface every consumer takes.
-func SiteReadDebugBrain(routingPath, modelOverride string, fake bool) (profile, facts, triage completer, banner string, err error) {
-	selected := 0
-	for _, on := range []bool{routingPath != "", modelOverride != "", fake} {
-		if on {
-			selected++
-		}
-	}
-	if selected != 1 {
-		return nil, nil, nil, "", fmt.Errorf("pick exactly one of --ai-routing, --model, --ai-fake")
+func SiteReadDebugBrain(modelOverride string, fake bool) (profile, facts, triage completer, banner string, err error) {
+	if modelOverride != "" == fake {
+		return nil, nil, nil, "", fmt.Errorf("pick exactly one of --model, --ai-fake")
 	}
 	switch {
 	case fake:
 		client := ai.NewFakeClient()
 		return client, client, client, "fake (offline; extraction yields nothing — crawl dry-run)", nil
-	case routingPath != "":
-		cfg, err := ai.LoadRoutingFile(routingPath, config.FromOS)
-		if err != nil {
-			return nil, nil, nil, "", err
-		}
-		router, err := ai.NewLocalRouter(cfg)
-		if err != nil {
-			return nil, nil, nil, "", err
-		}
-		return routerBrain{router: router, task: ai.TaskSiteExtract},
-			routerBrain{router: router, task: ai.TaskSiteFactExtract},
-			routerBrain{router: router, task: ai.TaskSiteTriage},
-			"routing " + routingPath, nil
 	default:
 		cfg, err := pinnedModelRouting(modelOverride)
 		if err != nil {
@@ -415,15 +396,15 @@ type TaskProbeCompleter func(ctx context.Context, req model.Request) (model.Resp
 // DB-less like its sibling: the probe has no pool, so this is the local router
 // — no metering, no budget store, no call tracing. That is what makes a probe
 // free to run and is also why it is not a production path.
-func TaskProbeBrain(routingPath, modelSpec string, fake bool, task ai.Task) (TaskProbeCompleter, string, error) {
+func TaskProbeBrain(modelSpec string, fake bool, task ai.Task) (TaskProbeCompleter, string, error) {
 	selected := 0
-	for _, on := range []bool{routingPath != "", modelSpec != "", fake} {
+	for _, on := range []bool{modelSpec != "", fake} {
 		if on {
 			selected++
 		}
 	}
 	if selected != 1 {
-		return nil, "", fmt.Errorf("pick exactly one of --ai-routing, --model, --ai-fake")
+		return nil, "", fmt.Errorf("pick exactly one of --model, --ai-fake")
 	}
 
 	if fake {
@@ -434,7 +415,7 @@ func TaskProbeBrain(routingPath, modelSpec string, fake bool, task ai.Task) (Tas
 		}, "fake (offline; the seam is driven, nothing is spent)", nil
 	}
 
-	cfg, banner, err := taskProbeRouting(routingPath, modelSpec)
+	cfg, banner, err := taskProbeRouting(modelSpec)
 	if err != nil {
 		return nil, "", err
 	}
@@ -450,14 +431,7 @@ func TaskProbeBrain(routingPath, modelSpec string, fake bool, task ai.Task) (Tas
 	}, banner, nil
 }
 
-func taskProbeRouting(routingPath, modelSpec string) (ai.RoutingConfig, string, error) {
-	if routingPath != "" {
-		cfg, err := ai.LoadRoutingFile(routingPath, config.FromOS)
-		if err != nil {
-			return ai.RoutingConfig{}, "", err
-		}
-		return cfg, "routing " + routingPath, nil
-	}
+func taskProbeRouting(modelSpec string) (ai.RoutingConfig, string, error) {
 	cfg, err := pinnedModelRouting(modelSpec)
 	if err != nil {
 		return ai.RoutingConfig{}, "", err
@@ -476,9 +450,16 @@ func pinnedModelRouting(modelSpec string) (ai.RoutingConfig, error) {
 	if !found || provider == "" || modelName == "" {
 		return ai.RoutingConfig{}, fmt.Errorf("--model wants provider:model (e.g. anthropic:claude-sonnet-4-6), got %q", modelSpec)
 	}
-	return ai.RoutingConfig{
+	cfg := ai.RoutingConfig{
 		Profile:    ai.ProfileCloudFrontier,
 		Tiers:      map[ai.Tier]ai.ProviderConfig{ai.TierCheapCloud: {Provider: provider, Model: modelName}},
 		Embeddings: ai.EmbeddingsConfig{ProviderConfig: ai.ProviderConfig{Provider: ai.ProviderFake}},
-	}, nil
+	}
+	// Bound to the environment, or a cloud --model cannot run: with a nil lookup
+	// cloudKey answers "" for every provider and SelectBrain fails closed with
+	// "BYOK key required" — while the key sits in the environment, unread. The
+	// retired routing file bound this on the way in (LoadRoutingFile called
+	// WithKeys), which is why the gap survived: --model was one of three ways to
+	// bind these lanes, and now it is the only one.
+	return cfg.WithKeys(config.FromOS), nil
 }

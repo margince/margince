@@ -46,7 +46,7 @@ vi.mock("@composition/extensions", () => ({
 
 // B-EP09.4 acceptance, for the SIDEBAR — the left-hand panel and nothing else.
 //
-// It is destinations only: the canonical 12-item nav in order (AC-shell-1b —
+// It is destinations only: the canonical 13-item nav in order (AC-shell-1b —
 // Automations left it for Settings → AI while the dedupe queue and the filter
 // builder took rows, which is a UI divergence on the founder's back-fill list),
 // at most one active

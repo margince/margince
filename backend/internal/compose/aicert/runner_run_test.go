@@ -34,24 +34,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/ai"
 )
 
-const fakeRoutingYAML = `
-profile: eu_hosted
-tiers:
-  local_small: {provider: fake}
-  cheap_cloud: {provider: fake}
-  premium: {provider: fake}
-embeddings: {provider: fake}
-`
-
-func writeRoutingFile(t *testing.T, dir string) string {
-	t.Helper()
-	path := filepath.Join(dir, "routing.yaml")
-	if err := os.WriteFile(path, []byte(fakeRoutingYAML), 0o600); err != nil {
-		t.Fatalf("writing routing file: %v", err)
-	}
-	return path
-}
-
 // scenarioYAML builds one minimal, always-"basic"-named scenario for
 // task — every call site in this file names a different task, never a
 // different scenario name.
@@ -84,14 +66,15 @@ func TestRunWritesOneRecordPerTaskAndItLoadsBackIdentically(t *testing.T) {
 	corpusDir := filepath.Join(dir, "corpus")
 	recordDir := filepath.Join(dir, "records")
 	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
-	routingPath := writeRoutingFile(t, dir)
 
 	records, err := aicert.Run(context.Background(), aicert.RunnerConfig{
-		Census:      censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
-		RoutingPath: routingPath,
-		CorpusDir:   corpusDir,
-		RecordDir:   recordDir,
-		Repeats:     3,
+		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		Profile:      ai.ProfileEUHosted,
+		CorpusDir:    corpusDir,
+		RecordDir:    recordDir,
+		Repeats:      3,
 	}, quietTestLogger())
 	if err != nil {
 		t.Fatalf("Run: %v", err)
@@ -127,15 +110,16 @@ func TestRunTaskFilterRestrictsCertificationToOneTask(t *testing.T) {
 	corpusDir := filepath.Join(dir, "corpus")
 	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
 	writeCorpusFile(t, corpusDir, "cold_start/basic_01.yaml", scenarioYAML("cold_start"))
-	routingPath := writeRoutingFile(t, dir)
 
 	records, err := aicert.Run(context.Background(), aicert.RunnerConfig{
-		Census:      censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
-		RoutingPath: routingPath,
-		CorpusDir:   corpusDir,
-		RecordDir:   filepath.Join(dir, "records"),
-		TaskFilter:  "cold_start",
-		Repeats:     1,
+		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		Profile:      ai.ProfileEUHosted,
+		CorpusDir:    corpusDir,
+		RecordDir:    filepath.Join(dir, "records"),
+		TaskFilter:   "cold_start",
+		Repeats:      1,
 	}, quietTestLogger())
 	if err != nil {
 		t.Fatalf("Run: %v", err)
@@ -149,15 +133,16 @@ func TestRunUnknownTaskFilterFailsLoudly(t *testing.T) {
 	dir := t.TempDir()
 	corpusDir := filepath.Join(dir, "corpus")
 	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
-	routingPath := writeRoutingFile(t, dir)
 
 	_, err := aicert.Run(context.Background(), aicert.RunnerConfig{
-		Census:      censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
-		RoutingPath: routingPath,
-		CorpusDir:   corpusDir,
-		RecordDir:   filepath.Join(dir, "records"),
-		TaskFilter:  "offer_draft",
-		Repeats:     1,
+		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		Profile:      ai.ProfileEUHosted,
+		CorpusDir:    corpusDir,
+		RecordDir:    filepath.Join(dir, "records"),
+		TaskFilter:   "offer_draft",
+		Repeats:      1,
 	}, quietTestLogger())
 	if err == nil || !strings.Contains(err.Error(), "offer_draft") {
 		t.Fatalf("want an error naming the unmatched task filter, got %v", err)
@@ -168,14 +153,15 @@ func TestRunRejectsAnEvenRepeatsBeforeTouchingAnything(t *testing.T) {
 	dir := t.TempDir()
 	corpusDir := filepath.Join(dir, "corpus")
 	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
-	routingPath := writeRoutingFile(t, dir)
 
 	_, err := aicert.Run(context.Background(), aicert.RunnerConfig{
-		Census:      censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
-		RoutingPath: routingPath,
-		CorpusDir:   corpusDir,
-		RecordDir:   filepath.Join(dir, "records"),
-		Repeats:     4,
+		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		Profile:      ai.ProfileEUHosted,
+		CorpusDir:    corpusDir,
+		RecordDir:    filepath.Join(dir, "records"),
+		Repeats:      4,
 	}, quietTestLogger())
 	if err == nil || !strings.Contains(err.Error(), "odd") {
 		t.Fatalf("want an odd-repeats complaint, got %v", err)
@@ -200,7 +186,6 @@ func TestRunWritesTaskARecordAndSurfacesTaskBsWriteErrorInTheSameCall(t *testing
 	recordDir := filepath.Join(dir, "records")
 	writeCorpusFile(t, corpusDir, "cold_start/basic_01.yaml", scenarioYAML("cold_start"))
 	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
-	routingPath := writeRoutingFile(t, dir)
 
 	if err := os.MkdirAll(recordDir, 0o750); err != nil {
 		t.Fatalf("pre-creating the records dir: %v", err)
@@ -214,11 +199,13 @@ func TestRunWritesTaskARecordAndSurfacesTaskBsWriteErrorInTheSameCall(t *testing
 	}
 
 	records, err := aicert.Run(context.Background(), aicert.RunnerConfig{
-		Census:      censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
-		RoutingPath: routingPath,
-		CorpusDir:   corpusDir,
-		RecordDir:   recordDir,
-		Repeats:     1,
+		Census:       censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
+		Binding:      ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		Profile:      ai.ProfileEUHosted,
+		CorpusDir:    corpusDir,
+		RecordDir:    recordDir,
+		Repeats:      1,
 	}, quietTestLogger())
 
 	if len(records) != 1 || records[0].Task != "cold_start" {
@@ -236,23 +223,25 @@ func TestRunWritesTaskARecordAndSurfacesTaskBsWriteErrorInTheSameCall(t *testing
 // it independently), and Run reports every one of them — via
 // errors.Join, not just the first — rather than stopping at the first
 // failure.
-func TestRunMalformedOverrideJoinsAnErrorPerTaskAndAbortsNone(t *testing.T) {
+func TestRunAnUnrunnableBindingJoinsAnErrorPerTaskAndAbortsNone(t *testing.T) {
 	dir := t.TempDir()
 	corpusDir := filepath.Join(dir, "corpus")
 	writeCorpusFile(t, corpusDir, "summarize/basic_01.yaml", scenarioYAML("summarize"))
 	writeCorpusFile(t, corpusDir, "cold_start/basic_01.yaml", scenarioYAML("cold_start"))
-	routingPath := writeRoutingFile(t, dir)
 
 	records, err := aicert.Run(context.Background(), aicert.RunnerConfig{
-		Census:      censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
-		RoutingPath: routingPath,
-		CorpusDir:   corpusDir,
-		RecordDir:   filepath.Join(dir, "records"),
-		Override:    "not-a-valid-override",
-		Repeats:     1,
+		Census: censusFor(t, ai.TaskSummarize, ai.TaskColdStart),
+		// A cloud vendor under a sovereign profile: refused per task, which is
+		// what makes this the errors.Join case rather than an early return.
+		Binding:      ai.ProviderConfig{Provider: "anthropic", Model: "claude-cert-test"},
+		JudgeBinding: ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"},
+		Profile:      ai.ProfileSovereign,
+		CorpusDir:    corpusDir,
+		RecordDir:    filepath.Join(dir, "records"),
+		Repeats:      1,
 	}, quietTestLogger())
 	if len(records) != 0 {
-		t.Fatalf("a malformed override must certify nothing, got %+v", records)
+		t.Fatalf("an unrunnable binding must certify nothing, got %+v", records)
 	}
 	if err == nil {
 		t.Fatal("want a non-nil error")

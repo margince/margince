@@ -72,7 +72,7 @@ func TestCertifyTaskWithTraceWritesCandidateAndJudgePayloads(t *testing.T) {
 	judgeFake := ai.NewFakeClient().Script(scoreJSON(90))
 	sc := testScenario("basic", wideBands)
 
-	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.FakeRoutingConfig(), "", 1, quietLogger(), &certifyHooks{
+	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, testCensus(t), ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 		candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 		judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 		trace:         trace,
@@ -204,7 +204,7 @@ func TestCertifyTaskWithTraceWritesEveryCallARunMade(t *testing.T) {
 	sc := testScenarioOnSite("basic", retryVariant, wideBands)
 
 	if _, err := certifyTask(wsContext(t), ai.TaskSummarize, []Scenario{sc}, retryCensus(t),
-		ai.FakeRoutingConfig(), "", 1, quietLogger(), &certifyHooks{
+		ai.ProviderConfig{Provider: ai.ProviderFake, Model: "candidate"}, ai.ProviderConfig{Provider: ai.ProviderFake, Model: "judge"}, ai.ProfileEUHosted, 1, quietLogger(), &certifyHooks{
 			candidateOpts: []ai.LocalOption{ai.WithFakeClient(candidateFake)},
 			judgeOpts:     []ai.LocalOption{ai.WithFakeClient(judgeFake)},
 			trace:         trace,

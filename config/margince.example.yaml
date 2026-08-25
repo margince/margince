@@ -1,7 +1,7 @@
 # config/margince.example.yaml — the dev deployment configuration (A107/ADR-0061).
 #
 # `make dev` copies this to config/margince.yaml on first run and then LEAVES it
-# — the same create-if-missing / leave-if-exists pattern as config/ai-routing.yaml
+# — created if missing and left alone if it exists
 # — so your edits persist across `make dev-stop` / `make dev`. To reset, delete
 # config/margince.yaml and re-run `make dev`.
 #
@@ -217,7 +217,7 @@ rates:
   # Currencies proposed to bootstrap an empty FX sheet; defaults to USD/GBP/CHF.
   fx_currencies: [USD, GBP, CHF]
   # provider -> pricing-page URL the model-cost refresh crawls + AI-extracts.
-  # Name the provider exactly as ai-routing.yaml binds it; a provider with no
+  # Name the provider exactly as `seeds.ai_routing` binds it; a provider with no
   # entry here is never refreshed, and its seeded rates go stale in silence.
   model_pricing:
     gemini: https://ai.google.dev/gemini-api/docs/pricing
@@ -225,12 +225,12 @@ rates:
     # openai: https://platform.openai.com/docs/pricing
     # OpenRouter publishes prices as JSON rather than a page — per-token, so a
     # proposal is the catalog's number x 1e12 to reach micro-USD/MTok. Uncomment
-    # alongside config/ai-routing.openrouter.example.yaml. The key is the generic
+    # for an OpenAI-wire broker. The key is the generic
     # adapter's name: it refreshes whichever broker openai_compatible is bound to,
     # so change the URL if that is not OpenRouter.
     #
     # A JSON catalog is read one passage PER MODEL and narrowed to the models
-    # ai-routing.yaml binds ON THIS PROVIDER — a broker lists hundreds, and
+    # the binding names ON THIS PROVIDER — a broker lists hundreds, and
     # asking for all of them overruns the extraction's output ceiling. Two
     # consequences worth knowing: a model you do not bind is never repriced from
     # here (its seeded rate in ai.SeedModelRates stands), and if NONE of this
