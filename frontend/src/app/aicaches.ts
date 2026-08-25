@@ -15,7 +15,6 @@
  * named, which is the half a list cannot hold on its own.
  */
 export const LANGUAGE_DEPENDENT_QUERY_PREFIXES = [
-  ["org-brief"],
   ["org-dossier"],
   ["org-growth-fit"],
   ["meetingBrief"],

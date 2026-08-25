@@ -165,7 +165,11 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, orgID ids.Organizatio
 			return err
 		}
 	}
-	return nil
+	// After the loop, not inside it: this decorates rows two of those sections
+	// already read, and it names no section of its own — a reader denied the
+	// activities behind the reasons still gets the deals and the projects,
+	// with the payload saying the reasons are missing.
+	return a.readWorkAttention()
 }
 
 // assembly is one 360's working state. Several sections are built from the

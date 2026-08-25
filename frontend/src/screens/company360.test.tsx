@@ -14,13 +14,13 @@ import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import {
-  AccountBrief,
   CommercialPanel,
   NextSteps,
   PeopleCard,
   type SuggestionAction,
   SuggestionsSection,
 } from "./company360";
+import { CompanyWorkCard } from "./companywork";
 import { CompanyScreen } from "./organizations";
 import { SentenceList } from "./record360";
 import { TaskQuickActions, useTaskUpdate } from "./taskactions";
@@ -267,14 +267,9 @@ function NextStepsWithVerbs({
   );
 }
 
-function renderBrief(three60: ReturnType<typeof view>) {
+function renderWork(three60: ReturnType<typeof view>) {
   render(
-    <AccountBrief
-      orgId="o-1"
-      view={three60 as never}
-      enabled
-      onOpenRecord={() => {}}
-    />,
+    <CompanyWorkCard view={three60 as never} onOpenRecord={() => {}} />,
   );
 }
 
@@ -661,7 +656,7 @@ describe("company view — what changed since the last visit", () => {
       },
     });
     stub(three60);
-    renderBrief(three60);
+    renderWork(three60);
 
     await waitFor(() =>
       expect(
@@ -686,7 +681,7 @@ describe("company view — what changed since the last visit", () => {
       },
     });
     stub(three60);
-    renderBrief(three60);
+    renderWork(three60);
 
     await waitFor(() =>
       expect(
