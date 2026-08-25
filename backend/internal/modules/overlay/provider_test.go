@@ -271,7 +271,7 @@ func TestProviderSearchRefusesATypeTheMirrorCannotHold(t *testing.T) {
 func TestASweepCursorNamesAPositionInTheMirrorRatherThanInOneRequest(t *testing.T) {
 	minted, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(datasource.EntityOrganization), Inner: "mirror-42"})
 	if err != nil {
-		t.Fatalf("encoding a sweep position: %v", err)
+		t.Fatalf("minting a position: %v", err)
 	}
 	resumeAt, inner, err := resumeStream(minted)
 	if err != nil {
@@ -290,7 +290,7 @@ func TestASweepCursorNamesAPositionInTheMirrorRatherThanInOneRequest(t *testing.
 	for _, probe := range []struct{ name, cursor string }{
 		{"not base64 at all", "not a cursor!!"},
 		{"base64 of something that is not a position", base64.RawURLEncoding.EncodeToString([]byte("nonsense"))},
-		{"naming an object class the mirror cannot hold", mustEncodeSweepCursor(t, datasource.EntityProject)},
+		{"naming an object class the mirror cannot hold", sweepCursorFor(t, datasource.EntityProject)},
 	} {
 		t.Run(probe.name, func(t *testing.T) {
 			_, _, err := resumeStream(probe.cursor)
@@ -302,13 +302,13 @@ func TestASweepCursorNamesAPositionInTheMirrorRatherThanInOneRequest(t *testing.
 	}
 }
 
-// mustEncodeSweepCursor mints a position for a probe, failing the test rather
-// than swallowing an encoding error into an empty cursor.
-func mustEncodeSweepCursor(t *testing.T, et datasource.EntityType) string {
+// sweepCursorFor mints a position for a probe, failing the test rather than
+// swallowing an encoding error into an empty cursor.
+func sweepCursorFor(t *testing.T, et datasource.EntityType) string {
 	t.Helper()
 	cursor, err := storekit.EncodeSweepCursor(storekit.SweepCursor{Stream: string(et), Inner: "mirror-7"})
 	if err != nil {
-		t.Fatalf("encoding a sweep position for %s: %v", et, err)
+		t.Fatalf("minting a position for %s: %v", et, err)
 	}
 	return cursor
 }

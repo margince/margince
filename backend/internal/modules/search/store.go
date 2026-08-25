@@ -5,11 +5,9 @@ package search
 
 import (
 	"context"
-	"encoding/base64"
 	"errors"
 	"fmt"
 	"slices"
-	"strconv"
 	"strings"
 	"time"
 
@@ -374,29 +372,28 @@ type rankedCursor struct {
 	ID    ids.UUID
 }
 
+// encodeCursor renders the ranked position. Score, type and id cannot fail to
+// marshal; an empty token would be refused on the way back in.
 func encodeCursor(c rankedCursor) string {
-	raw := strconv.FormatFloat(c.Score, 'g', -1, 64) + "|" + c.Type + "|" + c.ID.String()
-	return base64.RawURLEncoding.EncodeToString([]byte(raw))
+	token, err := storekit.EncodeOpaque(c)
+	if err != nil {
+		return ""
+	}
+	return token
 }
 
 func decodeCursor(s string) (rankedCursor, error) {
-	raw, err := base64.RawURLEncoding.DecodeString(s)
+	c, err := storekit.DecodeOpaque[rankedCursor](s)
 	if err != nil {
+		return rankedCursor{}, err
+	}
+	// The envelope proves the token is ours; this proves it names a row. `{}`
+	// unmarshals cleanly and leaves a zero id, which would page from a position
+	// nothing occupies rather than refuse.
+	if c.ID.IsZero() {
 		return rankedCursor{}, &storekit.MalformedCursorError{}
 	}
-	parts := strings.SplitN(string(raw), "|", 3)
-	if len(parts) != 3 {
-		return rankedCursor{}, &storekit.MalformedCursorError{}
-	}
-	score, err := strconv.ParseFloat(parts[0], 64)
-	if err != nil {
-		return rankedCursor{}, &storekit.MalformedCursorError{}
-	}
-	id, err := ids.Parse(parts[2])
-	if err != nil {
-		return rankedCursor{}, &storekit.MalformedCursorError{}
-	}
-	return rankedCursor{Score: score, Type: parts[1], ID: id}, nil
+	return c, nil
 }
 
 func knownEntity(t string) bool {
