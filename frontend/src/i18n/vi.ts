@@ -30,6 +30,7 @@ export const vi = {
   "trust.save": "Lưu",
   "trust.typedByYou": "do bạn nhập",
   "trust.typedByHuman": "do người nhập",
+  "trust.typedByBuyer": "do người mua nhập",
   "trust.typedByPrefix": "nhập bởi",
   "trust.sourceUnknown": "không ghi nhận nguồn",
   "trust.agentTag": "Tự động bởi {agent}",
@@ -2416,6 +2417,8 @@ export const vi = {
   "compose.scopedToCounted":
     "Giới hạn trong {key} · {inScope} trên {total} hoạt động",
   "compose.scopedTo": "Giới hạn trong {key}",
+  "compose.channelFiling":
+    "Sẽ được lưu vào {project}, cùng với cuộc trò chuyện đang được trả lời.",
   "compose.basedOn": "Dựa trên: {inputs}",
   "compose.whyThisDraft": "Vì sao có bản nháp này?",
   "compose.body": "Nội dung",

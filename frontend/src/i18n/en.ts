@@ -20,6 +20,7 @@ export const en = {
   "trust.save": "Save",
   "trust.typedByYou": "typed by you",
   "trust.typedByHuman": "typed by a person",
+  "trust.typedByBuyer": "typed by a buyer",
   "trust.typedByPrefix": "typed by",
   "trust.sourceUnknown": "source not recorded",
   "trust.agentTag": "Automated by {agent}",
@@ -2452,6 +2453,11 @@ export const en = {
   "compose.scopedToCounted":
     "Scoped to {key} · {inScope} of {total} activities",
   "compose.scopedTo": "Scoped to {key}",
+  // A channel reply has no picker: its send carries no filing field, so the
+  // conversation's own project is inherited. This is the disclosure that
+  // replaces the choice.
+  "compose.channelFiling":
+    "Will be filed under {project}, with the conversation it answers.",
   "compose.basedOn": "Based on: {inputs}",
   "compose.whyThisDraft": "Why this draft?",
   "compose.body": "Body",

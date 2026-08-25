@@ -22,6 +22,7 @@ export const de = {
   "trust.save": "Speichern",
   "trust.typedByYou": "von dir eingetragen",
   "trust.typedByHuman": "von einer Person eingetragen",
+  "trust.typedByBuyer": "von einem Käufer eingetragen",
   "trust.typedByPrefix": "eingetragen von",
   "trust.sourceUnknown": "Herkunft nicht erfasst",
   "trust.agentTag": "Automatisiert durch {agent}",
@@ -2435,6 +2436,8 @@ export const de = {
   "compose.scopedToCounted":
     "Bezogen auf {key} · {inScope} von {total} Aktivitäten",
   "compose.scopedTo": "Bezogen auf {key}",
+  "compose.channelFiling":
+    "Wird zusammen mit der beantworteten Konversation unter {project} abgelegt.",
   "compose.basedOn": "Grundlage: {inputs}",
   "compose.whyThisDraft": "Warum dieser Entwurf?",
   "compose.body": "Nachricht",

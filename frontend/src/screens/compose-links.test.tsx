@@ -412,3 +412,84 @@ describe("what a sent message files under", () => {
     expect(sent.some((r) => r.key === "POST /emails")).toBe(false);
   });
 });
+
+// What the composer SAYS a send files under, on the one transport that cannot
+// be asked. A channel reply posts the words and the consent purpose and
+// nothing else, so the server files it under the links of the conversation it
+// answers — a filing the rep could not see until it had already happened.
+describe("what a channel reply says it will be filed under", () => {
+  const CONVERSATION = {
+    id: "act-1",
+    kind: "message",
+    channel_provider: "telegram",
+    links: [
+      { entity_type: "person", entity_id: "per-1" },
+      { entity_type: "project", entity_id: "proj-1" },
+    ],
+  };
+
+  function renderChannelReply() {
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="person"
+        entityId="per-1"
+        personId="per-1"
+        kind="message"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+  }
+
+  it("names the project the conversation carries", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse(CONVERSATION),
+      "GET /projects/proj-1": () =>
+        jsonResponse({ id: "proj-1", name: "ERP rollout", key: "ERP-27" }),
+    });
+    renderChannelReply();
+
+    expect(
+      await screen.findByText(
+        "Will be filed under ERP-27 · ERP rollout, with the conversation it answers.",
+      ),
+    ).toBeTruthy();
+    // Stated, not asked. A picker here would take an answer the send has no
+    // field to carry, and the server would file the reply under the
+    // conversation's own project regardless of what the rep chose.
+    expect(screen.queryByLabelText("Project")).toBeNull();
+  });
+
+  it("says nothing when the conversation carries no project", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () =>
+        jsonResponse({ ...CONVERSATION, links: [] }),
+    });
+    renderChannelReply();
+
+    // The composer is up and usable — the absent line is the assertion, not an
+    // unrendered surface standing in for one.
+    expect(await screen.findByPlaceholderText("Body")).toBeTruthy();
+    expect(screen.queryByText(/Will be filed under/)).toBeNull();
+  });
+
+  it("leaves a mail reply asking, because a subject tag can carry the answer", async () => {
+    stubRoutes({
+      "GET /activities/act-1": () => jsonResponse({ id: "act-1", links: [] }),
+    });
+    render(
+      <ComposeModal
+        activityId="act-1"
+        entityType="organization"
+        entityId="org-1"
+        personId="per-1"
+        open
+        onClose={vi.fn()}
+      />,
+    );
+
+    expect(await screen.findByLabelText("Project")).toBeTruthy();
+    expect(screen.queryByText(/Will be filed under/)).toBeNull();
+  });
+});
