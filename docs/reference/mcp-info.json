@@ -11,8 +11,8 @@
     "tools": 57,
     "resources": 9,
     "tool_catalog_bytes": 158363,
-    "resource_catalog_bytes": 3678,
-    "approx_wire_tokens_total": 40510,
+    "resource_catalog_bytes": 3513,
+    "approx_wire_tokens_total": 40469,
     "largest_tool_bytes": 6473,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
@@ -10402,9 +10402,6 @@
               "frameDomains": [],
               "resourceDomains": []
             },
-            "permissions": {
-              "geolocation": {}
-            },
             "prefersBorder": true
           }
         },
@@ -10422,9 +10419,6 @@
               "connectDomains": [],
               "frameDomains": [],
               "resourceDomains": []
-            },
-            "permissions": {
-              "geolocation": {}
             },
             "prefersBorder": true
           }
@@ -10444,9 +10438,6 @@
               "frameDomains": [],
               "resourceDomains": []
             },
-            "permissions": {
-              "geolocation": {}
-            },
             "prefersBorder": true
           }
         },
@@ -10465,9 +10456,6 @@
               "frameDomains": [],
               "resourceDomains": []
             },
-            "permissions": {
-              "geolocation": {}
-            },
             "prefersBorder": true
           }
         },
@@ -10485,9 +10473,6 @@
               "connectDomains": [],
               "frameDomains": [],
               "resourceDomains": []
-            },
-            "permissions": {
-              "geolocation": {}
             },
             "prefersBorder": true
           }

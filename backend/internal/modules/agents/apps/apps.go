@@ -144,25 +144,34 @@ func DeclaredViews() map[string]string {
 	return out
 }
 
-// sandbox is the policy every view here declares, and the ONE place it is
-// stated.
+// sandbox is the policy a view declares, and the ONE place it is stated.
 //
-// EVERY allowlist is left empty, and every permission unasked EXCEPT
-// geolocation. That is the whole security posture of these views: no fetch, no
-// remote script, no nested frame, no camera, no clipboard. See the package
-// comment for why an empty list is the promise rather than a placeholder.
+// EVERY allowlist is left empty on every view, and every permission is unasked
+// except on the view that uses one. That is the whole security posture of these
+// views: no fetch, no remote script, no nested frame, no camera, no clipboard.
+// See the package comment for why an empty list is the promise rather than a
+// placeholder.
 //
-// WHY GEOLOCATION IS THE ONE EXCEPTION. Reading the device's own position is a
-// different act from letting a document reach the network, and the empty
-// allowlists are what keep the two apart. A view may learn where it is; it still
-// has no origin it may send that anywhere, so a coordinate can only travel back
-// the way every other answer does — through the host, into a tool call the user
-// sees. The permission widens what a view may KNOW, not what it may REACH.
+// WHY GEOLOCATION IS ASKED FOR, AND ONLY BY THE PROBE. Reading the device's own
+// position is a different act from letting a document reach the network, so it
+// is not refused by the same argument the empty allowlists make. But a host maps
+// this declaration onto an iframe `allow` attribute, so a card that declares it
+// and never calls it is a card that would carry the capability if its code were
+// ever substituted. Only geo-probe.html reads a position, so only geo-probe.html
+// asks.
 //
-// It is asked for on every view rather than one, because a host grants this per
-// iframe and a view that asks only when it expects to need the answer has
-// already lost the case it was for: the position is wanted at the moment
-// somebody hands over a business card, not one card later.
+// The first version of this asked on every view, on the reasoning that the
+// position is wanted the moment somebody hands over a business card rather than
+// one card later. That is a real product argument and it may come back — but it
+// belongs in the diff that makes a product card actually read a position, not
+// ahead of one. Least privilege is the default until a view needs otherwise.
+//
+// WHAT AN EMPTY CSP DOES NOT BUY, stated because the obvious reading is wrong: a
+// view still has window.parent.postMessage, which is how the bridge talks to its
+// host at all, and no origin allowlist governs it. So a coordinate in a view is
+// reachable by the host, and the containment here is that the ONE view holding
+// one is a probe that displays it and sends nothing. It is NOT that the sandbox
+// makes a coordinate unsendable. See #2619.
 //
 // A HOST MAY REFUSE, and that is the expected outcome until proven otherwise —
 // the extension says hosts "MAY honor these permissions… but are not required
@@ -172,10 +181,11 @@ func DeclaredViews() map[string]string {
 //
 // It is one function because the policy reaches a host TWICE — on the catalogue
 // and on the read — and those are the two answers that must not be allowed to
-// differ. A second literal would be a second chance to widen one of them.
-func sandbox() *mcp.ResourceUI {
+// differ. A second literal would be a second chance to widen one of them, which
+// is why the per-view part is a parameter rather than a second policy.
+func sandbox(uri string) *mcp.ResourceUI {
 	return &mcp.ResourceUI{
-		Permissions: mcp.ResourcePermissions{Geolocation: true},
+		Permissions: mcp.ResourcePermissions{Geolocation: uri == GeoProbeURI},
 		// PrefersBorder, because these render as a panel of rows beside a
 		// conversation and read better with an edge than bleeding into it.
 		PrefersBorder: true,
@@ -192,7 +202,7 @@ func describe(v view) mcp.Resource {
 		// filter on the resource surface applies to it exactly as to any other
 		// document — a passport with no read grant is not shown these.
 		RequiredScope: principal.ScopeRead,
-		UI:            sandbox(),
+		UI:            sandbox(v.uri),
 	}
 }
 
@@ -237,7 +247,7 @@ func (p *Provider) ReadResource(_ context.Context, uri string) (mcp.ResourceCont
 	// The policy travels WITH the bytes, from the same function the catalogue
 	// entry took it from — so a host that read this document without listing
 	// first sandboxes it under exactly the rules it would have been told.
-	return mcp.ResourceContents{URI: uri, MIMEType: mcp.AppMIMEType, Text: text, UI: sandbox()}, nil
+	return mcp.ResourceContents{URI: uri, MIMEType: mcp.AppMIMEType, Text: text, UI: sandbox(uri)}, nil
 }
 
 var _ mcp.ResourceProvider = (*Provider)(nil)

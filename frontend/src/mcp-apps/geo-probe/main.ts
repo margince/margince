@@ -37,7 +37,9 @@ const MEANING: Record<string, string> = {
   "host-blocked":
     "The host did not allow this frame to ask. Nobody was prompted. This is the host's decision, not yours and not a bug here.",
   "user-declined":
-    "A prompt was shown and refused, or the system withheld it. The permission itself got through — try again and accept to confirm.",
+    "A prompt was shown and refused. The permission itself got through — try again and accept to confirm.",
+  "refused-unclassified":
+    "Refused, and this build does not recognise the wording. It could be the host blocking the frame or a person declining — read the message above, and add it to the patterns in geo.ts once you know which.",
   unavailable:
     "This document has no geolocation API at all, which usually means it is not a secure context.",
   timeout:

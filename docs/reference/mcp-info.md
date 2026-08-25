@@ -14,8 +14,8 @@ receives it. This page is rendered from that file.
 | Tools | 57 |
 | Resources | 9 |
 | Tool catalog | 154.7 KB |
-| Resource catalog | 3.6 KB |
-| Approx. wire tokens | 40510 |
+| Resource catalog | 3.4 KB |
+| Approx. wire tokens | 40469 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -168,9 +168,6 @@ The ranked brief queue, with the factor decomposition each item ranked on.
       "frameDomains": [],
       "resourceDomains": []
     },
-    "permissions": {
-      "geolocation": {}
-    },
     "prefersBorder": true
   }
 }
@@ -196,9 +193,6 @@ The colleagues who know a contact, warmest first, with the interactions behind e
       "connectDomains": [],
       "frameDomains": [],
       "resourceDomains": []
-    },
-    "permissions": {
-      "geolocation": {}
     },
     "prefersBorder": true
   }
@@ -226,9 +220,6 @@ The promises still outstanding, oldest first, with who owes each one and how far
       "frameDomains": [],
       "resourceDomains": []
     },
-    "permissions": {
-      "geolocation": {}
-    },
     "prefersBorder": true
   }
 }
@@ -255,9 +246,6 @@ What the delivery side is being given for one project, with each gap beside the 
       "frameDomains": [],
       "resourceDomains": []
     },
-    "permissions": {
-      "geolocation": {}
-    },
     "prefersBorder": true
   }
 }
@@ -283,9 +271,6 @@ The deals at risk this week, worst first, with the evidence each risk claim rest
       "connectDomains": [],
       "frameDomains": [],
       "resourceDomains": []
-    },
-    "permissions": {
-      "geolocation": {}
     },
     "prefersBorder": true
   }

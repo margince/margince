@@ -39,8 +39,21 @@ const MAX_AGE_MS = 60_000;
 export type GeoRefusal =
   /** The iframe carries no `allow="geolocation"`. Nobody was ever prompted. */
   | "host-blocked"
-  /** A prompt was shown and refused, or the OS withheld it. */
+  /** A prompt was shown and refused, and the message says so. */
   | "user-declined"
+  /**
+   * Refused with a code-1 message this code does not recognise.
+   *
+   * It is a state of its own rather than a default, and that is the point. Code
+   * 1 covers a permissions-policy block, an insecure context, a person
+   * declining, AND a persistent OS-level denial, and the messages are not
+   * standardised — every engine words them differently. Folding an unfamiliar
+   * message into "user-declined" would tell a tester the permission got through
+   * and to try again, which is the exact OPPOSITE conclusion when the truth was
+   * a host block, and retrying cannot help. Saying "unrecognised" is worth more
+   * than a confident guess: `message` carries the evidence either way.
+   */
+  | "refused-unclassified"
   /** The API is not present — an old browser, or a non-secure context. */
   | "unavailable"
   /** Asked and allowed, but no fix arrived in time. */
@@ -72,23 +85,35 @@ export type GeoResult =
       readonly code: number;
     };
 
+/** Engine wordings that mean the frame was never allowed to ask. */
+const HOST_BLOCKED =
+  /permissions?\s+policy|feature\s+policy|disabled in this document/i;
+
+/** Engine wordings that mean a person was asked and refused. */
+const USER_DECLINED = /user\s+denied|denied by (the )?user|user\s+declined/i;
+
 /**
  * classify turns a GeolocationPositionError into the distinction that matters.
  *
- * The permissions-policy wording is matched case-insensitively and loosely
- * because it is not specified anywhere — it is what engines happen to say, and
- * Chrome, Firefox and Safari each word it differently. A miss here is not
- * dangerous: it degrades to "user-declined", and `message` still carries the
- * truth for anyone reading the detail.
+ * BOTH sides are matched, and anything else is "refused-unclassified" rather
+ * than a guess. Code 1 is PERMISSION_DENIED for four different reasons — a
+ * permissions-policy block, an insecure context, a person declining, a
+ * persistent OS denial — and the messages are not standardised. An earlier
+ * version defaulted an unmatched message to "user-declined", which would have
+ * told a tester "the permission got through, try again and accept" for a host
+ * block where retrying can never work: the opposite of the truth, stated
+ * confidently. Two positive matchers and an explicit unknown cannot do that.
+ *
+ * The patterns are what engines happen to say rather than anything specified,
+ * so they will need extending. `message` is carried verbatim either way, which
+ * is what makes an unrecognised wording a finding rather than a dead end.
  */
-function classify(err: GeolocationPositionError): GeoRefusal {
+export function classify(err: GeolocationPositionError): GeoRefusal {
   if (err.code === err.TIMEOUT) return "timeout";
   if (err.code === err.POSITION_UNAVAILABLE) return "position-unavailable";
-  return /permissions?\s+policy|feature\s+policy|disabled in this document/i.test(
-    err.message,
-  )
-    ? "host-blocked"
-    : "user-declined";
+  if (HOST_BLOCKED.test(err.message)) return "host-blocked";
+  if (USER_DECLINED.test(err.message)) return "user-declined";
+  return "refused-unclassified";
 }
 
 /**

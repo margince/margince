@@ -201,14 +201,19 @@ func TestEveryViewIsServedUnderTheAppProfile(t *testing.T) {
 		// added to the seam later would be invisible to a hand-written list, and
 		// silently-unchecked is the one thing a permission must not be.
 		//
-		// Geolocation is the one asked for, on every view, and the CSP assertion
-		// directly above is what makes it safe: a view may learn where it is and
-		// has no origin to send it to. A coordinate leaves only the way every
-		// other answer does — through the host, into a tool call the user sees.
-		// A SECOND permission appearing here is a real widening and fails.
-		if want := (mcp.ResourcePermissions{Geolocation: true}); r.UI.Permissions != want {
-			t.Errorf("the view %s asks for browser permissions %+v, want %+v — a permission beyond geolocation "+
-				"is a widening of the sandbox and this assertion is where it gets argued",
+		// The expected value is per view, and that IS the assertion. A host maps
+		// this declaration onto an iframe `allow` attribute, so a card that
+		// declares a permission it never uses would carry the capability if its
+		// code were ever substituted. Geolocation belongs to the probe, which is
+		// the only view that reads a position; every product card asks for
+		// nothing. A permission spreading to a second view fails here.
+		want := mcp.ResourcePermissions{}
+		if r.URI == apps.GeoProbeURI {
+			want.Geolocation = true
+		}
+		if r.UI.Permissions != want {
+			t.Errorf("the view %s asks for browser permissions %+v, want %+v — a card declaring a permission "+
+				"it does not use is a widening of the sandbox, and this assertion is where it gets argued",
 				r.URI, r.UI.Permissions, want)
 		}
 	}
