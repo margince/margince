@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2272 | 9% | 14728 | 15 | 8 |
-| _whole served catalog, for scale_ | 56 | 17188 | 71% | — | — | — |
+| _whole served catalog, for scale_ | 57 | 17352 | 72% | — | — | — |
 
 ### `morning_brief`
 
@@ -119,7 +119,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 281 tokens, mean 306, across 56 served tools.
+Median 275 tokens, mean 304, across 57 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -176,6 +176,7 @@ a term in an addition.
 | `remove_tag` | 190 | — |
 | `list_channel_providers` | 181 | — |
 | `account_coverage` | 178 | 2 scenarios |
+| `check_location_support` | 163 | — |
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |
 | `commit_import` | 149 | — |
