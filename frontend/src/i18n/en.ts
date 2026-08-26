@@ -5528,7 +5528,7 @@ export const en = {
   "googleApp.replace": "Replace app",
   "googleApp.removeConfirmTitle": "Remove the Google app?",
   "googleApp.removeConfirmBody":
-    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app — Microsoft and IMAP mailboxes are not affected — and first-run setup will ask for one again.",
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app. Microsoft and IMAP mailboxes are not affected. First-run setup will ask for one again.",
   "googleApp.remove": "Remove app",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
@@ -5583,6 +5583,14 @@ export const en = {
   "aiRouting.profile.eu_hosted": "EU-hosted",
   "aiRouting.profile.sovereign": "Sovereign (no egress)",
   "aiRouting.profile.cloud_frontier": "Cloud frontier",
+  "aiRouting.dimensions.label": "Vector width",
+  "aiRouting.dimensions.help":
+    "Leave blank for the provider's default. A value outside 1 to 2000 is refused.",
+  "aiRouting.embeddings.label": "Embeddings",
+  "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
+  "aiRouting.baseUrl.label": "Host",
+  "aiRouting.baseUrl.help":
+    "The vendor's host root, with no version segment. The adapter adds /v1. Required for openai_compatible, which has no default of its own.",
   "aiRouting.model.label": "Model",
   "aiRouting.save": "Save routing",
   "aiRouting.saving": "Saving the binding…",

@@ -5490,7 +5490,7 @@ export const de = {
   "installationSettings.save": "Speichern",
   "googleApp.title": "Google-App",
   "googleApp.sub":
-    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört — Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen, nicht mit unseren.",
+    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört. Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen, nicht mit unseren.",
   "googleApp.configured": "In Verwendung: {clientId}",
   "googleApp.absent":
     "Keine App hinterlegt. Gmail und Kalender lassen sich erst danach verbinden.",
@@ -5500,7 +5500,7 @@ export const de = {
   "googleApp.replace": "App ersetzen",
   "googleApp.removeConfirmTitle": "Google-App entfernen?",
   "googleApp.removeConfirmBody":
-    "Das Client-Secret lässt sich nicht wieder auslesen — nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App — Microsoft- und IMAP-Postfächer sind nicht betroffen —, und die Ersteinrichtung fragt wieder danach.",
+    "Das Client-Secret lässt sich nicht wieder auslesen. Nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App. Microsoft- und IMAP-Postfächer sind nicht betroffen. Die Ersteinrichtung fragt wieder danach.",
   "googleApp.remove": "App entfernen",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
@@ -5516,7 +5516,7 @@ export const de = {
   "firstRun.ai.embedModel": "Embedding-Modell",
   "firstRun.google.title": "Google-App verbinden",
   "firstRun.google.sub":
-    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört — Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen. Später unter Einstellungen änderbar.",
+    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört. Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen. Später unter Einstellungen änderbar.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client-ID",
@@ -5553,6 +5553,14 @@ export const de = {
   "aiRouting.profile.eu_hosted": "In der EU gehostet",
   "aiRouting.profile.sovereign": "Souverän (kein Datenabfluss)",
   "aiRouting.profile.cloud_frontier": "Cloud-Frontier",
+  "aiRouting.dimensions.label": "Vektorbreite",
+  "aiRouting.dimensions.help":
+    "Leer lassen für den Standard des Anbieters. Ein Wert außerhalb von 1 bis 2000 wird abgelehnt.",
+  "aiRouting.embeddings.label": "Embeddings",
+  "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
+  "aiRouting.baseUrl.label": "Host",
+  "aiRouting.baseUrl.help":
+    "Die Host-Wurzel des Anbieters, ohne Versionssegment. Der Adapter hängt /v1 an. Für openai_compatible erforderlich, das keinen eigenen Standard hat.",
   "aiRouting.model.label": "Modell",
   "aiRouting.save": "Routing speichern",
   "aiRouting.saving": "Bindung wird gespeichert…",

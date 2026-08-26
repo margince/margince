@@ -5,11 +5,13 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { pickOption } from "../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../i18n";
 import { AiRoutingCard } from "./ai-routing";
 
@@ -30,6 +32,18 @@ function jsonResponse(body: unknown, status = 200) {
 const ROUTING_EDITOR: GrantSpec = { ai_routing: ["read", "update"] };
 const ROUTING_READER: GrantSpec = { ai_routing: ["read"] };
 
+/** What PUT /ai/routing carries, as these tests read it back. */
+type CapturedRouting = {
+  profile: string;
+  tiers: Record<string, { provider: string; model: string; base_url?: string }>;
+  embeddings: {
+    provider: string;
+    model: string;
+    base_url?: string;
+    dimensions?: number;
+  };
+};
+
 const BOUND = {
   profile: "eu_hosted",
   tiers: {
@@ -41,7 +55,11 @@ const BOUND = {
 
 function backendFor(allow: GrantSpec, routing: unknown = BOUND) {
   let stored = routing;
-  let capturedPut: unknown = null;
+  // Typed as the document this endpoint takes, so an assertion can read a field
+  // off it without an unchecked cast at every call site. The stub still stores
+  // whatever arrives — the type is a claim about the ENDPOINT, not a check on
+  // the body, and a test asserting the wrong shape fails on the assertion.
+  let capturedPut: CapturedRouting | null = null;
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
@@ -51,7 +69,7 @@ function backendFor(allow: GrantSpec, routing: unknown = BOUND) {
       }
       if (req.url.includes("/ai/routing")) {
         if (req.method === "PUT") {
-          capturedPut = await req.json();
+          capturedPut = (await req.json()) as CapturedRouting;
           stored = capturedPut;
         }
         return jsonResponse(stored);
@@ -59,7 +77,10 @@ function backendFor(allow: GrantSpec, routing: unknown = BOUND) {
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
   );
-  return { fetchMock, getCapturedPut: () => capturedPut };
+  return {
+    fetchMock,
+    getCapturedPut: (): CapturedRouting | null => capturedPut,
+  };
 }
 
 const render = (ui: ReactNode, locale: Locale = "en") => {
@@ -178,5 +199,111 @@ describe("AiRoutingCard", () => {
       "ai-routing-tier-premium",
       "ai-routing-tier-frontier",
     ]);
+  });
+
+  // The embed lane was missing from this form entirely, so a reader could
+  // re-point every chat tier and go on sending their retrieval to the vendor
+  // they had just moved away from, with nothing on screen saying so.
+  it("lets the embedding lane be re-pointed, and sends it", async () => {
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const model = await screen.findByDisplayValue("gemini-embedding-001");
+    await userEvent.clear(model);
+    await userEvent.type(model, "gemini-embedding-002");
+    await userEvent.click(
+      screen.getByRole("button", { name: /save routing/i }),
+    );
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    expect(backend.getCapturedPut()?.embeddings.model).toBe(
+      "gemini-embedding-002",
+    );
+  });
+
+  // openai_compatible has no default host and the server refuses a binding
+  // without one. With no field for it, choosing that adapter produced a write
+  // the running role could never adopt: saved cleanly, then declined at the
+  // rebind, leaving the OLD models serving with the reason only in a log.
+  it("asks for a host when the adapter has no default, and only then", async () => {
+    // An instance rather than the default export: pickOption drives a portalled
+    // listbox and needs a session that keeps pointer state across the open.
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-3.5-flash");
+
+    // A native vendor addresses its own API, so no host is asked for.
+    expect(screen.queryByLabelText("Host")).toBeNull();
+
+    const tier = screen.getByTestId("ai-routing-tier-premium");
+    await pickOption(
+      user,
+      within(tier).getByRole("combobox"),
+      "openai_compatible",
+    );
+    const host = await within(tier).findByLabelText("Host");
+    await user.type(host, "https://openrouter.ai/api");
+    await userEvent.click(
+      screen.getByRole("button", { name: /save routing/i }),
+    );
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut();
+    expect(sent?.tiers.premium.provider).toBe("openai_compatible");
+    expect(sent?.tiers.premium.base_url).toBe("https://openrouter.ai/api");
+  });
+  // The lane the operator reported as unreachable: it takes a provider of its
+  // own, and re-pointing it has to carry the host and the width with it or the
+  // server refuses the binding it just accepted.
+  it("re-points the embedding lane onto a hosted adapter, with its width", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-embedding-001");
+
+    const lane = screen.getByTestId("ai-routing-embeddings");
+    await pickOption(
+      user,
+      within(lane).getByRole("combobox"),
+      "openai_compatible",
+    );
+    await user.type(
+      await within(lane).findByLabelText("Host"),
+      "https://openrouter.ai/api",
+    );
+    await user.type(within(lane).getByLabelText("Vector width"), "1536");
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut()?.embeddings;
+    expect(sent?.provider).toBe("openai_compatible");
+    expect(sent?.base_url).toBe("https://openrouter.ai/api");
+    expect(sent?.dimensions).toBe(1536);
+  });
+
+  // An emptied width means "whatever the provider compiles in", which the
+  // contract spells as an absent field. A 0 is a different instruction, and a
+  // NaN does not survive the JSON at all, so neither may reach the wire.
+  it("sends no width at all when the field is emptied, rather than a zero", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-embedding-001");
+
+    const lane = screen.getByTestId("ai-routing-embeddings");
+    const width = within(lane).getByLabelText("Vector width");
+    await user.type(width, "768");
+    await user.clear(width);
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut()?.embeddings;
+    expect(sent?.dimensions).toBeUndefined();
+    expect(JSON.stringify(sent)).not.toContain("dimensions");
   });
 });

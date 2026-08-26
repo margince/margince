@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
+	"github.com/gradionhq/margince/backend/internal/platform/config"
 )
 
 func TestParseRoutingValidatesAtStartup(t *testing.T) {
@@ -306,5 +308,94 @@ profile: sovereign
 	cfg = cfg.WithKeys(allCloudKeys())
 	if cfg.Profile != ProfileSovereign || len(cfg.Tiers) != 2 {
 		t.Fatalf("unexpected parse: %+v", cfg)
+	}
+}
+
+// A binding this process cannot SERVE is refused at the write, not at the
+// rebind.
+//
+// This is the failure it exists to stop, reported from a live install: an
+// operator re-points every tier at a broker through Settings, the write is
+// accepted, the screen says saved — and the running role then declines to adopt
+// it, because SelectBrain will not build an openai_compatible client without a
+// host. It keeps serving the binding it already had, deliberately, so the
+// installation goes on answering with the OLD models while the stored document
+// says otherwise. The only account of why is an error line in the server log.
+//
+// Refusing at the door turns that into a message on the form, next to the field
+// that is missing.
+func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
+	broker := ProviderConfig{Provider: "openai_compatible", Model: "mistralai/mistral-small-3.2-24b-instruct"}
+	withHost := broker
+	withHost.BaseURL = "https://openrouter.ai/api"
+
+	for _, tc := range []struct {
+		name    string
+		cfg     RoutingConfig
+		refused bool
+		says    string
+	}{
+		{
+			name: "a chat tier with no host",
+			cfg: RoutingConfig{
+				Profile:    ProfileEUHosted,
+				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: broker},
+				Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}},
+			},
+			refused: true, says: "no base_url",
+		},
+		{
+			name: "the embeddings lane with no host",
+			cfg: RoutingConfig{
+				Profile:    ProfileEUHosted,
+				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake}},
+				Embeddings: EmbeddingsConfig{ProviderConfig: broker},
+			},
+			refused: true, says: "no base_url",
+		},
+		{
+			// Under a sovereign profile the missing host is beside the point:
+			// openai_compatible is refused there whatever its endpoint, and
+			// answering about base_url first sends the reader to fill in a
+			// field on a binding that is refused either way.
+			name: "a sovereign profile outranks the missing host",
+			cfg: RoutingConfig{
+				Profile:    ProfileSovereign,
+				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: providerOllama, BaseURL: "http://127.0.0.1:11434"}},
+				Embeddings: EmbeddingsConfig{ProviderConfig: broker},
+			},
+			refused: true, says: "forbids cloud provider",
+		},
+		{
+			// The other arm, so the rule cannot pass by refusing everything.
+			name: "the same binding with its host",
+			cfg: RoutingConfig{
+				Profile:    ProfileEUHosted,
+				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: withHost},
+				Embeddings: EmbeddingsConfig{ProviderConfig: withHost},
+			},
+			refused: false,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			err := tc.cfg.validate()
+			if tc.refused {
+				if err == nil {
+					t.Fatal("accepted a binding SelectBrain cannot build — it would store cleanly and never be adopted")
+				}
+				if !strings.Contains(err.Error(), tc.says) {
+					t.Errorf("refusal reads %q, and must name what is missing", err)
+				}
+				return
+			}
+			if err != nil {
+				t.Fatalf("refused a servable binding: %v", err)
+			}
+			// And it really is servable: the refusal above must be about the
+			// host rather than about the vendor being unwelcome.
+			if _, err := SelectBrain(withHost, config.Static(map[string]string{"OPENAI_COMPATIBLE_API_KEY": "k"})); err != nil {
+				t.Fatalf("validate accepted a binding SelectBrain then refused: %v", err)
+			}
+		})
 	}
 }
