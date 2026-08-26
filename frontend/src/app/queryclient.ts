@@ -71,6 +71,23 @@ function refreshNamedReferences(client: QueryClient): void {
   });
 }
 
+// A record's history is a read of what has just been written to it, so ANY
+// successful write makes the open history stale — including one made from
+// another panel on the same page, and including a restore, whose whole purpose
+// is to add a line to the list the reader is looking at.
+//
+// Invalidated for every successful mutation, for the same reason the named
+// references are: "which writes change a record's history" is every write, and
+// a list of them is a list the next one written is left off. Only MOUNTED
+// reads refetch, so a reader with no history panel open pays nothing.
+function refreshRecordHistory(client: QueryClient): void {
+  client.invalidateQueries({
+    predicate: (query) =>
+      query.queryKey[0] === "record-history" ||
+      query.queryKey[0] === "field-history",
+  });
+}
+
 // Built per call rather than exported as a module singleton so the policy can
 // be exercised without importing main.tsx, which mounts the application into
 // the document as a side effect of being imported.
@@ -98,7 +115,10 @@ export function createQueryClient(): QueryClient {
     // to a mutation, not a fault anyone should open a console for.
     mutationCache: new MutationCache({
       onError: logUnexpectedError,
-      onSuccess: () => refreshNamedReferences(client),
+      onSuccess: () => {
+        refreshNamedReferences(client);
+        refreshRecordHistory(client);
+      },
     }),
   });
   return client;

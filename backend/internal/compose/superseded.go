@@ -138,7 +138,8 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, entityType string, id 
 		SELECT k.key
 		FROM jsonb_each($2::jsonb) AS k(key, value)
 		JOIN `+pgx.Identifier{entityType}.Sanitize()+` r ON r.id = $1
-		WHERE to_jsonb(r) -> k.key IS DISTINCT FROM k.value
+		WHERE to_jsonb(r) ? k.key
+		  AND to_jsonb(r) -> k.key IS DISTINCT FROM k.value
 		ORDER BY 1`, id, asked)
 	if err != nil {
 		return nil, err
@@ -158,20 +159,20 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, entityType string, id 
 	return reportedAs(moved, imageKeys(after)), nil
 }
 
-// relationBackedFields live in their own table rather than in a column on the
-// record, so `to_jsonb(row) -> key` cannot answer what they hold and every one
-// of them would read as moved.
+// Only keys the record holds as COLUMNS are compared, and the row itself says
+// which those are — `to_jsonb(r) ? key`. A field kept in its own table
+// (a person's social profiles, a company's domains or relationship types) is
+// absent from the row's jsonb, so comparing it would read every one of them as
+// moved and refuse every restore that touched one.
 //
-// They are therefore NOT judged for supersession, and that is a stated gap: two
-// people editing a person's social profiles in turn will not block each other
-// the way two people editing a title do. Comparing them properly means reading
-// each relation, which is worth doing when a second such field appears — one
-// field with a narrow blast radius does not earn a second comparison engine.
-var relationBackedFields = map[string]bool{
-	"social": true,
-	"emails": true,
-	"phones": true,
-}
+// Derived rather than listed. A hand-kept set of "fields that are not columns"
+// is a second copy of the schema, and it fails the same way each time somebody
+// adds one: silently, by refusing a restore that should have worked.
+//
+// The gap this leaves is stated: supersession does not judge those fields, so
+// two people editing a company's domains in turn will not block each other the
+// way two editing its name do. Judging them means reading each relation, which
+// earns its own engine when it is worth building.
 
 // coupledImage is the after-image narrowed to the keys worth comparing, with
 // the money pair pulled in whole: a restore of the amount under a currency that
@@ -183,7 +184,7 @@ func coupledImage(after json.RawMessage) ([]byte, error) {
 	}
 	comparable := map[string]json.RawMessage{}
 	for key, value := range image {
-		if derivedColumns[key] || relationBackedFields[key] {
+		if derivedColumns[key] {
 			continue
 		}
 		comparable[key] = value

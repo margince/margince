@@ -302,11 +302,12 @@ func TestANullObjectFieldIsRestoredAsAnEmptyObject(t *testing.T) {
 	}
 }
 
-// A field the record holds in its own table is not judged for supersession: the
-// row's jsonb cannot answer what it holds, so comparing would report every one
-// of them as moved and refuse every restore that touched one.
-func TestARelationBackedFieldIsNotComparedForSupersession(t *testing.T) {
-	asked, err := coupledImage(json.RawMessage(`{"social":{"linkedin":"x"},"title":"CTO"}`))
+// Only the derived stamps are excluded from comparison here. WHICH keys are
+// comparable is decided by the row itself — a field kept in its own table is
+// absent from the row's jsonb and the query skips it — so this holds the one
+// exclusion that is a judgement rather than a fact about the schema.
+func TestAStampIsNotComparedForSupersession(t *testing.T) {
+	asked, err := coupledImage(json.RawMessage(`{"updated_at":"2026-01-01T00:00:00Z","title":"CTO"}`))
 	if err != nil {
 		t.Fatalf("narrow the image: %v", err)
 	}
@@ -314,11 +315,11 @@ func TestARelationBackedFieldIsNotComparedForSupersession(t *testing.T) {
 	if err := json.Unmarshal(asked, &compared); err != nil {
 		t.Fatalf("the narrowed image is not an object: %v", err)
 	}
-	if _, judged := compared["social"]; judged {
-		t.Error("social was compared; its value does not live in a column and would always read as moved")
+	if _, judged := compared["updated_at"]; judged {
+		t.Error("a stamp was compared; the write path set it, not a person")
 	}
 	if _, judged := compared["title"]; !judged {
-		t.Error("title was not compared; it is an ordinary column and must be judged")
+		t.Error("title was not compared; it is a person's decision and must be judged")
 	}
 }
 

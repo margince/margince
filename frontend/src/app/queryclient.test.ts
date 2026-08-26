@@ -156,3 +156,54 @@ describe("names the chrome is showing", () => {
     ).toBe(false);
   });
 });
+
+describe("the history a reader is looking at", () => {
+  // A record's history is a read of what has just been written to it. A write
+  // made from another panel on the same page — or a restore, whose whole point
+  // is to add a line to the list on screen — left the open history showing the
+  // state before it until the reader navigated away and back.
+  it("brings a record's history back after any successful write", async () => {
+    const client = createQueryClient();
+    for (const key of [
+      ["record-history", "organization", "o-1"],
+      ["field-history", "organization", "o-1", "", ""],
+    ]) {
+      await client.fetchQuery({
+        queryKey: key,
+        queryFn: () => Promise.resolve([]),
+      });
+      expect(client.getQueryState(key)?.isInvalidated).toBe(false);
+    }
+
+    await new MutationObserver(client, {
+      mutationFn: () => Promise.resolve("written"),
+    }).mutate();
+
+    for (const key of [
+      ["record-history", "organization", "o-1"],
+      ["field-history", "organization", "o-1", "", ""],
+    ]) {
+      expect(client.getQueryState(key)?.isInvalidated).toBe(true);
+    }
+  });
+
+  // A failed write changed nothing, so the history on screen is still correct
+  // and refetching it would spend a read to redraw the same list.
+  it("leaves the history alone when the write failed", async () => {
+    const client = createQueryClient();
+    const key = ["record-history", "organization", "o-2"];
+    await client.fetchQuery({
+      queryKey: key,
+      queryFn: () => Promise.resolve([]),
+    });
+
+    await new MutationObserver(client, {
+      mutationFn: () => Promise.reject(new Error("refused")),
+      retry: false,
+    })
+      .mutate()
+      .catch(() => undefined);
+
+    expect(client.getQueryState(key)?.isInvalidated).toBe(false);
+  });
+});

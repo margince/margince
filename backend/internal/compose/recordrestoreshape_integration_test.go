@@ -39,17 +39,10 @@ import (
 // would disagree about dates and money.
 func fieldsSentButNotHeld(t *testing.T, e *integration.Env, entityType string, id ids.UUID, patch map[string]json.RawMessage) []string {
 	t.Helper()
-	checkable := map[string]json.RawMessage{}
-	for key, value := range patch {
-		// The production set: these live in their own tables, so the record's
-		// own jsonb cannot answer whether they landed. Reading it here rather
-		// than keeping a copy is what stops the two drifting.
-		if relationBackedFields[key] {
-			continue
-		}
-		checkable[key] = value
-	}
-	sent, err := json.Marshal(checkable)
+	// The row decides what is comparable: a field kept in its own table is
+	// absent from the row's jsonb, and the query below skips it rather than
+	// reporting it as never landed.
+	sent, err := json.Marshal(patch)
 	if err != nil {
 		t.Fatalf("marshal the sent patch: %v", err)
 	}
@@ -59,7 +52,8 @@ func fieldsSentButNotHeld(t *testing.T, e *integration.Env, entityType string, i
 			SELECT k.key
 			FROM jsonb_each($2::jsonb) AS k(key, value)
 			JOIN `+pgx.Identifier{entityType}.Sanitize()+` r ON r.id = $1
-			WHERE to_jsonb(r) -> k.key IS DISTINCT FROM k.value
+			WHERE to_jsonb(r) ? k.key
+			  AND to_jsonb(r) -> k.key IS DISTINCT FROM k.value
 			ORDER BY 1`, id, sent)
 		if err != nil {
 			return err

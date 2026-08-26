@@ -792,3 +792,41 @@ func TestEndToEnd_aNullOnAnUnclearableFieldIsRefusedByName(t *testing.T) {
 		t.Errorf("full_name = %q; the refused clear wrote anyway", name)
 	}
 }
+
+// An entry whose image mentions a field the record keeps in its own table is
+// still undoable.
+//
+// Supersession compares the image against the row, and a company's domains and
+// relationship types are not columns on it — so comparing them read every such
+// entry as "somebody changed these fields since" when nobody had. The newest
+// entry on a record refused, which is the one a person is most likely to want.
+func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var created struct {
+		ID      string `json:"id"`
+		Version int64  `json:"version"`
+	}
+	if status := e.Call(t, "POST", "/v1/organizations",
+		apptest.AnyMap{"display_name": "Held Elsewhere Ltd"}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	// domains and relationship_types live in their own tables; industry is an
+	// ordinary column, so the entry mixes both kinds.
+	if status := e.Call(t, "PATCH", "/v1/organizations/"+created.ID, apptest.AnyMap{
+		"industry":           "Manufacturing",
+		"domains":            []apptest.AnyMap{{"domain": "held.test", "is_primary": true}},
+		"relationship_types": []string{"customer"},
+	}, nil, nil); status != 200 {
+		t.Fatalf("patch → %d", status)
+	}
+
+	page := readHistory(t, e, "organization", created.ID)
+	entry := theUpdateEntry(t, page)
+	if !entry.Undoable.Undoable {
+		t.Fatalf("the newest entry refused as %q (%q); nothing was written after it, and a "+
+			"field the row does not hold as a column cannot have moved",
+			reasonOf(entry), detailOf(entry))
+	}
+}
