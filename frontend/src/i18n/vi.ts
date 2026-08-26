@@ -474,7 +474,6 @@ export const vi = {
   "list.search": "Tìm kiếm",
   "list.showArchived": "Hiện mục lưu trữ",
   "list.loadMore": "Tải thêm",
-  "list.sortNewest": "Mới nhất",
   "list.viewAll": "Tất cả",
   "list.viewAZ": "A–Z",
   "list.viewHot": "Tiềm năng cao",

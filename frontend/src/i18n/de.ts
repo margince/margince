@@ -478,7 +478,6 @@ export const de = {
   "list.search": "Suchen",
   "list.showArchived": "Archivierte anzeigen",
   "list.loadMore": "Mehr laden",
-  "list.sortNewest": "Neueste",
   "list.viewAll": "Alle",
   "list.viewAZ": "A–Z",
   "list.viewHot": "Heiß",

@@ -31,6 +31,7 @@ import {
   DataTable,
   EmptyState,
   Modal,
+  OverflowMenu,
   SegmentedControl,
   TextInput,
 } from "../design-system/atoms";
@@ -2581,7 +2582,7 @@ export function FxLine({
 
 // Reopens a won/lost deal back to an open-semantic stage — the same advance
 // mutation shape the board drag uses, with status:"open" forced. Split out
-// of DealBadges for the same readability reason as the other header actions.
+// of DealActions for the same readability reason as the other header actions.
 function ReopenAction({
   dealId,
   dealVersion,
@@ -2702,7 +2703,7 @@ function ReopenAction({
 }
 
 // The edit form's project fields, in the two readings a stored project has.
-// Named rather than inlined so `DealBadges` stays under the complexity ceiling,
+// Named rather than inlined so `DealActions` stays under the complexity ceiling,
 // and so the masked case reads as one decision.
 function editProjectFields(
   t: (key: MessageKey) => string,
@@ -2739,14 +2740,20 @@ function editProjectFields(
   );
 }
 
-// The status badge plus the edit/archive affordances — split out of
-// DealScreen's render so the record-view callback stays readably small. An
-// archived deal is read-only (no edit/archive/advance path exists server-side
-// for a non-live row), so its verbs render REFUSED rather than missing: the
-// page's one sentence about the archive says why, and each of them points at
-// it (STATE-4a). A missing control says nothing about the deal, while a
-// refused one names the reason.
-function DealBadges({
+// This deal's VERBS — split out of DealScreen's render so the record-view
+// callback stays readably small. An archived deal is read-only (no
+// edit/archive/advance path exists server-side for a non-live row), so its
+// verbs render REFUSED rather than missing: the page's one sentence about the
+// archive says why, and each of them points at it (STATE-4a). A missing control
+// says nothing about the deal, while a refused one names the reason.
+//
+// They used to ride the record view's BADGES slot, which is where a record says
+// what it IS rather than what can be done to it — so the deal page passed
+// `actionsInline` with no `actions` to place, and four buttons sat in the row
+// meant for a status and a project chip. Edit leads because it is the verb a
+// reader reaches for; the three whose consequence has to be read before they
+// are pressed go behind the overflow.
+function DealActions({
   deal,
   orgs,
   meId,
@@ -2811,8 +2818,6 @@ function DealBadges({
     : undefined;
   return (
     <>
-      <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
-      <DealProjectChip deal={deal} />
       <EditAction
         disabledReasonId={refusedByArchive}
         label={t("deal.edit")}
@@ -2870,41 +2875,47 @@ function DealBadges({
         invalidate="deals"
         recordKey="deal"
       />
-      <ArchiveAction
-        disabledReasonId={refusedByArchive}
-        label={t("deal.archive")}
-        confirmText={t("deal.archiveConfirm")}
-        archive={async () => {
-          const { data, error } = await api.DELETE("/deals/{id}", {
-            params: { path: { id: deal.id } },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
-        }}
-        invalidate="deals"
-        recordKey="deal"
-        onArchived={() => navigate({ screen: "deals" })}
-      />
-      {!overlay && (
-        <ShareAction
-          recordType="deal"
-          recordId={deal.id}
+      {/* Behind the overflow, all three: archiving a deal, handing a link to
+          somebody outside the workspace, and reopening a closed one are verbs
+          whose consequence a reader has to read before pressing, so each of
+          them wants a whole line rather than a place in a row. */}
+      <OverflowMenu label={t("record.moreActions")}>
+        <ArchiveAction
           disabledReasonId={refusedByArchive}
+          label={t("deal.archive")}
+          confirmText={t("deal.archiveConfirm")}
+          archive={async () => {
+            const { data, error } = await api.DELETE("/deals/{id}", {
+              params: { path: { id: deal.id } },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="deals"
+          recordKey="deal"
+          onArchived={() => navigate({ screen: "deals" })}
         />
-      )}
-      {/* Reopen answers a CLOSED deal, so an open one has no reason to be
-          told about it — absent, not refused. An archived closed deal keeps
-          it, refused: the reader came asking whether this can come back. */}
-      {!overlay && (deal.status === "won" || deal.status === "lost") && (
-        <ReopenAction
-          dealId={deal.id}
-          dealVersion={deal.version}
-          openStages={openStages}
-          disabledReasonId={refusedByArchive}
-        />
-      )}
+        {!overlay && (
+          <ShareAction
+            recordType="deal"
+            recordId={deal.id}
+            disabledReasonId={refusedByArchive}
+          />
+        )}
+        {/* Reopen answers a CLOSED deal, so an open one has no reason to be
+            told about it — absent, not refused. An archived closed deal keeps
+            it, refused: the reader came asking whether this can come back. */}
+        {!overlay && (deal.status === "won" || deal.status === "lost") && (
+          <ReopenAction
+            dealId={deal.id}
+            dealVersion={deal.version}
+            openStages={openStages}
+            disabledReasonId={refusedByArchive}
+          />
+        )}
+      </OverflowMenu>
     </>
   );
 }
@@ -2912,7 +2923,7 @@ function DealBadges({
 type Approval = components["schemas"]["Approval"];
 
 // The live 🟡 confirm-first staging queue for this deal — split out of
-// DealScreen's render for the same readability reason as DealBadges above.
+// DealScreen's render for the same readability reason as DealActions above.
 function DealApprovals({
   approvals,
   decide,
@@ -3500,7 +3511,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               }
               actionsInline
               badges={
-                <DealBadges
+                <>
+                  <Badge tone={dealStatusTone(deal.status)}>
+                    {deal.status}
+                  </Badge>
+                  <DealProjectChip deal={deal} />
+                </>
+              }
+              actions={
+                <DealActions
                   deal={deal}
                   orgs={orgs.data?.data ?? []}
                   meId={me.data?.user.id ?? ""}

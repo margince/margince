@@ -518,7 +518,6 @@ export const en = {
   "list.search": "Search",
   "list.showArchived": "Show archived",
   "list.loadMore": "Load more",
-  "list.sortNewest": "Newest",
   "list.viewAll": "All",
   "list.viewAZ": "A–Z",
   "list.viewHot": "Hot",

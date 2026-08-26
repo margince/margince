@@ -112,6 +112,12 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       actions={
         <ProjectActions project={project} refusedReasonId={refusedByArchive} />
       }
+      // In the header row, where a reader looks for a record's verbs — as the
+      // company, contact and lead pages already put them. Without it the row
+      // fell to the full-width strip UNDER the header, so the one record page
+      // with no primary action was also the one whose verbs were somewhere
+      // else.
+      actionsInline
       band={
         <div className="project-band">
           {project.archived_at && (

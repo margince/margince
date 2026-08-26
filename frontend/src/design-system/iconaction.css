@@ -1,0 +1,6 @@
+/* The tooltip anchor wraps the control, so it has to lay out as the control
+ * did: a flex item in the header's verb row, taking exactly the button's box
+ * and adding no line-height of its own. */
+.icon-action {
+  display: inline-flex;
+}
