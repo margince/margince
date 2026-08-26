@@ -130,6 +130,7 @@ export const ACTIVITY_LINE: Readonly<
 
   growth_fit: WATCHED_BY_THE_ASKER,
   cold_start: WATCHED_BY_THE_ASKER,
+  corpus_ask: WATCHED_BY_THE_ASKER,
 
   brief_ranking: SYSTEM_SWEEP,
   capture_classify: SYSTEM_SWEEP,

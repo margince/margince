@@ -18338,7 +18338,7 @@ export interface components {
             /** @description Resolved display name for on_behalf_of. */
             on_behalf_of_name?: string | null;
             /** @enum {string} */
-            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke";
+            action: "create" | "update" | "archive" | "merge" | "promote" | "demote" | "disqualify" | "restore" | "export" | "erase" | "anonymize" | "assign" | "advance_stage" | "advance_phase" | "send_email" | "consent_grant" | "consent_withdraw" | "approve" | "reject" | "record_share" | "record_unshare" | "activity_relink" | "import" | "import_undo" | "reset_data" | "password_link_issued" | "connect" | "disconnect" | "schedule" | "reschedule" | "cancel" | "release" | "hold" | "expire" | "resolve" | "restrict" | "pin" | "accrue" | "pay" | "publish" | "pause" | "resume" | "close" | "invite" | "revoke" | "delete";
             entity_type: string;
             /**
              * Format: uuid
@@ -18708,7 +18708,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "brief_ranking" | "capture_classify" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "brief_ranking" | "capture_classify" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask";
         AiActivityItem: {
             /** Format: uuid */
             id: string;

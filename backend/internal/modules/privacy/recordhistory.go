@@ -41,14 +41,19 @@ const (
 // CHECK already closes the set at the DB level) falls back to the raw
 // string, never an error: an unrenderable phrase is still honest history.
 var recordHistoryVerbs = map[string]string{ // #nosec G101 -- audit verbs and the English phrases they render as; "password_link_issued" names an action, and no value here is a secret
-	"create":        "created",
-	"update":        "updated",
-	actionArchive:   "archived",
-	"merge":         "merged",
-	"promote":       "promoted",
-	"restore":       "restored",
-	"export":        "exported",
-	"erase":         "erased",
+	"create":      "created",
+	"update":      "updated",
+	actionArchive: "archived",
+	"merge":       "merged",
+	"promote":     "promoted",
+	"restore":     "restored",
+	"export":      "exported",
+	"erase":       "erased",
+	// A hard delete, distinct from both neighbours above it. "archived" would
+	// say the row is still there, and "erased" is this product's Art. 17 word —
+	// a reader scanning a trail for subject erasures must not find a corpus
+	// document's removal among them.
+	"delete":        "deleted",
 	"login":         "logged in",
 	"assign":        "assigned",
 	"advance_stage": "advanced the stage of",

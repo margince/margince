@@ -35,6 +35,9 @@ type ingestEnv struct {
 	store  *knowledge.Store
 	ctx    context.Context
 	corpus ids.UUID
+	// blob is the object store the uploads wrote to, kept so a delete can be
+	// checked against the bytes rather than only against the rows.
+	blob blobstore.Store
 	// queued records the document ids the upload asked to have ingested, so a
 	// test can assert the enqueue happened inside the write rather than mock it.
 	queued []ids.UUID
@@ -44,7 +47,8 @@ func newIngestEnv(t *testing.T) *ingestEnv {
 	t.Helper()
 	e := Setup(t)
 	ie := &ingestEnv{env: e}
-	ie.store = knowledge.NewStore(e.DB()).WithBlobstore(blobstore.NewMemory())
+	ie.blob = blobstore.NewMemory()
+	ie.store = knowledge.NewStore(e.DB()).WithBlobstore(ie.blob)
 	ie.ctx = e.As(e.Rep1, nil, corpusAdminPerms)
 	made, err := ie.store.CreateCorpus(ie.ctx, howTo("How-to"))
 	if err != nil {

@@ -214,6 +214,16 @@ func writeKnowledgeErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
+// DeleteCorpusDocument serves deleteCorpusDocument: 204, a hard delete that
+// takes the passages, their vectors and the stored file with the row.
+func (h Handlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if err := h.store.DeleteDocument(r.Context(), ids.UUID(id)); err != nil {
+		writeKnowledgeErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 // ArchiveCorpus serves archiveCorpus: 204, the corpus and everything filed in
 // it archived together.
 func (h Handlers) ArchiveCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

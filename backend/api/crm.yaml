@@ -25295,7 +25295,7 @@ components:
           # `close` freezes content while access continues, and `pause`/`resume`
           # suspend reads without touching a single credential. `hold`/`release`
           # and `expire` are retention and scheduling verbs and would read as those.
-          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke]
+          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete]
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
         before:
@@ -25690,7 +25690,8 @@ components:
          brief_ranking, capture_classify, capture_counterparty_verdict, cert_judge,
          cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search,
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
-         site_triage, summarize, transcript, transcript_propose, voice_build]
+         site_triage, summarize, transcript, transcript_propose, voice_build,
+         corpus_ask]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
