@@ -255,11 +255,31 @@ func packageLevelStatements(files []*ast.File) map[string][]string {
 					continue
 				}
 				for i, name := range value.Names {
-					// Every string LITERAL in the value, not the folded whole.
-					// These statements are assembled — a raw string plus a
-					// helper's output — so folding them returns nothing, and a
+					// Every string LITERAL in the value, not ONLY the folded
+					// whole. These statements are assembled — a raw string plus
+					// a helper's output — so folding them returns nothing, and a
 					// reader that gave up on the fold gave up on the statement.
+					//
+					// Where a fold DOES read whole, it is recorded beside the
+					// parts rather than instead of them: `UPDATE x SET a = $1 ` +
+					// `WHERE id = $2` carries neither the SET nor the WHERE on
+					// its own, so a census matching a statement shape sees
+					// nothing in either half. Both are kept because adding a
+					// reading can only widen what a consumer sees, and it is
+					// under-recognition that passes silently.
+					//
+					// So what a name holds is a SET OF READINGS of one value,
+					// overlapping on purpose, and not a list of the statements
+					// that value contains. A consumer that took the first entry
+					// as "the statement" would be reading whichever reading this
+					// walk happened to record first.
 					ast.Inspect(value.Values[i], func(node ast.Node) bool {
+						if binary, isBinary := node.(*ast.BinaryExpr); isBinary && binary.Op == token.ADD {
+							if folded, readable := concatenatedString(binary); readable {
+								held[name.Name] = append(held[name.Name], folded)
+							}
+							return true
+						}
 						literal, isLiteral := node.(*ast.BasicLit)
 						if !isLiteral || literal.Kind != token.STRING {
 							return true

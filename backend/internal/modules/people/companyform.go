@@ -103,13 +103,19 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 	return applied, nil
 }
 
-// setCompanyColumn writes a column-backed field, clearing it to NULL rather
-// than storing an empty string — an unfilled field reads as absent, never as
-// the empty answer.
-// setCompanyColumn writes one column-backed field and reports whether the
-// value actually moved. Every statement carries IS DISTINCT FROM, so a
-// resubmission of an unchanged form touches no row and answers false — which is
-// what keeps the duplicate re-check below off a save that renamed nothing.
+// setCompanyColumn writes one column-backed field and reports whether the value
+// actually moved — which is what keeps the duplicate re-check off a save that
+// renamed nothing, and the description-author stamp off one that typed no
+// description.
+//
+// "Moved" is each statement's own question rather than one rule. The three
+// replacing arms answer it with IS DISTINCT FROM, so a resubmission of an
+// unchanged form touches no row; offer_summary FILLS, so it answers false for
+// every save after the first whether or not the text changed. Both are the
+// right answer for their column, and neither is the other's.
+//
+// A value clears to NULL rather than to the empty string — an unfilled field
+// reads as absent, never as the empty answer.
 func setCompanyColumn(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, spec companyField, value string) (bool, error) {
 	var stored *string
 	if value != "" {

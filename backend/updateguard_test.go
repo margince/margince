@@ -55,6 +55,16 @@ var versionPredicate = regexp.MustCompile(`(?i)\bversion\s*=\s*\$\d+`)
 // the only part where a predicate can constrain which row is written.
 var whereClause = regexp.MustCompile(`(?is)\bWHERE\b(.*)$`)
 
+// byIDUpdateFloor is the smallest number of by-id-updating functions this
+// census may find and still be believed. Set well below the real count, because
+// its job is to catch a reader that has gone quiet, not to track the tree.
+//
+// It is the coarser of the two under-recognition alarms and covers the UNWAIVED
+// remainder. The sharper one is unguardedByIDUpdates.AssertAllMatched: a waived
+// function the reader stops seeing is named outright, because its ratification
+// then matches nothing.
+const byIDUpdateFloor = 90
+
 var (
 	// createTableLine opens a CREATE TABLE block; versionColumnLine marks
 	// the block's table as optimistic-locking. Line-based on purpose:
@@ -118,6 +128,12 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// arrives as pgx.ErrNoRows, which the caller handles as the decline it is
 	// rather than as a failure.
 	"internal/modules/people:bindSiteReadLogo": "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
+
+	// The second of that shape, and the reason it is ratified rather than
+	// taught to the witness: crediting a bare mention of pgx.ErrNoRows would
+	// hand a free pass to any function that checks it on an unrelated read. A
+	// third occurrence is the point at which that trade stops being worth it.
+	"internal/modules/privacy:PinToFloor": "the same QueryRow compare-and-set: `WHERE a.id = $1 AND a.restricted_at IS NULL ... RETURNING a.restricted_until` matches nothing once any restriction stands, and the zero-row result arrives as pgx.ErrNoRows, which the caller turns into ErrConflict — a second controller pinning the same record is declined rather than overwriting the first one's window. A version guard would be wrong besides: nothing pins a version here, the administrator is acting on a record rather than on a value they read",
 
 	// Archive is an absolute idempotent transition: the write sets
 	// archived_at unconditionally (no state derived from a pre-read),
@@ -188,6 +204,19 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:anonymizeLead":              "terminal absolute write: the retention sweep anonymizes an over-age lead regardless of concurrent state, by design, and its selector already excludes an already-anonymized row",
 	"internal/modules/privacy:eraseActivityContent":       "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizePersonRecord":      "terminal absolute write: the sweep's person/anonymize action overwrites the PII columns regardless of concurrent state, by design",
+
+	// A function the package-level folding attributes a statement to without its
+	// also executing it. Ratified here rather than smoothed away in the reader,
+	// because the shape recurs wherever a statement table is handed to an
+	// executor by value instead of by name, and a reader taught to excuse it
+	// would excuse the writers that DO need judging along with it.
+	//
+	// The lock this names is the ORGANIZATION row's, not the workspace row's.
+	// SaveCompany also takes lockCompanyState — `SELECT id FROM workspace … FOR
+	// UPDATE` — and that one is deliberately not what ratifies this: it names a
+	// different table from the one being written, which is exactly the free
+	// credit the table-scoped witness was narrowed to stop giving.
+	"internal/modules/people:writeCompanyFields": "runs under the row lock its callers hold on the organization being written. Both — SaveCompany and applySiteReadConfirmation — reach it through resolveOrCreateAnchor, whose anchorOrganization(ctx, tx, true) is `SELECT id FROM organization WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, held for the rest of the transaction, so two company saves serialize on the row rather than racing on it. The census cannot see that lock for two reasons at once: it is taken two frames up, and anchorOrganization assembles the statement with `query += \" FOR UPDATE\"`, which no reading here folds. This function is attributed a statement by NAME rather than by execution besides — it iterates companyFields and hands each one to setCompanyColumn",
 })
 
 // guardMarkers are the identifiers whose presence in the same function
@@ -206,6 +235,13 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 // it would therefore mean 28 ratified waivers, which is a bigger change than
 // this witness is worth on its own; it is recorded here so the next reader knows
 // the looseness is a decision with a number behind it.
+//
+// That 28 was counted against a reader that saw only the literals typed in a
+// body, so read it as a floor rather than as the figure. A marker now absolves
+// every statement the function NAMES as well — one RowsAffected on an unrelated
+// write credits a whole hoisted statement table the same function indexes. The
+// looseness therefore grew with the reach, and narrowing it is its own change
+// rather than a line to slip into this one.
 var guardMarkers = map[string]bool{
 	"ApplyWithVersion": true,
 	"ApplyGuarded":     true,
@@ -291,6 +327,346 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 	return consts
 }
 
+// statementsJudged is every SQL statement a function answers for: the string
+// literals written in its own body, plus the package-level statements it names.
+//
+// A statement hoisted to a package-level table is executed by whoever names it,
+// and the guard is that function's to carry. Reading only the body's literals
+// left those statements outside the census entirely — not reported as a gap but
+// silently absent, which is the one way a census must not fail. The sibling
+// census in orgrenamerecheck_test.go already folds them; this one had stayed
+// narrower, and eight organization writes were sitting in the difference.
+//
+// A name the function DECLARES is its own, whatever the package calls something
+// of the same name — attributing by spelling alone hands a package-level
+// statement to any function with a local of that name.
+//
+// Held by: TestTheGuardCensusJudgesEveryStatementAFunctionAnswersFor
+// (backend/updateguardcases_test.go)
+func statementsJudged(fn *ast.FuncDecl, held map[string][]string, imported []map[string][]string) []string {
+	walker := &lexicalStatements{held: held, imported: imported, locals: map[string]string{}}
+	walker.open()
+	walker.declareFields(fn.Type.Params, fn.Type.Results)
+	if fn.Recv != nil {
+		walker.declareFields(fn.Recv)
+	}
+	ast.Walk(walker, fn.Body)
+	return walker.out
+}
+
+// lexicalStatements resolves each identifier against Go's own scoping while it
+// gathers, which declaredNames deliberately does not: that helper treats a name
+// declared anywhere in a function as shadowing the package value throughout, and
+// says so, because the privacy census it serves would rather miss a statement on
+// both sides than add one to the side that does not write it.
+//
+// This census wants the opposite conservatism. A local declared inside one
+// branch would suppress a package-level statement named before it and outside
+// it, and the whole point here is that a statement nobody judges produces no
+// finding — only a smaller silence. So scope is tracked rather than approximated.
+type lexicalStatements struct {
+	held map[string][]string
+	// imported is what the in-module packages this file imports hold, one map
+	// each. A qualified name is looked up in ALL of them rather than in the one
+	// its base resolves to: a package's declared name need not match its
+	// directory, and getting that mapping subtly wrong would drop the statement
+	// silently, where looking too widely at worst raises a finding somebody
+	// answers.
+	imported []map[string][]string
+	scopes   []scope
+	// locals is what a string-valued local has been built up to so far, so an
+	// `x := "…"` / `x += "…"` pair is read as the one statement it becomes.
+	// Keyed by name across scopes on purpose: reconstructing more statements
+	// than a function really sends over-reports, and over-reporting is the
+	// direction that produces a finding somebody can answer.
+	locals map[string]string
+	out    []string
+}
+
+// scope is one block's bindings: the names it declares, and what each of those
+// displaced in locals so close can put it back.
+type scope struct {
+	declared  map[string]bool
+	displaced map[string]*string
+}
+
+// foldAppend records what `target += addition` builds the target up to, and
+// reads the accumulated whole. The parts are read separately anyway; this is
+// the reading that carries a SET and its WHERE together.
+func (l *lexicalStatements) foldAppend(target, addition ast.Expr) {
+	name, named := target.(*ast.Ident)
+	if !named {
+		return
+	}
+	added, readable := concatenatedString(addition)
+	if !readable {
+		return
+	}
+	l.locals[name.Name] += added
+	l.out = append(l.out, l.locals[name.Name])
+}
+
+// seedLocal starts that accumulation from a declaration's own value.
+func (l *lexicalStatements) seedLocal(target, value ast.Expr) {
+	name, named := target.(*ast.Ident)
+	if !named {
+		return
+	}
+	if seed, readable := concatenatedString(value); readable {
+		l.locals[name.Name] = seed
+	}
+}
+
+func (l *lexicalStatements) open() {
+	l.scopes = append(l.scopes, scope{declared: map[string]bool{}, displaced: map[string]*string{}})
+}
+
+// close puts back what this scope's declarations displaced. An inner
+// `statement := "SELECT 1"` must not survive its block: the outer name goes on
+// being built up after it, and an accumulation that kept the inner value folds
+// to a statement with no SET clause — one the census then skips.
+func (l *lexicalStatements) close() {
+	closing := l.scopes[len(l.scopes)-1]
+	for name, previous := range closing.displaced {
+		if previous == nil {
+			delete(l.locals, name)
+			continue
+		}
+		l.locals[name] = *previous
+	}
+	l.scopes = l.scopes[:len(l.scopes)-1]
+}
+
+func (l *lexicalStatements) declare(expr ast.Expr) {
+	ident, isIdent := expr.(*ast.Ident)
+	if !isIdent || ident.Name == "_" {
+		return
+	}
+	current := l.scopes[len(l.scopes)-1]
+	current.declared[ident.Name] = true
+	if _, already := current.displaced[ident.Name]; already {
+		return
+	}
+	if previous, held := l.locals[ident.Name]; held {
+		current.displaced[ident.Name] = &previous
+		return
+	}
+	current.displaced[ident.Name] = nil
+}
+
+func (l *lexicalStatements) declareFields(lists ...*ast.FieldList) {
+	for _, list := range lists {
+		if list == nil {
+			continue
+		}
+		for _, field := range list.List {
+			for _, name := range field.Names {
+				l.declare(name)
+			}
+		}
+	}
+}
+
+func (l *lexicalStatements) shadowed(name string) bool {
+	for _, enclosing := range l.scopes {
+		if enclosing.declared[name] {
+			return true
+		}
+	}
+	return false
+}
+
+// Visit gathers on the way down, so a name is read against the bindings that
+// stood where it was written: `held` used before a later `held := …` in the same
+// block is still the package's, which is what Go compiles it to.
+func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
+	switch n := node.(type) {
+	case nil:
+		return nil
+	case *ast.BlockStmt, *ast.IfStmt, *ast.ForStmt,
+		*ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt,
+		*ast.CaseClause, *ast.CommClause:
+		l.open()
+		return scopeCloser{l}
+	case *ast.FuncLit:
+		l.open()
+		l.declareFields(n.Type.Params, n.Type.Results)
+		return scopeCloser{l}
+	case *ast.RangeStmt:
+		// Its own scope, and its own declaration: the loop variables are
+		// declared by the clause rather than by an AssignStmt below it, so the
+		// generic arm above would open the scope and then never put them in it.
+		// The range expression is evaluated in the OUTER bindings.
+		l.open()
+		defer l.close()
+		ast.Walk(l, n.X)
+		if n.Tok == token.DEFINE {
+			l.declare(n.Key)
+			l.declare(n.Value)
+		} else {
+			for _, target := range []ast.Expr{n.Key, n.Value} {
+				if target != nil {
+					ast.Walk(l, target)
+				}
+			}
+		}
+		ast.Walk(l, n.Body)
+		return nil
+	case *ast.BinaryExpr:
+		// The same fold packageLevelStatements does, for the same reason:
+		// neither half of `UPDATE x SET a = $1 ` + `WHERE id = $2` carries the
+		// statement, so a census matching a shape sees nothing in either. The
+		// walk continues into the parts as well — adding a reading can only
+		// widen what is judged.
+		if n.Op == token.ADD {
+			if folded, readable := concatenatedString(n); readable {
+				l.out = append(l.out, folded)
+			}
+		}
+		return l
+	case *ast.LabeledStmt:
+		// A label shares the identifier namespace with nothing this reads —
+		// neither where it is declared nor where a break or continue names it.
+		ast.Walk(l, n.Stmt)
+		return nil
+	case *ast.BranchStmt:
+		return nil
+	case *ast.SelectorExpr:
+		// `spec.update` names a FIELD, not this package's `update`, so the Sel
+		// is not read as a local name. But `storekit.ProbeRenameOrg` is a
+		// statement held one import away, and dropping the Sel outright left
+		// that silence exactly where this change closed the same one inside a
+		// package. So the Sel is looked up in what the file's in-module imports
+		// hold — a field name matches nothing there, and a qualified statement
+		// matches. The base is walked either way, because that half can be a
+		// package value of this package's own.
+		for _, elsewhere := range l.imported {
+			l.out = append(l.out, elsewhere[n.Sel.Name]...)
+		}
+		ast.Walk(l, n.X)
+		return nil
+	case *ast.KeyValueExpr:
+		// A struct literal's field name is not a variable reference either, and
+		// the AST cannot tell one from a map key without types. An identifier
+		// key is therefore left unread: a package-level SQL statement used as a
+		// map KEY would be a statement nobody sends, so declining it costs no
+		// coverage, while reading it credits every `{update: …}` in the tree.
+		if _, named := n.Key.(*ast.Ident); !named {
+			ast.Walk(l, n.Key)
+		}
+		ast.Walk(l, n.Value)
+		return nil
+	case *ast.AssignStmt:
+		// `statement += " FOR UPDATE"` is the third spelling of the same
+		// assembly, and the one anchorOrganization uses to add the row lock that
+		// guards the company form. Each half is read on its own below; this
+		// folds them so the whole is read too.
+		if n.Tok == token.ADD_ASSIGN && len(n.Lhs) == 1 && len(n.Rhs) == 1 {
+			l.foldAppend(n.Lhs[0], n.Rhs[0])
+		}
+		// The right-hand side is evaluated against the bindings that stand
+		// BEFORE the declaration, so it is walked first and the names are
+		// declared after: `held := held` reads the package's value.
+		for _, rhs := range n.Rhs {
+			ast.Walk(l, rhs)
+		}
+		if n.Tok == token.DEFINE {
+			// declare BEFORE seedLocal: declaring is what records the value
+			// this name displaces, and seeding is what displaces it. The other
+			// order records the new value as the old one, so closing the scope
+			// restores nothing.
+			for _, lhs := range n.Lhs {
+				l.declare(lhs)
+			}
+			if len(n.Lhs) == len(n.Rhs) {
+				for i, lhs := range n.Lhs {
+					l.seedLocal(lhs, n.Rhs[i])
+				}
+			}
+		} else {
+			for _, lhs := range n.Lhs {
+				ast.Walk(l, lhs)
+			}
+		}
+		return nil
+	case *ast.ValueSpec:
+		for _, value := range n.Values {
+			ast.Walk(l, value)
+		}
+		for _, name := range n.Names {
+			l.declare(name)
+		}
+		if len(n.Names) == len(n.Values) {
+			for i, name := range n.Names {
+				l.seedLocal(name, n.Values[i])
+			}
+		}
+		return nil
+	case *ast.Ident:
+		if !l.shadowed(n.Name) {
+			l.out = append(l.out, l.held[n.Name]...)
+		}
+		return nil
+	case *ast.BasicLit:
+		if n.Kind == token.STRING {
+			if lit, err := strconv.Unquote(n.Value); err == nil {
+				l.out = append(l.out, lit)
+			}
+		}
+		return nil
+	}
+	return l
+}
+
+// scopeCloser pops the scope its node opened once ast.Walk has finished that
+// node's children. Nested inside the walker rather than folded into it because
+// ast.Walk signals "children done" by calling Visit(nil) on the visitor a node
+// RETURNED, and a walker that popped on every such call would pop for every
+// plain node too.
+type scopeCloser struct{ walker *lexicalStatements }
+
+func (c scopeCloser) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		c.walker.close()
+		return nil
+	}
+	return c.walker.Visit(node)
+}
+
+// modulePrefix is the backend module's own import path. An import outside it is
+// a dependency whose statements are not this tree's to judge.
+const modulePrefix = "github.com/gradionhq/margince/backend/"
+
+// inModuleImportDirs are the directories of the backend packages a file imports,
+// which is where a qualified statement name can have been declared.
+func inModuleImportDirs(file *ast.File) []string {
+	var dirs []string
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || !strings.HasPrefix(path, modulePrefix) {
+			continue
+		}
+		dirs = append(dirs, strings.TrimPrefix(path, modulePrefix))
+	}
+	return dirs
+}
+
+// heldStatements are the SQL statements a package holds in its package-level
+// vars and consts, keyed by the name that holds them, read once per package.
+//
+// The reading is the one packageCallGraph uses, rather than a second answer to
+// "what statement does this name hold" — a census whose reader is narrower than
+// its sibling's reports a clean tree over what the sibling can see.
+func heldStatements(t *testing.T, cache map[string]map[string][]string, dir string) map[string][]string {
+	t.Helper()
+	if held, ok := cache[dir]; ok {
+		return held
+	}
+	held := packageLevelStatements(parsePackageFiles(t, dir))
+	cache[dir] = held
+	return held
+}
+
 // lockedTable resolves the table a LockRow/LockPair call names: a string
 // literal, or an identifier declared as a package-level string constant. An
 // argument it cannot resolve returns "", which the caller treats as an
@@ -319,6 +695,8 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 	versioned := versionedTables(t)
 	fset := token.NewFileSet()
 	constCache := map[string]map[string]string{}
+	heldCache := map[string]map[string][]string{}
+	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
@@ -330,6 +708,12 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 			if err != nil {
 				return err
 			}
+			// Read once per FILE rather than per function: the imports are the
+			// file's, and heldStatements caches per package anyway.
+			var imported []map[string][]string
+			for _, dir := range inModuleImportDirs(file) {
+				imported = append(imported, heldStatements(t, heldCache, dir))
+			}
 			for _, decl := range file.Decls {
 				fn, ok := decl.(*ast.FuncDecl)
 				if !ok || fn.Body == nil {
@@ -338,38 +722,35 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 				var guarded bool
 				updated := map[string]bool{}
 				locked := map[string]bool{}
-				ast.Inspect(fn.Body, func(n ast.Node) bool {
-					switch node := n.(type) {
-					case *ast.BasicLit:
-						if node.Kind != token.STRING {
-							return true
-						}
-						lit, err := strconv.Unquote(node.Value)
-						if err != nil {
-							return true
-						}
-						if m := byIDUpdate.FindStringSubmatch(lit); m != nil && versioned[m[1]] {
-							updated[m[1]] = true
-							// A version predicate in the statement's own WHERE
-							// IS the compare-and-set this gate asks for, and the
-							// most direct form of it — the UPDATE matches no row
-							// unless the version is still the one that was read.
-							// Crediting only the storekit helpers would push a
-							// correct fix toward a waiver.
-							if w := whereClause.FindStringSubmatch(lit); w != nil &&
-								versionPredicate.MatchString(w[1]) {
-								guarded = true
-							}
-						}
-						// A locking read guards the table it READS. An advisory
-						// lock names no table at all and is a workspace-wide
-						// mutex, so it keeps its unattributed credit.
-						for _, table := range lockedByRead(lit) {
-							locked[table] = true
-						}
-						if advisoryLock.MatchString(lit) {
+				readStatement := func(lit string) {
+					if m := byIDUpdate.FindStringSubmatch(lit); m != nil && versioned[m[1]] {
+						updated[m[1]] = true
+						// A version predicate in the statement's own WHERE
+						// IS the compare-and-set this gate asks for, and the
+						// most direct form of it — the UPDATE matches no row
+						// unless the version is still the one that was read.
+						// Crediting only the storekit helpers would push a
+						// correct fix toward a waiver.
+						if w := whereClause.FindStringSubmatch(lit); w != nil &&
+							versionPredicate.MatchString(w[1]) {
 							guarded = true
 						}
+					}
+					// A locking read guards the table it READS. An advisory
+					// lock names no table at all and is a workspace-wide
+					// mutex, so it keeps its unattributed credit.
+					for _, table := range lockedByRead(lit) {
+						locked[table] = true
+					}
+					if advisoryLock.MatchString(lit) {
+						guarded = true
+					}
+				}
+				for _, lit := range statementsJudged(fn, heldStatements(t, heldCache, filepath.Dir(path)), imported) {
+					readStatement(lit)
+				}
+				ast.Inspect(fn.Body, func(n ast.Node) bool {
+					switch node := n.(type) {
 					case *ast.CallExpr:
 						sel, ok := node.Fun.(*ast.SelectorExpr)
 						if !ok || !lockMarkers[sel.Sel.Name] {
@@ -393,7 +774,11 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 						guarded = true
 					}
 				}
-				if len(updated) > 0 && !guarded {
+				if len(updated) == 0 {
+					continue
+				}
+				judged++
+				if !guarded {
 					key := filepath.ToSlash(filepath.Dir(path)) + ":" + fn.Name.Name
 					if unguardedByIDUpdates.Waived(t, key) {
 						continue
@@ -407,5 +792,17 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+
+	// A census that judged nothing certifies nothing, and this one has two ways
+	// to go quiet: the walk can stop finding files, and the reader can stop
+	// finding statements inside them. Neither produces a finding on its own —
+	// they produce a smaller silence, which is what the floor is for. It sits
+	// below the real count so it catches a broken reader rather than a tree
+	// that has changed.
+	if judged < byIDUpdateFloor {
+		t.Fatalf("this census judged %d function(s) running a by-id UPDATE and expects at least %d — "+
+			"the reader has stopped seeing statements rather than the tree having lost them",
+			judged, byIDUpdateFloor)
 	}
 }
