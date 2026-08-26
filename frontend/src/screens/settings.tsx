@@ -111,6 +111,7 @@ import { EmbedReindexCard } from "./embedreindex";
 import { EntityRef } from "./entityref";
 import { ExtensionAccessCard } from "./extension-access";
 import { ExtensionUnitsCard } from "./extension-units";
+import { GoogleAppCard } from "./google-app";
 import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
@@ -274,7 +275,15 @@ function tabContent(id: SettingsTabId): ReactNode {
         </>
       );
     case "connections":
-      return <ConnectionsTab />;
+      return (
+        <>
+          {/* Above the connections themselves: this is the app they are made
+              THROUGH, so a reader who cannot connect a mailbox finds the reason
+              before the empty list rather than after it. */}
+          <GoogleAppCard />
+          <ConnectionsTab />
+        </>
+      );
     // Beside `connections` and after it on purpose: that tab says what you are
     // connected to, this one says what those connections did with your mail.
     case "capture-activity":

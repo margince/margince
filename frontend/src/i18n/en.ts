@@ -5515,6 +5515,39 @@ export const en = {
   "installationSettings.edit": "Edit",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
+  "googleApp.title": "Google app",
+  "googleApp.sub":
+    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials rather than ours.",
+  "googleApp.configured": "In use: {clientId}",
+  "googleApp.absent":
+    "No app stored. Gmail and Calendar cannot be connected until one is.",
+  "googleApp.replaceHint":
+    "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
+  "googleApp.store": "Store app",
+  "googleApp.replace": "Replace app",
+  "googleApp.removeConfirmTitle": "Remove the Google app?",
+  "googleApp.removeConfirmBody":
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app — Microsoft and IMAP mailboxes are not affected — and first-run setup will ask for one again.",
+  "googleApp.remove": "Remove app",
+  "firstRun.continue": "Continue",
+  "firstRun.ai.title": "Choose a model provider",
+  "firstRun.ai.sub":
+    "Margince provides no inference of its own, so it works through your vendor account. You can change any of this later under Settings → AI.",
+  "firstRun.ai.provider": "Provider",
+  "firstRun.ai.key": "API key",
+  "firstRun.ai.keyHint":
+    "Sent once and sealed in the key vault. The server reads it as {envVar} when one is set in the environment instead.",
+  "firstRun.ai.chatModel": "Model",
+  "firstRun.ai.modelHint":
+    "A starting point. Any model id your provider serves will do.",
+  "firstRun.ai.embedModel": "Embedding model",
+  "firstRun.google.title": "Connect a Google app",
+  "firstRun.google.sub":
+    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials. You can change this later under Settings.",
+  "firstRun.google.clientIdPlaceholder":
+    "000000000000-xxxx.apps.googleusercontent.com",
+  "firstRun.google.clientId": "Client ID",
+  "firstRun.google.clientSecret": "Client secret",
   // Which vendor this installation's text is sent to. Admin/ops only, on both
   // verbs â see the ai_routing RBAC object.
   "aiProviderKeys.title": "Model provider keys",
