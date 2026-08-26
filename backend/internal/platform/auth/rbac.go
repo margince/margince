@@ -147,13 +147,20 @@ func RequireHuman(ctx context.Context) error {
 // authorization_rule, which reads as "no rule applied" years later —
 // TestEveryAuditVerbRendersItsAuthorizationRule keeps the set closed.
 var auditActionGrant = map[string]principal.Action{
-	"create":           principal.ActionCreate,
-	"update":           principal.ActionUpdate,
-	"assign":           principal.ActionUpdate,
-	"advance_stage":    principal.ActionUpdate,
-	"advance_phase":    principal.ActionUpdate,
-	"restore":          principal.ActionUpdate,
-	"archive":          principal.ActionDelete,
+	"create":        principal.ActionCreate,
+	"update":        principal.ActionUpdate,
+	"assign":        principal.ActionUpdate,
+	"advance_stage": principal.ActionUpdate,
+	"advance_phase": principal.ActionUpdate,
+	"restore":       principal.ActionUpdate,
+	"archive":       principal.ActionDelete,
+	// A hard delete takes the same grant an archive does, and for a reason
+	// worth stating: `delete` is not a STRONGER authority than `archive`, it is
+	// the same authority exercised on something whose removal is final. A role
+	// that may take a record out of circulation may destroy a corpus document,
+	// because for an uploaded file those are the same act — there is no
+	// archived state a corpus document can usefully sit in.
+	"delete":           principal.ActionDelete,
 	"merge":            principal.ActionUpdate,
 	"promote":          principal.ActionUpdate,
 	"consent_grant":    principal.ActionUpdate,

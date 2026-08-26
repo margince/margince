@@ -7,6 +7,7 @@ import {
 import {
   Activity,
   BadgeCheck,
+  BookOpen,
   Building2,
   ChevronDown,
   Database,
@@ -116,6 +117,7 @@ import { ImportCard } from "./import";
 import { InstallationSettingsCard } from "./installation-settings";
 import { ProviderCard } from "./integrations-provider";
 import { JobHealthCard } from "./jobhealth";
+import { KnowledgeCard } from "./knowledge";
 import {
   LeadDisqualifyReasonsCard,
   LeadHandlingCard,
@@ -235,6 +237,7 @@ export const SETTINGS_TABS = [
   { id: "capture", icon: Mail, group: "admin" },
   { id: "data-model", icon: Database, group: "admin" },
   { id: "ai", icon: Sparkles, group: "admin" },
+  { id: "knowledge", icon: BookOpen, group: "admin" },
   { id: "privacy", icon: ShieldCheck, group: "admin" },
   { id: "license", icon: BadgeCheck, group: "admin" },
   { id: "maintenance", icon: Wrench, group: "admin" },
@@ -313,6 +316,8 @@ function tabContent(id: SettingsTabId): ReactNode {
       );
     case "data-model":
       return <DataModelTab />;
+    case "knowledge":
+      return <KnowledgeCard />;
     case "ai":
       return <AiSettingsTab />;
     case "privacy":
@@ -547,6 +552,7 @@ export function useSettingsEntryVisibility(
   const pipeline = useCan("pipeline", "read");
   const product = useCan("product", "read");
   const offerTemplate = useCan("offer_template", "read");
+  const knowledgeCorpus = useCan("knowledge_corpus", "read");
   const customField = useCan("custom_field", "read");
   const fxRate = useCan("fx_rate", "read");
   const aiModelRate = useCan("ai_model_rate", "read");
@@ -654,6 +660,14 @@ export function useSettingsEntryVisibility(
     // holds it, and a role edited to drop it would otherwise reach a page of four
     // refusals. The three surfaces below the registry are narrower and each says so.
     privacy: person,
+    // The document sets a person can ask questions of, and the files in them.
+    // `knowledge_corpus:read` is the ASK, and the RBAC migration grants it to
+    // every seeded role — so this entry opens for a manager or a rep, and the
+    // card inside shows them the sets with no verbs. That is deliberate and is
+    // the same shape as the automations read on `ai` above: a page that lists
+    // what a reader may ask is not an administrator's page merely because
+    // creating one is.
+    knowledge: knowledgeCorpus,
     // The operational verbs, and the one entry that genuinely narrows. The reindex
     // read is admin/ops; job health and the danger zone are admin-ONLY (the server
     // spells both with RequireAdmin), so an ops seat reaches this page for the
@@ -691,6 +705,7 @@ export function useSettingsEntryVisibility(
       "data-model": false,
       ai: false,
       privacy: false,
+      knowledge: false,
       license: false,
       maintenance: false,
     };

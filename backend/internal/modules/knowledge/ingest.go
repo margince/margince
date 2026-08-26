@@ -31,6 +31,12 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
+// chunkCountColumn is the document column the ingest keeps in step with the
+// passages it wrote. Named because three writes and one audit image spell it,
+// and a column name typed four times is one typo from a statement that updates
+// nothing and reports success.
+const chunkCountColumn = "chunk_count"
+
 // maxCorpusChunks is the ceiling on ONE corpus, not one file.
 //
 // A per-file cap is the wrong bound: N small uploads exceed any of them, and
@@ -123,8 +129,8 @@ func (s *Store) WriteChunks(ctx context.Context, documentID ids.UUID, corpusID i
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "knowledge_document", documentID,
-			map[string]any{"chunk_count": wasCount},
-			map[string]any{"chunk_count": len(chunks)}); err != nil {
+			map[string]any{chunkCountColumn: wasCount},
+			map[string]any{chunkCountColumn: len(chunks)}); err != nil {
 			return fmt.Errorf("audit the document's chunking: %w", err)
 		}
 		return nil

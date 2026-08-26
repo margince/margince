@@ -281,6 +281,7 @@ const OPERATOR_TABS_WITH_MAINTENANCE = [
 const EVERY_TAB_GRANTED: GrantSpec = {
   person: ["read"],
   installation_settings: ["read"],
+  knowledge_corpus: ["read"],
   webhook_subscription: ["read"],
   capture_settings: ["read"],
   custom_field: ["read"],
@@ -309,6 +310,7 @@ const SEEDED_READS: GrantSpec = {
   capture_settings: ["read"],
   custom_field: ["read"],
   installation_settings: ["read"],
+  knowledge_corpus: ["read"],
   offer_template: ["read"],
   organization: ["read"],
   overlay_connection: ["read"],

@@ -4793,6 +4793,47 @@ export const en = {
   "settings.tab.capture": "Capture",
   "settings.tab.data-model": "Data model",
   "settings.tab.ai": "AI",
+  "settings.tab.knowledge": "Knowledge",
+  "knowledge.title": "Document sets",
+  "knowledge.sub":
+    "Bodies of text this organization can be asked questions of. An answer comes only from what is filed here, and a question they do not cover is refused rather than guessed at.",
+  "knowledge.withheld": "Which document sets exist is not yours to see.",
+  "knowledge.empty.title": "No document sets yet",
+  "knowledge.empty.body":
+    "Create one, file text documents in it, and anyone here can ask it questions in their own words.",
+  "knowledge.coverage":
+    "{documents} documents · {embedded} of {total} passages searchable",
+  "knowledge.reindexing":
+    "This set is being re-read after a change to how text is indexed. Asking it will say it is not ready until that finishes; nothing has been lost.",
+  "knowledge.tuningStale":
+    "The grounding threshold for this set was tuned against a different text index. The number is a leftover rather than a setting — worth revisiting.",
+  "knowledge.showDocuments": "Show documents",
+  "knowledge.hideDocuments": "Hide documents",
+  "knowledge.documents": "Documents",
+  "knowledge.noDocuments": "Nothing filed here yet.",
+  "knowledge.archive": "Archive set",
+  "knowledge.archiveConfirm.title": "Archive this document set?",
+  "knowledge.archiveConfirm.body":
+    "The set and everything filed in it stop being searchable. Nothing is destroyed.",
+  "knowledge.deleteDocument": "Delete",
+  "knowledge.deleteConfirm.title": "Delete this document?",
+  "knowledge.deleteConfirm.body":
+    "The file, the text taken from it and the search index built on it are destroyed. This cannot be undone.",
+  "knowledge.ingest.queued": "Waiting to be read",
+  "knowledge.ingest.running": "Being read",
+  "knowledge.ingest.done": "Searchable",
+  "knowledge.ingest.failed": "Could not be read",
+  "knowledge.upload.label": "Add a document",
+  "knowledge.upload.hint":
+    "Plain text, Markdown, CSV or JSON. There is no reader for PDFs or Word files here, and one would be refused rather than filed empty.",
+  "knowledge.upload.empty": "Drop a text file here, or choose one",
+  "knowledge.upload.submit": "Add document",
+  "knowledge.new.title": "New document set",
+  "knowledge.new.name": "Name",
+  "knowledge.new.topic": "What this set covers",
+  "knowledge.new.topicHint":
+    "Write a sentence, not a label. It is quoted back to whoever asks a question this set does not cover, so it is read at their least patient moment.",
+  "knowledge.new.submit": "Create set",
   "settings.tab.privacy": "Privacy & audit",
   "settings.tab.capture-activity": "Capture activity",
   "captureActivity.title": "Capture activity",

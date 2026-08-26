@@ -4744,6 +4744,48 @@ export const de = {
   "settings.tab.capture": "Erfassung",
   "settings.tab.data-model": "Datenmodell",
   "settings.tab.ai": "KI",
+  "settings.tab.knowledge": "Wissen",
+  "knowledge.title": "Dokumentensammlungen",
+  "knowledge.sub":
+    "Textbestände, zu denen diese Organisation befragt werden kann. Eine Antwort stammt ausschließlich aus dem, was hier abgelegt ist; eine Frage, die sie nicht abdecken, wird abgelehnt statt geraten.",
+  "knowledge.withheld":
+    "Welche Dokumentensammlungen es gibt, dürfen Sie nicht sehen.",
+  "knowledge.empty.title": "Noch keine Dokumentensammlungen",
+  "knowledge.empty.body":
+    "Legen Sie eine an, füllen Sie Textdokumente hinein, und alle hier können sie in eigenen Worten befragen.",
+  "knowledge.coverage":
+    "{documents} Dokumente · {embedded} von {total} Abschnitten durchsuchbar",
+  "knowledge.reindexing":
+    "Diese Sammlung wird nach einer Änderung der Textindizierung neu gelesen. Eine Frage meldet bis dahin, dass sie nicht bereit ist; verloren ist nichts.",
+  "knowledge.tuningStale":
+    "Die Schwelle für diese Sammlung wurde gegen einen anderen Textindex eingestellt. Der Wert ist ein Überbleibsel und keine Einstellung — er sollte überprüft werden.",
+  "knowledge.showDocuments": "Dokumente anzeigen",
+  "knowledge.hideDocuments": "Dokumente ausblenden",
+  "knowledge.documents": "Dokumente",
+  "knowledge.noDocuments": "Hier ist noch nichts abgelegt.",
+  "knowledge.archive": "Sammlung archivieren",
+  "knowledge.archiveConfirm.title": "Diese Dokumentensammlung archivieren?",
+  "knowledge.archiveConfirm.body":
+    "Die Sammlung und alles darin sind nicht mehr durchsuchbar. Zerstört wird nichts.",
+  "knowledge.deleteDocument": "Löschen",
+  "knowledge.deleteConfirm.title": "Dieses Dokument löschen?",
+  "knowledge.deleteConfirm.body":
+    "Die Datei, der daraus gewonnene Text und der darauf aufgebaute Suchindex werden zerstört. Das lässt sich nicht rückgängig machen.",
+  "knowledge.ingest.queued": "Wartet auf Verarbeitung",
+  "knowledge.ingest.running": "Wird gelesen",
+  "knowledge.ingest.done": "Durchsuchbar",
+  "knowledge.ingest.failed": "Konnte nicht gelesen werden",
+  "knowledge.upload.label": "Dokument hinzufügen",
+  "knowledge.upload.hint":
+    "Reiner Text, Markdown, CSV oder JSON. Für PDFs oder Word-Dateien gibt es hier keinen Leser; sie werden abgelehnt statt leer abgelegt.",
+  "knowledge.upload.empty": "Textdatei hierher ziehen oder auswählen",
+  "knowledge.upload.submit": "Dokument hinzufügen",
+  "knowledge.new.title": "Neue Dokumentensammlung",
+  "knowledge.new.name": "Name",
+  "knowledge.new.topic": "Was diese Sammlung abdeckt",
+  "knowledge.new.topicHint":
+    "Schreiben Sie einen Satz, kein Schlagwort. Er wird demjenigen zitiert, dessen Frage diese Sammlung nicht abdeckt — also im ungeduldigsten Moment gelesen.",
+  "knowledge.new.submit": "Sammlung anlegen",
   "settings.tab.privacy": "Datenschutz & Audit",
   "settings.tab.capture-activity": "Erfassungsaktivität",
   "captureActivity.title": "Erfassungsaktivität",

@@ -4705,6 +4705,47 @@ export const vi = {
   "settings.tab.capture": "Thu thập",
   "settings.tab.data-model": "Mô hình dữ liệu",
   "settings.tab.ai": "AI",
+  "settings.tab.knowledge": "Tri thức",
+  "knowledge.title": "Bộ tài liệu",
+  "knowledge.sub":
+    "Những tập văn bản mà tổ chức này có thể được hỏi. Câu trả lời chỉ đến từ những gì đã nộp ở đây; câu hỏi nằm ngoài phạm vi sẽ bị từ chối thay vì đoán.",
+  "knowledge.withheld": "Bạn không được xem có những bộ tài liệu nào.",
+  "knowledge.empty.title": "Chưa có bộ tài liệu nào",
+  "knowledge.empty.body":
+    "Tạo một bộ, nộp tài liệu văn bản vào đó, và mọi người ở đây có thể hỏi bằng lời của mình.",
+  "knowledge.coverage":
+    "{documents} tài liệu · {embedded} trên {total} đoạn có thể tìm kiếm",
+  "knowledge.reindexing":
+    "Bộ này đang được đọc lại sau khi cách lập chỉ mục văn bản thay đổi. Câu hỏi sẽ báo chưa sẵn sàng cho đến khi xong; không mất gì cả.",
+  "knowledge.tuningStale":
+    "Ngưỡng của bộ này được chỉnh theo một chỉ mục văn bản khác. Con số này là tàn dư chứ không phải một thiết lập — nên xem lại.",
+  "knowledge.showDocuments": "Hiện tài liệu",
+  "knowledge.hideDocuments": "Ẩn tài liệu",
+  "knowledge.documents": "Tài liệu",
+  "knowledge.noDocuments": "Chưa nộp gì ở đây.",
+  "knowledge.archive": "Lưu trữ bộ",
+  "knowledge.archiveConfirm.title": "Lưu trữ bộ tài liệu này?",
+  "knowledge.archiveConfirm.body":
+    "Bộ này và mọi thứ trong đó sẽ không còn tìm kiếm được. Không có gì bị hủy.",
+  "knowledge.deleteDocument": "Xóa",
+  "knowledge.deleteConfirm.title": "Xóa tài liệu này?",
+  "knowledge.deleteConfirm.body":
+    "Tệp, văn bản rút ra từ nó và chỉ mục tìm kiếm dựng trên nó đều bị hủy. Không thể hoàn tác.",
+  "knowledge.ingest.queued": "Đang chờ đọc",
+  "knowledge.ingest.running": "Đang đọc",
+  "knowledge.ingest.done": "Tìm kiếm được",
+  "knowledge.ingest.failed": "Không đọc được",
+  "knowledge.upload.label": "Thêm tài liệu",
+  "knowledge.upload.hint":
+    "Văn bản thuần, Markdown, CSV hoặc JSON. Ở đây không có bộ đọc PDF hay Word; tệp như vậy sẽ bị từ chối thay vì nộp rỗng.",
+  "knowledge.upload.empty": "Kéo tệp văn bản vào đây, hoặc chọn một tệp",
+  "knowledge.upload.submit": "Thêm tài liệu",
+  "knowledge.new.title": "Bộ tài liệu mới",
+  "knowledge.new.name": "Tên",
+  "knowledge.new.topic": "Bộ này bao gồm những gì",
+  "knowledge.new.topicHint":
+    "Viết một câu, đừng viết nhãn. Câu này được trích lại cho người hỏi điều bộ này không bao gồm — họ đọc nó vào lúc kém kiên nhẫn nhất.",
+  "knowledge.new.submit": "Tạo bộ",
   "settings.tab.privacy": "Quyền riêng tư & kiểm toán",
   "settings.tab.capture-activity": "Hoạt động thu thập",
   "captureActivity.title": "Hoạt động thu thập",
