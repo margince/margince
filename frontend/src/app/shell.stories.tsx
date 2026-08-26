@@ -597,8 +597,11 @@ export const SectionPhone: Story = {
  * What does NOT come back is the agent. It is a cell of the BAR, and the bar is
  * not on screen while this is; a row for it in a list of ten places would file
  * the one thing in the chrome that reports rather than navigates as an eleventh
- * place to go. The sheet is `max-height: 80dvh` over a list this long, so it is a
- * scroller either way — the captured frame is its head, not its end.
+ * place to go. What the cell it left behind buys the sheet is the room for the
+ * whole list: the ceiling is the viewport less the ledge it stands on and the
+ * same air again at the top, and the ten destinations now sit inside it without
+ * scrolling. It is still a scroller — a longer locale or a level with more rows
+ * will reach that ceiling.
  *
  * The close control is the same More button in its other state, renamed, and it
  * is PINNED to the head's corner rather than left at the end of a scrolling list

@@ -824,6 +824,39 @@ function looseStyle(frame: PanelFrame): NotchPlacement {
 }
 
 /**
+ * The frame over the phone bar: the bar's own span, clear of the well.
+ *
+ * Edge to edge with the BAR rather than inset by a margin of its own. The panel
+ * hangs off one of the bar's cells, so the two are one object seen from two
+ * distances — a panel inset by a different amount reads as a sheet that happened
+ * to arrive over the bar. Falls back to its own margin only where no bar was
+ * handed in, which is a caller that has none.
+ */
+function overTheBar(well: DOMRect, bar: DOMRect | undefined): PanelFrame {
+  return {
+    left: bar ? bar.left : PANEL_MARGIN,
+    right: bar ? globalThis.innerWidth - bar.right : PANEL_MARGIN,
+    bottom: globalThis.innerHeight - well.top + PANEL_GAP,
+    maxHeight: well.top - PANEL_GAP * 2,
+    caret: well.left + well.width / 2,
+  };
+}
+
+/**
+ * The frame beside the sidebar: bottom-aligned to the card, so opening the panel
+ * does not move the thing that opened it.
+ */
+function besideTheCard(card: DOMRect): PanelFrame {
+  const height = globalThis.innerHeight;
+  return {
+    left: card.right + PANEL_GAP,
+    bottom: Math.max(PANEL_MARGIN, height - card.bottom),
+    width: PANEL_WIDTH,
+    maxHeight: height - PANEL_MARGIN * 2,
+  };
+}
+
+/**
  * Where the panel goes, in viewport coordinates.
  *
  * It is FIXED and portalled to the body rather than positioned inside the block
@@ -839,6 +872,7 @@ function looseStyle(frame: PanelFrame): NotchPlacement {
 function usePanelFrame(
   card: RefObject<HTMLElement | null>,
   well: RefObject<HTMLElement | null>,
+  bar: RefObject<HTMLElement | null> | undefined,
   open: boolean,
   phone: boolean,
 ): PanelFrame | null {
@@ -859,23 +893,11 @@ function usePanelFrame(
       if (!box) {
         return;
       }
-      const height = globalThis.innerHeight;
-      if (phone) {
-        setFrame({
-          left: PANEL_MARGIN,
-          right: PANEL_MARGIN,
-          bottom: height - box.top + PANEL_GAP,
-          maxHeight: box.top - PANEL_GAP * 2,
-          caret: box.left + box.width / 2,
-        });
-        return;
-      }
-      setFrame({
-        left: box.right + PANEL_GAP,
-        bottom: Math.max(PANEL_MARGIN, height - box.bottom),
-        width: PANEL_WIDTH,
-        maxHeight: height - PANEL_MARGIN * 2,
-      });
+      setFrame(
+        phone
+          ? overTheBar(box, bar?.current?.getBoundingClientRect())
+          : besideTheCard(box),
+      );
     };
     place();
     // The anchor moves when the rail collapses, when the window changes size and
@@ -887,7 +909,7 @@ function usePanelFrame(
       globalThis.removeEventListener("resize", place);
       globalThis.removeEventListener("scroll", place, true);
     };
-  }, [card, well, open, phone]);
+  }, [bar, card, well, open, phone]);
   return frame;
 }
 
@@ -1082,7 +1104,20 @@ function barLine(
   return LABELS.idle;
 }
 
-export function AgentRail({ route }: Readonly<{ route: Route }>) {
+export function AgentRail({
+  route,
+  bar,
+}: Readonly<{
+  route: Route;
+  /**
+   * The bottom bar this block is a cell of, at phone width.
+   *
+   * Only the panel needs it, and only there: it spans the bar rather than
+   * insetting itself, so the two read as one object. Absent on the sidebar,
+   * where the panel stands beside the card and the bar does not exist.
+   */
+  bar?: RefObject<HTMLElement | null>;
+}>) {
   const t = useT();
   // The switcher's choice, and null while the rail is reporting what it read.
   const [override, setOverride] = useState<MarginceCoreState | null>(null);
@@ -1140,7 +1175,7 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
     }
   }, []);
 
-  const frame = usePanelFrame(block, trigger, open, phone);
+  const frame = usePanelFrame(block, trigger, bar, open, phone);
   const money =
     spend.minor === undefined
       ? ""

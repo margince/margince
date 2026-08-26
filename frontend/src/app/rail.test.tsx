@@ -293,6 +293,27 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
+  // TEMPORARY, with the marker it covers: delete this case in the change that
+  // takes the product out of pre-alpha.
+  //
+  // What it holds is the half that is easy to break — the marker has to survive
+  // the collapse. At 64px the rail drops every label it has, so a release marker
+  // that rode the wordmark would be gone exactly where the product is hardest to
+  // identify. It hangs off the head instead, which is present in both states.
+  it("keeps the pre-alpha marker in the head at both rail widths", () => {
+    const expanded = render(<WorkspaceRail route={{ screen: "home" }} />);
+    expect(
+      expanded.container.querySelectorAll(".railhead .prealpha"),
+    ).toHaveLength(1);
+    cleanup();
+
+    const collapsed = render(
+      <WorkspaceRail route={{ screen: "home" }} collapsed />,
+    );
+    const marker = collapsed.container.querySelector(".railhead .prealpha");
+    expect(marker?.textContent).toBe("Pre-alpha");
+  });
+
   // The bar is five cells and only three of them are destinations. The agent is
   // the middle one — it reports rather than navigates, so it is not filed among
   // the places to go — and it stands in the ROW STREAM rather than beside it,

@@ -344,12 +344,59 @@
   height: var(--topbarH);
   margin-top: calc(-1 * var(--space-3));
   margin-bottom: 0;
+  /* The release marker below hangs off this box. */
+  position: relative;
 }
 /* Collapsed, the head is the logomark alone, centred: the control that opens
    and closes this panel now stands in the top bar, where it does not travel
    with the panel it opens and does not have to be discovered on hover. */
 .rail.collapsed .railhead {
   justify-content: center;
+}
+/* TEMPORARY — the release marker.
+ *
+ * The whole thing goes when the product leaves pre-alpha: this rule, the span in
+ * app/shell.tsx and the `shell.preAlpha` key, in one change.
+ *
+ * ABSOLUTE, so it takes no space: the head's height is the strip's to the pixel
+ * and every row below it is aligned to that, so a marker in the flow would move
+ * the whole column. And placed off the MARK rather than off the head — the mark
+ * sits at the same x in both rail states and the head is what narrows around it,
+ * so one placement is on screen at 252px and at 64px with nothing restated.
+ *
+ * It sits under the mark, on the head's bottom edge, which is the one band that
+ * is empty in both states: the wordmark beside it ends above this line and the
+ * collapsed rail has nothing there at all.
+ *
+ * Warn, not danger and not the AI hue: it is a caveat about how finished the
+ * product is, which is the thing that goes wrong if a reader assumes otherwise.
+ * Not a `Badge` — that primitive owns its own geometry (design-system/atoms.tsx)
+ * and this is 8px chrome pinned to a corner, so reaching for it would mean
+ * overriding every property it has. Chrome the rail applies to itself, like
+ * `.railmore`. */
+.rail .prealpha {
+  position: absolute;
+  /* The mark's own centre INSIDE the head: 7px of head inset plus half of a
+     32px mark. Stated rather than measured, because a stylesheet cannot measure
+     — and it is the one number that has to hold, since the collapsed rail is
+     64px wide and this pill is most of it. */
+  left: 23px; /* ds:ignore the mark's centre line, which this hangs from */
+  bottom: -2px; /* ds:ignore the head's own bottom edge */
+  translate: -50% 0;
+  padding: 1px 4px; /* ds:ignore a cap-height pill, not spaced content */
+  border: 1px solid var(--warnBorder);
+  border-radius: 999px; /* ds:ignore a pill's own corner */
+  background: var(--warnBg);
+  color: var(--warn);
+  /* The body face, not the mono one an identifier takes: this is a word, and at
+     8px the mono face is 6px wider than the collapsed rail can hold. */
+  font-size: 8px; /* ds:ignore below the type scale on purpose — it must not compete with the mark */
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.02em;
+  line-height: 1.4;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* brand block */
@@ -1268,10 +1315,20 @@
     gap: 1px;
     padding: var(--space-2) var(--space-2)
       max(var(--space-2), env(safe-area-inset-bottom));
-    /* dvh, not vh: on iOS the browser chrome is subtracted from the wrong side
+    /* Everything between the two ledges. The sheet already stands on the bar's
+       own bottom inset, so what it may take is the viewport less that, less the
+       same air again at the top — a sheet that ended flush with the top edge
+       would read as a page rather than as a layer over one, and would leave the
+       reader nothing to press to dismiss it. Ten destinations do not fill it, so
+       this is a CEILING for the locales and the levels that come closer.
+       dvh, not vh: on iOS the browser chrome is subtracted from the wrong side
        of vh, and a sheet measured against the larger viewport runs its last row
        under the address bar. */
-    max-height: 80dvh;
+    max-height: calc(
+      100dvh -
+      max(var(--space-2), env(safe-area-inset-bottom)) -
+      var(--space-6)
+    );
     overflow-y: auto;
     /* The page behind is already locked; this stops the scroll chaining into
        the page's scroller when the sheet itself hits its end. */

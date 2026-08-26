@@ -16,7 +16,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -256,7 +256,11 @@ function PendingWrite() {
 
 function render(
   route: Route,
-  options: Readonly<{ client?: QueryClient; children?: ReactNode }> = {},
+  options: Readonly<{
+    client?: QueryClient;
+    children?: ReactNode;
+    bar?: RefObject<HTMLElement | null>;
+  }> = {},
 ) {
   const client =
     options.client ??
@@ -267,7 +271,7 @@ function render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         {options.children}
-        <AgentRail route={route} />
+        <AgentRail route={route} bar={options.bar} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -630,7 +634,8 @@ describe("AgentRail", () => {
     expect(container.querySelector(".arbadge")).toBeNull();
   });
 
-  // Where the panel is measured from at phone width, and what points at it.
+  // Where the panel is measured from at phone width, what it spans, and what
+  // points at it.
   //
   // There it stands OVER its anchor rather than beside it, and the anchor is the
   // round well the orb sits in — which rises clear of the bar's top edge. Take
@@ -640,7 +645,7 @@ describe("AgentRail", () => {
   // stop being even. Both come off the same measured box, and this is the case
   // that says so: the well and the cell are deliberately given different boxes,
   // and every number below is the well's.
-  it("measures the phone panel from the well the orb sits in", async () => {
+  it("spans the bar and measures the phone panel from the well the orb sits in", async () => {
     const user = userEvent.setup();
     stubPhoneViewport();
     stubAgentRailApi();
@@ -651,22 +656,36 @@ describe("AgentRail", () => {
     // difference every assertion below turns on.
     const well = new DOMRect(167, 700, 56, 56);
     const cell = new DOMRect(151, 716, 88, 48);
+    const rail = new DOMRect(12, 716, 366, 58);
     const nowhere = new DOMRect(0, 0, 0, 0);
+    const boxFor = (element: Element) => {
+      if (element.classList.contains("arhit")) {
+        return well;
+      }
+      if (element.classList.contains("arblock")) {
+        return cell;
+      }
+      return element.classList.contains("rail") ? rail : nowhere;
+    };
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
       function (this: Element) {
-        if (this.classList.contains("arhit")) {
-          return well;
-        }
-        return this.classList.contains("arblock") ? cell : nowhere;
+        return boxFor(this);
       },
     );
-    const { container } = render(ROUTE);
+    const bar = document.createElement("nav");
+    bar.className = "rail";
+    const { container } = render(ROUTE, { bar: { current: bar } });
 
     await openPanel(user, container);
     const loose = panel();
     const surface = loose.querySelector<HTMLElement>(".arpanel");
     // 8px of air over the WELL's top edge, not over the cell 16px below it.
     expect(surface?.style.bottom).toBe(`${globalThis.innerHeight - 700 + 8}px`);
+    // The bar's own span, edge to edge: the panel and the bar are one object,
+    // and a panel inset by a margin of its own reads as a sheet that happened to
+    // arrive over it.
+    expect(surface?.style.left).toBe("12px");
+    expect(surface?.style.right).toBe(`${globalThis.innerWidth - 378}px`);
     // The well's own middle: 167 + 56 / 2.
     expect(loose.getAttribute("style")).toContain("--arCaretX: 195px");
   });

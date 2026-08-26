@@ -157,6 +157,7 @@ export const en = {
   "shell.railAria": "Primary navigation",
   "shell.skipToContent": "Skip to content",
   "shell.logoAria": "Margince",
+  "shell.preAlpha": "Pre-alpha",
   "shell.searchEverything": "Search everything…",
   "shell.breadcrumbAria": "Breadcrumb",
   "shell.license.none": "No license",

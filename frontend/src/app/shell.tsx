@@ -318,6 +318,14 @@ export function WorkspaceRail({
       >
         <div className="railhead">
           <BrandBlock />
+          {/* TEMPORARY, and the whole element goes when the product leaves
+              pre-alpha: this span, its rule in shell.css and the `shell.preAlpha`
+              key, together. It is absolutely positioned so it takes no space and
+              moves nothing — the head is the same box with it and without it —
+              and it hangs off the mark rather than off the head, because the
+              mark stands at the same x in both rail states and the head is what
+              narrows. That is what keeps it on screen at 64px. */}
+          <span className="prealpha">{t("shell.preAlpha")}</span>
         </div>
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the SAME depth are the same level with
@@ -335,7 +343,7 @@ export function WorkspaceRail({
           // stream, so a thumb and a Tab key read the bar in the same order.
           // One Core either way: the foot below renders only above the
           // breakpoint.
-          centre={phone ? <AgentRail route={route} /> : undefined}
+          centre={phone ? <AgentRail route={route} bar={nav} /> : undefined}
         />
         {/* Phone-width only: expands the bar into a sheet carrying every
           destination. Hidden by CSS on the desktop sidebar.

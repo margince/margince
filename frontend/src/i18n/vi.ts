@@ -158,6 +158,7 @@ export const vi = {
   "shell.railAria": "Điều hướng chính",
   "shell.skipToContent": "Bỏ qua tới nội dung",
   "shell.logoAria": "Margince",
+  "shell.preAlpha": "Tiền alpha",
   "shell.searchEverything": "Tìm kiếm mọi thứ…",
   "shell.breadcrumbAria": "Đường dẫn",
   "shell.license.none": "Chưa có giấy phép",
