@@ -24,7 +24,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 )
 
@@ -143,17 +142,18 @@ func TestTheLocalDayBackfillUsesTheInstallationZoneNotUTC(t *testing.T) {
 
 // The fixture the two tests above share: one rep and two deals, which is the
 // smallest shape brief_run and brief_item's foreign keys will accept.
-var (
-	briefFixtureUser     = mustParseUUID("01920000-0000-7000-8000-000000000001")
-	briefFixtureDealA    = mustParseUUID("01920000-0000-7000-8000-00000000000a")
-	briefFixtureDealB    = mustParseUUID("01920000-0000-7000-8000-00000000000b")
-	briefFixturePipeline = mustParseUUID("01920000-0000-7000-8000-0000000000c1")
-	briefFixtureStage    = mustParseUUID("01920000-0000-7000-8000-0000000000d1")
+//
+// Held as strings, which is also all this component may say: `migrations` is
+// allowed pgx and nothing else, and pgx binds a string to a uuid column and
+// scans one back. A dedicated id type would widen the architecture rule to buy
+// a type this file never uses as a type.
+const (
+	briefFixtureUser     = "01920000-0000-7000-8000-000000000001"
+	briefFixtureDealA    = "01920000-0000-7000-8000-00000000000a"
+	briefFixtureDealB    = "01920000-0000-7000-8000-00000000000b"
+	briefFixturePipeline = "01920000-0000-7000-8000-0000000000c1"
+	briefFixtureStage    = "01920000-0000-7000-8000-0000000000d1"
 )
-
-func mustParseUUID(s string) uuid.UUID {
-	return uuid.MustParse(s)
-}
 
 // seedBriefRunFixture writes the rows brief_run and brief_item foreign-key to:
 // one rep, and two deals on a pipeline stage. It inserts them directly rather
@@ -177,7 +177,7 @@ func seedBriefRunFixture(t *testing.T, conn *pgx.Conn) {
 		briefFixtureStage, briefFixturePipeline); err != nil {
 		t.Fatalf("seeding the fixture stage: %v", err)
 	}
-	for _, deal := range []uuid.UUID{briefFixtureDealA, briefFixtureDealB} {
+	for _, deal := range []string{briefFixtureDealA, briefFixtureDealB} {
 		if _, err := conn.Exec(ctx,
 			`INSERT INTO deal (id, pipeline_id, stage_id, name, owner_id, status, source, captured_by)
 			 VALUES ($1, $2, $3, 'Deal', $4, 'open', 'manual', 'test')`,
@@ -189,9 +189,9 @@ func seedBriefRunFixture(t *testing.T, conn *pgx.Conn) {
 
 // insertBriefRun writes one pre-migration run — no local_day, which is the
 // whole point: the column does not exist yet when the migration replays.
-func insertBriefRun(t *testing.T, conn *pgx.Conn, generatedAt time.Time) uuid.UUID {
+func insertBriefRun(t *testing.T, conn *pgx.Conn, generatedAt time.Time) string {
 	t.Helper()
-	var id uuid.UUID
+	var id string
 	if err := conn.QueryRow(context.Background(),
 		`INSERT INTO brief_run (user_id, generated_at, as_of, candidate_count, revenue_norm_minor)
 		 VALUES ($1, $2, $2, 3, 5000000) RETURNING id`,
@@ -203,7 +203,7 @@ func insertBriefRun(t *testing.T, conn *pgx.Conn, generatedAt time.Time) uuid.UU
 
 // insertBriefItem writes one queue entry with the per-rep state the collapse
 // must carry forward.
-func insertBriefItem(t *testing.T, conn *pgx.Conn, run, deal uuid.UUID, rank int,
+func insertBriefItem(t *testing.T, conn *pgx.Conn, run, deal string, rank int,
 	state string, stateAt, snoozedUntil *time.Time,
 ) {
 	t.Helper()
