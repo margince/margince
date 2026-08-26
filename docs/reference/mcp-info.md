@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 159.8 KB |
+| Tool catalog | 160.2 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 41778 |
+| Approx. wire tokens | 41889 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 74.7 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 37.9 KB | 23% | Yes, every step |
+| Output schemas | 74.8 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 38.2 KB | 23% | Yes, every step |
 | Input schemas | 34.9 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.3 KB | 7% | Partly |
-| **Description + input schema** | **72.8 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **73.1 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -61,7 +61,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
-| [`account_coverage`](#account_coverage) | Relationship coverage on a deal | yes |  | 2.7 KB |
+| [`account_coverage`](#account_coverage) | Relationship coverage on a deal | yes |  | 3.1 KB |
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.2 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.0 KB |
@@ -315,7 +315,7 @@ Whether this host lets a view read the device's position, and the browser's own 
 
 **Relationship coverage on a deal**
 
-Answer "is this deal covered?": which roles on the account we have a relationship with, and where the deal is exposed to a single contact. It assesses the relationships recorded against one deal's account, not the deal's commercial health — nothing here says whether the deal will close. Use whats_slipping_this_week for deals at risk of stalling, and intro_path_to when the answer is that a gap needs a warm route filling it. Keep the deal_id and the named gaps; they are what a follow-up plan is built from. (Governance: runs immediately; requires passport scope "read".)
+Answer "is this deal covered?": which roles on the account we have a relationship with, and where the deal is exposed to a single contact. It assesses the relationships recorded against one deal's account, not the deal's commercial health — nothing here says whether the deal will close. Use whats_slipping_this_week for deals at risk of stalling, and intro_path_to when the answer is that a gap needs a warm route filling it. Keep the deal_id and the named gaps; they are what a follow-up plan is built from. Each stakeholder carries `person_name` beside its role — say WHO the uncovered seat is rather than reporting the role alone, because the answer a rep acts on is a person to bring into the room. A seat with no name is one this caller may not read: report the gap, and do not guess who fills it. (Governance: runs immediately; requires passport scope "read".)
 
 <details><summary>Input schema</summary>
 
@@ -395,6 +395,12 @@ Answer "is this deal covered?": which roles on the account we have a relationshi
                 },
                 "type": "array"
               },
+              "person_names": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
               "summary": {
                 "type": "string"
               },
@@ -428,6 +434,9 @@ Answer "is this deal covered?": which roles on the account we have a relationshi
               },
               "person_id": {
                 "format": "uuid",
+                "type": "string"
+              },
+              "person_name": {
                 "type": "string"
               },
               "role": {
@@ -1233,6 +1242,12 @@ Answer "where are our relationships thin?": across the caller's OPEN deals, the 
                     "person_ids": {
                       "items": {
                         "format": "uuid",
+                        "type": "string"
+                      },
+                      "type": "array"
+                    },
+                    "person_names": {
+                      "items": {
                         "type": "string"
                       },
                       "type": "array"

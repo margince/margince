@@ -92,8 +92,19 @@ type DealCoverageAnswer struct {
 // CoverageSeat is one stakeholder and whether the seat is a relationship.
 type CoverageSeat struct {
 	PersonID ids.UUID `json:"person_id"`
-	Role     string   `json:"role"`
-	Engaged  bool     `json:"engaged"`
+	// PersonName is who holds the seat. The whole question this tool answers
+	// is WHICH NAMED HUMAN is missing from a deal, and a seat that says
+	// "economic_buyer, not engaged" against a bare uuid has not answered it —
+	// a model cannot tell a rep who to bring into the room. The sibling field
+	// on KnownColleague makes the same argument for our side, and the REST
+	// payload has carried `person_name` since this read existed.
+	//
+	// Absent when the caller may not read that person: how many people carry a
+	// deal is not the secret, only who they are. The seat still ships, so the
+	// coverage picture keeps its shape and the risks stay countable.
+	PersonName string `json:"person_name,omitempty"`
+	Role       string `json:"role"`
+	Engaged    bool   `json:"engaged"`
 }
 
 // CoverageRisk is one finding. Kind names the RULE, so a model explaining the
@@ -102,7 +113,18 @@ type CoverageRisk struct {
 	Kind      string     `json:"kind"`
 	Summary   string     `json:"summary"`
 	PersonIDs []ids.UUID `json:"person_ids,omitempty"`
-	UserIDs   []ids.UUID `json:"user_ids,omitempty"`
+	// PersonNames names the people this finding is about, and is the half a
+	// model can put in a sentence. A finding that says "the deal rests on one
+	// relationship" and lists a uuid makes the rep go look the name up, which
+	// is the work the tool exists to save.
+	//
+	// It is a SET, not a parallel array: a person the caller may not read has
+	// no entry, so the two lists can differ in length and an index into one
+	// does not address the other. Pairing them positionally would silently
+	// attach the wrong name the first time a private contact sits on a deal —
+	// so they are deliberately not paired, and PersonIDs stays the handle.
+	PersonNames []string   `json:"person_names,omitempty"`
+	UserIDs     []ids.UUID `json:"user_ids,omitempty"`
 	// DaysSinceTouch is set on going-cold and absent elsewhere. A pointer
 	// rather than a plain int because a zero would read as "touched today" on
 	// every finding that says nothing about recency.

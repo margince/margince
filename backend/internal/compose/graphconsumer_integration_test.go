@@ -223,12 +223,21 @@ func TestCoverageNamesItsColleaguesForTheAgent(t *testing.T) {
 		t.Fatalf("seeding the deal: %v", err)
 	}
 
-	answer, err := coverageReader(e.Pool)(e.Admin(), dealID)
+	answer, err := coverageReader(e.Pool, people.NewStore(InstallationDB(e.Pool)))(e.Admin(), dealID)
 	if err != nil {
 		t.Fatalf("coverage seam: %v", err)
 	}
 	if len(answer.OurSide) == 0 {
 		t.Fatal("coverage named no colleagues though one exchanged mail with the stakeholder")
+	}
+	// And the stakeholder is NAMED, against a real person row and a real
+	// gate. The unit tests hand toAgentCoverage a prepared map; only this one
+	// proves PersonNamesTx is actually reached and actually answers.
+	if len(answer.Stakeholders) == 0 {
+		t.Fatal("coverage seated no stakeholder though one was captured")
+	}
+	if answer.Stakeholders[0].PersonName == "" {
+		t.Error("the stakeholder came back as a bare uuid — a rep cannot act on an id")
 	}
 	// A bare id leaves a model unable to say who to ask, which is the only
 	// reason it asked.

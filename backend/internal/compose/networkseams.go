@@ -12,6 +12,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,9 +20,11 @@ import (
 
 	"github.com/gradionhq/margince/backend/internal/compose/network"
 	"github.com/gradionhq/margince/backend/internal/modules/agents"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/relstrength"
@@ -106,7 +109,7 @@ const agentWhoKnowsCap = 10
 const agentWhoKnowsFetch = 100
 
 // coverageReader answers "how is this deal covered" for the tool surface.
-func coverageReader(pool *pgxpool.Pool) agents.CoverageReader {
+func coverageReader(pool *pgxpool.Pool, ppl *people.Store) agents.CoverageReader {
 	return func(ctx context.Context, dealID ids.UUID) (agents.DealCoverageAnswer, error) {
 		var out agents.DealCoverageAnswer
 		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
@@ -127,14 +130,23 @@ func coverageReader(pool *pgxpool.Pool) agents.CoverageReader {
 			if err != nil {
 				return err
 			}
-			out = toAgentCoverage(coverage, names)
+			// And the same for THEIR side, which the argument above applies to
+			// at least as strongly: the tool's whole question is which named
+			// human is missing from the deal. The HTTP surface has named its
+			// stakeholders since this read existed (`person_name` in the
+			// contract); only the tool shape was left with bare ids.
+			seated, err := coveragePersonNames(ctx, tx, ppl, coverage)
+			if err != nil {
+				return err
+			}
+			out = toAgentCoverage(coverage, names, seated)
 			return nil
 		})
 		return out, err
 	}
 }
 
-func toAgentCoverage(c network.DealCoverage, names map[ids.UUID]string) agents.DealCoverageAnswer {
+func toAgentCoverage(c network.DealCoverage, names, seated map[ids.UUID]string) agents.DealCoverageAnswer {
 	// Both collections start EMPTY, never nil: a deal with no stakeholder seat
 	// and nobody on our side is the answer that says the deal is uncovered, and
 	// it is the answer a rep most needs. Marshalled from a nil slice it reaches a
@@ -154,7 +166,8 @@ func toAgentCoverage(c network.DealCoverage, names map[ids.UUID]string) agents.D
 	}
 	for _, s := range c.Stakeholders {
 		out.Stakeholders = append(out.Stakeholders, agents.CoverageSeat{
-			PersonID: s.PersonID, Role: s.Role, Engaged: s.Engaged,
+			PersonID: s.PersonID, PersonName: seated[s.PersonID],
+			Role: s.Role, Engaged: s.Engaged,
 		})
 	}
 	for _, e := range c.OurSide {
@@ -168,18 +181,19 @@ func toAgentCoverage(c network.DealCoverage, names map[ids.UUID]string) agents.D
 		}
 		out.OurSide = append(out.OurSide, colleague)
 	}
-	out.Risks = toAgentRisks(c.Risks)
+	out.Risks = toAgentRisks(c.Risks, seated)
 	return out
 }
 
 // toAgentRisks maps the findings onto the tool shape. Spelled once because two
 // tools return risks — the coverage read and the at-risk sweep — and a second
 // copy would be a second place for the day-count rule below to be wrong.
-func toAgentRisks(risks []network.Risk) []agents.CoverageRisk {
+func toAgentRisks(risks []network.Risk, seated map[ids.UUID]string) []agents.CoverageRisk {
 	out := make([]agents.CoverageRisk, 0, len(risks))
 	for _, r := range risks {
 		risk := agents.CoverageRisk{
 			Kind: r.Kind, Summary: r.Summary, PersonIDs: r.PersonIDs, UserIDs: r.UserIDs,
+			PersonNames: namedPeople(r.PersonIDs, seated),
 		}
 		// Only going-cold carries a day count; a zero on the others would read
 		// as "touched today", which is the opposite of what a departure finding
@@ -213,6 +227,61 @@ func requireVisibleDeal(ctx context.Context, tx pgx.Tx, dealID ids.UUID) error {
 
 // coverageUserNames resolves the display names for a coverage answer's
 // colleagues.
+// coveragePersonNames names the stakeholders on a coverage payload.
+//
+// It delegates to people.PersonNamesTx rather than reading `person` here, for
+// the reason network.seatNames states about its own copy: PersonNamesTx
+// carries BOTH halves of the gate — the person object check and the row-scope
+// clause — and a second copy of that read is a second place for one half to go
+// missing. It went missing on the HTTP side once already, as a local query
+// with the row scope and no object gate, which named a deal's contacts to a
+// caller holding deal:read without person:read.
+//
+// A caller who may read the deal but not people gets their coverage with the
+// seats unnamed rather than no coverage at all: the findings are about the
+// DEAL, and taking them away to withhold a name withholds the wrong thing.
+func coveragePersonNames(ctx context.Context, tx pgx.Tx, ppl *people.Store, c network.DealCoverage) (map[ids.UUID]string, error) {
+	if len(c.Stakeholders) == 0 {
+		return map[ids.UUID]string{}, nil
+	}
+	seated := make([]ids.PersonID, 0, len(c.Stakeholders))
+	for _, s := range c.Stakeholders {
+		seated = append(seated, ids.From[ids.PersonKind](s.PersonID))
+	}
+	names, err := ppl.PersonNamesTx(ctx, tx, seated)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return map[ids.UUID]string{}, nil
+		}
+		return nil, err
+	}
+	return names, nil
+}
+
+// namedPeople is the names a finding can put in a sentence, for the people it
+// names that the caller may read.
+//
+// A person with no name resolved is SKIPPED rather than rendered as an empty
+// string: a finding reading "the deal rests on one relationship: ”" is worse
+// than one that names nobody, and the ids are still there to look up. The
+// result is deliberately not positionally paired with PersonIDs — see the
+// field's own comment.
+func namedPeople(people []ids.UUID, seated map[ids.UUID]string) []string {
+	if len(people) == 0 {
+		return nil
+	}
+	out := make([]string, 0, len(people))
+	for _, id := range people {
+		if name := seated[id]; name != "" {
+			out = append(out, name)
+		}
+	}
+	if len(out) == 0 {
+		return nil
+	}
+	return out
+}
+
 func coverageUserNames(ctx context.Context, tx pgx.Tx, c network.DealCoverage) (map[ids.UUID]string, error) {
 	edges := make([]search.InteractionEdge, 0, len(c.OurSide))
 	for _, e := range c.OurSide {

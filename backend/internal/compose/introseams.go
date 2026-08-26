@@ -326,7 +326,12 @@ func dealAtRisk(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal, now time.Ti
 	if len(coverage.Risks) == 0 {
 		return agents.AtRiskDeal{}, dealNoFinding, nil
 	}
+	// No stakeholder names on the SWEEP. It assesses up to atRiskScanLimit
+	// deals, so naming them would be one gated person read per deal to answer
+	// a question the list does not ask — which deals are at risk, not who sits
+	// on each. A caller who wants the names calls account_coverage on the one
+	// deal they picked, and that read names them.
 	return agents.AtRiskDeal{
-		DealID: ids.UUID(d.Id), Name: d.Name, Risks: toAgentRisks(coverage.Risks),
+		DealID: ids.UUID(d.Id), Name: d.Name, Risks: toAgentRisks(coverage.Risks, nil),
 	}, dealFlagged, nil
 }

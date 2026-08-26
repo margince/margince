@@ -57,6 +57,12 @@
                     "format": "uuid"
                   }
                 },
+                "person_names": {
+                  "type": "array",
+                  "items": {
+                    "type": "string"
+                  }
+                },
                 "summary": {
                   "type": "string"
                 },
@@ -91,6 +97,9 @@
                 "person_id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "person_name": {
+                  "type": "string"
                 },
                 "role": {
                   "type": "string"
@@ -629,6 +638,12 @@
                         "items": {
                           "type": "string",
                           "format": "uuid"
+                        }
+                      },
+                      "person_names": {
+                        "type": "array",
+                        "items": {
+                          "type": "string"
                         }
                       },
                       "summary": {
