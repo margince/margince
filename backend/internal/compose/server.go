@@ -28,6 +28,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/finance"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/modules/knowledge"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
 	"github.com/gradionhq/margince/backend/internal/modules/projects"
@@ -139,6 +140,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
 		quotasHandlers:       quotas.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf),
+		knowledgeHandlers:    knowledgeHandlers{Handlers: knowledge.NewHandlers(InstallationDB(pool))},
 		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
 		// the store bounds "today" at midnight in the clock's own location, and a
 		// UTC clock would name the wrong day on a non-UTC installation for the

@@ -21945,6 +21945,14 @@ export interface components {
             /** Format: date-time */
             created_at: string;
         };
+        /** @description Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it. */
+        KnowledgeCorpusList: {
+            items: components["schemas"]["KnowledgeCorpus"][];
+        };
+        /** @description Every document filed in one corpus, whatever state its ingest reached. */
+        KnowledgeDocumentList: {
+            items: components["schemas"]["KnowledgeDocument"][];
+        };
         KnowledgeCoverage: {
             chunks_total: number;
             chunks_embedded: number;
@@ -39667,9 +39675,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items: components["schemas"]["KnowledgeCorpus"][];
-                    };
+                    "application/json": components["schemas"]["KnowledgeCorpusList"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -39816,9 +39822,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        items: components["schemas"]["KnowledgeDocument"][];
-                    };
+                    "application/json": components["schemas"]["KnowledgeDocumentList"];
                 };
             };
             401: components["responses"]["Unauthorized"];

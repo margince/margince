@@ -2116,6 +2116,7 @@ public.knowledge_corpus.description text gen=- def=-
 public.knowledge_corpus.id uuid NOT NULL gen=- def=uuidv7()
 public.knowledge_corpus.knowledge_corpus_min_similarity_range CHECK (((min_similarity >= (0)::double precision) AND (min_similarity <= (1)::double precision)))
 public.knowledge_corpus.knowledge_corpus_pkey PRIMARY KEY (id)
+public.knowledge_corpus.knowledge_corpus_touch CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
 public.knowledge_corpus.name text NOT NULL gen=- def=-
 public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
@@ -2141,6 +2142,7 @@ public.knowledge_document.knowledge_document_corpus_fk FOREIGN KEY (corpus_id) R
 public.knowledge_document.knowledge_document_detail_shape CHECK (((ingest_status = 'failed'::text) = (ingest_detail IS NOT NULL)))
 public.knowledge_document.knowledge_document_pkey PRIMARY KEY (id)
 public.knowledge_document.knowledge_document_status_check CHECK ((ingest_status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))
+public.knowledge_document.knowledge_document_touch CREATE TRIGGER knowledge_document_touch BEFORE UPDATE ON public.knowledge_document FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.knowledge_document.storage_key text NOT NULL gen=- def=-
 public.knowledge_document.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.knowledge_document_by_corpus CREATE INDEX knowledge_document_by_corpus ON public.knowledge_document USING btree (corpus_id, archived_at)

@@ -89,6 +89,15 @@ ALTER TABLE knowledge_chunk ADD CONSTRAINT knowledge_chunk_document_fk
 CREATE INDEX knowledge_chunk_retrieval
     ON knowledge_chunk (corpus_id, embed_identity) WHERE archived_at IS NULL;
 
+-- updated_at is the trigger's, not the caller's: neither table carries a
+-- version column, so set_updated_at rather than its version-bumping sibling.
+-- knowledge_chunk gets none — a chunk is rewritten wholesale by the next ingest
+-- attempt and has no updated_at to keep honest.
+CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON knowledge_corpus
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+CREATE TRIGGER knowledge_document_touch BEFORE UPDATE ON knowledge_document
+    FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE knowledge_corpus TO margince_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE knowledge_document TO margince_app;
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE knowledge_chunk TO margince_app;

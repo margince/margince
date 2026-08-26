@@ -17802,6 +17802,11 @@ type KnowledgeCorpus struct {
 	TuningStale *bool `json:"tuning_stale,omitempty"`
 }
 
+// KnowledgeCorpusList Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it.
+type KnowledgeCorpusList struct {
+	Items []KnowledgeCorpus `json:"items"`
+}
+
 // KnowledgeCoverage defines model for KnowledgeCoverage.
 type KnowledgeCoverage struct {
 	ChunksEmbedded int `json:"chunks_embedded"`
@@ -17826,6 +17831,11 @@ type KnowledgeDocument struct {
 
 // KnowledgeDocumentIngestStatus defines model for KnowledgeDocument.IngestStatus.
 type KnowledgeDocumentIngestStatus string
+
+// KnowledgeDocumentList Every document filed in one corpus, whatever state its ingest reached.
+type KnowledgeDocumentList struct {
+	Items []KnowledgeDocument `json:"items"`
+}
 
 // Lead A thin, segregated prospect. Mirrors the `lead` table. NO organization FK.
 type Lead struct {
