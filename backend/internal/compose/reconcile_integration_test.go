@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"os"
@@ -63,6 +64,7 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(e.svc, e.Activities))
+	e.svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
 	e.reconciler = deals.NewFollowUpReconciler(e.DB(), followUpStager{svc: e.svc}, quiet)
 	return e
 }
@@ -360,6 +362,230 @@ func TestFollowUpRejectWritesNothing(t *testing.T) {
 	}
 	if status != "rejected" {
 		t.Errorf("approval status = %q, want rejected", status)
+	}
+}
+
+// A rejection STICKS. The nightly pass runs again tomorrow over the same deal,
+// and a rep who said no must not be asked the same thing a second time.
+//
+// The pass only ever asked whether a proposal was still PENDING, so a rejected
+// one left no trace it could see: the next run staged a fresh proposal, and the
+// rep's no became a daily question. That is the failure StageUnlessDeclined
+// exists to prevent, and it needs a stable logical identity to recognise the
+// proposal as the same one.
+func TestARejectedFollowUpIsNotAskedAgainTomorrow(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Asked once", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, _ := e.followUpApproval(t, deal)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
+		t.Fatalf("reject: %v", err)
+	}
+
+	// Tomorrow's pass, over a deal whose situation has not changed.
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("after a rejection the next pass staged %d proposals, want 0 — "+
+			"the rep is being asked again", got)
+	}
+}
+
+// A rejection on ONE deal says nothing about another. The identity is the deal,
+// so declining a follow-up must not quiet the whole pipeline — which is the way
+// a too-broad identity fails, and it fails silently: proposals simply stop
+// appearing and nobody can point at the moment they stopped.
+func TestARejectionOnOneDealDoesNotSilenceAnother(t *testing.T) {
+	e := setupReconcile(t)
+	declined := e.SeedDeal(t, "Said no here", e.pipeline, e.open, &e.Rep1)
+	other := e.SeedDeal(t, "Never asked", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, declined, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, _ := e.followUpApproval(t, declined)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
+		t.Fatalf("reject: %v", err)
+	}
+
+	// The other deal now earns a proposal of its own.
+	e.seedInteraction(t, other, "call", "First contact", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, other); got != 1 {
+		t.Errorf("the untouched deal has %d proposals, want 1 — a rejection "+
+			"elsewhere silenced it", got)
+	}
+	if got := e.pendingFollowUps(t, declined); got != 0 {
+		t.Errorf("the declined deal has %d proposals, want 0", got)
+	}
+}
+
+// An edit the effect cannot use REFUSES the decision, rather than recording a
+// yes that produces nothing.
+//
+// The approval commits before its effect runs and a failed effect never
+// un-decides it, so without a preflight the rep sees a decision go through, no
+// task appears, and there is no surface to decide the row again — the work
+// simply did not happen and nothing says so. A due date is the reachable case:
+// the card lets a human edit the payload, and the effect parses that date.
+func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Edited badly", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, proposal := e.followUpApproval(t, deal)
+
+	proposal.DueDate = "next Tuesday"
+	edited, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	_, err = e.svc.DecideEdited(human, approvalID, edited)
+	if err == nil {
+		t.Fatal("an unusable due date was accepted, want the decision refused")
+	}
+	// The rep has to be able to ACT on the refusal. An untyped error here reads
+	// as 500 internal at the handler, which says the server broke rather than
+	// that the date needs fixing — and a rep told that has no reason to retry.
+	var invalid *approvals.InvalidEditError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("refusal is %T, want *approvals.InvalidEditError so the rep "+
+			"gets a 422 naming the field rather than an opaque 500: %v", err, err)
+	}
+
+	// Refused means UNDECIDED: the rep fixes the date and approves the same row.
+	var status string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT status FROM approval WHERE id = $1`, approvalID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" {
+		t.Errorf("approval status = %q, want pending — a refused decision must "+
+			"leave the row answerable", status)
+	}
+	if got, _, _, _ := e.dealTasks(t, deal); got != 0 {
+		t.Errorf("a refused decision created %d tasks, want 0", got)
+	}
+}
+
+// A VALID edit still goes through, and the effect uses the edited value.
+//
+// The admit case beside the refusal above: a preflight that refused everything
+// would pass that test just as well, and would have quietly broken the one
+// thing the card exists for — a rep changing the date before saying yes.
+func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Edited well", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, proposal := e.followUpApproval(t, deal)
+
+	moved := time.Now().UTC().AddDate(0, 0, 9).Format(time.DateOnly)
+	proposal.DueDate = moved
+	edited, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.DecideEdited(human, approvalID, edited); err != nil {
+		t.Fatalf("a valid edit was refused: %v", err)
+	}
+	count, _, _, due := e.dealTasks(t, deal)
+	if count != 1 {
+		t.Fatalf("the approved follow-up created %d tasks, want 1", count)
+	}
+	if due == nil || due.UTC().Format(time.DateOnly) != moved {
+		t.Errorf("the task is due %v, want the edited date %s — the effect used "+
+			"the staged proposal rather than the human's edit", due, moved)
+	}
+}
+
+// The rejection survives a payload that has MOVED. The proposal's due date is
+// computed from "today", so tomorrow's proposal is a different document — and
+// supersession matches by containment of the identity, not by equality of the
+// payload. If that were the other way round, the memory would last exactly one
+// night and this fix would be decorative.
+func TestARejectionSurvivesTheProposalChangingUnderIt(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Payload moves", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, first := e.followUpApproval(t, deal)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
+		t.Fatalf("reject: %v", err)
+	}
+
+	// Move the deal's clock so the next pass computes a different due date over
+	// the SAME interaction — a different document, the same question.
+	e.WsExec(t, `UPDATE deal SET last_activity_at = now() - interval '2 days' WHERE id = $1`, deal)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("a moved payload staged %d proposals past the rejection, want 0 — "+
+			"the memory is keyed on the payload rather than on the situation", got)
+	}
+	if first.DealID.UUID != deal {
+		t.Errorf("the first proposal named deal %s, want %s", first.DealID.UUID, deal)
+	}
+}
+
+// A rejection covers the conversation it answered, not the deal forever.
+//
+// The admit case beside the three refusals above, and the one that decides
+// whether the memory is a memory or a mute button. A decline is remembered with
+// no expiry, so keying it on the deal alone would let one "no" bury every later
+// follow-up: the rep says no after a discovery call, has a real conversation
+// weeks later that again ends with no next step, and is never asked. The
+// evidence activity is what tells those apart.
+func TestANewConversationIsProposedAgainAfterAnEarlierRejection(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Moved on", e.pipeline, e.open, &e.Rep1)
+	// Both interactions sit inside the pass's 48h lookback; the declined one is
+	// simply the older, so the later call becomes the evidence on the reruns.
+	e.seedInteraction(t, deal, "meeting", "Discovery", 40)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, declined := e.followUpApproval(t, deal)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
+		t.Fatalf("reject: %v", err)
+	}
+
+	// A genuinely new interaction, later than the one that was declined.
+	e.WsExec(t, `UPDATE deal SET last_activity_at = now() - interval '2 days' WHERE id = $1`, deal)
+	fresh := e.seedInteraction(t, deal, "call", "They called back", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Fatalf("a new conversation staged %d proposals, want 1 — an old rejection "+
+			"is silencing a deal it was never asked about", got)
+	}
+	_, asked := e.followUpApproval(t, deal)
+	if asked.EvidenceActivityID.UUID != fresh {
+		t.Errorf("the new proposal cites interaction %s, want the fresh one %s",
+			asked.EvidenceActivityID.UUID, fresh)
+	}
+	if asked.EvidenceActivityID == declined.EvidenceActivityID {
+		t.Error("the new proposal cites the interaction that was already declined")
 	}
 }
 

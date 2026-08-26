@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
@@ -59,13 +60,43 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 	if err != nil {
 		return fmt.Errorf("compose: canonicalize follow-up proposal: %w", err)
 	}
-	_, err = s.svc.Stage(ctx, approvals.StageInput{
+	// The logical identity is the deal AND the interaction the proposal was
+	// drawn from — the two fields that say WHICH follow-up this is.
+	//
+	// It must not include the due date. The proposal's date moves with "today",
+	// so an identity carrying it makes every night's proposal a different one —
+	// and StageUnlessDeclined, which recognises a proposal a human already
+	// declined, would recognise nothing. A rep's "no" then became a question
+	// they were asked again the following morning.
+	//
+	// It must not be the deal ALONE either, for the opposite reason. A decline
+	// is remembered with no expiry, so a deal-only identity lets one "no" bury
+	// every future follow-up on that deal: the rep declines after a discovery
+	// call, has a real conversation three weeks later that again ends with no
+	// next step, and is never asked. The evidence activity is what separates
+	// those two cases — the nightly pass picks the LATEST interaction, so it is
+	// the same value while the situation is unchanged and a new one exactly when
+	// the deal has genuinely moved.
+	//
+	// Identity fields must appear in ProposedChange with the same value
+	// (canonicalIdentity enforces it), and both do: the payload carries the deal
+	// this follow-up is for and the interaction that triggered it.
+	identity, err := json.Marshal(map[string]string{
+		"deal_id":              dealID.String(),
+		"evidence_activity_id": proposal.EvidenceActivityID.String(),
+	})
+	if err != nil {
+		return fmt.Errorf("compose: marshal follow-up identity: %w", err)
+	}
+	_, _, err = s.svc.StageUnlessDeclined(ctx, approvals.StageInput{
 		Kind:           deals.FollowUpReconcileKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
 		TargetType:     "deal",
 		TargetID:       dealID,
 		Summary:        summary,
+		Identity:       identity,
+		JoinPending:    true,
 	})
 	return err
 }
@@ -74,6 +105,45 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 // the worker process role.
 func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUpReconciler {
 	return deals.NewFollowUpReconciler(InstallationDB(pool), followUpStager{svc: approvals.NewService(InstallationDB(pool))}, log)
+}
+
+// followUpPrecheck refuses a DECISION whose payload the effect could not use.
+//
+// It exists because the two halves are not one transaction: the approval
+// commits, then the effect runs, and a failed effect never un-decides it. So a
+// payload the effect chokes on produces an approved row nothing can decide
+// again and no surface can re-drive — the rep sees their yes recorded, no task
+// appears, and nothing says why. Refusing BEFORE the decision leaves the row
+// pending, which is the state a human can act on: fix the date, approve again.
+//
+// The due date is the reachable case rather than a theoretical one. The card
+// lets a human edit the proposal, and this is the field the effect parses.
+//
+// It checks the payload about to be committed — the edit when there is one, the
+// staged proposal otherwise — because those are different documents and only
+// one of them is what the effect will read.
+//
+// The refusal is approvals' own InvalidEditError so it lands on 422 naming the
+// field, the way the send precheck's refusals already do. An untyped error here
+// reaches the generic mapper and reads as 500 internal, which tells the rep
+// their approval broke the server rather than that the date needs fixing —
+// leaving them nothing to act on and no reason to try again.
+func followUpPrecheck() approvals.ReleasePrecheck {
+	return func(_ context.Context, staged, edited json.RawMessage) error {
+		payload := staged
+		if len(edited) > 0 {
+			payload = edited
+		}
+		proposal, err := deals.UnmarshalFollowUpProposal(payload)
+		if err != nil {
+			return &approvals.InvalidEditError{Cause: err}
+		}
+		if _, err := time.Parse(time.DateOnly, proposal.DueDate); err != nil {
+			return &approvals.InvalidEditError{Cause: fmt.Errorf(
+				"the due date %q is not a date — write it as YYYY-MM-DD", proposal.DueDate)}
+		}
+		return nil
+	}
 }
 
 // followUpConfirmEffect executes an approved follow-up: redeem-then-
@@ -88,9 +158,6 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 // decision's own audit row.
 func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		if _, _, err := svc.Redeem(ctx, approvalID, deals.FollowUpReconcileKind, diffHash); err != nil {
-			return err
-		}
 		proposal, err := deals.UnmarshalFollowUpProposal(proposedChange)
 		if err != nil {
 			return err
@@ -113,16 +180,32 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		body := proposal.Body
 		sourceSystem := "overnight-reconcile"
 		sourceID := approvalID.String()
-		_, _, err = store.LogActivity(execCtx, activities.LogActivityInput{
-			Kind:         "task",
-			Subject:      &subject,
-			Body:         &body,
-			DueAt:        &due,
-			SourceSystem: &sourceSystem,
-			SourceID:     &sourceID,
-			Source:       "overnight-reconcile",
-			Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
-		})
-		return err
+		// Redemption and the write in ONE transaction. Consuming the approval
+		// first and writing after leaves the two able to disagree: the approval
+		// reads as redeemed while no task exists, and the audit row asserts a
+		// redemption for a write that never landed. Here a failed write rolls
+		// the redemption back with it, so redeemed and created stay the same
+		// fact.
+		//
+		// It does NOT make a failed effect re-drivable. The decision commits
+		// before any effect runs, so a failure here leaves an approved row with
+		// its redemption intact and nothing to re-trigger it — deciding again
+		// returns AlreadyDecided. Closing that needs the effect inside the
+		// decision transaction, or a durable retry, and it is the approvals
+		// module's to close for every kind rather than this one's.
+		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
+			func(tx pgx.Tx) error {
+				_, _, err := store.LogActivityTx(execCtx, tx, activities.LogActivityInput{
+					Kind:         "task",
+					Subject:      &subject,
+					Body:         &body,
+					DueAt:        &due,
+					SourceSystem: &sourceSystem,
+					SourceID:     &sourceID,
+					Source:       "overnight-reconcile",
+					Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
+				})
+				return err
+			})
 	}
 }
