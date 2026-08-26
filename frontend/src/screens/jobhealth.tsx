@@ -13,7 +13,12 @@ import { CardBoundary } from "../design-system/cardboundary";
 import { type Fact, FactList } from "../design-system/factlist";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime, formatNumber } from "../format/format";
+import {
+  formatDateTime,
+  formatNumber,
+  identifierNumber,
+  ordinalNumber,
+} from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -193,20 +198,17 @@ function failureNote(
           {" · "}
         </>
       )}
-      {/* Two rungs of the retry ladder, never grouped: "attempt 1.234 of
-          2.000" reads as a quantity where the pair states a position. */}
       {t("jobs.attempt", {
-        attempt: String(failure.attempt),
-        max: String(failure.max_attempts),
+        attempt: ordinalNumber(failure.attempt),
+        max: ordinalNumber(failure.max_attempts),
         when: formatDateTime(failure.failed_at, locale, zone),
       })}
-      {/* Interpolated as-is, never through formatNumber: this is the id River
-          prints in its own log lines, and a grouped "4,711" is not a string
-          that finds them. */}
+      {/* The id River prints in its own log lines, so it stays the string an
+          operator greps them with. */}
       {jobID !== undefined && (
         <>
           {" · "}
-          {t("jobs.jobId", { id: String(jobID) })}
+          {t("jobs.jobId", { id: identifierNumber(jobID) })}
         </>
       )}
       {/* Only when an attempt error was actually recorded. A job cancelled

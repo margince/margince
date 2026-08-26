@@ -5,7 +5,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, Card, SectionHeader } from "../design-system/atoms";
-import { formatDate } from "../format/format";
+import { formatDate, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 
@@ -344,9 +344,9 @@ function EdgeFacts({
         }}
       >
         {t("person.graph.counts", {
-          total: String(edge.interactions_90d),
-          inbound: String(edge.inbound_90d ?? 0),
-          outbound: String(edge.outbound_90d ?? 0),
+          total: formatNumber(edge.interactions_90d, locale),
+          inbound: formatNumber(edge.inbound_90d ?? 0, locale),
+          outbound: formatNumber(edge.outbound_90d ?? 0, locale),
         })}
       </p>
       {receipts.length > 0 ? (
@@ -387,6 +387,7 @@ function EdgeFacts({
  */
 function DroppedNote({ graph }: Readonly<{ graph: Graph }>) {
   const t = useT();
+  const { locale } = useLocale();
   const dropped =
     (graph.dropped_count?.direct ?? 0) + (graph.dropped_count?.account ?? 0);
   if (dropped === 0) {
@@ -394,7 +395,7 @@ function DroppedNote({ graph }: Readonly<{ graph: Graph }>) {
   }
   return (
     <p style={{ margin: 0, fontSize: "0.9rem", opacity: 0.75 }}>
-      {t("person.graph.dropped", { count: String(dropped) })}
+      {t("person.graph.dropped", { count: formatNumber(dropped, locale) })}
     </p>
   );
 }

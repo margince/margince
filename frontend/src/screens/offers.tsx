@@ -21,7 +21,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select } from "../design-system/select";
-import { formatMoney, formatNumber } from "../format/format";
+import { formatMoney, formatNumber, identifierNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import {
   isVersionSkewOf,
@@ -1333,7 +1333,7 @@ export function OfferScreen({ id }: Readonly<{ id: string }>) {
                 <SectionHeader
                   title={offer.offer_number}
                   sub={t("offer.revision", {
-                    revision: String(offer.revision),
+                    revision: identifierNumber(offer.revision),
                   })}
                 />
                 <Badge>{offer.status}</Badge>

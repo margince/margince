@@ -1,6 +1,7 @@
 import { ArrowLeft, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "../design-system/atoms";
+import { ordinalNumber } from "../format/format";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -181,7 +182,8 @@ export function ManualCompanyInterview({
       <div className="ob-manual-progress">
         <span>{t(question.chapter)}</span>
         <span>
-          {questionIndex + 1} / {MANUAL_QUESTIONS.length}
+          {ordinalNumber(questionIndex + 1)} /{" "}
+          {ordinalNumber(MANUAL_QUESTIONS.length)}
         </span>
       </div>
       <h1 id={promptID}>{t(question.prompt)}</h1>

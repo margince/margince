@@ -351,6 +351,7 @@ function Lane({
   onSnooze: (id: string, dueAt: string) => void;
   completing: boolean;
 }>) {
+  const { locale } = useLocale();
   const Icon = shape.icon;
   return (
     <Panel
@@ -360,7 +361,9 @@ function Lane({
           {shape.title}
         </span>
       }
-      titleAction={total > 0 ? <Badge>{total}</Badge> : undefined}
+      titleAction={
+        total > 0 ? <Badge>{formatNumber(total, locale)}</Badge> : undefined
+      }
       tone={tone}
     >
       {withheld ? (
@@ -445,6 +448,7 @@ function MorningPanel({
   children,
 }: Readonly<{ total: number; children: React.ReactNode }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <Panel
       title={
@@ -453,7 +457,9 @@ function MorningPanel({
           {t("day.thisMorning")}
         </span>
       }
-      titleAction={total > 0 ? <Badge>{total}</Badge> : undefined}
+      titleAction={
+        total > 0 ? <Badge>{formatNumber(total, locale)}</Badge> : undefined
+      }
     >
       {children}
     </Panel>

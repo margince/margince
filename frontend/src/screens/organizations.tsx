@@ -1084,11 +1084,11 @@ function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
         </div>
         <div>
           <dt className="t-eyebrow">{t("rollup.activity30d")}</dt>
-          <dd>{rollup.activity_count_30d}</dd>
+          <dd>{formatNumber(rollup.activity_count_30d, locale)}</dd>
         </div>
         <div>
           <dt className="t-eyebrow">{t("rollup.accounts")}</dt>
-          <dd>{rollup.aggregated_account_count}</dd>
+          <dd>{formatNumber(rollup.aggregated_account_count, locale)}</dd>
         </div>
       </dl>
       {rollup.restricted_excluded.length > 0 && (

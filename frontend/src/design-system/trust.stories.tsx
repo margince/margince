@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type CSSProperties, type ReactNode, useState } from "react";
+import { identifierNumber } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import {
   ApprovalGate,
@@ -89,7 +90,15 @@ export const Signals: Story = {
           const level = confidenceLevel(confidence);
           return (
             <Specimen
-              caption={confidence === null ? "unrecorded" : String(confidence)}
+              // The caption NAMES which wire value produced the band beside
+              // it, so it has to read as the literal in the array above —
+              // grouped or padded it would label the specimen with a number
+              // that is not the one being demonstrated.
+              caption={
+                confidence === null
+                  ? "unrecorded"
+                  : identifierNumber(confidence)
+              }
               key={String(confidence)}
             >
               {level ? <ConfidenceMeter level={level} /> : <span>—</span>}

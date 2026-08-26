@@ -25,7 +25,8 @@ import { ProviderMark } from "../design-system/provider-mark";
 import { Meter } from "../design-system/readings";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import {
   problemCode,
   problemMessageOf,
@@ -214,6 +215,7 @@ function SpendReading({
   connection,
 }: Readonly<{ connection: ProviderConnection }>) {
   const t = useT();
+  const { locale } = useLocale();
   const months = connection.spend?.months ?? [];
   if (months.length === 0) {
     return <p className="provider-empty">{t("provider.spend.none")}</p>;
@@ -248,16 +250,18 @@ function SpendReading({
                   : month.month}
               </td>
               <td>{month.pool}</td>
-              <td>{month.charged_credits}</td>
+              <td>{formatNumber(month.charged_credits, locale)}</td>
               {/* Never folded into the charge: the platform does not know
                   whether those credits were spent, and a total that quietly
                   counted them either way would assert something it cannot
                   support. This is the figure a human reconciles against the
                   provider's invoice. */}
               <td className="provider-held">
-                {month.held_credits > 0 ? month.held_credits : "—"}
+                {month.held_credits > 0
+                  ? formatNumber(month.held_credits, locale)
+                  : "—"}
               </td>
-              <td>{month.runs}</td>
+              <td>{formatNumber(month.runs, locale)}</td>
             </tr>
           ))}
         </tbody>

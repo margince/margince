@@ -10,7 +10,8 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   type NavCounts,
@@ -200,6 +201,7 @@ function NavLevelRow({
   onSelect: (entry: NavLevelEntry) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   // One label, feeding the row text, the aria-label and the collapsed-rail
   // tooltip below — the three read the same string, so a row can never
   // announce one name and show another.
@@ -224,7 +226,7 @@ function NavLevelRow({
           either way. */}
       <span className="navlabel">{label}</span>
       {count !== undefined && count > 0 && (
-        <span className="count">{count}</span>
+        <span className="count">{formatNumber(count, locale)}</span>
       )}
       {/* Inside the row, not beside it: the tooltip sits outside the row's box
           but within its subtree, so moving the pointer onto it never leaves the

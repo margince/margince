@@ -224,7 +224,7 @@ export function LeadManualSignals({
                     <strong>{label(`${name}.${live.band}`)}</strong>
                     <Badge>
                       {live.points >= 0 ? "+" : ""}
-                      {live.points}
+                      {formatNumber(live.points, locale)}
                     </Badge>
                     <span className="t-caption">{label(live.signal_kind)}</span>
                     {live.confidence != null && (

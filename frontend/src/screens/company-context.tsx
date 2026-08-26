@@ -34,7 +34,8 @@ import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { confidenceLevel, FieldDiff } from "../design-system/trust";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   coldFieldLabel,
@@ -628,6 +629,7 @@ function CompanyFactsCard({
   onEdit: (field: keyof CompanyInput) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <Panel
       tone="accent"
@@ -647,7 +649,9 @@ function CompanyFactsCard({
         company.data ? (
           <>
             <span className="company-context-count">
-              <strong>{company.data.fields?.length ?? 0}</strong>{" "}
+              <strong>
+                {formatNumber(company.data.fields?.length ?? 0, locale)}
+              </strong>{" "}
               {t("settings.companyConfirmed")}
             </span>
             {rollout && <Badge>{rollout}</Badge>}
@@ -1071,6 +1075,7 @@ function RefreshReview(
   }>,
 ) {
   const t = useT();
+  const { locale } = useLocale();
   const ready =
     props.read.status === "ready" || props.read.status === "partial";
   const conflicts = props.read.comparisons.filter(
@@ -1105,7 +1110,8 @@ function RefreshReview(
       }
       footer={
         <span className="company-context-coverage">
-          <strong>{coverage}%</strong> {t("settings.companyCoverage")}
+          <strong>{formatNumber(coverage, locale)}%</strong>{" "}
+          {t("settings.companyCoverage")}
         </span>
       }
       actions={

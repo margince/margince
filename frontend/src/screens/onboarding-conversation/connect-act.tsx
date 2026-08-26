@@ -1,6 +1,7 @@
 import type { Dispatch } from "react";
 import { useEffect, useState } from "react";
 import { navigate } from "../../app/router";
+import { ordinalNumber } from "../../format/format";
 import { useT } from "../../i18n";
 import { problemMessageOf } from "../common";
 import { EMPTY_DRAFT } from "../onboarding";
@@ -181,10 +182,9 @@ export function ConnectAct({
 
   // Where the journey stands, in the rail's own counting.
   const stops = railStops(state.memberPath);
-  // A position in the rail, not a magnitude: never grouped, in any locale.
   const eyebrow = t("ob.conv.scene.step", {
-    n: String(stops.findIndex((stop) => stop.key === "connect") + 1),
-    m: String(stops.length),
+    n: ordinalNumber(stops.findIndex((stop) => stop.key === "connect") + 1),
+    m: ordinalNumber(stops.length),
     label: t("ob.rail.connect"),
   });
   return (

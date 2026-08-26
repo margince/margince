@@ -9,9 +9,12 @@ import {
   formatDuration,
   formatMoney,
   formatMoneyOrAbsent,
+  formatNumber,
   formatTimeOfDay,
+  identifierNumber,
   isRenderableZone,
   MONEY_ABSENT,
+  ordinalNumber,
 } from "./format";
 
 // B-EP09.17/18/19 acceptance: locale changes the RENDERING of the same stored
@@ -210,5 +213,32 @@ describe("display scales by the same table the server stores with", () => {
     // to decide and are not what this pins.
     const rendered = formatMoney(minor, currency, "en").replace(/[^\d.,]/g, "");
     expect(rendered).toBe(figure);
+  });
+});
+
+describe("a number that names or places is not a magnitude", () => {
+  // The pair exists so a call site can SAY which of the two it meant, and the
+  // claim is that they part company exactly where grouping starts. Four digits
+  // is where de-DE first groups, so it is the only width that can show it.
+  it("groups a magnitude in the reader's own notation", () => {
+    expect(formatNumber(1234, "de")).toBe("1.234");
+    expect(formatNumber(1234, "en")).toBe("1,234");
+  });
+
+  it("leaves a name and a position ungrouped, in every locale", () => {
+    expect(identifierNumber(1234)).toBe("1234");
+    expect(ordinalNumber(1234)).toBe("1234");
+  });
+
+  // Not a tautology about `String`: it is the claim that makes the ruling worth
+  // spelling as a call. Revision 1234 rendered through the formatter beside it
+  // reads as a quantity of revisions, and "1.204" is a different revision from
+  // "1204" to anybody typing it into a search box.
+  it("parts company with the formatter at four digits", () => {
+    expect(identifierNumber(1234)).not.toBe(formatNumber(1234, "de"));
+    expect(identifierNumber(1234)).not.toBe(formatNumber(1234, "en"));
+    // And agrees with it below that width, which is why three of these sites
+    // looked correct for as long as the demo data stayed small.
+    expect(identifierNumber(999)).toBe(formatNumber(999, "de"));
   });
 });

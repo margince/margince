@@ -246,7 +246,9 @@ function GrowthFitVerdict({ fit }: Readonly<{ fit: GrowthFit }>) {
                     about which dimension is which. */}
                 <span className="co-growth-fit-score-head">
                   <span>{t(SUB_SCORE_LABELS[sub.dimension])}</span>
-                  <span className="co-growth-fit-score-value">{sub.score}</span>
+                  <span className="co-growth-fit-score-value">
+                    {formatNumber(sub.score, locale)}
+                  </span>
                 </span>
                 {/* Flat, like the health meters beside it: the gradient's
                     second colour reads as a warning creeping in at the high

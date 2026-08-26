@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { formatNumber } from "../format/format";
+import { useLocale } from "../i18n";
 import { Avatar } from "./atoms";
 import "./avatarstack.css";
 
@@ -17,6 +19,7 @@ export function AvatarStack({
   people: readonly { name: string }[];
   max?: number;
 }>) {
+  const { locale } = useLocale();
   const shown = people.slice(0, max);
   const rest = people.length - shown.length;
   return (
@@ -26,7 +29,9 @@ export function AvatarStack({
           <Avatar name={person.name} />
         </span>
       ))}
-      {rest > 0 && <span className="avatar-stack-more">+{rest}</span>}
+      {rest > 0 && (
+        <span className="avatar-stack-more">+{formatNumber(rest, locale)}</span>
+      )}
     </span>
   );
 }

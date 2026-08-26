@@ -4,6 +4,7 @@
 import { AlarmClock, ArrowRight, Check, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { components } from "../api/schema";
+import { ordinalNumber } from "../format/format";
 import { Badge, Button, Card, PendingBody } from "./atoms";
 import { Meter } from "./readings";
 import "./briefitem.css";
@@ -171,7 +172,8 @@ export function BriefItemCard({
     >
       <div className="brief-item-head">
         <span className="brief-item-rank t-mono">
-          <span className="sr-only">{labels.rank}</span>#{item.rank}
+          <span className="sr-only">{labels.rank}</span>#
+          {ordinalNumber(item.rank)}
         </span>
         {/* Not a `Button`: this is the card's TITLE. Button owns control
             geometry — a shared 40px height, a width floor, its own icon sizing

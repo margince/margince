@@ -15,7 +15,11 @@ import {
   useRef,
   useState,
 } from "react";
-import { formatNumber } from "../format/format";
+import {
+  formatNumber,
+  identifierNumber,
+  ordinalNumber,
+} from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { Checkbox, useScrollRegion } from "./atoms";
 import {
@@ -1418,12 +1422,12 @@ function Pager({
               key={slot}
               className={slot === current ? "on" : undefined}
               aria-current={slot === current ? "page" : undefined}
-              // A page number is an ordinal, never grouped: "page 1.234" reads
-              // as a fraction of a page rather than the 1234th of them.
-              aria-label={t("table.page", { number: String(slot) })}
+              // "page 1.234" would read as a fraction of a page rather than
+              // the 1234th of them.
+              aria-label={t("table.page", { number: ordinalNumber(slot) })}
               onClick={() => onGoto(slot)}
             >
-              {slot}
+              {ordinalNumber(slot)}
             </button>
           ) : (
             <span
@@ -1449,11 +1453,11 @@ function Pager({
       <span className="lt-perpage">
         <Select
           aria-label={t("table.rowsPerPage")}
-          value={String(perPage)}
+          value={identifierNumber(perPage)}
           disabled={!onPerPage}
           onChange={(next) => onPerPage?.(Number(next))}
           options={PAGE_SIZES.map((size) => ({
-            value: String(size),
+            value: identifierNumber(size),
             label: t("table.perPage", { count: formatNumber(size, locale) }),
           }))}
         />

@@ -280,7 +280,11 @@ function BoardLayout<Record extends BoardRecord>({
           >
             <div className="board-col-head">
               <span className="stage">{column.label}</span>
-              {money && <span className="prob">{money.probabilityPct}%</span>}
+              {money && (
+                <span className="prob">
+                  {formatNumber(money.probabilityPct, locale)}%
+                </span>
+              )}
             </div>
             {/* The stage's total is the figure being scanned down the board, so it
               leads with the deal count beside it; the weighted figure is its own

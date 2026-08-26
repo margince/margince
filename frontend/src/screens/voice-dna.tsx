@@ -19,7 +19,7 @@ import {
   SettingRow,
 } from "../design-system/settingrow";
 import { ToastRegion, useToast } from "../design-system/toast";
-import { formatNumber } from "../format/format";
+import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { VoiceCorpusIntake } from "./voice-corpus-settings";
@@ -213,10 +213,8 @@ function VoiceDnaBody({ profile }: Readonly<{ profile: VoiceProfile }>) {
               </span>
             )}
             <span className="t-small vdna-version">
-              {/* A version number is a name, not a magnitude: grouped, build
-                  1234 would read as "1.234". */}
               {t("settings.voice.version", {
-                n: String(profile.profile_version ?? 0),
+                n: identifierNumber(profile.profile_version ?? 0),
               })}
             </span>
           </div>

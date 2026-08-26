@@ -13,7 +13,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -358,10 +358,7 @@ function ImportOutcome({
           <ul className="import__issues">
             {report.issues.map((issue) => (
               <li key={`${issue.line}-${issue.reason}`}>
-                {/* A line number is where to look in the uploaded file, so it
-                    is never grouped: "1.234" is not a line the reader can find
-                    in a text editor. */}
-                {t("import.issueLine", { line: String(issue.line) })}{" "}
+                {t("import.issueLine", { line: ordinalNumber(issue.line) })}{" "}
                 {issue.reason}
               </li>
             ))}

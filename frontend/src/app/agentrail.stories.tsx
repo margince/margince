@@ -8,9 +8,11 @@ import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
   jsonResponse,
+  meRoute,
   StoryProviders,
 } from "../screens/story-utils";
 import { AgentRail } from "./agentrail";
+import type { GrantSpec } from "./mefixture";
 
 // The section's states come from what the installation ANSWERS, so a story is
 // a set of answers rather than a set of props. Each one below is a posture an
@@ -31,6 +33,17 @@ type Answers = Readonly<{
   duplicates: number;
   calls: readonly Readonly<{ task: string; minutesAgo: number }>[];
 }>;
+
+// The two objects the section actually asks about: `license` gates the posture
+// the orb reads (`useLicensePosture`) and `automation:update` gates the runtime
+// row's `/ai/calls`. Granting exactly these rather than a blanket allow is what
+// keeps a story named for an INSTALLATION posture from also quietly documenting
+// an authority one — every story below is about what the installation answers,
+// and `LicenceWithheld` is the one that is about the seat instead.
+const OPERATOR: GrantSpec = {
+  license: ["read"],
+  automation: ["update"],
+};
 
 const NOW = Date.parse("2026-08-19T10:00:00Z");
 
@@ -78,9 +91,10 @@ function Rail({
   );
 }
 
-function story(answers: Answers, collapsed = false) {
+function story(answers: Answers, collapsed = false, grants = OPERATOR) {
   return () => {
     installFetchStub({
+      "GET /me": meRoute(grants),
       "GET /assistant/profile": () =>
         jsonResponse({
           name: "Margince",
@@ -173,6 +187,7 @@ export const Idle: Story = { render: story(HEALTHY) };
 export const Ingest: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute(OPERATOR),
       "GET /assistant/profile": () =>
         jsonResponse({
           name: "Margince",
@@ -211,6 +226,7 @@ export const Ingest: Story = {
 export const Working: Story = {
   render: () => {
     installFetchStub({
+      "GET /me": meRoute(OPERATOR),
       "GET /assistant/profile": () =>
         jsonResponse({
           name: "Margince",
@@ -287,4 +303,21 @@ export const PanelOpen: Story = {
       await canvas.findByRole("button", { name: /expand/i }),
     );
   },
+};
+
+/**
+ * A seat the licence is none of: the orb reports the installation's HEALTH and
+ * stays neutral about its commercial standing.
+ *
+ * The distinction this story exists for is that a withheld licence must not
+ * read as a fault. A rep's seat cannot see the entitlement, and an orb that
+ * went amber about it on every screen they opened would be a permission
+ * boundary drawn as a broken installation — so `useLicensePosture` answers
+ * "nothing to report" rather than "something is wrong", and this is the story
+ * that would fail if that ever changed.
+ */
+export const LicenceWithheld: Story = {
+  render: story({ ...HEALTHY, licenseState: "absent" }, false, {
+    automation: ["update"],
+  }),
 };

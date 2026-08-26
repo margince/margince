@@ -25,7 +25,7 @@ import {
 } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
-import { formatDate, formatNumber } from "../format/format";
+import { formatDate, formatNumber, identifierNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -769,13 +769,13 @@ function ShareScreenBody({
                 {...control}
                 // A day count is the state; the control speaks strings, so the
                 // conversion happens here at the boundary and nowhere else.
-                value={String(expiryDays)}
+                value={identifierNumber(expiryDays)}
                 onChange={(value) => {
                   setExpiryDays(Number(value));
                   dismissGrantFeedback();
                 }}
                 options={EXPIRY_OPTIONS.map((option) => ({
-                  value: String(option.days),
+                  value: identifierNumber(option.days),
                   label: t(option.key),
                 }))}
               />

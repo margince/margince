@@ -796,6 +796,7 @@ function LeadLifecycle({
   overlay: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const me = useMe();
   const scoreFieldId = useId();
   const reasonFieldId = useId();
@@ -909,7 +910,7 @@ function LeadLifecycle({
         summary={
           <span className="lead-score-summary">
             <Badge tone={scoreTone(lead.score)}>
-              {t("lead.score")}: {lead.score}
+              {t("lead.score")}: {formatNumber(lead.score, locale)}
             </Badge>{" "}
             <span className="t-caption">
               {lead.score_reason
@@ -956,13 +957,14 @@ function LeadLifecycle({
 // the terminal-state labelling lives in one place (terminalBadge).
 function LeadBadges({ lead }: Readonly<{ lead: Lead }>) {
   const t = useT();
+  const { locale } = useLocale();
   const terminal = terminalBadge(lead.status);
   return (
     <div
       style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}
     >
       <Badge tone={scoreTone(lead.score)}>
-        {t("lead.score")}: {lead.score}
+        {t("lead.score")}: {formatNumber(lead.score, locale)}
       </Badge>
       {lead.score_override_reason && <Badge>{t("lead.overriddenBadge")}</Badge>}
       <StatusBadge status={lead.status} />

@@ -283,6 +283,7 @@ function FieldRow({
   defaultExpanded: boolean;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [expanded, setExpanded] = useState(defaultExpanded);
   const controlId = `confirm-missing-${row.field}`;
   const onChange = (
@@ -332,7 +333,7 @@ function FieldRow({
           <span className="ob-triage-row-meta">
             {row.confidence !== null && (
               <span className="ob-triage-score">
-                {Math.round(row.confidence * 100)}
+                {formatNumber(Math.round(row.confidence * 100), locale)}
                 {row.evidence !== null && (
                   <span className="ob-triage-source">
                     {/* A row carries at most one evidence record, so this
@@ -549,7 +550,7 @@ function SectionBadge({
   if (blocking.length === 0) {
     return (
       <span className="ob-triage-nav-advisory">
-        <b aria-hidden>{advisory.length}</b>
+        <b aria-hidden>{formatNumber(advisory.length, locale)}</b>
         <span className="sr-only">
           {t("ob.conv.triage.sectionAdvisory", {
             count: formatNumber(advisory.length, locale),
@@ -560,7 +561,7 @@ function SectionBadge({
   }
   return (
     <span className="ob-triage-nav-badge" data-blocking="true">
-      <b aria-hidden>{blocking.length}</b>
+      <b aria-hidden>{formatNumber(blocking.length, locale)}</b>
       <span className="sr-only">
         {t("ob.conv.triage.sectionBlocking", {
           count: formatNumber(blocking.length, locale),
@@ -659,7 +660,7 @@ function SectionQuantity({
   }
   return (
     <span className="ob-triage-nav-quantity">
-      <b aria-hidden>{count}</b>
+      <b aria-hidden>{formatNumber(count, locale)}</b>
       <span className="sr-only">
         {t(labelKey, { count: formatNumber(count, locale) })}
       </span>
@@ -990,6 +991,7 @@ function FactRow({
   selection: FactSelection;
   t: ReturnType<typeof useT>;
 }>) {
+  const { locale } = useLocale();
   const selected = selection.isSelected(fact);
   const evidence: Evidence = {
     snippet: fact.evidence_snippet,
@@ -1010,7 +1012,7 @@ function FactRow({
       <span className="ob-triage-fact-value">{fact.value}</span>
       <span className="ob-triage-fact-meta">
         <span className="ob-triage-score">
-          {Math.round(fact.confidence * 100)}
+          {formatNumber(Math.round(fact.confidence * 100), locale)}
         </span>
         <EvidenceChip evidence={evidence} collapsed />
       </span>
@@ -1041,6 +1043,7 @@ function FactTypeGroup({
   selection: FactSelection;
   t: ReturnType<typeof useT>;
 }>) {
+  const { locale } = useLocale();
   return (
     <Disclosure
       className="ob-triage-fact-type"
@@ -1048,7 +1051,9 @@ function FactTypeGroup({
       summary={
         <>
           {coldFieldLabel(field, t)}
-          <span className="ob-triage-fact-type-count">{facts.length}</span>
+          <span className="ob-triage-fact-type-count">
+            {formatNumber(facts.length, locale)}
+          </span>
         </>
       }
     >
@@ -1141,7 +1146,8 @@ function FieldGroupSection({
       <div className="ob-triage-group-head">
         <h3>{t(group.labelKey)}</h3>
         <span>
-          {filled}/{group.order.length}
+          {formatNumber(filled, locale)}/
+          {formatNumber(group.order.length, locale)}
         </span>
       </div>
       <ul className="ob-conv-confirm-fields ob-triage-rows">

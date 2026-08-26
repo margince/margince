@@ -486,7 +486,7 @@ export function VoiceBuildScene({
             progress in words, so the crawling digits stay out of the a11y
             tree instead of being announced on every tick. */}
         <span className="ob-voice-orb-pct" aria-hidden>
-          {Math.round(progress * 100)}
+          {formatNumber(Math.round(progress * 100), locale)}
           <small>%</small>
         </span>
       </div>

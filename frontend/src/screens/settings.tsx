@@ -2248,6 +2248,7 @@ function StageRow({
   t: ReturnType<typeof useT>;
   returnFocusTo: () => HTMLElement | null;
 }>) {
+  const { locale } = useLocale();
   return (
     // The four tracks (name, semantic badge, probability, edit) live in
     // settings.css, where they can have a phone breakpoint. Inline, the three
@@ -2258,7 +2259,9 @@ function StageRow({
       <Badge tone={stageSemanticTone(stage.semantic)}>
         {stageSemanticLabel(stage.semantic, t)}
       </Badge>
-      <span className="t-mono t-small">{stage.win_probability}%</span>
+      <span className="t-mono t-small">
+        {formatNumber(stage.win_probability, locale)}%
+      </span>
       {/* Each control carries its own verb — editing a stage is
           pipeline:update, removing one is pipeline:delete — so a role
           holding one without the other still sees the one it may use. */}

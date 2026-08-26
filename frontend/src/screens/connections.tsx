@@ -497,6 +497,7 @@ function NodeList({
   graph,
 }: Readonly<{ nodes: readonly GraphNode[]; graph: Graph }>) {
   const t = useT();
+  const { locale } = useLocale();
   if (nodes.length === 0) {
     return <p className="surfacestate-empty">{t("co.connections.empty")}</p>;
   }
@@ -526,7 +527,7 @@ function NodeList({
             {node.detail && <span>{node.detail}</span>}
             {node.strength != null && node.strength_bucket && (
               <Badge tone={strengthTone(node.strength_bucket)}>
-                {node.strength}
+                {formatNumber(node.strength, locale)}
               </Badge>
             )}
             {node.kind === "user" && (
@@ -559,6 +560,7 @@ function ContactStrength({
   userId,
 }: Readonly<{ graph: Graph; userId: string }>) {
   const t = useT();
+  const { locale } = useLocale();
   const edge = strongestContactEdge(graph, userId);
   if (edge === undefined) {
     return null;
@@ -567,7 +569,9 @@ function ContactStrength({
     return <span className="cx-relation">{t("co.connections.noSignal")}</span>;
   }
   return (
-    <Badge tone={edgeStrengthTone(edge.strength_bucket)}>{edge.strength}</Badge>
+    <Badge tone={edgeStrengthTone(edge.strength_bucket)}>
+      {formatNumber(edge.strength, locale)}
+    </Badge>
   );
 }
 

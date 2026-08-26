@@ -9,7 +9,8 @@ import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import {
   LINKEDIN_ACCOUNT_KEY,
@@ -312,25 +313,26 @@ export function LinkedInImportCard() {
 // under a success message is worse than a refusal.
 function ImportResult({ summary }: Readonly<{ summary: ImportSummary }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <>
       <dl data-testid="linkedin-import-result" className="li-import-result">
         <div>
           <dt>{t("linkedinImport.imported")}</dt>
-          <dd>{summary.imported}</dd>
+          <dd>{formatNumber(summary.imported, locale)}</dd>
         </div>
         <div>
           <dt>{t("linkedinImport.confirmed")}</dt>
-          <dd>{summary.confirmed}</dd>
+          <dd>{formatNumber(summary.confirmed, locale)}</dd>
         </div>
         <div>
           <dt>{t("linkedinImport.suggested")}</dt>
-          <dd>{summary.suggested}</dd>
+          <dd>{formatNumber(summary.suggested, locale)}</dd>
         </div>
         {summary.skipped > 0 && (
           <div>
             <dt>{t("linkedinImport.skipped")}</dt>
-            <dd>{summary.skipped}</dd>
+            <dd>{formatNumber(summary.skipped, locale)}</dd>
           </div>
         )}
       </dl>

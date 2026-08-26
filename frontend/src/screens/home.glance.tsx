@@ -3,9 +3,9 @@
 
 import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
-import { hourInZone } from "../format/format";
+import { formatNumber, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 // The first thing a reader sees each morning: who they are, what hour it is for
@@ -118,6 +118,7 @@ function CountMark({
   onClick,
   label,
 }: Readonly<{ count: number; onClick?: () => void; label?: string }>) {
+  const { locale } = useLocale();
   // A figure with nowhere to go is a figure, not a control. The overnight
   // capture count is the case: Home has no destination that lists the messages
   // it counts, and pointing it at the dedupe queue sent a reader to a different
@@ -125,7 +126,9 @@ function CountMark({
   // loses the arrow and the press target, which is the honest reading.
   if (!onClick) {
     return (
-      <span className="glance-count glance-count-flat t-mono">{count}</span>
+      <span className="glance-count glance-count-flat t-mono">
+        {formatNumber(count, locale)}
+      </span>
     );
   }
   // The destination goes in a spoken span rather than an `aria-label`: a label
@@ -134,7 +137,7 @@ function CountMark({
   // at two places would announce the same name.
   return (
     <button type="button" className="glance-count t-mono" onClick={onClick}>
-      {count}
+      {formatNumber(count, locale)}
       {label ? <span className="sr-only"> {label}</span> : null}
       <ArrowRight size={13} aria-hidden="true" />
     </button>

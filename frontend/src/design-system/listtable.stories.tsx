@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { formatMoney } from "../format/format";
+import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
+import { useLocale } from "../i18n";
 import { Button } from "./atoms";
 import type { ListChip } from "./listsurface";
 import { type ListColumn, ListTable } from "./listtable";
@@ -187,7 +188,10 @@ export const PagedByTheCaller: Story = {
             rows={companies(60)}
             page={page}
             onPage={setPage}
-            caption={`The caller is holding page ${page}`}
+            // A page number is a POSITION, so it stays bare in every locale:
+            // grouped, page 1204 reads "1.204" and stops matching the page a
+            // reader types into the box beside it.
+            caption={`The caller is holding page ${ordinalNumber(page)}`}
           />
         </div>
       );
@@ -266,6 +270,7 @@ export const PinnedWhileScrolling: Story = {
 // carries the count and the verbs. Two rows come pre-selected so the bar is
 // on screen; the screen owns what the verbs do.
 function SelectableSurface() {
+  const { locale } = useLocale();
   const rows = companies(8);
   const [selected, setSelected] = useState<ReadonlySet<string>>(
     new Set(["c2", "c5"]),
@@ -292,7 +297,9 @@ function SelectableSurface() {
         label: (row) => `Select ${row.name}`,
         bar: (
           <>
-            <span className="t-caption">{selected.size} selected</span>
+            <span className="t-caption">
+              {formatNumber(selected.size, locale)} selected
+            </span>
             <Button small>Assign owner</Button>
             <Button small onClick={() => setSelected(new Set())}>
               Clear

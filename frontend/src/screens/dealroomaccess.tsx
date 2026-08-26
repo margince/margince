@@ -15,7 +15,7 @@ import { Callout } from "../design-system/callout";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { formatDateAbbrev } from "../format/format";
+import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryStates, throwProblem } from "./common";
@@ -135,6 +135,7 @@ export function DealRoomAccess({
 // early in a room's life is simply that there is nothing to report yet.
 function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
   const t = useT();
+  const { locale } = useLocale();
   const downloads = participant.download_count ?? 0;
   if (downloads === 0) {
     return null;
@@ -142,7 +143,7 @@ function ReadingSoFar({ participant }: Readonly<{ participant: Participant }>) {
   const titles = participant.documents_downloaded ?? [];
   return (
     <p className="t-small access-row-facts">
-      {t("access.downloads", { count: String(downloads) })}
+      {t("access.downloads", { count: formatNumber(downloads, locale) })}
       {titles.length > 0 ? ` · ${titles.join(", ")}` : ""}
     </p>
   );

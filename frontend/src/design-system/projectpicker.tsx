@@ -3,7 +3,8 @@
 
 import { useEffect, useRef } from "react";
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { Select } from "./select";
 import "./projectpicker.css";
 
@@ -159,6 +160,7 @@ export function ProjectPicker({
 // rather than printing a number nobody computed.
 export function ScopeLine({ scope }: Readonly<{ scope: ProjectScope }>) {
   const t = useT();
+  const { locale } = useLocale();
   const key = scope.key ?? scope.name;
   if (scope.in_scope == null || scope.total == null) {
     return <p className="t-caption">{t("compose.scopedTo", { key })}</p>;
@@ -167,8 +169,8 @@ export function ScopeLine({ scope }: Readonly<{ scope: ProjectScope }>) {
     <p className="t-caption">
       {t("compose.scopedToCounted", {
         key,
-        inScope: String(scope.in_scope),
-        total: String(scope.total),
+        inScope: formatNumber(scope.in_scope, locale),
+        total: formatNumber(scope.total, locale),
       })}
     </p>
   );

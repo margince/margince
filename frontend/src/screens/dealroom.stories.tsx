@@ -2,10 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { LocaleProvider } from "../i18n";
 import { DealRoomAside } from "./dealroom";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
 
 // The states a rep meets this surface in, so each can be judged without
 // arranging a room, a buyer and a close on a running stack.
@@ -31,27 +35,29 @@ function room(state: string) {
   };
 }
 
-// Answers the reads the aside makes. A story that hits the real API shows
-// whatever that installation happens to hold, which is not a state anybody
-// chose to review.
+/**
+ * Answers the reads the aside makes, at the NETWORK edge rather than by seeding
+ * a cache.
+ *
+ * Seeding was the first spelling and it is only as complete as its list of
+ * query keys: the aside also probes `/me` for `deal_room:create`, and a key
+ * nobody thought of is a request that leaves the page for whatever host serves
+ * the iframe, 404s, and resolves to an answer that looks legitimate. Routing
+ * says what this surface is allowed to ask for, and `installFetchStub`'s own
+ * fallback answers an empty page for anything else instead of the network.
+ */
 function Served({
   rooms,
   children,
 }: Readonly<{ rooms: unknown[]; children: ReactNode }>) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+  installFetchStub({
+    // The aside offers the create verb, so the seat that may press it is part
+    // of every state below — a story routed without it would document the
+    // refused form rather than the state it is named for.
+    "GET /me": meRoute({ deal_room: ["read", "create"] }),
+    "GET /deal-rooms": () => jsonResponse({ data: rooms, page: {} }),
   });
-  client.setQueryData(["deal-rooms", "deal-1"], { data: rooms, page: {} });
-  client.setQueryData(["deal-room-documents", "room-1"], {
-    data: [],
-    page: {},
-  });
-  client.setQueryData(["deal-room-threads", "room-1"], { data: [], page: {} });
-  return (
-    <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{children}</LocaleProvider>
-    </QueryClientProvider>
-  );
+  return <StoryProviders>{children}</StoryProviders>;
 }
 
 /** A live room mid-negotiation. */

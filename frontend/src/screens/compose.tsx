@@ -33,6 +33,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select, type SelectOption } from "../design-system/select";
+import { identifierNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useT } from "../i18n";
 import { entityTimelineKeys } from "./activitykeys";
@@ -879,10 +880,8 @@ function DraftDisclosure({
       {provenance.voice_profile_version != null && (
         <>
           <p className="t-caption">
-            {/* A profile VERSION, never grouped: version 1234 is one
-                identifier, and "1.234" reads as a different one. */}
             {t("compose.voiceVersion", {
-              n: String(provenance.voice_profile_version),
+              n: identifierNumber(provenance.voice_profile_version),
             })}
           </p>
           {maturity === "provisional" && (

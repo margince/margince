@@ -52,12 +52,15 @@ function DigestCount({
   value,
   onOpen,
 }: Readonly<{ label: string; value: number; onOpen?: () => void }>) {
+  const { locale } = useLocale();
   if (onOpen) {
     return (
       <PanelRow interactive>
         <button type="button" className="rail-count-go" onClick={onOpen}>
           <span className="rail-count-label">{label}</span>
-          <span className="rail-count-value t-mono">{value}</span>
+          <span className="rail-count-value t-mono">
+            {formatNumber(value, locale)}
+          </span>
           <ArrowRight size={14} aria-hidden />
         </button>
       </PanelRow>
@@ -67,7 +70,9 @@ function DigestCount({
     <PanelRow>
       <span className="rail-count">
         <span className="rail-count-label">{label}</span>
-        <span className="rail-count-value t-mono">{value}</span>
+        <span className="rail-count-value t-mono">
+          {formatNumber(value, locale)}
+        </span>
       </span>
     </PanelRow>
   );

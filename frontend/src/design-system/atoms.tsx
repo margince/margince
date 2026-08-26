@@ -20,6 +20,8 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { formatNumber } from "../format/format";
+import { useLocale } from "../i18n";
 import "./atoms.css";
 
 // The Margince atom library (B-EP09.2, re-scoped to our own
@@ -1322,6 +1324,7 @@ export function AttainmentRing({
   band: AttainmentBand;
   caption: string;
 }>) {
+  const { locale } = useLocale();
   const radius = 68;
   const circumference = 2 * Math.PI * radius;
   const fraction = Math.min(pct / 100, 1);
@@ -1350,7 +1353,9 @@ export function AttainmentRing({
         />
       </svg>
       <div className="attain-ring-center">
-        <span className="attain-ring-pct t-mono">{Math.round(pct)}%</span>
+        <span className="attain-ring-pct t-mono">
+          {formatNumber(Math.round(pct), locale)}%
+        </span>
         <span className="attain-ring-lbl">{caption}</span>
       </div>
     </div>

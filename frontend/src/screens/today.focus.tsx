@@ -196,13 +196,14 @@ export function FocusLane({
   onSkip: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const current = items[0];
   return (
     <Panel
       title={
         <span className="focus-title">
           {t("day.needsYou")}
-          {total > 0 && <Badge>{total}</Badge>}
+          {total > 0 && <Badge>{formatNumber(total, locale)}</Badge>}
         </span>
       }
       tone="accent"

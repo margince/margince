@@ -231,7 +231,8 @@ function BudgetReading({
           </Badge>
         )}
         <span className="t-mono t-small">
-          {consumed} / {limit ?? "—"}
+          {formatNumber(consumed, locale)} /{" "}
+          {limit === undefined ? "—" : formatNumber(limit, locale)}
         </span>
         {/* headroom is either a real free-capacity count or the server's own
             `~unknown` sentinel — printed verbatim either way, never

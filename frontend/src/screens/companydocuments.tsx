@@ -7,7 +7,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
@@ -141,6 +141,7 @@ export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
   // separately and before RBAC.
   const canWriteDeals = useCanWrite("deal", "update");
   const t = useT();
+  const { locale } = useLocale();
   const [category, setCategory] = useState<Category | "">("");
   // History is off by default. Three uploads of one agreement's terms are one
   // document to a rep, and listing every replaced version beside the live one
@@ -204,7 +205,7 @@ export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
           <>
             <span>
               {t(supersededLine(showSuperseded, superseded.length), {
-                count: String(superseded.length),
+                count: formatNumber(superseded.length, locale),
               })}
             </span>
             <Button
@@ -297,10 +298,11 @@ function FilterChip({
   pressed: boolean;
   onPress: () => void;
 }>) {
+  const { locale } = useLocale();
   return (
     <Button small aria-pressed={pressed} onClick={onPress}>
       {label}
-      <span className="rec-chip-count">{count}</span>
+      <span className="rec-chip-count">{formatNumber(count, locale)}</span>
     </Button>
   );
 }

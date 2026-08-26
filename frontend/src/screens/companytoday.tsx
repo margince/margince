@@ -311,10 +311,11 @@ function briefFooter(
 // own subhead below.
 function TodayTitle({ moves }: Readonly<{ moves: number }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <>
       {t("co.360.title")}
-      {moves > 0 && <Badge tone="accent">{moves}</Badge>}
+      {moves > 0 && <Badge tone="accent">{formatNumber(moves, locale)}</Badge>}
     </>
   );
 }

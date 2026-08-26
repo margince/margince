@@ -3,6 +3,8 @@
 
 import { Badge } from "../design-system/atoms";
 import type { SectionState } from "../design-system/surfacestate";
+import { formatNumber } from "../format/format";
+import { useLocale } from "../i18n";
 
 // Small pieces companyrail.tsx and companyrailtags.tsx both draw a section
 // summary off — a leaf so neither file imports the other, the same no-cycle
@@ -21,10 +23,11 @@ export function SectionSummary({
   title,
   count,
 }: Readonly<{ title: string; count?: number }>) {
+  const { locale } = useLocale();
   return (
     <span className="co-sect-summary">
       {title}
-      {count != null && <Badge>{count}</Badge>}
+      {count != null && <Badge>{formatNumber(count, locale)}</Badge>}
     </span>
   );
 }

@@ -18,7 +18,7 @@ import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
-import { formatMoney, INTL_LOCALE } from "../format/format";
+import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useOrganization360 } from "../screens/company360";
@@ -515,7 +515,7 @@ function RuntimeRows({
       )}
       {tools > 0 && (
         <span>
-          {LABELS.tools} <b>{tools}</b>
+          {LABELS.tools} <b>{formatNumber(tools, locale)}</b>
         </span>
       )}
       {(license === "none" || license === "refused") && (
@@ -682,9 +682,9 @@ function AgentPanel({
               <a
                 className="arbox artile"
                 href="#/today"
-                aria-label={`${LABELS.approvals} ${signals.waiting}`}
+                aria-label={`${LABELS.approvals} ${formatNumber(signals.waiting, locale)}`}
               >
-                <b>{signals.waiting}</b>
+                <b>{formatNumber(signals.waiting, locale)}</b>
                 <span>{LABELS.approvals}</span>
               </a>
             )}
