@@ -188,6 +188,13 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:anonymizeLead":              "terminal absolute write: the retention sweep anonymizes an over-age lead regardless of concurrent state, by design, and its selector already excludes an already-anonymized row",
 	"internal/modules/privacy:eraseActivityContent":       "terminal absolute write: the sweep's activity/erase action empties the body and stamps the tombstone subject regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizePersonRecord":      "terminal absolute write: the sweep's person/anonymize action overwrites the PII columns regardless of concurrent state, by design",
+
+	// A function the package-level folding attributes a statement to without its
+	// also executing it. Ratified here rather than smoothed away in the reader,
+	// because the shape recurs wherever a statement table is handed to an
+	// executor by value instead of by name, and a reader taught to excuse it
+	// would excuse the writers that DO need judging along with it.
+	"internal/modules/people:writeCompanyFields": "attributed by NAME rather than by execution: it iterates companyFields and hands each statement to setCompanyColumn, which answers on RowsAffected — the CAS this gate asks for, one frame down and out of a function-scoped witness's reach. The write is not read-modify-write besides: the form sends absolute values a human typed, every statement carries IS DISTINCT FROM so an unchanged resubmission touches no row, and SaveCompany serializes concurrent form saves on the workspace row (lockCompanyState). That lock is deliberately not credited above — it names workspace, not organization, and the narrowed witness declining it is the narrowing working",
 })
 
 // guardMarkers are the identifiers whose presence in the same function
@@ -291,6 +298,60 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 	return consts
 }
 
+// statementsJudged is every SQL statement a function answers for: the string
+// literals written in its own body, plus the package-level statements it names.
+//
+// A statement hoisted to a package-level table is executed by whoever names it,
+// and the guard is that function's to carry. Reading only the body's literals
+// left those statements outside the census entirely — not reported as a gap but
+// silently absent, which is the one way a census must not fail. The sibling
+// census in orgrenamerecheck_test.go already folds them; this one had stayed
+// narrower, and eight organization writes were sitting in the difference.
+//
+// A name the function DECLARES is its own, whatever the package calls something
+// of the same name — attributing by spelling alone hands a package-level
+// statement to any function with a local of that name.
+//
+// Held by: TestTheGuardCensusJudgesEveryStatementAFunctionAnswersFor
+// (backend/updateguardcases_test.go)
+func statementsJudged(fn *ast.FuncDecl, held map[string][]string) []string {
+	shadowed := declaredNames(fn)
+	var out []string
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.Ident:
+			if !shadowed[node.Name] {
+				out = append(out, held[node.Name]...)
+			}
+		case *ast.BasicLit:
+			if node.Kind != token.STRING {
+				return true
+			}
+			if lit, err := strconv.Unquote(node.Value); err == nil {
+				out = append(out, lit)
+			}
+		}
+		return true
+	})
+	return out
+}
+
+// heldStatements are the SQL statements a package holds in its package-level
+// vars and consts, keyed by the name that holds them, read once per package.
+//
+// The reading is the one packageCallGraph uses, rather than a second answer to
+// "what statement does this name hold" — a census whose reader is narrower than
+// its sibling's reports a clean tree over what the sibling can see.
+func heldStatements(t *testing.T, cache map[string]map[string][]string, dir string) map[string][]string {
+	t.Helper()
+	if held, ok := cache[dir]; ok {
+		return held
+	}
+	held := packageLevelStatements(parsePackageFiles(t, dir))
+	cache[dir] = held
+	return held
+}
+
 // lockedTable resolves the table a LockRow/LockPair call names: a string
 // literal, or an identifier declared as a package-level string constant. An
 // argument it cannot resolve returns "", which the caller treats as an
@@ -319,6 +380,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 	versioned := versionedTables(t)
 	fset := token.NewFileSet()
 	constCache := map[string]map[string]string{}
+	heldCache := map[string]map[string][]string{}
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
@@ -338,38 +400,35 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 				var guarded bool
 				updated := map[string]bool{}
 				locked := map[string]bool{}
-				ast.Inspect(fn.Body, func(n ast.Node) bool {
-					switch node := n.(type) {
-					case *ast.BasicLit:
-						if node.Kind != token.STRING {
-							return true
-						}
-						lit, err := strconv.Unquote(node.Value)
-						if err != nil {
-							return true
-						}
-						if m := byIDUpdate.FindStringSubmatch(lit); m != nil && versioned[m[1]] {
-							updated[m[1]] = true
-							// A version predicate in the statement's own WHERE
-							// IS the compare-and-set this gate asks for, and the
-							// most direct form of it — the UPDATE matches no row
-							// unless the version is still the one that was read.
-							// Crediting only the storekit helpers would push a
-							// correct fix toward a waiver.
-							if w := whereClause.FindStringSubmatch(lit); w != nil &&
-								versionPredicate.MatchString(w[1]) {
-								guarded = true
-							}
-						}
-						// A locking read guards the table it READS. An advisory
-						// lock names no table at all and is a workspace-wide
-						// mutex, so it keeps its unattributed credit.
-						for _, table := range lockedByRead(lit) {
-							locked[table] = true
-						}
-						if advisoryLock.MatchString(lit) {
+				readStatement := func(lit string) {
+					if m := byIDUpdate.FindStringSubmatch(lit); m != nil && versioned[m[1]] {
+						updated[m[1]] = true
+						// A version predicate in the statement's own WHERE
+						// IS the compare-and-set this gate asks for, and the
+						// most direct form of it — the UPDATE matches no row
+						// unless the version is still the one that was read.
+						// Crediting only the storekit helpers would push a
+						// correct fix toward a waiver.
+						if w := whereClause.FindStringSubmatch(lit); w != nil &&
+							versionPredicate.MatchString(w[1]) {
 							guarded = true
 						}
+					}
+					// A locking read guards the table it READS. An advisory
+					// lock names no table at all and is a workspace-wide
+					// mutex, so it keeps its unattributed credit.
+					for _, table := range lockedByRead(lit) {
+						locked[table] = true
+					}
+					if advisoryLock.MatchString(lit) {
+						guarded = true
+					}
+				}
+				for _, lit := range statementsJudged(fn, heldStatements(t, heldCache, filepath.Dir(path))) {
+					readStatement(lit)
+				}
+				ast.Inspect(fn.Body, func(n ast.Node) bool {
+					switch node := n.(type) {
 					case *ast.CallExpr:
 						sel, ok := node.Fun.(*ast.SelectorExpr)
 						if !ok || !lockMarkers[sel.Sel.Name] {
