@@ -13,6 +13,7 @@ package integration
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/gradionhq/margince/backend/internal/compose"
@@ -68,9 +69,10 @@ func readPerson(t *testing.T, e *apptest.AppEnv, id string) personRecord {
 // press Undo on.
 func theUpdateEntry(t *testing.T, page historyPage) historyEntry {
 	t.Helper()
-	for i := len(page.Data) - 1; i >= 0; i-- {
-		if page.Data[i].Action == "update" {
-			return page.Data[i]
+	// Newest first, so the newest update is the first one encountered.
+	for _, entry := range page.Data {
+		if entry.Action == "update" {
+			return entry
 		}
 	}
 	t.Fatalf("no update entry in a history of %d lines", len(page.Data))
@@ -571,8 +573,9 @@ func TestEndToEnd_aFieldFilledInGoesBackToEmpty(t *testing.T) {
 	}
 	// The trail says what happened, so the clear is auditable rather than a
 	// silent write.
+	// The page is newest first, so the reversal is the FIRST line.
 	page := readHistory(t, e, "person", created.ID)
-	reversal := page.Data[len(page.Data)-1]
+	reversal := page.Data[0]
 	if reversal.Action != "restore" {
 		t.Fatalf("the newest entry is %q, want restore", reversal.Action)
 	}
@@ -656,4 +659,74 @@ func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
 	if back.Address == nil || back.Address.City == nil || *back.Address.City != "Hanoi" {
 		t.Errorf("address.city after the restore = %v, want Hanoi", back.Address)
 	}
+}
+
+// A -> B -> C, reverted C -> B -> A.
+//
+// This is what a person means by undo: walk back through the record's history
+// one change at a time. It works only because supersession asks whether the
+// field's VALUE has moved rather than whether anybody wrote it — undoing C
+// writes B and records a reversal row, and a rule that counted writes would see
+// that row as a later write of the same field and refuse the B entry, so the
+// walk could never get past its first step.
+func TestEndToEnd_severalChangesGoBackOneAtATime(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people",
+		apptest.AnyMap{"full_name": "Walker", "title": "A"}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	for _, value := range []string{"B", "C"} {
+		if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+			apptest.AnyMap{"title": value}, nil, nil); status != 200 {
+			t.Fatalf("set title %s → %d", value, status)
+		}
+	}
+	if title := readPerson(t, e, created.ID).Title; title == nil || *title != "C" {
+		t.Fatalf("title = %v, want C before the walk starts", title)
+	}
+
+	// Walk back twice. Each step takes the newest entry that is undoable, which
+	// is what pressing the top "Put back" does.
+	for _, want := range []string{"B", "A"} {
+		page := readHistory(t, e, "person", created.ID)
+		// The newest undoable ORIGINAL change. A reversal row is undoable too,
+		// but pressing its button REDOES the change it reversed — that is the
+		// other direction, not the next step back.
+		var target string
+		for _, entry := range page.Data {
+			if entry.Undoable.Undoable && entry.Action == "update" {
+				target = entry.ID
+				break
+			}
+		}
+		if target == "" {
+			t.Fatalf("no undoable entry while walking back to %s; the walk stopped early:\n%s",
+				want, undoabilityOf(page))
+		}
+		status, _ := restore(t, e, "person", created.ID, target, readPerson(t, e, created.ID).Version)
+		if status != 200 {
+			t.Fatalf("restore toward %s → %d", want, status)
+		}
+		title := readPerson(t, e, created.ID).Title
+		if title == nil {
+			t.Fatalf("title after the step is empty, want %s", want)
+		}
+		if *title != want {
+			t.Fatalf("title after the step = %q, want %s", *title, want)
+		}
+	}
+}
+
+// undoabilityOf spells a page's verdicts, so a walk that stopped early says
+// which entry refused and why rather than only that it stopped.
+func undoabilityOf(page historyPage) string {
+	var out strings.Builder
+	for _, entry := range page.Data {
+		out.WriteString(fmt.Sprintf("\t%s %s: undoable=%v %s %s\n",
+			entry.Action, entry.ID, entry.Undoable.Undoable, reasonOf(entry), detailOf(entry)))
+	}
+	return out.String()
 }

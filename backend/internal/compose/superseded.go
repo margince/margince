@@ -3,38 +3,46 @@
 
 package compose
 
-// SupersededFields answers whether anyone wrote these keys after this audit
-// row. It is deliberately NOT HumanOwnedConflicts (humanprecedence.go), which
-// asks a different question: which keys a HUMAN last wrote to a DIFFERENT
-// value, with no cutoff.
+// Whether a change has been overtaken.
 //
-// The two must not share a reader. If this query inherited that one's
-// equal-value exemption, a colleague who re-typed the same value would be
-// invisible and the restore would silently revert a decision they had just
-// re-affirmed. If that query inherited this one's actor-agnosticism or cutoff,
-// fewer fields would read as human-owned and agent writes that stage for
-// approval today would auto-execute — a silent weakening of an agent-authority
-// guardrail.
+// The question is whether the field's value has MOVED since this entry left it,
+// not whether anybody wrote it. Those differ, and the difference is what makes
+// undoing several changes in a row work at all.
+//
+// A -> B -> C, reverted C -> B -> A. Undoing the C entry writes B and records a
+// reversal row. If supersession counted writes, that reversal row would be "a
+// later write" of the same field and the B entry would refuse — so walking back
+// through a record's history could never get past the first step. Asking about
+// the VALUE instead: after undoing C the field holds B, which is exactly what
+// the B entry left it at, so the B entry is undoable and the walk continues.
+//
+// It also refuses the case that matters. If somebody else changed the field and
+// their change is still standing, the value is theirs rather than this entry's,
+// and putting this entry back would take their decision with it. That is the
+// ambiguity the product must name rather than resolve.
+//
+// The cost, stated plainly: a colleague who re-typed the SAME value has
+// re-affirmed it, and this cannot see that — the value did not move, so the
+// undo is allowed. The earlier rule caught it, at the price of making
+// sequential undo impossible. Between refusing a re-affirmation nobody can
+// distinguish from a no-op and refusing every second undo, this is the better
+// trade, and it is a trade rather than a free win.
+//
+// This is deliberately NOT HumanOwnedConflicts (humanprecedence.go), which asks
+// which keys a HUMAN last wrote to a different value, with no cutoff, to decide
+// whether an AGENT's write needs approval. Sharing a reader would either weaken
+// that guardrail or reimpose the write-counting rule here.
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"sort"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/privacy"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
-
-// auditCutoff is the point in the trail a supersession question is asked from:
-// the target row's own position. audit_log is ordered by (occurred_at, id) —
-// the id is a UUIDv7, so it breaks a tie in write order rather than arbitrarily
-// — and the row itself is never "later" than itself.
-type auditCutoff struct {
-	OccurredAt time.Time
-	ID         ids.UUID
-}
 
 // moneyPair is read as ONE field for supersession. amount_minor is a count of
 // units the currency defines, so a later change to either makes a restore of
@@ -105,65 +113,83 @@ func reportedAs(superseded []string, asked []string) []string {
 	return out
 }
 
-// supersededFieldsTx is the query, taking the caller's transaction so the
-// binding evaluation inside a write can ask it under the same reading. A second
-// implementation reading its own snapshot is exactly the read-then-write shape
-// that lets a stale answer decide a write's meaning.
+// fieldsThatMovedSince names the keys whose value on the record is no longer
+// what this entry left them at. It takes the caller's transaction so the
+// binding evaluation reads the same row the write is about to take.
 //
-// A row's OWN reversal chain is excluded. Putting an entry back writes the very
-// fields the entry changed, and that write is later than the entry — so without
-// this every restored entry would read as superseded by the act of restoring
-// it. `already_undone` would be unreachable, and undoing an undo could never
-// reopen anything, because the reopened entry would be permanently superseded
-// by the two reversals that had cancelled each other out.
-//
-// The chain is followed transitively, not one link: a reversal of a reversal is
-// as much a part of it as the first, and stopping at depth one would leave the
-// same defect one press further along.
-//
-// Only `restore` rows join it. The evidence key is written by the reversal seam
-// alone today, so no other write could enter the chain — but a chain that
-// admitted any row carrying the key would let a future writer with caller-
-// influenced evidence exclude its own write from superseding the entry it
-// overwrote, and that is a guardrail nobody would notice losing.
-func supersededFieldsTx(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, keys []string, cutoff auditCutoff) ([]string, error) {
-	if len(keys) == 0 {
+// The comparison is on jsonb, through the same representation the image was
+// written in, rather than a per-type Go conversion that would disagree about
+// dates and money.
+func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, after json.RawMessage) ([]string, error) {
+	if len(after) == 0 {
 		return nil, nil
 	}
-	asked := coupledKeys(keys)
-	args := []any{entityType, id, asked, cutoff.OccurredAt, cutoff.ID, privacy.UndidAuditLogID}
+	if !servesRecordType(entityType) {
+		return nil, fmt.Errorf("compose: %q is not a record type this path reads", entityType)
+	}
+	asked, err := coupledImage(after)
+	if err != nil {
+		return nil, err
+	}
+	if len(asked) == 0 {
+		return nil, nil
+	}
 	rows, err := tx.Query(ctx, `
-		WITH RECURSIVE reversal_chain AS (
-		  SELECT $5::uuid AS id
-		  UNION
-		  SELECT link.id
-		  FROM audit_log link
-		  JOIN reversal_chain c ON link.evidence ->> $6 = c.id::text
-		  WHERE link.entity_type = $1 AND link.entity_id = $2
-		    AND link.action = 'restore'
-		)
-		SELECT DISTINCT k.key
-		FROM audit_log a
-		CROSS JOIN unnest($3::text[]) AS k(key)
-		WHERE a.entity_type = $1 AND a.entity_id = $2
-		  AND a.after ? k.key
-		  AND (a.occurred_at, a.id) > ($4, $5)
-		  AND a.id NOT IN (SELECT id FROM reversal_chain)
-		ORDER BY 1`, args...)
+		SELECT k.key
+		FROM jsonb_each($2::jsonb) AS k(key, value)
+		JOIN `+pgx.Identifier{entityType}.Sanitize()+` r ON r.id = $1
+		WHERE to_jsonb(r) -> k.key IS DISTINCT FROM k.value
+		ORDER BY 1`, id, asked)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var found []string
+	var moved []string
 	for rows.Next() {
 		var key string
 		if err := rows.Scan(&key); err != nil {
 			return nil, err
 		}
-		found = append(found, key)
+		moved = append(moved, key)
 	}
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
-	return reportedAs(found, keys), nil
+	return reportedAs(moved, imageKeys(after)), nil
+}
+
+// coupledImage is the after-image narrowed to the keys worth comparing, with
+// the money pair pulled in whole: a restore of the amount under a currency that
+// moved states a value that never existed.
+func coupledImage(after json.RawMessage) ([]byte, error) {
+	var image map[string]json.RawMessage
+	if err := json.Unmarshal(after, &image); err != nil {
+		return nil, fmt.Errorf("compose: after-image is not a JSON object: %w", err)
+	}
+	comparable := map[string]json.RawMessage{}
+	for key, value := range image {
+		if derivedColumns[key] {
+			continue
+		}
+		comparable[key] = value
+	}
+	if len(comparable) == 0 {
+		return nil, nil
+	}
+	return json.Marshal(comparable)
+}
+
+// imageKeys is the after-image's keys, for reporting a move under the name the
+// caller asked about.
+func imageKeys(after json.RawMessage) []string {
+	var image map[string]json.RawMessage
+	if err := json.Unmarshal(after, &image); err != nil {
+		return nil
+	}
+	keys := make([]string, 0, len(image))
+	for key := range image {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	return keys
 }

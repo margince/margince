@@ -108,9 +108,9 @@ var Reasons = []Reason{
 	ReasonNoBeforeImage,
 	ReasonRecordArchived,
 	ReasonNotWritableByCaller,
+	ReasonAlreadyUndone,
 	ReasonSuperseded,
 	ReasonBehindErasureBoundary,
-	ReasonAlreadyUndone,
 	ReasonNotRestorableByThisPath,
 	ReasonNullUnwritableByModule,
 }
@@ -139,6 +139,10 @@ type AuditRow struct {
 	EntityID   ids.UUID
 	Action     string
 	Before     json.RawMessage
+	// After is what this entry left the fields at. Supersession compares it
+	// with what the record holds now, which is what lets several changes be
+	// undone in a row.
+	After      json.RawMessage
 	OccurredAt time.Time
 }
 
@@ -424,13 +428,24 @@ func (e Evaluator) liveState(ctx context.Context, tx pgx.Tx, row AuditRow, patch
 // trailState asks the refusals that read the audit trail, then the value check
 // the write path owns.
 func (e Evaluator) trailState(ctx context.Context, tx pgx.Tx, row AuditRow, patch map[string]json.RawMessage, mode Mode) (Undoability, error) {
-	superseded, err := supersededFieldsTx(ctx, tx, row.EntityType, row.EntityID,
-		sortedFields(patch), auditCutoff{OccurredAt: row.OccurredAt, ID: row.ID})
+	// Asked before supersession: an entry that has been put back should say so.
+	// Its own reversal moved the fields away from what it left them at, so
+	// supersession would otherwise answer first and less usefully.
+	if e.AlreadyUndone != nil {
+		undone, err := e.AlreadyUndone(ctx, tx, row)
+		if err != nil {
+			return Undoability{}, err
+		}
+		if undone {
+			return refuse(ReasonAlreadyUndone, ""), nil
+		}
+	}
+	moved, err := fieldsThatMovedSince(ctx, tx, row.EntityType, row.EntityID, row.After)
 	if err != nil {
 		return Undoability{}, err
 	}
-	if len(superseded) > 0 {
-		return refuse(ReasonSuperseded, strings.Join(superseded, ", ")), nil
+	if len(moved) > 0 {
+		return refuse(ReasonSuperseded, strings.Join(moved, ", ")), nil
 	}
 	if e.BehindErasure != nil {
 		behind, err := e.BehindErasure(ctx, tx, row)
@@ -439,15 +454,6 @@ func (e Evaluator) trailState(ctx context.Context, tx pgx.Tx, row AuditRow, patc
 		}
 		if behind {
 			return refuse(ReasonBehindErasureBoundary, ""), nil
-		}
-	}
-	if e.AlreadyUndone != nil {
-		undone, err := e.AlreadyUndone(ctx, tx, row)
-		if err != nil {
-			return Undoability{}, err
-		}
-		if undone {
-			return refuse(ReasonAlreadyUndone, ""), nil
 		}
 	}
 	if e.Unwritable != nil {

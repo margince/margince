@@ -35,20 +35,20 @@ func TestRecordHistoryNamesTheClientADelegatedChangeCameThrough(t *testing.T) {
 
 	passport := seedGrantedPassport(t, e, human, "Claude")
 	seedDelegatedAuditRow(t, e, person, human, passport, // Dated FORWARD: SeedPerson's own create row is stamped at real now, and
-		// the read is chronological, so a row dated backward would not be last.
+		// the read is newest first, so a forward-dated row is served FIRST.
 		time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond))
 
 	page := readRecordHistory(t, e, person)
 	if len(page.Entries) == 0 {
 		t.Fatal("the history is empty; the seeded row should be in it")
 	}
-	last := page.Entries[len(page.Entries)-1]
-	if last.Summary != "Ada Authority, via Claude, updated the record" {
-		t.Errorf("the line reads %q, want the client named rather than \"via an agent\"", last.Summary)
+	newest := page.Entries[0]
+	if newest.Summary != "Ada Authority, via Claude, updated the record" {
+		t.Errorf("the line reads %q, want the client named rather than \"via an agent\"", newest.Summary)
 	}
-	if last.AgentClient == nil || *last.AgentClient != "Claude" {
+	if newest.AgentClient == nil || *newest.AgentClient != "Claude" {
 		t.Errorf("agent_client = %v, want Claude — a client rendering its own attribution "+
-			"must not have to parse the sentence", last.AgentClient)
+			"must not have to parse the sentence", newest.AgentClient)
 	}
 }
 
@@ -61,7 +61,7 @@ func TestAHandMintedPassportKeepsTheGenericQualifier(t *testing.T) {
 
 	passport := seedUngrantedPassport(t, e, human)
 	seedDelegatedAuditRow(t, e, person, human, passport, // Dated FORWARD: SeedPerson's own create row is stamped at real now, and
-		// the read is chronological, so a row dated backward would not be last.
+		// the read is newest first, so a forward-dated row is served FIRST.
 		time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond))
 
 	page := readRecordHistory(t, e, person)

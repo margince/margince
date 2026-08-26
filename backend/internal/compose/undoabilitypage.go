@@ -114,7 +114,7 @@ type pageRow struct {
 // and an Art. 17 boundary is not a rule where almost-the-same is survivable.
 func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, auditIDs []ids.UUID) ([]pageRow, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT a.id, a.entity_type, a.entity_id, a.action, a.before, a.occurred_at,
+		SELECT a.id, a.entity_type, a.entity_id, a.action, a.before, a.after, a.occurred_at,
 		       NOT (`+privacy.UnscrubbedImageSQL("a", "$3")+`) AS behind_erasure
 		FROM audit_log a
 		WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.id = ANY($4::uuid[])`,
@@ -127,7 +127,7 @@ func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType str
 	for rows.Next() {
 		var row pageRow
 		if err := rows.Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action,
-			&row.Before, &row.OccurredAt, &row.behindErasure); err != nil {
+			&row.Before, &row.After, &row.OccurredAt, &row.behindErasure); err != nil {
 			return nil, err
 		}
 		out = append(out, row)

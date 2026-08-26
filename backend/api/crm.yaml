@@ -9257,7 +9257,10 @@ paths:
       description: |
         Every audit_log row for the record, rendered as a plain-language `summary` line
         naming the actor and, for agent actions, the granting human (`on_behalf_of_name`).
-        Chronological oldest-first (`occurred_at` ASC, `id` tiebreak) with keyset pagination.
+        Newest first (`occurred_at` DESC, `id` tiebreak) with keyset pagination — the same
+        order as `/field-history`, and the order a reader needs: a record's history answers
+        "what just happened", and the change somebody wants to put back is almost always the
+        last one.
         `before`/`after` are masked to the viewer's readable fields by omission — a field the
         caller cannot see is absent from the object, never present as `null`. The projection
         stops at the record's newest erasure scrub: rows at-or-before that tombstone are

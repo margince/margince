@@ -134,22 +134,31 @@ func TestRecordHistoryRendersEveryActorChronologically(t *testing.T) {
 	if page.HasMore || page.NextCursor != "" {
 		t.Errorf("single page must report exhaustion: has_more=%v cursor=%q", page.HasMore, page.NextCursor)
 	}
+	// Newest first: a record's history answers "what just happened", and the
+	// change somebody wants to put back is almost always the last one.
 	for i := 1; i < len(page.Entries); i++ {
-		if page.Entries[i].OccurredAt.Before(page.Entries[i-1].OccurredAt) {
-			t.Fatalf("entries not chronological ASC at index %d: %v after %v",
+		if page.Entries[i].OccurredAt.After(page.Entries[i-1].OccurredAt) {
+			t.Fatalf("entries not newest-first at index %d: %v before %v",
 				i, page.Entries[i].OccurredAt, page.Entries[i-1].OccurredAt)
 		}
+	}
+
+	// The page is newest first; this suite reads the record's story in the
+	// order it happened, so it indexes from the OLD end. Naming the direction
+	// once beats flipping five subscripts and getting one of them wrong.
+	inStoryOrder := func(i int) privacy.RecordHistoryEntry {
+		return page.Entries[len(page.Entries)-1-i]
 	}
 
 	// The genesis row's actor is the harness admin, a real app_user whose
 	// display name is "Rep" like every harness seat, so the summary resolves
 	// the name rather than falling back to the raw prefixed actor_id.
-	genesis := page.Entries[0]
+	genesis := inStoryOrder(0)
 	if genesis.Action != "create" || genesis.Summary != "Rep created the record" {
 		t.Errorf("genesis line = %q (action %q), want the admin's resolved create line", genesis.Summary, genesis.Action)
 	}
 
-	human := page.Entries[1]
+	human := inStoryOrder(1)
 	if human.Summary != "Uma Underwriter updated the record" {
 		t.Errorf("human line = %q, want resolved display name", human.Summary)
 	}
@@ -162,7 +171,7 @@ func TestRecordHistoryRendersEveryActorChronologically(t *testing.T) {
 		t.Errorf("human line payload = before %v after %v, want the seeded images served", human.Before, human.After)
 	}
 
-	agent := page.Entries[2]
+	agent := inStoryOrder(2)
 	// PD-002: the granting human is the SUBJECT of the line and the agent is
 	// the qualifier on them, not the other way round.
 	if agent.Summary != "Ada Authority, via an agent, updated the record" {
@@ -180,10 +189,10 @@ func TestRecordHistoryRendersEveryActorChronologically(t *testing.T) {
 		t.Errorf("agent line OnBehalfOfName = %v, want Ada Authority", agent.OnBehalfOfName)
 	}
 
-	if got := page.Entries[3].Summary; got != "System archived the record" {
+	if got := inStoryOrder(3).Summary; got != "System archived the record" {
 		t.Errorf("system line = %q", got)
 	}
-	if got := page.Entries[4].Summary; got != "Connector updated the record" {
+	if got := inStoryOrder(4).Summary; got != "Connector updated the record" {
 		t.Errorf("connector line = %q", got)
 	}
 }
@@ -233,7 +242,8 @@ func TestRecordHistoryErasureBoundaryServesOnlyTheTombstone(t *testing.T) {
 	}
 
 	// The boundary is a cut, not a ban: a change made AFTER the scrub is
-	// ordinary history again, rendered behind the erase line.
+	// ordinary history again, and on a newest-first page it reads BEFORE the
+	// erase line.
 	future := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
 	seedRecordAuditRow(t, e, "update", personID, "human", "user-1", nil,
 		nil, map[string]any{"owner_id": "rep-2"}, future)
@@ -243,15 +253,18 @@ func TestRecordHistoryErasureBoundaryServesOnlyTheTombstone(t *testing.T) {
 	if err != nil {
 		t.Fatalf("post-scrub list: %v", err)
 	}
-	if len(page.Entries) != 2 || page.Entries[0].Action != "erase" || page.Entries[1].Action != "update" {
-		t.Fatalf("post-scrub timeline = %+v, want [erase, update]", page.Entries)
+	if len(page.Entries) != 2 || page.Entries[0].Action != "update" || page.Entries[1].Action != "erase" {
+		t.Fatalf("post-scrub timeline = %+v, want [update, erase] newest first", page.Entries)
 	}
 }
 
-func TestRecordHistoryKeysetWalksAscendingWithoutOverlap(t *testing.T) {
+// The keyset walks BACKWARDS in time, one row per page, without serving a row
+// twice. Newest first is the order the surface reads, so the walk starts at the
+// most recent change and ends at the record's genesis.
+func TestRecordHistoryKeysetWalksNewestFirstWithoutOverlap(t *testing.T) {
 	e := Setup(t)
-	// SeedPerson's create row is the true oldest line; two forward-dated
-	// updates make three rows total.
+	// SeedPerson's create row is the true oldest line and is therefore served
+	// LAST; two forward-dated updates make three rows total.
 	personID := e.SeedPerson(t, "Paging Subject", nil)
 	base := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
 	r2 := seedRecordAuditRow(t, e, "update", personID, "human", "user-1", nil,
@@ -282,8 +295,9 @@ func TestRecordHistoryKeysetWalksAscendingWithoutOverlap(t *testing.T) {
 			t.Fatalf("page 3 is genuine exhaustion — has_more must not lie")
 		}
 	}
-	if walked[1] != r2 || walked[2] != r3 {
-		t.Fatalf("walk order = %v, want [genesis, %v, %v]", walked, r2, r3)
+	// Newest first: the two forward-dated updates come before the genesis row.
+	if walked[0] != r3 || walked[1] != r2 {
+		t.Fatalf("walk order = %v, want [%v, %v, genesis]", walked, r3, r2)
 	}
 	seen := map[ids.UUID]bool{}
 	for _, id := range walked {

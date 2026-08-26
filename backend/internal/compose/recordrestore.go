@@ -90,11 +90,11 @@ func (s RestoreSeam) readRow(ctx context.Context, entityType string, id, auditID
 			return err
 		}
 		return tx.QueryRow(ctx, `
-			SELECT id, entity_type, entity_id, action, before, occurred_at
+			SELECT id, entity_type, entity_id, action, before, after, occurred_at
 			FROM audit_log
 			WHERE id = $1 AND entity_type = $2 AND entity_id = $3`,
 			auditID, entityType, id,
-		).Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action, &row.Before, &row.OccurredAt)
+		).Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action, &row.Before, &row.After, &row.OccurredAt)
 	})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
