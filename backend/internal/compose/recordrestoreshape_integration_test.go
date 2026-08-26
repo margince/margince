@@ -92,22 +92,8 @@ func TestARestoreLandsEveryFieldItSends(t *testing.T) {
 	}
 
 	// The entry a person would press Undo on.
-	// The version comes from the record rather than from a count of the writes
-	// above: If-Match is what the executor pins the write with, and a guessed
-	// version would fail the restore for a reason this test is not about.
-	var auditID ids.UUID
-	var version int64
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		if err := tx.QueryRow(ctx, `
-			SELECT id FROM audit_log
-			WHERE entity_type = 'person' AND entity_id = $1 AND action = 'update'
-			ORDER BY occurred_at DESC, id DESC LIMIT 1`, id).Scan(&auditID); err != nil {
-			return err
-		}
-		return tx.QueryRow(ctx, `SELECT version FROM person WHERE id = $1`, id).Scan(&version)
-	}); err != nil {
-		t.Fatalf("find the entry and the version to pin: %v", err)
-	}
+	auditID := latestAuditRowID(t, e, "person", id, "update")
+	version := currentVersion(t, e, "person", id)
 
 	// The image the reversal WILL send, read from the entry the executor reads.
 	patch, _, err := filterImage("person", json.RawMessage(`{"title":"CTO"}`))
@@ -165,15 +151,7 @@ func TestARestoreOfARecordOutsideTheCallersScopeIsNotFound(t *testing.T) {
 
 	// A REAL audit row on that record. An id naming nothing would answer 404
 	// for the wrong reason and prove nothing about row scope.
-	var auditID ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `
-			SELECT id FROM audit_log
-			WHERE entity_type = 'person' AND entity_id = $1 AND action = 'update'
-			ORDER BY occurred_at DESC, id DESC LIMIT 1`, id).Scan(&auditID)
-	}); err != nil {
-		t.Fatalf("find the entry a person would press Undo on: %v", err)
-	}
+	auditID := latestAuditRowID(t, e, "person", id, "update")
 
 	// The record and its entry both exist and are readable by THIS caller. What
 	// is varied is the row-scope gate alone, because that is the property under
@@ -198,4 +176,37 @@ func TestARestoreOfARecordOutsideTheCallersScopeIsNotFound(t *testing.T) {
 		t.Errorf("a row-scope miss answered the refusal %q; the gate is being asked "+
 			"AFTER the audit row is read, which discloses the record", refusal.Reason)
 	}
+}
+
+// latestAuditRowID is the newest audit row of one action on one record — the
+// entry a person would press Undo on.
+func latestAuditRowID(t *testing.T, e *integration.Env, entityType string, id ids.UUID, action string) ids.UUID {
+	t.Helper()
+	admin := e.Admin()
+	var auditID ids.UUID
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(admin, `
+			SELECT id FROM audit_log
+			WHERE entity_type = $1 AND entity_id = $2 AND action = $3
+			ORDER BY occurred_at DESC, id DESC LIMIT 1`, entityType, id, action).Scan(&auditID)
+	}); err != nil {
+		t.Fatalf("find the %s entry on %s: %v", action, entityType, err)
+	}
+	return auditID
+}
+
+// currentVersion is the record's version, read rather than counted from the
+// writes above: If-Match is what the executor pins the write with, and a
+// guessed version fails the restore for a reason no test here is about.
+func currentVersion(t *testing.T, e *integration.Env, entityType string, id ids.UUID) int64 {
+	t.Helper()
+	admin := e.Admin()
+	var version int64
+	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(admin, `SELECT version FROM `+pgx.Identifier{entityType}.Sanitize()+
+			` WHERE id = $1`, id).Scan(&version)
+	}); err != nil {
+		t.Fatalf("read the %s version to pin: %v", entityType, err)
+	}
+	return version
 }
