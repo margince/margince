@@ -148,6 +148,143 @@ describe("sorting", () => {
   });
 });
 
+describe("the sort menu", () => {
+  /** The menu's own entries, so a column picker's "Value" is never one of them. */
+  function sortMenu() {
+    return within(screen.getByRole("group", { name: "Sort by" }));
+  }
+
+  it("offers every orderable column and nothing else", async () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    const menu = sortMenu();
+    expect(menu.getByRole("button", { name: "Name" })).toBeTruthy();
+    expect(menu.getByRole("button", { name: "Value" })).toBeTruthy();
+    // Note and Region name no server sort field, so ordering by them is
+    // something the API cannot do and the menu must not offer.
+    expect(menu.queryByRole("button", { name: "Note" })).toBeNull();
+    expect(menu.queryByRole("button", { name: "Region" })).toBeNull();
+  });
+
+  it("still offers a column the reader has hidden", async () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Columns" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Shown columns" })).getByRole(
+        "button",
+        { name: "Value" },
+      ),
+    );
+    expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    expect(sortMenu().getByRole("button", { name: "Value" })).toBeTruthy();
+  });
+
+  it("presses the same direction a header press would", async () => {
+    const onChange = vi.fn();
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(sortMenu().getByRole("button", { name: "Name" }));
+    expect(onChange).toHaveBeenCalledWith("name");
+
+    await userEvent.click(sortMenu().getByRole("button", { name: "Value" }));
+    expect(onChange).toHaveBeenLastCalledWith("-value");
+  });
+
+  it("flips the direction of the attribute already sorted, and says which way", async () => {
+    function Harness() {
+      const [value, setValue] = useState("name");
+      return (
+        <ListTable
+          rows={testRows(1)}
+          columns={columns}
+          rowKey={(row) => row.id}
+          unit="rows"
+          sort={{ value, onChange: setValue }}
+        />
+      );
+    }
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    const entry = sortMenu().getByRole("button", { name: /^Name/ });
+    expect(entry.getAttribute("aria-pressed")).toBe("true");
+    expect(entry.textContent).toContain("ascending");
+
+    await userEvent.click(entry);
+    expect(
+      sortMenu().getByRole("button", { name: /^Name/ }).textContent,
+    ).toContain("descending");
+  });
+
+  it("offers the server's own order, which is a state a saved view can ask for", async () => {
+    const onChange = vi.fn();
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "name", onChange }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    const fallback = sortMenu().getByRole("button", { name: "Default order" });
+    expect(fallback.getAttribute("aria-pressed")).toBe("false");
+    await userEvent.click(fallback);
+    expect(onChange).toHaveBeenCalledWith("");
+  });
+
+  it("is not drawn for a list the server cannot order", () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={[{ key: "note", header: "Note", cell: () => "-" }]}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange: () => {} }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Sort" })).toBeNull();
+  });
+
+  it("is not drawn without a sort control at all", () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Sort" })).toBeNull();
+  });
+});
+
 describe("filter chips", () => {
   const chips: readonly ListChip[] = [
     {

@@ -28,7 +28,10 @@ import {
   ListSurface,
   type ListView,
   Menu,
+  nextSortValue,
   type SortControl,
+  type SortOption,
+  sortDirection,
   useCloseOnEscape,
   useCloseOnOutsideClick,
 } from "./listsurface";
@@ -39,6 +42,7 @@ export type {
   ListChip,
   ListView,
   SortControl,
+  SortOption,
 } from "./listsurface";
 
 // The list surface: one component owning the header, the controls, the rows and
@@ -347,13 +351,7 @@ function sortState(
   column: { sort?: string },
   value: string,
 ): "asc" | "desc" | null {
-  if (!column.sort) {
-    return null;
-  }
-  if (value === column.sort) {
-    return "asc";
-  }
-  return value === `-${column.sort}` ? "desc" : null;
+  return column.sort ? sortDirection(column.sort, value) : null;
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: the alternate body owns one guarded paging branch while the table keeps the shared query controls
@@ -732,6 +730,14 @@ export function ListTable<Row>({
   const sorted = sort
     ? columns.find((column) => sortState(column, sort.value) !== null)
     : undefined;
+  // Every orderable column, not just the shown ones: a reader who hid a column
+  // to fit a phone did not give up ordering by it, and the menu is the only
+  // route left to that sort once its header is gone.
+  const sortOptions: readonly SortOption[] = columns.flatMap((column) =>
+    column.sort
+      ? [{ field: column.sort, label: column.header, numeric: column.numeric }]
+      : [],
+  );
   const optional = columns.filter((column) => !column.fixed);
   // What is actually narrowing the set, and so whether an empty result should
   // offer to clear anything. A view is not itself a narrowing: applying one
@@ -901,6 +907,8 @@ export function ListTable<Row>({
       caption={caption}
       note={note}
       search={search}
+      sort={sort}
+      sortOptions={sortOptions}
       chips={chips}
       chosen={chosen}
       onChipChange={onChipChange}
@@ -1175,16 +1183,12 @@ function HeaderCell<Row>({
       </th>
     );
   }
-  const field = column.sort;
-  // Unsorted, a number column almost always wants its biggest value first.
-  const next =
-    state === "asc"
-      ? `-${field}`
-      : state === "desc"
-        ? field
-        : column.numeric
-          ? `-${field}`
-          : field;
+  // The same arithmetic the sort menu presses, so a reader who flips a column
+  // here finds that direction there.
+  const next = nextSortValue(
+    { field: column.sort, numeric: column.numeric },
+    state,
+  );
   return (
     <th
       className={className}

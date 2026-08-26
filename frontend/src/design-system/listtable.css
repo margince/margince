@@ -374,6 +374,15 @@
   background: var(--bgHover);
 }
 
+/* The sort direction rides the right edge of its entry, so the arrows line up
+ * in a column of their own instead of trailing labels of different lengths. */
+.lt-mi-dir {
+  display: inline-flex;
+  align-items: center;
+  margin-inline-start: auto;
+  color: var(--textSecondary);
+}
+
 /* The tick box is always laid out, and only its glyph appears when selected —
  * a checkmark that inserts itself would shift every label on selection. */
 .lt-cb {
