@@ -56,8 +56,15 @@ package backendarch
 // CLOSED TO NEW CLAIMS, NOT TO A BETTER DETECTOR. A shape that learns to see a
 // wording it used to miss finds claims that were already there, and the
 // register grows to hold them; "closed" would otherwise mean the detector may
-// never improve, which is the opposite of the point. `registeredDebt` is the
-// line where that growth is agreed to.
+// never improve, which is the opposite of the point. `shapeCensus` is the line
+// where that growth is agreed to, one row per shape.
+//
+// The rows are per shape rather than one total because the number falls two
+// ways and only one of them is work. A claim leaves because it was held or
+// deleted, or because the detector stopped seeing it — and the second costs
+// nothing, changes no code a reader would notice, and reads exactly like the
+// first. Priced per shape, looking away has to say which shape stopped looking
+// and what it cost.
 //
 // The register is 638 lines with no reasons, and that is deliberate rather than
 // sloppy: a reason per entry would be 638 rationalisations written by somebody
@@ -389,6 +396,43 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 	}
 }
 
+// shapeCensus pins how many unheld claims each detector shape attributes, and
+// it is where the debt total comes from.
+//
+// A single total cannot tell the two ways it falls apart. A claim leaves the
+// register either because somebody HELD it or because the claim was deleted —
+// both of which change the tree — or because the DETECTOR stopped seeing it,
+// which changes nothing but the number. The second is measured: deleting the
+// `cannot-drift` shape, deleting the 140 register lines that orphans and
+// lowering a single total by 140 leaves every other arm in this file green.
+// One hundred and forty live claims — `httperr.Classify`'s "the ONE decision
+// tree", the activity-kind contract parity, the consent verdict's one reader —
+// would have left the register with nothing audited and nothing fixed, and the
+// count would still have read as progress.
+//
+// Per shape, that move has to state itself: the shape's row goes to zero or
+// disappears, in a diff where the number sits beside the name of the thing that
+// stopped looking. It also catches the narrowing a whole-shape deletion does
+// not — trimming ONE alternative out of a regex leaves the shape matching
+// plenty, so every arm asking "does this shape match anything" stays green
+// while the claims that alternative used to reach go quiet. Here it is a
+// failure naming the shape and both counts.
+//
+// The rows churn as claims are held, and that is the point: real work shows as
+// a row falling, so the two kinds of progress are told apart by which number
+// moved and whether the tree moved with it.
+var shapeCensus = map[string]int{
+	"cannot-drift":   181,
+	"once":           160,
+	"one-of-a-kind":  156,
+	"is-every-named": 95,
+	"only-noun":      22,
+	"no-second":      10,
+	"never-twice":    6,
+	"is-every":       5,
+	"one-truth":      3,
+}
+
 // registeredDebt is the number of unheld claims this tree carries, tracked
 // EXACTLY: the register may not hold more, and may not hold fewer while this
 // still says so.
@@ -399,23 +443,111 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // claim, which a line added for a claim written this morning satisfies
 // perfectly. Only a count catches that.
 //
+// DERIVED from the census above rather than written beside it, because two
+// hand-written totals of one population are two answers to one question, and
+// the one that stops matching looks exactly like the one that still does.
 // Lowering it is the point of the file it counts; raising it is legal and is
 // what a widened detector shape requires.
-const registeredDebt = 638
+func registeredDebt() int {
+	total := 0
+	for _, count := range shapeCensus {
+		total += count
+	}
+	return total
+}
 
 func TestTheRegisterHoldsExactlyTheDebtItPins(t *testing.T) {
 	keys := readRegister(t)
-	if len(keys) > registeredDebt {
+	debt := registeredDebt()
+	if len(keys) > debt {
 		t.Errorf("the register holds %d entries against a ceiling of %d.\n\n"+
 			"A claim written today must name the test that holds it, not take a line here. "+
 			"If a DETECTOR shape was widened, it now sees claims that were already in the tree: "+
-			"raise registeredDebt in the same change, so the growth is one line somebody agreed to.",
-			len(keys), registeredDebt)
+			"raise that shape's row in shapeCensus in the same change, so the growth is one "+
+			"line somebody agreed to.",
+			len(keys), debt)
 	}
-	if len(keys) < registeredDebt {
-		t.Errorf("the register holds %d entries and the ceiling still says %d — lower it, "+
-			"because the number is the thing this file is for", len(keys), registeredDebt)
+	if len(keys) < debt {
+		t.Errorf("the register holds %d entries and the census still totals %d — lower the row "+
+			"of the shape whose claims were held, because the number is the thing this file is for",
+			len(keys), debt)
 	}
+}
+
+// TestEveryShapeAttributesTheClaimsItsCensusPins is the mirror of the arm above:
+// that one holds the register against the census, this one holds the census
+// against the DETECTOR.
+//
+// Without it the census is a second hand-written number rather than a
+// measurement, and the move it exists to price — narrowing a shape until it
+// stops reaching claims — is paid for by editing the very row that was supposed
+// to notice.
+func TestEveryShapeAttributesTheClaimsItsCensusPins(t *testing.T) {
+	attributed := map[string]int{}
+	for _, c := range allClaims(t) {
+		if c.held == "" {
+			attributed[c.shape]++
+		}
+	}
+	// A shape the detector no longer carries, still pinned here. This is the
+	// deletion the whole census is for, and it reports the cost rather than
+	// only the fact.
+	live := map[string]bool{namedShape: true}
+	for name := range claimShapes {
+		live[name] = true
+	}
+	for _, shape := range sortedCensusShapes() {
+		if !live[shape] {
+			t.Errorf("shapeCensus pins %d claim(s) to shape %q and the detector no longer "+
+				"declares it — a shape that stops looking lowers this file's number without "+
+				"auditing a single claim. Hold or delete those claims, or say in the detector "+
+				"why the shape was never a claim form",
+				shapeCensus[shape], shape)
+		}
+	}
+	for _, shape := range append(sortedShapes(), namedShape) {
+		pinned, ok := shapeCensus[shape]
+		if !ok {
+			t.Errorf("shape %q attributes %d unheld claim(s) and has no row in shapeCensus — "+
+				"an unpinned shape can be narrowed to nothing and every arm here stays green",
+				shape, attributed[shape])
+			continue
+		}
+		if got := attributed[shape]; got != pinned {
+			t.Errorf("shape %q attributes %d unheld claim(s), and shapeCensus pins %d.\n\n"+
+				"Fewer means the shape stopped reaching claims it used to reach: either they "+
+				"were held or deleted — lower the row — or the regex was narrowed, which is the "+
+				"move this row exists to make somebody agree to. More means it was widened, and "+
+				"the claims it now sees were always in the tree.",
+				shape, got, pinned)
+		}
+	}
+	// A row pinned at zero is a shape that has stopped attributing anything,
+	// which reads here as a satisfied obligation and is a dead detector. It is
+	// refused rather than tolerated, because the arm above compares two numbers
+	// and 0 == 0 is the one comparison that holds while nothing is being
+	// measured.
+	for _, shape := range sortedCensusShapes() {
+		if shapeCensus[shape] == 0 {
+			t.Errorf("shapeCensus pins shape %q at zero — delete the shape deliberately, or "+
+				"restore what it was written to see; a row of zero passes exactly like a shape "+
+				"whose claims were all held", shape)
+		}
+	}
+	if len(shapeCensus) == 0 {
+		t.Error("shapeCensus is empty, so every comparison above ran over nothing")
+	}
+}
+
+// sortedCensusShapes gives the census a stable read order, so two failures
+// report in the same sequence rather than in map order.
+func sortedCensusShapes() []string {
+	names := make([]string, 0, len(shapeCensus))
+	for name := range shapeCensus {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func TestTheRegisterIsSortedAndFreeOfDuplicates(t *testing.T) {

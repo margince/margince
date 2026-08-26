@@ -14,8 +14,10 @@
 #
 # WIDENING A DETECTOR SHAPE IS NOT ADDING A CLAIM. A shape that learns to see a
 # wording it used to miss finds claims that were already here, and this file
-# grows to hold them. `registeredDebt` in the gate is the ceiling that growth
-# has to pass through.
+# grows to hold them. `shapeCensus` in the gate is the ceiling that growth has
+# to pass through, and it is kept per shape: narrowing a shape empties lines
+# out of this file while auditing nothing, and a single total cannot tell that
+# from the work it looks like.
 #
 # THE NUMBER IS THE POINT, AND IT OTHERWISE ONLY GOES DOWN. To remove a line: write the
 # test that fails when a second implementation appears and name it in the doc
