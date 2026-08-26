@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func newVLLMForTest(t *testing.T, handler http.HandlerFunc) model.Client {

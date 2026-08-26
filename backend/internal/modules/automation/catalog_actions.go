@@ -3,7 +3,7 @@
 
 package automation
 
-import "github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
+import "github.com/margince/margince/backend/internal/shared/ports/workflow"
 
 // ActionType is the closed, user-facing action vocabulary (RC-11,
 // features/10 §1): the seven effects a catalog or agent-authored

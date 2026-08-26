@@ -33,7 +33,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // markerPrefix names what the marker is, in front of the nonce that makes it

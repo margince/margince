@@ -16,7 +16,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // Store reads the finance mirror under the caller's own gates.

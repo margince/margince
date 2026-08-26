@@ -20,7 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
 )
 
 // WithMCPAppViews hands this Server the view provider its process role built.

@@ -49,7 +49,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // coalesceCall finds where a coalesce begins. Only the CALL is matched by

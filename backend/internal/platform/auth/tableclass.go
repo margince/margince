@@ -3,7 +3,7 @@
 
 package auth
 
-import "github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+import "github.com/margince/margince/backend/internal/shared/kernel/principal"
 
 // The read classes of the row-scoped business records. Row scope (own / team /
 // all) is a property of the PRINCIPAL; which tables it narrows is a property

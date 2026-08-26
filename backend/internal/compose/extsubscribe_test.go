@@ -16,9 +16,9 @@ import (
 	"testing"
 	"time"
 
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func composedSubscription(events ...string) ComposedSubscription {

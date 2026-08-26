@@ -3,7 +3,7 @@ package learn
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/cli/craft/gate"
+	"github.com/margince/margince/cli/craft/gate"
 )
 
 // A CRAFT-DISPUTE routes ONE contested finding to human adjudication. It is not a

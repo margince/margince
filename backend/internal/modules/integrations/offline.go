@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/provider"
+	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 // OfflineProvider is the deterministic fake (PI-SEED-1): a provider that

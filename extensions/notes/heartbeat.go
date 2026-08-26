@@ -10,7 +10,7 @@ package notes
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // heartbeat writes one row naming the workspace this tick is for, and prunes

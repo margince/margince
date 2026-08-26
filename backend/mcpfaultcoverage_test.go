@@ -51,7 +51,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const modulesDir = "internal/modules"
@@ -102,7 +102,7 @@ var seamOutsideRoots = gatekit.Waive(map[string]string{
 // comment and nowhere else, and a gate keyed on the name skipped exactly them.
 // A gate that over-obligates costs one method on a type that did not strictly
 // need it; a gate that under-obligates reads green while the bug ships.
-const seamImportPath = "github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+const seamImportPath = "github.com/margince/margince/backend/internal/shared/ports/datasource"
 
 // moduleSource is one unit's parsed non-test files: a module under
 // internal/modules, or the whole compose tier.

@@ -6,7 +6,7 @@ package identity
 import (
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // The record types a grant may name are spelled in two places a client can

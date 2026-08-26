@@ -12,7 +12,7 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/extraction"
+	"github.com/margince/margince/backend/internal/shared/ports/extraction"
 )
 
 func TestTheStructuredFieldsAreComparedExactly(t *testing.T) {

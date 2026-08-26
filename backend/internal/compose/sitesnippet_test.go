@@ -14,8 +14,8 @@ import (
 	"testing"
 	"unicode/utf8"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
 func TestSegmentPassagesIsDeterministicAndCapped(t *testing.T) {

@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
+	"github.com/margince/margince/backend/internal/compose/promptvoice"
 )
 
 func TestTheVoiceAnnouncesItselfToTheModel(t *testing.T) {

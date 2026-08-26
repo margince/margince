@@ -17,8 +17,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // aiActivityEnv is the shared harness plus the projection under test and one

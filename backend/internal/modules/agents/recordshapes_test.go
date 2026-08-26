@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // The rendered shapes come from crm.yaml; the decoder is filled by Go structs

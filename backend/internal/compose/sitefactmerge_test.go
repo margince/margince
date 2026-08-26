@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // factsOfField builds n distinct facts of one field, in merge order.

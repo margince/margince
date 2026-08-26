@@ -19,8 +19,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/gradionhq/margince/backend/internal/platform/dbmigrate"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // unitFS builds the filesystem shape a unit's `//go:embed migrations`

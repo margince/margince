@@ -10,7 +10,7 @@ import (
 	"net/url"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // "Which rooms is this contact still in" is answered by address: a live seat

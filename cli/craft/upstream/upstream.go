@@ -8,8 +8,8 @@ package upstream
 import (
 	"sort"
 
-	"github.com/gradionhq/margince/cli/craft/gate"
-	"github.com/gradionhq/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/gate"
+	"github.com/margince/margince/cli/craft/rubric"
 )
 
 // Record is one recorded review verdict. Seq is the ordering axis (a monotonic

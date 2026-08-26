@@ -13,9 +13,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/freemail"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // BaselinePageSize caps how many baseline domains one search answer carries.

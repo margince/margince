@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // OutboundChannelMessage is one message to send into a chat.

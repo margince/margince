@@ -19,7 +19,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // wireIncumbentModifiedAt is the incumbent's own last-modified instant in the

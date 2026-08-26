@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 )
 
 func TestSinceReadsTheActivityWhenThereIsOne(t *testing.T) {

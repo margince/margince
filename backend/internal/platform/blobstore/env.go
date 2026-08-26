@@ -6,7 +6,7 @@ package blobstore
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // The variable names this package answers to. Declared next to the code that

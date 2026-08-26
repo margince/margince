@@ -6,7 +6,7 @@ package people
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The dedupe pre-checks leave ExistingID zero when the existing row is

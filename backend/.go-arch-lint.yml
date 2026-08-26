@@ -20,7 +20,7 @@ vendors:
   # committed vanilla stub in bare builds, the generated module under
   # build/composition/ in composed ones. Only cmd wires it (the fitness
   # test in backend/extensions_arch_test.go holds the same rule).
-  composition: { in: github.com/gradionhq/margince/composition }
+  composition: { in: github.com/margince/margince/composition }
   pgx:    { in: github.com/jackc/** }
   chi:    { in: github.com/go-chi/** }
   oapi:   { in: github.com/oapi-codegen/** }

@@ -12,7 +12,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // object is a JSON Schema object node. A map would lose key order and make the

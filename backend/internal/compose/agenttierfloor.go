@@ -20,8 +20,8 @@ package compose
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // toolRecordType is one (verb, record type) pair — the key a tool call can be

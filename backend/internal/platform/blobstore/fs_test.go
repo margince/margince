@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
 func TestFilesystemStorePutGetRoundTrip(t *testing.T) {

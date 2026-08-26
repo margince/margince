@@ -16,8 +16,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/provider"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 func phoneClaim(t *testing.T, confidence *float64) storedClaim {

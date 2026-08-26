@@ -15,8 +15,8 @@ package compose
 import (
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // servedMeter counts the records one agent response hands over and charges them

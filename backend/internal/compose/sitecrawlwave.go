@@ -16,8 +16,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 // admission is one candidate that passed the serial pre-fetch screen:

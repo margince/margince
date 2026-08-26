@@ -14,7 +14,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // EntityType names the domain entities the provider serves.

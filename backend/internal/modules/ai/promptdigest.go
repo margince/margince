@@ -8,7 +8,7 @@ import (
 	"encoding/binary"
 	"encoding/hex"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
 // PromptDigest fingerprints the system prompts a surface SENDS, so a cache key

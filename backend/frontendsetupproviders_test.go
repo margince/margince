@@ -28,7 +28,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 const setupProvidersFile = "../frontend/src/screens/setup-providers.ts"

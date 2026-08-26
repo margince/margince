@@ -38,7 +38,7 @@ import (
 	"encoding/json"
 	"slices"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // --- generic verbs: the record type comes from the arguments ---

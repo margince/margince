@@ -43,10 +43,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-const contractsImportPath = "github.com/gradionhq/margince/backend/internal/contracts"
+const contractsImportPath = "github.com/margince/margince/backend/internal/contracts"
 
 // contractsPkgDir is where the generated enums live, relative to the module root.
 const contractsPkgDir = "internal/contracts"

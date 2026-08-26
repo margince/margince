@@ -10,8 +10,8 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aicert"
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
 
 // The three states a shipped site's certification can be in. They are separate

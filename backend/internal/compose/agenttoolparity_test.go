@@ -26,7 +26,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestEveryDeclaredToolVerbIsRegistered(t *testing.T) {

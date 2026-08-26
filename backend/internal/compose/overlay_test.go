@@ -7,9 +7,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/platform/overlaybudget"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 )
 
 // TestUnresolvedOwnerEmailsIsHonestlyUnwired proves the compose-level

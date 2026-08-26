@@ -24,7 +24,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/agents"
 )
 
 // urlTakingOperations answers the operationIds whose request body declares a

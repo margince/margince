@@ -23,7 +23,7 @@ import (
 	"fmt"
 	"slices"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // errOutsideAgentSpec refuses a tool this run's catalog entry does not name.

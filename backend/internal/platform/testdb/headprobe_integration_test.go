@@ -20,8 +20,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/dbmigrate"
-	"github.com/gradionhq/margince/backend/migrations"
+	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/migrations"
 )
 
 // atHead is the ledger this binary would record for a namespace, which is what

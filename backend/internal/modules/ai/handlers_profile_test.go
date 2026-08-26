@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestPublicProfileDerivesSafeRoutingPosture(t *testing.T) {

@@ -20,9 +20,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // systemActor is the actor id a bus delivery runs under — the same spelling

@@ -13,9 +13,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/integrations"
-	"github.com/gradionhq/margince/backend/internal/modules/integrations/surfe"
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/modules/integrations/surfe"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // ProviderModeEnv selects WHICH adapter this process talks to: "live" (the

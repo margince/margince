@@ -17,7 +17,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The keys of one routing rule — the lead field a rule matches on, the

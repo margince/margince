@@ -12,8 +12,8 @@ package agents
 // gets the task, which word to tag with.
 
 import (
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // WhoamiResult is the human a passport acts for. Every field can be empty:

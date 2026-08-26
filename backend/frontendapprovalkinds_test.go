@@ -28,7 +28,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 )
 
 const frontendApprovalKinds = "../frontend/src/screens/approvalkind.ts"

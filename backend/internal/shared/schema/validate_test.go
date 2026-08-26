@@ -6,7 +6,7 @@ package schema_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/schema"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 func TestValidateJSONAcceptsAConformingObject(t *testing.T) {

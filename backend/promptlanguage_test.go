@@ -35,8 +35,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/draftrules"
-	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/compose/promptlang"
 )
 
 // The heading a language rule opens with, read from the package that DEFINES

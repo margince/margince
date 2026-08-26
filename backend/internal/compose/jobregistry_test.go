@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // declaredTimeout is what River will be handed for a kind, resolved exactly as

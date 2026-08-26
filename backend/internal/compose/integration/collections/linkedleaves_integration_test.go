@@ -17,9 +17,9 @@ package collections
 import (
 	"testing"
 
-	collectionsmod "github.com/gradionhq/margince/backend/internal/modules/collections"
-	peoplemod "github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	collectionsmod "github.com/margince/margince/backend/internal/modules/collections"
+	peoplemod "github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ownedOrg goes through CreateOrganization so the owner_id the team leaf joins on

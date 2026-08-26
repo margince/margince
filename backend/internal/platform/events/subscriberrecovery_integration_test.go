@@ -20,8 +20,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestSubscriberSurvivesItsGroupBeingPurged(t *testing.T) {

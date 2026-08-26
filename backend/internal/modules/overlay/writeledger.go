@@ -31,7 +31,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // DefaultLedgerWindow is OVA-PARAM-3: how long an our-write ledger entry stays

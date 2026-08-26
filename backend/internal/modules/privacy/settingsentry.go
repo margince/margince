@@ -8,7 +8,7 @@ package privacy
 // runs them without knowing what retention is.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // retentionPolicyObject is the RBAC object gating the whole retention surface —

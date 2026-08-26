@@ -3,7 +3,7 @@
 
 package identity
 
-import "github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+import "github.com/margince/margince/backend/internal/platform/database/storekit"
 
 // LiveMemberSQL is what "someone who still works here" means, for a query that
 // reads app_user.

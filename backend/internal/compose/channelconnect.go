@@ -14,8 +14,8 @@ package compose
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/telegram"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 )
 
 // WithChannelSurface composes the channel-connection transport. It takes no

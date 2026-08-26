@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // The names here are deliberately not spelled MARGINCE_*: the tree-wide

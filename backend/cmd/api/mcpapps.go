@@ -27,9 +27,9 @@ import (
 	"log/slog"
 	"net/url"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/modules/agents/apps"
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // mcpAppsOrigin answers the origin to read view documents from, or nil when this

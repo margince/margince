@@ -39,7 +39,7 @@ import (
 
 const (
 	agentsDir        = "internal/modules/agents"
-	agentsImportPath = "github.com/gradionhq/margince/backend/" + agentsDir
+	agentsImportPath = "github.com/margince/margince/backend/" + agentsDir
 
 	// registryType is the type a tool registrar takes: taking it is what makes
 	// a function a registrar.

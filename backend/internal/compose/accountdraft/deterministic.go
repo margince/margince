@@ -17,8 +17,8 @@ package accountdraft
 import (
 	"strings"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/draftfloor"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 )
 
 // Draft is the written message plus what it was written from, before the wire

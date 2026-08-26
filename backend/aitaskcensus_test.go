@@ -14,7 +14,7 @@ package backendarch
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose"
 )
 
 func TestTaskCensusMatchesTheContract(t *testing.T) {

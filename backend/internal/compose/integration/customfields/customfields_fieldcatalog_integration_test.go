@@ -23,10 +23,10 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	customfieldsmod "github.com/gradionhq/margince/backend/internal/modules/customfields"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	customfieldsmod "github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // var _ fieldcatalog.Reader documents the seam at its call site: the

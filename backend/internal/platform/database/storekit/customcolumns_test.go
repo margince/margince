@@ -17,7 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 func col(name, typ string) fieldcatalog.Column { return fieldcatalog.Column{Name: name, Type: typ} }

@@ -10,8 +10,8 @@ package projects
 // something false about what they are looking at.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The filter names, spelled once so a binding and the caller's key cannot

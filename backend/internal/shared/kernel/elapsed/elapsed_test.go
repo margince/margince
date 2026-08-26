@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 func TestDaysCountsTheCalendarAndNotTheClock(t *testing.T) {

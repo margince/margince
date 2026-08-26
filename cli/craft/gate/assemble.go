@@ -2,7 +2,7 @@ package gate
 
 import (
 	"context"
-	"github.com/gradionhq/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/rubric"
 	"os"
 	"os/exec"
 	"path/filepath"

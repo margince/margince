@@ -24,8 +24,8 @@ package draftfloor
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/convstate"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // DefaultLang is what an unresolved language falls back to. English, as the

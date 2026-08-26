@@ -24,7 +24,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // connectState is the tuple bound into a signed OAuth state parameter. Nonce

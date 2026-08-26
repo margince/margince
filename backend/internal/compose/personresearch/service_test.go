@@ -6,7 +6,7 @@ package personresearch
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/persondata"
+	"github.com/margince/margince/backend/internal/shared/ports/persondata"
 )
 
 // A provider's URL is untrusted input. A javascript: or data: source becomes a

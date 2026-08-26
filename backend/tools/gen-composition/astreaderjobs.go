@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"go/ast"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // opJobTick is the operation a scheduled extension job performs. It is not

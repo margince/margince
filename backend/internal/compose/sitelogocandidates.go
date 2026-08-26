@@ -16,7 +16,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 // logoCandidates builds the ordered, deduplicated candidate chain from what

@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // coreFamilyStreams is the events.md §4.1 stream set, spelled out rather than

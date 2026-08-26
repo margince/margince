@@ -11,8 +11,8 @@ import (
 	"errors"
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // oauthRevoke serves POST /oauth/revoke. No session is expected — a client

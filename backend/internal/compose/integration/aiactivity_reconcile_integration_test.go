@@ -18,7 +18,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/activities"
 )
 
 // deleteProjection drops the occurrence's row, standing in for an event the

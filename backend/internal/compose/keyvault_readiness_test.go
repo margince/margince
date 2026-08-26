@@ -6,7 +6,7 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
 func TestReadinessChecksIncludeKeyvaultWhenConfigured(t *testing.T) {

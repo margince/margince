@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/rubric"
 )
 
 // fakeClient records the prompt it was asked to complete and returns a canned

@@ -3,7 +3,7 @@
 
 package deals
 
-import "github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+import "github.com/margince/margince/backend/internal/shared/kernel/values"
 
 // DealStatus and StageSemantic are the deal lifecycle vocabulary — the
 // Go spelling of the deal_status and stage semantic CHECKs (0006), kept

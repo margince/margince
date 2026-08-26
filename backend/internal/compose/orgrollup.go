@@ -19,7 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // orgTreeNode is one row of the flattened organization hierarchy:

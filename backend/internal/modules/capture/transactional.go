@@ -28,7 +28,7 @@ package capture
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 )
 
 // transactionalBaseline is the pinned set of registrable domains (eTLD+1) that

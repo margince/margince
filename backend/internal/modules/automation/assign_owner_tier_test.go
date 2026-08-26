@@ -6,7 +6,7 @@ package automation
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // TestResolveAssignOwnerTierSingleEntityIsAutoExecute is the common case every

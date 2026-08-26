@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAnUpdateWithNoBeforeImageIsRefusedBeforeItReachesTheDatabase(t *testing.T) {

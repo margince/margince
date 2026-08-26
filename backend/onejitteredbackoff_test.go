@@ -41,7 +41,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // jitteredBackoffScope claims the randomness lives in kernel/backoff. Nothing

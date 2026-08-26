@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/compose/claims"
 )
 
 // The band, taken apart (DOSS-AC-17..20, ADR-0095/A146).

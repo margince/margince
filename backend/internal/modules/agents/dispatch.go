@@ -27,7 +27,7 @@ import (
 	"log/slog"
 	"slices"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // legacyProtocolVersions are the handshake-era MCP revisions this server

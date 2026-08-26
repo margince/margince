@@ -13,7 +13,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // reportFieldNotAllowedCode is the ONE 422 code crm.yaml declares for this

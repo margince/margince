@@ -16,8 +16,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // credentialWorkspaceBot and credentialPerMember are the two shapes a channel

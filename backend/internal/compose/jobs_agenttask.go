@@ -21,8 +21,8 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // AgentTaskRetentionArgs schedules one purge of MCP tasks past their expiry.

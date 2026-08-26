@@ -26,8 +26,8 @@ package backendarch
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/netguard"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // The published list and the guard's own list are the same list. A unit that

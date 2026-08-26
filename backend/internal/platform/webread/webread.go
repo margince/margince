@@ -30,8 +30,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/netguard"
-	"github.com/gradionhq/margince/backend/internal/platform/outbound"
+	"github.com/margince/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 // UserAgent names the bot on every request, robots.txt lookups included, and

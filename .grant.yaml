@@ -45,7 +45,7 @@ allow:
 # shipped product. Every other package must still resolve to a known, allowed
 # license.
 ignore-packages:
-  - github.com/gradionhq/margince/* # our own Go modules
+  - github.com/margince/margince/* # our own Go modules
   - example.margince.dev/* # committed extension stubs (ADR-0069), first-party
   - SonarSource/sonarqube-scan-action # LGPL-3.0-only CI scanner action, runs in CI only, never shipped
   # Local composite actions under .github/actions/ — first-party files carrying

@@ -39,8 +39,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // payloadEventTypes maps each generated payload struct to the event type it
@@ -515,7 +515,7 @@ func qualifiedName(sel *ast.SelectorExpr, qualifier string) (string, bool) {
 // contractsQualifier answers the name internal/contracts is reachable under in
 // one file, and whether the file imports it at all.
 func contractsQualifier(file *ast.File) (string, bool) {
-	const contractsPath = `"github.com/gradionhq/margince/backend/internal/contracts"`
+	const contractsPath = `"github.com/margince/margince/backend/internal/contracts"`
 	for _, imp := range file.Imports {
 		if imp.Path.Value != contractsPath {
 			continue

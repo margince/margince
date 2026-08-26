@@ -8,7 +8,7 @@ import (
 	"go/token"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // dispatcherLiteralFloor guards against a vacuous pass. Twenty-four dispatcher

@@ -9,8 +9,8 @@ package migrations_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/dbmigrate"
-	"github.com/gradionhq/margince/backend/migrations"
+	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/migrations"
 )
 
 func namespaces(t *testing.T) (core, custom dbmigrate.Namespace) {

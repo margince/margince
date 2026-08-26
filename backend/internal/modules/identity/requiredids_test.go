@@ -20,8 +20,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr/faulttest"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/httperr/faulttest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestBothOmittedGrantIDsAreNamed(t *testing.T) {

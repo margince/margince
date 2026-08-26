@@ -30,7 +30,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // headFingerprint is the catalog of the schema this process built at head,

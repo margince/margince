@@ -20,7 +20,7 @@ package orgbrief
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestTheBriefFingerprintMovesWhenTheInstallationChangesLanguage(t *testing.T) {

@@ -27,8 +27,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // messageOp names the raw-MIME fetch in a ProviderError. Its sibling calls carry
