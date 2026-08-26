@@ -165,3 +165,43 @@ func schemaFieldName(f reflect.StructField) (string, bool) {
 	name, _, _ := strings.Cut(tag, ",")
 	return name, name != "" && name != "-"
 }
+
+// An explicit null on a pointer field is something the LOADER accepts, so the
+// schema accepts it too.
+//
+// yaml.v3 decodes `bootstrap_admin: null` — and a key left bare, which parses
+// the same way — into a nil pointer, which is how an operator comments a
+// section out without deleting it. A schema that flagged that would be wrong
+// about the file in the direction that teaches people to ignore the squiggle.
+func TestTheSchemaAcceptsAnExplicitNullWhereTheLoaderDoes(t *testing.T) {
+	const withNulls = `version: 1
+bootstrap_admin: null
+uploads:
+  attachment_mb: null
+`
+	// The loader first: if this ever stops being accepted, the schema should
+	// stop accepting it too, and this test should fail on the loader's arm
+	// rather than quietly asserting a rule nobody holds any more.
+	var loaded deployconfig.Config
+	dec := yaml.NewDecoder(strings.NewReader(withNulls))
+	dec.KnownFields(true)
+	if err := dec.Decode(&loaded); err != nil {
+		t.Fatalf("the loader refuses an explicit null — this test's premise is gone: %v", err)
+	}
+
+	var doc any
+	if err := yaml.Unmarshal([]byte(withNulls), &doc); err != nil {
+		t.Fatalf("probe yaml: %v", err)
+	}
+	encoded, err := json.Marshal(doc)
+	if err != nil {
+		t.Fatalf("probe will not round-trip: %v", err)
+	}
+	var value any
+	if err := json.Unmarshal(encoded, &value); err != nil {
+		t.Fatalf("probe: %v", err)
+	}
+	if err := compiledConfigSchema(t).Validate(value); err != nil {
+		t.Errorf("the schema rejects a null the loader accepts:\n%v", err)
+	}
+}

@@ -119,6 +119,9 @@ func fieldNode(owner reflect.Type, f reflect.StructField, docs docIndex) (object
 	if err != nil {
 		return object{}, fmt.Errorf("%s.%s: %w", owner.Name(), f.Name, err)
 	}
+	if f.Type.Kind() == reflect.Pointer {
+		node = nullable(node)
+	}
 	doc := docs.lookup(owner.Name(), f.Name)
 	if doc == "" {
 		doc = docs.forType(namedType(f.Type).Name())
@@ -233,6 +236,35 @@ func specialNode(t reflect.Type) (object, bool) {
 	default:
 		return object{}, false
 	}
+}
+
+// nullable widens a pointer field's type to admit an explicit null.
+//
+// yaml.v3 decodes `bootstrap_admin: null` — and a key left bare, which parses
+// the same way — into a nil pointer, so the LOADER accepts it. A schema typed
+// only as the pointee would flag that as an error, which is the shape of false
+// positive an operator learns to ignore the squiggle over.
+//
+// A type ARRAY rather than anyOf: the sibling keywords (properties,
+// additionalProperties) already only apply to objects, so this admits null
+// without wrapping every pointer section in a second level of nesting.
+func nullable(node object) object {
+	out := object{}
+	for _, p := range node.pairs {
+		if p.key != "type" {
+			out.set(p.key, p.value)
+			continue
+		}
+		kind, ok := p.value.(string)
+		if !ok {
+			// Already widened, or a $ref with no type of its own — leave it be
+			// rather than guessing at a shape this function did not build.
+			out.set(p.key, p.value)
+			continue
+		}
+		out.set("type", []string{kind, "null"})
+	}
+	return out
 }
 
 // namedType unwraps a pointer so a *Section is documented like a Section.

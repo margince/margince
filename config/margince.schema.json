@@ -30,7 +30,10 @@
     },
     "bootstrap_admin": {
       "description": "BootstrapAdmin identifies the first administrator. The password is a reference so the secret can be deleted after first boot — once the organization exists this whole section may be removed.",
-      "type": "object",
+      "type": [
+        "object",
+        "null"
+      ],
       "additionalProperties": false,
       "properties": {
         "email": {
@@ -61,7 +64,10 @@
       "properties": {
         "pipeline": {
           "description": "PipelineSeed configures the default pipeline's open stages. Won/Lost terminal stages are appended by the deals module — stage semantics are a module invariant, not an operator choice.",
-          "type": "object",
+          "type": [
+            "object",
+            "null"
+          ],
           "additionalProperties": false,
           "properties": {
             "name": {
@@ -104,7 +110,10 @@
         },
         "retention": {
           "description": "RetentionSeed selects the retention POSTURE a fresh installation is bootstrapped into (GCS-PARAM-7). It does not select the policy rows: those stay the data-model's pins (DM-SEED-1..6) under either posture, so an installation that must keep everything still SEES the ladder it is not running.",
-          "type": "object",
+          "type": [
+            "object",
+            "null"
+          ],
           "additionalProperties": false,
           "properties": {
             "default_policy": {
@@ -114,10 +123,16 @@
           }
         },
         "starter_automations": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "booking_page": {
-          "type": "boolean"
+          "type": [
+            "boolean",
+            "null"
+          ]
         },
         "ai_routing": {
           "description": "AIRouting is the tier→model binding a fresh installation is bootstrapped with, so a deployment can declare which vendor it uses in the file it reviews rather than having to call an API after first boot. Consumed exactly once, like every other seed here; the database is authoritative afterwards and an admin re-points a lane through /v1/ai/routing.",
@@ -136,7 +151,10 @@
           "additionalProperties": false,
           "properties": {
             "enabled": {
-              "type": "boolean"
+              "type": [
+                "boolean",
+                "null"
+              ]
             }
           }
         }
@@ -354,15 +372,24 @@
       "properties": {
         "attachment_mb": {
           "description": "AttachmentMB bounds POST /v1/attachments — the documents surface.",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "csv_import_mb": {
           "description": "CSVImportMB bounds POST /v1/imports/sources — the CSV import source.",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         },
         "linkedin_import_mb": {
           "description": "LinkedInImportMB bounds POST /v1/me/linkedin-connections.",
-          "type": "integer"
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     }
