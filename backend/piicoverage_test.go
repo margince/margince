@@ -57,6 +57,17 @@ type piiHandling struct {
 	// the column here makes reversing the decision fail rather than pass, so it
 	// has to be an edit to this line and not a quiet widening.
 	retentionKeeps []string
+	// retentionPurge names the PREDICATES the sweep's deletes of this table
+	// carry, one per act. The table is destroyed by the row here rather than by
+	// columns of it, so retentionErasures has no SET clauses to name.
+	//
+	// Predicates rather than a bare "the sweep deletes this table", because
+	// several actions delete from one table and a table-level claim is
+	// satisfied by whichever of them survives: field_provenance is purged by
+	// person/anonymize AND by activity/erase, so a table-level flag would go on
+	// passing after either was deleted. Each declared predicate must be carried
+	// by a delete of its own.
+	retentionPurge []string
 	// sarRead: SAR assembly must read this table into the export package.
 	// False only for opaque derived artifacts (vectors) that carry no
 	// human-readable PII to hand back — they are purged, never exported.
@@ -140,12 +151,42 @@ var piiTables = map[string]piiHandling{
 		// because it is a different table — see its own entry.
 		retentionKeeps: []string{"counterparty_email", "source_id", "thread_key"},
 	},
-	"attachment":  {erasureWrite: true, sarRead: true},
+	"attachment": {erasureWrite: true, sarRead: true},
+	// The verbatim provider payload — full headers and body. The sweep's
+	// activity/erase destroys it along with the parsed copy it duplicates,
+	// because the two are joined on (source_system, source_id) and the erase
+	// deliberately KEEPS that pair on the activity row: clearing activity.body
+	// while this survived erased nothing, and sar.go exports this table by
+	// email match.
+	//
+	// Not registered retentionPurge, and the reason is a module boundary rather
+	// than a decision: this is capture's table, so the delete lives in
+	// capture.PendingStore.PurgeRawCaptureTx and reaches the sweep through the
+	// seam compose injects. It is therefore outside retentionSweepFiles, and
+	// adding capture's file to that list would let capture's own noise
+	// redaction — which also writes activity — satisfy the sweep's declarations
+	// for the table beside this one. Over-recognition is the failure that list
+	// exists to avoid, so the obligation is held where it can be seen whole:
+	//
+	// Held by: TestTheRetentionSweepDestroysTheProviderOriginalToo and
+	// TestTheEraseActionRefusesWithoutItsPurger
+	// (backend/internal/compose/integration/retentionrawcapture_integration_test.go)
 	"raw_capture": {erasureWrite: true, sarRead: true},
 	"embedding":   {erasureWrite: true, sarRead: false}, // opaque vector: purged, never exported
 	// Field-level provenance names who captured which of the subject's
 	// fields from where — subject-linked metadata (B-E02.12).
-	"field_provenance": {erasureWrite: true, sarRead: true},
+	//
+	// The sweep destroys these by the ROW, under two predicates that select
+	// different rows: person/anonymize takes the SUBJECT's field origins,
+	// activity/erase takes one erased message's. Both are declared, so deleting
+	// either act fails rather than being covered by the other — provenance
+	// naming who captured a value and from where outlives the value itself
+	// otherwise, and this table is SAR-exported.
+	"field_provenance": {
+		erasureWrite:   true,
+		sarRead:        true,
+		retentionPurge: []string{"object_type = 'person'", "object_type = 'activity'"},
+	},
 	// The enrichment sidecar holds the subject's title, phone, employer and
 	// public profile URL, each with the verbatim sentence it was read from —
 	// their data twice over, the value and the quote naming them. Nothing
@@ -418,6 +459,35 @@ func oneStatementCarries(statements []string, assignments []string) bool {
 	return false
 }
 
+// sweepPurges reports whether the sweep deletes from table under every declared
+// predicate — one delete per predicate, so a declaration names the acts rather
+// than the table.
+//
+// Through deleteRe, the matcher tableownership_test.go already derives its own
+// answer from, rather than a second spelling here. The hand-written one this
+// replaced looked for "delete from <table> " and its end-of-string twin, and
+// went blind on a trailing `;` or `)` — both of which end a statement in this
+// tree, and both of which would have reported a purge that exists as missing.
+func sweepPurges(statements []string, table string, predicates []string) bool {
+	for _, predicate := range predicates {
+		found := false
+		for _, stmt := range statements {
+			if !strings.Contains(stmt, strings.ToLower(predicate)) {
+				continue
+			}
+			for _, m := range deleteRe.FindAllStringSubmatch(stmt, -1) {
+				if m[1] == table {
+					found = true
+				}
+			}
+		}
+		if !found {
+			return false
+		}
+	}
+	return true
+}
+
 // statementDestroying returns the sweep statement that would destroy column on
 // table, or "" if none does.
 //
@@ -529,6 +599,12 @@ func TestErasureAndSARReachEveryPIITable(t *testing.T) {
 		// the evaluate*Retention passes) make more than a one-line derivation.
 		// The realistic drift — somebody deletes the assignment — is caught,
 		// because nothing else in the swept files carries these together.
+		if len(h.retentionPurge) > 0 && !sweepPurges(sweepStatements[table], table, h.retentionPurge) {
+			missing = append(missing, "PII table "+table+
+				" is registered as one the retention sweep PURGES under "+strings.Join(h.retentionPurge, ", ")+
+				", and no sweep delete carries every one of them — the rows one of those acts was written to destroy now"+
+				" outlive the content they describe; restore the delete or amend the declared purge")
+		}
 		if len(h.retentionErasures) > 0 && !oneStatementCarries(sweepStatements[table], h.retentionErasures) {
 			missing = append(missing, "no single retention-sweep statement on PII table "+table+
 				" carries all of "+strings.Join(h.retentionErasures, ", ")+

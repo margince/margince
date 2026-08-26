@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/compose"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
@@ -263,7 +264,7 @@ func TestExpiredRestrictionCompletesTheSuspendedErasureUnderRetainOnly(t *testin
 	}); err != nil {
 		t.Fatal(err)
 	}
-	svc := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 
 	// A window still open is left exactly as it is by the pass.
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {

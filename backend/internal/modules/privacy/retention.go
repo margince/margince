@@ -15,6 +15,7 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -126,13 +127,24 @@ type RetentionService struct {
 	// removes the interactions beneath them. Injected by compose; nil in a
 	// role that did not wire it, where the bus consumer is the fallback.
 	invalidateEdges EdgeInvalidator
+	// purgeRawCaptures destroys the provider originals behind an erased
+	// activity. Injected by compose; unlike invalidateEdges there is no
+	// fallback path, so the erase action refuses when it is nil rather than
+	// skipping it.
+	purgeRawCaptures RawCapturePurger
 }
 
-// NewRetentionService wires the nightly evaluator. blob lets its erase
-// action purge attachment objects (Art. 17 reaches the bytes); pass nil in
-// a deployment with no object store, where no attachment object can exist.
-func NewRetentionService(db *database.DB, blob blobstore.Store, log *slog.Logger) *RetentionService {
-	return &RetentionService{db: db, eraser: NewEraser(db).WithBlobstore(blob), log: log}
+// NewRetentionService wires the nightly evaluator.
+//
+// blob lets its erase action purge attachment objects (Art. 17 reaches the
+// bytes); pass nil in a deployment with no object store, where no attachment
+// object can exist. purge destroys the provider originals behind an erased
+// activity and has no such "there is nothing to do" case — it is a parameter
+// rather than an option because a service built without it can only erase half
+// of what it reports erasing, and there is no configuration in which that is
+// the intended behaviour. compose.NewRetentionServiceFor supplies capture's.
+func NewRetentionService(db *database.DB, blob blobstore.Store, log *slog.Logger, purge RawCapturePurger) *RetentionService {
+	return &RetentionService{db: db, eraser: NewEraser(db).WithBlobstore(blob), log: log, purgeRawCaptures: purge}
 }
 
 // EdgeInvalidator re-folds the relationship aggregates an activity fed, inside
@@ -159,6 +171,35 @@ func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionSer
 	out.invalidateEdges = fn
 	return &out
 }
+
+// RawCapturePurger deletes the provider originals behind the given activities,
+// inside the caller's transaction so they die with the text they duplicate.
+//
+// A seam rather than a fourth DELETE in this package, and NOT because privacy
+// may not write the table — it already does, twice, ratified in doc.go. It is a
+// seam because the natural-key join those rows are found by belongs to capture,
+// which writes them: a copy of that join here would be a second answer to the
+// same question, the two would drift, and the half that drifted would leave
+// originals behind while reporting success.
+// capture.PendingStore.PurgeRawCaptureTx is the implementation, already written
+// for the noise-redaction sweep.
+//
+// Where this parts company with EdgeInvalidator beside it is what an unwired
+// seam means. A missing edge invalidator leaves an aggregate for the bus
+// consumer that also handles retention.applied to correct — late, but
+// corrected. There is no second path that ages raw_capture out:
+// PurgeRawCaptureTx's own comment says so, and says why the Art. 17 purge
+// cannot stand in (it is scoped to a PERSON, where a retention window is scoped
+// to time). So an unwired purger is not a degraded mode. It is a constructor
+// argument, and EvaluateInstallation refuses the whole pass if one arrives nil
+// anyway — before a single record is touched.
+type RawCapturePurger func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error
+
+// ErrRetentionSeamMissing is the refusal a pass makes when it was built without
+// a dependency one of its destructive actions cannot finish without. A sentinel
+// so a caller can tell a misconfiguration from a failed erasure; the
+// constructor's signature is what stops it arising.
+var ErrRetentionSeamMissing = errors.New("privacy: the retention pass has no raw-capture purger, so activity/erase would clear the parsed copy and leave the provider original standing")
 
 // invalidateGraph runs the injected invalidator, if the role wired one. A role
 // that did not is not broken: the consumer still corrects the aggregate on the
@@ -190,6 +231,18 @@ type retentionPolicy struct {
 // make thirty-six unrelated declarations look like sanctioned destinations for
 // a context that cannot be denied.
 func (s *RetentionService) EvaluateInstallation(ctx context.Context) error {
+	// Before anything is read or destroyed, because this is the one refusal
+	// that must not arrive mid-pass. A destructive action that discovered a
+	// missing dependency on its Nth record would abort the pass with N-1
+	// records already erased and every LATER policy — including the
+	// restriction-expiry stage, which completes accepted Art. 17 requests and
+	// is not a storage-limitation policy an operator may decline — left unrun,
+	// nightly, until somebody found the row. evaluatePolicy's own skip
+	// conditions exist to avoid exactly that, and they can afford to skip
+	// because they cost one policy; this cannot skip, so it refuses whole.
+	if s.purgeRawCaptures == nil {
+		return ErrRetentionSeamMissing
+	}
 	var policies []retentionPolicy
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `

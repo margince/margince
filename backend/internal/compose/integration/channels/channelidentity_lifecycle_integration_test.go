@@ -26,6 +26,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
@@ -150,7 +151,7 @@ func TestRetentionAnonymizeDropsTheChannelIdentityWithoutSuppressingIt(t *testin
 	// granted consent and no deal stake — the selector's own conditions.
 	e.WsExec(t, `UPDATE person SET created_at = now() - interval '800 days' WHERE id = $1`, person)
 
-	svc := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}
