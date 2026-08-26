@@ -716,9 +716,10 @@
 /* --borderControl, and for the same reason a field's outline reads a visible
    token: this chip's
    fill is one step off the pane it sits on (--bgCard over --bgElevated measures
-   1.10:1 in both themes), so the border is the only thing that makes it a chip at
-   all. --borderSubtle cannot carry that — it measures 1.24:1 against the pane and
-   1.13:1 against this fill, invisible in all three postures the line can report.
+   1.20:1 light / 1.10:1 dark), so the border is the only thing that makes it a
+   chip at all. --borderSubtle cannot carry that — it measures 1.24:1 against the
+   pane and 1.03:1 against this fill, invisible in all three postures the line
+   can report.
    A boundary nobody can see is not one; 1.4.11 asks 3:1, and this token measures
    3.33:1 light / 3.32:1 dark here. */
 .auth-runtime-state {

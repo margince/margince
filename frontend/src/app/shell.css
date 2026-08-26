@@ -543,39 +543,62 @@
   align-items: center;
   gap: 9px;
   flex: 1;
-  min-height: 34px;
-  padding: 0 14px;
+  min-height: 36px;
+  /* 13 and not 14, with the transparent border below making up the difference:
+     the active row is a PLATE with an edge, and a border that appears only when
+     the row is current would shift its glyph and its label by a pixel on every
+     navigation. Held at every state instead, and coloured by one. */
+  /* Optical, not rhythm: 13 + the 1px edge is the 14 this row has always had,
+     and the --space-* rung either side of it moves every glyph in the rail off
+     the axis the collapsed and expanded states share. */
+  padding: 0 13px; /* ds:ignore 13 + the 1px edge is one 14px inset, not a rung */
+  border: 1px solid transparent;
   border-radius: 8px;
   /* A pointer-tracked highlight reads as lag past ~200ms; Carbon times this
-     class of change at 70–110ms. */
+     class of change at 70–110ms. The border-colour is in the same transition:
+     the plate's edge arrives with its fill or the two read as separate events. */
   transition:
     background var(--dur-state) var(--ease-in-out),
+    border-color var(--dur-state) var(--ease-in-out),
     color var(--dur-state) var(--ease-in-out);
   cursor: pointer;
-  border: 0;
   background: transparent;
   color: var(--textContent);
   text-decoration: none;
   font-size: var(--fs-body);
 }
-/* Collapsed keeps the SAME row height as expanded, and the 14px padding centres
-   the 18px icon either way (14 + 18 + 14 = 46), so no icon moves on either axis
-   across the collapse. Target size is therefore 46x38 in both states — past WCAG
-   2.2 2.5.8 (AA, 24x24), giving up the 44x44 of 2.5.5 (AAA) that AC-shell-1c
-   asks for in favour of the compact row rhythm the design direction sets. */
+/* Collapsed keeps the SAME row height as expanded, and the 13px padding plus the
+   1px edge centres the 18px icon either way (1 + 13 + 18 + 13 + 1 = 46), so no
+   icon moves on either axis across the collapse, and none moves when a row
+   becomes the current one. Target size is therefore 46x36 at the floor — past
+   WCAG 2.2 2.5.8 (AA, 24x24), giving up the 44x44 of 2.5.5 (AAA) that
+   AC-shell-1c asks for in favour of the compact row rhythm the design direction
+   sets. */
+/* Hover moves DOWN off the sidebar's ground and the current row moves UP to the
+   elevated one, so the two states are never the same gesture read twice — which
+   is why this is --bgSidebarHover and not --bgHover: --bgHover is lighter than
+   the rail, so it would brighten toward the active plate rather than away from
+   it. */
 .rail .navitem:hover {
-  background: var(--bgHover);
+  background: var(--bgSidebarHover);
   color: var(--textPrimary);
 }
-/* The current row, in three signals — a tint, a weight, and the accent on the
-   glyph — because a tint alone is colour-only (WCAG 1.4.1, Level A) and the tint
-   itself measures ~1.1:1 against the sidebar ground, so it cannot carry the state
-   on its own. The INK stays neutral: the accent as 13.5px text measures 3.9:1 on
-   the dark theme's tinted row, under the 4.5:1 AA needs, and weight does not
-   rescue that below 18.66px. The glyph is where the accent goes, and at 3:1
-   non-text (1.4.11) it clears. */
+/* The current row is a PLATE: the elevated surface, lifted off the sidebar's own
+   recessed ground the same way a card is lifted off the page — the rail's ladder
+   and the content's are one ladder.
+   Still three signals, and for the reason it always was: the lift measures
+   1.21:1 light / 1.20:1 dark against the ground, which is a difference a reader
+   sees and not one that carries a state on its own (WCAG 1.4.1, Level A). So the
+   weight and the accent on the glyph stay, and the plate gains an EDGE —
+   --borderSubtle is what makes it a surface with a boundary rather than a pale
+   smudge, and it is the same hairline every card in the product draws.
+   The INK stays neutral: the accent as 13.5px text measures 3.9:1 on the dark
+   theme's plate, under the 4.5:1 AA needs, and weight does not rescue that below
+   18.66px. The glyph is where the accent goes, and at 3:1 non-text (1.4.11) it
+   clears. */
 .rail .navitem.active {
-  background: var(--accentLight);
+  background: var(--bgElevated);
+  border-color: var(--borderSubtle);
   color: var(--textPrimary);
   font-weight: var(--fw-semibold);
 }
@@ -754,16 +777,19 @@
   margin-bottom: var(--space-2);
   /* Filled rather than outlined: it is the way OUT of a level, standing above a
      column of rows, and a hairline would read as a field at the head of them. A
-     recessed ground says "control" in a different word than a border does. */
+     recessed ground says "control" in a different word than a border does.
+     Only the RESTING ground is stated here. This element carries `navitem` too,
+     so `.rail .navitem:hover` already gives it the panel's one hover — it used to
+     restate that in --bgHover, which is LIGHTER than the sidebar's ground, and so
+     this control was the single thing in the rail that brightened under a pointer
+     while every row beside it darkened. A second spelling of one hover is how the
+     two got to disagree; there is one now. */
   background: var(--bgCard);
   color: var(--textPrimary);
   font-family: var(--f-body);
   font-size: var(--fs-body);
   font-weight: var(--fw-medium);
   text-align: left;
-}
-.rail .navback:hover {
-  background: var(--bgHover);
 }
 /* The chevron leads the movement it stands for: it pulls back the way the reader
    is about to go, which is the whole gesture in 2px. */
@@ -1161,10 +1187,26 @@
     overflow: visible;
     /* Here the panel IS a floating object — it hovers over the content rather
        than bounding it — so it takes the card chrome the flush sidebar gives
-       up: all four sides, a radius, and a shadow to sit on. */
+       up: all four sides, a radius, a shadow to sit on, and the ELEVATED ground
+       instead of the sidebar's recessed one. That last part is the whole reason
+       the ground is restated here: --bgSidebar is a shade DARKER than the page
+       because a left edge should recede behind what it frames, and this bar is
+       not an edge — it is a card lying on top of the content, and a card that
+       reads darker than the page it covers reads as a hole in it. */
+    background: var(--bgElevated);
     border: 1px solid var(--borderSubtle);
     border-radius: var(--r-md);
     box-shadow: var(--shadow-pop);
+  }
+  /* And so the current cell cannot be the elevated plate it is on the desktop
+     rail: the plate and the bar would be the same colour. The accent tint is
+     what marks it here — the same signal `.railmore.active` below already uses
+     for a destination that lives in the sheet, so the bar has ONE way of saying
+     "this one", whichever cell is carrying it. The weight and the accent glyph
+     from the desktop rule still apply, so the state keeps its three signals. */
+  .rail .navitem.active {
+    background: var(--accentLight);
+    border-color: transparent;
   }
   /* The layer the sheet sits on. It fades in rather than appearing, because the
      page under it does not move and an instant dim reads as a flash. */

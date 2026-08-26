@@ -22,22 +22,26 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // Values verbatim from the mockups; comparison normalizes case, whitespace and
 // a leading zero before a decimal point so formatting is free but values are not.
 //
-// --bgPage is the ONE value that no longer matches the mockup, and deliberately:
-// the page is white and the near-white the mockup put here is the sidebar's
-// ground (--bgSidebar). The two surfaces swapped, the decision is the shipped
-// one, and this table is what pins it now that the mockup does not.
+// The SURFACE rungs are the values that no longer match the mockup, and
+// deliberately: the grounds are neutral grey and the green lives in the accent,
+// the states and the status families. A tinted ground casts every neutral above
+// it toward the same hue and reads as a business tool from two decades ago,
+// which is a thing a whole application does rather than one surface. The hue
+// therefore stays where it is a decision a reader is meant to see. The mockups
+// are retired on these five; this table is what pins them in their place, and
+// tokens.css carries the ladder and the contrast steps in prose.
 const canonical: Record<string, string> = {
-  "--bgPage": "#ffffff",
-  "--bgSidebar": "#FBFCFB",
+  "--bgPage": "#f5f5f6",
+  "--bgSidebar": "#e9e9ec",
   "--bgElevated": "#ffffff",
-  "--bgCard": "#EEF1F0",
-  "--bgHover": "#F3F6F4",
+  "--bgCard": "#eaeaee",
+  "--bgHover": "#ededf0",
   "--accent": "#0B7A53",
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",
   "--textPrimary": "#15201B",
   "--textContent": "#36433D",
-  "--textSecondary": "#68756E",
+  "--textSecondary": "#5f6a64",
   "--textTertiary": "#9AA6A0",
   "--textMuted": "#CBD2CD",
   "--textMeta": "#5E6C65",
@@ -171,6 +175,280 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
 
   it("keeps brand emerald and success grass-green tonally distinct (§2)", () => {
     expect(normalize(light["--accent"])).not.toBe(normalize(light["--online"]));
+  });
+
+  // The surface ladder is a set of RELATIONS, not five independent colours, and
+  // every one of them is load-bearing: the rail recedes below the page, a card
+  // rises above it, a rail row's hover moves AWAY from the plate its active
+  // sibling wears. A retune that keeps all five values plausible and inverts one
+  // pair breaks a state the eye reads without breaking anything a value test can
+  // see — hover and active becoming the same gesture, or chrome climbing in
+  // front of the content it frames. So the ordering is asserted rather than the
+  // values, in BOTH themes, from the sheet itself.
+  //
+  // Dark is not a mirror of light and must not be asserted as one: on a dark
+  // ground every surface lifts toward the light, so the ladder runs the other
+  // way and only the DIRECTION of each step is shared. Each theme therefore
+  // states its own expected order, and both are checked the same way.
+  describe("the surface ladder holds its order", () => {
+    // Relative luminance, WCAG 2.x §relativeluminancedef. Hex only, which is
+    // what every rung on this ladder is — an alpha colour has no luminance of
+    // its own, and none of these is one.
+    function luminance(hex: string): number {
+      const h = hex.trim().replace("#", "");
+      const full =
+        h.length === 3
+          ? h
+              .split("")
+              .map((d) => d + d)
+              .join("")
+          : h;
+      expect(full, `${hex} is not a 3- or 6-digit hex`).toHaveLength(6);
+      const [r, g, b] = [0, 2, 4].map((i) => {
+        const c = Number.parseInt(full.slice(i, i + 2), 16) / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    }
+
+    // A token's channels, whether it is written as a hex or as an rgba(). The
+    // alpha comes back too, because a tint's alpha is the whole reason the
+    // composite tests below exist.
+    function channels(value: string): [number, number, number, number] {
+      const v = value.trim();
+      if (v.startsWith("#")) {
+        const h = v.slice(1);
+        const full =
+          h.length === 3
+            ? h
+                .split("")
+                .map((d) => d + d)
+                .join("")
+            : h.slice(0, 6);
+        const [r, g, b] = [0, 2, 4].map((i) =>
+          Number.parseInt(full.slice(i, i + 2), 16),
+        );
+        return [r, g, b, 1];
+      }
+      const inside = v.match(/rgba?\(([^)]+)\)/);
+      if (!inside) {
+        throw new Error(`${value} is neither a hex nor an rgb()`);
+      }
+      const parts = inside[1]
+        .replace(/\//g, ",")
+        .split(",")
+        .map((n) => Number.parseFloat(n.trim()));
+      return [parts[0], parts[1], parts[2], parts[3] ?? 1];
+    }
+
+    // Source-over, the compositing every alpha tint in this file goes through
+    // when a browser paints it on a ground.
+    function composite(fg: string, bg: string): string {
+      const [r, g, b, a] = channels(fg);
+      const [br, bg_, bb] = channels(bg);
+      const mix = [
+        r * a + br * (1 - a),
+        g * a + bg_ * (1 - a),
+        b * a + bb * (1 - a),
+      ].map((n) => Math.round(n));
+      return `rgb(${mix.join(", ")})`;
+    }
+
+    function contrastOf(fg: string, bg: string): number {
+      // Text is opaque in every role measured here; a ground never is not.
+      const lf = luminanceOf(fg);
+      const lb = luminanceOf(bg);
+      const [hi, lo] = lf > lb ? [lf, lb] : [lb, lf];
+      return (hi + 0.05) / (lo + 0.05);
+    }
+
+    function luminanceOf(value: string): number {
+      const [r, g, b] = channels(value);
+      const [lr, lg, lb] = [r, g, b].map((n) => {
+        const c = n / 255;
+        return c <= 0.03928 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * lr + 0.7152 * lg + 0.0722 * lb;
+    }
+
+    // Darkest first, as measured. The two themes are deliberately DIFFERENT
+    // sequences: light recesses the rail's hover below its ground while dark
+    // lifts it above, because a dark surface has only one direction to move in.
+    // What both share is the invariant the rail's states depend on — hover on
+    // one side of the rail's ground and the active plate (--bgElevated) on the
+    // other, so the two states never converge.
+    const ladders = {
+      light: [
+        "--bgSidebarHover",
+        "--bgSidebar",
+        "--bgCard",
+        "--bgHover",
+        "--bgPage",
+        "--bgElevated",
+      ],
+      dark: [
+        "--bgSidebar",
+        "--bgSidebarHover",
+        "--bgPage",
+        "--bgElevated",
+        "--bgCard",
+        "--bgHover",
+      ],
+    };
+
+    for (const [theme, rungs] of Object.entries(ladders)) {
+      it(`${theme}: each rung is strictly lighter than the one below it`, () => {
+        const block =
+          theme === "light"
+            ? light
+            : { ...light, ...parseBlock(tokenDecls, '[data-theme="dark"]') };
+        const measured = rungs.map((name) => {
+          expect(block[name], `${name} missing`).toBeDefined();
+          return { name, l: luminance(block[name]) };
+        });
+        for (let i = 1; i < measured.length; i += 1) {
+          const below = measured[i - 1];
+          const above = measured[i];
+          expect(
+            above.l,
+            `${above.name} (${block[above.name]}) must be lighter than ` +
+              `${below.name} (${block[below.name]}) — the ladder inverted`,
+          ).toBeGreaterThan(below.l);
+        }
+      });
+    }
+
+    // The lesson that produced this whole block, as a gate. Darkening the
+    // grounds by a few percent dropped SEVENTEEN text/ground pairs under
+    // 4.5:1 — and the tokens themselves all still looked reasonable in
+    // isolation, because a contrast failure is never in a value, it is in a
+    // pair. axe on the e2e routes caught two of the seventeen, which is what a
+    // route sample can do: it sees the combinations those pages happened to
+    // render. This derives the obligation from the palette instead, so the next
+    // person who retunes a ground finds out here rather than from a user.
+    //
+    // Only TEXT roles, and only against grounds they can actually sit on.
+    // --textTertiary is deliberately not in the list: it is a decorative tone
+    // that never carries prose, and holding it to 4.5:1 would make it
+    // --textSecondary.
+    it("every text role clears AA on every ground it sits on, both themes", () => {
+      const dark = {
+        ...light,
+        ...parseBlock(tokenDecls, '[data-theme="dark"]'),
+      };
+      const prose = [
+        "--textPrimary",
+        "--textContent",
+        "--textSecondary",
+        "--textMeta",
+        "--accentText",
+        "--tealText",
+      ];
+      // Per ground, the roles that can actually be read on it — not a cross
+      // product. The two rungs that carry less than everything are the reason
+      // this is a map: a hovered RAIL row sets its own ink to --textPrimary
+      // (app/shell.css), so the mid-tones never land on --bgSidebarHover, and
+      // asserting they do would force that rung lighter than the rail it has to
+      // stay darker than. The rail's static ground does carry mid-tone prose —
+      // group headings, the entitlement row — so it is held to everything.
+      const carries: Record<string, string[]> = {
+        "--bgPage": prose,
+        "--bgElevated": prose,
+        "--bgCard": prose,
+        "--bgHover": prose,
+        "--bgSidebar": prose,
+        "--bgSidebarHover": ["--textPrimary", "--textContent", "--accentText"],
+      };
+      const failures: string[] = [];
+      for (const [theme, pal] of [
+        ["light", light],
+        ["dark", dark],
+      ] as const) {
+        for (const [ground, roles] of Object.entries(carries)) {
+          for (const role of roles) {
+            const ratio = contrastOf(pal[role], pal[ground]);
+            if (ratio < 4.5) {
+              failures.push(
+                `${theme}: ${role} (${pal[role]}) on ${ground} ` +
+                  `(${pal[ground]}) = ${ratio.toFixed(2)}:1, needs 4.5:1`,
+              );
+            }
+          }
+        }
+      }
+      expect(failures.join("\n")).toBe("");
+    });
+
+    // An alpha tint has no ground of its own: --accentLight over the page and
+    // the same tint over a card are two different colours behind the same text,
+    // and the second one is always the worse. So each tinted pair is measured
+    // COMPOSITED, over every ground the tint can be painted on.
+    //
+    // The rail is exempt at 4.5 and held to 3:1 instead: the only things wearing
+    // an accent tint on the rail are a 26px figure and a glyph, which is where
+    // 1.4.3's large-text allowance and 1.4.11's non-text floor apply.
+    it("tinted chips clear AA over every ground they composite on", () => {
+      const dark = {
+        ...light,
+        ...parseBlock(tokenDecls, '[data-theme="dark"]'),
+      };
+      const pairs = [
+        ["--accentText", "--accentLight"],
+        ["--tealText", "--tealLight"],
+        ["--aiText", "--aiLight"],
+      ] as const;
+      const grounds = ["--bgPage", "--bgElevated", "--bgCard", "--bgHover"];
+      const failures: string[] = [];
+      for (const [theme, pal] of [
+        ["light", light],
+        ["dark", dark],
+      ] as const) {
+        for (const [role, tint] of pairs) {
+          for (const ground of grounds) {
+            const behind = composite(pal[tint], pal[ground]);
+            const ratio = contrastOf(pal[role], behind);
+            if (ratio < 4.5) {
+              failures.push(
+                `${theme}: ${role} (${pal[role]}) on ${tint} over ${ground} ` +
+                  `= ${behind} = ${ratio.toFixed(2)}:1, needs 4.5:1`,
+              );
+            }
+          }
+          const onRail = composite(pal[tint], pal["--bgSidebar"]);
+          const railRatio = contrastOf(pal[role], onRail);
+          if (railRatio < 3) {
+            failures.push(
+              `${theme}: ${role} on ${tint} over --bgSidebar = ` +
+                `${railRatio.toFixed(2)}:1, needs 3:1 (large text / glyph)`,
+            );
+          }
+        }
+      }
+      expect(failures.join("\n")).toBe("");
+    });
+
+    // The rail's hover and its active plate are the pair a reader actually
+    // decodes, so the step between them is asserted as a MAGNITUDE and not only
+    // as an order: two rungs one hair apart pass an ordering test and look
+    // identical on a screen. 1.1:1 is the floor the ladder's own prose claims.
+    for (const theme of ["light", "dark"] as const) {
+      it(`${theme}: hover and the active plate are visibly apart`, () => {
+        const block =
+          theme === "light"
+            ? light
+            : { ...light, ...parseBlock(tokenDecls, '[data-theme="dark"]') };
+        const contrast = (a: string, b: string) => {
+          const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+          return (hi + 0.05) / (lo + 0.05);
+        };
+        expect(
+          contrast(block["--bgSidebarHover"], block["--bgElevated"]),
+        ).toBeGreaterThan(1.1);
+        expect(
+          contrast(block["--bgSidebarHover"], block["--bgSidebar"]),
+        ).toBeGreaterThan(1.05);
+      });
+    }
   });
 
   // The material overlays are the ONLY non-canon literals in this file, and they
