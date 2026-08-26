@@ -157,17 +157,6 @@ func filterImage(entityType string, before json.RawMessage) (map[string]json.Raw
 	return patch, unspellable, nil
 }
 
-// sortedFields spells a patch's keys for a refusal's detail, so the person hears
-// which field stopped the restore rather than that something did.
-func sortedFields(patch map[string]json.RawMessage) []string {
-	out := make([]string, 0, len(patch))
-	for key := range patch {
-		out = append(out, key)
-	}
-	sort.Strings(out)
-	return out
-}
-
 // splitNulls separates the patch into the values a restore SENDS and the fields
 // it must ask to be CLEARED, and names the ones this record type cannot clear
 // at all.

@@ -725,8 +725,8 @@ func TestEndToEnd_severalChangesGoBackOneAtATime(t *testing.T) {
 func undoabilityOf(page historyPage) string {
 	var out strings.Builder
 	for _, entry := range page.Data {
-		out.WriteString(fmt.Sprintf("\t%s %s: undoable=%v %s %s\n",
-			entry.Action, entry.ID, entry.Undoable.Undoable, reasonOf(entry), detailOf(entry)))
+		fmt.Fprintf(&out, "\t%s %s: undoable=%v %s %s\n",
+			entry.Action, entry.ID, entry.Undoable.Undoable, reasonOf(entry), detailOf(entry))
 	}
 	return out.String()
 }
