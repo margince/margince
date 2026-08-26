@@ -244,10 +244,13 @@ describe("DecisionCard — a kind that says what it shows", () => {
     expect(screen.queryByText("Date on it now")).not.toBeInTheDocument();
   });
 
-  // The reason survives the row layout even though the fact list does not. It
-  // is what turns a headline into a question somebody can answer without
-  // opening anything, which is exactly what a queue needs.
-  it("keeps the reason on a row while the facts stay in the deck", () => {
+  // A declared kind keeps its reason AND its fields on a row. The deck-only
+  // suppression exists for the raw reading — a queue of rows each unrolling
+  // nine wire keys — and a declared list is at most four short labelled rows.
+  // Suppressing them cost the reader what they were being asked about: the
+  // Worklist shows one decision at a time, and its close-date card rendered
+  // the reason with no proposed date beneath it.
+  it("keeps the reason and the declared fields on a row", () => {
     const { container } = render(
       card({
         approval: CLOSE_DATE,
@@ -258,7 +261,8 @@ describe("DecisionCard — a kind that says what it shows", () => {
     expect(container.querySelector(".dcard-lead")).toHaveTextContent(
       "deal has gone quiet",
     );
-    expect(screen.queryByText("Proposed date")).not.toBeInTheDocument();
+    expect(screen.getByText("Proposed date")).toBeInTheDocument();
+    expect(screen.getByText("01.10.2026")).toBeInTheDocument();
   });
 
   // The generic reading is the honest fallback, not a worse one: a kind
