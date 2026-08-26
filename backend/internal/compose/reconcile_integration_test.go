@@ -504,6 +504,40 @@ func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
 	}
 }
 
+// The rejection survives a payload that has MOVED. The proposal's due date is
+// computed from "today", so tomorrow's proposal is a different document — and
+// supersession matches by containment of the identity, not by equality of the
+// payload. If that were the other way round, the memory would last exactly one
+// night and this fix would be decorative.
+func TestARejectionSurvivesTheProposalChangingUnderIt(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Payload moves", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, first := e.followUpApproval(t, deal)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
+		t.Fatalf("reject: %v", err)
+	}
+
+	// Move the deal's clock so the next pass computes a different due date and
+	// cites a fresh interaction — a genuinely different document, same question.
+	e.WsExec(t, `UPDATE deal SET last_activity_at = now() - interval '2 days' WHERE id = $1`, deal)
+	e.seedInteraction(t, deal, "call", "Follow-up call", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("a moved payload staged %d proposals past the rejection, want 0 — "+
+			"the memory is keyed on the payload rather than on the deal", got)
+	}
+	if first.DealID.UUID != deal {
+		t.Errorf("the first proposal named deal %s, want %s", first.DealID.UUID, deal)
+	}
+}
+
 // --- row scope: a proposal never leaks a deal the decider cannot see ---
 
 func TestFollowUpProposalRespectsRowScope(t *testing.T) {
