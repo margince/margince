@@ -19954,6 +19954,11 @@ components:
           items:
             type: string
             enum: [employments, deal_roles, projects, strength, network, activities, next_steps, consent, profile_fields, since_last_visit, last_touch, relationship_changes, moments, commercial, next_meeting, claims, conversation_memory, provider_profile]
+            # Pinned for the reason SavedViewResource is: the generator prefixes a
+            # constant only to break a collision, so these names move when an
+            # UNRELATED schema gains a value. Adding a lane to the attention feed's
+            # lanes_omitted has now unprefixed a whole enum twice.
+            x-enum-varnames: [Person360SectionsOmittedEmployments, Person360SectionsOmittedDealRoles, Person360SectionsOmittedProjects, Person360SectionsOmittedStrength, Person360SectionsOmittedNetwork, Person360SectionsOmittedActivities, Person360SectionsOmittedNextSteps, Person360SectionsOmittedConsent, Person360SectionsOmittedProfileFields, Person360SectionsOmittedSinceLastVisit, Person360SectionsOmittedLastTouch, Person360SectionsOmittedRelationshipChanges, Person360SectionsOmittedMoments, Person360SectionsOmittedCommercial, Person360SectionsOmittedNextMeeting, Person360SectionsOmittedClaims, Person360SectionsOmittedConversationMemory, Person360SectionsOmittedProviderProfile]
         strength: { $ref: '#/components/schemas/RelationshipStrength' }
         projects:
           type: array
@@ -28479,13 +28484,38 @@ components:
             carries the promise's own words and its evidence. Nothing appears in both.
 
             Absent — not empty — on an installation whose feed does not read claims.
+        meetings:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Today's booked meetings that have not happened yet, soonest first — the ones
+            still worth preparing for.
+
+            A meeting already held or cancelled is not on this lane: preparing for it is
+            no longer possible, and a queue that listed it would be asking for work that
+            cannot be done. `due_at` is when it starts.
+
+            Absent — not empty — on an installation whose feed does not read meetings.
+        at_risk:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Open deals going quiet, or whose expected close date has already passed — the
+            ones most likely to be lost by inattention rather than by a decision.
+
+            The idle window here is DELIBERATELY shorter than the product-wide `stalled`
+            threshold: a queue that only speaks once a deal meets the stalled bar is
+            reporting a two-month-old fact rather than warning. `detail` names the window
+            actually used, so the card never implies a patience the server did not apply.
+
+            Absent — not empty — on an installation whose feed does not read deals.
         done_for_you:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "What the system did on its own, most recent first. Receipts, not questions."
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -28501,6 +28531,18 @@ components:
         needs_you: { type: integer, minimum: 0 }
         planned: { type: integer, minimum: 0 }
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
+        meetings:
+          type: integer
+          minimum: 0
+          description: >-
+            How many of today's meetings are still ahead — the bounded page, as the other
+            lanes report.
+        at_risk:
+          type: integer
+          minimum: 0
+          description: >-
+            How many at-risk deals this lane is CARRYING, the bounded page rather than every
+            deal at risk — the same bound the other lanes report under.
         commitments:
           type: integer
           minimum: 0
@@ -28522,7 +28564,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

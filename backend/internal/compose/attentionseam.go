@@ -25,12 +25,12 @@ import (
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
+	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // attentionApprovals reads the staged queue through the engine every approval
@@ -338,40 +338,6 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, e
 	return entries, nil
 }
 
-// attentionCommitments reads the acting rep's own promises through the people
-// store.
-//
-// A claim carries no assignee, so ownership rides the person it was made to:
-// the rep who holds the relationship is the one who made the promise in their
-// own captured conversation. A principal with no human behind it has no
-// promises of its own to keep, which is a refusal rather than an empty lane —
-// the feed omits and NAMES the lane instead of reporting a clear day.
-type attentionCommitments struct{ store *people.Store }
-
-func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int) ([]attention.Commitment, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
-		return nil, apperrors.ErrPermissionDenied
-	}
-	due, err := c.store.OpenCommitmentsDue(ctx, ids.From[ids.UserKind](actor.UserID), by, limit)
-	if err != nil {
-		return nil, err
-	}
-	promises := make([]attention.Commitment, 0, len(due))
-	for _, row := range due {
-		promises = append(promises, attention.Commitment{
-			ID:          row.ID,
-			PersonID:    row.PersonID.UUID,
-			Body:        row.Body,
-			Quote:       row.SourceQuote,
-			SourceLabel: row.SourceLabel,
-			OccurredAt:  row.OccurredAt,
-			DueAt:       row.DueAt,
-		})
-	}
-	return promises, nil
-}
-
 // newAttentionHandlers assembles the surface for the API role.
 func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
 	db := InstallationDB(pool)
@@ -383,6 +349,8 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.
 		attentionReceipts{svc: svc},
 		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
 		attentionCommitments{store: people.NewStore(db)},
+		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
+		attentionMeetings{store: activities.NewStore(db)},
 		now,
 	))
 }

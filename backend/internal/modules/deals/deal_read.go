@@ -77,7 +77,12 @@ type ListDealsInput struct {
 	PartnerAttribution *string
 	Status             *string
 	Stalled            *bool
-	IncludeArchived    bool
+	// QuietForDays narrows to open deals idle at least this long, which is the
+	// stalled rule at a caller-named window (QuietSQL). Separate from Stalled
+	// because they answer different questions: Stalled is the product-wide
+	// status, this is "notice it earlier". Set both and both apply.
+	QuietForDays    *int
+	IncludeArchived bool
 	// Sort is the contract's sort spec, validated against the core
 	// vocabulary below plus the workspace's active cf_ columns.
 	Sort *string
@@ -240,6 +245,9 @@ func appendDealFilters(ctx context.Context, where []string, in ListDealsInput, a
 		} else {
 			where = append(where, "NOT "+StalledSQL(""))
 		}
+	}
+	if in.QuietForDays != nil {
+		where = append(where, QuietSQL("", *in.QuietForDays))
 	}
 	return where, nil
 }

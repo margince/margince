@@ -40,3 +40,43 @@ func TestIsStalled(t *testing.T) {
 		}
 	}
 }
+
+// The shorter window answers the same question with less patience. A deal quiet
+// three weeks is not stalled, and the two claims must not be able to disagree
+// about anything except the number — which is why the stalled spelling is the
+// quiet one at its own threshold rather than a second rule.
+func TestIsQuietForIsTheSameRuleAtADifferentWindow(t *testing.T) {
+	now := time.Date(2026, 7, 4, 12, 0, 0, 0, time.UTC)
+	at := func(daysAgo int) *time.Time {
+		v := now.AddDate(0, 0, -daysAgo)
+		return &v
+	}
+	created := now.AddDate(0, 0, -90)
+
+	// Twenty days idle: quiet at the shorter window, not yet stalled.
+	if !IsQuietFor(QuietThresholdDays, "open", created, at(20), nil, now) {
+		t.Error("a deal idle 20 days is not quiet at the 19-day window, want quiet")
+	}
+	if IsStalled("open", created, at(20), nil, now) {
+		t.Error("a deal idle 20 days reads as stalled, want not stalled")
+	}
+
+	// Every suppression the stalled rule keeps, the shorter window keeps too.
+	if IsQuietFor(QuietThresholdDays, "won", created, at(300), nil, now) {
+		t.Error("a closed deal reads as quiet, want never")
+	}
+	if IsQuietFor(QuietThresholdDays, "open", created, at(80), at(-10), now) {
+		t.Error("an active wait failed to suppress quiet, want suppressed")
+	}
+
+	// The stalled spelling IS the quiet one at its own threshold. Asserted over
+	// the same table the rule is specified by, so a change to either that made
+	// them disagree fails here rather than in whichever surface noticed first.
+	for _, idle := range []int{0, 5, 18, 19, 20, 59, 60, 61, 200} {
+		if got, want := IsQuietFor(StalledThresholdDays, "open", created, at(idle), nil, now),
+			IsStalled("open", created, at(idle), nil, now); got != want {
+			t.Errorf("idle %dd: IsQuietFor(stalled window) = %v, IsStalled = %v — one rule, two answers",
+				idle, got, want)
+		}
+	}
+}

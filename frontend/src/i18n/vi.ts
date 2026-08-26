@@ -86,6 +86,8 @@ export const vi = {
   "day.lead.plannedOnly":
     "Không có gì phải quyết định — {count} việc theo kế hoạch hôm nay.",
   "day.lead.promises": "Bạn đã hứa {count} việc — những việc đó trước tiên.",
+  "day.lead.meetings": "{count} cuộc họp trên lịch hôm nay.",
+  "day.lead.atRisk": "{count} đang lặng đi. Không còn gì khác chờ bạn.",
   "day.lead.morningOnly":
     "Không có gì chờ bạn — đêm qua đã chọn ra {count} việc để bắt đầu.",
   "day.lead.ranOvernight":
@@ -97,6 +99,12 @@ export const vi = {
   "day.lane.withheld": "Bị ẩn với tài khoản của bạn.",
   "day.needsYou": "Cần bạn",
   "day.needsYou.empty": "Không có gì cần quyết định.",
+  "day.meetings": "Cuộc họp hôm nay",
+  "day.meetings.empty": "Lịch trống.",
+  "day.atRisk": "Đang lặng đi",
+  "day.atRisk.empty": "Không có thương vụ nào trôi đi.",
+  "day.risk.quiet": "Không liên hệ trong {days} ngày.",
+  "day.risk.closeOverdue": "Dự kiến chốt {date} — vẫn còn mở.",
   "day.commitments": "Bạn đã hứa",
   "day.commitments.empty": "Không có lời hứa nào đến hạn.",
   "day.commitment.detail": "\u201c{quote}\u201d \u00b7 đến hạn {due}",

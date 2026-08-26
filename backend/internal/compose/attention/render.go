@@ -6,6 +6,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -233,8 +234,10 @@ func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 // against what was actually written, and a card showing only the paraphrase
 // asks them to trust the extractor instead.
 //
-// Its only verb is `open`. Marking a promise kept is the claim's own endpoint's
-// job, and this feed adds no authority the record does not already have.
+// It offers NO verb. Marking a promise kept is the claim's own endpoint's job,
+// and this feed adds no authority the record does not already have. `open` is
+// not sent either, for the reason the other two cards do not send it: this
+// surface wires no navigation, so the verb would reach no control.
 func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionItem {
 	body := promise.Body
 	quote := promise.Quote
@@ -248,13 +251,83 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		Subject: subjectOf("person", promise.PersonID),
 		DueAt:   &due,
 		Overdue: &past,
-		Actions: []crmcontracts.AttentionItemActions{"open"},
+		Actions: []crmcontracts.AttentionItemActions{},
 	}
 	if promise.SourceLabel != "" {
 		label := promise.SourceLabel
 		item.Kind = &label
 	}
 	return item
+}
+
+// riskItem renders one deal the pipeline should worry about.
+//
+// The title is the deal's own name, which the reader recognises. The card's
+// SENTENCE is the client's to write, because the two grounds read differently
+// in every language and the server has none — so what travels is the deal, the
+// idle days, and whether the close date has passed, and the client says it.
+//
+// `kind` carries the ground rather than a label: `quiet` when only the idle
+// clock admitted it, `close_overdue` when the date has passed. A deal that is
+// both is reported as overdue, because a date the customer agreed to outranks
+// a silence nobody agreed to.
+//
+// It offers NO verb. What to do about a quiet deal is a judgement, and a queue
+// that answered it here would be deciding rather than warning. `open` is not
+// sent either: this surface wires no navigation, and an action a card cannot
+// perform is a promise to a client that nothing keeps.
+func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
+	name := deal.Name
+	ground := "quiet"
+	if deal.CloseOverdue {
+		ground = "close_overdue"
+	}
+	item := crmcontracts.AttentionItem{
+		Id:      deal.DealID.String(),
+		Source:  crmcontracts.AttentionItemSource("deal_at_risk"),
+		Kind:    &ground,
+		Title:   &name,
+		Subject: subjectOf("deal", deal.DealID),
+		Overdue: &deal.CloseOverdue,
+		Actions: []crmcontracts.AttentionItemActions{},
+	}
+	// The idle count rides as the detail's own number, so the card can say the
+	// window the server actually applied instead of implying one.
+	if deal.QuietDays > 0 {
+		days := strconv.Itoa(deal.QuietDays)
+		item.Detail = &days
+	}
+	if deal.ExpectedCloseDate != nil {
+		due := *deal.ExpectedCloseDate
+		item.DueAt = &due
+	}
+	return item
+}
+
+// meetingItem renders one appointment still ahead today.
+//
+// The subject IS the sentence a rep recognises — somebody wrote it when the
+// meeting was booked — so it travels as the title, and the start time as
+// `due_at` because that is what a reader is racing. No `overdue` flag: a
+// meeting that has not started cannot be late, and the lane only carries the
+// ones still ahead.
+//
+// It offers NO verb. The pre-meeting brief is its own surface with its own eight
+// cited sections, and a queue that tried to summarise it here would be a second
+// answer to "prepare me for this". `open` is not sent because this surface
+// wires no navigation, and an advertised action nothing performs is worse than
+// none: a client is entitled to render a control for what the server offers.
+func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
+	subject := meeting.Subject
+	starts := meeting.StartsAt
+	return crmcontracts.AttentionItem{
+		Id:      meeting.ID.String(),
+		Source:  crmcontracts.AttentionItemSource("meeting"),
+		Title:   &subject,
+		Subject: subjectOf("activity", meeting.ID),
+		DueAt:   &starts,
+		Actions: []crmcontracts.AttentionItemActions{},
+	}
 }
 
 // receiptItem renders one thing the system did on its own.

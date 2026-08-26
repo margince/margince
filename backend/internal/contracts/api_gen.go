@@ -1224,8 +1224,10 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 
 // Defines values for AttentionLanesOmitted.
 const (
+	AttentionLanesOmittedAtRisk      AttentionLanesOmitted = "at_risk"
 	AttentionLanesOmittedCommitments AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDoneForYou  AttentionLanesOmitted = "done_for_you"
+	AttentionLanesOmittedMeetings    AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedNeedsYou    AttentionLanesOmitted = "needs_you"
 	AttentionLanesOmittedPlanned     AttentionLanesOmitted = "planned"
 	AttentionLanesOmittedThisMorning AttentionLanesOmitted = "this_morning"
@@ -1234,9 +1236,13 @@ const (
 // Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
 func (e AttentionLanesOmitted) Valid() bool {
 	switch e {
+	case AttentionLanesOmittedAtRisk:
+		return true
 	case AttentionLanesOmittedCommitments:
 		return true
 	case AttentionLanesOmittedDoneForYou:
+		return true
+	case AttentionLanesOmittedMeetings:
 		return true
 	case AttentionLanesOmittedNeedsYou:
 		return true
@@ -1290,7 +1296,9 @@ const (
 	AttentionItemSourceApproval          AttentionItemSource = "approval"
 	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
+	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
 	AttentionItemSourceTask              AttentionItemSource = "task"
 )
 
@@ -1303,7 +1311,11 @@ func (e AttentionItemSource) Valid() bool {
 		return true
 	case AttentionItemSourceConversationClaim:
 		return true
+	case AttentionItemSourceDealAtRisk:
+		return true
 	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceMeeting:
 		return true
 	case AttentionItemSourceTask:
 		return true
@@ -10149,16 +10161,16 @@ func (e VoiceBuildStatusCode) Valid() bool {
 
 // Defines values for VoiceCorpusPreviewRequestFormat.
 const (
-	Text       VoiceCorpusPreviewRequestFormat = "text"
-	Transcript VoiceCorpusPreviewRequestFormat = "transcript"
+	VoiceCorpusPreviewRequestFormatText       VoiceCorpusPreviewRequestFormat = "text"
+	VoiceCorpusPreviewRequestFormatTranscript VoiceCorpusPreviewRequestFormat = "transcript"
 )
 
 // Valid indicates whether the value is a known member of the VoiceCorpusPreviewRequestFormat enum.
 func (e VoiceCorpusPreviewRequestFormat) Valid() bool {
 	switch e {
-	case Text:
+	case VoiceCorpusPreviewRequestFormatText:
 		return true
-	case Transcript:
+	case VoiceCorpusPreviewRequestFormatTranscript:
 		return true
 	default:
 		return false
@@ -10536,22 +10548,22 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
-	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
-	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
-	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
+	DeadLettered WebhookDeliveryStatus = "dead_lettered"
+	Delivered    WebhookDeliveryStatus = "delivered"
+	Pending      WebhookDeliveryStatus = "pending"
+	Retrying     WebhookDeliveryStatus = "retrying"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
 func (e WebhookDeliveryStatus) Valid() bool {
 	switch e {
-	case WebhookDeliveryStatusDeadLettered:
+	case DeadLettered:
 		return true
-	case WebhookDeliveryStatusDelivered:
+	case Delivered:
 		return true
-	case WebhookDeliveryStatusPending:
+	case Pending:
 		return true
-	case WebhookDeliveryStatusRetrying:
+	case Retrying:
 		return true
 	default:
 		return false
@@ -11376,31 +11388,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	Customer       ListOrganizationsParamsLifecycle = "customer"
-	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	Prospect       ListOrganizationsParamsLifecycle = "prospect"
-	Target         ListOrganizationsParamsLifecycle = "target"
-	Unknown        ListOrganizationsParamsLifecycle = "unknown"
+	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
+	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
+	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
+	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case Customer:
+	case ListOrganizationsParamsLifecycleCustomer:
 		return true
-	case Disqualified:
+	case ListOrganizationsParamsLifecycleDisqualified:
 		return true
-	case FormerCustomer:
+	case ListOrganizationsParamsLifecycleFormerCustomer:
 		return true
-	case Opportunity:
+	case ListOrganizationsParamsLifecycleOpportunity:
 		return true
-	case Prospect:
+	case ListOrganizationsParamsLifecycleProspect:
 		return true
-	case Target:
+	case ListOrganizationsParamsLifecycleTarget:
 		return true
-	case Unknown:
+	case ListOrganizationsParamsLifecycleUnknown:
 		return true
 	default:
 		return false
@@ -13026,6 +13038,17 @@ type Attention struct {
 	// AsOf The instant every lane below was read at.
 	AsOf time.Time `json:"as_of"`
 
+	// AtRisk Open deals going quiet, or whose expected close date has already passed — the
+	// ones most likely to be lost by inattention rather than by a decision.
+	//
+	// The idle window here is DELIBERATELY shorter than the product-wide `stalled`
+	// threshold: a queue that only speaks once a deal meets the stalled bar is
+	// reporting a two-month-old fact rather than warning. `detail` names the window
+	// actually used, so the card never implies a patience the server did not apply.
+	//
+	// Absent — not empty — on an installation whose feed does not read deals.
+	AtRisk *[]AttentionItem `json:"at_risk,omitempty"`
+
 	// Commitments Promises this rep made that are coming due, most overdue first — each with the
 	// message it was read from, so the reader can check it against what was written.
 	//
@@ -13052,6 +13075,16 @@ type Attention struct {
 	// Absent when there is nothing to lead with, which is itself the honest answer.
 	Lead *string `json:"lead,omitempty"`
 
+	// Meetings Today's booked meetings that have not happened yet, soonest first — the ones
+	// still worth preparing for.
+	//
+	// A meeting already held or cancelled is not on this lane: preparing for it is
+	// no longer possible, and a queue that listed it would be asking for work that
+	// cannot be done. `due_at` is when it starts.
+	//
+	// Absent — not empty — on an installation whose feed does not read meetings.
+	Meetings *[]AttentionItem `json:"meetings,omitempty"`
+
 	// NeedsYou Decisions only a person can make, highest-stakes first.
 	NeedsYou []AttentionItem `json:"needs_you"`
 
@@ -13076,13 +13109,19 @@ type AttentionLanesOmitted string
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
 type AttentionCounts struct {
+	// AtRisk How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under.
+	AtRisk *int `json:"at_risk,omitempty"`
+
 	// Commitments How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
-	NeedsYou       int  `json:"needs_you"`
-	Planned        int  `json:"planned"`
+
+	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
+	Meetings *int `json:"meetings,omitempty"`
+	NeedsYou int  `json:"needs_you"`
+	Planned  int  `json:"planned"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`

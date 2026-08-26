@@ -1,9 +1,11 @@
 import {
+  CalendarClock,
   CheckSquare,
   GitMerge,
   Handshake,
   Sparkles,
   Sunrise,
+  TrendingDown,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
@@ -25,6 +27,7 @@ import { FocusLane } from "./today.focus";
 import {
   type Attention,
   type AttentionItem,
+  type AttentionLane,
   attentionKey,
   useAttention,
 } from "./today.queries";
@@ -66,6 +69,13 @@ function leadLine(
   if ((day.lanes_omitted ?? []).length > 0) {
     return t("day.lead.partial");
   }
+  // Meetings lead every other lane, because a meeting is the one thing on this
+  // page that happens whether or not the reader acts. A decision waits; an
+  // appointment at eleven does not.
+  const booked = day.counts.meetings ?? 0;
+  if (booked > 0) {
+    return t("day.lead.meetings", { count: formatNumber(booked, locale) });
+  }
   const decisions = day.counts.needs_you;
   if (decisions === 1) {
     return t("day.lead.oneDecision");
@@ -86,6 +96,24 @@ function leadLine(
   if (promises > 0) {
     return t("day.lead.promises", { count: formatNumber(promises, locale) });
   }
+  return quietLead(day, t, locale);
+}
+
+// What the line says once nothing is WAITING on the reader — no decision, no
+// promise due, no meeting. Split from the branches above because those answer
+// "what is being asked of you" and these answer "what is worth knowing anyway",
+// and one function holding both was past the complexity the linter allows.
+function quietLead(
+  day: Attention,
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+): string {
+  // A drifting deal is money leaving on its own — nobody is waiting on the
+  // reader for it, which is exactly why it needs saying.
+  const drifting = day.counts.at_risk ?? 0;
+  if (drifting > 0) {
+    return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
+  }
   // Before "clear", because the briefing lane is on this page: a line reading
   // "your day is clear" above two items the night picked out is the one thing
   // this line exists to prevent. It sits below decisions and planned work,
@@ -104,7 +132,11 @@ function leadLine(
   // states that nothing was found ANYWHERE, and a feed that never read the
   // claims has not looked where promises live. The weaker line says only what
   // is true — nothing is waiting among the lanes this page did read.
-  if (day.counts.commitments === undefined) {
+  if (
+    day.counts.commitments === undefined ||
+    day.counts.at_risk === undefined ||
+    day.counts.meetings === undefined
+  ) {
     return t("day.lead.clearOfWhatWasRead");
   }
   return t("day.lead.clear");
@@ -148,6 +180,24 @@ function itemDetail(
   locale: Locale,
   zone: string,
 ): string | null {
+  // A risk card's sentence is written HERE, not sent: the server has no
+  // language, and "quiet 19 days" versus "the close date passed" read
+  // differently in each of the three. `kind` names the ground and `detail`
+  // carries the number the server actually measured, so the line can never
+  // imply a patience nobody applied.
+  if (item.source === "deal_at_risk") {
+    if (item.kind === "close_overdue" && item.due_at) {
+      return t("day.risk.closeOverdue", {
+        date: formatDateTime(item.due_at, locale, zone),
+      });
+    }
+    if (item.detail) {
+      return t("day.risk.quiet", {
+        days: formatNumber(Number(item.detail), locale),
+      });
+    }
+    return null;
+  }
   // A promise is the one item whose supporting line carries TWO facts, and it
   // needs both: the words it was read from are what make the claim checkable,
   // and the deadline is why it is on today's page at all. Showing only the
@@ -234,6 +284,48 @@ function AttentionRow({
 // decisions — so a reader scanning the page finds it before reading a word.
 // Two tinted panels would be no lead at all, which is why the other two are
 // plain.
+// An OPTIONAL lane: one the server may not send at all.
+//
+// Absent means this installation does not read what the lane holds; empty means
+// it read and found nothing. The two draw differently — nothing at all versus a
+// quiet plate — so the check belongs in one place rather than repeated per lane,
+// where the third copy is what pushed this screen past the complexity bar.
+function OptionalLane({
+  items,
+  shape,
+  omitted,
+  lane,
+  total,
+  onComplete,
+  onSnooze,
+  completing,
+}: Readonly<{
+  items: readonly AttentionItem[] | undefined;
+  shape: LaneShape;
+  omitted: readonly AttentionLane[];
+  lane: AttentionLane;
+  total: number;
+  onComplete: (id: string) => void;
+  onSnooze: (id: string, dueAt: string) => void;
+  completing: boolean;
+}>) {
+  const withheld = omitted.includes(lane);
+  if (items === undefined && !withheld) {
+    return null;
+  }
+  return (
+    <Lane
+      shape={shape}
+      items={items ?? []}
+      withheld={withheld}
+      total={total}
+      onComplete={onComplete}
+      onSnooze={onSnooze}
+      completing={completing}
+    />
+  );
+}
+
 function Lane({
   shape,
   items,
@@ -497,6 +589,9 @@ function TodayLanes({
   // Absent means this installation serves no commitments lane; empty means the
   // rep owes nothing today. The two draw differently, so they stay apart.
   const commitments = day.commitments;
+  // Same absent-versus-empty rule: no lane at all when nothing reads deals.
+  const atRisk = day.at_risk;
+  const meetings = day.meetings;
   const done = day.done_for_you ?? [];
   const omitted = day.lanes_omitted ?? [];
   // How many decisions this reader has answered since the page opened, and
@@ -541,6 +636,21 @@ function TodayLanes({
         withheld={omitted.includes("this_morning")}
         total={day.counts.this_morning}
       />
+      <OptionalLane
+        items={meetings}
+        shape={{
+          title: t("day.meetings"),
+          empty: t("day.meetings.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: CalendarClock,
+        }}
+        omitted={omitted}
+        lane="meetings"
+        total={day.counts.meetings ?? 0}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
       <FocusLane
         items={queue}
         total={day.counts.needs_you}
@@ -563,22 +673,36 @@ function TodayLanes({
         onSnooze={onSnooze}
         completing={complete.isPending}
       />
-      {(commitments !== undefined || omitted.includes("commitments")) && (
-        <Lane
-          shape={{
-            title: t("day.commitments"),
-            empty: t("day.commitments.empty"),
-            withheld: t("day.lane.withheld"),
-            icon: Handshake,
-          }}
-          items={commitments ?? []}
-          withheld={omitted.includes("commitments")}
-          total={day.counts.commitments ?? 0}
-          onComplete={onComplete}
-          onSnooze={onSnooze}
-          completing={complete.isPending}
-        />
-      )}
+      <OptionalLane
+        items={atRisk}
+        shape={{
+          title: t("day.atRisk"),
+          empty: t("day.atRisk.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: TrendingDown,
+        }}
+        omitted={omitted}
+        lane="at_risk"
+        total={day.counts.at_risk ?? 0}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
+      <OptionalLane
+        items={commitments}
+        shape={{
+          title: t("day.commitments"),
+          empty: t("day.commitments.empty"),
+          withheld: t("day.lane.withheld"),
+          icon: Handshake,
+        }}
+        omitted={omitted}
+        lane="commitments"
+        total={day.counts.commitments ?? 0}
+        onComplete={onComplete}
+        onSnooze={onSnooze}
+        completing={complete.isPending}
+      />
       <Lane
         shape={{
           title: t("day.done"),
