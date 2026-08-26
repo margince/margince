@@ -13,6 +13,7 @@ package privacy
 
 import (
 	"context"
+	"log/slog"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -52,8 +53,10 @@ func (h Handlers) WithUndoabilityReader(reader UndoabilityReader) Handlers {
 // id asks about it once and they all read the same answer.
 //
 // A reader that fails does NOT fail the page: a history a person can read is
-// more useful than an error, and every entry falls back to the answer an
-// unevaluated entry honestly has.
+// more useful than an error. But it is LOGGED, not swallowed — the fallback
+// renders every entry as refused with no reason, which is exactly the
+// greyed-button-with-no-explanation this feature exists to remove, and a page
+// that silently became that shape is one nobody would ever be told about.
 func (h Handlers) undoabilityFor(ctx context.Context, entityType string, entityID ids.UUID, auditIDs []ids.UUID) map[ids.UUID]UndoabilityAnswer {
 	if h.undoability == nil || len(auditIDs) == 0 {
 		return nil
@@ -69,6 +72,9 @@ func (h Handlers) undoabilityFor(ctx context.Context, entityType string, entityI
 	}
 	answers, err := h.undoability.ForRecord(ctx, entityType, entityID, distinct)
 	if err != nil {
+		slog.ErrorContext(ctx, "privacy: a history page could not be judged for undoability; "+
+			"every entry on it will render refused with no reason",
+			"entity_type", entityType, "entity_id", entityID, "entries", len(distinct), "err", err)
 		return nil
 	}
 	return answers
