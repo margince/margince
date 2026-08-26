@@ -126,6 +126,11 @@ type RetentionService struct {
 	// removes the interactions beneath them. Injected by compose; nil in a
 	// role that did not wire it, where the bus consumer is the fallback.
 	invalidateEdges EdgeInvalidator
+	// purgeRawCaptures destroys the provider originals behind an erased
+	// activity. Injected by compose; unlike invalidateEdges there is no
+	// fallback path, so the erase action refuses when it is nil rather than
+	// skipping it.
+	purgeRawCaptures RawCapturePurger
 }
 
 // NewRetentionService wires the nightly evaluator. blob lets its erase
@@ -157,6 +162,32 @@ type EdgeInvalidator func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) e
 func (s *RetentionService) WithEdgeInvalidator(fn EdgeInvalidator) *RetentionService {
 	out := *s
 	out.invalidateEdges = fn
+	return &out
+}
+
+// RawCapturePurger deletes the provider originals behind the given activities,
+// inside the caller's transaction so they die with the text they duplicate.
+//
+// A seam for the same reason EdgeInvalidator is one: raw_capture is capture's
+// table, a module never imports a sibling, and privacy writing it directly
+// would need a table-ownership waiver. capture.PendingStore.PurgeRawCaptureTx
+// is the implementation, already written for the noise-redaction sweep.
+//
+// Where this parts company with EdgeInvalidator is what an unwired seam means.
+// A missing edge invalidator leaves an aggregate to be corrected by the bus
+// consumer that also handles retention.applied — late, but corrected. There is
+// no second path that ages raw_capture out: PurgeRawCaptureTx's own comment
+// says so, and says why the Art. 17 purge cannot stand in (it is scoped to a
+// PERSON, and a retention window is scoped to time). So an unwired purger is
+// not a degraded mode, it is an erasure that silently keeps the original, and
+// eraseActivityContent refuses rather than proceeding.
+type RawCapturePurger func(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID) error
+
+// WithRawCapturePurger returns a service whose activity/erase destroys the
+// verbatim provider original along with the parsed copy.
+func (s *RetentionService) WithRawCapturePurger(fn RawCapturePurger) *RetentionService {
+	out := *s
+	out.purgeRawCaptures = fn
 	return &out
 }
 

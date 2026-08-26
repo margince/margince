@@ -28,7 +28,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/modules/privacy"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -101,11 +100,10 @@ func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) 
 		t.Fatalf("seeding the retention policy: %v", err)
 	}
 
-	// The real service, wired exactly as the worker wires it.
-	svc := privacy.NewRetentionService(InstallationDB(e.Pool), nil, slog.New(slog.NewTextHandler(io.Discard, nil))).
-		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
-			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
-		})
+	// The real service, through the assembler the worker uses — so "wired
+	// exactly as the worker wires it" stays true when a seam is added rather
+	// than becoming a claim this file has to be edited to keep.
+	svc := NewRetentionServiceFor(InstallationDB(e.Pool), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := svc.EvaluateInstallation(retentionPassProvenance(e.Admin())); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
