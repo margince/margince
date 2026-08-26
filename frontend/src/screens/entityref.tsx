@@ -282,12 +282,23 @@ export function RosterPartialNote({
 // nothing is fetched twice. Exported for chrome that wants the name as plain
 // text rather than as EntityRef's navigating button — the breadcrumb names the
 // record you are already looking at, so linking it would go nowhere.
+/**
+ * The segment that marks a query as ONE record's display name.
+ *
+ * Named because two readers key on it: the reads below, and the data layer,
+ * which brings every mounted name back after a successful write
+ * (app/queryclient.ts). A write can rename its record, and the trail at the top
+ * of the window is naming it — held apart by a literal in two files, a rename
+ * would have gone on showing the old name until the reader reloaded.
+ */
+export const ENTITY_NAME_KEY = "ref";
+
 export function useEntityName(
   kind: EntityKind,
   id: string | null | undefined,
 ): { name: string | null; reading: NameReading } {
   const query = useQuery({
-    queryKey: [kind, "ref", id],
+    queryKey: [kind, ENTITY_NAME_KEY, id],
     queryFn: () => fetchEntityName(kind, id ?? ""),
     enabled: Boolean(id),
     staleTime: 60_000,
@@ -502,7 +513,7 @@ function RecordRef({
   // switches the read off is the same value that gets rendered.
   const supplied = usableName(name);
   const query = useQuery({
-    queryKey: [kind, "ref", id],
+    queryKey: [kind, ENTITY_NAME_KEY, id],
     queryFn: () => fetchEntityName(kind, id),
     enabled: supplied == null,
     // References change rarely relative to the pages that render them; a short

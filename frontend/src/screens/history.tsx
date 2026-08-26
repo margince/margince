@@ -22,6 +22,11 @@ export {
 import { RecordHistory } from "./historyentries";
 import { FieldHistoryTimeline } from "./historyfields";
 
+// One vocabulary, whatever record the panel is opened on: `changes` is
+// everything that happened in order, each entry carrying what it did; `fields`
+// is the same changes grouped by the field they touched. They name the SHAPE
+// of the list rather than its subject, which is what keeps a deal, a company
+// and a person from describing one panel three ways.
 const HISTORY_TABS = ["changes", "fields"] as const;
 type HistoryTab = (typeof HISTORY_TABS)[number];
 

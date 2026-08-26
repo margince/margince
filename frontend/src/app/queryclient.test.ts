@@ -1,6 +1,7 @@
 import { MutationObserver, type QueryClient } from "@tanstack/react-query";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ProblemError } from "../screens/common";
+import { ENTITY_NAME_KEY } from "../screens/entityref";
 import { createQueryClient, retryQuery } from "./queryclient";
 
 // The data-layer parameters are invisible until they are wrong: a retried 4xx
@@ -103,5 +104,55 @@ describe("the mutation failure sink", () => {
     // The reader can already read that cause; a console copy would report the
     // same failure twice and add nothing to it.
     expect(reported).not.toHaveBeenCalled();
+  });
+});
+
+describe("names the chrome is showing", () => {
+  function nameQuery(client: QueryClient, id: string): Promise<unknown> {
+    return client.fetchQuery({
+      queryKey: ["organization", ENTITY_NAME_KEY, id],
+      queryFn: () => Promise.resolve({ name: "Globex" }),
+    });
+  }
+
+  // A rename lands as an ordinary mutation on a screen that knows nothing
+  // about the trail at the top of the window. Nothing else brings those names
+  // back inside their freshness window, so the trail went on naming the record
+  // by what it used to be called until the reader reloaded.
+  it("brings a record's name back after a write that could have changed it", async () => {
+    const client = createQueryClient();
+    await nameQuery(client, "o-1");
+    expect(
+      client.getQueryState(["organization", ENTITY_NAME_KEY, "o-1"])
+        ?.isInvalidated,
+    ).toBe(false);
+
+    await new MutationObserver(client, {
+      mutationFn: () => Promise.resolve("renamed"),
+    }).mutate();
+
+    expect(
+      client.getQueryState(["organization", ENTITY_NAME_KEY, "o-1"])
+        ?.isInvalidated,
+    ).toBe(true);
+  });
+
+  // The other keys are a screen's own reads, and a screen that has just
+  // written invalidates what it owns. Refetching every read in the cache after
+  // every write would put the whole page back on the network.
+  it("leaves a screen's own reads to the screen", async () => {
+    const client = createQueryClient();
+    await client.fetchQuery({
+      queryKey: ["organization360", "o-1"],
+      queryFn: () => Promise.resolve({ id: "o-1" }),
+    });
+
+    await new MutationObserver(client, {
+      mutationFn: () => Promise.resolve("written"),
+    }).mutate();
+
+    expect(
+      client.getQueryState(["organization360", "o-1"])?.isInvalidated,
+    ).toBe(false);
   });
 });

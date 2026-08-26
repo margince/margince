@@ -1,5 +1,6 @@
 import { MutationCache, QueryCache, QueryClient } from "@tanstack/react-query";
 import { logUnexpectedError, ProblemError } from "../screens/common";
+import { ENTITY_NAME_KEY } from "../screens/entityref";
 
 // The data layer's parameters (architecture/frontend, FE-PARAM-1..4). The
 // library's defaults are not this product's: they hold nothing back from the
@@ -54,11 +55,27 @@ function reportQueryError(error: Error): void {
   console.error("margince: query failed", error);
 }
 
+// A write can rename the record it touches, and the chrome around the reader is
+// naming that record: the trail at the top of the window and every reference
+// chip read the name on their own key, with a freshness window measured in
+// minutes, so nothing a screen invalidates brings them back. A company renamed
+// on its own page kept the old name in the trail until the reader reloaded.
+//
+// Invalidated for every successful mutation rather than beside each rename,
+// because "which writes can change a display name" is a list — twelve PATCH
+// sites today — and the thirteenth would be written without it. Only MOUNTED
+// reads refetch, and the chrome holds one per named reference on screen.
+function refreshNamedReferences(client: QueryClient): void {
+  client.invalidateQueries({
+    predicate: (query) => query.queryKey[1] === ENTITY_NAME_KEY,
+  });
+}
+
 // Built per call rather than exported as a module singleton so the policy can
 // be exercised without importing main.tsx, which mounts the application into
 // the document as a side effect of being imported.
 export function createQueryClient(): QueryClient {
-  return new QueryClient({
+  const client: QueryClient = new QueryClient({
     defaultOptions: {
       queries: {
         staleTime: STALE_TIME_MS,
@@ -79,6 +96,10 @@ export function createQueryClient(): QueryClient {
     // makes: a server problem is already on the screen in the reader's own
     // words, and a refusal a form renders field by field is a routine answer
     // to a mutation, not a fault anyone should open a console for.
-    mutationCache: new MutationCache({ onError: logUnexpectedError }),
+    mutationCache: new MutationCache({
+      onError: logUnexpectedError,
+      onSuccess: () => refreshNamedReferences(client),
+    }),
   });
+  return client;
 }

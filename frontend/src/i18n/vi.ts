@@ -61,7 +61,7 @@ export const vi = {
   "history.actorHuman": "Người",
   "history.actorAgent": "Agent",
   "history.tabChanges": "Thay đổi",
-  "history.tabFields": "Lịch sử trường",
+  "history.tabFields": "Theo trường",
   "history.field.address": "Địa chỉ",
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",

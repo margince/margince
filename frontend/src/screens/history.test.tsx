@@ -318,7 +318,7 @@ describe("RecordHistoryTab", () => {
       expect(screen.getByText("Demo Admin created the record")).toBeTruthy(),
     );
     await userEvent.click(
-      screen.getByRole("button", { name: /field history/i }),
+      screen.getByRole("button", { name: /by field/i }),
     );
     await waitFor(() =>
       expect(screen.getByText("Globex Renewal (updated)")).toBeTruthy(),

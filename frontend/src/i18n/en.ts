@@ -57,7 +57,7 @@ export const en = {
   "history.actorHuman": "Human",
   "history.actorAgent": "Agent",
   "history.tabChanges": "Changes",
-  "history.tabFields": "Field history",
+  "history.tabFields": "By field",
   "history.field.address": "Address",
   "history.field.amount_minor": "Value",
   "history.field.assignee_id": "Assignee",
