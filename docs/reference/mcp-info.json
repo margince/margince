@@ -10,16 +10,16 @@
   "totals": {
     "tools": 58,
     "resources": 9,
-    "tool_catalog_bytes": 163083,
+    "tool_catalog_bytes": 163599,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 41649,
+    "approx_wire_tokens_total": 41778,
     "largest_tool_bytes": 6414,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 38449,
+      "description_bytes": 38805,
       "input_schema_bytes": 35709,
-      "output_schema_bytes": 76331,
-      "description_plus_input_schema_bytes": 74158
+      "output_schema_bytes": 76491,
+      "description_plus_input_schema_bytes": 74514
     }
   },
   "tools": {
@@ -6065,7 +6065,7 @@
           "readOnlyHint": true,
           "title": "Query the workspace"
         },
-        "description": "Answer a question that has STRUCTURE — a record type, conditions on its fields, a hop to a related record, or a likeness to describe — by sending a plan and reading back the records that satisfy it, together with what kind of answer it is. Every name in a plan comes from the published vocabulary; one outside it is refused by name. The margince://schema/query resource — not this description — says which record types, fields, operators and relationships can be asked about. At most one similarity clause and one hop. It cannot group, count or total, and has no cursor: an answer that hit its limit says so. Use search_records when you only have a name or a phrase and no conditions to apply, and run_report when the answer wanted is a count, a total or a breakdown rather than the records themselves. Read `coverage` before you use the rows: `complete_exact` means every record matching the plan is here, `ranked_semantic` means these ranked highest and others may match, and `partial_degraded` means something in the plan could not be answered as asked — `notes` says which. Keep each row's record_type and id for any follow-up call, and its `evidence` for the related record that admitted it. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer a question that has STRUCTURE — a record type, conditions on its fields, a hop to a related record, or a likeness to describe — by sending a plan and reading back the records that satisfy it, together with what kind of answer it is. Every name in a plan comes from the published vocabulary; one outside it is refused by name. The margince://schema/query resource — not this description — says which record types, fields, operators and relationships can be asked about. At most one similarity clause and one hop. It cannot group, count or total, and has no cursor: an answer that hit its limit says so. Use search_records when you only have a name or a phrase and no conditions to apply, and run_report when the answer wanted is a count, a total or a breakdown rather than the records themselves. Read `coverage` before you use the rows: `complete_exact` means every record matching the plan is here, `ranked_semantic` means these ranked highest and others may match, and `partial_degraded` means something in the plan could not be answered as asked — `notes` says which. Keep each row's record_type and id for any follow-up call, and its `evidence` for the related record that admitted it. A row's `owner` is the colleague who holds that account: rows come back from across the whole workspace, so most of them belong to someone other than the person asking. When `owner.is_you` is false, say whose it is when you report the record, and treat contacting it as theirs to decide rather than advising an approach as though the account were unowned. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -6149,6 +6149,25 @@
                           "type": "object"
                         },
                         "type": "array"
+                      },
+                      "owner": {
+                        "properties": {
+                          "id": {
+                            "format": "uuid",
+                            "type": "string"
+                          },
+                          "is_you": {
+                            "type": "boolean"
+                          },
+                          "name": {
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "id",
+                          "is_you"
+                        ],
+                        "type": "object"
                       },
                       "record": {
                         "properties": {

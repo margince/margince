@@ -95,6 +95,12 @@ type QueryWorkspaceRow struct {
 	// a traversal. It is what makes a hop legible as a reason rather than as an
 	// invisible filter, and it is never null for the same reason Notes is not.
 	Evidence []QueryEvidence `json:"evidence"`
+	// Owner is who this record belongs to, named and marked against the caller.
+	// Absent for a record that carries no owner, which is the honest answer —
+	// an unowned account is nobody's to check with. Present and NOT `is_you`
+	// means a colleague is working this record: see queryowner.go for why that
+	// has to be said out loud rather than left in the fields as a raw id.
+	Owner *RecordOwner `json:"owner,omitempty"`
 }
 
 // QueryEvidence is one related record that admitted a row, and the relationship
