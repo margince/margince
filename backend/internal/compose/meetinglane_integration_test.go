@@ -14,6 +14,7 @@ package compose
 // today's problem.
 
 import (
+	"fmt"
 	"testing"
 	"time"
 
@@ -100,5 +101,28 @@ func TestAMeetingWithNoStatusIsStillWorthPreparingFor(t *testing.T) {
 	got := meetingSubjects(t, e, now)
 	if len(got) != 1 || got[0] != "From the calendar" {
 		t.Fatalf("the lane = %v, want the unstatused calendar event", got)
+	}
+}
+
+// The scan reads newest-first and the lane reads forward, so a workspace with a
+// long history of past meetings must not push today's off the page.
+//
+// This is the shape of failure the bounded scan can hide: the lane would draw a
+// free day over a day with meetings in it, and nobody would report it, because
+// an empty calendar lane looks exactly like an empty calendar. Ordering makes it
+// safe here — occurred_at DESC puts a future meeting above every past one — and
+// this pins that rather than leaving it as a property nobody checked.
+func TestAPileOfPastMeetingsDoesNotPushTodaysOffTheLane(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Now().UTC().Truncate(time.Hour).Add(9 * time.Hour)
+	// Comfortably more than the lane's scan (12 * taskScanFactor).
+	for day := 1; day <= 130; day++ {
+		bookMeeting(t, e, fmt.Sprintf("Long ago %d", day), now.AddDate(0, 0, -day), "held")
+	}
+	bookMeeting(t, e, "This afternoon", now.Add(3*time.Hour), "booked")
+
+	got := meetingSubjects(t, e, now)
+	if len(got) != 1 || got[0] != "This afternoon" {
+		t.Fatalf("the lane = %v, want today's meeting despite 130 older ones", got)
 	}
 }
