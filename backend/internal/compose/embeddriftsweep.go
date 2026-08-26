@@ -80,20 +80,35 @@ func (w *embedDriftWorkspaceWorker) Work(ctx context.Context, job *river.Job[Emb
 	if healed > 0 {
 		w.log.InfoContext(wsCtx, "embed drift sweep healed entities", "healed", healed)
 	}
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
 	// The corpora are swept even when the entity pass healed nothing: the two
 	// hold their vectors in different tables and drift independently. A corpus
 	// left under a superseded binding retrieves NOTHING — the identity filter
-	// excludes every passage — and re-uploading the same file does not repair
-	// it, because the checksum matches and nothing re-chunks. That is a corpus
-	// bricked by a configuration change, and this is the only path back.
-	repaired, err := w.corpora.SweepCorpusDrift(wsCtx, w.embedder)
+	// excludes every passage — and no other path re-embeds an existing
+	// document, so this is the only way back.
+	//
+	// Run even when the ENTITY pass failed, and deliberately. Coupling them
+	// sequentially would let one bad search entity keep every corpus in the
+	// workspace bricked after a binding swap, which is a far larger failure
+	// than the one being retried — the two sweeps share a question, not a fate.
+	// Closed BEFORE the drift repair, because an abandoned document holds the
+	// whole corpus not_ready and the repair cannot lift that: readiness reads
+	// `running` as in-flight whatever the vectors say.
+	if closed, err := w.corpora.SweepAbandonedIngests(wsCtx); err != nil {
+		w.log.WarnContext(wsCtx, "closing abandoned corpus ingests", "err", err)
+	} else if closed > 0 {
+		w.log.InfoContext(wsCtx, "closed corpus ingests that stopped without finishing", "closed", closed)
+	}
+	repaired, cerr := w.corpora.SweepCorpusDrift(wsCtx, w.embedder)
 	if repaired > 0 {
 		w.log.InfoContext(wsCtx, "embed drift sweep re-embedded corpus passages", "repaired", repaired)
 	}
-	return jobs.FaultContext(ctx, err)
+	// The entity pass's failure is reported first when both failed: it is the
+	// one with a retry budget behind it, and errors.Join here would hand River
+	// a fault whose classification is neither error's.
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	return jobs.FaultContext(ctx, cerr)
 }
 
 // addEmbedDriftSweepJob registers the sweep worker and its periodic tick

@@ -8,8 +8,6 @@ package knowledge
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"io"
@@ -52,7 +50,33 @@ type UnsupportedTypeError struct {
 
 func (e *UnsupportedTypeError) Error() string {
 	return fmt.Sprintf("%s cannot be read as text; the accepted types are %s",
-		e.Got, strings.Join(acceptedContentTypes, ", "))
+		clampEchoedType(e.Got), strings.Join(acceptedContentTypes, ", "))
+}
+
+// maxEchoedType bounds what of the caller's own Content-Type is quoted back.
+// A media type is a short token; anything longer is not one, and echoing an
+// unbounded caller-chosen string into a problem body and the operator log is a
+// gift to whoever sends a megabyte of it.
+const maxEchoedType = 64
+
+func clampEchoedType(got string) string {
+	runes := []rune(got)
+	if len(runes) <= maxEchoedType {
+		return got
+	}
+	return string(runes[:maxEchoedType]) + "…"
+}
+
+// AlreadyFiledError is a file whose bytes are already in this corpus.
+//
+// It names the document that holds them, because the useful answer to "why was
+// my upload refused" is "you already uploaded it, it is called X".
+type AlreadyFiledError struct {
+	Filename string
+}
+
+func (e *AlreadyFiledError) Error() string {
+	return fmt.Sprintf("these exact bytes are already filed in this set as %q", e.Filename)
 }
 
 // ErrBlobstoreUnconfigured is an upload arriving at an installation with no
@@ -60,12 +84,50 @@ func (e *UnsupportedTypeError) Error() string {
 // answering it as a validation failure would send them off to fix their file.
 var ErrBlobstoreUnconfigured = errors.New("knowledge: object storage is not configured; a document cannot be stored")
 
-// acceptedType normalises a browser's Content-Type (which carries parameters —
-// `text/markdown; charset=utf-8`) down to the media type the list names.
-func acceptedType(contentType string) (string, bool) {
-	media := strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0])
-	media = strings.ToLower(media)
+// acceptedType decides the media type an upload is filed under.
+//
+// It normalises a browser's Content-Type (which carries parameters —
+// `text/markdown; charset=utf-8`) down to the media type the list names, and
+// falls back to the FILENAME's extension when the client sent none.
+//
+// The fallback is not a nicety. A platform with no registry entry for `.md`
+// makes the browser report an EMPTY type, and this route's flagship file would
+// then be refused with "` ` cannot be read as text" — a refusal naming nothing,
+// for exactly the file the route wants. A curl caller that omits the part
+// header hits the same wall. It runs HERE rather than in the browser so every
+// client gets it, and only when the client said NOTHING: a stated type is the
+// client's claim and stands, wrong extension or not.
+//
+// An extension is still only a name, which is why it decides nothing else. It
+// picks a label from a closed list; the bytes are never parsed on the strength
+// of it, because there is no parser here at all.
+func acceptedType(contentType, filename string) (string, bool) {
+	media := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
+	if media == "" || media == "application/octet-stream" {
+		media = typeByExtension(filename)
+	}
 	return media, slices.Contains(acceptedContentTypes, media)
+}
+
+// typeByExtension names the media type a file ending implies, or "" for one
+// this route does not read.
+func typeByExtension(filename string) string {
+	dot := strings.LastIndex(filename, ".")
+	if dot < 0 {
+		return ""
+	}
+	switch strings.ToLower(filename[dot+1:]) {
+	case "md", "markdown":
+		return "text/markdown"
+	case "txt":
+		return "text/plain"
+	case "csv":
+		return "text/csv"
+	case "json":
+		return "application/json"
+	default:
+		return ""
+	}
 }
 
 // NewDocument is one uploaded file. Content is a reader rather than bytes: the
@@ -97,7 +159,7 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 	if s.blob == nil {
 		return crmcontracts.KnowledgeDocument{}, ErrBlobstoreUnconfigured
 	}
-	media, ok := acceptedType(in.ContentType)
+	media, ok := acceptedType(in.ContentType, in.Filename)
 	if !ok {
 		return crmcontracts.KnowledgeDocument{}, &UnsupportedTypeError{Got: media}
 	}
@@ -121,7 +183,7 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 	// bidirectional override in it rewrites whichever of those quotes it.
 	in.Filename = extension.SafeFilename(in.Filename, 0)
 
-	checksum, size, err := digestDocument(in.Content)
+	checksum, size, err := blobstore.Digest(in.Content)
 	if err != nil {
 		return crmcontracts.KnowledgeDocument{}, err
 	}
@@ -135,6 +197,28 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		// the bytes were being stored would otherwise take a live document.
 		if _, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly); err != nil {
 			return err
+		}
+		// The same BYTES twice is refused, and this is what the checksum column
+		// is for.
+		//
+		// Re-uploading a file is the most natural repair gesture there is —
+		// "it must have gone wrong, I will send it again" — and accepting it
+		// would file a SECOND document holding the same passages. They would
+		// then compete with each other for the eight retrieval slots, halving
+		// what an answer can draw on; an answer could cite one sentence twice
+		// from two apparently different documents; and both copies would count
+		// against the corpus ceiling. Refusing NAMES the document already
+		// holding them, which is the answer the uploader actually wants.
+		var existing string
+		switch err := tx.QueryRow(ctx,
+			`SELECT filename FROM knowledge_document
+			  WHERE corpus_id = $1 AND checksum = $2 AND archived_at IS NULL
+			  LIMIT 1`, in.CorpusID, checksum).Scan(&existing); {
+		case err == nil:
+			return &AlreadyFiledError{Filename: existing}
+		case errors.Is(err, pgx.ErrNoRows):
+		default:
+			return fmt.Errorf("look for a document already holding these bytes: %w", err)
 		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO knowledge_document
@@ -162,20 +246,6 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		return rerr
 	})
 	return out, err
-}
-
-// digestDocument hashes the upload and measures it, rewinding so the same
-// reader can then be streamed to storage.
-func digestDocument(content io.ReadSeeker) (string, int64, error) {
-	sum := sha256.New()
-	size, err := io.Copy(sum, content)
-	if err != nil {
-		return "", 0, fmt.Errorf("knowledge: reading the uploaded document: %w", err)
-	}
-	if _, err := content.Seek(0, io.SeekStart); err != nil {
-		return "", 0, fmt.Errorf("knowledge: rewinding the uploaded document: %w", err)
-	}
-	return hex.EncodeToString(sum.Sum(nil)), size, nil
 }
 
 // ListDocuments returns one corpus's live documents, newest first, whatever
@@ -257,10 +327,21 @@ func scanDocument(row pgx.Row) (crmcontracts.KnowledgeDocument, error) {
 // available outcome: the screen says the document is gone, and the file it was
 // made from is still there with nothing left pointing at it to find it by.
 //
-// The blob goes LAST, after the rows commit. The other order deletes bytes that
-// a failed transaction then leaves a live row promising. This way a failure
-// leaves at worst an orphan object — recoverable, and invisible to every read —
-// rather than a row whose document cannot be opened.
+// The blob goes LAST, after the rows commit, and the ordering has a cost worth
+// stating rather than implying away.
+//
+// The other order deletes bytes that a failed transaction then leaves a live
+// row promising — a document the screen lists and nobody can open, which is the
+// worse failure. This way a process that dies between the commit and the delete
+// leaves an ORPHAN OBJECT: bytes with no row pointing at them. A retry cannot
+// finish the job either, because the row that held the storage key is gone, so
+// it answers ErrNotFound.
+//
+// What that orphan is and is not: invisible to every read, unreachable by key
+// (nothing left names it), and swept by the workspace-wide prefix delete a data
+// reset performs. It is not claimed to be erased on the day it is orphaned, and
+// a corpus document is deliberately not registered as PII-bearing — see the
+// package doc, which states that limit rather than leaving it to be discovered.
 func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 	if err := auth.Require(ctx, "knowledge_document", principal.ActionDelete); err != nil {
 		return err

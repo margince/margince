@@ -4,8 +4,10 @@
 package knowledge
 
 import (
+	"math/rand/v2"
 	"strings"
 	"testing"
+	"unicode/utf8"
 )
 
 func TestADocumentShorterThanOneChunkIsOneChunk(t *testing.T) {
@@ -143,4 +145,95 @@ func chunkTexts(chunks []Chunk) []string {
 		texts = append(texts, c.Text)
 	}
 	return texts
+}
+
+// EVERY byte offset this chunker turns into a span boundary must land on a
+// rune start, and there are TWO of them: the no-boundary fallback cut, and the
+// overlap step back. The second is the one that bites ordinary European prose.
+//
+// The fixture is deliberately IRREGULAR — mixed 1- and 2-byte runes at no fixed
+// period — because a uniform one passes by arithmetic luck. An earlier version
+// of this test used a run of 3-byte CJK runes, and 120 (the overlap width) is
+// divisible by 3, so the step back happened to land rune-aligned every time
+// while the defect it was written for sat ten lines below.
+func TestNoSpanBoundaryEverSplitsARune(t *testing.T) {
+	// German words with umlauts, in a DETERMINISTIC but irregular order: a
+	// fixed seed keeps the case reproducible while breaking the periodicity a
+	// cyclic fixture has. Cycling seven words repeats every seven, which lines
+	// the spans up on the same residues every time and hides the defect — that
+	// is how the first version of this test passed against the broken code.
+	words := []string{"Nachrichten", "Grundsätze", "Verhältnis", "übermitteln", "Prüfung", "Größe", "Maßnahme", "und", "die", "Änderung"}
+	rng := rand.New(rand.NewPCG(1, 2))
+
+	// Many documents rather than one: the offset that splits a rune depends on
+	// how the bytes fall, so one document that happens to fall well proves
+	// nothing about the next.
+	for doc := 0; doc < 50; doc++ {
+		var b strings.Builder
+		for b.Len() < 6000 {
+			b.WriteString(words[rng.IntN(len(words))])
+			b.WriteByte(' ')
+		}
+		text := b.String()
+
+		chunks := ChunkText(text)
+		if len(chunks) < 2 {
+			t.Fatalf("document %d produced %d chunks; it must be cut", doc, len(chunks))
+		}
+		for i, c := range chunks {
+			if !utf8.ValidString(c.Text) {
+				t.Fatalf("document %d chunk %d is not valid UTF-8 — a span boundary split a rune", doc, i)
+			}
+			if !strings.Contains(text, c.Text) {
+				t.Fatalf("document %d chunk %d is not a span of the document", doc, i)
+			}
+		}
+	}
+}
+
+// A document with no ASCII whitespace in reach reaches the fallback cut, and
+// the cut must land on a rune start.
+//
+// Every boundary bestBoundary looks for is ASCII — two newlines, a full stop
+// and a space, a newline, a space — so a Japanese, Chinese or Thai document
+// reaches the fallback for EVERY span. A cut in the middle of a 3-byte rune
+// produces bytes that are not UTF-8, the insert fails with 22021 from Postgres,
+// the ingest burns all three attempts, and the uploader is told the file is
+// fine and to try again.
+func TestAnUnbrokenCJKRunIsNeverCutMidRune(t *testing.T) {
+	// Well past maxChunkChars in bytes, and with no ASCII space anywhere: the
+	// fallback is the only branch that can cut it.
+	text := strings.Repeat("日本語のテキストです", 400)
+
+	chunks := ChunkText(text)
+	if len(chunks) < 2 {
+		t.Fatalf("the fixture produced %d chunks; it must be cut for this to test anything", len(chunks))
+	}
+	for i, c := range chunks {
+		if !utf8.ValidString(c.Text) {
+			t.Fatalf("chunk %d is not valid UTF-8 — the cut split a rune", i)
+		}
+	}
+	// And nothing was lost or duplicated beyond the declared overlap: every
+	// chunk is a real substring of the document.
+	for i, c := range chunks {
+		if !strings.Contains(text, c.Text) {
+			t.Fatalf("chunk %d is not a span of the document", i)
+		}
+	}
+}
+
+// The same document must also survive a round trip through the hash, which is
+// what decides whether a re-ingest costs a model call.
+func TestACJKChunkHashesConsistently(t *testing.T) {
+	chunks := ChunkText(strings.Repeat("日本語のテキストです", 400))
+	if len(chunks) == 0 {
+		t.Fatal("no chunks")
+	}
+	again := ChunkText(strings.Repeat("日本語のテキストです", 400))
+	for i := range chunks {
+		if chunks[i].Hash() != again[i].Hash() {
+			t.Fatalf("chunk %d hashed differently across two runs of a pure function", i)
+		}
+	}
 }

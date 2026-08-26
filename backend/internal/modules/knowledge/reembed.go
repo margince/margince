@@ -11,10 +11,12 @@ package knowledge
 // comparing two widths raises an error outright — so the corpus retrieves
 // nothing and reports `not_ready`.
 //
-// Without this sweep that state is permanent. Re-uploading the same file does
-// not fix it: the checksum matches, so nothing re-chunks, and there is no other
-// path that re-embeds. That is a corpus bricked by a configuration change, and
-// the repair is not something a person should have to know to ask for.
+// Without this sweep that state is permanent. Nothing else re-embeds an
+// existing document: an ingest runs once per upload, and a person who
+// re-uploaded the same file to "fix" it would get a SECOND document rather than
+// a repaired one — every passage twice, competing with itself for the eight
+// retrieval slots. So the repair is not something a person should have to know
+// to ask for, and it is not something they could ask for correctly if they did.
 
 import (
 	"context"
@@ -46,6 +48,19 @@ func (s *Store) SweepCorpusDrift(ctx context.Context, e vectorkit.Embedder) (int
 		// have drifted from — and re-embedding into no space at all is not a
 		// repair.
 		return 0, nil
+	}
+	// Lowered FIRST, on every corpus with nothing stale left. The flag is
+	// raised per document and lowered on the way out, but a pass that DIED
+	// between the last document's vectors committing and its own flag-lowering
+	// leaves it raised — and the next pass then finds nothing stale, so nothing
+	// would ever lower it. The corpus would report not_ready forever while
+	// holding a complete, current index.
+	//
+	// So the flag is not something a sweep must remember to clean up: it is
+	// derived here from what the corpus actually holds, which makes a crashed
+	// pass self-healing rather than a wedge.
+	if err := s.clearSettledReindexing(ctx, identity); err != nil {
+		return 0, err
 	}
 	documents, err := s.documentsUnderAStaleBinding(ctx, identity)
 	if err != nil {
@@ -144,4 +159,99 @@ func (s *Store) setReindexing(ctx context.Context, corpusID ids.UUID, on bool) e
 		}
 		return nil
 	})
+}
+
+// clearSettledReindexing lowers the flag on every corpus that has no passage
+// left under a superseded binding.
+//
+// Written as ONE statement over the whole workspace rather than per corpus,
+// because the question it answers is per corpus and the answer is derivable:
+// a corpus marked reindexing with nothing stale in it is finished, whatever
+// the pass that marked it went on to do.
+func (s *Store) clearSettledReindexing(ctx context.Context, identity string) error {
+	return s.tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`UPDATE knowledge_corpus k SET reindexing = false
+			  WHERE k.reindexing
+			    AND k.archived_at IS NULL
+			    AND NOT EXISTS (
+			      SELECT 1 FROM knowledge_chunk c
+			       JOIN knowledge_document d ON d.id = c.document_id
+			      WHERE c.corpus_id = k.id
+			        AND c.archived_at IS NULL
+			        AND d.archived_at IS NULL
+			        AND d.ingest_status = 'done'
+			        AND c.embed_identity IS DISTINCT FROM $1)`, identity); err != nil {
+			return fmt.Errorf("lower the reindexing flag on the settled corpora: %w", err)
+		}
+		return nil
+	})
+}
+
+// abandonedAfter is how long a document may sit `running` before the sweep
+// gives up on it.
+//
+// It is the ingest job's own wall clock (15m, api/jobs.yaml) plus a wide
+// margin, because the two failures it must tell apart are "slow" and "gone". A
+// job still inside its timeout is slow and must be left alone; one whose
+// timeout has passed with the row untouched has no worker behind it — River
+// rescues a job whose worker died, but a process that dies on the LAST attempt
+// leaves nothing to rescue and no attempt to run.
+//
+// Without this the document sits `running` forever, readiness reads it as
+// in-flight, and the WHOLE CORPUS answers not_ready permanently — every other
+// document in it unaskable because one upload's worker was killed. That is a
+// corpus bricked by a machine restart.
+const abandonedAfter = "1 hour"
+
+// SweepAbandonedIngests fails the documents whose ingest stopped without
+// saying so, and reports how many it closed.
+//
+// It rides the drift sweep for the same reason the corpus repair does: the
+// sweep is already periodic and per-workspace, and a second one would be a
+// second answer to "is this corpus in a state it can be asked in".
+//
+// The threshold is compared in SQL against ingest_started_at, so the DATABASE's
+// clock decides and the column says what it needs to know. updated_at would be
+// wrong: the trigger moves it for any write, so a row touched for any other
+// reason would look like a fresh attempt and never be swept.
+//
+// There is no clock to inject and none to get wrong, and a test backdates the
+// column rather than waiting.
+func (s *Store) SweepAbandonedIngests(ctx context.Context) (int, error) {
+	var abandoned []ids.UUID
+	if err := s.tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx,
+			`SELECT id FROM knowledge_document
+			  WHERE ingest_status = 'running'
+			    AND archived_at IS NULL
+			    AND ingest_started_at < now() - $1::interval`, abandonedAfter)
+		if err != nil {
+			return fmt.Errorf("find the abandoned ingests: %w", err)
+		}
+		defer rows.Close()
+		for rows.Next() {
+			var id ids.UUID
+			if err := rows.Scan(&id); err != nil {
+				return err
+			}
+			abandoned = append(abandoned, id)
+		}
+		return rows.Err()
+	}); err != nil {
+		return 0, err
+	}
+	closed := 0
+	for _, id := range abandoned {
+		// Through FailIngest, not a bare UPDATE: the passages a half-finished
+		// attempt wrote have to go, the stored file has to go, and the audit
+		// row is owed. Spelling any of that again here would be a second
+		// writer of the same terminal state.
+		if err := s.FailIngest(ctx, id,
+			"Reading this document stopped without finishing — the machine doing it went away. Delete it and upload it again."); err != nil {
+			return closed, err
+		}
+		closed++
+	}
+	return closed, nil
 }

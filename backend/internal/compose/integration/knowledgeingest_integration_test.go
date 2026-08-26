@@ -391,7 +391,9 @@ func TestADocumentCrossingTheCorpusPassageCeilingIsRefused(t *testing.T) {
 	filler := ie.upload(t, "filler.md", "text/markdown", prose(1))
 	fillToPassageCeiling(t, ie.env, ie.corpus, filler)
 
-	docID := ie.upload(t, "one-more.md", "text/markdown", prose(1))
+	// Distinct bytes from the filler, or the duplicate refusal fires first and
+	// this case would never reach the ceiling it names.
+	docID := ie.upload(t, "one-more.md", "text/markdown", prose(2))
 	_, err := ie.attempt(docID)
 
 	var full *knowledge.CorpusFullError
@@ -426,4 +428,278 @@ func fillToPassageCeiling(t *testing.T, e *Env, corpusID, documentID ids.UUID) {
 		 SELECT $1, $2, g, 'filler ' || g, md5(g::text)
 		 FROM generate_series(1, $3) AS g`,
 		corpusID, documentID, knowledgePassageCeiling)
+}
+
+// A terminally failed ingest takes its stored file with it.
+//
+// No further attempt will read the bytes once the ingest gives up, so leaving
+// them is an unbounded store of files nothing will open. The corpus ceiling
+// bounds PASSAGES, not storage: a document refused by that ceiling would
+// otherwise keep its megabytes forever, once per attempt anyone cares to make.
+func TestATerminallyFailedIngestTakesItsStoredFileWithIt(t *testing.T) {
+	ie := newIngestEnv(t)
+	docID := ie.upload(t, "operating.md", "text/markdown", prose(2))
+	key := wsText(t, ie.env, `SELECT storage_key FROM knowledge_document WHERE id = $1`, docID)
+	if _, _, err := ie.blob.Get(ie.ctx, key); err != nil {
+		t.Fatalf("the upload stored nothing, so this proves nothing: %v", err)
+	}
+
+	if err := ie.store.FailIngest(ie.ctx, docID, "the stored file could not be read"); err != nil {
+		t.Fatalf("fail: %v", err)
+	}
+	if _, _, err := ie.blob.Get(ie.ctx, key); !errors.Is(err, blobstore.ErrNotFound) {
+		t.Fatalf("a failed ingest left its stored file behind: %v", err)
+	}
+	// The ROW stays, with its reason: that is what the uploader reads, and it
+	// is the bytes rather than the record that have no further use.
+	docs, err := ie.store.ListDocuments(ie.ctx, ie.corpus)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(docs) != 1 || docs[0].IngestStatus != "failed" {
+		t.Fatalf("the failed document is not listed with its reason: %+v", docs)
+	}
+}
+
+// Two attempts at one document cannot both write its passages.
+//
+// River dedupes a QUEUED ingest by args, but a worker declared dead while it is
+// still running has its row rescued and re-run, so the overlap is reachable.
+// Without a guard both attempts delete the previous chunks and insert their
+// own: the corpus holds every passage twice, cites duplicates, reports a
+// chunk_count half of what it holds, and passes the per-corpus ceiling while
+// over it.
+func TestTwoAttemptsAtOneDocumentCannotBothWriteItsPassages(t *testing.T) {
+	ie := newIngestEnv(t)
+	docID := ie.upload(t, "operating.md", "text/markdown", prose(3))
+
+	// Both attempts read the document before either writes — the interleaving a
+	// rescued worker produces.
+	first, err := ie.store.BeginIngest(ie.ctx, docID)
+	if err != nil {
+		t.Fatalf("first begin: %v", err)
+	}
+	second, err := ie.store.BeginIngest(ie.ctx, docID)
+	if err != nil {
+		t.Fatalf("second begin: %v", err)
+	}
+	chunks := knowledge.ChunkText(prose(3))
+	if err := ie.store.WriteChunks(ie.ctx, docID, first.CorpusID, chunks); err != nil {
+		t.Fatalf("first write: %v", err)
+	}
+	// The second attempt is REFUSED rather than doubling the corpus. Which
+	// error it is does not matter — what matters is that it does not succeed.
+	if err := ie.store.WriteChunks(ie.ctx, docID, second.CorpusID, chunks); err == nil {
+		t.Fatal("a second attempt wrote the same passages again")
+	}
+	if live := liveChunkCount(t, ie.env, ie.corpus); live != len(chunks) {
+		t.Fatalf("the corpus holds %d passages, want the %d one attempt wrote", live, len(chunks))
+	}
+}
+
+// The same bytes twice is refused, naming what already holds them.
+//
+// Re-uploading a file is the most natural repair gesture there is. Accepting it
+// would file a SECOND document holding the same passages: they would compete
+// for the eight retrieval slots, an answer could cite one sentence twice from
+// two apparently different documents, and both copies would count against the
+// corpus ceiling.
+func TestUploadingTheSameBytesTwiceIsRefusedNamingWhatHoldsThem(t *testing.T) {
+	ie := newIngestEnv(t)
+	ie.upload(t, "operating.md", "text/markdown", prose(2))
+
+	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
+		CorpusID:    ie.corpus,
+		Filename:    "operating-copy.md",
+		ContentType: "text/markdown",
+		Content:     strings.NewReader(prose(2)),
+	}, ie.queue)
+
+	var filed *knowledge.AlreadyFiledError
+	if !errors.As(err, &filed) {
+		t.Fatalf("re-upload = %v, want AlreadyFiledError", err)
+	}
+	// It names the document, because "you already uploaded it, it is called X"
+	// is the answer the uploader wants.
+	if filed.Filename != "operating.md" {
+		t.Fatalf("the refusal names %q, want the document that holds the bytes", filed.Filename)
+	}
+	if n := liveDocumentCount(t, ie.env, ie.corpus); n != 1 {
+		t.Fatalf("the corpus holds %d documents after a refused duplicate", n)
+	}
+}
+
+// A DIFFERENT file with the same name is not a duplicate: the bytes decide, not
+// the filename.
+func TestADifferentFileWithTheSameNameIsNotADuplicate(t *testing.T) {
+	ie := newIngestEnv(t)
+	ie.upload(t, "operating.md", "text/markdown", prose(2))
+	ie.upload(t, "operating.md", "text/markdown", prose(3))
+
+	if n := liveDocumentCount(t, ie.env, ie.corpus); n != 2 {
+		t.Fatalf("the corpus holds %d documents, want both files", n)
+	}
+}
+
+// The ceiling is a statement about the CORPUS, so it must hold across two
+// documents ingesting at once — not only across two attempts at one.
+func TestTheCeilingHoldsAcrossTwoDocumentsInOneCorpus(t *testing.T) {
+	ie := newIngestEnv(t)
+	filler := ie.upload(t, "filler.md", "text/markdown", prose(1))
+	// Room for one of the two documents and not both, so the ceiling is what
+	// decides rather than either document's own size.
+	fillToPassageCeilingLess(t, ie.env, ie.corpus, filler, len(knowledge.ChunkText(prose(2)))+1)
+
+	// Distinct bytes, or the duplicate refusal fires before the ceiling does.
+	first := ie.upload(t, "a.md", "text/markdown", prose(2))
+	second := ie.upload(t, "b.md", "text/markdown", prose(3))
+	firstSrc, err := ie.store.BeginIngest(ie.ctx, first)
+	if err != nil {
+		t.Fatalf("begin first: %v", err)
+	}
+	secondSrc, err := ie.store.BeginIngest(ie.ctx, second)
+	if err != nil {
+		t.Fatalf("begin second: %v", err)
+	}
+	if err := ie.store.WriteChunks(ie.ctx, first, firstSrc.CorpusID, knowledge.ChunkText(prose(2))); err != nil {
+		t.Fatalf("first write: %v", err)
+	}
+	// The second is refused: the corpus is full, whichever document is asking.
+	var full *knowledge.CorpusFullError
+	if err := ie.store.WriteChunks(ie.ctx, second, secondSrc.CorpusID, knowledge.ChunkText(prose(3))); !errors.As(err, &full) {
+		t.Fatalf("second write = %v, want CorpusFullError", err)
+	}
+	if live := liveChunkCount(t, ie.env, ie.corpus); live > knowledgePassageCeiling {
+		t.Fatalf("the corpus holds %d passages, past its %d ceiling", live, knowledgePassageCeiling)
+	}
+}
+
+func fillToPassageCeilingLess(t *testing.T, e *Env, corpusID, documentID ids.UUID, short int) {
+	t.Helper()
+	e.WsExec(t,
+		`INSERT INTO knowledge_chunk (corpus_id, document_id, chunk_ix, text, chunk_hash)
+		 SELECT $1, $2, g, 'filler ' || g, md5(g::text)
+		 FROM generate_series(1, $3) AS g`,
+		corpusID, documentID, knowledgePassageCeiling-short)
+}
+
+// A document whose ingest stopped without saying so is closed by the sweep.
+//
+// River rescues a job whose worker died, but a process that dies on the LAST
+// attempt leaves nothing to rescue and no attempt to run. The document then
+// sits `running` forever, readiness reads it as in-flight, and the WHOLE corpus
+// answers not_ready permanently — every other document in it unaskable because
+// one upload's worker was killed.
+func TestAnIngestThatStoppedWithoutFinishingIsClosedBytheSweep(t *testing.T) {
+	ie := newIngestEnv(t)
+	docID := ie.upload(t, "operating.md", "text/markdown", prose(2))
+	if _, err := ie.store.BeginIngest(ie.ctx, docID); err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+	// Backdated rather than waited for: the threshold is compared against the
+	// database's clock, so a test moves the row rather than the clock. It moves
+	// ingest_started_at and NOT updated_at — the trigger owns updated_at and
+	// would overwrite a backdate with now() on the very statement that set it.
+	ie.env.WsExec(t,
+		`UPDATE knowledge_document SET ingest_started_at = now() - interval '3 hours' WHERE id = $1`, docID)
+
+	closed, err := ie.store.SweepAbandonedIngests(ie.ctx)
+	if err != nil {
+		t.Fatalf("sweep: %v", err)
+	}
+	if closed != 1 {
+		t.Fatalf("the sweep closed %d ingests, want 1", closed)
+	}
+	docs, err := ie.store.ListDocuments(ie.ctx, ie.corpus)
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if docs[0].IngestStatus != "failed" {
+		t.Fatalf("the abandoned document is %q, want failed", docs[0].IngestStatus)
+	}
+	// With a reason the uploader can act on, rather than a bare state.
+	if docs[0].IngestDetail == nil || !strings.Contains(*docs[0].IngestDetail, "upload it again") {
+		t.Fatalf("the abandoned document's reason is %v", docs[0].IngestDetail)
+	}
+}
+
+// A document still INSIDE its wall clock is slow, not gone, and the sweep must
+// leave it alone. Closing it would fail an ingest that is about to succeed.
+func TestASweepLeavesAnIngestThatIsMerelySlowAlone(t *testing.T) {
+	ie := newIngestEnv(t)
+	docID := ie.upload(t, "operating.md", "text/markdown", prose(2))
+	if _, err := ie.store.BeginIngest(ie.ctx, docID); err != nil {
+		t.Fatalf("begin: %v", err)
+	}
+
+	closed, err := ie.store.SweepAbandonedIngests(ie.ctx)
+	if err != nil {
+		t.Fatalf("sweep: %v", err)
+	}
+	if closed != 0 {
+		t.Fatalf("the sweep closed %d ingests that had only just started", closed)
+	}
+}
+
+// A client that sent no type at all is read by its filename.
+//
+// A platform with no registry entry for `.md` makes the browser report an EMPTY
+// content type, and this route's flagship file would otherwise be refused with
+// "` ` cannot be read as text" — a refusal naming nothing, for exactly the file
+// the route wants. A curl caller omitting the part header hits the same wall.
+func TestAnUploadWithNoContentTypeIsReadByItsFilename(t *testing.T) {
+	ie := newIngestEnv(t)
+	for _, c := range []struct{ filename, want string }{
+		{"handbook.md", "text/markdown"},
+		{"notes.txt", "text/plain"},
+		{"rows.csv", "text/csv"},
+		{"config.json", "application/json"},
+	} {
+		doc, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
+			CorpusID:    ie.corpus,
+			Filename:    c.filename,
+			ContentType: "",
+			Content:     strings.NewReader(prose(1) + c.filename),
+		}, ie.queue)
+		if err != nil {
+			t.Fatalf("upload %s with no content type: %v", c.filename, err)
+		}
+		if doc.ContentType != c.want {
+			t.Fatalf("%s was filed as %q, want %q", c.filename, doc.ContentType, c.want)
+		}
+	}
+}
+
+// A STATED type stands, wrong extension or not: it is the client's claim, and
+// a filename is only a name.
+func TestAStatedContentTypeIsNotOverriddenByTheExtension(t *testing.T) {
+	ie := newIngestEnv(t)
+	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
+		CorpusID:    ie.corpus,
+		Filename:    "handbook.md",
+		ContentType: "application/pdf",
+		Content:     strings.NewReader("%PDF-1.7"),
+	}, ie.queue)
+
+	var unsupported *knowledge.UnsupportedTypeError
+	if !errors.As(err, &unsupported) {
+		t.Fatalf("a PDF named .md = %v, want UnsupportedTypeError", err)
+	}
+}
+
+// And an extension this route does not read is still refused, so the fallback
+// widens nothing.
+func TestAnUploadWithNoContentTypeAndAnUnreadableExtensionIsRefused(t *testing.T) {
+	ie := newIngestEnv(t)
+	_, err := ie.store.UploadDocument(ie.ctx, knowledge.NewDocument{
+		CorpusID:    ie.corpus,
+		Filename:    "handbook.docx",
+		ContentType: "",
+		Content:     strings.NewReader("PK\x03\x04"),
+	}, ie.queue)
+
+	var unsupported *knowledge.UnsupportedTypeError
+	if !errors.As(err, &unsupported) {
+		t.Fatalf("a .docx with no stated type = %v, want UnsupportedTypeError", err)
+	}
 }

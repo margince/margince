@@ -206,6 +206,11 @@ func writeKnowledgeErr(w http.ResponseWriter, r *http.Request, err error) {
 		})
 		return
 	}
+	var filed *AlreadyFiledError
+	if errors.As(err, &filed) {
+		httperr.Write(w, r, httperr.Validation("file", "already_filed", filed.Error()))
+		return
+	}
 	var full *CorpusFullError
 	if errors.As(err, &full) {
 		httperr.Write(w, r, httperr.Validation("file", "corpus_full", full.Error()))

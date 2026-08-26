@@ -4731,8 +4731,6 @@ export const vi = {
     "{documents} tài liệu · {embedded} trên {total} đoạn có thể tìm kiếm",
   "knowledge.reindexing":
     "Bộ này đang được đọc lại sau khi cách lập chỉ mục văn bản thay đổi. Câu hỏi sẽ báo chưa sẵn sàng cho đến khi xong; không mất gì cả.",
-  "knowledge.tuningStale":
-    "Ngưỡng của bộ này được chỉnh theo một chỉ mục văn bản khác. Con số này là tàn dư chứ không phải một thiết lập — nên xem lại.",
   "knowledge.showDocuments": "Hiện tài liệu",
   "knowledge.hideDocuments": "Ẩn tài liệu",
   "knowledge.documents": "Tài liệu",

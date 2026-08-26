@@ -4819,8 +4819,6 @@ export const en = {
     "{documents} documents · {embedded} of {total} passages searchable",
   "knowledge.reindexing":
     "This set is being re-read after a change to how text is indexed. Asking it will say it is not ready until that finishes; nothing has been lost.",
-  "knowledge.tuningStale":
-    "The grounding threshold for this set was tuned against a different text index. The number is a leftover rather than a setting — worth revisiting.",
   "knowledge.showDocuments": "Show documents",
   "knowledge.hideDocuments": "Hide documents",
   "knowledge.documents": "Documents",

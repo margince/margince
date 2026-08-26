@@ -142,10 +142,20 @@ func (s *Store) embedBatch(ctx context.Context, batch []pendingChunk, e vectorki
 // retrievable by the ask's identity filter and unrankable when it got there,
 // which is worse than an unembedded row and is what the pairing CHECK refuses.
 //
-// The hash is re-asserted in the WHERE clause: a re-ingest that rewrote this
-// passage while the model call was in flight has already replaced the row's
-// text, and stamping this vector onto it would claim a vector of prose that is
-// no longer there.
+// The write is a CAS on BOTH halves of what was read, and both are needed.
+//
+// The HASH: a re-ingest that rewrote this passage while the model call was in
+// flight has already replaced the row's text, and stamping this vector onto it
+// would claim a vector of prose that is no longer there.
+//
+// The IDENTITY: two passes can overlap under different bindings — a drift
+// sweep repairing a corpus while an ingest embeds a new document, say — and the
+// one that started EARLIER can finish later. Without this half it would
+// overwrite the newer binding's vector with an older one, and the corpus that
+// had just become answerable would report not_ready again, because the ask
+// counts and retrieves only at the live identity. A row whose identity has
+// moved since it was read is a row this pass no longer has anything to say
+// about.
 func (s *Store) storeVectors(ctx context.Context, batch []pendingChunk, vectors [][]float32, identity string) (int, error) {
 	stored := 0
 	err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -157,16 +167,18 @@ func (s *Store) storeVectors(ctx context.Context, batch []pendingChunk, vectors 
 			tag, err := tx.Exec(ctx,
 				`UPDATE knowledge_chunk
 				 SET embedding = $2::vector, embed_identity = $3, embedded_at = now()
-				 WHERE id = $1 AND chunk_hash = $4 AND archived_at IS NULL`,
-				c.id, vectorkit.Literal(vectors[i]), identity, c.hash)
+				 WHERE id = $1 AND chunk_hash = $4 AND archived_at IS NULL
+				   AND embed_identity IS NOT DISTINCT FROM $5`,
+				c.id, vectorkit.Literal(vectors[i]), identity, c.hash, storedIdentityArg(c))
 			if err != nil {
 				return fmt.Errorf("store the passage's vector: %w", err)
 			}
-			// Zero rows is not an error: the passage was archived or replaced
-			// by a re-ingest while the model call was in flight, and there is
-			// nothing left to stamp. It is not counted either — reporting a
-			// vector that was not written is how a corpus reads as embedded
-			// while answering nothing.
+			// Zero rows is not an error: the passage was archived, replaced by
+			// a re-ingest, or already re-stamped by a newer binding while the
+			// model call was in flight, and there is nothing left for this pass
+			// to say. It is not counted either — reporting a vector that was
+			// not written is how a corpus reads as embedded while answering
+			// nothing.
 			stored += int(tag.RowsAffected())
 		}
 		return nil
@@ -174,16 +186,12 @@ func (s *Store) storeVectors(ctx context.Context, batch []pendingChunk, vectors 
 	return stored, err
 }
 
-// MarkTuningIdentity records the binding a corpus's grounding floor was tuned
-// against, so a later binding swap can say the number is a leftover rather than
-// a threshold.
-func (s *Store) MarkTuningIdentity(ctx context.Context, corpusID ids.UUID, identity string) error {
-	return s.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx,
-			`UPDATE knowledge_corpus SET tuned_under_identity = $2 WHERE id = $1 AND archived_at IS NULL`,
-			corpusID, identity); err != nil {
-			return fmt.Errorf("stamp the corpus's tuning identity: %w", err)
-		}
+// storedIdentityArg renders the identity a pending chunk was READ with, for the
+// CAS above: SQL NULL for a row that carried none, so `IS NOT DISTINCT FROM`
+// matches an unembedded row rather than failing the way `=` would against NULL.
+func storedIdentityArg(c pendingChunk) *string {
+	if c.storedIdentity == "" {
 		return nil
-	})
+	}
+	return &c.storedIdentity
 }
