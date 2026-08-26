@@ -109,24 +109,31 @@ func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
 // attentionMeetings reads today's remaining meetings through the activities
 // store — the same gated list every other activity surface reads.
 //
-// SCAN AND FILTER, like the task lane above and for the same reason: the store
-// cannot express "kind=meeting between two instants", so this reads wider and
-// narrows here. The same scan factor applies, because a day with a pile of
-// finished meetings would otherwise push the one still ahead off the page.
+// The WINDOW is applied in SQL, not here. An earlier cut read ten times the
+// lane and narrowed the time range in Go, which is lossy in the one direction
+// that hides itself: a day with more than the scan's worth of later activity
+// pushes a real meeting off the page, and the lane draws a free afternoon over
+// a booked one. ListActivitiesInput carries OccurredAfter/OccurredBefore and
+// the store applies both as predicates, so the bound is the day rather than a
+// guess about how busy the day might be.
+//
+// The STATUS filter stays in Go: the store has no dial for it, and the set it
+// removes is bounded by the window the database already applied.
 type attentionMeetings struct{ store *activities.Store }
 
 func (m attentionMeetings) Today(
 	ctx context.Context, from, until time.Time, limit int,
 ) ([]attention.Meeting, error) {
 	kind := string(crmcontracts.ActivityKindMeeting)
-	scan := limit * taskScanFactor
-	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{Kind: &kind, Limit: &scan})
+	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{
+		Kind: &kind, OccurredAfter: &from, OccurredBefore: &until, Limit: &limit,
+	})
 	if err != nil {
 		return nil, err
 	}
 	ahead := make([]attention.Meeting, 0, len(rows))
 	for _, row := range rows {
-		if !meetingStillWorthPreparing(row, from, until) {
+		if !meetingStillWorthPreparing(row) {
 			continue
 		}
 		ahead = append(ahead, attention.Meeting{
@@ -136,24 +143,18 @@ func (m attentionMeetings) Today(
 	// Soonest first: the lane is a countdown, and the store returns activities
 	// newest-first, which is the opposite order for a day still ahead.
 	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
-	if len(ahead) > limit {
-		ahead = ahead[:limit]
-	}
 	return ahead, nil
 }
 
 // meetingStillWorthPreparing keeps the meetings a rep can still do something
-// about: booked (not held, not cancelled, not a no-show) and starting between
-// now and the end of the day.
+// about: booked, rather than held, cancelled or a no-show. The time window is
+// the database's to apply.
 //
 // A meeting with no status is treated as booked. Capture writes calendar events
 // without one, and dropping them would empty this lane on exactly the
 // installations whose calendars are connected.
-func meetingStillWorthPreparing(row crmcontracts.Activity, from, until time.Time) bool {
-	if row.MeetingStatus != nil && *row.MeetingStatus != crmcontracts.ActivityMeetingStatusBooked {
-		return false
-	}
-	return !row.OccurredAt.Before(from) && row.OccurredAt.Before(until)
+func meetingStillWorthPreparing(row crmcontracts.Activity) bool {
+	return row.MeetingStatus == nil || *row.MeetingStatus == crmcontracts.ActivityMeetingStatusBooked
 }
 
 // subjectOfMeeting is the line a meeting shows. Unlike a task, a meeting may

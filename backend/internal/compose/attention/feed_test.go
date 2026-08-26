@@ -547,6 +547,9 @@ func TestABriefingItemOffersItsOwnThreeVerbs(t *testing.T) {
 type stubCommitments struct {
 	rows []Commitment
 	err  error
+	// calls counts the reads, so a lane assembled twice is caught here rather
+	// than by a reader noticing their withheld lane named twice.
+	calls int
 	// by records the instant the lane asked for, so a test can prove the
 	// window rather than assume it.
 	by *time.Time
@@ -554,6 +557,7 @@ type stubCommitments struct {
 
 func (s *stubCommitments) DueBy(_ context.Context, by time.Time, _ int) ([]Commitment, error) {
 	s.by = &by
+	s.calls++
 	return s.rows, s.err
 }
 
@@ -849,8 +853,9 @@ func stringOr(v *string) string {
 }
 
 type stubMeetings struct {
-	rows []Meeting
-	err  error
+	rows  []Meeting
+	err   error
+	calls int
 	// from records the window's start, so a test can prove the lane asks from
 	// NOW rather than from the start of the day.
 	from *time.Time
@@ -858,6 +863,7 @@ type stubMeetings struct {
 
 func (s *stubMeetings) Today(_ context.Context, from, _ time.Time, _ int) ([]Meeting, error) {
 	s.from = &from
+	s.calls++
 	return s.rows, s.err
 }
 
@@ -935,5 +941,53 @@ func TestAWithheldMeetingLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	}
 	if !named {
 		t.Errorf("lanes_omitted = %v, want it to name meetings", *out.LanesOmitted)
+	}
+}
+
+// Each lane is read ONCE per feed. A lane assembled twice costs a second
+// database round trip on every load of the page, and a refusal from the second
+// read names the withheld lane twice — which is how the duplicate announces
+// itself to a reader rather than to a test.
+//
+// It is asserted per lane rather than in one place because the lanes are wired
+// separately: adding a fourth by copying a third is exactly the slip that
+// leaves an old block behind.
+func TestEveryLaneIsReadOncePerFeed(t *testing.T) {
+	commitments := &stubCommitments{rows: []Commitment{promise("a promise", readInstant)}}
+	meetings := &stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
+		commitments, stubAtRisk{}, meetings, fixedClock,
+	)
+	if _, err := svc.Assemble(context.Background()); err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if commitments.calls != 1 {
+		t.Errorf("the commitments lane was read %d times, want once", commitments.calls)
+	}
+	if meetings.calls != 1 {
+		t.Errorf("the meetings lane was read %d times, want once", meetings.calls)
+	}
+}
+
+// A withheld lane is named ONCE. Naming it twice is what a duplicate read looks
+// like on the wire, and a client rendering the list would say it twice.
+func TestAWithheldLaneIsNamedOnce(t *testing.T) {
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
+		&stubCommitments{err: apperrors.ErrPermissionDenied}, stubAtRisk{}, nil, fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	var named int
+	for _, lane := range *out.LanesOmitted {
+		if lane == "commitments" {
+			named++
+		}
+	}
+	if named != 1 {
+		t.Errorf("commitments named %d times in lanes_omitted, want once", named)
 	}
 }

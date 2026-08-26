@@ -270,8 +270,10 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 // both is reported as overdue, because a date the customer agreed to outranks
 // a silence nobody agreed to.
 //
-// Its only verb is `open`. What to DO about a quiet deal is a judgement, and a
-// queue that offered to answer it here would be deciding rather than warning.
+// It offers NO verb. What to do about a quiet deal is a judgement, and a queue
+// that answered it here would be deciding rather than warning. `open` is not
+// sent either: this surface wires no navigation, and an action a card cannot
+// perform is a promise to a client that nothing keeps.
 func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 	name := deal.Name
 	ground := "quiet"
@@ -285,7 +287,7 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 		Title:   &name,
 		Subject: subjectOf("deal", deal.DealID),
 		Overdue: &deal.CloseOverdue,
-		Actions: []crmcontracts.AttentionItemActions{"open"},
+		Actions: []crmcontracts.AttentionItemActions{},
 	}
 	// The idle count rides as the detail's own number, so the card can say the
 	// window the server actually applied instead of implying one.
@@ -308,9 +310,11 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 // meeting that has not started cannot be late, and the lane only carries the
 // ones still ahead.
 //
-// Its only verb is `open`. The pre-meeting brief is its own surface with its
-// own eight cited sections, and a queue that tried to summarise it here would
-// be a second answer to "prepare me for this".
+// It offers NO verb. The pre-meeting brief is its own surface with its own eight
+// cited sections, and a queue that tried to summarise it here would be a second
+// answer to "prepare me for this". `open` is not sent because this surface
+// wires no navigation, and an advertised action nothing performs is worse than
+// none: a client is entitled to render a control for what the server offers.
 func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 	subject := meeting.Subject
 	starts := meeting.StartsAt
@@ -320,7 +324,7 @@ func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
 		Title:   &subject,
 		Subject: subjectOf("activity", meeting.ID),
 		DueAt:   &starts,
-		Actions: []crmcontracts.AttentionItemActions{"open"},
+		Actions: []crmcontracts.AttentionItemActions{},
 	}
 }
 

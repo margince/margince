@@ -5,12 +5,10 @@ package attention
 
 import (
 	"context"
-	"errors"
 	"sort"
 	"time"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -303,25 +301,6 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	})
 	if err != nil {
 		return crmcontracts.Attention{}, err
-	}
-
-	// Absent, not empty, when no reader is bound: see the Commitments doc.
-	if s.commitments != nil {
-		commitments, err := s.commitments.DueBy(ctx, endOfDay(asOf), plannedCap)
-		switch {
-		case errors.Is(err, apperrors.ErrPermissionDenied):
-			omitted = append(omitted, crmcontracts.AttentionLanesOmitted("commitments"))
-		case err != nil:
-			return crmcontracts.Attention{}, err
-		default:
-			items := make([]crmcontracts.AttentionItem, 0, len(commitments))
-			for _, promise := range commitments {
-				items = append(items, commitmentItem(promise, asOf))
-			}
-			out.Commitments = &items
-			count := len(items)
-			out.Counts.Commitments = &count
-		}
 	}
 
 	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
