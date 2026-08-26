@@ -58,6 +58,11 @@ var whereClause = regexp.MustCompile(`(?is)\bWHERE\b(.*)$`)
 // byIDUpdateFloor is the smallest number of by-id-updating functions this
 // census may find and still be believed. Set well below the real count, because
 // its job is to catch a reader that has gone quiet, not to track the tree.
+//
+// It is the coarser of the two under-recognition alarms and covers the UNWAIVED
+// remainder. The sharper one is unguardedByIDUpdates.AssertAllMatched: a waived
+// function the reader stops seeing is named outright, because its ratification
+// then matches nothing.
 const byIDUpdateFloor = 90
 
 var (
@@ -205,7 +210,13 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// because the shape recurs wherever a statement table is handed to an
 	// executor by value instead of by name, and a reader taught to excuse it
 	// would excuse the writers that DO need judging along with it.
-	"internal/modules/people:writeCompanyFields": "attributed by NAME rather than by execution: it iterates companyFields and hands each statement to setCompanyColumn, which answers on RowsAffected — the CAS this gate asks for, one frame down and out of a function-scoped witness's reach. The write is not read-modify-write besides: the form sends absolute values a human typed, every statement carries IS DISTINCT FROM so an unchanged resubmission touches no row, and SaveCompany serializes concurrent form saves on the workspace row (lockCompanyState). That lock is deliberately not credited above — it names workspace, not organization, and the narrowed witness declining it is the narrowing working",
+	//
+	// The lock this names is the ORGANIZATION row's, not the workspace row's.
+	// SaveCompany also takes lockCompanyState — `SELECT id FROM workspace … FOR
+	// UPDATE` — and that one is deliberately not what ratifies this: it names a
+	// different table from the one being written, which is exactly the free
+	// credit the table-scoped witness was narrowed to stop giving.
+	"internal/modules/people:writeCompanyFields": "runs under the row lock its callers hold on the organization being written. Both — SaveCompany and applySiteReadConfirmation — reach it through resolveOrCreateAnchor, whose anchorOrganization(ctx, tx, true) is `SELECT id FROM organization WHERE is_anchor AND archived_at IS NULL FOR UPDATE`, held for the rest of the transaction, so two company saves serialize on the row rather than racing on it. The census cannot see that lock for two reasons at once: it is taken two frames up, and anchorOrganization assembles the statement with `query += \" FOR UPDATE\"`, which no reading here folds. This function is attributed a statement by NAME rather than by execution besides — it iterates companyFields and hands each one to setCompanyColumn",
 })
 
 // guardMarkers are the identifiers whose presence in the same function
@@ -224,6 +235,13 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 // it would therefore mean 28 ratified waivers, which is a bigger change than
 // this witness is worth on its own; it is recorded here so the next reader knows
 // the looseness is a decision with a number behind it.
+//
+// That 28 was counted against a reader that saw only the literals typed in a
+// body, so read it as a floor rather than as the figure. A marker now absolves
+// every statement the function NAMES as well — one RowsAffected on an unrelated
+// write credits a whole hoisted statement table the same function indexes. The
+// looseness therefore grew with the reach, and narrowing it is its own change
+// rather than a line to slip into this one.
 var guardMarkers = map[string]bool{
 	"ApplyWithVersion": true,
 	"ApplyGuarded":     true,
@@ -325,8 +343,8 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 //
 // Held by: TestTheGuardCensusJudgesEveryStatementAFunctionAnswersFor
 // (backend/updateguardcases_test.go)
-func statementsJudged(fn *ast.FuncDecl, held map[string][]string) []string {
-	walker := &lexicalStatements{held: held}
+func statementsJudged(fn *ast.FuncDecl, held map[string][]string, imported []map[string][]string) []string {
+	walker := &lexicalStatements{held: held, imported: imported, locals: map[string]string{}}
 	walker.open()
 	walker.declareFields(fn.Type.Params, fn.Type.Results)
 	if fn.Recv != nil {
@@ -347,9 +365,49 @@ func statementsJudged(fn *ast.FuncDecl, held map[string][]string) []string {
 // it, and the whole point here is that a statement nobody judges produces no
 // finding — only a smaller silence. So scope is tracked rather than approximated.
 type lexicalStatements struct {
-	held   map[string][]string
-	scopes []map[string]bool
+	held map[string][]string
+	// imported is what the in-module packages this file imports hold, one map
+	// each. A qualified name is looked up in ALL of them rather than in the one
+	// its base resolves to: a package's declared name need not match its
+	// directory, and getting that mapping subtly wrong would drop the statement
+	// silently, where looking too widely at worst raises a finding somebody
+	// answers.
+	imported []map[string][]string
+	scopes   []map[string]bool
+	// locals is what a string-valued local has been built up to so far, so an
+	// `x := "…"` / `x += "…"` pair is read as the one statement it becomes.
+	// Keyed by name across scopes on purpose: reconstructing more statements
+	// than a function really sends over-reports, and over-reporting is the
+	// direction that produces a finding somebody can answer.
+	locals map[string]string
 	out    []string
+}
+
+// foldAppend records what `target += addition` builds the target up to, and
+// reads the accumulated whole. The parts are read separately anyway; this is
+// the reading that carries a SET and its WHERE together.
+func (l *lexicalStatements) foldAppend(target, addition ast.Expr) {
+	name, named := target.(*ast.Ident)
+	if !named {
+		return
+	}
+	added, readable := concatenatedString(addition)
+	if !readable {
+		return
+	}
+	l.locals[name.Name] += added
+	l.out = append(l.out, l.locals[name.Name])
+}
+
+// seedLocal starts that accumulation from a declaration's own value.
+func (l *lexicalStatements) seedLocal(target, value ast.Expr) {
+	name, named := target.(*ast.Ident)
+	if !named {
+		return
+	}
+	if seed, readable := concatenatedString(value); readable {
+		l.locals[name.Name] = seed
+	}
 }
 
 func (l *lexicalStatements) open()  { l.scopes = append(l.scopes, map[string]bool{}) }
@@ -439,8 +497,17 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 	case *ast.BranchStmt:
 		return nil
 	case *ast.SelectorExpr:
-		// `spec.update` names a FIELD, not the package's `update`. The base is
-		// still walked, because that half can be a package value.
+		// `spec.update` names a FIELD, not this package's `update`, so the Sel
+		// is not read as a local name. But `storekit.ProbeRenameOrg` is a
+		// statement held one import away, and dropping the Sel outright left
+		// that silence exactly where this change closed the same one inside a
+		// package. So the Sel is looked up in what the file's in-module imports
+		// hold — a field name matches nothing there, and a qualified statement
+		// matches. The base is walked either way, because that half can be a
+		// package value of this package's own.
+		for _, elsewhere := range l.imported {
+			l.out = append(l.out, elsewhere[n.Sel.Name]...)
+		}
 		ast.Walk(l, n.X)
 		return nil
 	case *ast.KeyValueExpr:
@@ -455,6 +522,13 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 		ast.Walk(l, n.Value)
 		return nil
 	case *ast.AssignStmt:
+		// `statement += " FOR UPDATE"` is the third spelling of the same
+		// assembly, and the one anchorOrganization uses to add the row lock that
+		// guards the company form. Each half is read on its own below; this
+		// folds them so the whole is read too.
+		if n.Tok == token.ADD_ASSIGN && len(n.Lhs) == 1 && len(n.Rhs) == 1 {
+			l.foldAppend(n.Lhs[0], n.Rhs[0])
+		}
 		// The right-hand side is evaluated against the bindings that stand
 		// BEFORE the declaration, so it is walked first and the names are
 		// declared after: `held := held` reads the package's value.
@@ -462,6 +536,11 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 			ast.Walk(l, rhs)
 		}
 		if n.Tok == token.DEFINE {
+			if len(n.Lhs) == len(n.Rhs) {
+				for i, lhs := range n.Lhs {
+					l.seedLocal(lhs, n.Rhs[i])
+				}
+			}
 			for _, lhs := range n.Lhs {
 				l.declare(lhs)
 			}
@@ -474,6 +553,11 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 	case *ast.ValueSpec:
 		for _, value := range n.Values {
 			ast.Walk(l, value)
+		}
+		if len(n.Names) == len(n.Values) {
+			for i, name := range n.Names {
+				l.seedLocal(name, n.Values[i])
+			}
 		}
 		for _, name := range n.Names {
 			l.declare(name)
@@ -508,6 +592,24 @@ func (c scopeCloser) Visit(node ast.Node) ast.Visitor {
 		return nil
 	}
 	return c.walker.Visit(node)
+}
+
+// modulePrefix is the backend module's own import path. An import outside it is
+// a dependency whose statements are not this tree's to judge.
+const modulePrefix = "github.com/gradionhq/margince/backend/"
+
+// inModuleImportDirs are the directories of the backend packages a file imports,
+// which is where a qualified statement name can have been declared.
+func inModuleImportDirs(file *ast.File) []string {
+	var dirs []string
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || !strings.HasPrefix(path, modulePrefix) {
+			continue
+		}
+		dirs = append(dirs, strings.TrimPrefix(path, modulePrefix))
+	}
+	return dirs
 }
 
 // heldStatements are the SQL statements a package holds in its package-level
@@ -567,6 +669,12 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 			if err != nil {
 				return err
 			}
+			// Read once per FILE rather than per function: the imports are the
+			// file's, and heldStatements caches per package anyway.
+			var imported []map[string][]string
+			for _, dir := range inModuleImportDirs(file) {
+				imported = append(imported, heldStatements(t, heldCache, dir))
+			}
 			for _, decl := range file.Decls {
 				fn, ok := decl.(*ast.FuncDecl)
 				if !ok || fn.Body == nil {
@@ -599,7 +707,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 						guarded = true
 					}
 				}
-				for _, lit := range statementsJudged(fn, heldStatements(t, heldCache, filepath.Dir(path))) {
+				for _, lit := range statementsJudged(fn, heldStatements(t, heldCache, filepath.Dir(path)), imported) {
 					readStatement(lit)
 				}
 				ast.Inspect(fn.Body, func(n ast.Node) bool {
@@ -653,7 +761,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 	// they produce a smaller silence, which is what the floor is for. It sits
 	// below the real count so it catches a broken reader rather than a tree
 	// that has changed.
-	if judged < byIDUpdateFloor { 
+	if judged < byIDUpdateFloor {
 		t.Fatalf("this census judged %d function(s) running a by-id UPDATE and expects at least %d — "+
 			"the reader has stopped seeing statements rather than the tree having lost them",
 			judged, byIDUpdateFloor)
