@@ -111,8 +111,8 @@ order. It is **ten items**: Home standing alone, then three labeled groups.
 | Group | Route ids |
 |---|---|
 | *(ungrouped)* | `home` |
-| Records | `contacts`, `companies`, `leads`, `dedupe` |
-| Work | `deals`, `tasks`, `inbox` |
+| Records | `contacts`, `companies`, `leads`, `filters` |
+| Work | `today`, `deals`, `projects` |
 | Intelligence | `reports`, `ai` |
 
 The groups are the **expanded sidebar's** own structure. Collapsed, each group
@@ -123,13 +123,25 @@ additive rather than a replacement. Collapse is a persisted preference
 animates between 250px and 64px on one shared `--shellAnim` (0.36s), and a
 `SETTLE_MS` of 420ms suppresses hover reveal until the width settles.
 
-At **≤700px** the same `<nav>` element becomes a fixed bottom bar. `MOBILE_PRIMARY`
-(`home`, `contacts`, `deals`, `inbox`) rides the bar; everything else lives
-behind **More**, which expands the same element into a sheet. One nav element
-means one navigation landmark and no second item list to keep in sync — and
-because the hidden routes' own rows are `display:none` at this width, **More**
-carries `aria-current="page"` for them, dropping it once the sheet is open so
-two elements never both claim the current page.
+At **≤700px** the same `<nav>` element becomes a fixed bottom bar of five equal
+cells. `MOBILE_PRIMARY` (`home`, `contacts`, `deals`) rides the bar; everything
+else lives behind **More**, which expands the same element into a sheet. One nav
+element means one navigation landmark and no second item list to keep in sync —
+and because the hidden routes' own rows are `display:none` at this width,
+**More** carries `aria-current="page"` for them, dropping it once the sheet is
+open so two elements never both claim the current page.
+
+The **middle** cell is not a destination: it is the agent, which reports rather
+than navigates and belongs to the whole session rather than to any one screen.
+`NavLevelView` takes it as a `centre` slot and renders it into the row stream,
+after the bar row that leaves as many cells to its left as to its right, so the
+bar's tab order is the order a thumb reads it in — a cell placed by a grid
+column alone would be third on screen and last to the keyboard. It rises clear
+of the bar's top edge by `--phoneAgentRise`, which `--phoneNavClearance` adds to
+the bar's own height so a sticky element never lands behind it. Above the
+breakpoint the same block is the sidebar's foot (`.railagent`) instead; it moves
+rather than being drawn twice, because two of them would be two Cores reporting
+one session.
 
 `RAIL_LESS_SCREENS` is the documented layout exception: `onboarding`, `book`,
 `client`, `preferences`, `oauth-consent`. These render full-bleed with their own
