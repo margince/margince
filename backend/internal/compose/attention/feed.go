@@ -275,40 +275,34 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	var omitted []crmcontracts.AttentionLanesOmitted
 
 	morning, err := s.thisMorning(ctx)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		omitted = append(omitted, crmcontracts.AttentionLanesOmitted("this_morning"))
-	case err != nil:
-		return crmcontracts.Attention{}, err
-	default:
+	omitted, err = fill(omitted, "this_morning", err, func() {
 		out.ThisMorning = morning
 		out.Counts.ThisMorning = len(morning)
+	})
+	if err != nil {
+		return crmcontracts.Attention{}, err
 	}
 
 	needsYou, count, err := s.decisions(ctx)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		omitted = append(omitted, crmcontracts.AttentionLanesOmitted("needs_you"))
-	case err != nil:
-		return crmcontracts.Attention{}, err
-	default:
+	omitted, err = fill(omitted, "needs_you", err, func() {
 		out.NeedsYou = needsYou
 		out.Counts.NeedsYou = count.items
 		if count.duplicates > 0 {
 			open := count.duplicates
 			out.Counts.DuplicatesOpen = &open
 		}
+	})
+	if err != nil {
+		return crmcontracts.Attention{}, err
 	}
 
 	planned, err := s.planned(ctx, asOf)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		omitted = append(omitted, crmcontracts.AttentionLanesOmitted("planned"))
-	case err != nil:
-		return crmcontracts.Attention{}, err
-	default:
+	omitted, err = fill(omitted, "planned", err, func() {
 		out.Planned = planned
 		out.Counts.Planned = len(planned)
+	})
+	if err != nil {
+		return crmcontracts.Attention{}, err
 	}
 
 	// Absent, not empty, when no reader is bound: see the Commitments doc.
@@ -330,53 +324,19 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 		}
 	}
 
-	if s.meetings != nil {
-		// From NOW rather than from the start of the day: a meeting that has
-		// already begun cannot be prepared for, and one that ended an hour ago
-		// on a queue headed "still ahead" would be plainly wrong.
-		booked, err := s.meetings.Today(ctx, asOf, endOfDay(asOf), plannedCap)
-		switch {
-		case errors.Is(err, apperrors.ErrPermissionDenied):
-			omitted = append(omitted, crmcontracts.AttentionLanesOmitted("meetings"))
-		case err != nil:
+	// The three OPTIONAL lanes, each bound or absent. optionalLane holds the
+	// shape they share; what differs is the reader and the drawing.
+	for _, lane := range s.optionalLanes(ctx, asOf, &out) {
+		omitted, err = lane.collect(omitted)
+		if err != nil {
 			return crmcontracts.Attention{}, err
-		default:
-			items := make([]crmcontracts.AttentionItem, 0, len(booked))
-			for _, meeting := range booked {
-				items = append(items, meetingItem(meeting))
-			}
-			out.Meetings = &items
-			count := len(items)
-			out.Counts.Meetings = &count
-		}
-	}
-
-	if s.atRisk != nil {
-		risky, err := s.atRisk.Quiet(ctx)
-		switch {
-		case errors.Is(err, apperrors.ErrPermissionDenied):
-			omitted = append(omitted, crmcontracts.AttentionLanesOmitted("at_risk"))
-		case err != nil:
-			return crmcontracts.Attention{}, err
-		default:
-			items := make([]crmcontracts.AttentionItem, 0, len(risky))
-			for _, deal := range risky {
-				items = append(items, riskItem(deal))
-			}
-			out.AtRisk = &items
-			count := len(items)
-			out.Counts.AtRisk = &count
 		}
 	}
 
 	done, err := s.done(ctx, asOf)
-	switch {
-	case errors.Is(err, apperrors.ErrPermissionDenied):
-		omitted = append(omitted, crmcontracts.AttentionLanesOmitted("done_for_you"))
-	case err != nil:
+	omitted, err = fill(omitted, "done_for_you", err, func() { out.DoneForYou = done })
+	if err != nil {
 		return crmcontracts.Attention{}, err
-	default:
-		out.DoneForYou = done
 	}
 
 	if len(omitted) > 0 {
