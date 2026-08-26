@@ -108,7 +108,13 @@ function useDocuments(corpusId: string, enabled: boolean) {
 function useUploadDocument(corpusId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: async (file: File) => {
+    mutationFn: async ({
+      corpusId,
+      file,
+    }: {
+      corpusId: string;
+      file: File;
+    }) => {
       // Sent as multipart by hand rather than through the typed client: the
       // generated client serializes JSON bodies, and this endpoint takes a
       // file part. The linkedin import does the same, for the same reason.
@@ -157,16 +163,24 @@ function useDeleteDocument(corpusId: string) {
 // string TypeScript cannot check against the message catalog, so a state whose
 // copy nobody wrote would render its own key on screen. Spelled out, a missing
 // one is a compile error.
-function ingestLabelKey(status: CorpusDocument["ingest_status"]) {
+type IngestLabelKey =
+  | "knowledge.ingest.queued"
+  | "knowledge.ingest.running"
+  | "knowledge.ingest.failed"
+  | "knowledge.ingest.done";
+
+function ingestLabelKey(
+  status: CorpusDocument["ingest_status"],
+): IngestLabelKey {
   switch (status) {
     case "queued":
-      return "knowledge.ingest.queued" as const;
+      return "knowledge.ingest.queued";
     case "running":
-      return "knowledge.ingest.running" as const;
+      return "knowledge.ingest.running";
     case "failed":
-      return "knowledge.ingest.failed" as const;
+      return "knowledge.ingest.failed";
     default:
-      return "knowledge.ingest.done" as const;
+      return "knowledge.ingest.done";
   }
 }
 
@@ -174,12 +188,14 @@ function ingestLabelKey(status: CorpusDocument["ingest_status"]) {
 // should DO about it. Only `failed` is bad news; `queued` and `running` are the
 // same "wait" in two words, and `done` is the quiet one because a set where
 // everything worked should not be a wall of green pills.
-function ingestTone(status: CorpusDocument["ingest_status"]) {
+function ingestTone(
+  status: CorpusDocument["ingest_status"],
+): "danger" | "success" | undefined {
   if (status === "failed") {
-    return "danger" as const;
+    return "danger";
   }
   if (status === "done") {
-    return "success" as const;
+    return "success";
   }
   // Queued and running are the same "wait" in two words, and neither is news.
   // An undefined tone is the Badge's own quiet ground, which is right: a set
@@ -400,10 +416,46 @@ function DocumentRow({
   );
 }
 
+// One refused file out of several. Named, because "3 of 10 failed" leaves the
+// reader to work out WHICH three by comparing two lists by eye.
+type UploadRefusal = Readonly<{ filename: string; message: string }>;
+
 function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
   const t = useT();
-  const [file, setFile] = useState<File | undefined>(undefined);
+  const { locale } = useLocale();
+  const [files, setFiles] = useState<readonly File[]>([]);
+  const [refusals, setRefusals] = useState<readonly UploadRefusal[]>([]);
+  const [sending, setSending] = useState(false);
   const upload = useUploadDocument(corpusId);
+
+  // Uploaded one at a time, not in parallel. Each file is a separate write
+  // that takes a row lock on the same corpus, and firing ten at once turns a
+  // queue into lock contention for no gain a reader would notice. It also
+  // keeps the refusals in the order the reader dropped them.
+  const send = async () => {
+    setSending(true);
+    setRefusals([]);
+    const refused: UploadRefusal[] = [];
+    const accepted: File[] = [];
+    for (const file of files) {
+      try {
+        await upload.mutateAsync({ corpusId, file });
+        accepted.push(file);
+      } catch (err) {
+        // One bad file does not abandon the rest: a reader who dropped ten
+        // handbook pages and has one duplicate among them wants the nine.
+        refused.push({
+          filename: file.name,
+          message: problemMessageOf(err, t),
+        });
+      }
+    }
+    // Only what was refused stays in the zone, so the button retries exactly
+    // the files that still need it rather than re-sending the whole drop.
+    setFiles(files.filter((one) => !accepted.includes(one)));
+    setRefusals(refused);
+    setSending(false);
+  };
 
   return (
     <div className="form-stack">
@@ -411,24 +463,36 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         label={t("knowledge.upload.label")}
         hint={t("knowledge.upload.hint")}
         emptyLabel={t("knowledge.upload.empty")}
-        file={file}
-        onPick={setFile}
+        multiple
+        files={files}
+        onPick={(picked) =>
+          setFiles((held) =>
+            // A second drop ADDS. Replacing would silently discard the first
+            // drop, and a reader gathering files from two folders has no way
+            // to tell that happened until the counts are wrong.
+            held.some((one) => one.name === picked.name)
+              ? held
+              : [...held, picked],
+          )
+        }
       />
       <div className="form-actions">
-        <Button
-          disabled={!file || upload.isPending}
-          onClick={() => {
-            if (file) {
-              upload.mutate(file, { onSuccess: () => setFile(undefined) });
-            }
-          }}
-        >
-          {t("knowledge.upload.submit")}
+        <Button disabled={files.length === 0 || sending} onClick={send}>
+          {files.length > 1
+            ? t("knowledge.upload.submitMany", {
+                count: formatNumber(files.length, locale),
+              })
+            : t("knowledge.upload.submit")}
         </Button>
       </div>
-      {upload.isError ? (
-        <Callout tone="danger">{problemMessageOf(upload.error, t)}</Callout>
-      ) : null}
+      {refusals.map((refusal) => (
+        <Callout key={refusal.filename} tone="danger">
+          {t("knowledge.upload.refused", {
+            filename: refusal.filename,
+            message: refusal.message,
+          })}
+        </Callout>
+      ))}
     </div>
   );
 }

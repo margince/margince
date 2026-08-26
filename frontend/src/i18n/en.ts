@@ -4840,6 +4840,8 @@ export const en = {
   "knowledge.upload.hint":
     "Plain text, Markdown, CSV or JSON. There is no reader for PDFs or Word files here, and one would be refused rather than filed empty.",
   "knowledge.upload.empty": "Drop a text file here, or choose one",
+  "knowledge.upload.submitMany": "Add {count} documents",
+  "knowledge.upload.refused": "{filename} was not added: {message}",
   "knowledge.upload.submit": "Add document",
   "knowledge.new.title": "New document set",
   "knowledge.new.name": "Name",

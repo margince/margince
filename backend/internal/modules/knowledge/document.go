@@ -11,8 +11,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"slices"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -26,116 +24,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/pkg/extension"
 )
-
-// acceptedContentTypes is the whole list, and it is short for one reason: this
-// product has no document parser. A type is here only when the file's bytes ARE
-// its text, so accepting a PDF would mean ingesting its binary envelope as
-// prose — a corpus that answers nothing while reporting a successful upload.
-//
-// The refusal names this list, because "unsupported" alone leaves the uploader
-// with nothing to do.
-var acceptedContentTypes = []string{
-	"text/plain",
-	"text/markdown",
-	"text/csv",
-	"application/json",
-}
-
-// UnsupportedTypeError is a file whose bytes are not its own text. It carries
-// no field name: the refusal is about the file, and the transport maps it to
-// 415 rather than to a validation error on a form field.
-type UnsupportedTypeError struct {
-	Got string
-}
-
-func (e *UnsupportedTypeError) Error() string {
-	return fmt.Sprintf("%s cannot be read as text; the accepted types are %s",
-		clampEchoedType(e.Got), strings.Join(acceptedContentTypes, ", "))
-}
-
-// maxEchoedType bounds what of the caller's own Content-Type is quoted back.
-// A media type is a short token; anything longer is not one, and echoing an
-// unbounded caller-chosen string into a problem body and the operator log is a
-// gift to whoever sends a megabyte of it.
-const maxEchoedType = 64
-
-func clampEchoedType(got string) string {
-	runes := []rune(got)
-	if len(runes) <= maxEchoedType {
-		return got
-	}
-	return string(runes[:maxEchoedType]) + "…"
-}
-
-// AlreadyFiledError is a file whose bytes are already in this corpus.
-//
-// It names the document that holds them, because the useful answer to "why was
-// my upload refused" is "you already uploaded it, it is called X". The name is
-// empty only when two identical uploads raced and the index refused the second.
-type AlreadyFiledError struct {
-	Filename string
-}
-
-func (e *AlreadyFiledError) Error() string {
-	if e.Filename == "" {
-		// The name is unknown only on the racing path, where the index refused
-		// the second of two simultaneous uploads and the transaction that would
-		// have read it is already aborted.
-		return "these exact bytes are already filed in this set"
-	}
-	return fmt.Sprintf("these exact bytes are already filed in this set as %q", e.Filename)
-}
-
-// ErrBlobstoreUnconfigured is an upload arriving at an installation with no
-// object storage bound. It is the deployment's fault, not the caller's, and
-// answering it as a validation failure would send them off to fix their file.
-var ErrBlobstoreUnconfigured = errors.New("knowledge: object storage is not configured; a document cannot be stored")
-
-// acceptedType decides the media type an upload is filed under.
-//
-// It normalises a browser's Content-Type (which carries parameters —
-// `text/markdown; charset=utf-8`) down to the media type the list names, and
-// falls back to the FILENAME's extension when the client sent none.
-//
-// The fallback is not a nicety. A platform with no registry entry for `.md`
-// makes the browser report an EMPTY type, and this route's flagship file would
-// then be refused with "` ` cannot be read as text" — a refusal naming nothing,
-// for exactly the file the route wants. A curl caller that omits the part
-// header hits the same wall. It runs HERE rather than in the browser so every
-// client gets it, and only when the client said NOTHING: a stated type is the
-// client's claim and stands, wrong extension or not.
-//
-// An extension is still only a name, which is why it decides nothing else. It
-// picks a label from a closed list; the bytes are never parsed on the strength
-// of it, because there is no parser here at all.
-func acceptedType(contentType, filename string) (string, bool) {
-	media := strings.ToLower(strings.TrimSpace(strings.SplitN(contentType, ";", 2)[0]))
-	if media == "" || media == "application/octet-stream" {
-		media = typeByExtension(filename)
-	}
-	return media, slices.Contains(acceptedContentTypes, media)
-}
-
-// typeByExtension names the media type a file ending implies, or "" for one
-// this route does not read.
-func typeByExtension(filename string) string {
-	dot := strings.LastIndex(filename, ".")
-	if dot < 0 {
-		return ""
-	}
-	switch strings.ToLower(filename[dot+1:]) {
-	case "md", "markdown":
-		return "text/markdown"
-	case "txt":
-		return "text/plain"
-	case "csv":
-		return "text/csv"
-	case "json":
-		return "application/json"
-	default:
-		return ""
-	}
-}
 
 // NewDocument is one uploaded file. Content is a reader rather than bytes: the
 // store hashes it and streams it to object storage, so a file never has to be
@@ -231,7 +119,24 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		out, rerr = readDocument(ctx, tx, id)
 		return rerr
 	})
-	return out, err
+	if err != nil {
+		// The bytes were written before this transaction opened, and no row
+		// now names them. The ordinary case is the duplicate race: two uploads
+		// of identical bytes both clear the pre-flight, both call Put, and the
+		// loser is refused by the unique index — leaving its own object behind
+		// with nothing pointing at it and nothing that will ever collect it,
+		// because every sweep in this module walks ROWS.
+		//
+		// Reported rather than swallowed, and joined rather than substituted:
+		// the caller's refusal is the answer they need, and a storage backend
+		// that would not delete is a separate fault an operator needs to see.
+		if derr := s.blob.Delete(ctx, key); derr != nil {
+			return crmcontracts.KnowledgeDocument{}, errors.Join(err,
+				fmt.Errorf("delete the corpus document's stored object after a failed write: %w", derr))
+		}
+		return crmcontracts.KnowledgeDocument{}, err
+	}
+	return out, nil
 }
 
 // readyUpload settles everything an upload can be refused for BEFORE any bytes
@@ -251,6 +156,18 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	if s.blob == nil {
 		return "", "", 0, ErrBlobstoreUnconfigured
 	}
+	// The name a person TYPED, made safe — the same call every other uploaded
+	// name in this tree goes through. It is presentational only (nothing opens
+	// a file by it) but it is read back in a citation, a list and an ingest
+	// failure, and a path separator or a bidirectional override in it rewrites
+	// whichever of those quotes it.
+	//
+	// Normalised HERE, above the type check, rather than after it: the 415
+	// detail quotes this name when no media type could be derived, so a
+	// refusal is one of the surfaces that reads it back. Sanitising afterwards
+	// left the one path that handles hostile input quoting it raw.
+	in.Filename = extension.SafeFilename(in.Filename, 0)
+
 	media, ok := acceptedType(in.ContentType, in.Filename)
 	if !ok {
 		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
@@ -261,13 +178,6 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 	}); err != nil {
 		return "", "", 0, err
 	}
-	// The name a person TYPED, made safe before it reaches the column — the
-	// same call every other uploaded name in this tree goes through. It is
-	// presentational only (nothing opens a file by it) but it is read back in a
-	// citation, a list and an ingest failure, and a path separator or a
-	// bidirectional override in it rewrites whichever of those quotes it.
-	in.Filename = extension.SafeFilename(in.Filename, 0)
-
 	checksum, size, err := blobstore.Digest(in.Content)
 	if err != nil {
 		return "", "", 0, err
@@ -284,22 +194,6 @@ func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, strin
 		return "", "", 0, &AlreadyFiledError{Filename: existing}
 	}
 	return media, checksum, size, nil
-}
-
-// refusedTypeName is what a 415 calls the file: the DERIVED media type when
-// there is one, and the caller's own words when there is not.
-//
-// An extension this route does not read resolves to an empty media type, and a
-// refusal reading "` ` cannot be read as text" names nothing at all — worse
-// than useless to whoever sent a .docx.
-func refusedTypeName(media string, in NewDocument) string {
-	if media != "" {
-		return media
-	}
-	if stated := strings.TrimSpace(in.ContentType); stated != "" {
-		return stated
-	}
-	return in.Filename
 }
 
 // ListDocuments returns one corpus's live documents, newest first, whatever

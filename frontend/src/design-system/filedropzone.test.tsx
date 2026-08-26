@@ -29,6 +29,20 @@ function show(onPick: (file: File) => void, file?: File) {
   );
 }
 
+function showMany(onPick: (file: File) => void, files: readonly File[] = []) {
+  return render(
+    <LocaleProvider initial="en">
+      <FileDropzone
+        label="Document"
+        emptyLabel="Drop the files here, or click to choose some"
+        multiple
+        files={files}
+        onPick={onPick}
+      />
+    </LocaleProvider>,
+  );
+}
+
 const ORDER_FORM = () =>
   new File(["EUR 148,500.00"], "order_form.txt", { type: "text/plain" });
 
@@ -134,5 +148,59 @@ describe("choosing a file", () => {
     expect(
       screen.queryByText("Drop the file here, or click to choose one"),
     ).toBeNull();
+  });
+
+  // Dropping a folder's worth of files at once is the point of asking for
+  // several. Taking only the first would look like it worked and quietly file
+  // one of ten.
+  it("takes EVERY file when the caller asked for several", () => {
+    const picked = vi.fn();
+    showMany(picked);
+
+    fireEvent.drop(target(), {
+      dataTransfer: {
+        files: [
+          new File(["a"], "capture.md", { type: "text/markdown" }),
+          new File(["b"], "records.md", { type: "text/markdown" }),
+          new File(["c"], "settings.md", { type: "text/markdown" }),
+        ],
+      },
+    });
+
+    expect(picked).toHaveBeenCalledTimes(3);
+    expect(picked.mock.calls.map((call) => call[0].name)).toEqual([
+      "capture.md",
+      "records.md",
+      "settings.md",
+    ]);
+  });
+
+  // The single-file contract is unchanged by the new option: a browser hands a
+  // FileList to every drop whatever the input says, so a caller with one slot
+  // must still be given exactly one.
+  it("still takes only the first when the caller did not ask for several", () => {
+    const picked = vi.fn();
+    show(picked);
+
+    fireEvent.drop(target(), {
+      dataTransfer: {
+        files: [
+          ORDER_FORM(),
+          new File(["b"], "second.txt", { type: "text/plain" }),
+        ],
+      },
+    });
+
+    expect(picked).toHaveBeenCalledTimes(1);
+    expect(picked.mock.calls[0][0].name).toBe("order_form.txt");
+  });
+
+  it("names every held file, so a short drop is visible before it is sent", () => {
+    showMany(vi.fn(), [
+      new File(["a"], "capture.md", { type: "text/markdown" }),
+      new File(["b"], "records.md", { type: "text/markdown" }),
+    ]);
+
+    expect(screen.getByText("capture.md, records.md")).toBeTruthy();
   });
 });
