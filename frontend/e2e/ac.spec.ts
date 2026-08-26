@@ -1334,7 +1334,12 @@ const ADDRESSED_VIEWS = [
 test.describe("B-EP09.21: WCAG 2.2 AA (axe), dark palette", () => {
   test.use({ colorScheme: "dark" });
 
-  for (const screen of CORE_SCREENS) {
+  // Both lists, not just the nav entries. A record header drawn as icon-only
+  // squares sits on the accent-tinted grounds this palette lightens, and the
+  // eight findings this block was written for were every one of them
+  // accent-coloured text on an accent-tinted fill — invisible to the light
+  // sweep, with no markup between the two different.
+  for (const screen of [...CORE_SCREENS, ...ADDRESSED_VIEWS]) {
     test(`no AA violations on #/${screen} in dark`, async ({ page }) => {
       await page.goto(`/#/${screen}`);
       await page.waitForLoadState("networkidle");

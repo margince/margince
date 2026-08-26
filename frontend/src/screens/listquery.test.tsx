@@ -259,6 +259,42 @@ function TwoListHarness({
   );
 }
 
+describe("the search box follows the address", () => {
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("shows the q an address arrives with, not the one the reader left", async () => {
+    const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    render(<ListTableHarness fetchPage={fetchPage} />);
+    const search = await screen.findByPlaceholderText("Search");
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(search, { target: { value: "stripe" } });
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+        await Promise.resolve();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(search).toHaveProperty("value", "stripe"));
+
+    // The address moves under a screen that stays mounted: Back, Forward, or a
+    // link to the same list narrowed differently. The box has to follow it, or
+    // it shows words the rows are not answering.
+    await act(async () => {
+      window.location.hash = "#/contacts?q=brandt";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    await waitFor(() => expect(search).toHaveProperty("value", "brandt"));
+    expect(fetchPage.mock.calls.at(-1)?.[0].q).toBe("brandt");
+  });
+});
+
 describe("two lists on one route", () => {
   afterEach(() => {
     window.location.hash = "";

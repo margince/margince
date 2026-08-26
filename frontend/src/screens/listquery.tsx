@@ -791,6 +791,9 @@ export function ListTable<Row>({
   const rowsScroller = useRef<HTMLDivElement>(null);
   useScrollMemory(rowsScroller, useHash(), "rows");
   const [localSearch, setLocalSearch] = useState(query.q);
+  // What this box last put on the wire, so a `q` that moved for any OTHER
+  // reason can be told apart from this box's own debounce landing.
+  const committed = useRef(query.q);
   // Which view tab is lit is READ from the query rather than remembered: a tab
   // is a claim about what the list is showing, and a reader who then edits a
   // filter or a sort is no longer looking at that preset. Stored, the highlight
@@ -877,11 +880,27 @@ export function ListTable<Row>({
   // (which sets query immediately, before this timer fires) is preserved
   // instead of being reverted by a stale closure over `query`. Skipped when
   // the screen isn't searchable — there is no debounce to race in that case.
+  // The address moves without this screen unmounting — Back, Forward, a link to
+  // the same list narrowed differently — and the box has to follow it or it
+  // shows words the rows are not answering. Pressing Back out of a search left
+  // the typed word sitting in a box over the unnarrowed list it had just left.
+  //
+  // Only for a `q` this box did not commit itself: the ref carries what it last
+  // put on the wire, so a reader mid-word is never overwritten by their own
+  // debounce arriving.
+  useEffect(() => {
+    if (query.q !== committed.current) {
+      committed.current = query.q;
+      setLocalSearch(query.q);
+    }
+  }, [query.q]);
+
   useEffect(() => {
     if (!searchable) {
       return;
     }
     const timer = setTimeout(() => {
+      committed.current = localSearch;
       setQuery((prev) =>
         prev.q === localSearch ? prev : { ...prev, q: localSearch },
       );

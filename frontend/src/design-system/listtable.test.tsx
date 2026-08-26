@@ -1161,6 +1161,29 @@ describe("empty state", () => {
     expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
   });
 
+  it("does not tell the count line nothing exists when a dial is hiding it", () => {
+    // Both sentences were on screen at once and one of them was false: the body
+    // said "no companies match these filters" while the line above it said
+    // "No companies yet". A search that matches nothing says nothing about
+    // whether the workspace has any.
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "name", onChange: () => {} }}
+        search={{ value: "acme", onChange: () => {} }}
+      />,
+    );
+    expect(screen.queryByText(/No rows yet/)).toBeNull();
+    expect(screen.getByText("No rows match these filters.")).toBeTruthy();
+    // The order is still true, and still worth saying — and it opens the line
+    // now rather than continuing one, so it opens in upper case and carries no
+    // comma with nothing on its left.
+    expect(screen.getByText("Sorted by Name")).toBeTruthy();
+  });
+
   it("names a likelier cause under the none-yet copy", () => {
     render(
       <ListTable

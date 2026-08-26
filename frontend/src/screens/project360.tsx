@@ -7,6 +7,7 @@ import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
+import { OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import {
   hasTimelineFilters,
@@ -227,7 +228,14 @@ function ProjectSubtitle({ view }: Readonly<{ view: Project360 }>) {
   );
 }
 
-/** Edit, archive and share — the record's rare verbs, beside its identity. */
+/**
+ * Edit, archive and share — the record's rare verbs, beside its identity.
+ *
+ * Edit in the row and the other two behind the overflow, as on the deal page.
+ * A project has no primary action, so a labelled Archive left the DESTRUCTIVE
+ * verb as the loudest control on the page: it draws in the danger colour, and
+ * with nothing green beside it the eye went there first.
+ */
 function ProjectActions({
   project,
   refusedReasonId,
@@ -264,35 +272,37 @@ function ProjectActions({
         invalidate="projects"
         recordKey="project"
       />
-      <ArchiveAction
-        disabledReasonId={refusedReasonId}
-        label={t("project.archive")}
-        confirmText={t("project.archiveConfirm")}
-        archive={async () => {
-          // Archive answers 204: the archived record is the one the page
-          // already holds, so its id is what the shared choreography gets.
-          const { error } = await api.DELETE("/projects/{id}", {
-            params: {
-              path: { id: project.id },
-              ...ifMatch(requireVersion(project.version)),
-            },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return { id: project.id };
-        }}
-        invalidate="projects"
-        recordKey="project"
-        onArchived={() => navigate({ screen: "projects" })}
-      />
-      {!overlay && (
-        <ShareAction
-          recordType="project"
-          recordId={project.id}
+      <OverflowMenu label={t("record.moreActions")}>
+        <ArchiveAction
           disabledReasonId={refusedReasonId}
+          label={t("project.archive")}
+          confirmText={t("project.archiveConfirm")}
+          archive={async () => {
+            // Archive answers 204: the archived record is the one the page
+            // already holds, so its id is what the shared choreography gets.
+            const { error } = await api.DELETE("/projects/{id}", {
+              params: {
+                path: { id: project.id },
+                ...ifMatch(requireVersion(project.version)),
+              },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return { id: project.id };
+          }}
+          invalidate="projects"
+          recordKey="project"
+          onArchived={() => navigate({ screen: "projects" })}
         />
-      )}
+        {!overlay && (
+          <ShareAction
+            recordType="project"
+            recordId={project.id}
+            disabledReasonId={refusedReasonId}
+          />
+        )}
+      </OverflowMenu>
     </>
   );
 }

@@ -919,6 +919,7 @@ export function ListTable<Row>({
             last={from + pageRows.length}
             total={rows.length}
             more={hasMore}
+            narrowed={filtered}
             sortedBy={sorted?.header}
           />
         )
