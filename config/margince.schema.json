@@ -45,7 +45,7 @@
         "password": {
           "description": "Password is the reference form: ${file:...} or ${env:...}.",
           "type": "string",
-          "pattern": "^$|^\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}$",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
           "examples": [
             "${env:VARIABLE_NAME}",
             "${file:/run/secrets/name}"
@@ -168,7 +168,7 @@
         "token": {
           "description": "TokenRef is the reference form: ${file:...} or ${env:...}. Named for the reference rather than the value, because Token() below is what hands a caller the value and the two must not read alike.",
           "type": "string",
-          "pattern": "^$|^\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}$",
+          "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
           "examples": [
             "${env:VARIABLE_NAME}",
             "${file:/run/secrets/name}"
@@ -205,7 +205,7 @@
             "password": {
               "description": "Password is the reference form: ${file:...} or ${env:...}.",
               "type": "string",
-              "pattern": "^$|^\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}$",
+              "pattern": "^\\s*$|^\\s*\\$\\{(env|file):[^}]*[^}\\s][^}]*\\}\\s*$",
               "examples": [
                 "${env:VARIABLE_NAME}",
                 "${file:/run/secrets/name}"

@@ -74,12 +74,15 @@ const (
 //
 // This pattern is what the loader accepts END TO END, which is what an editor
 // has to be checking: a reference whose argument holds at least one real
-// character, or the empty string, which Unmarshal reads as "no source named".
+// character, or a blank scalar, which Unmarshal reads as "no source named".
+// Outer whitespace is allowed because Unmarshal trims the WHOLE scalar before
+// it matches anything — so ` ${env:NAME} ` and `   ` are both values it takes,
+// and an anchored pattern that forgot the trim flagged valid yaml.
 // TestTheSecretPatternAcceptsWhatTheLoaderAccepts holds the two together in
 // both directions.
 //
 //nolint:gosec // G101: a regex describing the SHAPE of a reference, not a credential — it is precisely what refuses one
-const SecretRefPattern = `^$|^\$\{(env|file):[^}]*[^}\s][^}]*\}$`
+const SecretRefPattern = `^\s*$|^\s*\$\{(env|file):[^}]*[^}\s][^}]*\}\s*$`
 
 //nolint:gosec // G101: as above — the parser's looser shape, so its refusals can be specific
 const secretRefPattern = `^\$\{(env|file):([^}]+)\}$`

@@ -34,6 +34,10 @@ func TestTheSecretPatternAcceptsWhatTheLoaderAccepts(t *testing.T) {
 		// the loader trims it to nothing and refuses.
 		{"an argument of only spaces", "${env:   }"},
 		{"an argument of nothing at all", "${env:}"},
+		// The loader trims the WHOLE scalar before it matches, so padding
+		// outside the braces is padding it never sees.
+		{"padding around the reference", " ${env:MARGINCE_SMTP_PASSWORD} "},
+		{"a scalar of only spaces", "   "},
 		{"an unknown source", "${vault:thing}"},
 		{"a literal secret", "hunter2"},
 		{"a reference missing its braces", "env:MARGINCE_SMTP_PASSWORD"},
@@ -43,7 +47,7 @@ func TestTheSecretPatternAcceptsWhatTheLoaderAccepts(t *testing.T) {
 			// custom unmarshaller is what decides, and reaching for it directly
 			// would be this test staging its own version of the decode.
 			var got Secret
-			loaderAccepts := yaml.Unmarshal([]byte(quoted(tc.raw)), &got) == nil
+			loaderAccepts := yaml.Unmarshal([]byte(quoted(t, tc.raw)), &got) == nil
 			if schema.MatchString(tc.raw) != loaderAccepts {
 				t.Errorf("the schema %s %q and the loader %s it — an editor and the server must agree",
 					verdict(schema.MatchString(tc.raw)), tc.raw, verdict(loaderAccepts))
@@ -61,10 +65,14 @@ func verdict(accepts bool) string {
 
 // quoted keeps a value yaml would otherwise reinterpret — an empty scalar, or
 // one that begins with a brace — as the literal string under test.
-func quoted(raw string) string {
+func quoted(t *testing.T, raw string) string {
+	t.Helper()
 	out, err := yaml.Marshal(raw)
 	if err != nil {
-		return `""`
+		// Returning a fallback would substitute a DIFFERENT input — an empty
+		// scalar, which this table treats as accepted — and the case would pass
+		// having tested something nobody wrote.
+		t.Fatalf("staging %q as a yaml scalar: %v", raw, err)
 	}
 	return string(out[:len(out)-1])
 }
