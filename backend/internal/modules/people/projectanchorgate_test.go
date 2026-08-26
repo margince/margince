@@ -42,6 +42,11 @@ const projectAnchorGate = "ensureProjectWritable"
 // any id somebody could guess.
 const personReadGate = "Require"
 
+// personReadPackage is where that grant lives. Named, because the gate matches
+// on the receiver as well as the method: `auth.Require` is the grant and
+// something else's Require is not.
+const personReadPackage = "auth"
+
 // stakeholderFile is where the verbs and their gate live together. The claim is
 // about that pairing, so the file is the honest unit: a verb that moves out of
 // it moves out of the claim, and this fails rather than silently covering less.
@@ -71,7 +76,7 @@ func TestEveryProjectStakeholderVerbTakesTheRowAnchorGate(t *testing.T) {
 			// being wrong, not the method being exempt. The one thing it may
 			// be instead of a project verb is a read, and a read owes its own
 			// grant.
-			if callsAny(fn, map[string]bool{personReadGate: true}) {
+			if callsAny(fn, personReadPackage, map[string]bool{personReadGate: true}) {
 				continue
 			}
 			t.Errorf("%s in %s names no project, by parameter or by input struct, and takes no "+
@@ -165,7 +170,7 @@ func gatedHelpers(file *ast.File) map[string]bool {
 		if !ok || fn.Name == nil || fn.Name.IsExported() {
 			continue
 		}
-		if callsAny(fn, map[string]bool{projectAnchorGate: true}) {
+		if callsAny(fn, receiverName(fn), map[string]bool{projectAnchorGate: true}) {
 			gated[fn.Name.Name] = true
 		}
 	}
@@ -173,14 +178,20 @@ func gatedHelpers(file *ast.File) map[string]bool {
 }
 
 func reachesGate(fn *ast.FuncDecl, gated map[string]bool) bool {
-	return callsAny(fn, gated)
+	return callsAny(fn, receiverName(fn), gated)
 }
 
-// callsAny reports whether fn's body calls any of names as a method on its own
-// receiver. Method calls only: a free function sharing the name would be a
-// different subject, and matching it would report coverage that is not there.
-func callsAny(fn *ast.FuncDecl, names map[string]bool) bool {
-	if fn.Body == nil {
+// callsAny reports whether fn's body calls any of names on the receiver named
+// by qualifier — fn's own receiver for a method of this store, or a package
+// name for an imported one.
+//
+// The qualifier is what makes the answer mean anything. Matching the method
+// NAME alone lets `peer.ensureProjectWritable(other)` report that this verb
+// checked the project it is about, when it checked somebody else's: a gate
+// satisfied by a call on a different object holds the spelling and not the
+// rule, which is the defect this whole branch exists to remove.
+func callsAny(fn *ast.FuncDecl, qualifier string, names map[string]bool) bool {
+	if fn.Body == nil || qualifier == "" {
 		return false
 	}
 	found := false
@@ -189,12 +200,26 @@ func callsAny(fn *ast.FuncDecl, names map[string]bool) bool {
 		if !ok {
 			return true
 		}
-		if sel, ok := call.Fun.(*ast.SelectorExpr); ok && names[sel.Sel.Name] {
+		sel, ok := call.Fun.(*ast.SelectorExpr)
+		if !ok || !names[sel.Sel.Name] {
+			return true
+		}
+		if on, ok := sel.X.(*ast.Ident); ok && on.Name == qualifier {
 			found = true
 		}
 		return !found
 	})
 	return found
+}
+
+// receiverName answers what fn's own receiver is called, or "" for a function
+// with none. A method whose receiver is unnamed (`func (*Store) f()`) cannot
+// call anything ON it, so "" correctly matches nothing.
+func receiverName(fn *ast.FuncDecl) string {
+	if fn.Recv == nil || len(fn.Recv.List) == 0 || len(fn.Recv.List[0].Names) == 0 {
+		return ""
+	}
+	return fn.Recv.List[0].Names[0].Name
 }
 
 func typeText(expr ast.Expr) string {

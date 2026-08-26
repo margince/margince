@@ -51,7 +51,7 @@ func TestBothProfileFieldVerbsWriteThroughTheOnePath(t *testing.T) {
 			continue
 		}
 		verbs++
-		if !callsAny(fn, map[string]bool{profileFieldOnePath: true}) {
+		if !callsAny(fn, receiverName(fn), map[string]bool{profileFieldOnePath: true}) {
 			t.Errorf("%s does not go through %s.\n\nCorrecting and confirming are the same write "+
 				"with a different provenance; a verb that writes on its own makes them disagree "+
 				"about what happened while both still answer with a well-formed field.",
