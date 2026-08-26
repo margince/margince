@@ -451,8 +451,17 @@ func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
 		t.Fatal(err)
 	}
 	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
-	if _, err := e.svc.DecideEdited(human, approvalID, edited); err == nil {
+	_, err = e.svc.DecideEdited(human, approvalID, edited)
+	if err == nil {
 		t.Fatal("an unusable due date was accepted, want the decision refused")
+	}
+	// The rep has to be able to ACT on the refusal. An untyped error here reads
+	// as 500 internal at the handler, which says the server broke rather than
+	// that the date needs fixing — and a rep told that has no reason to retry.
+	var invalid *approvals.InvalidEditError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("refusal is %T, want *approvals.InvalidEditError so the rep "+
+			"gets a 422 naming the field rather than an opaque 500: %v", err, err)
 	}
 
 	// Refused means UNDECIDED: the rep fixes the date and approves the same row.
@@ -522,19 +531,61 @@ func TestARejectionSurvivesTheProposalChangingUnderIt(t *testing.T) {
 		t.Fatalf("reject: %v", err)
 	}
 
-	// Move the deal's clock so the next pass computes a different due date and
-	// cites a fresh interaction — a genuinely different document, same question.
+	// Move the deal's clock so the next pass computes a different due date over
+	// the SAME interaction — a different document, the same question.
 	e.WsExec(t, `UPDATE deal SET last_activity_at = now() - interval '2 days' WHERE id = $1`, deal)
-	e.seedInteraction(t, deal, "call", "Follow-up call", 1)
 	if err := e.reconcile(); err != nil {
 		t.Fatal(err)
 	}
 	if got := e.pendingFollowUps(t, deal); got != 0 {
 		t.Errorf("a moved payload staged %d proposals past the rejection, want 0 — "+
-			"the memory is keyed on the payload rather than on the deal", got)
+			"the memory is keyed on the payload rather than on the situation", got)
 	}
 	if first.DealID.UUID != deal {
 		t.Errorf("the first proposal named deal %s, want %s", first.DealID.UUID, deal)
+	}
+}
+
+// A rejection covers the conversation it answered, not the deal forever.
+//
+// The admit case beside the three refusals above, and the one that decides
+// whether the memory is a memory or a mute button. A decline is remembered with
+// no expiry, so keying it on the deal alone would let one "no" bury every later
+// follow-up: the rep says no after a discovery call, has a real conversation
+// weeks later that again ends with no next step, and is never asked. The
+// evidence activity is what tells those apart.
+func TestANewConversationIsProposedAgainAfterAnEarlierRejection(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Moved on", e.pipeline, e.open, &e.Rep1)
+	// Both interactions sit inside the pass's 48h lookback; the declined one is
+	// simply the older, so the later call becomes the evidence on the reruns.
+	e.seedInteraction(t, deal, "meeting", "Discovery", 40)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, declined := e.followUpApproval(t, deal)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
+		t.Fatalf("reject: %v", err)
+	}
+
+	// A genuinely new interaction, later than the one that was declined.
+	e.WsExec(t, `UPDATE deal SET last_activity_at = now() - interval '2 days' WHERE id = $1`, deal)
+	fresh := e.seedInteraction(t, deal, "call", "They called back", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Fatalf("a new conversation staged %d proposals, want 1 — an old rejection "+
+			"is silencing a deal it was never asked about", got)
+	}
+	_, asked := e.followUpApproval(t, deal)
+	if asked.EvidenceActivityID.UUID != fresh {
+		t.Errorf("the new proposal cites interaction %s, want the fresh one %s",
+			asked.EvidenceActivityID.UUID, fresh)
+	}
+	if asked.EvidenceActivityID == declined.EvidenceActivityID {
+		t.Error("the new proposal cites the interaction that was already declined")
 	}
 }
 
