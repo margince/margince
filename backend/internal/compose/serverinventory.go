@@ -231,7 +231,7 @@ type Server struct {
 	// composite literal is one the next literal drops without a word — which is
 	// exactly how this arrived inert the first time. Kept here, each construction
 	// has to name it, and a reader sees the omission.
-	googleAppResolver func(ctx context.Context) (clientID, clientSecret string, ok bool, err error)
+	googleAppResolver googleAppResolver
 
 	// schemaPoolReady is the /readyz schema-pool probe, injected only by
 	// WithSchemaPool — a role that never mounted --schema-dsn declares

@@ -30,7 +30,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
 	"github.com/gradionhq/margince/backend/internal/platform/mailer"
 	"github.com/gradionhq/margince/backend/internal/platform/overlaybudget"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // Option customizes the wiring for one process role; everything not
@@ -205,24 +204,10 @@ func WithKeyvault(vault keyvault.Vault) Option {
 		googleApp := capture.NewGoogleAppStore(NewSettingsStore(pool), vault, s.log)
 		s.googleAppHandlers = googleAppHandlers{store: googleApp}
 		// And the connect transport resolves the STORED app per request, so an
-		// app set through Settings works without restarting the api.
-		//
-		// On a system principal: the caller is usually a rep connecting their own
-		// mailbox, who holds no capture grant, and the installation's own
-		// configuration is not theirs to be entitled to — it is what the server
-		// uses to do what they ARE entitled to. Same reasoning the model binding
-		// is resolved under, and it keeps the object gate rather than declaring
-		// the entry ungated.
-		s.googleAppResolver = func(ctx context.Context) (string, string, bool, error) {
-			ws, ok := principal.WorkspaceID(ctx)
-			if !ok {
-				// No workspace bound is a caller that has not authenticated; the
-				// transport's own gate judges that, and answering "no app" here
-				// would let it read as an unconfigured installation.
-				return "", "", false, nil
-			}
-			return googleApp.Credentials(bootCtx(ctx, ws, googleAppReadActor))
-		}
+		// app set through Settings works without restarting the api. The worker
+		// resolves it the same way for the sync poll's token refresh, which is
+		// why the resolver is built by a shared constructor rather than here.
+		s.googleAppResolver = googleAppCredentialsFrom(googleApp)
 		// And the setup surface, which reads all three. It is wired here rather
 		// than beside the AI block because the Google half only exists once the
 		// vault does — a setup answer composed from two of the three stores

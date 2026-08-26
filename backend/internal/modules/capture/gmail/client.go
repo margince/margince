@@ -78,9 +78,8 @@ var ErrMessageGone = fmt.Errorf("gmail: message no longer exists: %w", connector
 // authorization code for a refresh token, and mint a fresh access token from
 // a stored refresh token.
 type OAuth interface {
+	googleconn.Authorizer
 	AuthCodeURL(state, redirectURI string) string
-	Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error)
-	AccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
 }
 
 // sentLabelID is Gmail's system label for the mailbox owner's own sent mail.
