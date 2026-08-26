@@ -83,17 +83,22 @@ func guardsIn(file *ast.File) map[string][]string {
 	return found
 }
 
-// coalesceGuardsOutsideTheRecordModules: files holding a coalesce guard that the
-// reversal path does not serve. Each states what that table is instead of a
-// reversible record — a reason that only restated the subject would be refused.
-var coalesceGuardsOutsideTheRecordModules = gatekit.Waive(map[string]string{
-	"internal/modules/consent/dsr.go":               "data_subject_request is a request's own lifecycle row, not a CRM record; its history screen and its reversal are the DSR workflow's, not the record spine's",
-	"internal/modules/ai/voice_source_mutations.go": "voice_corpus_source is a corpus membership row; putting one back is re-including the source, which the corpus surface does directly rather than by replaying a field image",
-	"internal/modules/ai/voice_profile_artifact.go": "voice_profile carries a generated artifact reference; the prior reference names a build that a later generation may have superseded, so replaying it is not the same as producing it",
-	"internal/modules/ai/voice.go":                  "voice_profile as above — the profile is derived from a corpus, and reverting the derivation without the corpus behind it states a profile nothing would reproduce",
-	"internal/modules/people/relationship.go":       "relationship is an EDGE, and an edge's ends are what it is; the reversal path serves records, and the edge tier is out of its scope by design rather than by omission",
-	"internal/modules/activities/transcriptread.go": "transcript_read is a per-reader position marker, not a field of the activity; it carries no audit images and no history screen shows it",
-	"internal/modules/automation/automations.go":    "automation is a rule definition, whose surface is the automation editor; a rule put back by replaying columns would not re-derive the schedule the rule owns",
+// guardedTablesThatAreNotReversibleRecords: every OTHER table under
+// internal/modules whose update path holds a coalesce guard. Keyed by table
+// rather than by file, because the question is about the table's meaning and a
+// table written from two files would otherwise need two identical reasons.
+//
+// This exists so that "the reversal path serves six record types" is a
+// statement somebody checked rather than a silent skip. Without it the census
+// would walk past every guard it did not recognise and report PASS, which is a
+// census failing short in exactly the way that leaves no assertion to notice.
+var guardedTablesThatAreNotReversibleRecords = gatekit.Waive(map[string]string{
+	"data_subject_request": "a request's own lifecycle row, not a CRM record; its history and its reversal belong to the DSR workflow rather than to the record spine",
+	"voice_corpus_source":  "a corpus membership row; putting one back is re-including the source, which the corpus surface does directly rather than by replaying a field image",
+	"voice_profile":        "carries a generated artifact reference derived from a corpus; replaying the prior reference names a build a later generation may have superseded, which is not the same as producing it",
+	"relationship":         "an EDGE, and an edge's ends are what it IS; the reversal path serves records, and the edge tier is outside it by design rather than by omission",
+	"transcript_read":      "a per-reader position marker, not a field of the activity; it carries no audit images and no history screen shows it",
+	"automation":           "a rule definition whose surface is the automation editor; a rule put back by replaying columns would not re-derive the schedule the rule owns",
 })
 
 // The declared set is the SQL's set. Both directions matter: a declared column
@@ -106,7 +111,6 @@ func TestEveryCoalesceGuardedColumnIsDeclaredWhereTheReversalPathReadsIt(t *test
 		Subject: func(path string, file *ast.File) bool {
 			return !strings.HasSuffix(path, "_test.go") && len(guardsIn(file)) > 0
 		},
-		Exempt: coalesceGuardsOutsideTheRecordModules,
 	}
 
 	reversible := map[string]bool{}
@@ -120,8 +124,13 @@ func TestEveryCoalesceGuardedColumnIsDeclaredWhereTheReversalPathReadsIt(t *test
 		for table, columns := range guardsIn(parsed.File) {
 			sawAGuard = true
 			if !reversible[table] {
-				// Ratified above, or reported by the Scope sweep. Either way
-				// it is not this assertion's subject.
+				// Named as not-a-record, or reported here. A table nobody
+				// ratified is a guard nobody looked at.
+				if !guardedTablesThatAreNotReversibleRecords.Waived(t, table) {
+					t.Errorf("%s holds a coalesce guard and is neither a record type "+
+						"the reversal path serves nor a table anybody ratified as not "+
+						"being one", table)
+				}
 				continue
 			}
 			if found[table] == nil {
@@ -136,6 +145,9 @@ func TestEveryCoalesceGuardedColumnIsDeclaredWhereTheReversalPathReadsIt(t *test
 		t.Fatal("the census found no coalesce guard anywhere under internal/modules; " +
 			"the scan is broken, not the tree — activities/lifecycle.go writes several")
 	}
+	// A ratification that no longer matches anything reads as approval of code
+	// that is gone, which is how a waiver outlives the reason it was written.
+	guardedTablesThatAreNotReversibleRecords.AssertAllMatched(t)
 
 	for _, recordType := range reversibleRecordTypes {
 		declared := compose.CoalesceGuardedColumns(recordType)
