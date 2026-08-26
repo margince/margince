@@ -597,7 +597,7 @@
 
 .ob-scene-eyebrow {
   margin: 0;
-  color: var(--accent);
+  color: var(--accentText);
   font-family: var(--f-body);
   font-size: var(--fs-eyebrow);
   font-weight: var(--fw-semibold);
@@ -1684,7 +1684,7 @@
 }
 
 .ob-connect-card-cta {
-  color: var(--accent);
+  color: var(--accentText);
   font-family: var(--f-body);
   font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);
@@ -1929,7 +1929,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--accentText);
   cursor: pointer;
   font: var(--fw-medium) var(--fs-sm) / var(--lh-normal) var(--f-body);
   text-decoration: underline;
@@ -2091,7 +2091,7 @@
 
 .ob-company-card-facts dd button:hover,
 .ob-company-card-facts dd button:focus-visible {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .ob-company-card-facts dd button:focus-visible {
@@ -2356,7 +2356,7 @@
    pill). */
 .ob-triage-nav-link[aria-current="true"] {
   background: var(--accentLight);
-  color: var(--accent);
+  color: var(--accentText);
   font-weight: var(--fw-semibold);
 }
 
@@ -2995,7 +2995,7 @@
 }
 
 .ob-triage-fact-toggle[aria-pressed="true"] {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .ob-triage-fact-toggle:disabled {

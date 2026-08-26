@@ -141,7 +141,7 @@ button.evidence-chip:hover {
    stripe on their Deal Room comment). */
 .provenance-buyer {
   background: var(--bgCard);
-  color: var(--accent);
+  color: var(--accentText);
 }
 /* An unrecorded source claims neither a person nor a machine, and reads as
    the absence it is rather than borrowing either one's colour. */

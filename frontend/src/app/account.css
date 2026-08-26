@@ -269,7 +269,7 @@
   align-items: center;
   justify-content: center;
   width: 14px;
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .acctthemelabel {

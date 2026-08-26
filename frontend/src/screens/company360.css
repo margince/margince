@@ -89,7 +89,7 @@
   color: var(--textMeta);
 }
 .co-meta-link {
-  color: var(--accent);
+  color: var(--accentText);
   text-decoration: none;
 }
 .co-meta-link:hover {

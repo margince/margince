@@ -324,7 +324,7 @@ p.settings-panel-sub {
    spaces to break at, so it also has to be allowed to break inside itself
    rather than set the row's minimum width. */
 .tool-name {
-  color: var(--accent);
+  color: var(--accentText);
   overflow-wrap: anywhere;
 }
 /* Struck, not dimmed. Dimming the row to 0.4 took it under the AA contrast

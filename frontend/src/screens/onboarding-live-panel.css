@@ -86,7 +86,7 @@
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .ob-live-card-chev {

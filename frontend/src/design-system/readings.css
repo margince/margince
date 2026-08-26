@@ -92,10 +92,10 @@
 }
 .chip-link:hover {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accentText);
 }
 .chip-link:hover svg {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* The ring. Same shape as the file chip it sits beside — both are a bordered

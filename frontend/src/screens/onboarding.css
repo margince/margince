@@ -47,7 +47,7 @@
   font-weight: var(--fw-semibold);
   letter-spacing: var(--tracking-eyebrow);
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--accentText);
   margin-bottom: var(--space-3);
 }
 .ttl {
@@ -60,7 +60,7 @@
   margin-bottom: var(--space-3);
 }
 .ttl .em {
-  color: var(--accent);
+  color: var(--accentText);
 }
 .ob-sub {
   color: var(--textSecondary);
@@ -654,7 +654,7 @@
   line-height: var(--lh-normal);
 }
 .legal-preview-card small {
-  color: var(--accent);
+  color: var(--accentText);
   font-family: var(--f-mono);
   font-size: var(--fs-meta);
 }
@@ -1249,7 +1249,7 @@
 }
 .choice-check svg {
   width: 14px;
-  color: var(--accent);
+  color: var(--accentText);
 }
 .choice-card b,
 .choice-card span span,

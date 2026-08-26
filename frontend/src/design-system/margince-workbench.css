@@ -209,7 +209,7 @@
 }
 
 .mw-step.is-now b {
-  color: var(--accent);
+  color: var(--accentText);
   border-color: var(--accentMed);
 }
 

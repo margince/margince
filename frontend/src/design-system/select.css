@@ -92,7 +92,7 @@
 }
 .select-option-check {
   flex: none;
-  color: var(--accent);
+  color: var(--accentText);
 }
 /* The ACTIVE option — where the keyboard is, and what a pointer is hovering.
    One treatment for both, because they are one state: the popup tracks a single
@@ -101,7 +101,7 @@
   background: var(--bgHover);
 }
 .select-option[aria-selected="true"] {
-  color: var(--accent);
+  color: var(--accentText);
   font-weight: 500;
 }
 .select-option[aria-selected="true"].is-active {

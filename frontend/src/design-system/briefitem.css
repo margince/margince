@@ -87,7 +87,7 @@
 }
 
 .brief-item-name:hover {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .brief-item-name:focus-visible {
@@ -221,7 +221,7 @@
   width: 13px;
   height: 13px;
   flex: none;
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .brief-item-actions {

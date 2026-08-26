@@ -24,7 +24,7 @@
   margin-right: auto;
 }
 .company-context-count strong {
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* One proposed change, as a full-bleed row of the review panel: its name and
@@ -70,5 +70,5 @@
  * It is a caveat on everything above it, not a headline: it used to be set at
  * 24px, larger than the page's own h1, for a number nobody acts on. */
 .company-context-coverage strong {
-  color: var(--accent);
+  color: var(--accentText);
 }

@@ -32,6 +32,13 @@
   --bgTopbar: rgba(255, 255, 255, 0.9);
 
   --accent: #0b7a53;
+  /* The accent as TEXT, split from the accent as a FILL. They are the same
+   * value here and diverge in dark mode, which is the whole reason the split
+   * exists: --accent lightens to the ADR-0040 mandate #16a34a, and that tone
+   * sitting as text on the --accentLight tint derived from it measures 4.03:1
+   * — under the 4.5:1 AA needs for text this size. The fill cannot move, so
+   * the text does. Same shape as --tealText and the --mono*Text pairs. */
+  --accentText: #0b7a53;
   --accentLight: rgba(11, 122, 83, 0.09);
   --accentMed: rgba(11, 122, 83, 0.17);
 
@@ -400,6 +407,10 @@
      the --online disc) — dark ink there is a control-boundary failure, not
      a contrast fix, on backgrounds this palette never touches. --success
      and --danger are NOT in that set: see --textOnStatusControl below. */
+  /* Lifted off --accent, which cannot move. #4ade80 is the tone --mono0Text
+     already uses for emerald text on an emerald tint here, so the accent
+     reads as the same colour those chips do rather than as a second green. */
+  --accentText: #4ade80;
   --accentLight: rgba(22, 163, 74, 0.14);
   --accentMed: rgba(22, 163, 74, 0.26);
   /* DARK ink on the accent, not white — the accent itself is untouched
@@ -509,6 +520,8 @@
     --bgTopbar: rgba(20, 36, 32, 0.9);
 
     --accent: #16a34a;
+
+    --accentText: #4ade80;
 
     --accentLight: rgba(22, 163, 74, 0.14);
     --accentMed: rgba(22, 163, 74, 0.26);

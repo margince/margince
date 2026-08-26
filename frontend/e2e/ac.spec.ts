@@ -1231,6 +1231,32 @@ const ADDRESSED_VIEWS = [
   "reports/forecast",
 ];
 
+// The SAME sweep under the dark palette, which the suite measured by accident
+// for as long as the scheme went unpinned: a run inherited whichever palette
+// the machine reported, so one afternoon read light locally and dark on CI and
+// the lane presented as flaky. It was two palettes.
+//
+// It is a second block rather than a second tag on the block above because the
+// palettes are not the same subject. tokens.css publishes dark as its own set
+// of values — the accent lightens to the ADR-0040 mandate and the surfaces
+// darken — so a screen can pass in one and fail in the other with no markup
+// between them different. Eight findings across six screens were live here
+// when this block was written, every one of them accent-coloured text on an
+// accent-tinted fill, and none of them visible to the light sweep.
+test.describe("B-EP09.21: WCAG 2.2 AA (axe), dark palette", () => {
+  test.use({ colorScheme: "dark" });
+
+  for (const screen of CORE_SCREENS) {
+    test(`no AA violations on #/${screen} in dark`, async ({ page }) => {
+      await page.goto(`/#/${screen}`);
+      await page.waitForLoadState("networkidle");
+      await expectShellRendered(page);
+      await settleAnimations(page);
+      await expectNoAaViolations(page, `${screen} (dark)`);
+    });
+  }
+});
+
 test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
   for (const screen of CORE_SCREENS) {
     test(`no AA violations on #/${screen}`, async ({ page }) => {

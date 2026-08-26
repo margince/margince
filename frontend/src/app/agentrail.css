@@ -550,7 +550,7 @@
 /* The link a heading can carry, pushed to the far end of it. */
 .arplain {
   margin-left: auto;
-  color: var(--accent);
+  color: var(--accentText);
   font-size: 11px;
   font-weight: var(--fw-medium);
   letter-spacing: 0;
@@ -603,7 +603,7 @@
   font-weight: var(--fw-medium);
   letter-spacing: -0.03em;
   line-height: 1;
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 /* No counts at all, which is a report and not an absence. Dashed, because a
@@ -686,7 +686,7 @@
 .armore {
   display: inline-block;
   margin-top: var(--space-1);
-  color: var(--accent);
+  color: var(--accentText);
   font-size: 11.5px;
   text-decoration: none;
 }
@@ -763,7 +763,7 @@
   border: 1px solid var(--arTone);
   border-radius: var(--r-full);
   background: color-mix(in srgb, var(--arTone) 10%, transparent);
-  color: var(--accent);
+  color: var(--accentText);
   font-family: var(--f-mono);
   font-size: 12px;
   cursor: pointer;

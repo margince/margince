@@ -38,7 +38,7 @@
 
 .r360-standing-accent {
   background: var(--accentLight);
-  color: var(--accent);
+  color: var(--accentText);
 }
 
 .r360-standing-warn {

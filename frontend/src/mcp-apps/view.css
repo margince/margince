@@ -90,7 +90,7 @@ h1 {
 
 .score {
   margin-left: auto;
-  color: var(--accent);
+  color: var(--accentText);
   font-variant-numeric: tabular-nums;
   font-weight: 600;
 }

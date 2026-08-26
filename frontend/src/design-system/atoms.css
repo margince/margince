@@ -46,7 +46,7 @@
 }
 .badge-accent {
   background: var(--accentLight);
-  color: var(--accent);
+  color: var(--accentText);
 }
 /* The quiet spelling: one status per row down a column, where a stack of
  * filled pills reads as decoration. The tone survives as the dot's colour and
@@ -131,7 +131,7 @@
 .avatar {
   border-radius: var(--r-full);
   background: var(--accentMed);
-  color: var(--accent);
+  color: var(--accentText);
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -451,7 +451,7 @@
   padding: 0;
   border: 0;
   background: none;
-  color: var(--accent);
+  color: var(--accentText);
   font: inherit;
   cursor: pointer;
   text-align: left;
@@ -528,7 +528,7 @@
   font-family: var(--f-body);
   font-size: 12px;
   font-weight: 600;
-  color: var(--accent);
+  color: var(--accentText);
   background: transparent;
   border: 0;
   padding: 2px 4px;
@@ -699,7 +699,7 @@
 }
 .recordpicker-option[aria-pressed="true"] {
   border-color: var(--accent);
-  color: var(--accent);
+  color: var(--accentText);
   background: var(--accentLight);
 }
 .recordpicker-selected {
@@ -716,7 +716,7 @@
   font-size: 13.5px;
 }
 .recordpicker-selected-check {
-  color: var(--accent);
+  color: var(--accentText);
   width: 15px;
   height: 15px;
   flex: none;
