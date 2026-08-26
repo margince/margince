@@ -41,6 +41,52 @@ export const LIFECYCLE_OPTIONS = [
   "disqualified",
 ] as const;
 
+// What the account is TO US, multi-valued (ADR-0079/A124). Typed against the
+// schema union, so a value added upstream fails the build here rather than
+// reaching a reader as a raw enum.
+export type RelationshipType = NonNullable<
+  Organization["relationship_types"]
+>[number];
+
+// Beside LIFECYCLE_LABELS because the header draws both vocabularies on one
+// line and they OVERLAP: `customer` is a member of each. Two modules cannot
+// notice that; one can, which is what relationshipBadges below does.
+export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
+  customer: "org.relType.customer",
+  partner: "org.relType.partner",
+  supplier: "org.relType.supplier",
+  investor: "org.relType.investor",
+  portfolio_company: "org.relType.portfolio_company",
+  competitor: "org.relType.competitor",
+  other: "org.relType.other",
+};
+
+/**
+ * The relationship types worth drawing beside the account's lifecycle: every
+ * one whose label the lifecycle badge is not already printing.
+ *
+ * An account can be a partner AND a customer, so dropping the second reading
+ * would make a true thing look untrue — the two are kept. What is dropped is
+ * the same WORD twice: an account whose lifecycle is `customer` and whose
+ * relationship types include `customer` is the ordinary shape of a customer,
+ * and the header used to render "Customer" beside "Customer" from two fields
+ * that happened to agree, reading as a second reading confirming the first.
+ *
+ * Compared on the rendered LABEL rather than the enum key, because what a
+ * reader sees twice is the word: today only `customer` collides by key, and a
+ * translation that spells two different keys the same way is the same defect
+ * with nothing in the type system to catch it.
+ */
+export function relationshipBadges(
+  org: Pick<Organization, "lifecycle" | "relationship_types">,
+  t: (key: MessageKey) => string,
+): RelationshipType[] {
+  const standing = t(LIFECYCLE_LABELS[org.lifecycle ?? "unknown"]);
+  return (org.relationship_types ?? []).filter(
+    (relType) => t(RELATIONSHIP_TYPE_LABELS[relType]) !== standing,
+  );
+}
+
 // The seven wire size bands, same sharing reason as LIFECYCLE_OPTIONS above.
 export const SIZE_BAND_OPTIONS = [
   "1-10",

@@ -14,6 +14,7 @@ import { useLocale, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
 import { DecisionsChip } from "./companyapprovals";
+import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { ComposeModal } from "./compose";
 import { joinMultiselectValue } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
@@ -32,7 +33,6 @@ import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   mapOrgUpdate,
-  RELATIONSHIP_TYPE_LABELS,
   searchOrgTargets,
 } from "./organizations";
 import { ShareAction } from "./share";
@@ -592,8 +592,13 @@ export function CompanyActionBadges({
           and it now has a separate control — the editable lifecycle in the
           pulse line — so it is not repeated here as a read-only badge. The two
           were one field once, which is how an account whose contract had ended
-          still read as "Prospect". */}
-      {(org.relationship_types ?? []).map((relType) => (
+          still read as "Prospect".
+
+          The two vocabularies overlap, though, and relationshipBadges is what
+          keeps the header from printing one word twice: a customer account
+          carries `customer` in both fields, and "Customer · Customer" reads as
+          a second reading confirming the first. */}
+      {relationshipBadges(org, t).map((relType) => (
         <Badge key={relType} tone="accent">
           {t(RELATIONSHIP_TYPE_LABELS[relType])}
         </Badge>

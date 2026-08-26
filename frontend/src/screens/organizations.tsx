@@ -87,6 +87,7 @@ import {
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
+  RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
 import { CompanyProjects } from "./companyprojects";
@@ -174,20 +175,12 @@ type Organization = components["schemas"]["Organization"];
 // module still resolves, and this file still reads it below as its own.
 export { LIFECYCLE_LABELS };
 
-// What it is TO US, multi-valued (ADR-0079/A124). Typed against the schema
-// union, so a value added upstream fails the build here rather than reaching
-// a reader as a raw enum.
-type RelationshipType = NonNullable<Organization["relationship_types"]>[number];
-
-export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
-  customer: "org.relType.customer",
-  partner: "org.relType.partner",
-  supplier: "org.relType.supplier",
-  investor: "org.relType.investor",
-  portfolio_company: "org.relType.portfolio_company",
-  competitor: "org.relType.competitor",
-  other: "org.relType.other",
-};
+// What it is TO US, multi-valued (ADR-0079/A124). Moved beside
+// LIFECYCLE_LABELS in companylookups.ts because the two vocabularies OVERLAP —
+// `customer` is a member of both — and only a module holding both can tell
+// that the header is about to print one word twice. Re-exported for the same
+// reason LIFECYCLE_LABELS is: every existing caller still resolves.
+export { RELATIONSHIP_TYPE_LABELS };
 type CreateOrganizationRequest =
   components["schemas"]["CreateOrganizationRequest"];
 type UpdateOrganizationRequest =

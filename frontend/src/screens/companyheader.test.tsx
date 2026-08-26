@@ -309,3 +309,46 @@ describe("an archived account's verbs", () => {
     ).toBe(false);
   });
 });
+
+// The header draws two vocabularies that overlap on `customer`: where the
+// account STANDS (lifecycle, the editable badge beside the name) and what it IS
+// to us (relationship types). A customer account carries the value in both, and
+// the strip printed "Customer" twice from two fields that happened to agree —
+// one fact rendered as a second reading confirming the first.
+//
+// The readings row that used to guard this compared the two itself and has since
+// been removed; the guard was local to it and never covered the header. So it is
+// pinned here, on the badges themselves.
+describe("an account whose lifecycle and relationship agree", () => {
+  it("says the word once, and keeps every relationship the lifecycle is not already saying", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyActionBadges
+        org={{ ...ORG, relationship_types: ["customer", "partner"] }}
+        onOpenHistory={() => undefined}
+        onSetUpPartner={() => undefined}
+      />,
+    );
+
+    // The strip is what this component draws; the lifecycle badge is the other
+    // mount, so a duplicate here is one "Customer" too many on its own.
+    expect(await screen.findByText(en["org.relType.partner"])).toBeTruthy();
+    expect(screen.queryByText(en["org.relType.customer"])).toBeNull();
+  });
+
+  it("still draws a relationship the lifecycle disagrees with", async () => {
+    stub([{ id: "u-owner", display_name: "Mira Voss" }]);
+    renderInApp(
+      <CompanyActionBadges
+        org={{ ...ORG, lifecycle: "prospect", relationship_types: ["customer"] }}
+        onOpenHistory={() => undefined}
+        onSetUpPartner={() => undefined}
+      />,
+    );
+
+    // An account can be worked as a prospect and be a customer of something
+    // else already — dropping the badge because the two words differ would hide
+    // a true reading rather than a repeated one.
+    expect(await screen.findByText(en["org.relType.customer"])).toBeTruthy();
+  });
+});
