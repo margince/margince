@@ -228,16 +228,19 @@ function findingsIn(path: string, source: string): Finding[] {
  * an order of magnitude over the local measurement rather than a margin
  * trimmed to fit.
  *
- * A LITERAL, not the product, because scripts/test-budget.test.ts refuses a
- * timeout it cannot statically fold — correctly, since a ceiling no reader can
- * evaluate is one no reader can audit. The cost of that is the number cannot
- * scale itself, so the corpus size it assumes is asserted in the test body
- * instead: the tree outgrowing this budget fails by name rather than by
- * timeout.
+ * Written as the product so the derivation is in the code and not only here.
+ * scripts/test-budget.test.ts refuses a timeout it cannot statically fold —
+ * correctly, since a ceiling no reader can evaluate is one no reader can audit
+ * — and it rejected a first version that multiplied by `sourceFiles().length`
+ * at runtime. Two constants fold; a directory walk does not.
+ *
+ * What that costs is that the number cannot scale ITSELF, so the corpus size it
+ * assumes is asserted in the test body instead: the tree outgrowing this budget
+ * fails by name and count rather than returning as an opaque timeout.
  */
 const PARSE_BUDGET_PER_FILE_MS = 40;
 const BUDGETED_CORPUS_FILES = 1_400;
-const SCAN_TIMEOUT_MS = 56_000;
+const SCAN_TIMEOUT_MS = BUDGETED_CORPUS_FILES * PARSE_BUDGET_PER_FILE_MS;
 
 describe("one plural rule", () => {
   it(
