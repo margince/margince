@@ -66,4 +66,11 @@ describe("FieldHistoryTimeline money", () => {
     render(<FieldHistoryTimeline kind="deal" id="d1" currency="VND" />);
     expect(await screen.findByText(/2,500,000/)).toBeTruthy();
   });
+
+  it("names the field rather than printing its column", async () => {
+    vi.stubGlobal("fetch", servingOnePage([repriced]));
+    render(<FieldHistoryTimeline kind="deal" id="d1" currency="EUR" />);
+    expect(await screen.findByText("Value")).toBeTruthy();
+    expect(screen.queryByText("amount_minor")).toBeNull();
+  });
 });

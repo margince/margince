@@ -37,6 +37,7 @@ import {
   groupByField,
   provenanceOfEntry,
 } from "./history.logic";
+import { historyFieldLabel } from "./historyfieldlabels";
 import { historyValue } from "./historyvalues";
 import "./history.css";
 
@@ -125,11 +126,12 @@ function FieldGroupSection({
   group,
   currency,
 }: Readonly<{ group: FieldGroup; currency: string | null | undefined }>) {
+  const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   return (
     <div className="fgroup">
-      <div className="fgroup-head">{group.field}</div>
+      <div className="fgroup-head">{historyFieldLabel(group.field, t)}</div>
       <ul>
         {group.changes.map((change) => (
           <li key={change.id} className="change">
@@ -302,7 +304,7 @@ export function FieldHistoryTimeline({
                 variant={fieldFilter === field ? "primary" : "ghost"}
                 onClick={() => setFieldFilter(field)}
               >
-                {field}
+                {historyFieldLabel(field, t)}
               </Button>
             ))}
           </div>
