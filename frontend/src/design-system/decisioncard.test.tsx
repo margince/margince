@@ -156,6 +156,127 @@ describe("DecisionCard — what the reader is being asked", () => {
   });
 });
 
+// What a kind that has DECLARED what it shows puts on the card, against the
+// generic reading that prints the payload's own keys.
+//
+// The declarations live on the screen side (screens/approvalkind.ts) and arrive
+// here already resolved, so these tests hand the primitive what that resolution
+// produces. They are about the drawing, not the vocabulary.
+describe("DecisionCard — a kind that says what it shows", () => {
+  const CLOSE_DATE = approval({
+    kind: "close_date_correction",
+    summary: 'Confirm the real close date for "Riverty" (proposed 2026-10-01)',
+    proposed_change: {
+      deal_id: "01a03781-9083-7565-8d65-5939ec0f3e70",
+      basis: "deal has gone quiet; confirm it is still alive",
+      expected_close_date: "2026-10-01",
+      flags: ["unrealistic_stale"],
+    },
+  });
+
+  const CLOSE_DATE_DISPLAY = [
+    {
+      field: "basis",
+      label: "Why",
+      value: "deal has gone quiet; confirm it is still alive",
+      lead: true as const,
+    },
+    {
+      field: "expected_close_date",
+      label: "Proposed date",
+      value: "01.10.2026",
+    },
+    {
+      field: "flags",
+      label: "What is wrong with it",
+      value: "nothing has moved on it",
+    },
+  ];
+
+  // The reason is the first thing in the body and carries no caption. It is a
+  // sentence the server wrote for a person, and labelling it would frame an
+  // explanation as one more data point.
+  it("leads the body with the reason, unlabelled", () => {
+    const { container } = render(
+      card({ approval: CLOSE_DATE, display: CLOSE_DATE_DISPLAY }),
+    );
+    const lead = container.querySelector(".dcard-lead");
+    expect(lead).toHaveTextContent(
+      "deal has gone quiet; confirm it is still alive",
+    );
+    // Not repeated as a labelled fact underneath.
+    expect(screen.queryByText("Why")).not.toBeInTheDocument();
+  });
+
+  // The identifiers are the point of the whole exercise: a person asked to
+  // decide something must not be shown the row it is stored in.
+  it("shows the declared fields under their names and drops the rest", () => {
+    render(card({ approval: CLOSE_DATE, display: CLOSE_DATE_DISPLAY }));
+    expect(screen.getByText("Proposed date")).toBeInTheDocument();
+    expect(screen.getByText("01.10.2026")).toBeInTheDocument();
+    expect(screen.getByText("What is wrong with it")).toBeInTheDocument();
+    expect(screen.getByText("nothing has moved on it")).toBeInTheDocument();
+    // Never the wire.
+    expect(screen.queryByText("deal_id")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("01a03781-9083-7565-8d65-5939ec0f3e70"),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByText("unrealistic_stale")).not.toBeInTheDocument();
+  });
+
+  // A declared field the payload does not carry is absent rather than blank:
+  // `previous_close_date` is genuinely missing on a deal that never had one,
+  // and an empty row under a caption reads as a fact nobody wrote.
+  it("omits a declared field the payload does not carry", () => {
+    render(
+      card({
+        approval: CLOSE_DATE,
+        display: [
+          ...CLOSE_DATE_DISPLAY,
+          {
+            field: "previous_close_date",
+            label: "Date on it now",
+            value: null,
+          },
+        ],
+      }),
+    );
+    expect(screen.queryByText("Date on it now")).not.toBeInTheDocument();
+  });
+
+  // The reason survives the row layout even though the fact list does not. It
+  // is what turns a headline into a question somebody can answer without
+  // opening anything, which is exactly what a queue needs.
+  it("keeps the reason on a row while the facts stay in the deck", () => {
+    const { container } = render(
+      card({
+        approval: CLOSE_DATE,
+        display: CLOSE_DATE_DISPLAY,
+        layout: "row",
+      }),
+    );
+    expect(container.querySelector(".dcard-lead")).toHaveTextContent(
+      "deal has gone quiet",
+    );
+    expect(screen.queryByText("Proposed date")).not.toBeInTheDocument();
+  });
+
+  // The generic reading is the honest fallback, not a worse one: a kind
+  // carrying an agent's tool arguments has no typed payload to describe, and
+  // captions invented for unknown keys would be guesses.
+  it("still prints wire keys for a kind that declared nothing", () => {
+    render(
+      card({
+        approval: approval({
+          kind: "update_record",
+          proposed_change: { stage_id: "01a03781-9083-7565-8d65-5939ec0f3e70" },
+        }),
+      }),
+    );
+    expect(screen.getByText("stage_id")).toBeInTheDocument();
+  });
+});
+
 describe("DecisionCard — the deadline", () => {
   // The thresholds have ONE home. The badge the caller draws beside the card
   // reads the same function, which is what keeps a deadline from looking urgent

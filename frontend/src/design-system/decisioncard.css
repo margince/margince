@@ -141,6 +141,17 @@
   overflow: hidden;
 }
 
+/* Why this decision is in front of somebody, in the words the server wrote for
+   a person. First in the body and unlabelled: an explanation under a caption
+   reads as one more data point, and the reason has to arrive before the values
+   it explains or the reader has to work the question out from the answer. */
+.dcard-lead {
+  margin-bottom: var(--space-3);
+  color: var(--textContent);
+  font-size: var(--fs-body);
+  line-height: var(--lh-relaxed);
+}
+
 .dcard-diff {
   margin-top: var(--space-3);
 }
@@ -149,12 +160,21 @@
   margin-top: var(--space-3);
 }
 
-/* A payload value, mono because it is a stored value rather than prose, and
-   wrapped because a jsonb document has no length a card can rely on. */
+/* A payload value, wrapped because a jsonb document has no length a card can
+   rely on.
+
+   Mono only where the value is a RAW one — a kind that declared no display
+   policy, whose keys and values are shown as the wire spells them. A declared
+   field carries a name and a date somebody typed, and setting those in mono
+   would dress a business fact as machine output, which is the thing this
+   whole reading exists to stop. */
 .dcard-fact {
-  font-family: var(--f-mono);
   font-size: var(--fs-sm);
   overflow-wrap: anywhere;
+}
+
+.dcard-rest-raw .dcard-fact {
+  font-family: var(--f-mono);
 }
 
 .dcard-evidence {

@@ -22,6 +22,7 @@ import {
   type DecisionApproval,
   DecisionCard,
   type DecisionCardLabels,
+  type DecisionDisplay,
   decisionLapsed,
 } from "./decisioncard";
 import { usePrefersReducedMotion } from "./motion";
@@ -93,6 +94,12 @@ export type DecisionDeckChips = Readonly<{
   aside?: ReactNode;
   provenance?: Provenance;
   confidence?: ConfidenceLevel;
+  /**
+   * What THIS kind of proposal shows, in the reader's language. It rides here
+   * for the same reason the chips do: resolving it needs the kind catalogue and
+   * the locale, and this tier holds neither.
+   */
+  display?: readonly DecisionDisplay[];
 }>;
 
 /**
@@ -847,6 +854,7 @@ function ItemCard({
       labels={labels.card}
       provenance={trim.provenance}
       confidence={trim.confidence}
+      display={trim.display}
       aside={trim.aside}
       meta={
         <>

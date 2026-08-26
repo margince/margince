@@ -21,6 +21,7 @@ import {
 } from "../design-system/decisioncard";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
+import { viewerZone } from "../format/timezone";
 import type { Locale, Translator } from "../i18n";
 import { useLocale, useT } from "../i18n";
 import {
@@ -29,7 +30,11 @@ import {
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
-import { approvalKindLabel } from "./approvalkind";
+import {
+  approvalKindLabel,
+  resolveDisplay,
+  stagedDayFormatter,
+} from "./approvalkind";
 import {
   isAlreadyDecided,
   isVersionSkew,
@@ -211,6 +216,12 @@ export function ApprovalRow({
 
   const change = approval.proposed_change ?? {};
   const strings = editableStrings(approval.kind, change);
+  const display = resolveDisplay(
+    approval.kind,
+    change,
+    t,
+    stagedDayFormatter(locale, viewerZone()),
+  );
   const level = confidenceLevel(approval.confidence);
 
   const problem =
@@ -255,6 +266,7 @@ export function ApprovalRow({
       approval={approval}
       layout="row"
       className="approval-row"
+      display={display}
       now={now}
       labels={rowLabels(t)}
       decided={decided}

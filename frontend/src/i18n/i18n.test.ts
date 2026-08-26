@@ -30,6 +30,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",
+  // The same noun, captioning a staged proposal's email field.
+  "approval.field.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
   // keeps "Email". German translates it, and does.
   "deal.forecast.pipeline",
