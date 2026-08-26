@@ -110,8 +110,16 @@ func (a AgentSpec) TriggerRef(day time.Time, seat ids.UserID) string {
 // Truncated to 12 hex characters: this distinguishes seats within one
 // workspace-day, which is all the ref has to do, and the uniqueness that
 // matters is still enforced by the database rather than by this string being
-// unguessable. A collision would cost one rep one night's run, and at 48 bits
-// across the seats of a single workspace it is not a risk anyone will meet.
+// unguessable.
+//
+// WHAT A COLLISION COSTS, stated honestly. It is authority-safe — EnqueueJob
+// conflicts to DO NOTHING, so the losing seat gets no job rather than
+// inheriting the winner's passport. But it does not cost one night: the digest
+// is a pure function of a stable user id, so the same seat loses every day and
+// for every spec it granted, silently, until somebody notices one rep never
+// gets a brief. The probability is n(n-1)/2^49 — around 1.8e-7 at ten thousand
+// seats — and this trades that against printing a record-shaped uuid into a
+// model prompt, which is a certainty rather than a chance.
 func seatDigest(seat ids.UserID) string {
 	sum := sha256.Sum256([]byte(seat.String()))
 	return hex.EncodeToString(sum[:6])

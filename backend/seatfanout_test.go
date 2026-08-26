@@ -69,11 +69,12 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 				"workspace shares one trigger ref and only the first seeded gets a run", c.pos)
 			continue
 		}
-		if !strings.Contains(c.seatArg, ".") {
-			t.Errorf("%s: TriggerRef is called with %q, which is not a field read off a "+
-				"per-seat value — a ref built from a constant or a captured id is the "+
-				"same one for every rep, and the uniqueness constraints then admit exactly "+
-				"one run for the whole workspace", c.pos, c.seatArg)
+		if !c.fromRangeVar {
+			t.Errorf("%s: TriggerRef is called with %q, which does not resolve to the "+
+				"variable of the loop it sits in — a ref built from a constant, a captured "+
+				"id, or one seat resolved outside the loop is the SAME ref for every rep, "+
+				"and the uniqueness constraints then admit exactly one run for the whole "+
+				"workspace", c.pos, c.seatArg)
 		}
 	}
 }
@@ -88,7 +89,11 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 func TestTheTriggerRefStillCarriesTheWholeUniquenessKey(t *testing.T) {
 	sql := readMigrations(t)
 	for _, name := range triggerKeyedConstraints {
-		idx := strings.Index(sql, name)
+		// The LAST mention, not the first: the baseline defines these
+		// constraints, so reading the first occurrence would keep answering from
+		// the baseline even after a later migration dropped or re-keyed one —
+		// the gate would stay green about a rule that no longer exists.
+		idx := strings.LastIndex(sql, name)
 		if idx < 0 {
 			t.Errorf("constraint %s is gone from the migrations: the seat segment in "+
 				"TriggerRef exists to make THIS key per-seat, so if the key moved, "+
@@ -113,6 +118,13 @@ func TestTheTriggerRefStillCarriesTheWholeUniquenessKey(t *testing.T) {
 type triggerRefCall struct {
 	pos     string
 	seatArg string
+	// fromRangeVar is whether the seat traces to the range variable of a loop
+	// enclosing the call. That is the property the fan-out actually needs: a
+	// value that varies per iteration. "an argument was passed" and "it has a
+	// dot in it" are both satisfied by a seat resolved ONCE outside the loop,
+	// which compiles, reads correctly, and seeds one identical ref for the
+	// whole workspace.
+	fromRangeVar bool
 }
 
 // triggerRefCalls parses the non-test tree and returns every call whose
@@ -138,7 +150,22 @@ func triggerRefCalls(t *testing.T) []triggerRefCall {
 		if perr != nil {
 			return perr
 		}
-		ast.Inspect(file, func(n ast.Node) bool {
+		// The range variables currently in scope, innermost last. A call is
+		// only per-seat if its seat argument is rooted in one of them.
+		var inScope []string
+		var walk func(ast.Node) bool
+		walk = func(n ast.Node) bool {
+			if rng, ok := n.(*ast.RangeStmt); ok {
+				before := len(inScope)
+				for _, key := range []ast.Expr{rng.Key, rng.Value} {
+					if id, ok := key.(*ast.Ident); ok && id.Name != "_" {
+						inScope = append(inScope, id.Name)
+					}
+				}
+				ast.Inspect(rng.Body, walk)
+				inScope = inScope[:before]
+				return false
+			}
 			call, ok := n.(*ast.CallExpr)
 			if !ok {
 				return true
@@ -152,16 +179,38 @@ func triggerRefCalls(t *testing.T) []triggerRefCall {
 			// the seat names whose occurrence it is.
 			if n := len(call.Args); n >= 2 {
 				c.seatArg = exprText(fset, call.Args[n-1])
+				c.fromRangeVar = rootedIn(call.Args[n-1], inScope)
 			}
 			out = append(out, c)
 			return true
-		})
+		}
+		ast.Inspect(file, walk)
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("scanning for TriggerRef callers: %v", err)
 	}
 	return out
+}
+
+// rootedIn reports whether an expression bottoms out in one of the named
+// variables: `grant`, `grant.UserID`, `grant.Seat.ID` all count for "grant".
+func rootedIn(expr ast.Expr, names []string) bool {
+	for {
+		switch e := expr.(type) {
+		case *ast.SelectorExpr:
+			expr = e.X
+		case *ast.Ident:
+			for _, name := range names {
+				if e.Name == name {
+					return true
+				}
+			}
+			return false
+		default:
+			return false
+		}
+	}
 }
 
 // readMigrations concatenates the core migrations so a constraint can be read

@@ -132,21 +132,29 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	// and the rail would silently never learn that the 06:00 brief was queued.
 	ctx = schedulerContext(ctx)
 	s.reapAbandonedRuns(ctx)
+	// Seeding failures are collected, NOT returned here. Claiming is what makes
+	// already-queued work run, and it is independent of whether tonight's
+	// seeding succeeded — so returning early would let one seat whose seeding
+	// keeps failing stop every other seat's queued brief from executing, on
+	// every tick, for as long as the fault lasts. The pass still reports the
+	// failure at the end, on its own job row, which is where an operator reads
+	// it.
+	var seeding []error
 	for _, spec := range mustScheduledAgents() {
 		if due := spec.DueAt(now); !now.Before(due) {
 			if err := s.seedSeats(ctx, spec, now, due); err != nil {
-				return err
+				seeding = append(seeding, err)
 			}
 		}
 	}
 	jobs, err := s.store.ClaimDueJobs(ctx, claimBatch)
 	if err != nil {
-		return err
+		return errors.Join(append(seeding, err)...)
 	}
 	for _, job := range jobs {
 		s.executeJob(ctx, job)
 	}
-	return nil
+	return errors.Join(seeding...)
 }
 
 // seedSeats queues tonight's occurrence of one spec for every rep who granted

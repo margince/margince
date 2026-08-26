@@ -508,3 +508,108 @@ func grantedSpec(t *testing.T) runner.AgentSpec {
 	t.Fatalf("no catalog entry named %s", grantSpec)
 	return runner.AgentSpec{}
 }
+
+// TestOneSeatWhoseSeedingFailsDoesNotStopTheOthersRunning is the starvation
+// case, and it is about the ORDER of the two halves of a pass rather than
+// about seeding.
+//
+// Seeding and claiming are independent: claiming runs work that is ALREADY
+// queued, which does not care whether tonight's seeding succeeded. A pass that
+// returned as soon as one seat's insert raised would therefore hold every
+// other rep's queued brief hostage to that one broken seat, on every tick, for
+// as long as the fault lasted — and the failing seat is stable, so the fault
+// does not rotate away on its own.
+func TestOneSeatWhoseSeedingFailsDoesNotStopTheOthersRunning(t *testing.T) {
+	re := setupRunner(t)
+	owner := integration.OwnerConn(t)
+
+	me := re.sessionUser(t)
+	if err := re.recordDecision(t, me, runner.GrantStateGranted, &re.passportID); err != nil {
+		t.Fatalf("record the grant: %v", err)
+	}
+
+	// Work already queued from an earlier night, waiting to be claimed. This is
+	// what the failing seat must not be able to hold up.
+	const waiting = "morning_brief:already-queued"
+	seedDueRunnerJob(t, owner, waiting)
+
+	// Now make THIS seat's seeding raise, and only the insert: claiming updates
+	// the row it is executing, so a fault covering updates too would stop the
+	// claim for reasons that have nothing to do with seeding.
+	failRunnerJobInsertsFor(t, owner, grantedSpec(t).TriggerRef(afterEveryDueHour(), me))
+
+	now := afterEveryDueHour()
+	err := re.svc.Tick(schedulerPassCtx(re.wsID), now)
+	if err == nil {
+		t.Fatal("the pass reported success though a seat's seeding raised — the failure has no row and no reader, and nobody learns that rep gets no brief")
+	}
+
+	// The pass still reported the fault, AND still ran the work that was
+	// waiting. Both halves matter: reporting without claiming is the starvation
+	// bug, and claiming without reporting hides a rep's broken night.
+	status, lastError := runnerJobOutcome(t, owner, waiting)
+	if status == "queued" {
+		t.Errorf("the already-queued brief is still queued after a pass that failed to seed one seat: "+
+			"one broken seat stops every other rep's queued work from running, every tick, "+
+			"for as long as the fault lasts (pass reported: %v)", err)
+	}
+	if status != "failed" || lastError == "" {
+		t.Fatalf("the claimed job is %s (%q), want the loud passport-less failure — the claim did not reach it, so this test proves nothing about starvation", status, lastError)
+	}
+}
+
+// failRunnerJobInsertsFor makes the INSERT of one specific trigger ref raise,
+// leaving every other seat's seeding and all claiming untouched.
+//
+// Narrower than failRunnerJobWrites on purpose: that one fails the whole
+// table, so a pass under it has no successful seat to be starved and could not
+// tell the two failure shapes apart.
+func failRunnerJobInsertsFor(t *testing.T, owner *pgx.Conn, triggerRef string) {
+	t.Helper()
+	ctx := context.Background()
+	// The ref to fail lives in a row rather than in the function's text: a
+	// value spliced into a CREATE FUNCTION body would be a hand-built SQL
+	// literal, which is the one thing this tree never does.
+	if _, err := owner.Exec(ctx, `
+		CREATE TABLE IF NOT EXISTS runner_job_seat_fault_ref (trigger_ref text PRIMARY KEY)`); err != nil {
+		t.Fatalf("creating the fault-ref table: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(),
+			`DROP TABLE IF EXISTS runner_job_seat_fault_ref CASCADE`); err != nil {
+			t.Errorf("dropping the fault-ref table: %v", err)
+		}
+	})
+	if _, err := owner.Exec(ctx,
+		`INSERT INTO runner_job_seat_fault_ref (trigger_ref) VALUES ($1)`, triggerRef); err != nil {
+		t.Fatalf("pinning the faulting trigger ref: %v", err)
+	}
+	if _, err := owner.Exec(ctx, `
+		CREATE OR REPLACE FUNCTION runner_job_seat_fault() RETURNS trigger
+		LANGUAGE plpgsql AS $$
+		BEGIN
+		  IF EXISTS (SELECT 1 FROM runner_job_seat_fault_ref WHERE trigger_ref = NEW.trigger_ref) THEN
+		    RAISE EXCEPTION 'runner job seeding fault injection';
+		  END IF;
+		  RETURN NEW;
+		END $$`); err != nil {
+		t.Fatalf("creating the seat fault-injection function: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(),
+			`DROP FUNCTION IF EXISTS runner_job_seat_fault() CASCADE`); err != nil {
+			t.Errorf("dropping the seat fault-injection function: %v", err)
+		}
+	})
+	if _, err := owner.Exec(ctx, `
+		CREATE TRIGGER runner_job_seat_fault BEFORE INSERT ON runner_job
+		FOR EACH ROW EXECUTE FUNCTION runner_job_seat_fault()`); err != nil {
+		t.Fatalf("arming the seat fault trigger: %v", err)
+	}
+	t.Cleanup(func() {
+		if _, err := owner.Exec(context.Background(),
+			`DROP TRIGGER IF EXISTS runner_job_seat_fault ON runner_job`); err != nil {
+			t.Errorf("dropping the seat fault trigger: %v", err)
+		}
+	})
+}
