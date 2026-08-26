@@ -777,16 +777,19 @@
   margin-bottom: var(--space-2);
   /* Filled rather than outlined: it is the way OUT of a level, standing above a
      column of rows, and a hairline would read as a field at the head of them. A
-     recessed ground says "control" in a different word than a border does. */
+     recessed ground says "control" in a different word than a border does.
+     Only the RESTING ground is stated here. This element carries `navitem` too,
+     so `.rail .navitem:hover` already gives it the panel's one hover — it used to
+     restate that in --bgHover, which is LIGHTER than the sidebar's ground, and so
+     this control was the single thing in the rail that brightened under a pointer
+     while every row beside it darkened. A second spelling of one hover is how the
+     two got to disagree; there is one now. */
   background: var(--bgCard);
   color: var(--textPrimary);
   font-family: var(--f-body);
   font-size: var(--fs-body);
   font-weight: var(--fw-medium);
   text-align: left;
-}
-.rail .navback:hover {
-  background: var(--bgHover);
 }
 /* The chevron leads the movement it stands for: it pulls back the way the reader
    is about to go, which is the whole gesture in 2px. */

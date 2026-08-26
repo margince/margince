@@ -355,7 +355,7 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         "--bgCard": prose,
         "--bgHover": prose,
         "--bgSidebar": prose,
-        "--bgSidebarHover": ["--textPrimary", "--textContent"],
+        "--bgSidebarHover": ["--textPrimary", "--textContent", "--accentText"],
       };
       const failures: string[] = [];
       for (const [theme, pal] of [
