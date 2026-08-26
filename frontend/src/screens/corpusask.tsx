@@ -59,9 +59,15 @@ function useAskableSets(enabled: boolean) {
   });
 }
 
-function useAsk(corpusId: string) {
+function useAsk() {
   return useMutation({
-    mutationFn: async (question: string): Promise<Answer> => {
+    mutationFn: async ({
+      corpusId,
+      question,
+    }: {
+      corpusId: string;
+      question: string;
+    }): Promise<Answer> => {
       const { data, error } = await api.POST("/knowledge/corpora/{id}/ask", {
         params: { path: { id: corpusId } },
         body: { question },
@@ -91,7 +97,7 @@ export function CorpusAskCard({
   const sets = useAskableSets(canAsk);
   const [corpusId, setCorpusId] = useState("");
   const [question, setQuestion] = useState(carriedQuestion ?? "");
-  const ask = useAsk(corpusId);
+  const ask = useAsk();
 
   // The set is chosen once the list arrives, and only while nothing is chosen:
   // re-running it on every render would take the reader's own choice away the
@@ -145,7 +151,7 @@ export function CorpusAskCard({
           <Button
             disabled={question.trim() === "" || corpusId === ""}
             pending={ask.isPending}
-            onClick={() => ask.mutate(question.trim())}
+            onClick={() => ask.mutate({ corpusId, question: question.trim() })}
           >
             {t("corpusAsk.submit")}
           </Button>
@@ -153,7 +159,14 @@ export function CorpusAskCard({
         {ask.isError ? (
           <Callout tone="danger">{problemMessageOf(ask.error, t)}</Callout>
         ) : null}
-        {ask.data ? <AnswerView answer={ask.data} /> : null}
+        {/* Only while it still belongs to the set on screen. useMutation keeps
+            its last result across a change of selection, so without this a
+            reader who asks one set, switches to another, and reads on would
+            see the FIRST set's answer and citations sitting under the second
+            set's name — with nothing on the page saying so. */}
+        {ask.data && ask.data.corpus.id === corpusId ? (
+          <AnswerView answer={ask.data} />
+        ) : null}
       </PanelBody>
     </Panel>
   );

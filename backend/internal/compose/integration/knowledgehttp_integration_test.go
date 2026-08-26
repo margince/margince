@@ -76,10 +76,16 @@ type knowledgeHTTP struct {
 }
 
 func newKnowledgeHTTP(e *Env) *knowledgeHTTP {
+	return newKnowledgeHTTPWithBlobs(e, blobstore.NewMemory())
+}
+
+// newKnowledgeHTTPWithBlobs is the same wiring against a CALLER'S object store,
+// for the one suite that has to observe what the upload wrote and removed.
+func newKnowledgeHTTPWithBlobs(e *Env, blobs blobstore.Store) *knowledgeHTTP {
 	h := &knowledgeHTTP{}
 	h.handlers = knowledge.NewHandlers(e.DB()).
 		WithUploadLimit(knowledgeUploadCeiling).
-		WithBlobstore(blobstore.NewMemory()).
+		WithBlobstore(blobs).
 		WithIngestQueue(func(_ context.Context, _ pgx.Tx, documentID ids.UUID) error {
 			h.queued = append(h.queued, documentID)
 			return nil

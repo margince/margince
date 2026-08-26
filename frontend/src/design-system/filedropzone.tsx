@@ -39,6 +39,8 @@ export function FileDropzone({
   emptyLabel,
   file,
   onPick,
+  multiple,
+  files,
 }: Readonly<{
   label: string;
   hint?: string;
@@ -47,6 +49,13 @@ export function FileDropzone({
   emptyLabel: string;
   file?: File;
   onPick: (file: File) => void;
+  // Opt-in, because taking several files is a decision about what the SCREEN
+  // does with them, not about the control. A caller that has one slot to fill
+  // leaves this off and keeps the single-file behaviour unchanged.
+  multiple?: boolean;
+  // What is held when `multiple` is set. The zone names them instead of the
+  // single `file`.
+  files?: readonly File[];
 }>) {
   return (
     <Field label={label} hint={hint}>
@@ -56,6 +65,8 @@ export function FileDropzone({
           emptyLabel={emptyLabel}
           file={file}
           onPick={onPick}
+          multiple={multiple}
+          files={files}
         />
       )}
     </Field>
@@ -74,20 +85,44 @@ export function FileDropzoneControl({
   emptyLabel,
   file,
   onPick,
+  multiple,
+  files,
 }: Readonly<{
   control: FieldControl;
   emptyLabel: string;
   file?: File;
   onPick: (file: File) => void;
+  multiple?: boolean;
+  files?: readonly File[];
 }>) {
   const [over, setOver] = useState(false);
 
+  // Every dropped file when the caller asked for several, the first when it
+  // did not. A drop carries a FileList whatever the input's `multiple` says,
+  // so a single-file caller must still be handed exactly one — the browser
+  // does not enforce that for us.
   const take = (chosen: FileList | null) => {
-    const first = chosen?.[0];
+    if (!chosen) {
+      return;
+    }
+    if (multiple) {
+      for (const one of chosen) {
+        onPick(one);
+      }
+      return;
+    }
+    const first = chosen[0];
     if (first) {
       onPick(first);
     }
   };
+
+  // What the live region says. With several files the NAMES are what a reader
+  // needs — a bare count cannot tell them they dropped nine of the ten they
+  // meant to.
+  const chosenLabel = multiple
+    ? (files ?? []).map((one) => one.name).join(", ")
+    : (file?.name ?? "");
 
   return (
     // An inert div. The zone is not a second label and not a widget: the
@@ -106,6 +141,7 @@ export function FileDropzoneControl({
         // natural next move after a caller clears the field — which is
         // exactly what the add-document dialog does when an upload half
         // fails. Without this the second pick is silently inert.
+        multiple={multiple}
         onChange={(event) => {
           const chosen = event.target.files;
           take(chosen);
@@ -136,9 +172,9 @@ export function FileDropzoneControl({
               reader just chose is a confirmation, not an interruption. */}
       <span
         aria-live="polite"
-        className={file ? "fdz-label chosen" : "fdz-label"}
+        className={chosenLabel ? "fdz-label chosen" : "fdz-label"}
       >
-        {file ? file.name : emptyLabel}
+        {chosenLabel || emptyLabel}
       </span>
     </div>
   );

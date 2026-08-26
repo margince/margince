@@ -4793,6 +4793,8 @@ export const de = {
   "knowledge.upload.hint":
     "Reiner Text, Markdown, CSV oder JSON. Für PDFs oder Word-Dateien gibt es hier keinen Leser; sie werden abgelehnt statt leer abgelegt.",
   "knowledge.upload.empty": "Textdatei hierher ziehen oder auswählen",
+  "knowledge.upload.submitMany": "{count} Dokumente hinzufügen",
+  "knowledge.upload.refused": "{filename} wurde nicht hinzugefügt: {message}",
   "knowledge.upload.submit": "Dokument hinzufügen",
   "knowledge.new.title": "Neue Dokumentensammlung",
   "knowledge.new.name": "Name",
