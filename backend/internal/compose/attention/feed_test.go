@@ -970,9 +970,10 @@ func TestEveryLaneIsReadOncePerFeed(t *testing.T) {
 	}
 }
 
-// A withheld lane is named ONCE. Naming it twice is what a duplicate read looks
-// like on the wire, and a client rendering the list would say it twice.
-func TestAWithheldLaneIsNamedOnce(t *testing.T) {
+// A withheld lane appears in lanes_omitted exactly one time. Two entries is
+// what a duplicate read looks like on the wire, and a client rendering the list
+// would say it twice.
+func TestAWithheldLaneAppearsInLanesOmittedExactlyOneTime(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{err: apperrors.ErrPermissionDenied}, stubAtRisk{}, nil, fixedClock,

@@ -15,6 +15,7 @@ package compose
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"os"
@@ -63,6 +64,7 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(e.svc, e.Activities))
+	e.svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck())
 	e.reconciler = deals.NewFollowUpReconciler(e.DB(), followUpStager{svc: e.svc}, quiet)
 	return e
 }
@@ -423,6 +425,82 @@ func TestARejectionOnOneDealDoesNotSilenceAnother(t *testing.T) {
 	}
 	if got := e.pendingFollowUps(t, declined); got != 0 {
 		t.Errorf("the declined deal has %d proposals, want 0", got)
+	}
+}
+
+// An edit the effect cannot use REFUSES the decision, rather than recording a
+// yes that produces nothing.
+//
+// The approval commits before its effect runs and a failed effect never
+// un-decides it, so without a preflight the rep sees a decision go through, no
+// task appears, and there is no surface to decide the row again — the work
+// simply did not happen and nothing says so. A due date is the reachable case:
+// the card lets a human edit the payload, and the effect parses that date.
+func TestAnEditTheEffectCannotUseRefusesTheDecision(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Edited badly", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, proposal := e.followUpApproval(t, deal)
+
+	proposal.DueDate = "next Tuesday"
+	edited, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.DecideEdited(human, approvalID, edited); err == nil {
+		t.Fatal("an unusable due date was accepted, want the decision refused")
+	}
+
+	// Refused means UNDECIDED: the rep fixes the date and approves the same row.
+	var status string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT status FROM approval WHERE id = $1`, approvalID).Scan(&status); err != nil {
+		t.Fatal(err)
+	}
+	if status != "pending" {
+		t.Errorf("approval status = %q, want pending — a refused decision must "+
+			"leave the row answerable", status)
+	}
+	if got, _, _, _ := e.dealTasks(t, deal); got != 0 {
+		t.Errorf("a refused decision created %d tasks, want 0", got)
+	}
+}
+
+// A VALID edit still goes through, and the effect uses the edited value.
+//
+// The admit case beside the refusal above: a preflight that refused everything
+// would pass that test just as well, and would have quietly broken the one
+// thing the card exists for — a rep changing the date before saying yes.
+func TestAValidEditIsApprovedAndTheEffectUsesIt(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Edited well", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, proposal := e.followUpApproval(t, deal)
+
+	moved := time.Now().UTC().AddDate(0, 0, 9).Format(time.DateOnly)
+	proposal.DueDate = moved
+	edited, err := json.Marshal(proposal)
+	if err != nil {
+		t.Fatal(err)
+	}
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.DecideEdited(human, approvalID, edited); err != nil {
+		t.Fatalf("a valid edit was refused: %v", err)
+	}
+	count, _, _, due := e.dealTasks(t, deal)
+	if count != 1 {
+		t.Fatalf("the approved follow-up created %d tasks, want 1", count)
+	}
+	if due == nil || due.UTC().Format(time.DateOnly) != moved {
+		t.Errorf("the task is due %v, want the edited date %s — the effect used "+
+			"the staged proposal rather than the human's edit", due, moved)
 	}
 }
 

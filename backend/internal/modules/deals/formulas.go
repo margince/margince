@@ -27,7 +27,7 @@ const StalledThresholdDays = 60
 // a rep at three weeks rather than reporting a two-month-old fact.
 //
 // It is a second THRESHOLD, never a second predicate: IsQuietFor and QuietSQL
-// below take the window as an argument and the one rule is spelled once. A
+// below take the window as an argument, so the rule itself does not fork. A
 // surface asking at this window is asking the same question with a different
 // patience, which is why the copy beside it must name the window it used —
 // "quiet 19 days" and "stalled" are different claims about the same deal.
@@ -41,8 +41,12 @@ func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *ti
 }
 
 // IsQuietFor is IsStalled with the idle window named by the caller. Every rule
-// bar the number is identical, so the two cannot drift: a closed deal is never
-// quiet, an explicit deferral suppresses it, and idle is measured the same way.
+// bar the number is identical — a closed deal is never quiet, an explicit
+// deferral suppresses it, and idle is measured the same way.
+//
+// Held by: TestIsQuietForIsTheSameRuleAtADifferentWindow
+// (backend/internal/modules/deals/formulas_test.go), which asserts the two
+// answer identically across the idle range rather than trusting the delegation.
 func IsQuietFor(days int, status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, now time.Time) bool {
 	if DealStatus(status) != DealOpen {
 		return false // closed deals never stall

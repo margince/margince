@@ -93,6 +93,39 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	return deals.NewFollowUpReconciler(InstallationDB(pool), followUpStager{svc: approvals.NewService(InstallationDB(pool))}, log)
 }
 
+// followUpPrecheck refuses a DECISION whose payload the effect could not use.
+//
+// It exists because the two halves are not one transaction: the approval
+// commits, then the effect runs, and a failed effect never un-decides it. So a
+// payload the effect chokes on produces an approved row nothing can decide
+// again and no surface can re-drive — the rep sees their yes recorded, no task
+// appears, and nothing says why. Refusing BEFORE the decision leaves the row
+// pending, which is the state a human can act on: fix the date, approve again.
+//
+// The due date is the reachable case rather than a theoretical one. The card
+// lets a human edit the proposal, and this is the field the effect parses.
+//
+// It checks the payload about to be committed — the edit when there is one, the
+// staged proposal otherwise — because those are different documents and only
+// one of them is what the effect will read.
+func followUpPrecheck() approvals.ReleasePrecheck {
+	return func(_ context.Context, staged, edited json.RawMessage) error {
+		payload := staged
+		if len(edited) > 0 {
+			payload = edited
+		}
+		proposal, err := deals.UnmarshalFollowUpProposal(payload)
+		if err != nil {
+			return fmt.Errorf("this follow-up cannot be created as written: %w", err)
+		}
+		if _, err := time.Parse(time.DateOnly, proposal.DueDate); err != nil {
+			return fmt.Errorf(
+				"the due date %q is not a date — write it as YYYY-MM-DD", proposal.DueDate)
+		}
+		return nil
+	}
+}
+
 // followUpConfirmEffect executes an approved follow-up: redeem-then-
 // create like every 🟡 executor, then log the drafted (possibly human-
 // edited) follow-up task through the activities store — the same

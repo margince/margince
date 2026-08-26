@@ -24,6 +24,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -91,15 +92,13 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, erro
 	return risky, nil
 }
 
-// idleDaysOf is how long the deal has been quiet, counted from the same base
-// the idle rule itself measures from: the last activity, or the deal's creation
-// when nothing has ever touched it.
+// idleDaysOf is how long the deal has been quiet, counted from the base the
+// idle RULE measures from — through idlebase.Since rather than by repeating its
+// fallback here. A card that computed the base itself would agree with the
+// stalled rule by inspection and then drift the first time either moved, which
+// is what the one-spelling gate exists to stop.
 func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
-	since := deal.CreatedAt
-	if deal.LastActivityAt != nil {
-		since = *deal.LastActivityAt
-	}
-	days := int(now.Sub(since).Hours() / 24)
+	days := int(now.Sub(idlebase.Since(deal.CreatedAt, deal.LastActivityAt)).Hours() / 24)
 	if days < 0 {
 		return 0
 	}
