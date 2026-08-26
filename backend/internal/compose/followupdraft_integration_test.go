@@ -407,12 +407,15 @@ func TestTheDraftedFollowUpUsesTheExistingHeldDraftKind(t *testing.T) {
 // opens with a person-read gate whose own comment forbids exactly this — "a
 // caller who may read activities but not people must not be told through this
 // door what the people surface withholds" — and auth.Require passes a system
-// principal unconditionally, so the overnight pass walked straight past it.
-// Every string it then resolved (the counterparty's address, the subject and
-// body of their message) was stored in proposed_change, where reading the card
-// back needs only activity:create plus deal visibility. Neither person:read nor
-// activity:read is in that set, so the card handed a reader an address they may
-// not look up and content from a message they cannot open.
+// principal unconditionally, so the overnight pass walked straight past it. The
+// address it resolved was stored in proposed_change, where reading the card
+// back needs only activity:create plus deal visibility, and person:read is not
+// in that set.
+//
+// The message the draft answers is already safe by a different rule: the
+// reconciler picks evidence only from audience = 'workspace' activities, so its
+// subject and body are readable by every decider. The address is the one field
+// with no such filter behind it.
 //
 // An owner who lacks person:read gets the TASK proposal: the rep is still told
 // the deal has no next step, and no address reaches the card.

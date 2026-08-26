@@ -169,15 +169,18 @@ func (s followUpStager) stageDraftedReply(
 ) (bool, error) {
 	// The draft is composed under the DEAL OWNER's authority, not the sweep's.
 	//
-	// ReplyAddress resolves a person's email and DraftEmail reads the anchor
-	// message's subject and body — both gated on person and activity reads that
-	// a system principal walks straight past (auth.Require passes it
-	// unconditionally). Every one of those strings is then stored in
-	// proposed_change, where the card's own decide grant (activity:create plus
-	// deal visibility) is what governs reading it back. Neither person:read nor
-	// activity:read is in that set, so composing under the sweep's principal
-	// handed a reader an address they may not look up and content from a
-	// message they cannot open.
+	// ReplyAddress resolves the counterparty's email off the person record,
+	// behind an object grant AND a row scope that a system principal walks
+	// straight past — auth.Require and auth.ScopeClauseFor both pass it
+	// unconditionally. That address is then stored in proposed_change, where
+	// the card's own decide grant (activity:create plus deal visibility) is
+	// what governs reading it back, and person:read is not in that set.
+	//
+	// The message the draft answers is NOT the same question: the reconciler
+	// only ever picks evidence with audience = 'workspace', so its subject and
+	// body are readable by every decider already. The address has no such
+	// filter behind it, which is what makes this the field that needed the
+	// owner's authority.
 	//
 	// A deal nobody owns, or one whose owner is no longer live, gets the TASK
 	// proposal instead of a draft. The rep is still told about the deal; there
