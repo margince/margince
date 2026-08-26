@@ -10,6 +10,7 @@ import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { useDecisionSink } from "./approvalrow";
+import { usePendingApprovals } from "./approvals.queries";
 import { useMe } from "./common";
 import { DecisionsSection } from "./home.decisions";
 import {
@@ -31,7 +32,6 @@ import {
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { TodaySection } from "./home.today";
-import { usePendingApprovals } from "./inbox.queries";
 import "./home.css";
 
 // Home — the morning handover.

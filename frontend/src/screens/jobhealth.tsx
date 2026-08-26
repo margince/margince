@@ -20,7 +20,15 @@ import {
   ordinalNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import {
+  type Locale,
+  type PluralBase,
+  type PluralTranslator,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem, useMe } from "./common";
 import "./jobhealth.css";
@@ -59,7 +67,7 @@ const FAILURE_STATE: Record<
 // queue that jammed sixty-one minutes ago read "waited 1 hours".
 function formatWaitedFor(
   seconds: number,
-  t: Translator,
+  plural: PluralTranslator,
   locale: Locale,
 ): string {
   const [unit, count] =
@@ -70,11 +78,11 @@ function formatWaitedFor(
         : seconds >= 60
           ? (["Minutes", Math.floor(seconds / 60)] as const)
           : (["Seconds", seconds] as const);
-  const plural = count === 1 ? "one" : "other";
-  // Annotated so an unknown unit or form is a compile error rather than a key
-  // the catalog silently echoes back.
-  const key: MessageKey = `jobs.waited${unit}.${plural}`;
-  return t(key, { count: formatNumber(count, locale) });
+  // Annotated so an unknown unit is a compile error rather than a base the
+  // catalog silently echoes back. Which FORM the base takes is the plural
+  // helper's business, not this function's.
+  const base: PluralBase = `jobs.waited${unit}`;
+  return plural(base, count, { count: formatNumber(count, locale) });
 }
 
 // All four states of one kind, always all four. A zero is a fact an operator
@@ -102,6 +110,7 @@ function KindCounts({ kind }: Readonly<{ kind: JobKindHealth }>) {
 function kindFacts(
   kinds: readonly JobKindHealth[],
   t: Translator,
+  plural: PluralTranslator,
   locale: Locale,
 ): Fact[] {
   return kinds.map((kind) => ({
@@ -123,7 +132,10 @@ function kindFacts(
             late — and a row claiming a wait of zero would read as a queue
             that just started rather than one with nothing in it. */}
         {kind.oldest_waiting_age_seconds !== null && (
-          <> · {formatWaitedFor(kind.oldest_waiting_age_seconds, t, locale)}</>
+          <>
+            {" · "}
+            {formatWaitedFor(kind.oldest_waiting_age_seconds, plural, locale)}
+          </>
         )}
       </>
     ),
@@ -149,6 +161,7 @@ function KindSection({
   emptyText: string;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   return (
     <SettingRow
@@ -160,7 +173,7 @@ function KindSection({
           {kinds.length === 0 ? (
             <EmptyState>{emptyText}</EmptyState>
           ) : (
-            <FactList numeric facts={kindFacts(kinds, t, locale)} />
+            <FactList numeric facts={kindFacts(kinds, t, plural, locale)} />
           )}
         </div>
       }

@@ -33,7 +33,7 @@ import {
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { forReader } from "../format/collate";
 import { formatNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   LoadMoreButton,
@@ -460,6 +460,7 @@ function ByOwnerList({
   directory: DirectoryState;
   partial: boolean;
 }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const { principal } = directory;
@@ -517,12 +518,9 @@ function ByOwnerList({
           how many it is leaving out rather than read as a full census. */}
       {unmapped > 0 && (
         <p className="t-caption usermap-note">
-          {t(
-            unmapped === 1
-              ? "overlay.userMap.unmappedCountOne"
-              : "overlay.userMap.unmappedCount",
-            { count: formatNumber(unmapped, locale) },
-          )}
+          {plural("overlay.userMap.unmappedCount", unmapped, {
+            count: formatNumber(unmapped, locale),
+          })}
         </p>
       )}
       {/* Both the grouping and that count are computed over the pages loaded

@@ -41,7 +41,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   problemCodeOf,
@@ -65,7 +65,9 @@ import {
 } from "./connections";
 import {
   byReach,
-  missingRoles,
+  type CommitteeRole,
+  countGaps,
+  missingRolesByDeal,
   reachLabelKey,
   reachOf,
   roleLabelKey,
@@ -196,6 +198,15 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+// The roles one deal is short of, in the reader's words. One spelling, because
+// the two callout forms below differ only in whether they name the deal.
+function roleList(
+  missing: readonly CommitteeRole[],
+  t: ReturnType<typeof useT>,
+): string {
+  return missing.map((role) => t(roleLabelKey(role))).join(" / ");
+}
+
 // The coverage line the mockup draws above the contact rows: how many
 // contacts, how many nobody has written to, how many roles are unfilled.
 //
@@ -225,6 +236,7 @@ function CoverageSummary({
   routesReadable: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   if (contacts.length === 0) {
     return null;
@@ -237,7 +249,7 @@ function CoverageSummary({
       ? t("co.coverage.contactsAtLeast", {
           count: formatNumber(contacts.length, locale),
         })
-      : t("co.coverage.contacts", {
+      : plural("co.coverage.contacts", contacts.length, {
           count: formatNumber(contacts.length, locale),
         }),
   ];
@@ -249,7 +261,9 @@ function CoverageSummary({
   // The gap count is only meaningful over a complete picture: a capped page
   // hides the contacts who might hold the roles it would report as missing.
   if (!truncated && gaps > 0) {
-    parts.push(t("co.coverage.gaps", { count: formatNumber(gaps, locale) }));
+    parts.push(
+      plural("co.coverage.gaps", gaps, { count: formatNumber(gaps, locale) }),
+    );
   }
   return <p className="surfacestate-empty">{parts.join(" · ")}</p>;
 }
@@ -280,6 +294,7 @@ export function PeopleCard({
   loading?: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const contacts = [...(view?.people?.data ?? [])].sort(byReach);
   const truncated = Boolean(view?.people?.page.has_more);
@@ -291,7 +306,6 @@ export function PeopleCard({
         name: deal.name,
       }))
     : [];
-  const openDealIds = new Set(openDeals.map((deal) => deal.id));
   // Every way the committee picture can be partial, in one flag. An empty
   // `contacts` means "nobody" only when the section was actually READ: a
   // people section the grants withheld, or one this response never carried,
@@ -303,7 +317,7 @@ export function PeopleCard({
     !view?.people ||
     omitted(view, "people") ||
     Boolean(view?.deals?.page.has_more);
-  const missing = missingRoles(contacts, openDealIds, committeeIncomplete);
+  const gaps = missingRolesByDeal(contacts, openDeals, committeeIncomplete);
   const untried = contacts.filter((c) => reachOf(c) === "untried");
   return (
     <RailPanel
@@ -328,7 +342,7 @@ export function PeopleCard({
           <CoverageSummary
             contacts={contacts}
             untried={untried.length}
-            gaps={missing.length}
+            gaps={countGaps(gaps)}
             truncated={truncated}
             routesReadable={contacts.some((each) => each.routes)}
           />
@@ -372,30 +386,40 @@ export function PeopleCard({
       {/* Who is missing, not only who is present. On an account where every
           known contact has gone quiet, the person nobody has written to is the
           only move left that is not a fourth follow-up. */}
-      {(untried.length > 0 || missing.length > 0) && (
+      {(untried.length > 0 || gaps.length > 0) && (
         <PanelBody>
           {untried.length > 0 && (
             <p className="co-callout">
               <Badge tone="accent">
-                {untried.length === 1
-                  ? t("co.people.untriedHintOne")
-                  : t("co.people.untriedHint", {
-                      count: formatNumber(untried.length, locale),
-                    })}
-              </Badge>
-            </p>
-          )}
-          {missing.length > 0 && (
-            <p className="co-callout">
-              <Badge tone="warn">
-                {t("co.people.missing", {
-                  roles: missing
-                    .map((role) => t(roleLabelKey(role)))
-                    .join(" / "),
+                {plural("co.people.untriedHint", untried.length, {
+                  count: formatNumber(untried.length, locale),
                 })}
               </Badge>
             </p>
           )}
+          {/* One line per deal that is short, because a role is missing from
+              the deal that lacks it. The deal is NAMED only when there is more
+              than one open deal to be on: on a single-deal account "on Renewal"
+              is the same word the reader already has, and the row's own roles
+              line omits it for the same reason. */}
+          {gaps.map((gap) => {
+            // plural-rule:allow naming the deal or not is a choice between two
+            // sentences, not between two forms of one, so no plural rule decides it
+            const wording =
+              openDeals.length === 1
+                ? "co.people.missing"
+                : "co.people.missingOnDeal";
+            return (
+              <p className="co-callout" key={gap.dealId}>
+                <Badge tone="warn">
+                  {t(wording, {
+                    roles: roleList(gap.missing, t),
+                    deal: gap.dealName,
+                  })}
+                </Badge>
+              </p>
+            );
+          })}
         </PanelBody>
       )}
     </RailPanel>

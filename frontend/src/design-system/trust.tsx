@@ -1,6 +1,6 @@
 import { ArrowRight, ChevronRight } from "lucide-react";
 import { type ReactNode, useState } from "react";
-import { useT } from "../i18n";
+import { usePlural, useT } from "../i18n";
 import { Button } from "./atoms";
 import "./trust.css";
 
@@ -161,6 +161,7 @@ export function EvidenceChip({
   collapsed?: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const [expanded, setExpanded] = useState(false);
   const cited = evidence.lines ?? [];
   // Beside the snippet in both forms, never behind the disclosure: the line
@@ -169,7 +170,7 @@ export function EvidenceChip({
   const lineRef =
     cited.length > 0 ? (
       <span className="evidence-lines">
-        {t(cited.length === 1 ? "trust.evidenceLine" : "trust.evidenceLines", {
+        {plural("trust.evidenceLine", cited.length, {
           lines: formatSourceLines(cited),
         })}
       </span>

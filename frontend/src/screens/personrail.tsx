@@ -33,7 +33,13 @@ import {
 } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { formatDayMonth, formatNumber, relativeDays } from "../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import {
+  type Locale,
+  type Translator,
+  translatePlural,
+  useLocale,
+  useT,
+} from "../i18n";
 import { useProviderLabel } from "./channelproviders";
 import {
   ProblemError,
@@ -1013,11 +1019,7 @@ function RelationshipPulse({
       />
       <Row
         label={t("person.rail.coverage")}
-        value={reading(
-          colleagueWords(colleagues, t, locale),
-          hidden.network,
-          t,
-        )}
+        value={reading(colleagueWords(colleagues, locale), hidden.network, t)}
       />
       <Row
         label={t("person.rail.trend")}
@@ -1037,14 +1039,10 @@ function RelationshipPulse({
   );
 }
 
-function colleagueWords(
-  count: number,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-): string {
-  return count === 1
-    ? t("person.rail.colleagueOne")
-    : t("person.rail.colleagues", { count: formatNumber(count, locale) });
+function colleagueWords(count: number, locale: Locale): string {
+  return translatePlural(locale, "person.rail.colleagues", count, {
+    count: formatNumber(count, locale),
+  });
 }
 
 function trendWord(view: Person360, t: ReturnType<typeof useT>): string {

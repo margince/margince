@@ -51,6 +51,7 @@ function useImportConnections() {
       // file part.
       const body = new FormData();
       body.append("file", file);
+      // contract-fetch:allow multipart — see the note above
       const response = await fetch("/v1/me/linkedin-connections", {
         method: "POST",
         body,

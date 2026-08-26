@@ -27,7 +27,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { formatDate, formatNumber, identifierNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   problemCodeOf,
@@ -420,6 +420,7 @@ function ShareScreenBody({
   recordId,
 }: Readonly<{ recordType: RecordType; recordId: string }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   // Grant expiry must read in the viewer's own timezone, not a hardcoded
   // one — the browser's resolved IANA zone is the honest signal for "what
@@ -488,16 +489,15 @@ function ShareScreenBody({
         return {
           id: team.id,
           name: team.name,
-          note: t(
-            count === 1 ? "share.teamMembers.one" : "share.teamMembers.other",
-            { count: formatNumber(count, locale) },
-          ),
+          note: plural("share.teamMembers", count, {
+            count: formatNumber(count, locale),
+          }),
           kind: "team",
         };
       },
     );
     return [...users, ...teams];
-  }, [usersQuery.data, teamsQuery.data, t, locale]);
+  }, [usersQuery.data, teamsQuery.data, plural, locale]);
 
   const [term, setTerm] = useState("");
   const [subject, setSubject] = useState<RosterSubject | null>(null);
@@ -788,12 +788,9 @@ function ShareScreenBody({
               is the default, and the one case that does NOT end says so. */}
           <p className="t-caption" data-testid="share-expiry-consequence">
             {expiryDays > 0
-              ? t(
-                  expiryDays === 1
-                    ? "share.expiryConsequence.one"
-                    : "share.expiryConsequence.other",
-                  { days: formatNumber(expiryDays, locale) },
-                )
+              ? plural("share.expiryConsequence", expiryDays, {
+                  days: formatNumber(expiryDays, locale),
+                })
               : t("share.expiryConsequenceNone")}
           </p>
 

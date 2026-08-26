@@ -15,7 +15,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
@@ -121,6 +121,7 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
 
 export function TeamsCard() {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const qc = useQueryClient();
   // The shared roster read, not a second query of this card's own. Both spell
@@ -180,12 +181,9 @@ export function TeamsCard() {
                     label={team.name}
                     // The roster's own count copy, which has a singular — this
                     // row said "1 members" for a team of one.
-                    value={t(
-                      (team.member_count ?? 0) === 1
-                        ? "users.memberCount.one"
-                        : "users.memberCount.other",
-                      { count: formatNumber(team.member_count ?? 0, locale) },
-                    )}
+                    value={plural("users.memberCount", team.member_count ?? 0, {
+                      count: formatNumber(team.member_count ?? 0, locale),
+                    })}
                     control={
                       <Button
                         small

@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
+import { api } from "../api/client";
 import { Button, Field, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -63,20 +64,17 @@ export function PasswordSettingRow({
     // the click belongs to the committed render, so a variable it passes cannot
     // be older than the control that carried it.
     mutationFn: async (values: ChangeFields) => {
-      const response = await fetch("/v1/auth/change-password", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({
+      const { error } = await api.POST("/auth/change-password", {
+        body: {
           current_password: values.current,
           new_password: values.next,
-        }),
+        },
       });
-      if (!response.ok) {
+      if (error) {
         // The house error path: the server's problem detail is what says
         // whether the current password was wrong or the new one was refused,
         // and a generic message here would throw that away.
-        throwProblem(await response.json().catch(() => null), t);
+        throwProblem(error, t);
       }
     },
     onSuccess: async () => {

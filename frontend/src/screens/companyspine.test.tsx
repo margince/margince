@@ -478,7 +478,7 @@ describe("the conversations behind the last word", () => {
     );
 
     expect(screen.getByText("More conversations before this")).toBeTruthy();
-    expect(screen.queryByText("One earlier conversation")).toBeNull();
+    expect(screen.queryByText("1 earlier conversation")).toBeNull();
     expect(screen.queryByText("1 Jul 2026")).toBeNull();
   });
 
@@ -510,7 +510,10 @@ describe("the conversations behind the last word", () => {
       }),
     );
 
-    expect(screen.getByText("One earlier conversation")).toBeTruthy();
+    // The singular arm carries the count rather than the word "One": the form
+    // comes from the reader's plural rule now, and a locale whose `one` category
+    // covers more than the number one still has to render the number.
+    expect(screen.getByText("1 earlier conversation")).toBeTruthy();
   });
 });
 

@@ -66,6 +66,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
+import { usePendingApprovals } from "./approvals.queries";
 import { ArchiveAction } from "./archive";
 import {
   LoadMoreButton,
@@ -108,7 +109,6 @@ import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import { EditAction } from "./edit";
 import { EntityRef, useEntityName } from "./entityref";
 import { RecordHistoryTab } from "./history";
-import { usePendingApprovals } from "./inbox.queries";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,

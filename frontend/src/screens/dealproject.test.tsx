@@ -313,6 +313,22 @@ describe("the deal page", () => {
     expect(chip.getAttribute("href")).toBe("#/projects/pr-1");
   });
 
+  it("says a withheld project is withheld rather than drawing no chip at all", async () => {
+    // A withheld project is null with the field named in `masked_fields`, and
+    // the chip used to return nothing on a null id — so a deal whose project
+    // this reader may not see read exactly like a deal with no project. The
+    // mask says there IS one; it carries no link, because there is no id to
+    // send anybody to.
+    dealBackend({
+      deals: [deal({ project_id: null, masked_fields: ["project_id"] })],
+      projects: [project({ id: "pr-1", name: "CRM rollout" })],
+    });
+    render(<DealScreen id="d1" />);
+    await screen.findByRole("heading", { name: "Fleet retrofit" });
+    expect(await screen.findByLabelText("Masked value")).toBeTruthy();
+    expect(screen.queryByText("CRM rollout")).toBeNull();
+  });
+
   it("offers a won deal with no project the company's one open project, and attaches it", async () => {
     const user = userEvent.setup();
     const writes = dealBackend({

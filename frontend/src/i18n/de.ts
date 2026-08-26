@@ -35,8 +35,8 @@ export const de = {
   "trust.resolvedValue": "übernommener Wert",
   "trust.editValue": "{description} bearbeiten",
   "trust.evidenceFrom": "Beleg von {source}",
-  "trust.evidenceLine": "Zeile {lines}",
-  "trust.evidenceLines": "Zeilen {lines}",
+  "trust.evidenceLine_one": "Zeile {lines}",
+  "trust.evidenceLine_other": "Zeilen {lines}",
 
   "history.created": "— angelegt —",
   "history.oldValue": "Vorheriger Wert",
@@ -265,9 +265,9 @@ export const de = {
   "share.expiry.day": "Läuft in 24 Stunden ab",
   "share.expiry.week": "Läuft in 7 Tagen ab",
   "share.expiry.month": "Läuft in 30 Tagen ab",
-  "share.expiryConsequence.one":
+  "share.expiryConsequence_one":
     "Der Zugriff endet automatisch in {days} Tag. Sie können ihn jederzeit früher widerrufen.",
-  "share.expiryConsequence.other":
+  "share.expiryConsequence_other":
     "Der Zugriff endet automatisch in {days} Tagen. Sie können ihn jederzeit früher widerrufen.",
   "share.expiryConsequenceNone":
     "Der Zugriff bleibt bestehen, bis Sie ihn widerrufen — er endet nicht von selbst.",
@@ -288,9 +288,9 @@ export const de = {
   "share.revokeConfirm":
     "Diese Freigabe widerrufen? Der Zugriff auf diesen Datensatz entfällt beim nächsten Request — es gibt keine Rückgängig-Funktion.",
   "share.approvalRequired":
-    "Diese Freigabe braucht erst eine Genehmigung — sie wurde in den Genehmigungs-Posteingang eingereiht, aber noch nicht angewendet.",
-  "share.teamMembers.one": "Team · {count} Mitglied",
-  "share.teamMembers.other": "Team · {count} Mitglieder",
+    "Diese Freigabe braucht erst eine Genehmigung — sie wartet auf eine Entscheidung und ist noch nicht angewendet.",
+  "share.teamMembers_one": "Team · {count} Mitglied",
+  "share.teamMembers_other": "Team · {count} Mitglieder",
   "share.rosterLoading": "Personen und Teams werden geladen…",
   "share.rosterErrorUsers":
     "Personenliste konnte nicht geladen werden — Teams werden unten angezeigt.",
@@ -656,9 +656,9 @@ export const de = {
   "overlay.userMap.sharedSeat": "Geteilter Sitz — {count} Nutzer",
   "overlay.userMap.ownerEmpty":
     "Bisher ist niemand einem {principal}-Nutzer zugeordnet.",
-  "overlay.userMap.unmappedCountOne":
+  "overlay.userMap.unmappedCount_one":
     "1 Person ist nicht zugeordnet und fehlt hier — wechsle zu Nach Nutzer, um das zu beheben.",
-  "overlay.userMap.unmappedCount":
+  "overlay.userMap.unmappedCount_other":
     "{count} Personen sind nicht zugeordnet und fehlen hier — wechsle zu Nach Nutzer, um das zu beheben.",
   "overlay.userMap.partialView":
     "Diese Gruppierung und die Zählung umfassen nur die bisher geladenen Nutzer. Lade mehr, um den Rest zu sehen.",
@@ -789,10 +789,10 @@ export const de = {
   "co.suggest.act.openDeal": "Deal öffnen",
   "co.suggest.act.addTask": "Nächsten Schritt anlegen",
   // Ein Verlauf als ein Ereignis sagt zuerst, WAS er ist.
-  "timeline.group.thread": "{count} Nachrichten",
-  "timeline.group.threadOne": "1 Nachricht",
-  "timeline.group.bulk": "an {count} Personen gesendet",
-  "timeline.group.bulkOne": "an 1 Person gesendet",
+  "timeline.group.thread_other": "{count} Nachrichten",
+  "timeline.group.thread_one": "{count} Nachricht",
+  "timeline.group.bulk_other": "an {count} Personen gesendet",
+  "timeline.group.bulk_one": "an {count} Person gesendet",
   "timeline.group.expand": "Öffnen",
   "timeline.group.collapse": "Schließen",
   "timeline.group.openThread": "Ganzen Verlauf ansehen",
@@ -838,10 +838,10 @@ export const de = {
   "co.health.payment.onTime": "Zahlt pünktlich.",
   "co.health.sinceInbound": "Sie schrieben zuletzt vor {days} Tagen",
   "co.health.replyBalance": "{percent}% des Austauschs kam von ihnen",
-  "co.health.activeContacts.one": "{count} Person hier hatte je Kontakt",
-  "co.health.activeContacts.other": "{count} Personen hier hatten je Kontakt",
-  "co.health.openCommitments.one": "{count} offene Zusage",
-  "co.health.openCommitments.other": "{count} offene Zusagen",
+  "co.health.activeContacts_one": "{count} Person hier hatte je Kontakt",
+  "co.health.activeContacts_other": "{count} Personen hier hatten je Kontakt",
+  "co.health.openCommitments_one": "{count} offene Zusage",
+  "co.health.openCommitments_other": "{count} offene Zusagen",
   "co.health.singleThreaded": "Ein Kontakt trägt diesen Account",
   "org.partnerSetUp": "Partnerprogramm einrichten",
   "signal.kind.stalled_deal": "Deal steht",
@@ -987,8 +987,8 @@ export const de = {
   "co.pulse.neverTouched": "Noch nie kontaktiert",
   "co.pulse.owner": "Betreut von",
   "co.pulse.strongestLead": "Zugang \u00fcber",
-  "co.pulse.strengthTail.one": "\u2014 der einzige Kontakt hier",
-  "co.pulse.strengthTail.other": "\u2014 von {count} Kontakten hier",
+  "co.pulse.strengthTail_one": "\u2014 der einzige Kontakt hier",
+  "co.pulse.strengthTail_other": "\u2014 von {count} Kontakten hier",
   "co.pulse.unowned": "Nicht zugewiesen",
   "co.since.first": "Du öffnest diesen Account zum ersten Mal.",
   "co.partial":
@@ -1019,10 +1019,10 @@ export const de = {
   "finance.paidOn": "bezahlt {when}",
   "finance.col.dates": "Ausgestellt → fällig",
   "finance.recentInvoices": "Letzte Rechnungen",
-  "finance.paidDayLate": "1 Tag zu spät bezahlt",
-  "finance.paidDaysLate": "{days} Tage zu spät bezahlt",
-  "finance.overdueDay": "{days} Tag überfällig",
-  "finance.overdueDays": "{days} Tage überfällig",
+  "finance.paidDaysLate_one": "1 Tag zu spät bezahlt",
+  "finance.paidDaysLate_other": "{days} Tage zu spät bezahlt",
+  "finance.overdueDays_one": "{days} Tag überfällig",
+  "finance.overdueDays_other": "{days} Tage überfällig",
   "finance.col.amount": "Betrag",
   "finance.col.status": "Status",
   "finance.unnumbered": "Ohne Nummer",
@@ -1111,10 +1111,12 @@ export const de = {
   "commercial.offer.rejected": "Abgelehnt",
   "commercial.offer.expired": "Abgelaufen",
   "commercial.offer.superseded": "Ersetzt",
-  "co.coverage.contacts": "{count} Kontakte",
+  "co.coverage.contacts_one": "{count} Kontakt",
+  "co.coverage.contacts_other": "{count} Kontakte",
   "co.coverage.contactsAtLeast": "{count}+ Kontakte",
   "co.coverage.untried": "{count} nie angeschrieben",
-  "co.coverage.gaps": "{count} Rollenlücken",
+  "co.coverage.gaps_one": "{count} Rollenlücke",
+  "co.coverage.gaps_other": "{count} Rollenlücken",
   "co.section.restricted":
     "Ausgeblendet \u2014 deine Rolle darf das nicht lesen",
   "co.next.title": "Nächste Schritte",
@@ -1135,10 +1137,10 @@ export const de = {
   "co.facts.noDeals": "Keine offenen Deals",
   "co.facts.unpriced": "Noch nicht beziffert",
   "co.facts.nothing": "Nichts",
-  "co.facts.dealsOne": "1 Deal",
-  "co.facts.dealsMany": "{count} Deals",
-  "co.facts.projectsOne": "1 Projekt",
-  "co.facts.projectsMany": "{count} Projekte",
+  "co.facts.deals_one": "1 Deal",
+  "co.facts.deals_other": "{count} Deals",
+  "co.facts.projects_one": "1 Projekt",
+  "co.facts.projects_other": "{count} Projekte",
   "co.facts.atLeast": "oder mehr",
   "co.work.title": "Was gerade l\u00e4uft",
   "co.work.count": "{count} laufend",
@@ -1474,8 +1476,11 @@ export const de = {
   "co.role.user": "Anwender",
   "co.people.missing":
     "Für den offenen Deal ist noch kein {roles} benannt — leg die Rolle bei der Person fest, die es ist.",
-  "co.people.untriedHint": "{count} Personen hier wurden nie angesprochen.",
-  "co.people.untriedHintOne": "Eine Person hier wurde nie angesprochen.",
+  "co.people.missingOnDeal":
+    "Für {deal} ist noch kein {roles} benannt — leg die Rolle bei der Person fest, die es ist.",
+  "co.people.untriedHint_other":
+    "{count} Personen hier wurden nie angesprochen.",
+  "co.people.untriedHint_one": "{count} Person hier wurde nie angesprochen.",
   "co.evidence.extractedUnconfirmed": "KI-extrahiert · noch nicht bestätigt",
   "co.evidence.previous": "Vorherige Aussage",
   "co.evidence.next": "Nächste Aussage",
@@ -1484,8 +1489,8 @@ export const de = {
   "co.tools.title": "Daten & Werkzeuge",
   "co.prep.withheld":
     "Teile dieses Accounts sind für dich nicht sichtbar. Diese Einschätzung ist deshalb unvollständig.",
-  "co.read.newActivityOne": "Ein neuer Vorgang seit deinem letzten Besuch.",
-  "co.read.newActivityMany":
+  "co.read.newActivity_one": "Ein neuer Vorgang seit deinem letzten Besuch.",
+  "co.read.newActivity_other":
     "{count} neue Vorgänge seit deinem letzten Besuch.",
   "co.factField.founded_year": "Gegründet",
   "co.factField.employee_range": "Mitarbeitende",
@@ -1939,8 +1944,8 @@ export const de = {
   "deals.bulkStagePick": "Phase wählen",
   "deals.bulkMove": "Verschieben",
   "deals.bulkArchive": "Archivieren",
-  "deals.bulkArchiveConfirmTitle.one": "Diesen Deal archivieren?",
-  "deals.bulkArchiveConfirmTitle.other": "{count} Deals archivieren?",
+  "deals.bulkArchiveConfirmTitle_one": "Diesen Deal archivieren?",
+  "deals.bulkArchiveConfirmTitle_other": "{count} Deals archivieren?",
   "deals.bulkArchiveConfirmBody":
     "Sie verschwinden aus allen Listen und Auswertungen, und zurückholen lässt sich hier noch keiner.",
   "deals.bulkFailed": "{count} nicht übernommen –",
@@ -2003,33 +2008,33 @@ export const de = {
   "offer.pdfUnavailable":
     "PDF-Erzeugung auf diesem Deployment nicht verfügbar.",
 
-  "inbox.viaTool": "über {verb}",
-  "inbox.approveEdited": "Bearbeitet übernehmen",
-  "inbox.reject": "Ablehnen",
-  "inbox.rejectReason": "Begründung",
-  "inbox.draftSubject": "Betreff",
-  "inbox.draftBody": "Nachricht",
-  "inbox.rejectReasonHint":
+  "decision.viaTool": "über {verb}",
+  "decision.approveEdited": "Bearbeitet übernehmen",
+  "decision.reject": "Ablehnen",
+  "decision.rejectReason": "Begründung",
+  "decision.draftSubject": "Betreff",
+  "decision.draftBody": "Nachricht",
+  "decision.rejectReasonHint":
     "Wird mit der Person geteilt, für die dies vorgemerkt wurde.",
-  "inbox.dismiss": "Schließen",
-  "inbox.versionSkew":
+  "decision.dismiss": "Schließen",
+  "decision.versionSkew":
     "Dieser Datensatz hat sich seit dem Vormerken geändert — bitte neu vormerken.",
-  "inbox.reRead": "Neu einlesen",
-  "inbox.alreadyDecided":
+  "decision.reRead": "Neu einlesen",
+  "decision.alreadyDecided":
     "Bereits entschieden — hier gibt es nichts mehr zu tun.",
-  "inbox.expired": "Abgelaufen",
-  "inbox.expiresIn": "läuft ab in {countdown}",
-  "inbox.detail": "Freigabe-Detail",
-  "inbox.detailTechnical": "Technische Details",
-  "inbox.detailAsked": "Gefragt am",
-  "inbox.detailDecided": "Entschieden am",
-  "inbox.status.approved": "Genehmigt",
-  "inbox.status.rejected": "Abgelehnt",
-  "inbox.status.expired": "Abgelaufen",
+  "decision.expired": "Abgelaufen",
+  "decision.expiresIn": "läuft ab in {countdown}",
+  "decision.detail": "Freigabe-Detail",
+  "decision.detailTechnical": "Technische Details",
+  "decision.detailAsked": "Gefragt am",
+  "decision.detailDecided": "Entschieden am",
+  "decision.status.approved": "Genehmigt",
+  "decision.status.rejected": "Abgelehnt",
+  "decision.status.expired": "Abgelaufen",
 
   "home.pipelineWeighted": "{amount} gewichtet",
-  "home.pipelineCount.one": "{count} offener Deal",
-  "home.pipelineCount.other": "{count} offene Deals",
+  "home.pipelineCount_one": "{count} offener Deal",
+  "home.pipelineCount_other": "{count} offene Deals",
   "home.pipelinePartial":
     "{count} Deals fehlen in diesen Zahlen – Ihre Berechtigung deckt sie nicht ab.",
   "home.pipelineUnavailable": "Diese Zahl konnte nicht geladen werden.",
@@ -2049,8 +2054,8 @@ export const de = {
   "home.dismiss": "Ausblenden",
   "home.actedState": "erledigt",
   "home.dismissedState": "ausgeblendet",
-  "home.evidence": "{count} Belege",
-  "home.evidenceOne": "1 Beleg",
+  "home.evidence_other": "{count} Belege",
+  "home.evidence_one": "{count} Beleg",
   "home.openDeal": "Deal öffnen",
   "home.factorWinnability": "Gewinnchance",
   "home.factorRevenue": "Umsatz",
@@ -2082,19 +2087,19 @@ export const de = {
   "home.glance.nightAnon": "Noch im Einsatz.",
   "home.glance.intro": "Das ist dein Tag.",
   "home.glance.decisionsClear": "Es wartet nichts auf dich.",
-  "home.glance.decisions.one": "Entscheidung wartet auf dich.",
-  "home.glance.decisions.other": "Entscheidungen warten auf dich.",
-  "home.glance.expiring.one": "davon läuft heute ab.",
-  "home.glance.expiring.other": "davon laufen heute ab.",
-  "home.glance.ranked.one": "Deal ist für heute priorisiert.",
-  "home.glance.ranked.other": "Deals sind für heute priorisiert.",
+  "home.glance.decisions_one": "Entscheidung wartet auf dich.",
+  "home.glance.decisions_other": "Entscheidungen warten auf dich.",
+  "home.glance.expiring_one": "davon läuft heute ab.",
+  "home.glance.expiring_other": "davon laufen heute ab.",
+  "home.glance.ranked_one": "Deal ist für heute priorisiert.",
+  "home.glance.ranked_other": "Deals sind für heute priorisiert.",
   "home.glance.leader": "{deal} führt mit {amount}.",
-  "home.glance.captured.one": "Nachricht wurde über Nacht erfasst.",
-  "home.glance.captured.other": "Nachrichten wurden über Nacht erfasst.",
-  "home.glance.duplicates.one": "Duplikat braucht einen Blick.",
-  "home.glance.duplicates.other": "Duplikate brauchen einen Blick.",
-  "home.glance.quiet.one": "offener Deal ist still geworden.",
-  "home.glance.quiet.other": "offene Deals sind still geworden.",
+  "home.glance.captured_one": "Nachricht wurde über Nacht erfasst.",
+  "home.glance.captured_other": "Nachrichten wurden über Nacht erfasst.",
+  "home.glance.duplicates_one": "Duplikat braucht einen Blick.",
+  "home.glance.duplicates_other": "Duplikate brauchen einen Blick.",
+  "home.glance.quiet_one": "offener Deal ist still geworden.",
+  "home.glance.quiet_other": "offene Deals sind still geworden.",
   "home.glance.goDecisions": "Zu den Entscheidungen, die auf dich warten",
   "home.glance.goToday": "Zu den heute priorisierten Deals",
   "home.glance.goDuplicates": "Zur Duplikate-Warteschlange",
@@ -2107,12 +2112,12 @@ export const de = {
   "home.overnight.fixConnector": "Verbindung prüfen",
   "home.watch.clear": "Nichts ist still geworden.",
   "home.readings.decisions": "Wartet auf dich",
-  "home.readings.expiring.one": "1 läuft heute ab",
-  "home.readings.expiring.other": "{count} laufen heute ab",
+  "home.readings.expiring_one": "1 läuft heute ab",
+  "home.readings.expiring_other": "{count} laufen heute ab",
   "home.readings.expiringNone": "nichts läuft heute ab",
   "home.readings.openDeals": "Offene Deals",
-  "home.readings.currencies.one": "in {count} Währung",
-  "home.readings.currencies.other": "in {count} Währungen",
+  "home.readings.currencies_one": "in {count} Währung",
+  "home.readings.currencies_other": "in {count} Währungen",
   "home.readings.ranked": "Heute priorisiert",
   "home.readings.topScore": "höchster Score {pct} %",
   "home.readings.noRun": "noch kein Lauf",
@@ -2128,15 +2133,15 @@ export const de = {
   "home.deck.viewList": "Liste",
   "home.deck.keys":
     "→ annehmen · ← ablehnen · ↑ bearbeiten · ↓ später · U zurücknehmen · Enter senden",
-  "home.deck.behind.one": "1 weitere Karte dahinter",
-  "home.deck.behind.other": "{count} weitere Karten dahinter",
-  "home.deck.staged.one": "1 Entscheidung vorbereitet",
-  "home.deck.staged.other": "{count} Entscheidungen vorbereitet",
+  "home.deck.behind_one": "1 weitere Karte dahinter",
+  "home.deck.behind_other": "{count} weitere Karten dahinter",
+  "home.deck.staged_one": "1 Entscheidung vorbereitet",
+  "home.deck.staged_other": "{count} Entscheidungen vorbereitet",
   "home.deck.commit": "Vorbereitete Entscheidungen senden",
   "home.deck.unstage": "Letzte zurücknehmen",
   "home.deck.clearedTitle": "Stapel leer",
-  "home.deck.cleared.one": "1 Entscheidung gesendet",
-  "home.deck.cleared.other": "{count} Entscheidungen gesendet",
+  "home.deck.cleared_one": "1 Entscheidung gesendet",
+  "home.deck.cleared_other": "{count} Entscheidungen gesendet",
   "home.deck.clearedTime": "um {at}",
   "home.deck.empty": "Es wartet nichts auf dich.",
   "home.deck.bundleSummary": "Eine Entscheidung · {count} Vorgänge",
@@ -2165,17 +2170,17 @@ export const de = {
   "deepread.statusFailed": "Fehlgeschlagen",
   "deepread.statusCancelled": "Abgebrochen",
   "deepread.resumesAt": "Wird automatisch am {when} fortgesetzt.",
-  "deepread.pagesSoFar.one": "{count} Seite gelesen",
-  "deepread.pagesSoFar.other": "{count} Seiten gelesen",
+  "deepread.pagesSoFar_one": "{count} Seite gelesen",
+  "deepread.pagesSoFar_other": "{count} Seiten gelesen",
   "deepread.stoppedEarly": "Früh beendet: {reason}",
   "deepread.stopBudget": "Modellbudget",
   "deepread.stopPageCap": "Seitenlimit",
   "deepread.stopByteCap": "Größenlimit",
   "deepread.stopDeadline": "Zeitlimit",
-  "deepread.factCount.one": "{count} belegter Fakt vorgemerkt",
-  "deepread.factCount.other": "{count} belegte Fakten vorgemerkt",
-  "deepread.proposals": "{count} Vorschläge warten auf deine Prüfung",
-  "deepread.proposalsOne": "1 Vorschlag wartet auf deine Prüfung",
+  "deepread.factCount_one": "{count} belegter Fakt vorgemerkt",
+  "deepread.factCount_other": "{count} belegte Fakten vorgemerkt",
+  "deepread.proposals_other": "{count} Vorschläge warten auf deine Prüfung",
+  "deepread.proposals_one": "{count} Vorschlag wartet auf deine Prüfung",
   "deepread.kindHome": "Startseite",
   "deepread.kindImpressum": "Impressum",
   "deepread.kindAbout": "Über uns",
@@ -2196,11 +2201,12 @@ export const de = {
   "transcriptread.statusRunning": "Wird gelesen…",
   "transcriptread.statusDone": "Fertig",
   "transcriptread.statusFailed": "Fehlgeschlagen",
-  "transcriptread.lineCount.one": "{count} Zeile gelesen",
-  "transcriptread.lineCount.other": "{count} Zeilen gelesen",
-  "transcriptread.proposals":
+  "transcriptread.lineCount_one": "{count} Zeile gelesen",
+  "transcriptread.lineCount_other": "{count} Zeilen gelesen",
+  "transcriptread.proposals_other":
     "{count} nächste Schritte warten auf deine Prüfung",
-  "transcriptread.proposalsOne": "1 nächster Schritt wartet auf deine Prüfung",
+  "transcriptread.proposals_one":
+    "{count} nächster Schritt wartet auf deine Prüfung",
   "transcriptread.nothingStated":
     "Vollständig gelesen. Dieses Gespräch nennt keine nächsten Schritte.",
   "transcriptread.failedFallback":
@@ -2287,8 +2293,8 @@ export const de = {
   "co.spine.expectedClose": "Erwarteter Abschluss",
   "co.spine.worth": "{amount} h\u00e4ngen daran",
   "co.spine.unpriced": "{count} offen, noch nicht beziffert",
-  "co.spine.earlier": "{count} frühere Gespräche",
-  "co.spine.earlierOne": "Ein früheres Gespräch",
+  "co.spine.earlier_other": "{count} frühere Gespräche",
+  "co.spine.earlier_one": "{count} früheres Gespräch",
   "co.spine.earlierMore": "Weitere Gespräche davor",
   "co.spine.exchangeCount": "{count} Nachrichten",
   "co.spine.kind.email": "Eine E-Mail",
@@ -2354,10 +2360,11 @@ export const de = {
     "Hier stehen nur noch ersetzte Dokumente. Einblenden, um die Historie zu lesen.",
   "docs.superseded.show": "Ersetzte einblenden",
   "docs.superseded.hide": "Ersetzte ausblenden",
-  "docs.superseded.hiddenOne": "1 ersetztes Dokument ist ausgeblendet.",
-  "docs.superseded.hiddenMany": "{count} ersetzte Dokumente sind ausgeblendet.",
-  "docs.superseded.shownOne": "1 ersetztes Dokument steht unten in der Liste.",
-  "docs.superseded.shownMany":
+  "docs.superseded.hidden_one": "1 ersetztes Dokument ist ausgeblendet.",
+  "docs.superseded.hidden_other":
+    "{count} ersetzte Dokumente sind ausgeblendet.",
+  "docs.superseded.shown_one": "1 ersetztes Dokument steht unten in der Liste.",
+  "docs.superseded.shown_other":
     "{count} ersetzte Dokumente stehen unten in der Liste.",
   "docs.reading.show": "Dokument auslesen",
   "docs.reading.hide": "Auslesung ausblenden",
@@ -2416,19 +2423,19 @@ export const de = {
   "extraction.failed": "Diese Datei konnte nicht gelesen werden.",
   "extraction.groundedNothing":
     "Die KI hat diese Datei gelesen — sie nennt keines der Deal-Felder.",
-  "extraction.heading.one":
+  "extraction.heading_one":
     "Die KI hat diese Datei gelesen — {count} belegbares Feld, für Ihren Datensatz vorbereitet (zum Übernehmen bestätigen)",
-  "extraction.heading.other":
+  "extraction.heading_other":
     "Die KI hat diese Datei gelesen — {count} belegbare Felder, für Ihren Datensatz vorbereitet (zum Übernehmen bestätigen)",
-  "extraction.accept.one": "{count} Feld übernehmen",
-  "extraction.accept.other": "{count} Felder übernehmen",
+  "extraction.accept_one": "{count} Feld übernehmen",
+  "extraction.accept_other": "{count} Felder übernehmen",
   "extraction.dismiss": "Verwerfen",
   "extraction.dismissed":
     "Es wurde nichts geschrieben. Die Datei bleibt angehängt.",
   "extraction.acceptedLabel": "Übernommene Felder",
-  "extraction.acceptedHeading.one":
+  "extraction.acceptedHeading_one":
     "{count} Feld in den Deal übernommen — die Originalauszüge bleiben erhalten",
-  "extraction.acceptedHeading.other":
+  "extraction.acceptedHeading_other":
     "{count} Felder in den Deal übernommen — die Originalauszüge bleiben erhalten",
   "extraction.acceptFailed":
     "Diese Felder wurden nicht geschrieben. Am Deal hat sich nichts geändert.",
@@ -2827,23 +2834,23 @@ export const de = {
   "import.issuesLead":
     "Einige Zeilen können nicht importiert werden. Sie sind mit der Zeilennummer in Ihrer Datei aufgeführt.",
   "import.issueLine": "Zeile {line}:",
-  "import.commit.one": "1 Zeile importieren",
-  "import.commit.other": "{rows} Zeilen importieren",
+  "import.commit_one": "1 Zeile importieren",
+  "import.commit_other": "{rows} Zeilen importieren",
   "import.importing": "Wird importiert…",
   "import.done": "Der Import ist abgeschlossen.",
   "import.failed":
     "Der Import hat nach {checkpoint} Zeilen gestoppt. Fortsetzen macht dort weiter, statt neu zu beginnen.",
   "import.resume": "Import fortsetzen",
   "import.another": "Weitere Datei importieren",
-  "import.undo.one": "Diesen Import rückgängig machen (1 Zeile)",
-  "import.undo.other": "Diesen Import rückgängig machen ({rows} Zeilen)",
+  "import.undo_one": "Diesen Import rückgängig machen (1 Zeile)",
+  "import.undo_other": "Diesen Import rückgängig machen ({rows} Zeilen)",
   "import.undoing": "Wird rückgängig gemacht…",
   "import.undoInterrupted":
     "Das Rückgängigmachen wurde unterbrochen. Fortsetzen macht dort weiter, wo es aufgehört hat, nicht von vorn.",
   "import.continueUndo": "Rückgängigmachen fortsetzen",
   "import.undone": "Der Import wurde rückgängig gemacht.",
-  "import.undoReversed.one": "1 Zeile rückgängig gemacht.",
-  "import.undoReversed.other": "{rows} Zeilen rückgängig gemacht.",
+  "import.undoReversed_one": "1 Zeile rückgängig gemacht.",
+  "import.undoReversed_other": "{rows} Zeilen rückgängig gemacht.",
   "import.undoKeptLead":
     "Beibehalten — diese wurden seit dem Import bearbeitet:",
   "import.undoErroredLead":
@@ -2886,14 +2893,14 @@ export const de = {
   "jobs.count.retrying": "{count} wiederholen",
   "jobs.count.dead": "{count} tot",
   "jobs.queue": "Queue {queue}",
-  "jobs.waitedSeconds.one": "ältester wartet seit {count} Sekunde",
-  "jobs.waitedSeconds.other": "ältester wartet seit {count} Sekunden",
-  "jobs.waitedMinutes.one": "ältester wartet seit {count} Minute",
-  "jobs.waitedMinutes.other": "ältester wartet seit {count} Minuten",
-  "jobs.waitedHours.one": "ältester wartet seit {count} Stunde",
-  "jobs.waitedHours.other": "ältester wartet seit {count} Stunden",
-  "jobs.waitedDays.one": "ältester wartet seit {count} Tag",
-  "jobs.waitedDays.other": "ältester wartet seit {count} Tagen",
+  "jobs.waitedSeconds_one": "ältester wartet seit {count} Sekunde",
+  "jobs.waitedSeconds_other": "ältester wartet seit {count} Sekunden",
+  "jobs.waitedMinutes_one": "ältester wartet seit {count} Minute",
+  "jobs.waitedMinutes_other": "ältester wartet seit {count} Minuten",
+  "jobs.waitedHours_one": "ältester wartet seit {count} Stunde",
+  "jobs.waitedHours_other": "ältester wartet seit {count} Stunden",
+  "jobs.waitedDays_one": "ältester wartet seit {count} Tag",
+  "jobs.waitedDays_other": "ältester wartet seit {count} Tagen",
   "jobs.deadTitle": "Tote Arbeit braucht deine Hand",
   "jobs.deadBody":
     "{count} Jobs sind verworfen oder abgebrochen: diese Arbeit passiert ohne Eingriff nicht mehr. Ein verworfener Job hat alle Versuche verbraucht, ein abgebrochener wurde absichtlich gestoppt. Lies die Fehler unten, bevor du etwas neu einreihst.",
@@ -3171,17 +3178,17 @@ export const de = {
   // Die Klartext-Zeile im Rail-Footer: Die genauen IDs sind einen Klick
   // entfernt in der Zeile „Konfigurierte KI“ des Laufzeit-Chips — hier steht
   // nur, was auf den ersten Blick zählt: wie viele Modelle, und wo sie laufen.
-  "ob.ai.summary.cloud.one": "1 Modell, läuft in der Cloud",
-  "ob.ai.summary.cloud.other": "{count} Modelle, laufen in der Cloud",
-  "ob.ai.summary.local.one": "1 Modell, läuft lokal",
-  "ob.ai.summary.local.other": "{count} Modelle, laufen lokal",
-  "ob.ai.summary.hybrid.one": "1 Modell, teils Cloud, teils lokal",
-  "ob.ai.summary.hybrid.other": "{count} Modelle, teils Cloud, teils lokal",
-  "ob.ai.summary.development.one": "1 Modell, Entwicklungsmodus",
-  "ob.ai.summary.development.other": "{count} Modelle, Entwicklungsmodus",
+  "ob.ai.summary.cloud_one": "1 Modell, läuft in der Cloud",
+  "ob.ai.summary.cloud_other": "{count} Modelle, laufen in der Cloud",
+  "ob.ai.summary.local_one": "1 Modell, läuft lokal",
+  "ob.ai.summary.local_other": "{count} Modelle, laufen lokal",
+  "ob.ai.summary.hybrid_one": "1 Modell, teils Cloud, teils lokal",
+  "ob.ai.summary.hybrid_other": "{count} Modelle, teils Cloud, teils lokal",
+  "ob.ai.summary.development_one": "1 Modell, Entwicklungsmodus",
+  "ob.ai.summary.development_other": "{count} Modelle, Entwicklungsmodus",
   "ob.ai.summary.none": "Noch kein Modell konfiguriert",
-  "ob.ai.summaryProviders.one": "1 Provider konfiguriert",
-  "ob.ai.summaryProviders.other": "{count} Provider konfiguriert",
+  "ob.ai.summaryProviders_one": "1 Provider konfiguriert",
+  "ob.ai.summaryProviders_other": "{count} Provider konfiguriert",
   "ob.ai.readFirst": "Starte zuerst die Firmeneinrichtung.",
   "ob.ai.liveArtifact": "Lebendes, prüfbares Ergebnis",
   "ob.ai.companyKnowledge": "Was ich über dein Unternehmen verstehe",
@@ -3201,8 +3208,8 @@ export const de = {
   "ob.ai.suggestedChanges": "Vorgeschlagene Änderungen am Entwurf",
   "ob.ai.applyChanges": "In meinen Entwurf übernehmen",
   "ob.ai.applied": "In Entwurf übernommen",
-  "ob.ai.finding": "belegter Fund",
-  "ob.ai.findings": "belegte Funde",
+  "ob.ai.finding_one": "belegter Fund",
+  "ob.ai.finding_other": "belegte Funde",
   "ob.continueManual": "Erzähl es mir stattdessen",
   "ob.readStatus.queued": "Ich bereite mich vor",
   "ob.readStatus.deferred": "Ich warte auf KI-Budget",
@@ -3661,7 +3668,7 @@ export const de = {
   "ob.s4.scope1Rest":
     "Deine Post wird automatisch zu Kontakten, Firmen und Aktivitäten.",
   "ob.s4.scope2Lead": "Wir senden nie etwas ohne deine Freigabe.",
-  "ob.s4.scope2Rest": "Entwürfe warten in deinem Freigabe-Eingang.",
+  "ob.s4.scope2Rest": "Entwürfe warten auf deine Entscheidung.",
   "ob.s4.scope3Lead": "Deine Daten bleiben in deiner Organisation.",
   "ob.s4.scope3Rest":
     "Own-your-data — jederzeit alles exportieren oder löschen.",
@@ -3800,9 +3807,9 @@ export const de = {
   "ob.conv.review.showLess": "Weniger zeigen",
   "ob.conv.review.continue": "Weiter",
   "ob.conv.review.progressLabel": "Ausgefüllte Pflichtfelder",
-  "ob.conv.review.requiredRemaining.one":
+  "ob.conv.review.requiredRemaining_one":
     "{count} Feld nötig, bevor du fortfahren kannst",
-  "ob.conv.review.requiredRemaining.other":
+  "ob.conv.review.requiredRemaining_other":
     "{count} Felder nötig, bevor du fortfahren kannst",
   "ob.conv.review.requiredDone": "Nichts weiter nötig — du kannst fortfahren.",
   "ob.conv.review.confirmQuestionOpen":
@@ -3929,13 +3936,13 @@ export const de = {
   "ob.conv.scene.foundOn": "Gefunden auf",
   "ob.conv.guide.decision":
     "Ich brauche eine Entscheidung von dir: {question} Sie steht rechts, mit den Belegen zu jeder Option.",
-  "ob.conv.guide.reviewBlocked.one":
+  "ob.conv.guide.reviewBlocked_one":
     "Deine Prüfung ist rechts bereit. {count} Feld blockiert die Übernahme.",
-  "ob.conv.guide.reviewBlocked.other":
+  "ob.conv.guide.reviewBlocked_other":
     "Deine Prüfung ist rechts bereit. {count} Felder blockieren die Übernahme.",
-  "ob.conv.guide.reviewAdvisory.one":
+  "ob.conv.guide.reviewAdvisory_one":
     "Deine Prüfung ist rechts bereit. Nichts blockiert dich; {count} Punkt ist einen Blick wert.",
-  "ob.conv.guide.reviewAdvisory.other":
+  "ob.conv.guide.reviewAdvisory_other":
     "Deine Prüfung ist rechts bereit. Nichts blockiert dich; {count} Punkte sind einen Blick wert.",
   "ob.conv.guide.reviewClean":
     "Deine Prüfung ist rechts bereit. Sie sieht sauber aus, prüfe was du willst und übernimm, wenn du bereit bist.",
@@ -4485,8 +4492,8 @@ export const de = {
   "buyer.poweredByMargince": "Powered by Margince",
   "threads.roomTitle": "Der Raum als Ganzes",
   "threads.roomSub": "Alles, was nicht ein einzelnes Dokument betrifft.",
-  "threads.aboutThis": "{count} Threads zu diesem Dokument",
-  "threads.aboutThisOne": "1 Thread zu diesem Dokument",
+  "threads.aboutThis_other": "{count} Threads zu diesem Dokument",
+  "threads.aboutThis_one": "{count} Thread zu diesem Dokument",
   "threads.askAbout": "Zu diesem Dokument fragen",
   "threads.cancel": "Abbrechen",
   "threads.empty": "Noch nichts gesagt.",
@@ -4885,6 +4892,13 @@ export const de = {
   "license.state.licensed": "Lizenziert",
   "license.state.uncapped": "Lizenziert, ohne Sitzplatzgrenze",
   "license.state.unlicensed": "Keine Lizenz konfiguriert",
+  "license.state.refused": "Lizenz abgelehnt",
+  "license.absent.title": "Diese Installation hat keine Lizenz",
+  "license.absent.body":
+    "Alles funktioniert weiter, nichts ist begrenzt. Konfiguriere ein Lizenz-Token im Deployment, wenn Sitzplätze gegen eine Zusage gezählt werden sollen.",
+  "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
+  "license.refused.body":
+    "Das Token im Deployment wurde vorgelegt und abgelehnt. Alles funktioniert weiter und unbegrenzt, bis es ersetzt wird — prüfe das Token und die Uhr der Installation.",
   "license.seats.title": "Plätze",
   "license.seats.used": "Belegte Sitzplätze",
   "license.seats.granted": "Gewährte Sitzplätze",
@@ -5154,8 +5168,8 @@ export const de = {
   "users.membersTitle": "Mitglieder",
   "users.membersSub":
     "Alle mit einem Platz in dieser Installation, deaktivierte Konten eingeschlossen.",
-  "users.memberCount.one": "{count} Mitglied",
-  "users.memberCount.other": "{count} Mitglieder",
+  "users.memberCount_one": "{count} Mitglied",
+  "users.memberCount_other": "{count} Mitglieder",
   "users.emailLabel": "E-Mail des neuen Mitglieds",
   "users.nameLabel": "Vollständiger Name des neuen Mitglieds",
   "users.emailPlaceholder": "name@firma.de",
@@ -5902,8 +5916,8 @@ export const de = {
   "person.consent.unknownWord": "Unbekannt",
 
   "person.today.heading": "Heute mit {name}",
-  "person.today.source": "{count} Beleg",
-  "person.today.sources": "{count} Belege",
+  "person.today.source_one": "{count} Beleg",
+  "person.today.source_other": "{count} Belege",
   "person.today.updated": "Aktualisiert {when}",
   "person.today.freshToday": "heute",
   "person.today.freshYesterday": "gestern",
@@ -5970,8 +5984,8 @@ export const de = {
   "person.rail.oneSided": "Einseitig",
   "person.rail.lastReply": "Letzte Antwort",
   "person.rail.coverage": "Abdeckung",
-  "person.rail.colleagueOne": "1 Kollege",
-  "person.rail.colleagues": "{count} Kolleginnen und Kollegen",
+  "person.rail.colleagues_one": "{count} Kollegin oder Kollege",
+  "person.rail.colleagues_other": "{count} Kolleginnen und Kollegen",
   "person.rail.trend": "Tendenz",
   "person.rail.noInbound": "Nichts eingehend",
   "person.rail.cooling": "Kühlt ab",

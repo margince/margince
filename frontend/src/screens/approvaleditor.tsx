@@ -23,8 +23,8 @@ import {
   resolveDisplay,
   stagedDayFormatter,
 } from "./approvalkind";
+import type { Approval } from "./approvals.queries";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
-import type { Approval } from "./inbox.queries";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
 // dialog behind its meta line, and the inline staged-draft editor. They sit
@@ -128,7 +128,7 @@ export function ApprovalDetailModal({
         className="t-h2"
         style={{ marginBottom: "var(--space-3)" }}
       >
-        {t("inbox.detail")}
+        {t("decision.detail")}
       </h2>
       {open && (
         <QueryGate query={detail}>
@@ -206,7 +206,7 @@ function ApprovalDetailBody({
       ))}
       <EvidenceList evidence={approval.evidence} />
       {named.length > 0 && (
-        <Disclosure summary={t("inbox.detailTechnical")}>
+        <Disclosure summary={t("decision.detailTechnical")}>
           <div className="approval-detail">{rawPayload}</div>
         </Disclosure>
       )}
@@ -254,11 +254,14 @@ function askedOn(
   t: ReturnType<typeof useT>,
 ): [string, string][] {
   const asked: [string, string][] = [
-    [t("inbox.detailAsked"), formatDateTime(approval.created_at, locale, zone)],
+    [
+      t("decision.detailAsked"),
+      formatDateTime(approval.created_at, locale, zone),
+    ],
   ];
   if (approval.decided_at) {
     asked.push([
-      t("inbox.detailDecided"),
+      t("decision.detailDecided"),
       formatDateTime(approval.decided_at, locale, zone),
     ]);
   }
@@ -313,10 +316,10 @@ export function DecideOutcome({
       {skew && (
         <div style={{ marginTop: "var(--space-2)" }}>
           <p className="t-caption" style={{ color: "var(--danger)" }}>
-            {t("inbox.versionSkew")}
+            {t("decision.versionSkew")}
           </p>
           <Button small onClick={onReRead}>
-            {t("inbox.reRead")}
+            {t("decision.reRead")}
           </Button>
         </div>
       )}
@@ -439,7 +442,7 @@ export function StagedEditor({
         {/* The edited approve is the same write as the plain one and was the one
             path with no gate at all, so a second press sent a second verdict. */}
         <Button variant="primary" small pending={pending} onClick={onApprove}>
-          {t("inbox.approveEdited")}
+          {t("decision.approveEdited")}
         </Button>
         <Button small disabled={pending} onClick={onCancel}>
           {t("deals.cancel")}

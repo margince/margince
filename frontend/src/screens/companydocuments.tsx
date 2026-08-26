@@ -8,7 +8,7 @@ import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { AddDocumentDialog } from "./adddocument";
 import { throwProblem } from "./common";
@@ -119,18 +119,13 @@ function emptyReason(
   return "docs.empty";
 }
 
-// What the footer says about the history it is holding — written out per case
-// rather than assembled from fragments, because the message layer does not
-// speak ICU and a key built by concatenation is a key no search for it finds.
-function supersededLine(shown: boolean, count: number): MessageKey {
-  if (shown) {
-    return count === 1
-      ? "docs.superseded.shownOne"
-      : "docs.superseded.shownMany";
-  }
-  return count === 1
-    ? "docs.superseded.hiddenOne"
-    : "docs.superseded.hiddenMany";
+// What the footer says about the history it is holding. Written out per case
+// rather than assembled from fragments, because a key built by concatenation is
+// a key no search for it finds — and the only thing this decides is WHICH of the
+// two sentences applies. How the count picks a form is the plural helper's
+// business, and the locale's.
+function supersededBase(shown: boolean): PluralBase {
+  return shown ? "docs.superseded.shown" : "docs.superseded.hidden";
 }
 
 export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
@@ -141,6 +136,7 @@ export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
   // separately and before RBAC.
   const canWriteDeals = useCanWrite("deal", "update");
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const [category, setCategory] = useState<Category | "">("");
   // History is off by default. Three uploads of one agreement's terms are one
@@ -204,7 +200,7 @@ export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
         present && superseded.length > 0 ? (
           <>
             <span>
-              {t(supersededLine(showSuperseded, superseded.length), {
+              {plural(supersededBase(showSuperseded), superseded.length, {
                 count: formatNumber(superseded.length, locale),
               })}
             </span>

@@ -22,10 +22,10 @@ import {
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { usePendingApprovals } from "../screens/approvals.queries";
 import { useOrganization360 } from "../screens/company360";
 import { useConnectors } from "../screens/connectors";
 import { useDedupeQueue } from "../screens/dedupe.queries";
-import { usePendingApprovals } from "../screens/inbox.queries";
 import { useLicenseEntitlement } from "../screens/license";
 import { type AppActivity, useAppActivity } from "./activity";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
@@ -958,10 +958,11 @@ function derive(
   // signal that is always on stops being a signal at all. Asking and being told
   // no is different, because there is a repair behind it.
   //
-  // The cost is real and recorded rather than smoothed over: nothing in the
-  // chrome now says the licence is missing. Issue 2679 carries the decision
-  // about where that belongs, since the answer is probably neither amber forever
-  // nor silence.
+  // Nothing in the chrome says the licence is missing, and that is the trade
+  // rather than an oversight: the fact is a standing condition, so it is stated
+  // once where an operator goes looking for it — the licence card in settings
+  // names both absences and says what each one costs — instead of spending the
+  // chrome's only ambient warning channel on something that is permanently true.
   if (signals.license === "refused") {
     return "warning";
   }
