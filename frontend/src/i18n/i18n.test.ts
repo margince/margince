@@ -465,12 +465,20 @@ describe("catalog keys against the surfaces that render them", () => {
     // An arm is rendered when its BASE is: the call site names the base and the
     // reader's own plural rule picks the arm, so the arm's full key never
     // appears in source at all.
+    //
+    // Only the two ARMS get this, not any key whose last underscore happens to
+    // follow a plural base. Cutting at the last `_` exempted
+    // `<renderedBase>_anythingElse` as well, which is a hole in exactly the
+    // direction that matters: this gate's job is to find a key nothing renders,
+    // and an exemption that reaches further than the convention it models makes
+    // it report PASS over one.
+    const arms = ["_one", "_other"] as const;
     const underPluralBase = (key: string): boolean => {
-      const cut = key.lastIndexOf("_");
-      if (cut <= 0) {
+      const arm = arms.find((suffix) => key.endsWith(suffix));
+      if (arm === undefined) {
         return false;
       }
-      const base = key.slice(0, cut);
+      const base = key.slice(0, -arm.length);
       return bases.has(base) && literals.has(base);
     };
     const orphans = Object.keys(en).filter(

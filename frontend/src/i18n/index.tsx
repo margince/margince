@@ -227,10 +227,9 @@ export function pluralKey(
  * number `Intl.PluralRules` can select from, and a raw `1204` is not what a
  * reader should see. So the caller formats, and this selects.
  *
- * Falls back through `_other` to the base key. A category the catalogue has no
- * entry for is a missing translation rather than a reason to render nothing, and
- * the base key reads as the obvious defect that `translate` already falls back
- * to for an unknown key.
+ * A category the catalogue has no entry for falls back to `_other`, which is a
+ * missing translation rather than a reason to render nothing — the same fallback
+ * `pluralKey` states, because this is that function plus a lookup.
  */
 export function translatePlural(
   locale: Locale,
@@ -238,21 +237,13 @@ export function translatePlural(
   count: number,
   params?: Record<string, string>,
 ): string {
-  const category = pluralCategory(locale, count);
-  const catalog = catalogs[locale] as Record<string, string>;
-  const key =
-    `${base}_${category}` in catalog ? `${base}_${category}` : `${base}_other`;
-  // `translate` takes the narrow key union and this one is composed, so the
-  // lookup happens here — against the same two catalogues, in the same order,
-  // and it is the reason this function lives in this file rather than beside
-  // `pluralCategory`.
-  const message = catalog[key] ?? unitCopy[locale]?.[key] ?? base;
-  if (!params) {
-    return message;
-  }
-  return message.replace(/\{(\w+)\}/g, (whole, name: string) =>
-    name in params ? String(params[name]) : whole,
-  );
+  // `pluralKey` already narrows the composed `${base}_${category}` back to a
+  // real key through `isMessageKey`, so this is a lookup `translate` can do —
+  // and doing it there rather than again here is what keeps ONE catalogue
+  // order, one fallback and one interpolation in the file. The earlier version
+  // repeated all three behind an `as Record<string, string>`, which is a second
+  // implementation wearing an assertion to get at the same two catalogues.
+  return translate(locale, pluralKey(locale, base, count), params);
 }
 
 type LocaleContextValue = {

@@ -100,7 +100,13 @@ echo "==> contract-fetch check (mount $MOUNT, ${#FILES[@]} files under frontend/
 # appearing inside the string the call is given — anchoring on a line shape
 # instead is what would miss the spelling nobody thought of, and the origin form
 # is the one that got past the first draft of this gate.
-PATTERN="fetch\\([^)]*[\"\`'][^\"\`']*${MOUNT}/"
+#
+# The mount may be followed by the path separator OR by the end of the string,
+# because a path assembled across adjacent literals — `fetch("/v1" + "/deals")`
+# — puts the separator in the NEXT literal. Requiring the slash read past that
+# spelling entirely, which is the one shape of miss this gate must not have: it
+# would have reported PASS over a hand-written call to the contract.
+PATTERN="fetch\\([^)]*[\"\`'][^\"\`']*${MOUNT}(/|[\"\`'])"
 
 HITS="$(printf '%s\0' "${FILES[@]}" | xargs -0 grep -nHE "$PATTERN" || true)"
 

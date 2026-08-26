@@ -1654,9 +1654,15 @@ describe("company view — where the account stands, and what it is to us", () =
           if (request.method === "PATCH") {
             patchCount += 1;
             lastIfMatch = request.headers.get("if-match");
-            const body = (await request.json()) as {
-              lifecycle?: Organization["lifecycle"];
-            };
+            // Read as unknown and CHECKED, not asserted: an assertion here
+            // would let a screen that sent the wrong shape — or nothing at all —
+            // pass as a write of `undefined`, and the case below would then be
+            // asserting against a value this stub invented.
+            const sent: unknown = await request.json();
+            if (sent === null || typeof sent !== "object") {
+              throw new Error(`the PATCH body is not an object: ${sent}`);
+            }
+            const body: { lifecycle?: Organization["lifecycle"] } = sent;
             if (currentOrg.version === undefined) {
               // What this case asserts is the If-Match the second write sends,
               // so a fixture with no version to increment would be measuring

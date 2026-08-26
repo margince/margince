@@ -135,6 +135,27 @@ plant "$ABS" 'const r = await fetch(`${origin}/v1/deals`);'
 run "$ABS" "$V1"
 expect_named "$ABS" "a contract path built onto the origin"
 
+# A path assembled across adjacent literals is the same call again, and the
+# separator lands in the SECOND literal — so a pattern demanding the mount be
+# followed by a slash reads straight past it.
+SPLIT_PATH="$TMP/ext-split-path"
+plant "$SPLIT_PATH" 'const r = await fetch("/v1" + "/deals", { method: "GET" });'
+run "$SPLIT_PATH" "$V1"
+expect_named "$SPLIT_PATH" "a contract path split across two literals"
+
+# The mount alone, with nothing after it: still a hand-written call to the
+# contract's own root.
+ROOT="$TMP/ext-root"
+plant "$ROOT" 'const r = await fetch("/v1");'
+run "$ROOT" "$V1"
+expect_named "$ROOT" "a call to the mount root"
+
+# And the split spelling still follows the CONTRACT: /v1 pieces are silent
+# against a contract mounted at /v2, so the looser match did not become a
+# hard-coded /v1.
+run "$SPLIT_PATH" "$V2"
+expect_silent "$SPLIT_PATH" "a split /v1 path against a contract mounted at /v2"
+
 # 3. A waiver carries a reason or it is not a waiver.
 WAIVED="$TMP/ext-waived"
 plant_pair "$WAIVED" \
