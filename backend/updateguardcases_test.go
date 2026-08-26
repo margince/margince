@@ -118,6 +118,23 @@ func write(tx T, cond bool) {
 }`,
 		judged: true,
 	}, {
+		// An accumulation that let an inner declaration outlive its block
+		// would fold this to "SELECT 1WHERE id = $1" — no SET clause, so the
+		// census skips the write entirely. Silence again, from the bookkeeping
+		// this time rather than from the reading.
+		name: "an inner declaration of a name the outer scope is still building",
+		source: `package p
+func write(tx T, cond bool) {
+	statement := ` + "`UPDATE organization SET legal_name = $2 `" + `
+	if cond {
+		statement := "SELECT 1"
+		_ = statement
+	}
+	statement += ` + "`WHERE id = $1`" + `
+	tx.Exec(ctx, statement)
+}`,
+		judged: true,
+	}, {
 		// The direction that MISSES a writer is the dangerous one, but this
 		// is the direction that invents one: a local of the same name is
 		// not the package's value, and crediting it would attribute a

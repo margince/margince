@@ -373,7 +373,7 @@ type lexicalStatements struct {
 	// silently, where looking too widely at worst raises a finding somebody
 	// answers.
 	imported []map[string][]string
-	scopes   []map[string]bool
+	scopes   []scope
 	// locals is what a string-valued local has been built up to so far, so an
 	// `x := "…"` / `x += "…"` pair is read as the one statement it becomes.
 	// Keyed by name across scopes on purpose: reconstructing more statements
@@ -381,6 +381,13 @@ type lexicalStatements struct {
 	// direction that produces a finding somebody can answer.
 	locals map[string]string
 	out    []string
+}
+
+// scope is one block's bindings: the names it declares, and what each of those
+// displaced in locals so close can put it back.
+type scope struct {
+	declared  map[string]bool
+	displaced map[string]*string
 }
 
 // foldAppend records what `target += addition` builds the target up to, and
@@ -410,13 +417,41 @@ func (l *lexicalStatements) seedLocal(target, value ast.Expr) {
 	}
 }
 
-func (l *lexicalStatements) open()  { l.scopes = append(l.scopes, map[string]bool{}) }
-func (l *lexicalStatements) close() { l.scopes = l.scopes[:len(l.scopes)-1] }
+func (l *lexicalStatements) open() {
+	l.scopes = append(l.scopes, scope{declared: map[string]bool{}, displaced: map[string]*string{}})
+}
+
+// close puts back what this scope's declarations displaced. An inner
+// `statement := "SELECT 1"` must not survive its block: the outer name goes on
+// being built up after it, and an accumulation that kept the inner value folds
+// to a statement with no SET clause — one the census then skips.
+func (l *lexicalStatements) close() {
+	closing := l.scopes[len(l.scopes)-1]
+	for name, previous := range closing.displaced {
+		if previous == nil {
+			delete(l.locals, name)
+			continue
+		}
+		l.locals[name] = *previous
+	}
+	l.scopes = l.scopes[:len(l.scopes)-1]
+}
 
 func (l *lexicalStatements) declare(expr ast.Expr) {
-	if ident, isIdent := expr.(*ast.Ident); isIdent && ident.Name != "_" {
-		l.scopes[len(l.scopes)-1][ident.Name] = true
+	ident, isIdent := expr.(*ast.Ident)
+	if !isIdent || ident.Name == "_" {
+		return
 	}
+	current := l.scopes[len(l.scopes)-1]
+	current.declared[ident.Name] = true
+	if _, already := current.displaced[ident.Name]; already {
+		return
+	}
+	if previous, held := l.locals[ident.Name]; held {
+		current.displaced[ident.Name] = &previous
+		return
+	}
+	current.displaced[ident.Name] = nil
 }
 
 func (l *lexicalStatements) declareFields(lists ...*ast.FieldList) {
@@ -433,8 +468,8 @@ func (l *lexicalStatements) declareFields(lists ...*ast.FieldList) {
 }
 
 func (l *lexicalStatements) shadowed(name string) bool {
-	for _, scope := range l.scopes {
-		if scope[name] {
+	for _, enclosing := range l.scopes {
+		if enclosing.declared[name] {
 			return true
 		}
 	}
@@ -536,13 +571,17 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 			ast.Walk(l, rhs)
 		}
 		if n.Tok == token.DEFINE {
+			// declare BEFORE seedLocal: declaring is what records the value
+			// this name displaces, and seeding is what displaces it. The other
+			// order records the new value as the old one, so closing the scope
+			// restores nothing.
+			for _, lhs := range n.Lhs {
+				l.declare(lhs)
+			}
 			if len(n.Lhs) == len(n.Rhs) {
 				for i, lhs := range n.Lhs {
 					l.seedLocal(lhs, n.Rhs[i])
 				}
-			}
-			for _, lhs := range n.Lhs {
-				l.declare(lhs)
 			}
 		} else {
 			for _, lhs := range n.Lhs {
@@ -554,13 +593,13 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 		for _, value := range n.Values {
 			ast.Walk(l, value)
 		}
+		for _, name := range n.Names {
+			l.declare(name)
+		}
 		if len(n.Names) == len(n.Values) {
 			for i, name := range n.Names {
 				l.seedLocal(name, n.Values[i])
 			}
-		}
-		for _, name := range n.Names {
-			l.declare(name)
 		}
 		return nil
 	case *ast.Ident:
