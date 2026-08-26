@@ -5,7 +5,7 @@
 
 package people
 
-// A write refuses an archived row, on the four paths in this module that used
+// A write refuses an archived row, on the five paths in this module that used
 // to reach one.
 //
 // The window these share is not a race. A scrape or deep-read proposal sits in
@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
@@ -41,6 +42,12 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 	if err != nil {
 		t.Fatalf("commission the dossier while the company is live: %v", err)
 	}
+
+	// The mail a signature would have been read out of. Its id only has to name
+	// the source on the evidence row, so it is minted rather than seeded — but
+	// it is minted BEFORE the archive for the same reason the dossier is: a
+	// refusal that came from somewhere else would prove nothing about the gate.
+	activityForSignature := ids.NewV7()
 
 	archiver := e.asArchiver()
 	if _, err := e.store.ArchiveOrganization(archiver, orgID, nil); err != nil {
@@ -116,6 +123,19 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 				return err
 			},
 		},
+		{
+			name: "signature fields read out of the person's own mail",
+			why: "ApplySignatureFields (enrichsignature.go) — the same declared-PII table as the row above, " +
+				"reached by the capture sweep instead of an inbox: the candidate is selected live, a model call " +
+				"runs, and the apply arrives after",
+			call: func() error {
+				_, err := e.store.ApplySignatureFields(ctx, personID, activityForSignature, []SignatureField{{
+					Name: "title", Value: "Head of Procurement",
+					Evidence: "Mira Halvorsen | Head of Procurement", Confidence: 0.9,
+				}})
+				return err
+			},
+		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			// ErrNotFound and not ErrPermissionDenied: an archived record is
@@ -128,7 +148,7 @@ func TestAnArchivedRecordTakesNoStagedApply(t *testing.T) {
 	}
 
 	// Nothing landed. Asserted on the columns rather than inferred from the
-	// four refusals, because a gate that returns the right error while still
+	// five refusals, because a gate that returns the right error while still
 	// committing the write is the failure this exists to notice — and these are
 	// the columns the applies above would have moved.
 	for column, want := range map[string]string{

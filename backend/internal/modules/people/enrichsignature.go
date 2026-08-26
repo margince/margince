@@ -19,8 +19,10 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
 )
 
@@ -55,8 +57,26 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 	if len(fields) == 0 {
 		return res, nil
 	}
+	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
+		return res, err
+	}
 	sourceRef := "activity:" + sourceActivity.String()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// LIVE, and the window this closes is the pass's own shape rather than
+		// a race to argue about: SignatureCandidates selects a live person,
+		// then a model call runs, then this applies. An Art. 17 erasure landing
+		// in between stamps archived_at, deletes the person_profile_field rows
+		// and leaves the person row standing — so an apply arriving afterwards
+		// writes the erased subject's title and phone back into a declared PII
+		// table the erasure had just cleared.
+		//
+		// writePersonProfileField carries the same liveness on its INSERT and
+		// that is not this: it answers "nothing landed", which this pass counts
+		// as a field somebody had already filled. The probe is what makes an
+		// erased subject a refusal instead of a skip that reads like success.
+		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+			return err
+		}
 		var appliedFields []string
 		// Every field this pass landed, as it found it and as it left it —
 		// keyed by the field name, whether it is a column of the person or a
