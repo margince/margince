@@ -11,14 +11,14 @@ package compose
 // provider-original purge in capture — and a module never imports a sibling, so
 // each arrives as a function this file injects.
 //
-// It is one assembler rather than a builder each caller runs because the two
-// seams are not equivalent, and the difference is the reason this file exists.
-// A missing edge invalidator degrades: the bus consumer handling
-// retention.applied corrects the aggregate late. A missing raw-capture purger
-// does not degrade, it silently keeps the verbatim provider original of a
-// message whose retention window closed — which is what the service did until a
-// review of the erasure beside it went looking. privacy refuses that
-// configuration now, and this is the one place that satisfies it.
+// It is one assembler rather than a builder each caller runs so that adding a
+// seam is one edit rather than a hunt: six integration tests each wired their
+// own service before this, and one of them claimed to be "wired exactly as the
+// worker wires it" — a claim that had to be re-earned by hand every time and
+// would have gone false without failing.
+//
+// Why the two seams are not equivalent is on privacy.RawCapturePurger, beside
+// the type that carries the obligation.
 
 import (
 	"context"
@@ -42,9 +42,8 @@ import (
 // such "there is nothing to do" case and are always wired.
 func NewRetentionServiceFor(db *database.DB, blob blobstore.Store, log *slog.Logger) *privacy.RetentionService {
 	pending := capture.NewPendingStore(db)
-	return privacy.NewRetentionService(db, blob, log).
+	return privacy.NewRetentionService(db, blob, log, pending.PurgeRawCaptureTx).
 		WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
 			return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
-		}).
-		WithRawCapturePurger(pending.PurgeRawCaptureTx)
+		})
 }

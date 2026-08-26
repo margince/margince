@@ -24,9 +24,9 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"io"
 	"log/slog"
-	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -65,9 +65,9 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 			sourceSystem, sourceID, []byte(`{"subject":"Quarterly figures","body":"the numbers themselves"}`)); err != nil {
 			return err
 		}
-		// Provenance for the body about to be erased. Both sibling erasers
-		// delete these; the sweep did not, so the row went on naming who
-		// captured the erased text and from where.
+		// Provenance for the body about to be erased: without the delete it
+		// goes on naming who captured the text and from where, and it is
+		// SAR-exported.
 		_, err := tx.Exec(ctx, `
 			INSERT INTO field_provenance (object_type, object_id, field_name, source, captured_by)
 			VALUES ('activity', $1, 'body', 'capture', 'connector:t')`, activity)
@@ -76,25 +76,30 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 		t.Fatalf("seeding the aged-out message: %v", err)
 	}
 
-	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("running the retention sweep: %v", err)
 	}
 
 	var body *string
+	var keptKey bool
 	var originals, provenance int
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
-		if err := tx.QueryRow(ctx, `SELECT body FROM activity WHERE id = $1`, activity).Scan(&body); err != nil {
+		if err := tx.QueryRow(ctx, `
+			SELECT body, source_system IS NOT DISTINCT FROM $2 AND source_id IS NOT DISTINCT FROM $3
+			  FROM activity WHERE id = $1`,
+			activity, sourceSystem, sourceID).Scan(&body, &keptKey); err != nil {
 			return err
 		}
-		// The join the erasure leaves standing, which is the query an Art. 15
-		// export runs: the record still names its provider message, and that is
-		// deliberate — what must be gone is what the message SAID.
+		// Counted by the seeded key rather than through the join to activity.
+		// The join reads zero for two different reasons — the original is gone,
+		// or the erase stopped keeping the pair — and only one of those is this
+		// test passing. Which pair the activity still carries is asserted
+		// separately, above.
 		if err := tx.QueryRow(ctx, `
-			SELECT count(*) FROM raw_capture r
-			  JOIN activity a ON r.source_system = a.source_system AND r.source_id = a.source_id
-			 WHERE a.id = $1`, activity).Scan(&originals); err != nil {
+			SELECT count(*) FROM raw_capture WHERE source_system = $1 AND source_id = $2`,
+			sourceSystem, sourceID).Scan(&originals); err != nil {
 			return err
 		}
 		return tx.QueryRow(ctx, `
@@ -107,21 +112,34 @@ func TestTheRetentionSweepDestroysTheProviderOriginalToo(t *testing.T) {
 	if body != nil {
 		t.Errorf("activity.body = %q after an erase policy fired, want cleared", *body)
 	}
+	if !keptKey {
+		t.Error("the erase dropped the activity's (source_system, source_id) — the record of the message " +
+			"is supposed to survive its content, and the purge below is keyed on that pair")
+	}
 	if originals != 0 {
 		t.Errorf("%d raw_capture original(s) survived the erasure of the activity they duplicate — "+
 			"the content is one join away, and SAR exports raw_capture by email match", originals)
 	}
 	if provenance != 0 {
 		t.Errorf("%d field_provenance row(s) survived, still naming who captured the erased body "+
-			"and from where; both sibling erasers delete them", provenance)
+			"and from where", provenance)
 	}
 }
 
-// TestTheEraseActionRefusesWithoutItsPurger holds the half of the fix a passing
-// sweep cannot show: that an unwired purger FAILS rather than quietly erasing
-// the copy and keeping the original. Without this, deleting the seam from
-// compose would leave every assertion above passing for a service nobody builds.
-func TestTheEraseActionRefusesWithoutItsPurger(t *testing.T) {
+// TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything holds the half of the
+// fix a passing sweep cannot show. The constructor is what stops a purger-less
+// service being built; this is what happens if one is anyway, and the two things
+// it asserts are the ones that make the refusal safe rather than merely loud.
+//
+// It refuses with the sentinel — not some other failure this test would have
+// accepted as proof.
+//
+// And it refuses having destroyed NOTHING. A destructive pass that discovered a
+// missing dependency partway would abort with earlier records already erased and
+// every later policy unrun, nightly: the failure mode retentionActions' own
+// comment is written to avoid. So the aged-out activity must still be intact
+// after the refusal, which is only true while the check precedes the work.
+func TestAPassMissingItsPurgerRefusesBeforeDestroyingAnything(t *testing.T) {
 	e := Setup(t)
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
@@ -139,11 +157,24 @@ func TestTheEraseActionRefusesWithoutItsPurger(t *testing.T) {
 		t.Fatalf("seeding the aged-out message: %v", err)
 	}
 
-	// The unassembled service — what privacy.NewRetentionService builds on its
-	// own, which is the configuration compose must never ship.
-	bare := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := bare.EvaluateInstallation(RetentionPassCtx(e.WS)); err == nil {
-		t.Fatal("an erase policy ran on a service with no raw-capture purger and reported success; " +
-			"it must refuse, because the provider original has no other way to age out")
+	// nil, spelled out: the argument the constructor now demands, supplied as
+	// the value compose never passes.
+	bare := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)), nil)
+	err := bare.EvaluateInstallation(RetentionPassCtx(e.WS))
+	if !errors.Is(err, privacy.ErrRetentionSeamMissing) {
+		t.Fatalf("a pass with no raw-capture purger returned %v, want ErrRetentionSeamMissing — "+
+			"it must refuse, because the provider original has no other way to age out", err)
+	}
+
+	var body *string
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT body FROM activity WHERE subject = 'Quarterly figures'`).Scan(&body)
+	}); err != nil {
+		t.Fatalf("reading the record after the refusal: %v", err)
+	}
+	if body == nil || *body != "the numbers themselves" {
+		t.Error("the refused pass had already erased the activity's body — a pass that cannot finish " +
+			"must destroy nothing, or it leaves the installation half-swept with no record of where it stopped")
 	}
 }

@@ -14,7 +14,6 @@ package privacy
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -191,29 +190,27 @@ func (s *RetentionService) apply(ctx context.Context, pol retentionPolicy, id id
 // data-layer guard `activity_restriction_lift_erases` exists because the same
 // kind of difference was once carried in prose and went short.
 func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
-	// Before the row is touched, because this is the arm that can refuse: an
-	// erasure that cleared the parsed copy and then failed to reach the
-	// original would leave the transaction to roll back, and a half-done
-	// erasure is the state this ordering exists to make impossible.
-	if s.purgeRawCaptures == nil {
-		return errors.New("privacy: activity/erase has no raw-capture purger wired, so it would clear the parsed copy and leave the provider original standing; compose injects capture's PurgeRawCaptureTx")
-	}
 	_, err := tx.Exec(ctx,
 		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
-		// The verbatim provider payload the parsed copy came from. Keyed on
-		// (source_system, source_id), which this statement deliberately keeps
-		// on the activity row — so the join that makes the record replayable is
-		// the same join that would have served the original back through an
-		// Art. 15 export.
+		// The verbatim provider payload the parsed copy was made from. It is
+		// keyed on (source_system, source_id) — the pair the statement above
+		// deliberately keeps — so the join that makes the record replayable is
+		// the same join that serves the original back through an Art. 15
+		// export. Clearing the parsed copy alone erases nothing.
+		//
+		// This reaches the captures written under the DOMAIN natural key, which
+		// is the mail lane. A channel poller stores its original under the
+		// provider's redelivery key instead, and no join from the activity
+		// finds it: #2802 carries that lane.
 		err = s.purgeRawCaptures(ctx, tx, []ids.UUID{id})
 	}
 	if err == nil {
-		// Provenance outlives the value it describes otherwise: the row goes on
-		// naming who captured the erased body and from where, and it is
-		// registered PII-bearing and SAR-exported. Both sibling erasers delete
-		// it (erasuretimeline.go, retentionrestricted.go); this one had not.
+		// Provenance outlives the value it describes otherwise: the row names
+		// who captured the erased body and from where, and it is registered
+		// PII-bearing and SAR-exported. Both sibling erasers delete it
+		// (erasuretimeline.go, retentionrestricted.go).
 		_, err = tx.Exec(ctx,
 			`DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id)
 	}
