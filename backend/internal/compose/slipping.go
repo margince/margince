@@ -34,11 +34,27 @@ const slippingScanLimit = 50
 // slippingLister serves the formulas-§8 candidate set: stalled open
 // deals plus open deals whose expected close date is already past.
 func slippingLister(pool *pgxpool.Pool) agents.SlippingLister {
+	return quietDealLister(pool, deals.StalledThresholdDays)
+}
+
+// quietDealLister is slippingLister with the idle window named by the caller.
+//
+// ONE candidate set, two patiences. The tool surface asks at the stalled
+// threshold, because "slipping" is the product-wide status; the morning queue
+// asks at the shorter window, because a queue that only speaks after two months
+// is reporting rather than warning. Both run this function, so a change to how
+// a candidate is built or evidenced reaches both — a second at-risk predicate
+// beside this one is the failure this shape exists to prevent.
+//
+// Deals whose expected close date has passed join the set at ANY window: an
+// overdue close is late whatever the idle clock says.
+func quietDealLister(pool *pgxpool.Pool, quietForDays int) agents.SlippingLister {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return func(ctx context.Context) ([]agents.SlippingDeal, error) {
 		limit := slippingScanLimit
-		stalledOnly := true
-		stalled, _, err := store.ListDeals(ctx, deals.ListDealsInput{Stalled: &stalledOnly, Limit: &limit})
+		quiet, _, err := store.ListDeals(ctx, deals.ListDealsInput{
+			QuietForDays: &quietForDays, Limit: &limit,
+		})
 		if err != nil {
 			return nil, err
 		}
@@ -48,13 +64,25 @@ func slippingLister(pool *pgxpool.Pool) agents.SlippingLister {
 			return nil, err
 		}
 
+		// The quiet sweep already applied the window, so its rows are admitted
+		// on that ground alone. Testing candidate.Stalled instead would ask the
+		// deal row's own 60-day flag, which is FALSE for every deal a shorter
+		// window admits — the lane would fetch the right rows and drop them all.
+		admitted := map[ids.UUID]bool{}
+		for _, d := range quiet {
+			admitted[ids.UUID(d.Id)] = true
+		}
+
 		now := time.Now().UTC()
 		today := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, time.UTC)
-		out := make([]agents.SlippingDeal, 0, len(stalled))
+		out := make([]agents.SlippingDeal, 0, len(quiet))
 		seen := map[ids.UUID]bool{}
-		for _, d := range append(stalled, open...) {
+		for _, d := range append(quiet, open...) {
 			candidate := slippingCandidate(d, today)
-			if seen[candidate.DealID] || (!candidate.Stalled && !candidate.CloseOverdue) {
+			if seen[candidate.DealID] {
+				continue
+			}
+			if !admitted[candidate.DealID] && !candidate.CloseOverdue {
 				continue
 			}
 			seen[candidate.DealID] = true
