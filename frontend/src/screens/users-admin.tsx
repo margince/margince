@@ -416,6 +416,8 @@ function RoleCell({
   // A member holding SEVERAL roles is the case worth naming: any choice here
   // replaces the whole set, so a neutral "Set role…" would let an admin strip
   // privileges they never saw. The placeholder says what is held instead.
+  // plural-rule:allow the two arms name what is held and what to do, which is a
+  // state the reader is in rather than two forms of one sentence
   const placeholder =
     heldRoles.length > 1
       ? t("users.rolesHeld", { roles: heldRoles.map(roleLabel(t)).join(", ") })

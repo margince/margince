@@ -40,6 +40,7 @@ function TranscriptReadOutcome({
   report,
 }: Readonly<{ report: TranscriptReadReport }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   if (report.status === "failed") {
     return (
@@ -67,11 +68,9 @@ function TranscriptReadOutcome({
     >
       <AutonomyDot tier="confirm" />
       <span className="t-small">
-        {report.proposal_ids.length === 1
-          ? t("transcriptread.proposalsOne")
-          : t("transcriptread.proposals", {
-              count: formatNumber(report.proposal_ids.length, locale),
-            })}
+        {plural("transcriptread.proposals", report.proposal_ids.length, {
+          count: formatNumber(report.proposal_ids.length, locale),
+        })}
       </span>
       <Button small onClick={() => navigate({ screen: "today" })}>
         {t("enrich.toInbox")}

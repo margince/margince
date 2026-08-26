@@ -106,14 +106,71 @@ function comparesAgainstOne(test: ts.Expression): boolean {
  * can write. Anything computed is not a key this gate can rule on, and is
  * therefore not a finding — the census below states that limit rather than
  * leaving it to be discovered.
+ *
+ * A call carrying a key is the same choice one level down:
+ * `n === 1 ? t("a") : t("b")` picks a wording exactly as `t(n === 1 ? …)` does,
+ * and reading only the second spelling is how this gate first went blind to the
+ * more common one. The CALLEE IS NOT MATCHED — not `t`, not a screen's own
+ * `plural()` — because a gate that names its subject's spellings has hard-coded
+ * part of its subject, and renaming the translator would be the way around it.
+ * Any argument may be the key, since a translator that takes the locale first
+ * (`translate(locale, "a")`) carries it second.
  */
 function catalogKey(node: ts.Expression): string | null {
+  if (ts.isParenthesizedExpression(node)) {
+    return catalogKey(node.expression);
+  }
+  if (ts.isCallExpression(node)) {
+    for (const argument of node.arguments) {
+      const key = catalogKey(argument);
+      if (key !== null) {
+        return key;
+      }
+    }
+    return null;
+  }
   const text = ts.isStringLiteral(node)
     ? node.text
     : ts.isNoSubstitutionTemplateLiteral(node)
       ? node.text
       : null;
   return text !== null && CATALOG_KEYS.has(text) ? text : null;
+}
+
+// A count compared with 1 that picks between two catalogue keys is USUALLY a
+// plural choice, and sometimes is not: "one open deal, so naming it adds
+// nothing" chooses between two different sentences rather than two forms of one.
+// Nothing derivable separates those — the tree's pairs are spelled `_one`,
+// `One`, `Many`, and bare singular/plural nouns, so keying on the NAMES is the
+// hard-coded-subject mistake this gate exists to avoid.
+//
+// So the author declares it, in the source, with a reason, the way
+// `craft:ignore` does. A waiver with no reason is not a waiver: it reads as a
+// keystroke that turns the gate off, which is exactly what the reason is for.
+const WAIVER = /plural-rule:allow[ \t]+(?<reason>\S.*)/;
+
+/**
+ * Whether the comment attached above this site waives it, with a reason.
+ *
+ * The comment is read off the AST, from the STATEMENT the site sits in, rather
+ * than by counting lines up from the expression. The formatter owns where lines
+ * break: a waiver matched by line arithmetic comes undone the next time
+ * anything either side of it is reflowed, and it comes undone SILENTLY — the
+ * comment still reads as an exemption while the gate has started failing.
+ * Anchoring on the statement is what a reader means by "the comment above this".
+ */
+function waivedAt(source: string, node: ts.Node): boolean {
+  let statement: ts.Node = node;
+  while (statement.parent && !ts.isStatement(statement)) {
+    statement = statement.parent;
+  }
+  const comments = [
+    ...(ts.getLeadingCommentRanges(source, statement.getFullStart()) ?? []),
+    ...(ts.getLeadingCommentRanges(source, node.getFullStart()) ?? []),
+  ];
+  return comments.some((range) =>
+    WAIVER.test(source.slice(range.pos, range.end)),
+  );
 }
 
 function findingsIn(path: string, source: string): Finding[] {
@@ -133,12 +190,12 @@ function findingsIn(path: string, source: string): Finding[] {
     ) {
       const whenTrue = catalogKey(node.whenTrue);
       const whenFalse = catalogKey(node.whenFalse);
-      if (whenTrue && whenFalse) {
+      const line =
+        parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line + 1;
+      if (whenTrue && whenFalse && !waivedAt(source, node)) {
         found.push({
           file: rel,
-          line:
-            parsed.getLineAndCharacterOfPosition(node.getStart(parsed)).line +
-            1,
+          line,
           text: `${whenTrue} / ${whenFalse}`,
         });
       }
@@ -181,6 +238,14 @@ describe("one plural rule", () => {
       `const label = n > 1 ? "${first}" : "${second}";`,
       `const label = t(rows === 1 ? "${first}" : "${second}", {});`,
       `const label = n === 1 ? \`${first}\` : \`${second}\`;`,
+      // The arms carrying the keys rather than the condition being inside the
+      // call. This is the spelling the tree actually used, and the one the gate
+      // read straight past on its first arming.
+      `const label = n === 1 ? t("${first}") : t("${second}", { count });`,
+      // A translator that takes the locale first, so the key is not argument
+      // one. Matching a fixed position would be hard-coding the subject.
+      `const label = n === 1 ? translate(locale, "${first}") : translate(locale, "${second}");`,
+      `const label = n === 1 ? (t("${first}")) : (t("${second}"));`,
     ];
     for (const source of cases) {
       expect(
@@ -204,6 +269,11 @@ describe("one plural rule", () => {
       `const label = n === 1 ? "not.a.key" : "also.not.a.key";`,
       // Half a pair. One arm being a key is not a choice between wordings.
       `const label = n === 1 ? "${first}" : someOtherThing;`,
+      // A call on both arms carrying no key at all — a count deciding between
+      // two computations is not a wording choice.
+      `const label = n === 1 ? formatOne(value) : formatMany(value);`,
+      // A waived site: the author says why, on the line above.
+      `// plural-rule:allow one open deal needs no name\nconst label = n === 1 ? t("${first}") : t("${second}");`,
     ];
     for (const source of allowed) {
       expect(
@@ -211,6 +281,51 @@ describe("one plural rule", () => {
         `wrongly flagged: ${source}`,
       ).toHaveLength(0);
     }
+  });
+
+  it("does not accept a waiver with no reason", () => {
+    // The waiver has to cost a sentence. A bare marker is a keystroke that
+    // turns the gate off, and a gate with one of those is decoration.
+    const [first, second] = Object.keys(en).slice(0, 2);
+    const reasonless = [
+      `// plural-rule:allow\nconst label = n === 1 ? t("${first}") : t("${second}");`,
+      `// plural-rule:allow   \nconst label = n === 1 ? t("${first}") : t("${second}");`,
+    ];
+    for (const source of reasonless) {
+      expect(
+        findingsIn(join(srcRoot, "planted.ts"), source),
+        `a reasonless waiver was honoured: ${source}`,
+      ).toHaveLength(1);
+    }
+  });
+
+  it("waives the site below the comment and not the next one down", () => {
+    // One author's exemption must not become everybody's: the walk up stops at
+    // the first line of code, so the second site here is still a finding.
+    const [first, second] = Object.keys(en).slice(0, 2);
+    const source = [
+      `// plural-rule:allow this one is a naming choice`,
+      `const first = n === 1 ? t("${first}") : t("${second}");`,
+      `const second = n === 1 ? t("${first}") : t("${second}");`,
+    ].join("\n");
+    expect(findingsIn(join(srcRoot, "planted.ts"), source)).toHaveLength(1);
+  });
+
+  it("still reads a waiver whose reason wraps, and a split conditional", () => {
+    // The formatter owns where lines break. A waiver that only matched when the
+    // marker sat exactly one line above would come undone the next time
+    // anything either side of it was reflowed, and it would come undone
+    // silently — the comment would still read as an exemption.
+    const [first, second] = Object.keys(en).slice(0, 2);
+    const source = [
+      `// plural-rule:allow naming the thing is a choice between two`,
+      `// sentences rather than between two forms of one`,
+      `const label =`,
+      `  n === 1`,
+      `    ? t("${first}")`,
+      `    : t("${second}");`,
+    ].join("\n");
+    expect(findingsIn(join(srcRoot, "planted.ts"), source)).toHaveLength(0);
   });
 
   it("reads the extension tier, not frontend/src alone", () => {

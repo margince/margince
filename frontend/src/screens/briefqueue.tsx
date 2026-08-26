@@ -10,7 +10,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf } from "./common";
 import type { Deal, MorningBriefItem, useBriefItemMark } from "./home.queries";
@@ -56,12 +56,9 @@ export function briefLabels(
       momentum: t("home.factorMomentum"),
       warmth: t("home.factorWarmth"),
     },
-    evidence:
-      evidenceCount === 1
-        ? t("home.evidenceOne")
-        : t("home.evidence", {
-            count: formatNumber(evidenceCount, locale),
-          }),
+    evidence: translatePlural(locale, "home.evidence", evidenceCount, {
+      count: formatNumber(evidenceCount, locale),
+    }),
     evidenceNone: t("home.evidenceNone"),
     openDeal: t("home.openDeal"),
     act: t("home.act"),

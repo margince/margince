@@ -11,7 +11,7 @@ import {
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import "./dealroomthreads.css";
 
@@ -172,6 +172,7 @@ function DocumentCard({
   verbs: ThreadVerbs;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   return (
     <article className="board-doc" aria-label={doc.title}>
@@ -189,11 +190,9 @@ function DocumentCard({
         <div className="board-doc-threads">
           <span className="t-small board-doc-threads-head">
             <MessageSquare aria-hidden />
-            {threads.length === 1
-              ? t("threads.aboutThisOne")
-              : t("threads.aboutThis", {
-                  count: formatNumber(threads.length, locale),
-                })}
+            {plural("threads.aboutThis", threads.length, {
+              count: formatNumber(threads.length, locale),
+            })}
           </span>
           <ThreadList threads={threads} verbs={verbs} />
         </div>

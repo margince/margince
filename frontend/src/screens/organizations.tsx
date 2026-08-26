@@ -896,11 +896,9 @@ function SiteReadPanel({
         >
           <AutonomyDot tier="confirm" />
           <span className="t-small">
-            {report.proposal_ids.length === 1
-              ? t("deepread.proposalsOne")
-              : t("deepread.proposals", {
-                  count: formatNumber(report.proposal_ids.length, locale),
-                })}
+            {plural("deepread.proposals", report.proposal_ids.length, {
+              count: formatNumber(report.proposal_ids.length, locale),
+            })}
           </span>
           <Button small onClick={() => navigate({ screen: "today" })}>
             {t("enrich.toInbox")}

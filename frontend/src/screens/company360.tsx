@@ -41,7 +41,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   problemCodeOf,
@@ -236,6 +236,7 @@ function CoverageSummary({
   routesReadable: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   if (contacts.length === 0) {
     return null;
@@ -248,7 +249,7 @@ function CoverageSummary({
       ? t("co.coverage.contactsAtLeast", {
           count: formatNumber(contacts.length, locale),
         })
-      : t("co.coverage.contacts", {
+      : plural("co.coverage.contacts", contacts.length, {
           count: formatNumber(contacts.length, locale),
         }),
   ];
@@ -260,7 +261,9 @@ function CoverageSummary({
   // The gap count is only meaningful over a complete picture: a capped page
   // hides the contacts who might hold the roles it would report as missing.
   if (!truncated && gaps > 0) {
-    parts.push(t("co.coverage.gaps", { count: formatNumber(gaps, locale) }));
+    parts.push(
+      plural("co.coverage.gaps", gaps, { count: formatNumber(gaps, locale) }),
+    );
   }
   return <p className="surfacestate-empty">{parts.join(" · ")}</p>;
 }
@@ -291,6 +294,7 @@ export function PeopleCard({
   loading?: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const contacts = [...(view?.people?.data ?? [])].sort(byReach);
   const truncated = Boolean(view?.people?.page.has_more);
@@ -387,11 +391,9 @@ export function PeopleCard({
           {untried.length > 0 && (
             <p className="co-callout">
               <Badge tone="accent">
-                {untried.length === 1
-                  ? t("co.people.untriedHintOne")
-                  : t("co.people.untriedHint", {
-                      count: formatNumber(untried.length, locale),
-                    })}
+                {plural("co.people.untriedHint", untried.length, {
+                  count: formatNumber(untried.length, locale),
+                })}
               </Badge>
             </p>
           )}
@@ -400,18 +402,24 @@ export function PeopleCard({
               than one open deal to be on: on a single-deal account "on Renewal"
               is the same word the reader already has, and the row's own roles
               line omits it for the same reason. */}
-          {gaps.map((gap) => (
-            <p className="co-callout" key={gap.dealId}>
-              <Badge tone="warn">
-                {openDeals.length === 1
-                  ? t("co.people.missing", { roles: roleList(gap.missing, t) })
-                  : t("co.people.missingOnDeal", {
-                      roles: roleList(gap.missing, t),
-                      deal: gap.dealName,
-                    })}
-              </Badge>
-            </p>
-          ))}
+          {gaps.map((gap) => {
+            // plural-rule:allow naming the deal or not is a choice between two
+            // sentences, not between two forms of one, so no plural rule decides it
+            const wording =
+              openDeals.length === 1
+                ? "co.people.missing"
+                : "co.people.missingOnDeal";
+            return (
+              <p className="co-callout" key={gap.dealId}>
+                <Badge tone="warn">
+                  {t(wording, {
+                    roles: roleList(gap.missing, t),
+                    deal: gap.dealName,
+                  })}
+                </Badge>
+              </p>
+            );
+          })}
         </PanelBody>
       )}
     </RailPanel>
