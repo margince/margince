@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -155,14 +156,25 @@ func TestConfiguredAdminEmailReadsTheInstallationsOwnAddress(t *testing.T) {
 		// section being reported as the sign-in address.
 		"an email under another key first": "" +
 			"organization:\n  email: billing@example.com\n\nbootstrap_admin:\n  email: admin@demo.test\n",
+		// '#' is legal in the local part of an address (RFC 5322 atext), so a
+		// reader that cut at every one would announce a truncated address —
+		// the failure this whole function exists to prevent.
+		"a hash inside the address": "" +
+			"bootstrap_admin:\n  email: admin#demo@demo.test\n",
+		"a quoted hash inside the address": "" +
+			"bootstrap_admin:\n  email: \"admin#demo@demo.test\"\n",
 	} {
 		t.Run(name, func(t *testing.T) {
 			l := newTestLayout(t)
 			if err := os.WriteFile(l.configPath(), []byte(yaml), 0o600); err != nil {
 				t.Fatalf("write config: %v", err)
 			}
-			if got := l.configuredAdminEmail(); got != "admin@demo.test" {
-				t.Fatalf("start message would name %q, but margince.yaml bootstraps admin@demo.test", got)
+			want := "admin@demo.test"
+			if strings.Contains(yaml, "admin#demo") {
+				want = "admin#demo@demo.test"
+			}
+			if got := l.configuredAdminEmail(); got != want {
+				t.Fatalf("start message would name %q, but margince.yaml bootstraps %q", got, want)
 			}
 		})
 	}
@@ -179,6 +191,9 @@ func TestConfiguredAdminEmailFallsBackRatherThanFailing(t *testing.T) {
 		"the block names no email":   ptr("bootstrap_admin:\n  display_name: Owner\n"),
 		"the email is commented out": ptr("bootstrap_admin:\n  # email: admin@demo.test\n"),
 		"the value is empty":         ptr("bootstrap_admin:\n  email:\n"),
+		// bootstrap_admin.contact.email is not bootstrap_admin.email. Announcing
+		// a nested address would name an account nothing bootstrapped.
+		"only a nested email": ptr("bootstrap_admin:\n  contact:\n    email: ops@demo.test\n"),
 	} {
 		t.Run(name, func(t *testing.T) {
 			l := newTestLayout(t)

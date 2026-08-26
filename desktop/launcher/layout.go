@@ -4,7 +4,6 @@
 package main
 
 import (
-	"bufio"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
@@ -111,49 +110,89 @@ const defaultAdminEmail = "owner@margince.local"
 //
 // A DELIBERATELY NARROW READER, not a YAML parser. This module is stdlib-only
 // and outside go.work by design (see go.mod), and a parser dependency bought for
-// one line of a start message would not pay for itself. It finds `email:` under
-// `bootstrap_admin:` and stops.
+// one line of a start message would not pay for itself. It accepts `email:` as a
+// DIRECT child of `bootstrap_admin:` and nothing else, so a nested key of the
+// same name is not mistaken for the installation's own.
 //
 // Every failure answers with the default rather than an error. The address is
 // informational, so a shape this reader cannot follow must cost a reader the
 // precision and not the launch.
 func (l layout) configuredAdminEmail() string {
-	file, err := os.Open(l.configPath())
+	// Read whole rather than streamed: the file is small and write-once, and one
+	// read has one error to answer, where a scanner has a second that is easy to
+	// leave unasked.
+	//
+	// #nosec G304 -- the path is layout's own, derived from the installation directory
+	raw, err := os.ReadFile(l.configPath())
 	if err != nil {
 		return defaultAdminEmail
 	}
-	//craft:ignore swallowed-errors best-effort close of a file opened for reading
-	defer func() { _ = file.Close() }()
 
-	inBlock := false
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if i := strings.IndexByte(line, '#'); i >= 0 {
-			line = line[:i]
-		}
-		if strings.TrimSpace(line) == "" {
+	blockIndent, fieldIndent := -1, -1
+	for _, line := range strings.Split(string(raw), "\n") {
+		body := strings.TrimLeft(strings.TrimRight(line, "\r"), " \t")
+		if body == "" || strings.HasPrefix(body, "#") {
 			continue
 		}
-		// A key at column zero ends whatever block preceded it. bootstrap_admin's
-		// own line is such a key, so one test both enters and leaves the block.
-		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
-			inBlock = strings.TrimSpace(line) == "bootstrap_admin:"
+		key, rest, isKey := strings.Cut(body, ":")
+		if !isKey {
 			continue
 		}
-		if !inBlock {
+		key = strings.TrimSpace(key)
+		indent := len(strings.TrimRight(line, "\r")) - len(body)
+
+		if blockIndent < 0 {
+			if key == "bootstrap_admin" {
+				blockIndent = indent
+			}
 			continue
 		}
-		value, found := strings.CutPrefix(strings.TrimSpace(line), "email:")
-		if !found {
+		// A key back at or outside the block's own column has ended it, and
+		// nothing after it can be the installation's admin.
+		if indent <= blockIndent {
+			return defaultAdminEmail
+		}
+		// The block's first field fixes the column its own keys sit in. Anything
+		// deeper belongs to a nested key — bootstrap_admin.contact.email is not
+		// bootstrap_admin.email.
+		if fieldIndent < 0 {
+			fieldIndent = indent
+		}
+		if indent != fieldIndent || key != "email" {
 			continue
 		}
-		if email := strings.Trim(strings.TrimSpace(value), `"'`); email != "" {
+		if email := scalarValue(rest); email != "" {
 			return email
 		}
 		return defaultAdminEmail
 	}
 	return defaultAdminEmail
+}
+
+// scalarValue reads a YAML scalar written on one line: a quoted string up to its
+// closing quote, or a bare value up to an end-of-line comment.
+//
+// A '#' opens a comment only at the start of a line or after whitespace. It is
+// legal in the local part of an address, so cutting at every '#' would hand a
+// reader a truncated one — which is the failure the caller exists to prevent.
+func scalarValue(rest string) string {
+	rest = strings.TrimSpace(rest)
+	if rest == "" {
+		return ""
+	}
+	if quote := rest[0]; quote == '"' || quote == '\'' {
+		closing := strings.IndexByte(rest[1:], quote)
+		if closing < 0 {
+			return ""
+		}
+		return rest[1 : 1+closing]
+	}
+	for i := 1; i < len(rest); i++ {
+		if rest[i] == '#' && (rest[i-1] == ' ' || rest[i-1] == '\t') {
+			return strings.TrimRight(rest[:i], " \t")
+		}
+	}
+	return rest
 }
 
 // ensureConfig writes the deployment configuration on first run and leaves an
