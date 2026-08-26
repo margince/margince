@@ -31,8 +31,16 @@ import (
 )
 
 // gateIdentifiers are the top-level declarations that make a file part of this
-// gate, and so the only thing that earns a file its exemption from the sweep.
-var gateIdentifiers = []string{"claimShapes", "namedExhaustiveness", "heldBy", "gateFiles", "shapeCensus"}
+// gate, and so what earns a file its exemption from the sweep.
+//
+// `gateIdentifiers` and `exemptGateFiles` are on the list because THIS file
+// declares them: a source that decides which files are exempt is as much a part
+// of the gate as one that declares the shapes, and leaving it off would have
+// meant the arm could not admit the file it is written in.
+var gateIdentifiers = []string{
+	"claimShapes", "namedExhaustiveness", "heldBy", "gateFiles", "shapeCensus",
+	"gateIdentifiers", "exemptGateFiles",
+}
 
 // exemptGateFiles is how many files may be exempt from the sweep, pinned.
 //
@@ -42,7 +50,7 @@ var gateIdentifiers = []string{"claimShapes", "namedExhaustiveness", "heldBy", "
 // contain a claim shape, so "contains a claim" qualifies every file worth
 // exempting, by construction. Pinning the size makes a third exemption a line
 // somebody agrees to, the way a shape's row makes a narrowing one.
-const exemptGateFiles = 2
+const exemptGateFiles = 3
 
 func TestOnlyTheGatesOwnSourcesAreExemptFromTheSweep(t *testing.T) {
 	if len(gateFiles) != exemptGateFiles {
@@ -265,6 +273,7 @@ func TestTheTwoDoorsAreJudgedRatherThanTrusted(t *testing.T) {
 	}{
 		{"one of this gate's arms", []string{"uniquenessclaims_test.go"}, true},
 		{"the detector beside it", []string{"uniquenessclaimsdetector_test.go"}, true},
+		{"this file, which is one too", []string{"uniquenessclaimscorpus_test.go"}, true},
 		{"an ordinary gate elsewhere", []string{"internal/modules/deals/pipeline_test.go"}, false},
 		{"an arm among ordinary files", []string{"enumsync_test.go", "uniquenessclaims_test.go"}, true},
 		{"nothing at all", nil, false},

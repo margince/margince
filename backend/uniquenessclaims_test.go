@@ -116,8 +116,10 @@ func allClaims(t *testing.T) []claim {
 // It answers TWO questions, which happen to have the same answer and are not
 // the same question: which files the sweep skips, and which files a `Held by:`
 // may not name. The second is because these arms judge the register rather than
-// any claim's subject. A third gate arm added in a file of its own is covered
-// by neither until it is named here.
+// any claim's subject. A gate arm added in a file of its own is covered by
+// neither until it is named here — and `exemptGateFiles` pins how many there
+// are, so adding one is a line somebody agrees to rather than a skip that
+// arrives with a refactor.
 //
 // By path and not by basename: a basename match would skip every file so named
 // in every swept tree, and a nested one could then carry an unbound claim.
@@ -127,6 +129,7 @@ func allClaims(t *testing.T) []claim {
 var gateFiles = map[string]bool{
 	"uniquenessclaims_test.go":         true,
 	"uniquenessclaimsdetector_test.go": true,
+	"uniquenessclaimscorpus_test.go":   true,
 }
 
 const registerPath = "uniquenessclaims.txt"
