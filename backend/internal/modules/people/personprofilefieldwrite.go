@@ -25,10 +25,13 @@ package people
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -86,34 +89,39 @@ type personProfileFieldRow struct {
 // writePersonProfileField writes one evidence row and reports whether it landed —
 // false meaning the field was already answered and this writer defers to it.
 //
-// The subject's liveness rides the INSERT rather than only the probe the entry
-// point ran. person_profile_field is a declared PII table and Art. 17 erasure
-// clears its rows while stamping the person archived, so a fill decided before
-// that commit and applied after it would put the erased subject's details
-// straight back — in the window between two statements, not over the hours an
-// entry gate closes. A SELECT source rather than VALUES is what lets the
-// predicate travel with the row.
+// The subject is HELD before the row lands, not merely probed by the entry
+// point. person_profile_field is a declared PII table and Art. 17 erasure clears
+// its rows while stamping the person archived, so a fill decided before that
+// commit and applied after it would put the erased subject's details straight
+// back — in the window between two statements, not over the hours an entry gate
+// closes.
 //
-// FOR UPDATE, because the predicate alone only NARROWS that window. Reading the
-// person as live and inserting are one statement, but an erasure running
-// concurrently can still commit between this transaction's snapshot and its
-// own — and the foreign key would accept the parent it just archived, so the
-// row lands on an erased subject and nothing complains. The lock makes the two
-// take turns: an erasure in flight blocks here until it commits, and then this
-// statement finds no live row.
+// Through auth.LockSubjectLive, which is where that lock is spelled; this
+// used to carry its own `SELECT … FOR UPDATE` inside the INSERT and was the only
+// statement in the tree that did. Two writers of one invariant, and the sites
+// that needed it next each had to rediscover the shape.
 //
 // Locking PERSON and not the field row: the field row may not exist yet, and
 // what has to be serialized is the subject's liveness. Every caller that goes
 // on to write a person COLUMN takes the same row next, so the order is
 // person-then-person and no new deadlock edge is introduced.
 func writePersonProfileField(ctx context.Context, tx pgx.Tx, personID ids.PersonID, row personProfileFieldRow, precedence personProfileFieldPrecedence) (bool, error) {
+	if err := auth.LockSubjectLive(ctx, tx, "person", personID.UUID); err != nil {
+		if errors.Is(err, apperrors.ErrNotFound) {
+			// Not an error to THIS writer, whose whole contract is to report
+			// whether the row landed. "The subject went" is one more reason it
+			// did not, and the callers refuse an archived subject at their own
+			// door — reaching here means it went inside the window, where
+			// landed=false is the honest answer rather than a swallowed
+			// refusal.
+			return false, nil
+		}
+		return false, err
+	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO person_profile_field
 		  (person_id, field, value, evidence_snippet, source_ref, confidence, source, captured_by)
-		SELECT $1, $2, $3, $4, $5, $6, $7, $8
-		  FROM person
-		 WHERE person.id = $1 AND person.archived_at IS NULL
-		   FOR UPDATE
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		ON CONFLICT (person_id, field) `+precedence.conflictClause(),
 		personID, row.Field, row.Value, row.EvidenceSnippet, row.SourceRef,
 		row.Confidence, row.Source, row.CapturedBy)

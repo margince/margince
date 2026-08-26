@@ -87,11 +87,60 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // retention sweep, the archive transition itself, a merge retiring its source,
 // or a refusal path that writes nothing — it uses EnsureWritable and says why
 // at the call site.
+//
+// It NARROWS the window rather than closing it, and a caller whose write would
+// be harmful on the far side of it owes LockSubjectLive as well. This reads a
+// snapshot; the write happens in a later statement of the same transaction, and
+// under READ COMMITTED an archive or an erasure committing in between lands
+// anyway. For most callers the residue is a stale write. Where it is a live
+// capability or a PII row an erasure had just cleared, it is not, and the lock
+// is what makes the two take turns.
 func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if err := EnsureVisibleLive(ctx, tx, table, id); err != nil {
 		return err
 	}
 	return ensureWriteAuthority(ctx, tx, table, id)
+}
+
+// LockSubjectLive holds the subject's row for the rest of the transaction and
+// refuses if it is not live, so a write that follows cannot be overtaken by an
+// archive or an Art. 17 erasure the probe could not see.
+//
+// The lock is taken HERE, beside the write, rather than inside
+// EnsureWritableLive where every live-probed path would take it. That placement
+// is the decision and not an accident: the probe runs at the top of two dozen
+// transactions, several of them in `people`, where a documented lock order
+// already exists (the workspace-wide name lock before the organization row) and
+// where renamerecheck.go records a deadlock found only by review when a row lock
+// was taken out of turn. Locking in the primitive would add an edge to every one
+// of those orders at once. Locking at the write adds it only where the residue
+// is harmful, which is a set small enough to audit.
+//
+// FOR NO KEY UPDATE rather than FOR UPDATE: the subject is a parent row that
+// other tables reference, and this must not block an unrelated insert taking a
+// foreign key to it. It conflicts with the archive and the erasure, which both
+// UPDATE the row, and with nothing else.
+//
+// ErrNotFound on a subject that is gone, which is the answer the probe would
+// have given a moment earlier — a caller that already refused an archived
+// subject refuses one archived since in the same shape.
+//
+// Held by: TestALiveProbedWriteOfAHeldRowLocksItsSubject
+// (backend/liveprobelock_test.go)
+func LockSubjectLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	// The table is a compile-time literal at every call site, never a value off
+	// a request; Sanitize is belt for the identifier this cannot bind.
+	q := fmt.Sprintf(
+		`SELECT 1 FROM %s WHERE id = $1 AND archived_at IS NULL FOR NO KEY UPDATE`,
+		pgx.Identifier{table}.Sanitize())
+	var held int
+	if err := tx.QueryRow(ctx, q, id).Scan(&held); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 // EnsureWritableForSubjectRights is EnsureVisibleForSubjectRights' write-authority

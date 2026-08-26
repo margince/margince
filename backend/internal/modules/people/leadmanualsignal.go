@@ -89,6 +89,14 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 		if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}
+		// And held: Art. 17 anonymization DELETEs the lead's score history and
+		// manual signals, so a row written after that commit restores the
+		// erased subject's scoring — a factors JSON carrying the ids of
+		// activities they took part in, or a colleague's written judgement
+		// naming them. The probe reads a snapshot; this holds the row.
+		if err := auth.LockSubjectLive(ctx, tx, "lead", leadID.UUID); err != nil {
+			return err
+		}
 		// The auto value wins (ADR-0105 §4), so a factor the model already
 		// fetches cannot be hand-set: accepting it would let an estimate
 		// outrank a fact one request after the rule says otherwise. A rep who
@@ -222,6 +230,14 @@ func (s *Store) ClearLeadManualSignal(ctx context.Context, leadID ids.LeadID, fa
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
+			return err
+		}
+		// And held: Art. 17 anonymization DELETEs the lead's score history and
+		// manual signals, so a row written after that commit restores the
+		// erased subject's scoring — a factors JSON carrying the ids of
+		// activities they took part in, or a colleague's written judgement
+		// naming them. The probe reads a snapshot; this holds the row.
+		if err := auth.LockSubjectLive(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}
 		tag, err := tx.Exec(ctx,

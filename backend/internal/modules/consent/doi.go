@@ -99,33 +99,25 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 		// consent_doi_token rows are a security artifact, not a kernel
 		// entity, so the row id stays untyped.
 		var tokenRowID ids.UUID
-		// The subject's liveness rides the INSERT as well as the probe above,
-		// and it is worth being exact about what that buys. It closes the
-		// window between the probe and this statement — an erasure committing
-		// there would otherwise mint a live invitation to grant consent for
-		// somebody the installation has just been told to forget, and the token
-		// would work. It does NOT close the window between this statement and
-		// COMMIT; an erasure landing there still wins, and closing that needs a
-		// row lock on the subject rather than a predicate.
+		// What this mints is a bearer capability in somebody's mailbox: a
+		// working invitation to GRANT consent, valid for its full TTL. So the
+		// probe above is not enough on its own — an erasure committing between
+		// it and this statement, or between this statement and COMMIT, would
+		// leave the installation posting an invitation to a person it has just
+		// been told to forget, and the link would work.
 		//
-		// So this is a narrowing, not a proof, and it is the only statement in
-		// the module that carries one — every other EnsureWritableLive site is
-		// probe-then-write and takes the same residual risk unremarked. Both
-		// halves are tracked on #2574, which decides lock-versus-predicate for
-		// the primitive rather than leaving each statement to answer it.
-		//
-		// No row means the subject went while we were deciding, which is the
-		// answer the probe would have given a moment earlier, so it refuses the
-		// same way rather than failing on a scan.
+		// The lock is what makes the two take turns rather than race; the
+		// predicate the statement used to carry closed only the first of those
+		// two windows. auth.LockSubjectLive says why it is taken here and not
+		// inside the probe.
+		if err := auth.LockSubjectLive(ctx, tx, "person", personID.UUID); err != nil {
+			return err
+		}
 		err = tx.QueryRow(ctx, `
 			INSERT INTO consent_doi_token (person_id, purpose_id, token_hash, issued_at, expires_at)
-			SELECT $1, $2, $3, $4, $5
-			 WHERE EXISTS (SELECT 1 FROM person WHERE id = $1 AND archived_at IS NULL)
+			VALUES ($1, $2, $3, $4, $5)
 			RETURNING id`,
 			personID, purposeID, hashDOIToken(token), issued, issued.Add(doiTokenTTL)).Scan(&tokenRowID)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return apperrors.ErrNotFound
-		}
 		if err != nil {
 			return err
 		}

@@ -273,6 +273,13 @@ func writeLinkedInHandle(ctx context.Context, tx pgx.Tx, connectionID, personID 
 	if handle == nil || *handle == "" {
 		return false, nil
 	}
+	// person_social is a declared PII table and Art. 17 erasure deletes the
+	// subject's rows from it, so a handle written after that commit puts the
+	// erased person's public profile straight back. The entry probe read a
+	// snapshot; this holds the row so the erasure and this write take turns.
+	if err := auth.LockSubjectLive(ctx, tx, "person", personID); err != nil {
+		return false, err
+	}
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO person_social (person_id, platform, handle)
 		VALUES ($1, $3, $2)

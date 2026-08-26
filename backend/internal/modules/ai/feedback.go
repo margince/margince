@@ -145,6 +145,18 @@ func (s *FeedbackStore) Record(ctx context.Context, in RecordInput) error {
 		if err := auth.EnsureWritableLive(ctx, tx, in.SubjectType, in.SubjectID); err != nil {
 			return err
 		}
+		// And held, because ai_feedback is a declared PII table that Art. 17
+		// erasure deletes: a verdict written after that commit restores
+		// human-typed text ABOUT the subject to a table the erasure had
+		// cleared. The probe above narrows the window; this closes it.
+		//
+		// SubjectType is the polymorphic arm, and it is safe as an identifier
+		// for the same reason the probe above takes it: both are checked
+		// against the closed feedbackSubjects vocabulary by admitVerdict, which runs
+		// before the transaction opens.
+		if err := auth.LockSubjectLive(ctx, tx, in.SubjectType, in.SubjectID); err != nil {
+			return err
+		}
 		id, err := upsertVerdict(ctx, tx, in, key, capturedBy)
 		if err != nil {
 			return err
