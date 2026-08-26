@@ -157,6 +157,8 @@ const (
 // undoableRecordTypes are the six the history screens serve. relationship is a
 // write shape without a history endpoint, so a restore of one has nowhere to be
 // pressed from and is refused by name rather than half-served.
+//
+//nolint:goconst // the six this path serves, listed once
 var undoableRecordTypes = []string{
 	"person", "organization", "deal", "lead", "project", "activity",
 }

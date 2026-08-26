@@ -49,6 +49,8 @@ import (
 // the other state a value that never existed, wrong by the scale difference
 // values.MinorUnitExceptions() encodes — and wrong silently, because the number
 // is plausible in both denominations.
+//
+//nolint:goconst // the pair IS the declaration; a constant for either half would read as if one were special
 var moneyPair = []string{"amount_minor", "currency"}
 
 // coupledKeys expands the keys a supersession question must actually ask about.

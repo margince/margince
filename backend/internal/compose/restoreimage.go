@@ -26,6 +26,8 @@ import (
 // derivedColumns never travel in a restore even when the image carries them.
 // They are the write path's own output, not a person's decision, and replaying
 // one would state a stamp nobody made.
+//
+//nolint:goconst // the four stamps, spelled where they are judged
 var derivedColumns = map[string]bool{
 	"updated_at": true, "created_at": true, "id": true, "version": true,
 }
@@ -80,6 +82,8 @@ var objectFieldsClearedByAnEmptyObject = map[string]bool{
 // (backend/internal/compose/recordrestoreshape_integration_test.go), which sets
 // every field a record type's shape declares, restores, and reports any that did
 // not land — so a key that joins the gap later is named rather than dropped.
+//
+//nolint:goconst // the rows are wire field names read as data; a shared constant would tie them to whichever other concept spells the same word
 var namedByTheShapeButNotWrittenByThePatch = map[string]map[string]bool{
 	"deal": {
 		"fx_rate_to_base": true, "fx_rate_date": true,
@@ -102,11 +106,9 @@ var namedByTheShapeButNotWrittenByThePatch = map[string]map[string]bool{
 // writes are dropped SILENTLY and on purpose: neither was a person's decision,
 // and neither is missing from the restore in any sense a reader would care about.
 func filterImage(entityType string, before json.RawMessage) (map[string]json.RawMessage, []string, error) {
-	var image map[string]json.RawMessage
-	if len(before) > 0 {
-		if err := json.Unmarshal(before, &image); err != nil {
-			return nil, nil, fmt.Errorf("compose: undoability: before-image is not a JSON object: %w", err)
-		}
+	image, err := imageObject(before)
+	if err != nil {
+		return nil, nil, err
 	}
 	writable, served := agents.UpdatableFields(datasource.EntityType(entityType))
 	if !served {
@@ -116,31 +118,22 @@ func filterImage(entityType string, before json.RawMessage) (map[string]json.Raw
 	for _, field := range writable {
 		allowed[field] = true
 	}
+
 	patch := make(map[string]json.RawMessage, len(image))
 	address := map[string]json.RawMessage{}
 	var unspellable []string
 	for key, value := range image {
-		if derivedColumns[key] || namedByTheShapeButNotWrittenByThePatch[entityType][key] {
-			continue
-		}
-		if nested, isAddress := addressColumns[key]; isAddress && allowed[addressField] {
-			address[nested] = value
-			continue
-		}
-		// A null on one of these is "there was none", which an empty object
-		// says and a null cannot.
-		if objectFieldsClearedByAnEmptyObject[key] && allowed[key] && string(value) == "null" {
-			patch[key] = json.RawMessage(`{}`)
-			continue
-		}
-		// A cf_* key is a custom field: the catalog decides whether it is still
-		// writable, and that is a live-state question the value check owns. The
-		// shape check admits it here so the value check can name it.
-		if !allowed[key] && !strings.HasPrefix(key, "cf_") {
+		switch kept := spell(entityType, key, value, allowed); kept {
+		case spelledDropped:
+		case spelledUnspellable:
 			unspellable = append(unspellable, key)
-			continue
+		case spelledIntoAddress:
+			address[addressColumns[key]] = value
+		case spelledAsEmptyObject:
+			patch[key] = json.RawMessage(`{}`)
+		default:
+			patch[key] = value
 		}
-		patch[key] = value
 	}
 	if len(address) > 0 {
 		// The nested object is SUPPLIED, so the nulls inside it are values the
@@ -157,6 +150,56 @@ func filterImage(entityType string, before json.RawMessage) (map[string]json.Raw
 	return patch, unspellable, nil
 }
 
+// spelling is what a restore can do with one image key.
+type spelling int
+
+const (
+	spelledAsItself spelling = iota
+	// spelledDropped: nobody chose it, so replaying it states nothing.
+	spelledDropped
+	// spelledUnspellable: the update shape has no name for it, so sending the
+	// rest would put half the change back and report success.
+	spelledUnspellable
+	// spelledIntoAddress: one column of the structured address.
+	spelledIntoAddress
+	// spelledAsEmptyObject: a whole-object field whose image says "there was
+	// none", which an empty object says and a null cannot.
+	spelledAsEmptyObject
+)
+
+// spell decides how one image key reaches the update path, so filterImage reads
+// as the assembly it is rather than as the decision and the assembly at once.
+func spell(entityType, key string, value json.RawMessage, allowed map[string]bool) spelling {
+	if derivedColumns[key] || namedByTheShapeButNotWrittenByThePatch[entityType][key] {
+		return spelledDropped
+	}
+	if _, isAddress := addressColumns[key]; isAddress && allowed[addressField] {
+		return spelledIntoAddress
+	}
+	if objectFieldsClearedByAnEmptyObject[key] && allowed[key] && string(value) == jsonNull {
+		return spelledAsEmptyObject
+	}
+	// A cf_* key is a custom field: the catalog decides whether it is still
+	// writable, and that is a live-state question the value check owns. The
+	// shape check admits it here so the value check can name it.
+	if !allowed[key] && !strings.HasPrefix(key, "cf_") {
+		return spelledUnspellable
+	}
+	return spelledAsItself
+}
+
+// imageObject decodes an audit image, treating an absent one as empty.
+func imageObject(raw json.RawMessage) (map[string]json.RawMessage, error) {
+	var image map[string]json.RawMessage
+	if len(raw) == 0 {
+		return image, nil
+	}
+	if err := json.Unmarshal(raw, &image); err != nil {
+		return nil, fmt.Errorf("compose: undoability: before-image is not a JSON object: %w", err)
+	}
+	return image, nil
+}
+
 // splitNulls separates the patch into the values a restore SENDS and the fields
 // it must ask to be CLEARED, and names the ones this record type cannot clear
 // at all.
@@ -168,21 +211,21 @@ func filterImage(entityType string, before json.RawMessage) (map[string]json.Raw
 // clear is refused rather than sent and silently dropped.
 func splitNulls(entityType string, patch map[string]json.RawMessage) (map[string]json.RawMessage, []string, []string) {
 	values := make(map[string]json.RawMessage, len(patch))
-	var clear, unclearable []string
+	var cleared, unclearable []string
 	for key, value := range patch {
-		if string(value) != "null" {
+		if string(value) != jsonNull {
 			values[key] = value
 			continue
 		}
 		if canClear(entityType, key) {
-			clear = append(clear, key)
+			cleared = append(cleared, key)
 			continue
 		}
 		unclearable = append(unclearable, key)
 	}
-	sort.Strings(clear)
+	sort.Strings(cleared)
 	sort.Strings(unclearable)
-	return values, clear, unclearable
+	return values, cleared, unclearable
 }
 
 // recordsAChange reports whether the entry's images differ on any key. A store

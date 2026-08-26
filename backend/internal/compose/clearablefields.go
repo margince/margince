@@ -28,6 +28,8 @@ package compose
 //     positions and a sticky decision, not values.
 //   - a person's full_name and an organization's display_name are absent because
 //     a record with no name is not a record anybody can find again.
+//
+//nolint:goconst // the rows are wire FIELD names and record types read as data; the constants goconst points at are other concepts that spell the same word — a report field, a filter param — and hiding these behind them would assert a correspondence this table exists to state on its own
 var clearableFields = map[string][]string{
 	"person": {"first_name", "last_name", "title", "owner_id"},
 	"organization": {

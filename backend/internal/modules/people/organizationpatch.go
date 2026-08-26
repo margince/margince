@@ -26,6 +26,26 @@ func buildOrganizationPatch(ctx context.Context, tx pgx.Tx, current crmcontracts
 	if err := applyClears(p, in.Clear, clearableOrganizationColumns(current)); err != nil {
 		return nil, err
 	}
+	setOrganizationPlainFields(p, current, in)
+	if err := setOrganizationCheckedFields(ctx, tx, p, current, in); err != nil {
+		return nil, err
+	}
+	if in.Address != nil {
+		cur := addressColumns(current.Address)
+		p.Set("address_line1", cur.Line1, in.Address.Line1)
+		p.Set("address_line2", cur.Line2, in.Address.Line2)
+		p.Set("address_city", cur.City, in.Address.City)
+		p.Set("address_region", cur.Region, in.Address.Region)
+		p.Set("address_postal_code", cur.PostalCode, in.Address.PostalCode)
+		p.Set("address_country", cur.Country, in.Address.Country)
+	}
+	return p, nil
+}
+
+// setOrganizationPlainFields stages the fields whose only rule is "the caller
+// supplied it". Kept apart from the checked ones so a reader can see at a
+// glance which fields carry a rule and which do not.
+func setOrganizationPlainFields(p *storekit.Patch, current crmcontracts.Organization, in UpdateOrganizationInput) {
 	if in.DisplayName != nil {
 		p.Set("display_name", current.DisplayName, *in.DisplayName)
 	}
@@ -38,42 +58,39 @@ func buildOrganizationPatch(ctx context.Context, tx pgx.Tx, current crmcontracts
 	if in.Industry != nil {
 		p.Set("industry", current.Industry, *in.Industry)
 	}
-	if in.SizeBand != nil {
-		if err := checkSizeBand(*in.SizeBand); err != nil {
-			return nil, err
-		}
-		p.Set("size_band", current.SizeBand, *in.SizeBand)
-	}
 	if in.OwnerID != nil {
 		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
 	}
+}
+
+// setOrganizationCheckedFields stages the fields that carry a rule: a closed
+// vocabulary, a normalisation, or a link target that must be visible before the
+// edge lands.
+func setOrganizationCheckedFields(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Organization, in UpdateOrganizationInput) error {
+	if in.SizeBand != nil {
+		if err := checkSizeBand(*in.SizeBand); err != nil {
+			return err
+		}
+		p.Set("size_band", current.SizeBand, *in.SizeBand)
+	}
 	if in.Lifecycle != nil {
 		if err := checkLifecycle(*in.Lifecycle); err != nil {
-			return nil, err
+			return err
 		}
 		p.Set("lifecycle", lifecycleValue(current.Lifecycle), *in.Lifecycle)
 	}
 	if in.ParentOrgID != nil {
 		if err := auth.EnsureLinkTarget(ctx, tx, "organization", in.ParentOrgID.UUID); err != nil {
-			return nil, err
+			return err
 		}
 		p.Set("parent_org_id", current.ParentOrgId, *in.ParentOrgID)
 	}
 	if in.LinkedInURL != nil {
 		normalized, err := orgLinkedInPatchValue(*in.LinkedInURL)
 		if err != nil {
-			return nil, err
+			return err
 		}
 		p.Set("linkedin_url", current.LinkedinUrl, normalized)
 	}
-	if in.Address != nil {
-		cur := addressColumns(current.Address)
-		p.Set("address_line1", cur.Line1, in.Address.Line1)
-		p.Set("address_line2", cur.Line2, in.Address.Line2)
-		p.Set("address_city", cur.City, in.Address.City)
-		p.Set("address_region", cur.Region, in.Address.Region)
-		p.Set("address_postal_code", cur.PostalCode, in.Address.PostalCode)
-		p.Set("address_country", cur.Country, in.Address.Country)
-	}
-	return p, nil
+	return nil
 }

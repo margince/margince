@@ -487,6 +487,8 @@ func applyClears(p *storekit.Patch, fields []string, columns map[string]clearabl
 // with literal column names. amount_minor and currency are absent: money is
 // read as one field, and a half-cleared pair states an amount in no currency.
 // status and the close-date flags belong to the advance path.
+//
+//nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
 func clearableDealColumns(current crmcontracts.Deal) map[string]clearable {
 	return map[string]clearable{
 		"expected_close_date": {"expected_close_date", current.ExpectedCloseDate},

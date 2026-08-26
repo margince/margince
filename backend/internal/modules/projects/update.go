@@ -107,6 +107,15 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 // member may own a project — so the composite FK is the whole check; the
 // anchor company is not re-pointable here, because moving a project to
 // another company would silently orphan the deals that inherited it.
+// The date columns a project carries, named once: each appears in the patch
+// builder, the clearable set and the read, and three spellings of one column
+// name is how the three come to disagree.
+const (
+	startedAtColumn     = "started_at"
+	targetEndDateColumn = "target_end_date"
+	endedAtColumn       = "ended_at"
+)
+
 func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if err := applyClears(p, in.Clear, clearableProjectColumns(current)); err != nil {
@@ -122,13 +131,13 @@ func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) (*s
 		p.Set("description", current.Description, *in.Description)
 	}
 	if in.StartedAt != nil {
-		p.Set("started_at", current.StartedAt, *in.StartedAt)
+		p.Set(startedAtColumn, current.StartedAt, *in.StartedAt)
 	}
 	if in.TargetEndDate != nil {
-		p.Set("target_end_date", current.TargetEndDate, *in.TargetEndDate)
+		p.Set(targetEndDateColumn, current.TargetEndDate, *in.TargetEndDate)
 	}
 	if in.EndedAt != nil {
-		p.Set("ended_at", current.EndedAt, *in.EndedAt)
+		p.Set(endedAtColumn, current.EndedAt, *in.EndedAt)
 	}
 	return p, nil
 }
@@ -179,10 +188,10 @@ func applyClears(p *storekit.Patch, fields []string, columns map[string]clearabl
 // NULL, with literal column names.
 func clearableProjectColumns(current crmcontracts.Project) map[string]clearable {
 	return map[string]clearable{
-		"description":     {"description", current.Description},
-		"owner_id":        {"owner_id", current.OwnerId},
-		"started_at":      {"started_at", current.StartedAt},
-		"target_end_date": {"target_end_date", current.TargetEndDate},
-		"ended_at":        {"ended_at", current.EndedAt},
+		"description":       {"description", current.Description},
+		"owner_id":          {"owner_id", current.OwnerId},
+		startedAtColumn:     {startedAtColumn, current.StartedAt},
+		targetEndDateColumn: {targetEndDateColumn, current.TargetEndDate},
+		endedAtColumn:       {endedAtColumn, current.EndedAt},
 	}
 }

@@ -57,6 +57,8 @@ func applyClears(p *storekit.Patch, fields []string, columns map[string]clearabl
 //
 // A field absent from this map cannot be cleared, and the reversal path refuses
 // rather than reporting a success it did not have.
+//
+//nolint:goconst // the map keys are wire field names and the values are COLUMN names; each is its own vocabulary, and the constants goconst names are filter params and report fields that spell the same words by coincidence
 func clearablePersonColumns(current crmcontracts.Person) map[string]clearable {
 	return map[string]clearable{
 		"first_name": {"first_name", current.FirstName},
@@ -70,6 +72,8 @@ func clearablePersonColumns(current crmcontracts.Person) map[string]clearable {
 // set to NULL, with literal column names — nothing caller-supplied reaches the
 // UPDATE text. A field absent here cannot be cleared, and the reversal path
 // refuses rather than reporting a success it did not have.
+//
+//nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
 func clearableOrganizationColumns(current crmcontracts.Organization) map[string]clearable {
 	return map[string]clearable{
 		"legal_name":    {"legal_name", current.LegalName},
@@ -87,6 +91,8 @@ func clearableOrganizationColumns(current crmcontracts.Organization) map[string]
 // a lead's status is a lifecycle position rather than a value, and the score
 // override is sticky by design (clearing its reason resumes recompute, which is
 // a decision rather than a field edit).
+//
+//nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
 func clearableLeadColumns(current crmcontracts.Lead) map[string]clearable {
 	return map[string]clearable{
 		"title":             {"title", current.Title},
