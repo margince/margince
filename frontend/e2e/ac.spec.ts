@@ -1308,6 +1308,15 @@ const ADDRESSED_VIEWS = [
   "companies?q=brandt&sort=name",
   "companies/o-brandt/tasks",
   "reports/forecast",
+  // The three record headers whose verbs are icon-only: the name a sighted
+  // reader gets on hover is not the name axe checks, so what is swept here is
+  // the other half — that every square carries an accessible name at all, and
+  // that a header of squares still meets AA on its own ground. A glyph with no
+  // name is the one way this pattern fails silently, and it fails for exactly
+  // the readers who cannot see the glyph.
+  "contacts/p-anna",
+  "deals/d-fleet",
+  "projects/pr-fleet",
 ];
 
 // The SAME sweep under the dark palette, which the suite measured by accident

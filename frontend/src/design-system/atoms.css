@@ -1203,6 +1203,23 @@
   margin-top: var(--space-3);
 }
 
+/* A section verb sits ON the summary's line and OUTSIDE the `<summary>`, which
+   is a control of its own — nesting one inside the other fails
+   `nested-interactive` and makes pressing the verb toggle the section under it.
+   Absolute rather than a flex row because the `<details>` has to keep its own
+   box: the summary is what a click on the line must reach, and a sibling laid
+   out beside it would take half that line away from the toggle. */
+.disclosure-wrap {
+  position: relative;
+}
+.disclosure-action {
+  position: absolute;
+  top: var(--space-3);
+  right: 0;
+  display: inline-flex;
+  align-items: center;
+}
+
 /* The chevron on a control that opens something which is NOT a `<details>` —
    the next table row, a panel below the button. `Disclosure` owns its own; this
    is for the two screens that had each written the turn as an inline

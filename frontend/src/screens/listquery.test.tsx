@@ -265,8 +265,12 @@ describe("two lists on one route", () => {
   });
 
   it("keep separate dials, so neither narrows the other's read", async () => {
-    const left = vi.fn(async () => emptyPage());
-    const right = vi.fn(async () => emptyPage());
+    const left = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    const right = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
     render(<TwoListHarness left={left} right={right} />);
 
     // Each list seeds its OWN opening sort, under its own prefix, and neither
@@ -301,8 +305,12 @@ describe("two lists on one route", () => {
   });
 
   it("a sort one list cannot answer never reaches the other", async () => {
-    const left = vi.fn(async () => emptyPage());
-    const right = vi.fn(async () => emptyPage());
+    const left = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    const right = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
     window.location.hash = "#/settings?left.sort=sku&right.sort=locale";
     render(<TwoListHarness left={left} right={right} />);
 
