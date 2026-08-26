@@ -15,6 +15,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
@@ -27,6 +28,8 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/automation"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -52,6 +55,11 @@ type followUpStager struct {
 	// wired stages the task proposal for every candidate, which is what the
 	// pass did before the drafted reply existed.
 	draft followUpReplySeam
+	// owner resolves the authority the DRAFT is read under. The reply carries a
+	// counterparty's address and the message it answers, both of which end up
+	// stored on the card — so they are read as the person the card is for, never
+	// under the sweep's own unbounded principal.
+	owner dealOwnerAuthority
 }
 
 // HasPendingFollowUp answers for BOTH shapes a follow-up can take.
@@ -159,7 +167,44 @@ func answerableThread(proposal deals.FollowUpProposal) bool {
 func (s followUpStager) stageDraftedReply(
 	ctx context.Context, dealID ids.UUID, proposal deals.FollowUpProposal,
 ) (bool, error) {
-	draft, answerable, err := draftFollowUpReply(ctx, s.draft, proposal)
+	// The draft is composed under the DEAL OWNER's authority, not the sweep's.
+	//
+	// ReplyAddress resolves the counterparty's email off the person record,
+	// behind an object grant AND a row scope that a system principal walks
+	// straight past — auth.Require and auth.ScopeClauseFor both pass it
+	// unconditionally. That address is then stored in proposed_change, where
+	// the card's own decide grant (activity:create plus deal visibility) is
+	// what governs reading it back, and person:read is not in that set.
+	//
+	// The message the draft answers is NOT the same question: the reconciler
+	// only ever picks evidence with audience = 'workspace', so its subject and
+	// body are readable by every decider already. The address has no such
+	// filter behind it, which is what makes this the field that needed the
+	// owner's authority.
+	//
+	// A deal nobody owns, or one whose owner is no longer live, gets the TASK
+	// proposal instead of a draft. The rep is still told about the deal; there
+	// is simply no authority under which a reply may be composed.
+	ownerCtx, err := s.owner.contextFor(ctx, dealID)
+	if err != nil {
+		if errors.Is(err, errNoDealOwner) || errors.Is(err, apperrors.ErrNotFound) {
+			return false, nil
+		}
+		return false, err
+	}
+	draft, answerable, err := draftFollowUpReply(ownerCtx, s.draft, proposal)
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		// The owner may not read what a reply would have to quote. That is the
+		// gate working rather than a fault: composing under their authority is
+		// exactly what stops a card carrying a read they could not have made.
+		// It is also SETTLED — a grant, not an outage — so retrying tomorrow
+		// changes nothing, and the rep gets the task proposal instead.
+		//
+		// draftFollowUpReply itself treats a denial as a failure, correctly: it
+		// is handed an authority and cannot know whose. Only here is it known
+		// to be the deal owner's, which is what makes a refusal ordinary.
+		return false, nil
+	}
 	if err != nil || !answerable {
 		return false, err
 	}
@@ -188,7 +233,11 @@ func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUp
 	// engine. The zero SendPath matches that surface: nothing here sends, the
 	// held-draft release does, through the fully wired path it builds itself.
 	drafter := newCommsAdapter(pool, nil, SendPath{})
-	stager := followUpStager{svc: approvals.NewService(db), draft: drafter}
+	stager := followUpStager{
+		svc:   approvals.NewService(db),
+		draft: drafter,
+		owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)},
+	}
 	return deals.NewFollowUpReconciler(db, stager, log)
 }
 

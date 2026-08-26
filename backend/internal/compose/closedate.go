@@ -32,7 +32,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
 // closeDateStager adapts the approvals service onto the deals module's
@@ -85,21 +84,19 @@ func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, t
 // denial, never empty permission), and an owner whose grants do not reach the
 // correspondence. A deal's date hygiene must not depend on any of them.
 type quietReviewReader struct {
-	db    *database.DB
-	users *identity.Service
+	db *database.DB
+	// owner resolves the reading authority. Shared with the overnight drafter,
+	// which has the same obligation for the same reason.
+	owner dealOwnerAuthority
 }
 
 func (r quietReviewReader) ReadForOwner(ctx context.Context, dealID ids.DealID) (deals.QuietFacts, deals.QuietNames, error) {
-	owner, err := r.dealOwner(ctx, dealID)
-	if err != nil {
-		return deals.QuietFacts{}, nil, err
-	}
-	if owner.IsZero() {
+	ownerCtx, err := r.owner.contextFor(ctx, dealID.UUID)
+	if errors.Is(err, errNoDealOwner) {
 		// An unowned deal still gets its review; nobody's authority is the
 		// right one to read its correspondence under, so it goes unnamed.
 		return deals.QuietFacts{}, nil, nil
 	}
-	ownerCtx, err := r.asOwner(ctx, owner)
 	if err != nil {
 		return deals.QuietFacts{}, nil, err
 	}
@@ -126,49 +123,6 @@ func (r quietReviewReader) ReadForOwner(ctx context.Context, dealID ids.DealID) 
 		return deals.QuietFacts{}, nil, err
 	}
 	return facts, names, nil
-}
-
-// dealOwner reads who the deal belongs to. It runs under the caller's own
-// principal — the sweep's — because owner_id is what CHOOSES the reading
-// authority, and a read that needed the authority to find it could not start.
-func (r quietReviewReader) dealOwner(ctx context.Context, dealID ids.DealID) (ids.UUID, error) {
-	var owner *ids.UUID
-	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT owner_id FROM deal WHERE id = $1`, dealID).Scan(&owner)
-	})
-	if err != nil {
-		return ids.Nil, fmt.Errorf("compose: deal %s owner: %w", dealID, err)
-	}
-	if owner == nil {
-		return ids.Nil, nil
-	}
-	return *owner, nil
-}
-
-// asOwner binds the deal owner as the acting principal.
-//
-// EffectiveAuthority reads the grants and the seat as ONE snapshot: composed
-// from separate reads they can describe an authority the owner never held —
-// permissions from before a role change with a seat from after. SeatType is
-// carried rather than omitted because its zero value fails closed to read-only,
-// which would silently narrow a read that is supposed to mirror the owner's.
-func (r quietReviewReader) asOwner(ctx context.Context, owner ids.UUID) (context.Context, error) {
-	wsID, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		return nil, errors.New("compose: quiet review outside a bound workspace")
-	}
-	rbac, seat, err := r.users.EffectiveAuthority(ctx, wsID, owner)
-	if err != nil {
-		return nil, fmt.Errorf("compose: deal owner %s authority: %w", owner, err)
-	}
-	return principal.WithActor(ctx, principal.Principal{
-		Type:        principal.PrincipalHuman,
-		ID:          principal.HumanIDPrefix + owner.String(),
-		UserID:      owner,
-		SeatType:    seat,
-		TeamIDs:     rbac.TeamIDs,
-		Permissions: rbac.Permissions,
-	}), nil
 }
 
 // nameCounterparties resolves both sides' people in ONE call, so a deal whose
@@ -198,7 +152,7 @@ func NewCloseDateCorrector(pool *pgxpool.Pool, log *slog.Logger) *deals.CloseDat
 	db := InstallationDB(pool)
 	return deals.NewCloseDateCorrector(db,
 		closeDateStager{svc: approvals.NewService(db)},
-		quietReviewReader{db: db, users: identity.NewServiceFor(db)},
+		quietReviewReader{db: db, owner: dealOwnerAuthority{db: db, users: identity.NewServiceFor(db)}},
 		log, installseam.Deals())
 }
 
