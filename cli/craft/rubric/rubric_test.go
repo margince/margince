@@ -156,18 +156,17 @@ func TestTheSectionScanSurvivesAFencedExample(t *testing.T) {
 	}
 }
 
-// TestTheProseRangeReachesTheHighestRule closes the OTHER direction of the
-// binding above.
+// TestTheProseRangeReachesTheHighestRule holds the rubric→prose direction: the
+// range the rulebook advertises must reach the highest rule the gate applies.
 //
-// That test walks prose→rubric: every id the prose names must exist. Nothing
-// walked rubric→prose, so a rule ADDED to the standard left the range in
-// AGENTS.md naming a smaller set, and both files stayed green. The prose then
-// under-reports the standard — the failure that is invisible, because a reader
-// who trusts "T1–T10" over a rubric of T1–T11 never learns the rule exists and
-// has no reason to look.
+// Its sibling above holds prose→rubric — every id the prose names must exist —
+// and that is the direction a reader survives. A range that overshoots names a
+// rule nobody can find. A range that falls SHORT tells a reader the standard is
+// smaller than it is, and they have no reason to look further, so nothing else
+// in the tree will correct them.
 //
-// The range is derived from the rubric on both sides, so a T12 added tomorrow is
-// enrolled the day it lands and there is no list here to go short.
+// The bound is derived from the rubric, so a T12 is enrolled the day it lands
+// and there is no list here to go short.
 func TestTheProseRangeReachesTheHighestRule(t *testing.T) {
 	const rulebook = "../../../AGENTS.md"
 
@@ -188,9 +187,15 @@ func TestTheProseRangeReachesTheHighestRule(t *testing.T) {
 	// whitespace is normalised before matching rather than the pattern being
 	// taught about line breaks.
 	flat := strings.Join(strings.Fields(section), " ")
-	// En dash and hyphen alike: the rulebook uses the typographic dash and a
-	// pattern that only knew the ASCII one would match nothing and pass.
-	rangePattern := regexp.MustCompile(`\b([TP])(\d{1,2})\s*[–-]\s*([TP])(\d{1,2})\b`)
+	// Every dash the rulebook might reasonably be written with. A pattern that
+	// knew only the ASCII hyphen would find no range in prose using the
+	// typographic one — reported below as "states no range at all", which is a
+	// true failure but names the wrong cause and sends the reader to edit prose
+	// that is already correct.
+	//
+	// The digit bound is two, which is the whole of any rule set this gate has
+	// had. A hundredth rule fails here rather than passing short.
+	rangePattern := regexp.MustCompile(`\b([TP])(\d{1,2})\s*[-–—]\s*([TP])(\d{1,2})\b`)
 
 	highest := map[string]int{}
 	for _, r := range loaded.Rules {

@@ -12,7 +12,8 @@ package backendarch
 // INSERT/UPDATE/DELETE target from SQL string literals (plus the storekit
 // applier and row-lock table arguments), and asserts each module only writes its own
 // tables. Cross-store writes exist by design (merge relinks, GDPR erasure,
-// ingest materialization); each one is ratified below with a self-contained
+// ingest materialization); each one is ratified in crossStoreWrites
+// (tableownershipwaivers_test.go) with a self-contained
 // rationale — an entry without a rationale is a finding, not a pass, and a
 // waiver that matches no remaining write is stale and fails too. SELECTs are
 // out of scope: reads are governed by each statement's own workspace predicate
