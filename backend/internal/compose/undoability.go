@@ -80,10 +80,14 @@ const (
 	// its own terms; naming it here makes the refusal legible rather than a
 	// surprise.
 	ReasonRecordArchived Reason = "record_archived"
-	// ReasonNullUnwritableByModule: the image puts a field back to NULL through
-	// a coalesce-guarded column. The write would report success and change
-	// nothing, which is worse than a refusal — the person reads the
-	// confirmation and stops looking.
+	// ReasonNullUnwritableByModule: the image puts a field back to NULL, and no
+	// update path here can write one. Every field on every update request is an
+	// optional pointer, so a JSON null decodes to "not supplied" and is
+	// indistinguishable from omitting the field; activity's columns are
+	// additionally coalesce-guarded in SQL, which would swallow a null even if
+	// one arrived. The write would report success and change nothing, which is
+	// worse than a refusal — the person reads the confirmation and stops
+	// looking.
 	ReasonNullUnwritableByModule Reason = "null_unwritable_by_module"
 	// ReasonNotWritableByCaller: the caller may read this history but not
 	// change the record, so the button is honest rather than a 403 waiting to
@@ -244,21 +248,22 @@ func sortedFields(patch map[string]json.RawMessage) []string {
 	return out
 }
 
-// nullUnwritableFields names the patch keys whose restored value is JSON null in
-// a column this record type's update path guards with coalesce. Those writes
-// would succeed and change nothing.
-func nullUnwritableFields(entityType string, patch map[string]json.RawMessage) []string {
-	guarded := CoalesceGuardedColumns(entityType)
-	if len(guarded) == 0 {
-		return nil
-	}
-	isGuarded := make(map[string]bool, len(guarded))
-	for _, column := range guarded {
-		isGuarded[column] = true
-	}
+// nullUnwritableFields names the patch keys whose restored value is JSON null.
+//
+// NO field of any record type can be put back to null through this path. Every
+// field on every update request is an optional pointer (`*string`,
+// `*openapi_types.UUID`, …), so a JSON null decodes to a nil pointer, which the
+// module reads as "the caller did not supply this" — and the write succeeds
+// having changed nothing. activity's columns are coalesce-guarded in SQL on top
+// of that, which would swallow a null even if one reached the statement.
+//
+// The rule is therefore about the CONTRACT's decoding, not one module's SQL,
+// and it binds every record type. Making nulls writable means distinguishing
+// absent from null across six request bodies, which is its own change.
+func nullUnwritableFields(patch map[string]json.RawMessage) []string {
 	var unwritable []string
 	for key, value := range patch {
-		if isGuarded[key] && string(value) == "null" {
+		if string(value) == "null" {
 			unwritable = append(unwritable, key)
 		}
 	}
@@ -367,7 +372,7 @@ func (e Evaluator) liveState(ctx context.Context, tx pgx.Tx, row AuditRow, patch
 			return refuse(ReasonNotWritableByCaller, ""), true, nil
 		}
 	}
-	if unwritable := nullUnwritableFields(row.EntityType, patch); len(unwritable) > 0 {
+	if unwritable := nullUnwritableFields(patch); len(unwritable) > 0 {
 		return refuse(ReasonNullUnwritableByModule, strings.Join(unwritable, ", ")), true, nil
 	}
 	return Undoability{}, false, nil

@@ -162,39 +162,36 @@ func TestACallerWhoCannotWriteTheRecordGetsAnHonestButton(t *testing.T) {
 	}
 }
 
-// The dishonest-success case. activity's update path writes due_at as
-// coalesce($n, due_at), so restoring the image's NULL would report success and
-// leave the current value standing. The refusal names the field.
+// The dishonest-success case. No update path here can write a null: every field
+// on every update request is an optional pointer, so a JSON null decodes to
+// "not supplied" and the write succeeds having changed nothing. The refusal
+// names the field.
 func TestRestoringNullIntoACoalesceGuardedColumnIsRefusedByFieldName(t *testing.T) {
-	row := AuditRow{
-		ID: ids.NewV7(), EntityType: "activity", EntityID: ids.NewV7(),
-		Action: "update", Before: json.RawMessage(`{"subject":"Call","due_at":null}`),
-	}
-	answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
+	answer := evaluateWithoutTheTrail(t, Evaluator{},
+		personRow(`{"full_name":"Greta","title":null}`))
 	if answer.Reason != ReasonNullUnwritableByModule {
 		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNullUnwritableByModule)
 	}
-	if !strings.Contains(answer.Detail, "due_at") {
+	if !strings.Contains(answer.Detail, "title") {
 		t.Errorf("the refusal does not name the field: %q", answer.Detail)
 	}
 }
 
-// A NULL in a column the update path CAN clear is not this refusal. person
-// patches through storekit.Patch, which writes exactly the columns the caller
-// supplied, so refusing its nulls would withhold restores that work.
-func TestRestoringNullIntoAClearableColumnIsNotRefusedForNullness(t *testing.T) {
+// The rule binds every record type, not one module's SQL: person patches
+// through storekit.Patch and could write a null in principle, but the request
+// body cannot carry one, so a restore toward null is a no-op there too.
+func TestRestoringNullIsRefusedOnEveryRecordType(t *testing.T) {
 	patch := map[string]json.RawMessage{"title": json.RawMessage("null")}
-	if unwritable := nullUnwritableFields("person", patch); len(unwritable) > 0 {
-		t.Errorf("person's title reported unwritable: %v", unwritable)
+	if unwritable := nullUnwritableFields(patch); len(unwritable) != 1 {
+		t.Errorf("a null on person reported as %v, want it named", unwritable)
 	}
 }
 
-// A coalesce-guarded column holding a real value restores fine. Only the NULL
-// is unwritable, and refusing the whole column would refuse most of the entries
-// on an activity's history.
-func TestACoalesceGuardedColumnWithAValueIsNotRefused(t *testing.T) {
+// A field holding a real value restores fine. Refusing a whole column because
+// it CAN hold null would refuse most of the entries on any history.
+func TestAFieldHoldingAValueIsNotRefused(t *testing.T) {
 	patch := map[string]json.RawMessage{"due_at": json.RawMessage(`"2026-01-01T00:00:00Z"`)}
-	if unwritable := nullUnwritableFields("activity", patch); len(unwritable) > 0 {
+	if unwritable := nullUnwritableFields(patch); len(unwritable) > 0 {
 		t.Errorf("a due_at holding a value reported unwritable: %v", unwritable)
 	}
 }
