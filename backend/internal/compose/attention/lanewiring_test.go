@@ -44,3 +44,45 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		}
 	}
 }
+
+// No lane advertises an action the surface cannot perform.
+//
+// AttentionRow renders controls for `complete` and `snooze` only. A card
+// offering anything else is a promise to a client that nothing keeps — and a
+// generated client is entitled to draw a control for whatever the server says
+// it offers. The three optional lanes therefore send no action at all until the
+// navigation they would need actually exists.
+//
+// Derived from the lanes rather than listed, so a fourth joins the check by
+// existing.
+func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
+	performable := map[crmcontracts.AttentionItemActions]bool{
+		"complete": true, "snooze": true,
+	}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
+		&stubCommitments{rows: []Commitment{promise("a promise", readInstant)}},
+		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
+		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
+		fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	for name, lane := range map[string]*[]crmcontracts.AttentionItem{
+		"meetings": out.Meetings, "at_risk": out.AtRisk, "commitments": out.Commitments,
+	} {
+		if lane == nil {
+			t.Fatalf("%s is absent, so this gate checked nothing", name)
+		}
+		for _, item := range *lane {
+			for _, action := range item.Actions {
+				if !performable[action] {
+					t.Errorf("%s offers %q, which no control on this surface performs",
+						name, action)
+				}
+			}
+		}
+	}
+}

@@ -234,8 +234,10 @@ func briefItem(entry BriefEntry) crmcontracts.AttentionItem {
 // against what was actually written, and a card showing only the paraphrase
 // asks them to trust the extractor instead.
 //
-// Its only verb is `open`. Marking a promise kept is the claim's own endpoint's
-// job, and this feed adds no authority the record does not already have.
+// It offers NO verb. Marking a promise kept is the claim's own endpoint's job,
+// and this feed adds no authority the record does not already have. `open` is
+// not sent either, for the reason the other two cards do not send it: this
+// surface wires no navigation, so the verb would reach no control.
 func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionItem {
 	body := promise.Body
 	quote := promise.Quote
@@ -249,7 +251,7 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 		Subject: subjectOf("person", promise.PersonID),
 		DueAt:   &due,
 		Overdue: &past,
-		Actions: []crmcontracts.AttentionItemActions{"open"},
+		Actions: []crmcontracts.AttentionItemActions{},
 	}
 	if promise.SourceLabel != "" {
 		label := promise.SourceLabel
