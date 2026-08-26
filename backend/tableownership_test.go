@@ -598,6 +598,10 @@ func declSite(fset *token.FileSet, decl ast.Decl) string {
 // holding many statements: answering per declaration puts every statement in
 // the block under its first name — the same collapse the receiver closes for
 // methods, one waiver ratifying writes it never saw.
+//
+// One spec can still bind SEVERAL names, and this answers for the spec rather
+// than for a value in it. `walkDeclSites` pairs values with names where it can
+// and only falls back here when it cannot; see the count check there.
 func specSite(spec ast.Spec) string {
 	if vs, ok := spec.(*ast.ValueSpec); ok && len(vs.Names) > 0 {
 		return vs.Names[0].Name
@@ -622,6 +626,20 @@ func walkDeclSites(fset *token.FileSet, file *ast.File, visit func(site string, 
 	for _, decl := range file.Decls {
 		if gen, ok := decl.(*ast.GenDecl); ok {
 			for _, spec := range gen.Specs {
+				// `const a, b = "…", "…"` is ONE spec binding two statements.
+				// Answering per spec puts both under `a`, which is the grouped
+				// block's collapse one level further in. Pair each value with
+				// the name it is bound to when the counts agree.
+				if vs, ok := spec.(*ast.ValueSpec); ok && len(vs.Values) > 0 && len(vs.Names) == len(vs.Values) {
+					for i, value := range vs.Values {
+						inspect(value, vs.Names[i].Name)
+					}
+					continue
+				}
+				// They disagree for `var a, b = f()` — one expression yielding
+				// several names, where no value is attributable to one name.
+				// The spec's own site is the honest answer there, and it is the
+				// first name rather than a token every such spec would share.
 				inspect(spec, specSite(spec))
 			}
 			continue
@@ -935,6 +953,25 @@ const (
 		if sites[0] == sites[1] {
 			t.Errorf("both statements name the site %q, so one waiver would ratify both — the walk "+
 				"is answering a grouped block per declaration rather than per statement", sites[0])
+		}
+	})
+
+	t.Run("two statements bound by one spec are two sites", func(t *testing.T) {
+		// ONE ValueSpec binding two names. The grouped-block arm above answers
+		// per spec, which is still one answer for both statements here — the
+		// same collapse a third level in, and the reason the walk pairs values
+		// with names rather than stopping at the spec.
+		const src = `package p
+
+const blankOne, deleteOne = ` + "`UPDATE t SET a = NULL`" + `, ` + "`DELETE FROM t`" + `
+`
+		sites := literalSitesOf(t, "onespec.go", src)
+		if len(sites) != 2 {
+			t.Fatalf("the fixture no longer binds exactly two statements: %v", sites)
+		}
+		if sites[0] == sites[1] {
+			t.Errorf("both statements name the site %q, so one waiver would ratify both — the walk "+
+				"is answering one spec per spec rather than per value bound in it", sites[0])
 		}
 	})
 }
