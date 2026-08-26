@@ -287,6 +287,10 @@ var tableOwners = map[string]string{
 	// agents (incl. the runner subpackage)
 	"agent_run":  "internal/modules/agents",
 	"runner_job": "internal/modules/agents",
+	// Whether a rep granted an agent standing authority, and which of THEIR
+	// OWN passports carries it. The grant records the decision; the passport
+	// it names is minted by identity, which is the only writer of that table.
+	"agent_standing_grant": "internal/modules/agents",
 	// The AI-activity projection. Derived read-model state written by exactly
 	// one consumer, so it carries no audit or outbox row of its own — the
 	// events that FEED it carry the write shape at their own writers.

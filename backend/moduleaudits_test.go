@@ -99,8 +99,7 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 	"internal/platform/keyvault": "vault_secret is the installation's ciphertext store; keyvault is a seam whose callers each audit their own act in their own module, and the vault row is that act's storage rather than a second fact — except capture's boot-time credential relocation, which records nothing (#2552)",
 
 	// Operational state whose DOMAIN writes are audited elsewhere.
-	"internal/modules/agents": "agent_run and runner_job are runner lifecycle bookkeeping. The domain writes a run performs happen inside the TOOLS it calls, and those carry the full audit and outbox shape — auditing the run row as well would file the same change twice under two entity types",
-	"internal/modules/comms":  "comms_outbound is delivery machinery, not the message. The user-visible fact of an outbound email is the ACTIVITY row, which activities owns and audits; StageTx runs inside that same transaction, so the send already has its history. comms does write a ledger row for the one thing activities cannot describe — a reconcile failure — through storekit.LogSystem, which is system_log and deliberately not counted here",
+	"internal/modules/comms": "comms_outbound is delivery machinery, not the message. The user-visible fact of an outbound email is the ACTIVITY row, which activities owns and audits; StageTx runs inside that same transaction, so the send already has its history. comms does write a ledger row for the one thing activities cannot describe — a reconcile failure — through storekit.LogSystem, which is system_log and deliberately not counted here",
 
 	// A projection whose whole input is the ledger of its sources. ai_task_run
 	// holds one row per AI-backed occurrence, and every state change it stores
