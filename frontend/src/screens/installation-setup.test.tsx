@@ -30,12 +30,19 @@ function setupReport(
   };
 }
 
-function mount(report: ReturnType<typeof setupReport>) {
+function mount(
+  report: ReturnType<typeof setupReport>,
+  /** Paths whose write should fail, so a half-finished run can be exercised. */
+  refuse: readonly string[] = [],
+) {
   const writes: { url: string; body: unknown }[] = [];
   const fetchMock = vi.fn(async (request: Request) => {
     const url = new URL(request.url).pathname;
     if (request.method !== "GET") {
       writes.push({ url, body: JSON.parse(await request.text()) });
+      if (refuse.some((p) => url.endsWith(p))) {
+        return jsonResponse({ title: "refused" }, 500);
+      }
       return new Response(null, { status: 204 });
     }
     return jsonResponse(report);
@@ -140,6 +147,26 @@ describe("the first-run setup gate", () => {
       expect(bound.base_url).toBe("https://openrouter.ai/api");
     }
     expect(routing.embeddings.base_url).toBe("https://openrouter.ai/api");
+  });
+
+  // The key is the reader's only copy. Clearing it after the FIRST write left a
+  // failed binding with an empty field, a disabled Continue, a step still
+  // unconfigured and a reload that restored exactly that — the only way on was
+  // to re-paste a key the server already held.
+  it("keeps the key on screen when the binding fails, so Continue still works", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false), ["/ai/routing"]);
+    await screen.findByText("Choose a model provider");
+    const key = screen.getByLabelText<HTMLInputElement>("API key");
+    await user.type(key, "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+    await waitFor(() => expect(writes.length).toBe(2));
+
+    // The field still holds it, and the button is pressable again.
+    await waitFor(() => expect(key.value).toBe("AIza-secret"));
+    expect(
+      screen.getByRole("button", { name: "Continue" }).getAttribute("disabled"),
+    ).toBeNull();
   });
 
   it("sends the Google app as one pair", async () => {

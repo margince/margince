@@ -1,6 +1,12 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -72,7 +78,7 @@ describe("the Google app card", () => {
     const user = userEvent.setup();
     const { calls } = mount({ configured: false, client_id: "" });
     await screen.findByText(/No app stored/);
-    const secret = screen.getByLabelText("Client secret") as HTMLInputElement;
+    const secret = screen.getByLabelText<HTMLInputElement>("Client secret");
     await user.type(screen.getByLabelText("Client ID"), CLIENT_ID);
     await user.type(secret, "GOCSPX-secret");
     await user.click(screen.getByRole("button", { name: "Store app" }));
@@ -90,10 +96,26 @@ describe("the Google app card", () => {
     const user = userEvent.setup();
     const { calls } = mount({ configured: true, client_id: CLIENT_ID });
     await user.click(await screen.findByRole("button", { name: "Remove app" }));
+    // The first press opens the question; it does not answer it.
+    const dialog = await screen.findByRole("dialog");
+    await user.click(
+      within(dialog).getByRole("button", { name: "Remove app" }),
+    );
     await waitFor(() => expect(calls.length).toBe(1));
     expect(calls[0]).toMatchObject({
       method: "DELETE",
       url: "/v1/installation/google-app",
     });
+  });
+
+  // The secret cannot be read back, every mailbox is connected through this
+  // app, and removing it re-opens the first-run gate — so a stray click must
+  // not be enough.
+  it("deletes nothing until the removal is confirmed", async () => {
+    const user = userEvent.setup();
+    const { calls } = mount({ configured: true, client_id: CLIENT_ID });
+    await user.click(await screen.findByRole("button", { name: "Remove app" }));
+    await screen.findByRole("dialog");
+    expect(calls).toEqual([]);
   });
 });

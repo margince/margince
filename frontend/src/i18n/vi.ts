@@ -5436,6 +5436,9 @@ export const vi = {
     "Nhập cặp mới sẽ thay thế cặp đã lưu. Các kết nối đã tạo vẫn chạy cho tới khi kết nối lại.",
   "googleApp.store": "Lưu ứng dụng",
   "googleApp.replace": "Thay ứng dụng",
+  "googleApp.removeConfirmTitle": "Xoá ứng dụng Google?",
+  "googleApp.removeConfirmBody":
+    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Mọi hộp thư đều kết nối qua ứng dụng này, và bước thiết lập lần đầu sẽ hỏi lại.",
   "googleApp.remove": "Xoá ứng dụng",
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",

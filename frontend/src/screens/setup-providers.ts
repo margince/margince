@@ -39,7 +39,17 @@ export type SetupProvider = {
   readonly embedModel: string;
 };
 
-const PRESETS = {
+/**
+ * The ids, as a tuple so a caller can narrow a value THROUGH it rather than
+ * asserting one INTO it. The table below is typed by these, which makes the two
+ * a compile-time pair in both directions: an id here with no preset fails, and
+ * a preset whose id is not here fails too.
+ */
+export const SETUP_PROVIDER_IDS = ["gemini", "openrouter"] as const;
+
+export type SetupProviderId = (typeof SETUP_PROVIDER_IDS)[number];
+
+const PRESETS: Readonly<Record<SetupProviderId, SetupProvider>> = {
   gemini: {
     label: "Google Gemini",
     provider: "gemini",
@@ -55,16 +65,7 @@ const PRESETS = {
     chatModel: "mistralai/mistral-small-3.2-24b-instruct",
     embedModel: "openai/text-embedding-3-small",
   },
-} as const;
+};
 
-export type SetupProviderId = keyof typeof PRESETS;
-
-// Typed as the shared shape rather than left as the literal union: a caller
-// reading `baseUrl` should not have to know which entries happen to carry one,
-// which is the difference between an optional field and two different types.
 export const SETUP_PROVIDERS: Readonly<Record<SetupProviderId, SetupProvider>> =
   PRESETS;
-
-export const SETUP_PROVIDER_IDS = Object.keys(
-  SETUP_PROVIDERS,
-) as readonly SetupProviderId[];

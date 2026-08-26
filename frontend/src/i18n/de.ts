@@ -5486,6 +5486,9 @@ export const de = {
     "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
   "googleApp.store": "App hinterlegen",
   "googleApp.replace": "App ersetzen",
+  "googleApp.removeConfirmTitle": "Google-App entfernen?",
+  "googleApp.removeConfirmBody":
+    "Das Client-Secret lässt sich nicht wieder auslesen — nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Jedes Postfach ist über diese App verbunden, und die Ersteinrichtung fragt wieder danach.",
   "googleApp.remove": "App entfernen",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",

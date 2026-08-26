@@ -4,6 +4,7 @@ import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -89,6 +90,7 @@ export function GoogleAppCard() {
   const remove = useRemoveGoogleApp();
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [confirming, setConfirming] = useState(false);
 
   const busy = save.isPending || remove.isPending;
   const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
@@ -171,15 +173,28 @@ export function GoogleAppCard() {
                     variant="danger"
                     pending={remove.isPending}
                     disabled={!canManage || save.isPending}
-                    onClick={() => {
-                      save.reset();
-                      remove.mutate();
-                    }}
+                    onClick={() => setConfirming(true)}
                   >
                     {t("googleApp.remove")}
                   </Button>
                 )}
               </div>
+              <ConfirmModal
+                open={confirming}
+                onClose={() => setConfirming(false)}
+                title={t("googleApp.removeConfirmTitle")}
+                confirmLabel={t("googleApp.remove")}
+                confirmVariant="danger"
+                pending={remove.isPending}
+                onConfirm={() => {
+                  save.reset();
+                  remove.mutate(undefined, {
+                    onSuccess: () => setConfirming(false),
+                  });
+                }}
+              >
+                {t("googleApp.removeConfirmBody")}
+              </ConfirmModal>
             </>
           )}
         </QueryGate>

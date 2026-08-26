@@ -140,27 +140,45 @@ function AiStep() {
     apiKey.trim() !== "" && chatModel.trim() !== "" && embedModel.trim() !== "";
   const failure = saveKey.error ?? bind.error;
 
-  const submit = async () => {
+  // The KEY first, then the binding. A binding whose vendor has no key is an
+  // installation that reads as configured and fails on its first real call; a
+  // key with no binding is simply a key, and the next attempt completes it.
+  //
+  // Chained through callbacks rather than awaited: mutateAsync REJECTS, and the
+  // rejection has to be handled somewhere or it is an unhandled promise. More
+  // importantly the field is cleared only after BOTH writes land. Clearing it
+  // after the first one locked the reader out — a failed binding left `ready`
+  // false with the Continue button disabled, the step still unconfigured, and a
+  // reload restoring exactly that, so the only way on was to re-paste a key the
+  // server already held.
+  const submit = () => {
     saveKey.reset();
     bind.reset();
-    // The KEY first, then the binding. A binding whose vendor has no key is an
-    // installation that reads as configured and fails on its first real call;
-    // a key with no binding is simply a key, and the next attempt completes it.
-    await saveKey.mutateAsync({
-      provider: preset.provider,
-      apiKey: apiKey.trim(),
-    });
-    setApiKey("");
-    await bind.mutateAsync({
-      provider: preset.provider,
-      baseUrl: preset.baseUrl,
-      chatModel: chatModel.trim(),
-      embedModel: embedModel.trim(),
-    });
-    saveKey.reset();
-    // No "next" call: both mutations invalidate the setup query, so the answer
-    // to what is still outstanding comes back from the server rather than from
-    // this component's guess about what it just did.
+    saveKey.mutate(
+      { provider: preset.provider, apiKey: apiKey.trim() },
+      {
+        onSuccess: () =>
+          bind.mutate(
+            {
+              provider: preset.provider,
+              baseUrl: preset.baseUrl,
+              chatModel: chatModel.trim(),
+              embedModel: embedModel.trim(),
+            },
+            {
+              onSuccess: () => {
+                // Both landed, so the field has done its job and this is the
+                // only copy of the key the app was holding.
+                setApiKey("");
+                saveKey.reset();
+                // Nothing else: both mutations invalidate the setup query, so
+                // what is still outstanding comes back from the server rather
+                // than from this component's guess about what it just did.
+              },
+            },
+          ),
+      },
+    );
   };
 
   return (
@@ -176,7 +194,15 @@ function AiStep() {
               {...control}
               value={choice}
               disabled={busy}
-              onChange={(v) => pick(v as SetupProviderId)}
+              // Narrowed THROUGH the id list rather than asserted into it: a
+              // Select answers with a string, and an answer that is not one of
+              // these is not a provider this screen can bind.
+              onChange={(v) => {
+                const next = SETUP_PROVIDER_IDS.find((id) => id === v);
+                if (next) {
+                  pick(next);
+                }
+              }}
               options={SETUP_PROVIDER_IDS.map((id) => ({
                 value: id,
                 label: SETUP_PROVIDERS[id].label,
@@ -229,9 +255,7 @@ function AiStep() {
           variant="primary"
           pending={busy}
           disabled={!ready}
-          onClick={() => {
-            void submit();
-          }}
+          onClick={submit}
         >
           {t("firstRun.continue")}
         </Button>

@@ -5504,11 +5504,9 @@ export const en = {
   "installationSettings.edit": "Edit",
   "installationSettings.editField": "Edit {field}",
   "installationSettings.save": "Save",
-  // Which vendor this installation's text is sent to. Admin/ops only, on both
-  // verbs â see the ai_routing RBAC object.
   "googleApp.title": "Google app",
   "googleApp.sub":
-    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organisation’s own credentials rather than ours.",
+    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials rather than ours.",
   "googleApp.configured": "In use: {clientId}",
   "googleApp.absent":
     "No app stored. Gmail and Calendar cannot be connected until one is.",
@@ -5516,6 +5514,9 @@ export const en = {
     "Entering a new pair replaces the stored one. Connections already made keep working until they are reconnected.",
   "googleApp.store": "Store app",
   "googleApp.replace": "Replace app",
+  "googleApp.removeConfirmTitle": "Remove the Google app?",
+  "googleApp.removeConfirmBody":
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Every mailbox is connected through this app, and first-run setup will ask for one again.",
   "googleApp.remove": "Remove app",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",
@@ -5531,11 +5532,13 @@ export const en = {
   "firstRun.ai.embedModel": "Embedding model",
   "firstRun.google.title": "Connect a Google app",
   "firstRun.google.sub":
-    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organisation’s own credentials. You can change this later under Settings.",
+    "Mailboxes are connected through a Google OAuth app you own, so mail is read with your organization’s own credentials. You can change this later under Settings.",
   "firstRun.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
   "firstRun.google.clientId": "Client ID",
   "firstRun.google.clientSecret": "Client secret",
+  // Which vendor this installation's text is sent to. Admin/ops only, on both
+  // verbs â see the ai_routing RBAC object.
   "aiProviderKeys.title": "Model provider keys",
   "aiProviderKeys.sub":
     "The credentials this installation calls each model vendor with. A key is sealed in the key vault and never shown again — replace it if you need to change it.",
