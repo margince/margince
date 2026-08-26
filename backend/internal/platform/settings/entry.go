@@ -69,8 +69,9 @@ type Definition interface {
 	//
 	// False by default, deliberately: a setting added later is reset unless
 	// someone declares otherwise, rather than silently escaping the wipe. That
-	// is the same direction identity.preservedWorkspaceColumns takes for the
-	// columns these replaced.
+	// is the direction the workspace row's own column list took for the columns
+	// these replaced, before ADR-0091 left that row with no configuration to
+	// reset and retired the list with it.
 	SurvivesDataReset() bool
 }
 

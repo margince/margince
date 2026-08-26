@@ -74,7 +74,7 @@ func (s *Service) reconnectConnection(ctx context.Context, in ConnectInput, ref 
 			auditFieldRegion:    previousRegion,
 			auditFieldStatus:    statusRevoked,
 		}
-		activated, actErr := activateConnection(ctx, tx, id, in, ws, connectedAt, "update", before)
+		activated, actErr := activateConnection(ctx, tx, id, in, connectedAt, "update", before)
 		if actErr != nil {
 			return actErr
 		}

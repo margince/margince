@@ -285,7 +285,7 @@ func TestWorkerCleanStopsOnMidSweepDisconnect(t *testing.T) {
 // Disconnect can already have committed (connection revoked,
 // overlay_sync_state purged, workspace flipped to native) while THIS
 // process is still serving a stale cached "overlay" read. After a genuine
-// Connect + Disconnect, it restores ONLY workspace.x_sor_mode/x_incumbent
+// Connect + Disconnect, it restores ONLY the overlay_mode row
 // via raw SQL — never incumbent_connection or overlay_sync_state, which
 // stay exactly as the teardown left them — so requireOverlayMode passes
 // and RequestSweep is forced through to the fenced write instead of being
@@ -312,13 +312,12 @@ func TestOnDemandReconcileRacingDisconnectAnswersModeNotOverlay(t *testing.T) {
 	}
 
 	// Simulate the stale cached "overlay" mode read: restore ONLY
-	// workspace.x_sor_mode/x_incumbent, leaving incumbent_connection
-	// revoked and overlay_sync_state purged exactly as Disconnect left
-	// them — so the mode gate passes and the call reaches the fence.
+	// overlay_mode, leaving incumbent_connection revoked and
+	// overlay_sync_state purged exactly as Disconnect left them — so the mode
+	// gate passes and the call reaches the fence.
 	if err := database.WithWorkspaceTx(adminCtx, e.Pool, func(tx pgx.Tx) error {
 		_, execErr := tx.Exec(adminCtx,
-			`UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = 'hubspot'
-			 WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid`)
+			`UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`)
 		return execErr
 	}); err != nil {
 		t.Fatalf("restoring the stale cached overlay mode: %v", err)

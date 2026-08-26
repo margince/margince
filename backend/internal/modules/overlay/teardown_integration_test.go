@@ -186,7 +186,7 @@ func assertWorkspaceFlippedBackToNative(ctx context.Context, t *testing.T, pool 
 	var sorMode string
 	var incumbentCol *string
 	queryRowWS(ctx, t, pool,
-		`SELECT x_sor_mode, x_incumbent FROM workspace WHERE id = $1`, []any{ws}, &sorMode, &incumbentCol)
+		`SELECT sor_mode, incumbent FROM overlay_mode`, []any{}, &sorMode, &incumbentCol)
 	if sorMode != "native" || incumbentCol != nil {
 		t.Errorf("workspace mode = (%s, %v), want (native, nil)", sorMode, incumbentCol)
 	}
@@ -218,6 +218,7 @@ func assertEveryIncumbentDerivedTablePurged(ctx context.Context, t *testing.T, p
 	retainedByDesign := map[string]string{
 		"incumbent_connection": "the revoked lifecycle row IS the retention (asserted separately: status=revoked, never deleted)",
 		"overlay_tombstone":    "teardown WRITES tombstones — PII-free erasure markers (asserted non-empty separately)",
+		"overlay_mode":         "the installation's mode, not data derived from an incumbent: exactly one row always exists, and teardown returns it to native (asserted separately by assertWorkspaceFlippedBackToNative)",
 	}
 	tables := overlayWorkspaceTables(ctx, t, pool)
 	for _, seeded := range []string{
@@ -537,7 +538,7 @@ func TestDisconnectCommitsEvenWhenVaultDeleteFails(t *testing.T) {
 	queryRowWS(ctx, t, pool,
 		`SELECT status FROM incumbent_connection`, nil, &status)
 	queryRowWS(ctx, t, pool,
-		`SELECT x_sor_mode FROM workspace WHERE id = $1`, []any{ws}, &sorMode)
+		`SELECT sor_mode FROM overlay_mode`, []any{}, &sorMode)
 	if status != "revoked" || sorMode != "native" {
 		t.Errorf("after disconnect: connection status=%q, sor_mode=%q — want revoked/native (the teardown must commit regardless of vault cleanup)", status, sorMode)
 	}

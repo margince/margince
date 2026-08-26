@@ -100,7 +100,7 @@ func TestDispatcherWriteVerbsIgnoreAStaleCachedMode(t *testing.T) {
 			t.Errorf("%s: want the overlay provider's own error, got nil — the verb did not reach a provider", name)
 		}
 		if *calls == before {
-			t.Errorf("%s: answered from the cached mode; a mutation must re-read workspace.x_sor_mode", name)
+			t.Errorf("%s: answered from the cached mode; a mutation must re-read overlay_mode.sor_mode", name)
 		}
 	}
 }
@@ -135,7 +135,7 @@ func TestOverlayWriteShadowResolvesTheModeOnce(t *testing.T) {
 	}
 
 	if *calls != 1 {
-		t.Errorf("the shadow's update+archive path read workspace.x_sor_mode %d times, want exactly 1", *calls)
+		t.Errorf("the shadow's update+archive path read overlay_mode.sor_mode %d times, want exactly 1", *calls)
 	}
 }
 
@@ -156,6 +156,6 @@ func TestDispatcherReadVerbsStillUseTheCachedMode(t *testing.T) {
 		t.Fatal("Search: want the overlay provider's nil-mirror-store error, got nil")
 	}
 	if *calls != 0 {
-		t.Errorf("cached reads re-queried workspace.x_sor_mode %d time(s); avoiding that on every read is the whole reason the cache exists", *calls)
+		t.Errorf("cached reads re-queried overlay_mode.sor_mode %d time(s); avoiding that on every read is the whole reason the cache exists", *calls)
 	}
 }

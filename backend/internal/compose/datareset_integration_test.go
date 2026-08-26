@@ -402,11 +402,11 @@ func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
 // dispatching to a mirror that has nothing in it.
 //
 // The two columns move together because the schema requires it:
-// CHECK ((x_sor_mode = 'overlay') = (x_incumbent IS NOT NULL)).
+// CHECK ((sor_mode = 'overlay') = (incumbent IS NOT NULL)).
 func TestResetReturnsAnOverlayWorkspaceToNativeMode(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	e.WsExec(t, `UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = 'hubspot' WHERE id = $1`, e.WS)
+	e.WsExec(t, `UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`)
 
 	h := dataResetHandlers{
 		pool:             e.Pool,
@@ -421,113 +421,18 @@ func TestResetReturnsAnOverlayWorkspaceToNativeMode(t *testing.T) {
 	var mode string
 	var incumbent *string
 	if err := e.Pool.QueryRow(ctx,
-		`SELECT x_sor_mode, x_incumbent FROM workspace WHERE id = $1`, e.WS).Scan(&mode, &incumbent); err != nil {
+		`SELECT sor_mode, incumbent FROM overlay_mode`).Scan(&mode, &incumbent); err != nil {
 		t.Fatalf("reading the workspace's mode back: %v", err)
 	}
 	if mode != "native" {
-		t.Errorf("x_sor_mode = %q, want native — the install still reads from an incumbent the reset disconnected it from", mode)
+		t.Errorf("sor_mode = %q, want native — the install still reads from an incumbent the reset disconnected it from", mode)
 	}
 	if incumbent != nil {
-		t.Errorf("x_incumbent = %q, want NULL", *incumbent)
+		t.Errorf("incumbent = %q, want NULL", *incumbent)
 	}
 	if got := e.WsCount(t, `SELECT count(*) FROM audit_log
 		WHERE action = 'reset_data' AND evidence->>'sor_mode_reverted' = 'true'`); got != 1 {
 		t.Errorf("reset_data rows recording the mode revert = %d, want 1 — a flip this consequential belongs in the permanent record", got)
-	}
-}
-
-// TestResetRestoresWorkspaceLevelSettings is the general case behind the
-// overlay one above: the mode columns are not the only configuration living on
-// the workspace row, and the sweep reaches none of it. The sweep's target list
-// is derived from the tables carrying a workspace_id column; workspace keys on
-// id, so it is not excluded from that list, it is not a candidate for it.
-//
-// x_sor_mode stands in for every configuration column the row carries: an
-// operator who wiped the installation would otherwise find yesterday's
-// settings still applied to a database with nothing in it. The settings that
-// live in the `setting` table are the other half of the same obligation, and
-// the sibling test below covers them.
-func TestResetRestoresWorkspaceLevelSettings(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
-	e.WsExec(t, `
-		UPDATE workspace SET x_sor_mode = 'overlay', x_incumbent = 'hubspot' WHERE id = $1`, e.WS)
-
-	h := dataResetHandlers{
-		pool:             e.Pool,
-		seeds:            deployconfig.Seeds{},
-		dataResetAllowed: true,
-		log:              slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-	if _, err := h.run(ctx, "Authz"); err != nil {
-		t.Fatalf("run: %v", err)
-	}
-
-	var mode string
-	if err := e.Pool.QueryRow(ctx,
-		`SELECT x_sor_mode FROM workspace WHERE id = $1`, e.WS).Scan(&mode); err != nil {
-		t.Fatalf("reading the setting back: %v", err)
-	}
-	if mode != "native" {
-		t.Errorf("x_sor_mode = %q after a reset, want native (its declared default) — a workspace-level setting outlived the wipe", mode)
-	}
-}
-
-// The same obligation for the settings that moved off the workspace row into
-// `setting` (ADR-0090/A135). That table carries no workspace_id, so the reset's
-// table sweep — derived from the tables that do — never had it as a candidate
-// either: without an explicit restore every setting outlives the wipe exactly
-// as the workspace row's own settings did before ResetWorkspaceConfig.
-//
-// The split is what this proves. Configuration goes back to its registered
-// default; the installation's IDENTITY does not, because a reset wipes an
-// installation's data without re-creating the installation.
-func TestResetRestoresSettingRowsButKeepsTheInstallationsIdentity(t *testing.T) {
-	e := integration.Setup(t)
-	ctx := e.Admin()
-
-	// Configuration a human changed, and identity bootstrap wrote.
-	e.WsExec(t, `
-		INSERT INTO setting (key, value) VALUES ('capture.auto_enrich', 'false'::jsonb)
-		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
-	e.WsExec(t, `
-		INSERT INTO setting (key, value) VALUES ('installation.name', '"Brandt Automotive"'::jsonb)
-		ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value`)
-
-	h := dataResetHandlers{
-		pool:             e.Pool,
-		seeds:            deployconfig.Seeds{},
-		dataResetAllowed: true,
-		log:              slog.New(slog.NewTextHandler(io.Discard, nil)),
-	}
-	// Confirmed with the SETTING's name, not the workspace column's. This test
-	// is the one place the two deliberately differ, and the confirmation
-	// prompt asks for the name the operator can actually see — which is the
-	// one the installation settings screen shows (issue #521).
-	if _, err := h.run(ctx, "Brandt Automotive"); err != nil {
-		t.Fatalf("run: %v", err)
-	}
-
-	// Configuration is gone, so a read resolves to the registered default —
-	// an absent row and a row holding the default read identically, and the
-	// absence keeps "has anyone changed this?" answerable.
-	var configRows int
-	if err := e.Pool.QueryRow(ctx,
-		`SELECT count(*) FROM setting WHERE key = 'capture.auto_enrich'`).Scan(&configRows); err != nil {
-		t.Fatalf("reading the configuration setting back: %v", err)
-	}
-	if configRows != 0 {
-		t.Error("capture.auto_enrich survived the reset — a configuration setting must return to its default")
-	}
-
-	// Identity survives: the installation is the same installation afterwards.
-	var name string
-	if err := e.Pool.QueryRow(ctx,
-		`SELECT value #>> '{}' FROM setting WHERE key = 'installation.name'`).Scan(&name); err != nil {
-		t.Fatalf("the installation lost its name in a reset that preserves the installation: %v", err)
-	}
-	if name != "Brandt Automotive" {
-		t.Errorf("installation.name = %q after a reset, want it preserved", name)
 	}
 }
 

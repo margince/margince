@@ -13,7 +13,7 @@ package overlay
 // workspace's calls to the overlaymod.Provider (Authoritative:false),
 // chosen per call from the context's workspace, never fixed at
 // construction time. This needs a real, migrated Postgres (RLS +
-// workspace.x_sor_mode + the mirror_visibility deny-join), so it is
+// overlay_mode.sor_mode + the mirror_visibility deny-join), so it is
 // gated behind //go:build integration like the rest of this package.
 
 import (
@@ -32,7 +32,7 @@ import (
 )
 
 // TestDispatcherRoutesNativeWorkspaceReadsToTheNativeProvider is the
-// native-mode half of the AC: a workspace that never flipped x_sor_mode
+// native-mode half of the AC: a workspace that never flipped the installation's mode
 // (the harness's default fixture) dispatches Read to the native
 // composite Provider, whose Freshness is trivially authoritative.
 func TestDispatcherRoutesNativeWorkspaceReadsToTheNativeProvider(t *testing.T) {
@@ -51,7 +51,7 @@ func TestDispatcherRoutesNativeWorkspaceReadsToTheNativeProvider(t *testing.T) {
 }
 
 // TestDispatcherRoutesOverlayWorkspaceReadsToTheOverlayProvider is the
-// overlay-mode half: a workspace with x_sor_mode='overlay' dispatches
+// overlay-mode half: an installation in overlay mode dispatches
 // Read/Search to overlaymod.Provider, which serves the mirror
 // (Authoritative:false, DS-AC-7) — and the contract-assembly helper
 // tags that Search result with the T2 external trust tier (design.md
@@ -109,23 +109,36 @@ func TestDispatcherRoutesOverlayWorkspaceReadsToTheOverlayProvider(t *testing.T)
 	}
 }
 
-// seedOverlayModeWorkspace mints a fresh workspace whose x_sor_mode is
-// 'overlay' from creation (the x_overlay_iff_incumbent CHECK requires
-// x_incumbent set in the same statement) plus one human app_user, via
-// the owner connection — the same "direct SQL, owner role bypasses RLS"
-// pattern integration.SeedRow uses elsewhere in this harness. It opens its own
-// owner connection (via integration.OwnerConn) rather than reusing the caller's
-// integration.Env, since this workspace is intentionally a SECOND, independent
-// tenant from the harness's own default fixture.
+// seedOverlayModeWorkspace mints a fresh workspace, puts the INSTALLATION into
+// overlay mode, and seeds one human app_user — all through the owner
+// connection, the same "direct SQL, owner role bypasses RLS" pattern
+// integration.SeedRow uses elsewhere in this harness.
+//
+// The mode and the incumbent move in one statement because
+// overlay_mode_overlay_iff_incumbent admits no intermediate state.
+//
+// It opens its own owner connection (integration.OwnerConn) rather than reusing
+// the caller's integration.Env, because the workspace it mints is a second row
+// independent of the harness's default fixture. The MODE, though, is not
+// second: ADR-0091 moved it off the workspace row, so there is one for the
+// installation and this call flips it for every test in the package until
+// testdb.Reset returns it to native.
 func seedOverlayModeWorkspace(t *testing.T) (ws, user ids.UUID) {
 	t.Helper()
 	owner := integration.OwnerConn(t)
 	ws = ids.NewV7()
 	if _, err := owner.Exec(context.Background(),
-		`INSERT INTO workspace (id, x_sor_mode, x_incumbent)
-		 VALUES ($1, 'overlay', 'hubspot')`,
-		ws); err != nil {
-		t.Fatalf("seeding the overlay-mode workspace: %v", err)
+		`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
+		t.Fatalf("seeding the workspace: %v", err)
+	}
+	// The mode is the INSTALLATION's now, not this row's: overlay_mode holds
+	// one row (ADR-0061), so putting the fixture in overlay mode is an update
+	// to that row rather than a column on the workspace it seeds. A second
+	// workspace in a different mode from the first is no longer expressible,
+	// which is the retirement doing what it is for.
+	if _, err := owner.Exec(context.Background(),
+		`UPDATE overlay_mode SET sor_mode = 'overlay', incumbent = 'hubspot'`); err != nil {
+		t.Fatalf("putting the installation into overlay mode: %v", err)
 	}
 	user = ids.NewV7()
 	if _, err := owner.Exec(context.Background(),

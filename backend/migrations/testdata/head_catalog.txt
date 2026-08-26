@@ -2916,6 +2916,25 @@ public.overlay_mirror_halt.detected_at timestamp with time zone NOT NULL gen=- d
 public.overlay_mirror_halt.reason text NOT NULL gen=- def=-
 public.overlay_mirror_halt_singleton CREATE UNIQUE INDEX overlay_mirror_halt_singleton ON public.overlay_mirror_halt USING btree ((true))
 public.overlay_mirror_pkey CREATE UNIQUE INDEX overlay_mirror_pkey ON public.overlay_mirror USING btree (object_class, external_id)
+public.overlay_mode acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.overlay_mode.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.overlay_mode.incumbent text gen=- def=-
+public.overlay_mode.overlay_mode_incumbent_check CHECK (((incumbent IS NULL) OR (incumbent = ANY (ARRAY['hubspot'::text, 'salesforce'::text, 'dynamics'::text]))))
+public.overlay_mode.overlay_mode_overlay_iff_incumbent CHECK (((sor_mode = 'overlay'::text) = (incumbent IS NOT NULL)))
+public.overlay_mode.overlay_mode_pkey PRIMARY KEY (singleton)
+public.overlay_mode.overlay_mode_singleton_check CHECK (singleton)
+public.overlay_mode.overlay_mode_sor_mode_check CHECK ((sor_mode = ANY (ARRAY['native'::text, 'overlay'::text])))
+public.overlay_mode.singleton boolean NOT NULL gen=- def=true
+public.overlay_mode.sor_mode text NOT NULL gen=- def='native'::text
+public.overlay_mode.trg_overlay_mode_undeletable CREATE TRIGGER trg_overlay_mode_undeletable BEFORE DELETE ON public.overlay_mode FOR EACH ROW EXECUTE FUNCTION overlay_mode_undeletable()
+public.overlay_mode.trg_overlay_mode_updated CREATE TRIGGER trg_overlay_mode_updated BEFORE UPDATE ON public.overlay_mode FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.overlay_mode.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.overlay_mode_pkey CREATE UNIQUE INDEX overlay_mode_pkey ON public.overlay_mode USING btree (singleton)
+public.overlay_mode_undeletable() secdef=false cfg=- acl=- 
+BEGIN
+  RAISE EXCEPTION 'overlay_mode holds the installation''s system-of-record mode and always has exactly one row; it is updated, never deleted'
+    USING ERRCODE = 'check_violation';
+END; 
 public.overlay_reconcile_watermark acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.overlay_reconcile_watermark.object_class text NOT NULL gen=- def=-
 public.overlay_reconcile_watermark.overlay_reconcile_watermark_pkey PRIMARY KEY (object_class)
@@ -4351,11 +4370,6 @@ public.workspace.id uuid NOT NULL gen=- def=uuidv7()
 public.workspace.trg_workspace_updated CREATE TRIGGER trg_workspace_updated BEFORE UPDATE ON public.workspace FOR EACH ROW EXECUTE FUNCTION set_updated_at()
 public.workspace.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.workspace.workspace_pkey PRIMARY KEY (id)
-public.workspace.workspace_x_incumbent_check CHECK (((x_incumbent IS NULL) OR (x_incumbent = ANY (ARRAY['hubspot'::text, 'salesforce'::text, 'dynamics'::text]))))
-public.workspace.workspace_x_sor_mode_check CHECK ((x_sor_mode = ANY (ARRAY['native'::text, 'overlay'::text])))
-public.workspace.x_incumbent text gen=- def=-
-public.workspace.x_overlay_iff_incumbent CHECK (((x_sor_mode = 'overlay'::text) = (x_incumbent IS NOT NULL)))
-public.workspace.x_sor_mode text NOT NULL gen=- def='native'::text
 public.workspace_email_domain acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workspace_email_domain.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.workspace_email_domain.domain text NOT NULL gen=- def=-

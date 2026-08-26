@@ -274,7 +274,7 @@ func TestSlippingGuardRefusesOnAStaleNativeCache(t *testing.T) {
 		t.Error("the native deals lister ran for an overlay workspace: an empty pipeline reads as nothing slipping")
 	}
 	if *calls == 0 {
-		t.Error("the guard never re-read workspace.x_sor_mode")
+		t.Error("the guard never re-read overlay_mode.sor_mode")
 	}
 }
 

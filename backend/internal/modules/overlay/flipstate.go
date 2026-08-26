@@ -7,7 +7,7 @@ package overlay
 // (B-E18.26, ADR-0071/OVA-AC-6): the readiness checks, the mirror
 // freeze/seal (flip_snapshot_id + mirror_frozen_at on
 // overlay_sync_state), and CompleteFlip — the one place the flip mutates
-// workspace.x_sor_mode. The cutover ORCHESTRATION (parity dry-run via the
+// overlay_mode.sor_mode. The cutover ORCHESTRATION (parity dry-run via the
 // migration engine, the export check, the wire shapes) lives in compose's
 // FlipRunner; these primitives keep every mirror/sync/mode semantic
 // inside this module.
@@ -326,8 +326,8 @@ func (s *Service) FlipSnapshot(ctx context.Context) (FlipSnapshot, error) {
 }
 
 // CompleteFlip is the cutover's mode change (B-E18.27's last step): ONE
-// transaction flips workspace.x_sor_mode to native and clears
-// x_incumbent — the x_overlay_iff_incumbent CHECK demands both move
+// transaction flips overlay_mode.sor_mode to native and clears
+// the incumbent — the overlay_mode_overlay_iff_incumbent CHECK demands both move
 // together, so the incumbent_connection row deliberately SURVIVES, still
 // active, no longer authoritative (UC-E18-05 precondition: retirement
 // revokes it later, and disconnect-after-flip still tears the mirror
@@ -347,17 +347,21 @@ func (s *Service) CompleteFlip(ctx context.Context, runID ids.UUID, mode string)
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
-			UPDATE workspace SET x_sor_mode = 'native', x_incumbent = NULL
-			WHERE id = $1 AND x_sor_mode = 'overlay'`, ws)
+			UPDATE overlay_mode SET sor_mode = 'native', incumbent = NULL
+			 WHERE sor_mode = 'overlay'`)
 		if err != nil {
 			return fmt.Errorf("overlay: flipping the workspace to native mode: %w", err)
 		}
 		if tag.RowsAffected() == 0 {
 			return fmt.Errorf("overlay: the workspace is not in overlay mode, nothing to flip: %w", apperrors.ErrConflict)
 		}
+		// The subject stays the installation — its workspace row is what
+		// identifies it — while the detail names the columns that moved.
+		// overlay_mode is a singleton with no uuid of its own to audit against,
+		// and inventing one to be a subject would be a key nothing else uses.
 		_, err = storekit.Audit(ctx, tx, "update", "workspace", ws,
-			map[string]any{"x_sor_mode": "overlay"},
-			map[string]any{"x_sor_mode": "native", "x_incumbent": nil, "import_run_id": runID.String(), "flip_mode": mode, "derivative_tier": "T1 (incumbent-derived reads re-tagged first-party by the cutover)"})
+			map[string]any{"sor_mode": modeOverlay},
+			map[string]any{"sor_mode": modeNative, "incumbent": nil, "import_run_id": runID.String(), "flip_mode": mode, "derivative_tier": "T1 (incumbent-derived reads re-tagged first-party by the cutover)"})
 		return err
 	})
 	if err != nil {

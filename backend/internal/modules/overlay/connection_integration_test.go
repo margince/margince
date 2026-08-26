@@ -127,12 +127,12 @@ func TestConnectSealsTheTokenAndFlipsTheWorkspaceToOverlay(t *testing.T) {
 		t.Errorf("vault returned %q, want the original token", sealed)
 	}
 
-	// The workspace flip: x_sor_mode/x_incumbent change together (the
-	// x_overlay_iff_incumbent CHECK).
+	// The mode flip: sor_mode/incumbent change together (the
+	// overlay_mode_overlay_iff_incumbent CHECK).
 	var sorMode string
 	var incumbentCol *string
 	queryRowWS(ctx, t, pool,
-		`SELECT x_sor_mode, x_incumbent FROM workspace WHERE id = $1`, []any{ws}, &sorMode, &incumbentCol)
+		`SELECT sor_mode, incumbent FROM overlay_mode`, []any{}, &sorMode, &incumbentCol)
 	if sorMode != "overlay" || incumbentCol == nil || *incumbentCol != "hubspot" {
 		t.Errorf("workspace mode = (%s, %v), want (overlay, hubspot)", sorMode, incumbentCol)
 	}
@@ -275,8 +275,7 @@ func TestConnectAfterDisconnectRevivesTheConnection(t *testing.T) {
 		if err := tx.QueryRow(ctx, `SELECT count(*) FROM overlay_tombstone`).Scan(&tombstones); err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `SELECT x_sor_mode FROM workspace
-			WHERE id = NULLIF(current_setting('app.workspace_id', true), '')::uuid`).Scan(&mode)
+		return tx.QueryRow(ctx, `SELECT sor_mode FROM overlay_mode`).Scan(&mode)
 	}); err != nil {
 		t.Fatalf("post-reconnect read: %v", err)
 	}
@@ -287,7 +286,7 @@ func TestConnectAfterDisconnectRevivesTheConnection(t *testing.T) {
 		t.Fatalf("overlay_tombstone rows = %d, want 0 — a reconnect clears what teardown suppressed", tombstones)
 	}
 	if mode != "overlay" {
-		t.Fatalf("x_sor_mode = %q, want overlay", mode)
+		t.Fatalf("sor_mode = %q, want overlay", mode)
 	}
 }
 

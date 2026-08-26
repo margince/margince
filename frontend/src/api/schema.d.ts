@@ -18016,7 +18016,7 @@ export interface components {
             roles: string[];
             teams: string[];
             /**
-             * @description The workspace's active system-of-record mode (workspace.x_sor_mode). `native` is the
+             * @description The installation's active system-of-record mode (overlay_mode.sor_mode). `native` is the
              *     default and full-capability mode. In `overlay` mode the data is served from a read-only
              *     incumbent mirror: list sort/filter dials and unservable reads answer
              *     422 `unsupported_in_overlay_mode` / 404, and mirrored-entity writes answer

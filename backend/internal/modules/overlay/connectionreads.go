@@ -54,13 +54,9 @@ type DueOverlayConnection struct {
 // not stop the rest of the fleet from being enumerated.
 func DueOverlayConnections(ctx context.Context, pool *pgxpool.Pool) ([]DueOverlayConnection, error) {
 	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; this reads every tenant before entering each workspace's own GUC.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL AND x_sor_mode = 'overlay' ORDER BY created_at`)
+	workspaces, err := overlayModeWorkspaces(ctx, pool)
 	if err != nil {
 		return nil, fmt.Errorf("overlay: listing overlay-mode workspaces: %w", err)
-	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return nil, fmt.Errorf("overlay: collecting overlay-mode workspace ids: %w", err)
 	}
 
 	var due []DueOverlayConnection
@@ -89,7 +85,7 @@ func DueOverlayConnections(ctx context.Context, pool *pgxpool.Pool) ([]DueOverla
 				  AND s.mirror_frozen_at IS NULL`,
 				statusActive).Scan(&incumbent, &region, &ref, &connectedAt)
 			if errors.Is(scanErr, pgx.ErrNoRows) {
-				// Either x_sor_mode='overlay' with no active connection row (a
+				// Either sor_mode='overlay' with no active connection row (a
 				// transient mid-teardown state), or an active connection that
 				// is backed off and not yet due — in both cases the poller has
 				// nothing to sweep for this workspace this tick, not an error.
@@ -132,13 +128,9 @@ func WorkspaceForPortal(ctx context.Context, pool *pgxpool.Pool, incumbent, incu
 		return ids.WorkspaceID{}, apperrors.ErrNotFound
 	}
 	// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped; this reads every tenant before entering each workspace's own GUC to probe its connection.
-	rows, err := pool.Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL AND x_sor_mode = 'overlay'`)
+	workspaces, err := overlayModeWorkspaces(ctx, pool)
 	if err != nil {
 		return ids.WorkspaceID{}, fmt.Errorf("overlay: listing overlay-mode workspaces for portal binding: %w", err)
-	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
-	if err != nil {
-		return ids.WorkspaceID{}, fmt.Errorf("overlay: collecting workspace ids for portal binding: %w", err)
 	}
 	// Collect ALL matches rather than returning on the first — one match binds,
 	// zero or many are both fail-closed (see the ambiguity note above).
@@ -316,4 +308,43 @@ func readConnection(ctx context.Context, pool *pgxpool.Pool, query string) (DueO
 // caller degrades to the mirror rather than treating it as an error.
 func ActiveConnection(ctx context.Context, pool *pgxpool.Pool) (DueOverlayConnection, error) {
 	return readConnection(ctx, pool, activeConnectionQuery)
+}
+
+// overlayModeWorkspaces lists the workspaces a fleet pass should visit while
+// the installation is in overlay mode, and nothing while it is not.
+//
+// It reads the mode as its own question before enumerating, rather than folding
+// it into the enumeration as an EXISTS. The two differ on the state that must
+// not be silent: with an EXISTS, a missing overlay_mode row answers "no
+// installation is in overlay mode" with err == nil, and the sweep, the lag
+// metric and the webhook binding all go quiet on a database that has merely
+// lost the fact. Every other reader of the mode surfaces pgx.ErrNoRows; these
+// three would not have. The row is undeletable at the schema (the migration's
+// delete guard), so this is the second lock on the same door — but a fleet pass
+// that reports "nothing to do" is exactly the failure nobody sees.
+//
+// Spelled once because three callers asked the same question three ways.
+//
+// Held by: TestFleetEnumerationOnlyAtRatifiedSites (backend/jobfleetscan_test.go),
+// which counts the workspace-collection reads each file makes and ratifies them
+// by name — a second spelling in this package raises the count and fails.
+func overlayModeWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {
+	var mode string
+	if err := pool.QueryRow(ctx, `SELECT sor_mode FROM overlay_mode`).Scan(&mode); err != nil {
+		return nil, fmt.Errorf("overlay: reading the installation's system-of-record mode: %w", err)
+	}
+	if mode != modeOverlay {
+		return nil, nil
+	}
+	// One installation, one organization (ADR-0061), so this is every live
+	// workspace rather than a filtered subset. A fan-out that outlives that
+	// assumption is #1857's to collapse.
+	rows, err := pool.Query(ctx, `
+		SELECT id FROM workspace
+		 WHERE archived_at IS NULL
+		 ORDER BY created_at`)
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
 }

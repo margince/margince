@@ -2824,9 +2824,9 @@ components:
       x-entity-type: incumbent_connection
       x-version: 1
       description: >-
-        Payload for incumbent.connected — a workspace completed the
+        Payload for incumbent.connected — the installation completed the
         overlay-mode incumbent-CRM connect flow (overlay/connection.go's
-        insertConnection); the workspace flipped to x_sor_mode=overlay in
+        insertConnection) and flipped to overlay_mode.sor_mode=overlay in
         the same transaction. Unlike the mirror.* events above, this
         event's subject is always the incumbent_connection row itself —
         a fixed type — so it is emitted via the plain storekit.EmitEvent.

@@ -10,7 +10,7 @@ package compose
 // agent tool registry call. The REST record-write handlers are the
 // module-owned transports (people.Handlers.CreatePerson, …): they write
 // their native tables DIRECTLY and never ride the SoR seam, so nothing on
-// that path consults x_sor_mode or reaches the incumbent.
+// that path consults the overlay mode or reaches the incumbent.
 //
 // A native REST write against an overlay-mode workspace is only a problem
 // when BOTH of these hold: the record type is one the mirror actually holds

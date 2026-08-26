@@ -1277,7 +1277,7 @@ export interface components {
         };
         /** @description Payload for mirror.write_rejected. Never emitted today — reserved for branch 2 (writes to an overlay-mode workspace's incumbent CRM, currently declared unsupported_by_sor); the schema is published so the type is a valid subscription target and the coverage gate can name it explicitly rather than silently omitting it. */
         PublicEventMirrorWriteRejected: Record<string, never>;
-        /** @description Payload for incumbent.connected — a workspace completed the overlay-mode incumbent-CRM connect flow (overlay/connection.go's insertConnection); the workspace flipped to x_sor_mode=overlay in the same transaction. Unlike the mirror.* events above, this event's subject is always the incumbent_connection row itself — a fixed type — so it is emitted via the plain storekit.EmitEvent. */
+        /** @description Payload for incumbent.connected — the installation completed the overlay-mode incumbent-CRM connect flow (overlay/connection.go's insertConnection) and flipped to overlay_mode.sor_mode=overlay in the same transaction. Unlike the mirror.* events above, this event's subject is always the incumbent_connection row itself — a fixed type — so it is emitted via the plain storekit.EmitEvent. */
         PublicEventIncumbentConnected: {
             /** @description The incumbent CRM system connected (e.g. "hubspot"). */
             incumbent: string;

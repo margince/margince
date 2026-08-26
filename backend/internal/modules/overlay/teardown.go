@@ -98,7 +98,7 @@ func (s *Service) Disconnect(ctx context.Context) error {
 		if err := purgeMirror(ctx, tx); err != nil {
 			return err
 		}
-		if _, err := RevertToNative(ctx, tx, ws); err != nil {
+		if _, err := RevertToNative(ctx, tx); err != nil {
 			return err
 		}
 		return nil
@@ -120,42 +120,37 @@ func (s *Service) Disconnect(ctx context.Context) error {
 	return nil
 }
 
-// RevertToNative returns the bound workspace to native mode inside the
-// caller's transaction, reporting whether it had to. It is the ONE spelling of
-// that flip as an intentional act: Disconnect's teardown takes it, and so does
-// the non-production data reset, which sweeps every table overlay mode depends
-// on and would otherwise leave the workspace claiming to read from an
-// incumbent it no longer has a connection to.
+// RevertToNative returns the installation to native mode inside the caller's
+// transaction, reporting whether it had to. It is the ONE spelling of that flip
+// as an intentional act: Disconnect's teardown takes it, and so does the
+// non-production data reset, which sweeps every table overlay mode depends on
+// and would otherwise leave the installation claiming to read from an incumbent
+// it no longer has a connection to.
 //
-// The reset then runs identity.ResetWorkspaceConfig, which restores every
-// non-preserved column on the workspace row to its declared default — these
-// two among them, so they are written again. That ordering is required, not
-// incidental: whether the
-// installation was in overlay mode is only knowable before something writes
-// the column, and only this call reports it.
+// It is the ONLY thing that reverts the mode. The data reset spares
+// overlay_mode from its table sweep (compose/datasweep.go) precisely so this
+// call has a row to update, and nothing writes the mode again afterwards — so
+// whether the installation WAS in overlay mode is knowable only here, and only
+// from this call's return.
 //
-// Both columns move in one statement because the schema admits no intermediate
-// state (the x_overlay_iff_incumbent CHECK: a mode of 'overlay' and a non-NULL
-// x_incumbent are the same fact). It is exported because these are overlay's
-// own fork-owned columns on a table identity owns — the write belongs to this
-// module wherever it is called from, which is what
-// TestEveryPackageOnlyWritesTablesItOwns holds.
+// Both values move in one statement because the schema admits no intermediate
+// state (overlay_mode_overlay_iff_incumbent: a mode of 'overlay' and a non-NULL
+// incumbent are the same fact). It is exported because overlay owns
+// overlay_mode outright — this module's own table in its own fork-owned
+// namespace — so the write belongs here wherever it is called from, which is
+// what TestEveryPackageOnlyWritesTablesItOwns holds.
 //
-// Idempotent by predicate: a workspace already native reports false and is not
-// written, so a caller need not ask the mode first.
+// Idempotent by predicate: an installation already native reports false and is
+// not written, so a caller need not ask the mode first.
 //
-// ws is the workspace the caller's transaction is bound to, and it is a
-// PARAMETER because this function cannot discover it: it runs inside a
-// transaction somebody else opened, and only that caller knows what bound it.
-// Reading the request context here instead would answer for a handle pinned
-// elsewhere, and a wrong id is worse than no id — the statement is idempotent
-// by predicate, so it would match no row and report (false, nil), which reads
-// exactly like a workspace that was already native.
-func RevertToNative(ctx context.Context, tx pgx.Tx, ws ids.UUID) (bool, error) {
+// It takes no workspace. overlay_mode holds one row for the installation
+// (ADR-0061), so the statement has nothing to select it by and cannot be
+// pointed at the wrong one — which is what the workspace-id parameter existed
+// to prevent while the mode lived on the workspace row.
+func RevertToNative(ctx context.Context, tx pgx.Tx) (bool, error) {
 	tag, err := tx.Exec(ctx, `
-		UPDATE workspace SET x_sor_mode = 'native', x_incumbent = NULL
-		WHERE id = $1
-		  AND x_sor_mode <> 'native'`, ws)
+		UPDATE overlay_mode SET sor_mode = 'native', incumbent = NULL
+		 WHERE sor_mode <> 'native'`)
 	if err != nil {
 		return false, fmt.Errorf("overlay: flipping the workspace back to native mode: %w", err)
 	}

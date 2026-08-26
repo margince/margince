@@ -255,29 +255,18 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// with the sweep, the reset carries its own audit row, and
 		// incumbent.disconnected would be staged into an outbox this reset just
 		// drained.
-		reverted, err := overlay.RevertToNative(ctx, tx, wsID)
+		reverted, err := overlay.RevertToNative(ctx, tx)
 		if err != nil {
 			return err
 		}
 		counts.SorModeReverted = reverted
 
-		// And every OTHER setting on that same row, back to the default a fresh
-		// bootstrap leaves. The overlay flip above is not the general case, it
-		// is the reported one: the sweep is derived from the tables carrying a
-		// workspace_id column and workspace keys on id, so NO workspace-level
-		// setting is in its target set. The auto-enrich posture outlived every
-		// reset before this call, which is what exposed it, and so would the
-		// next setting added to the row.
-		//
-		// identity owns that row and derives its own column list the same way,
-		// so nothing here has to be kept in step with the schema. It runs AFTER
-		// the flip, and restores those two columns again as part of its sweep,
-		// because whether the installation WAS in overlay mode is only knowable
-		// before something writes the column — a blanket restore cannot report
-		// what it changed, and that fact belongs in the audit row.
-		if err := identity.ResetWorkspaceConfig(ctx, tx, wsID); err != nil {
-			return err
-		}
+		// The workspace row itself carries nothing to reset. ADR-0090 moved its
+		// identity into `setting` and ADR-0091 moved the overlay mode into
+		// overlay_mode, leaving id and the lifecycle timestamps — which a reset
+		// preserves by definition, since it wipes an installation's DATA and does
+		// not re-create the installation. identity.ResetWorkspaceConfig retired
+		// with the last column it had to restore.
 
 		// The same obligation for the settings that no longer live on that row
 		// (ADR-0090/A135). `setting` carries no workspace_id, so the table
