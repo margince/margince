@@ -112,7 +112,11 @@ var accountCoverageCopy = toolCopy{
 		"commercial health — nothing here says whether the deal will close.",
 	Instead: "Use whats_slipping_this_week for deals at risk of stalling, and intro_path_to when " +
 		"the answer is that a gap needs a warm route filling it.",
-	Retain: "Keep the deal_id and the named gaps; they are what a follow-up plan is built from.",
+	Retain: "Keep the deal_id and the named gaps; they are what a follow-up plan is built from. " +
+		"Each stakeholder carries `person_name` beside its role — say WHO the uncovered seat is " +
+		"rather than reporting the role alone, because the answer a rep acts on is a person to " +
+		"bring into the room. A seat with no name is one this caller may not read: report the " +
+		"gap, and do not guess who fills it.",
 }
 
 var introPathToCopy = toolCopy{

@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2330 | 9% | 14670 | 15 | 8 |
-| _whole served catalog, for scale_ | 58 | 18153 | 75% | — | — | — |
+| _whole served catalog, for scale_ | 58 | 18227 | 75% | — | — | — |
 
 ### `morning_brief`
 
@@ -119,7 +119,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 274 tokens, mean 312, across 58 served tools.
+Median 274 tokens, mean 313, across 58 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -163,6 +163,7 @@ a term in an addition.
 | `decide_approval_bundle` | 266 | — |
 | `qualify_lead` | 261 | — |
 | `create_task` | 260 | — |
+| `account_coverage` | 252 | 2 scenarios |
 | `relink_activities` | 237 | — |
 | `read_record` | 229 | 2 scenarios |
 | `relink_thread` | 228 | — |
@@ -176,7 +177,6 @@ a term in an addition.
 | `intro_path_to` | 197 | 2 scenarios |
 | `remove_tag` | 190 | — |
 | `list_channel_providers` | 181 | — |
-| `account_coverage` | 178 | 2 scenarios |
 | `check_location_support` | 163 | — |
 | `read_project_360` | 163 | — |
 | `read_approval` | 160 | — |

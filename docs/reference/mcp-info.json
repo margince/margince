@@ -10,16 +10,16 @@
   "totals": {
     "tools": 58,
     "resources": 9,
-    "tool_catalog_bytes": 163599,
+    "tool_catalog_bytes": 164267,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 41778,
+    "approx_wire_tokens_total": 41945,
     "largest_tool_bytes": 6414,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
-      "description_bytes": 38805,
+      "description_bytes": 39101,
       "input_schema_bytes": 35709,
-      "output_schema_bytes": 76491,
-      "description_plus_input_schema_bytes": 74514
+      "output_schema_bytes": 76863,
+      "description_plus_input_schema_bytes": 74810
     }
   },
   "tools": {
@@ -38,7 +38,7 @@
           "readOnlyHint": true,
           "title": "Relationship coverage on a deal"
         },
-        "description": "Answer \"is this deal covered?\": which roles on the account we have a relationship with, and where the deal is exposed to a single contact. It assesses the relationships recorded against one deal's account, not the deal's commercial health — nothing here says whether the deal will close. Use whats_slipping_this_week for deals at risk of stalling, and intro_path_to when the answer is that a gap needs a warm route filling it. Keep the deal_id and the named gaps; they are what a follow-up plan is built from. (Governance: runs immediately; requires passport scope \"read\".)",
+        "description": "Answer \"is this deal covered?\": which roles on the account we have a relationship with, and where the deal is exposed to a single contact. It assesses the relationships recorded against one deal's account, not the deal's commercial health — nothing here says whether the deal will close. Use whats_slipping_this_week for deals at risk of stalling, and intro_path_to when the answer is that a gap needs a warm route filling it. Keep the deal_id and the named gaps; they are what a follow-up plan is built from. Each stakeholder carries `person_name` beside its role — say WHO the uncovered seat is rather than reporting the role alone, because the answer a rep acts on is a person to bring into the room. A seat with no name is one this caller may not read: report the gap, and do not guess who fills it. (Governance: runs immediately; requires passport scope \"read\".)",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -101,6 +101,25 @@
                       "kind": {
                         "type": "string"
                       },
+                      "people": {
+                        "items": {
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "person_id": {
+                              "format": "uuid",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "person_id"
+                          ],
+                          "type": "object"
+                        },
+                        "type": "array"
+                      },
                       "person_ids": {
                         "items": {
                           "format": "uuid",
@@ -141,6 +160,9 @@
                       },
                       "person_id": {
                         "format": "uuid",
+                        "type": "string"
+                      },
+                      "person_name": {
                         "type": "string"
                       },
                       "role": {
@@ -892,6 +914,25 @@
                             },
                             "kind": {
                               "type": "string"
+                            },
+                            "people": {
+                              "items": {
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "person_id": {
+                                    "format": "uuid",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "person_id"
+                                ],
+                                "type": "object"
+                              },
+                              "type": "array"
                             },
                             "person_ids": {
                               "items": {

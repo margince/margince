@@ -21,6 +21,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/modules/overlay"
+	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
@@ -264,9 +265,9 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// how a deal is covered, who can get us into an account, and which of the
 	// caller's deals the coverage rules flag. All 🟢 — they name people, they
 	// change nothing.
-	agents.RegisterNetworkTools(registry, whoKnowsLister(pool), coverageReader(pool),
+	agents.RegisterNetworkTools(registry, whoKnowsLister(pool), coverageReader(pool, people.NewStore(InstallationDB(pool))),
 		nativeOnlyIntroPath(sorMode, introPathLister(pool)),
-		nativeOnlyAtRisk(sorMode, atRiskLister(pool)))
+		nativeOnlyAtRisk(sorMode, atRiskLister(pool, people.NewStore(InstallationDB(pool)))))
 	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
 	// The location check (🟢), and the verb the probe card hangs off. It reads
 	// no record and takes no seam, so it registers unconditionally.

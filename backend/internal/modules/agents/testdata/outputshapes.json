@@ -50,6 +50,25 @@
                 "kind": {
                   "type": "string"
                 },
+                "people": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "person_id"
+                    ]
+                  }
+                },
                 "person_ids": {
                   "type": "array",
                   "items": {
@@ -91,6 +110,9 @@
                 "person_id": {
                   "type": "string",
                   "format": "uuid"
+                },
+                "person_name": {
+                  "type": "string"
                 },
                 "role": {
                   "type": "string"
@@ -623,6 +645,25 @@
                       },
                       "kind": {
                         "type": "string"
+                      },
+                      "people": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "person_id": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "person_id"
+                          ]
+                        }
                       },
                       "person_ids": {
                         "type": "array",

@@ -5,9 +5,9 @@
   "whole_catalog_floor": 21000,
   "catalog": {
     "tools": 58,
-    "tokens": 18153,
+    "tokens": 18227,
     "median_tool_tokens": 274,
-    "mean_tool_tokens": 312
+    "mean_tool_tokens": 313
   },
   "agents": [
     {
@@ -206,6 +206,10 @@
       "tokens": 260
     },
     {
+      "name": "account_coverage",
+      "tokens": 252
+    },
+    {
       "name": "relink_activities",
       "tokens": 237
     },
@@ -256,10 +260,6 @@
     {
       "name": "list_channel_providers",
       "tokens": 181
-    },
-    {
-      "name": "account_coverage",
-      "tokens": 178
     },
     {
       "name": "check_location_support",

@@ -92,8 +92,27 @@ type DealCoverageAnswer struct {
 // CoverageSeat is one stakeholder and whether the seat is a relationship.
 type CoverageSeat struct {
 	PersonID ids.UUID `json:"person_id"`
-	Role     string   `json:"role"`
-	Engaged  bool     `json:"engaged"`
+	// PersonName is who holds the seat. The whole question this tool answers
+	// is WHICH NAMED HUMAN is missing from a deal, and a seat that says
+	// "economic_buyer, not engaged" against a bare uuid has not answered it —
+	// a model cannot tell a rep who to bring into the room. The sibling field
+	// on KnownColleague makes the same argument for our side, and the REST
+	// payload has carried `person_name` since this read existed.
+	//
+	// Empty in practice means the workspace holds no name for that person, not
+	// that one was withheld. A caller who may not read people gets no SEATS at
+	// all rather than nameless ones: the seats are an edge, "knowing a deal
+	// does not license learning who sits on it", and deals.Stakeholders
+	// refuses before a row is read. Row scope removes a seat the same way,
+	// upstream in CoverageFor.
+	//
+	// So there is no state where a seat exists and its name was denied — the
+	// two travel together, and an earlier draft of this comment claiming
+	// otherwise was wrong. Held by
+	// TestCoverageWithoutPersonReadIsRefusedRatherThanUnnamed.
+	PersonName string `json:"person_name,omitempty"`
+	Role       string `json:"role"`
+	Engaged    bool   `json:"engaged"`
 }
 
 // CoverageRisk is one finding. Kind names the RULE, so a model explaining the
@@ -102,11 +121,40 @@ type CoverageRisk struct {
 	Kind      string     `json:"kind"`
 	Summary   string     `json:"summary"`
 	PersonIDs []ids.UUID `json:"person_ids,omitempty"`
-	UserIDs   []ids.UUID `json:"user_ids,omitempty"`
+	// People names the people this finding is about, each id carrying its own
+	// name, and is the half a model can put in a sentence. A finding that says
+	// "the deal rests on one relationship" and lists a uuid makes the rep go
+	// look the name up, which is the work the tool exists to save.
+	//
+	// PAIRED IN ONE OBJECT rather than as a second array beside PersonIDs.
+	// Two arrays can diverge — a caller with deal:read and no person:read has
+	// ids and no names, and the transaction is Read Committed, so a person
+	// archived between the coverage read and the name read leaves one list
+	// shorter. A consumer indexing across them would then attach the wrong
+	// name to the wrong person, silently, in a sentence a rep repeats. An
+	// object cannot be misaligned, so the failure is structurally impossible
+	// rather than merely documented.
+	//
+	// PersonIDs is kept beside it unchanged: it is the existing handle, and
+	// removing it would break every caller that already follows those ids.
+	People  []FindingPerson `json:"people,omitempty"`
+	UserIDs []ids.UUID      `json:"user_ids,omitempty"`
 	// DaysSinceTouch is set on going-cold and absent elsewhere. A pointer
 	// rather than a plain int because a zero would read as "touched today" on
 	// every finding that says nothing about recency.
 	DaysSinceTouch *int `json:"days_since_touch,omitempty"`
+}
+
+// FindingPerson is one person a finding names, with their id, so a reader can
+// both say who it is and read them back.
+//
+// Name is never empty: a person whose name did not resolve is left out of the
+// list entirely rather than shipped as an id with a blank name, which would
+// read as a person with no name rather than as one this caller may not see.
+// The ids stay complete on CoverageRisk.PersonIDs either way.
+type FindingPerson struct {
+	PersonID ids.UUID `json:"person_id"`
+	Name     string   `json:"name"`
 }
 
 // IntroRoute is one warm way into an account: a colleague, the contact they
