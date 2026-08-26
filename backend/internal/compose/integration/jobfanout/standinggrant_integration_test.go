@@ -68,6 +68,29 @@ func (re *runnerEnv) sessionUser(t *testing.T) ids.UserID {
 	return id
 }
 
+// mintPassportForColleague makes a passport that acts as somebody other than
+// the session user.
+//
+// It inserts directly, which is deliberate and is the ONLY place this suite
+// does so: there is no product path that mints a passport for another person —
+// that is the invariant — so a test needing one has to write the row the
+// product refuses to write, in order to prove what happens if it existed.
+func (re *runnerEnv) mintPassportForColleague(t *testing.T, colleague ids.UserID) ids.PassportID {
+	t.Helper()
+	var raw string
+	if err := re.Owner.QueryRow(context.Background(), `
+		INSERT INTO passport (on_behalf_of, granted_by, scopes, token_hash, expires_at)
+		VALUES ($1, $1, ARRAY['read'], $2, now() + interval '30 days')
+		RETURNING id::text`, colleague, "probe-"+ids.NewV7().String()).Scan(&raw); err != nil {
+		t.Fatalf("seed a colleague's passport: %v", err)
+	}
+	id, err := ids.ParseAs[ids.PassportKind](raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
 // colleague is a rep who is NOT the session user. The decline and never-asked
 // cases need one: they turn on the absence of a credential, and the session
 // user's passport would confuse what the test is actually asserting.
@@ -95,13 +118,17 @@ func (re *runnerEnv) asRep(user ids.UserID) context.Context {
 	})
 }
 
+// recordDecision answers AS the given rep. RecordDecisionTx takes no user id —
+// it reads the acting principal — so the rep is expressed by the context, which
+// is the same thing a signed-in session does.
 func (re *runnerEnv) recordDecision(
 	t *testing.T, user ids.UserID, state string, passport *ids.PassportID,
 ) error {
 	t.Helper()
+	ctx := re.asRep(user)
 	db := database.BindTo(re.pool, ids.From[ids.WorkspaceKind](re.wsID))
-	return db.Tx(re.wsCtx, func(tx pgx.Tx) error {
-		return runner.RecordDecisionTx(re.wsCtx, tx, user, grantSpec, state, passport)
+	return db.Tx(ctx, func(tx pgx.Tx) error {
+		return runner.RecordDecisionTx(ctx, tx, grantSpec, state, passport)
 	})
 }
 
@@ -226,6 +253,73 @@ func TestAPrincipalWithNoHumanHasNoStandingGrantToRead(t *testing.T) {
 	if _, _, err := e.store.MyGrant(e.wsCtx, grantSpec); err == nil {
 		t.Fatal("a principal with no human behind it was answered — it has no " +
 			"decision of its own, and answering invites the caller to offer it one")
+	}
+}
+
+// A grant may not name somebody else's credential.
+//
+// This is the one way the "nobody is acted for by a credential they did not
+// mint" invariant can still be broken, and it is not the mint: the passport
+// itself is minted correctly, for its own owner. What breaks it is a GRANT row
+// pairing one rep's user id with another rep's passport, because the fan-out
+// then runs for the named rep under the named credential — acting as the
+// passport's owner, on the say-so of somebody who never asked them.
+func TestAGrantCannotNameACredentialBelongingToSomebodyElse(t *testing.T) {
+	e := setupRunner(t)
+	// A passport minted correctly, by and for the session user.
+	mine := e.mintPassportFor(t)
+	owner := e.sessionUser(t)
+	colleague := e.colleague(t, "borrowed@grant.test")
+	if colleague == owner {
+		t.Fatal("the fixture handed back the same user twice; this proves nothing")
+	}
+
+	// The pairing that must not exist, either way round: a grant whose user and
+	// whose passport are different people. The fan-out reads (user, passport)
+	// and authenticates the passport, so the run does what the PASSPORT's owner
+	// may do while the grant says whose it is.
+	if err := e.recordDecision(t, colleague, runner.GrantStateGranted, &mine); err == nil {
+		t.Fatal("a grant was recorded pairing one rep with another rep's passport — " +
+			"the fan-out would run for them under a credential they never minted")
+	}
+	// And the reverse pairing, so neither rep can borrow from the other
+	// whichever way round the row is written.
+	theirs := e.mintPassportForColleague(t, colleague)
+	if err := e.recordDecision(t, owner, runner.GrantStateGranted, &theirs); err == nil {
+		t.Fatal("a rep recorded their own grant naming a colleague's passport")
+	}
+}
+
+// A machine principal cannot record a standing decision.
+//
+// The rep is read from the acting principal rather than passed in, so the only
+// answer any caller can record is their own. A principal with no human behind
+// it has no answer to give, and letting it write one would make "the system
+// turned it on for you" expressible — which is the whole thing this feature
+// exists not to be.
+func TestAPrincipalWithNoHumanCannotRecordAStandingDecision(t *testing.T) {
+	e := setupRunner(t)
+	passport := e.mintPassportFor(t)
+	db := database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.wsID))
+	// e.wsCtx carries the scheduler's own system actor, no human behind it.
+	err := db.Tx(e.wsCtx, func(tx pgx.Tx) error {
+		return runner.RecordDecisionTx(e.wsCtx, tx, grantSpec, runner.GrantStateGranted, &passport)
+	})
+	if err == nil {
+		t.Fatal("a machine principal recorded a standing grant — nobody's authority " +
+			"may be granted by something that is not them")
+	}
+	// Two guards refuse this independently: the human check, and the ownership
+	// check, since a principal with no user id can own no passport. Either
+	// alone is enough, which is why removing one does not make this test pass
+	// for the wrong reason.
+	var rows int
+	if qErr := e.Owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM agent_standing_grant`).Scan(&rows); qErr != nil {
+		t.Fatal(qErr)
+	}
+	if rows != 0 {
+		t.Errorf("grants on file = %d, want 0 — the refusal did not stop the write", rows)
 	}
 }
 

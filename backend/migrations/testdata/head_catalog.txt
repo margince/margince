@@ -294,7 +294,7 @@ public.agent_run_pkey CREATE UNIQUE INDEX agent_run_pkey ON public.agent_run USI
 public.agent_run_trigger_unique CREATE UNIQUE INDEX agent_run_trigger_unique ON public.agent_run USING btree (trigger_ref)
 public.agent_standing_grant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.agent_standing_grant.agent_spec text NOT NULL gen=- def=-
-public.agent_standing_grant.agent_standing_grant_passport_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE RESTRICT
+public.agent_standing_grant.agent_standing_grant_passport_fkey FOREIGN KEY (passport_id, user_id) REFERENCES passport(id, on_behalf_of) ON DELETE RESTRICT
 public.agent_standing_grant.agent_standing_grant_passport_shape CHECK ((((state = 'granted'::text) AND (passport_id IS NOT NULL)) OR ((state <> 'granted'::text) AND (passport_id IS NULL))))
 public.agent_standing_grant.agent_standing_grant_pkey PRIMARY KEY (id)
 public.agent_standing_grant.agent_standing_grant_state_check CHECK ((state = ANY (ARRAY['granted'::text, 'declined'::text])))
@@ -3006,6 +3006,7 @@ public.passport.passport_token_hash_key UNIQUE (token_hash)
 public.passport.revoked_at timestamp with time zone gen=- def=-
 public.passport.scopes text[] NOT NULL gen=- def=-
 public.passport.token_hash text NOT NULL gen=- def=-
+public.passport.uq_passport_id_owner UNIQUE (id, on_behalf_of)
 public.passport.uq_passport_ws_id UNIQUE (id)
 public.passport_oauth_grant_ix CREATE INDEX passport_oauth_grant_ix ON public.passport USING btree (oauth_grant_id)
 public.passport_pkey CREATE UNIQUE INDEX passport_pkey ON public.passport USING btree (id)
@@ -4028,6 +4029,7 @@ public.uq_org_profile_field CREATE UNIQUE INDEX uq_org_profile_field ON public.o
 public.uq_org_rel_type CREATE UNIQUE INDEX uq_org_rel_type ON public.organization_relationship_type USING btree (organization_id, relationship_type) WHERE (archived_at IS NULL)
 public.uq_organization_anchor CREATE UNIQUE INDEX uq_organization_anchor ON public.organization USING btree ((true)) WHERE (is_anchor AND (archived_at IS NULL))
 public.uq_organization_domain_disposition CREATE UNIQUE INDEX uq_organization_domain_disposition ON public.organization_domain_disposition USING btree (domain)
+public.uq_passport_id_owner CREATE UNIQUE INDEX uq_passport_id_owner ON public.passport USING btree (id, on_behalf_of)
 public.uq_passport_ws_id CREATE UNIQUE INDEX uq_passport_ws_id ON public.passport USING btree (id)
 public.uq_person_channel_identity CREATE UNIQUE INDEX uq_person_channel_identity ON public.person_channel_identity USING btree (provider, channel_user_id) WHERE (archived_at IS NULL)
 public.uq_person_email_dedupe CREATE UNIQUE INDEX uq_person_email_dedupe ON public.person_email USING btree (email) WHERE (archived_at IS NULL)

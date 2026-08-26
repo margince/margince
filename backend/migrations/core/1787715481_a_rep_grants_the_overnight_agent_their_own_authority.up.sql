@@ -1,3 +1,8 @@
+-- Bounded: the passport ALTER below takes a lock on a table this migration did
+-- not create, so an open transaction holding a conflicting one would otherwise
+-- stall every passport write for as long as this is willing to queue.
+SET LOCAL lock_timeout = '3s';
+
 -- Whether each rep has said yes to the overnight agent working on their behalf,
 -- and which passport carries that authority.
 --
@@ -80,9 +85,27 @@ ALTER TABLE agent_standing_grant
     ADD CONSTRAINT agent_standing_grant_user_fkey
     FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE;
 
+-- The passport must belong to the REP THE GRANT IS FOR, and this is the
+-- constraint that makes "nobody is acted for by a credential they did not mint"
+-- true end to end.
+--
+-- The mint alone is not enough. It binds a passport to its own owner correctly,
+-- and no admin path can mint one for somebody else — but a GRANT row pairing
+-- one rep's user id with another rep's passport reintroduces exactly the hole
+-- from the other side: the fan-out reads (user, passport) and runs for the named
+-- rep under the named credential, so the run acts as the PASSPORT's owner on the
+-- say-so of whoever wrote the row. Nothing about the mint prevents that pairing.
+--
+-- A composite foreign key onto (id, on_behalf_of) is what refuses it: the
+-- database will not accept a passport id unless the user beside it is the user
+-- that passport acts as. It holds for every writer, including ones not written
+-- yet, which a check in one function cannot.
+ALTER TABLE passport
+    ADD CONSTRAINT uq_passport_id_owner UNIQUE (id, on_behalf_of);
+
 ALTER TABLE agent_standing_grant
     ADD CONSTRAINT agent_standing_grant_passport_fkey
-    FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE RESTRICT;
+    FOREIGN KEY (passport_id, user_id) REFERENCES passport(id, on_behalf_of) ON DELETE RESTRICT;
 
 -- The scheduler's read: every rep who granted this spec, so the nightly fan-out
 -- enumerates live grants instead of seeding one authority-less occurrence.

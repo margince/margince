@@ -49,8 +49,9 @@ const (
 
 // The field names an audit image of this row carries.
 const (
-	auditFieldAgentSpec = "agent_spec"
-	auditFieldState     = "state"
+	auditFieldAgentSpec  = "agent_spec"
+	auditFieldState      = "state"
+	auditFieldPassportID = "passport_id"
 )
 
 // StandingGrant is one rep's answer for one agent.
@@ -187,22 +188,22 @@ func (s *Store) LiveGrantsFor(ctx context.Context, spec string) ([]StandingGrant
 // Re-answering overwrites. A rep who declined and later changes their mind is
 // giving a new answer to the same question, not a second answer — the unique
 // constraint says so, and this makes the write agree with it.
+//
+// WHOSE ANSWER. It takes no user id. The rep is read from the acting principal,
+// so the only decision any caller can record is their own — an argument would
+// let one person answer for another, and "the admin turned it on for you" is
+// precisely what this feature exists not to be. A principal with no human
+// behind it is refused: a machine has no standing decision to make.
 func RecordDecisionTx(
-	ctx context.Context, tx pgx.Tx, userID ids.UserID, spec, state string, passportID *ids.PassportID,
+	ctx context.Context, tx pgx.Tx, spec, state string, passportID *ids.PassportID,
 ) error {
-	switch state {
-	case GrantStateGranted:
-		if passportID == nil {
-			// The shape the schema forbids, refused here too so the failure
-			// names the cause rather than surfacing as a constraint violation.
-			return errors.New("agents: a granted standing grant must carry the rep's passport")
-		}
-	case GrantStateDeclined:
-		if passportID != nil {
-			return errors.New("agents: a declined standing grant carries no passport")
-		}
-	default:
-		return fmt.Errorf("agents: %q is not an answer a rep can give", state)
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return apperrors.ErrPermissionDenied
+	}
+	userID := ids.From[ids.UserKind](actor.UserID)
+	if err := refuseUnanswerable(ctx, tx, userID, state, passportID); err != nil {
+		return err
 	}
 	// The row as it stands, read INSIDE this transaction and before the write.
 	//
@@ -214,7 +215,14 @@ func RecordDecisionTx(
 	if err != nil {
 		return err
 	}
+	// `xmax = 0` is how the upsert reports which branch it took: the system
+	// column is zero on a row this statement INSERTED and non-zero on one it
+	// updated. It is read here rather than trusted from the SELECT above,
+	// because FOR UPDATE cannot lock a row that does not exist yet — two first
+	// answers arriving together both read "absent", and without this the second
+	// would audit a create for a row it actually replaced.
 	var id ids.UUID
+	var inserted bool
 	if err := tx.QueryRow(ctx, `
 		INSERT INTO agent_standing_grant (user_id, agent_spec, state, passport_id)
 		VALUES ($1, $2, $3, $4)
@@ -223,17 +231,93 @@ func RecordDecisionTx(
 		       passport_id = EXCLUDED.passport_id,
 		       decided_at = now(),
 		       updated_at = now()
-		RETURNING id`, userID, spec, state, passportID).Scan(&id); err != nil {
+		RETURNING id, xmax = 0`, userID, spec, state, passportID).Scan(&id, &inserted); err != nil {
 		return fmt.Errorf("record the rep's standing grant: %w", err)
+	}
+	// The statement's own answer wins over the read: a row that appeared
+	// between them is one this write replaced, whatever the SELECT saw.
+	if !inserted && !existed {
+		before, existed = nil, true
+	}
+	if inserted {
+		existed = false
 	}
 	// Standing authority is an audited fact for the same reason the passport
 	// mint is one: it is the record of who agreed to be acted for, and by what.
-	after := map[string]any{auditFieldAgentSpec: spec, auditFieldState: state}
-	if existed {
-		_, err = storekit.Audit(ctx, tx, "update", "agent_standing_grant", id, before, after)
-	} else {
-		_, err = storekit.AuditEvent(ctx, tx, "create", "agent_standing_grant", id, after)
+	after := grantImage(spec, state, passportID)
+	return auditDecision(ctx, tx, id, spec, before, after, existed)
+}
+
+// refuseUnanswerable rejects everything that is not one of the two answers a
+// rep can give, paired with the credential that answer requires.
+func refuseUnanswerable(
+	ctx context.Context, tx pgx.Tx, userID ids.UserID, state string, passportID *ids.PassportID,
+) error {
+	switch state {
+	case GrantStateGranted:
+		if passportID == nil {
+			// The shape the schema forbids, refused here too so the failure
+			// names the cause rather than surfacing as a constraint violation.
+			return errors.New("agents: a granted standing grant must carry the rep's passport")
+		}
+		// The passport must be THIS rep's. The composite foreign key refuses
+		// any other pairing, so this check is not what makes it safe — it is
+		// what makes the refusal readable, and it names the reason: a grant
+		// pairing one rep with another's credential would have the fan-out run
+		// as the passport's owner on somebody else's say-so.
+		return refuseBorrowedCredential(ctx, tx, userID, *passportID)
+	case GrantStateDeclined:
+		if passportID != nil {
+			return errors.New("agents: a declined standing grant carries no passport")
+		}
+		return nil
+	default:
+		return fmt.Errorf("agents: %q is not an answer a rep can give", state)
 	}
+}
+
+// refuseBorrowedCredential rejects a grant naming a passport that acts as
+// somebody other than the rep the grant is for.
+func refuseBorrowedCredential(
+	ctx context.Context, tx pgx.Tx, userID ids.UserID, passportID ids.PassportID,
+) error {
+	var actsAs ids.UserID
+	switch err := tx.QueryRow(ctx,
+		`SELECT on_behalf_of FROM passport WHERE id = $1`, passportID).Scan(&actsAs); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return errors.New("agents: the standing grant names a passport that does not exist")
+	case err != nil:
+		return fmt.Errorf("read the passport a standing grant names: %w", err)
+	}
+	if actsAs != userID {
+		return errors.New("agents: a standing grant may only name the rep's own passport — " +
+			"a run under somebody else's credential acts as them, not as the rep who granted it")
+	}
+	return nil
+}
+
+// auditDecision files the ledger row for one recorded answer, saying whether it
+// was a first answer or a changed one.
+func auditDecision(
+	ctx context.Context, tx pgx.Tx, id ids.UUID, spec string,
+	before, after map[string]any, existed bool,
+) error {
+	if !existed {
+		_, err := storekit.AuditEvent(ctx, tx, "create", "agent_standing_grant", id, after)
+		return err
+	}
+	if before == nil {
+		// The row was replaced by a concurrent first answer this transaction
+		// could not see. What it held is unrecoverable now, and the audit
+		// contract refuses an update with no before-image rather than letting
+		// one claim a change it cannot describe — so the honest record is the
+		// evidence that the prior image was lost, not a fabricated empty one.
+		_, err := storekit.AuditWithEvidence(ctx, tx, "update", "agent_standing_grant", id,
+			map[string]any{auditFieldAgentSpec: spec}, after,
+			map[string]any{"before_image": "raced with a concurrent first answer"})
+		return err
+	}
+	_, err := storekit.Audit(ctx, tx, "update", "agent_standing_grant", id, before, after)
 	return err
 }
 
@@ -243,13 +327,32 @@ func grantImageTx(
 ) (map[string]any, bool, error) {
 	var state string
 	var passportID *ids.PassportID
+	// FOR UPDATE, so two answers arriving together are ordered rather than
+	// racing. Without it both can read "absent", both audit a create, and the
+	// ledger records one decision twice — or both read the same stale image and
+	// each records the other's answer as what it replaced.
 	switch err := tx.QueryRow(ctx, `
 		SELECT state, passport_id FROM agent_standing_grant
-		 WHERE user_id = $1 AND agent_spec = $2`, userID, spec).Scan(&state, &passportID); {
+		 WHERE user_id = $1 AND agent_spec = $2
+		 FOR UPDATE`, userID, spec).Scan(&state, &passportID); {
 	case errors.Is(err, pgx.ErrNoRows):
 		return nil, false, nil
 	case err != nil:
 		return nil, false, fmt.Errorf("read the standing grant being replaced: %w", err)
 	}
-	return map[string]any{auditFieldAgentSpec: spec, auditFieldState: state}, true, nil
+	return grantImage(spec, state, passportID), true, nil
+}
+
+// grantImage is one snapshot of the row's own fields.
+//
+// It carries the passport, because "who agreed to be acted for, and by WHAT" is
+// the question standing authority raises — an image naming only the state says
+// a rep's authority moved without saying which credential it moved to, and an
+// audit row cannot be corrected later.
+func grantImage(spec, state string, passportID *ids.PassportID) map[string]any {
+	image := map[string]any{auditFieldAgentSpec: spec, auditFieldState: state}
+	if passportID != nil {
+		image[auditFieldPassportID] = passportID.String()
+	}
+	return image
 }
