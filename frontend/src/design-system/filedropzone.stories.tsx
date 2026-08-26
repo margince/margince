@@ -66,8 +66,14 @@ export const Dragover: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     // The drag handlers live on the input, which covers the whole zone.
+    //
+    // A real `DataTransfer`, not an object shaped like one: jsdom accepts the
+    // plain object and a browser refuses to construct the DragEvent from it, so
+    // the object-literal spelling passed the unit test and failed the render
+    // gate. Empty on purpose — the state under review is "something is being
+    // held over the zone", not what it is.
     await fireEvent.dragOver(await canvas.findByLabelText("Document"), {
-      dataTransfer: { files: [] },
+      dataTransfer: new DataTransfer(),
     });
   },
 };

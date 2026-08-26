@@ -62,7 +62,11 @@ function Row({
   decide?: () => Response;
 }>) {
   installFetchStub({
-    "GET /me": meRoute({ approval: ["read", "update"] }),
+    // The row gates on nothing but the viewer's identity — deciding a staged
+    // proposal is authorised server-side on the effect, not on an object grant
+    // this surface could read — so the grants here are the ones the DECISIONS
+    // land on rather than a grant for the row itself.
+    "GET /me": meRoute({ deal: ["read", "update"] }),
     "GET /agent-tools": () =>
       jsonResponse({
         data: [{ name: "send_email", tier: "confirm" }],
