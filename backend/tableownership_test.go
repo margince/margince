@@ -576,29 +576,58 @@ type tableWrite struct {
 const unnamedDeclSite = "<unnamed-decl>"
 
 func declSite(fset *token.FileSet, decl ast.Decl) string {
-	switch d := decl.(type) {
-	case *ast.FuncDecl:
-		if d.Name == nil {
-			return unnamedDeclSite
-		}
-		if d.Recv == nil || len(d.Recv.List) != 1 {
-			return d.Name.Name
-		}
-		// The pointer star carries no information here — a method set is named
-		// by its type — and leaving it in would put a `*` in every such key.
-		//
-		// The receiver itself is not decoration. This tree writes two workers
-		// into one file as a matter of course, `Work` on one beside `Work` on
-		// another, and a bare method name would collapse both onto one key.
-		return strings.TrimPrefix(exprText(fset, d.Recv.List[0].Type), "*") + "." + d.Name.Name
-	case *ast.GenDecl:
-		for _, spec := range d.Specs {
-			if vs, ok := spec.(*ast.ValueSpec); ok && len(vs.Names) > 0 {
-				return vs.Names[0].Name
-			}
-		}
+	fn, ok := decl.(*ast.FuncDecl)
+	switch {
+	case !ok || fn.Name == nil:
+		return unnamedDeclSite
+	case fn.Recv == nil || len(fn.Recv.List) != 1:
+		return fn.Name.Name
+	}
+	// The pointer star carries no information here — a method set is named
+	// by its type — and leaving it in would put a `*` in every such key.
+	//
+	// The receiver itself is not decoration. This tree writes two workers
+	// into one file as a matter of course, `Work` on one beside `Work` on
+	// another, and a bare method name would collapse both onto one key.
+	return strings.TrimPrefix(exprText(fset, fn.Recv.List[0].Type), "*") + "." + fn.Name.Name
+}
+
+// specSite names ONE spec of a package-level declaration.
+//
+// Separate from declSite because a grouped `const (...)` is one declaration
+// holding many statements: answering per declaration puts every statement in
+// the block under its first name — the same collapse the receiver closes for
+// methods, one waiver ratifying writes it never saw.
+func specSite(spec ast.Spec) string {
+	if vs, ok := spec.(*ast.ValueSpec); ok && len(vs.Names) > 0 {
+		return vs.Names[0].Name
 	}
 	return unnamedDeclSite
+}
+
+// walkDeclSites walks file, calling visit for each node with the site of the
+// declaration that node sits in. A file's imports, types and package-level
+// values are walked too, because a SQL literal bound to a var is still a write.
+//
+// The traversal lives here rather than inline in the collector so a test can
+// drive the REAL attribution over a fixture. Asserting declSite and specSite
+// directly proves the naming helpers work and says nothing about whether the
+// walk reaches them, which is where a grouped block is won or lost.
+func walkDeclSites(fset *token.FileSet, file *ast.File, visit func(site string, n ast.Node)) {
+	// visit returns nothing: every node is offered, because a SQL literal can
+	// sit at any depth and this walk has no subtree it can safely skip.
+	inspect := func(n ast.Node, site string) {
+		ast.Inspect(n, func(n ast.Node) bool { visit(site, n); return true })
+	}
+	for _, decl := range file.Decls {
+		if gen, ok := decl.(*ast.GenDecl); ok {
+			for _, spec := range gen.Specs {
+				inspect(spec, specSite(spec))
+			}
+			continue
+		}
+		inspect(decl, declSite(fset, decl))
+	}
 }
 
 // indirectTableArg ratifies the storekit call sites whose table arrives through
@@ -673,26 +702,26 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 					})
 				}
 			}
-			visit := func(n ast.Node) bool {
+			visit := func(n ast.Node) {
 				switch node := n.(type) {
 				case *ast.BasicLit:
 					if node.Kind != token.STRING {
-						return true
+						return
 					}
 					text, err := strconv.Unquote(node.Value)
 					if err != nil {
-						return true
+						return
 					}
 					record(node.Pos(), sqlWriteTargets(text))
 				case *ast.CallExpr:
 					sel, ok := node.Fun.(*ast.SelectorExpr)
 					if !ok || !storekitTableArg[sel.Sel.Name] || len(node.Args) < 4 {
-						return true
+						return
 					}
 					table, ok := tableArgText(node.Args[2], consts[dir])
 					if !ok {
 						if indirectTableArg.Waived(t, owner+":"+exprText(fset, node.Args[2])) {
-							return true
+							return
 						}
 						// A table this walker cannot read is a table it cannot
 						// attribute, and a skip here reads exactly like a module
@@ -702,21 +731,16 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 							"name the table in a string literal or a package-level string constant, "+
 							"or the write is attributed to no owner at all",
 							fset.Position(node.Pos()), exprText(fset, sel.X), sel.Sel.Name)
-						return true
+						return
 					}
 					record(node.Pos(), []string{strings.ToLower(table)})
 					storekitWrites++
 				}
-				return true
 			}
-			// Per top-level declaration, so every write is attributed to the
-			// function that contains it. A file's imports, types and
-			// package-level vars are walked too — a SQL literal bound to a var
-			// is still a write — and those carry pkgLevelSite.
-			for _, decl := range file.Decls {
-				enclosing = declSite(fset, decl)
-				ast.Inspect(decl, visit)
-			}
+			walkDeclSites(fset, file, func(site string, n ast.Node) {
+				enclosing = site
+				visit(n)
+			})
 			return nil
 		})
 		if err != nil {
@@ -892,52 +916,68 @@ func (w *aWorkspaceWorker) Work() {}
 	})
 
 	t.Run("two package-level statements in one file are two sites", func(t *testing.T) {
-		// erasure_graph.go really does bind two cross-store statements to two
-		// package-level names, and a write outside any function must not fall
-		// back to a token every such write in the file would share.
+		// GROUPED, which is the shape a per-declaration answer gets wrong:
+		// `const (...)` is ONE declaration holding two statements. Separate
+		// `const` statements are two declarations and pass either way, so a
+		// fixture written that way exercises the walk only where it was
+		// already right.
 		const src = `package p
 
-const blankOne = ` + "`UPDATE t SET a = NULL`" + `
-const deleteOne = ` + "`DELETE FROM t`" + `
+const (
+	blankOne  = ` + "`UPDATE t SET a = NULL`" + `
+	deleteOne = ` + "`DELETE FROM t`" + `
+)
 `
-		sites := declSitesOf(t, "statements.go", src)
+		sites := literalSitesOf(t, "statements.go", src)
 		if len(sites) != 2 {
 			t.Fatalf("the fixture no longer declares exactly two statements: %v", sites)
 		}
 		if sites[0] == sites[1] {
-			t.Errorf("both statements name the site %q, so one waiver would ratify both — a "+
-				"package-level write has stopped naming what it is bound to", sites[0])
+			t.Errorf("both statements name the site %q, so one waiver would ratify both — the walk "+
+				"is answering a grouped block per declaration rather than per statement", sites[0])
 		}
 	})
 }
 
-// declSitesOf parses src and returns the site each top-level declaration names.
-func declSitesOf(t *testing.T, filename, src string) []string {
+// literalSitesOf parses src and returns the site attributed to each SQL string
+// literal in it, driving the same walk the collector uses.
+//
+// Through walkDeclSites, not the naming helpers: a case that called specSite
+// directly stayed green when the walk's grouped-block arm was deleted, because
+// nothing it touched had changed.
+func literalSitesOf(t *testing.T, filename, src string) []string {
 	t.Helper()
-	return sitesOf(t, filename, src, func(ast.Decl) bool { return true })
-}
-
-// methodSitesOf is declSitesOf restricted to declarations with a receiver.
-func methodSitesOf(t *testing.T, filename, src string) []string {
-	t.Helper()
-	return sitesOf(t, filename, src, func(d ast.Decl) bool {
-		fn, ok := d.(*ast.FuncDecl)
-		return ok && fn.Recv != nil
+	return sitesOf(t, filename, src, func(n ast.Node) bool {
+		lit, ok := n.(*ast.BasicLit)
+		if !ok || lit.Kind != token.STRING {
+			return false
+		}
+		text, err := strconv.Unquote(lit.Value)
+		return err == nil && len(sqlWriteTargets(text)) > 0
 	})
 }
 
-func sitesOf(t *testing.T, filename, src string, keep func(ast.Decl) bool) []string {
+// methodSitesOf returns the site attributed to each method BODY in src.
+func methodSitesOf(t *testing.T, filename, src string) []string {
+	t.Helper()
+	return sitesOf(t, filename, src, func(n ast.Node) bool {
+		_, ok := n.(*ast.BlockStmt)
+		return ok
+	})
+}
+
+func sitesOf(t *testing.T, filename, src string, keep func(ast.Node) bool) []string {
 	t.Helper()
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, filename, src, 0)
 	if err != nil {
 		t.Fatalf("parse the fixture: %v", err)
 	}
-	sites := make([]string, 0, len(file.Decls))
-	for _, decl := range file.Decls {
-		if keep(decl) {
-			sites = append(sites, declSite(fset, decl))
+	var sites []string
+	walkDeclSites(fset, file, func(site string, n ast.Node) {
+		if n != nil && keep(n) {
+			sites = append(sites, site)
 		}
-	}
+	})
 	return sites
 }
