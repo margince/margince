@@ -45,11 +45,8 @@ func (s *Store) RecomputeLeadScore(ctx context.Context, leadID ids.LeadID, now t
 		if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}
-		// And held: Art. 17 anonymization DELETEs the lead's score history and
-		// manual signals, so a row written after that commit restores the
-		// erased subject's scoring — a factors JSON carrying the ids of
-		// activities they took part in, or a colleague's written judgement
-		// naming them. The probe reads a snapshot; this holds the row.
+		// And held, for the reason SetLeadManualSignal states
+		// (leadmanualsignal.go).
 		if err := auth.LockSubjectLive(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}

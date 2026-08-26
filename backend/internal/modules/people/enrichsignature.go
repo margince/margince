@@ -69,8 +69,11 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		//
 		// writePersonProfileField carries the same liveness on its INSERT and
 		// that is not this: it answers "nothing landed", which this pass counts
-		// as a field somebody had already filled. The probe is what makes an
-		// erased subject a refusal instead of a skip that reads like success.
+		// as a field somebody had already filled. The probe is what refuses an
+		// erased subject at the door instead of counting it skipped. It does
+		// not cover the subject going mid-transaction — the writer's row lock
+		// serializes that, and this pass still reports it as a skip, which is
+		// the honest count for a field that did not land.
 		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}

@@ -15,15 +15,22 @@ package backendarch
 // For most of the two dozen live-probed paths the residue is a stale write. For
 // a path that goes on to INSERT into a table Art. 17 ERASURE CLEARS, it is not:
 // the row it writes is one the erasure had just deleted, restored after the
-// installation was told to forget it. Those paths owe auth.LockSubjectLive, and
-// which ones they are is derived here from the PII registry rather than kept as
-// a list — piiTables already declares which tables an erasure clears, and a
-// table added there brings its writers into this census on the same commit.
+// installation was told to forget it. Those paths owe auth.LockSubjectLive.
 //
-// Reachability rather than a same-function check, because the probe and the
-// insert are routinely two frames apart: ai.Record probes and upsertVerdict
-// writes. The graph is the one packageCallGraph builds, with its package-level
-// statement folding.
+// Reachability BOTH ways, because the probe and the insert are routinely several
+// frames apart and in either order: ai.Record probes and upsertVerdict writes,
+// while activities.UploadAttachment writes and a one-line helper probes. Seeding
+// on "this body names the probe" missed the second shape entirely, and there was
+// a live instance of it.
+//
+// Two things it cannot see, said here rather than left for the next reader to
+// discover. The reach is EXISTENTIAL and unqualified — it answers that a lock is
+// taken somewhere downward, not that it is taken on THIS subject or on an arm
+// the write actually follows; guardedBy names the same hole for its own walk.
+// And the corpus is what the privacy module DELETEs, so a table the erasure
+// clears by UPDATE-to-NULL is outside it, and so is a restoring UPDATE on the
+// write side. Both are presence checks around a per-site argument the comments
+// carry.
 
 import (
 	"fmt"
@@ -44,9 +51,8 @@ const (
 // unlockedLiveWrites ratifies a live-probed writer of an erasure-cleared table
 // that does not hold its subject.
 //
-// Empty, and that is the finding rather than an oversight: every such writer in
-// the tree today takes the lock. The map exists so that adding an entry is a
-// visible decision with a reason beside it.
+// Empty, and the map exists so that adding an entry is a visible decision with a
+// reason beside it rather than a silent edit to the walk above.
 var unlockedLiveWrites = gatekit.Waive(map[string]string{})
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
@@ -62,12 +68,12 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 	probed, locked := 0, 0
 	for _, dir := range moduleDirsWith(t, liveProbe) {
 		graph := packageCallGraph(t, dir)
-		for name, entry := range graph {
-			// reads, not calls: both of these are cross-package
-			// (auth.EnsureWritableLive), and packageCallGraph records a
-			// selector call as an edge only when its base is the receiver.
-			// The Sel is an identifier either way, so it lands in reads.
-			if !entry.reads[liveProbe] {
+		for name := range graph {
+			// Through reaches, which reads identifiers rather than call
+			// edges: both of these are cross-package, and packageCallGraph
+			// records a selector call as an edge only when its base is the
+			// receiver. The Sel is an identifier either way.
+			if !reaches(graph, name, liveProbe) {
 				continue
 			}
 			probed++
@@ -75,8 +81,14 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 			if table == "" {
 				continue
 			}
-			if reaches(graph, name, subjectLock) || unlockedLiveWrites.Waived(t, dir+":"+name) {
+			if reaches(graph, name, subjectLock) {
 				locked++
+				continue
+			}
+			// A waiver does NOT count toward the floor below. Counting one
+			// would let three ratifications plus a broken walk read as a
+			// working census.
+			if unlockedLiveWrites.Waived(t, dir+":"+name) {
 				continue
 			}
 			findings = append(findings, fmt.Sprintf("%s:%s writes %s", dir, name, table))
@@ -86,9 +98,10 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 	// A census that judged nothing certifies nothing, and this one has two ways
 	// to go quiet: the walk can stop finding live-probed functions, and the
 	// reach can stop finding the writes under them.
-	if probed < 15 || locked < 3 {
+	if probed < 50 || locked < 8 {
 		t.Fatalf("this census saw %d live-probed function(s) of which %d write an erasure-cleared table "+
-			"under a held subject; it expects at least 15 and 3, so the walk or the reach has stopped "+
+			"under a held subject; it expects at least 50 and 8 — against the 72 and 12 observed "+
+			"when this floor was set — so the walk or the reach has stopped "+
 			"working rather than the tree having changed", probed, locked)
 	}
 	if len(findings) > 0 {

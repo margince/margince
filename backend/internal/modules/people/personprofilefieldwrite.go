@@ -86,8 +86,13 @@ type personProfileFieldRow struct {
 	Confidence      *float64
 }
 
-// writePersonProfileField writes one evidence row and reports whether it landed —
-// false meaning the field was already answered and this writer defers to it.
+// writePersonProfileField writes one evidence row and reports whether it landed.
+//
+// false carries two meanings and the callers separate them: the field was
+// already answered and this writer defers to it, OR the subject went while this
+// transaction was deciding. The second is the rarer one and the lock below is
+// what makes it reliable; a caller that must tell them apart re-reads, and
+// researchclaim.go says why it turns either into a refusal.
 //
 // The subject is HELD before the row lands, not merely probed by the entry
 // point. person_profile_field is a declared PII table and Art. 17 erasure clears
@@ -96,10 +101,9 @@ type personProfileFieldRow struct {
 // back — in the window between two statements, not over the hours an entry gate
 // closes.
 //
-// Through auth.LockSubjectLive, which is where that lock is spelled; this
-// used to carry its own `SELECT … FOR UPDATE` inside the INSERT and was the only
-// statement in the tree that did. Two writers of one invariant, and the sites
-// that needed it next each had to rediscover the shape.
+// Through auth.LockSubjectLive. This used to carry its own `SELECT … FOR UPDATE`
+// inside the INSERT and was the only statement in the tree that did, which is
+// one writer of the invariant too many.
 //
 // Locking PERSON and not the field row: the field row may not exist yet, and
 // what has to be serialized is the subject's liveness. Every caller that goes

@@ -92,9 +92,10 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // be harmful on the far side of it owes LockSubjectLive as well. This reads a
 // snapshot; the write happens in a later statement of the same transaction, and
 // under READ COMMITTED an archive or an erasure committing in between lands
-// anyway. For most callers the residue is a stale write. Where it is a live
-// capability or a PII row an erasure had just cleared, it is not, and the lock
-// is what makes the two take turns.
+// anyway. For most callers the
+// residue is a stale write. Where it is a live capability or a PII row an
+// erasure had just cleared, it is not, and the lock is what makes the two take
+// turns. Which writers owe it is derived in backend/liveprobelock_test.go.
 func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if err := EnsureVisibleLive(ctx, tx, table, id); err != nil {
 		return err
@@ -106,30 +107,43 @@ func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUI
 // refuses if it is not live, so a write that follows cannot be overtaken by an
 // archive or an Art. 17 erasure the probe could not see.
 //
-// The lock is taken HERE, beside the write, rather than inside
-// EnsureWritableLive where every live-probed path would take it. That placement
-// is the decision and not an accident: the probe runs at the top of two dozen
-// transactions, several of them in `people`, where a documented lock order
-// already exists (the workspace-wide name lock before the organization row) and
-// where renamerecheck.go records a deadlock found only by review when a row lock
-// was taken out of turn. Locking in the primitive would add an edge to every one
-// of those orders at once. Locking at the write adds it only where the residue
-// is harmful, which is a set small enough to audit.
+// It is NOT storekit.LockRow, which runs the same SELECT … FOR UPDATE and
+// answers the same sentinel, and the reason is the layer rather than the SQL.
+// LockRow is a STORE helper: tableownership_test.go counts its table argument as
+// a write by that module and writeauthorityreach_test.go counts it as a mutation
+// owing a row probe. Both are right for the 58 sites where a module locks its
+// own row before patching it. Every call here locks somebody ELSE'S subject —
+// consent locking person, activities locking a polymorphic parent — purely to
+// refuse a race, writing nothing. Routed through LockRow, five reads that mutate
+// nothing would each need a cross-store write ratification and a probe waiver.
+// Row-level authority over another module's subject is what this package is for,
+// so the lock lives beside the probe it completes.
 //
-// FOR NO KEY UPDATE rather than FOR UPDATE: the subject is a parent row that
-// other tables reference, and this must not block an unrelated insert taking a
-// foreign key to it. It conflicts with the archive and the erasure, which both
-// UPDATE the row, and with nothing else.
+// The lock is taken at the WRITE rather than inside EnsureWritableLive, where
+// every live-probed path would take it. That probe runs at the top of two dozen
+// transactions, several in `people`, where a documented order already exists and
+// renamerecheck.go records a deadlock found only by review when a row lock was
+// taken out of turn. Locking in the primitive adds an edge to every one of those
+// orders at once; locking at the write adds it only where the residue is
+// harmful. Call sites take it BEFORE any other row lock in their transaction,
+// because the eraser is subject-first and the opposite order closes a cycle.
 //
-// ErrNotFound on a subject that is gone, which is the answer the probe would
-// have given a moment earlier — a caller that already refused an archived
-// subject refuses one archived since in the same shape.
+// FOR NO KEY UPDATE rather than FOR UPDATE: the subject is a parent row other
+// tables reference, and this must not block a child insert taking a foreign key
+// to it (FOR KEY SHARE). It conflicts with everything else — the archive and the
+// erasure, which UPDATE the row, and any concurrent lock on the same subject.
 //
 // Held by: TestALiveProbedWriteOfAHeldRowLocksItsSubject
-// (backend/liveprobelock_test.go)
+// (backend/liveprobelock_test.go).
 func LockSubjectLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
-	// The table is a compile-time literal at every call site, never a value off
-	// a request; Sanitize is belt for the identifier this cannot bind.
+	// The same closed set every sibling in this file gates on. One call site
+	// passes a request-body value (ai.RecordInput.SubjectType), so this is the
+	// check rather than a formality: Sanitize below stops an injection, but a
+	// table outside this set has no archived_at and would reach the caller as a
+	// raw SQL error where a sentinel is owed.
+	if !ownerScopedTables[table] {
+		return fmt.Errorf("auth: %q is not a row-scoped subject table: %w", table, apperrors.ErrNotFound)
+	}
 	q := fmt.Sprintf(
 		`SELECT 1 FROM %s WHERE id = $1 AND archived_at IS NULL FOR NO KEY UPDATE`,
 		pgx.Identifier{table}.Sanitize())

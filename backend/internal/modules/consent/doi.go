@@ -76,6 +76,23 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
+		// And HELD, before this transaction takes any other row lock. What this
+		// mints is a bearer capability in somebody's mailbox: a working
+		// invitation to GRANT consent, valid for its full TTL. The probe reads a
+		// snapshot, so an erasure committing after it would leave the
+		// installation posting that invitation to a person it had just been told
+		// to forget, and the link would work.
+		//
+		// FIRST, and that ordering is the whole of why it is here rather than
+		// beside the INSERT it guards. The supersession UPDATE below locks this
+		// subject's token rows; Art. 17 erasure and the retention anonymizer
+		// both take the person row and THEN delete those same tokens. Taking the
+		// person second would close the cycle, and nothing in this tree retries a
+		// deadlock — one of the two transactions dies, and when the eraser is the
+		// one that loses, an Art. 17 fulfilment fails.
+		if err := auth.LockSubjectLive(ctx, tx, "person", personID.UUID); err != nil {
+			return err
+		}
 		var requiresDOI bool
 		err := tx.QueryRow(ctx,
 			`SELECT requires_double_opt_in FROM consent_purpose WHERE id = $1 AND archived_at IS NULL`,
@@ -99,20 +116,6 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 		// consent_doi_token rows are a security artifact, not a kernel
 		// entity, so the row id stays untyped.
 		var tokenRowID ids.UUID
-		// What this mints is a bearer capability in somebody's mailbox: a
-		// working invitation to GRANT consent, valid for its full TTL. So the
-		// probe above is not enough on its own — an erasure committing between
-		// it and this statement, or between this statement and COMMIT, would
-		// leave the installation posting an invitation to a person it has just
-		// been told to forget, and the link would work.
-		//
-		// The lock is what makes the two take turns rather than race; the
-		// predicate the statement used to carry closed only the first of those
-		// two windows. auth.LockSubjectLive says why it is taken here and not
-		// inside the probe.
-		if err := auth.LockSubjectLive(ctx, tx, "person", personID.UUID); err != nil {
-			return err
-		}
 		err = tx.QueryRow(ctx, `
 			INSERT INTO consent_doi_token (person_id, purpose_id, token_hash, issued_at, expires_at)
 			VALUES ($1, $2, $3, $4, $5)
