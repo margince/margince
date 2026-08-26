@@ -87,9 +87,9 @@ func TestDeletingADocumentRemovesItsChunksItsVectorsAndItsBlob(t *testing.T) {
 		t.Fatalf("%d passage(s) survived the delete", live)
 	}
 	// Every row, not only the live ones: this is a delete, not an archive.
-	if any := ee.env.WsCount(t,
-		`SELECT count(*) FROM knowledge_chunk WHERE corpus_id = $1`, ee.corpus); any != 0 {
-		t.Fatalf("%d passage row(s) survived the delete", any)
+	if remaining := ee.env.WsCount(t,
+		`SELECT count(*) FROM knowledge_chunk WHERE corpus_id = $1`, ee.corpus); remaining != 0 {
+		t.Fatalf("%d passage row(s) survived the delete", remaining)
 	}
 	if rows := ee.env.WsCount(t,
 		`SELECT count(*) FROM knowledge_document WHERE id = $1`, ee.doc); rows != 0 {

@@ -297,10 +297,10 @@ func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 		// behind in the audit trail is not a deletion.
 		if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", documentID,
 			map[string]any{
-				"filename":     doc.filename,
-				"checksum":     doc.checksum,
-				"content_type": doc.contentType,
-				"chunk_count":  doc.chunkCount,
+				"filename":       doc.filename,
+				"checksum":       doc.checksum,
+				"content_type":   doc.contentType,
+				chunkCountColumn: doc.chunkCount,
 			}, nil); err != nil {
 			return fmt.Errorf("audit corpus document delete: %w", err)
 		}
