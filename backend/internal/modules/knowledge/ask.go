@@ -98,31 +98,81 @@ func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string
 		return state, nil, err
 	}
 	if vec == nil {
-		// An empty question, or one the lane could only answer with a zero
-		// vector. Every cosine against zero is NaN and `ORDER BY sim DESC`
-		// sorts NaN first, so there is nothing to rank and nothing honest to
-		// say except that the corpus does not cover it.
+		// Nothing to rank. Every cosine against the zero vector is NaN and
+		// `ORDER BY sim DESC` sorts NaN FIRST, so ranking would put arbitrary
+		// passages at the top of an answer.
+		//
+		// Reported as not_covered, and the choice is worth stating because the
+		// alternative was considered. not_covered is a statement about the
+		// QUESTION, which is exactly right here: a question with no words in it
+		// is a question the corpus cannot answer, and the reader who typed
+		// spaces gets the topic statement quoted back, which tells them what to
+		// ask instead. The one case this reads slightly wrong for — a real
+		// question the lane could only answer with a zero vector — is a lane
+		// malfunction, and it is already the outcome that spends nothing and
+		// claims nothing.
 		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotCovered
 		return state, nil, nil
 	}
 
-	passages, err := s.rank(ctx, corpusID, vec, identity)
+	// Readiness is settled AGAIN here, and this second read is the
+	// authoritative one. The first decides whether to spend a model call
+	// embedding the question at all; it cannot be the answer, because a
+	// transaction may not be held across that network call.
+	//
+	// What can change in between is exactly what makes an outcome dishonest. A
+	// document uploaded after the first read leaves the corpus mid-ingest, and
+	// retrieval over the old embedded subset would find nothing and report
+	// not_covered — blaming the question for a corpus that is simply not
+	// finished. A document DELETED in between leaves passages ranked out of
+	// rows that no longer exist, and the answer would cite a file the corpus
+	// does not hold.
+	//
+	// Both disappear by reading readiness, the passages and the floor in ONE
+	// transaction, which is what this is.
+	var grounded []Passage
+	err = s.tx(ctx, func(tx pgx.Tx) (err error) {
+		state, grounded, err = groundedIn(ctx, tx, corpusID, vec, identity)
+		return err
+	})
 	if err != nil {
 		return state, nil, err
 	}
-	floor, err := s.groundingFloor(ctx, corpusID)
-	if err != nil {
-		return state, nil, err
-	}
-	grounded := passages[:0]
-	for _, p := range passages {
-		if p.Similarity >= floor {
-			grounded = append(grounded, p)
-		}
+	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+		return state, nil, nil
 	}
 	if len(grounded) == 0 {
 		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotCovered
 		return state, nil, nil
+	}
+	return state, grounded, nil
+}
+
+// groundedIn settles readiness, ranks, and keeps what clears the floor — all
+// inside ONE transaction, which is the point: see Retrieve.
+func groundedIn(
+	ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, identity string,
+) (Readiness, []Passage, error) {
+	state, err := readinessIn(ctx, tx, corpusID, identity)
+	if err != nil {
+		return state, nil, err
+	}
+	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+		return state, nil, nil
+	}
+	passages, err := rankIn(ctx, tx, corpusID, vec, identity)
+	if err != nil {
+		return state, nil, err
+	}
+	floor, err := groundingFloorIn(ctx, tx, corpusID)
+	if err != nil {
+		return state, nil, err
+	}
+	var grounded []Passage
+	for _, p := range passages {
+		if p.Similarity >= floor {
+			grounded = append(grounded, p)
+		}
 	}
 	return state, grounded, nil
 }
@@ -149,48 +199,56 @@ func (s *Store) Retrieve(ctx context.Context, corpusID ids.UUID, question string
 // and why, which is where that fact belongs.
 func (s *Store) readinessOf(ctx context.Context, corpusID ids.UUID, identity string) (Readiness, error) {
 	var state Readiness
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		row, err := readCorpus(ctx, tx, corpusID, storekit.LiveOnly)
-		if err != nil {
-			return err
-		}
-		corpus := row.wire()
-		state.Coverage = corpus.Coverage
-		state.Corpus = crmcontracts.KnowledgeAnswerCorpus{
-			Id:             corpus.Id,
-			Name:           corpus.Name,
-			TopicStatement: corpus.TopicStatement,
-		}
-		var inFlight, done int
-		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FILTER (WHERE ingest_status IN ('queued', 'running')),
-			        count(*) FILTER (WHERE ingest_status = 'done')
-			   FROM knowledge_document
-			  WHERE corpus_id = $1 AND archived_at IS NULL`, corpusID).Scan(&inFlight, &done); err != nil {
-			return fmt.Errorf("count the corpus's documents: %w", err)
-		}
-		var retrievable int
-		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM knowledge_chunk
-			  WHERE corpus_id = $1 AND archived_at IS NULL AND embed_identity = $2`,
-			corpusID, identity).Scan(&retrievable); err != nil {
-			return fmt.Errorf("count the corpus's retrievable passages: %w", err)
-		}
-		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeAnswered
-		switch {
-		case corpus.Reindexing != nil && *corpus.Reindexing,
-			inFlight > 0,
-			done == 0,
-			corpus.Coverage.ChunksTotal == 0,
-			// Counted at the LIVE identity, not at any identity. Vectors under
-			// a superseded binding retrieve nothing, and saying not_covered
-			// would blame the question for prose the corpus is holding.
-			retrievable < corpus.Coverage.ChunksTotal:
-			state.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotReady
-		}
-		return nil
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		state, err = readinessIn(ctx, tx, corpusID, identity)
+		return err
 	})
 	return state, err
+}
+
+// readinessIn is readinessOf inside a transaction the caller holds, so the
+// retrieval below can share one snapshot with it.
+func readinessIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, identity string) (Readiness, error) {
+	var state Readiness
+	row, err := readCorpus(ctx, tx, corpusID, storekit.LiveOnly)
+	if err != nil {
+		return state, err
+	}
+	corpus := row.wire()
+	state.Coverage = corpus.Coverage
+	state.Corpus = crmcontracts.KnowledgeAnswerCorpus{
+		Id:             corpus.Id,
+		Name:           corpus.Name,
+		TopicStatement: corpus.TopicStatement,
+	}
+	var inFlight, done int
+	if err := tx.QueryRow(ctx,
+		`SELECT count(*) FILTER (WHERE ingest_status IN ('queued', 'running')),
+		        count(*) FILTER (WHERE ingest_status = 'done')
+		   FROM knowledge_document
+		  WHERE corpus_id = $1 AND archived_at IS NULL`, corpusID).Scan(&inFlight, &done); err != nil {
+		return state, fmt.Errorf("count the corpus's documents: %w", err)
+	}
+	var retrievable int
+	if err := tx.QueryRow(ctx,
+		`SELECT count(*) FROM knowledge_chunk
+		  WHERE corpus_id = $1 AND archived_at IS NULL AND embed_identity = $2`,
+		corpusID, identity).Scan(&retrievable); err != nil {
+		return state, fmt.Errorf("count the corpus's retrievable passages: %w", err)
+	}
+	state.Outcome = crmcontracts.KnowledgeAnswerOutcomeAnswered
+	switch {
+	case corpus.Reindexing != nil && *corpus.Reindexing,
+		inFlight > 0,
+		done == 0,
+		corpus.Coverage.ChunksTotal == 0,
+		// Counted at the LIVE identity, not at any identity. Vectors under
+		// a superseded binding retrieve nothing, and saying not_covered
+		// would blame the question for prose the corpus is holding.
+		retrievable < corpus.Coverage.ChunksTotal:
+		state.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotReady
+	}
+	return state, nil
 }
 
 // questionVector embeds the question, or reports that there is nothing to rank.
@@ -214,53 +272,51 @@ func (s *Store) questionVector(ctx context.Context, question string, e vectorkit
 	return res.Vectors[0], nil
 }
 
-// rank returns the corpus's closest passages to the question vector.
-func (s *Store) rank(ctx context.Context, corpusID ids.UUID, vec []float32, identity string) ([]Passage, error) {
+// rankIn returns the corpus's closest passages to the question vector, inside
+// the transaction the caller holds.
+func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, identity string) ([]Passage, error) {
+	// The `c.embed_identity = $3` predicate is load-bearing twice over, and
+	// must never be removed. For correctness: a vector from an older binding
+	// lives in a space this query's vector does not share, so ranking against
+	// it is meaningless. For crash avoidance: the column is unbounded width, so
+	// comparing two widths raises an error outright — the filter has to exclude
+	// those rows BEFORE the projection computes the distance, which is why it
+	// is a WHERE clause and not a HAVING.
+	rows, err := tx.Query(ctx,
+		`SELECT c.id, c.document_id, d.filename, c.text, 1 - (c.embedding <=> $1::vector) AS sim
+		   FROM knowledge_chunk c
+		   JOIN knowledge_document d ON d.id = c.document_id
+		  WHERE c.corpus_id = $2
+		    AND c.embed_identity = $3
+		    AND c.archived_at IS NULL
+		  ORDER BY c.embedding <=> $1::vector
+		  LIMIT $4`,
+		vectorkit.Literal(vec), corpusID, identity, retrieveLimit)
+	if err != nil {
+		return nil, fmt.Errorf("rank the corpus's passages: %w", err)
+	}
+	defer rows.Close()
 	var out []Passage
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx,
-			// The `c.embed_identity = $3` predicate is load-bearing twice over,
-			// and must never be removed. For correctness: a vector from an
-			// older binding lives in a space this query's vector does not
-			// share, so ranking against it is meaningless. For crash
-			// avoidance: the column is unbounded width, so comparing two widths
-			// raises an error outright — the filter has to exclude those rows
-			// BEFORE the projection computes the distance, which is why it is a
-			// WHERE clause and not a HAVING.
-			`SELECT c.id, c.document_id, d.filename, c.text, 1 - (c.embedding <=> $1::vector) AS sim
-			   FROM knowledge_chunk c
-			   JOIN knowledge_document d ON d.id = c.document_id
-			  WHERE c.corpus_id = $2
-			    AND c.embed_identity = $3
-			    AND c.archived_at IS NULL
-			  ORDER BY c.embedding <=> $1::vector
-			  LIMIT $4`,
-			vectorkit.Literal(vec), corpusID, identity, retrieveLimit)
-		if err != nil {
-			return fmt.Errorf("rank the corpus's passages: %w", err)
+	for rows.Next() {
+		var p Passage
+		if err := rows.Scan(&p.ChunkID, &p.DocumentID, &p.DocumentName, &p.Text, &p.Similarity); err != nil {
+			return nil, err
 		}
-		defer rows.Close()
-		for rows.Next() {
-			var p Passage
-			if err := rows.Scan(&p.ChunkID, &p.DocumentID, &p.DocumentName, &p.Text, &p.Similarity); err != nil {
-				return err
-			}
-			out = append(out, p)
-		}
-		return rows.Err()
-	})
-	return out, err
+		out = append(out, p)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
-// groundingFloor reads the similarity a passage must reach to be citable.
-func (s *Store) groundingFloor(ctx context.Context, corpusID ids.UUID) (float64, error) {
+// groundingFloorIn reads the similarity a passage must reach to be citable,
+// inside the transaction the caller holds.
+func groundingFloorIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID) (float64, error) {
 	var floor float64
-	err := s.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT min_similarity FROM knowledge_corpus WHERE id = $1 AND archived_at IS NULL`,
-			corpusID).Scan(&floor)
-	})
-	if err != nil {
+	if err := tx.QueryRow(ctx,
+		`SELECT min_similarity FROM knowledge_corpus WHERE id = $1 AND archived_at IS NULL`,
+		corpusID).Scan(&floor); err != nil {
 		return 0, notFoundOr(err, "read the corpus's grounding floor")
 	}
 	return floor, nil

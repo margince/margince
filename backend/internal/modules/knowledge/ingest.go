@@ -72,9 +72,15 @@ type IngestSource struct {
 func (s *Store) BeginIngest(ctx context.Context, documentID ids.UUID) (IngestSource, error) {
 	var src IngestSource
 	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// FOR UPDATE, so two attempts at one document serialize here rather
+		// than both deleting the previous chunks and both inserting their own.
+		// River dedupes a QUEUED ingest by args, but a worker declared dead
+		// while it is still running has its row rescued and re-run — so the
+		// overlap is reachable, and the schema's uniqueness index is the
+		// backstop rather than the only guard.
 		if err := tx.QueryRow(ctx,
 			`SELECT corpus_id, storage_key FROM knowledge_document
-			 WHERE id = $1 AND archived_at IS NULL`, documentID).
+			 WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, documentID).
 			Scan(&src.CorpusID, &src.StorageKey); err != nil {
 			return notFoundOr(err, "read the document to ingest")
 		}
@@ -83,7 +89,8 @@ func (s *Store) BeginIngest(ctx context.Context, documentID ids.UUID) (IngestSou
 		}
 		_, err := tx.Exec(ctx,
 			`UPDATE knowledge_document
-			 SET ingest_status = 'running', ingest_detail = NULL, chunk_count = 0
+			 SET ingest_status = 'running', ingest_detail = NULL, chunk_count = 0,
+			     ingest_started_at = now()
 			 WHERE id = $1 AND archived_at IS NULL`, documentID)
 		if err != nil {
 			return fmt.Errorf("open the document's ingest: %w", err)
@@ -106,6 +113,20 @@ func (s *Store) BeginIngest(ctx context.Context, documentID ids.UUID) (IngestSou
 // live chunks under an archived document a moment later.
 func (s *Store) WriteChunks(ctx context.Context, documentID ids.UUID, corpusID ids.UUID, chunks []Chunk) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		// The CORPUS row first, and the order matters twice.
+		//
+		// The ceiling below is a statement about the corpus, not about this
+		// document, so the document's own lock does not serialize it: two
+		// ingests of DIFFERENT documents in one corpus both read the same count
+		// under the ceiling and both commit, landing the corpus permanently
+		// over a bound nothing re-checks. Locking the corpus is what makes the
+		// count and the insert one decision.
+		//
+		// Corpus before document, always, so two attempts in one corpus cannot
+		// deadlock by taking them in opposite orders.
+		if _, err := storekit.LockRow(ctx, tx, "knowledge_corpus", corpusID, storekit.LiveOnly); err != nil {
+			return err
+		}
 		var archived *string
 		var wasCount int
 		if err := tx.QueryRow(ctx,
@@ -179,18 +200,27 @@ func (s *Store) FinishIngest(ctx context.Context, documentID ids.UUID, chunkCoun
 // FailIngest closes an attempt terminally, with a reason the uploader can act
 // on, and takes this document's chunks with it.
 //
+// The STORED FILE goes with them. No further attempt will read a failed
+// document's bytes — the ingest is over — so leaving them is an unbounded store
+// of files nothing will open: the corpus ceiling bounds PASSAGES, and a
+// document refused BY that ceiling would otherwise keep its megabytes forever,
+// once per attempt anybody cares to make. The row is deliberately kept, because
+// the reason it failed is what the uploader needs; it is the bytes that have no
+// further use.
+//
 // It is called only once River's attempts are exhausted. A document mid-retry
 // stays `running`, which matters because readiness reads that word: a corpus
 // with an attempt still to come is not ready, and is not permanently broken
 // either.
 func (s *Store) FailIngest(ctx context.Context, documentID ids.UUID, detail string) error {
-	return s.tx(ctx, func(tx pgx.Tx) error {
+	var storageKey string
+	if err := s.tx(ctx, func(tx pgx.Tx) error {
 		var wasStatus string
 		var wasDetail *string
 		if err := tx.QueryRow(ctx,
-			`SELECT ingest_status, ingest_detail FROM knowledge_document
+			`SELECT ingest_status, ingest_detail, storage_key FROM knowledge_document
 			 WHERE id = $1 AND archived_at IS NULL FOR UPDATE`, documentID).
-			Scan(&wasStatus, &wasDetail); err != nil {
+			Scan(&wasStatus, &wasDetail, &storageKey); err != nil {
 			return notFoundOr(err, "re-read the document before failing its ingest")
 		}
 		if err := deleteChunksOf(ctx, tx, documentID); err != nil {
@@ -211,7 +241,20 @@ func (s *Store) FailIngest(ctx context.Context, documentID ids.UUID, detail stri
 			return fmt.Errorf("audit the failed ingest: %w", err)
 		}
 		return nil
-	})
+	}); err != nil {
+		return err
+	}
+	// After the row commits, and only when an object store is bound. A role
+	// without one never wrote the bytes in the first place, and a delete that
+	// could not run is not a reason to leave the document `running` — the row
+	// already says why it failed, which is what the uploader reads.
+	if s.blob == nil {
+		return nil
+	}
+	if err := s.blob.Delete(ctx, storageKey); err != nil {
+		return fmt.Errorf("delete the failed document's stored file: %w", err)
+	}
+	return nil
 }
 
 // OpenDocument streams a stored document's bytes.

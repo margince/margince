@@ -2105,6 +2105,7 @@ public.knowledge_chunk.knowledge_chunk_document_fk FOREIGN KEY (document_id) REF
 public.knowledge_chunk.knowledge_chunk_embed_pairing CHECK (((embed_identity IS NULL) = (embedding IS NULL)))
 public.knowledge_chunk.knowledge_chunk_pkey PRIMARY KEY (id)
 public.knowledge_chunk.text text NOT NULL gen=- def=-
+public.knowledge_chunk_one_per_span CREATE UNIQUE INDEX knowledge_chunk_one_per_span ON public.knowledge_chunk USING btree (document_id, chunk_ix)
 public.knowledge_chunk_pkey CREATE UNIQUE INDEX knowledge_chunk_pkey ON public.knowledge_chunk USING btree (id)
 public.knowledge_chunk_retrieval CREATE INDEX knowledge_chunk_retrieval ON public.knowledge_chunk USING btree (corpus_id, embed_identity) WHERE (archived_at IS NULL)
 public.knowledge_corpus acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
@@ -2121,7 +2122,6 @@ public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
 public.knowledge_corpus.name text NOT NULL gen=- def=-
 public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
 public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-
-public.knowledge_corpus.tuned_under_identity text gen=- def=-
 public.knowledge_corpus.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.knowledge_corpus_one_default CREATE UNIQUE INDEX knowledge_corpus_one_default ON public.knowledge_corpus USING btree (default_ask) WHERE (default_ask AND (archived_at IS NULL))
 public.knowledge_corpus_pkey CREATE UNIQUE INDEX knowledge_corpus_pkey ON public.knowledge_corpus USING btree (id)
@@ -2137,6 +2137,7 @@ public.knowledge_document.created_at timestamp with time zone NOT NULL gen=- def
 public.knowledge_document.filename text NOT NULL gen=- def=-
 public.knowledge_document.id uuid NOT NULL gen=- def=uuidv7()
 public.knowledge_document.ingest_detail text gen=- def=-
+public.knowledge_document.ingest_started_at timestamp with time zone gen=- def=-
 public.knowledge_document.ingest_status text NOT NULL gen=- def='queued'::text
 public.knowledge_document.knowledge_document_corpus_fk FOREIGN KEY (corpus_id) REFERENCES knowledge_corpus(id) ON DELETE RESTRICT
 public.knowledge_document.knowledge_document_detail_shape CHECK (((ingest_status = 'failed'::text) = (ingest_detail IS NOT NULL)))

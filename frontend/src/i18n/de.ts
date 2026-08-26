@@ -4772,8 +4772,6 @@ export const de = {
     "{documents} Dokumente · {embedded} von {total} Abschnitten durchsuchbar",
   "knowledge.reindexing":
     "Diese Sammlung wird nach einer Änderung der Textindizierung neu gelesen. Eine Frage meldet bis dahin, dass sie nicht bereit ist; verloren ist nichts.",
-  "knowledge.tuningStale":
-    "Die Schwelle für diese Sammlung wurde gegen einen anderen Textindex eingestellt. Der Wert ist ein Überbleibsel und keine Einstellung — er sollte überprüft werden.",
   "knowledge.showDocuments": "Dokumente anzeigen",
   "knowledge.hideDocuments": "Dokumente ausblenden",
   "knowledge.documents": "Dokumente",

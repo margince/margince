@@ -21939,8 +21939,6 @@ export interface components {
              * @description The grounding floor. Below it a question is refused before any model call.
              */
             min_similarity: number;
-            /** @description True when min_similarity was tuned under an embed identity that no longer serves this workspace. The number is then a leftover, not a threshold. */
-            tuning_stale?: boolean;
             /** @description The corpus the command palette's ask lands on. At most one per workspace. */
             default_ask: boolean;
             /** @description A re-embed is in flight; every ask answers not_ready until it finishes. */
@@ -21985,7 +21983,6 @@ export interface components {
             id: string;
             name: string;
             topic_statement: string;
-            tuning_stale?: boolean;
         };
         KnowledgeClaim: {
             /** @description One sentence of the answer. Absent when generated_by is deterministic — then the quote stands on its own and no prose was written. */

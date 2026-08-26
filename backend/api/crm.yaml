@@ -29103,12 +29103,6 @@ components:
           minimum: 0
           maximum: 1
           description: The grounding floor. Below it a question is refused before any model call.
-        tuning_stale:
-          type: boolean
-          description: >-
-            True when min_similarity was tuned under an embed identity that no
-            longer serves this workspace. The number is then a leftover, not a
-            threshold.
         default_ask:
           type: boolean
           description: The corpus the command palette's ask lands on. At most one per workspace.
@@ -29183,7 +29177,6 @@ components:
         id: { type: string, format: uuid }
         name: { type: string }
         topic_statement: { type: string }
-        tuning_stale: { type: boolean }
 
     KnowledgeClaim:
       type: object

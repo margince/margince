@@ -282,15 +282,10 @@ function DocumentSetRow({
             documents: formatNumber(set.coverage.documents_total, locale),
           })}
         </p>
-        {/* Two DIFFERENT statements, never collapsed into one. A set being
-            re-embedded has nothing for the reader to do but wait; a stale
-            tuning is a number that no longer means what it meant, and is the
-            reader's to revisit. */}
+        {/* A set being re-read has nothing for the reader to do but wait, and
+            saying so is different from saying it is not ready. */}
         {set.reindexing ? (
           <Callout tone="info">{t("knowledge.reindexing")}</Callout>
-        ) : null}
-        {set.tuning_stale ? (
-          <Callout tone="warn">{t("knowledge.tuningStale")}</Callout>
         ) : null}
         <Button variant="ghost" onClick={() => setOpen((was) => !was)}>
           {open ? t("knowledge.hideDocuments") : t("knowledge.showDocuments")}

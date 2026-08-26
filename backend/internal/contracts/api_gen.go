@@ -17768,7 +17768,6 @@ type KnowledgeAnswerCorpus struct {
 	Id             openapi_types.UUID `json:"id"`
 	Name           string             `json:"name"`
 	TopicStatement string             `json:"topic_statement"`
-	TuningStale    *bool              `json:"tuning_stale,omitempty"`
 }
 
 // KnowledgeClaim defines model for KnowledgeClaim.
@@ -17803,9 +17802,6 @@ type KnowledgeCorpus struct {
 
 	// TopicStatement What this corpus covers, in the workspace's own words. Quoted back in the refusal when a question falls below the grounding floor, so it is read by a person at their least patient moment — write it as a sentence, not a label.
 	TopicStatement string `json:"topic_statement"`
-
-	// TuningStale True when min_similarity was tuned under an embed identity that no longer serves this workspace. The number is then a leftover, not a threshold.
-	TuningStale *bool `json:"tuning_stale,omitempty"`
 }
 
 // KnowledgeCorpusList Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it.

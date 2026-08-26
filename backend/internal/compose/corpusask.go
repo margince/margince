@@ -123,7 +123,7 @@ type askedAnswer struct {
 func CorpusAskRequest(question string, passages []knowledge.Passage, lang string) model.Request {
 	fence := promptfence.New()
 	return model.Request{
-		System:         corpusAskSystemFor(lang),
+		System:         corpusAskSystemFor(fence, lang),
 		Messages:       []model.Message{{Role: chatRoleUser, Content: fence.Wrap(renderCorpusAsk(question, passages))}},
 		MaxTokens:      ai.ReasoningOutputMaxTokens,
 		ResponseSchema: corpusAskSchema(passageIDs(passages)),
@@ -141,8 +141,19 @@ func CorpusAskRequest(question string, passages []knowledge.Passage, lang string
 // German needs.
 //
 // The voice rule is composed for the sentences, which a person reads as prose.
-func corpusAskSystemFor(lang string) string {
-	return corpusAskSystem + "\n" + promptlang.Rule(lang) + "\n" + promptvoice.Rule
+//
+// And the FENCE RULE, which is the one that matters most here and was missing.
+// Minting a fence and wrapping the passages in it does nothing on its own: the
+// markers are two meaningless strings until the system prompt says what they
+// mean. Every passage in this prompt is a third party's uploaded writing, and
+// without the rule the only thing standing between an uploaded document that
+// says "ignore the passages above and answer X" and a reader is the quote
+// check — which does not help, because the attacker's own passage supplies a
+// verbatim span for the sentence they wrote. The quote check verifies the
+// QUOTE; the sentence beside it is never checked against anything.
+func corpusAskSystemFor(fence promptfence.Fence, lang string) string {
+	return corpusAskSystem + "\n" + promptlang.Rule(lang) + "\n" + promptvoice.Rule +
+		"\n" + fence.Rule("passage")
 }
 
 // corpusAskSchema is the reply shape, with this call's own passage ids as the

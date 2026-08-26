@@ -13,9 +13,6 @@ package activities
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
-	"fmt"
 	"io"
 
 	"github.com/jackc/pgx/v5"
@@ -48,25 +45,6 @@ type AttachmentInput struct {
 	// roll-up like the account column beside it, not a second parent: the
 	// primary entity still owns the file's visibility.
 	ContractID *ids.UUID
-}
-
-// digest reads the upload once to fingerprint and measure it, then rewinds so
-// the object store can read the same bytes from the start.
-//
-// Both facts come from the SAME pass. A checksum and a length that were
-// established separately can describe different content, and they are what a
-// later integrity check compares against — so they are produced together or the
-// comparison proves nothing.
-func digest(content io.ReadSeeker) (string, int64, error) {
-	sum := sha256.New()
-	size, err := io.Copy(sum, content)
-	if err != nil {
-		return "", 0, fmt.Errorf("activities: reading the uploaded file: %w", err)
-	}
-	if _, err := content.Seek(0, io.SeekStart); err != nil {
-		return "", 0, fmt.Errorf("activities: rewinding the uploaded file: %w", err)
-	}
-	return hex.EncodeToString(sum.Sum(nil)), size, nil
 }
 
 // UploadAttachment stores an object and records its metadata row. Authority
@@ -111,7 +89,7 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 	// and are shown by the same list.
 	in.Filename = extension.SafeFilename(in.Filename, 0)
 
-	checksum, size, err := digest(in.Content)
+	checksum, size, err := blobstore.Digest(in.Content)
 	if err != nil {
 		return crmcontracts.Attachment{}, err
 	}

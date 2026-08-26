@@ -22,12 +22,19 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
 
+// defaultAskColumn is the flag naming the corpus the command palette asks. It
+// appears in the audit images on both sides of a move, and in the statement
+// that performs it — one spelling, because a column name typed three times is
+// one typo from an audit row describing a field that does not exist.
+const defaultAskColumn = "default_ask"
+
 // DefaultMinSimilarity is the grounding floor a corpus starts life with: the
 // cosine a passage must reach before it may be cited at all.
 //
-// It is a starting point rather than a tuned value, and the corpus carries
-// tuned_under_identity precisely so a floor that WAS tuned can be told apart
-// from one that was merely defaulted. 0.35 is deliberately permissive — the
+// It is a starting point rather than a tuned value, and nothing in this build
+// records which binding a floor WAS tuned against — the surface that would use
+// such a record does not exist, so neither does the column. 0.35 is
+// deliberately permissive — the
 // quote check downstream is what keeps an ungrounded sentence out of an
 // answer, and a floor set high enough to do that job on its own would refuse
 // questions the corpus does answer.
@@ -102,7 +109,7 @@ func (s *Store) CreateCorpus(ctx context.Context, in NewCorpus) (crmcontracts.Kn
 			"name":            in.Name,
 			"topic_statement": in.TopicStatement,
 			"min_similarity":  floor,
-			"default_ask":     in.DefaultAsk,
+			defaultAskColumn:  in.DefaultAsk,
 		}); err != nil {
 			return fmt.Errorf("audit knowledge corpus create: %w", err)
 		}
@@ -182,7 +189,7 @@ func buildCorpusPatch(current crmcontracts.KnowledgeCorpus, in UpdateCorpus) *st
 		p.Set("min_similarity", current.MinSimilarity, *in.MinSimilarity)
 	}
 	if in.DefaultAsk != nil {
-		p.Set("default_ask", current.DefaultAsk, *in.DefaultAsk)
+		p.Set(defaultAskColumn, current.DefaultAsk, *in.DefaultAsk)
 	}
 	return p
 }
@@ -194,10 +201,43 @@ func buildCorpusPatch(current crmcontracts.KnowledgeCorpus, in UpdateCorpus) *st
 // partial unique index is what makes the second create a success instead of a
 // 409 the caller cannot act on.
 func clearDefaultAsk(ctx context.Context, tx pgx.Tx, keep ids.UUID) error {
-	if _, err := tx.Exec(ctx,
-		`UPDATE knowledge_corpus SET default_ask = false
-		 WHERE default_ask AND archived_at IS NULL AND id <> $1`, keep); err != nil {
-		return fmt.Errorf("clear the previous default corpus: %w", err)
+	// Read first, so the DEMOTED corpus gets an audit row of its own.
+	//
+	// The write-shape gate is per entry point and cannot see a second entity
+	// mutated inside an audited call, so nothing would have caught this: the
+	// corpus that LOST the flag is a different record from the one the caller
+	// named, and without its own row its history never says the flag moved or
+	// who moved it. "Why did the palette stop asking my set" is then
+	// unanswerable from the trail.
+	rows, err := tx.Query(ctx,
+		`SELECT id FROM knowledge_corpus
+		  WHERE default_ask AND archived_at IS NULL AND id <> $1 FOR UPDATE`, keep)
+	if err != nil {
+		return fmt.Errorf("find the previous default corpus: %w", err)
+	}
+	var demoted []ids.UUID
+	for rows.Next() {
+		var id ids.UUID
+		if err := rows.Scan(&id); err != nil {
+			rows.Close()
+			return err
+		}
+		demoted = append(demoted, id)
+	}
+	rows.Close()
+	if err := rows.Err(); err != nil {
+		return err
+	}
+	for _, id := range demoted {
+		if _, err := tx.Exec(ctx,
+			`UPDATE knowledge_corpus SET default_ask = false WHERE id = $1`, id); err != nil {
+			return fmt.Errorf("clear the previous default corpus: %w", err)
+		}
+		if _, err := storekit.Audit(ctx, tx, "update", "knowledge_corpus", id,
+			map[string]any{defaultAskColumn: true},
+			map[string]any{defaultAskColumn: false}); err != nil {
+			return fmt.Errorf("audit the demoted default corpus: %w", err)
+		}
 	}
 	return nil
 }

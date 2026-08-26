@@ -8,7 +8,6 @@ CREATE TABLE knowledge_corpus (
     description text,
     topic_statement text NOT NULL,
     min_similarity double precision DEFAULT 0.35 NOT NULL,
-    tuned_under_identity text,
     default_ask boolean DEFAULT false NOT NULL,
     reindexing boolean DEFAULT false NOT NULL,
     captured_by text NOT NULL,
@@ -35,6 +34,11 @@ CREATE TABLE knowledge_document (
     storage_key text NOT NULL,
     checksum text NOT NULL,
     ingest_status text DEFAULT 'queued' NOT NULL,
+    -- When the CURRENT attempt began, which updated_at cannot say: the trigger
+    -- moves that for any write, so a row touched for any other reason would
+    -- look like a fresh attempt. The sweep that closes an ingest whose worker
+    -- went away needs the attempt's own start and nothing else's.
+    ingest_started_at timestamptz,
     ingest_detail text,
     chunk_count integer DEFAULT 0 NOT NULL,
     captured_by text NOT NULL,
@@ -82,6 +86,20 @@ ALTER TABLE knowledge_chunk ADD CONSTRAINT knowledge_chunk_pkey PRIMARY KEY (id)
 -- text that only the document they were cut from gives meaning.
 ALTER TABLE knowledge_chunk ADD CONSTRAINT knowledge_chunk_document_fk
     FOREIGN KEY (document_id) REFERENCES knowledge_document (id) ON DELETE CASCADE;
+
+-- One row per span per document, held by the SCHEMA rather than by the ingest
+-- being careful.
+--
+-- Two attempts at one document can overlap: River dedupes a queued ingest by
+-- args, but a worker declared dead while it is still running has its row
+-- rescued and re-run, and both attempts then delete the previous chunks and
+-- insert their own. Nothing in the application would notice — the rows differ
+-- only by id — and the corpus would hold every passage twice, cite duplicates,
+-- report a chunk_count half of what it holds, and pass the per-corpus ceiling
+-- while over it. Here the second insert is refused, the attempt fails, and
+-- River retries it cleanly.
+CREATE UNIQUE INDEX knowledge_chunk_one_per_span
+    ON knowledge_chunk (document_id, chunk_ix);
 
 -- The ask's hot path and the readiness count both key on this pair. There is
 -- deliberately no vector index: the column is unbounded width, so an index over

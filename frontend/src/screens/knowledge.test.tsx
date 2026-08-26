@@ -181,19 +181,6 @@ describe("KnowledgeCard", () => {
     expect(await screen.findByText(/being re-read/i)).toBeTruthy();
   });
 
-  it("says a threshold is a leftover when it was tuned against another index", async () => {
-    vi.stubGlobal(
-      "fetch",
-      backendFor(ADMIN, { sets: [corpus({ tuning_stale: true })] }).fetchMock,
-    );
-    render(<KnowledgeCard />);
-
-    expect(await screen.findByText(/leftover/i)).toBeTruthy();
-    // And it is NOT the re-reading message: the two are different facts about
-    // the set, and only one of them is the reader's to act on.
-    expect(screen.queryByText(/being re-read/i)).toBeNull();
-  });
-
   it("names the file that could not be read, and why", async () => {
     vi.stubGlobal(
       "fetch",

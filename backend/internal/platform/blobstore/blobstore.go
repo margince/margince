@@ -11,7 +11,10 @@ package blobstore
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"fmt"
 	"io"
 
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -78,4 +81,28 @@ type Object struct {
 // "attachment") and id its identifier.
 func WorkspaceKey(ws ids.WorkspaceID, kind, id string) string {
 	return ws.String() + "/" + kind + "/" + id
+}
+
+// Digest reads an upload once to fingerprint and measure it, then rewinds so
+// the store can read the same bytes from the start.
+//
+// Both facts come from the SAME pass. A checksum and a length established
+// separately can describe different content, and they are what a later
+// integrity check compares against — so they are produced together, or the
+// comparison proves nothing.
+//
+// It lives here rather than in either module that needs it because it is the
+// same act in both: what you must know about bytes before you Put them. Two
+// callers had written it identically, which is two answers to one question
+// waiting to disagree.
+func Digest(content io.ReadSeeker) (checksum string, size int64, err error) {
+	sum := sha256.New()
+	size, err = io.Copy(sum, content)
+	if err != nil {
+		return "", 0, fmt.Errorf("blobstore: reading the upload to fingerprint it: %w", err)
+	}
+	if _, err := content.Seek(0, io.SeekStart); err != nil {
+		return "", 0, fmt.Errorf("blobstore: rewinding the upload after fingerprinting it: %w", err)
+	}
+	return hex.EncodeToString(sum.Sum(nil)), size, nil
 }
