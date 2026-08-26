@@ -2005,6 +2005,8 @@ export const vi = {
   "inbox.expiresIn": "hết hạn sau {countdown}",
   "inbox.detail": "Chi tiết phê duyệt",
   "inbox.detailTechnical": "Chi tiết kỹ thuật",
+  "inbox.detailAsked": "Đã hỏi",
+  "inbox.detailDecided": "Đã quyết định",
   "inbox.status.approved": "Đã duyệt",
   "inbox.status.rejected": "Đã từ chối",
   "inbox.status.expired": "Đã hết hạn",

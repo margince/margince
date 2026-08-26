@@ -51,6 +51,29 @@ type CorrectionStager interface {
 	StageCorrection(ctx context.Context, dealID ids.UUID, targetVersion int64, summary string, proposal CloseDateCorrection) error
 }
 
+// QuietReviewReader reads one deal's correspondence UNDER ITS OWNER'S OWN
+// AUTHORITY, and that principal is the whole security argument for the
+// gone-quiet review.
+//
+// The sweep runs as a system principal, which auth.Require passes
+// unconditionally and which no row scope bounds. A counterparty resolved under
+// it is resolvable whoever they are — and the review writes that name into
+// proposed_change, where anyone holding deal:update on the target reads it
+// later. An unbounded read frozen into a stored payload is a disclosure no
+// read-side gate can undo, so the read runs as the person the card is for: the
+// deal's owner, resolved per deal.
+//
+// The composition root fills this because resolving an authority means reading
+// app_user, which this module may not do.
+//
+// Best-effort by contract. A deal with no owner, or one whose owner is no
+// longer live, yields no facts and the review falls back to a reason carrying
+// no name. Absence of authority is denial rather than empty permission, and a
+// deal's date hygiene is not a reason to fail the pass.
+type QuietReviewReader interface {
+	ReadForOwner(ctx context.Context, dealID ids.DealID) (QuietFacts, QuietNames, error)
+}
+
 // CloseDateCorrection is the staged proposed_change payload: everything
 // a human needs to confirm (or edit) the replacement date, and the
 // confirm effect needs to apply it.
@@ -84,9 +107,10 @@ func UnmarshalCloseDateCorrection(raw json.RawMessage) (CloseDateCorrection, err
 // CloseDateCorrector drives the sweep; the worker ticks it nightly.
 type CloseDateCorrector struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
-	db     *database.DB
-	stager CorrectionStager
-	log    *slog.Logger
+	db       *database.DB
+	stager   CorrectionStager
+	reviewer QuietReviewReader
+	log      *slog.Logger
 	// now is the corrector's clock so the fixed-clock invariant test
 	// ("no open deal survives the run with a past date") can pin a day.
 	now func() time.Time
@@ -98,11 +122,12 @@ type CloseDateCorrector struct {
 // NewCloseDateCorrector assembles the sweep over the pool it reads through,
 // the stager it raises corrections into, and the seam that answers which zone
 // its dates are computed in.
-func NewCloseDateCorrector(db *database.DB, stager CorrectionStager, log *slog.Logger,
-	inst Installation,
+func NewCloseDateCorrector(db *database.DB, stager CorrectionStager, reviewer QuietReviewReader,
+	log *slog.Logger, inst Installation,
 ) *CloseDateCorrector {
 	return &CloseDateCorrector{
-		db: db, stager: stager, log: log, now: time.Now, installation: inst.orRefusing(),
+		db: db, stager: stager, reviewer: reviewer, log: log,
+		now: time.Now, installation: inst.orRefusing(),
 	}
 }
 
@@ -201,7 +226,7 @@ func (c *CloseDateCorrector) sweepWorkspace(ctx context.Context) error {
 			InForecastCommit:    category == "commit" || category == "best_case",
 			StageVelocityDays:   velocity,
 		}, now, loc)
-		if err := c.correct(ctx, cand, hygiene, category); err != nil {
+		if err := c.correct(ctx, cand, hygiene, category, now, loc); err != nil {
 			return fmt.Errorf("close-date correction on %s: %w", cand.id, err)
 		}
 	}
@@ -270,7 +295,7 @@ func forecastDowngrade(category string) string {
 // correct applies one deal's A6 tier. The write runs in its own audited
 // transaction; the 🟡 staging follows it (Stage opens its own) — if the
 // staging fails the provisional row simply re-enters the next sweep.
-func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string) error {
+func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidate, hygiene CloseDateHygiene, category string, now time.Time, loc *time.Location) error {
 	if !hygiene.Flagged {
 		if cand.provisional {
 			// The date itself is clean (the sweep set it), but the human
@@ -280,7 +305,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 				DealID:            cand.id,
 				ExpectedCloseDate: cand.expectedClose.Format(time.DateOnly),
 				PreviousCloseDate: dateString(cand.expectedClose),
-				Basis:             "provisional date from an earlier nightly correction, still awaiting confirmation",
+				Basis:             quietHoldingBasis,
 			})
 		}
 		return nil
@@ -291,7 +316,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		ExpectedCloseDate: hygiene.ProposedClose.Format(time.DateOnly),
 		PreviousCloseDate: dateString(cand.expectedClose),
 		Flags:             hygiene.Flags,
-		Basis:             fmt.Sprintf("%d open stage(s) remaining × stage velocity", max(1, cand.remainingOpen)),
+		Basis:             pacedBasis(max(1, cand.remainingOpen)),
 	}
 
 	switch hygiene.Action {
@@ -332,16 +357,33 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 		if err != nil {
 			return err
 		}
-		// The 🟡 review: gone quiet — still alive? A provisional date, if
-		// any, rides the same proposal so confirming it also re-dates.
+		// The 🟡 review: gone quiet — still alive? The proposal keeps the
+		// stage-velocity date the assessment computed, on BOTH branches. It
+		// used to be overwritten here with the deal's CURRENT date whenever the
+		// invariant did not force a re-date, which asked a human to confirm the
+		// date the deal already had — a card with nothing in it to approve.
 		review := proposal
-		if !hygiene.Provisional {
-			review.ExpectedCloseDate = cand.expectedClose.Format(time.DateOnly)
-			review.Basis = "deal has gone quiet; confirm it is still alive — set a real date or mark it lost"
-		}
+		review.Basis = c.quietBasis(ctx, cand.id, now, loc)
 		return c.ensureStaged(ctx, cand.id, version, cand.name, review)
 	}
 	return fmt.Errorf("close-date sweep: no executor for action %q", hygiene.Action)
+}
+
+// quietBasis is the reason the quiet review shows: which way the silence runs,
+// who is on the far end of it, and how long it has lasted.
+//
+// A failure to READ the correspondence is not a reason to fail the sweep — the
+// downgrade has already committed and the review is what is left to raise. So a
+// read error degrades to the generic sentence and is logged, rather than
+// aborting a pass over every other deal in the workspace.
+func (c *CloseDateCorrector) quietBasis(ctx context.Context, dealID ids.DealID, now time.Time, loc *time.Location) string {
+	facts, names, err := c.reviewer.ReadForOwner(ctx, dealID)
+	if err != nil {
+		c.log.WarnContext(ctx, "close-date quiet review fell back to a generic reason",
+			"deal_id", dealID, "error", err)
+		return quietFallbackBasis
+	}
+	return quietReason(facts, names, now, loc)
 }
 
 // apply runs one tier's write shape: re-verify the deal is still open

@@ -27,6 +27,7 @@ import { useLocale, useT } from "../i18n";
 import {
   ApprovalDetailModal,
   DecideOutcome,
+  editableSeed,
   editableStrings,
   StagedEditor,
 } from "./approvaleditor";
@@ -229,12 +230,17 @@ export function ApprovalRow({
   const skew = problem ? isVersionSkew(problem) : false;
   const alreadyDecided = problem ? isAlreadyDecided(problem) : false;
 
+  // The draft is seeded with what the CONTROL will show, not with what the
+  // payload holds. A date control silently discards a value it cannot parse, so
+  // seeding the raw string would leave the reader looking at an empty box while
+  // the original value still rode out on approve — the editor showing one thing
+  // and submitting another.
   const startEdit = () => {
     setDraft(
       Object.fromEntries(
         strings.map((entry) => [
           entry.field,
-          String(change[entry.field] ?? ""),
+          editableSeed(entry, change[entry.field]),
         ]),
       ),
     );

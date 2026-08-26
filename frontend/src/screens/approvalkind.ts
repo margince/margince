@@ -91,6 +91,16 @@ export type EditableField =
   | {
       readonly field: string;
       /**
+       * A date-only wire value. It gets the calendar control rather than a text
+       * box: the payload wants `2026-09-27`, and a reader typing the date the
+       * way they say it out loud writes something the server refuses.
+       */
+      readonly as: "date";
+      readonly label?: MessageKey;
+    }
+  | {
+      readonly field: string;
+      /**
        * Prose that runs to paragraphs rather than a line. An email body in a
        * single-line input is technically editable and practically unreadable:
        * the reader can see about eight words of what they are being asked to
@@ -171,6 +181,18 @@ export const EDITABLE_FIELDS: Readonly<
   held_draft: [
     { field: "subject", as: "text", label: "inbox.draftSubject" },
     { field: "body", as: "textarea", label: "inbox.draftBody" },
+  ],
+  // The date is the entire question, and it is the only thing here a person may
+  // change. Undeclared, the generic editor offered every string in the payload:
+  // the deal's uuid as a text box to retype, the server's own reason sentence
+  // as if it were the reader's to rewrite, and the previous date beside the
+  // proposed one with nothing saying which was which.
+  close_date_correction: [
+    {
+      field: "expected_close_date",
+      as: "date",
+      label: "approval.field.expected_close_date",
+    },
   ],
 };
 

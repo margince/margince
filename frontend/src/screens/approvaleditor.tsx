@@ -9,8 +9,10 @@ import {
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { DateInput, type ISODate, isISODate } from "../design-system/dateinput";
 import { Select } from "../design-system/select";
 import { EvidenceChip } from "../design-system/trust";
+import { isRealCalendarDay } from "../format/calendarday";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -91,9 +93,9 @@ function EvidenceList({
 }
 
 /**
- * AC-2: the row's "view everything" affordance — the full proposed_change
- * (key→value), evidence, target_version, proposed_by/on_behalf_of and
- * timestamps the summary/evidence-chip row necessarily elides.
+ * AC-2: the row's "view everything" affordance — the proposal's own fields, the
+ * evidence behind them and the timestamps the summary/evidence-chip row
+ * necessarily elides.
  */
 export function ApprovalDetailModal({
   approvalId,
@@ -148,18 +150,19 @@ export function ApprovalDetailModal({
  *
  * Ordered the way a person reads a decision rather than the way the row is
  * stored: the sentence saying what is being asked, then what the proposal says
- * in named fields, then the quoted evidence behind it, and only then — behind a
- * disclosure — the identifiers and versions.
+ * in named fields, then when it was asked, then the quoted evidence behind it.
  *
  * The summary leads and used to be absent entirely. It is the one field the
  * server documents as prose ("the sentence a human reads before deciding"), and
  * a dialog that opened on `deal_id` while omitting it was showing the reader
  * everything except the question.
  *
- * The technical block is kept rather than dropped. Somebody debugging a stuck
- * proposal needs the target version and the proposing actor, and a support
- * conversation needs the id — but none of that is why a person is being asked
- * to agree to something, so it does not open the dialog.
+ * Only the raw payload stays behind the disclosure, and only for a kind that has
+ * already said what its fields mean — there it is reference material for
+ * somebody checking what the server actually staged. The target version and the
+ * `agent:<id>` that proposed it are gone from this surface entirely: neither
+ * names a person or describes a change, so a reader can do nothing with them,
+ * and one click away rather than zero does not make them useful.
  */
 function ApprovalDetailBody({
   approval,
@@ -198,15 +201,15 @@ function ApprovalDetailBody({
             />
           ))
         : rawPayload}
+      {askedOn(approval, locale, zone, t).map(([label, value]) => (
+        <FieldLine key={label} name={label} value={value} />
+      ))}
       <EvidenceList evidence={approval.evidence} />
-      <Disclosure summary={t("inbox.detailTechnical")}>
-        <div className="approval-detail">
-          {named.length > 0 && rawPayload}
-          {detailMeta(approval, locale, zone).map(([key, value]) => (
-            <FieldLine key={key} name={key} mono value={value} />
-          ))}
-        </div>
-      </Disclosure>
+      {named.length > 0 && (
+        <Disclosure summary={t("inbox.detailTechnical")}>
+          <div className="approval-detail">{rawPayload}</div>
+        </Disclosure>
+      )}
     </div>
   );
 }
@@ -230,29 +233,36 @@ function RawPayload({
   );
 }
 
-// Wire field identifiers (contract shape), not translatable prose — rendered
-// raw, behind the technical disclosure where a payload path is what the reader
-// actually came for.
-function detailMeta(
+/**
+ * When the question was raised, and when it was settled.
+ *
+ * These two used to sit behind the technical disclosure, labelled `created_at`
+ * and `decided_at` in monospace beside a uuid. They are not technical: how long
+ * a proposal has been waiting is one of the few things on this dialog a reader
+ * actually weighs, and it was filed with the debugging material because it
+ * arrived on the wire next to it.
+ *
+ * The rest of that block is gone from this surface rather than moved. A target
+ * version and a `proposed_by` of `agent:<id>` name no person and describe no
+ * change — there is nothing a reader can do with either, and putting them one
+ * click away rather than zero does not make them useful.
+ */
+function askedOn(
   approval: Approval,
   locale: ReturnType<typeof useLocale>["locale"],
   zone: string,
+  t: ReturnType<typeof useT>,
 ): [string, string][] {
-  const meta: [string, string][] = [
-    ["target_version", String(approval.target_version ?? "—")],
-    ["proposed_by", approval.proposed_by],
+  const asked: [string, string][] = [
+    [t("inbox.detailAsked"), formatDateTime(approval.created_at, locale, zone)],
   ];
-  if (approval.on_behalf_of) {
-    meta.push(["on_behalf_of", approval.on_behalf_of]);
-  }
-  meta.push(["created_at", formatDateTime(approval.created_at, locale, zone)]);
   if (approval.decided_at) {
-    meta.push([
-      "decided_at",
+    asked.push([
+      t("inbox.detailDecided"),
       formatDateTime(approval.decided_at, locale, zone),
     ]);
   }
-  return meta;
+  return asked;
 }
 
 // `mono` marks a value the WIRE spells — a uuid, a version, a payload path.
@@ -315,6 +325,38 @@ export function DecideOutcome({
 }
 
 /**
+ * What the editor should START with for one field.
+ *
+ * This is the seed AND the display rule, deliberately in one function: a date
+ * control silently discards a value it cannot parse, so if the two disagreed
+ * the reader would see an empty box while the unparseable original still rode
+ * out on approve — an editor showing one thing and submitting another.
+ *
+ * "Cannot parse" covers more than a wrong shape. `2026-02-30` is spelled
+ * correctly and is not a day, and the element blanks it exactly as it blanks
+ * `27/09/2026` — so the seed asks whether the date EXISTS, through
+ * isRealCalendarDay, rather than only whether it looks like one.
+ *
+ * A non-string payload value seeds empty rather than being stringified. The
+ * editor only ever offers string fields, so a number or object arriving here is
+ * a payload that does not match its kind's declaration, and inviting somebody
+ * to edit `[object Object]` is worse than an empty box.
+ */
+export function editableSeed(entry: EditableField, staged: unknown): string {
+  if (typeof staged !== "string") {
+    return "";
+  }
+  return entry.as === "date" && !isRealCalendarDay(staged) ? "" : staged;
+}
+
+// The seeded value narrowed to what the date control's own type accepts. The
+// seed already dropped anything unshowable, so this is the type narrowing and
+// not a second rule.
+function isoOrBlank(staged: string | undefined): ISODate | "" {
+  return staged && isISODate(staged) ? staged : "";
+}
+
+/**
  * The inline staged-draft editor: the string fields of the proposed_change, in
  * the shape the kind declared for them, going up as `edited_payload`.
  *
@@ -365,6 +407,16 @@ export function StagedEditor({
                 })}
                 value={draft[entry.field] ?? ""}
                 onChange={(value) => onChange(entry.field, value)}
+              />
+            ) : entry.as === "date" ? (
+              <DateInput
+                {...control}
+                // A staged date the control cannot show is shown as empty
+                // rather than passed through: the element would blank a
+                // malformed value on its own, and an empty box a reader can
+                // fill beats one that silently drops what they typed.
+                value={isoOrBlank(draft[entry.field])}
+                onChange={(event) => onChange(entry.field, event.target.value)}
               />
             ) : entry.as === "textarea" ? (
               <Textarea

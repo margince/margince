@@ -2045,6 +2045,8 @@ export const en = {
   "inbox.expiresIn": "expires in {countdown}",
   "inbox.detail": "Approval detail",
   "inbox.detailTechnical": "Technical details",
+  "inbox.detailAsked": "Asked",
+  "inbox.detailDecided": "Decided",
   "inbox.status.approved": "Approved",
   "inbox.status.rejected": "Rejected",
   "inbox.status.expired": "Expired",
