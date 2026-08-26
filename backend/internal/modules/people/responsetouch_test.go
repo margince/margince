@@ -33,6 +33,10 @@ const touchType = "leadResponseTouch"
 // ownedTouchFields names, per field, the function that owns the rule the field
 // carries. A field here holds a rule rather than a value, so reading it IS
 // deciding the rule; anyone else wanting the answer calls that function.
+//
+// gatekit:fixture the field-to-owner pairing this gate judges, not a set of
+// ratified exceptions: the values name functions, and a stale one fails above
+// rather than quietly widening what is allowed.
 var ownedTouchFields = map[string]string{
 	"source":     "humanLoggedNote",
 	"capturedBy": "humanCaptured",
