@@ -176,6 +176,36 @@ type Commitment struct {
 	DueAt       time.Time
 }
 
+// AtRisk is the open deals going quiet, or already past their expected close.
+//
+// The seam behind it reads the SAME candidate engine the whats_slipping tool
+// reads, at a shorter idle window. A second at-risk rule living here would be
+// two answers to one question, and the two would disagree in front of a rep.
+//
+// Optional exactly as Commitments is: nil means this feed does not do deal risk,
+// which is a different fact from a pipeline with nothing wrong in it.
+type AtRisk interface {
+	Quiet(ctx context.Context) ([]RiskyDeal, error)
+}
+
+// RiskyDeal is one deal the pipeline should worry about, and the ground it is
+// worried on.
+//
+// Both flags travel because they are different warnings: a deal nobody has
+// touched is neglected, and a deal past its close date is late whether or not
+// anyone touched it. A card that collapsed them would say "at risk" and leave
+// the rep to guess which.
+type RiskyDeal struct {
+	DealID ids.UUID
+	Name   string
+	// QuietDays is how long the deal has been idle, which is the number the
+	// card says out loud. Zero for a deal admitted only by its close date.
+	QuietDays int
+	// CloseOverdue is set when the expected close date has already passed.
+	CloseOverdue      bool
+	ExpectedCloseDate *time.Time
+}
+
 // Clock is the read's instant, injected so the lane boundaries a test asserts
 // are the ones it set.
 type Clock func() time.Time
@@ -192,12 +222,19 @@ type Service struct {
 	// and Assemble then leaves the field unset rather than sending an empty
 	// array. The contract makes the lane optional for exactly that reason.
 	commitments Commitments
-	now         Clock
+	// atRisk is OPTIONAL for the reason commitments is: absent lane, not empty.
+	atRisk AtRisk
+	now    Clock
 }
 
 // NewService binds the feed to its readers.
-func NewService(a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing, c Commitments, now Clock) *Service {
-	return &Service{approvals: a, duplicates: d, tasks: t, receipts: r, briefing: b, commitments: c, now: now}
+func NewService(
+	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing, c Commitments, k AtRisk, now Clock,
+) *Service {
+	return &Service{
+		approvals: a, duplicates: d, tasks: t, receipts: r,
+		briefing: b, commitments: c, atRisk: k, now: now,
+	}
 }
 
 // Assemble reads every lane and returns the day.
@@ -273,6 +310,24 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 			out.Commitments = &items
 			count := len(items)
 			out.Counts.Commitments = &count
+		}
+	}
+
+	if s.atRisk != nil {
+		risky, err := s.atRisk.Quiet(ctx)
+		switch {
+		case errors.Is(err, apperrors.ErrPermissionDenied):
+			omitted = append(omitted, crmcontracts.AttentionLanesOmitted("at_risk"))
+		case err != nil:
+			return crmcontracts.Attention{}, err
+		default:
+			items := make([]crmcontracts.AttentionItem, 0, len(risky))
+			for _, deal := range risky {
+				items = append(items, riskItem(deal))
+			}
+			out.AtRisk = &items
+			count := len(items)
+			out.Counts.AtRisk = &count
 		}
 	}
 

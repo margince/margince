@@ -1224,6 +1224,7 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 
 // Defines values for AttentionLanesOmitted.
 const (
+	AttentionLanesOmittedAtRisk      AttentionLanesOmitted = "at_risk"
 	AttentionLanesOmittedCommitments AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDoneForYou  AttentionLanesOmitted = "done_for_you"
 	AttentionLanesOmittedNeedsYou    AttentionLanesOmitted = "needs_you"
@@ -1234,6 +1235,8 @@ const (
 // Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
 func (e AttentionLanesOmitted) Valid() bool {
 	switch e {
+	case AttentionLanesOmittedAtRisk:
+		return true
 	case AttentionLanesOmittedCommitments:
 		return true
 	case AttentionLanesOmittedDoneForYou:
@@ -1290,6 +1293,7 @@ const (
 	AttentionItemSourceApproval          AttentionItemSource = "approval"
 	AttentionItemSourceBriefItem         AttentionItemSource = "brief_item"
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
+	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
 	AttentionItemSourceTask              AttentionItemSource = "task"
 )
@@ -1302,6 +1306,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceBriefItem:
 		return true
 	case AttentionItemSourceConversationClaim:
+		return true
+	case AttentionItemSourceDealAtRisk:
 		return true
 	case AttentionItemSourceDedupeCandidate:
 		return true
@@ -10149,16 +10155,16 @@ func (e VoiceBuildStatusCode) Valid() bool {
 
 // Defines values for VoiceCorpusPreviewRequestFormat.
 const (
-	Text       VoiceCorpusPreviewRequestFormat = "text"
-	Transcript VoiceCorpusPreviewRequestFormat = "transcript"
+	VoiceCorpusPreviewRequestFormatText       VoiceCorpusPreviewRequestFormat = "text"
+	VoiceCorpusPreviewRequestFormatTranscript VoiceCorpusPreviewRequestFormat = "transcript"
 )
 
 // Valid indicates whether the value is a known member of the VoiceCorpusPreviewRequestFormat enum.
 func (e VoiceCorpusPreviewRequestFormat) Valid() bool {
 	switch e {
-	case Text:
+	case VoiceCorpusPreviewRequestFormatText:
 		return true
-	case Transcript:
+	case VoiceCorpusPreviewRequestFormatTranscript:
 		return true
 	default:
 		return false
@@ -13026,6 +13032,17 @@ type Attention struct {
 	// AsOf The instant every lane below was read at.
 	AsOf time.Time `json:"as_of"`
 
+	// AtRisk Open deals going quiet, or whose expected close date has already passed — the
+	// ones most likely to be lost by inattention rather than by a decision.
+	//
+	// The idle window here is DELIBERATELY shorter than the product-wide `stalled`
+	// threshold: a queue that only speaks once a deal meets the stalled bar is
+	// reporting a two-month-old fact rather than warning. `detail` names the window
+	// actually used, so the card never implies a patience the server did not apply.
+	//
+	// Absent — not empty — on an installation whose feed does not read deals.
+	AtRisk *[]AttentionItem `json:"at_risk,omitempty"`
+
 	// Commitments Promises this rep made that are coming due, most overdue first — each with the
 	// message it was read from, so the reader can check it against what was written.
 	//
@@ -13076,6 +13093,9 @@ type AttentionLanesOmitted string
 // queue's own count under its both-sides-visible rule, kept separate because the
 // lane shows a bounded slice of it.
 type AttentionCounts struct {
+	// AtRisk How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under.
+	AtRisk *int `json:"at_risk,omitempty"`
+
 	// Commitments How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
 

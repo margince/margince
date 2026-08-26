@@ -24,7 +24,9 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/briefs"
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
+	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
+	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -372,6 +374,50 @@ func (c attentionCommitments) DueBy(ctx context.Context, by time.Time, limit int
 	return promises, nil
 }
 
+// attentionAtRisk reads the pipeline's own risk candidates at the morning
+// queue's shorter idle window.
+//
+// It calls quietDealLister, the SAME engine whats_slipping_this_week reads, so
+// there is one at-risk rule in the product and the two surfaces cannot come to
+// disagree about which deals are in trouble. Only the patience differs, and it
+// is named here rather than buried: a queue exists to warn, and the stalled
+// threshold is a status rather than a warning.
+type attentionAtRisk struct{ lister agents.SlippingLister }
+
+func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, error) {
+	candidates, err := a.lister(ctx)
+	if err != nil {
+		return nil, err
+	}
+	now := clockNow()
+	risky := make([]attention.RiskyDeal, 0, len(candidates))
+	for _, deal := range candidates {
+		risky = append(risky, attention.RiskyDeal{
+			DealID:            deal.DealID,
+			Name:              deal.Name,
+			QuietDays:         idleDaysOf(deal, now),
+			CloseOverdue:      deal.CloseOverdue,
+			ExpectedCloseDate: deal.ExpectedCloseDate,
+		})
+	}
+	return risky, nil
+}
+
+// idleDaysOf is how long the deal has been quiet, counted from the same base
+// the idle rule itself measures from: the last activity, or the deal's creation
+// when nothing has ever touched it.
+func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
+	since := deal.CreatedAt
+	if deal.LastActivityAt != nil {
+		since = *deal.LastActivityAt
+	}
+	days := int(now.Sub(since).Hours() / 24)
+	if days < 0 {
+		return 0
+	}
+	return days
+}
+
 // newAttentionHandlers assembles the surface for the API role.
 func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
 	db := InstallationDB(pool)
@@ -383,6 +429,7 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.
 		attentionReceipts{svc: svc},
 		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
 		attentionCommitments{store: people.NewStore(db)},
+		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
 		now,
 	))
 }

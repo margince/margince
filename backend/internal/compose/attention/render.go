@@ -6,6 +6,7 @@ package attention
 import (
 	"context"
 	"errors"
+	"strconv"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -253,6 +254,48 @@ func commitmentItem(promise Commitment, asOf time.Time) crmcontracts.AttentionIt
 	if promise.SourceLabel != "" {
 		label := promise.SourceLabel
 		item.Kind = &label
+	}
+	return item
+}
+
+// riskItem renders one deal the pipeline should worry about.
+//
+// The title is the deal's own name, which the reader recognises. The card's
+// SENTENCE is the client's to write, because the two grounds read differently
+// in every language and the server has none — so what travels is the deal, the
+// idle days, and whether the close date has passed, and the client says it.
+//
+// `kind` carries the ground rather than a label: `quiet` when only the idle
+// clock admitted it, `close_overdue` when the date has passed. A deal that is
+// both is reported as overdue, because a date the customer agreed to outranks
+// a silence nobody agreed to.
+//
+// Its only verb is `open`. What to DO about a quiet deal is a judgement, and a
+// queue that offered to answer it here would be deciding rather than warning.
+func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
+	name := deal.Name
+	ground := "quiet"
+	if deal.CloseOverdue {
+		ground = "close_overdue"
+	}
+	item := crmcontracts.AttentionItem{
+		Id:      deal.DealID.String(),
+		Source:  crmcontracts.AttentionItemSource("deal_at_risk"),
+		Kind:    &ground,
+		Title:   &name,
+		Subject: subjectOf("deal", deal.DealID),
+		Overdue: &deal.CloseOverdue,
+		Actions: []crmcontracts.AttentionItemActions{"open"},
+	}
+	// The idle count rides as the detail's own number, so the card can say the
+	// window the server actually applied instead of implying one.
+	if deal.QuietDays > 0 {
+		days := strconv.Itoa(deal.QuietDays)
+		item.Detail = &days
+	}
+	if deal.ExpectedCloseDate != nil {
+		due := *deal.ExpectedCloseDate
+		item.DueAt = &due
 	}
 	return item
 }
