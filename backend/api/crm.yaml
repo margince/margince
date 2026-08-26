@@ -13344,7 +13344,7 @@ paths:
   # passes identically OR returns a declared, tested `unsupported_by_sor` result
   # (422) — never a silent break. The ops below are ONLY the overlay LIFECYCLE /
   # MANAGEMENT surface, which has no SoR-mode equivalent and exists only when
-  # `workspace.sor_mode = overlay` (data-model §12); in SoR-mode each returns
+  # `overlay_mode.sor_mode = overlay` (data-model §12); in SoR-mode each returns
   # 404 `mode_not_overlay`. Schemas drawn 1:1 from data-model §12
   # (`incumbent_connection`, `overlay_mirror` sync-state); contract-codegen +
   # AC-MCP-3 lint MUST emit/verify these ops. One incumbent per workspace, so the
@@ -13399,7 +13399,7 @@ paths:
   #       §5 importer, preserve record counts/relationships, carry over OUR
   #       augmentation (context/embeddings/audit/capture/mappings), re-tag
   #       incumbent-derived nodes T2→T1, detach write-back, flip
-  #       `workspace.sor_mode = native`. Human-only, like its preflight:
+  #       `overlay_mode.sor_mode = native`. Human-only, like its preflight:
   #       the typed confirmation phrase IS the human-intent control, and
   #       an agent supplying it in staged arguments would collapse the
   #       confirm-first gate to one approval click on a one-way,

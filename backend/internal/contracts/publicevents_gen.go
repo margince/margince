@@ -911,7 +911,7 @@ type PublicEventEnvelope struct {
 	Version int `json:"version"`
 }
 
-// PublicEventIncumbentConnected Payload for incumbent.connected — a workspace completed the overlay-mode incumbent-CRM connect flow (overlay/connection.go's insertConnection); the installation flipped to overlay_mode.sor_mode=overlay in the same transaction. Unlike the mirror.* events above, this event's subject is always the incumbent_connection row itself — a fixed type — so it is emitted via the plain storekit.EmitEvent.
+// PublicEventIncumbentConnected Payload for incumbent.connected — the installation completed the overlay-mode incumbent-CRM connect flow (overlay/connection.go's insertConnection) and flipped to overlay_mode.sor_mode=overlay in the same transaction. Unlike the mirror.* events above, this event's subject is always the incumbent_connection row itself — a fixed type — so it is emitted via the plain storekit.EmitEvent.
 type PublicEventIncumbentConnected struct {
 	// Incumbent The incumbent CRM system connected (e.g. "hubspot").
 	Incumbent string `json:"incumbent"`
