@@ -80,12 +80,7 @@ func requestNightlyPasses(ctx context.Context, conn *pgx.Conn) error {
 	return nil
 }
 
-// requestTheMorningBrief drops today's empty runs and asks for the brief again.
-//
-// The brief ranks the same deals the worklist passes read, and it opens the
-// installation — so a seed that leaves it empty leaves the demo's first screen
-// saying the overnight brief found nothing worth the first hour, which is a
-// sentence about a database that had no deals rather than about the pipeline.
+// requestTheMorningBrief drops the empty runs and asks for the brief again.
 //
 // It cannot simply be added to nightlyWorklistJobs, because it is suppressed
 // rather than idempotent. repsWithoutARunFor anti-joins on brief_run and
@@ -93,24 +88,31 @@ func requestNightlyPasses(ctx context.Context, conn *pgx.Conn) error {
 // tick that already ran against the empty installation has claimed today for
 // every seat. Asking again writes nothing at all until those runs are gone.
 //
-// Deleting them is safe HERE and only here: a run whose candidate_count is zero
-// ranked nothing, so it holds no brief_item rows and no rep can have acted on
-// one. That emptiness is the whole filter, and it is deliberately the ONLY one —
-// naming a day here would be a second opinion about which day it is. local_day
-// is the installation timezone applied to the WORKER's clock, while current_date
-// is the database server's date in its own; the two disagree whenever those
-// clocks or zones do, and a mismatch would clear nothing while reporting
-// success, leaving the suppression in place and the brief empty.
+// A run whose candidate_count is zero ranked nothing, so it holds no brief_item
+// rows and no rep can have acted on one. The emptiness test is spelled out in
+// the statement rather than argued here: candidate_count is computed in
+// compose/briefs, and a delete that trusted it would rest on another package's
+// arithmetic staying true, with nothing in this file failing if it stopped.
 //
-// One case this deliberately does NOT cover: a seed run before briefingHour in
-// the installation's timezone. repsDueTheirMorning returns nobody until the
-// local day reaches that hour, so the requested pass completes having written
-// nothing, and the brief fills at the tick after the installation's morning
-// arrives. Forcing it would mean holding a second opinion about when morning is,
-// which is the engine's to hold — so the seed says what it asked for rather than
-// promising cards that a night-time run cannot produce.
+// It clears every rep's empty run rather than today's. Nothing reads a
+// historical run — the brief read resolves today's local day — so the only
+// effect is on the next rank's evidence window, which opens to all time. For a
+// seed filling an installation from empty that is the intent.
+//
+// No day filter for a second reason as well: local_day is the worker's clock in
+// the installation timezone and current_date is the database server's date in
+// its own, so the two can disagree and a day-filtered delete would clear
+// nothing while reporting success.
+//
+// A seed before the installation's briefing hour still fills nothing:
+// repsDueTheirMorning finds nobody due, and the brief arrives at the first tick
+// after morning. The hour is not repeated here — briefingHour is unexported in
+// compose, and a copy of the number would drift the moment the engine's changed.
 func requestTheMorningBrief(ctx context.Context, conn *pgx.Conn) error {
-	cleared, err := conn.Exec(ctx, `DELETE FROM brief_run WHERE candidate_count = 0`)
+	cleared, err := conn.Exec(ctx, `
+		DELETE FROM brief_run br
+		WHERE br.candidate_count = 0
+		  AND NOT EXISTS (SELECT 1 FROM brief_item bi WHERE bi.brief_run_id = br.id)`)
 	if err != nil {
 		return fmt.Errorf("clearing the empty brief runs this seed outran: %w", err)
 	}
@@ -119,9 +121,6 @@ func requestTheMorningBrief(ctx context.Context, conn *pgx.Conn) error {
 		 VALUES ('available', 'brief_generate', 'default', 1, 3, '{}'::jsonb, now())`); err != nil {
 		return fmt.Errorf("requesting the morning brief: %w", err)
 	}
-	// The hour itself is not repeated here: briefingHour is unexported in the
-	// compose package and a copy of the number would be a second answer to when
-	// morning is, drifting the moment the engine's changed.
 	fmt.Printf("brief:         %d empty run(s) cleared, morning brief requested — "+
 		"it fills once the installation's morning hour has arrived\n", cleared.RowsAffected())
 	return nil
