@@ -972,6 +972,8 @@ func TestEveryLaneIsReadOncePerFeed(t *testing.T) {
 
 // A withheld lane is named ONCE. Naming it twice is what a duplicate read looks
 // like on the wire, and a client rendering the list would say it twice.
+//
+// Held by: TestAWithheldLaneIsNamedOnce (backend/internal/compose/attention/feed_test.go) — this test, which counts the namings.
 func TestAWithheldLaneIsNamedOnce(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},

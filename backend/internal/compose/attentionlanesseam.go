@@ -24,6 +24,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -91,15 +92,15 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, erro
 	return risky, nil
 }
 
-// idleDaysOf is how long the deal has been quiet, counted from the same base
-// the idle rule itself measures from: the last activity, or the deal's creation
-// when nothing has ever touched it.
+// idleDaysOf is how long the deal has been quiet, counted from the base the
+// idle rule measures from rather than from a second answer to that question.
+//
+// The number a reader is shown and the number the rule decides on are the same
+// fact, so a copy of the base here would let the queue say "quiet 19 days" about
+// a deal the rule does not think is quiet at all — and the two would agree in
+// every test written on the day the copy was made.
 func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
-	since := deal.CreatedAt
-	if deal.LastActivityAt != nil {
-		since = *deal.LastActivityAt
-	}
-	days := int(now.Sub(since).Hours() / 24)
+	days := int(now.Sub(idlebase.Since(deal.CreatedAt, deal.LastActivityAt)).Hours() / 24)
 	if days < 0 {
 		return 0
 	}

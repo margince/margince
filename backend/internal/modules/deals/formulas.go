@@ -31,6 +31,8 @@ const StalledThresholdDays = 60
 // surface asking at this window is asking the same question with a different
 // patience, which is why the copy beside it must name the window it used —
 // "quiet 19 days" and "stalled" are different claims about the same deal.
+//
+// Held by: TestAThresholdEntryPointCarriesNoRuleOfItsOwn (backend/internal/modules/deals/oneidlerule_test.go)
 const QuietThresholdDays = 19
 
 // IsStalled evaluates §8.1 at one instant. Idle is an absolute-duration
@@ -43,6 +45,8 @@ func IsStalled(status string, createdAt time.Time, lastActivityAt, waitUntil *ti
 // IsQuietFor is IsStalled with the idle window named by the caller. Every rule
 // bar the number is identical, so the two cannot drift: a closed deal is never
 // quiet, an explicit deferral suppresses it, and idle is measured the same way.
+//
+// Held by: TestAThresholdEntryPointCarriesNoRuleOfItsOwn (backend/internal/modules/deals/oneidlerule_test.go)
 func IsQuietFor(days int, status string, createdAt time.Time, lastActivityAt, waitUntil *time.Time, now time.Time) bool {
 	if DealStatus(status) != DealOpen {
 		return false // closed deals never stall

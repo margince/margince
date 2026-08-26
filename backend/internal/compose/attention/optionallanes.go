@@ -97,8 +97,8 @@ func (s *Service) optionalLanes(
 	}
 }
 
-// renderEach turns one producer's rows into wire items. The lanes differ in
-// what they read and how a row is drawn; the loop between them is spelled once.
+// renderEach turns one producer's rows into wire items, so a lane supplies only
+// what differs: the rows it read and how one of them is drawn.
 //
 // Never nil: the empty slice rather than a null the contract promised was a list.
 func renderEach[T any](rows []T, draw func(T) crmcontracts.AttentionItem) []crmcontracts.AttentionItem {
