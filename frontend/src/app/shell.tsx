@@ -319,13 +319,13 @@ export function WorkspaceRail({
         <div className="railhead">
           <BrandBlock />
           {/* TEMPORARY, and the whole element goes when the product leaves
-              pre-alpha: this span, its rule in shell.css and the `shell.preAlpha`
-              key, together. It is absolutely positioned so it takes no space and
+              alpha: this span, its rule in shell.css, the `shell.alpha` key and
+              the case in rail.test.tsx, together. A ribbon across the head's
+              top-left corner, absolutely positioned so it takes no space and
               moves nothing — the head is the same box with it and without it —
-              and it hangs off the mark rather than off the head, because the
-              mark stands at the same x in both rail states and the head is what
-              narrows. That is what keeps it on screen at 64px. */}
-          <span className="prealpha">{t("shell.preAlpha")}</span>
+              and anchored to the corner rather than to the wordmark, which is
+              what keeps it on screen at 64px where every label is gone. */}
+          <span className="alphamark">{t("shell.alpha")}</span>
         </div>
         {/* Keyed by depth so a level that arrives is a new element and plays its
             entrance; two addresses at the SAME depth are the same level with

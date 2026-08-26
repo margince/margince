@@ -151,7 +151,7 @@ export const de = {
   "shell.railAria": "Hauptnavigation",
   "shell.skipToContent": "Zum Inhalt springen",
   "shell.logoAria": "Margince",
-  "shell.preAlpha": "Pre-Alpha",
+  "shell.alpha": "Alpha",
   "shell.searchEverything": "Alles durchsuchen…",
   "shell.breadcrumbAria": "Navigationspfad",
   "shell.license.none": "Keine Lizenz",

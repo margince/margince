@@ -355,45 +355,42 @@
 }
 /* TEMPORARY — the release marker.
  *
- * The whole thing goes when the product leaves pre-alpha: this rule, the span in
- * app/shell.tsx and the `shell.preAlpha` key, in one change.
+ * The whole thing goes when the product leaves alpha: this rule, the span in
+ * app/shell.tsx, the `shell.alpha` key and the case in rail.test.tsx that holds
+ * it through the collapse, in one change.
+ *
+ * A corner ribbon across the head's top-left, which is the one place a marker
+ * can go without competing with anything: the head holds the mark and the
+ * wordmark and nothing else, and this crosses the corner both of them leave
+ * empty.
  *
  * ABSOLUTE, so it takes no space: the head's height is the strip's to the pixel
  * and every row below it is aligned to that, so a marker in the flow would move
- * the whole column. And placed off the MARK rather than off the head — the mark
- * sits at the same x in both rail states and the head is what narrows around it,
- * so one placement is on screen at 252px and at 64px with nothing restated.
- *
- * It sits under the mark, on the head's bottom edge, which is the one band that
- * is empty in both states: the wordmark beside it ends above this line and the
- * collapsed rail has nothing there at all.
- *
- * Warn, not danger and not the AI hue: it is a caveat about how finished the
- * product is, which is the thing that goes wrong if a reader assumes otherwise.
- * Not a `Badge` — that primitive owns its own geometry (design-system/atoms.tsx)
- * and this is 8px chrome pinned to a corner, so reaching for it would mean
- * overriding every property it has. Chrome the rail applies to itself, like
- * `.railmore`. */
-.rail .prealpha {
+ * the whole column. And it hangs off the HEAD's own corner, which is at the same
+ * place in both rail states — the head narrows around the mark rather than
+ * moving it — so one placement is on screen at 252px, at 64px, and in the phone
+ * sheet's head. */
+.rail .alphamark {
   position: absolute;
-  /* The mark's own centre INSIDE the head: 7px of head inset plus half of a
-     32px mark. Stated rather than measured, because a stylesheet cannot measure
-     — and it is the one number that has to hold, since the collapsed rail is
-     64px wide and this pill is most of it. */
-  left: 23px; /* ds:ignore the mark's centre line, which this hangs from */
-  bottom: -2px; /* ds:ignore the head's own bottom edge */
+  left: 2px; /* ds:ignore the ribbon's own corner anchor */
+  top: 10px; /* ds:ignore the ribbon's own corner anchor */
   translate: -50% 0;
-  padding: 1px 4px; /* ds:ignore a cap-height pill, not spaced content */
-  border: 1px solid var(--warnBorder);
-  border-radius: 999px; /* ds:ignore a pill's own corner */
-  background: var(--warnBg);
-  color: var(--warn);
-  /* The body face, not the mono one an identifier takes: this is a word, and at
-     8px the mono face is 6px wider than the collapsed rail can hold. */
+  rotate: -45deg;
+  transform-origin: 50% 0;
+  width: 75px; /* ds:ignore the ribbon's own span across the corner */
+  padding: 1px 0; /* ds:ignore a cap-height band, not spaced content */
+  border-radius: 4px; /* ds:ignore the ribbon's own corner */
+  /* The status amber, and a fixed dark ink on it. `--bgRail` is the one near
+     black this palette holds STILL across both themes (tokens.css says so where
+     it is declared) — every other dark ink here lightens with the theme, and
+     this ribbon's ground does not, so it would go unreadable in one of them. */
+  background: var(--away);
+  color: var(--bgRail);
+  font-family: var(--f-mono);
   font-size: 8px; /* ds:ignore below the type scale on purpose — it must not compete with the mark */
-  font-weight: var(--fw-semibold);
-  letter-spacing: 0.02em;
+  font-weight: var(--fw-bold);
   line-height: 1.4;
+  text-align: center;
   text-transform: uppercase;
   white-space: nowrap;
   pointer-events: none;
