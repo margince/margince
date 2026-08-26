@@ -36,7 +36,12 @@ const ROUTING_READER: GrantSpec = { ai_routing: ["read"] };
 type CapturedRouting = {
   profile: string;
   tiers: Record<string, { provider: string; model: string; base_url?: string }>;
-  embeddings: { provider: string; model: string; base_url?: string };
+  embeddings: {
+    provider: string;
+    model: string;
+    base_url?: string;
+    dimensions?: number;
+  };
 };
 
 const BOUND = {
@@ -249,5 +254,56 @@ describe("AiRoutingCard", () => {
     const sent = backend.getCapturedPut();
     expect(sent?.tiers.premium.provider).toBe("openai_compatible");
     expect(sent?.tiers.premium.base_url).toBe("https://openrouter.ai/api");
+  });
+  // The lane the operator reported as unreachable: it takes a provider of its
+  // own, and re-pointing it has to carry the host and the width with it or the
+  // server refuses the binding it just accepted.
+  it("re-points the embedding lane onto a hosted adapter, with its width", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-embedding-001");
+
+    const lane = screen.getByTestId("ai-routing-embeddings");
+    await pickOption(
+      user,
+      within(lane).getByRole("combobox"),
+      "openai_compatible",
+    );
+    await user.type(
+      await within(lane).findByLabelText("Host"),
+      "https://openrouter.ai/api",
+    );
+    await user.type(within(lane).getByLabelText("Vector width"), "1536");
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut()?.embeddings;
+    expect(sent?.provider).toBe("openai_compatible");
+    expect(sent?.base_url).toBe("https://openrouter.ai/api");
+    expect(sent?.dimensions).toBe(1536);
+  });
+
+  // An emptied width means "whatever the provider compiles in", which the
+  // contract spells as an absent field. A 0 is a different instruction, and a
+  // NaN does not survive the JSON at all, so neither may reach the wire.
+  it("sends no width at all when the field is emptied, rather than a zero", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-embedding-001");
+
+    const lane = screen.getByTestId("ai-routing-embeddings");
+    const width = within(lane).getByLabelText("Vector width");
+    await user.type(width, "768");
+    await user.clear(width);
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut()?.embeddings;
+    expect(sent?.dimensions).toBeUndefined();
+    expect(JSON.stringify(sent)).not.toContain("dimensions");
   });
 });

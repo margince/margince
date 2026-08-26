@@ -225,6 +225,44 @@ function RoutingForm({
   );
 }
 
+// The endpoint, for the one adapter that has no default of its own.
+//
+// Shared by both rows rather than written beside each: it is one control with
+// one rule — openai_compatible cannot be served without a host — and two copies
+// would be two places to forget when that rule moves. It draws nothing for a
+// native vendor, where an empty box invites somebody to override a working
+// default.
+function HostField<B extends { provider: string; base_url?: string }>({
+  binding,
+  disabled,
+  onChange,
+}: Readonly<{
+  binding: B;
+  disabled: boolean;
+  onChange: (next: B) => void;
+}>) {
+  const t = useT();
+  if (binding.provider !== OPENAI_WIRE) {
+    return null;
+  }
+  return (
+    <Field
+      label={t("aiRouting.baseUrl.label")}
+      hint={t("aiRouting.baseUrl.help")}
+    >
+      {(control) => (
+        <TextInput
+          {...control}
+          value={binding.base_url ?? ""}
+          disabled={disabled}
+          placeholder={t("aiRouting.baseUrl.placeholder")}
+          onChange={(e) => onChange({ ...binding, base_url: e.target.value })}
+        />
+      )}
+    </Field>
+  );
+}
+
 // The embeddings lane. Its own row rather than a TierRow, because the two
 // shapes differ in both directions: this one takes `dimensions` and no `input`,
 // and a widened row that accepted either field on either lane would offer a
@@ -262,24 +300,7 @@ function EmbeddingsRow({
           />
         )}
       </Field>
-      {binding.provider === OPENAI_WIRE && (
-        <Field
-          label={t("aiRouting.baseUrl.label")}
-          hint={t("aiRouting.baseUrl.help")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              value={binding.base_url ?? ""}
-              disabled={disabled}
-              placeholder={t("aiRouting.baseUrl.placeholder")}
-              onChange={(e) =>
-                onChange({ ...binding, base_url: e.target.value })
-              }
-            />
-          )}
-        </Field>
-      )}
+      <HostField binding={binding} disabled={disabled} onChange={onChange} />
       {/* The width this lane asks the provider for, which only it has. Blank
           means the compiled default rather than zero: the contract reads an
           omitted value and a 0 the same way, so an empty box must send neither
@@ -361,24 +382,7 @@ function TierRow({
           and the running role then declined to adopt it. A native vendor
           addresses its own API, and an empty box beside it invites somebody to
           fill it in with something that overrides a working default. */}
-      {binding.provider === OPENAI_WIRE && (
-        <Field
-          label={t("aiRouting.baseUrl.label")}
-          hint={t("aiRouting.baseUrl.help")}
-        >
-          {(control) => (
-            <TextInput
-              {...control}
-              value={binding.base_url ?? ""}
-              disabled={disabled}
-              placeholder={t("aiRouting.baseUrl.placeholder")}
-              onChange={(e) =>
-                onChange({ ...binding, base_url: e.target.value })
-              }
-            />
-          )}
-        </Field>
-      )}
+      <HostField binding={binding} disabled={disabled} onChange={onChange} />
     </div>
   );
 }
