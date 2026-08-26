@@ -33,7 +33,13 @@ import (
 // forward takes its place. When the last stub goes, so does this type.
 type knowledgeHandlers struct {
 	module knowledge.Handlers
+	// ask is nil until WithCorpusAsk wires the engine.
+	ask corpusAskFunc
 }
+
+// corpusAskFunc is the ask engine's entry point, held as a function so this
+// seat carries no dependency it cannot construct.
+type corpusAskFunc func(w http.ResponseWriter, r *http.Request, id crmcontracts.Id)
 
 // The three wiring edges, as functions rather than methods. Server embeds this
 // seat, so a uniquely-named METHOD here is promoted to Server itself and
@@ -92,6 +98,20 @@ func (knowledgeHandlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Req
 	httperr.NotImplemented(w, r, "deleteCorpusDocument")
 }
 
-func (knowledgeHandlers) AskCorpus(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "askCorpus")
+// AskCorpus is answered by the compose-level engine rather than by the module:
+// the ask joins the knowledge module's retrieval to the AI router's chat lane,
+// and a module may join neither to the other. It keeps the 501 until
+// WithCorpusAsk wires one, because an installation that composed no retrieval
+// cannot search and pretending to would be worse than saying so.
+func (h knowledgeHandlers) AskCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	if h.ask == nil {
+		httperr.NotImplemented(w, r, "askCorpus (no retrieval configured)")
+		return
+	}
+	h.ask(w, r, id)
+}
+
+func knowledgeWithAsk(h knowledgeHandlers, ask corpusAskFunc) knowledgeHandlers {
+	h.ask = ask
+	return h
 }

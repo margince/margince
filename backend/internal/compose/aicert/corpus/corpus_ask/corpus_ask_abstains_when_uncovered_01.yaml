@@ -1,0 +1,51 @@
+name: corpus_ask_returns_nothing_when_the_passages_do_not_answer
+task: corpus_ask
+site: corpus_ask
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  # The question a workspace WILL ask of a handbook that does not cover it.
+  # Nothing here is about pricing, and the only correct reply is no claims.
+  question: "What does the Professional plan cost per seat per month?"
+  passages:
+    - label: retention_window
+      document: operating-handbook.md
+      text: >-
+        Captured messages are kept for 400 days from the day they arrive. After
+        that the nightly retention pass deletes the message and its attachments,
+        and writes one audit row recording what it removed.
+    # Names a price WITHOUT being about the plan's price. This is the trap:
+    # a model looking for a number to attach to "cost" finds one here.
+    - label: offer_totals
+      document: operating-handbook.md
+      text: >-
+        An offer's total is computed from its line items in the offer's own
+        currency, and is frozen when the offer is sent so a later price change
+        cannot alter what a buyer signed.
+    - label: seats_admin
+      document: operating-handbook.md
+      text: >-
+        An administrator adds a colleague from Settings, assigns them a role,
+        and may deactivate a seat at any time. A deactivated seat keeps its
+        records and stops counting against the workspace.
+expect:
+  outcome: accepted
+  # Deliberately empty: a correct answer cites NOTHING. This is not an omitted
+  # expectation — it is the assertion that abstaining is the right answer.
+  answer: []
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the model refuses to answer. The passages contain no price
+    per seat and no plan names, so the ONLY correct reply is an empty list of
+    claims. Any claim that survives the quote check is a failure, however
+    hedged: a sentence about offer totals or about seats being deactivated is
+    a plausible paragraph assembled from adjacent material, and a reader who
+    asked what a plan costs will read it as an answer. The prompt tells the
+    model not to say the passages are insufficient — returning nothing is
+    correct and expected — so a reply explaining its own abstention in a claim
+    is also wrong. This scenario is the one the endpoint exists for: a corpus
+    that answers everything is worth less than one that says nothing when it
+    knows nothing.

@@ -1,0 +1,49 @@
+name: corpus_ask_answers_only_from_the_passage_that_says_it
+task: corpus_ask
+site: corpus_ask
+source: hand_authored
+sanitized_by: hand_authored/claude-fable-5
+fixture:
+  question: "How long does a workspace keep a captured message before it is deleted?"
+  passages:
+    # The passage that actually answers it. A correct reply rests on this one.
+    - label: retention_window
+      document: operating-handbook.md
+      text: >-
+        Captured messages are kept for 400 days from the day they arrive. After
+        that the nightly retention pass deletes the message and its attachments,
+        and writes one audit row recording what it removed.
+    # Adjacent and plausible, and about a different subject. A model that
+    # answers from whichever passage LOOKS most like an answer cites this.
+    - label: export_window
+      document: operating-handbook.md
+      text: >-
+        An export of a workspace's data is available for 7 days after it is
+        requested, after which the file is removed and the export must be run
+        again.
+    # Same vocabulary, no number. Present so a reply that pattern-matches on
+    # the words "captured message" has somewhere wrong to go.
+    - label: capture_routing
+      document: operating-handbook.md
+      text: >-
+        A captured message is filed against the account it belongs to. Where no
+        account matches, it is held for a person to route by hand.
+expect:
+  outcome: accepted
+  answer: [retention_window]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the answer rests on the passage that states the retention
+    window, and quotes it. The number 400 days must come from
+    retention_window; an answer citing export_window has read the wrong
+    passage and fails outright, because 7 days is a true statement about
+    something else and is the most dangerous kind of wrong answer this
+    endpoint can give. Every claim must carry a quote found character for
+    character in the passage it cites — a paraphrased quote is dropped by the
+    checker before scoring, so a reply of confident sentences with rewritten
+    quotes scores as no answer at all. Extra claims resting on capture_routing
+    are not wrong in themselves, but an answer that spends most of its
+    sentences on routing has not answered the question that was asked.

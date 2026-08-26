@@ -220,6 +220,7 @@ func TestUnboundLadderWarnings(t *testing.T) {
 				"task capture_counterparty_verdict: no bound tier on ladder [local_small cheap_cloud]; calls will be refused",
 				"task cert_judge: no bound tier on ladder [premium cheap_cloud]; calls will be refused",
 				"task cold_start: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
+				"task corpus_ask: no bound tier on ladder [premium]; calls will be refused",
 				"task deal_health: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
 				"task document_extract: no bound tier on ladder [premium]; calls will be refused",
 				"task draft_reply: no bound tier on ladder [cheap_cloud premium]; calls will be refused",
