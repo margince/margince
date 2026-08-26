@@ -6,6 +6,7 @@ import {
   calendarDay,
   calendarMonth,
   dueInstant,
+  isRealCalendarDay,
   localDateTimeValue,
   middayInstant,
 } from "./calendarday";
@@ -153,5 +154,38 @@ describe("calendarMonth", () => {
     for (const zone of ["UTC", "Asia/Ho_Chi_Minh", "America/Los_Angeles"]) {
       expect(calendarMonth(at, zone)).toBe(calendarDay(at, zone).slice(0, 7));
     }
+  });
+});
+
+describe("isRealCalendarDay", () => {
+  it("accepts a day the calendar actually holds", () => {
+    expect(isRealCalendarDay("2026-09-27")).toBe(true);
+    expect(isRealCalendarDay("2026-01-31")).toBe(true);
+    expect(isRealCalendarDay("2026-12-31")).toBe(true);
+  });
+
+  // The whole point: these are spelled correctly and are not dates. A shape
+  // check passes them and the date control then blanks them silently.
+  it("refuses a well-shaped day that does not exist", () => {
+    expect(isRealCalendarDay("2026-02-30")).toBe(false);
+    expect(isRealCalendarDay("2026-04-31")).toBe(false);
+    expect(isRealCalendarDay("2026-13-01")).toBe(false);
+    expect(isRealCalendarDay("2026-00-10")).toBe(false);
+    expect(isRealCalendarDay("2026-01-00")).toBe(false);
+    expect(isRealCalendarDay("2026-01-32")).toBe(false);
+  });
+
+  it("follows the Gregorian leap rule, centuries included", () => {
+    expect(isRealCalendarDay("2028-02-29")).toBe(true);
+    expect(isRealCalendarDay("2026-02-29")).toBe(false);
+    expect(isRealCalendarDay("2000-02-29")).toBe(true);
+    expect(isRealCalendarDay("2100-02-29")).toBe(false);
+  });
+
+  it("refuses anything that is not a bare YYYY-MM-DD", () => {
+    expect(isRealCalendarDay("27/09/2026")).toBe(false);
+    expect(isRealCalendarDay("2026-9-27")).toBe(false);
+    expect(isRealCalendarDay("2026-09-27T00:00:00Z")).toBe(false);
+    expect(isRealCalendarDay("")).toBe(false);
   });
 });

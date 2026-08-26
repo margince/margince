@@ -31,6 +31,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 )
@@ -69,7 +70,8 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(e.svc, deals.NewStore(e.DB(), DealsInstallation())))
-	e.corrector = deals.NewCloseDateCorrector(e.DB(), closeDateStager{svc: e.svc}, quiet, installseam.Deals())
+	e.corrector = deals.NewCloseDateCorrector(e.DB(), closeDateStager{svc: e.svc},
+		quietReviewReader{db: e.DB(), users: identity.NewServiceFor(e.DB())}, quiet, installseam.Deals())
 	return e
 }
 
@@ -96,10 +98,13 @@ func (e *closeDateEnv) seedSweepDeal(t *testing.T, name string, stage ids.UUID, 
 	}
 	id := ids.NewV7()
 	if _, err := e.owner.Exec(context.Background(),
-		`INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, forecast_category, expected_close_date, last_activity_at, created_at, source, captured_by)
+		// The deal carries an owner because the gone-quiet review reads its
+		// correspondence under that person's authority — an unowned deal is
+		// reviewed unnamed, which is a case its own test covers.
+		`INSERT INTO deal (id, name, pipeline_id, stage_id, amount_minor, currency, forecast_category, expected_close_date, last_activity_at, created_at, source, captured_by, owner_id)
 		 VALUES ($1, $2, $3, $4, 10000, 'EUR', $5, $6,
-		         now() - make_interval(days => $7), now() - interval '120 days', 'manual', 'human:x')`,
-		id, name, e.pipeline, stage, category, expectedClose, lastActivityDaysAgo); err != nil {
+		         now() - make_interval(days => $7), now() - interval '120 days', 'manual', 'human:x', $8)`,
+		id, name, e.pipeline, stage, category, expectedClose, lastActivityDaysAgo, e.Rep1); err != nil {
 		t.Fatalf("seeding deal %q: %v", name, err)
 	}
 	return id

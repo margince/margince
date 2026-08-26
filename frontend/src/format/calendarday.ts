@@ -39,6 +39,41 @@ function dayFormatter(zone: string): Intl.DateTimeFormat {
   return made;
 }
 
+/**
+ * Whether a `YYYY-MM-DD` string names a day that EXISTS.
+ *
+ * A shape test is not enough: `2026-02-30` and `2026-13-01` are both spelled
+ * correctly and neither is a date. This compares the parts against what a real
+ * calendar holds — which needs no clock and no zone at all, because the
+ * question is about the STRING, not about whose calendar it lands on.
+ *
+ * It lives beside calendarDay because it is the same subject: what a calendar
+ * day is, and which strings are one.
+ */
+export function isRealCalendarDay(day: string): boolean {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(day);
+  if (!match) {
+    return false;
+  }
+  const [year, month, dayOfMonth] = match.slice(1).map(Number);
+  return (
+    month >= 1 &&
+    month <= 12 &&
+    dayOfMonth >= 1 &&
+    dayOfMonth <= daysIn(year, month)
+  );
+}
+
+// How many days a month holds, February following the Gregorian leap rule
+// (every four years, except centuries, except every four hundred).
+function daysIn(year: number, month: number): number {
+  if (month === 2) {
+    const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+    return leap ? 29 : 28;
+  }
+  return [4, 6, 9, 11].includes(month) ? 30 : 31;
+}
+
 export function calendarDay(at: Date, zone: string): string {
   const parts = new Map(
     dayFormatter(zone)

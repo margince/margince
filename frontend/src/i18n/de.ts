@@ -2020,6 +2020,8 @@ export const de = {
   "inbox.expiresIn": "läuft ab in {countdown}",
   "inbox.detail": "Freigabe-Detail",
   "inbox.detailTechnical": "Technische Details",
+  "inbox.detailAsked": "Gefragt am",
+  "inbox.detailDecided": "Entschieden am",
   "inbox.status.approved": "Genehmigt",
   "inbox.status.rejected": "Abgelehnt",
   "inbox.status.expired": "Abgelaufen",
