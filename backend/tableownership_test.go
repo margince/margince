@@ -563,11 +563,42 @@ type tableWrite struct {
 	site string
 }
 
-// pkgLevelSite names the enclosing function of a write that is not inside one
-// — a SQL literal bound to a package-level var or const. Such a write has no
-// instance narrower than the file it sits in, and says so rather than being
-// attributed to whichever function the walker happened to be near.
-const pkgLevelSite = "<package-level>"
+// declSite names the declaration a write sits in, for the waiver key.
+//
+// A function gives its receiver and name; a package-level var or const gives
+// the name it is bound to. The bound name matters: a shared file-wide token
+// would let a second package-level literal writing the same table ride the
+// first one's waiver, which is the category ratification this key exists to
+// end, reopened at file grain.
+//
+// unnamedDeclSite is the last resort — a declaration with no name to take.
+const unnamedDeclSite = "<unnamed-decl>"
+
+func declSite(fset *token.FileSet, decl ast.Decl) string {
+	switch d := decl.(type) {
+	case *ast.FuncDecl:
+		if d.Name == nil {
+			return unnamedDeclSite
+		}
+		if d.Recv == nil || len(d.Recv.List) != 1 {
+			return d.Name.Name
+		}
+		// The pointer star carries no information here — a method set is named
+		// by its type — and leaving it in would put a `*` in every such key.
+		//
+		// The receiver itself is not decoration. This tree writes two workers
+		// into one file as a matter of course, `Work` on one beside `Work` on
+		// another, and a bare method name would collapse both onto one key.
+		return strings.TrimPrefix(exprText(fset, d.Recv.List[0].Type), "*") + "." + d.Name.Name
+	case *ast.GenDecl:
+		for _, spec := range d.Specs {
+			if vs, ok := spec.(*ast.ValueSpec); ok && len(vs.Names) > 0 {
+				return vs.Names[0].Name
+			}
+		}
+	}
+	return unnamedDeclSite
+}
 
 // indirectTableArg ratifies the storekit call sites whose table arrives through
 // a struct field rather than a name this walker can read, each with the tables
@@ -623,11 +654,11 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 			}
 			dir := filepath.ToSlash(filepath.Dir(path))
 			owner := owningDir(dir)
-			// enclosing is the function the walk is currently inside. Set per
-			// top-level declaration below rather than tracked during the walk:
-			// ast.Inspect is flat, and a stack maintained by hand here would be
-			// a second traversal to keep correct.
-			enclosing := pkgLevelSite
+			// enclosing is the declaration the walk is currently inside. Set
+			// per top-level declaration below rather than tracked during the
+			// walk: ast.Inspect is flat, and a stack maintained by hand here
+			// would be a second traversal to keep correct.
+			enclosing := unnamedDeclSite
 			record := func(pos token.Pos, tables []string) {
 				for _, table := range tables {
 					writes[owner] = append(writes[owner], tableWrite{
@@ -635,8 +666,8 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 						table: table,
 						// Relative to the owner, which the key already names:
 						// the absolute path would repeat that prefix in every
-						// one of the 123 entries and push the part a reader is
-						// actually comparing off the end of the line.
+						// entry and push the part a reader is actually
+						// comparing off the end of the line.
 						site: strings.TrimPrefix(path, owner+"/") + ":" + enclosing,
 					})
 				}
@@ -682,10 +713,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 			// package-level vars are walked too — a SQL literal bound to a var
 			// is still a write — and those carry pkgLevelSite.
 			for _, decl := range file.Decls {
-				enclosing = pkgLevelSite
-				if fn, ok := decl.(*ast.FuncDecl); ok && fn.Name != nil {
-					enclosing = fn.Name.Name
-				}
+				enclosing = declSite(fset, decl)
 				ast.Inspect(decl, visit)
 			}
 			return nil
@@ -708,12 +736,11 @@ const storekitWriteFloor = 25
 // waiverKey is the subject crossStoreWrites ratifies: the writing package, the
 // table it reaches into, and the INSTANCE that reaches it.
 //
-// The instance is the point. Keyed on owner and table alone, one entry ratifies
-// the CATEGORY — "people may write activity_link" — and a second, differently
-// written copy of that write inside the same package is admitted by the entry
-// the first one earned. That is not hypothetical: the four conflict-semantics
-// disagreements this gate was extended for all sat inside a single module, each
-// behind a waiver that had already been granted to a sibling.
+// The declaration is the point. Keyed on owner and table alone, one entry
+// ratifies the CATEGORY — "people may write activity_link" — and a second,
+// differently written copy of that write inside the same package is admitted by
+// the entry the first one earned, with no finding to notice. A cross-store
+// write is ratified on its own evidence or it is not ratified.
 func waiverKey(owner string, w tableWrite) string {
 	return owner + ":" + w.table + ":" + w.site
 }
@@ -723,10 +750,14 @@ func waiverKey(owner string, w tableWrite) string {
 //
 // It RETURNS the findings rather than reporting them, so the gate's decision can
 // be exercised against synthetic writes without failing the test that exercises
-// it. A gate whose only input is the tree it happens to be checked out over can
+// it, and it takes the waiver set rather than reaching for the package-level one
+// so such a test can pass a throwaway copy. Querying the real set MARKS entries
+// matched, and gatekit accumulates that across every test in the package — a
+// probe that consulted it would silently satisfy AssertAllMatched for the entry
+// it named, which is the one staleness a stale-waiver gate exists to report. A gate whose only input is the tree it happens to be checked out over can
 // be tested for what it accepts today and never for what it would refuse — and
 // refusing is the half that has to keep working.
-func unratifiedCrossStoreWrites(t testing.TB, writes map[string][]tableWrite) []string {
+func unratifiedCrossStoreWrites(t testing.TB, waivers *gatekit.Waivers[string], writes map[string][]tableWrite) []string {
 	t.Helper()
 	owners := slices.Sorted(maps.Keys(writes))
 	var findings []string
@@ -744,7 +775,7 @@ func unratifiedCrossStoreWrites(t testing.TB, writes map[string][]tableWrite) []
 				continue
 			}
 			key := waiverKey(owner, w)
-			if crossStoreWrites.Waived(t, key) {
+			if waivers.Waived(t, key) {
 				continue
 			}
 			findings = append(findings, fmt.Sprintf(
@@ -761,71 +792,64 @@ func TestEveryPackageOnlyWritesTablesItOwns(t *testing.T) {
 	defer crossStoreWrites.AssertAllMatched(t)
 	defer indirectTableArg.AssertAllMatched(t)
 
-	for _, finding := range unratifiedCrossStoreWrites(t, collectTableWrites(t)) {
+	for _, finding := range unratifiedCrossStoreWrites(t, crossStoreWrites, collectTableWrites(t)) {
 		t.Error(finding)
 	}
 }
 
 // TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst is this gate's own
-// defect case, and it is the reason the key names a function.
+// defect case, and it is why the key names a declaration rather than a package
+// and a table.
 //
-// The planted write is a SECOND spelling of a cross-store write the same
-// package already has ratified — the shape every conflict-semantics
-// disagreement this gate exists for actually took. Keyed on package and table
-// alone, the entry the first copy earned admits the second silently, and there
-// is no failing assertion anywhere to notice it.
+// Keyed on package and table alone, a waiver ratifies the CATEGORY, and a
+// second, differently written copy of the same cross-store write is admitted by
+// the entry the first one earned — silently, because a key that already exists
+// produces no finding to notice.
 //
-// The first subtest is the BEFORE measurement. Without it this file would only
-// show that the gate refuses the planted write today, which a gate that refused
-// everything would also show; what makes the change worth its diff is that the
-// key it replaced could not.
+// The waiver set is a throwaway rather than crossStoreWrites: querying the real
+// one marks its entries matched for the whole package, which would quietly
+// satisfy the staleness sweep for whichever entry this case names.
 func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
-	// A write this tree really does ratify, and its live waiver key.
 	const (
-		owner    = "internal/modules/people"
-		table    = "activity_link"
-		ratified = "ensure.go:linkActivityToPerson"
+		owner = "internal/modules/people"
+		table = "activity_link"
+		first = "ensure.go:Store.linkActivityToPerson"
 	)
-	if _, live := tableOwners[table]; !live {
-		t.Fatalf("%s has no declared owner, so this case no longer plants what it claims to", table)
-	}
-	if declared := tableOwners[table]; declared == owner {
-		t.Fatalf("%s now owns %s, so a write of it is not a cross-store write and this case proves nothing",
-			owner, table)
-	}
-	if !slices.Contains(crossStoreWrites.Subjects(), owner+":"+table+":"+ratified) {
-		t.Fatalf("crossStoreWrites no longer ratifies %s:%s:%s — repoint this case at a live waiver, "+
-			"because a plant the map does not already allow tests nothing about coverage",
-			owner, table, ratified)
-	}
-
-	// The second copy: same package, same table, DIFFERENT function.
+	ratified := tableWrite{pos: "internal/modules/people/ensure.go:1:1", table: table, site: first}
+	// Same package, same table, a different declaration.
 	planted := tableWrite{
 		pos:   "internal/modules/people/planted.go:1:1",
 		table: table,
 		site:  "planted.go:aSecondWriterOfARatifiedTable",
 	}
 
-	t.Run("the key it replaced could not tell the two apart", func(t *testing.T) {
-		// The superseded scheme, spelled out rather than referenced: the point
-		// is that it produces ONE subject for two distinct writes.
-		supersededKey := func(w tableWrite) string { return owner + ":" + w.table }
-		first := tableWrite{table: table, site: ratified}
-		if supersededKey(first) != supersededKey(planted) {
-			t.Fatalf("the superseded key already separated these two writes (%q vs %q), so this gate's "+
-				"change bought nothing and the reasoning in waiverKey's docblock is wrong",
-				supersededKey(first), supersededKey(planted))
-		}
+	// The plant only tests coverage if it is a write the tree really ratifies
+	// and really does not own; both halves can drift out from under it.
+	declared, known := tableOwners[table]
+	if !known || declared == owner {
+		t.Fatalf("%s is no longer a table %s writes without owning, so this case plants nothing", table, owner)
+	}
+	if !slices.Contains(crossStoreWrites.Subjects(), waiverKey(owner, ratified)) {
+		t.Fatalf("crossStoreWrites no longer ratifies %s — repoint this case at a live waiver",
+			waiverKey(owner, ratified))
+	}
+	// And the two must differ ONLY in the part the key added, or the case would
+	// pass on a distinction the superseded key already drew.
+	if owner+":"+ratified.table != owner+":"+planted.table {
+		t.Fatalf("the plant differs from the ratified write in package or table, so a key naming " +
+			"neither would already separate them and this case proves nothing about the declaration")
+	}
+
+	waivers := gatekit.Waive(map[string]string{
+		waiverKey(owner, ratified): "the write this case treats as already ratified",
 	})
 
-	t.Run("the instance key refuses the second copy", func(t *testing.T) {
-		findings := unratifiedCrossStoreWrites(t, map[string][]tableWrite{
-			owner: {planted},
-		})
+	t.Run("the second copy is refused", func(t *testing.T) {
+		findings := unratifiedCrossStoreWrites(t, waivers, map[string][]tableWrite{owner: {planted}})
 		if len(findings) != 1 {
 			t.Fatalf("planted one unratified write, got %d findings: %v", len(findings), findings)
 		}
-		// Named, not merely counted: a finding about some OTHER write would
+		// Named, not merely counted: a finding about some other write would
 		// satisfy a bare count while the planted copy went through.
 		if !strings.Contains(findings[0], planted.site) {
 			t.Errorf("the finding does not name the planted write %q, so this case cannot tell that the "+
@@ -835,13 +859,84 @@ func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
 
 	t.Run("the ratified copy still passes", func(t *testing.T) {
 		// The other direction. A gate that refused the planted write by
-		// refusing every write would pass the subtest above, and would have
-		// made 123 ratified writes fail on the next push.
-		findings := unratifiedCrossStoreWrites(t, map[string][]tableWrite{
-			owner: {{pos: "internal/modules/people/ensure.go:1:1", table: table, site: ratified}},
-		})
-		if len(findings) != 0 {
+		// refusing every write would pass the subtest above and fail every
+		// ratified write in the tree on the next push.
+		if findings := unratifiedCrossStoreWrites(t, waivers, map[string][]tableWrite{owner: {ratified}}); len(findings) != 0 {
 			t.Errorf("the ratified write is no longer covered by its own waiver: %v", findings)
 		}
 	})
+
+	t.Run("two same-named methods on different receivers are two sites", func(t *testing.T) {
+		// This tree writes two workers into one file as a matter of course, and
+		// a bare method name would collapse both onto one site — the category
+		// ratification above, one level down.
+		const src = `package p
+
+type aWorker struct{}
+type aWorkspaceWorker struct{}
+
+func (w *aWorker) Work() {}
+func (w *aWorkspaceWorker) Work() {}
+`
+		// The type declarations are in the fixture only so the methods have
+		// receivers; the sites under test are the two Work methods.
+		sites := methodSitesOf(t, "jobs.go", src)
+		if len(sites) != 2 {
+			t.Fatalf("the fixture no longer declares exactly two methods: %v", sites)
+		}
+		if sites[0] == sites[1] {
+			t.Errorf("both methods name the site %q, so one waiver would ratify both writes — "+
+				"the receiver has stopped reaching the key", sites[0])
+		}
+	})
+
+	t.Run("two package-level statements in one file are two sites", func(t *testing.T) {
+		// erasure_graph.go really does bind two cross-store statements to two
+		// package-level names, and a write outside any function must not fall
+		// back to a token every such write in the file would share.
+		const src = `package p
+
+const blankOne = ` + "`UPDATE t SET a = NULL`" + `
+const deleteOne = ` + "`DELETE FROM t`" + `
+`
+		sites := declSitesOf(t, "statements.go", src)
+		if len(sites) != 2 {
+			t.Fatalf("the fixture no longer declares exactly two statements: %v", sites)
+		}
+		if sites[0] == sites[1] {
+			t.Errorf("both statements name the site %q, so one waiver would ratify both — a "+
+				"package-level write has stopped naming what it is bound to", sites[0])
+		}
+	})
+}
+
+// declSitesOf parses src and returns the site each top-level declaration names.
+func declSitesOf(t *testing.T, filename, src string) []string {
+	t.Helper()
+	return sitesOf(t, filename, src, func(ast.Decl) bool { return true })
+}
+
+// methodSitesOf is declSitesOf restricted to declarations with a receiver.
+func methodSitesOf(t *testing.T, filename, src string) []string {
+	t.Helper()
+	return sitesOf(t, filename, src, func(d ast.Decl) bool {
+		fn, ok := d.(*ast.FuncDecl)
+		return ok && fn.Recv != nil
+	})
+}
+
+func sitesOf(t *testing.T, filename, src string, keep func(ast.Decl) bool) []string {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, filename, src, 0)
+	if err != nil {
+		t.Fatalf("parse the fixture: %v", err)
+	}
+	sites := make([]string, 0, len(file.Decls))
+	for _, decl := range file.Decls {
+		if keep(decl) {
+			sites = append(sites, declSite(fset, decl))
+		}
+	}
+	return sites
 }
