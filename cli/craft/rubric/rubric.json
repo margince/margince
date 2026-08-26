@@ -1,5 +1,5 @@
 {
-  "version": "1",
+  "version": "2",
   "source": "this file is the standard (ADR-0045); AGENTS.md ## Craftsmanship carries the prose form and any per-directory deltas",
   "binds": [
     "Google Go Style Guide",
@@ -94,6 +94,14 @@
       "block_eligible": true,
       "title": "Oversized, unexplained PRs",
       "rule": "The change is scoped and tells a story. A huge PR the author cannot explain line by line is the canonical rejected case; PR hygiene is in scope."
+    },
+    {
+      "id": "T11",
+      "kind": "anti_tell",
+      "category": "duplicate-capability",
+      "block_eligible": false,
+      "title": "Second implementation of an existing capability",
+      "rule": "Before adding a capability, search the whole tree for its nouns — not just the package being edited. A second implementation of one capability is two answers to one question, and they drift until they disagree in front of a user. Adopt the existing owner, or state at the code why a second is required. MAJOR, never BLOCKER: a reviewer sees the diff and not the tree, so it raises the question rather than vetoing it."
     },
     {
       "id": "P1",
