@@ -96,7 +96,29 @@ func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcon
 // previewTarget is the read half of promoteTarget: the same candidate the
 // promotion would resolve, through the same ladder, so the preview and the
 // promotion cannot disagree about who the lead already is.
+//
+// Held by: TestTheLadderCandidateIsDerivedInOnePlace (backend/internal/modules/people/onederivation_test.go)
 func (s *Store) previewTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (PersonResolution, error) {
+	candidate, err := s.leadPersonCandidate(ctx, tx, lead)
+	if err != nil {
+		return PersonResolution{}, err
+	}
+	return DedupePerson(ctx, tx, candidate)
+}
+
+// leadPersonCandidate turns a lead into the candidate the §1.3 ladder matches
+// on. The preview and the promotion take it from here rather than each
+// assembling one, because "the same candidate" is a promise about the
+// DERIVATION and not about the struct: two literals with the same fields still
+// disagree when the names fed into them are worked out differently, and the
+// preview would then name a person the promotion does not land on.
+//
+// A lead reaching here can carry a full_name that is present and empty, which
+// is not the same as absent — the identity check upstream refuses only a lead
+// with neither field, so an empty name with no email survives it. The email is
+// therefore read through its own nil check rather than on the strength of that
+// check having passed.
+func (s *Store) leadPersonCandidate(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (PersonCandidate, error) {
 	name := deref(lead.FullName)
 	if name == "" && lead.Email != nil {
 		name = string(*lead.Email)
@@ -107,9 +129,7 @@ func (s *Store) previewTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 	}
 	consumerMail, err := s.consumerMailMatcher(ctx, tx)
 	if err != nil {
-		return PersonResolution{}, err
+		return PersonCandidate{}, err
 	}
-	return DedupePerson(ctx, tx, PersonCandidate{
-		FullName: name, Emails: emails, ConsumerMail: consumerMail,
-	})
+	return PersonCandidate{FullName: name, Emails: emails, ConsumerMail: consumerMail}, nil
 }

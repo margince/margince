@@ -316,23 +316,15 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 // creates (DEDUPE_FUZZY_AUTOMERGE is pinned never) and now leaves the pair on
 // the review queue instead of nothing at all.
 func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, merged *bool) (ids.PersonID, map[string]any, error) {
-	name := deref(lead.FullName)
-	if name == "" {
-		// Identity was checked upstream, so an email exists; a person
-		// needs SOME name until enrichment fills it.
-		name = string(*lead.Email)
-	}
-	var emails []string
-	if lead.Email != nil {
-		emails = []string{string(*lead.Email)}
-	}
-	consumerMail, err := s.consumerMailMatcher(ctx, tx)
+	candidate, err := s.leadPersonCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.PersonID{}, nil, err
 	}
-	match, err := DedupePerson(ctx, tx, PersonCandidate{
-		FullName: name, Emails: emails, ConsumerMail: consumerMail,
-	})
+	// The person is created under the SAME name the ladder matched on, so a
+	// lead that resolved as a new person is stored as the candidate that was
+	// compared, not as a second reading of the lead.
+	name := candidate.FullName
+	match, err := DedupePerson(ctx, tx, candidate)
 	if err != nil {
 		return ids.PersonID{}, nil, err
 	}

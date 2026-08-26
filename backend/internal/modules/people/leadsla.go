@@ -10,7 +10,6 @@ package people
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -279,7 +278,7 @@ func isFirstResponseActivity(t leadResponseTouch) bool {
 	if t.direction != "outbound" {
 		return false
 	}
-	if strings.HasPrefix(t.capturedBy, string(principal.PrincipalHuman)+":") {
+	if humanCaptured(t) {
 		return true
 	}
 	return t.hadInbound
