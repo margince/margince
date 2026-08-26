@@ -461,7 +461,6 @@ internal/modules/people/handlers_projectstakeholder.go#const block at const Proj
 internal/modules/people/lead_list.go#const block at const leadNameColumn
 internal/modules/people/lead_read.go#const liveOnlyClause
 internal/modules/people/leadmanualsignal.go#const block at const auditKeyManualSignal
-internal/modules/people/leadrouting.go#var RoutableLeadFields
 internal/modules/people/leadslaworkflow.go#func humanLoggedNote
 internal/modules/people/leadstatus.go#method LeadStatus.Open
 internal/modules/people/linkedinimport.go#const block at const csvFirst
@@ -478,7 +477,6 @@ internal/modules/people/merge.go#const block at const auditKeyMergedInto
 internal/modules/people/organization_counts.go#func fillOpenDealCounts
 internal/modules/people/organization_profile_field_write.go#const block at const auditKeyValue
 internal/modules/people/organization_profile_field_write.go#method Store.writeProfileField
-internal/modules/people/organization_relationship_types.go#var validSizeBands
 internal/modules/people/organizationlogo.go#const logoFieldName
 internal/modules/people/projectcompany.go#const relationshipRoleField
 internal/modules/people/projectstakeholder.go#method Store.PersonNames
