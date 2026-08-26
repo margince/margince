@@ -14,7 +14,7 @@ import { useRecordZone } from "../app/recordzone";
 import { Button, Card, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { FieldDiff, ProvenanceTag } from "../design-system/trust";
-import { formatDateTime } from "../format/format";
+import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
@@ -269,7 +269,9 @@ function UndoButton({
         onConfirm={() => putBack.mutate({ auditId: entry.id, version })}
       >
         <p>
-          {t("history.undo.confirmBody", { count: String(changes.length) })}
+          {t("history.undo.confirmBody", {
+            count: formatNumber(changes.length, locale),
+          })}
         </p>
         <ul className="entry-fields">
           {changes.map((change) => (
