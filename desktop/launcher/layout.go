@@ -4,12 +4,14 @@
 package main
 
 import (
+	"bufio"
 	"crypto/rand"
 	"encoding/base64"
 	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // layout is the installation directory — everything is relative to it, so the
@@ -97,6 +99,63 @@ func (l layout) adminPasswordPath() string { return filepath.Join(l.data(), "adm
 // copies data/ has the attachments a row points at rather than dangling keys.
 func (l layout) blobs() string { return filepath.Join(l.data(), "blobs") }
 
+// defaultAdminEmail is the bootstrap admin this launcher creates when it writes
+// margince.yaml itself, and the address the start message offers when the file
+// cannot answer. ONE constant because the two must agree: a start message naming
+// an account the configuration did not create hands a reader a credential that
+// cannot sign in, and nothing else in the folder would contradict it.
+const defaultAdminEmail = "owner@margince.local"
+
+// configuredAdminEmail is the address margince.yaml names as the bootstrap
+// admin, or defaultAdminEmail when the file cannot be read or does not say.
+//
+// A DELIBERATELY NARROW READER, not a YAML parser. This module is stdlib-only
+// and outside go.work by design (see go.mod), and a parser dependency bought for
+// one line of a start message would not pay for itself. It finds `email:` under
+// `bootstrap_admin:` and stops.
+//
+// Every failure answers with the default rather than an error. The address is
+// informational, so a shape this reader cannot follow must cost a reader the
+// precision and not the launch.
+func (l layout) configuredAdminEmail() string {
+	file, err := os.Open(l.configPath())
+	if err != nil {
+		return defaultAdminEmail
+	}
+	//craft:ignore swallowed-errors best-effort close of a file opened for reading
+	defer func() { _ = file.Close() }()
+
+	inBlock := false
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := scanner.Text()
+		if i := strings.IndexByte(line, '#'); i >= 0 {
+			line = line[:i]
+		}
+		if strings.TrimSpace(line) == "" {
+			continue
+		}
+		// A key at column zero ends whatever block preceded it. bootstrap_admin's
+		// own line is such a key, so one test both enters and leaves the block.
+		if !strings.HasPrefix(line, " ") && !strings.HasPrefix(line, "\t") {
+			inBlock = strings.TrimSpace(line) == "bootstrap_admin:"
+			continue
+		}
+		if !inBlock {
+			continue
+		}
+		value, found := strings.CutPrefix(strings.TrimSpace(line), "email:")
+		if !found {
+			continue
+		}
+		if email := strings.Trim(strings.TrimSpace(value), `"'`); email != "" {
+			return email
+		}
+		return defaultAdminEmail
+	}
+	return defaultAdminEmail
+}
+
 // ensureConfig writes the deployment configuration on first run and leaves an
 // existing one alone, matching the create-if-missing / leave-if-exists rule
 // the api documents for margince.yaml (A107/ADR-0061). Overwriting it would
@@ -129,10 +188,10 @@ organization:
   timezone: %s
 
 bootstrap_admin:
-  email: owner@margince.local
+  email: %s
   display_name: Owner
   password_file: data/admin-password
-`, localTimezone())
+`, localTimezone(), defaultAdminEmail)
 
 	if err := writeFileAtomic(l.configPath(), []byte(config), 0o600); err != nil {
 		return "", err

@@ -122,3 +122,77 @@ func TestEnsureAdminPasswordDisclosesOnlyOnFirstRun(t *testing.T) {
 		}
 	})
 }
+
+// TestConfiguredAdminEmailAgreesWithTheFileTheLauncherWrites pins the pair that
+// must agree: ensureConfig writes an address into margince.yaml, and the start
+// message offers one to sign in with. Derived from one constant, a launcher
+// cannot create an account under a name it will not go on to report.
+func TestConfiguredAdminEmailAgreesWithTheFileTheLauncherWrites(t *testing.T) {
+	l := newTestLayout(t)
+	if _, err := l.ensureConfig(); err != nil {
+		t.Fatalf("write the config: %v", err)
+	}
+
+	if got := l.configuredAdminEmail(); got != defaultAdminEmail {
+		t.Fatalf("the launcher wrote a config its own start message cannot read back:\n"+
+			"  announce would say %q\n  margince.yaml names %q", got, defaultAdminEmail)
+	}
+}
+
+// TestConfiguredAdminEmailReadsTheInstallationsOwnAddress covers the case that
+// matters: margince.yaml is write-once and the organization is bootstrapped from
+// it, so an operator who names the admin before the first run owns that name for
+// good and the start message follows the file rather than its own default.
+func TestConfiguredAdminEmailReadsTheInstallationsOwnAddress(t *testing.T) {
+	for name, yaml := range map[string]string{
+		"a plain value": "" +
+			"version: 1\n\nbootstrap_admin:\n  email: admin@demo.test\n  display_name: Owner\n",
+		"a quoted value": "" +
+			"version: 1\n\nbootstrap_admin:\n  email: \"admin@demo.test\"\n",
+		"a trailing comment": "" +
+			"version: 1\n\nbootstrap_admin:\n  email: admin@demo.test # the demo account\n",
+		// The block test is what stops an `email:` belonging to some other
+		// section being reported as the sign-in address.
+		"an email under another key first": "" +
+			"organization:\n  email: billing@example.com\n\nbootstrap_admin:\n  email: admin@demo.test\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			l := newTestLayout(t)
+			if err := os.WriteFile(l.configPath(), []byte(yaml), 0o600); err != nil {
+				t.Fatalf("write config: %v", err)
+			}
+			if got := l.configuredAdminEmail(); got != "admin@demo.test" {
+				t.Fatalf("start message would name %q, but margince.yaml bootstraps admin@demo.test", got)
+			}
+		})
+	}
+}
+
+// TestConfiguredAdminEmailFallsBackRatherThanFailing keeps the address
+// informational. Reading it must never decide whether a launcher can report
+// where the app is running, so every shape this reader cannot follow answers
+// with the address the launcher would itself have written.
+func TestConfiguredAdminEmailFallsBackRatherThanFailing(t *testing.T) {
+	for name, yaml := range map[string]*string{
+		"no file at all":             nil,
+		"no bootstrap_admin block":   ptr("version: 1\n\norganization:\n  name: Margince\n"),
+		"the block names no email":   ptr("bootstrap_admin:\n  display_name: Owner\n"),
+		"the email is commented out": ptr("bootstrap_admin:\n  # email: admin@demo.test\n"),
+		"the value is empty":         ptr("bootstrap_admin:\n  email:\n"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			l := newTestLayout(t)
+			if yaml != nil {
+				if err := os.WriteFile(l.configPath(), []byte(*yaml), 0o600); err != nil {
+					t.Fatalf("write config: %v", err)
+				}
+			}
+			if got := l.configuredAdminEmail(); got != defaultAdminEmail {
+				t.Fatalf("answered %q; an unreadable config must fall back to %q rather than\n"+
+					"reporting an address no one can sign in with", got, defaultAdminEmail)
+			}
+		})
+	}
+}
+
+func ptr(s string) *string { return &s }
