@@ -22,6 +22,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
@@ -45,6 +46,11 @@ import (
 // long as that entry exists.
 type followUpStager struct {
 	svc *approvals.Service
+	// draft composes the reply when the evidence is an email thread. Nil is a
+	// real configuration rather than a missing one: a role with no send path
+	// wired stages the task proposal for every candidate, which is what the
+	// pass did before the drafted reply existed.
+	draft followUpReplySeam
 }
 
 func (s followUpStager) HasPendingFollowUp(ctx context.Context, dealID ids.UUID) (bool, error) {
@@ -52,6 +58,18 @@ func (s followUpStager) HasPendingFollowUp(ctx context.Context, dealID ids.UUID)
 }
 
 func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summary string, proposal deals.FollowUpProposal) error {
+	// An email thread can be ANSWERED, so the rep gets the reply itself rather
+	// than a task telling them to write one. A call or a meeting has no thread
+	// and no address, and a drafted reply to one would be a message to nobody.
+	if s.draft != nil && proposal.EvidenceKind == string(crmcontracts.ActivityKindEmail) {
+		staged, err := s.stageDraftedReply(ctx, dealID, summary, proposal)
+		if err != nil {
+			return err
+		}
+		if staged {
+			return nil
+		}
+	}
 	raw, err := json.Marshal(proposal)
 	if err != nil {
 		return fmt.Errorf("compose: marshal follow-up proposal: %w", err)
@@ -92,7 +110,7 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 		Kind:           deals.FollowUpReconcileKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
-		TargetType:     "deal",
+		TargetType:     approvalTargetDeal,
 		TargetID:       dealID,
 		Summary:        summary,
 		Identity:       identity,
@@ -101,10 +119,36 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 	return err
 }
 
+// stageDraftedReply offers the drafted reply, and reports whether it was
+// taken. A thread with no answerable counterparty falls back to the task
+// proposal rather than dropping the candidate — the rep is still told about
+// the deal, they simply get "write a follow-up" instead of a draft to send.
+func (s followUpStager) stageDraftedReply(
+	ctx context.Context, dealID ids.UUID, summary string, proposal deals.FollowUpProposal,
+) (bool, error) {
+	draft, answerable, err := draftFollowUpReply(ctx, s.draft, proposal)
+	if err != nil || !answerable {
+		return false, err
+	}
+	replySummary := fmt.Sprintf("%s — a reply is drafted and waiting", summary)
+	if err := stageFollowUpDraft(ctx, s.svc, replySummary,
+		dealID, proposal.EvidenceActivityID.UUID, draft); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // NewFollowUpReconciler assembles the nightly follow-up reconciler for
 // the worker process role.
 func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUpReconciler {
-	return deals.NewFollowUpReconciler(InstallationDB(pool), followUpStager{svc: approvals.NewService(InstallationDB(pool))}, log)
+	db := InstallationDB(pool)
+	// The drafting seam is the same adapter the workflow executors compose
+	// through, so an overnight reply and an automation's draft are one drafting
+	// engine. The zero SendPath matches that surface: nothing here sends, the
+	// held-draft release does, through the fully wired path it builds itself.
+	drafter := newCommsAdapter(pool, nil, SendPath{})
+	stager := followUpStager{svc: approvals.NewService(db), draft: drafter}
+	return deals.NewFollowUpReconciler(db, stager, log)
 }
 
 // followUpPrecheck refuses a DECISION whose payload the effect could not use.

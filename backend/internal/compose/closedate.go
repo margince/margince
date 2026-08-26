@@ -51,7 +51,7 @@ func (s closeDateStager) StageCorrection(ctx context.Context, dealID ids.UUID, t
 		Kind:           deals.CloseDateCorrectionKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
-		TargetType:     "deal",
+		TargetType:     approvalTargetDeal,
 		TargetID:       dealID,
 		TargetVersion:  &targetVersion,
 		Summary:        summary,
