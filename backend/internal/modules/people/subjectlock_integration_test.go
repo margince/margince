@@ -50,7 +50,15 @@ func TestALockedSubjectMakesTheEraserWait(t *testing.T) {
 			return nil
 		})
 	}()
-	<-held
+	// Either outcome, never just the good one: a lock that FAILED sends on
+	// holding and closes nothing, so waiting on held alone would hang to the
+	// package timeout and report a deadline where the real answer is one line
+	// of error text.
+	select {
+	case <-held:
+	case err := <-holding:
+		t.Fatalf("taking the lock failed, so this proves nothing about the eraser: %v", err)
+	}
 
 	// No sleep and no clock: the erasure's own lock_timeout reports the
 	// blocking, and it can only fire while something holds the row.
