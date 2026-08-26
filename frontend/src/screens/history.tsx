@@ -28,7 +28,14 @@ type HistoryTab = (typeof HISTORY_TABS)[number];
 export function RecordHistoryTab({
   kind,
   id,
-}: Readonly<{ kind: EntityKind; id: string }>) {
+  currency,
+}: Readonly<{
+  kind: EntityKind;
+  id: string;
+  // Handed down to the field panel, which needs it to read a minor-unit
+  // amount at the scale its currency actually has.
+  currency?: string | null;
+}>) {
   const t = useT();
   const [tab, setTab] = useState<HistoryTab>("changes");
   const tabLabels: Record<HistoryTab, string> = {
@@ -52,7 +59,7 @@ export function RecordHistoryTab({
       {tab === "changes" ? (
         <RecordHistory kind={kind} id={id} />
       ) : (
-        <FieldHistoryTimeline kind={kind} id={id} />
+        <FieldHistoryTimeline kind={kind} id={id} currency={currency} />
       )}
     </div>
   );

@@ -3640,7 +3640,11 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
               {tab === "files" && overlay && <OverlayUnavailable />}
               {tab === "history" && !overlay && (
-                <RecordHistoryTab kind="deal" id={deal.id} />
+                <RecordHistoryTab
+                  kind="deal"
+                  id={deal.id}
+                  currency={deal.currency}
+                />
               )}
               {tab === "history" && overlay && <OverlayUnavailable />}
               {advance.isError && (

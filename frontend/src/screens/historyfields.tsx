@@ -37,6 +37,7 @@ import {
   groupByField,
   provenanceOfEntry,
 } from "./history.logic";
+import { historyValue } from "./historyvalues";
 import "./history.css";
 
 // The per-field old→new diff view (B-EP09.x): every field-change row the
@@ -120,7 +121,10 @@ function ChangeGrounding({ change }: Readonly<{ change: FieldHistoryEntry }>) {
   );
 }
 
-function FieldGroupSection({ group }: Readonly<{ group: FieldGroup }>) {
+function FieldGroupSection({
+  group,
+  currency,
+}: Readonly<{ group: FieldGroup; currency: string | null | undefined }>) {
   const { locale } = useLocale();
   const recordZone = useRecordZone();
   return (
@@ -130,8 +134,18 @@ function FieldGroupSection({ group }: Readonly<{ group: FieldGroup }>) {
         {group.changes.map((change) => (
           <li key={change.id} className="change">
             <FieldDiff
-              oldValue={change.old_value ?? null}
-              newValue={change.new_value ?? null}
+              oldValue={historyValue(
+                group.field,
+                change.old_value,
+                currency,
+                locale,
+              )}
+              newValue={historyValue(
+                group.field,
+                change.new_value,
+                currency,
+                locale,
+              )}
             />
             <span className="tl-meta">
               {formatDateTime(change.changed_at, locale, recordZone)}
@@ -147,7 +161,15 @@ function FieldGroupSection({ group }: Readonly<{ group: FieldGroup }>) {
 export function FieldHistoryTimeline({
   kind,
   id,
-}: Readonly<{ kind: EntityKind; id: string }>) {
+  currency,
+}: Readonly<{
+  kind: EntityKind;
+  id: string;
+  // The record's ISO currency, which is what gives a minor-unit column its
+  // scale. Only a deal carries one; every other record type this panel serves
+  // has no money column for it to reach.
+  currency?: string | null;
+}>) {
   const t = useT();
   const [actorFacet, setActorFacet] = useState<ActorFacet>("all");
   const [fieldFilter, setFieldFilter] = useState<string | undefined>(undefined);
@@ -229,7 +251,11 @@ export function FieldHistoryTimeline({
     body = (
       <>
         {groups.map((group) => (
-          <FieldGroupSection key={group.field} group={group} />
+          <FieldGroupSection
+            key={group.field}
+            group={group}
+            currency={currency}
+          />
         ))}
         <LoadMoreButton query={query} />
       </>
