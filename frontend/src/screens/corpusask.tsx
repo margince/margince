@@ -13,7 +13,8 @@ import {
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Select } from "../design-system/select";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 
 // Asking a document set a question, in the reader's own words.
@@ -192,12 +193,15 @@ function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
 
 function Refusal({ answer }: Readonly<{ answer: Answer }>) {
   const t = useT();
+  // Counts, so they are MAGNITUDES and take the reader's own notation: a German
+  // reader seeing 1234 beside a formatted 1.234 is one screen written in two.
+  const { locale } = useLocale();
   if (answer.outcome === "not_ready") {
     return (
       <Callout tone="info">
         {t("corpusAsk.notReady", {
-          embedded: String(answer.coverage.chunks_embedded),
-          total: String(answer.coverage.chunks_total),
+          embedded: formatNumber(answer.coverage.chunks_embedded, locale),
+          total: formatNumber(answer.coverage.chunks_total, locale),
         })}
       </Callout>
     );

@@ -16,7 +16,8 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // The document sets a workspace can be asked questions of.
@@ -249,6 +250,8 @@ function DocumentSetRow({
   canManage,
 }: Readonly<{ set: Corpus; canManage: boolean }>) {
   const t = useT();
+  // Counts, so they are MAGNITUDES and take the reader's own notation.
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [confirming, setConfirming] = useState(false);
   const archive = useArchiveDocumentSet();
@@ -274,9 +277,9 @@ function DocumentSetRow({
         />
         <p className="t-small">
           {t("knowledge.coverage", {
-            embedded: String(set.coverage.chunks_embedded),
-            total: String(set.coverage.chunks_total),
-            documents: String(set.coverage.documents_total),
+            embedded: formatNumber(set.coverage.chunks_embedded, locale),
+            total: formatNumber(set.coverage.chunks_total, locale),
+            documents: formatNumber(set.coverage.documents_total, locale),
           })}
         </p>
         {/* Two DIFFERENT statements, never collapsed into one. A set being
