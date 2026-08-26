@@ -117,7 +117,7 @@ func TestADuplicateOutranksAnApprovalBecauseAMergeCannotBeUndone(t *testing.T) {
 	svc := NewService(
 		stubApprovals{rows: []crmcontracts.Approval{approval("Send the Weber follow-up")}},
 		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "person", Confidence: 0.9}}, open: 1},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -135,7 +135,7 @@ func TestAWithheldLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 		stubApprovals{},
 		stubDuplicates{err: apperrors.ErrPermissionDenied},
 		&stubTasks{rows: []Task{{ID: ids.NewV7(), Subject: "Call Anna"}}},
-		stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("a refused lane must not fail the read: %v", err)
@@ -157,7 +157,7 @@ func TestAWithheldLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 func TestABrokenLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
 	svc := NewService(
 		stubApprovals{err: fmt.Errorf("the database is unreachable")},
-		stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(context.Background()); err == nil {
 		t.Fatal("a lane that FAILED was reported as an empty day")
 	}
@@ -171,7 +171,7 @@ func TestTheCountReportsTheTotalThoughTheLaneIsBounded(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{pairs: pairs, open: 40},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -194,7 +194,7 @@ func TestTheCountCoversStagedProposalsToo(t *testing.T) {
 	}
 	svc := NewService(
 		stubApprovals{rows: staged, pending: 20},
-		stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -213,7 +213,7 @@ func TestAnOverdueTaskLeadsThePlannedLane(t *testing.T) {
 			{ID: ids.NewV7(), Subject: "Due later today", DueAt: &later},
 			{ID: ids.NewV7(), Subject: "Was due yesterday", DueAt: &yesterday},
 		}},
-		stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -236,7 +236,7 @@ func TestAReceiptOffersNoDecision(t *testing.T) {
 			ID: ids.NewV7(), Kind: "close_date_correction",
 			Summary: "Moved the Acme close date to 27 Sep", OccurredAt: readInstant.Add(-time.Hour),
 		}}},
-		stubBriefing{}, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -255,7 +255,7 @@ func TestADuplicateCarriesNoServerWrittenSentence(t *testing.T) {
 	svc := NewService(
 		stubApprovals{},
 		stubDuplicates{pairs: []DuplicatePair{{ID: ids.NewV7(), EntityType: "organization", Confidence: 0.92}}, open: 1},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -291,7 +291,7 @@ func TestAFloodOfDuplicatesDoesNotBuryTheStagedDecisions(t *testing.T) {
 	svc := NewService(
 		stubApprovals{rows: staged, pending: 79},
 		stubDuplicates{pairs: pairs, open: len(pairs)},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -319,7 +319,7 @@ func TestADuplicateCardNamesBothRecords(t *testing.T) {
 			LeftID: left, RightID: right,
 			Evidence: []FieldComparison{{Field: "display_name", Signal: "collide"}},
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -344,7 +344,7 @@ func TestAnUnreadableSideCostsTheMergeVerbRatherThanLeakingTheRecord(t *testing.
 			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: hidden,
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("a record this reader may not see must not fail the whole day: %v", err)
@@ -375,7 +375,7 @@ func TestEvidenceNeverReachesAReaderAsAColumnName(t *testing.T) {
 				{Field: "org", Signal: "collide"},
 			},
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -400,7 +400,7 @@ func TestARecordReadThatBrokeIsNotReportedAsWithheld(t *testing.T) {
 			ID: ids.NewV7(), EntityType: "person", Confidence: 0.9,
 			LeftID: ids.NewV7(), RightID: ids.NewV7(),
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(context.Background()); err == nil {
 		t.Fatal("a record read that FAILED was rendered as a pair the reader may not see")
 	}
@@ -421,7 +421,7 @@ func TestAnIdentityConflictKeepsTheOneRowThatExplainsIt(t *testing.T) {
 				{Field: "matched_lane", Signal: "exact_conflict", Left: &lane},
 			},
 		}}},
-		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, fixedClock)
+		&stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -439,7 +439,7 @@ func TestTheBriefingLaneIsItsOwnAndNotADecision(t *testing.T) {
 	deal := ids.NewV7()
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}}, nil, nil,
+		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: deal, Rank: 1}}}, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -472,7 +472,7 @@ func TestTheBriefingLaneIsItsOwnAndNotADecision(t *testing.T) {
 func TestAMorningWithNoRunIsEmptyRatherThanWithheld(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{}, nil, nil, fixedClock)
+		stubBriefing{}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -493,7 +493,7 @@ func TestAMorningWithNoRunIsEmptyRatherThanWithheld(t *testing.T) {
 func TestABriefingLaneRefusedIsNamedRatherThanReportedQuiet(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{err: apperrors.ErrPermissionDenied}, nil, nil, fixedClock)
+		stubBriefing{err: apperrors.ErrPermissionDenied}, nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -509,7 +509,7 @@ func TestABriefingLaneRefusedIsNamedRatherThanReportedQuiet(t *testing.T) {
 func TestABrokenBriefingLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{err: errors.New("the brief read fell over")}, nil, nil, fixedClock)
+		stubBriefing{err: errors.New("the brief read fell over")}, nil, nil, nil, fixedClock)
 	if _, err := svc.Assemble(context.Background()); err == nil {
 		t.Fatal("a broken briefing read was reported as a quiet morning")
 	}
@@ -518,7 +518,7 @@ func TestABrokenBriefingLaneFailsTheReadRatherThanReadingAsQuiet(t *testing.T) {
 func TestABriefingItemOffersItsOwnThreeVerbs(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{},
-		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}}, nil, nil,
+		stubBriefing{rows: []BriefEntry{{ID: ids.NewV7(), DealID: ids.NewV7(), Rank: 1}}}, nil, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -577,7 +577,7 @@ func TestACommitmentCarriesThePromiseAndTheWordsItWasReadFrom(t *testing.T) {
 	due := readInstant.Add(2 * time.Hour)
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		&stubCommitments{rows: []Commitment{promise("Referenzliste an Herrn Vogt schicken", due)}}, nil,
+		&stubCommitments{rows: []Commitment{promise("Referenzliste an Herrn Vogt schicken", due)}}, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -617,7 +617,7 @@ func TestAnOverduePromiseSaysSoRatherThanLeavingTheReaderToCompareDates(t *testi
 		&stubCommitments{rows: []Commitment{
 			promise("Angebot nachfassen", readInstant.Add(-48*time.Hour)),
 			promise("Termin bestätigen", readInstant.Add(3*time.Hour)),
-		}}, nil,
+		}}, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -643,7 +643,7 @@ func TestBothDueDatedLanesStopAtTheSameEndOfDay(t *testing.T) {
 	tasks := &stubTasks{}
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, tasks, stubReceipts{}, stubBriefing{},
-		commitments, nil, fixedClock)
+		commitments, nil, nil, fixedClock)
 	if _, err := svc.Assemble(context.Background()); err != nil {
 		t.Fatalf("assembling: %v", err)
 	}
@@ -662,7 +662,7 @@ func TestBothDueDatedLanesStopAtTheSameEndOfDay(t *testing.T) {
 func TestAWithheldCommitmentLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		&stubCommitments{err: apperrors.ErrPermissionDenied}, nil,
+		&stubCommitments{err: apperrors.ErrPermissionDenied}, nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -691,7 +691,7 @@ func TestAWithheldCommitmentLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 func TestAFeedWithNoClaimReaderSendsNoCommitmentLaneAtAll(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		nil, nil, fixedClock)
+		nil, nil, nil, fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -709,7 +709,7 @@ func TestAFeedWithNoClaimReaderSendsNoCommitmentLaneAtAll(t *testing.T) {
 func TestABrokenCommitmentReadFailsTheFeedRatherThanReadingAsAClearDay(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
-		&stubCommitments{err: errors.New("the claim read fell over")}, nil,
+		&stubCommitments{err: errors.New("the claim read fell over")}, nil, nil,
 		fixedClock)
 	if _, err := svc.Assemble(context.Background()); err == nil {
 		t.Fatal("a failed commitment read assembled a day, want the error surfaced")
@@ -740,9 +740,8 @@ func TestAQuietDealSaysHowLongItHasBeenQuiet(t *testing.T) {
 	deal := ids.NewV7()
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
-		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}},
-		fixedClock,
-	)
+		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}}, nil,
+		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -778,9 +777,8 @@ func TestADealPastItsCloseDateReportsThatGroundRatherThanSilence(t *testing.T) {
 		stubAtRisk{rows: []RiskyDeal{{
 			DealID: ids.NewV7(), Name: "Closing last month",
 			QuietDays: 2, CloseOverdue: true, ExpectedCloseDate: &closed,
-		}}},
-		fixedClock,
-	)
+		}}}, nil,
+		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -803,9 +801,8 @@ func TestADealPastItsCloseDateReportsThatGroundRatherThanSilence(t *testing.T) {
 func TestAWithheldRiskLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
-		stubAtRisk{err: apperrors.ErrPermissionDenied},
-		fixedClock,
-	)
+		stubAtRisk{err: apperrors.ErrPermissionDenied}, nil,
+		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -828,9 +825,8 @@ func TestAWithheldRiskLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 // rule the commitments lane keeps.
 func TestAFeedWithNoRiskReaderSendsNoRiskLane(t *testing.T) {
 	svc := NewService(
-		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
-		fixedClock,
-	)
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
+		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
 		t.Fatalf("assembling: %v", err)
@@ -850,4 +846,94 @@ func stringOr(v *string) string {
 		return "absent"
 	}
 	return *v
+}
+
+type stubMeetings struct {
+	rows []Meeting
+	err  error
+	// from records the window's start, so a test can prove the lane asks from
+	// NOW rather than from the start of the day.
+	from *time.Time
+}
+
+func (s *stubMeetings) Today(_ context.Context, from, _ time.Time, _ int) ([]Meeting, error) {
+	s.from = &from
+	return s.rows, s.err
+}
+
+// The lane asks from the READ INSTANT, not from midnight. A meeting that ended
+// an hour ago cannot be prepared for, and listing it under a lane of what is
+// still ahead would be plainly false.
+func TestTheMeetingLaneAsksFromNowRatherThanFromTheStartOfTheDay(t *testing.T) {
+	meetings := &stubMeetings{}
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
+		nil, nil, meetings, fixedClock,
+	)
+	if _, err := svc.Assemble(context.Background()); err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if meetings.from == nil {
+		t.Fatal("the meeting lane was never asked for a window")
+	}
+	if !meetings.from.Equal(readInstant) {
+		t.Errorf("the lane asks from %s, want the read instant %s", meetings.from, readInstant)
+	}
+}
+
+// A meeting carries its own subject and the instant it starts. The subject is
+// what a rep recognises and the start is what they are racing.
+func TestAMeetingCarriesItsSubjectAndWhenItStarts(t *testing.T) {
+	starts := readInstant.Add(90 * time.Minute)
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
+		&stubMeetings{rows: []Meeting{{ID: ids.NewV7(), Subject: "Vogt — Angebotsbesprechung", StartsAt: starts}}},
+		fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if out.Meetings == nil {
+		t.Fatal("the meeting lane is absent, want one meeting")
+	}
+	item := (*out.Meetings)[0]
+	if item.Title == nil || *item.Title != "Vogt — Angebotsbesprechung" {
+		t.Errorf("title = %s, want the meeting subject", stringOr(item.Title))
+	}
+	if item.DueAt == nil || !item.DueAt.Equal(starts) {
+		t.Errorf("due_at = %v, want when the meeting starts", item.DueAt)
+	}
+	// A meeting that has not started cannot be late, so the flag stays off.
+	if item.Overdue != nil && *item.Overdue {
+		t.Error("a meeting still ahead reports overdue, want not")
+	}
+	if out.Counts.Meetings == nil || *out.Counts.Meetings != 1 {
+		t.Errorf("counts.meetings = %v, want 1", out.Counts.Meetings)
+	}
+}
+
+// A withheld meeting lane is NAMED. "No meetings today" and "you may not read
+// the calendar" are different answers and only one of them is true.
+func TestAWithheldMeetingLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
+		&stubMeetings{err: apperrors.ErrPermissionDenied}, fixedClock,
+	)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if out.Meetings != nil {
+		t.Errorf("a withheld lane sent %v, want no lane", *out.Meetings)
+	}
+	var named bool
+	for _, lane := range *out.LanesOmitted {
+		if lane == "meetings" {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("lanes_omitted = %v, want it to name meetings", *out.LanesOmitted)
+	}
 }

@@ -77,6 +77,7 @@ export const de = {
   "day.lead.decisions": "{count} Entscheidungen warten auf dich.",
   "day.lead.plannedOnly": "Nichts zu entscheiden — {count} für heute geplant.",
   "day.lead.promises": "Du hast {count} zugesagt — das geht vor.",
+  "day.lead.meetings": "{count} heute im Kalender.",
   "day.lead.atRisk": "{count} werden still. Sonst wartet nichts auf dich.",
   "day.lead.morningOnly":
     "Nichts wartet auf dich — die Nacht hat {count} zum Anfangen herausgesucht.",
@@ -90,6 +91,8 @@ export const de = {
   "day.lane.withheld": "Für dein Konto nicht sichtbar.",
   "day.needsYou": "Wartet auf dich",
   "day.needsYou.empty": "Nichts zu entscheiden.",
+  "day.meetings": "Termine heute",
+  "day.meetings.empty": "Nichts im Kalender.",
   "day.atRisk": "Wird still",
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",

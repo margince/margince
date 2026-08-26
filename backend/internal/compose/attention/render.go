@@ -300,6 +300,30 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 	return item
 }
 
+// meetingItem renders one appointment still ahead today.
+//
+// The subject IS the sentence a rep recognises — somebody wrote it when the
+// meeting was booked — so it travels as the title, and the start time as
+// `due_at` because that is what a reader is racing. No `overdue` flag: a
+// meeting that has not started cannot be late, and the lane only carries the
+// ones still ahead.
+//
+// Its only verb is `open`. The pre-meeting brief is its own surface with its
+// own eight cited sections, and a queue that tried to summarise it here would
+// be a second answer to "prepare me for this".
+func meetingItem(meeting Meeting) crmcontracts.AttentionItem {
+	subject := meeting.Subject
+	starts := meeting.StartsAt
+	return crmcontracts.AttentionItem{
+		Id:      meeting.ID.String(),
+		Source:  crmcontracts.AttentionItemSource("meeting"),
+		Title:   &subject,
+		Subject: subjectOf("activity", meeting.ID),
+		DueAt:   &starts,
+		Actions: []crmcontracts.AttentionItemActions{"open"},
+	}
+}
+
 // receiptItem renders one thing the system did on its own.
 //
 // Its only verb is `open`. A receipt reports a finished act, and offering a

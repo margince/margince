@@ -28484,6 +28484,18 @@ components:
             carries the promise's own words and its evidence. Nothing appears in both.
 
             Absent — not empty — on an installation whose feed does not read claims.
+        meetings:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            Today's booked meetings that have not happened yet, soonest first — the ones
+            still worth preparing for.
+
+            A meeting already held or cancelled is not on this lane: preparing for it is
+            no longer possible, and a queue that listed it would be asking for work that
+            cannot be done. `due_at` is when it starts.
+
+            Absent — not empty — on an installation whose feed does not read meetings.
         at_risk:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
@@ -28503,7 +28515,7 @@ components:
           description: "What the system did on its own, most recent first. Receipts, not questions."
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -28519,6 +28531,12 @@ components:
         needs_you: { type: integer, minimum: 0 }
         planned: { type: integer, minimum: 0 }
         duplicates_open: { type: integer, minimum: 0, description: "Open duplicate pairs both of whose sides this caller can see." }
+        meetings:
+          type: integer
+          minimum: 0
+          description: >-
+            How many of today's meetings are still ahead — the bounded page, as the other
+            lanes report.
         at_risk:
           type: integer
           minimum: 0
@@ -28546,7 +28564,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

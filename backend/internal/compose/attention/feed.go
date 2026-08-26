@@ -206,6 +206,21 @@ type RiskyDeal struct {
 	ExpectedCloseDate *time.Time
 }
 
+// Meetings is today's booked meetings that have not happened yet.
+//
+// Optional as the other two are: nil means this feed does not read meetings,
+// which is not the same as a day with none in it.
+type Meetings interface {
+	Today(ctx context.Context, from, until time.Time, limit int) ([]Meeting, error)
+}
+
+// Meeting is one appointment still ahead of the reader.
+type Meeting struct {
+	ID       ids.UUID
+	Subject  string
+	StartsAt time.Time
+}
+
 // Clock is the read's instant, injected so the lane boundaries a test asserts
 // are the ones it set.
 type Clock func() time.Time
@@ -223,17 +238,19 @@ type Service struct {
 	// array. The contract makes the lane optional for exactly that reason.
 	commitments Commitments
 	// atRisk is OPTIONAL for the reason commitments is: absent lane, not empty.
-	atRisk AtRisk
-	now    Clock
+	atRisk   AtRisk
+	meetings Meetings
+	now      Clock
 }
 
 // NewService binds the feed to its readers.
 func NewService(
-	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing, c Commitments, k AtRisk, now Clock,
+	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
+	c Commitments, k AtRisk, m Meetings, now Clock,
 ) *Service {
 	return &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r,
-		briefing: b, commitments: c, atRisk: k, now: now,
+		briefing: b, commitments: c, atRisk: k, meetings: m, now: now,
 	}
 }
 
@@ -310,6 +327,27 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 			out.Commitments = &items
 			count := len(items)
 			out.Counts.Commitments = &count
+		}
+	}
+
+	if s.meetings != nil {
+		// From NOW rather than from the start of the day: a meeting that has
+		// already begun cannot be prepared for, and one that ended an hour ago
+		// on a queue headed "still ahead" would be plainly wrong.
+		booked, err := s.meetings.Today(ctx, asOf, endOfDay(asOf), plannedCap)
+		switch {
+		case errors.Is(err, apperrors.ErrPermissionDenied):
+			omitted = append(omitted, crmcontracts.AttentionLanesOmitted("meetings"))
+		case err != nil:
+			return crmcontracts.Attention{}, err
+		default:
+			items := make([]crmcontracts.AttentionItem, 0, len(booked))
+			for _, meeting := range booked {
+				items = append(items, meetingItem(meeting))
+			}
+			out.Meetings = &items
+			count := len(items)
+			out.Counts.Meetings = &count
 		}
 	}
 

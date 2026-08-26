@@ -16,6 +16,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log/slog"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -418,6 +419,66 @@ func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
 	return days
 }
 
+// attentionMeetings reads today's remaining meetings through the activities
+// store — the same gated list every other activity surface reads.
+//
+// SCAN AND FILTER, like the task lane above and for the same reason: the store
+// cannot express "kind=meeting between two instants", so this reads wider and
+// narrows here. The same scan factor applies, because a day with a pile of
+// finished meetings would otherwise push the one still ahead off the page.
+type attentionMeetings struct{ store *activities.Store }
+
+func (m attentionMeetings) Today(
+	ctx context.Context, from, until time.Time, limit int,
+) ([]attention.Meeting, error) {
+	kind := string(crmcontracts.ActivityKindMeeting)
+	scan := limit * taskScanFactor
+	rows, _, err := m.store.ListActivities(ctx, activities.ListActivitiesInput{Kind: &kind, Limit: &scan})
+	if err != nil {
+		return nil, err
+	}
+	ahead := make([]attention.Meeting, 0, len(rows))
+	for _, row := range rows {
+		if !meetingStillWorthPreparing(row, from, until) {
+			continue
+		}
+		ahead = append(ahead, attention.Meeting{
+			ID: ids.UUID(row.Id), Subject: subjectOfMeeting(row), StartsAt: row.OccurredAt,
+		})
+	}
+	// Soonest first: the lane is a countdown, and the store returns activities
+	// newest-first, which is the opposite order for a day still ahead.
+	sort.SliceStable(ahead, func(i, j int) bool { return ahead[i].StartsAt.Before(ahead[j].StartsAt) })
+	if len(ahead) > limit {
+		ahead = ahead[:limit]
+	}
+	return ahead, nil
+}
+
+// meetingStillWorthPreparing keeps the meetings a rep can still do something
+// about: booked (not held, not cancelled, not a no-show) and starting between
+// now and the end of the day.
+//
+// A meeting with no status is treated as booked. Capture writes calendar events
+// without one, and dropping them would empty this lane on exactly the
+// installations whose calendars are connected.
+func meetingStillWorthPreparing(row crmcontracts.Activity, from, until time.Time) bool {
+	if row.MeetingStatus != nil && *row.MeetingStatus != crmcontracts.ActivityMeetingStatusBooked {
+		return false
+	}
+	return !row.OccurredAt.Before(from) && row.OccurredAt.Before(until)
+}
+
+// subjectOfMeeting is the line a meeting shows. Unlike a task, a meeting may
+// honestly have no subject — a calendar event with a blank title is a real
+// thing a provider hands over — so the fallback is a routine case here.
+func subjectOfMeeting(row crmcontracts.Activity) string {
+	if row.Subject != nil && *row.Subject != "" {
+		return *row.Subject
+	}
+	return "(untitled meeting)"
+}
+
 // newAttentionHandlers assembles the surface for the API role.
 func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
 	db := InstallationDB(pool)
@@ -430,6 +491,7 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.
 		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
 		attentionCommitments{store: people.NewStore(db)},
 		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
+		attentionMeetings{store: activities.NewStore(db)},
 		now,
 	))
 }

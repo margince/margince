@@ -1227,6 +1227,7 @@ const (
 	AttentionLanesOmittedAtRisk      AttentionLanesOmitted = "at_risk"
 	AttentionLanesOmittedCommitments AttentionLanesOmitted = "commitments"
 	AttentionLanesOmittedDoneForYou  AttentionLanesOmitted = "done_for_you"
+	AttentionLanesOmittedMeetings    AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedNeedsYou    AttentionLanesOmitted = "needs_you"
 	AttentionLanesOmittedPlanned     AttentionLanesOmitted = "planned"
 	AttentionLanesOmittedThisMorning AttentionLanesOmitted = "this_morning"
@@ -1240,6 +1241,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedCommitments:
 		return true
 	case AttentionLanesOmittedDoneForYou:
+		return true
+	case AttentionLanesOmittedMeetings:
 		return true
 	case AttentionLanesOmittedNeedsYou:
 		return true
@@ -1295,6 +1298,7 @@ const (
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
 	AttentionItemSourceTask              AttentionItemSource = "task"
 )
 
@@ -1310,6 +1314,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDealAtRisk:
 		return true
 	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceMeeting:
 		return true
 	case AttentionItemSourceTask:
 		return true
@@ -10542,22 +10548,22 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
-	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
-	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
-	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
+	DeadLettered WebhookDeliveryStatus = "dead_lettered"
+	Delivered    WebhookDeliveryStatus = "delivered"
+	Pending      WebhookDeliveryStatus = "pending"
+	Retrying     WebhookDeliveryStatus = "retrying"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
 func (e WebhookDeliveryStatus) Valid() bool {
 	switch e {
-	case WebhookDeliveryStatusDeadLettered:
+	case DeadLettered:
 		return true
-	case WebhookDeliveryStatusDelivered:
+	case Delivered:
 		return true
-	case WebhookDeliveryStatusPending:
+	case Pending:
 		return true
-	case WebhookDeliveryStatusRetrying:
+	case Retrying:
 		return true
 	default:
 		return false
@@ -11382,31 +11388,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	Customer       ListOrganizationsParamsLifecycle = "customer"
-	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	Prospect       ListOrganizationsParamsLifecycle = "prospect"
-	Target         ListOrganizationsParamsLifecycle = "target"
-	Unknown        ListOrganizationsParamsLifecycle = "unknown"
+	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
+	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
+	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
+	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case Customer:
+	case ListOrganizationsParamsLifecycleCustomer:
 		return true
-	case Disqualified:
+	case ListOrganizationsParamsLifecycleDisqualified:
 		return true
-	case FormerCustomer:
+	case ListOrganizationsParamsLifecycleFormerCustomer:
 		return true
-	case Opportunity:
+	case ListOrganizationsParamsLifecycleOpportunity:
 		return true
-	case Prospect:
+	case ListOrganizationsParamsLifecycleProspect:
 		return true
-	case Target:
+	case ListOrganizationsParamsLifecycleTarget:
 		return true
-	case Unknown:
+	case ListOrganizationsParamsLifecycleUnknown:
 		return true
 	default:
 		return false
@@ -13069,6 +13075,16 @@ type Attention struct {
 	// Absent when there is nothing to lead with, which is itself the honest answer.
 	Lead *string `json:"lead,omitempty"`
 
+	// Meetings Today's booked meetings that have not happened yet, soonest first — the ones
+	// still worth preparing for.
+	//
+	// A meeting already held or cancelled is not on this lane: preparing for it is
+	// no longer possible, and a queue that listed it would be asking for work that
+	// cannot be done. `due_at` is when it starts.
+	//
+	// Absent — not empty — on an installation whose feed does not read meetings.
+	Meetings *[]AttentionItem `json:"meetings,omitempty"`
+
 	// NeedsYou Decisions only a person can make, highest-stakes first.
 	NeedsYou []AttentionItem `json:"needs_you"`
 
@@ -13101,8 +13117,11 @@ type AttentionCounts struct {
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`
-	NeedsYou       int  `json:"needs_you"`
-	Planned        int  `json:"planned"`
+
+	// Meetings How many of today's meetings are still ahead — the bounded page, as the other lanes report.
+	Meetings *int `json:"meetings,omitempty"`
+	NeedsYou int  `json:"needs_you"`
+	Planned  int  `json:"planned"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`

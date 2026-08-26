@@ -21483,6 +21483,17 @@ export interface components {
              */
             commitments?: components["schemas"]["AttentionItem"][];
             /**
+             * @description Today's booked meetings that have not happened yet, soonest first — the ones
+             *     still worth preparing for.
+             *
+             *     A meeting already held or cancelled is not on this lane: preparing for it is
+             *     no longer possible, and a queue that listed it would be asking for work that
+             *     cannot be done. `due_at` is when it starts.
+             *
+             *     Absent — not empty — on an installation whose feed does not read meetings.
+             */
+            meetings?: components["schemas"]["AttentionItem"][];
+            /**
              * @description Open deals going quiet, or whose expected close date has already passed — the
              *     ones most likely to be lost by inattention rather than by a decision.
              *
@@ -21497,7 +21508,7 @@ export interface components {
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -21512,6 +21523,8 @@ export interface components {
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
+            /** @description How many of today's meetings are still ahead — the bounded page, as the other lanes report. */
+            meetings?: number;
             /** @description How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under. */
             at_risk?: number;
             /** @description How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
@@ -21530,7 +21543,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

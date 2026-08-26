@@ -81,6 +81,7 @@ export const en = {
   "day.lead.decisions": "{count} decisions are waiting on you.",
   "day.lead.plannedOnly": "Nothing to decide — {count} planned for today.",
   "day.lead.promises": "You promised {count} — those come first.",
+  "day.lead.meetings": "{count} on the calendar today.",
   "day.lead.atRisk": "{count} going quiet. Nothing else is waiting on you.",
   "day.lead.morningOnly":
     "Nothing waiting on you — the night picked out {count} to start with.",
@@ -92,6 +93,8 @@ export const en = {
   "day.lane.withheld": "Hidden from your account.",
   "day.needsYou": "Needs you",
   "day.needsYou.empty": "Nothing needs a decision.",
+  "day.meetings": "Today's meetings",
+  "day.meetings.empty": "Nothing in the calendar.",
   "day.atRisk": "Going quiet",
   "day.atRisk.empty": "No deal is drifting.",
   "day.risk.quiet": "No contact for {days} days.",

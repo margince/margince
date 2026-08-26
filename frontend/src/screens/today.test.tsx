@@ -455,6 +455,38 @@ describe("what the night left on the worklist", () => {
       screen.queryByText(/found nothing worth your first hour/),
     ).toBeNull();
   });
+  // A meeting leads the day, above every other lane. It is the one thing on the
+  // page that happens whether or not the reader acts — a decision waits, an
+  // appointment at eleven does not.
+  it("leads with today's meetings above everything else waiting", async () => {
+    stub({
+      ...emptyDay,
+      meetings: [
+        {
+          id: "act-1",
+          source: "meeting",
+          title: "Vogt — Angebotsbesprechung",
+          due_at: "2026-08-25T11:00:00Z",
+          subject: { type: "activity", id: "act-1" },
+          actions: ["open"],
+        },
+      ],
+      needs_you: [
+        {
+          id: "ap-1",
+          source: "approval",
+          kind: "send_email",
+          title: "Send the Weber follow-up",
+          actions: ["decide"],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 1, planned: 0, meetings: 1 },
+    });
+    renderToday();
+
+    await screen.findByText("Vogt — Angebotsbesprechung");
+    expect(screen.getByText("1 on the calendar today.")).toBeTruthy();
+  });
   // A drifting deal says how long it has been quiet, in the reader's own
   // language. The server sends the ground and the number and never the
   // sentence, so a card that dropped either would say "at risk" and leave the
