@@ -138,6 +138,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// precisely so an absent one cannot read as a complete one.
 		{"query_workspace", `{"plan":{"version":"v1","target":"deal","where":[{"field":"status","op":"eq","value":"open"}]}}`},
 		{"query_workspace", `{"plan":{"version":"v1","target":"deal","where":[{"field":"name","op":"eq","value":"nothing here matches this"}]}}`},
+		// The vocabulary the two plans above are written against. It takes no
+		// arguments and needs no seam the lane is missing, so it is a call here
+		// rather than a waiver: the census does not accept "registered and
+		// unproven" for a tool this sweep can simply invoke.
+		{"describe_query_vocabulary", `{}`},
 		{"read_record", `{"record_type":"deal","id":"` + deal.String() + `"}`},
 		// A ranked sweep that finds rows and one that finds none. The empty page
 		// is the one worth pinning: it still carries `coverage` and `notes`, and
@@ -390,10 +395,20 @@ func TestTheConformanceCheckFailsAgainstAMisdeclaredSchema(t *testing.T) {
 func snapshotBriefRun(ctx context.Context, t *testing.T, e *Env) {
 	t.Helper()
 	engine := briefs.NewBriefEngine(e.Pool, people.NewStore(e.DB()))
-	// A fixed instant. The run only has to EXIST for read_brief to have
-	// something to re-read, and ranking against the wall clock would make what
-	// this lane certifies depend on the day it ran.
-	if _, err := engine.SnapshotRun(ctx, time.Date(2026, 8, 8, 6, 0, 0, 0, time.UTC)); err != nil {
+	// The reader's own instant, because brief_run is keyed by LOCAL DAY and
+	// read_brief asks for today's: briefseam.go reads `LatestRun(ctx,
+	// time.Now().UTC())`, which resolves a calendar day and matches
+	// `WHERE user_id = $1 AND local_day = $2`. A run stamped with any other day
+	// is a run that read cannot see, so a fixed instant here does not freeze
+	// what the lane certifies — it dates the fixture, and the sweep certifies a
+	// not-found from the morning after.
+	//
+	// Sharing the clock is what keeps the two ends honest; nothing here rests on
+	// WHICH day it is, only that one run exists under the day the read will ask
+	// for. The two agree by asking the same question, not by holding one answer
+	// between them — so a reader that moves to an injected clock leaves this
+	// behind, silently and the same way. Follow it here when it does.
+	if _, err := engine.SnapshotRun(ctx, time.Now().UTC()); err != nil {
 		t.Fatalf("assembling a brief run for the acting rep: %v", err)
 	}
 }
