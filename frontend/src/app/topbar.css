@@ -1,8 +1,11 @@
 /* ===== the top bar =====
  * The session's own strip: the sidebar control, the trail, the search, and the
- * person. It stands on the SAME ground as the sidebar (--bgElevated) with one
- * hairline under it, so the chrome reads as a single L around the content
- * instead of two panels that happen to meet at a corner.
+ * person. It stands on the PAGE's ground (--bgTopbar is --bgPage with an alpha)
+ * with one hairline under it, so the strip reads as the top of the room the
+ * content is in rather than as a second panel meeting the sidebar at a corner.
+ * The sidebar's own ground is a step darker on purpose (--bgSidebar), and the
+ * two are deliberately not the same: an L of identical chrome around the content
+ * makes the frame the loudest thing on the screen.
  *
  * It never scrolls: it is the first row of the content column's flex box and
  * the scroller is its sibling, which is cheaper than `position: sticky` and

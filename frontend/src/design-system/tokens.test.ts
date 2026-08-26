@@ -22,16 +22,20 @@ const tokenDecls = tokensCss.replace(/\/\*[\s\S]*?\*\//g, "");
 // Values verbatim from the mockups; comparison normalizes case, whitespace and
 // a leading zero before a decimal point so formatting is free but values are not.
 //
-// --bgPage is the ONE value that no longer matches the mockup, and deliberately:
-// the page is white and the near-white the mockup put here is the sidebar's
-// ground (--bgSidebar). The two surfaces swapped, the decision is the shipped
-// one, and this table is what pins it now that the mockup does not.
+// The SURFACE rungs are the values that no longer match the mockup, and
+// deliberately: the grounds are neutral grey and the green lives in the accent,
+// the states and the status families. A tinted ground casts every neutral above
+// it toward the same hue and reads as a business tool from two decades ago,
+// which is a thing a whole application does rather than one surface. The hue
+// therefore stays where it is a decision a reader is meant to see. The mockups
+// are retired on these five; this table is what pins them in their place, and
+// tokens.css carries the ladder and the contrast steps in prose.
 const canonical: Record<string, string> = {
-  "--bgPage": "#ffffff",
-  "--bgSidebar": "#FBFCFB",
+  "--bgPage": "#f5f5f6",
+  "--bgSidebar": "#e9e9ec",
   "--bgElevated": "#ffffff",
-  "--bgCard": "#EEF1F0",
-  "--bgHover": "#F3F6F4",
+  "--bgCard": "#eaeaee",
+  "--bgHover": "#ededf0",
   "--accent": "#0B7A53",
   "--accentLight": "rgba(11,122,83,.09)",
   "--accentMed": "rgba(11,122,83,.17)",

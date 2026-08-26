@@ -10,26 +10,57 @@
  * success stays a brighter grass-green than the brand emerald on purpose.
  */
 :root {
-  /* The page is WHITE. It used to be #fbfcfb, and the near-white it was is now
-   * the SIDEBAR's ground — the two surfaces swapped so the chrome reads as the
-   * quieter of the pair and the reading surface is the brightest thing on
-   * screen. The mockup this palette was mirrored from says #fbfcfb here; that
-   * document is retired and this is the shipped choice, which tokens.test.ts
-   * pins in its place. */
-  --bgPage: #ffffff;
+  /*
+   * The GROUNDS are neutral grey; the green is the accent, the states and the
+   * status families. This is the one place the §2 Ledger-Green identity is
+   * deliberately not carried, and the reason is what a tinted ground does to a
+   * whole application rather than to one surface: a green-cast page reads as a
+   * business tool from two decades ago, and it casts every neutral above it —
+   * a grey border, a monogram fill, a screenshot pasted into a record — toward
+   * the same hue. An accent is a choice a reader sees; a ground is the light
+   * everything else is seen in. The hue therefore lives where it is a decision
+   * (--accent, --success/--warn/--danger, --ai) and the grounds stay out of the
+   * way. tokens.test.ts pins these values in the retired mockup's place.
+   *
+   * Five rungs, read as a ladder from the recessed chrome up to the surface a
+   * card floats on. Each is one visible step off its neighbours, and the step
+   * is what the next rule's contrast note is measuring:
+   *
+   *   --bgSidebar   #e9e9ec   the application's left edge, BELOW the page
+   *   --bgCard      #eaeaee   a well inside a card: a chip, an inset row
+   *   --bgHover     #ededf0   a pointer resting on a row
+   *   --bgPage      #f5f5f6   the reading ground
+   *   --bgElevated  #ffffff   a card, a panel, a menu — the top of the ladder
+   *
+   * The page is no longer the brightest thing on screen; --bgElevated is, and
+   * a card is therefore separated by its own lightness rather than by the
+   * shadow alone. That is what lets --shadow-card be as slight as it now is.
+   */
+  --bgPage: #f5f5f6;
   --bgElevated: #ffffff;
-  --bgCard: #eef1f0;
-  --bgHover: #f3f6f4;
-  /* The sidebar's own ground: a shade off the page rather than the page's own
-   * white, so the application's left edge is visible without a second border.
-   * A token rather than `--bgCard` because the sidebar is not a card and must
-   * not follow one when card grounds are re-tuned. */
-  --bgSidebar: #fbfcfb;
-  /* The top strip, which the content scrolls UNDER: translucent over whatever
-   * passes beneath it, with an 8px blur behind it (app/topbar.css). Stated as
-   * an alpha colour rather than a solid because the blur is only visible where
-   * the ground is see-through. */
-  --bgTopbar: rgba(255, 255, 255, 0.9);
+  /* 1.20:1 against --bgElevated, which it usually sits on, and 1.10:1 against
+   * --bgPage: one step off BOTH its hosts. The old value was one step off white
+   * only, which is invisible once the page stops being white. */
+  --bgCard: #eaeaee;
+  --bgHover: #ededf0;
+  /* The sidebar's own ground, DARKER than the page rather than lighter: the
+   * application's left edge is visible without a second border, and chrome that
+   * recedes is chrome that stops competing with what it frames. A token rather
+   * than `--bgCard` because the sidebar is not a card and must not follow one
+   * when card grounds are re-tuned. The rail's own hover is --bgSidebarHover
+   * below, because --bgHover is LIGHTER than this ground and a hover that
+   * brightens the row it is on collides with the active row's plate. */
+  --bgSidebar: #e9e9ec;
+  /* A pointer resting on a rail row: one step DOWN from --bgSidebar (1.10:1),
+   * the same direction --bgHover moves off --bgPage. The active row moves the
+   * other way — up to --bgElevated — so the two states cannot be confused. */
+  --bgSidebarHover: #dfdfe4;
+  /* The top strip, which the content scrolls UNDER: the page's own ground,
+   * translucent, with an 8px blur behind it (app/topbar.css). Stated as an
+   * alpha colour rather than a solid because the blur is only visible where the
+   * ground is see-through, and the alpha is what makes the strip show the
+   * content sliding past it. */
+  --bgTopbar: rgba(245, 245, 246, 0.9);
 
   --accent: #0b7a53;
   /* The accent as TEXT, split from the accent as a FILL. They are the same
@@ -68,7 +99,7 @@
      a rectangle accepts typing, and WCAG 1.4.11 therefore asks it for 3:1
      against its background. --borderStrong measures 1.45:1 on white and cannot
      be raised to 3:1 without turning every content divider into a hard rule.
-     Chosen to clear 3:1 against BOTH --bgElevated and --bgPage (3.33 / 3.24),
+     Chosen to clear 3:1 against BOTH --bgElevated and --bgPage (3.33 / 3.06),
      since controls sit on both. */
   --borderControl: #868f89;
 
@@ -304,8 +335,18 @@
   --overlayLight: #ffffff;
   --overlayDark: #000000;
 
-  --shadow-card:
-    0 1px 2px rgba(41, 37, 36, 0.04), 0 4px 16px rgba(41, 37, 36, 0.05);
+  /* ONE layer, and a tight one: a card is separated from the page by its own
+   * lightness (--bgElevated white on the --bgPage grey above), so the shadow's
+   * job is only to say which of the two is in front. The two-layer version this
+   * replaces was carrying the separation on its own, because the page it sat on
+   * was also white — a 16px ambient wash under every card, on every screen,
+   * which read as a product of soft floating tiles rather than of surfaces. The
+   * negative spread is what keeps the shadow narrower than the card: it hugs the
+   * bottom edge instead of haloing all four.
+   *
+   * Read by every panel and card in the tree through this one token, so the
+   * elevation of a card is not a decision any screen gets to make. */
+  --shadow-card: 0 2px 4px -1px #0000000f;
   --shadow-pop: 0 8px 30px rgba(41, 37, 36, 0.14);
 
   /*
@@ -403,11 +444,23 @@
   --bgElevated: #142420;
   --bgCard: #1a2c26;
   --bgHover: #1f332c;
-  /* The dark theme's page is already darker than its cards, so the sidebar
-     keeps the elevated ground it has always had here — the light theme is the
-     one whose two surfaces swapped. */
-  --bgSidebar: #142420;
-  --bgTopbar: rgba(20, 36, 32, 0.9);
+  /* The same RELATION the light theme states, mirrored rather than copied: the
+     sidebar is one step off the page in the direction away from the elevated
+     surface, so the chrome recedes in both themes. Dark is where that means
+     DARKER than the page — the light theme's #e9e9ec against #f5f5f6 measures
+     1.11:1, and this pair measures 1.09:1, which is the same step a reader
+     sees. It used to be the elevated ground, which put the frame in FRONT of
+     what it frames. */
+  --bgSidebar: #06100d;
+  /* Up off the sidebar, not down: on a dark ground the room only has one
+     direction to go, so hover lifts (1.11:1) and the active row lifts further,
+     all the way to --bgElevated. The ORDER is what carries the state, and it is
+     the same order in both themes. */
+  --bgSidebarHover: #0f1d18;
+  /* The page's own ground, translucent — the light theme's rule, in this
+     theme's page colour. It used to be the ELEVATED ground, which made the
+     strip read as a card laid over the top of the window. */
+  --bgTopbar: rgba(14, 27, 22, 0.9);
 
   --accent: #16a34a;
   /* --textOnAccent stays light in dark mode: it is the shared ink for every
@@ -469,13 +522,15 @@
      control boundary, held to the same 1.4.11 floor. */
   --borderControl: #5f7a6e;
 
-  /* Themed, because the light values are a 4-5% WARM BLACK — invisible on
-     #0e1b16. Any card whose separation depends on its shadow simply lost its
-     edge in dark, and the login surface's brand pane is exactly that case: its
-     fill sits within a couple of ΔE of the pane behind it, so with no shadow the
-     two-pane split had no visible boundary at all. Pure black at a much higher
-     alpha is what reads on a dark surface. */
-  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.36);
+  /* Themed, because the light value is a 6% black — invisible on #0e1b16. Any
+     card whose separation depends on its shadow simply lost its edge in dark,
+     and the login surface's brand pane is exactly that case: its fill sits
+     within a couple of ΔE of the pane behind it, so with no shadow the two-pane
+     split had no visible boundary at all. The GEOMETRY is the light theme's,
+     because a card sits the same distance off the page in either theme; only the
+     alpha is a theme's decision, and on a dark ground it has to be most of the
+     way to opaque to read at all. */
+  --shadow-card: 0 2px 4px -1px rgba(0, 0, 0, 0.5);
   --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
   /* higher alpha so the teal read-pill fill stays legible on the darker card
@@ -525,8 +580,9 @@
     --bgElevated: #142420;
     --bgCard: #1a2c26;
     --bgHover: #1f332c;
-    --bgSidebar: #142420;
-    --bgTopbar: rgba(20, 36, 32, 0.9);
+    --bgSidebar: #06100d;
+    --bgSidebarHover: #0f1d18;
+    --bgTopbar: rgba(14, 27, 22, 0.9);
 
     --accent: #16a34a;
 
@@ -563,7 +619,7 @@
 
     --borderControl: #5f7a6e;
 
-    --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4), 0 4px 16px rgba(0, 0, 0, 0.36);
+    --shadow-card: 0 2px 4px -1px rgba(0, 0, 0, 0.5);
     --shadow-pop: 0 8px 30px rgba(0, 0, 0, 0.55);
 
     --tealLight: rgba(14, 116, 144, 0.28);
