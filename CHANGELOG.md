@@ -569,4 +569,4 @@ numbers appear here when releases start.
   without touching a committed file; the annotated template stays the
   parse-guarded source of truth.
 
-[Unreleased]: https://github.com/gradionhq/margince
+[Unreleased]: https://github.com/margince/margince
