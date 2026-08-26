@@ -894,7 +894,7 @@ describe("pagination", () => {
     expect(onPerPage).toHaveBeenCalledWith(50);
   });
 
-  it("leaves the rows-per-page picker inert when the caller offers no handler", () => {
+  it("slices its own rows when the caller offers no page-size handler", async () => {
     render(
       <ListTable
         rows={testRows(60)}
@@ -903,9 +903,14 @@ describe("pagination", () => {
         unit="rows"
       />,
     );
-    expect(
-      screen.getByRole("combobox", { name: "Rows per page" }),
-    ).toHaveProperty("disabled", true);
+    const picker = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(picker).toHaveProperty("disabled", false);
+    expect(screen.getAllByRole("row")).toHaveLength(26);
+
+    // Every row is already in hand, so there is no wire to re-ask and slicing
+    // them IS the whole of what this dial means here.
+    await pickOption(userEvent.setup(), picker, "50 per page");
+    expect(screen.getAllByRole("row")).toHaveLength(51);
   });
 
   it("puts the current page between its neighbours and keeps page one reachable", () => {

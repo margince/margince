@@ -380,7 +380,7 @@ export function ListTable<Row>({
   footer,
   hasMore = false,
   onLoadMore,
-  perPage = PAGE_SIZES[0],
+  perPage: controlledPerPage,
   onPerPage,
   page: controlledPage,
   onPage,
@@ -492,12 +492,15 @@ export function ListTable<Row>({
   /**
    * Rows per RENDERED page. The caller fetches a whole multiple of it, so the
    * table divides the rows it holds on boundaries the fetch already respects.
+   * Read only alongside `onPerPage`; without one the table holds the size.
    */
   perPage?: number;
   /**
-   * The reader picked a different page size; re-ask the server with it. A
-   * table with no handler keeps the footer's picker inert rather than
-   * pretending a size the caller will never fetch.
+   * The reader picked a different page size; re-ask the server with it.
+   *
+   * Omit it, as the page number is omitted, and the table keeps the size
+   * itself: with no handler there is no wire to re-ask, so every row is
+   * already in hand and slicing them is the whole of what the dial means.
    */
   onPerPage?: (next: number) => void;
   /**
@@ -571,6 +574,17 @@ export function ListTable<Row>({
     setOwnPage(to);
     onPage?.(to);
   };
+  // The page SIZE splits the same way, on the handler rather than on the value:
+  // a caller that cannot be told the reader changed it cannot own it. The dial
+  // then slices what is already in hand, which is all it can mean without a
+  // wire to re-ask. Drawing it disabled instead was the state a preview table
+  // shipped in, and a dead control reads as a broken one rather than as a dial
+  // this table does not have.
+  const [ownPerPage, setOwnPerPage] = useState(
+    controlledPerPage ?? PAGE_SIZES[0],
+  );
+  const perPage = onPerPage ? (controlledPerPage ?? PAGE_SIZES[0]) : ownPerPage;
+  const setPerPage = onPerPage ?? setOwnPerPage;
   const scroller = useRef<HTMLDivElement>(null);
   const head = useRef<HTMLTableElement>(null);
   // The frozen column only casts a shadow once columns have actually slid under
@@ -956,7 +970,7 @@ export function ListTable<Row>({
               hasMore={hasMore}
               perPage={perPage}
               onGoto={goto}
-              onPerPage={onPerPage}
+              onPerPage={setPerPage}
             />
           )}
         </>
@@ -1414,7 +1428,7 @@ function Pager({
   hasMore: boolean;
   perPage: number;
   onGoto: (to: number) => void;
-  onPerPage?: (next: number) => void;
+  onPerPage: (next: number) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -1471,8 +1485,7 @@ function Pager({
         <Select
           aria-label={t("table.rowsPerPage")}
           value={identifierNumber(perPage)}
-          disabled={!onPerPage}
-          onChange={(next) => onPerPage?.(Number(next))}
+          onChange={(next) => onPerPage(Number(next))}
           options={PAGE_SIZES.map((size) => ({
             value: identifierNumber(size),
             label: t("table.perPage", { count: formatNumber(size, locale) }),
