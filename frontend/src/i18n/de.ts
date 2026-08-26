@@ -2599,7 +2599,6 @@ export const de = {
   "explain.sources": "Quellzeilen",
 
   "ai.sub": "bring deinen eigenen Agenten mit — geregelt über die zwei Stufen",
-  "ai.carriedQuestion": "Deine Frage",
   "ai.tiers": "Was ein Agent darf",
   "ai.tierAutoExecute": "Lesen & Entwerfen läuft sofort.",
   "ai.tierAutoExecuteDetail":
@@ -4745,6 +4744,22 @@ export const de = {
   "settings.tab.data-model": "Datenmodell",
   "settings.tab.ai": "KI",
   "settings.tab.knowledge": "Wissen",
+  "corpusAsk.title": "Ihre Dokumente fragen",
+  "corpusAsk.sub":
+    "Eine Frage in eigenen Worten, beantwortet ausschließlich aus einer Dokumentensammlung dieser Organisation. Was die Sammlung nicht abdeckt, wird abgelehnt statt geraten, und jeder Satz nennt die Textstelle, auf der er beruht.",
+  "corpusAsk.whichSet": "Welche Sammlung",
+  "corpusAsk.question": "Ihre Frage",
+  "corpusAsk.submit": "Fragen",
+  "corpusAsk.byModel": "Aus den Textstellen unten geschrieben",
+  "corpusAsk.byPassages":
+    "Die Textstellen selbst — niemand hat eine Zusammenfassung geschrieben",
+  "corpusAsk.notReady":
+    "Diese Sammlung ist noch nicht fertig eingelesen — {embedded} von {total} Abschnitten sind durchsuchbar. An Ihrer Frage liegt es nicht; versuchen Sie es gleich noch einmal.",
+  "corpusAsk.retrievalUnavailable":
+    "Es wurde nichts durchsucht: in dieser Installation ist kein Suchindex eingerichtet, die Dokumente konnten also nicht angesehen werden. Das ist eine Frage der Einrichtung und liegt nicht an Ihrer Frage.",
+  "corpusAsk.notCovered.title": "Von dieser Sammlung nicht abgedeckt",
+  "corpusAsk.notCovered.body":
+    "{name} wurde vollständig durchsucht und enthält nichts, was nah genug daran wäre. Die Sammlung deckt ab:",
   "knowledge.title": "Dokumentensammlungen",
   "knowledge.sub":
     "Textbestände, zu denen diese Organisation befragt werden kann. Eine Antwort stammt ausschließlich aus dem, was hier abgelegt ist; eine Frage, die sie nicht abdecken, wird abgelehnt statt geraten.",

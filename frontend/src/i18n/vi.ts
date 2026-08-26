@@ -2578,7 +2578,6 @@ export const vi = {
   "explain.sources": "Các dòng nguồn",
 
   "ai.sub": "mang Agent của riêng bạn — được quản trị bằng hợp đồng hai bậc",
-  "ai.carriedQuestion": "Câu hỏi của bạn",
   "ai.tiers": "Một Agent được phép làm gì",
   "ai.tierAutoExecute": "Đọc và soạn nháp chạy ngay.",
   "ai.tierAutoExecuteDetail":
@@ -4706,6 +4705,21 @@ export const vi = {
   "settings.tab.data-model": "Mô hình dữ liệu",
   "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Tri thức",
+  "corpusAsk.title": "Hỏi tài liệu của bạn",
+  "corpusAsk.sub":
+    "Một câu hỏi bằng lời của bạn, chỉ được trả lời từ một bộ tài liệu mà tổ chức này đã nộp. Điều bộ đó không bao gồm sẽ bị từ chối thay vì đoán, và mỗi câu đều dẫn đoạn văn mà nó dựa vào.",
+  "corpusAsk.whichSet": "Bộ nào",
+  "corpusAsk.question": "Câu hỏi của bạn",
+  "corpusAsk.submit": "Hỏi",
+  "corpusAsk.byModel": "Được viết từ các đoạn bên dưới",
+  "corpusAsk.byPassages": "Chính các đoạn văn — không ai viết bản tóm tắt",
+  "corpusAsk.notReady":
+    "Bộ này chưa đọc xong — {embedded} trên {total} đoạn có thể tìm kiếm. Câu hỏi của bạn không có gì sai; hãy thử lại sau ít phút.",
+  "corpusAsk.retrievalUnavailable":
+    "Không có gì được tìm: bản cài đặt này chưa cấu hình chỉ mục tìm kiếm, nên không thể xem tài liệu. Đây là vấn đề cài đặt, không phải do câu hỏi của bạn.",
+  "corpusAsk.notCovered.title": "Bộ này không bao gồm",
+  "corpusAsk.notCovered.body":
+    "{name} đã được tìm toàn bộ và không có gì đủ gần để trả lời. Bộ này bao gồm:",
   "knowledge.title": "Bộ tài liệu",
   "knowledge.sub":
     "Những tập văn bản mà tổ chức này có thể được hỏi. Câu trả lời chỉ đến từ những gì đã nộp ở đây; câu hỏi nằm ngoài phạm vi sẽ bị từ chối thay vì đoán.",

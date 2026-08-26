@@ -3,6 +3,7 @@ import { ASK_QUERY_KEY } from "../app/palette";
 import { Card, Kbd } from "../design-system/atoms";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
+import { CorpusAskCard } from "./corpusask";
 
 // Ask AI (B-EP09.12c, 03b): the BYO-agent surface. Agents connect over MCP
 // with a passport; this surface states the two-tier contract honestly —
@@ -19,18 +20,12 @@ export function AskAiScreen() {
 
   return (
     <div className="wrap">
-      {query && (
-        <Card as="div">
-          {/* Named for the READER's question rather than for the control that
-              carried it: the palette hands one over, and a label naming the
-              control rather than the question is wrong the moment a second one
-              can carry it. */}
-          <p className="t-label">{t("ai.carriedQuestion")}</p>
-          <p className="t-mono" style={{ marginTop: 4 }}>
-            {query}
-          </p>
-        </Card>
-      )}
+      {/* The carried question goes straight into the ask box, and the card that
+          used to reprint it above an empty box is gone with it. A reader who
+          typed a question into the palette ASKED it; showing it back to them
+          beside a box they must retype it into was the surface admitting it
+          could not answer. */}
+      <CorpusAskCard carriedQuestion={query} />
       <Card as="div" title={t("ai.tiers")}>
         <ul
           style={{
