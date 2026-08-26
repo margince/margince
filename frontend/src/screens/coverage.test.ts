@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { byReach, missingRoles, reachOf } from "./coverage";
+import { byReach, countGaps, missingRolesByDeal, reachOf } from "./coverage";
 
 type Contact = NonNullable<
   components["schemas"]["Organization360"]["people"]
@@ -59,13 +59,16 @@ describe("byReach", () => {
   });
 });
 
-describe("missingRoles", () => {
-  const open = new Set(["d-open"]);
+describe("missingRolesByDeal", () => {
+  const open = [{ id: "d-open", name: "Renewal" }];
 
   it("names the committee roles nobody holds on an open deal", () => {
-    expect(missingRoles([contact()], open, false)).toEqual([
-      "champion",
-      "economic_buyer",
+    expect(missingRolesByDeal([contact()], open, false)).toEqual([
+      {
+        dealId: "d-open",
+        dealName: "Renewal",
+        missing: ["champion", "economic_buyer"],
+      },
     ]);
   });
 
@@ -75,31 +78,99 @@ describe("missingRoles", () => {
     const held = contact({
       deal_roles: [{ deal_id: "d-closed", role: "champion" }],
     });
-    expect(missingRoles([held], open, false)).toContain("champion");
+    expect(missingRolesByDeal([held], open, false)[0]?.missing).toContain(
+      "champion",
+    );
   });
 
   it("says nothing when the role is held on the open deal", () => {
     const held = contact({
       deal_roles: [{ deal_id: "d-open", role: "champion" }],
     });
-    expect(missingRoles([held], open, false)).toEqual(["economic_buyer"]);
+    expect(missingRolesByDeal([held], open, false)[0]?.missing).toEqual([
+      "economic_buyer",
+    ]);
+  });
+
+  // The defect this shape exists for. Deal A has a champion and no economic
+  // buyer; deal B has an economic buyer and no champion. Unioning the roles
+  // across the account covered both and reported NO gap — on an account with a
+  // gap on every deal it has.
+  it("reports each deal's own gap rather than the union across the account", () => {
+    const twoDeals = [
+      { id: "d-a", name: "Renewal" },
+      { id: "d-b", name: "New business" },
+    ];
+    const contacts = [
+      contact({
+        person_id: "p-champ",
+        deal_roles: [{ deal_id: "d-a", role: "champion" }],
+      }),
+      contact({
+        person_id: "p-buyer",
+        deal_roles: [{ deal_id: "d-b", role: "economic_buyer" }],
+      }),
+    ];
+
+    expect(missingRolesByDeal(contacts, twoDeals, false)).toEqual([
+      { dealId: "d-a", dealName: "Renewal", missing: ["economic_buyer"] },
+      { dealId: "d-b", dealName: "New business", missing: ["champion"] },
+    ]);
+  });
+
+  it("leaves out a deal whose committee is complete", () => {
+    const twoDeals = [
+      { id: "d-a", name: "Renewal" },
+      { id: "d-b", name: "New business" },
+    ];
+    const covered = contact({
+      deal_roles: [
+        { deal_id: "d-a", role: "champion" },
+        { deal_id: "d-a", role: "economic_buyer" },
+      ],
+    });
+
+    expect(
+      missingRolesByDeal([covered], twoDeals, false).map((gap) => gap.dealId),
+    ).toEqual(["d-b"]);
   });
 
   it("makes no claim about a gap from a truncated contact list", () => {
     // The twenty-sixth contact is exactly where the missing champion is.
-    expect(missingRoles([contact()], open, true)).toEqual([]);
+    expect(missingRolesByDeal([contact()], open, true)).toEqual([]);
   });
 
   it("makes no claim from an empty contact set the caller could not read", () => {
     // Withheld and truncated arrive here identically — an empty array — so the
     // caller collapses both into `incomplete`. Reporting every role missing
     // from contacts nobody read is the failure this guards.
-    expect(missingRoles([], open, true)).toEqual([]);
+    expect(missingRolesByDeal([], open, true)).toEqual([]);
   });
 
   it("reports no gap on an account with no open deal", () => {
     // A committee gap is a statement about a deal. With nothing running there
     // is no committee to be short of.
-    expect(missingRoles([contact()], new Set(), false)).toEqual([]);
+    expect(missingRolesByDeal([contact()], [], false)).toEqual([]);
+  });
+});
+
+describe("countGaps", () => {
+  // The summary line said "N role gaps" off the number of role TYPES missing
+  // account-wide, which is at most two however many deals are short of them.
+  it("counts every unfilled pair, not the role types", () => {
+    expect(
+      countGaps([
+        { dealId: "d-a", dealName: "Renewal", missing: ["champion"] },
+        {
+          dealId: "d-b",
+          dealName: "New business",
+          missing: ["champion", "economic_buyer"],
+        },
+      ]),
+    ).toBe(3);
+  });
+
+  it("counts nothing when no deal is short", () => {
+    expect(countGaps([])).toBe(0);
   });
 });

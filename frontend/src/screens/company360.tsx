@@ -65,7 +65,9 @@ import {
 } from "./connections";
 import {
   byReach,
-  missingRoles,
+  type CommitteeRole,
+  countGaps,
+  missingRolesByDeal,
   reachLabelKey,
   reachOf,
   roleLabelKey,
@@ -196,6 +198,15 @@ function asRecord(value: unknown): Record<string, unknown> | undefined {
     : undefined;
 }
 
+// The roles one deal is short of, in the reader's words. One spelling, because
+// the two callout forms below differ only in whether they name the deal.
+function roleList(
+  missing: readonly CommitteeRole[],
+  t: ReturnType<typeof useT>,
+): string {
+  return missing.map((role) => t(roleLabelKey(role))).join(" / ");
+}
+
 // The coverage line the mockup draws above the contact rows: how many
 // contacts, how many nobody has written to, how many roles are unfilled.
 //
@@ -291,7 +302,6 @@ export function PeopleCard({
         name: deal.name,
       }))
     : [];
-  const openDealIds = new Set(openDeals.map((deal) => deal.id));
   // Every way the committee picture can be partial, in one flag. An empty
   // `contacts` means "nobody" only when the section was actually READ: a
   // people section the grants withheld, or one this response never carried,
@@ -303,7 +313,7 @@ export function PeopleCard({
     !view?.people ||
     omitted(view, "people") ||
     Boolean(view?.deals?.page.has_more);
-  const missing = missingRoles(contacts, openDealIds, committeeIncomplete);
+  const gaps = missingRolesByDeal(contacts, openDeals, committeeIncomplete);
   const untried = contacts.filter((c) => reachOf(c) === "untried");
   return (
     <RailPanel
@@ -328,7 +338,7 @@ export function PeopleCard({
           <CoverageSummary
             contacts={contacts}
             untried={untried.length}
-            gaps={missing.length}
+            gaps={countGaps(gaps)}
             truncated={truncated}
             routesReadable={contacts.some((each) => each.routes)}
           />
@@ -372,7 +382,7 @@ export function PeopleCard({
       {/* Who is missing, not only who is present. On an account where every
           known contact has gone quiet, the person nobody has written to is the
           only move left that is not a fourth follow-up. */}
-      {(untried.length > 0 || missing.length > 0) && (
+      {(untried.length > 0 || gaps.length > 0) && (
         <PanelBody>
           {untried.length > 0 && (
             <p className="co-callout">
@@ -385,17 +395,23 @@ export function PeopleCard({
               </Badge>
             </p>
           )}
-          {missing.length > 0 && (
-            <p className="co-callout">
+          {/* One line per deal that is short, because a role is missing from
+              the deal that lacks it. The deal is NAMED only when there is more
+              than one open deal to be on: on a single-deal account "on Renewal"
+              is the same word the reader already has, and the row's own roles
+              line omits it for the same reason. */}
+          {gaps.map((gap) => (
+            <p className="co-callout" key={gap.dealId}>
               <Badge tone="warn">
-                {t("co.people.missing", {
-                  roles: missing
-                    .map((role) => t(roleLabelKey(role)))
-                    .join(" / "),
-                })}
+                {openDeals.length === 1
+                  ? t("co.people.missing", { roles: roleList(gap.missing, t) })
+                  : t("co.people.missingOnDeal", {
+                      roles: roleList(gap.missing, t),
+                      deal: gap.dealName,
+                    })}
               </Badge>
             </p>
-          )}
+          ))}
         </PanelBody>
       )}
     </RailPanel>

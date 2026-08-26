@@ -1474,6 +1474,8 @@ export const de = {
   "co.role.user": "Anwender",
   "co.people.missing":
     "Für den offenen Deal ist noch kein {roles} benannt — leg die Rolle bei der Person fest, die es ist.",
+  "co.people.missingOnDeal":
+    "Für {deal} ist noch kein {roles} benannt — leg die Rolle bei der Person fest, die es ist.",
   "co.people.untriedHint": "{count} Personen hier wurden nie angesprochen.",
   "co.people.untriedHintOne": "Eine Person hier wurde nie angesprochen.",
   "co.evidence.extractedUnconfirmed": "KI-extrahiert · noch nicht bestätigt",

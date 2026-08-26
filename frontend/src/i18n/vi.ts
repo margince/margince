@@ -1471,6 +1471,8 @@ export const vi = {
   "co.role.user": "người dùng cuối",
   "co.people.missing":
     "Deal đang mở chưa nêu tên {roles} nào — hãy đặt vai trò đó cho đúng contact.",
+  "co.people.missingOnDeal":
+    "{deal} chưa nêu tên {roles} nào — hãy đặt vai trò đó cho đúng contact.",
   "co.people.untriedHint": "{count} người ở đây chưa từng được tiếp cận.",
   "co.people.untriedHintOne": "Một người ở đây chưa từng được tiếp cận.",
   "co.evidence.extractedUnconfirmed": "AI trích xuất · chưa xác nhận",

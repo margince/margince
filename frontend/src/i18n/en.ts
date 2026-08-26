@@ -1515,6 +1515,8 @@ export const en = {
   "co.role.user": "end user",
   "co.people.missing":
     "No {roles} is named on the open deal yet — set one on the contact who is.",
+  "co.people.missingOnDeal":
+    "No {roles} is named on {deal} yet — set one on the contact who is.",
   "co.people.untriedHint": "{count} people here have never been approached.",
   "co.people.untriedHintOne": "One person here has never been approached.",
   "co.evidence.extractedUnconfirmed": "AI extracted · not yet confirmed",
