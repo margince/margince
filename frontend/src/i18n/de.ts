@@ -288,7 +288,7 @@ export const de = {
   "share.revokeConfirm":
     "Diese Freigabe widerrufen? Der Zugriff auf diesen Datensatz entfällt beim nächsten Request — es gibt keine Rückgängig-Funktion.",
   "share.approvalRequired":
-    "Diese Freigabe braucht erst eine Genehmigung — sie wurde in den Genehmigungs-Posteingang eingereiht, aber noch nicht angewendet.",
+    "Diese Freigabe braucht erst eine Genehmigung — sie wartet auf eine Entscheidung und ist noch nicht angewendet.",
   "share.teamMembers.one": "Team · {count} Mitglied",
   "share.teamMembers.other": "Team · {count} Mitglieder",
   "share.rosterLoading": "Personen und Teams werden geladen…",
@@ -2005,29 +2005,29 @@ export const de = {
   "offer.pdfUnavailable":
     "PDF-Erzeugung auf diesem Deployment nicht verfügbar.",
 
-  "inbox.viaTool": "über {verb}",
-  "inbox.approveEdited": "Bearbeitet übernehmen",
-  "inbox.reject": "Ablehnen",
-  "inbox.rejectReason": "Begründung",
-  "inbox.draftSubject": "Betreff",
-  "inbox.draftBody": "Nachricht",
-  "inbox.rejectReasonHint":
+  "decision.viaTool": "über {verb}",
+  "decision.approveEdited": "Bearbeitet übernehmen",
+  "decision.reject": "Ablehnen",
+  "decision.rejectReason": "Begründung",
+  "decision.draftSubject": "Betreff",
+  "decision.draftBody": "Nachricht",
+  "decision.rejectReasonHint":
     "Wird mit der Person geteilt, für die dies vorgemerkt wurde.",
-  "inbox.dismiss": "Schließen",
-  "inbox.versionSkew":
+  "decision.dismiss": "Schließen",
+  "decision.versionSkew":
     "Dieser Datensatz hat sich seit dem Vormerken geändert — bitte neu vormerken.",
-  "inbox.reRead": "Neu einlesen",
-  "inbox.alreadyDecided":
+  "decision.reRead": "Neu einlesen",
+  "decision.alreadyDecided":
     "Bereits entschieden — hier gibt es nichts mehr zu tun.",
-  "inbox.expired": "Abgelaufen",
-  "inbox.expiresIn": "läuft ab in {countdown}",
-  "inbox.detail": "Freigabe-Detail",
-  "inbox.detailTechnical": "Technische Details",
-  "inbox.detailAsked": "Gefragt am",
-  "inbox.detailDecided": "Entschieden am",
-  "inbox.status.approved": "Genehmigt",
-  "inbox.status.rejected": "Abgelehnt",
-  "inbox.status.expired": "Abgelaufen",
+  "decision.expired": "Abgelaufen",
+  "decision.expiresIn": "läuft ab in {countdown}",
+  "decision.detail": "Freigabe-Detail",
+  "decision.detailTechnical": "Technische Details",
+  "decision.detailAsked": "Gefragt am",
+  "decision.detailDecided": "Entschieden am",
+  "decision.status.approved": "Genehmigt",
+  "decision.status.rejected": "Abgelehnt",
+  "decision.status.expired": "Abgelaufen",
 
   "home.pipelineWeighted": "{amount} gewichtet",
   "home.pipelineCount.one": "{count} offener Deal",
@@ -3663,7 +3663,7 @@ export const de = {
   "ob.s4.scope1Rest":
     "Deine Post wird automatisch zu Kontakten, Firmen und Aktivitäten.",
   "ob.s4.scope2Lead": "Wir senden nie etwas ohne deine Freigabe.",
-  "ob.s4.scope2Rest": "Entwürfe warten in deinem Freigabe-Eingang.",
+  "ob.s4.scope2Rest": "Entwürfe warten auf deine Entscheidung.",
   "ob.s4.scope3Lead": "Deine Daten bleiben in deiner Organisation.",
   "ob.s4.scope3Rest":
     "Own-your-data — jederzeit alles exportieren oder löschen.",

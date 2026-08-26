@@ -31,7 +31,7 @@ import {
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { TodaySection } from "./home.today";
-import { usePendingApprovals } from "./inbox.queries";
+import { usePendingApprovals } from "./approvals.queries";
 import "./home.css";
 
 // Home — the morning handover.

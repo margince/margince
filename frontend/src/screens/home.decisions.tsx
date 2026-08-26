@@ -68,12 +68,12 @@ function approvalsOf(item: DecisionDeckItem): readonly Approval[] {
 function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
   return {
     expiresIn: (msRemaining) =>
-      t("inbox.expiresIn", {
+      t("decision.expiresIn", {
         countdown: formatCountdown(msRemaining, t, locale),
       }),
-    approved: t("inbox.status.approved"),
-    rejected: t("inbox.status.rejected"),
-    expired: t("inbox.status.expired"),
+    approved: t("decision.status.approved"),
+    rejected: t("decision.status.rejected"),
+    expired: t("decision.status.expired"),
   };
 }
 
@@ -85,13 +85,13 @@ function deckLabels(
   const card: DecisionCardLabels = {
     accept: t("trust.accept"),
     edit: t("trust.edit"),
-    reject: t("inbox.reject"),
+    reject: t("decision.reject"),
     // The deck is the one surface where "later" is a real answer: it is the top
     // of the pile, not the pile itself, and the full queue is one click away.
     skip: t("home.deck.later"),
-    expired: t("inbox.expired"),
-    draftSubject: t("inbox.draftSubject"),
-    draftBody: t("inbox.draftBody"),
+    expired: t("decision.expired"),
+    draftSubject: t("decision.draftSubject"),
+    draftBody: t("decision.draftBody"),
     showMore: t("home.deck.showMore"),
     showLess: t("home.deck.showLess"),
     noContent: t("common.empty"),
@@ -377,7 +377,7 @@ export function DecisionsSection({
               </span>
               <DecisionToolChip
                 verb={KIND_TO_VERB[approval.kind]}
-                label={(verb) => t("inbox.viaTool", { verb })}
+                label={(verb) => t("decision.viaTool", { verb })}
               />
               <DecisionStatusChip
                 approval={approval}

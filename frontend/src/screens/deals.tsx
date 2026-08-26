@@ -108,7 +108,7 @@ import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import { EditAction } from "./edit";
 import { EntityRef, useEntityName } from "./entityref";
 import { RecordHistoryTab } from "./history";
-import { usePendingApprovals } from "./inbox.queries";
+import { usePendingApprovals } from "./approvals.queries";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,

@@ -25,7 +25,7 @@ import type { MessageKey } from "../i18n/en";
 import { useOrganization360 } from "../screens/company360";
 import { useConnectors } from "../screens/connectors";
 import { useDedupeQueue } from "../screens/dedupe.queries";
-import { usePendingApprovals } from "../screens/inbox.queries";
+import { usePendingApprovals } from "../screens/approvals.queries";
 import { useLicenseEntitlement } from "../screens/license";
 import { type AppActivity, useAppActivity } from "./activity";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";

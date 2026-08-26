@@ -179,8 +179,8 @@ export const EDITABLE_FIELDS: Readonly<
   // server refuses an edited anchor outright (it is an entity reference, and
   // edit scope pins those), so offering it would only invite a refusal.
   held_draft: [
-    { field: "subject", as: "text", label: "inbox.draftSubject" },
-    { field: "body", as: "textarea", label: "inbox.draftBody" },
+    { field: "subject", as: "text", label: "decision.draftSubject" },
+    { field: "body", as: "textarea", label: "decision.draftBody" },
   ],
   // The date is the entire question, and it is the only thing here a person may
   // change. Undeclared, the generic editor offered every string in the payload:

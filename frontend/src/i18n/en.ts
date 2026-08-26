@@ -307,7 +307,7 @@ export const en = {
   "share.revokeConfirm":
     "Revoke this grant? The subject loses this record's access at the next request — there is no undo control.",
   "share.approvalRequired":
-    "This share needs approval before it takes effect — it's been queued to the approval inbox, not applied yet.",
+    "This share needs approval before it takes effect — it's queued for a decision, not applied yet.",
   "share.teamMembers.one": "Team · {count} member",
   "share.teamMembers.other": "Team · {count} members",
   "share.rosterLoading": "Loading people and teams…",
@@ -2032,27 +2032,33 @@ export const en = {
   "offer.viewPdf": "View PDF",
   "offer.pdfUnavailable": "PDF rendering not available on this deployment.",
 
-  "inbox.viaTool": "via {verb}",
-  "inbox.approveEdited": "Approve edited",
-  "inbox.reject": "Reject",
-  "inbox.rejectReason": "Reason",
-  "inbox.draftSubject": "Subject",
-  "inbox.draftBody": "Message",
-  "inbox.rejectReasonHint": "Shared with the person this was staged for.",
-  "inbox.dismiss": "Dismiss",
-  "inbox.versionSkew":
+  // The queue of staged actions a person has to decide. It is a DECISION here
+  // and an `approval` on the wire, and those two are the only names it has: it
+  // was also being called an inbox, a drafts queue and a staged list, and a
+  // reader told four names for one surface has been told none. Copy that has to
+  // point at it says what the reader does there ("waiting on you", "wait for
+  // your decision") rather than inventing a fifth noun for the place.
+  "decision.viaTool": "via {verb}",
+  "decision.approveEdited": "Approve edited",
+  "decision.reject": "Reject",
+  "decision.rejectReason": "Reason",
+  "decision.draftSubject": "Subject",
+  "decision.draftBody": "Message",
+  "decision.rejectReasonHint": "Shared with the person this was staged for.",
+  "decision.dismiss": "Dismiss",
+  "decision.versionSkew":
     "This record changed since it was staged — re-stage it before deciding.",
-  "inbox.reRead": "Re-read",
-  "inbox.alreadyDecided": "Already decided — nothing left to do here.",
-  "inbox.expired": "Expired",
-  "inbox.expiresIn": "expires in {countdown}",
-  "inbox.detail": "Approval detail",
-  "inbox.detailTechnical": "Technical details",
-  "inbox.detailAsked": "Asked",
-  "inbox.detailDecided": "Decided",
-  "inbox.status.approved": "Approved",
-  "inbox.status.rejected": "Rejected",
-  "inbox.status.expired": "Expired",
+  "decision.reRead": "Re-read",
+  "decision.alreadyDecided": "Already decided — nothing left to do here.",
+  "decision.expired": "Expired",
+  "decision.expiresIn": "expires in {countdown}",
+  "decision.detail": "Approval detail",
+  "decision.detailTechnical": "Technical details",
+  "decision.detailAsked": "Asked",
+  "decision.detailDecided": "Decided",
+  "decision.status.approved": "Approved",
+  "decision.status.rejected": "Rejected",
+  "decision.status.expired": "Expired",
 
   "home.pipelineWeighted": "{amount} weighted",
   "home.pipelineCount.one": "{count} open deal",
@@ -3683,7 +3689,7 @@ export const en = {
   "ob.s4.scope1Rest":
     "Your mail becomes contacts, companies and activities, captured automatically.",
   "ob.s4.scope2Lead": "We never send anything without your approval.",
-  "ob.s4.scope2Rest": "Drafts wait in your approval inbox.",
+  "ob.s4.scope2Rest": "Drafts wait for your decision.",
   "ob.s4.scope3Lead": "Your data stays in your organization.",
   "ob.s4.scope3Rest": "Own-your-data — export or delete everything anytime.",
   "ob.s4.scope4Lead": "Disconnect in one click.",

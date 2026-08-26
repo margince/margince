@@ -296,7 +296,7 @@ export const vi = {
   "share.revokeConfirm":
     "Thu hồi quyền này? Người được cấp sẽ mất quyền truy cập bản ghi ở yêu cầu kế tiếp — không có nút hoàn tác.",
   "share.approvalRequired":
-    "Lượt chia sẻ này cần được phê duyệt trước khi có hiệu lực — nó đã được xếp vào hộp phê duyệt, chưa áp dụng.",
+    "Lượt chia sẻ này cần được phê duyệt trước khi có hiệu lực — nó đang chờ bạn quyết định, chưa áp dụng.",
   "share.teamMembers.one": "Nhóm · {count} thành viên",
   "share.teamMembers.other": "Nhóm · {count} thành viên",
   "share.rosterLoading": "Đang tải danh sách người và nhóm…",
@@ -1991,28 +1991,28 @@ export const vi = {
   "offer.viewPdf": "Xem PDF",
   "offer.pdfUnavailable": "Bản triển khai này không tạo được PDF.",
 
-  "inbox.viaTool": "qua {verb}",
-  "inbox.approveEdited": "Duyệt bản đã sửa",
-  "inbox.reject": "Từ chối",
-  "inbox.rejectReason": "Lý do",
-  "inbox.draftSubject": "Tiêu đề",
-  "inbox.draftBody": "Nội dung",
-  "inbox.rejectReasonHint":
+  "decision.viaTool": "qua {verb}",
+  "decision.approveEdited": "Duyệt bản đã sửa",
+  "decision.reject": "Từ chối",
+  "decision.rejectReason": "Lý do",
+  "decision.draftSubject": "Tiêu đề",
+  "decision.draftBody": "Nội dung",
+  "decision.rejectReasonHint":
     "Người mà mục này được xếp chờ duyệt cho sẽ thấy lý do này.",
-  "inbox.dismiss": "Bỏ qua",
-  "inbox.versionSkew":
+  "decision.dismiss": "Bỏ qua",
+  "decision.versionSkew":
     "Bản ghi đã thay đổi kể từ khi được xếp chờ duyệt — hãy xếp lại trước khi quyết định.",
-  "inbox.reRead": "Đọc lại",
-  "inbox.alreadyDecided": "Đã quyết rồi — không còn gì để làm ở đây.",
-  "inbox.expired": "Đã hết hạn",
-  "inbox.expiresIn": "hết hạn sau {countdown}",
-  "inbox.detail": "Chi tiết phê duyệt",
-  "inbox.detailTechnical": "Chi tiết kỹ thuật",
-  "inbox.detailAsked": "Đã hỏi",
-  "inbox.detailDecided": "Đã quyết định",
-  "inbox.status.approved": "Đã duyệt",
-  "inbox.status.rejected": "Đã từ chối",
-  "inbox.status.expired": "Đã hết hạn",
+  "decision.reRead": "Đọc lại",
+  "decision.alreadyDecided": "Đã quyết rồi — không còn gì để làm ở đây.",
+  "decision.expired": "Đã hết hạn",
+  "decision.expiresIn": "hết hạn sau {countdown}",
+  "decision.detail": "Chi tiết phê duyệt",
+  "decision.detailTechnical": "Chi tiết kỹ thuật",
+  "decision.detailAsked": "Đã hỏi",
+  "decision.detailDecided": "Đã quyết định",
+  "decision.status.approved": "Đã duyệt",
+  "decision.status.rejected": "Đã từ chối",
+  "decision.status.expired": "Đã hết hạn",
 
   "home.pipelineWeighted": "{amount} theo trọng số",
   "home.pipelineCount.one": "{count} deal đang mở",
@@ -3635,7 +3635,7 @@ export const vi = {
   "ob.s4.scope1Rest":
     "Email của bạn thành contact, công ty và hoạt động, được thu thập tự động.",
   "ob.s4.scope2Lead": "Chúng tôi không gửi gì nếu bạn chưa duyệt.",
-  "ob.s4.scope2Rest": "Bản nháp nằm chờ trong hộp phê duyệt của bạn.",
+  "ob.s4.scope2Rest": "Bản nháp nằm chờ bạn quyết định.",
   "ob.s4.scope3Lead": "Dữ liệu của bạn nằm trong tổ chức của bạn.",
   "ob.s4.scope3Rest":
     "Dữ liệu là của bạn — xuất hoặc xoá sạch lúc nào cũng được.",
