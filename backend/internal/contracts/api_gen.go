@@ -24845,6 +24845,9 @@ type NotFound = Problem
 // PasswordChangeRequired RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type PasswordChangeRequired = Problem
 
+// PayloadTooLarge RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type PayloadTooLarge = Problem
+
 // PermissionDenied RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type PermissionDenied = Problem
 
@@ -24853,6 +24856,9 @@ type RetentionHeld = Problem
 
 // Unauthorized RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Unauthorized = Problem
+
+// UnsupportedMediaType RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type UnsupportedMediaType = Problem
 
 // ValidationError RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type ValidationError = Problem
@@ -26291,6 +26297,11 @@ type UpdateCorpusJSONBody struct {
 // AskCorpusJSONBody defines parameters for AskCorpus.
 type AskCorpusJSONBody struct {
 	Question string `json:"question"`
+}
+
+// UploadCorpusDocumentMultipartBody defines parameters for UploadCorpusDocument.
+type UploadCorpusDocumentMultipartBody struct {
+	File openapi_types.File `json:"file"`
 }
 
 // CreateLeadDisqualifyReasonParams defines parameters for CreateLeadDisqualifyReason.
@@ -29230,6 +29241,9 @@ type UpdateCorpusJSONRequestBody UpdateCorpusJSONBody
 
 // AskCorpusJSONRequestBody defines body for AskCorpus for application/json ContentType.
 type AskCorpusJSONRequestBody AskCorpusJSONBody
+
+// UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
+type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
 
 // CreateLeadDisqualifyReasonJSONRequestBody defines body for CreateLeadDisqualifyReason for application/json ContentType.
 type CreateLeadDisqualifyReasonJSONRequestBody = CreateLeadDisqualifyReasonRequest
@@ -37843,6 +37857,9 @@ type ServerInterface interface {
 	// The documents filed in this corpus, and how far each one's ingest got.
 	// (GET /knowledge/corpora/{id}/documents)
 	ListCorpusDocuments(w http.ResponseWriter, r *http.Request, id Id)
+	// Add a document to this corpus.
+	// (POST /knowledge/corpora/{id}/documents)
+	UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
 	// Delete a document, its chunks, its vectors and its stored file.
 	// (DELETE /knowledge/documents/{id})
 	DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
@@ -39928,6 +39945,12 @@ func (_ Unimplemented) AskCorpus(w http.ResponseWriter, r *http.Request, id Id) 
 // The documents filed in this corpus, and how far each one's ingest got.
 // (GET /knowledge/corpora/{id}/documents)
 func (_ Unimplemented) ListCorpusDocuments(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a document to this corpus.
+// (POST /knowledge/corpora/{id}/documents)
+func (_ Unimplemented) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -50134,6 +50157,38 @@ func (siw *ServerInterfaceWrapper) ListCorpusDocuments(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListCorpusDocuments(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCorpusDocument operation middleware
+func (siw *ServerInterfaceWrapper) UploadCorpusDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCorpusDocument(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64074,6 +64129,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/corpora/{id}/documents", wrapper.ListCorpusDocuments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/knowledge/corpora/{id}/documents", wrapper.UploadCorpusDocument)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/knowledge/documents/{id}", wrapper.DeleteCorpusDocument)

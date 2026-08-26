@@ -851,6 +851,10 @@ func (stubs) ListCorpusDocuments(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "ListCorpusDocuments")
 }
 
+func (stubs) UploadCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UploadCorpusDocument")
+}
+
 func (stubs) DeleteCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DeleteCorpusDocument")
 }

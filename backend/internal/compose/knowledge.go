@@ -8,12 +8,13 @@ import (
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/knowledge"
+	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 )
 
-// knowledgeHandlers is the knowledge module's seat on Server: the module's own
-// transport for the operations it answers today, and a 501 for the ones whose
-// module code has not landed yet.
+// knowledgeHandlers is the knowledge module's seat on Server: it forwards the
+// operations the module answers today and 501s the ones whose code has not
+// landed yet.
 //
 // The stubs are here because Server carries a compile-time assertion that it
 // satisfies the whole generated ServerInterface, so a contract operation with
@@ -22,16 +23,70 @@ import (
 // response types are generated from it — which leaves exactly this window where
 // a route is declared and the code answering it is not yet written.
 //
-// Each remaining stub is deleted by the change that implements its operation,
-// and the embedded module surface grows to match. When the last one goes, this
-// type is a bare embed and goes with it.
+// The module's surface is a NAMED field rather than an embed, and the forwards
+// below are written out. Embedding would promote its methods through Server
+// itself, so `s.knowledgeHandlers.WithBlobstore(...)` and `s.WithBlobstore(...)`
+// would both compile and mean the same thing — and which one the compiler picks
+// changes as this seat gains and loses stubs.
+//
+// Each stub is deleted by the change that implements its operation, and a
+// forward takes its place. When the last stub goes, so does this type.
 type knowledgeHandlers struct {
-	knowledge.Handlers
+	module knowledge.Handlers
 }
 
-func (knowledgeHandlers) ListCorpusDocuments(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "listCorpusDocuments")
+// The three wiring edges, as functions rather than methods. Server embeds this
+// seat, so a uniquely-named METHOD here is promoted to Server itself and
+// `s.withBlobstore(store)` compiles — reading as though the server carried the
+// setting rather than the corpus surface did. A function takes the seat as an
+// argument and cannot be reached that way.
+
+func knowledgeWithUploadLimit(h knowledgeHandlers, bytes int64) knowledgeHandlers {
+	h.module = h.module.WithUploadLimit(bytes)
+	return h
 }
+
+func knowledgeWithBlobstore(h knowledgeHandlers, store blobstore.Store) knowledgeHandlers {
+	h.module = h.module.WithBlobstore(store)
+	return h
+}
+
+func knowledgeWithIngestQueue(h knowledgeHandlers, queue knowledge.QueueIngest) knowledgeHandlers {
+	h.module = h.module.WithIngestQueue(queue)
+	return h
+}
+
+// Answered by the module.
+
+func (h knowledgeHandlers) ListCorpora(w http.ResponseWriter, r *http.Request) {
+	h.module.ListCorpora(w, r)
+}
+
+func (h knowledgeHandlers) CreateCorpus(w http.ResponseWriter, r *http.Request) {
+	h.module.CreateCorpus(w, r)
+}
+
+func (h knowledgeHandlers) ReadCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.module.ReadCorpus(w, r, id)
+}
+
+func (h knowledgeHandlers) UpdateCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.module.UpdateCorpus(w, r, id)
+}
+
+func (h knowledgeHandlers) ArchiveCorpus(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.module.ArchiveCorpus(w, r, id)
+}
+
+func (h knowledgeHandlers) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.module.UploadCorpusDocument(w, r, id)
+}
+
+func (h knowledgeHandlers) ListCorpusDocuments(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.module.ListCorpusDocuments(w, r, id)
+}
+
+// Not yet written.
 
 func (knowledgeHandlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "deleteCorpusDocument")

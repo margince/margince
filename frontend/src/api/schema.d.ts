@@ -10229,7 +10229,11 @@ export interface paths {
          */
         get: operations["listCorpusDocuments"];
         put?: never;
-        post?: never;
+        /**
+         * Add a document to this corpus.
+         * @description Accepts only files whose bytes are their own text — text/plain, text/markdown, text/csv, application/json. Anything else is refused naming what is accepted; there is no parser in this product, and a PDF arriving as an empty corpus is worse than a PDF refused. Ingest is asynchronous: the document lands `queued` and its progress is read back from this path's GET.
+         */
+        post: operations["uploadCorpusDocument"];
         delete?: never;
         options?: never;
         head?: never;
@@ -22082,6 +22086,24 @@ export interface components {
         };
         /** @description No such resource in this workspace (or out of RBAC scope). */
         NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid. */
+        PayloadTooLarge: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The uploaded file is not of a type this route can read (`code: unsupported_media_type`). The refusal NAMES what is accepted: a bare rejection leaves the caller nothing to act on, and the alternative — accepting the bytes and ingesting nothing from them — reads to them exactly like success. */
+        UnsupportedMediaType: {
             headers: {
                 [name: string]: unknown;
             };
@@ -39828,6 +39850,42 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             404: components["responses"]["NotFound"];
+        };
+    };
+    uploadCorpusDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /** Format: binary */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Accepted for ingest. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeDocument"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            413: components["responses"]["PayloadTooLarge"];
+            415: components["responses"]["UnsupportedMediaType"];
+            422: components["responses"]["ValidationError"];
         };
     };
     deleteCorpusDocument: {

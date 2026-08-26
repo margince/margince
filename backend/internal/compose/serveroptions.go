@@ -147,6 +147,9 @@ func WithBlobstore(store blobstore.Store) Option {
 		s.activitiesHandlers = s.activitiesHandlers.WithBlobstore(store)
 		s.dealsHandlers = s.dealsHandlers.WithBlobstore(store)
 		s.peopleHandlers = s.peopleHandlers.WithBlobstore(store)
+		// A corpus document is object bytes like any other; without a store the
+		// upload refuses rather than accepting a file it cannot keep.
+		s.knowledgeHandlers = knowledgeWithBlobstore(s.knowledgeHandlers, store)
 		// Erasure must reach the attachment bytes, not only the rows, so the
 		// DSR erase path gets a blob-aware eraser (Art. 17).
 		s.consentHandlers = s.WithEraser(privacy.NewEraser(InstallationDB(pool)).WithBlobstore(store))
