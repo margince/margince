@@ -113,8 +113,8 @@ func namedExhaustiveness(decl string) *regexp.Regexp {
 	return regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(name) + `\b\s+(?:is|are) every\s+(\w+)`)
 }
 
-// firstClaimPhrase returns the first match that is a claim rather than the tail
-// of a hyphenated modifier, and "" when the pattern only reaches the latter.
+// claimPhrase returns the first match that is a claim rather than prose, and ""
+// when the pattern reaches nothing else.
 //
 // `\bonly caller` matches inside "a lead:update-only caller", where "only"
 // binds leftwards into the compound and quantifies nothing: the sentence says
@@ -144,7 +144,7 @@ func namedExhaustiveness(decl string) *regexp.Regexp {
 // whose first match is an idiom still qualifies on a later real one.
 func claimPhrase(pattern *regexp.Regexp, text string, reject func(string) bool) string {
 	for _, span := range pattern.FindAllStringSubmatchIndex(text, -1) {
-		if precededByHyphen(text, span[0]) {
+		if compoundedQuantifier(text, span[0], span[1]) {
 			continue
 		}
 		if reject != nil && len(span) >= 4 && span[2] >= 0 && reject(text[span[2]:span[3]]) {
@@ -155,8 +155,9 @@ func claimPhrase(pattern *regexp.Regexp, text string, reject func(string) bool) 
 	return ""
 }
 
-// precededByHyphen reports whether a match opens in the middle of a hyphenated
-// word, where its first token binds leftwards and quantifies nothing.
+// compoundedQuantifier reports whether a match opens on a QUANTIFIER that is
+// the tail of a hyphenated word, where it binds leftwards and quantifies
+// nothing.
 //
 // By RUNE and not by byte: `text[index-1]` reads the last continuation byte of
 // whatever multi-byte character precedes the match, and U+2011 NON-BREAKING
@@ -168,13 +169,27 @@ func claimPhrase(pattern *regexp.Regexp, text string, reject func(string) bool) 
 // sentence punctuation — "the store — the only writer" — and a clause opening
 // after one is ordinary prose making an ordinary claim. Only characters that
 // join two halves of a single word suppress a match.
-func precededByHyphen(text string, index int) bool {
-	if index <= 0 {
+//
+// And only when the compounded word is the QUANTIFIER. Most shapes open on a
+// verb instead, where a hyphen changes nothing about the claim: "the route
+// table is hand-written once" says exactly what "written once" says, and
+// suppressing it would silence a whole shape — `hand-written` is this tree's
+// own idiom, so ordinary prose would trip it. Over-collecting costs a register
+// line somebody resolves; over-suppressing costs a claim nobody ever sees
+// again, so the rule is the narrow one.
+func compoundedQuantifier(text string, start, end int) bool {
+	if start <= 0 {
 		return false
 	}
-	previous, _ := utf8.DecodeLastRuneInString(text[:index])
+	previous, _ := utf8.DecodeLastRuneInString(text[:start])
 	switch previous {
 	case '-', '‐', '‑':
+	default:
+		return false
+	}
+	first, _, _ := strings.Cut(text[start:end], " ")
+	switch strings.ToLower(first) {
+	case "only", "one", "single", "no", "never", "not":
 		return true
 	}
 	return false
@@ -224,6 +239,29 @@ var heldBy = regexp.MustCompile(`Held by:\s*(Test[A-Z_][A-Za-z0-9_]*)\s*\(([^)]+
 // `func Testhelperghost() {}` satisfies neither, and a gate that can never run
 // is not a gate.
 var goTestFunc = regexp.MustCompile(`(?m)^func (Test[A-Z_][A-Za-z0-9_]*)\([a-zA-Z_][a-zA-Z0-9_]* \*testing\.T\)`)
+
+// authoredGoFile reports whether a file is one somebody could have written a
+// claim in: Go, and not generated.
+//
+// Shared rather than respelled at each walk. Four sweeps in this gate ask "is
+// this a source an author wrote" — the claim sweep, the test-function sweep and
+// the two corpus sweeps — and they answered it three different ways, one of
+// them missing `.git`. A gate whose walks disagree about their own subject
+// reads green over whatever the narrowest of them skipped.
+func authoredGoFile(name string) bool {
+	return strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_gen.go")
+}
+
+// unauthoredDir reports a directory no author writes into: an installed
+// dependency tree, a fixture directory, or git's own store. Nothing under one
+// can carry a claim somebody chose to make.
+func unauthoredDir(name string) bool {
+	switch name {
+	case "node_modules", "testdata", ".git":
+		return true
+	}
+	return false
+}
 
 // claimedTrees are the hand-written Go trees this rule covers. The backend
 // module is one tree, not all of them: extensions/, fixtures/, cli/ and
@@ -298,10 +336,7 @@ func findClaims(root string) ([]claim, error) {
 			return walkErr
 		}
 		if entry.IsDir() {
-			// node_modules holds a unit's installed dependency tree and
-			// testdata holds fixtures; neither is hand-written, so neither can
-			// carry a claim somebody chose to make.
-			if entry.Name() == "node_modules" || entry.Name() == "testdata" {
+			if unauthoredDir(entry.Name()) {
 				return fs.SkipDir
 			}
 			// The GENERATED contract package, by PATH. Matching the directory
@@ -314,7 +349,7 @@ func findClaims(root string) ([]claim, error) {
 			}
 			return nil
 		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_gen.go") {
+		if !authoredGoFile(filepath.Base(path)) {
 			return nil
 		}
 		if gateFiles[filepath.ToSlash(path)] {

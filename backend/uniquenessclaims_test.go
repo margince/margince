@@ -80,6 +80,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -111,6 +112,12 @@ func allClaims(t *testing.T) []claim {
 // gateFiles are this gate's own sources, by PATH relative to the backend root.
 // Both halves spell out the phrases they hunt for, so a sweep that read either
 // would register its own prose as debt.
+//
+// It answers TWO questions, which happen to have the same answer and are not
+// the same question: which files the sweep skips, and which files a `Held by:`
+// may not name. The second is because these arms judge the register rather than
+// any claim's subject. A third gate arm added in a file of its own is covered
+// by neither until it is named here.
 //
 // By path and not by basename: a basename match would skip every file so named
 // in every swept tree, and a nested one could then carry an unbound claim.
@@ -166,7 +173,7 @@ func testFunctions(t *testing.T) map[string][]string {
 				return walkErr
 			}
 			if entry.IsDir() {
-				if name := entry.Name(); name == "node_modules" || name == "testdata" {
+				if unauthoredDir(entry.Name()) {
 					return fs.SkipDir
 				}
 				return nil
@@ -235,21 +242,12 @@ func TestANamedGateExistsAndLivesWhereTheClaimSaysItDoes(t *testing.T) {
 				c.path, c.line, c.decl, c.held, c.heldIn, strings.Join(files, ", "))
 			continue
 		}
-		// This gate's own arms are not available as holders. They judge the
-		// REGISTER — that it is sorted, that it totals what it pins — and know
-		// nothing about any claim's subject, so binding to one satisfies every
-		// check here while holding nothing at all. It is the cheapest way to
-		// retire a claim without auditing it, and unlike a narrowed detector it
-		// moves the tree, so it reads as the good kind of progress.
-		for _, file := range files {
-			if gateFiles[file] {
-				t.Errorf("%s:%d %s names %s, which is one of this gate's own arms in %s.\n\n"+
-					"Those arms judge the register, not the claim's subject, so the binding "+
-					"would hold nothing. Name the test that fails when a second implementation "+
-					"appears, or leave the claim in the register until one exists.",
-					c.path, c.line, c.decl, c.held, file)
-				break
-			}
+		if file, isArm := declaredInAGateArm(files); isArm {
+			t.Errorf("%s:%d %s names %s, which is one of this gate's own arms in %s.\n\n"+
+				"Those arms judge the register, not the claim's subject, so the binding "+
+				"would hold nothing. Name the test that fails when a second implementation "+
+				"appears, or leave the claim in the register until one exists.",
+				c.path, c.line, c.decl, c.held, file)
 		}
 	}
 	// A gate that judges nothing passes exactly like one that judges a clean
@@ -259,6 +257,23 @@ func TestANamedGateExistsAndLivesWhereTheClaimSaysItDoes(t *testing.T) {
 		t.Error("no claim in the tree names a gate — this arm judged nothing, which is " +
 			"indistinguishable from every binding being correct")
 	}
+}
+
+// declaredInAGateArm reports whether a binding names a test declared in one of
+// this gate's own sources, and which.
+//
+// Those arms judge the REGISTER — that it is sorted, that it totals what it
+// pins — and know nothing about any claim's subject, so binding to one
+// satisfies every other check here while holding nothing at all. It is the
+// cheapest way to retire a claim without auditing it, and unlike a narrowed
+// detector it moves the tree, so it reads as the good kind of progress.
+func declaredInAGateArm(paths []string) (string, bool) {
+	for _, path := range paths {
+		if gateFiles[path] {
+			return path, true
+		}
+	}
+	return "", false
 }
 
 // namesTheFile reports whether one of `paths` is the file the binding named.
@@ -511,7 +526,7 @@ func TestEveryShapeAttributesTheClaimsItsCensusPins(t *testing.T) {
 	for name := range claimShapes {
 		live[name] = true
 	}
-	for _, shape := range sortedCensusShapes() {
+	for _, shape := range slices.Sorted(maps.Keys(shapeCensus)) {
 		if !live[shape] {
 			t.Errorf("shapeCensus pins %d claim(s) to shape %q and the detector no longer "+
 				"declares it — a shape that stops looking lowers this file's number without "+
@@ -542,184 +557,13 @@ func TestEveryShapeAttributesTheClaimsItsCensusPins(t *testing.T) {
 	// refused rather than tolerated, because the arm above compares two numbers
 	// and 0 == 0 is the one comparison that holds while nothing is being
 	// measured.
-	for _, shape := range sortedCensusShapes() {
+	for _, shape := range slices.Sorted(maps.Keys(shapeCensus)) {
 		if shapeCensus[shape] == 0 {
 			t.Errorf("shapeCensus pins shape %q at zero — delete the shape deliberately, or "+
 				"restore what it was written to see; a row of zero passes exactly like a shape "+
 				"whose claims were all held", shape)
 		}
 	}
-	if len(shapeCensus) == 0 {
-		t.Error("shapeCensus is empty, so every comparison above ran over nothing")
-	}
-}
-
-// TestTheSweptCorpusIsEveryModuleThatCouldCarryAClaim holds the half the shape
-// census cannot: WHERE the detector looks, as against what it looks for.
-//
-// Pricing the shapes leaves the corpus free, and the corpus is the cheaper
-// place to make the number fall. Deleting `{root: "../extensions"}` from
-// claimedTrees drops that tier's claims out of the sweep; remove their register
-// lines, decrement the two rows they came from, and the shape census is
-// satisfied — every remaining shape attributes exactly what it pins, because
-// the arm derives both sides from the same narrowed walk. The claims are still
-// in the tree, still unheld, and no longer counted.
-//
-// So the roots are checked against the tree rather than against a list: every
-// Go module that holds a hand-written source must lie under one of them. A
-// module is derived from its go.mod, and "hand-written" from the same rule the
-// walk itself uses — generated files are not somewhere an author can make a
-// claim, so a module holding only those is legitimately unswept and needs no
-// exemption anybody has to remember.
-func TestTheSweptCorpusIsEveryModuleThatCouldCarryAClaim(t *testing.T) {
-	const repoRoot = ".."
-	covered := func(module string) bool {
-		for _, tree := range claimedTrees {
-			root := filepath.Clean(filepath.Join("backend", tree.root))
-			if module == root || strings.HasPrefix(module, root+string(filepath.Separator)) {
-				return true
-			}
-		}
-		return false
-	}
-	var modules, unswept []string
-	err := filepath.WalkDir(repoRoot, func(path string, entry fs.DirEntry, walkErr error) error {
-		if walkErr != nil {
-			return walkErr
-		}
-		if entry.IsDir() {
-			if name := entry.Name(); name == "node_modules" || name == "testdata" || name == ".git" {
-				return fs.SkipDir
-			}
-			return nil
-		}
-		if entry.Name() != "go.mod" {
-			return nil
-		}
-		module, relErr := filepath.Rel(repoRoot, filepath.Dir(path))
-		if relErr != nil {
-			return relErr
-		}
-		authored, authoredErr := holdsHandWrittenGo(filepath.Dir(path))
-		if authoredErr != nil {
-			return authoredErr
-		}
-		if !authored {
-			return nil
-		}
-		modules = append(modules, module)
-		if !covered(module) {
-			unswept = append(unswept, module)
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walking %s for modules: %v", repoRoot, err)
-	}
-	slices.Sort(unswept)
-	for _, module := range unswept {
-		t.Errorf("module %s holds hand-written Go and lies under no claimed root (%s), so a "+
-			"uniqueness claim written there needs no gate and takes no register line.\n\n"+
-			"Add the root, or say beside claimedTrees why this module cannot carry a claim. "+
-			"Removing a root is how the register's number falls without a claim being audited.",
-			module, strings.Join(claimedRootNames(), ", "))
-	}
-	// The walk has to have found the modules this repository is made of. A
-	// corpus check over an empty module list reports a covered tree exactly as
-	// a correct one does, and it is the arm's own subject that would be
-	// missing.
-	if len(modules) < len(claimedTrees) {
-		t.Errorf("the walk found %d module(s) holding hand-written Go against %d claimed root(s) — "+
-			"fewer modules than roots means the walk, not the roots, is what went wrong",
-			len(modules), len(claimedTrees))
-	}
-}
-
-// TestOnlyTheGatesOwnSourcesAreExemptFromTheSweep closes the corpus's other
-// door.
-//
-// `gateFiles` is a skip list, and a skip list is where a census goes blind: add
-// an ordinary source to it, drop that file's register lines, decrement the rows
-// they came from, and every other arm agrees. The exemption exists for ONE
-// reason — these two files spell out the phrases they hunt for, so a sweep that
-// read either would register its own prose as debt — and that reason is
-// checkable, so it is checked rather than trusted.
-func TestOnlyTheGatesOwnSourcesAreExemptFromTheSweep(t *testing.T) {
-	if len(gateFiles) == 0 {
-		t.Fatal("no file is exempt, so this arm judged nothing — the gate's own sources " +
-			"must be exempt or the sweep registers its own prose")
-	}
-	for path := range gateFiles {
-		source, err := os.ReadFile(path) // #nosec G304 -- a path this gate declares about itself
-		if err != nil {
-			t.Errorf("%s is exempt from the sweep and cannot be read: %v — an exemption naming "+
-				"a file that is not there skips nothing and hides a rename", path, err)
-			continue
-		}
-		// Declaring the shapes is what makes a file unjudgeable by them. A
-		// source that merely mentions the gate does not qualify, which is the
-		// difference between this and a list somebody may append to.
-		if !strings.Contains(string(source), "claimShapes") {
-			t.Errorf("%s is exempt from the sweep and does not declare the claim shapes.\n\n"+
-				"The exemption is for a file that spells out the phrases it hunts for and so "+
-				"cannot be judged by them. Exempting anything else removes its claims from the "+
-				"register without holding or deleting one.", path)
-		}
-	}
-}
-
-// holdsHandWrittenGo reports whether a module directory holds a source an
-// author could have written a claim in, stopping at a nested module so a
-// parent does not answer for its child.
-func holdsHandWrittenGo(dir string) (bool, error) {
-	entries, err := os.ReadDir(dir)
-	if err != nil {
-		return false, err
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() {
-			if name == "node_modules" || name == "testdata" || name == ".git" {
-				continue
-			}
-			if _, statErr := os.Stat(filepath.Join(dir, name, "go.mod")); statErr == nil {
-				continue
-			}
-			nested, nestedErr := holdsHandWrittenGo(filepath.Join(dir, name))
-			if nestedErr != nil {
-				return false, nestedErr
-			}
-			if nested {
-				return true, nil
-			}
-			continue
-		}
-		if strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_gen.go") {
-			return true, nil
-		}
-	}
-	return false, nil
-}
-
-// claimedRootNames names the roots for a failure message, so a reader is told
-// what IS swept rather than only what is not.
-func claimedRootNames() []string {
-	names := make([]string, 0, len(claimedTrees))
-	for _, tree := range claimedTrees {
-		names = append(names, tree.root)
-	}
-	return names
-}
-
-// sortedCensusShapes gives the census a stable read order, so two failures
-// report in the same sequence rather than in map order.
-func sortedCensusShapes() []string {
-	names := make([]string, 0, len(shapeCensus))
-	for name := range shapeCensus {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
 }
 
 func TestTheRegisterIsSortedAndFreeOfDuplicates(t *testing.T) {
@@ -900,17 +744,37 @@ func TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt(t *testing
 		t.Errorf("claimPhrase(%q) = %q, want %q — an em-dash separates clauses and does "+
 			"not make the next word a compound", emDash, phrase, "only writer")
 	}
+
+	// A shape that opens on a VERB rather than on the quantifier keeps its
+	// claim when the verb is compounded. `hand-written` is this tree's own
+	// idiom, so a rule keyed on the match's start rather than on the
+	// quantifier would silence the second-largest shape with ordinary prose,
+	// and nothing here would fail.
+	once := claimShapes["once"]
+	if once == nil {
+		t.Fatal("the once shape is gone, so the cases below prove nothing about it")
+	}
+	for _, sentence := range []string{
+		"The route table is hand-written once, in composeRoutes.",
+		"The timeout is well-defined once, in the config loader.",
+		"Every column is auto-named once, by the generator.",
+	} {
+		if phrase := claimPhrase(once, sentence, nil); phrase == "" {
+			t.Errorf("claimPhrase read no claim from %q — the compounded word is the verb, "+
+				"and the sentence still says the thing is written once", sentence)
+		}
+	}
 }
 
 // TestAnIdiomDoesNotHideTheDerivedShapesRealClaim covers the derived shape's
 // own version of the defect above.
 //
-// `namedExhaustiveness` is prefiltered before it joins the shape list, and that
-// prefilter used to read only the FIRST match: a comment whose first "<name> is
-// every …" was the "every bit" idiom never added the shape at all, so the real
-// claim in the next sentence was invisible to every arm. The idiom rule now
-// travels with the pattern, so both readings of the text agree about which
-// match is the claim.
+// `namedExhaustiveness` is prefiltered before it joins the shape list, and the
+// idiom rule travels with the pattern rather than being applied to that
+// prefilter alone. Applied there, a comment whose FIRST "<name> is every …" is
+// the "every bit" idiom would never add the shape, and the real claim in the
+// next sentence would be invisible to every arm — the two readings of one text
+// have to agree about which match is the claim.
 func TestAnIdiomDoesNotHideTheDerivedShapesRealClaim(t *testing.T) {
 	named := namedExhaustiveness("func Read")
 	if named == nil {
