@@ -71,6 +71,18 @@ func TestPromotingALeadThatNamesNobodyIsRefused(t *testing.T) {
 			}
 			leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
 
+			// The preview is what a human reads before agreeing, so it has to
+			// answer the same way. A preview promising "create" over an act
+			// that refuses is the worse half of the two.
+			var previewNeedsIdentity *PromoteNeedsIdentityError
+			preview, perr := store.PreviewLeadPromotion(ctx, leadID)
+			if !errors.As(perr, &previewNeedsIdentity) {
+				t.Errorf("previewing a lead that names nobody: got outcome %q (err=%v), want a "+
+					"PromoteNeedsIdentityError — the preview and the promotion answer one "+
+					"question and a human acts on the preview's answer",
+					preview.Outcome, perr)
+			}
+
 			person, merged, err := store.PromoteLead(ctx, leadID, PromoteLeadInput{Trigger: "human_qualify"})
 			var needsIdentity *PromoteNeedsIdentityError
 			if !errors.As(err, &needsIdentity) {

@@ -63,12 +63,15 @@ type AlreadyPromotedError struct{ PersonID ids.PersonID }
 
 func (e *AlreadyPromotedError) Error() string { return "lead is already promoted" }
 
-// PromoteNeedsIdentityError maps to 422: a lead with neither a name nor
-// an email cannot become a person worth having.
+// PromoteNeedsIdentityError maps to 422: a lead nothing names cannot become a
+// person worth having.
 type PromoteNeedsIdentityError struct{}
 
+// Error says what is missing rather than which field is absent. A full_name
+// that is present and empty is refused here, and telling that caller the lead
+// "has no full_name" contradicts the record they can see.
 func (e *PromoteNeedsIdentityError) Error() string {
-	return "lead has neither full_name nor email; enrich it before promoting"
+	return "lead has no name and no email to be named by; enrich it before promoting"
 }
 
 // MessageFault names the condition and no field: the remedy is EITHER of two

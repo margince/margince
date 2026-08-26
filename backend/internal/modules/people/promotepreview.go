@@ -57,6 +57,13 @@ func (s *Store) PreviewLeadPromotion(ctx context.Context, id ids.LeadID) (crmcon
 			// Disqualified: nothing promotion could do, so nothing to preview.
 			return apperrors.ErrConflict
 		}
+		// The promotion refuses a lead nothing names, so the preview says so
+		// too. Answering "will create" and then refusing the act is worse than
+		// refusing outright, because the answer is what a human read and
+		// agreed to before pressing the button.
+		if leadIdentityName(lead) == "" {
+			return &PromoteNeedsIdentityError{}
+		}
 		match, err := s.previewTarget(ctx, tx, lead)
 		if err != nil {
 			return err

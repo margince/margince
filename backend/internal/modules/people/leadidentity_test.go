@@ -4,6 +4,7 @@
 package people
 
 import (
+	"strings"
 	"testing"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -73,5 +74,95 @@ func TestLeadIdentityName(t *testing.T) {
 				t.Errorf("leadIdentityName() = %q, want %q", got, tc.want)
 			}
 		})
+	}
+}
+
+// The rule has a second spelling that no AST gate can see. A query naming a
+// lead falls back the same way in SQL, and there `COALESCE(full_name, email)`
+// is the exact defect `FullName != nil` was in Go: it answers the empty string
+// for a full_name that is present and empty, so one surface calls the lead
+// nothing while the promotion of the same lead calls it by its address.
+//
+// The census reads every string literal in the module rather than the ones
+// that look like queries — deciding what looks like a query is where a census
+// goes blind — and then decides on ONE coalesce's own argument list. A literal
+// merely mentioning both columns is not this rule: a SELECT naming the name and
+// the address as separate columns, an INSERT listing both, and a coalesce over
+// a domain extracted from the address all do that, and none of them falls back.
+func TestEverySQLFallbackToAnEmailGuardsTheEmptyName(t *testing.T) {
+	const (
+		nameColumn  = "full_name"
+		emailColumn = "email"
+		// The guard that makes the SQL agree with leadIdentityName: an empty
+		// name, once trimmed, is NULL, so the fallback proceeds past it.
+		guard = "nullif(btrim(full_name), '')"
+	)
+	fallbacks := 0
+	for _, lit := range moduleSQLLiterals(t) {
+		for _, args := range coalesceArguments(lit.text) {
+			// The fallback is name THEN address, in one argument list. The
+			// other order is a different rule and this gate does not hold it.
+			name := strings.Index(args, nameColumn)
+			if name < 0 || !strings.Contains(args[name:], emailColumn) {
+				continue
+			}
+			fallbacks++
+			if strings.Contains(args, guard) {
+				continue
+			}
+			t.Errorf("a query at %s falls back from %s to %s as coalesce(%s) without %s.\n\n"+
+				"COALESCE stops at a present-but-empty name and answers \"\", so this surface "+
+				"calls a lead nothing while leadIdentityName calls the same lead by its "+
+				"address. Guard the name.",
+				lit.where, nameColumn, emailColumn, strings.Join(strings.Fields(args), " "), guard)
+		}
+	}
+	if fallbacks == 0 {
+		t.Fatalf("no query in this module falls back from %s to %s, so this gate judged nothing "+
+			"— the rule has moved out of SQL and this test no longer describes the module",
+			nameColumn, emailColumn)
+	}
+}
+
+// coalesceArguments returns the argument text of every coalesce(...) in one SQL
+// literal, lowercased, with line comments stripped first — a `--` can carry an
+// unbalanced parenthesis, and counting it would end the argument list early and
+// hide what follows.
+func coalesceArguments(sql string) []string {
+	var stripped strings.Builder
+	for _, line := range strings.Split(sql, "\n") {
+		if cut := strings.Index(line, "--"); cut >= 0 {
+			line = line[:cut]
+		}
+		stripped.WriteString(line)
+		stripped.WriteByte('\n')
+	}
+	text := strings.ToLower(stripped.String())
+
+	var args []string
+	for at := 0; ; {
+		open := strings.Index(text[at:], "coalesce(")
+		if open < 0 {
+			return args
+		}
+		open += at + len("coalesce(")
+		depth, end := 1, open
+		for ; end < len(text) && depth > 0; end++ {
+			switch text[end] {
+			case '(':
+				depth++
+			case ')':
+				depth--
+			}
+		}
+		if depth != 0 {
+			// Unbalanced: the literal is a fragment concatenated with another.
+			// Judging half an argument list would answer about a call that is
+			// not there, so take what there is and say nothing about the rest.
+			args = append(args, text[open:])
+			return args
+		}
+		args = append(args, text[open:end-1])
+		at = end
 	}
 }
