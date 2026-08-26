@@ -34,6 +34,65 @@ import (
 // about the STATEMENT, which is the half that carries the invariant.
 const passportOwner = "internal/modules/identity"
 
+// TestEveryPassportMintTakesItsUserFromTheSession holds the other half of the
+// invariant: WHERE the user id comes from.
+//
+// The statement check below proves on_behalf_of and granted_by are the same
+// value. It cannot prove that value is the caller's own — Identity is a struct
+// with exported fields, so a new admin endpoint could construct one naming
+// anybody, hand it to IssuePassport, and mint a passport for a colleague
+// through an INSERT this gate reads as correct.
+//
+// So every call site must pass an identity it READ from the request context,
+// never one it built. identityFrom is the only way to obtain one honestly.
+func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
+	fset := token.NewFileSet()
+	calls := 0
+	roots := []string{"internal", "cmd"}
+	for _, root := range roots {
+		err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {
+			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
+				strings.HasSuffix(path, "_test.go") {
+				return err
+			}
+			parsed, parseErr := parser.ParseFile(fset, path, nil, parser.SkipObjectResolution)
+			if parseErr != nil {
+				return parseErr
+			}
+			ast.Inspect(parsed, func(n ast.Node) bool {
+				call, ok := n.(*ast.CallExpr)
+				if !ok {
+					return true
+				}
+				sel, ok := call.Fun.(*ast.SelectorExpr)
+				if !ok || sel.Sel.Name != "IssuePassport" || len(call.Args) < 2 {
+					return true
+				}
+				calls++
+				// The identity argument must be a plain identifier — a variable
+				// the function obtained. A composite literal is somebody
+				// building an identity, which is exactly the shape that mints
+				// for a person who did not ask.
+				if _, plain := call.Args[1].(*ast.Ident); !plain {
+					t.Errorf("%s calls IssuePassport with a constructed identity (%s) — "+
+						"the user must come from the session, or the mint acts for "+
+						"somebody who never asked",
+						fset.Position(call.Pos()), exprText(fset, call.Args[1]))
+				}
+				return true
+			})
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s: %v", root, err)
+		}
+	}
+	if calls == 0 {
+		t.Fatal("no call to IssuePassport found under internal/ or cmd/ — this gate " +
+			"read a smaller tree than it thinks, and would pass over a new mint caller")
+	}
+}
+
 func TestOnlyIdentityMintsAPassportAndOnlyForTheSessionUser(t *testing.T) {
 	var inserts []string
 	roots := []string{"internal", "cmd"}

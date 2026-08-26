@@ -267,14 +267,16 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	// rather than answered, since it has no decision of its own to read.
 	"internal/modules/agents/runner:MyGrant": "the bound is the signature: it takes no user id, selects on the acting principal's own, and refuses a principal with no human behind it — there is no argument by which a caller could read another rep's decision",
 	// The nightly fan-out's enumeration, and the one call that reads across
-	// reps. What bounds it is that it returns no authority: every row is a
-	// (user, spec, passport id) the scheduler turns into a run executed under
-	// THAT rep's own passport, which re-resolves their live RBAC at claim time
-	// — so a run can do exactly what its rep can, whoever enumerated it. It
-	// leaks nothing a caller could act on either: the passport id names a
-	// credential whose token exists only in the mint response and nowhere in
-	// this row. The rep-facing read is MyGrant, which takes no user id at all.
-	"internal/modules/agents/runner:LiveGrantsFor":           "the scheduler's own enumeration under the system principal: it returns no credential and no record, only which reps to run for, and each run authenticates that rep's own passport before it acts",
+	// reps. What bounds it is the CALLER rather than the payload, and the
+	// rationale has to say so plainly: these rows carry passport ids, and a
+	// passport id IS an in-process capability — AuthenticateAgentByID takes the
+	// uuid alone and hands back that rep's identity. So the bound is not "it
+	// returns nothing to act on". It is that nothing user-facing can invoke it:
+	// the worker's scheduling pass calls it under the system principal, and no
+	// route, tool or handler reaches it. The rep-facing read is MyGrant, which
+	// takes no user id and can express nothing but the caller's own row. A
+	// surface that ever needs this list needs a gate, not this waiver.
+	"internal/modules/agents/runner:LiveGrantsFor":           "reached only by the worker's scheduling pass under the system principal — no route, tool or handler calls it. The rows carry passport ids, which ARE in-process capability handles, so what bounds this is that nothing user-facing can invoke it; the rep-facing read is MyGrant, which takes no user id",
 	"internal/modules/agents/runner:FinishJob":               "agent-runner persistence driven by the worker loop under the system principal; admission happened at the tool gate that enqueued the run",
 	"internal/modules/agents/runner:FailStuckRuns":           "worker sweep under the system principal: closes runs whose resume died mid-loop, which no human requested and none can reach by then. It only moves 'running' to 'failed', so there is no object an actor could be granted or denied",
 	"internal/modules/people:BeginSiteRead":                  "worker-loop status transition (queued→running), not a human principal; the human's authority was checked at StartSiteRead, and what bounds the write is the CAS itself — one dossier id, carried by the admitted job, updated only from the statuses a claim may take",
