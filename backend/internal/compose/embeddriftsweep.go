@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/gradionhq/margince/backend/internal/modules/knowledge"
 	"github.com/gradionhq/margince/backend/internal/modules/search"
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -60,7 +61,12 @@ func (EmbedDriftWorkspaceArgs) Kind() string { return "embed_drift_workspace" }
 func (a EmbedDriftWorkspaceArgs) WorkspaceID() ids.UUID { return a.Workspace }
 
 type embedDriftWorkspaceWorker struct {
-	store    *search.Store
+	store *search.Store
+	// corpora is the knowledge module's half of the same question. It rides
+	// this sweep rather than a job of its own: the sweep already answers "has
+	// the live identity moved", and a second one would be a second answer to
+	// one question — the two would disagree the first time either changed.
+	corpora  *knowledge.Store
 	embedder search.Embedder
 	log      *slog.Logger
 }
@@ -73,6 +79,19 @@ func (w *embedDriftWorkspaceWorker) Work(ctx context.Context, job *river.Job[Emb
 	healed, err := w.store.SweepWorkspaceEmbeddingDrift(wsCtx, ids.From[ids.WorkspaceKind](job.Args.Workspace), w.embedder)
 	if healed > 0 {
 		w.log.InfoContext(wsCtx, "embed drift sweep healed entities", "healed", healed)
+	}
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	// The corpora are swept even when the entity pass healed nothing: the two
+	// hold their vectors in different tables and drift independently. A corpus
+	// left under a superseded binding retrieves NOTHING — the identity filter
+	// excludes every passage — and re-uploading the same file does not repair
+	// it, because the checksum matches and nothing re-chunks. That is a corpus
+	// bricked by a configuration change, and this is the only path back.
+	repaired, err := w.corpora.SweepCorpusDrift(wsCtx, w.embedder)
+	if repaired > 0 {
+		w.log.InfoContext(wsCtx, "embed drift sweep re-embedded corpus passages", "repaired", repaired)
 	}
 	return jobs.FaultContext(ctx, err)
 }
@@ -97,6 +116,11 @@ func addEmbedDriftSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 		return nil
 	}
 	addDeclaredWorker[EmbedDriftSweepArgs](reg, &embedDriftSweepWorker{pool: pool})
-	addDeclaredWorker[EmbedDriftWorkspaceArgs](reg, &embedDriftWorkspaceWorker{store: search.NewStore(InstallationDB(pool)), embedder: embedder, log: log})
+	addDeclaredWorker[EmbedDriftWorkspaceArgs](reg, &embedDriftWorkspaceWorker{
+		store:    search.NewStore(InstallationDB(pool)),
+		corpora:  knowledge.NewStore(InstallationDB(pool)),
+		embedder: embedder,
+		log:      log,
+	})
 	return periodicFor(cfg, EmbedDriftSweepArgs{})
 }
