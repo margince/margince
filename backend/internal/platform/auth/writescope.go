@@ -133,8 +133,11 @@ func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUI
 // to it (FOR KEY SHARE). It conflicts with everything else — the archive and the
 // erasure, which UPDATE the row, and any concurrent lock on the same subject.
 //
-// Held by: TestALiveProbedWriteOfAHeldRowLocksItsSubject
-// (backend/liveprobelock_test.go).
+// Held by: TestALockedSubjectMakesTheEraserWait and
+// TestLockSubjectLiveRefusesWhatItCannotHold
+// (backend/internal/modules/people/subjectlock_integration_test.go) for what the
+// lock does, and TestALiveProbedWriteOfAHeldRowLocksItsSubject
+// (backend/liveprobelock_test.go) for which writers owe it.
 func LockSubjectLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	// The same closed set every sibling in this file gates on. One call site
 	// passes a request-body value (ai.RecordInput.SubjectType), so this is the
