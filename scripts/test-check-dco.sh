@@ -177,6 +177,24 @@ $signed" >/dev/null
 git -C "$repo" merge -q --no-ff --no-verify -m "Merge the attestation branch" aside-target
 case_is "an attestation must descend from what it attests to" "$base" "$(git -C "$repo" rev-parse HEAD)" 1 "commit $target missing"
 
+# A merge commit needs no sign-off, but one that HAS a sign-off is a commit of
+# its author's like any other — and the guidance promises an attestation may
+# live in any later signed-off commit of theirs. The collection pass therefore
+# reads merges even though the judging pass skips them; before that split this
+# case was red.
+target="$(case_branch merge-attester)"
+git -C "$repo" checkout -q -b merge-attester-side "$target"
+commit_with "a signed change to merge back
+
+$signed" >/dev/null
+git -C "$repo" checkout -q merge-attester
+git -C "$repo" merge -q --no-ff --no-verify -m "Merge, and attest while doing it
+
+$attest $target
+
+$signed" merge-attester-side
+case_is "a signed merge commit can attest" "$base" "$(git -C "$repo" rev-parse HEAD)" 0 "attested by its author"
+
 # The same commit, attested properly by its own author, passes — so the four
 # refusals above are about identity and order, not about the gate having quietly
 # stopped accepting attestations at all.

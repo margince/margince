@@ -48,7 +48,11 @@ signed_off() {
 attestations="$(mktemp)"
 trap 'rm -f "$attestations"' EXIT HUP INT TERM
 
-for sha in $(git rev-list --no-merges "$range"); do
+# Merges included, unlike the judging loop below: a merge commit needs no
+# sign-off, but one that HAS a sign-off is a commit of its author's like any
+# other, and CONTRIBUTING.md promises an attestation may live in any later
+# signed-off commit of theirs.
+for sha in $(git rev-list "$range"); do
 	# Condition 1. An attestation carried by an unsigned commit is not read at
 	# all, so a chain of unsigned commits cannot certify itself.
 	signed_off "$sha" || continue
@@ -61,7 +65,14 @@ for sha in $(git rev-list --no-merges "$range"); do
 		sed -n -E 's/^DCO-Remediation-Commit: I, .+ <(.+@.+)>, hereby add my Signed-off-by to commit: ([0-9a-f]{40})[[:space:]]*$/\1 \2/p' |
 		while read -r claimed target; do
 			claimed="$(printf '%s' "$claimed" | tr '[:upper:]' '[:lower:]')"
-			# Condition 3.
+			# Condition 3. The ADDRESS is the identity, and the name beside it
+			# deliberately is not. A person signs commits under whatever display
+			# name their account carries and writes their own name in prose, so
+			# the two rarely match: both attestations on this repository's main
+			# are authored by `luit-nfq` and `LarsGradion` while claiming
+			# "Luitpold Alexander" and "Lars Jankowfsky". Comparing names would
+			# reject exactly the attestations it exists to accept, and it buys
+			# nothing — the address is what identifies the account that pushed.
 			[ "$claimed" = "$author" ] || continue
 			echo "$target $sha $author" >>"$attestations"
 		done
