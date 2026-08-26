@@ -27,12 +27,16 @@ func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher) RestoreSeam {
 	return RestoreSeam{
 		pool:       pool,
 		dispatcher: dispatcher,
+		visible:    recordIsVisibleToCaller,
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,
 			BehindErasure: rowIsBehindTheErasureBoundary,
 			AlreadyUndone: rowIsAlreadyUndone,
 			Unwritable:    valuesNoLongerWritable,
+			ExternallyGoverned: func(ctx context.Context) (bool, error) {
+				return dispatcher.isOverlayUncached(ctx)
+			},
 		},
 	}
 }
@@ -52,6 +56,18 @@ func recordIsArchived(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 		return false, err
 	}
 	return archived, nil
+}
+
+// recordIsVisibleToCaller is the row-scope gate every read of this record
+// takes, dispatching for activity exactly as the history read does. The
+// reversal path takes it before it reads the audit row at all: anything that
+// returns a record is a read, and a refusal that distinguishes a hidden record
+// from an absent one has disclosed the record.
+func recordIsVisibleToCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
+	if entityType == entityTypeActivity {
+		return auth.EnsureActivityContentVisible(ctx, tx, id)
+	}
+	return auth.EnsureVisible(ctx, tx, entityType, id)
 }
 
 // recordIsWritableByCaller asks the same gate the record's own update path will

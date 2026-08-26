@@ -93,7 +93,6 @@ func TestAnImageThatFiltersToNothingIsRefusedAsNoBeforeImage(t *testing.T) {
 		"json null":            `null`,
 		"empty object":         `{}`,
 		"only derived columns": `{"updated_at":"2026-01-01T00:00:00Z","id":"x"}`,
-		"only unknown keys":    `{"not_a_field_the_patch_declares":1}`,
 	} {
 		t.Run(name, func(t *testing.T) {
 			answer := evaluateWithoutTheTrail(t, Evaluator{}, personRow(before))
@@ -101,6 +100,36 @@ func TestAnImageThatFiltersToNothingIsRefusedAsNoBeforeImage(t *testing.T) {
 				t.Errorf("reason = %q, want %q", answer.Reason, ReasonNoBeforeImage)
 			}
 		})
+	}
+}
+
+// An image key the record's update shape cannot spell is NAMED, never dropped.
+// A person's update changed a title and an address; the address arrives as
+// address_line1…address_country and the shape spells only a structured
+// `address`. Quietly restoring the title would put half the change back and
+// report success — worse than refusing, because the person reads the
+// confirmation and stops looking.
+func TestAnImageTheShapeCannotSpellIsRefusedByNamingTheField(t *testing.T) {
+	answer := evaluateWithoutTheTrail(t, Evaluator{},
+		personRow(`{"title":"CTO","address_city":"Hanoi"}`))
+	if answer.Reason != ReasonNotRestorableByThisPath {
+		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNotRestorableByThisPath)
+	}
+	if !strings.Contains(answer.Detail, "address_city") {
+		t.Errorf("the refusal does not name the field it could not spell: %q", answer.Detail)
+	}
+}
+
+// A restore in a workspace whose records live in an incumbent system is refused
+// before it writes. The write-back path records its own verb and its own
+// evidence, so the link naming the reversed row is never written — nothing
+// would read as undone, and the change would already have happened in two
+// systems by the time anyone noticed.
+func TestARecordHeldInAnExternalSystemIsRefusedBeforeAnythingIsWritten(t *testing.T) {
+	e := Evaluator{ExternallyGoverned: func(context.Context) (bool, error) { return true, nil }}
+	answer := evaluateWithoutTheTrail(t, e, personRow(`{"title":"CTO"}`))
+	if answer.Reason != ReasonNotRestorableByThisPath {
+		t.Errorf("reason = %q, want %q", answer.Reason, ReasonNotRestorableByThisPath)
 	}
 }
 

@@ -15,14 +15,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"sort"
-	"strings"
+	"net/http"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/auditverb"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -41,6 +41,11 @@ type RestoreSeam struct {
 	pool       *pgxpool.Pool
 	dispatcher *Dispatcher
 	evaluator  Evaluator
+	// visible is the record's row-scope gate. It is a field rather than a
+	// direct call so the property that matters can be held by a test: that a
+	// caller who may not see the record is answered 404 and never a refusal,
+	// whatever the gate happens to allow in a given fixture.
+	visible func(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error
 }
 
 // Restore puts the named audit row's before-image back.
@@ -64,19 +69,26 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 	if err := s.write(ctx, row, patch, ifVersion); err != nil {
 		return privacy.RecordHistoryEntry{}, err
 	}
-	if err := s.verifyLanded(ctx, row, patch); err != nil {
-		return privacy.RecordHistoryEntry{}, err
-	}
 	return s.readRestoreEntry(ctx, entityType, id, auditID)
 }
 
-// readRow loads the target entry, bound to the path's own record. An audit row
-// belonging to a DIFFERENT record is ErrNotFound and never a 403: telling a
-// caller that a row exists but is not theirs discloses the row, which is the
-// existence-hiding rule every single-record read here keeps.
+// readRow loads the target entry, bound to the path's own record.
+//
+// The record's row-scope gate is taken FIRST, and its error is returned
+// unchanged. Reading the audit row before asking whether the caller may see the
+// record would answer "this change cannot be put back" for a record they are
+// not allowed to know exists — and a caller who can tell a refusal from a 404
+// can tell a hidden record from an absent one, which is the whole of what the
+// row-scope rule hides.
+//
+// An audit row belonging to a DIFFERENT record is ErrNotFound for the same
+// reason, never a 403.
 func (s RestoreSeam) readRow(ctx context.Context, entityType string, id, auditID ids.UUID) (AuditRow, error) {
 	var row AuditRow
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := s.visible(ctx, tx, entityType, id); err != nil {
+			return err
+		}
 		return tx.QueryRow(ctx, `
 			SELECT id, entity_type, entity_id, action, before, occurred_at
 			FROM audit_log
@@ -88,7 +100,7 @@ func (s RestoreSeam) readRow(ctx context.Context, entityType string, id, auditID
 		if errors.Is(err, pgx.ErrNoRows) {
 			return AuditRow{}, apperrors.ErrNotFound
 		}
-		return AuditRow{}, fmt.Errorf("compose: read the change to put back: %w", err)
+		return AuditRow{}, err
 	}
 	return row, nil
 }
@@ -109,7 +121,10 @@ func (s RestoreSeam) decide(ctx context.Context, row AuditRow) (map[string]json.
 	if !answer.Undoable {
 		return nil, RefusedRestore{Reason: answer.Reason, Detail: answer.Detail}
 	}
-	patch, err := filterImage(row.EntityType, row.Before)
+	// The evaluator has already refused an image that cannot be spelled in
+	// full, so anything unspellable here would be a disagreement between the
+	// two rather than a state to handle.
+	patch, _, err := filterImage(row.EntityType, row.Before)
 	if err != nil {
 		return nil, err
 	}
@@ -134,75 +149,6 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 	return err
 }
 
-// verifyLanded reads the record back and confirms every field the restore sent
-// now holds the value it sent. It is the answer to the one failure this feature
-// must not have: a write that reports success and changed nothing.
-//
-// Two things produce that outcome. A column the module guards with coalesce
-// cannot be set to NULL, which the evaluator refuses in advance. And a value
-// can stop being writable BETWEEN the decision and the write — retiring a
-// custom field writes `custom_field` and not the record, so the record's
-// version does not move and the required If-Match, which closes every other
-// such gap, cannot see it. The module then drops the unknown key and answers
-// success.
-//
-// So this closes it by DETECTION rather than prevention: the write has already
-// committed, and what a reader is owed at that point is the truth about which
-// fields moved, not a confirmation that some of them did. The audit trail is
-// already honest — the restore's own images record what actually happened —
-// and this is what makes the caller as well informed as the trail.
-func (s RestoreSeam) verifyLanded(ctx context.Context, row AuditRow, patch map[string]json.RawMessage) error {
-	var dropped []string
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
-		var err error
-		dropped, err = fieldsThatDidNotLand(ctx, tx, row.EntityType, row.EntityID, patch)
-		return err
-	})
-	if err != nil {
-		return fmt.Errorf("compose: confirm the restore landed: %w", err)
-	}
-	if len(dropped) > 0 {
-		sort.Strings(dropped)
-		return RefusedRestore{
-			Reason: ReasonNotRestorableByThisPath,
-			Detail: strings.Join(dropped, ", "),
-		}
-	}
-	return nil
-}
-
-// fieldsThatDidNotLand names the patch keys whose value on the record is not
-// what the restore sent. The comparison is on jsonb, so each column is read
-// through the same representation the image was written in rather than through
-// a per-type Go conversion that would disagree about dates and money.
-func fieldsThatDidNotLand(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, patch map[string]json.RawMessage) ([]string, error) {
-	if !servesRecordType(entityType) {
-		return nil, fmt.Errorf("compose: %q is not a record type this path reads", entityType)
-	}
-	sent, err := json.Marshal(patch)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT k.key
-		FROM jsonb_each($2::jsonb) AS k(key, value)
-		JOIN `+pgx.Identifier{entityType}.Sanitize()+` r ON r.id = $1
-		WHERE to_jsonb(r) -> k.key IS DISTINCT FROM k.value`, id, sent)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	var dropped []string
-	for rows.Next() {
-		var key string
-		if err := rows.Scan(&key); err != nil {
-			return nil, err
-		}
-		dropped = append(dropped, key)
-	}
-	return dropped, rows.Err()
-}
-
 // readRestoreEntry returns the restore's own history line, looked up by the
 // evidence link rather than by "the newest restore on this record": a record
 // with several reversals has several, and taking the newest would hand the
@@ -213,8 +159,8 @@ func (s RestoreSeam) readRestoreEntry(ctx context.Context, entityType string, id
 }
 
 // RefusedRestore is a refusal the surface can render. It carries the reason
-// word rather than prose, because the disabled button and the 409 must say the
-// SAME thing — a person who reads one sentence before pressing and a different
+// WORD rather than prose, because the disabled button and the 409 must say the
+// same thing — a person who reads one sentence before pressing and a different
 // one after has been told the product changed its mind.
 type RefusedRestore struct {
 	Reason Reason
@@ -228,6 +174,17 @@ func (e RefusedRestore) Error() string {
 	return "this change cannot be put back: " + string(e.Reason) + " (" + e.Detail + ")"
 }
 
-// Unwrap makes a refusal a conflict to every layer that classifies by sentinel,
-// so the route answers 409 without the transport learning this type.
-func (e RefusedRestore) Unwrap() error { return apperrors.ErrConflict }
+// Unwrap renders the refusal as the fault the contract promises: 409 whose
+// `code` IS the reason. Falling back to the generic conflict sentinel would put
+// `code: "conflict"` on the wire and leave the reason inside free text, so a
+// client built to the enum would match nothing and render generic copy — the
+// disabled button and the 409 saying different things, which is the one thing
+// the refusal set exists to prevent. The detail names only the caller's own
+// record's field names.
+func (e RefusedRestore) Unwrap() error {
+	return &httperr.DetailedError{
+		Status: http.StatusConflict,
+		Code:   string(e.Reason),
+		Detail: e.Error(),
+	}
+}

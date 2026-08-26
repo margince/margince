@@ -18,13 +18,12 @@ package compose
 
 import (
 	"context"
-	"fmt"
 	"sort"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/gradionhq/margince/backend/internal/modules/privacy"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -33,7 +32,7 @@ import (
 // the id is a UUIDv7, so it breaks a tie in write order rather than arbitrarily
 // — and the row itself is never "later" than itself.
 type auditCutoff struct {
-	OccurredAt any
+	OccurredAt time.Time
 	ID         ids.UUID
 }
 
@@ -121,6 +120,12 @@ func reportedAs(superseded []string, asked []string) []string {
 // The chain is followed transitively, not one link: a reversal of a reversal is
 // as much a part of it as the first, and stopping at depth one would leave the
 // same defect one press further along.
+//
+// Only `restore` rows join it. The evidence key is written by the reversal seam
+// alone today, so no other write could enter the chain — but a chain that
+// admitted any row carrying the key would let a future writer with caller-
+// influenced evidence exclude its own write from superseding the entry it
+// overwrote, and that is a guardrail nobody would notice losing.
 func supersededFieldsTx(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, keys []string, cutoff auditCutoff) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, nil
@@ -135,6 +140,7 @@ func supersededFieldsTx(ctx context.Context, tx pgx.Tx, entityType string, id id
 		  FROM audit_log link
 		  JOIN reversal_chain c ON link.evidence ->> $6 = c.id::text
 		  WHERE link.entity_type = $1 AND link.entity_id = $2
+		    AND link.action = 'restore'
 		)
 		SELECT DISTINCT k.key
 		FROM audit_log a
@@ -160,19 +166,4 @@ func supersededFieldsTx(ctx context.Context, tx pgx.Tx, entityType string, id id
 		return nil, err
 	}
 	return reportedAs(found, keys), nil
-}
-
-// SupersededFields is supersededFieldsTx in its own transaction, for the
-// advisory read that makes the button honest before anyone presses it.
-func (f fieldOwnership) SupersededFields(ctx context.Context, entityType string, id ids.UUID, keys []string, cutoff auditCutoff) ([]string, error) {
-	var superseded []string
-	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) error {
-		var err error
-		superseded, err = supersededFieldsTx(ctx, tx, entityType, id, keys, cutoff)
-		return err
-	})
-	if err != nil {
-		return nil, fmt.Errorf("compose: superseded fields: %w", err)
-	}
-	return superseded, nil
 }

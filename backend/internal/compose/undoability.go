@@ -66,10 +66,15 @@ const (
 	// terminal — reversing that restore reopens this entry, which is what makes
 	// the trail navigable in both directions.
 	ReasonAlreadyUndone Reason = "already_undone"
-	// ReasonNotRestorableByThisPath: a value in the filtered image cannot be
-	// written back today — a retired stage, a deleted custom field, a
-	// deactivated owner, an archived FK target. Without this the module's own
-	// 422, written for a different surface, is what the person reads.
+	// ReasonNotRestorableByThisPath: the reversal path cannot put this entry
+	// back. Three things reach it: a custom field retired since the change, an
+	// image holding keys the record's update shape cannot spell, and a record
+	// whose system of record is external.
+	//
+	// It does NOT cover every value that a module would refuse today — a stage
+	// since retired, a close date now in the past, an owner since deactivated.
+	// Those still surface as the module's own error, and closing that gap means
+	// asking each module what it would accept, which is its own change.
 	ReasonNotRestorableByThisPath Reason = "not_restorable_by_this_path"
 	// ReasonRecordArchived: the record is archived. Its update path refuses on
 	// its own terms; naming it here makes the refusal legible rather than a
@@ -157,40 +162,75 @@ var derivedColumns = map[string]bool{
 	"updated_at": true, "created_at": true, "id": true, "version": true,
 }
 
-// filterImage reduces a before-image to the patch a restore could actually
-// send: the keys the update shape declares, plus this workspace's custom
-// fields, minus what the write path derives. Everything downstream judges THIS,
-// not the raw image — an image whose only keys are derived filters to nothing,
-// and an entry offering to restore nothing is the greyed button with no reason.
-func filterImage(entityType string, before json.RawMessage) (map[string]json.RawMessage, error) {
+// namedByTheShapeButNotWrittenByThePatch: keys a record type's update REQUEST
+// declares that its update path does not write. The generated shape is the
+// contract's, and the module's mapper is narrower than it — a key in the gap is
+// accepted, ignored, and answers success, which is the silent-drop failure this
+// whole refusal set exists to prevent.
+//
+// deals is the whole of it today. fx_rate_to_base and fx_rate_date are DERIVED
+// from the amount and currency, so a restore that puts those two back re-derives
+// them; replaying a stored rate would state a conversion nobody performed.
+// status and lost_reason belong to the advance-and-close path, and a field patch
+// is not how a deal's lifecycle moves.
+//
+// Held by TestARestoreLandsEveryFieldItSends
+// (backend/internal/compose/recordrestoreshape_integration_test.go), which sets
+// every field a record type's shape declares, restores, and reports any that did
+// not land — so a key that joins the gap later is named rather than dropped.
+var namedByTheShapeButNotWrittenByThePatch = map[string]map[string]bool{
+	"deal": {
+		"fx_rate_to_base": true, "fx_rate_date": true,
+		"status": true, "lost_reason": true,
+	},
+}
+
+// filterImage reduces a before-image to the patch a restore could send, and
+// reports the keys it had to leave behind.
+//
+// Those two answers travel together because the second is not a detail. A
+// person's update changed a title and an address; the address arrives in the
+// image as address_line1…address_country and the update shape spells only a
+// structured `address`, so a filter that quietly kept the title would put half
+// the change back and report success. That is the dishonest success this whole
+// refusal set exists to prevent, and it is worse than refusing, because the
+// person reads the confirmation and stops looking.
+//
+// Derived columns and the keys a record type's shape names but its mapper never
+// writes are dropped SILENTLY and on purpose: neither was a person's decision,
+// and neither is missing from the restore in any sense a reader would care about.
+func filterImage(entityType string, before json.RawMessage) (map[string]json.RawMessage, []string, error) {
 	var image map[string]json.RawMessage
 	if len(before) > 0 {
 		if err := json.Unmarshal(before, &image); err != nil {
-			return nil, fmt.Errorf("compose: undoability: before-image is not a JSON object: %w", err)
+			return nil, nil, fmt.Errorf("compose: undoability: before-image is not a JSON object: %w", err)
 		}
 	}
 	writable, served := agents.UpdatableFields(datasource.EntityType(entityType))
 	if !served {
-		return nil, nil
+		return nil, nil, nil
 	}
 	allowed := make(map[string]bool, len(writable))
 	for _, field := range writable {
 		allowed[field] = true
 	}
 	patch := make(map[string]json.RawMessage, len(image))
+	var unspellable []string
 	for key, value := range image {
-		if derivedColumns[key] {
+		if derivedColumns[key] || namedByTheShapeButNotWrittenByThePatch[entityType][key] {
 			continue
 		}
 		// A cf_* key is a custom field: the catalog decides whether it is still
 		// writable, and that is a live-state question the value check owns. The
 		// shape check admits it here so the value check can name it.
 		if !allowed[key] && !strings.HasPrefix(key, "cf_") {
+			unspellable = append(unspellable, key)
 			continue
 		}
 		patch[key] = value
 	}
-	return patch, nil
+	sort.Strings(unspellable)
+	return patch, unspellable, nil
 }
 
 // sortedFields spells a patch's keys for a refusal's detail, so the person hears
@@ -257,6 +297,13 @@ type Evaluator struct {
 	// today — a retired enum member, a deleted custom field, a departed owner.
 	// It is best-effort on the read and authoritative inside the write.
 	Unwritable func(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, patch map[string]json.RawMessage) ([]string, error)
+	// ExternallyGoverned reports whether this workspace's records live in an
+	// incumbent system rather than here. A reversal there is a write-back, and
+	// the write-back path records its own verb and its own evidence — so the
+	// link naming the reversed row is never written, nothing reads as undone,
+	// and the change has already happened in two systems by the time anyone
+	// notices. Saying so first is the only honest answer available.
+	ExternallyGoverned func(ctx context.Context) (bool, error)
 }
 
 // Evaluate answers whether this row can be put back.
@@ -271,12 +318,27 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 	if !servesRecordType(row.EntityType) {
 		return refuse(ReasonUnsupportedRecordType, row.EntityType), nil
 	}
-	patch, err := filterImage(row.EntityType, row.Before)
+	if e.ExternallyGoverned != nil {
+		external, err := e.ExternallyGoverned(ctx)
+		if err != nil {
+			return Undoability{}, err
+		}
+		if external {
+			return refuse(ReasonNotRestorableByThisPath,
+				"this workspace's records are held in an external system"), nil
+		}
+	}
+	patch, unspellable, err := filterImage(row.EntityType, row.Before)
 	if err != nil {
 		return Undoability{}, err
 	}
-	if len(patch) == 0 {
+	if len(patch) == 0 && len(unspellable) == 0 {
 		return refuse(ReasonNoBeforeImage, ""), nil
+	}
+	// Judged before the patch is: an entry that can only be put back in part
+	// must refuse, not put back the part it can.
+	if len(unspellable) > 0 {
+		return refuse(ReasonNotRestorableByThisPath, strings.Join(unspellable, ", ")), nil
 	}
 	if answer, decided, err := e.liveState(ctx, tx, row, patch); err != nil || decided {
 		return answer, err

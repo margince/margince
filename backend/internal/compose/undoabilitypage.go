@@ -5,16 +5,23 @@ package compose
 
 // Answering undoability for a PAGE of history without asking per entry.
 //
-// A page is one record's rows, so most of what the refusals need is a property
-// of the RECORD and is read once: whether it is archived, and whether the
-// caller may change it. What varies per entry — the rows themselves with their
-// erasure boundary, and which entries a live reversal already covers — is one
-// query each over the whole page.
+// A page is one record's rows, so what the refusals need from the RECORD is
+// read once however many entries the page holds: whether it is archived, and
+// whether the caller may change it. The rows themselves with their erasure
+// boundary, and the entries a live reversal already covers, are one query each
+// over the whole page.
 //
-// Flat in page size is the contract, not an optimisation. A lazy per-entry
-// lookup was rejected outright: it produces a button whose state is unknown
-// until the user interacts with it, which is the greyed-button-with-no-reason
-// shape this feature exists to remove.
+// Supersession and the custom-field catalog check are NOT among those. They ask
+// about one entry's own keys from one entry's own position in the trail, so
+// they run per row that reaches them — a page whose entries are mostly
+// refused earlier pays for few, and a page of undoable entries pays for all of
+// them. Folding those two into the page would mean a second spelling of each,
+// and two spellings of supersession is precisely what superseded.go exists to
+// argue against.
+//
+// What is NOT done is a lazy per-entry lookup, which was rejected outright: it
+// produces a button whose state is unknown until the user interacts with it,
+// the greyed-button-with-no-reason shape this feature exists to remove.
 
 import (
 	"context"
