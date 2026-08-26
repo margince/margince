@@ -3,6 +3,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Badge, DataTable, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
+import { FieldGuard } from "../design-system/rbac";
 import { formatMoney } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import { QueryGate, throwProblem } from "./common";
@@ -105,13 +106,22 @@ function SourcedDeals({
           {
             // The whole point of the panel: a partner brings a deal FOR another
             // company, so the customer is the fact that makes the row make
-            // sense. A withheld organization renders as the reference EntityRef
-            // gives any unreadable record rather than going blank.
+            // sense.
+            //
+            // A WITHHELD customer arrives as a null `organization_id` with the
+            // field named in `masked_fields`, and EntityRef draws any null id as
+            // an em dash — so a customer this reader may not see used to be
+            // indistinguishable from a deal nobody has linked. On a panel whose
+            // every row is "a partner brought this deal for someone", that is
+            // the one column that must not read as absent.
             key: "customer",
             header: t("partnerDeals.column.customer"),
-            render: (deal) => (
-              <EntityRef kind="organization" id={deal.organization_id} />
-            ),
+            render: (deal) =>
+              deal.masked_fields?.includes("organization_id") ? (
+                <FieldGuard mode="masked" />
+              ) : (
+                <EntityRef kind="organization" id={deal.organization_id} />
+              ),
           },
           {
             key: "attribution",

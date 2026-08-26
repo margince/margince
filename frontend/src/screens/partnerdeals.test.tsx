@@ -96,6 +96,28 @@ describe("the deals a partner brought", () => {
     ).toBeTruthy();
   });
 
+  // The customer is the column this panel exists for, and a withheld one is the
+  // reading it could get most wrong: the server sends `organization_id: null`
+  // with the field named in `masked_fields`, and EntityRef draws any null id as
+  // an em dash. So a customer this reader may not see used to be spelled exactly
+  // like a deal nobody had linked — on a panel where every row means "a partner
+  // brought this deal for someone".
+  it("says a withheld customer is withheld rather than blank", async () => {
+    stubDeals([
+      {
+        ...sourced,
+        organization_id: null,
+        masked_fields: ["organization_id"],
+      },
+    ]);
+
+    render(<PartnerDeals organizationId="o-1" />);
+    const panel = await screen.findByTestId("partner-deals");
+
+    expect(within(panel).getByLabelText("Masked value")).toBeTruthy();
+    expect(within(panel).queryByText("—")).toBeNull();
+  });
+
   it("shows the deal value and what the partner's part was", async () => {
     stubDeals([sourced]);
 
