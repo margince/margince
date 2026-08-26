@@ -48,8 +48,11 @@ type LinkedInImportResult struct {
 	Skipped  int
 }
 
-// The header fields this importer reads, named so the alias table and the
-// row reader cannot disagree about a key by a typo.
+// The header fields this importer reads. Naming them stops the alias table and
+// the row reader disagreeing by a typo — the compiler settles that — and leaves
+// the disagreement that stays silent: a key one side uses and the other never
+// produces, which drops a whole column while the import reports success.
+// Held by: TestEveryFieldTheAliasTableProducesIsReadFromTheRow (backend/internal/modules/people/linkedinheaderkeys_test.go)
 const (
 	csvFirst     = "first"
 	csvLast      = "last"

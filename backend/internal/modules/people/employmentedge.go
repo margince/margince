@@ -202,4 +202,5 @@ const relationshipOriginCapture = "capture"
 
 // employmentKind is the relationship kind this file plants, spelled once so the
 // SQL, the audit row and the event delta cannot drift apart.
+// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/claimedspelling_test.go)
 const employmentKind = "employment"

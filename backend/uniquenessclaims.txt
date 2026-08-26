@@ -453,18 +453,14 @@ internal/modules/overlay/usermapadmin.go#func auditRevokedMappings
 internal/modules/overlay/usermapservice.go#func requireUserMapAdmin
 internal/modules/people/companysitereadcomparison.go#func PrintedSiteReadValue
 internal/modules/people/domainadmission.go#func reopenAdmittedDomainTx
-internal/modules/people/employmentedge.go#const employmentKind
 internal/modules/people/employmentedge.go#const relationshipOriginCapture
 internal/modules/people/ensure.go#const block at const evidenceFieldKey
 internal/modules/people/geocode.go#var organizationAddressColumns
 internal/modules/people/handlers_projectstakeholder.go#const block at const ProjectStakeholderKind
 internal/modules/people/lead_list.go#const block at const leadNameColumn
 internal/modules/people/lead_read.go#const liveOnlyClause
-internal/modules/people/leadmanualsignal.go#const block at const auditKeyManualSignal
-internal/modules/people/leadrouting.go#var RoutableLeadFields
 internal/modules/people/leadslaworkflow.go#func humanLoggedNote
 internal/modules/people/leadstatus.go#method LeadStatus.Open
-internal/modules/people/linkedinimport.go#const block at const csvFirst
 internal/modules/people/linkedinmatch.go#method Store.MatchLinkedInConnections
 internal/modules/people/linkedinmatch.go#var suggestNameEmployerMatchSQL
 internal/modules/people/linkedinorgplace.go#func orgKeys
@@ -474,13 +470,9 @@ internal/modules/people/listfilters.go#const block at const filterOwnerID
 internal/modules/people/listpage.go#func aiWrittenClause
 internal/modules/people/listpage.go#func capturedByKindClause
 internal/modules/people/mapping.go#type LeadUpdateRequest
-internal/modules/people/merge.go#const block at const auditKeyMergedInto
 internal/modules/people/organization_counts.go#func fillOpenDealCounts
 internal/modules/people/organization_profile_field_write.go#const block at const auditKeyValue
 internal/modules/people/organization_profile_field_write.go#method Store.writeProfileField
-internal/modules/people/organization_relationship_types.go#var validSizeBands
-internal/modules/people/organizationlogo.go#const logoFieldName
-internal/modules/people/projectcompany.go#const relationshipRoleField
 internal/modules/people/projectstakeholder.go#method Store.PersonNames
 internal/modules/people/projectstakeholder.go#method Store.ensureProjectWritable
 internal/modules/people/promotepreview.go#method Store.previewTarget
