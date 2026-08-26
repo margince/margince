@@ -178,12 +178,12 @@ func TestAFieldTheRecordTypeCanClearIsClearedRatherThanRefused(t *testing.T) {
 		"title":     json.RawMessage("null"),
 		"full_name": json.RawMessage(`"Greta"`),
 	}
-	values, clear, unclearable := splitNulls("person", patch)
+	values, cleared, unclearable := splitNulls("person", patch)
 	if len(unclearable) > 0 {
 		t.Fatalf("person cannot clear %v; a title it filled in is not undoable", unclearable)
 	}
-	if len(clear) != 1 || clear[0] != "title" {
-		t.Errorf("clear = %v, want [title]", clear)
+	if len(cleared) != 1 || cleared[0] != "title" {
+		t.Errorf("cleared = %v, want [title]", cleared)
 	}
 	if _, sent := values["title"]; sent {
 		t.Error("the null travelled in the patch; it decodes to \"not supplied\" and writes nothing")
@@ -211,10 +211,10 @@ func TestAFieldTheRecordTypeCannotClearIsRefusedByName(t *testing.T) {
 
 // A field holding a real value is never a clear.
 func TestAFieldHoldingAValueIsNotCleared(t *testing.T) {
-	_, clear, _ := splitNulls("activity",
+	_, cleared, _ := splitNulls("activity",
 		map[string]json.RawMessage{"due_at": json.RawMessage(`"2026-01-01T00:00:00Z"`)})
-	if len(clear) > 0 {
-		t.Errorf("a due_at holding a value was reported as a clear: %v", clear)
+	if len(cleared) > 0 {
+		t.Errorf("a due_at holding a value was reported as a clear: %v", cleared)
 	}
 }
 

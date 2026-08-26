@@ -268,6 +268,7 @@ func (e Evaluator) liveState(ctx context.Context, tx pgx.Tx, row AuditRow, patch
 			// The row-scope error is not surfaced: it distinguishes "not yours"
 			// from "does not exist", and that distinction is what the row-scope
 			// gate keeps hidden.
+			//nolint:nilerr // dropping this error is the point: surfacing it would tell the caller which of the two it was
 			return refuse(ReasonNotWritableByCaller, ""), true, nil
 		}
 	}
@@ -315,7 +316,7 @@ func (e Evaluator) trailState(ctx context.Context, tx pgx.Tx, row AuditRow, patc
 			// honest as a read can make it, and the write is what binds. A read
 			// that failed here must not hide the whole page.
 			if mode == Advisory {
-				return undoable(), nil //nolint:nilerr // a read that could not judge this must not hide the whole page; the write is what binds
+				return undoable(), nil
 			}
 			return Undoability{}, err
 		}

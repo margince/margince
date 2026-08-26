@@ -136,7 +136,7 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 	// The nulls leave the patch and travel as named clears: a JSON null in the
 	// body decodes to a nil pointer and reads as "not supplied", so sending one
 	// would report success and change nothing.
-	values, clear, unclearable := splitNulls(row.EntityType, patch)
+	values, cleared, unclearable := splitNulls(row.EntityType, patch)
 	if len(unclearable) > 0 {
 		// The evaluator refuses these before the write. Reaching here means the
 		// two disagree, which is worth a fault rather than a silent no-op.
@@ -151,7 +151,7 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 		Ref:       datasource.EntityRef{Type: datasource.EntityType(row.EntityType), ID: row.EntityID},
 		Patch:     json.RawMessage(body),
 		IfVersion: &ifVersion,
-		Clear:     clear,
+		Clear:     cleared,
 		Trail: auditverb.Trail{
 			Verb:     auditverb.Restore,
 			Evidence: map[string]any{undidAuditLogID: row.ID.String()},
