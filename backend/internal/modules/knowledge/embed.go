@@ -96,7 +96,17 @@ func (s *Store) chunksNeedingEmbedding(ctx context.Context, documentID ids.UUID,
 			if err := rows.Scan(&c.id, &c.text, &c.hash, &c.storedIdentity); err != nil {
 				return err
 			}
-			if vectorkit.Unchanged(c.hash, c.storedIdentity, c.hash, identity) {
+			// The hash is RECOMPUTED from the text this read returned, and
+			// compared against the one stored beside it. Passing the stored
+			// hash as both arguments made the comparison a tautology — it
+			// reduced Unchanged to an identity check, so the half of it that
+			// exists to notice moved TEXT was dead at this call site.
+			//
+			// The two normally agree, because the writer sets them together.
+			// When they do not — a row edited outside the writer, a migration,
+			// a defect — the row holds a vector of prose it no longer contains,
+			// and re-embedding it is the only honest answer.
+			if vectorkit.Unchanged(c.hash, c.storedIdentity, Chunk{Text: c.text}.Hash(), identity) {
 				continue
 			}
 			pending = append(pending, c)

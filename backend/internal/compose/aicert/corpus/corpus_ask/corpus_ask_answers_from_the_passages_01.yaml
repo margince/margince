@@ -16,6 +16,7 @@ fixture:
     # Adjacent and plausible, and about a different subject. A model that
     # answers from whichever passage LOOKS most like an answer cites this.
     - label: export_window
+      wrong: true
       document: operating-handbook.md
       text: >-
         An export of a workspace's data is available for 7 days after it is

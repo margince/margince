@@ -15363,7 +15363,14 @@ paths:
               type: object
               properties:
                 name: { type: string, maxLength: 200 }
-                description: { type: [string, 'null'], maxLength: 2000 }
+                # NOT nullable on the patch, unlike the response, and the
+                # asymmetry is deliberate. A merge-PATCH cannot tell an explicit
+                # null from an absent key once it is decoded — both arrive as a
+                # nil pointer — so offering one here would be a request the
+                # server accepts, answers 200 to, and ignores. Send an empty
+                # string to clear it; the read renders empty and absent the same
+                # way, because to a reader they are the same thing.
+                description: { type: string, maxLength: 2000 }
                 topic_statement: { type: string, maxLength: 500 }
                 min_similarity: { type: number, format: double, minimum: 0, maximum: 1 }
                 default_ask: { type: boolean }

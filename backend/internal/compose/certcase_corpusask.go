@@ -32,6 +32,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 
 	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
@@ -56,6 +57,12 @@ type corpusAskPassageFixture struct {
 	Label    string `json:"label"`
 	Document string `json:"document"`
 	Text     string `json:"text"`
+	// Wrong marks a passage a correct answer must NOT rest on: adjacent
+	// material that reads like an answer and is about something else. Citing
+	// one is the failure the scenario was built around, and without this the
+	// case scored a reply that cited both the right passage and the trap as
+	// fully correct.
+	Wrong bool `json:"wrong"`
 }
 
 type corpusAskCases struct{}
@@ -99,7 +106,19 @@ func (corpusAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 				"corpus_ask/corpus_ask: the expected answer names passage %q, which the fixture does not supply — an unreachable expectation grades every reply wrong", name)
 		}
 	}
-	return &corpusAskCase{question: f.Question, passages: passages, label: label, expected: want}, nil
+	forbidden := map[string]string{}
+	for _, p := range f.Passages {
+		if p.Wrong {
+			forbidden[label[p.Label]] = p.Label
+		}
+	}
+	for _, name := range want {
+		if _, banned := forbidden[label[name]]; banned {
+			return nil, fmt.Errorf(
+				"corpus_ask/corpus_ask: passage %q is both expected and marked wrong — the scenario asks for two opposite things", name)
+		}
+	}
+	return &corpusAskCase{question: f.Question, passages: passages, label: label, expected: want, forbidden: forbidden}, nil
 }
 
 // corpusAskPassages builds the retrieved passages production would hand the
@@ -137,6 +156,9 @@ type corpusAskCase struct {
 	passages []knowledge.Passage
 	label    map[string]string
 	expected []string
+	// forbidden is chunk id -> label for the passages a correct answer must not
+	// rest on.
+	forbidden map[string]string
 }
 
 // Run issues the one request this site sends, through the production request
@@ -172,6 +194,27 @@ func (c *corpusAskCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	cited := map[string]bool{}
 	for _, claim := range kept {
 		cited[claim.ChunkId.String()] = true
+	}
+	// A citation the scenario marks WRONG fails the case whatever else the
+	// reply got right, and it is checked before the missing-citation pass
+	// because it is the worse answer: a reply that also cites the right passage
+	// reads as confident and correct while resting half its sentences on
+	// something about a different subject. In the shipped scenario the trap
+	// passage states a true 7-day window for exports beside a true 400-day
+	// window for retention — the most dangerous kind of wrong answer this
+	// endpoint can give.
+	var wrong []string
+	for id, name := range c.forbidden {
+		if cited[id] {
+			wrong = append(wrong, name)
+		}
+	}
+	if len(wrong) > 0 {
+		sort.Strings(wrong)
+		return aitasks.Outcome{
+			Result: aitasks.OutcomeWrongAnswer,
+			Detail: "rested on a passage about something else: " + strings.Join(wrong, ", "),
+		}
 	}
 	// A scenario expecting NOTHING is the abstention case, and it is graded the
 	// other way round: any surviving claim is a failure. This is the shape the

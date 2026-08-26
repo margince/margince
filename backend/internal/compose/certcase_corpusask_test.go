@@ -28,7 +28,9 @@ func corpusAskFixtureJSON(t *testing.T) json.RawMessage {
 		Question: "How long are captured messages kept?",
 		Passages: []corpusAskPassageFixture{
 			{Label: "retention", Document: "handbook.md", Text: askedPassageText},
-			{Label: "export", Document: "handbook.md", Text: "An export is available for 7 days."},
+			// Marked WRONG: adjacent, true, and about a different subject. A
+			// reply resting on it has read the wrong passage.
+			{Label: "export", Document: "handbook.md", Text: "An export is available for 7 days.", Wrong: true},
 		},
 	})
 	if err != nil {
@@ -175,5 +177,44 @@ func TestAnUnparseableReplyIsInvalidRatherThanWrong(t *testing.T) {
 	got := prepared.Evaluate(aitasks.Trace{Output: "not json at all"})
 	if got.Result != aitasks.OutcomeInvalid {
 		t.Fatalf("an unparseable reply scored %v", got.Result)
+	}
+}
+
+// A citation the scenario marks WRONG fails the case, even when the reply also
+// cites the passage the answer was supposed to rest on.
+//
+// This is the worse answer rather than a lesser one: a reply that gets the
+// right passage AND the trap reads as confident and correct while resting half
+// its sentences on something about a different subject. In the shipped scenario
+// the trap states a true 7-day export window beside a true 400-day retention
+// window — the most dangerous shape of wrong answer this endpoint can give.
+func TestCitingAPassageTheScenarioMarksWrongFailsTheCase(t *testing.T) {
+	cases := corpusAskCases{}
+	prepared, err := cases.Prepare(corpusAskFixtureJSON(t), expectedJSON(t, "retention"))
+	if err != nil {
+		t.Fatalf("prepare: %v", err)
+	}
+	c := prepared.(*corpusAskCase)
+	right, trap := c.passages[0].ChunkID.String(), c.passages[1].ChunkID.String()
+
+	got := prepared.Evaluate(aitasks.Trace{Output: corpusReply(
+		askedClaim{Text: "Kept 400 days.", ID: right, Quote: "kept for 400 days"},
+		askedClaim{Text: "And exports last 7 days.", ID: trap, Quote: "available for 7 days"},
+	)})
+	if got.Result != aitasks.OutcomeWrongAnswer {
+		t.Fatalf("a reply resting on the trap scored %v (%s)", got.Result, got.Detail)
+	}
+	if !strings.Contains(got.Detail, "export") {
+		t.Fatalf("the verdict does not name the passage it rested on: %q", got.Detail)
+	}
+}
+
+// A scenario that both expects a passage and marks it wrong is refused at
+// PREPARE time: it asks for two opposite things, and whichever check ran second
+// would silently decide.
+func TestAPassageBothExpectedAndMarkedWrongIsRefused(t *testing.T) {
+	cases := corpusAskCases{}
+	if _, err := cases.Prepare(corpusAskFixtureJSON(t), expectedJSON(t, "export")); err == nil {
+		t.Fatal("a scenario asking for two opposite things was accepted")
 	}
 }

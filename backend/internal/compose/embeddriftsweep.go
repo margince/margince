@@ -5,6 +5,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"log/slog"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -93,22 +94,24 @@ func (w *embedDriftWorkspaceWorker) Work(ctx context.Context, job *river.Job[Emb
 	// Closed BEFORE the drift repair, because an abandoned document holds the
 	// whole corpus not_ready and the repair cannot lift that: readiness reads
 	// `running` as in-flight whatever the vectors say.
-	if closed, err := w.corpora.SweepAbandonedIngests(wsCtx); err != nil {
-		w.log.WarnContext(wsCtx, "closing abandoned corpus ingests", "err", err)
-	} else if closed > 0 {
+	closed, aerr := w.corpora.SweepAbandonedIngests(wsCtx)
+	if closed > 0 {
 		w.log.InfoContext(wsCtx, "closed corpus ingests that stopped without finishing", "closed", closed)
 	}
 	repaired, cerr := w.corpora.SweepCorpusDrift(wsCtx, w.embedder)
 	if repaired > 0 {
 		w.log.InfoContext(wsCtx, "embed drift sweep re-embedded corpus passages", "repaired", repaired)
 	}
-	// The entity pass's failure is reported first when both failed: it is the
-	// one with a retry budget behind it, and errors.Join here would hand River
-	// a fault whose classification is neither error's.
-	if err != nil {
-		return jobs.FaultContext(ctx, err)
-	}
-	return jobs.FaultContext(ctx, cerr)
+	// Every failure reaches River, and none of the three is allowed to hide the
+	// others. Logging one and returning nil would report the job as successful,
+	// so nothing retries and the next tick starts from the same place — which
+	// for the abandoned-ingest sweep means the corpus it was going to unblock
+	// stays not_ready with a green job behind it.
+	//
+	// The entity pass is named FIRST when several failed: it is the one with a
+	// retry budget behind it, and a reader looking for what to do sees it
+	// before the two that ride along.
+	return jobs.FaultContext(ctx, errors.Join(err, aerr, cerr))
 }
 
 // addEmbedDriftSweepJob registers the sweep worker and its periodic tick
@@ -132,8 +135,11 @@ func addEmbedDriftSweepJob(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerCo
 	}
 	addDeclaredWorker[EmbedDriftSweepArgs](reg, &embedDriftSweepWorker{pool: pool})
 	addDeclaredWorker[EmbedDriftWorkspaceArgs](reg, &embedDriftWorkspaceWorker{
-		store:    search.NewStore(InstallationDB(pool)),
-		corpora:  knowledge.NewStore(InstallationDB(pool)),
+		store: search.NewStore(InstallationDB(pool)),
+		// WithBlobstore, or the abandoned-ingest sweep marks a document failed
+		// and leaves its stored file behind: FailIngest deletes the bytes
+		// through this store, and a nil one skips that silently.
+		corpora:  knowledge.NewStore(InstallationDB(pool)).WithBlobstore(cfg.Blobstore),
 		embedder: embedder,
 		log:      log,
 	})

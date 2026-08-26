@@ -39799,7 +39799,7 @@ export interface operations {
             content: {
                 "application/json": {
                     name?: string;
-                    description?: string | null;
+                    description?: string;
                     topic_statement?: string;
                     /** Format: double */
                     min_similarity?: number;

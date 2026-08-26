@@ -153,42 +153,19 @@ type QueueIngest func(ctx context.Context, tx pgx.Tx, documentID ids.UUID) error
 // commits: a committed row always has its bytes, and a failed write leaves at
 // worst an orphan object rather than a row promising bytes that are not there.
 func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueIngest) (crmcontracts.KnowledgeDocument, error) {
-	if err := auth.Require(ctx, "knowledge_document", principal.ActionCreate); err != nil {
-		return crmcontracts.KnowledgeDocument{}, err
-	}
-	if s.blob == nil {
-		return crmcontracts.KnowledgeDocument{}, ErrBlobstoreUnconfigured
-	}
-	media, ok := acceptedType(in.ContentType, in.Filename)
-	if !ok {
-		return crmcontracts.KnowledgeDocument{}, &UnsupportedTypeError{Got: media}
-	}
-	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		_, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
-		return err
-	}); err != nil {
-		return crmcontracts.KnowledgeDocument{}, err
-	}
-	by, err := storekit.CapturedBy(ctx)
+	media, checksum, size, err := s.readyUpload(ctx, &in)
 	if err != nil {
 		return crmcontracts.KnowledgeDocument{}, err
 	}
 
 	id := ids.NewV7()
 	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)), "knowledge", id.String())
-	// The name a person TYPED, made safe before it reaches the column — the
-	// same call every other uploaded name in this tree goes through. It is
-	// presentational only (nothing opens a file by it) but it is read back in a
-	// citation, a list and an ingest failure, and a path separator or a
-	// bidirectional override in it rewrites whichever of those quotes it.
-	in.Filename = extension.SafeFilename(in.Filename, 0)
-
-	checksum, size, err := blobstore.Digest(in.Content)
-	if err != nil {
-		return crmcontracts.KnowledgeDocument{}, err
-	}
 	if err := s.blob.Put(ctx, key, in.Content, size, media); err != nil {
 		return crmcontracts.KnowledgeDocument{}, fmt.Errorf("store the corpus document: %w", err)
+	}
+	by, err := storekit.CapturedBy(ctx)
+	if err != nil {
+		return crmcontracts.KnowledgeDocument{}, err
 	}
 
 	var out crmcontracts.KnowledgeDocument
@@ -198,27 +175,16 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		if _, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly); err != nil {
 			return err
 		}
-		// The same BYTES twice is refused, and this is what the checksum column
-		// is for.
-		//
-		// Re-uploading a file is the most natural repair gesture there is —
-		// "it must have gone wrong, I will send it again" — and accepting it
-		// would file a SECOND document holding the same passages. They would
-		// then compete with each other for the eight retrieval slots, halving
-		// what an answer can draw on; an answer could cite one sentence twice
-		// from two apparently different documents; and both copies would count
-		// against the corpus ceiling. Refusing NAMES the document already
-		// holding them, which is the answer the uploader actually wants.
-		var existing string
-		switch err := tx.QueryRow(ctx,
-			`SELECT filename FROM knowledge_document
-			  WHERE corpus_id = $1 AND checksum = $2 AND archived_at IS NULL
-			  LIMIT 1`, in.CorpusID, checksum).Scan(&existing); {
-		case err == nil:
+		// Checked AGAIN here, and this is the one that decides: the pre-flight
+		// spares the storage write in the ordinary case, and only a check
+		// inside this transaction is safe against a second upload of the same
+		// bytes racing it.
+		existing, err := documentHoldingIn(ctx, tx, in.CorpusID, checksum)
+		if err != nil {
+			return err
+		}
+		if existing != "" {
 			return &AlreadyFiledError{Filename: existing}
-		case errors.Is(err, pgx.ErrNoRows):
-		default:
-			return fmt.Errorf("look for a document already holding these bytes: %w", err)
 		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO knowledge_document
@@ -246,6 +212,74 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 		return rerr
 	})
 	return out, err
+}
+
+// readyUpload settles everything an upload can be refused for BEFORE any bytes
+// are stored: the grant, the object store, the file's type, the corpus, and
+// whether these exact bytes are already filed.
+//
+// Split out because each of those is a separate reason and the list only grows
+// — and because a refusal that happens after blob.Put has already written the
+// object leaves bytes no row names.
+//
+// It normalises in.Filename in place, so the name that reaches the column is
+// the one that was hashed and refused against.
+func (s *Store) readyUpload(ctx context.Context, in *NewDocument) (string, string, int64, error) {
+	if err := auth.Require(ctx, "knowledge_document", principal.ActionCreate); err != nil {
+		return "", "", 0, err
+	}
+	if s.blob == nil {
+		return "", "", 0, ErrBlobstoreUnconfigured
+	}
+	media, ok := acceptedType(in.ContentType, in.Filename)
+	if !ok {
+		return "", "", 0, &UnsupportedTypeError{Got: refusedTypeName(media, *in)}
+	}
+	if err := s.tx(ctx, func(tx pgx.Tx) error {
+		_, err := readCorpus(ctx, tx, in.CorpusID, storekit.LiveOnly)
+		return err
+	}); err != nil {
+		return "", "", 0, err
+	}
+	// The name a person TYPED, made safe before it reaches the column — the
+	// same call every other uploaded name in this tree goes through. It is
+	// presentational only (nothing opens a file by it) but it is read back in a
+	// citation, a list and an ingest failure, and a path separator or a
+	// bidirectional override in it rewrites whichever of those quotes it.
+	in.Filename = extension.SafeFilename(in.Filename, 0)
+
+	checksum, size, err := blobstore.Digest(in.Content)
+	if err != nil {
+		return "", "", 0, err
+	}
+	// Refused BEFORE the bytes are stored. Checked again inside the write —
+	// that is the one that decides — but a re-upload is the ORDINARY case here,
+	// and probing only there wrote the whole object to storage and then rolled
+	// the row back, leaving bytes no row names.
+	existing, err := s.documentHolding(ctx, in.CorpusID, checksum)
+	if err != nil {
+		return "", "", 0, err
+	}
+	if existing != "" {
+		return "", "", 0, &AlreadyFiledError{Filename: existing}
+	}
+	return media, checksum, size, nil
+}
+
+// refusedTypeName is what a 415 calls the file: the DERIVED media type when
+// there is one, and the caller's own words when there is not.
+//
+// An extension this route does not read resolves to an empty media type, and a
+// refusal reading "` ` cannot be read as text" names nothing at all — worse
+// than useless to whoever sent a .docx.
+func refusedTypeName(media string, in NewDocument) string {
+	if media != "" {
+		return media
+	}
+	if stated := strings.TrimSpace(in.ContentType); stated != "" {
+		return stated
+	}
+	return in.Filename
 }
 
 // ListDocuments returns one corpus's live documents, newest first, whatever
@@ -405,4 +439,30 @@ type deletedDocument struct {
 	checksum    string
 	contentType string
 	chunkCount  int
+}
+
+// documentHolding names the live document in this corpus already holding these
+// exact bytes, or "" when none does.
+func (s *Store) documentHolding(ctx context.Context, corpusID ids.UUID, checksum string) (string, error) {
+	var existing string
+	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
+		existing, err = documentHoldingIn(ctx, tx, corpusID, checksum)
+		return err
+	})
+	return existing, err
+}
+
+func documentHoldingIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, checksum string) (string, error) {
+	var existing string
+	switch err := tx.QueryRow(ctx,
+		`SELECT filename FROM knowledge_document
+		  WHERE corpus_id = $1 AND checksum = $2 AND archived_at IS NULL
+		  LIMIT 1`, corpusID, checksum).Scan(&existing); {
+	case err == nil:
+		return existing, nil
+	case errors.Is(err, pgx.ErrNoRows):
+		return "", nil
+	default:
+		return "", fmt.Errorf("look for a document already holding these bytes: %w", err)
+	}
 }
