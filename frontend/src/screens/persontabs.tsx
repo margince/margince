@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
@@ -22,6 +23,7 @@ import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useViewerId } from "./common";
 import { TimelineActions } from "./compose";
+import { RecordHistoryTab } from "./history";
 import { PersonCommercialCard, readableRole } from "./personcards";
 import {
   CHRONOLOGY_EMPTY_KEYS,
@@ -73,6 +75,7 @@ export function PersonTimelineTab({
   onBriefMeeting?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const [filter, setFilter] = useChronologyFilter(personId);
   const [filters, setFilters] = useTimelineFilters(personId);
@@ -115,31 +118,54 @@ export function PersonTimelineTab({
         {filter !== "changes" && (
           <TimelineFilterBar value={filters} onChange={setFilters} />
         )}
-        <SurfaceState
-          state={timelineState(
-            view,
-            filter,
-            chronology,
-            timeline,
-            hasTimelineFilters(filters),
-            loading,
-          )}
-          emptyLabel={
-            filter === "activities"
-              ? t("person.timeline.empty")
-              : t(CHRONOLOGY_EMPTY_KEYS[filter])
-          }
-          detail={
-            filter === "activities"
-              ? undefined
-              : { onRetry: chronology.changes.refetch }
-          }
-        >
-          <GroupedTimelineList
-            groups={groupChronology(chronology.entries, timeline.hasNextPage)}
-            zone={recordZone}
+        {/* The Changes view IS the record's history: one reading of what
+            changed on this record, and the one that can put a change back. A
+            second rendering of the same audit rows beside it would be two
+            answers to one question, and only one of them would ever carry the
+            control. */}
+        {filter === "changes" ? (
+          <RecordHistoryTab
+            kind="person"
+            id={personId}
+            restore={
+              view?.person.version === undefined
+                ? undefined
+                : {
+                    version: view.person.version,
+                    onRestored: () =>
+                      queryClient.invalidateQueries({
+                        queryKey: ["person360", personId],
+                      }),
+                  }
+            }
           />
-        </SurfaceState>
+        ) : (
+          <SurfaceState
+            state={timelineState(
+              view,
+              filter,
+              chronology,
+              timeline,
+              hasTimelineFilters(filters),
+              loading,
+            )}
+            emptyLabel={
+              filter === "activities"
+                ? t("person.timeline.empty")
+                : t(CHRONOLOGY_EMPTY_KEYS[filter])
+            }
+            detail={
+              filter === "activities"
+                ? undefined
+                : { onRetry: chronology.changes.refetch }
+            }
+          >
+            <GroupedTimelineList
+              groups={groupChronology(chronology.entries, timeline.hasNextPage)}
+              zone={recordZone}
+            />
+          </SurfaceState>
+        )}
       </PanelBody>
     </Panel>
   );

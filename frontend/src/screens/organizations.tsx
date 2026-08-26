@@ -1668,6 +1668,7 @@ function useChronologySlots({
   showChanges: () => void;
 } {
   const t = useT();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useChronologyFilter(org.id);
   const [filters, setFilters] = useTimelineFilters(org.id);
   // The 360's own page seeds the list; older pages and every narrowed read
@@ -1726,33 +1727,57 @@ function useChronologySlots({
         </>
       ),
       timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
-      timelineNotice: chronologyNotice(
-        "co.timeline.empty",
-        {
-          // Per filter, because the two feeds fail independently. A 360 that
-          // omitted its activities section says nothing about the change
-          // feed, and reporting the Changes view as unavailable on that
-          // basis hid rows that had loaded perfectly well.
-          loading:
-            filter === "changes"
-              ? history.loading
-              : loading || history.loading || timeline.isPending,
-          failed:
-            filter === "changes"
-              ? history.failed
-              : failed || history.failed || timeline.isError,
-          // A narrowed read is the list's own and is assembled once it
-          // answers; the unfiltered one is the 360's section.
-          assembled:
-            filter === "changes" ||
-            (hasTimelineFilters(filters)
-              ? timeline.isSuccess
-              : Boolean(view?.activities)),
-          filter,
-        },
-        history.entries.length,
-        t,
-      ),
+      // The Changes view IS the record's history: one reading of what changed
+      // on this record, and the one that can put a change back. It replaces
+      // the list rather than sitting beside it, because two renderings of the
+      // same audit rows would be two answers to one question and only one of
+      // them would ever carry the control.
+      timelineNotice:
+        filter === "changes" ? (
+          <RecordHistoryTab
+            kind="organization"
+            id={org.id}
+            restore={
+              org.version === undefined
+                ? undefined
+                : {
+                    version: org.version,
+                    onRestored: () =>
+                      queryClient.invalidateQueries({
+                        queryKey: ["organization360", org.id],
+                      }),
+                  }
+            }
+          />
+        ) : (
+          chronologyNotice(
+            "co.timeline.empty",
+            {
+              // Per filter, because the two feeds fail independently. A 360 that
+              // omitted its activities section says nothing about the change
+              // feed, and reporting the Changes view as unavailable on that
+              // basis hid rows that had loaded perfectly well.
+              loading:
+                filter === "changes"
+                  ? history.loading
+                  : loading || history.loading || timeline.isPending,
+              failed:
+                filter === "changes"
+                  ? history.failed
+                  : failed || history.failed || timeline.isError,
+              // A narrowed read is the list's own and is assembled once it
+              // answers; the unfiltered one is the 360's section.
+              assembled:
+                filter === "changes" ||
+                (hasTimelineFilters(filters)
+                  ? timeline.isSuccess
+                  : Boolean(view?.activities)),
+              filter,
+            },
+            history.entries.length,
+            t,
+          )
+        ),
     },
   };
 }
