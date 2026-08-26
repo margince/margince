@@ -41,6 +41,12 @@ commit_with() {
 }
 
 # case_is <name> <base> <head> <expected-exit> [substring the output must carry]
+#
+# A refusal case asserts the REFUSAL SENTENCE, never the bare sha: the line that
+# ACCEPTS an attestation names that same sha, so a sha-only assertion is
+# satisfied by either verdict. One case proved it — with the attester's own
+# sign-off requirement deleted, it stayed green on an exit code it was owed for
+# an unrelated reason.
 case_is() {
 	local name="$1" base="$2" head="$3" want="$4" must_say="${5:-}"
 	local out status=0
@@ -109,6 +115,78 @@ In review somebody asked for: $attest $other
 
 $signed")"
 case_is "an attestation must start its own line" "$base" "$quoted" 1 "$other"
+
+# Author-only, which is the whole worth of the certification: if anybody can
+# attest to anybody's commit, the trailer certifies that somebody typed a sha.
+# Each case below is one way the attestation could be somebody else's.
+#
+# Every one runs on a branch of its own, off a base of its own, holding exactly
+# the target and the attestation under test. Sharing a mainline is what made the
+# first draft of these cases meaningless: an unsigned commit left behind by an
+# earlier case failed every range after it, so a case could report the verdict
+# it expected while proving nothing about the property in its own name.
+stranger_name="Other Person"
+stranger_mail="other@example.com"
+stranger_attest="DCO-Remediation-Commit: I, $stranger_name <$stranger_mail>, hereby add my Signed-off-by to commit:"
+
+# case_branch <name> — a fresh branch at $base, and the unsigned commit each of
+# these cases attests to (or fails to). Echoes that commit's sha.
+case_branch() {
+	git -C "$repo" checkout -q -b "$1" "$base"
+	commit_with "an unsigned change to attest to"
+}
+
+target="$(case_branch stranger)"
+git -C "$repo" -c user.name="$stranger_name" -c user.email="$stranger_mail" \
+	commit -q --no-verify --allow-empty -m "a stranger attests to it
+
+$stranger_attest $target
+
+Signed-off-by: $stranger_name <$stranger_mail>"
+case_is "a stranger cannot attest to somebody else's commit" "$base" "$(git -C "$repo" rev-parse HEAD)" 1 "commit $target missing"
+
+# The claimed identity and the commit carrying it must be the same person, or
+# the sentence and the signature disagree about who is speaking — and the
+# sentence is the half a human reads.
+target="$(case_branch misclaimed)"
+head_sha="$(commit_with "claim to be somebody else
+
+$stranger_attest $target
+
+$signed")"
+case_is "a claimed identity must match the attesting author" "$base" "$head_sha" 1 "commit $target missing"
+
+# An unsigned commit cannot lend a signature it does not have, so a run of
+# unsigned commits cannot certify itself.
+target="$(case_branch unsigned-attest)"
+head_sha="$(commit_with "attest without signing off
+
+$attest $target")"
+case_is "an unsigned commit cannot carry an attestation" "$base" "$head_sha" 1 "commit $target missing"
+
+# Somebody can only attest to what they already wrote. Two branches off one
+# base, merged: the attestation is in range and is the target's author's own,
+# and it still does not descend from the commit it names.
+target="$(case_branch aside-target)"
+git -C "$repo" checkout -q -b aside-attest "$base"
+commit_with "attest from a branch the target is not on
+
+$attest $target
+
+$signed" >/dev/null
+git -C "$repo" merge -q --no-ff --no-verify -m "Merge the attestation branch" aside-target
+case_is "an attestation must descend from what it attests to" "$base" "$(git -C "$repo" rev-parse HEAD)" 1 "commit $target missing"
+
+# The same commit, attested properly by its own author, passes — so the four
+# refusals above are about identity and order, not about the gate having quietly
+# stopped accepting attestations at all.
+target="$(case_branch proper)"
+head_sha="$(commit_with "the author attests to their own commit
+
+$attest $target
+
+$signed")"
+case_is "the author's own attestation is accepted" "$base" "$head_sha" 0 "attested by its author"
 
 # A merge commit carries no sign-off and never can — GitHub synthesizes one for
 # every pull_request run — so the gate skips merges. Proven rather than assumed:

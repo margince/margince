@@ -56,15 +56,18 @@ the branch commits in its body. Replacing that body drops every one of
 them, and the commit that lands on `main` is then unsigned.
 
 A commit already on `main` cannot be amended, so its **author** attests
-to it afterwards, in the message of any later signed-off commit of
+to it afterward, in the message of any later signed-off commit of
 theirs — one line, the full 40-character sha:
 
-```
+```text
 DCO-Remediation-Commit: I, Your Name <you@example.com>, hereby add my Signed-off-by to commit: <sha>
 ```
 
-Nobody else can give that attestation, which is why the gate reads it
-and why an unsigned commit is otherwise permanent.
+Nobody else can give that attestation, and the gate holds you to it
+rather than taking your word: the attesting commit must be signed off,
+authored by the same person as the commit it names, under the address
+its own sentence claims, and it must come after that commit. An unsigned
+commit is otherwise permanent.
 
 ## A working tree in four commands
 
