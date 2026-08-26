@@ -363,6 +363,69 @@ func TestFollowUpRejectWritesNothing(t *testing.T) {
 	}
 }
 
+// A rejection STICKS. The nightly pass runs again tomorrow over the same deal,
+// and a rep who said no must not be asked the same thing a second time.
+//
+// The pass only ever asked whether a proposal was still PENDING, so a rejected
+// one left no trace it could see: the next run staged a fresh proposal, and the
+// rep's no became a daily question. That is the failure StageUnlessDeclined
+// exists to prevent, and it needs a stable logical identity to recognise the
+// proposal as the same one.
+func TestARejectedFollowUpIsNotAskedAgainTomorrow(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Asked once", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, deal, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, _ := e.followUpApproval(t, deal)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
+		t.Fatalf("reject: %v", err)
+	}
+
+	// Tomorrow's pass, over a deal whose situation has not changed.
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 0 {
+		t.Errorf("after a rejection the next pass staged %d proposals, want 0 — "+
+			"the rep is being asked again", got)
+	}
+}
+
+// A rejection on ONE deal says nothing about another. The identity is the deal,
+// so declining a follow-up must not quiet the whole pipeline — which is the way
+// a too-broad identity fails, and it fails silently: proposals simply stop
+// appearing and nobody can point at the moment they stopped.
+func TestARejectionOnOneDealDoesNotSilenceAnother(t *testing.T) {
+	e := setupReconcile(t)
+	declined := e.SeedDeal(t, "Said no here", e.pipeline, e.open, &e.Rep1)
+	other := e.SeedDeal(t, "Never asked", e.pipeline, e.open, &e.Rep1)
+	e.seedInteraction(t, declined, "meeting", "Sync", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	approvalID, _ := e.followUpApproval(t, declined)
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, reconcilePerms)
+	if _, err := e.svc.Decide(human, approvalID, false, nil); err != nil {
+		t.Fatalf("reject: %v", err)
+	}
+
+	// The other deal now earns a proposal of its own.
+	e.seedInteraction(t, other, "call", "First contact", 1)
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if got := e.pendingFollowUps(t, other); got != 1 {
+		t.Errorf("the untouched deal has %d proposals, want 1 — a rejection "+
+			"elsewhere silenced it", got)
+	}
+	if got := e.pendingFollowUps(t, declined); got != 0 {
+		t.Errorf("the declined deal has %d proposals, want 0", got)
+	}
+}
+
 // --- row scope: a proposal never leaks a deal the decider cannot see ---
 
 func TestFollowUpProposalRespectsRowScope(t *testing.T) {

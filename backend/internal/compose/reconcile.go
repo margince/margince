@@ -59,13 +59,30 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 	if err != nil {
 		return fmt.Errorf("compose: canonicalize follow-up proposal: %w", err)
 	}
-	_, err = s.svc.Stage(ctx, approvals.StageInput{
+	// The logical identity is the DEAL, and nothing else.
+	//
+	// It must not include the due date. The proposal's date moves with "today",
+	// so an identity carrying it makes every night's proposal a different one —
+	// and StageUnlessDeclined, which recognises a proposal a human already
+	// declined, would recognise nothing. A rep's "no" then became a question
+	// they were asked again the following morning.
+	//
+	// Identity fields must appear in ProposedChange with the same value
+	// (canonicalIdentity enforces it), and deal_id does: the payload carries it
+	// as the deal this follow-up is for.
+	identity, err := json.Marshal(map[string]string{"deal_id": dealID.String()})
+	if err != nil {
+		return fmt.Errorf("compose: marshal follow-up identity: %w", err)
+	}
+	_, _, err = s.svc.StageUnlessDeclined(ctx, approvals.StageInput{
 		Kind:           deals.FollowUpReconcileKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
 		TargetType:     "deal",
 		TargetID:       dealID,
 		Summary:        summary,
+		Identity:       identity,
+		JoinPending:    true,
 	})
 	return err
 }
