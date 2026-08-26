@@ -54,12 +54,26 @@ func recordIsArchived(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 	return archived, nil
 }
 
-// recordIsWritableByCaller asks the same gate the update path will ask. Asking
-// it here is what makes the button honest instead of a 403 waiting to happen,
-// and asking the SAME gate is what keeps the two answers from diverging.
+// recordIsWritableByCaller asks the same gate the record's own update path will
+// ask. Asking it here is what makes the button honest instead of a 403 waiting
+// to happen, and asking the SAME gate is what keeps the two answers from
+// diverging.
+//
+// activity dispatches differently, exactly as the history read does: it carries
+// no owner_id, so its write authority rides the link walk rather than the
+// owner column. Reaching it through the ordinary gate refuses every activity,
+// which is a button that says the caller may not edit a record they can.
 func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error {
+	if entityType == entityTypeActivity {
+		return auth.EnsureActivityWritable(ctx, tx, id)
+	}
 	return auth.EnsureWritable(ctx, tx, entityType, id)
 }
+
+// entityTypeActivity names the one record kind whose row-scope checks dispatch
+// differently — spelled once so the gate above and any sibling read from the
+// same word.
+const entityTypeActivity = "activity"
 
 // rowIsBehindTheErasureBoundary reuses privacy's own boundary predicate rather
 // than restating it. An Art. 17 erasure is one of the few rules where a second

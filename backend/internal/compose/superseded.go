@@ -23,6 +23,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/modules/privacy"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -106,22 +107,42 @@ func reportedAs(superseded []string, asked []string) []string {
 }
 
 // supersededFieldsTx is the query, taking the caller's transaction so the
-// binding evaluation inside a module's write can ask it after the row lock. A
-// second implementation reading its own snapshot is exactly the read-then-write
-// shape that lets a stale answer decide a write's meaning.
+// binding evaluation inside a write can ask it under the same reading. A second
+// implementation reading its own snapshot is exactly the read-then-write shape
+// that lets a stale answer decide a write's meaning.
+//
+// A row's OWN reversal chain is excluded. Putting an entry back writes the very
+// fields the entry changed, and that write is later than the entry — so without
+// this every restored entry would read as superseded by the act of restoring
+// it. `already_undone` would be unreachable, and undoing an undo could never
+// reopen anything, because the reopened entry would be permanently superseded
+// by the two reversals that had cancelled each other out.
+//
+// The chain is followed transitively, not one link: a reversal of a reversal is
+// as much a part of it as the first, and stopping at depth one would leave the
+// same defect one press further along.
 func supersededFieldsTx(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, keys []string, cutoff auditCutoff) ([]string, error) {
 	if len(keys) == 0 {
 		return nil, nil
 	}
 	asked := coupledKeys(keys)
-	args := []any{entityType, id, asked, cutoff.OccurredAt, cutoff.ID}
+	args := []any{entityType, id, asked, cutoff.OccurredAt, cutoff.ID, privacy.UndidAuditLogID}
 	rows, err := tx.Query(ctx, `
+		WITH RECURSIVE reversal_chain AS (
+		  SELECT $5::uuid AS id
+		  UNION
+		  SELECT link.id
+		  FROM audit_log link
+		  JOIN reversal_chain c ON link.evidence ->> $6 = c.id::text
+		  WHERE link.entity_type = $1 AND link.entity_id = $2
+		)
 		SELECT DISTINCT k.key
 		FROM audit_log a
 		CROSS JOIN unnest($3::text[]) AS k(key)
 		WHERE a.entity_type = $1 AND a.entity_id = $2
 		  AND a.after ? k.key
 		  AND (a.occurred_at, a.id) > ($4, $5)
+		  AND a.id NOT IN (SELECT id FROM reversal_chain)
 		ORDER BY 1`, args...)
 	if err != nil {
 		return nil, err
