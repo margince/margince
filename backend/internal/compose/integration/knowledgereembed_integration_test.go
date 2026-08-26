@@ -202,3 +202,49 @@ func TestTheDriftSweepSkipsADocumentThatFailedIngest(t *testing.T) {
 			repaired, ee.embedder.calls-callsBefore)
 	}
 }
+
+// One document the sweep cannot repair must not block every document behind it.
+//
+// The sweep is periodic and its document order is stable, so returning at the
+// first failure stopped it at the SAME document every pass — one passage a
+// provider will not embed left every later document in the workspace under a
+// superseded binding forever, unaskable, with nothing in the corpus to explain
+// it. The pass now continues and reports what failed.
+func TestOneUnrepairableDocumentDoesNotBlockTheRest(t *testing.T) {
+	ie := newIngestEnv(t)
+	e := newCountingEmbedder()
+
+	first := ie.upload(t, "first.md", "text/markdown", prose(2))
+	second := ie.upload(t, "second.md", "text/markdown", prose(3))
+	ie.ingest(t, first)
+	ie.ingest(t, second)
+	total := liveChunkCount(t, ie.env, ie.corpus)
+
+	// One document's passages are given a hash the writer never produced, which
+	// is enough to keep them selected for embedding forever; the lane then
+	// refuses THEM specifically by answering a zero vector for their text.
+	if _, err := ie.store.SweepCorpusDrift(ie.ctx, e); err != nil {
+		t.Fatalf("first sweep: %v", err)
+	}
+	if embeddedCount(t, ie.env, ie.corpus) != total {
+		t.Fatal("the fixture did not embed everything, so the failure below would prove nothing")
+	}
+
+	// The FIRST document by id is broken, which is the one the sweep reaches
+	// first — the sweep orders by document id precisely so this is decidable.
+	// Breaking the later one instead would let the old, early-returning code
+	// pass half the time: it would repair the good document, hit the bad one,
+	// and return with a non-zero count.
+	ie.env.WsExec(t, `UPDATE knowledge_chunk SET text = '' WHERE document_id = $1`, first)
+	e.identity = "fake/other@8"
+	e.zeroFor = ""
+
+	repaired, err := ie.store.SweepCorpusDrift(ie.ctx, e)
+	if err == nil {
+		t.Fatal("a sweep that could not repair a document reported success")
+	}
+	// The OTHER document was repaired anyway, which is the whole point.
+	if repaired == 0 {
+		t.Fatal("the sweep repaired nothing: one bad document blocked the rest")
+	}
+}

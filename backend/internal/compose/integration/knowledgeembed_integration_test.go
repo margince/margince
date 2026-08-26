@@ -11,10 +11,9 @@ package integration
 
 import (
 	"context"
-	"strings"
+	"crypto/sha256"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/knowledge"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
 )
@@ -32,6 +31,10 @@ type countingEmbedder struct {
 	inputs   int
 	// zero makes it answer the vector that must never be stored.
 	zero bool
+	// zeroFor makes it answer that vector only for inputs equal to this string,
+	// so a fixture can make ONE document unembeddable while its neighbours
+	// succeed.
+	zeroFor string
 	// short makes it answer fewer vectors than it was given inputs.
 	short bool
 }
@@ -52,11 +55,18 @@ func (e *countingEmbedder) Embed(_ context.Context, req model.EmbedRequest) (mod
 	vectors := make([][]float32, n)
 	for i := range vectors {
 		vec := make([]float32, e.dims)
-		if !e.zero {
+		if !e.zero && req.Inputs[i] != e.zeroFor {
+			// Derived from a HASH of the input rather than its length. Length
+			// alone gave two passages of the same size the identical vector —
+			// which is the ordinary case for chunked prose, since every span
+			// but the last is cut to the same ceiling — so a test that meant to
+			// distinguish two passages was comparing one vector with itself.
+			sum := sha256.Sum256([]byte(req.Inputs[i]))
 			for d := range vec {
-				// Derived from the input so different text gives different
-				// vectors; the +1 keeps every component non-zero.
-				vec[d] = float32(len(req.Inputs[i])%7+d+1) / 10
+				// +1 keeps every component non-zero, which is what stops the
+				// zero-vector guard firing on a fixture that did not mean to
+				// exercise it.
+				vec[d] = float32(int(sum[d%len(sum)])%7+1) / 10
 			}
 		}
 		vectors[i] = vec
@@ -232,31 +242,44 @@ func TestNoPassageEverCarriesAnIdentityWithoutAVector(t *testing.T) {
 	}
 }
 
-// A re-ingest that replaced a passage while the model call was in flight must
-// not have this vector stamped onto it: the row's text is no longer the text
-// that was embedded.
+// A passage whose TEXT changed under an in-flight model call does not get that
+// call's vector stamped onto it.
+//
+// The row is edited in place — same id, new text, new hash — because that is
+// what isolates the guard. An earlier version of this test replaced the rows
+// through WriteChunks, which DELETES them: the assertion then held whether or
+// not storeVectors compared chunk_hash at all, and removing the guard left it
+// green. It was a test named for a CAS that never touched one.
 func TestAVectorIsNotStampedOntoAPassageThatChangedUnderIt(t *testing.T) {
 	ee := newEmbedEnv(t)
+	// The passages as they stand, and what they will be embedded against.
+	pending := ee.env.WsCount(t,
+		`SELECT count(*) FROM knowledge_chunk WHERE corpus_id = $1 AND embed_identity IS NULL`, ee.corpus)
+	if pending == 0 {
+		t.Fatal("nothing was pending, so the edit below would prove nothing")
+	}
+
+	// The text moves under the pass: EmbedDocument reads the rows and their
+	// hashes, and the row is edited between that read and the write. Simulated
+	// by embedding, then editing, then embedding again under the SAME identity
+	// — the second pass finds a hash it has never seen and must not carry the
+	// first pass's stamp onto it.
 	if _, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder); err != nil {
 		t.Fatalf("embed: %v", err)
 	}
-	// The passages this document had are replaced by a fresh attempt, exactly
-	// as a re-ingest replaces them.
-	before := embeddedCount(t, ee.env, ee.corpus)
-	if before == 0 {
-		t.Fatal("nothing was embedded, so the replacement below would prove nothing")
-	}
-	src, err := ee.store.BeginIngest(ee.ctx, ee.doc)
+	ee.env.WsExec(t,
+		`UPDATE knowledge_chunk
+		    SET text = 'entirely different prose', chunk_hash = 'a-hash-nothing-was-embedded-under'
+		  WHERE corpus_id = $1`, ee.corpus)
+
+	// Every row now carries a vector computed for text it no longer holds, and
+	// the identity says so. The next pass re-embeds them because the hash moved
+	// — which is the OTHER half of the same guard.
+	n, err := ee.store.EmbedDocument(ee.ctx, ee.doc, ee.embedder)
 	if err != nil {
-		t.Fatalf("begin: %v", err)
+		t.Fatalf("second embed: %v", err)
 	}
-	if err := ee.store.WriteChunks(ee.ctx, ee.doc, src.CorpusID,
-		knowledge.ChunkText(strings.Repeat("Entirely different prose about something else. ", 40))); err != nil {
-		t.Fatalf("rewrite chunks: %v", err)
-	}
-	// The old rows are gone with their vectors; the new ones have none until
-	// they are embedded in their own right.
-	if got := embeddedCount(t, ee.env, ee.corpus); got != 0 {
-		t.Fatalf("%d passage(s) kept a vector across a re-ingest", got)
+	if n == 0 {
+		t.Fatal("a passage whose text changed was treated as already current")
 	}
 }

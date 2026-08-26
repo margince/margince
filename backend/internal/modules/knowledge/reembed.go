@@ -20,6 +20,7 @@ package knowledge
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -67,17 +68,29 @@ func (s *Store) SweepCorpusDrift(ctx context.Context, e vectorkit.Embedder) (int
 		return 0, err
 	}
 	repaired := 0
+	var failures []error
 	for _, d := range documents {
 		n, err := s.reembedDocument(ctx, d, e)
 		repaired += n
 		if err != nil {
-			// The count so far is returned with the error: the passages already
-			// repaired ARE repaired, and reporting zero would make a partial
-			// pass indistinguishable from one that did nothing.
-			return repaired, err
+			// The pass CONTINUES past a document it could not repair, and this
+			// is the difference between a sweep and a wedge. Returning here
+			// stopped at the first failure, and because the sweep is periodic
+			// and the document order is stable, the same document stopped it
+			// every time — so ONE passage a provider will not embed left every
+			// later document in the workspace under a superseded binding
+			// forever, unaskable, with nothing in the corpus to explain it.
+			//
+			// The failures are joined and returned, so River still sees a fault
+			// and the operator still sees the reason; what changes is that the
+			// documents behind the bad one are repaired first.
+			failures = append(failures, fmt.Errorf("re-embedding document %s: %w", d.id, err))
 		}
 	}
-	return repaired, nil
+	// The count is returned whatever happened: the passages already repaired
+	// ARE repaired, and reporting zero would make a partial pass
+	// indistinguishable from one that did nothing.
+	return repaired, errors.Join(failures...)
 }
 
 // staleDocument is one document needing re-embedding, and the corpus it is in.
@@ -87,7 +100,12 @@ type staleDocument struct {
 }
 
 // documentsUnderAStaleBinding finds the documents holding at least one passage
-// whose vector is not the live binding's.
+// whose vector is not the live binding's, oldest first.
+//
+// ORDERED, because a sweep whose order is whatever the planner chose is a sweep
+// whose behaviour on a document it cannot repair cannot be reasoned about or
+// tested. Oldest first is also the order a person would expect: the document
+// that has been wrong longest is repaired first.
 //
 // A NULL identity counts as stale: those are passages an ingest wrote but never
 // embedded — an installation that had no lane when the document landed and has
@@ -106,7 +124,8 @@ func (s *Store) documentsUnderAStaleBinding(ctx context.Context, identity string
 			    AND d.archived_at IS NULL
 			    AND k.archived_at IS NULL
 			    AND d.ingest_status = 'done'
-			    AND c.embed_identity IS DISTINCT FROM $1`, identity)
+			    AND c.embed_identity IS DISTINCT FROM $1
+			  ORDER BY c.document_id`, identity)
 		if err != nil {
 			return fmt.Errorf("find the passages under a stale binding: %w", err)
 		}
