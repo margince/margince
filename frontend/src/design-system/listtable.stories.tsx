@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { type ReactNode, useState } from "react";
-import { formatMoney, formatNumber } from "../format/format";
+import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { Button } from "./atoms";
 import type { ListChip } from "./listsurface";
@@ -188,7 +188,10 @@ export const PagedByTheCaller: Story = {
             rows={companies(60)}
             page={page}
             onPage={setPage}
-            caption={`The caller is holding page ${page}`}
+            // A page number is a POSITION, so it stays bare in every locale:
+            // grouped, page 1204 reads "1.204" and stops matching the page a
+            // reader types into the box beside it.
+            caption={`The caller is holding page ${ordinalNumber(page)}`}
           />
         </div>
       );

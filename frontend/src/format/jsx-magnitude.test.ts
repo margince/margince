@@ -371,6 +371,14 @@ function renderedPositions(
     ) {
       found.push(node.expression);
     }
+    // Judged on the SHAPE the object is contextualized into, not on the callee.
+    // Narrowing this to call arguments would read better and cost recognition:
+    // a params object built as a variable and handed to `t()` a line later is
+    // still a catalog parameter, and this arm is the only thing that sees it.
+    // The reach it buys instead — a `Record<string, string>` nobody renders —
+    // asks for a ruling on a string no reader meets, which is a wasted call
+    // rather than a missed magnitude. Over-recognition is the safe direction
+    // here, and the only one an assertion can catch when it goes wrong.
     if (
       ts.isPropertyAssignment(node) &&
       ts.isObjectLiteralExpression(node.parent)

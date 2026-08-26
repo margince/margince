@@ -448,6 +448,7 @@ function MorningPanel({
   children,
 }: Readonly<{ total: number; children: React.ReactNode }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <Panel
       title={
@@ -456,7 +457,9 @@ function MorningPanel({
           {t("day.thisMorning")}
         </span>
       }
-      titleAction={total > 0 ? <Badge>{total}</Badge> : undefined}
+      titleAction={
+        total > 0 ? <Badge>{formatNumber(total, locale)}</Badge> : undefined
+      }
     >
       {children}
     </Panel>
