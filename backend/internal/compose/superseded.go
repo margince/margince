@@ -1,0 +1,157 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// SupersededFields answers whether anyone wrote these keys after this audit
+// row. It is deliberately NOT HumanOwnedConflicts (humanprecedence.go), which
+// asks a different question: which keys a HUMAN last wrote to a DIFFERENT
+// value, with no cutoff.
+//
+// The two must not share a reader. If this query inherited that one's
+// equal-value exemption, a colleague who re-typed the same value would be
+// invisible and the restore would silently revert a decision they had just
+// re-affirmed. If that query inherited this one's actor-agnosticism or cutoff,
+// fewer fields would read as human-owned and agent writes that stage for
+// approval today would auto-execute — a silent weakening of an agent-authority
+// guardrail.
+
+import (
+	"context"
+	"fmt"
+	"sort"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+)
+
+// auditCutoff is the point in the trail a supersession question is asked from:
+// the target row's own position. audit_log is ordered by (occurred_at, id) —
+// the id is a UUIDv7, so it breaks a tie in write order rather than arbitrarily
+// — and the row itself is never "later" than itself.
+type auditCutoff struct {
+	OccurredAt any
+	ID         ids.UUID
+}
+
+// moneyPair is read as ONE field for supersession. amount_minor is a count of
+// units the currency defines, so a later change to either makes a restore of
+// the other state a value that never existed, wrong by the scale difference
+// values.MinorUnitExceptions() encodes — and wrong silently, because the number
+// is plausible in both denominations.
+var moneyPair = []string{"amount_minor", "currency"}
+
+// coupledKeys expands the keys a supersession question must actually ask about.
+// A restore is refused per audit ROW, so pulling the sibling in here — rather
+// than at each caller — is what keeps the coupling one rule instead of one per
+// reader.
+func coupledKeys(keys []string) []string {
+	asked := make(map[string]bool, len(keys)+1)
+	for _, key := range keys {
+		asked[key] = true
+	}
+	for _, half := range moneyPair {
+		if !asked[half] {
+			continue
+		}
+		for _, other := range moneyPair {
+			asked[other] = true
+		}
+		break
+	}
+	out := make([]string, 0, len(asked))
+	for key := range asked {
+		out = append(out, key)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// reportedAs maps a superseded key back onto the keys the caller asked about.
+// The money pair travels together in both directions: a later change to the
+// currency supersedes a restore of the amount, and the caller hears it named as
+// the field it asked to put back.
+func reportedAs(superseded []string, asked []string) []string {
+	wasAsked := make(map[string]bool, len(asked))
+	for _, key := range asked {
+		wasAsked[key] = true
+	}
+	hit := make(map[string]bool, len(superseded))
+	moneyMoved := false
+	for _, key := range superseded {
+		if wasAsked[key] {
+			hit[key] = true
+		}
+		for _, half := range moneyPair {
+			if key == half {
+				moneyMoved = true
+			}
+		}
+	}
+	if moneyMoved {
+		for _, half := range moneyPair {
+			if wasAsked[half] {
+				hit[half] = true
+			}
+		}
+	}
+	out := make([]string, 0, len(hit))
+	for key := range hit {
+		out = append(out, key)
+	}
+	sort.Strings(out)
+	return out
+}
+
+// supersededFieldsTx is the query, taking the caller's transaction so the
+// binding evaluation inside a module's write can ask it after the row lock. A
+// second implementation reading its own snapshot is exactly the read-then-write
+// shape that lets a stale answer decide a write's meaning.
+func supersededFieldsTx(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, keys []string, cutoff auditCutoff) ([]string, error) {
+	if len(keys) == 0 {
+		return nil, nil
+	}
+	asked := coupledKeys(keys)
+	args := []any{entityType, id, asked, cutoff.OccurredAt, cutoff.ID}
+	rows, err := tx.Query(ctx, `
+		SELECT DISTINCT k.key
+		FROM audit_log a
+		CROSS JOIN unnest($3::text[]) AS k(key)
+		WHERE a.entity_type = $1 AND a.entity_id = $2
+		  AND a.after ? k.key
+		  AND (a.occurred_at, a.id) > ($4, $5)
+		ORDER BY 1`, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var found []string
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		found = append(found, key)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return reportedAs(found, keys), nil
+}
+
+// SupersededFields is supersededFieldsTx in its own transaction, for the
+// advisory read that makes the button honest before anyone presses it.
+func (f fieldOwnership) SupersededFields(ctx context.Context, entityType string, id ids.UUID, keys []string, cutoff auditCutoff) ([]string, error) {
+	var superseded []string
+	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) error {
+		var err error
+		superseded, err = supersededFieldsTx(ctx, tx, entityType, id, keys, cutoff)
+		return err
+	})
+	if err != nil {
+		return nil, fmt.Errorf("compose: superseded fields: %w", err)
+	}
+	return superseded, nil
+}
