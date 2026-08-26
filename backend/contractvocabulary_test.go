@@ -5,12 +5,22 @@
 
 package backendarch
 
-// A membership set spelled out of the generated contract's own constants reads
-// as though it cannot drift from crm.yaml — every value in it IS the contract's
-// value, so no rename can slip past. What that spelling does not carry is the
-// SET: crm.yaml gains a member, the generator emits it, the enum's Valid()
-// accepts it, and a map written this way keeps the members it had. The refusal
-// that follows names a field and rejects a value the contract publishes.
+// A membership set built from a generated enum's own constants must hold every
+// member of that enum.
+//
+// Spelling the constants reads as though the set cannot drift from crm.yaml —
+// every value in it IS the contract's value, so no rename slips past. What that
+// spelling does not carry is the SET: crm.yaml gains a member, the generator
+// emits it, the enum's Valid() accepts it, and a map written this way keeps the
+// members it had. The refusal that follows names a field and rejects a value
+// the contract publishes.
+//
+// Only completeness is checked, because the other direction cannot fail: the
+// corpus admits a set only when EVERY key names a constant of one enum, so a
+// set that is in scope is a subset by construction and holding it whole is set
+// equality. A stray key does not make the set wrong here — it takes the set out
+// of this gate's reach, which is why the corpus rule is stated with the
+// detector rather than left implicit.
 //
 // oapi-codegen emits Valid() and no member list, which is why these maps exist
 // at all — a refusal has to render the vocabulary it accepted, and Valid()

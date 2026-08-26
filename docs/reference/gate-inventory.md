@@ -28,7 +28,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `configschema_test.go` | H3 | The margince.yaml schema is editor tooling, and editor tooling that lies is worse than none: an operator trusts the squiggle. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts exactly the record types the search module can search, and the contract has to say the same set. |
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the FRONTEND types is enforced in two different places for two different readers. |
-| `contractvocabulary_test.go` | H3 | A membership set spelled out of the generated contract's own constants reads as though it cannot drift from crm.yaml — every value in it IS the contract's value, so no rename can slip past. |
+| `contractvocabulary_test.go` | H3 | A membership set built from a generated enum's own constants must hold every member of that enum. |
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
 | `dedupeevidencefields_test.go` | H1 | The dedupe evidence snapshot is stored as free JSON, so nothing about a field name is checked when it is written. |
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
