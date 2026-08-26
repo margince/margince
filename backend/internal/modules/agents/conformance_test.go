@@ -409,8 +409,6 @@ func TestToolListCarriesTitleAndDerivedAnnotations(t *testing.T) {
 // and the authority cannot disagree — and it claims read-only ONLY where the
 // scope proves it, because a tool that writes and says it does not is a lie a
 // client acts on.
-//
-// Held by: TestReadOnlyIsDerivedFromTheEnforcedScope (backend/internal/modules/agents/conformance_test.go) — this test.
 func TestReadOnlyIsDerivedFromTheEnforcedScope(t *testing.T) {
 	for scope, want := range map[principal.Scope]bool{
 		principal.ScopeRead: true,

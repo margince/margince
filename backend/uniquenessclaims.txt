@@ -25,11 +25,13 @@
 # describing an unheld claim FAILS the gate, so this file cannot rot beside the
 # tree it describes.
 #
-# There are no per-entry reasons on purpose. 621 rationalisations written by
-# somebody who has not audited the claims would be worse than an honest count of
-# what is unaudited.
+# There are no per-entry reasons on purpose. Six hundred rationalisations
+# written by somebody who has not audited the claims would be worse than an
+# honest count of what is unaudited. The count itself is not restated here: it
+# is whatever this file holds, and a second copy of it drifts.
 #
 # Sorted, one key per line: <path>#<declaration>.
+
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
 ../extensions/notes/note.go#const noteColumns
@@ -78,6 +80,7 @@ internal/compose/certcase_agentloop_window.go#type agentLoopToolWindow
 internal/compose/certcase_fieldextract.go#method fieldExtractCases.CertifiedScope
 internal/compose/certcase_ratefx_test.go#type fxCompleterStub
 internal/compose/certcase_ratepricing_test.go#type pricingCompleterStub
+internal/compose/channelaxis_fitness_integration_test.go#func TestActivityKindTableMatchesTheContractKindEnum
 internal/compose/channelprovider.go#func CoreChannelProviders
 internal/compose/channelprovider.go#func reservedCoreProviders
 internal/compose/channelprovider.go#func upsertChannelProvider
@@ -281,6 +284,7 @@ internal/modules/agents/command.go#type routedRecordTarget
 internal/modules/agents/commandauto.go#func verdictWord
 internal/modules/agents/commandrelinkbatch.go#func destinationSubject
 internal/modules/agents/commandsidecar.go#const organizationSidecarRecordType
+internal/modules/agents/conformance_test.go#func TestReadOnlyIsDerivedFromTheEnforcedScope
 internal/modules/agents/dispatch.go#const block at const jsonRPCVersion
 internal/modules/agents/dispatch.go#type rpcErrorData
 internal/modules/agents/modern.go#const block at const codeParseError
@@ -481,6 +485,7 @@ internal/modules/people/projectstakeholder.go#method Store.PersonNames
 internal/modules/people/projectstakeholder.go#method Store.ensureProjectWritable
 internal/modules/people/promotepreview.go#method Store.previewTarget
 internal/modules/people/provider.go#func pageOf
+internal/modules/people/relationship_conflict_test.go#func TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint
 internal/modules/people/resolve.go#func exactOrganizationOwners
 internal/modules/people/resolve.go#func exactPersonOwners
 internal/modules/people/resolvecreate.go#type OrgSpec

@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 // claimShapes are the ways this tree says "this is the only one".
@@ -117,10 +118,10 @@ func namedExhaustiveness(decl string) *regexp.Regexp {
 //
 // `\bonly caller` matches inside "a lead:update-only caller", where "only"
 // binds leftwards into the compound and quantifies nothing: the sentence says
-// which KIND of caller, not that there is one. Six claims in this tree were
-// registered from that reading — "Go-only definition", "CREATE-only caller",
-// "live-only caller", "stdlib-only implementation", "body-only reader" — and
-// each is ordinary prose the register was counting as unaudited debt.
+// which KIND of caller, not that there is one. Ordinary prose of that shape is
+// common — "Go-only definition", "stdlib-only implementation", "body-only
+// reader" — and a register counting it as unaudited debt is a register whose
+// number means less than it says.
 //
 // A hyphen is the discriminator rather than a list of the compounds seen so
 // far, because the next one will be spelled differently and a list would miss
@@ -128,17 +129,55 @@ func namedExhaustiveness(decl string) *regexp.Regexp {
 // match that begins immediately after a hyphen is the second half of a word in
 // any of them.
 //
-// Go's regexp has no lookbehind, so this reads the byte before the match rather
+// Go's regexp has no lookbehind, so this reads what precedes the match rather
 // than expressing the exclusion in the pattern — the same trade `intensifier`
 // makes below, for the same missing feature.
-func firstClaimPhrase(pattern *regexp.Regexp, text string) string {
-	for _, span := range pattern.FindAllStringIndex(text, -1) {
-		if span[0] > 0 && text[span[0]-1] == '-' {
+//
+// Every match is examined, not only the first. Returning "" because the first
+// match was prose would un-see every claim that happens to FOLLOW a hyphenated
+// word, and the register would fall with nothing to say why — the same defect
+// one rung down from the one the shape census exists to price.
+//
+// reject, when non-nil, is asked about the match's first capture group and says
+// whether that match is prose. It carries the derived shape's `intensifier`
+// rule, which has to be applied HERE rather than beside the caller: a shape
+// whose first match is an idiom still qualifies on a later real one.
+func claimPhrase(pattern *regexp.Regexp, text string, reject func(string) bool) string {
+	for _, span := range pattern.FindAllStringSubmatchIndex(text, -1) {
+		if precededByHyphen(text, span[0]) {
+			continue
+		}
+		if reject != nil && len(span) >= 4 && span[2] >= 0 && reject(text[span[2]:span[3]]) {
 			continue
 		}
 		return text[span[0]:span[1]]
 	}
 	return ""
+}
+
+// precededByHyphen reports whether a match opens in the middle of a hyphenated
+// word, where its first token binds leftwards and quantifies nothing.
+//
+// By RUNE and not by byte: `text[index-1]` reads the last continuation byte of
+// whatever multi-byte character precedes the match, and U+2011 NON-BREAKING
+// HYPHEN joins a compound exactly as U+002D does while ending in a byte that is
+// not `-`. Reading the rune costs nothing and removes a whole spelling of the
+// same false positive.
+//
+// The dashes are deliberately NOT here. An em- or en-dash in this tree is
+// sentence punctuation — "the store — the only writer" — and a clause opening
+// after one is ordinary prose making an ordinary claim. Only characters that
+// join two halves of a single word suppress a match.
+func precededByHyphen(text string, index int) bool {
+	if index <= 0 {
+		return false
+	}
+	previous, _ := utf8.DecodeLastRuneInString(text[:index])
+	switch previous {
+	case '-', '‐', '‑':
+		return true
+	}
+	return false
 }
 
 // intensifier reports whether "every <word>" is an English idiom rather than a
@@ -304,14 +343,19 @@ func findClaims(root string) ([]claim, error) {
 			for name, pattern := range claimShapes {
 				patterns[name] = pattern
 			}
+			// The derived shape's idiom rule travels WITH its pattern rather
+			// than being applied once here, so the two readings of the same
+			// text cannot disagree about which match is the claim.
+			rejects := map[string]func(string) bool{}
 			if named := namedExhaustiveness(decl); named != nil {
-				if match := named.FindStringSubmatch(text); match != nil && !intensifier(match[1]) {
+				if claimPhrase(named, text, intensifier) != "" {
 					shapes = append(shapes, namedShape)
 					patterns[namedShape] = named
+					rejects[namedShape] = intensifier
 				}
 			}
 			for _, shape := range shapes {
-				phrase := firstClaimPhrase(patterns[shape], text)
+				phrase := claimPhrase(patterns[shape], text, rejects[shape])
 				if phrase == "" {
 					continue
 				}
