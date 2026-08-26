@@ -63,10 +63,28 @@ const (
 // accepted what the loader refuses would let an operator paste a literal
 // secret, see no complaint, and find out at boot.
 //
+// SecretRefPattern is what an EDITOR should accept for a secret field, which is
+// not quite what the parser below matches.
+//
+// Two spellings on purpose, and the difference is the point. `secretRef` is
+// deliberately loose: it matches `${env:   }` so UnmarshalYAML can trim, notice
+// the argument names nothing, and say exactly that. Tightening it would push
+// that input into the "holds a literal secret" branch, which tells an operator
+// to rotate a credential they never wrote.
+//
+// This pattern is what the loader accepts END TO END, which is what an editor
+// has to be checking: a reference whose argument holds at least one real
+// character, or the empty string, which Unmarshal reads as "no source named".
+// TestTheSecretPatternAcceptsWhatTheLoaderAccepts holds the two together in
+// both directions.
+//
 //nolint:gosec // G101: a regex describing the SHAPE of a reference, not a credential — it is precisely what refuses one
-const SecretRefPattern = `^\$\{(env|file):([^}]+)\}$`
+const SecretRefPattern = `^$|^\$\{(env|file):[^}]*[^}\s][^}]*\}$`
 
-var secretRef = regexp.MustCompile(SecretRefPattern)
+//nolint:gosec // G101: as above — the parser's looser shape, so its refusals can be specific
+const secretRefPattern = `^\$\{(env|file):([^}]+)\}$`
+
+var secretRef = regexp.MustCompile(secretRefPattern)
 
 // Secret is a reference to a value held somewhere else.
 //
