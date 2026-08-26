@@ -107,9 +107,9 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 // member may own a project — so the composite FK is the whole check; the
 // anchor company is not re-pointable here, because moving a project to
 // another company would silently orphan the deals that inherited it.
-// The date columns a project carries, named once: each appears in the patch
-// builder, the clearable set and the read, and three spellings of one column
-// name is how the three come to disagree.
+// The date columns a project carries. Each is read by the patch builder, the
+// clearable set and the row read, and a literal repeated across the three is
+// how the three come to disagree about which column they mean.
 const (
 	startedAtColumn     = "started_at"
 	targetEndDateColumn = "target_end_date"
