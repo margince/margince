@@ -51,3 +51,29 @@
   font-size: 12px;
   color: var(--textMeta);
 }
+
+/* The field detail under one entry's sentence. It is a reading block rather
+ * than a table: one row per field that moved, the name leading the diff, so a
+ * reader checking what a change did never has to leave the list it happened
+ * on. */
+.entry-fields {
+  list-style: none;
+  margin: 6px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.entry-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.entry-field-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--textMeta);
+}

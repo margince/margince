@@ -9,7 +9,7 @@ import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { Card, EmptyState } from "../design-system/atoms";
-import { ProvenanceTag } from "../design-system/trust";
+import { FieldDiff, ProvenanceTag } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import {
@@ -18,7 +18,10 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
-import { provenanceOfEntry } from "./history.logic";
+import { entryFieldChanges, provenanceOfEntry } from "./history.logic";
+import { historyFieldLabel } from "./historyfieldlabels";
+import { historyValue } from "./historyvalues";
+import "./history.css";
 
 // The per-record plain-language change list (B-EP09.x): every audit_log row
 // for one record, rendered as a `summary` line the endpoint already wrote in
@@ -62,12 +65,59 @@ export function useRecordHistory(
   });
 }
 
+// What one entry CHANGED, under the sentence saying that it did.
+//
+// It sits on this list rather than only in the per-field panel because this is
+// the list a reader opens first, and a change nobody can see is a change
+// nobody can check.
+function EntryFieldDetail({
+  entry,
+  currency,
+}: Readonly<{
+  entry: AuditHistoryEntry;
+  currency: string | null | undefined;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const changes = entryFieldChanges(entry);
+  if (changes.length === 0) {
+    return null;
+  }
+  return (
+    <ul className="entry-fields">
+      {changes.map((change) => (
+        <li key={change.field} className="entry-field">
+          <span className="entry-field-name">
+            {historyFieldLabel(change.field, t)}
+          </span>
+          <FieldDiff
+            oldValue={historyValue(
+              change.field,
+              change.oldValue,
+              currency,
+              locale,
+            )}
+            newValue={historyValue(
+              change.field,
+              change.newValue,
+              currency,
+              locale,
+            )}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 function HistoryEntryRow({
   entry,
   locale,
+  currency,
 }: Readonly<{
   entry: AuditHistoryEntry;
   locale: ReturnType<typeof useLocale>["locale"];
+  currency: string | null | undefined;
 }>) {
   const viewerId = useViewerId();
   const recordZone = useRecordZone();
@@ -91,6 +141,7 @@ function HistoryEntryRow({
             renderUser={() => entry.actor_name}
           />
         </span>
+        <EntryFieldDetail entry={entry} currency={currency} />
       </span>
     </li>
   );
@@ -99,7 +150,14 @@ function HistoryEntryRow({
 export function RecordHistory({
   kind,
   id,
-}: Readonly<{ kind: EntityKind; id: string }>) {
+  currency,
+}: Readonly<{
+  kind: EntityKind;
+  id: string;
+  // The record's ISO currency, which is what gives a minor-unit column in the
+  // detail below a row its scale.
+  currency?: string | null;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const query = useRecordHistory(kind, id);
@@ -116,7 +174,12 @@ export function RecordHistory({
       <>
         <ul className="timeline">
           {entries.map((entry) => (
-            <HistoryEntryRow key={entry.id} entry={entry} locale={locale} />
+            <HistoryEntryRow
+              key={entry.id}
+              entry={entry}
+              locale={locale}
+              currency={currency}
+            />
           ))}
         </ul>
         <LoadMoreButton query={query} />

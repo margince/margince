@@ -162,3 +162,49 @@ function machineProvenance(
   const carriesKind = actorId === actorType || actorId.startsWith(prefix);
   return provenanceOf(carriesKind ? actorId : prefix + actorId);
 }
+
+// One changed field, as the record-level projection already holds it.
+export type EntryFieldChange = {
+  field: string;
+  oldValue: string | null;
+  newValue: string | null;
+};
+
+// The fields ONE audit row touched.
+//
+// The record-level entry carries both images, so the detail beside a change
+// costs no second read — which is what lets the plain-language list show what
+// actually moved instead of sending the reader to another sub-tab for it.
+//
+// A key the image does not hold reads as absent rather than as empty text: the
+// diff draws its own wording for a field that did not exist before or does not
+// now, and "" is a value somebody stored.
+export function entryFieldChanges(
+  entry: Pick<AuditHistoryEntry, "before" | "after">,
+): EntryFieldChange[] {
+  const before = entry.before ?? {};
+  const after = entry.after ?? {};
+  const fields: string[] = [];
+  for (const field of [...Object.keys(after), ...Object.keys(before)]) {
+    if (!fields.includes(field)) {
+      fields.push(field);
+    }
+  }
+  return fields
+    .map((field) => ({
+      field,
+      oldValue: imageValue(before[field]),
+      newValue: imageValue(after[field]),
+    }))
+    .filter((change) => change.oldValue !== change.newValue);
+}
+
+// A jsonb value as the diff renders it. Anything that is not already text is
+// spelled the way the wire spells it, because a stored document is still what
+// the row holds and "[object Object]" tells a reader nothing they can check.
+function imageValue(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  return typeof value === "string" ? value : JSON.stringify(value);
+}

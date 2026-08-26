@@ -57,7 +57,7 @@ export function RecordHistoryTab({
         />
       </div>
       {tab === "changes" ? (
-        <RecordHistory kind={kind} id={id} />
+        <RecordHistory kind={kind} id={id} currency={currency} />
       ) : (
         <FieldHistoryTimeline kind={kind} id={id} currency={currency} />
       )}
