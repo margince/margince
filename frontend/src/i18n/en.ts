@@ -4800,6 +4800,7 @@ export const en = {
   "corpusAsk.question": "Your question",
   "corpusAsk.submit": "Ask",
   "corpusAsk.byModel": "Written from the passages below",
+  "corpusAsk.atLine": "line {line}, column {column}",
   "corpusAsk.byPassages": "The passages themselves — nobody wrote a summary",
   "corpusAsk.notReady":
     "This set is not finished being read yet — {embedded} of {total} passages are searchable. Nothing is wrong with your question; try again shortly.",

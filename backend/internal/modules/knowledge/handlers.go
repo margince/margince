@@ -219,6 +219,24 @@ func writeKnowledgeErr(w http.ResponseWriter, r *http.Request, err error) {
 	httperr.Write(w, r, err)
 }
 
+// DownloadCorpusDocument serves downloadCorpusDocument: the file a citation
+// points at, streamed rather than buffered.
+func (h Handlers) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	doc, body, err := h.store.OpenForDownload(r.Context(), ids.UUID(id))
+	if err != nil {
+		writeKnowledgeErr(w, r, err)
+		return
+	}
+	httperr.StreamObject(w, r, httperr.StreamedObject{
+		Download: httperr.Download{
+			ContentType: doc.ContentType,
+			Filename:    doc.Filename,
+			Size:        doc.ByteSize,
+		},
+		Body: body,
+	}, "corpus document "+id.String())
+}
+
 // DeleteCorpusDocument serves deleteCorpusDocument: 204, a hard delete that
 // takes the passages, their vectors and the stored file with the row.
 func (h Handlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

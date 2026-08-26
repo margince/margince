@@ -4751,6 +4751,7 @@ export const de = {
   "corpusAsk.question": "Ihre Frage",
   "corpusAsk.submit": "Fragen",
   "corpusAsk.byModel": "Aus den Textstellen unten geschrieben",
+  "corpusAsk.atLine": "Zeile {line}, Spalte {column}",
   "corpusAsk.byPassages":
     "Die Textstellen selbst — niemand hat eine Zusammenfassung geschrieben",
   "corpusAsk.notReady":

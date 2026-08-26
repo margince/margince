@@ -28,6 +28,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"unicode/utf8"
 
 	"github.com/jackc/pgx/v5"
 
@@ -55,6 +56,43 @@ type Passage struct {
 	DocumentName string
 	Text         string
 	Similarity   float64
+	// StartLine is the 1-based line of the document this span begins on, or 0
+	// for a passage written before the column existed. A citation says nothing
+	// about where rather than guessing.
+	StartLine int
+}
+
+// Locate answers where in the document a span of this passage's text begins:
+// the 1-based line and column a reader would open the file at.
+//
+// Both zero when the passage does not know its own start line, or when the span
+// is not in its text. A location that points at the wrong line is worse than
+// none — the whole value of a citation is that following it lands you on the
+// sentence.
+//
+// The column is in CHARACTERS, not bytes: a person counts across a line by what
+// they can see, and a byte offset would put them past the mark on any line with
+// an accent in it.
+func (p Passage) Locate(span string) (line, column int) {
+	if p.StartLine == 0 {
+		return 0, 0
+	}
+	at := strings.Index(p.Text, span)
+	if at < 0 {
+		return 0, 0
+	}
+	before := p.Text[:at]
+	line = p.StartLine + strings.Count(before, "\n")
+	if nl := strings.LastIndex(before, "\n"); nl >= 0 {
+		// A later line of the passage: the column is measured from that
+		// line's own start.
+		return line, utf8.RuneCountInString(before[nl+1:]) + 1
+	}
+	// The passage's FIRST line, which may itself begin mid-line in the
+	// document — a span cut at the width ceiling does. Nothing here knows how
+	// far in that was, so the column is measured from the passage's start and
+	// is a lower bound on the true one.
+	return line, utf8.RuneCountInString(before) + 1
 }
 
 // Readiness is what the deterministic pass concluded, and the counts a screen
@@ -283,7 +321,8 @@ func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, id
 	// those rows BEFORE the projection computes the distance, which is why it
 	// is a WHERE clause and not a HAVING.
 	rows, err := tx.Query(ctx,
-		`SELECT c.id, c.document_id, d.filename, c.text, 1 - (c.embedding <=> $1::vector) AS sim
+		`SELECT c.id, c.document_id, d.filename, c.text, coalesce(c.start_line, 0),
+		        1 - (c.embedding <=> $1::vector) AS sim
 		   FROM knowledge_chunk c
 		   JOIN knowledge_document d ON d.id = c.document_id
 		  WHERE c.corpus_id = $2
@@ -299,7 +338,7 @@ func rankIn(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, vec []float32, id
 	var out []Passage
 	for rows.Next() {
 		var p Passage
-		if err := rows.Scan(&p.ChunkID, &p.DocumentID, &p.DocumentName, &p.Text, &p.Similarity); err != nil {
+		if err := rows.Scan(&p.ChunkID, &p.DocumentID, &p.DocumentName, &p.Text, &p.StartLine, &p.Similarity); err != nil {
 			return nil, err
 		}
 		out = append(out, p)

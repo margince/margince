@@ -21992,6 +21992,10 @@ export interface components {
             /** Format: uuid */
             document_id: string;
             document_name: string;
+            /** @description The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none. */
+            line?: number;
+            /** @description The 1-based column on that line, counted in CHARACTERS rather than bytes: it is read by a person counting across a line, not by a program seeking in a file. Absent whenever `line` is. */
+            column?: number;
             /** @description A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist. */
             quote: string;
         };

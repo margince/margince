@@ -4712,6 +4712,7 @@ export const vi = {
   "corpusAsk.question": "Câu hỏi của bạn",
   "corpusAsk.submit": "Hỏi",
   "corpusAsk.byModel": "Được viết từ các đoạn bên dưới",
+  "corpusAsk.atLine": "dòng {line}, cột {column}",
   "corpusAsk.byPassages": "Chính các đoạn văn — không ai viết bản tóm tắt",
   "corpusAsk.notReady":
     "Bộ này chưa đọc xong — {embedded} trên {total} đoạn có thể tìm kiếm. Câu hỏi của bạn không có gì sai; hãy thử lại sau ít phút.",

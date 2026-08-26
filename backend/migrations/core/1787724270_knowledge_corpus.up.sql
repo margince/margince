@@ -83,6 +83,17 @@ CREATE TABLE knowledge_chunk (
     chunk_ix integer NOT NULL,
     text text NOT NULL,
     chunk_hash text NOT NULL,
+    -- Where this span STARTS in the document it was cut from, 1-based, so a
+    -- citation can say which line to open the file at.
+    --
+    -- Stored rather than derived, because deriving it at ask time would mean
+    -- re-reading the document's bytes for every answer — the ingest already
+    -- holds the whole text and counting there costs one pass.
+    --
+    -- Nullable for the rows written before this column existed: a passage with
+    -- no start line yields a claim with no line, which is the honest answer.
+    -- A line number that points at the wrong line is worse than none.
+    start_line integer,
     embed_identity text,
     embedding vector,
     embedded_at timestamptz,

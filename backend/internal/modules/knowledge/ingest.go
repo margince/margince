@@ -166,15 +166,15 @@ func insertChunks(ctx context.Context, tx pgx.Tx, documentID, corpusID ids.UUID,
 	if len(chunks) == 0 {
 		return nil
 	}
-	args := make([]any, 0, len(chunks)*6)
+	args := make([]any, 0, len(chunks)*7)
 	rows := make([]string, 0, len(chunks))
 	for _, c := range chunks {
-		rows = append(rows, storekit.SQLf("($%d, $%d, $%d, $%d, $%d, $%d)",
-			len(args)+1, len(args)+2, len(args)+3, len(args)+4, len(args)+5, len(args)+6))
-		args = append(args, ids.NewV7(), corpusID, documentID, c.Ix, c.Text, c.Hash())
+		rows = append(rows, storekit.SQLf("($%d, $%d, $%d, $%d, $%d, $%d, $%d)",
+			len(args)+1, len(args)+2, len(args)+3, len(args)+4, len(args)+5, len(args)+6, len(args)+7))
+		args = append(args, ids.NewV7(), corpusID, documentID, c.Ix, c.Text, c.Hash(), c.StartLine)
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO knowledge_chunk (id, corpus_id, document_id, chunk_ix, text, chunk_hash)
+		`INSERT INTO knowledge_chunk (id, corpus_id, document_id, chunk_ix, text, chunk_hash, start_line)
 		 VALUES `+strings.Join(rows, ", "), args...); err != nil {
 		return fmt.Errorf("write the document's passages: %w", err)
 	}

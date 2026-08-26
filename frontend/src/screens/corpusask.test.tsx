@@ -59,6 +59,8 @@ function answer(over: Record<string, unknown> = {}) {
         chunk_id: "00000000-0000-4000-8000-0000000000c1",
         document_id: "00000000-0000-4000-8000-0000000000b1",
         document_name: "operating.md",
+        line: 14,
+        column: 3,
         text: "Captured messages are kept for 400 days.",
         quote: "kept for 400 days from the day they arrive",
       },
@@ -274,5 +276,54 @@ describe("CorpusAskCard", () => {
         String(input).includes("/knowledge/corpora"),
       ),
     ).toBe(false);
+  });
+
+  it("offers the cited document as a download, and says where in it the quote sits", async () => {
+    vi.stubGlobal("fetch", backendFor(ASKER).fetchMock);
+    render(<CorpusAskCard />);
+    await askAbout("how long are messages kept");
+
+    // The FILE, downloadable. A citation nobody can follow is a citation in
+    // name only: the reader has the sentence and the quote, and this is what
+    // lets them open the document and see it in place.
+    const link = await screen.findByRole("link", { name: /operating\.md/i });
+    expect(link).toHaveAttribute(
+      "href",
+      "/v1/knowledge/documents/00000000-0000-4000-8000-0000000000b1",
+    );
+    expect(link).toHaveAttribute("download", "operating.md");
+
+    // And WHERE in it, so following the link lands on the sentence rather than
+    // on the top of a file the reader then has to search.
+    expect(screen.getByText(/line 14, column 3/i)).toBeTruthy();
+  });
+
+  it("says nothing about where when the passage could not locate the quote", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(ASKER, {
+        reply: answer({
+          claims: [
+            {
+              chunk_id: "00000000-0000-4000-8000-0000000000c1",
+              document_id: "00000000-0000-4000-8000-0000000000b1",
+              document_name: "operating.md",
+              text: "Messages are kept for 400 days.",
+              quote: "kept for 400 days from the day they arrive",
+            },
+          ],
+        }),
+      }).fetchMock,
+    );
+    render(<CorpusAskCard />);
+    await askAbout("how long are messages kept");
+
+    // The download still stands — the file is openable whether or not the line
+    // is known. Only the location is withheld, because a line number pointing
+    // at the wrong line is worse than none.
+    expect(
+      await screen.findByRole("link", { name: /operating\.md/i }),
+    ).toBeTruthy();
+    expect(screen.queryByText(/line \d/i)).toBeNull();
   });
 });
