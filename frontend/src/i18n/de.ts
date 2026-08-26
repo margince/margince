@@ -1786,8 +1786,8 @@ export const de = {
   "lead.segregation":
     "Leads bleiben von Kontakten getrennt. Ein Lead wird erst zum Kontakt, wenn du ihn qualifizierst.",
   "lead.segregationDismiss": "Verstanden",
-  "lead.emptyMine": "Du besitzt keine Leads.",
-  "lead.showAll": "Alle anzeigen",
+  "list.emptyMine": "Du besitzt keine {unit}.",
+  "list.showAll": "Alle anzeigen",
   "lead.assignedAway":
     "{names} an {owner} zugewiesen — nicht mehr unter „Meine“.",
   "lead.viewNew": "Neu",

@@ -1818,8 +1818,8 @@ export const en = {
   "lead.segregation":
     "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it.",
   "lead.segregationDismiss": "Got it",
-  "lead.emptyMine": "You own no leads.",
-  "lead.showAll": "Show all",
+  "list.emptyMine": "You own no {unit}.",
+  "list.showAll": "Show all",
   "lead.assignedAway": "{names} assigned to {owner} — no longer in Mine.",
   "lead.viewNew": "New",
   "lead.viewNeedsFollowUp": "Needs follow-up",

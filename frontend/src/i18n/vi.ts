@@ -1778,8 +1778,8 @@ export const vi = {
   "lead.segregation":
     "Khách hàng tiềm năng được giữ tách biệt với Liên hệ. Chỉ trở thành liên hệ khi bạn xác nhận đủ điều kiện.",
   "lead.segregationDismiss": "Đã hiểu",
-  "lead.emptyMine": "Bạn không sở hữu khách hàng tiềm năng nào.",
-  "lead.showAll": "Hiện tất cả",
+  "list.emptyMine": "Bạn không sở hữu {unit} nào.",
+  "list.showAll": "Hiện tất cả",
   "lead.assignedAway":
     "{names} đã được giao cho {owner} — không còn trong “Của tôi”.",
   "lead.viewNew": "Mới",

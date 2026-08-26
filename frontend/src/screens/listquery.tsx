@@ -149,14 +149,25 @@ function replaceOwn(
 // last page there is.
 const PAGE_PARAM = "page";
 
-/** The page `params` names, or 1 for an address that names none or names junk. */
-function pageOf(params: UrlParams, scope?: string): number {
+/**
+ * The rendered page `params` names, or 1 for an address naming none or junk.
+ *
+ * Exported for the ONE screen that composes this codec by hand rather than
+ * through `useListQuery` — the deals screen drives a board and a table from a
+ * single query, and reaches for these pieces instead of growing a second answer
+ * to what a narrowed list's address looks like.
+ */
+export function listPageOf(params: UrlParams, scope?: string): number {
   const asked = Number(params.get(scoped(scope, PAGE_PARAM)));
   return Number.isInteger(asked) && asked > 1 ? asked : 1;
 }
 
 /** `params` with the rendered page set, page one being spelled by absence. */
-function withPage(params: UrlParams, page: number, scope?: string): UrlParams {
+export function withListPage(
+  params: UrlParams,
+  page: number,
+  scope?: string,
+): UrlParams {
   const next = new Map(params);
   const name = scoped(scope, PAGE_PARAM);
   if (page > 1) {
@@ -609,9 +620,9 @@ export function useListQuery<Row>({
         mergeScreenDials(
           replaceOwn(
             live,
-            withPage(
+            withListPage(
               paramsFromListQuery(next, opening, paramScope),
-              pageOf(live, paramScope),
+              listPageOf(live, paramScope),
               paramScope,
             ),
             paramScope,
@@ -970,7 +981,17 @@ export function ListTable<Row>({
       // grants it to anyone) than a genuinely empty HubSpot portal — name that
       // cause rather than letting the generic empty copy imply "there is
       // nothing here".
-      emptyNote={overlay ? t("overlay.emptyOwnerHint") : emptyNote}
+      //
+      // Not while a search is narrowing it, though: then the reader's own words
+      // are the likeliest cause, and blaming the mirror's owner mapping for
+      // what a typo did would send them looking in the wrong place.
+      emptyNote={
+        overlay
+          ? query.q
+            ? undefined
+            : t("overlay.emptyOwnerHint")
+          : emptyNote
+      }
       action={action}
       caption={caption ? t(caption) : undefined}
       footer={footer}
@@ -1019,9 +1040,9 @@ export function ListTable<Row>({
       // opening a record no longer costs the reader their place. Page one is
       // left OUT of it: it is where every list opens, and an address that said
       // so on arrival would put a dial in front of a reader who turned nothing.
-      page={pageOf(params, state.paramScope)}
+      page={listPageOf(params, state.paramScope)}
       onPage={(next) =>
-        setParams(withPage(currentParams(), next, state.paramScope))
+        setParams(withListPage(currentParams(), next, state.paramScope))
       }
       bodyRef={rowsScroller}
       // The unit key names the table for the widths it remembers.

@@ -427,9 +427,15 @@ export function ListTable<Row>({
   /** Plural noun for the count and the empty state — "contacts", "leads". */
   unit: string;
   /**
-   * A likelier cause than "there is nothing here", for a data source that has
-   * one. Shown under the empty state only when no filter is narrowing the
-   * list, since a filtered-empty table already explains itself.
+   * A likelier cause than "there is nothing here", for a caller that knows one.
+   *
+   * Drawn under the empty state whichever line it carries, narrowed or not:
+   * which emptiness a note explains is the CALLER's to know. A "Mine" view for
+   * a reader who owns nothing is the case this was written for and is a
+   * narrowed list, so a note shown only over the unnarrowed one never appeared.
+   * A caller whose note would blame the data source for what the reader's own
+   * dial did passes none — the overlay owner hint goes quiet under a live
+   * search for exactly that reason.
    */
   emptyNote?: ReactNode;
   /** Omit for a list whose GET has no `q` param; the box is then not rendered. */
@@ -1125,17 +1131,26 @@ export function ListTable<Row>({
                         </button>
                       </>
                     ) : (
-                      <>
-                        {t("table.none", { unit })}
-                        {emptyNote && (
-                          <p
-                            className="t-caption"
-                            style={{ marginTop: "var(--space-2)" }}
-                          >
-                            {emptyNote}
-                          </p>
-                        )}
-                      </>
+                      t("table.none", { unit })
+                    )}
+                    {/* Under EITHER line, because WHICH emptiness a note
+                        explains is the caller's to know and not this table's.
+                        Drawn only over the unnarrowed one, the case the prop
+                        was written for never appeared at all: a "Mine" view
+                        for a reader who owns nothing is a NARROWED list. A
+                        caller whose note would blame the data source for what
+                        the reader's own dial did passes none — the overlay
+                        owner hint goes quiet under a live search for exactly
+                        that reason. The generic line stays above it either
+                        way: "clear filters" undoes every narrowing, and a
+                        screen's own way back usually undoes one. */}
+                    {emptyNote && (
+                      <p
+                        className="t-caption"
+                        style={{ marginTop: "var(--space-2)" }}
+                      >
+                        {emptyNote}
+                      </p>
                     )}
                   </td>
                 </tr>
