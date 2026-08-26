@@ -26,6 +26,7 @@ import { AgentRail } from "./agentrail";
 import { LABELS, REVIEW_ONLY, TASK_SAID, VOCABULARY } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
 import type { Route } from "./router";
+import { stubPhoneViewport } from "./testing/shellharness";
 
 // The agent section at the foot of the workspace rail reads every one of its
 // facts off the wire (approvals, connectors, dedupe, AI posture, licence
@@ -319,6 +320,10 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  // The frame case spies on Element.prototype.getBoundingClientRect, which every
+  // later case in this file shares. Restored here rather than there: a spy left
+  // on a prototype is the kind of leak whose failure names a case that is fine.
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
@@ -623,6 +628,63 @@ describe("AgentRail", () => {
       ).toBeNull(),
     );
     expect(container.querySelector(".arbadge")).toBeNull();
+  });
+
+  // Where the panel is measured from at phone width, and what points at it.
+  //
+  // There it stands OVER its anchor rather than beside it, and the anchor is the
+  // round well the orb sits in — which rises clear of the bar's top edge. Take
+  // the measurement from the CELL behind that well and the panel opens across
+  // the orb it belongs to; take the notch's x from the middle of the SCREEN and
+  // it stops pointing at the thing that was pressed the moment the bar's cells
+  // stop being even. Both come off the same measured box, and this is the case
+  // that says so: the well and the cell are deliberately given different boxes,
+  // and every number below is the well's.
+  it("measures the phone panel from the well the orb sits in", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    stubAgentRailApi();
+    const well = { top: 700, left: 167, width: 56 };
+    const cell = { top: 716, left: 151, width: 88 };
+    const nowhere = { top: 0, left: 0, width: 0 };
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: Element) {
+        const seen = this.classList.contains("arhit")
+          ? well
+          : this.classList.contains("arblock")
+            ? cell
+            : nowhere;
+        return {
+          ...seen,
+          bottom: 0,
+          height: 0,
+          right: 0,
+          x: 0,
+          y: 0,
+        } as DOMRect;
+      },
+    );
+    const { container } = render(ROUTE);
+
+    await openPanel(user, container);
+    const loose = panel();
+    const surface = loose.querySelector<HTMLElement>(".arpanel");
+    // 8px of air over the WELL's top edge, not over the cell 16px below it.
+    expect(surface?.style.bottom).toBe(`${globalThis.innerHeight - 700 + 8}px`);
+    // The well's own middle: 167 + 56 / 2.
+    expect(loose.getAttribute("style")).toContain("--arCaretX: 195px");
+  });
+
+  // Beside the card on a sidebar, and nothing pointing at anything: the panel
+  // and the block it came from are side by side and a notch would have no gap to
+  // cross. The variable is absent rather than set to a value the sheet ignores.
+  it("carries no notch on the sidebar", async () => {
+    const user = userEvent.setup();
+    stubAgentRailApi();
+    const { container } = render(ROUTE);
+
+    await openPanel(user, container);
+    expect(panel().getAttribute("style")).not.toContain("--arCaretX");
   });
 
   it("opens the panel on a click of the section and flips its expanded state", async () => {

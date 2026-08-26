@@ -580,7 +580,7 @@ export const SectionPhone: Story = {
 /**
  * The More sheet, open — the phone's whole sidebar.
  *
- * The bar it grew out of is five glyphs with no captions, which is all a 390px
+ * The bar it grew out of is five cells with no captions, which is all a 390px
  * row can hold; the sheet is where the ten destinations become a LIST again, and
  * everything the bar had to give up comes back with them:
  *
@@ -592,15 +592,13 @@ export const SectionPhone: Story = {
  *   rail's hairline, because the sheet is 600px wide whatever the desktop
  *   preference it inherited was left at;
  * - the badge as a TRAILING figure in its row rather than a chip pinned to a
- *   tab — a list row has somewhere to put a number;
- * - the entitlement row in the foot, because what the installation is entitled
- *   to is as true on a phone as anywhere.
+ *   tab — a list row has somewhere to put a number.
  *
- * That last one is below the fold in the captured frame, honestly: the sheet is
- * `max-height: 80dvh` over 821px of content, so it is a scroller, and the foot
- * sits about 70px past its bottom edge. It is there and it is reachable — scroll
- * the sheet — but a screenshot of the sheet's head is not a screenshot of its
- * foot, and saying so is cheaper than a second frame scrolled to the end.
+ * What does NOT come back is the agent. It is a cell of the BAR, and the bar is
+ * not on screen while this is; a row for it in a list of ten places would file
+ * the one thing in the chrome that reports rather than navigates as an eleventh
+ * place to go. The sheet is `max-height: 80dvh` over a list this long, so it is a
+ * scroller either way — the captured frame is its head, not its end.
  *
  * The close control is the same More button in its other state, renamed, and it
  * is PINNED to the head's corner rather than left at the end of a scrolling list
@@ -657,6 +655,105 @@ export const PhoneMoreSheet: Story = {
       <StoryProviders>
         <SeedInstallation>
           <PhoneSheetExample />
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * The phone bar, closed — three destinations, the agent, and More.
+ *
+ * Five cells of equal width, and only three of them are places to go. The middle
+ * one is the agent, and everything about how it is drawn is one claim: it is a
+ * different KIND of thing from the four glyphs around it. It rises out of the
+ * bar's top edge in a round well of the bar's own material, it carries the only
+ * lit object in the chrome, and it has no caption — the bar has no captions at
+ * all, and a word under the one cell with room for one would read as a label for
+ * the bar rather than for the agent. Its accessible name says the rest.
+ *
+ * The Worklist is what the bar gave up for that cell. It is a tap away in the
+ * sheet, which is the same distance the other six destinations already are.
+ *
+ * Position is load-bearing twice over. It is the CENTRE because the agent
+ * belongs to the whole session rather than to any destination, so it stands
+ * outside the row of them rather than at one end. And it is the third cell in
+ * the DOM as well as on screen (app/navlevel.tsx renders it into the row stream),
+ * so a thumb and a Tab key read the bar in the same order — a cell placed by a
+ * grid column alone would have been third to the eye and last to the keyboard.
+ */
+function PhoneBarExample() {
+  const route: Route = { screen: "home" };
+  const { openSearch, palette } = usePaletteSeam();
+  return (
+    <div className="app railexpanded">
+      <WorkspaceRail route={route} counts={COUNTS} />
+      <main className="main">
+        <TopBar route={route} collapsed={false} onOpenSearch={openSearch} />
+        <div className="scroll">
+          <PageTitle route={route} />
+          <div className="wrap">
+            <Card as="div">The page the bar floats over.</Card>
+          </div>
+        </div>
+      </main>
+      {palette}
+    </div>
+  );
+}
+
+export const PhoneBar: Story = {
+  name: "phone — the bar, with the agent in the middle",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  render: () => {
+    stubEntitlement(WITHIN_CAP);
+    return (
+      <StoryProviders>
+        <SeedInstallation>
+          <PhoneBarExample />
+        </SeedInstallation>
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * The agent's panel, open over the phone bar.
+ *
+ * The same panel the sidebar opens beside its own card, in the only place a
+ * bottom bar leaves for it: above. Two things make it read as this cell's panel
+ * rather than as a sheet that arrived from nowhere.
+ *
+ * It is MEASURED from the well, not from the cell behind it — the well rises
+ * clear of the bar, and a frame taken from the cell would open the panel across
+ * the orb it belongs to. And it carries a notch that points back down at that
+ * well, drawn on the portalled wrapper rather than on the panel, because the
+ * panel scrolls its own body and would clip anything outside it. The notch's x
+ * is the measured middle of the well, so it still lands if the bar's cells ever
+ * stop being even.
+ *
+ * There is no scrim. This is a popover, not the More sheet: the page behind it
+ * stays live and readable, an outside tap or Escape closes it, and focus goes
+ * back to the orb. A dimmed page would claim the reader has to answer something
+ * before carrying on, and there is nothing here to answer.
+ */
+export const PhoneAgentPanel: Story = {
+  name: "phone — the agent's panel over the bar",
+  globals: { viewport: { value: "phone" } },
+  tags: ["uat-phone"],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: "Expand the agent panel" }),
+    );
+  },
+  render: () => {
+    stubEntitlement(WITHIN_CAP);
+    return (
+      <StoryProviders>
+        <SeedInstallation>
+          <PhoneBarExample />
         </SeedInstallation>
       </StoryProviders>
     );

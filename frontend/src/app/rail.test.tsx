@@ -293,6 +293,57 @@ describe("WorkspaceRail (AC-shell-1/2)", () => {
     expect(container.querySelectorAll('[aria-current="page"]')).toHaveLength(1);
   });
 
+  // The bar is five cells and only three of them are destinations. The agent is
+  // the middle one — it reports rather than navigates, so it is not filed among
+  // the places to go — and it stands in the ROW STREAM rather than beside it,
+  // because a cell placed by a grid column alone is third to the eye and last to
+  // the Tab key. What this asserts is that ONE order describes both.
+  it("puts the agent in the middle of the phone bar, in the order a thumb reads", () => {
+    stubPhoneViewport();
+    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    const nav = container.querySelector(".rail");
+    const cells = [
+      ...(nav?.querySelectorAll(".navwrap.primary, .arblock, .railmore") ?? []),
+    ].map((cell) =>
+      cell.classList.contains("navwrap")
+        ? (cell.querySelector(".navitem")?.getAttribute("aria-label") ?? "")
+        : cell.classList.contains("arblock")
+          ? "agent"
+          : "more",
+    );
+    expect(cells).toEqual(["Home", "Contacts", "agent", "Pipeline", "more"]);
+  });
+
+  // The Worklist is the destination the bar gave up for that cell. Off the bar
+  // is not gone: it is a row in the sheet like every other destination the bar
+  // cannot carry, and More reports it as the current page while it is open.
+  it("keeps the Worklist off the bar and in the sheet", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    const { container } = render(<WorkspaceRail route={{ screen: "today" }} />);
+    expect(container.querySelectorAll(".navwrap.primary")).toHaveLength(3);
+    expect(
+      container.querySelector(".railmore.active")?.getAttribute("aria-current"),
+    ).toBe("page");
+
+    await user.click(screen.getByRole("button", { name: "More" }));
+    expect(levelLabels()).toContain("Worklist");
+  });
+
+  // The agent is a cell of the BAR, and the bar is not on screen while the sheet
+  // is. It is not re-parented into the sheet either: a row for it in a list of
+  // ten places would file the agent as an eleventh place to go, which is what
+  // taking it out of that list was for. One block, still mounted, still one Core.
+  it("keeps exactly one agent when the sheet takes the bar's place", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    const { container } = render(<WorkspaceRail route={{ screen: "home" }} />);
+    expect(container.querySelectorAll(".arblock")).toHaveLength(1);
+
+    await user.click(screen.getByRole("button", { name: "More" }));
+    expect(container.querySelectorAll(".arblock")).toHaveLength(1);
+  });
+
   // The sheet is the phone's whole sidebar, and it is navigation and nothing
   // else: the account menu lives in the top bar, which is on screen at this
   // width too. A second copy of it down here would be two account affordances

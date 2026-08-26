@@ -330,6 +330,12 @@ export function WorkspaceRail({
           state={{ collapsed, tip, onTip: setTip }}
           onSelect={level.onSelect}
           onWalkUp={level.onWalkUp}
+          // At phone width the agent stands in the MIDDLE of the bar rather
+          // than at the foot of a column that is not there — inside the row
+          // stream, so a thumb and a Tab key read the bar in the same order.
+          // One Core either way: the foot below renders only above the
+          // breakpoint.
+          centre={phone ? <AgentRail route={route} /> : undefined}
         />
         {/* Phone-width only: expands the bar into a sheet carrying every
           destination. Hidden by CSS on the desktop sidebar.
@@ -359,16 +365,18 @@ export function WorkspaceRail({
           </span>
         </button>
         <div className="grow" />
-        {/* The foot is the agent. It is the one thing in the chrome that reports
-            rather than navigates, and it never claims the current page. What the
-            installation is ENTITLED to used to sit here as its own grey row, and
-            it now reaches a reader through the Core instead: a licence fault
-            turns the orb amber, which is a thing somebody notices.
+        {/* The sidebar's foot is the agent. It is the one thing in the chrome
+            that reports rather than navigates, and it never claims the current
+            page. What the installation is ENTITLED to used to sit here as its
+            own grey row, and it now reaches a reader through the Core instead: a
+            licence fault turns the orb amber, which is a thing somebody notices.
             The whole foot goes on a drilled-in level, element and all: an empty
             box left behind would still hold the band and the rule that divide a
-            reading from the rows above it. */}
-        {!leveled && (
-          <div className="railfoot">
+            reading from the rows above it. And it goes at phone width, where
+            there is no column to have a foot: the bar's centre cell above is
+            where the agent stands there, and two of these would be two Cores. */}
+        {!leveled && !phone && (
+          <div className="railagent">
             <AgentRail route={route} />
           </div>
         )}

@@ -345,6 +345,94 @@
   --coreHalo: 0.5;
 }
 
+/* ===== The phone bar's centre cell =====
+ *
+ * At phone width the rail is a bottom bar of destinations, and the agent is the
+ * one cell on it that is not a place to go. So it does not dress as one: it
+ * RISES out of the bar's top edge on the bar's own material, which is the same
+ * claim the sidebar makes with a hairline and a lit floor, made in the one
+ * currency a five-cell bar has left — position.
+ *
+ * Nothing here is a second Core. The block is the same component in the same
+ * document; only its box changes (app/shell.tsx renders it in the bar's middle
+ * at this width and at the foot of the column above it).
+ */
+@media (max-width: 700px) {
+  .rail .arblock {
+    /* The cell's own height, so the bar's row is the destinations' 48px whatever
+       the circle above does. The circle is taken out of the flow below: sized in
+       it, it would make the agent's cell taller than every other one and stand
+       the bar on two heights. */
+    min-height: 48px; /* ds:ignore the bar's own cell height, set in app/shell.css */
+    margin: 0;
+  }
+  /* The well: the bar's material, its edge and its shadow, drawn as a circle and
+     lifted clear of the bar's top edge by exactly --phoneAgentRise. The lip is
+     what the bar publishes about its own padding and border (app/shell.css), so
+     the rise is measured from the edge a reader sees rather than from the cell
+     behind it. */
+  .rail .arhit {
+    position: absolute;
+    left: 50%;
+    top: calc(-1 * (var(--phoneBarLip) + var(--phoneAgentRise)));
+    translate: -50% 0;
+    /* A hair over the 48px minimum in both axes, because a circle's corners are
+       not a target: 56px of circle is 48px of reachable middle. */
+    width: 56px; /* ds:ignore the well's diameter, which is its own geometry */
+    height: 56px; /* ds:ignore the well's diameter, which is its own geometry */
+    flex-direction: row;
+    justify-content: center;
+    padding: 0;
+    border: 1px solid var(--borderSubtle);
+    border-radius: 50%;
+    /* The bar's ground, not the page's: the well is the bar rising, and a
+       different fill would read as an object resting on it. The tone the orb
+       spills sits over that ground rather than replacing it. */
+    background:
+      radial-gradient(
+        70% 70% at 50% 42%,
+        color-mix(in srgb, var(--arTone) 14%, transparent),
+        transparent 72%
+      ),
+      var(--bgSidebar);
+    box-shadow: var(--shadow-pop);
+  }
+  /* Outside the shape rather than inset: this control has an edge of its own
+     here, and a ring drawn inside it lands on the glass instead of around the
+     well. It follows the circle, because `outline` follows `border-radius`. */
+  .rail .arhit:focus-visible {
+    outline-offset: 2px;
+  }
+  /* No line and no figure under it. The bar carries no captions at all
+     (app/shell.css drops every `.navlabel`), and a reading under the one cell
+     that has room for one would be the only words on the bar — which reads as a
+     label for the bar rather than for the agent. The button keeps its accessible
+     name, so nothing is lost to a screen reader, and the panel it opens is where
+     the line and the month's spend are said. */
+  .rail .arwords,
+  .rail .archev {
+    display: none;
+  }
+  .rail .arorb {
+    /* Sized to the well, not to the rail: the sidebar gives the ball 196px and
+       this gives it the inside of a 56px circle. Still twice a destination's
+       20px glyph, which is the point — the one live object in the bar. */
+    --coreSize: 44px; /* ds:ignore the ball's diameter inside the well */
+    --coreGlass: 38px; /* ds:ignore the glass inside that ball */
+    /* More halo than the rail's, less than a hero's: here the ball has an edge
+       to bloom against, and the bloom is what makes the well read as lit from
+       the inside rather than as a grey disc with a marble in it. */
+    --coreHalo: 0.4;
+  }
+  /* The sheet is destinations and nothing else. The agent is a cell of the BAR,
+     and the bar is not on screen while the sheet is: a row for it in a list of
+     ten places would be the agent filed as an eleventh place to go, which is
+     what taking it out of that list was for. */
+  .rail.sheetopen .arblock {
+    display: none;
+  }
+}
+
 /* ===== The panel =====
  *
  * Beside the rail, and OUT of it: the rail scrolls its destinations and so
@@ -407,8 +495,65 @@
     transform: none;
   }
 }
-@media (prefers-reduced-motion: reduce) {
+/* On the phone bar the card is UNDER the panel, not to its left, so the arrival
+   comes from below and a notch says which cell it came out of. Both are declared
+   above the reduced-motion rule below, because that rule turns the animation off
+   and a later declaration of equal specificity would quietly turn it back on. */
+@media (max-width: 700px) {
   .arpanel {
+    animation-name: arpanelup;
+  }
+  @keyframes arpanelup {
+    from {
+      opacity: 0;
+      transform: translateY(6px) scale(0.985);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  /* The notch, on the WRAPPER rather than on the panel: the panel scrolls its
+     own body and would clip anything drawn outside it. It is a square standing
+     on a corner, filled and edged like the panel, sitting half behind it — the
+     half that shows is the tail, and the half that does not covers the panel's
+     own bottom hairline so the two read as one piece of glass.
+     Its position is the frame's, handed down as custom properties by
+     app/agentrail.tsx: the notch points at the orb that was MEASURED, not at the
+     middle of the screen, so it still lands if the bar's cells stop being even. */
+  .arloose::after {
+    content: "";
+    position: fixed;
+    left: var(--arCaretX);
+    bottom: calc(var(--arPanelBottom) - 3px);
+    width: 14px; /* ds:ignore the notch's own diagonal, not spacing */
+    height: 14px; /* ds:ignore the notch's own diagonal, not spacing */
+    translate: -50% 0;
+    rotate: 45deg;
+    border-right: 1px solid var(--borderSubtle);
+    border-bottom: 1px solid var(--borderSubtle);
+    border-bottom-right-radius: 3px; /* ds:ignore the notch's own tip */
+    background: var(--bgElevated);
+    z-index: 28;
+    /* Opacity alone. The notch already carries `rotate` and `translate` of its
+       own, and `transform` composes AFTER both — so the panel's 6px rise would
+       reach this element as a 6px slide along its own rotated axis, which is
+       diagonal. It fades over the same window instead, and the two arrive
+       together. */
+    animation: arnotchin 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  @keyframes arnotchin {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .arpanel,
+  .arloose::after {
     animation: none;
   }
 }

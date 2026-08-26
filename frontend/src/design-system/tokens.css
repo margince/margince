@@ -214,11 +214,20 @@
   --space-12: 48px;
   --space-16: 64px;
 
+  /* How far the agent's cell rises above the top edge of the phone bar. The bar
+   * is a row of destinations and the agent is not one, so it breaks the bar's
+   * plane rather than sitting in it — and what it overhangs is the content
+   * column, which is why the clearance below has to know this number rather than
+   * agentrail.css keeping it to itself. */
+  --phoneAgentRise: 16px;
+
   /* How far a page-level sticky element must stay clear of the bottom of a
    * phone viewport: the app's navigation is fixed there (shell.css, inset 8px)
    * and anything that ignored it would render underneath the nav. Named rather
-   * than repeated so the two cannot drift apart. */
-  --phoneNavClearance: 64px;
+   * than repeated so the two cannot drift apart. The 66px is the bar itself —
+   * a 48px cell, 4px of padding and a 1px edge on each side of it, on the 8px
+   * ledge it stands on — and the rise is the agent overhanging its top edge. */
+  --phoneNavClearance: calc(66px + var(--phoneAgentRise));
 
   /* How far a sticky element inside the content column must stand off the foot
    * of the scroll area. The default is the plain 8px ledge, because most of the

@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import {
+  type CSSProperties,
   type RefObject,
   useCallback,
   useEffect,
@@ -781,7 +782,32 @@ type PanelFrame = Readonly<{
   bottom: number;
   width?: number;
   maxHeight: number;
+  /**
+   * Where the notch under the panel points, in viewport coordinates.
+   *
+   * Only the phone frame carries one: there the panel stands OVER the anchor
+   * rather than beside it, and a full-width sheet with nothing pointing at what
+   * opened it is a panel that could have come from anywhere. Measured from the
+   * anchor rather than assumed to be the middle of the screen, so the notch
+   * still lands on the orb if the bar's cells ever stop being symmetric.
+   */
+  caret?: number;
 }>;
+
+/**
+ * The notch's place, handed to the stylesheet rather than drawn here.
+ *
+ * Where it points is a MEASUREMENT and how it is drawn is the sheet's business,
+ * so the frame travels as custom properties on the portalled wrapper. Beside a
+ * sidebar there is no notch and no `--arCaretX`: the panel and the card that
+ * opened it are already touching, and a tail would have no gap to cross.
+ */
+function looseStyle(frame: PanelFrame): CSSProperties {
+  return {
+    "--arCaretX": frame.caret === undefined ? undefined : `${frame.caret}px`,
+    "--arPanelBottom": `${frame.bottom}px`,
+  } as CSSProperties;
+}
 
 /**
  * Where the panel goes, in viewport coordinates.
@@ -797,7 +823,8 @@ type PanelFrame = Readonly<{
  * block instead.
  */
 function usePanelFrame(
-  anchor: RefObject<HTMLElement | null>,
+  card: RefObject<HTMLElement | null>,
+  well: RefObject<HTMLElement | null>,
   open: boolean,
   phone: boolean,
 ): PanelFrame | null {
@@ -809,7 +836,12 @@ function usePanelFrame(
       return;
     }
     const place = () => {
-      const box = anchor.current?.getBoundingClientRect();
+      // Two anchors, because the panel stands in two places. Beside the whole
+      // CARD on the sidebar, where the card is what the reader is looking at;
+      // above the round WELL on the phone bar, which rises out of the bar's top
+      // edge — a frame measured from the cell behind it would open the panel
+      // across the orb it belongs to.
+      const box = (phone ? well : card).current?.getBoundingClientRect();
       if (!box) {
         return;
       }
@@ -820,6 +852,7 @@ function usePanelFrame(
           right: PANEL_MARGIN,
           bottom: height - box.top + PANEL_GAP,
           maxHeight: box.top - PANEL_GAP * 2,
+          caret: box.left + box.width / 2,
         });
         return;
       }
@@ -840,7 +873,7 @@ function usePanelFrame(
       globalThis.removeEventListener("resize", place);
       globalThis.removeEventListener("scroll", place, true);
     };
-  }, [anchor, open, phone]);
+  }, [card, well, open, phone]);
   return frame;
 }
 
@@ -1093,7 +1126,7 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
     }
   }, []);
 
-  const frame = usePanelFrame(block, open, phone);
+  const frame = usePanelFrame(block, trigger, open, phone);
   const money =
     spend.minor === undefined
       ? ""
@@ -1145,7 +1178,11 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
       {open &&
         frame &&
         createPortal(
-          <div className="arloose" data-core-state={state}>
+          <div
+            className="arloose"
+            data-core-state={state}
+            style={looseStyle(frame)}
+          >
             <AgentPanel
               state={state}
               setState={setOverride}

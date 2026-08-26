@@ -86,7 +86,7 @@ function Rail({
   return (
     <nav className={collapsed ? "rail collapsed" : "rail expanded"}>
       <div className="grow" />
-      <div className="railfoot">{children}</div>
+      <div className="railagent">{children}</div>
     </nav>
   );
 }
