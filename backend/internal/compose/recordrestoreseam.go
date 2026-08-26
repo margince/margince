@@ -142,3 +142,16 @@ func valuesNoLongerWritable(ctx context.Context, tx pgx.Tx, entityType string, _
 // rather than at the assignment so a signature drift fails where the seam is
 // defined, naming both sides.
 var _ privacy.ChangeRestorer = RestoreSeam{}
+
+// withReversal gives the history surface both halves of the reversal: the
+// executor that puts a change back, and the reader that says in advance which
+// changes can be. They share ONE seam so the button and the write cannot come
+// to disagree about what is possible.
+//
+// This is wired at construction rather than as an option: undoability is part
+// of what the history surface MEANS, and a server serving that history without
+// it would render buttons that answer 404.
+func withReversal(handlers privacy.Handlers, pool *pgxpool.Pool) privacy.Handlers {
+	seam := NewRestoreSeam(pool, NewDispatcher(NewProvider(pool), NewOverlayProvider(pool, failClosedOverlayMeter(), nil), pool))
+	return handlers.WithChangeRestorer(seam).WithUndoabilityReader(NewUndoabilityPage(seam))
+}

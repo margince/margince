@@ -39,9 +39,17 @@ func (h Handlers) GetRecordHistory(w http.ResponseWriter, r *http.Request,
 		return
 	}
 
+	auditIDs := make([]ids.UUID, 0, len(page.Entries))
+	for _, entry := range page.Entries {
+		auditIDs = append(auditIDs, entry.ID)
+	}
+	answers := h.undoabilityFor(r.Context(), entityType, ids.UUID(id), auditIDs)
 	data := make([]crmcontracts.AuditHistoryEntry, 0, len(page.Entries))
 	for _, entry := range page.Entries {
-		data = append(data, recordHistoryEntryToWire(entry))
+		wire := recordHistoryEntryToWire(entry)
+		answer, judged := answers[entry.ID]
+		wire.Undoable = undoabilityToWire(answer, judged)
+		data = append(data, wire)
 	}
 	resp := crmcontracts.AuditHistoryListResponse{
 		Data: data,

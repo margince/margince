@@ -1,0 +1,201 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// Answering undoability for a PAGE of history without asking per entry.
+//
+// A page is one record's rows, so most of what the refusals need is a property
+// of the RECORD and is read once: whether it is archived, and whether the
+// caller may change it. What varies per entry — the rows themselves with their
+// erasure boundary, and which entries a live reversal already covers — is one
+// query each over the whole page.
+//
+// Flat in page size is the contract, not an optimisation. A lazy per-entry
+// lookup was rejected outright: it produces a button whose state is unknown
+// until the user interacts with it, which is the greyed-button-with-no-reason
+// shape this feature exists to remove.
+
+import (
+	"context"
+	"fmt"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/gradionhq/margince/backend/internal/modules/privacy"
+	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+)
+
+// UndoabilityPage answers undoability for one record's history page. compose
+// owns it because the answer needs the update shapes and the record's own
+// table, neither of which the history module may reach.
+type UndoabilityPage struct {
+	seam RestoreSeam
+}
+
+// NewUndoabilityPage reads through the same evaluator the write binds with, so
+// the advisory and the binding answers are one set of branches rather than two
+// that drift.
+func NewUndoabilityPage(seam RestoreSeam) UndoabilityPage { return UndoabilityPage{seam: seam} }
+
+// ForRecord answers each audit row the page touches. A row absent from the
+// result was not judged, which the caller renders as undoable=false with no
+// reason rather than as undoable.
+func (p UndoabilityPage) ForRecord(ctx context.Context, entityType string, entityID ids.UUID, auditIDs []ids.UUID) (map[ids.UUID]privacy.UndoabilityAnswer, error) {
+	answers := make(map[ids.UUID]privacy.UndoabilityAnswer, len(auditIDs))
+	if len(auditIDs) == 0 {
+		return answers, nil
+	}
+	err := database.WithWorkspaceTx(ctx, p.seam.pool, func(tx pgx.Tx) error {
+		shared, err := p.recordFacts(ctx, tx, entityType, entityID)
+		if err != nil {
+			return err
+		}
+		undone, err := p.liveReversals(ctx, tx, entityType, entityID)
+		if err != nil {
+			return err
+		}
+		rows, err := p.pageRows(ctx, tx, entityType, entityID, auditIDs)
+		if err != nil {
+			return err
+		}
+		for _, row := range rows {
+			answer, err := p.judge(ctx, tx, row, shared, undone)
+			if err != nil {
+				return err
+			}
+			answers[row.ID] = answer
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, fmt.Errorf("compose: undoability for a history page: %w", err)
+	}
+	return answers, nil
+}
+
+// recordFacts are the answers that belong to the RECORD rather than to an
+// entry, so a page pays for them once however many rows it holds.
+type recordFacts struct {
+	archived bool
+	writable bool
+}
+
+func (p UndoabilityPage) recordFacts(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (recordFacts, error) {
+	archived, err := recordIsArchived(ctx, tx, entityType, entityID)
+	if err != nil {
+		return recordFacts{}, err
+	}
+	// The row-scope error is reduced to a boolean here, and only here: this
+	// asks whether the caller COULD write, and "no" is the answer rather than
+	// a failure. Carrying the error further would put "not yours" versus "does
+	// not exist" one careless log line away from a caller.
+	writable := recordIsWritableByCaller(ctx, tx, entityType, entityID) == nil
+	return recordFacts{archived: archived, writable: writable}, nil
+}
+
+// pageRow is an AuditRow with the boundary answer the page query already found.
+type pageRow struct {
+	AuditRow
+	behindErasure bool
+}
+
+// pageRows reads the page's audit rows in ONE query, carrying the erasure
+// boundary on each through privacy's OWN predicate. Restating that predicate
+// here is how two readers of one erasure come to disagree about where it sits,
+// and an Art. 17 boundary is not a rule where almost-the-same is survivable.
+func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, auditIDs []ids.UUID) ([]pageRow, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT a.id, a.entity_type, a.entity_id, a.action, a.before, a.occurred_at,
+		       NOT (`+privacy.UnscrubbedImageSQL("a", "$3")+`) AS behind_erasure
+		FROM audit_log a
+		WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.id = ANY($4::uuid[])`,
+		entityType, entityID, privacy.ScrubVerbs(), auditIDs)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var out []pageRow
+	for rows.Next() {
+		var row pageRow
+		if err := rows.Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action,
+			&row.Before, &row.OccurredAt, &row.behindErasure); err != nil {
+			return nil, err
+		}
+		out = append(out, row)
+	}
+	return out, rows.Err()
+}
+
+// liveReversals is the set of audit rows a live restore already reverses — one
+// query for the page, riding idx_audit_entity on the record's own rows. A
+// reversal that has itself been reversed is not live, which is what keeps the
+// trail navigable in both directions rather than a one-way ratchet.
+func (p UndoabilityPage) liveReversals(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (map[string]bool, error) {
+	rows, err := tx.Query(ctx, `
+		SELECT undo.evidence ->> $3 FROM audit_log undo
+		WHERE undo.entity_type = $1 AND undo.entity_id = $2
+		  AND undo.evidence ? $3
+		  AND NOT EXISTS (
+		    SELECT 1 FROM audit_log reundo
+		    WHERE reundo.entity_type = undo.entity_type
+		      AND reundo.entity_id = undo.entity_id
+		      AND reundo.evidence ->> $3 = undo.id::text)`,
+		entityType, entityID, privacy.UndidAuditLogID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	undone := map[string]bool{}
+	for rows.Next() {
+		var undid string
+		if err := rows.Scan(&undid); err != nil {
+			return nil, err
+		}
+		undone[undid] = true
+	}
+	return undone, rows.Err()
+}
+
+// judge asks the same branches the write binds, in the same order, with the
+// page-level facts already in hand. The ports answer from those facts rather
+// than querying, which is what makes the page flat in its size while leaving
+// ONE set of branches to keep correct.
+func (p UndoabilityPage) judge(ctx context.Context, tx pgx.Tx, row pageRow,
+	shared recordFacts, undone map[string]bool,
+) (privacy.UndoabilityAnswer, error) {
+	advisory := Evaluator{
+		Archived: func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) {
+			return shared.archived, nil
+		},
+		Writable: func(context.Context, pgx.Tx, string, ids.UUID) error {
+			if shared.writable {
+				return nil
+			}
+			return errRecordNotWritable
+		},
+		BehindErasure: func(context.Context, pgx.Tx, AuditRow) (bool, error) {
+			return row.behindErasure, nil
+		},
+		AlreadyUndone: func(_ context.Context, _ pgx.Tx, r AuditRow) (bool, error) {
+			return undone[r.ID.String()], nil
+		},
+		Unwritable: valuesNoLongerWritable,
+	}
+	answer, err := advisory.Evaluate(ctx, tx, row.AuditRow, Advisory)
+	if err != nil {
+		return privacy.UndoabilityAnswer{}, err
+	}
+	return privacy.UndoabilityAnswer{
+		Undoable: answer.Undoable,
+		Reason:   string(answer.Reason),
+		Detail:   answer.Detail,
+	}, nil
+}
+
+// errRecordNotWritable stands for the row-scope refusal without carrying it.
+// The evaluator only asks whether the port returned an error, and the real one
+// separates "not yours" from "does not exist" — the distinction the row-scope
+// gate keeps hidden.
+var errRecordNotWritable = fmt.Errorf("the caller may not change this record")
