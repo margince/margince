@@ -111,7 +111,13 @@ func TestAMeetingWithNoStatusIsStillWorthPreparingFor(t *testing.T) {
 // booked one. The window is the database's now, so the bound is the day.
 func TestABusyCalendarStillShowsTheSoonestMeetings(t *testing.T) {
 	e := integration.Setup(t)
-	now := time.Now().UTC().Truncate(time.Hour).Add(6 * time.Hour)
+	// Anchored to the START of a day, not to the wall clock like its siblings
+	// above. They book RELATIVE to `now`, so the hour the suite runs cannot
+	// reach them; this one books at ABSOLUTE hours and then names 08:00, so a
+	// `now` carried off the wall decides whether 08:00 is still ahead at all.
+	// Derived from the clock it did pass between 00:00 and 02:00 UTC and failed
+	// the rest of the day.
+	now := time.Now().UTC().Truncate(24 * time.Hour).Add(7 * time.Hour)
 	// Far more later-today meetings than the lane carries, booked out of order
 	// so the answer cannot come from insertion order.
 	for hour := 17; hour >= 8; hour-- {
