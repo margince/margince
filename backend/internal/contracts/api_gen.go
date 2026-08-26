@@ -37871,6 +37871,9 @@ type ServerInterface interface {
 	// Delete a document, its chunks, its vectors and its stored file.
 	// (DELETE /knowledge/documents/{id})
 	DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Download a document's own bytes.
+	// (GET /knowledge/documents/{id})
+	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
 	// List disqualification reasons, active and inactive, in display order.
 	// (GET /lead-disqualify-reasons)
 	ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request)
@@ -39965,6 +39968,12 @@ func (_ Unimplemented) UploadCorpusDocument(w http.ResponseWriter, r *http.Reque
 // Delete a document, its chunks, its vectors and its stored file.
 // (DELETE /knowledge/documents/{id})
 func (_ Unimplemented) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download a document's own bytes.
+// (GET /knowledge/documents/{id})
+func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -50229,6 +50238,38 @@ func (siw *ServerInterfaceWrapper) DeleteCorpusDocument(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DeleteCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadCorpusDocument operation middleware
+func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadCorpusDocument(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64143,6 +64184,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/knowledge/documents/{id}", wrapper.DeleteCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-disqualify-reasons", wrapper.ListLeadDisqualifyReasons)

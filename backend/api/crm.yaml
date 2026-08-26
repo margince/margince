@@ -15460,6 +15460,29 @@ paths:
   /knowledge/documents/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Knowledge]
+      operationId: downloadCorpusDocument
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Download a document's own bytes.
+      description: >-
+        What a CITATION POINTS AT. An answer names the document a sentence rests on,
+        quotes it, and says which line the quote begins on; without a way to open the
+        file the reader cannot see the quote in place, and a citation nobody can follow
+        is a citation in name only.
+
+        Gated on `knowledge_document:read`, which every seeded role holds, because the
+        person who received the answer is the person who needs to check it.
+      responses:
+        '200':
+          description: The file bytes; Content-Disposition names the file.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
     delete:
       tags: [Knowledge]
       operationId: deleteCorpusDocument

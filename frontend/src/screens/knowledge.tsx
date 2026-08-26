@@ -48,6 +48,14 @@ function useDocumentSets(enabled: boolean) {
   return useQuery({
     enabled,
     queryKey: SETS_KEY,
+    // A rebind sweep moves these counts with no document changing status, so
+    // this list has one in-flight signal of its own. The ordinary ingest case
+    // is driven from the document list instead, which is the thing that knows
+    // when it is finished — see useDocuments.
+    refetchInterval: (query) =>
+      query.state.data?.items?.some((set) => set.reindexing)
+        ? INGEST_POLL_MS
+        : false,
     queryFn: async () => {
       const { data, error, response } = await api.GET("/knowledge/corpora");
       if (error || !response.ok) {
@@ -56,6 +64,21 @@ function useDocumentSets(enabled: boolean) {
       return data;
     },
   });
+
+  // The set's own line — "10 documents, N of M passages searchable" — is served
+  // by a DIFFERENT query, so it does not move when a document finishes being
+  // read. Refreshed here at the moment this list settles, because that is where
+  // the transition is observable: the alternative is polling the sets list on a
+  // condition it cannot see, which would either never stop or never start.
+  const items = query.data?.items;
+  const done = items !== undefined && settled(items);
+  useEffect(() => {
+    if (done) {
+      void client.invalidateQueries({ queryKey: SETS_KEY });
+    }
+  }, [done, client]);
+
+  return query;
 }
 
 function useCreateDocumentSet() {
@@ -88,10 +111,35 @@ function useArchiveDocumentSet() {
   });
 }
 
+// How often the list asks again while an ingest is still moving. Slow enough
+// that a set of twenty documents is not a request every second, fast enough
+// that a reader watching a file they just dropped sees it change without
+// wondering whether the page is broken.
+const INGEST_POLL_MS = 2500;
+
+// settled is a document whose status will not change on its own. Only `queued`
+// and `running` are waiting on a worker; `done` and `failed` are both final,
+// and a failed one must NOT hold the poll open or a set with one bad file
+// polls for as long as the tab is open.
+function settled(documents: readonly CorpusDocument[]): boolean {
+  return documents.every(
+    (doc) => doc.ingest_status !== "queued" && doc.ingest_status !== "running",
+  );
+}
+
 function useDocuments(corpusId: string, enabled: boolean) {
-  return useQuery({
+  const client = useQueryClient();
+  const query = useQuery({
     enabled,
     queryKey: documentsKey(corpusId),
+    // Ingest is asynchronous, so the status shown at upload is a snapshot of
+    // one instant. Without this the badges sit on "Waiting to be read" until a
+    // reload — the screen reporting a state the server left minutes ago, which
+    // is worse than showing nothing because it looks live.
+    refetchInterval: (query) => {
+      const items = query.state.data?.items;
+      return items && settled(items) ? false : INGEST_POLL_MS;
+    },
     queryFn: async () => {
       const { data, error, response } = await api.GET(
         "/knowledge/corpora/{id}/documents",
