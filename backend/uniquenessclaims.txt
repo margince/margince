@@ -14,8 +14,10 @@
 #
 # WIDENING A DETECTOR SHAPE IS NOT ADDING A CLAIM. A shape that learns to see a
 # wording it used to miss finds claims that were already here, and this file
-# grows to hold them. `registeredDebt` in the gate is the ceiling that growth
-# has to pass through.
+# grows to hold them. `shapeCensus` in the gate is the ceiling that growth has
+# to pass through, and it is kept per shape: narrowing a shape empties lines
+# out of this file while auditing nothing, and a single total cannot tell that
+# from the work it looks like.
 #
 # THE NUMBER IS THE POINT, AND IT OTHERWISE ONLY GOES DOWN. To remove a line: write the
 # test that fails when a second implementation appears and name it in the doc
@@ -23,11 +25,13 @@
 # describing an unheld claim FAILS the gate, so this file cannot rot beside the
 # tree it describes.
 #
-# There are no per-entry reasons on purpose. 646 rationalisations written by
-# somebody who has not audited the claims would be worse than an honest count of
-# what is unaudited.
+# There are no per-entry reasons on purpose. Six hundred rationalisations
+# written by somebody who has not audited the claims would be worse than an
+# honest count of what is unaudited. The count itself is not restated here: it
+# is whatever this file holds, and a second copy of it drifts.
 #
 # Sorted, one key per line: <path>#<declaration>.
+
 ../desktop/launcher/console.go#func say
 ../desktop/launcher/main.go#type stack
 ../extensions/notes/note.go#const noteColumns
@@ -38,7 +42,6 @@
 ../extensions/relay-probe/relayprobe.go#const ingressSystem
 ../extensions/relay-probe/walk.go#type walkResult.items
 aiactivitycatalogparity_test.go#func producedKinds
-airoutingschema_test.go#func TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration
 aitaskrailcensus_test.go#func everyRoutableTask
 aitaskrailcensus_test.go#var carrierSources
 arch_test.go#var modelClientConstructors
@@ -50,7 +53,6 @@ edgereaders_test.go#const edgeTable
 edgereaders_test.go#var edgeReaderScope
 enumsync_test.go#func recordChecks
 envcontract_test.go#func liveEnvVars
-envcontract_test.go#var deploySurfaceRoots
 fieldnames_test.go#const internalTree
 geocodestaleness_test.go#var addressColumns
 internal/compose/accountdraft/deterministic.go#type Draft
@@ -66,7 +68,6 @@ internal/compose/aicert/reportcmd/report.go#var reportColumns
 internal/compose/aicert/run.go#type runCalls
 internal/compose/aicert/scenario.go#const sourceHandAuthored
 internal/compose/approval_kinds_test.go#var exportedApprovalKinds
-internal/compose/archiverouting_test.go#func TestTheCompositeArchivesWhatItsModulesArchive
 internal/compose/backfilltransport.go#func backfillStatusPayload
 internal/compose/backfilltransport.go#func writeBackfillJSON
 internal/compose/bodyceilingcensus_test.go#var httpMethods
@@ -128,7 +129,6 @@ internal/compose/gmailpush.go#func handleGmailPush
 internal/compose/heldrelease_integration_test.go#const draftRecipient
 internal/compose/idempotency.go#const replayWindow
 internal/compose/installation.go#func seedRoutingBinding
-internal/compose/integration/agentaccess/mcp_transport_integration_test.go#func TestMCPOnTheAPIServesTheAPIsOwnToolSurface
 internal/compose/integration/agentaccess/oauth_integration_test.go#method oauthEnv.postToken
 internal/compose/integration/agentaccess/oauth_lend_integration_test.go#method oauthEnv.approve
 internal/compose/integration/apptest/appdsn.go#func AppDSN
@@ -152,7 +152,6 @@ internal/compose/integration/recordhistory_http_integration_test.go#const record
 internal/compose/integration/requiredbodyids_http_integration_test.go#func requiredIDCases
 internal/compose/integration/scheduledsend_integration_test.go#method preflightEnv.seedConsentedRecipient
 internal/compose/integration/seatmatrix_integration_test.go#func seededRoles
-internal/compose/integration/uploadceiling_integration_test.go#func TestTheInstallationReadPublishesTheConfiguredCeiling
 internal/compose/integration/webhooks/webhooks_integration_test.go#method webhookEnv.inWorkspaceTx
 internal/compose/integration/workflow_replay_integration_test.go#const block at const routeLeadHandler
 internal/compose/integration/writeauthorityreview_integration_test.go#func TestAReadShareOfADealCannotRewriteItsContracts
@@ -219,7 +218,6 @@ internal/compose/queryseam.go#func queryRunner
 internal/compose/replydraft.go#type replyDrafter.envelope
 internal/compose/replydraftmodel.go#method replyDrafter.completeChecked
 internal/compose/report.go#method reportSpec.fromClause
-internal/compose/report_winloss_integration_test.go#func TestAnUnsetFilterMeansTheSameThingOnBothDoors
 internal/compose/reportcatalog.go#func catalogFilterNames
 internal/compose/reporterrors.go#const block at const slotGroupBy
 internal/compose/reporterrors.go#const reportFieldNotAllowedCode
@@ -258,7 +256,6 @@ internal/modules/activities/linktarget.go#var linkIDCoalesce
 internal/modules/activities/mapping.go#const fieldBody
 internal/modules/activities/messageidentity.go#func copyEchoLinks
 internal/modules/activities/messageidentity_absorb_integration_test.go#func TestAbsorbLeavesTheEchosProjectLinkBehindWhenTheSurvivorHasOne
-internal/modules/activities/messageidentity_absorb_integration_test.go#func TestLogActivityStillWritesTheMarkOnTheUpdateGrantAlone
 internal/modules/activities/orgscope.go#func ActivityWithinProject
 internal/modules/activities/orgscope.go#func OrgLinkedActivityExists
 internal/modules/activities/pipelinefacts.go#const kindEmail
@@ -281,7 +278,6 @@ internal/modules/agents/apps/apps.go#const block at const AccountBriefURI
 internal/modules/agents/apps/apps.go#func DeclaredViews
 internal/modules/agents/apps/fetch.go#method Fetcher.documentURL
 internal/modules/agents/apps/hold.go#type Provider.quietMu
-internal/modules/agents/apps/validate_test.go#func TestTheAdmissionVocabularyMatchesTheFrontend
 internal/modules/agents/command.go#method routedRecordTarget.refuse
 internal/modules/agents/command.go#type anchoredRecord
 internal/modules/agents/command.go#type routedRecordTarget
@@ -299,7 +295,6 @@ internal/modules/agents/outputshapes.go#const envelopeDataMember
 internal/modules/agents/outputshapes_test.go#func TestDeclaredOutputSchemasMatchTheCommittedRendering
 internal/modules/agents/outputshapes_test.go#func renderDeclaredSchemas
 internal/modules/agents/quotarelease.go#type QuotaReleaseRequest.Proposal
-internal/modules/agents/recordfields_test.go#func TestContractFieldNamesReadsTheWireNames
 internal/modules/agents/recordtyped.go#const block at const typeLead
 internal/modules/agents/registration.go#func envelopedSpec
 internal/modules/agents/registration.go#func unitOwned
@@ -399,7 +394,6 @@ internal/modules/customfields/engine.go#var FieldObjects
 internal/modules/customfields/privilege_boundary_test.go#func isStorekitAuditCall
 internal/modules/customfields/service.go#const catalogColumns
 internal/modules/dealrooms/document_read.go#func documentIDOf
-internal/modules/dealrooms/documentmembership_test.go#func TestRoomDocumentMembershipIsSpelledOnce
 internal/modules/dealrooms/errors.go#const block at const codeTooLong
 internal/modules/dealrooms/errors.go#const codeRequired
 internal/modules/dealrooms/lifecycle.go#const block at const stateDraft
@@ -409,7 +403,6 @@ internal/modules/deals/basecurrencyfreeze.go#var frozenRateTables
 internal/modules/deals/handlers.go#func WriteOfferError
 internal/modules/deals/listfilters.go#const block at const filterOrganizationID
 internal/modules/deals/offer.go#func recomputeOfferTotals
-internal/modules/deals/pipeline.go#func readPipeline
 internal/modules/deals/store.go#const block at const listCreatedAtColumn
 internal/modules/finance/audit.go#const block at const entityInvoice
 internal/modules/identity/authority.go#func RBACObjectGrantable
@@ -471,7 +464,6 @@ internal/modules/people/leadmanualsignal.go#const block at const auditKeyManualS
 internal/modules/people/leadrouting.go#var RoutableLeadFields
 internal/modules/people/leadslaworkflow.go#func humanLoggedNote
 internal/modules/people/leadstatus.go#method LeadStatus.Open
-internal/modules/people/leadstatus_test.go#func TestParseWritableLeadStatusRefusesTerminalStates
 internal/modules/people/linkedinimport.go#const block at const csvFirst
 internal/modules/people/linkedinmatch.go#method Store.MatchLinkedInConnections
 internal/modules/people/linkedinmatch.go#var suggestNameEmployerMatchSQL
@@ -628,7 +620,6 @@ pkg/extension/ingress.go#type Record.Addresses
 pkg/extension/job.go#const JobKindSuffix
 pkg/extension/job.go#method JobDeclaration.Validate
 pkg/extension/mergekey.go#const MergeKeyEmail
-pkg/extension/runtime_test.go#func TestRuntimeTxContractIsUsable
 pkg/extension/tool.go#method Tier.Validate
 pkg/extension/verb.go#const APIBasePath
 pkg/extension/verb.go#const RoutePrefix
@@ -653,7 +644,6 @@ tools/gen-composition/emit.go#type composition.Files
 tools/gen-composition/extmigrations.go#func derivedIdentifier
 tools/gen-composition/extverbs.go#const extensionRoutePrefix
 tools/gen-composition/extverbs.go#func operationHash
-tools/gen-composition/extverbschemas.go#func argumentSchema
 tools/gen-composition/main.go#const block at const manifestFile
 tools/gen-composition/scan.go#func coreDigest
 tools/gen-jobs/emitkinds.go#func emitKinds

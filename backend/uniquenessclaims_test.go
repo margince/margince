@@ -41,8 +41,8 @@ package backendarch
 // same defect as a uniqueness comment with no test behind it.
 //
 // THIS GATE DOES NOT AUDIT THE CLAIMS. It cannot: whether a claim is true is a
-// question about the whole tree, and there are 649 of them. What it does is
-// make the class stop GROWING, which is the half a test can hold:
+// question about the whole tree, and the tree holds hundreds of them. What it
+// does is make the class stop GROWING, which is the half a test can hold:
 //
 //   - A claim that names its gate is held. `Held by: TestName (path)` in the
 //     same doc comment, and this file checks that test exists.
@@ -56,13 +56,22 @@ package backendarch
 // CLOSED TO NEW CLAIMS, NOT TO A BETTER DETECTOR. A shape that learns to see a
 // wording it used to miss finds claims that were already there, and the
 // register grows to hold them; "closed" would otherwise mean the detector may
-// never improve, which is the opposite of the point. `registeredDebt` is the
-// line where that growth is agreed to.
+// never improve, which is the opposite of the point. `shapeCensus` is the line
+// where that growth is agreed to, one row per shape.
 //
-// The register is 638 lines with no reasons, and that is deliberate rather than
-// sloppy: a reason per entry would be 638 rationalisations written by somebody
-// who has not audited the claim, which is worse than an honest count of what is
-// unaudited. The number is the point. It is meant to go down.
+// The rows are per shape rather than one total because the number falls two
+// ways and only one of them is work. A claim leaves because it was held or
+// deleted, or because the detector stopped seeing it — and the second costs
+// nothing, changes no code a reader would notice, and reads exactly like the
+// first. Priced per shape, looking away has to say which shape stopped looking
+// and what it cost.
+//
+// The register carries no per-entry reasons, and that is deliberate rather than
+// sloppy: a reason per entry would be six hundred rationalisations written by
+// somebody who has not audited the claim, which is worse than an honest count
+// of what is unaudited. The number is the point, it is meant to go down, and it
+// is not restated here: a second hand-written copy of a derived total is the
+// thing shapeCensus exists to refuse.
 
 import (
 	"bufio"
@@ -71,6 +80,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -103,6 +113,14 @@ func allClaims(t *testing.T) []claim {
 // Both halves spell out the phrases they hunt for, so a sweep that read either
 // would register its own prose as debt.
 //
+// It answers TWO questions, which happen to have the same answer and are not
+// the same question: which files the sweep skips, and which files a `Held by:`
+// may not name. The second is because these arms judge the register rather than
+// any claim's subject. A gate arm added in a file of its own is covered by
+// neither until it is named here — and `exemptGateFiles` pins how many there
+// are, so adding one is a line somebody agrees to rather than a skip that
+// arrives with a refactor.
+//
 // By path and not by basename: a basename match would skip every file so named
 // in every swept tree, and a nested one could then carry an unbound claim.
 // Named rather than derived from the runtime, because runtime.Caller inside a
@@ -111,6 +129,7 @@ func allClaims(t *testing.T) []claim {
 var gateFiles = map[string]bool{
 	"uniquenessclaims_test.go":         true,
 	"uniquenessclaimsdetector_test.go": true,
+	"uniquenessclaimscorpus_test.go":   true,
 }
 
 const registerPath = "uniquenessclaims.txt"
@@ -157,7 +176,7 @@ func testFunctions(t *testing.T) map[string][]string {
 				return walkErr
 			}
 			if entry.IsDir() {
-				if name := entry.Name(); name == "node_modules" || name == "testdata" {
+				if unauthoredDir(entry.Name()) {
 					return fs.SkipDir
 				}
 				return nil
@@ -224,6 +243,14 @@ func TestANamedGateExistsAndLivesWhereTheClaimSaysItDoes(t *testing.T) {
 		if !namesTheFile(files, c.heldIn) {
 			t.Errorf("%s:%d %s names %s in %s; that test is declared in %s",
 				c.path, c.line, c.decl, c.held, c.heldIn, strings.Join(files, ", "))
+			continue
+		}
+		if file, isArm := declaredInAGateArm(files); isArm {
+			t.Errorf("%s:%d %s names %s, which is one of this gate's own arms in %s.\n\n"+
+				"Those arms judge the register, not the claim's subject, so the binding "+
+				"would hold nothing. Name the test that fails when a second implementation "+
+				"appears, or leave the claim in the register until one exists.",
+				c.path, c.line, c.decl, c.held, file)
 		}
 	}
 	// A gate that judges nothing passes exactly like one that judges a clean
@@ -233,6 +260,23 @@ func TestANamedGateExistsAndLivesWhereTheClaimSaysItDoes(t *testing.T) {
 		t.Error("no claim in the tree names a gate — this arm judged nothing, which is " +
 			"indistinguishable from every binding being correct")
 	}
+}
+
+// declaredInAGateArm reports whether a binding names a test declared in one of
+// this gate's own sources, and which.
+//
+// Those arms judge the REGISTER — that it is sorted, that it totals what it
+// pins — and know nothing about any claim's subject, so binding to one
+// satisfies every other check here while holding nothing at all. It is the
+// cheapest way to retire a claim without auditing it, and unlike a narrowed
+// detector it moves the tree, so it reads as the good kind of progress.
+func declaredInAGateArm(paths []string) (string, bool) {
+	for _, path := range paths {
+		if gateFiles[path] {
+			return path, true
+		}
+	}
+	return "", false
 }
 
 // namesTheFile reports whether one of `paths` is the file the binding named.
@@ -389,9 +433,42 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 	}
 }
 
+// shapeCensus pins how many unheld claims each detector shape attributes, and
+// it is where the debt total comes from.
+//
+// A single total cannot tell the two ways it falls. A claim leaves the register
+// either because somebody HELD it or because the claim was deleted — both of
+// which change the tree — or because the DETECTOR stopped seeing it, which
+// changes nothing but the number. Deleting a shape and the register lines it
+// orphans satisfies every other arm in this file, and the claims it stopped
+// reaching are still in the tree, still unheld, and no longer counted.
+//
+// Per shape, that move has to state itself: the row goes to zero or disappears,
+// in a diff where the number sits beside the name of the thing that stopped
+// looking. It also catches the narrowing a whole-shape deletion does not —
+// trimming ONE alternative out of a regex leaves the shape matching plenty, so
+// every arm asking "does this shape match anything" stays green while the
+// claims that alternative reached go quiet. Here it is a failure naming the
+// shape and both counts.
+//
+// The rows churn as claims are held, and that is the point: real work shows as
+// a row falling, so the two kinds of progress are told apart by which number
+// moved and whether the tree moved with it.
+var shapeCensus = map[string]int{
+	"cannot-drift":   175,
+	"once":           158,
+	"one-of-a-kind":  156,
+	"is-every-named": 95,
+	"only-noun":      16,
+	"no-second":      10,
+	"never-twice":    6,
+	"is-every":       5,
+	"one-truth":      3,
+}
+
 // registeredDebt is the number of unheld claims this tree carries, tracked
-// EXACTLY: the register may not hold more, and may not hold fewer while this
-// still says so.
+// EXACTLY: the register may not hold more than the census totals, and may not
+// hold fewer.
 //
 // Pinned because "the register is closed to new entries" is a claim, and a
 // claim about membership that nothing counts is what this gate refuses
@@ -399,22 +476,96 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // claim, which a line added for a claim written this morning satisfies
 // perfectly. Only a count catches that.
 //
+// DERIVED from the census above rather than written beside it, because two
+// hand-written totals of one population are two answers to one question, and
+// the one that stops matching looks exactly like the one that still does.
 // Lowering it is the point of the file it counts; raising it is legal and is
 // what a widened detector shape requires.
-const registeredDebt = 638
+func registeredDebt() int {
+	total := 0
+	for _, count := range shapeCensus {
+		total += count
+	}
+	return total
+}
 
 func TestTheRegisterHoldsExactlyTheDebtItPins(t *testing.T) {
 	keys := readRegister(t)
-	if len(keys) > registeredDebt {
+	debt := registeredDebt()
+	if len(keys) > debt {
 		t.Errorf("the register holds %d entries against a ceiling of %d.\n\n"+
 			"A claim written today must name the test that holds it, not take a line here. "+
 			"If a DETECTOR shape was widened, it now sees claims that were already in the tree: "+
-			"raise registeredDebt in the same change, so the growth is one line somebody agreed to.",
-			len(keys), registeredDebt)
+			"raise that shape's row in shapeCensus in the same change, so the growth is one "+
+			"line somebody agreed to.",
+			len(keys), debt)
 	}
-	if len(keys) < registeredDebt {
-		t.Errorf("the register holds %d entries and the ceiling still says %d — lower it, "+
-			"because the number is the thing this file is for", len(keys), registeredDebt)
+	if len(keys) < debt {
+		t.Errorf("the register holds %d entries and the census still totals %d — lower the row "+
+			"of the shape whose claims were held, because the number is the thing this file is for",
+			len(keys), debt)
+	}
+}
+
+// TestEveryShapeAttributesTheClaimsItsCensusPins is the mirror of the arm above:
+// that one holds the register against the census, this one holds the census
+// against the DETECTOR.
+//
+// Without it the census is a second hand-written number rather than a
+// measurement, and the move it exists to price — narrowing a shape until it
+// stops reaching claims — is paid for by editing the very row that was supposed
+// to notice.
+func TestEveryShapeAttributesTheClaimsItsCensusPins(t *testing.T) {
+	attributed := map[string]int{}
+	for _, c := range allClaims(t) {
+		if c.held == "" {
+			attributed[c.shape]++
+		}
+	}
+	// A shape the detector no longer carries, still pinned here. This is the
+	// deletion the whole census is for, and it reports the cost rather than
+	// only the fact.
+	live := map[string]bool{namedShape: true}
+	for name := range claimShapes {
+		live[name] = true
+	}
+	for _, shape := range slices.Sorted(maps.Keys(shapeCensus)) {
+		if !live[shape] {
+			t.Errorf("shapeCensus pins %d claim(s) to shape %q and the detector no longer "+
+				"declares it — a shape that stops looking lowers this file's number without "+
+				"auditing a single claim. Hold or delete those claims, or say in the detector "+
+				"why the shape was never a claim form",
+				shapeCensus[shape], shape)
+		}
+	}
+	for _, shape := range append(sortedShapes(), namedShape) {
+		pinned, ok := shapeCensus[shape]
+		if !ok {
+			t.Errorf("shape %q attributes %d unheld claim(s) and has no row in shapeCensus — "+
+				"an unpinned shape can be narrowed to nothing and every arm here stays green",
+				shape, attributed[shape])
+			continue
+		}
+		if got := attributed[shape]; got != pinned {
+			t.Errorf("shape %q attributes %d unheld claim(s), and shapeCensus pins %d.\n\n"+
+				"Fewer means the shape stopped reaching claims it used to reach: either they "+
+				"were held or deleted — lower the row — or the regex was narrowed, which is the "+
+				"move this row exists to make somebody agree to. More means it was widened, and "+
+				"the claims it now sees were always in the tree.",
+				shape, got, pinned)
+		}
+	}
+	// A row pinned at zero is a shape that has stopped attributing anything,
+	// which reads here as a satisfied obligation and is a dead detector. It is
+	// refused rather than tolerated, because the arm above compares two numbers
+	// and 0 == 0 is the one comparison that holds while nothing is being
+	// measured.
+	for _, shape := range slices.Sorted(maps.Keys(shapeCensus)) {
+		if shapeCensus[shape] == 0 {
+			t.Errorf("shapeCensus pins shape %q at zero — delete the shape deliberately, or "+
+				"restore what it was written to see; a row of zero passes exactly like a shape "+
+				"whose claims were all held", shape)
+		}
 	}
 }
 
@@ -538,6 +689,115 @@ func TestNoShapeReadsOrdinaryProseAsAClaim(t *testing.T) {
 			t.Errorf("shape %q has no near-miss case — it could be widened into ordinary "+
 				"English and this arm would stay green", shape)
 		}
+	}
+}
+
+// TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt covers both
+// directions of the compound-word exclusion.
+//
+// One direction is the false reading it refuses: a match opening mid-word
+// quantifies nothing. The other is the blind spot the refusal could become — a
+// doc comment holding a compound AND a real claim must still register the real
+// one, or every claim that happens to follow a hyphenated word goes quiet and
+// the register falls with nothing to say why.
+func TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt(t *testing.T) {
+	onlyNoun := claimShapes["only-noun"]
+	if onlyNoun == nil {
+		t.Fatal("the only-noun shape is gone, so the cases below prove nothing about it")
+	}
+	compounds := []string{
+		"letting a bare status edit set them lets a lead:update-only caller skip the person mint",
+		"a Go-only definition of live would drift from the config layer the product reads",
+		"the empty single-row read, through a stdlib-only implementation",
+		"that is the defect the old body-only reader had in mirroring",
+	}
+	for _, sentence := range compounds {
+		if phrase := claimPhrase(onlyNoun, sentence, nil); phrase != "" {
+			t.Errorf("%q read as a claim (%q) — `only` there is the tail of a hyphenated "+
+				"modifier and quantifies nothing", sentence, phrase)
+		}
+		// The pattern itself still matches: the exclusion is the reader's, so
+		// a case that stopped grazing the shape would stop proving anything.
+		if !onlyNoun.MatchString(sentence) {
+			t.Errorf("%q no longer matches the only-noun shape at all, so it is not a "+
+				"near-miss of anything and this case has gone decorative", sentence)
+		}
+	}
+	// The claim survives a compound earlier in the same comment.
+	const both = "It stops the CREATE-only caller. The store is the only writer of that column."
+	if phrase := claimPhrase(onlyNoun, both, nil); phrase != "only writer" {
+		t.Errorf("claimPhrase(%q) = %q, want %q — a compound before a claim must not "+
+			"swallow it", both, phrase, "only writer")
+	}
+	// A NON-BREAKING HYPHEN joins a compound exactly as the ASCII one does, and
+	// reading the preceding BYTE sees only the last third of it. The case is
+	// here rather than left to the tree because the tree happens not to contain
+	// one today, which is what makes it the spelling a regression would take.
+	const nonBreaking = "a Go‑only definition of live would drift from the config layer"
+	if phrase := claimPhrase(onlyNoun, nonBreaking, nil); phrase != "" {
+		t.Errorf("claimPhrase read %q from %q — U+2011 joins a compound and the match is "+
+			"still the tail of a word", phrase, nonBreaking)
+	}
+	// An em-dash is sentence punctuation here, not a joiner, so a claim opening
+	// after one is an ordinary claim and must still register. Suppressing it
+	// would turn the compound fix into a new blind spot across the whole tree,
+	// which uses em-dashes constantly.
+	const emDash = "the store—only writer of that column—answers"
+	if phrase := claimPhrase(onlyNoun, emDash, nil); phrase != "only writer" {
+		t.Errorf("claimPhrase(%q) = %q, want %q — an em-dash separates clauses and does "+
+			"not make the next word a compound", emDash, phrase, "only writer")
+	}
+
+	// A shape that opens on a VERB rather than on the quantifier keeps its
+	// claim when the verb is compounded. `hand-written` is this tree's own
+	// idiom, so a rule keyed on the match's start rather than on the
+	// quantifier would silence the second-largest shape with ordinary prose,
+	// and nothing here would fail.
+	once := claimShapes["once"]
+	if once == nil {
+		t.Fatal("the once shape is gone, so the cases below prove nothing about it")
+	}
+	for _, sentence := range []string{
+		"The route table is hand-written once, in composeRoutes.",
+		"The timeout is well-defined once, in the config loader.",
+		"Every column is auto-named once, by the generator.",
+	} {
+		if phrase := claimPhrase(once, sentence, nil); phrase == "" {
+			t.Errorf("claimPhrase read no claim from %q — the compounded word is the verb, "+
+				"and the sentence still says the thing is written once", sentence)
+		}
+	}
+}
+
+// TestAnIdiomDoesNotHideTheDerivedShapesRealClaim covers the derived shape's
+// own version of the defect above.
+//
+// `namedExhaustiveness` is prefiltered before it joins the shape list, and the
+// idiom rule travels with the pattern rather than being applied to that
+// prefilter alone. Applied there, a comment whose FIRST "<name> is every …" is
+// the "every bit" idiom would never add the shape, and the real claim in the
+// next sentence would be invisible to every arm — the two readings of one text
+// have to agree about which match is the claim.
+func TestAnIdiomDoesNotHideTheDerivedShapesRealClaim(t *testing.T) {
+	named := namedExhaustiveness("func Read")
+	if named == nil {
+		t.Fatal("the derived shape built nothing for a plain function, so this case proves nothing")
+	}
+	// The idiom has to MATCH the pattern to be the first match — the shape
+	// wants the declaration's own name immediately before "is every", so a
+	// sentence merely containing the idiom reaches the reject arm never, and
+	// the case would pass without exercising it.
+	const idiomFirst = "Read is every bit as ordered as Write.\n" +
+		"Read is every reader of the authoritative row.\n"
+	if phrase := claimPhrase(named, idiomFirst, intensifier); phrase == "" {
+		t.Errorf("the derived shape found no claim in %q — an idiom in the first sentence "+
+			"must not hide the exhaustiveness claim in the second", idiomFirst)
+	}
+	// And the idiom alone still claims nothing, or the rule above has been
+	// widened into ordinary English.
+	const idiomOnly = "Read is every bit as ordered as Write, and neither is buffered."
+	if phrase := claimPhrase(named, idiomOnly, intensifier); phrase != "" {
+		t.Errorf("the derived shape read %q from an idiom-only comment: %q", phrase, idiomOnly)
 	}
 }
 

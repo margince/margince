@@ -15,6 +15,8 @@ import (
 // if any of them grew its own SQL for "is this the deal's file", the next
 // change to the rule would reach two of the three and the buyer would keep
 // downloading a file the seller had hidden.
+//
+// Held by: TestRoomDocumentMembershipIsSpelledOnce (backend/internal/modules/dealrooms/documentmembership_test.go) — this test.
 func TestRoomDocumentMembershipIsSpelledOnce(t *testing.T) {
 	readers := map[string]bool{
 		"document_write.go":         false,

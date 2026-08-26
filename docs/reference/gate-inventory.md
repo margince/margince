@@ -50,7 +50,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 
-## Census (49)
+## Census (50)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -102,6 +102,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `satellite_lifecycle_test.go` | H2 | Person-satellite lifecycle reach as a fitness function. |
 | `scrubverbs_test.go` | H2 | Every verb the privacy module writes is judged a scrub or ratified as not one. |
 | `settingscatalog_test.go` | H3 | The settings-catalog fitness gates (ADR-0090/A135 §7). |
+| `uniquenessclaimscorpus_test.go` | H2 | WHERE the claim sweep looks, as against what it looks for. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 
 ## Reachability (14)

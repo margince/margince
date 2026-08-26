@@ -59,6 +59,8 @@ func compiledRoutingSchema(t *testing.T) *jsonschema.Schema {
 
 // The `input:` acceptance matrix, asserted against the editor's authority and
 // the runtime's in one table so the two cannot drift apart silently.
+//
+// Held by: TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration (backend/airoutingschema_test.go) — this test.
 func TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration(t *testing.T) {
 	t.Setenv("GEMINI_API_KEY", "k")
 	t.Setenv("OPENAI_COMPATIBLE_API_KEY", "k")

@@ -21,6 +21,7 @@ import (
 	"regexp"
 	"sort"
 	"strings"
+	"unicode/utf8"
 )
 
 // claimShapes are the ways this tree says "this is the only one".
@@ -112,6 +113,88 @@ func namedExhaustiveness(decl string) *regexp.Regexp {
 	return regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(name) + `\b\s+(?:is|are) every\s+(\w+)`)
 }
 
+// claimPhrase returns the first match that is a claim rather than prose, and ""
+// when the pattern reaches nothing else.
+//
+// `\bonly caller` matches inside "a lead:update-only caller", where "only"
+// binds leftwards into the compound and quantifies nothing: the sentence says
+// which KIND of caller, not that there is one. Ordinary prose of that shape is
+// common — "Go-only definition", "stdlib-only implementation", "body-only
+// reader" — and a register counting it as unaudited debt is a register whose
+// number means less than it says.
+//
+// A hyphen is the discriminator rather than a list of the compounds seen so
+// far, because the next one will be spelled differently and a list would miss
+// it. Applied to every shape, not just the one that has the problem today: a
+// match that begins immediately after a hyphen is the second half of a word in
+// any of them.
+//
+// Go's regexp has no lookbehind, so this reads what precedes the match rather
+// than expressing the exclusion in the pattern — the same trade `intensifier`
+// makes below, for the same missing feature.
+//
+// Every match is examined, not only the first. Returning "" because the first
+// match was prose would un-see every claim that happens to FOLLOW a hyphenated
+// word, and the register would fall with nothing to say why — the same defect
+// one rung down from the one the shape census exists to price.
+//
+// reject, when non-nil, is asked about the match's first capture group and says
+// whether that match is prose. It carries the derived shape's `intensifier`
+// rule, which has to be applied HERE rather than beside the caller: a shape
+// whose first match is an idiom still qualifies on a later real one.
+func claimPhrase(pattern *regexp.Regexp, text string, reject func(string) bool) string {
+	for _, span := range pattern.FindAllStringSubmatchIndex(text, -1) {
+		if compoundedQuantifier(text, span[0], span[1]) {
+			continue
+		}
+		if reject != nil && len(span) >= 4 && span[2] >= 0 && reject(text[span[2]:span[3]]) {
+			continue
+		}
+		return text[span[0]:span[1]]
+	}
+	return ""
+}
+
+// compoundedQuantifier reports whether a match opens on a QUANTIFIER that is
+// the tail of a hyphenated word, where it binds leftwards and quantifies
+// nothing.
+//
+// By RUNE and not by byte: `text[index-1]` reads the last continuation byte of
+// whatever multi-byte character precedes the match, and U+2011 NON-BREAKING
+// HYPHEN joins a compound exactly as U+002D does while ending in a byte that is
+// not `-`. Reading the rune costs nothing and removes a whole spelling of the
+// same false positive.
+//
+// The dashes are deliberately NOT here. An em- or en-dash in this tree is
+// sentence punctuation — "the store — the only writer" — and a clause opening
+// after one is ordinary prose making an ordinary claim. Only characters that
+// join two halves of a single word suppress a match.
+//
+// And only when the compounded word is the QUANTIFIER. Most shapes open on a
+// verb instead, where a hyphen changes nothing about the claim: "the route
+// table is hand-written once" says exactly what "written once" says, and
+// suppressing it would silence a whole shape — `hand-written` is this tree's
+// own idiom, so ordinary prose would trip it. Over-collecting costs a register
+// line somebody resolves; over-suppressing costs a claim nobody ever sees
+// again, so the rule is the narrow one.
+func compoundedQuantifier(text string, start, end int) bool {
+	if start <= 0 {
+		return false
+	}
+	previous, _ := utf8.DecodeLastRuneInString(text[:start])
+	switch previous {
+	case '-', '‐', '‑':
+	default:
+		return false
+	}
+	first, _, _ := strings.Cut(text[start:end], " ")
+	switch strings.ToLower(first) {
+	case "only", "one", "single", "no", "never", "not":
+		return true
+	}
+	return false
+}
+
 // intensifier reports whether "every <word>" is an English idiom rather than a
 // set assertion.
 //
@@ -156,6 +239,29 @@ var heldBy = regexp.MustCompile(`Held by:\s*(Test[A-Z_][A-Za-z0-9_]*)\s*\(([^)]+
 // `func Testhelperghost() {}` satisfies neither, and a gate that can never run
 // is not a gate.
 var goTestFunc = regexp.MustCompile(`(?m)^func (Test[A-Z_][A-Za-z0-9_]*)\([a-zA-Z_][a-zA-Z0-9_]* \*testing\.T\)`)
+
+// authoredGoFile reports whether a file is one somebody could have written a
+// claim in: Go, and not generated.
+//
+// Shared rather than respelled at each walk. Four sweeps in this gate ask "is
+// this a source an author wrote" — the claim sweep, the test-function sweep and
+// the two corpus sweeps — and they answered it three different ways, one of
+// them missing `.git`. A gate whose walks disagree about their own subject
+// reads green over whatever the narrowest of them skipped.
+func authoredGoFile(name string) bool {
+	return strings.HasSuffix(name, ".go") && !strings.HasSuffix(name, "_gen.go")
+}
+
+// unauthoredDir reports a directory no author writes into: an installed
+// dependency tree, a fixture directory, or git's own store. Nothing under one
+// can carry a claim somebody chose to make.
+func unauthoredDir(name string) bool {
+	switch name {
+	case "node_modules", "testdata", ".git":
+		return true
+	}
+	return false
+}
 
 // claimedTrees are the hand-written Go trees this rule covers. The backend
 // module is one tree, not all of them: extensions/, fixtures/, cli/ and
@@ -230,10 +336,7 @@ func findClaims(root string) ([]claim, error) {
 			return walkErr
 		}
 		if entry.IsDir() {
-			// node_modules holds a unit's installed dependency tree and
-			// testdata holds fixtures; neither is hand-written, so neither can
-			// carry a claim somebody chose to make.
-			if entry.Name() == "node_modules" || entry.Name() == "testdata" {
+			if unauthoredDir(entry.Name()) {
 				return fs.SkipDir
 			}
 			// The GENERATED contract package, by PATH. Matching the directory
@@ -246,7 +349,7 @@ func findClaims(root string) ([]claim, error) {
 			}
 			return nil
 		}
-		if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_gen.go") {
+		if !authoredGoFile(filepath.Base(path)) {
 			return nil
 		}
 		if gateFiles[filepath.ToSlash(path)] {
@@ -275,14 +378,19 @@ func findClaims(root string) ([]claim, error) {
 			for name, pattern := range claimShapes {
 				patterns[name] = pattern
 			}
+			// The derived shape's idiom rule travels WITH its pattern rather
+			// than being applied once here, so the two readings of the same
+			// text cannot disagree about which match is the claim.
+			rejects := map[string]func(string) bool{}
 			if named := namedExhaustiveness(decl); named != nil {
-				if match := named.FindStringSubmatch(text); match != nil && !intensifier(match[1]) {
+				if claimPhrase(named, text, intensifier) != "" {
 					shapes = append(shapes, namedShape)
 					patterns[namedShape] = named
+					rejects[namedShape] = intensifier
 				}
 			}
 			for _, shape := range shapes {
-				phrase := patterns[shape].FindString(text)
+				phrase := claimPhrase(patterns[shape], text, rejects[shape])
 				if phrase == "" {
 					continue
 				}

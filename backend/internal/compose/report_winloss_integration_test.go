@@ -324,6 +324,8 @@ func TestWinLossPeriodGrainsUseTheirCanonicalSpelling(t *testing.T) {
 // that answered "six" — from the same response, about the same question. The
 // package's whole premise is that an explanation cannot disagree with the number
 // it explains.
+//
+// Held by: TestAnUnsetFilterMeansTheSameThingOnBothDoors (backend/internal/compose/report_winloss_integration_test.go) — this test.
 func TestAnUnsetFilterMeansTheSameThingOnBothDoors(t *testing.T) {
 	e := setupForecast(t)
 	e.seedClosedDeal(t, "Unowned A", "won", "2025-03-04T10:00:00Z", 10000)

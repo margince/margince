@@ -63,6 +63,8 @@ func TestWriteToolSchemasPointAtThePublishedFieldVocabulary(t *testing.T) {
 // crm.yaml. That only holds while reflection actually reads json tags — a
 // shape that answered no field names would render an empty, confidently wrong
 // list, which is worse than the opaque object it replaced.
+//
+// Held by: TestContractFieldNamesReadsTheWireNames (backend/internal/modules/agents/recordfields_test.go) — this test.
 func TestContractFieldNamesReadsTheWireNames(t *testing.T) {
 	for recordType, shape := range createShapes {
 		names := contractFieldNames(shape)
