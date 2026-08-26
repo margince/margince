@@ -9279,6 +9279,77 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /records/{entity_type}/{id}/history/{audit_id}/restore:
+    parameters:
+      - name: entity_type
+        in: path
+        required: true
+        schema: { type: string, enum: [person, organization, deal, lead, project, activity] }
+      - $ref: '#/components/parameters/Id'
+      - name: audit_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: The history entry to put back. It must belong to the record named by the path; one that does not answers 404, never 403.
+    post:
+      tags: [Compliance]
+      operationId: restoreRecordChange
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Put one audited change back.
+      description: |
+        Re-applies the named history entry's before-image to the record, as an ordinary
+        update recorded with the `restore` verb and an `evidence.undid_audit_log_id` link
+        to the entry it reverses. There is no second write engine and no new table: the
+        write is the record's own update path, so every rule that path holds still holds.
+
+        **`If-Match` is REQUIRED here**, unlike every other mutating endpoint where it is
+        optional. A restore is decided from a history screen the person has been reading,
+        so the record may have moved under them between reading and pressing; last-write-wins
+        is not an acceptable default for a write whose entire premise is a prior state.
+
+        Whether an entry can be put back is COMPUTED, never stored, and it is evaluated
+        twice: advisorily on the history read, so the button is honest, and bindingly inside
+        this write's own transaction after the row lock, so the write cannot act on a
+        snapshot taken before it. The two agree on the SET of reasons; they may differ on
+        timing, which is why a `409` here can carry a reason the read did not show.
+
+        An agent may not call this. A restore is a human's authority, and reaching it
+        through an agent would let one launder a change it was not allowed to make directly.
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: { type: string }
+          description: >-
+            The last-seen record `version`, required. If the row's current version differs
+            the restore is rejected with `409 code: version_skew` and nothing is written —
+            re-read the record and its history, then decide again.
+      responses:
+        '200':
+          description: The change was put back. The body is the `restore` entry now in the record's history.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditHistoryEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The change cannot be put back. `code` is `version_skew` when the record moved
+            under the caller, and otherwise the `undoable.reason` the binding evaluation
+            returned — which may differ from what the read showed, because the read cannot
+            hold a lock.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                skew:
+                  value: { type: 'https://errors.gradion.com/version_skew', title: Version conflict, status: 409, code: version_skew, detail: The record changed since your last read; re-read and decide again. }
+                superseded:
+                  value: { type: 'https://errors.gradion.com/superseded', title: Cannot be put back, status: 409, code: superseded, detail: 'amount_minor was changed after this entry.' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /records/{entity_type}/{id}/context:
     parameters:
       - name: entity_type
@@ -25097,6 +25168,8 @@ components:
         actor_id: { type: string }
         passport_id: { type: [string, 'null'], format: uuid, description: Agent Seat Passport that authorized the change; present for agent actors only. }
         evidence: { type: [object, 'null'], additionalProperties: true, description: Grounding evidence for an agent-authored change; present for agent actors only. }
+        undoable:
+          $ref: '#/components/schemas/Undoability'
 
     FieldHistoryListResponse:
       type: object
@@ -25243,6 +25316,43 @@ components:
         before: { type: [object, 'null'], additionalProperties: true }
         after: { type: [object, 'null'], additionalProperties: true }
         summary: { type: string }
+        undoable:
+          $ref: '#/components/schemas/Undoability'
+
+    Undoability:
+      type: object
+      description: |
+        Whether this history entry can be put back, and if not, why. COMPUTED per read,
+        never stored: a stored flag is a second copy of a question the audit spine already
+        answers, and it goes stale the moment anyone else writes.
+
+        Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+        `id` carry the same answer — a restore replays the row's whole filtered image, and
+        there is no per-field undo.
+
+        Three reasons — `not_restorable_by_this_path`, `record_archived` and
+        `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+        are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+        a read makes the button as honest as a read can, and the write is the authority.
+      required: [undoable]
+      properties:
+        undoable: { type: boolean }
+        reason:
+          type: [string, 'null']
+          description: >-
+            Present exactly when `undoable` is false. `superseded` means someone wrote one of
+            these fields after this entry — the product refuses rather than resolving an
+            ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the
+            entry would report success and change nothing, which is worse than refusing.
+          enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
+                 behind_erasure_boundary, already_undone, not_restorable_by_this_path,
+                 record_archived, null_unwritable_by_module, not_writable_by_caller, null]
+        detail:
+          type: [string, 'null']
+          description: >-
+            The fields a refusal names, where naming them is the better explanation — which
+            field was superseded, which one cannot be written back. Never the only thing a
+            reader renders; `reason` is what the product says.
 
     AuditHistoryListResponse:
       type: object

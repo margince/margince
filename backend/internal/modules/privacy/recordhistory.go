@@ -400,17 +400,8 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 	var out []recordAuditRow
 	for rows.Next() {
 		var r recordAuditRow
-		var beforeJSON, afterJSON []byte
-		if err := rows.Scan(&r.id, &r.actorType, &r.actorID, &r.onBehalfOf, &r.action, &r.occurredAt,
-			&r.authorizationRule, &beforeJSON, &afterJSON, &r.passportID,
-			&r.actorDisplayName, &r.onBehalfOfName, &r.agentClientName); err != nil {
+		if err := scanRecordAuditRow(rows, &r); err != nil {
 			return nil, err
-		}
-		if err := unmarshalJSONBMap(beforeJSON, &r.before); err != nil {
-			return nil, fmt.Errorf("audit row %s before: %w", r.id, err)
-		}
-		if err := unmarshalJSONBMap(afterJSON, &r.after); err != nil {
-			return nil, fmt.Errorf("audit row %s after: %w", r.id, err)
 		}
 		out = append(out, r)
 	}

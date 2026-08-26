@@ -9487,6 +9487,48 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 	}
 }
 
+// Defines values for UndoabilityReason.
+const (
+	UndoabilityReasonAlreadyUndone           UndoabilityReason = "already_undone"
+	UndoabilityReasonBehindErasureBoundary   UndoabilityReason = "behind_erasure_boundary"
+	UndoabilityReasonNoBeforeImage           UndoabilityReason = "no_before_image"
+	UndoabilityReasonNotAReplayableVerb      UndoabilityReason = "not_a_replayable_verb"
+	UndoabilityReasonNotRestorableByThisPath UndoabilityReason = "not_restorable_by_this_path"
+	UndoabilityReasonNotWritableByCaller     UndoabilityReason = "not_writable_by_caller"
+	UndoabilityReasonNullUnwritableByModule  UndoabilityReason = "null_unwritable_by_module"
+	UndoabilityReasonRecordArchived          UndoabilityReason = "record_archived"
+	UndoabilityReasonSuperseded              UndoabilityReason = "superseded"
+	UndoabilityReasonUnsupportedRecordType   UndoabilityReason = "unsupported_record_type"
+)
+
+// Valid indicates whether the value is a known member of the UndoabilityReason enum.
+func (e UndoabilityReason) Valid() bool {
+	switch e {
+	case UndoabilityReasonAlreadyUndone:
+		return true
+	case UndoabilityReasonBehindErasureBoundary:
+		return true
+	case UndoabilityReasonNoBeforeImage:
+		return true
+	case UndoabilityReasonNotAReplayableVerb:
+		return true
+	case UndoabilityReasonNotRestorableByThisPath:
+		return true
+	case UndoabilityReasonNotWritableByCaller:
+		return true
+	case UndoabilityReasonNullUnwritableByModule:
+		return true
+	case UndoabilityReasonRecordArchived:
+		return true
+	case UndoabilityReasonSuperseded:
+		return true
+	case UndoabilityReasonUnsupportedRecordType:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdateAttachmentMetadataRequestCategory.
 const (
 	UpdateAttachmentMetadataRequestCategoryContract          UpdateAttachmentMetadataRequestCategory = "contract"
@@ -11544,22 +11586,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	Current    ListOrganizationDocumentsParamsDocState = "current"
-	Draft      ListOrganizationDocumentsParamsDocState = "draft"
-	Final      ListOrganizationDocumentsParamsDocState = "final"
-	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
+	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
+	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
+	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
+	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case Current:
+	case ListOrganizationDocumentsParamsDocStateCurrent:
 		return true
-	case Draft:
+	case ListOrganizationDocumentsParamsDocStateDraft:
 		return true
-	case Final:
+	case ListOrganizationDocumentsParamsDocStateFinal:
 		return true
-	case Superseded:
+	case ListOrganizationDocumentsParamsDocStateSuperseded:
 		return true
 	default:
 		return false
@@ -13302,6 +13344,20 @@ type AuditHistoryEntry struct {
 	// OnBehalfOfName Resolved display name for on_behalf_of.
 	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
 	Summary        string  `json:"summary"`
+
+	// Undoable Whether this history entry can be put back, and if not, why. COMPUTED per read,
+	// never stored: a stored flag is a second copy of a question the audit spine already
+	// answers, and it goes stale the moment anyone else writes.
+	//
+	// Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+	// `id` carry the same answer — a restore replays the row's whole filtered image, and
+	// there is no per-field undo.
+	//
+	// Three reasons — `not_restorable_by_this_path`, `record_archived` and
+	// `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+	// are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+	// a read makes the button as honest as a read can, and the write is the authority.
+	Undoable *Undoability `json:"undoable,omitempty"`
 }
 
 // AuditHistoryEntryActorType defines model for AuditHistoryEntry.ActorType.
@@ -16781,6 +16837,20 @@ type FieldHistoryEntry struct {
 
 	// PassportId Agent Seat Passport that authorized the change; present for agent actors only.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
+
+	// Undoable Whether this history entry can be put back, and if not, why. COMPUTED per read,
+	// never stored: a stored flag is a second copy of a question the audit spine already
+	// answers, and it goes stale the moment anyone else writes.
+	//
+	// Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+	// `id` carry the same answer — a restore replays the row's whole filtered image, and
+	// there is no per-field undo.
+	//
+	// Three reasons — `not_restorable_by_this_path`, `record_archived` and
+	// `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+	// are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+	// a read makes the button as honest as a read can, and the write is the authority.
+	Undoable *Undoability `json:"undoable,omitempty"`
 }
 
 // FieldHistoryEntryActorType defines model for FieldHistoryEntry.ActorType.
@@ -23708,6 +23778,30 @@ type TransferProjectOwnershipResult struct {
 	Transferred int `json:"transferred"`
 }
 
+// Undoability Whether this history entry can be put back, and if not, why. COMPUTED per read,
+// never stored: a stored flag is a second copy of a question the audit spine already
+// answers, and it goes stale the moment anyone else writes.
+//
+// Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+// `id` carry the same answer — a restore replays the row's whole filtered image, and
+// there is no per-field undo.
+//
+// Three reasons — `not_restorable_by_this_path`, `record_archived` and
+// `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+// are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+// a read makes the button as honest as a read can, and the write is the authority.
+type Undoability struct {
+	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
+	Detail *string `json:"detail,omitempty"`
+
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would report success and change nothing, which is worse than refusing.
+	Reason   *UndoabilityReason `json:"reason,omitempty"`
+	Undoable bool               `json:"undoable"`
+}
+
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would report success and change nothing, which is worse than refusing.
+type UndoabilityReason string
+
 // UpdateActivityRequest defines model for UpdateActivityRequest.
 type UpdateActivityRequest struct {
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
@@ -28083,6 +28177,12 @@ type GetRecordHistoryParams struct {
 
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// RestoreRecordChangeParams defines parameters for RestoreRecordChange.
+type RestoreRecordChangeParams struct {
+	// IfMatch The last-seen record `version`, required. If the row's current version differs the restore is rejected with `409 code: version_skew` and nothing is written — re-read the record and its history, then decide again.
+	IfMatch string `json:"If-Match"`
 }
 
 // ClaimRecordParams defines parameters for ClaimRecord.
@@ -38213,6 +38313,9 @@ type ServerInterface interface {
 	// Full audit history for one record, rendered as plain-language lines.
 	// (GET /records/{entity_type}/{id}/history)
 	GetRecordHistory(w http.ResponseWriter, r *http.Request, entityType string, id Id, params GetRecordHistoryParams)
+	// Put one audited change back.
+	// (POST /records/{entity_type}/{id}/history/{audit_id}/restore)
+	RestoreRecordChange(w http.ResponseWriter, r *http.Request, entityType string, id Id, auditId openapi_types.UUID, params RestoreRecordChangeParams)
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
@@ -40826,6 +40929,12 @@ func (_ Unimplemented) GetRecordContext(w http.ResponseWriter, r *http.Request, 
 // Full audit history for one record, rendered as plain-language lines.
 // (GET /records/{entity_type}/{id}/history)
 func (_ Unimplemented) GetRecordHistory(w http.ResponseWriter, r *http.Request, entityType string, id Id, params GetRecordHistoryParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Put one audited change back.
+// (POST /records/{entity_type}/{id}/history/{audit_id}/restore)
+func (_ Unimplemented) RestoreRecordChange(w http.ResponseWriter, r *http.Request, entityType string, id Id, auditId openapi_types.UUID, params RestoreRecordChangeParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -58748,6 +58857,84 @@ func (siw *ServerInterfaceWrapper) GetRecordHistory(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreRecordChange operation middleware
+func (siw *ServerInterfaceWrapper) RestoreRecordChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type" -------------
+	var entityType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type", chi.URLParam(r, "entity_type"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "audit_id" -------------
+	var auditId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "audit_id", chi.URLParam(r, "audit_id"), &auditId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "audit_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreRecordChangeParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreRecordChange(w, r, entityType, id, auditId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ClaimRecord operation middleware
 func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Request) {
 
@@ -64140,6 +64327,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/records/{entity_type}/{id}/history", wrapper.GetRecordHistory)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{entity_type}/{id}/history/{audit_id}/restore", wrapper.RestoreRecordChange)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)

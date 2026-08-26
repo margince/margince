@@ -469,6 +469,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/public/rooms/threads/{threadId}/comments":                  {Op: "replyBuyerRoomThread", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/quotas":                                                    {Op: "createQuota", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/record-grants":                                             {Op: "createRecordGrant", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/records/{entity_type}/{id}/history/{audit_id}/restore":     {Op: "restoreRecordChange", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/records/{record_type}/{id}/claim":                          {Op: "claimRecord", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/relationships":                                             {Op: "createRelationship", Access: "tool", Tool: "create_record", RecordType: "relationship", Tier: "auto_execute", Scope: "write"},
 	"POST /v1/reports/{report}":                                          {Op: "runReport", Access: "tool", Tool: "run_report", RecordType: "", Tier: "auto_execute", Scope: "read"},
