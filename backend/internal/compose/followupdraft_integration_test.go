@@ -118,6 +118,120 @@ func TestAnEmailThreadWithNoNextStepStagesADraftedReply(t *testing.T) {
 	}
 }
 
+// The drafted body is a message, not a machine note.
+//
+// This is what clicking through caught and seven passing tests did not: the
+// deterministic floor appends the caller's intent to the body VERBATIM, so an
+// internal label like "Follow up on <deal>" became a sentence in the middle of
+// a German email addressed to a customer. The deal name is our word for the
+// account, not theirs, and a rep who sends it without noticing has sent our
+// CRM's internal shorthand to the buyer.
+func TestTheDraftedBodyCarriesNoInternalLabels(t *testing.T) {
+	e := setupReconcile(t)
+	const dealName = "Weber GmbH — Rahmenvertrag"
+	deal := e.SeedDeal(t, dealName, e.pipeline, e.open, &e.Rep1)
+	e.seedAnswerableThread(t, deal, "Rueckfragen zum Angebot")
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	_, draft := e.heldDraftFor(t, deal)
+
+	if strings.Contains(draft.Body, dealName) {
+		t.Errorf("the drafted body names the deal %q — that is our word for the "+
+			"account, not the recipient's, and this text is sent to them:\n%s",
+			dealName, draft.Body)
+	}
+	// "I wanted to follow up on <thread subject>" is the drafting floor's own
+	// prose and belongs here — it names the THREAD, in the counterparty's
+	// words. What must not appear is the label this caller could have passed,
+	// which names the deal and reads as a note to ourselves.
+	if strings.Contains(draft.Body, "Follow up on "+dealName) ||
+		strings.Contains(draft.Body, "Follow up: ") {
+		t.Errorf("the drafted body carries the internal follow-up label, which reads "+
+			"as a machine note dropped into a message to a customer:\n%s", draft.Body)
+	}
+}
+
+// The card's line describes a reply waiting, not a task to write one.
+func TestTheDraftedReplySummaryDescribesAReply(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Weber GmbH", e.pipeline, e.open, &e.Rep1)
+	e.seedAnswerableThread(t, deal, "Rueckfragen zum Angebot")
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	var summary string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT summary FROM approval WHERE kind = 'held_draft' AND target_entity_id = $1`,
+		deal).Scan(&summary); err != nil {
+		t.Fatal(err)
+	}
+	// The task proposal's line opens "Draft a follow-up on" — a reply that is
+	// already written is not that, and saying so asks the rep to do work the
+	// product already did.
+	if strings.HasPrefix(summary, "Draft a follow-up") {
+		t.Errorf("the drafted reply reuses the TASK proposal's line (%q), which tells "+
+			"the rep to write something that is already written", summary)
+	}
+	if !strings.Contains(summary, "drafted") {
+		t.Errorf("the summary %q does not say a reply is drafted, which is the one "+
+			"thing that distinguishes this card from the task proposal", summary)
+	}
+}
+
+// OUR OWN last email is not a message to answer.
+//
+// The candidate query never filtered direction, and ReplyAddressFor is built
+// to resolve the counterparty on an outbound message too — so the pass would
+// draft a "reply" to a mail the rep themselves had sent. Approving it creates
+// another outbound email, which becomes the next night's latest evidence, and
+// the deal generates a fresh approval every night forever.
+func TestOurOwnOutboundEmailIsNotAThreadToAnswer(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "We wrote last", e.pipeline, e.open, &e.Rep1)
+	sent := e.seedInteraction(t, deal, "email", "Unser Angebot", 1)
+	e.WsExec(t, `UPDATE activity SET direction = 'outbound' WHERE id = $1`, sent)
+	e.attachReachableCounterparty(t, sent, "kunde@example.test")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval
+		WHERE kind = 'held_draft' AND target_entity_id = $1`, deal); n != 0 {
+		t.Errorf("the pass drafted %d replies to a message WE sent, want 0 — "+
+			"approving one sends mail that becomes tomorrow's evidence, and the "+
+			"deal proposes a reply every night from then on", n)
+	}
+	// The deal still has no next step, so the rep is still told.
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Errorf("task proposals = %d, want 1", got)
+	}
+}
+
+// One deal, one pending reply — never two a rep can approve independently.
+//
+// The pending check asks about the TASK kind, and a drafted reply is staged
+// under held_draft, so a second email arriving while the first draft still
+// waits produced two approvable replies on one deal. Approving both sends both.
+func TestASecondEmailDoesNotStackASecondPendingReply(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Wrote twice", e.pipeline, e.open, &e.Rep1)
+	e.seedAnswerableThread(t, deal, "Erste Frage")
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	// A second thread, while the first draft is still pending and undecided.
+	e.seedAnswerableThread(t, deal, "Zweite Frage")
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM approval
+		WHERE kind = 'held_draft' AND target_entity_id = $1 AND status = 'pending'`, deal); n != 1 {
+		t.Errorf("pending drafted replies on one deal = %d, want 1 — two independently "+
+			"approvable replies means approving both sends two mails", n)
+	}
+}
+
 // A call has no thread to answer, so it keeps the task proposal.
 func TestACallWithNoNextStepStillStagesTheTaskProposal(t *testing.T) {
 	e := setupReconcile(t)

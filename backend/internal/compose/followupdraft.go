@@ -29,8 +29,10 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 
+	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/automation"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
@@ -83,11 +85,28 @@ func draftFollowUpReply(
 ) (automation.HeldDraftProposal, bool, error) {
 	anchor := proposal.EvidenceActivityID.UUID
 	to, err := drafter.ReplyAddress(ctx, anchor)
-	if err != nil || to == "" {
-		return automation.HeldDraftProposal{}, false, nil //nolint:nilerr // an unanswerable thread is the task proposal's case, not a failure
+	switch {
+	case errors.As(err, new(*activities.NoReplyAddressError)), err == nil && to == "":
+		// The ONE case the task proposal is the answer to: this thread carries
+		// no counterparty. Anything else — a denied read, a row-scope miss, a
+		// database failure — is a real failure and must not be reported as a
+		// nightly pass that quietly chose the other proposal. That reading hid
+		// the failure and never retried the draft.
+		return automation.HeldDraftProposal{}, false, nil
+	case err != nil:
+		return automation.HeldDraftProposal{}, false,
+			fmt.Errorf("compose: resolve who the follow-up answers: %w", err)
 	}
-	intent := fmt.Sprintf("Follow up: %s", proposal.Subject)
-	subject, body, err := drafter.DraftEmail(ctx, anchor, intent)
+	// The intent is EMPTY, and that is the whole care here.
+	//
+	// DeterministicEmailDraft appends the intent to the body verbatim, so
+	// whatever is passed becomes a sentence in a message a rep sends to a
+	// customer. The obvious "Follow up on <deal>" label reads as a machine
+	// note dropped into the middle of a German email, and the deal name is
+	// our internal word for the account, not theirs. The floor already writes
+	// a complete reply from the thread it is answering; there is nothing this
+	// caller knows to add that a recipient should read.
+	subject, body, err := drafter.DraftEmail(ctx, anchor, "")
 	if err != nil {
 		return automation.HeldDraftProposal{}, false, fmt.Errorf("compose: draft the follow-up reply: %w", err)
 	}
@@ -97,7 +116,8 @@ func draftFollowUpReply(
 		Subject:          subject,
 		Body:             body,
 		ConsentPurpose:   followUpDraftPurpose,
-		Intent:           intent,
+		// Intent is the rep-facing note on the card, never body text.
+		Intent: "no next step was planned after this message",
 	}, true, nil
 }
 
