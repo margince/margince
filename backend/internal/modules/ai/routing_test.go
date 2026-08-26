@@ -337,16 +337,20 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 	}{
 		{
 			name: "a chat tier with no host",
-			cfg: RoutingConfig{Profile: ProfileEUHosted,
+			cfg: RoutingConfig{
+				Profile:    ProfileEUHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: broker},
-				Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}}},
+				Embeddings: EmbeddingsConfig{ProviderConfig: ProviderConfig{Provider: ProviderFake}},
+			},
 			refused: true, says: "no base_url",
 		},
 		{
 			name: "the embeddings lane with no host",
-			cfg: RoutingConfig{Profile: ProfileEUHosted,
+			cfg: RoutingConfig{
+				Profile:    ProfileEUHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: ProviderFake}},
-				Embeddings: EmbeddingsConfig{ProviderConfig: broker}},
+				Embeddings: EmbeddingsConfig{ProviderConfig: broker},
+			},
 			refused: true, says: "no base_url",
 		},
 		{
@@ -355,17 +359,21 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 			// answering about base_url first sends the reader to fill in a
 			// field on a binding that is refused either way.
 			name: "a sovereign profile outranks the missing host",
-			cfg: RoutingConfig{Profile: ProfileSovereign,
+			cfg: RoutingConfig{
+				Profile:    ProfileSovereign,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: providerOllama, BaseURL: "http://127.0.0.1:11434"}},
-				Embeddings: EmbeddingsConfig{ProviderConfig: broker}},
+				Embeddings: EmbeddingsConfig{ProviderConfig: broker},
+			},
 			refused: true, says: "forbids cloud provider",
 		},
 		{
 			// The other arm, so the rule cannot pass by refusing everything.
 			name: "the same binding with its host",
-			cfg: RoutingConfig{Profile: ProfileEUHosted,
+			cfg: RoutingConfig{
+				Profile:    ProfileEUHosted,
 				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: withHost},
-				Embeddings: EmbeddingsConfig{ProviderConfig: withHost}},
+				Embeddings: EmbeddingsConfig{ProviderConfig: withHost},
+			},
 			refused: false,
 		},
 	} {
