@@ -133,7 +133,17 @@ func (s RestoreSeam) decide(ctx context.Context, row AuditRow) (map[string]json.
 
 // write sends the filtered image back through the record's own update path.
 func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]json.RawMessage, ifVersion int64) error {
-	body, err := json.Marshal(patch)
+	// The nulls leave the patch and travel as named clears: a JSON null in the
+	// body decodes to a nil pointer and reads as "not supplied", so sending one
+	// would report success and change nothing.
+	values, clear, unclearable := splitNulls(row.EntityType, patch)
+	if len(unclearable) > 0 {
+		// The evaluator refuses these before the write. Reaching here means the
+		// two disagree, which is worth a fault rather than a silent no-op.
+		return fmt.Errorf("compose: %s cannot clear %v, and the evaluator admitted it",
+			row.EntityType, unclearable)
+	}
+	body, err := json.Marshal(values)
 	if err != nil {
 		return fmt.Errorf("compose: assemble the restore patch: %w", err)
 	}
@@ -141,6 +151,7 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 		Ref:       datasource.EntityRef{Type: datasource.EntityType(row.EntityType), ID: row.EntityID},
 		Patch:     json.RawMessage(body),
 		IfVersion: &ifVersion,
+		Clear:     clear,
 		Trail: auditverb.Trail{
 			Verb:     auditverb.Restore,
 			Evidence: map[string]any{undidAuditLogID: row.ID.String()},
@@ -155,7 +166,18 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 // caller somebody else's line whenever two people press Undo in the same
 // moment.
 func (s RestoreSeam) readRestoreEntry(ctx context.Context, entityType string, id, auditID ids.UUID) (privacy.RecordHistoryEntry, error) {
-	return privacy.ReadRestoreOf(ctx, InstallationDB(s.pool), entityType, id, auditID)
+	entry, err := privacy.ReadRestoreOf(ctx, InstallationDB(s.pool), entityType, id, auditID)
+	if errors.Is(err, apperrors.ErrNotFound) {
+		// The write committed and left no reversal row, which the update path
+		// does when the patch changes nothing. Answering 404 here would say the
+		// entry does not exist, when what happened is that the record already
+		// held these values — so the person is told that instead.
+		return privacy.RecordHistoryEntry{}, RefusedRestore{
+			Reason: ReasonNotRestorableByThisPath,
+			Detail: "the record already holds these values, so there was nothing to put back",
+		}
+	}
+	return entry, err
 }
 
 // RefusedRestore is a refusal the surface can render. It carries the reason

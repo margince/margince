@@ -60,7 +60,7 @@ export const vi = {
   "history.actorAll": "Tất cả",
   "history.actorHuman": "Người",
   "history.actorAgent": "Agent",
-  "history.tabChanges": "Thay đổi",
+  "history.tabChanges": "Theo thay đổi",
   "history.tabFields": "Theo trường",
   "history.undo.action": "Hoàn tác",
   "history.undo.busy": "Đang hoàn tác thay đổi…",

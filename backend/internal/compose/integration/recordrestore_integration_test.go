@@ -533,3 +533,127 @@ func TestEndToEnd_aRetireTheVersionGuardCannotSeeIsCaughtAtWriteTime(t *testing.
 		t.Errorf("restore → %d, want 409", status)
 	}
 }
+
+// Filling a field in and then putting it back to empty — the case a person
+// most often reaches for undo on, and the one a JSON null cannot express.
+//
+// The before-image holds a null, so the restore must ask for the field to be
+// CLEARED rather than send the null: an optional pointer decodes a null as "not
+// supplied", and the write would report success having changed nothing.
+func TestEndToEnd_aFieldFilledInGoesBackToEmpty(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	// Created with NO title, so the change below records a before-image of null.
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people",
+		apptest.AnyMap{"full_name": "Greta Cleared"}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+		apptest.AnyMap{"title": "Typed by mistake"}, nil, nil); status != 200 {
+		t.Fatalf("fill the field → %d", status)
+	}
+
+	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	if !entry.Undoable.Undoable {
+		t.Fatalf("filling an empty field reads as not undoable (%s); this is the case a "+
+			"person reaches for undo on most", reasonOf(entry))
+	}
+
+	status, _ := restore(t, e, "person", created.ID, entry.ID, readPerson(t, e, created.ID).Version)
+	if status != 200 {
+		t.Fatalf("restore → %d, want 200", status)
+	}
+	if title := readPerson(t, e, created.ID).Title; title != nil && *title != "" {
+		t.Errorf("title after the restore = %q, want it empty again — the restore "+
+			"reported success and left the value standing", *title)
+	}
+	// The trail says what happened, so the clear is auditable rather than a
+	// silent write.
+	page := readHistory(t, e, "person", created.ID)
+	reversal := page.Data[len(page.Data)-1]
+	if reversal.Action != "restore" {
+		t.Fatalf("the newest entry is %q, want restore", reversal.Action)
+	}
+	if _, recorded := reversal.After["title"]; !recorded {
+		t.Errorf("the reversal's image does not mention title: %v", reversal.After)
+	}
+}
+
+// An activity cannot clear, and says so. Its update statement writes every
+// column as coalesce($n, col), so the placeholder's NULL selects the current
+// value and no argument can clear one.
+func TestEndToEnd_anActivityFieldFilledInRefusesBecauseItCannotBeCleared(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var activity struct {
+		ID string `json:"id"`
+	}
+	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+		"kind": "task", "subject": "Call Greta",
+	}, nil, &activity); status != 201 {
+		t.Fatalf("create activity → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/activities/"+activity.ID,
+		apptest.AnyMap{"due_at": "2026-09-01T10:00:00Z"}, nil, nil); status != 200 {
+		t.Fatalf("set due_at → %d", status)
+	}
+
+	entry := theUpdateEntry(t, readHistory(t, e, "activity", activity.ID))
+	if entry.Undoable.Undoable {
+		t.Fatal("an activity field that cannot be cleared reads as undoable; the write " +
+			"would answer success and change nothing")
+	}
+	if reasonOf(entry) != "null_unwritable_by_module" {
+		t.Fatalf("reason = %s, want null_unwritable_by_module", reasonOf(entry))
+	}
+	if detailOf(entry) != "due_at" {
+		t.Errorf("detail = %s, want the field it cannot clear", detailOf(entry))
+	}
+}
+
+// An address arrives as six columns and goes back as one nested object. Without
+// the fold every key reads as unspellable and an edit that touched an address
+// would be permanently un-undoable.
+func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+		"full_name": "Greta Address",
+		"address":   apptest.AnyMap{"city": "Hanoi", "line1": "1 First Street"},
+	}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{
+		"address": apptest.AnyMap{"city": "Da Nang", "line1": "2 Second Street"},
+	}, nil, nil); status != 200 {
+		t.Fatalf("change the address → %d", status)
+	}
+
+	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	if !entry.Undoable.Undoable {
+		t.Fatalf("an address change reads as not undoable (%s / %s)",
+			reasonOf(entry), detailOf(entry))
+	}
+	status, _ := restore(t, e, "person", created.ID, entry.ID, readPerson(t, e, created.ID).Version)
+	if status != 200 {
+		t.Fatalf("restore → %d, want 200", status)
+	}
+
+	var back struct {
+		Address *struct {
+			City  *string `json:"city"`
+			Line1 *string `json:"line1"`
+		} `json:"address"`
+	}
+	if status := e.Call(t, "GET", "/v1/people/"+created.ID, nil, nil, &back); status != 200 {
+		t.Fatalf("read back → %d", status)
+	}
+	if back.Address == nil || back.Address.City == nil || *back.Address.City != "Hanoi" {
+		t.Errorf("address.city after the restore = %v, want Hanoi", back.Address)
+	}
+}

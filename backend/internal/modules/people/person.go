@@ -230,6 +230,10 @@ func (s *Store) GetPersonTx(ctx context.Context, tx pgx.Tx, id ids.PersonID,
 }
 
 type UpdatePersonInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail     storekit.AuditTrail
 	FullName  *string
@@ -349,6 +353,7 @@ func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) *storek
 	if in.OwnerID != nil {
 		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
 	}
+	applyClears(p, in.Clear, clearablePersonColumns(current))
 	if in.Address != nil {
 		cur := addressColumns(current.Address)
 		p.Set("address_line1", cur.Line1, in.Address.Line1)
@@ -405,4 +410,20 @@ func (s *Store) EnsurePersonByEmail(ctx context.Context, fullName, email, source
 		}
 	}
 	return ids.Nil, err
+}
+
+// clearablePersonColumns maps the wire fields a person restore may set to NULL
+// onto the column holding each, with the row's current value for the audit
+// image. The column names are literals here and never come from a caller, so
+// nothing caller-supplied reaches the UPDATE text.
+//
+// A field absent from this map cannot be cleared, and the reversal path refuses
+// rather than reporting a success it did not have.
+func clearablePersonColumns(current crmcontracts.Person) map[string]clearable {
+	return map[string]clearable{
+		"first_name": {"first_name", current.FirstName},
+		"last_name":  {"last_name", current.LastName},
+		"title":      {"title", current.Title},
+		"owner_id":   {ownerIDColumn, current.OwnerId},
+	}
 }

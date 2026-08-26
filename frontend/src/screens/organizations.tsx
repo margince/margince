@@ -1753,25 +1753,16 @@ function useChronologySlots({
           chronologyNotice(
             "co.timeline.empty",
             {
-              // Per filter, because the two feeds fail independently. A 360 that
-              // omitted its activities section says nothing about the change
-              // feed, and reporting the Changes view as unavailable on that
-              // basis hid rows that had loaded perfectly well.
-              loading:
-                filter === "changes"
-                  ? history.loading
-                  : loading || history.loading || timeline.isPending,
-              failed:
-                filter === "changes"
-                  ? history.failed
-                  : failed || history.failed || timeline.isError,
+              // Only Activities and All reach here — the Changes view is the
+              // record's history above and reports its own state — so the two
+              // feeds are read together rather than per filter.
+              loading: loading || history.loading || timeline.isPending,
+              failed: failed || history.failed || timeline.isError,
               // A narrowed read is the list's own and is assembled once it
               // answers; the unfiltered one is the 360's section.
-              assembled:
-                filter === "changes" ||
-                (hasTimelineFilters(filters)
-                  ? timeline.isSuccess
-                  : Boolean(view?.activities)),
+              assembled: hasTimelineFilters(filters)
+                ? timeline.isSuccess
+                : Boolean(view?.activities),
               filter,
             },
             history.entries.length,

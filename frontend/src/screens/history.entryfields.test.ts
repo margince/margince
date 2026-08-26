@@ -37,3 +37,15 @@ describe("entryFieldChanges", () => {
     expect(entryFieldChanges({ before: null, after: null })).toEqual([]);
   });
 });
+
+it("does not show a stamp the write path set as a field somebody changed", () => {
+  // The row really did change updated_at, so the image carries it. Rendering
+  // it as a field change tells a reader somebody edited "updated at", which
+  // nobody did and which they cannot act on.
+  const changes = entryFieldChanges({
+    before: { name: "Test", updated_at: "2026-08-26T13:10:56Z" },
+    after: { name: "Test Renamed", updated_at: "2026-08-26T06:26:23Z" },
+  });
+
+  expect(changes.map((c) => c.field)).toEqual(["name"]);
+});

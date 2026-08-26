@@ -21,6 +21,10 @@ import (
 )
 
 type UpdateLeadInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail           storekit.AuditTrail
 	FullName        *string
@@ -325,6 +329,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 // resumes recompute.
 func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Patch, bool, error) {
 	p := storekit.NewPatch()
+	applyClears(p, in.Clear, clearableLeadColumns(current))
 	if in.FullName != nil {
 		p.Set("full_name", current.FullName, *in.FullName)
 	}
@@ -481,4 +486,19 @@ func statusSetByFor(ctx context.Context) (string, error) {
 		return string(crmcontracts.LeadStatusSetBySystem), nil
 	}
 	return string(crmcontracts.LeadStatusSetByHuman), nil
+}
+
+// clearableLeadColumns names the wire fields a lead restore may set to NULL,
+// with literal column names. `status` and the score pair are absent on purpose:
+// a lead's status is a lifecycle position rather than a value, and the score
+// override is sticky by design (clearing its reason resumes recompute, which is
+// a decision rather than a field edit).
+func clearableLeadColumns(current crmcontracts.Lead) map[string]clearable {
+	return map[string]clearable{
+		"title":             {"title", current.Title},
+		"company_name":      {leadCompanyColumn, current.CompanyName},
+		"candidate_org_key": {"candidate_org_key", current.CandidateOrgKey},
+		"project_id":        {"project_id", current.ProjectId},
+		"owner_id":          {ownerIDColumn, current.OwnerId},
+	}
 }

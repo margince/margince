@@ -179,6 +179,17 @@ export type EntryFieldChange = {
 // A key the image does not hold reads as absent rather than as empty text: the
 // diff draws its own wording for a field that did not exist before or does not
 // now, and "" is a value somebody stored.
+// Columns the write path stamps rather than a person choosing. They sit in the
+// audit image because the row really did change, and showing them as field
+// changes tells a reader somebody edited "updated at" — which nobody did, and
+// which they cannot act on. The restore drops them for the same reason.
+const DERIVED_COLUMNS: ReadonlySet<string> = new Set([
+  "updated_at",
+  "created_at",
+  "id",
+  "version",
+]);
+
 export function entryFieldChanges(
   entry: Pick<AuditHistoryEntry, "before" | "after">,
 ): EntryFieldChange[] {
@@ -191,6 +202,7 @@ export function entryFieldChanges(
     }
   }
   return fields
+    .filter((field) => !DERIVED_COLUMNS.has(field))
     .map((field) => ({
       field,
       oldValue: imageValue(before[field]),

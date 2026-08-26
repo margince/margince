@@ -206,6 +206,10 @@ func createOrganizationInTx(ctx context.Context, tx pgx.Tx, in CreateOrganizatio
 }
 
 type UpdateOrganizationInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail       storekit.AuditTrail
 	DisplayName *string
@@ -446,6 +450,7 @@ func recheckRenamedOrganization(ctx context.Context, tx pgx.Tx, id ids.Organizat
 // it is visibility-probed before the edge lands.
 func buildOrganizationPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Organization, in UpdateOrganizationInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
+	applyClears(p, in.Clear, clearableOrganizationColumns(current))
 	if in.DisplayName != nil {
 		p.Set("display_name", current.DisplayName, *in.DisplayName)
 	}
@@ -496,4 +501,20 @@ func buildOrganizationPatch(ctx context.Context, tx pgx.Tx, current crmcontracts
 		p.Set("address_country", cur.Country, in.Address.Country)
 	}
 	return p, nil
+}
+
+// clearableOrganizationColumns names the wire fields an organization restore may
+// set to NULL, with literal column names — nothing caller-supplied reaches the
+// UPDATE text. A field absent here cannot be cleared, and the reversal path
+// refuses rather than reporting a success it did not have.
+func clearableOrganizationColumns(current crmcontracts.Organization) map[string]clearable {
+	return map[string]clearable{
+		"legal_name":    {"legal_name", current.LegalName},
+		"description":   {"description", current.Description},
+		"industry":      {"industry", current.Industry},
+		"size_band":     {"size_band", current.SizeBand},
+		"linkedin_url":  {"linkedin_url", current.LinkedinUrl},
+		"owner_id":      {ownerIDColumn, current.OwnerId},
+		"parent_org_id": {"parent_org_id", current.ParentOrgId},
+	}
 }

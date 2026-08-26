@@ -264,6 +264,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		}
 		update := personUpdateInput(req, in.IfVersion)
 		update.Trail = in.Trail
+		update.Clear = in.Clear
 		v, err := p.store.UpdatePerson(ctx, ids.From[ids.PersonKind](in.Ref.ID), update)
 		return ref(datasource.EntityPerson, v.Id), err
 	case datasource.EntityOrganization:
@@ -273,6 +274,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		}
 		update := organizationUpdateInput(req, in.IfVersion)
 		update.Trail = in.Trail
+		update.Clear = in.Clear
 		v, err := p.store.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](in.Ref.ID), update)
 		return ref(datasource.EntityOrganization, v.Id), err
 	case datasource.EntityLead:
@@ -282,6 +284,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		}
 		update := leadUpdateInput(req, in.IfVersion)
 		update.Trail = in.Trail
+		update.Clear = in.Clear
 		v, err := p.store.UpdateLead(ctx, ids.From[ids.LeadKind](in.Ref.ID), update)
 		return ref(datasource.EntityLead, v.Id), err
 	case datasource.EntityRelationship:

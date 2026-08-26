@@ -144,6 +144,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		return datasource.EntityRef{}, err
 	}
 	update.Trail = in.Trail
+	update.Clear = in.Clear
 	v, err := p.store.UpdateProject(ctx, ids.From[ids.ProjectKind](in.Ref.ID), update)
 	return ref(v.Id), err
 }

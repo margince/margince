@@ -89,6 +89,7 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 // visible under the caller's row scope before it lands in the patch.
 func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal, in UpdateDealInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
+	applyClears(p, in.Clear, clearableDealColumns(current))
 	if in.Name != nil {
 		p.Set(dealNameColumn, current.Name, *in.Name)
 	}
@@ -436,4 +437,41 @@ func (e *TerminalStageOnCreateError) Error() string {
 // FieldFault refuses creating a deal directly into a won/lost stage.
 func (e *TerminalStageOnCreateError) FieldFault() (field, code, message string) {
 	return "stage_id", "terminal_stage_on_create", e.Error()
+}
+
+// clearable is one column a caller may set to NULL, and what the row holds
+// there now. The current value is carried so the audit image says what the
+// field was cleared FROM.
+//
+//craft:ignore naked-any the value is whichever type the column holds; the patch seam takes it as the audit image does
+type clearable struct {
+	column  string
+	current any
+}
+
+// applyClears sets each named field to NULL. A name this map does not hold is
+// ignored here and refused by the reversal path before the write, so a caller
+// cannot reach a column this store did not name.
+func applyClears(p *storekit.Patch, clear []string, columns map[string]clearable) {
+	for _, field := range clear {
+		target, clearableHere := columns[field]
+		if !clearableHere {
+			continue
+		}
+		p.Set(target.column, target.current, nil)
+	}
+}
+
+// clearableDealColumns names the wire fields a deal restore may set to NULL,
+// with literal column names. amount_minor and currency are absent: money is
+// read as one field, and a half-cleared pair states an amount in no currency.
+// status and the close-date flags belong to the advance path.
+func clearableDealColumns(current crmcontracts.Deal) map[string]clearable {
+	return map[string]clearable{
+		"expected_close_date": {"expected_close_date", current.ExpectedCloseDate},
+		"forecast_category":   {"forecast_category", current.ForecastCategory},
+		"wait_until":          {"wait_until", current.WaitUntil},
+		"owner_id":            {"owner_id", current.OwnerId},
+		"project_id":          {"project_id", current.ProjectId},
+	}
 }

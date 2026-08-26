@@ -1,0 +1,195 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//gate:kind census H2
+
+package backendarch
+
+// The fields a restore says it can clear are the fields the stores clear.
+//
+// compose.clearableFields decides which nulls travel as clears and which are
+// refused. The stores decide which ones they actually write. A field the
+// reversal path names and a store does not clear is a restore that reports
+// success and changes nothing — the one outcome worse than a refusal, because
+// the person reads the confirmation and stops looking. A field a store clears
+// and the reversal path does not name is a restore refused for no reason.
+//
+// This is exactly the shape of claim that rots: two lists in different packages
+// that only agree on the day they were written. So the gate derives the store
+// half from the source rather than restating it.
+
+import (
+	"go/ast"
+	"go/parser"
+	"go/token"
+	"os"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"testing"
+)
+
+// clearableMapsByRecordType names the declaration in each module that lists what
+// that record type can clear, and the record type it serves. Derived from the
+// naming convention the stores share; a new one that does not follow it is
+// caught by TestEveryRecordTypeThatCanClearDeclaresIt below.
+var clearableMapsByRecordType = map[string]string{
+	"clearablePersonColumns":       "person",
+	"clearableOrganizationColumns": "organization",
+	"clearableLeadColumns":         "lead",
+	"clearableDealColumns":         "deal",
+	"clearableProjectColumns":      "project",
+}
+
+// storeClearableFields walks the module sources for the clearable-column maps
+// and returns the wire field names each one holds — the map KEYS, which are
+// what a caller names, not the column values.
+func storeClearableFields(t *testing.T) map[string][]string {
+	t.Helper()
+	found := map[string][]string{}
+	roots := []string{
+		filepath.Join("internal", "modules", "people"),
+		filepath.Join("internal", "modules", "deals"),
+		filepath.Join("internal", "modules", "projects"),
+		filepath.Join("internal", "modules", "activities"),
+	}
+	for _, root := range roots {
+		entries, err := os.ReadDir(root)
+		if err != nil {
+			t.Fatalf("read %s: %v", root, err)
+		}
+		for _, entry := range entries {
+			if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+				continue
+			}
+			path := filepath.Join(root, entry.Name())
+			file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+			if err != nil {
+				t.Fatalf("parse %s: %v", path, err)
+			}
+			collectClearableMaps(file, found)
+		}
+	}
+	return found
+}
+
+// collectClearableMaps reads the keys of each clearable-column map literal.
+func collectClearableMaps(file *ast.File, into map[string][]string) {
+	ast.Inspect(file, func(node ast.Node) bool {
+		decl, isFunc := node.(*ast.FuncDecl)
+		if !isFunc {
+			return true
+		}
+		recordType, serves := clearableMapsByRecordType[decl.Name.Name]
+		if !serves {
+			return true
+		}
+		ast.Inspect(decl.Body, func(inner ast.Node) bool {
+			literal, isComposite := inner.(*ast.CompositeLit)
+			if !isComposite {
+				return true
+			}
+			for _, element := range literal.Elts {
+				pair, isPair := element.(*ast.KeyValueExpr)
+				if !isPair {
+					continue
+				}
+				key, isString := pair.Key.(*ast.BasicLit)
+				if !isString || key.Kind != token.STRING {
+					continue
+				}
+				field, err := strconv.Unquote(key.Value)
+				if err != nil {
+					continue
+				}
+				into[recordType] = append(into[recordType], field)
+			}
+			return false
+		})
+		return false
+	})
+}
+
+func TestTheFieldsARestoreClearsAreTheFieldsTheStoresClear(t *testing.T) {
+	fromStores := storeClearableFields(t)
+	if len(fromStores) == 0 {
+		t.Fatal("no clearable-column map found in any module; the walk is broken, not the tree — " +
+			"people/person.go declares one")
+	}
+	declared := composeClearableFields(t)
+
+	for recordType, storeFields := range fromStores {
+		sort.Strings(storeFields)
+		named := append([]string(nil), declared[recordType]...)
+		sort.Strings(named)
+		if strings.Join(storeFields, ",") == strings.Join(named, ",") {
+			continue
+		}
+		t.Errorf("%s: the reversal path says it can clear %v, the store clears %v.\n"+
+			"\tA field named and not cleared is a restore that reports success and "+
+			"writes nothing; one cleared and not named is a restore refused for no "+
+			"reason.", recordType, named, storeFields)
+	}
+	for recordType := range declared {
+		if len(declared[recordType]) > 0 && fromStores[recordType] == nil {
+			t.Errorf("%s: the reversal path names clearable fields and no store declares any; "+
+				"every one of them would be sent and silently dropped", recordType)
+		}
+	}
+}
+
+// composeClearableFields reads compose's own declaration out of its source. It
+// is unexported there on purpose — nothing outside compose decides what a
+// restore may clear — so the gate parses rather than imports.
+func composeClearableFields(t *testing.T) map[string][]string {
+	t.Helper()
+	path := filepath.Join("internal", "compose", "clearablefields.go")
+	file, err := parser.ParseFile(token.NewFileSet(), path, nil, 0)
+	if err != nil {
+		t.Fatalf("parse %s: %v", path, err)
+	}
+	declared := map[string][]string{}
+	ast.Inspect(file, func(node ast.Node) bool {
+		spec, isValue := node.(*ast.ValueSpec)
+		if !isValue || len(spec.Names) != 1 || spec.Names[0].Name != "clearableFields" {
+			return true
+		}
+		literal, isComposite := spec.Values[0].(*ast.CompositeLit)
+		if !isComposite {
+			return true
+		}
+		for _, element := range literal.Elts {
+			pair, isPair := element.(*ast.KeyValueExpr)
+			if !isPair {
+				continue
+			}
+			recordType, err := strconv.Unquote(pair.Key.(*ast.BasicLit).Value)
+			if err != nil {
+				continue
+			}
+			fields, isList := pair.Value.(*ast.CompositeLit)
+			if !isList {
+				continue
+			}
+			declared[recordType] = []string{}
+			for _, item := range fields.Elts {
+				value, isString := item.(*ast.BasicLit)
+				if !isString {
+					continue
+				}
+				field, err := strconv.Unquote(value.Value)
+				if err != nil {
+					continue
+				}
+				declared[recordType] = append(declared[recordType], field)
+			}
+		}
+		return false
+	})
+	if len(declared) == 0 {
+		t.Fatal("compose.clearableFields was not found; the gate would report agreement " +
+			"between two empty sets")
+	}
+	return declared
+}

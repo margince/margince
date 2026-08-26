@@ -31,6 +31,10 @@ import { FieldHistoryTimeline } from "./historyfields";
 // is the same changes grouped by the field they touched. They name the SHAPE
 // of the list rather than its subject, which is what keeps a deal, a company
 // and a person from describing one panel three ways.
+// The pair names the SHAPE of the same history: one row per change, or one
+// row per field. Neither is called "Changes" on its own — the timeline that
+// embeds this panel already offers a "Changes" filter, and one word meaning
+// two things on one screen is how a reader learns to distrust both.
 const HISTORY_TABS = ["changes", "fields"] as const;
 type HistoryTab = (typeof HISTORY_TABS)[number];
 

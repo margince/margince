@@ -52,7 +52,7 @@ export const de = {
   "history.actorAll": "Alle",
   "history.actorHuman": "Mensch",
   "history.actorAgent": "Agent",
-  "history.tabChanges": "Änderungen",
+  "history.tabChanges": "Nach Änderung",
   "history.tabFields": "Nach Feld",
   "history.undo.action": "Zurücksetzen",
   "history.undo.busy": "Änderung wird zurückgesetzt…",

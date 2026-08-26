@@ -104,18 +104,21 @@ func TestAnImageThatFiltersToNothingIsRefusedAsNoBeforeImage(t *testing.T) {
 }
 
 // An image key the record's update shape cannot spell is NAMED, never dropped.
-// A person's update changed a title and an address; the address arrives as
-// address_line1…address_country and the shape spells only a structured
-// `address`. Quietly restoring the title would put half the change back and
-// report success — worse than refusing, because the person reads the
-// confirmation and stops looking.
+// A person's update that replaced their email addresses records `emails`, and
+// UpdatePersonRequest declares no such field. Quietly restoring the title
+// beside it would put half the change back and report success — worse than
+// refusing, because the person reads the confirmation and stops looking.
+//
+// The address columns are NOT an example of this any more: they fold into the
+// structured `address` the shape does declare, which is what makes an address
+// edit reversible at all.
 func TestAnImageTheShapeCannotSpellIsRefusedByNamingTheField(t *testing.T) {
 	answer := evaluateWithoutTheTrail(t, Evaluator{},
-		personRow(`{"title":"CTO","address_city":"Hanoi"}`))
+		personRow(`{"title":"CTO","emails":[{"email":"a@b.test"}]}`))
 	if answer.Reason != ReasonNotRestorableByThisPath {
 		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNotRestorableByThisPath)
 	}
-	if !strings.Contains(answer.Detail, "address_city") {
+	if !strings.Contains(answer.Detail, "emails") {
 		t.Errorf("the refusal does not name the field it could not spell: %q", answer.Detail)
 	}
 }
@@ -162,37 +165,50 @@ func TestACallerWhoCannotWriteTheRecordGetsAnHonestButton(t *testing.T) {
 	}
 }
 
-// The dishonest-success case. No update path here can write a null: every field
-// on every update request is an optional pointer, so a JSON null decodes to
-// "not supplied" and the write succeeds having changed nothing. The refusal
-// names the field.
-func TestRestoringNullIntoACoalesceGuardedColumnIsRefusedByFieldName(t *testing.T) {
-	answer := evaluateWithoutTheTrail(t, Evaluator{},
-		personRow(`{"full_name":"Greta","title":null}`))
+// A field the record type CAN clear is put back to nothing rather than refused.
+// This is the common case a person reaches for undo on: they filled a field in
+// by mistake and want it empty again.
+func TestAFieldTheRecordTypeCanClearIsClearedRatherThanRefused(t *testing.T) {
+	patch := map[string]json.RawMessage{
+		"title":     json.RawMessage("null"),
+		"full_name": json.RawMessage(`"Greta"`),
+	}
+	values, clear, unclearable := splitNulls("person", patch)
+	if len(unclearable) > 0 {
+		t.Fatalf("person cannot clear %v; a title it filled in is not undoable", unclearable)
+	}
+	if len(clear) != 1 || clear[0] != "title" {
+		t.Errorf("clear = %v, want [title]", clear)
+	}
+	if _, sent := values["title"]; sent {
+		t.Error("the null travelled in the patch; it decodes to \"not supplied\" and writes nothing")
+	}
+	if string(values["full_name"]) != `"Greta"` {
+		t.Errorf("the value half lost full_name: %v", values)
+	}
+}
+
+// A field the record type CANNOT clear is refused by name. activity writes
+// every column as coalesce($n, col), so no argument can clear one.
+func TestAFieldTheRecordTypeCannotClearIsRefusedByName(t *testing.T) {
+	answer := evaluateWithoutTheTrail(t, Evaluator{}, AuditRow{
+		ID: ids.NewV7(), EntityType: "activity", EntityID: ids.NewV7(),
+		Action: "update", Before: json.RawMessage(`{"subject":"Call","due_at":null}`),
+	})
 	if answer.Reason != ReasonNullUnwritableByModule {
 		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNullUnwritableByModule)
 	}
-	if !strings.Contains(answer.Detail, "title") {
+	if !strings.Contains(answer.Detail, "due_at") {
 		t.Errorf("the refusal does not name the field: %q", answer.Detail)
 	}
 }
 
-// The rule binds every record type, not one module's SQL: person patches
-// through storekit.Patch and could write a null in principle, but the request
-// body cannot carry one, so a restore toward null is a no-op there too.
-func TestRestoringNullIsRefusedOnEveryRecordType(t *testing.T) {
-	patch := map[string]json.RawMessage{"title": json.RawMessage("null")}
-	if unwritable := nullUnwritableFields(patch); len(unwritable) != 1 {
-		t.Errorf("a null on person reported as %v, want it named", unwritable)
-	}
-}
-
-// A field holding a real value restores fine. Refusing a whole column because
-// it CAN hold null would refuse most of the entries on any history.
-func TestAFieldHoldingAValueIsNotRefused(t *testing.T) {
-	patch := map[string]json.RawMessage{"due_at": json.RawMessage(`"2026-01-01T00:00:00Z"`)}
-	if unwritable := nullUnwritableFields(patch); len(unwritable) > 0 {
-		t.Errorf("a due_at holding a value reported unwritable: %v", unwritable)
+// A field holding a real value is never a clear.
+func TestAFieldHoldingAValueIsNotCleared(t *testing.T) {
+	_, clear, _ := splitNulls("activity",
+		map[string]json.RawMessage{"due_at": json.RawMessage(`"2026-01-01T00:00:00Z"`)})
+	if len(clear) > 0 {
+		t.Errorf("a due_at holding a value was reported as a clear: %v", clear)
 	}
 }
 
@@ -214,3 +230,48 @@ var errNotYours = &rowScopeError{}
 type rowScopeError struct{}
 
 func (*rowScopeError) Error() string { return "record not found" }
+
+// An address arrives in the image one column at a time and is written back as
+// one nested object, because that is the only shape the update path accepts.
+// Without the fold every address key reads as unspellable and an edit that
+// touched an address becomes permanently un-undoable.
+func TestAnAddressIsFoldedIntoTheFieldTheUpdatePathAccepts(t *testing.T) {
+	patch, unspellable, err := filterImage("organization",
+		json.RawMessage(`{"address_city":"Hanoi","address_line1":null,"display_name":"Acme"}`))
+	if err != nil {
+		t.Fatalf("filter: %v", err)
+	}
+	if len(unspellable) > 0 {
+		t.Fatalf("address columns reported unspellable: %v", unspellable)
+	}
+	folded, present := patch["address"]
+	if !present {
+		t.Fatal("no address in the patch; the columns were dropped rather than folded")
+	}
+	var address map[string]any
+	if err := json.Unmarshal(folded, &address); err != nil {
+		t.Fatalf("the folded address is not an object: %v", err)
+	}
+	if address["city"] != "Hanoi" {
+		t.Errorf("address.city = %v, want Hanoi", address["city"])
+	}
+	// A null INSIDE a supplied object is a value the update path can write; a
+	// bare address_line1 null would have been indistinguishable from absent.
+	if line1, held := address["line1"]; !held || line1 != nil {
+		t.Errorf("address.line1 = %v (held=%v), want an explicit null", line1, held)
+	}
+	if _, leaked := patch["address_city"]; leaked {
+		t.Error("the raw column travelled beside the folded object")
+	}
+}
+
+// The fold does not fire for a record type whose update shape has no address.
+func TestAnAddressIsNotFoldedForAShapeThatCannotTakeOne(t *testing.T) {
+	_, unspellable, err := filterImage("deal", json.RawMessage(`{"address_city":"Hanoi"}`))
+	if err != nil {
+		t.Fatalf("filter: %v", err)
+	}
+	if len(unspellable) != 1 || unspellable[0] != "address_city" {
+		t.Errorf("unspellable = %v, want [address_city] named rather than folded", unspellable)
+	}
+}

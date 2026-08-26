@@ -166,6 +166,28 @@ var derivedColumns = map[string]bool{
 	"updated_at": true, "created_at": true, "id": true, "version": true,
 }
 
+// addressColumns maps the address_* columns an audit image carries onto the
+// keys of the structured `address` object the update shapes declare. The image
+// is per COLUMN, because that is what the record holds; the request is one
+// nested object, because that is how a person edits an address.
+//
+// Folding is what makes an address change reversible at all. Without it every
+// key filters out as unspellable and the whole entry refuses — and an edit that
+// touched an address would be permanently un-undoable, which is not a limit the
+// product should have for the sake of a name mismatch.
+var addressColumns = map[string]string{
+	"address_line1":       "line1",
+	"address_line2":       "line2",
+	"address_city":        "city",
+	"address_region":      "region",
+	"address_postal_code": "postal_code",
+	"address_country":     "country",
+}
+
+// addressField is the key the folded object travels under. Every update shape
+// that accepts an address spells it this way.
+const addressField = "address"
+
 // namedByTheShapeButNotWrittenByThePatch: keys a record type's update REQUEST
 // declares that its update path does not write. The generated shape is the
 // contract's, and the module's mapper is narrower than it — a key in the gap is
@@ -219,9 +241,14 @@ func filterImage(entityType string, before json.RawMessage) (map[string]json.Raw
 		allowed[field] = true
 	}
 	patch := make(map[string]json.RawMessage, len(image))
+	address := map[string]json.RawMessage{}
 	var unspellable []string
 	for key, value := range image {
 		if derivedColumns[key] || namedByTheShapeButNotWrittenByThePatch[entityType][key] {
+			continue
+		}
+		if nested, isAddress := addressColumns[key]; isAddress && allowed[addressField] {
+			address[nested] = value
 			continue
 		}
 		// A cf_* key is a custom field: the catalog decides whether it is still
@@ -232,6 +259,17 @@ func filterImage(entityType string, before json.RawMessage) (map[string]json.Raw
 			continue
 		}
 		patch[key] = value
+	}
+	if len(address) > 0 {
+		// The nested object is SUPPLIED, so the nulls inside it are values the
+		// update path can write. That is the whole difference between folding
+		// and refusing: a bare address_city null is indistinguishable from an
+		// absent field, and one inside a supplied address is not.
+		folded, err := json.Marshal(address)
+		if err != nil {
+			return nil, nil, fmt.Errorf("compose: fold the restored address: %w", err)
+		}
+		patch[addressField] = folded
 	}
 	sort.Strings(unspellable)
 	return patch, unspellable, nil
@@ -248,27 +286,32 @@ func sortedFields(patch map[string]json.RawMessage) []string {
 	return out
 }
 
-// nullUnwritableFields names the patch keys whose restored value is JSON null.
+// splitNulls separates the patch into the values a restore SENDS and the fields
+// it must ask to be CLEARED, and names the ones this record type cannot clear
+// at all.
 //
-// NO field of any record type can be put back to null through this path. Every
-// field on every update request is an optional pointer (`*string`,
-// `*openapi_types.UUID`, …), so a JSON null decodes to a nil pointer, which the
-// module reads as "the caller did not supply this" — and the write succeeds
-// having changed nothing. activity's columns are coalesce-guarded in SQL on top
-// of that, which would swallow a null even if one reached the statement.
-//
-// The rule is therefore about the CONTRACT's decoding, not one module's SQL,
-// and it binds every record type. Making nulls writable means distinguishing
-// absent from null across six request bodies, which is its own change.
-func nullUnwritableFields(patch map[string]json.RawMessage) []string {
-	var unwritable []string
+// A null cannot travel in the patch. Every field on every update request is an
+// optional pointer, so a JSON null decodes to nil and the module reads it as
+// "not supplied" — the write succeeds and the field keeps its value. Cleared
+// fields therefore travel beside the patch, and a field the record type cannot
+// clear is refused rather than sent and silently dropped.
+func splitNulls(entityType string, patch map[string]json.RawMessage) (map[string]json.RawMessage, []string, []string) {
+	values := make(map[string]json.RawMessage, len(patch))
+	var clear, unclearable []string
 	for key, value := range patch {
-		if string(value) == "null" {
-			unwritable = append(unwritable, key)
+		if string(value) != "null" {
+			values[key] = value
+			continue
 		}
+		if canClear(entityType, key) {
+			clear = append(clear, key)
+			continue
+		}
+		unclearable = append(unclearable, key)
 	}
-	sort.Strings(unwritable)
-	return unwritable
+	sort.Strings(clear)
+	sort.Strings(unclearable)
+	return values, clear, unclearable
 }
 
 // replayableVerbs are the two an image replay can reverse.
@@ -372,8 +415,8 @@ func (e Evaluator) liveState(ctx context.Context, tx pgx.Tx, row AuditRow, patch
 			return refuse(ReasonNotWritableByCaller, ""), true, nil
 		}
 	}
-	if unwritable := nullUnwritableFields(patch); len(unwritable) > 0 {
-		return refuse(ReasonNullUnwritableByModule, strings.Join(unwritable, ", ")), true, nil
+	if _, _, unclearable := splitNulls(row.EntityType, patch); len(unclearable) > 0 {
+		return refuse(ReasonNullUnwritableByModule, strings.Join(unclearable, ", ")), true, nil
 	}
 	return Undoability{}, false, nil
 }

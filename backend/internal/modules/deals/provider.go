@@ -126,6 +126,7 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		}
 		update := dealUpdateInput(req, in.IfVersion)
 		update.Trail = in.Trail
+		update.Clear = in.Clear
 		v, err := p.store.UpdateDeal(ctx, ids.From[ids.DealKind](in.Ref.ID), update)
 		return ref(datasource.EntityDeal, v.Id), err
 	default:

@@ -24,6 +24,10 @@ import (
 
 // UpdateProjectInput is one project partial update: every field optional.
 type UpdateProjectInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
 	// Trail names what the audit trail calls this write; zero is an update.
 	Trail         storekit.AuditTrail
 	Name          *string
@@ -102,6 +106,7 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 // another company would silently orphan the deals that inherited it.
 func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) *storekit.Patch {
 	p := storekit.NewPatch()
+	applyClears(p, in.Clear, clearableProjectColumns(current))
 	if in.Name != nil {
 		p.Set("name", current.Name, *in.Name)
 	}
@@ -121,4 +126,39 @@ func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) *st
 		p.Set("ended_at", current.EndedAt, *in.EndedAt)
 	}
 	return p
+}
+
+// clearable is one column a caller may set to NULL, and what the row holds
+// there now. The current value is carried so the audit image says what the
+// field was cleared FROM.
+//
+//craft:ignore naked-any the value is whichever type the column holds; the patch seam takes it as the audit image does
+type clearable struct {
+	column  string
+	current any
+}
+
+// applyClears sets each named field to NULL. A name this map does not hold is
+// ignored here and refused by the reversal path before the write, so a caller
+// cannot reach a column this store did not name.
+func applyClears(p *storekit.Patch, clear []string, columns map[string]clearable) {
+	for _, field := range clear {
+		target, clearableHere := columns[field]
+		if !clearableHere {
+			continue
+		}
+		p.Set(target.column, target.current, nil)
+	}
+}
+
+// clearableProjectColumns names the wire fields a project restore may set to
+// NULL, with literal column names.
+func clearableProjectColumns(current crmcontracts.Project) map[string]clearable {
+	return map[string]clearable{
+		"description":     {"description", current.Description},
+		"owner_id":        {"owner_id", current.OwnerId},
+		"started_at":      {"started_at", current.StartedAt},
+		"target_end_date": {"target_end_date", current.TargetEndDate},
+		"ended_at":        {"ended_at", current.EndedAt},
+	}
 }

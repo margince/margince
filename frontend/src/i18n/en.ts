@@ -56,7 +56,7 @@ export const en = {
   "history.actorAll": "All",
   "history.actorHuman": "Human",
   "history.actorAgent": "Agent",
-  "history.tabChanges": "Changes",
+  "history.tabChanges": "By change",
   "history.tabFields": "By field",
   "history.undo.action": "Put back",
   "history.undo.busy": "Putting this change back…",
