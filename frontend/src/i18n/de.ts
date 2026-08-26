@@ -2286,6 +2286,7 @@ export const de = {
   "co.spine.unpriced": "{count} offen, noch nicht beziffert",
   "co.spine.earlier": "{count} frühere Gespräche",
   "co.spine.earlierOne": "Ein früheres Gespräch",
+  "co.spine.earlierMore": "Weitere Gespräche davor",
   "co.spine.exchangeCount": "{count} Nachrichten",
   "co.spine.kind.email": "Eine E-Mail",
   "co.spine.kind.call": "Ein Anruf",

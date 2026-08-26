@@ -238,8 +238,11 @@ function isExchange(kind: string): kind is ExchangeKind {
 // three is all there was.
 const PAST_STOPS = 3;
 
-// One conversation, as the thread tells it.
+// One conversation, as the thread tells it. `key` is the identity it was
+// grouped under and outlives its newest message, so React keeps the same list
+// item when a reply arrives and moves the conversation's date.
 type Exchange = {
+  readonly key: string;
   readonly at: string;
   readonly subject: string;
   readonly kind: ExchangeKind;
@@ -274,23 +277,75 @@ function pastStops(view: Organization360, ctx: Ctx): Stop[] {
   // has more history than the thread draws.
   const shown = conversations.slice(0, PAST_STOPS).reverse();
   const earlier = conversations.length - shown.length;
+  // Our last word, when it is later than every conversation the thread could
+  // name: a message with no subject, or one whose content this reader may not
+  // see. The gap below is counted from it, so it takes the head's label and
+  // its own date — otherwise the thread dates "You last spoke" at one
+  // conversation while the gap beneath counts from another.
+  const unnamed = unnamedLastWord(view, shown.at(-1), ctx);
   const stops = shown.map((conversation, index) =>
-    pastStop(conversation, index === shown.length - 1, ctx),
+    pastStop(conversation, !unnamed && index === shown.length - 1, ctx),
   );
+  if (unnamed) {
+    stops.push(unnamed);
+  }
   if (earlier > 0) {
-    stops.unshift({
-      key: "earlier",
-      tone: "past",
-      when: on(conversations[conversations.length - 1].at, ctx),
-      title:
-        earlier === 1
-          ? ctx.t("co.spine.earlierOne")
-          : ctx.t("co.spine.earlier", {
-              count: formatNumber(earlier, ctx.locale),
-            }),
-    });
+    stops.unshift(earlierStop(conversations, earlier, view, ctx));
   }
   return stops;
+}
+
+// The stop for a last word the thread cannot name, or undefined when the
+// newest drawn conversation already IS our last word.
+function unnamedLastWord(
+  view: Organization360,
+  newest: Exchange | undefined,
+  ctx: Ctx,
+): Stop | undefined {
+  const spoke = silenceSince(view);
+  if (!spoke || !newest) {
+    return undefined;
+  }
+  const said = Date.parse(spoke);
+  const drawn = Date.parse(newest.at);
+  if (Number.isNaN(said) || Number.isNaN(drawn) || said <= drawn) {
+    return undefined;
+  }
+  return {
+    key: "spoke",
+    tone: "past",
+    when: on(spoke, ctx),
+    title: ctx.t("co.spine.lastSpoke"),
+  };
+}
+
+// The conversations the thread did not draw, as one stop.
+//
+// It counts what the 360 SENT, and the 360 sends one capped page of the
+// timeline. On an account with more history than that page holds, an exact
+// count would be a number the reader can check against the history tab and
+// find wrong, so a cut page says "more" instead — and its date is dropped with
+// the count, because the oldest conversation on a cut page is not where the
+// account began.
+function earlierStop(
+  conversations: readonly Exchange[],
+  earlier: number,
+  view: Organization360,
+  ctx: Ctx,
+): Stop {
+  const cut = view.activities?.page?.has_more === true;
+  return {
+    key: "earlier",
+    tone: "past",
+    when: cut ? "" : on(conversations[conversations.length - 1].at, ctx),
+    title: cut
+      ? ctx.t("co.spine.earlierMore")
+      : earlier === 1
+        ? ctx.t("co.spine.earlierOne")
+        : ctx.t("co.spine.earlier", {
+            count: formatNumber(earlier, ctx.locale),
+          }),
+  };
 }
 
 // A conversation's own stop. The newest one keeps "You last spoke" as its
@@ -305,7 +360,7 @@ function pastStop(conversation: Exchange, newest: boolean, ctx: Ctx): Stop {
         })
       : ctx.t(EXCHANGE_KINDS[conversation.kind]);
   return {
-    key: `said-${conversation.at}-${conversation.subject}`,
+    key: `said-${conversation.key}`,
     tone: "past",
     when: on(conversation.at, ctx),
     title: newest ? ctx.t("co.spine.lastSpoke") : conversation.subject,
@@ -321,21 +376,37 @@ function pastStop(conversation: Exchange, newest: boolean, ctx: Ctx): Stop {
 // Update" exchanges — acceptable as a fallback for the rows that have no
 // better key, wrong as the rule.
 function exchanges(view: Organization360): Exchange[] {
+  const asOf = Date.parse(view.as_of);
   const conversations = new Map<string, Exchange>();
   for (const entry of view.activities?.data ?? []) {
-    const subject = entry.subject;
+    const subject = bareSubject(entry.subject);
+    const at = Date.parse(entry.occurred_at ?? "");
     if (
       !isExchange(entry.kind) ||
       !subject ||
       // Already happened, as of the read the rest of the card describes: an
       // `occurred_at DESC` list sorts a meeting booked for next week to the
-      // top, and it has not been said yet.
-      !entry.occurred_at ||
-      entry.occurred_at > view.as_of
+      // top, and it has not been said yet. Compared as instants: the same
+      // moment is written with any offset, and comparing the strings would
+      // read 08:30-02:00 as earlier than 09:00Z when it is ninety minutes
+      // later. NaN from a malformed date fails both tests and drops the row,
+      // which is the only safe reading of a timestamp nothing can order.
+      Number.isNaN(at) ||
+      Number.isNaN(asOf) ||
+      at > asOf
     ) {
       continue;
     }
-    const key = entry.thread_key ?? `subject:${bareSubject(subject)}`;
+    // The two key spaces never meet: a provider whose thread ids look like our
+    // own fallback would otherwise merge an unrelated conversation into one it
+    // has nothing to do with.
+    const key = entry.thread_key
+      ? `thread:${entry.thread_key}`
+      : // Lowercased against the invariant locale, never the machine's: this is
+        // a grouping key rather than a rendered value, and a Turkish browser
+        // folding "I" to "ı" would file one account's conversations differently
+        // from every other reader's.
+        `subject:${subject.toLowerCase()}`;
     const seen = conversations.get(key);
     // The list arrives newest-first, so the first row of a conversation is its
     // latest message: that is the date the thread shows it at, and its subject
@@ -345,8 +416,9 @@ function exchanges(view: Organization360): Exchange[] {
       seen
         ? { ...seen, count: seen.count + 1 }
         : {
-            at: entry.occurred_at,
-            subject: bareSubject(subject),
+            key,
+            at: entry.occurred_at as string,
+            subject,
             kind: entry.kind,
             count: 1,
           },
@@ -357,11 +429,25 @@ function exchanges(view: Organization360): Exchange[] {
 
 // A subject with its reply and forward markers taken off, so "Re: Kickoff" and
 // "Kickoff" are recognised as one conversation when neither row was threaded
-// by capture. Only the two ASCII prefixes every mail client writes — a
-// localized "AW:" that slips through costs one extra stop, while a greedy
-// pattern would merge conversations that merely start alike.
-function bareSubject(subject: string): string {
-  return subject.replace(/^(?:re|fwd?)\s*:\s*/i, "").trim() || subject.trim();
+// by capture.
+//
+// Repeated markers are stripped to the end: a chain that has been replied to
+// and forwarded arrives as "Re: Fwd: Kickoff", and taking one prefix off would
+// file it apart from the conversation it belongs to. Only the ASCII prefixes
+// every mail client writes — a localized "AW:" that slips through costs one
+// extra stop, which is the cheap direction to be wrong in.
+//
+// Returns "" for a subject that is absent, blank, or nothing but markers.
+// Those are not conversations the thread can name, and folding them together
+// under one empty key would merge unrelated calls into a stop with no title.
+function bareSubject(subject: string | null | undefined): string {
+  let bare = (subject ?? "").trim();
+  let stripped = bare.replace(/^(?:re|fwd?)\s*:\s*/i, "").trim();
+  while (stripped !== bare) {
+    bare = stripped;
+    stripped = bare.replace(/^(?:re|fwd?)\s*:\s*/i, "").trim();
+  }
+  return bare;
 }
 
 // What is riding on the close date. An unpriced pipeline says so rather than

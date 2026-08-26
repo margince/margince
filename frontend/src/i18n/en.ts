@@ -2308,6 +2308,7 @@ export const en = {
   "co.spine.unpriced": "{count} open, none priced yet",
   "co.spine.earlier": "{count} earlier conversations",
   "co.spine.earlierOne": "One earlier conversation",
+  "co.spine.earlierMore": "More conversations before this",
   "co.spine.exchangeCount": "{count} messages",
   "co.spine.kind.email": "One email",
   "co.spine.kind.call": "A call",

@@ -444,6 +444,44 @@ describe("the conversations behind the last word", () => {
     expect(screen.getByText("Third")).toBeTruthy();
   });
 
+  // The 360 sends one capped page of the timeline. Counting conversations on a
+  // page that was cut would print a number the reader can check against the
+  // history tab and find wrong, and dating it would claim the account began at
+  // whatever the page happened to reach.
+  it("refuses to count or date the earlier conversations on a cut page", () => {
+    const cut = activities([
+      { id: "p-4", kind: "email", subject: "Fourth", at: SPOKE },
+      {
+        id: "p-3",
+        kind: "email",
+        subject: "Third",
+        at: "2026-08-10T09:00:00Z",
+      },
+      {
+        id: "p-2",
+        kind: "email",
+        subject: "Second",
+        at: "2026-08-05T09:00:00Z",
+      },
+      {
+        id: "p-1",
+        kind: "email",
+        subject: "First",
+        at: "2026-07-01T09:00:00Z",
+      },
+    ]);
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: { ...cut, page: { has_more: true, next_cursor: "c" } },
+      }),
+    );
+
+    expect(screen.getByText("More conversations before this")).toBeTruthy();
+    expect(screen.queryByText("One earlier conversation")).toBeNull();
+    expect(screen.queryByText("1 Jul 2026")).toBeNull();
+  });
+
   it("counts one dropped conversation in the singular", () => {
     draw(
       view({
@@ -539,5 +577,178 @@ describe("an account nobody has written to", () => {
     // But nothing is waiting on a reply.
     expect(screen.queryByText("They have never written back")).toBeNull();
     expect(screen.queryByText("Silence since then")).toBeNull();
+  });
+});
+
+// What the grouping must not do to the rows a real timeline carries.
+describe("the rows a conversation is recognised from", () => {
+  it("folds a chain that was replied to and forwarded", () => {
+    // A mail client stacks its markers. Taking one off files the same chain
+    // under two names, which is two stops for one conversation.
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          { id: "r-3", kind: "email", subject: "Re: Fwd: Pricing", at: SPOKE },
+          {
+            id: "r-2",
+            kind: "email",
+            subject: "Re: Re: Pricing",
+            at: "2026-08-14T09:00:00Z",
+          },
+          {
+            id: "r-1",
+            kind: "email",
+            subject: "Pricing",
+            at: "2026-08-11T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    // One conversation, not three: the chain is the newest stop, so its
+    // subject is the head's detail and the thread names it once.
+    expect(screen.getAllByText("Pricing")).toHaveLength(1);
+    const titles = [...document.querySelectorAll(".co-spine-title")].map(
+      (node) => node.textContent,
+    );
+    expect(titles).toEqual(["You last spoke", "They have never written back"]);
+  });
+
+  it("skips a subject that is blank or nothing but markers", () => {
+    // Two hand-logged calls with no real subject are not one conversation,
+    // and a stop with an empty title names nothing at all.
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          { id: "b-2", kind: "call", subject: "   ", at: SPOKE },
+          {
+            id: "b-1",
+            kind: "call",
+            subject: "Re:",
+            at: "2026-08-14T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    const titles = [...document.querySelectorAll(".co-spine-title")].map(
+      (node) => node.textContent,
+    );
+    expect(titles).toEqual(["You last spoke", "They have never written back"]);
+  });
+
+  it("keeps a provider thread id out of the subject's key space", () => {
+    // A thread id shaped like the subject fallback would otherwise merge an
+    // unrelated conversation into one it has nothing to do with.
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "n-2",
+            kind: "email",
+            subject: "Renewal",
+            at: SPOKE,
+            thread: "subject:pricing",
+          },
+          {
+            id: "n-1",
+            kind: "email",
+            subject: "Pricing",
+            at: "2026-08-11T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    expect(screen.getByText("Pricing")).toBeTruthy();
+    expect(screen.getByText("Renewal")).toBeTruthy();
+  });
+
+  // The same instant is written with any offset. Comparing the strings reads
+  // 08:30-02:00 as earlier than 09:00Z when it is ninety minutes later, which
+  // puts a meeting that has not happened at the head of the thread.
+  it("orders an offset timestamp by its instant, not by its text", () => {
+    draw(
+      view({
+        as_of: "2026-08-25T09:00:00Z",
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "z-2",
+            kind: "meeting",
+            subject: "Not yet held",
+            at: "2026-08-25T08:30:00-02:00",
+          },
+          {
+            id: "z-1",
+            kind: "email",
+            subject: "Already said",
+            at: "2026-08-25T10:00:00+02:00",
+          },
+        ]),
+      }),
+    );
+
+    // 08:30-02:00 is 10:30Z and still ahead; 10:00+02:00 is 08:00Z and past.
+    expect(screen.queryByText("Not yet held")).toBeNull();
+    expect(screen.getByText("Already said")).toBeTruthy();
+  });
+
+  it("drops a row whose timestamp cannot be read at all", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          { id: "bad", kind: "email", subject: "Unreadable date", at: "!" },
+          {
+            id: "ok",
+            kind: "email",
+            subject: "Readable",
+            at: "2026-08-11T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    expect(screen.queryByText("Unreadable date")).toBeNull();
+    expect(screen.getByText("Readable")).toBeTruthy();
+  });
+});
+
+// The thread's head and the gap beneath it are one reading of one fact.
+describe("a last word the thread cannot name", () => {
+  it("dates the head from our last message even when it has no subject", () => {
+    // The gap counts from the 18 August outbound. Labelling the 1 August
+    // conversation "You last spoke" would date the head at one message and
+    // measure the silence from another.
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        last_inbound_at: null,
+        activities: activities([
+          {
+            id: "s-1",
+            kind: "email",
+            subject: "Pricing",
+            at: "2026-08-01T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    const stops = [...document.querySelectorAll(".co-spine-stop")].map(
+      (stop) => ({
+        when: stop.querySelector(".co-spine-when")?.textContent,
+        title: stop.querySelector(".co-spine-title")?.textContent,
+      }),
+    );
+    expect(stops).toEqual([
+      { when: "1 Aug 2026", title: "Pricing" },
+      { when: "18 Aug 2026", title: "You last spoke" },
+      { when: "7 days", title: "They have never written back" },
+    ]);
   });
 });

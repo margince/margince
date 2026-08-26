@@ -2272,6 +2272,8 @@ export const vi = {
     "{count} cu\u1ed9c trao \u0111\u1ed5i tr\u01b0\u1edbc \u0111\u00f3",
   "co.spine.earlierOne":
     "M\u1ed9t cu\u1ed9c trao \u0111\u1ed5i tr\u01b0\u1edbc \u0111\u00f3",
+  "co.spine.earlierMore":
+    "C\u00f2n nhi\u1ec1u cu\u1ed9c trao \u0111\u1ed5i tr\u01b0\u1edbc \u0111\u00f3",
   "co.spine.exchangeCount": "{count} tin nh\u1eafn",
   "co.spine.kind.email": "M\u1ed9t email",
   "co.spine.kind.call": "M\u1ed9t cu\u1ed9c g\u1ecdi",
