@@ -15,7 +15,7 @@ import {
 } from "../design-system/surfacestate";
 import { useTruncationTooltip } from "../design-system/tooltip";
 import { formatDate, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { problemCodeOf, throwProblem } from "./common";
 import { worstOf } from "./company360";
 import {
@@ -173,6 +173,7 @@ function HealthSection({
   orgId,
   loading,
 }: Readonly<{ view?: Organization360; orgId?: string; loading: boolean }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const health = view?.health;
@@ -199,22 +200,16 @@ function HealthSection({
   }
   if (health?.active_contacts != null) {
     lines.push(
-      t(
-        health.active_contacts === 1
-          ? "co.health.activeContacts.one"
-          : "co.health.activeContacts.other",
-        { count: formatNumber(health.active_contacts, locale) },
-      ),
+      plural("co.health.activeContacts", health.active_contacts, {
+        count: formatNumber(health.active_contacts, locale),
+      }),
     );
   }
   if (health?.open_commitments != null && health.open_commitments > 0) {
     lines.push(
-      t(
-        health.open_commitments === 1
-          ? "co.health.openCommitments.one"
-          : "co.health.openCommitments.other",
-        { count: formatNumber(health.open_commitments, locale) },
-      ),
+      plural("co.health.openCommitments", health.open_commitments, {
+        count: formatNumber(health.open_commitments, locale),
+      }),
     );
   }
   const state = sectionState(

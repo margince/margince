@@ -431,13 +431,53 @@ function renderedStems(): string[] {
   return [...stems];
 }
 
+/**
+ * The plural bases this catalog carries: every key with an `_one` arm whose
+ * `_other` arm is here too.
+ *
+ * A plural base is a key stem like any other, reached the same way a template
+ * stem is — `plural("share.teamMembers", n)` renders `share.teamMembers_one` or
+ * `_other` and writes neither in full. Without this, every arm of every plural
+ * pair reads as an orphan and this gate tells the next person to delete
+ * ninety-four strings the product is displaying.
+ *
+ * DERIVED from the catalog rather than listed, and derived from the PAIR rather
+ * than from a suffix: `x_one` alone vouches for nothing, because half a
+ * translated pair is the orphan this check exists to find.
+ */
+function pluralBases(): Set<string> {
+  const keys = new Set(Object.keys(en));
+  const bases = new Set<string>();
+  for (const key of keys) {
+    const base = key.endsWith("_one") ? key.slice(0, -"_one".length) : null;
+    if (base !== null && keys.has(`${base}_other`)) {
+      bases.add(base);
+    }
+  }
+  return bases;
+}
+
 describe("catalog keys against the surfaces that render them", () => {
   it("every key is rendered by a source file, literally or under a stem", () => {
     const literals = renderedLiterals();
     const stems = renderedStems();
+    const bases = pluralBases();
+    // An arm is rendered when its BASE is: the call site names the base and the
+    // reader's own plural rule picks the arm, so the arm's full key never
+    // appears in source at all.
+    const underPluralBase = (key: string): boolean => {
+      const cut = key.lastIndexOf("_");
+      if (cut <= 0) {
+        return false;
+      }
+      const base = key.slice(0, cut);
+      return bases.has(base) && literals.has(base);
+    };
     const orphans = Object.keys(en).filter(
       (key) =>
-        !literals.has(key) && !stems.some((stem) => key.startsWith(stem)),
+        !literals.has(key) &&
+        !underPluralBase(key) &&
+        !stems.some((stem) => key.startsWith(stem)),
     );
     expect(
       orphans,

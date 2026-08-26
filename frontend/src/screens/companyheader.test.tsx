@@ -340,7 +340,11 @@ describe("an account whose lifecycle and relationship agree", () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
       <CompanyActionBadges
-        org={{ ...ORG, lifecycle: "prospect", relationship_types: ["customer"] }}
+        org={{
+          ...ORG,
+          lifecycle: "prospect",
+          relationship_types: ["customer"],
+        }}
         onOpenHistory={() => undefined}
         onSetUpPartner={() => undefined}
       />,

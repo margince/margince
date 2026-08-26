@@ -40,7 +40,7 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
 import { AssistantPanel } from "./assistant";
@@ -173,14 +173,13 @@ type Organization = components["schemas"]["Organization"];
 // import, so the two cannot drift onto two different label sets for the same
 // enum. Re-exported: every existing caller of `LIFECYCLE_LABELS` from this
 // module still resolves, and this file still reads it below as its own.
-export { LIFECYCLE_LABELS };
-
 // What it is TO US, multi-valued (ADR-0079/A124). Moved beside
 // LIFECYCLE_LABELS in companylookups.ts because the two vocabularies OVERLAP —
 // `customer` is a member of both — and only a module holding both can tell
 // that the header is about to print one word twice. Re-exported for the same
 // reason LIFECYCLE_LABELS is: every existing caller still resolves.
-export { RELATIONSHIP_TYPE_LABELS };
+export { LIFECYCLE_LABELS, RELATIONSHIP_TYPE_LABELS };
+
 type CreateOrganizationRequest =
   components["schemas"]["CreateOrganizationRequest"];
 type UpdateOrganizationRequest =
@@ -807,6 +806,7 @@ function SiteReadPanel({
   orgId,
   readId,
 }: Readonly<{ orgId: string; readId: string }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const reportQuery = useQuery({
@@ -862,21 +862,15 @@ function SiteReadPanel({
           {t(SITE_READ_STATUS_LABELS[report.status])}
         </Badge>
         <span className="t-small">
-          {t(
-            report.pages.length === 1
-              ? "deepread.pagesSoFar.one"
-              : "deepread.pagesSoFar.other",
-            { count: formatNumber(report.pages.length, locale) },
-          )}
+          {plural("deepread.pagesSoFar", report.pages.length, {
+            count: formatNumber(report.pages.length, locale),
+          })}
         </span>
         {terminal && (
           <span className="t-small">
-            {t(
-              (report.fact_count ?? 0) === 1
-                ? "deepread.factCount.one"
-                : "deepread.factCount.other",
-              { count: formatNumber(report.fact_count ?? 0, locale) },
-            )}
+            {plural("deepread.factCount", report.fact_count ?? 0, {
+              count: formatNumber(report.fact_count ?? 0, locale),
+            })}
           </span>
         )}
       </p>

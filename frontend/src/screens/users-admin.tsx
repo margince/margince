@@ -19,7 +19,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import "./users-admin.css";
 import { useHoldsAdminRole } from "../app/capability";
@@ -118,6 +118,7 @@ function MembersCard({
   canIssueLink: boolean;
   canAdminister: boolean;
 }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const roster = members.data;
@@ -134,12 +135,9 @@ function MembersCard({
         <>
           {roster && roster.length > 0 && (
             <Badge>
-              {t(
-                roster.length === 1
-                  ? "users.memberCount.one"
-                  : "users.memberCount.other",
-                { count: formatNumber(roster.length, locale) },
-              )}
+              {plural("users.memberCount", roster.length, {
+                count: formatNumber(roster.length, locale),
+              })}
             </Badge>
           )}
           {canAdminister && <InviteAction canIssueLink={canIssueLink} />}

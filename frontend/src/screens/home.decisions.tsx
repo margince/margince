@@ -30,7 +30,14 @@ import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { formatCountdown } from "../format/now";
 import { viewerZone } from "../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import {
+  type Locale,
+  type PluralTranslator,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   approvalKindLabel,
@@ -80,6 +87,7 @@ function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
 /** The deck's vocabulary, in this surface's own words. */
 function deckLabels(
   t: (key: MessageKey, params?: Record<string, string>) => string,
+  plural: PluralTranslator,
   locale: Parameters<typeof formatDateTime>[1],
 ): DecisionDeckLabels {
   const card: DecisionCardLabels = {
@@ -104,18 +112,18 @@ function deckLabels(
     viewList: t("home.deck.viewList"),
     keys: t("home.deck.keys"),
     behind: (count) =>
-      t(count === 1 ? "home.deck.behind.one" : "home.deck.behind.other", {
+      plural("home.deck.behind", count, {
         count: formatNumber(count, locale),
       }),
     staged: (count) =>
-      t(count === 1 ? "home.deck.staged.one" : "home.deck.staged.other", {
+      plural("home.deck.staged", count, {
         count: formatNumber(count, locale),
       }),
     commit: t("home.deck.commit"),
     unstage: t("home.deck.unstage"),
     clearedTitle: t("home.deck.clearedTitle"),
     cleared: (count) =>
-      t(count === 1 ? "home.deck.cleared.one" : "home.deck.cleared.other", {
+      plural("home.deck.cleared", count, {
         count: formatNumber(count, locale),
       }),
     clearedTime: (atMs) =>
@@ -298,6 +306,7 @@ export function DecisionsSection({
   onAlreadyDecided: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const stagedDay = stagedDayFormatter(locale, viewerZone());
   const queryClient = useQueryClient();
@@ -355,7 +364,7 @@ export function DecisionsSection({
         items={items}
         now={nowMs}
         title={t("home.panel.decisions")}
-        labels={deckLabels(t, locale)}
+        labels={deckLabels(t, plural, locale)}
         state={state}
         loadingLabel={t("home.panel.decisions")}
         commitState={commitState}

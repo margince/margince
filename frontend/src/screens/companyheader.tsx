@@ -10,7 +10,7 @@ import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
 import { DecisionsChip } from "./companyapprovals";
@@ -807,6 +807,7 @@ export function CompanyIdentityLine({
   // never reads as an account nobody has ever written to.
   loading?: boolean;
 }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
@@ -895,12 +896,9 @@ export function CompanyIdentityLine({
             <span>
               {t("co.pulse.strongestLead")}{" "}
               <EntityRef kind="person" id={wayIn.contributor_person_id} />{" "}
-              {t(
-                wayIn.contact_count === 1
-                  ? "co.pulse.strengthTail.one"
-                  : "co.pulse.strengthTail.other",
-                { count: formatNumber(wayIn.contact_count, locale) },
-              )}
+              {plural("co.pulse.strengthTail", wayIn.contact_count, {
+                count: formatNumber(wayIn.contact_count, locale),
+              })}
             </span>
           </>
         )}

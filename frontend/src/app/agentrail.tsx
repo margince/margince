@@ -22,10 +22,10 @@ import {
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { usePendingApprovals } from "../screens/approvals.queries";
 import { useOrganization360 } from "../screens/company360";
 import { useConnectors } from "../screens/connectors";
 import { useDedupeQueue } from "../screens/dedupe.queries";
-import { usePendingApprovals } from "../screens/approvals.queries";
 import { useLicenseEntitlement } from "../screens/license";
 import { type AppActivity, useAppActivity } from "./activity";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";

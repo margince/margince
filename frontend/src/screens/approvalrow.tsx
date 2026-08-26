@@ -36,6 +36,7 @@ import {
   resolveDisplay,
   stagedDayFormatter,
 } from "./approvalkind";
+import type { Approval } from "./approvals.queries";
 import {
   isAlreadyDecided,
   isVersionSkew,
@@ -44,7 +45,6 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
-import type { Approval } from "./approvals.queries";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that

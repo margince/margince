@@ -7,7 +7,7 @@ import { Badge, Button, Card, Skeleton } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { AutonomyDot } from "../design-system/trust";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 
@@ -87,6 +87,7 @@ function TranscriptReadPanel({
   activityId,
   readId,
 }: Readonly<{ activityId: string; readId: string }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const reportQuery = useQuery({
@@ -137,12 +138,9 @@ function TranscriptReadPanel({
         </Badge>
         {terminal && (
           <span className="t-small">
-            {t(
-              report.line_count === 1
-                ? "transcriptread.lineCount.one"
-                : "transcriptread.lineCount.other",
-              { count: formatNumber(report.line_count, locale) },
-            )}
+            {plural("transcriptread.lineCount", report.line_count, {
+              count: formatNumber(report.line_count, locale),
+            })}
           </span>
         )}
       </p>

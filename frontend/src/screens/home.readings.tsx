@@ -4,7 +4,7 @@
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 
 // The day's readings, on one plate. The record pages read theirs the same way,
 // which is the point: a strip is read ACROSS as one comparison, and four
@@ -37,6 +37,7 @@ export function HomeReadingsStrip({
   ranked,
   quiet,
 }: HomeReadings) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   // Nothing to compare is nothing to draw. With every reading unread the strip
@@ -64,12 +65,9 @@ export function HomeReadingsStrip({
           dot={decisions.expiringToday > 0}
           detail={
             decisions.expiringToday > 0
-              ? t(
-                  decisions.expiringToday === 1
-                    ? "home.readings.expiring.one"
-                    : "home.readings.expiring.other",
-                  { count: formatNumber(decisions.expiringToday, locale) },
-                )
+              ? plural("home.readings.expiring", decisions.expiringToday, {
+                  count: formatNumber(decisions.expiringToday, locale),
+                })
               : t("home.readings.expiringNone")
           }
         />
@@ -79,12 +77,9 @@ export function HomeReadingsStrip({
           numeric
           label={t("home.readings.openDeals")}
           value={formatNumber(open.deals, locale)}
-          detail={t(
-            open.currencies === 1
-              ? "home.readings.currencies.one"
-              : "home.readings.currencies.other",
-            { count: formatNumber(open.currencies, locale) },
-          )}
+          detail={plural("home.readings.currencies", open.currencies, {
+            count: formatNumber(open.currencies, locale),
+          })}
         />
       )}
       {ranked && (

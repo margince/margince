@@ -205,9 +205,7 @@ describe("LicenseCard", () => {
     render(<LicenseCard />);
 
     expect(
-      await waitFor(() =>
-        screen.getByText("This installation has no license"),
-      ),
+      await waitFor(() => screen.getByText("This installation has no license")),
     ).toBeTruthy();
     expect(screen.getByText(/nothing is capped/)).toBeTruthy();
     // A standing condition does not interrupt: over-the-grant owns the only

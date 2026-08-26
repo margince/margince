@@ -23,8 +23,8 @@ import {
   resolveDisplay,
   stagedDayFormatter,
 } from "./approvalkind";
-import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import type { Approval } from "./approvals.queries";
+import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // The two slots an ApprovalRow hands to `DecisionCard`: the "view everything"
 // dialog behind its meta line, and the inline staged-draft editor. They sit
@@ -254,7 +254,10 @@ function askedOn(
   t: ReturnType<typeof useT>,
 ): [string, string][] {
   const asked: [string, string][] = [
-    [t("decision.detailAsked"), formatDateTime(approval.created_at, locale, zone)],
+    [
+      t("decision.detailAsked"),
+      formatDateTime(approval.created_at, locale, zone),
+    ],
   ];
   if (approval.decided_at) {
     asked.push([

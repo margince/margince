@@ -8,7 +8,7 @@ import type { ConfidenceLevel } from "../design-system/trust";
 import { StagingCard } from "../design-system/trust";
 import { formatMoney, formatNumber } from "../format/format";
 import { minorUnitDigits, toMajorUnits } from "../format/minorunits";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
 
@@ -78,13 +78,6 @@ const CONFIDENCE: Record<ExtractedField["confidence"], ConfidenceLevel> = {
   medium: "med",
 };
 
-// The message layer substitutes {name} and does not speak ICU, so a count picks
-// its own key. Written out per message rather than built by concatenation: a
-// key assembled from fragments is a key no search for it will find.
-function plural(count: number, one: MessageKey, other: MessageKey): MessageKey {
-  return count === 1 ? one : other;
-}
-
 // Money is stored in MINOR units and must never be shown in them.
 //
 // "14850000" under a label reading "Amount" is not a rendering of €148,500.00,
@@ -131,6 +124,7 @@ export function DocumentExtractionPanel({
   canAccept,
 }: Readonly<{ attachmentId: string; canAccept: boolean }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   const [edits, setEdits] = useState<Record<string, string>>({});
@@ -215,14 +209,9 @@ export function DocumentExtractionPanel({
     return (
       <section className="real-card" aria-label={t("extraction.acceptedLabel")}>
         <p className="t-small">
-          {t(
-            plural(
-              accepted,
-              "extraction.acceptedHeading.one",
-              "extraction.acceptedHeading.other",
-            ),
-            { count: formatNumber(accepted, locale) },
-          )}
+          {plural("extraction.acceptedHeading", accepted, {
+            count: formatNumber(accepted, locale),
+          })}
         </p>
       </section>
     );
@@ -322,6 +311,7 @@ function ExtractionBody({
   acceptFailed: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
 
   if (extraction.status === "queued" || extraction.status === "running") {
@@ -358,14 +348,9 @@ function ExtractionBody({
   return (
     <StagingCard>
       <p className="t-small">
-        {t(
-          plural(
-            extraction.fields.length,
-            "extraction.heading.one",
-            "extraction.heading.other",
-          ),
-          { count: formatNumber(extraction.fields.length, locale) },
-        )}
+        {plural("extraction.heading", extraction.fields.length, {
+          count: formatNumber(extraction.fields.length, locale),
+        })}
       </p>
       <ul className="extraction-fields">
         {extraction.fields.map((field) => (
@@ -386,14 +371,9 @@ function ExtractionBody({
             onClick={() => onAccept(extraction.fields)}
             disabled={accepting}
           >
-            {t(
-              plural(
-                extraction.fields.length,
-                "extraction.accept.one",
-                "extraction.accept.other",
-              ),
-              { count: formatNumber(extraction.fields.length, locale) },
-            )}
+            {plural("extraction.accept", extraction.fields.length, {
+              count: formatNumber(extraction.fields.length, locale),
+            })}
           </Button>
           <Button variant="ghost" onClick={onDismiss}>
             {t("extraction.dismiss")}

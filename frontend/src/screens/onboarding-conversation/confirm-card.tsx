@@ -17,7 +17,7 @@ import {
   ProvenanceTag,
 } from "../../design-system/trust";
 import { formatNumber } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, useLocale, usePluralKey, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { coldFieldLabel } from "../common";
 import type { CompanyDraft, CompanyFieldName } from "../onboarding";
@@ -1267,6 +1267,7 @@ function ReviewContinueBar({
   t: ReturnType<typeof useT>;
 }>) {
   const { locale } = useLocale();
+  const keyFor = usePluralKey();
   const statusId = "ob-triage-continue-status";
   // Required fields first: it is the more actionable of the two blockers
   // (a value to type, right here) and the one this surface can always
@@ -1274,9 +1275,7 @@ function ReviewContinueBar({
   // narrower, rarer case.
   const statusKey =
     remaining > 0
-      ? remaining === 1
-        ? "ob.conv.review.requiredRemaining.one"
-        : "ob.conv.review.requiredRemaining.other"
+      ? keyFor("ob.conv.review.requiredRemaining", remaining)
       : blockedByQuestion
         ? "ob.conv.review.confirmQuestionOpen"
         : "ob.conv.review.requiredDone";
