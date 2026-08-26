@@ -51,6 +51,10 @@ function stubPages(pages: Record<string, unknown>) {
   return seen;
 }
 
+// Every field the contract REQUIRES, so the fixture is a real Approval rather
+// than one an assertion claims is one: a fixture that skips a required field and
+// says `as Approval` is how a test ends up asserting against a shape the server
+// cannot send.
 function approval(over: Partial<Approval>): Approval {
   return {
     id: "ap-1",
@@ -60,7 +64,7 @@ function approval(over: Partial<Approval>): Approval {
     summary: "Send the follow-up",
     created_at: "2026-08-01T09:00:00Z",
     ...over,
-  } as unknown as Approval;
+  };
 }
 
 function wrapper() {

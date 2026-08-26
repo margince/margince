@@ -150,6 +150,18 @@ plant "$ROOT" 'const r = await fetch("/v1");'
 run "$ROOT" "$V1"
 expect_named "$ROOT" "a call to the mount root"
 
+# The root with a query, and with a fragment: a URL continues in more ways than
+# one, and each of them is a call this gate is refusing.
+QUERY="$TMP/ext-query"
+plant "$QUERY" 'const r = await fetch("/v1?limit=10");'
+run "$QUERY" "$V1"
+expect_named "$QUERY" "a call to the mount root carrying a query"
+
+FRAGMENT="$TMP/ext-fragment"
+plant "$FRAGMENT" 'const r = await fetch("/v1#anchor");'
+run "$FRAGMENT" "$V1"
+expect_named "$FRAGMENT" "a call to the mount root carrying a fragment"
+
 # And the split spelling still follows the CONTRACT: /v1 pieces are silent
 # against a contract mounted at /v2, so the looser match did not become a
 # hard-coded /v1.

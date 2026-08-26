@@ -472,7 +472,7 @@ describe("catalog keys against the surfaces that render them", () => {
     // direction that matters: this gate's job is to find a key nothing renders,
     // and an exemption that reaches further than the convention it models makes
     // it report PASS over one.
-    const arms = ["_one", "_other"] as const;
+    const arms: readonly ["_one", "_other"] = ["_one", "_other"];
     const underPluralBase = (key: string): boolean => {
       const arm = arms.find((suffix) => key.endsWith(suffix));
       if (arm === undefined) {
