@@ -148,6 +148,143 @@ describe("sorting", () => {
   });
 });
 
+describe("the sort menu", () => {
+  /** The menu's own entries, so a column picker's "Value" is never one of them. */
+  function sortMenu() {
+    return within(screen.getByRole("group", { name: "Sort by" }));
+  }
+
+  it("offers every orderable column and nothing else", async () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    const menu = sortMenu();
+    expect(menu.getByRole("button", { name: "Name" })).toBeTruthy();
+    expect(menu.getByRole("button", { name: "Value" })).toBeTruthy();
+    // Note and Region name no server sort field, so ordering by them is
+    // something the API cannot do and the menu must not offer.
+    expect(menu.queryByRole("button", { name: "Note" })).toBeNull();
+    expect(menu.queryByRole("button", { name: "Region" })).toBeNull();
+  });
+
+  it("still offers a column the reader has hidden", async () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange: () => {} }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Columns" }));
+    await userEvent.click(
+      within(screen.getByRole("group", { name: "Shown columns" })).getByRole(
+        "button",
+        { name: "Value" },
+      ),
+    );
+    expect(screen.queryByRole("columnheader", { name: "Value" })).toBeNull();
+
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    expect(sortMenu().getByRole("button", { name: "Value" })).toBeTruthy();
+  });
+
+  it("presses the same direction a header press would", async () => {
+    const onChange = vi.fn();
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    await userEvent.click(sortMenu().getByRole("button", { name: "Name" }));
+    expect(onChange).toHaveBeenCalledWith("name");
+
+    await userEvent.click(sortMenu().getByRole("button", { name: "Value" }));
+    expect(onChange).toHaveBeenLastCalledWith("-value");
+  });
+
+  it("flips the direction of the attribute already sorted, and says which way", async () => {
+    function Harness() {
+      const [value, setValue] = useState("name");
+      return (
+        <ListTable
+          rows={testRows(1)}
+          columns={columns}
+          rowKey={(row) => row.id}
+          unit="rows"
+          sort={{ value, onChange: setValue }}
+        />
+      );
+    }
+    render(<Harness />);
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    const entry = sortMenu().getByRole("button", { name: /^Name/ });
+    expect(entry.getAttribute("aria-pressed")).toBe("true");
+    expect(entry.textContent).toContain("ascending");
+
+    await userEvent.click(entry);
+    expect(
+      sortMenu().getByRole("button", { name: /^Name/ }).textContent,
+    ).toContain("descending");
+  });
+
+  it("offers the server's own order, which is a state a saved view can ask for", async () => {
+    const onChange = vi.fn();
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "name", onChange }}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Sort" }));
+    const fallback = sortMenu().getByRole("button", { name: "Default order" });
+    expect(fallback.getAttribute("aria-pressed")).toBe("false");
+    await userEvent.click(fallback);
+    expect(onChange).toHaveBeenCalledWith("");
+  });
+
+  it("is not drawn for a list the server cannot order", () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={[{ key: "note", header: "Note", cell: () => "-" }]}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "", onChange: () => {} }}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Sort" })).toBeNull();
+  });
+
+  it("is not drawn without a sort control at all", () => {
+    render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Sort" })).toBeNull();
+  });
+});
+
 describe("filter chips", () => {
   const chips: readonly ListChip[] = [
     {
@@ -757,7 +894,7 @@ describe("pagination", () => {
     expect(onPerPage).toHaveBeenCalledWith(50);
   });
 
-  it("leaves the rows-per-page picker inert when the caller offers no handler", () => {
+  it("slices its own rows when the caller offers no page-size handler", async () => {
     render(
       <ListTable
         rows={testRows(60)}
@@ -766,9 +903,14 @@ describe("pagination", () => {
         unit="rows"
       />,
     );
-    expect(
-      screen.getByRole("combobox", { name: "Rows per page" }),
-    ).toHaveProperty("disabled", true);
+    const picker = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(picker).toHaveProperty("disabled", false);
+    expect(screen.getAllByRole("row")).toHaveLength(26);
+
+    // Every row is already in hand, so there is no wire to re-ask and slicing
+    // them IS the whole of what this dial means here.
+    await pickOption(userEvent.setup(), picker, "50 per page");
+    expect(screen.getAllByRole("row")).toHaveLength(51);
   });
 
   it("puts the current page between its neighbours and keeps page one reachable", () => {
@@ -1019,8 +1161,51 @@ describe("empty state", () => {
     expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
   });
 
-  it("names a likelier cause under the none-yet copy, and only when unfiltered", () => {
-    const { rerender } = render(
+  it("does not tell the count line nothing exists when a dial is hiding it", () => {
+    // Both sentences were on screen at once and one of them was false: the body
+    // said "no companies match these filters" while the line above it said
+    // "No companies yet". A search that matches nothing says nothing about
+    // whether the workspace has any.
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        sort={{ value: "name", onChange: () => {} }}
+        search={{ value: "acme", onChange: () => {} }}
+      />,
+    );
+    expect(screen.queryByText(/No rows yet/)).toBeNull();
+    expect(screen.getByText("No rows match these filters.")).toBeTruthy();
+    // The order is still true, and still worth saying — and it opens the line
+    // now rather than continuing one, so it opens in upper case and carries no
+    // comma with nothing on its left.
+    expect(screen.getByText("Sorted by Name")).toBeTruthy();
+  });
+
+  it("says nothing exists only when nothing is narrowing, scope included", () => {
+    // A screen's own scope — which pipeline's board is being read — narrows the
+    // rows and no button here can undo it. Switching to a pipeline with no
+    // deals said "no deals yet" about a workspace full of them.
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        scopeKey="pipeline-2"
+      />,
+    );
+    expect(screen.queryByText(/No rows yet/)).toBeNull();
+    expect(screen.getByText(/No rows match these filters/)).toBeTruthy();
+    // And no verb, because there is nothing here that could clear it. A Clear
+    // that cleared nothing is a control that does nothing.
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+  });
+
+  it("names a likelier cause under the none-yet copy", () => {
+    render(
       <ListTable
         rows={[]}
         columns={columns}
@@ -1032,24 +1217,37 @@ describe("empty state", () => {
     expect(
       screen.getByText("No owner here maps to a workspace user."),
     ).toBeTruthy();
+  });
 
-    // A filtered-empty table already explains itself, so the note would only
-    // blame the data source for what the reader's own filter did.
-    rerender(
-      <LocaleProvider initial="en">
-        <ListTable
-          rows={[]}
-          columns={columns}
-          rowKey={(row) => row.id}
-          unit="rows"
-          emptyNote="No owner here maps to a workspace user."
-          search={{ value: "acme", onChange: () => {} }}
-        />
-      </LocaleProvider>,
+  it("names it under the no-matches copy too, since a narrowing can be the cause", () => {
+    // The case the prop was written for is a narrowed one: a "Mine" view for a
+    // reader who owns nothing. Drawn only over the unnarrowed line, that note
+    // never appeared at all. Which emptiness a note explains is the caller's to
+    // know — a caller whose note would blame the data source for the reader's
+    // own dial passes none.
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        emptyNote="You own no rows."
+        chips={[
+          {
+            key: "owner_id",
+            label: "Owner",
+            allLabel: "Any owner",
+            options: [{ value: "u-9", label: "Me" }],
+          },
+        ]}
+        chosen={{ owner_id: "u-9" }}
+      />,
     );
-    expect(
-      screen.queryByText("No owner here maps to a workspace user."),
-    ).toBeNull();
+    expect(screen.getByText("No rows match these filters.")).toBeTruthy();
+    expect(screen.getByText("You own no rows.")).toBeTruthy();
+    // Two different offers: one undoes every narrowing, the screen's own note
+    // usually undoes one.
+    expect(screen.getByRole("button", { name: "Clear filters" })).toBeTruthy();
   });
 });
 

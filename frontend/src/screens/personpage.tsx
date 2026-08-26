@@ -5,7 +5,6 @@ import {
   Link as LinkIcon,
   Mail,
   MapPin,
-  MoreHorizontal,
   Phone,
   Search,
 } from "lucide-react";
@@ -15,8 +14,9 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Button, SegmentedControl } from "../design-system/atoms";
+import { Button, OverflowMenu, SegmentedControl } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
+import { IconAction } from "../design-system/iconaction";
 import { liveProjects } from "../design-system/projectpicker";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -590,30 +590,47 @@ function PersonActions({
       >
         <WriteIcon size={15} aria-hidden="true" /> {write.label}
       </Button>
-      <Button onClick={() => navigate(personTabRoute(personId, "timeline"))}>
-        <Phone size={15} aria-hidden="true" /> {t("person.action.call")}
-      </Button>
-      <Button
+      {/* Square, because a phone and a calendar are verbs a reader already
+          knows from the glyph — and five labelled buttons in a row is a header
+          that reads as a toolbar, with the one action the page is FOR no more
+          prominent than the rest of them. `IconAction` owes each one its name
+          on hover as well as to a screen reader. */}
+      <IconAction
+        label={t("person.action.call")}
+        icon={<Phone size={15} aria-hidden="true" />}
+        onClick={() => navigate(personTabRoute(personId, "timeline"))}
+      />
+      <IconAction
+        label={t("person.action.meetings")}
+        icon={<CalendarDays size={15} aria-hidden="true" />}
         onClick={() =>
           navigate({ screen: "contacts", id: personId, id2: "meetings" })
         }
-      >
-        <CalendarDays size={15} aria-hidden="true" />{" "}
-        {t("person.action.meetings")}
-      </Button>
+      />
+      {/* Keeps its words. A tick box is the glyph for COMPLETING a task, so
+          squaring this one would name the opposite of what it does. */}
       <Button onClick={() => navigate({ screen: "today" })}>
         <CheckSquare size={15} aria-hidden="true" />{" "}
         {t("person.action.addTask")}
       </Button>
-      <Button onClick={onResearch}>
-        <Search size={15} aria-hidden="true" /> {t("person.action.research")}
-      </Button>
-      <Button
-        aria-label={t("person.action.more")}
-        onClick={() => navigate(personTabRoute(personId, "timeline"))}
-      >
-        <MoreHorizontal size={15} aria-hidden="true" />
-      </Button>
+      {/* A real menu. This was a button labelled "More actions" that navigated
+          to the timeline tab — the same place the Call button went — so the one
+          control on the header promising there was more behind it delivered a
+          tab instead, and the promise was the only thing it did. Research moves
+          in here because a magnifier reads as "search" and this verb is not
+          search, and the timeline gets the honest name the product already uses
+          for it everywhere else. */}
+      <OverflowMenu label={t("person.action.more")}>
+        <Button small onClick={onResearch}>
+          <Search size={15} aria-hidden="true" /> {t("person.action.research")}
+        </Button>
+        <Button
+          small
+          onClick={() => navigate(personTabRoute(personId, "timeline"))}
+        >
+          {t("record.fullHistory")}
+        </Button>
+      </OverflowMenu>
     </>
   );
 }

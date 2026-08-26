@@ -142,6 +142,7 @@ import {
 import {
   createdColumn,
   lastActivityColumn,
+  mineEmptyNote,
   ownerColumn,
   standardViews,
 } from "./recordlist";
@@ -593,6 +594,12 @@ export function CompaniesScreen() {
       <ListTable
         state={state}
         unit="unit.companies"
+        emptyNote={mineEmptyNote({
+          t,
+          state,
+          viewerId,
+          unit: "unit.companies",
+        })}
         action={
           <>
             <Button small onClick={() => navigate({ screen: "partners" })}>

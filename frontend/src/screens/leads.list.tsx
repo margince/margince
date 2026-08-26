@@ -48,7 +48,12 @@ import {
   useListQuery,
   useOwnerChips,
 } from "./listquery";
-import { lastActivityColumn, ownerColumn, standardViews } from "./recordlist";
+import {
+  lastActivityColumn,
+  mineEmptyNote,
+  ownerColumn,
+  standardViews,
+} from "./recordlist";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
@@ -310,24 +315,7 @@ function LeadsWorkbench({
         </div>
       )}
       <ListTable
-        emptyNote={
-          showingMine ? (
-            <span>
-              {t("lead.emptyMine")}{" "}
-              <Button
-                small
-                onClick={() =>
-                  state.setQuery((q) => {
-                    const { owner_id: _mine, ...rest } = q.filters;
-                    return { ...q, filters: rest };
-                  })
-                }
-              >
-                {t("lead.showAll")}
-              </Button>
-            </span>
-          ) : undefined
-        }
+        emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })}
         // The board renders INSIDE the surface, so the search, the chips and
         // the saved views stay above it. A board that replaced the surface
         // took the filter bar with it, leaving the reader looking at a
@@ -520,7 +508,7 @@ function LeadsWorkbench({
                           });
                         }}
                       >
-                        {t("lead.showAll")}
+                        {t("list.showAll")}
                       </Button>
                     </span>,
                     { sticky: true },

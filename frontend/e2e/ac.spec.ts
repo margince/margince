@@ -1308,6 +1308,15 @@ const ADDRESSED_VIEWS = [
   "companies?q=brandt&sort=name",
   "companies/o-brandt/tasks",
   "reports/forecast",
+  // The three record headers whose verbs are icon-only: the name a sighted
+  // reader gets on hover is not the name axe checks, so what is swept here is
+  // the other half — that every square carries an accessible name at all, and
+  // that a header of squares still meets AA on its own ground. A glyph with no
+  // name is the one way this pattern fails silently, and it fails for exactly
+  // the readers who cannot see the glyph.
+  "contacts/p-anna",
+  "deals/d-fleet",
+  "projects/pr-fleet",
 ];
 
 // The SAME sweep under the dark palette, which the suite measured by accident
@@ -1325,7 +1334,12 @@ const ADDRESSED_VIEWS = [
 test.describe("B-EP09.21: WCAG 2.2 AA (axe), dark palette", () => {
   test.use({ colorScheme: "dark" });
 
-  for (const screen of CORE_SCREENS) {
+  // Both lists, not just the nav entries. A record header drawn as icon-only
+  // squares sits on the accent-tinted grounds this palette lightens, and the
+  // eight findings this block was written for were every one of them
+  // accent-coloured text on an accent-tinted fill — invisible to the light
+  // sweep, with no markup between the two different.
+  for (const screen of [...CORE_SCREENS, ...ADDRESSED_VIEWS]) {
     test(`no AA violations on #/${screen} in dark`, async ({ page }) => {
       await page.goto(`/#/${screen}`);
       await page.waitForLoadState("networkidle");

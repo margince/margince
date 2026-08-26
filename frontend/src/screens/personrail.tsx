@@ -586,17 +586,13 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
     <Disclosure
       className="pe-sect"
       open
-      summary={
+      summary={t("person.rail.employmentTitle")}
+      action={
         canEdit ? (
-          <span className="pe-sect-summary">
-            {t("person.rail.employmentTitle")}
-            <Button small onClick={() => setAdding(true)}>
-              {t("person.rail.addEmployment")}
-            </Button>
-          </span>
-        ) : (
-          t("person.rail.employmentTitle")
-        )
+          <Button small onClick={() => setAdding(true)}>
+            {t("person.rail.addEmployment")}
+          </Button>
+        ) : undefined
       }
     >
       <SurfaceState
@@ -993,13 +989,11 @@ function RelationshipPulse({
     <Disclosure
       className="pe-sect"
       open
-      summary={
-        <span className="pe-sect-summary">
-          {t("person.rail.pulseTitle")}
-          <Button small onClick={onExplain}>
-            {t("person.rail.explain")}
-          </Button>
-        </span>
+      summary={t("person.rail.pulseTitle")}
+      action={
+        <Button small onClick={onExplain}>
+          {t("person.rail.explain")}
+        </Button>
       }
     >
       {/* Four of these five readings are derived from the two directional

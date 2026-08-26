@@ -1,8 +1,11 @@
+import type { ReactNode } from "react";
+import { Button } from "../design-system/atoms";
 import type { ListColumn } from "../design-system/listtable";
 import { formatDateAbbrev } from "../format/format";
 import type { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { OwnerName } from "./entityref";
-import type { ViewSpec } from "./listquery";
+import type { ListState, ViewSpec } from "./listquery";
 
 /**
  * The columns and views every owner-scoped record list shares (people,
@@ -101,4 +104,55 @@ export function standardViews(
     filters: { owner_id: viewerId },
   };
   return options.mineFirst ? [mine, all] : [all, mine];
+}
+
+/**
+ * What an empty "Mine" tab says, and the way back to everything.
+ *
+ * The other half of `standardViews`, and it belongs beside it: a screen that
+ * renders the Mine tab owes the reader this sentence, because a bare "no
+ * matches" over a filter they may not remember turning reads as an empty
+ * workspace. It was spelled on the leads queue alone, so the companies and
+ * contacts lists — same tab, same emptiness a reader reaches in one click —
+ * said nothing at all.
+ *
+ * Undefined unless Mine is what is actually on screen. Under any other
+ * narrowing the table's own line is the right one, and a sentence about
+ * ownership would name a cause that is not the cause.
+ *
+ * "Show all" drops the owner filter and nothing else, which is what makes it
+ * worth having beside the table's own "clear filters": one undoes the tab, the
+ * other undoes every dial the reader has turned.
+ */
+export function mineEmptyNote<Row>({
+  t,
+  state,
+  viewerId,
+  unit,
+}: Readonly<{
+  t: Translate;
+  state: ListState<Row>;
+  viewerId: string | undefined;
+  /** The plural noun for these rows, so the sentence names them. */
+  unit: MessageKey;
+}>): ReactNode | undefined {
+  if (!viewerId || state.query.filters.owner_id !== viewerId) {
+    return undefined;
+  }
+  return (
+    <span>
+      {t("list.emptyMine", { unit: t(unit) })}{" "}
+      <Button
+        small
+        onClick={() =>
+          state.setQuery((query) => {
+            const { owner_id: _mine, ...rest } = query.filters;
+            return { ...query, filters: rest };
+          })
+        }
+      >
+        {t("list.showAll")}
+      </Button>
+    </span>
+  );
 }

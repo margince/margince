@@ -28,7 +28,10 @@ import {
   ListSurface,
   type ListView,
   Menu,
+  nextSortValue,
   type SortControl,
+  type SortOption,
+  sortDirection,
   useCloseOnEscape,
   useCloseOnOutsideClick,
 } from "./listsurface";
@@ -39,6 +42,7 @@ export type {
   ListChip,
   ListView,
   SortControl,
+  SortOption,
 } from "./listsurface";
 
 // The list surface: one component owning the header, the controls, the rows and
@@ -347,13 +351,7 @@ function sortState(
   column: { sort?: string },
   value: string,
 ): "asc" | "desc" | null {
-  if (!column.sort) {
-    return null;
-  }
-  if (value === column.sort) {
-    return "asc";
-  }
-  return value === `-${column.sort}` ? "desc" : null;
+  return column.sort ? sortDirection(column.sort, value) : null;
 }
 
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: the alternate body owns one guarded paging branch while the table keeps the shared query controls
@@ -382,7 +380,7 @@ export function ListTable<Row>({
   footer,
   hasMore = false,
   onLoadMore,
-  perPage = PAGE_SIZES[0],
+  perPage: controlledPerPage,
   onPerPage,
   page: controlledPage,
   onPage,
@@ -429,9 +427,15 @@ export function ListTable<Row>({
   /** Plural noun for the count and the empty state — "contacts", "leads". */
   unit: string;
   /**
-   * A likelier cause than "there is nothing here", for a data source that has
-   * one. Shown under the empty state only when no filter is narrowing the
-   * list, since a filtered-empty table already explains itself.
+   * A likelier cause than "there is nothing here", for a caller that knows one.
+   *
+   * Drawn under the empty state whichever line it carries, narrowed or not:
+   * which emptiness a note explains is the CALLER's to know. A "Mine" view for
+   * a reader who owns nothing is the case this was written for and is a
+   * narrowed list, so a note shown only over the unnarrowed one never appeared.
+   * A caller whose note would blame the data source for what the reader's own
+   * dial did passes none — the overlay owner hint goes quiet under a live
+   * search for exactly that reason.
    */
   emptyNote?: ReactNode;
   /** Omit for a list whose GET has no `q` param; the box is then not rendered. */
@@ -494,12 +498,15 @@ export function ListTable<Row>({
   /**
    * Rows per RENDERED page. The caller fetches a whole multiple of it, so the
    * table divides the rows it holds on boundaries the fetch already respects.
+   * Read only alongside `onPerPage`; without one the table holds the size.
    */
   perPage?: number;
   /**
-   * The reader picked a different page size; re-ask the server with it. A
-   * table with no handler keeps the footer's picker inert rather than
-   * pretending a size the caller will never fetch.
+   * The reader picked a different page size; re-ask the server with it.
+   *
+   * Omit it, as the page number is omitted, and the table keeps the size
+   * itself: with no handler there is no wire to re-ask, so every row is
+   * already in hand and slicing them is the whole of what the dial means.
    */
   onPerPage?: (next: number) => void;
   /**
@@ -573,6 +580,17 @@ export function ListTable<Row>({
     setOwnPage(to);
     onPage?.(to);
   };
+  // The page SIZE splits the same way, on the handler rather than on the value:
+  // a caller that cannot be told the reader changed it cannot own it. The dial
+  // then slices what is already in hand, which is all it can mean without a
+  // wire to re-ask. Drawing it disabled instead was the state a preview table
+  // shipped in, and a dead control reads as a broken one rather than as a dial
+  // this table does not have.
+  const [ownPerPage, setOwnPerPage] = useState(
+    controlledPerPage ?? PAGE_SIZES[0],
+  );
+  const perPage = onPerPage ? (controlledPerPage ?? PAGE_SIZES[0]) : ownPerPage;
+  const setPerPage = onPerPage ?? setOwnPerPage;
   const scroller = useRef<HTMLDivElement>(null);
   const head = useRef<HTMLTableElement>(null);
   // The frozen column only casts a shadow once columns have actually slid under
@@ -732,6 +750,14 @@ export function ListTable<Row>({
   const sorted = sort
     ? columns.find((column) => sortState(column, sort.value) !== null)
     : undefined;
+  // Every orderable column, not just the shown ones: a reader who hid a column
+  // to fit a phone did not give up ordering by it, and the menu is the only
+  // route left to that sort once its header is gone.
+  const sortOptions: readonly SortOption[] = columns.flatMap((column) =>
+    column.sort
+      ? [{ field: column.sort, label: column.header, numeric: column.numeric }]
+      : [],
+  );
   const optional = columns.filter((column) => !column.fixed);
   // What is actually narrowing the set, and so whether an empty result should
   // offer to clear anything. A view is not itself a narrowing: applying one
@@ -741,6 +767,14 @@ export function ListTable<Row>({
   // records do not exist rather than that a filter is hiding them.
   const filtered =
     Boolean(search?.value) || Object.values(chosen).some(Boolean);
+  // Whether ANYTHING is cutting the set down, which is a wider question than
+  // whether a CLEARABLE dial is. A screen's own scope — which pipeline's board
+  // is being read — narrows the rows and no button here can undo it, so the two
+  // answers have to be separate: offering "clear filters" for a scope this
+  // table cannot clear would be a control that does nothing, and calling an
+  // empty scope "no deals yet" is a claim about the workspace when the truth is
+  // that this pipeline has none.
+  const narrowed = filtered || Boolean(scopeKey);
 
   // Narrowing the set changes what page 1 even means, so go back to it rather
   // than stranding the reader on a page that no longer exists. Clamping alone
@@ -893,6 +927,7 @@ export function ListTable<Row>({
             last={from + pageRows.length}
             total={rows.length}
             more={hasMore}
+            narrowed={narrowed}
             sortedBy={sorted?.header}
           />
         )
@@ -901,6 +936,8 @@ export function ListTable<Row>({
       caption={caption}
       note={note}
       search={search}
+      sort={sort}
+      sortOptions={sortOptions}
       chips={chips}
       chosen={chosen}
       onChipChange={onChipChange}
@@ -948,7 +985,7 @@ export function ListTable<Row>({
               hasMore={hasMore}
               perPage={perPage}
               onGoto={goto}
-              onPerPage={onPerPage}
+              onPerPage={setPerPage}
             />
           )}
         </>
@@ -1091,9 +1128,21 @@ export function ListTable<Row>({
               {!pending && !problem && rows.length === 0 && (
                 <tr className="lt-empty" role="row">
                   <td colSpan={shown.length + 1} role="cell">
-                    {filtered ? (
+                    {/* Three states, not two. "No rows yet" is a claim about
+                        the SET and is false the moment anything is cutting it
+                        down — including a narrowing this table cannot clear,
+                        which is what a screen's own scope is: switching to a
+                        pipeline with no deals said "no deals yet" about a
+                        workspace full of them. So what is narrowing decides the
+                        sentence, and whether it is CLEARABLE decides whether a
+                        verb is offered, because a Clear that cleared nothing
+                        would be a control that does nothing. */}
+                    {narrowed
+                      ? t("table.noMatches", { unit })
+                      : t("table.none", { unit })}
+                    {filtered && (
                       <>
-                        {t("table.noMatches", { unit })}{" "}
+                        {" "}
                         <button
                           type="button"
                           className="lt-linkish"
@@ -1102,18 +1151,25 @@ export function ListTable<Row>({
                           {t("table.clearFilters")}
                         </button>
                       </>
-                    ) : (
-                      <>
-                        {t("table.none", { unit })}
-                        {emptyNote && (
-                          <p
-                            className="t-caption"
-                            style={{ marginTop: "var(--space-2)" }}
-                          >
-                            {emptyNote}
-                          </p>
-                        )}
-                      </>
+                    )}
+                    {/* Under EITHER line, because WHICH emptiness a note
+                        explains is the caller's to know and not this table's.
+                        Drawn only over the unnarrowed one, the case the prop
+                        was written for never appeared at all: a "Mine" view
+                        for a reader who owns nothing is a NARROWED list. A
+                        caller whose note would blame the data source for what
+                        the reader's own dial did passes none — the overlay
+                        owner hint goes quiet under a live search for exactly
+                        that reason. The generic line stays above it either
+                        way: "clear filters" undoes every narrowing, and a
+                        screen's own way back usually undoes one. */}
+                    {emptyNote && (
+                      <p
+                        className="t-caption"
+                        style={{ marginTop: "var(--space-2)" }}
+                      >
+                        {emptyNote}
+                      </p>
                     )}
                   </td>
                 </tr>
@@ -1175,16 +1231,12 @@ function HeaderCell<Row>({
       </th>
     );
   }
-  const field = column.sort;
-  // Unsorted, a number column almost always wants its biggest value first.
-  const next =
-    state === "asc"
-      ? `-${field}`
-      : state === "desc"
-        ? field
-        : column.numeric
-          ? `-${field}`
-          : field;
+  // The same arithmetic the sort menu presses, so a reader who flips a column
+  // here finds that direction there.
+  const next = nextSortValue(
+    { field: column.sort, numeric: column.numeric },
+    state,
+  );
   return (
     <th
       className={className}
@@ -1410,7 +1462,7 @@ function Pager({
   hasMore: boolean;
   perPage: number;
   onGoto: (to: number) => void;
-  onPerPage?: (next: number) => void;
+  onPerPage: (next: number) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -1467,8 +1519,7 @@ function Pager({
         <Select
           aria-label={t("table.rowsPerPage")}
           value={identifierNumber(perPage)}
-          disabled={!onPerPage}
-          onChange={(next) => onPerPage?.(Number(next))}
+          onChange={(next) => onPerPage(Number(next))}
           options={PAGE_SIZES.map((size) => ({
             value: identifierNumber(size),
             label: t("table.perPage", { count: formatNumber(size, locale) }),

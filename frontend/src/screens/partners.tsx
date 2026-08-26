@@ -516,6 +516,16 @@ export function PartnerTab({
   );
 }
 
+/**
+ * One page of partners.
+ *
+ * No `sort`: `/partners` is keyset-paged by organization id and orders by it,
+ * so the ordering is not a dial anybody can turn. The parameter exists on the
+ * operation and the handler never reads it, which is worse than its absence —
+ * the list used to open on a "Newest" tab, send `sort=-created_at` and draw
+ * rows in uuid order, telling the reader an ordering it did not have. Until the
+ * store can answer one, this list offers none.
+ */
 async function fetchPartnersPage(
   query: ListQuery,
   cursor: string | null,
@@ -523,7 +533,6 @@ async function fetchPartnersPage(
   const { data, error } = await api.GET("/partners", {
     params: {
       query: {
-        sort: query.sort || undefined,
         cursor: cursor || undefined,
         limit: listFetchLimit(query.perPage),
         partner_role: asPartnerRole(query.filters.partner_role ?? ""),
@@ -547,7 +556,6 @@ export function PartnersScreen() {
   const t = useT();
   const state = useListQuery<Partner>({
     key: "partners",
-    initialSort: "-created_at",
     fetchPage: fetchPartnersPage,
   });
 
@@ -620,7 +628,6 @@ export function PartnersScreen() {
             })),
           },
         ]}
-        views={[{ label: "list.sortNewest", sort: "-created_at" }]}
       />
     </div>
   );

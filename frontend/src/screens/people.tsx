@@ -61,6 +61,7 @@ import { PersonProjects } from "./personprojects";
 import {
   createdColumn,
   lastActivityColumn,
+  mineEmptyNote,
   ownerColumn,
   standardViews,
 } from "./recordlist";
@@ -343,6 +344,7 @@ export function ContactsScreen() {
       <ListTable
         state={state}
         unit="unit.contacts"
+        emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" })}
         action={
           <CreateAction
             label={t("create.contact")}

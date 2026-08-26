@@ -1517,6 +1517,17 @@ describe("DealsScreen filters", () => {
   });
 });
 
+/**
+ * Open the header's overflow, which is where archiving, sharing and reopening
+ * live: verbs whose consequence a reader has to read before pressing get a
+ * whole line rather than a place in the verb row. Edit stays in the row.
+ */
+async function openHeaderMenu(): Promise<void> {
+  await userEvent.click(
+    await screen.findByRole("button", { name: "More actions" }),
+  );
+}
+
 describe("DealScreen — edit, archive, FX line (A3)", () => {
   beforeEach(() => localStorage.setItem("margince.workspaceSlug", "acme"));
 
@@ -1723,7 +1734,8 @@ describe("DealScreen — edit, archive, FX line (A3)", () => {
       }),
     );
     render(<DealScreen id="x" />);
-    await userEvent.click(await screen.findByTestId("archive-record"));
+    await openHeaderMenu();
+    await userEvent.click(screen.getByTestId("archive-record"));
     await userEvent.click(screen.getByTestId("archive-confirm"));
     await waitFor(() => expect(deleted).toBe(true));
   });
@@ -1924,6 +1936,7 @@ describe("DealScreen — an archived deal keeps its verbs, refused", () => {
     vi.stubGlobal("fetch", stubBackend([d], { single: d }));
     render(<DealScreen id="x" />);
 
+    await openHeaderMenu();
     const refused = [
       await screen.findByTestId("edit-record"),
       screen.getByTestId("archive-record"),
@@ -2001,6 +2014,7 @@ describe("DealScreen — overlay mode write affordances", () => {
     vi.stubGlobal("fetch", overlayBackend(d));
     render(<DealScreen id="x" />);
     expect(await screen.findByTestId("edit-record")).toBeTruthy();
+    await openHeaderMenu();
     expect(screen.getByTestId("archive-record")).toBeTruthy();
   });
 
@@ -2054,7 +2068,8 @@ describe("DealScreen reopen", () => {
       stubBackend([d], { single: d, onAdvance: (b, m) => moves.push([b, m]) }),
     );
     render(<DealScreen id="x" />);
-    await userEvent.click(await screen.findByTestId("reopen-open"));
+    await openHeaderMenu();
+    await userEvent.click(screen.getByTestId("reopen-open"));
     await userEvent.click(screen.getByTestId("reopen-stage-s1"));
     await userEvent.click(screen.getByTestId("reopen-confirm"));
     await waitFor(() => expect(moves.length).toBe(1));
