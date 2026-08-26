@@ -25,6 +25,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/gradionhq/margince/backend/internal/platform/vectorkit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -89,11 +90,20 @@ func knowledgeIngestPrincipal(ctx context.Context, documentID ids.UUID) context.
 // knowledgeIngestWorker turns one stored document into passages.
 type knowledgeIngestWorker struct {
 	store *knowledge.Store
-	log   *slog.Logger
+	// embedder is the retrieval embed lane. Nil is a role started without AI
+	// routing: the passages are still written and the document still finishes,
+	// and the ask answers retrieval_unavailable rather than pretending the
+	// corpus does not cover the question.
+	embedder vectorkit.Embedder
+	log      *slog.Logger
 }
 
-func newKnowledgeIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger) *knowledgeIngestWorker {
-	return &knowledgeIngestWorker{store: knowledge.NewStore(InstallationDB(pool)).WithBlobstore(blob), log: log}
+func newKnowledgeIngestWorker(pool *pgxpool.Pool, blob blobstore.Store, embedder vectorkit.Embedder, log *slog.Logger) *knowledgeIngestWorker {
+	return &knowledgeIngestWorker{
+		store:    knowledge.NewStore(InstallationDB(pool)).WithBlobstore(blob),
+		embedder: embedder,
+		log:      log,
+	}
 }
 
 func (w *knowledgeIngestWorker) Work(ctx context.Context, job *river.Job[KnowledgeIngestArgs]) error {
@@ -141,6 +151,14 @@ func (w *knowledgeIngestWorker) ingest(ctx context.Context, documentID ids.UUID)
 	if err := w.store.WriteChunks(ctx, documentID, src.CorpusID, chunks); err != nil {
 		return err
 	}
+	// Embedded before the document is called done: `done` is what readiness
+	// reads, and a document reported finished while its passages carry no
+	// vector is a corpus that answers "not covered" for prose it holds.
+	if w.embedder != nil {
+		if _, err := w.store.EmbedDocument(ctx, documentID, w.embedder); err != nil {
+			return err
+		}
+	}
 	return w.store.FinishIngest(ctx, documentID, len(chunks))
 }
 
@@ -181,11 +199,11 @@ func ingestDetail(err error) string {
 }
 
 // addKnowledgeIngestJobs registers the ingest. It registers even with no object
-// storage bound: a document queued on such an installation then fails with a
-// message a person can act on, rather than sitting queued forever behind a
-// worker nobody composed.
-func addKnowledgeIngestJobs(reg *jobRegistry, pool *pgxpool.Pool, blob blobstore.Store, log *slog.Logger) {
-	addDeclaredWorker[KnowledgeIngestArgs](reg, newKnowledgeIngestWorker(pool, blob, log))
+// storage bound, and with no embed lane: a document queued on an installation
+// missing either then reaches a state a person can act on, rather than sitting
+// queued forever behind a worker nobody composed.
+func addKnowledgeIngestJobs(reg *jobRegistry, pool *pgxpool.Pool, blob blobstore.Store, embedder vectorkit.Embedder, log *slog.Logger) {
+	addDeclaredWorker[KnowledgeIngestArgs](reg, newKnowledgeIngestWorker(pool, blob, embedder, log))
 }
 
 // WithKnowledgeIngest enables the corpus upload on the api role: the file is
