@@ -94,8 +94,8 @@ func (p UndoabilityPage) recordFacts(ctx context.Context, tx pgx.Tx, entityType 
 	if err != nil {
 		return recordFacts{}, err
 	}
-	// The REFUSAL is reduced to a boolean here, and only here: this asks whether
-	// the caller COULD write, and "no" is the answer rather than a failure.
+	// The REFUSAL is reduced to a boolean: this asks whether the caller COULD
+	// write, and "no" is the answer rather than a failure.
 	// Carrying it further would put "not yours" versus "does not exist" one
 	// careless log line away from a caller. A fault is a different thing and is
 	// returned: reduced to false it would claim the caller has no write
