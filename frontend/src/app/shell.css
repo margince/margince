@@ -548,7 +548,10 @@
      the active row is a PLATE with an edge, and a border that appears only when
      the row is current would shift its glyph and its label by a pixel on every
      navigation. Held at every state instead, and coloured by one. */
-  padding: 0 13px;
+  /* Optical, not rhythm: 13 + the 1px edge is the 14 this row has always had,
+     and the --space-* rung either side of it moves every glyph in the rail off
+     the axis the collapsed and expanded states share. */
+  padding: 0 13px; /* ds:ignore 13 + the 1px edge is one 14px inset, not a rung */
   border: 1px solid transparent;
   border-radius: 8px;
   /* A pointer-tracked highlight reads as lag past ~200ms; Carbon times this

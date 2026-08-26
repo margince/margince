@@ -22,15 +22,21 @@
    * (--accent, --success/--warn/--danger, --ai) and the grounds stay out of the
    * way. tokens.test.ts pins these values in the retired mockup's place.
    *
-   * Five rungs, read as a ladder from the recessed chrome up to the surface a
-   * card floats on. Each is one visible step off its neighbours, and the step
-   * is what the next rule's contrast note is measuring:
+   * A ladder, darkest first, from the recessed chrome up to the surface a card
+   * floats on. Each rung is one visible step off its neighbours, and the ORDER
+   * is the part that carries meaning — tokens.test.ts asserts the ordering in
+   * both themes rather than trusting six plausible values to stay in sequence:
    *
-   *   --bgSidebar   #e9e9ec   the application's left edge, BELOW the page
-   *   --bgCard      #eaeaee   a well inside a card: a chip, an inset row
-   *   --bgHover     #ededf0   a pointer resting on a row
-   *   --bgPage      #f5f5f6   the reading ground
-   *   --bgElevated  #ffffff   a card, a panel, a menu — the top of the ladder
+   *   --bgSidebarHover #dfdfe4  a pointer resting on a rail row
+   *   --bgSidebar      #e9e9ec  the application's left edge, BELOW the page
+   *   --bgCard         #eaeaee  a well inside a card: a chip, an inset row
+   *   --bgHover        #ededf0  a pointer resting on a row on the page
+   *   --bgPage         #f5f5f6  the reading ground
+   *   --bgElevated     #ffffff  a card, a panel, a menu, and the ACTIVE rail row
+   *
+   * The dark theme is NOT this list mirrored. On a dark ground every surface
+   * lifts toward the light, so the ladder runs the other way and only the
+   * DIRECTION of each step is shared; the dark block states its own order.
    *
    * The page is no longer the brightest thing on screen; --bgElevated is, and
    * a card is therefore separated by its own lightness rather than by the
@@ -63,19 +69,32 @@
   --bgTopbar: rgba(245, 245, 246, 0.9);
 
   --accent: #0b7a53;
-  /* The accent as TEXT, split from the accent as a FILL. They are the same
-   * value here and diverge in dark mode, which is the whole reason the split
-   * exists: --accent lightens to the ADR-0040 mandate #16a34a, and that tone
-   * sitting as text on the --accentLight tint derived from it measures 4.03:1
-   * — under the 4.5:1 AA needs for text this size. The fill cannot move, so
-   * the text does. Same shape as --tealText and the --mono*Text pairs. */
-  --accentText: #0b7a53;
+  /* The accent as TEXT, split from the accent as a FILL, and now diverging from
+   * it in BOTH themes. Dark was the original reason: --accent lightens to the
+   * ADR-0040 mandate #16a34a, and that tone sitting as text on the --accentLight
+   * tint derived from it measures 4.03:1, under the 4.5:1 AA needs for text this
+   * size.
+   * Light diverges for the same reason one step removed. --accentLight is an
+   * alpha tint, so what sits BEHIND it decides what the text is read against,
+   * and the grounds went grey: the home glance's count chip (--accentText on
+   * --accentLight, 15px) measured 4.36:1 once the page stopped being white.
+   * The fill cannot move either way — #0b7a53 is the brand emerald — so the text
+   * does: 5.04:1 on that chip now, and clear of 4.5:1 on every ground in the
+   * ladder. Same shape as --tealText and the --mono*Text pairs. */
+  --accentText: #0a6f4b;
   --accentLight: rgba(11, 122, 83, 0.09);
   --accentMed: rgba(11, 122, 83, 0.17);
 
   --textPrimary: #15201b;
   --textContent: #36433d;
-  --textSecondary: #68756e;
+  /* Darkened with the grounds, not independently of them: this is body text on
+   * every surface in the ladder, and the darkest one it sits on is the rail
+   * (--bgSidebar). At #68756e it measured 4.42:1 on the page and 3.98:1 on the
+   * rail once those stopped being white — under the 4.5:1 AA needs for text this
+   * size, which axe caught on seven elements of the home glance alone. 4.64:1 at
+   * its worst ground now. A text tone answers to the ground it is read on, so
+   * moving one without the other is what breaks it. */
+  --textSecondary: #5f6a64;
   --textTertiary: #9aa6a0;
   --textMuted: #cbd2cd;
   --textOnAccent: #fff;
@@ -107,8 +126,12 @@
   --teal: #0e7490;
   /* Readable teal text for a chip on the --tealLight fill. Split from --teal
    * (a fill/accent) so the dark theme can lift the text without shifting the
-   * pill fills that read --teal. */
-  --tealText: #0e7490;
+   * pill fills that read --teal — and so LIGHT can darken it without them, which
+   * the grey grounds now require: --tealLight is an alpha tint over whatever is
+   * behind it, and on the grey page the pair measured 4.30:1. 5.08:1 now. The
+   * same move as --accentText, for the same reason; neither --teal nor
+   * --tealLight shifts. */
+  --tealText: #0d6882;
   /* low-alpha teal fill — the read-access pill's tint, tonally distinct from
    * the emerald --accentLight the write pill uses (record-share safety split,
    * mirrors share.html's read/write pill colours). Derived from --teal. */
@@ -453,10 +476,12 @@
      what it frames. */
   --bgSidebar: #06100d;
   /* Up off the sidebar, not down: on a dark ground the room only has one
-     direction to go, so hover lifts (1.11:1) and the active row lifts further,
-     all the way to --bgElevated. The ORDER is what carries the state, and it is
-     the same order in both themes. */
-  --bgSidebarHover: #0f1d18;
+     direction to go, so hover lifts (1.06:1) and the active row lifts further,
+     all the way to --bgElevated (1.20:1 off the rail). What has to hold is the
+     GAP between hover and that plate — they are the pair a reader decodes — and
+     here it is 1.13:1. It was #0f1d18, which read 1.08:1 against the plate: an
+     ordering that was correct and a difference nobody could see. */
+  --bgSidebarHover: #0c1814;
   /* The page's own ground, translucent — the light theme's rule, in this
      theme's page colour. It used to be the ELEVATED ground, which made the
      strip read as a card laid over the top of the window. */
@@ -581,7 +606,7 @@
     --bgCard: #1a2c26;
     --bgHover: #1f332c;
     --bgSidebar: #06100d;
-    --bgSidebarHover: #0f1d18;
+    --bgSidebarHover: #0c1814;
     --bgTopbar: rgba(14, 27, 22, 0.9);
 
     --accent: #16a34a;
