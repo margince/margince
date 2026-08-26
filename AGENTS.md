@@ -129,8 +129,8 @@ sandboxed.
 4. Push and open a PR.
 5. CI, DCO, CodeRabbit and SonarCloud must all pass. Address review findings
    rather than dismissing them.
-6. Merge only when everything is green: `gh pr merge <n> --squash`. Then delete
-   the branch.
+6. Merge only when everything is green: `gh pr merge <n> --squash`, never with a
+   replaced body — it drops the commits' sign-off. Then delete the branch.
 
 **Commit only product.** Before `git add`, check `git status` for build caches
 (`node_modules/`, `.pnpm-store/`, binaries), working notes — those go in the
