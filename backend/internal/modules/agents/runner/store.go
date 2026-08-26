@@ -16,12 +16,21 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// Store persists runs and the trigger queue. Every query rides the
-// workspace GUC transaction — the worker crosses tenants by iterating
-// workspaces, never by bypassing RLS. Runs and jobs are operational
-// runner state, not domain records: the domain writes a run performs
-// happen inside the tools it calls, which carry the full audit+outbox
-// write shape already.
+// Store persists runs, the trigger queue and each rep's standing grant. Every
+// query rides the workspace GUC transaction — the worker crosses tenants by
+// iterating workspaces, never by bypassing RLS.
+//
+// Runs and jobs are operational runner state, not domain records, and they
+// carry no audit row of their own: the domain writes a run performs happen
+// inside the tools it calls, which carry the full audit+outbox write shape
+// already, and auditing the run row as well would file the same change twice
+// under two entity types.
+//
+// The standing grant is the exception, and the difference is what the row IS.
+// It records who agreed to be acted for overnight and by which credential,
+// which is not bookkeeping about work — it is the authority the work rests on,
+// and it is written nowhere else. So every write to it carries an audit row
+// (standinggrant.go).
 type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).
 	db  *database.DB

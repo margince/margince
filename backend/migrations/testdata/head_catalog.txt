@@ -292,6 +292,22 @@ public.agent_run.trigger_ref text NOT NULL gen=- def=-
 public.agent_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.agent_run_pkey CREATE UNIQUE INDEX agent_run_pkey ON public.agent_run USING btree (id)
 public.agent_run_trigger_unique CREATE UNIQUE INDEX agent_run_trigger_unique ON public.agent_run USING btree (trigger_ref)
+public.agent_standing_grant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.agent_standing_grant.agent_spec text NOT NULL gen=- def=-
+public.agent_standing_grant.agent_standing_grant_passport_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE RESTRICT
+public.agent_standing_grant.agent_standing_grant_passport_shape CHECK ((((state = 'granted'::text) AND (passport_id IS NOT NULL)) OR ((state <> 'granted'::text) AND (passport_id IS NULL))))
+public.agent_standing_grant.agent_standing_grant_pkey PRIMARY KEY (id)
+public.agent_standing_grant.agent_standing_grant_state_check CHECK ((state = ANY (ARRAY['granted'::text, 'declined'::text])))
+public.agent_standing_grant.agent_standing_grant_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.agent_standing_grant.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.agent_standing_grant.decided_at timestamp with time zone NOT NULL gen=- def=now()
+public.agent_standing_grant.id uuid NOT NULL gen=- def=uuidv7()
+public.agent_standing_grant.passport_id uuid gen=- def=-
+public.agent_standing_grant.state text NOT NULL gen=- def='granted'::text
+public.agent_standing_grant.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.agent_standing_grant.uq_agent_standing_grant_user_spec UNIQUE (user_id, agent_spec)
+public.agent_standing_grant.user_id uuid NOT NULL gen=- def=-
+public.agent_standing_grant_pkey CREATE UNIQUE INDEX agent_standing_grant_pkey ON public.agent_standing_grant USING btree (id)
 public.agent_task acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.agent_task.agent_task_approval_fk FOREIGN KEY (approval_id) REFERENCES approval(id) ON DELETE RESTRICT
 public.agent_task.agent_task_passport_fk FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE RESTRICT
@@ -1828,6 +1844,7 @@ public.idx_activity_thread CREATE INDEX idx_activity_thread ON public.activity U
 public.idx_activity_unlabeled CREATE INDEX idx_activity_unlabeled ON public.activity USING btree (occurred_at) WHERE ((capture_label IS NULL) AND (captured_by ~~ 'connector:%'::text) AND (kind = 'email'::text))
 public.idx_activity_ws_time CREATE INDEX idx_activity_ws_time ON public.activity USING btree (occurred_at DESC) WHERE (archived_at IS NULL)
 public.idx_agent_run_awaiting CREATE INDEX idx_agent_run_awaiting ON public.agent_run USING btree (approval_id) WHERE (status = 'awaiting_approval'::text)
+public.idx_agent_standing_grant_live CREATE INDEX idx_agent_standing_grant_live ON public.agent_standing_grant USING btree (agent_spec, user_id) WHERE ((state = 'granted'::text) AND (passport_id IS NOT NULL))
 public.idx_agent_task_approval CREATE UNIQUE INDEX idx_agent_task_approval ON public.agent_task USING btree (approval_id)
 public.idx_agent_task_expiry CREATE INDEX idx_agent_task_expiry ON public.agent_task USING btree (expires_at)
 public.idx_agent_task_passport CREATE INDEX idx_agent_task_passport ON public.agent_task USING btree (passport_id)
@@ -3965,6 +3982,7 @@ public.uq_activity_link_project CREATE UNIQUE INDEX uq_activity_link_project ON 
 public.uq_activity_participant CREATE UNIQUE INDEX uq_activity_participant ON public.activity_participant USING btree (activity_id, role, COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(person_id, '00000000-0000-0000-0000-000000000000'::uuid), COALESCE(address, ''::text))
 public.uq_activity_retention_evidence CREATE UNIQUE INDEX uq_activity_retention_evidence ON public.activity_retention_evidence USING btree (activity_id, deal_id, deal_name, project_id, project_name, basis) NULLS NOT DISTINCT WHERE (basis <> 'controller_pin'::text)
 public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activity USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
+public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
 public.uq_ai_call_ws_id CREATE UNIQUE INDEX uq_ai_call_ws_id ON public.ai_call USING btree (id)
 public.uq_app_user_email CREATE UNIQUE INDEX uq_app_user_email ON public.app_user USING btree (lower(email))
 public.uq_attachment_extraction_inflight CREATE UNIQUE INDEX uq_attachment_extraction_inflight ON public.attachment_extraction USING btree (attachment_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
