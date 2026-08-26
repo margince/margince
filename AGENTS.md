@@ -130,7 +130,11 @@ sandboxed.
 5. CI, DCO, CodeRabbit and SonarCloud must all pass. Address review findings
    rather than dismissing them.
 6. Merge only when everything is green: `gh pr merge <n> --squash`. Then delete
-   the branch.
+   the branch. **Do not replace the squash message body** (`--body`, or editing
+   it in the UI): the default body is the branch commits, and their
+   `Signed-off-by` trailers are the only sign-off the squash will ever carry.
+   Three squashes landed on main unsigned that way, each needing its author's
+   retroactive attestation.
 
 **Commit only product.** Before `git add`, check `git status` for build caches
 (`node_modules/`, `.pnpm-store/`, binaries), working notes — those go in the
