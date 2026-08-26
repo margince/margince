@@ -10250,7 +10250,12 @@ export interface paths {
             };
             cookie?: never;
         };
-        get?: never;
+        /**
+         * Download a document's own bytes.
+         * @description What a CITATION POINTS AT. An answer names the document a sentence rests on, quotes it, and says which line the quote begins on; without a way to open the file the reader cannot see the quote in place, and a citation nobody can follow is a citation in name only.
+         *     Gated on `knowledge_document:read`, which every seeded role holds, because the person who received the answer is the person who needs to check it.
+         */
+        get: operations["downloadCorpusDocument"];
         put?: never;
         post?: never;
         /**
@@ -39887,6 +39892,32 @@ export interface operations {
             413: components["responses"]["PayloadTooLarge"];
             415: components["responses"]["UnsupportedMediaType"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    downloadCorpusDocument: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The file bytes; Content-Disposition names the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/octet-stream": string;
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
         };
     };
     deleteCorpusDocument: {
