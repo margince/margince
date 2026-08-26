@@ -32,7 +32,11 @@ import { formatCountdown } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { approvalKindLabel } from "./approvalkind";
+import {
+  approvalKindLabel,
+  resolveDisplay,
+  stagedDayFormatter,
+} from "./approvalkind";
 import {
   isAlreadyDecided,
   ProblemError,
@@ -295,6 +299,7 @@ export function DecisionsSection({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const stagedDay = stagedDayFormatter(locale, viewerZone());
   const queryClient = useQueryClient();
   const viewerId = useViewerId();
   const tierMap = useAgentTierMap();
@@ -384,6 +389,12 @@ export function DecisionsSection({
           ),
           provenance: provenanceOf(approval.proposed_by, viewerId),
           confidence: confidenceLevel(approval.confidence) ?? undefined,
+          display: resolveDisplay(
+            approval.kind,
+            (approval.proposed_change ?? {}) as Record<string, unknown>,
+            t,
+            stagedDay,
+          ),
         })}
       />
     </section>

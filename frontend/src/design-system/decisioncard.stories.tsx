@@ -253,6 +253,81 @@ export const FieldChange: Story = {
   },
 };
 
+// A kind that declares what it shows, beside the same payload without the
+// declaration — the two halves of this card's reading, on one page.
+//
+// The payload is a real close-date correction: a deal id, two dates, a flag
+// array and the sweep's own sentence. Undeclared, all five print as wire keys
+// and the reader is handed the database row. Declared, the sentence leads and
+// the identifiers are gone.
+const CLOSE_DATE_PAYLOAD = {
+  deal_id: "01a03781-9083-7565-8d65-5939ec0f3e70",
+  basis:
+    "deal has gone quiet; confirm it is still alive — set a real date or mark it lost",
+  expected_close_date: "2026-10-01",
+  previous_close_date: "2026-10-01",
+  flags: ["unrealistic_stale"],
+};
+
+const CLOSE_DATE = approval({
+  kind: "close_date_correction",
+  summary: 'Confirm the real close date for "Riverty" (proposed 2026-10-01)',
+  confidence: undefined,
+  proposed_change: CLOSE_DATE_PAYLOAD,
+  evidence: [],
+});
+
+const CLOSE_DATE_META = (
+  <>
+    <AutonomyDot tier="confirm" />
+    <span className="t-small">Correct a close date</span>
+  </>
+);
+
+// What `screens/approvalkind.ts` resolves for this payload, written out: the
+// story shows the CARD, so it hands over finished strings the way the screen
+// does rather than importing the screen's vocabulary. The date appears once
+// because the sweep proposes the date the deal already carries — it keeps the
+// date on a stale deal and asks a person instead of guessing a new one — and
+// two captions over one value is not a comparison.
+export const DeclaredFields: Story = {
+  args: {
+    ...Deck.args,
+    approval: CLOSE_DATE,
+    confidence: undefined,
+    meta: CLOSE_DATE_META,
+    display: [
+      {
+        field: "basis",
+        label: "Why",
+        value: CLOSE_DATE_PAYLOAD.basis,
+        lead: true,
+      },
+      {
+        field: "expected_close_date",
+        label: "Proposed date",
+        value: "01.10.2026",
+      },
+      {
+        field: "flags",
+        label: "What is wrong with it",
+        value: "nothing has moved on it",
+      },
+    ],
+  },
+};
+
+// The same proposal with no declaration: what every kind looked like before,
+// and what the raw-args kinds still honestly look like.
+export const UndeclaredFields: Story = {
+  args: {
+    ...Deck.args,
+    approval: CLOSE_DATE,
+    confidence: undefined,
+    meta: CLOSE_DATE_META,
+  },
+};
+
 // History, not a question: no verbs, no urgency band, and the verdict badge is
 // the caller's. A decided card must not offer anything to press.
 export const Decided: Story = {

@@ -19,3 +19,30 @@
   gap: var(--space-2);
   margin-top: var(--space-3);
 }
+
+/* The "view everything" dialog. Stacked with air between the facts, because
+   this is a thing somebody reads rather than a form they fill in. */
+.approval-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The question, at the top, in the server's own sentence. It was missing from
+   this dialog entirely — the one prose field the approvals module writes, and
+   the reader opened onto `deal_id` instead. */
+.approval-detail-lead {
+  margin-bottom: var(--space-2);
+  color: var(--textContent);
+  font-size: var(--fs-body);
+  line-height: var(--lh-relaxed);
+}
+
+/* A named field's value: a person's own words, a date they recognise. Set as
+   prose, unlike the wire values under Technical details, which stay mono
+   because a uuid IS machine output and should look like it. */
+.approval-detail-value {
+  color: var(--textContent);
+  font-size: var(--fs-body);
+  overflow-wrap: anywhere;
+}

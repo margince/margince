@@ -344,17 +344,62 @@ function diffsOf(
   return diffs;
 }
 
-// Everything the two readings above did not consume, as label→value rows. Wire
-// field identifiers, shown as written: they are a payload path rather than
-// prose, and the inbox's detail modal has always rendered them raw for the same
-// reason. Drawn only in the deck layout — a row already offers a way through to
-// the whole payload, and a queue of rows each unrolling nine keys is not a queue
-// anybody can read.
+/**
+ * What one payload field is called and how to read it, already resolved into
+ * the reader's own language by the caller.
+ *
+ * Resolved rather than looked up here, for the reason DecisionToolChip takes a
+ * verb rather than a kind: which fields a kind shows is the product's
+ * vocabulary, and a primitive holding a copy of it would be a second author of
+ * it. This tier knows how to DRAW a labelled fact; it does not know that a
+ * close-date correction has a `basis`.
+ */
+export type DecisionDisplay = Readonly<{
+  /** The payload key this describes. */
+  field: string;
+  /** What to call it, in the reader's language. */
+  label: string;
+  /** The value, already formatted — a date on the reader's calendar, an enum
+   *  in words. Null where the payload does not carry the field. */
+  value: string | null;
+  /** Leads the body as a sentence rather than sitting in the fact list. */
+  lead?: boolean;
+}>;
+
+// Everything the readings above did not consume, as label→value rows.
+//
+// A kind that declares a display policy shows exactly what it declared: the
+// caller resolved those fields, so the payload's remaining keys are identifiers
+// and bookkeeping that answer nothing a person was asked. Printing them was how
+// a business question came to read as a database row — `deal_id`,
+// `target_version`, `flags: ["unrealistic_stale"]` under a headline about a
+// deal going quiet.
+//
+// A kind that declares nothing keeps the old reading: wire keys as written.
+// That is not a nicer fallback, it is an honest one — the raw-args kinds carry
+// an agent's tool arguments or an automation's action, with no typed payload to
+// describe, and inventing captions for a bag of unknown keys would be guessing
+// at what the software meant. Drawn only in the deck layout, where the row
+// offers a way through to the whole payload instead.
 function restOf(
   change: Readonly<Record<string, unknown>>,
   draft: DecisionDraft,
   diffs: readonly DecisionDiff[],
+  display: readonly DecisionDisplay[],
 ): readonly Fact[] {
+  if (display.length > 0) {
+    return display.flatMap((entry) =>
+      entry.lead || entry.value === null
+        ? []
+        : [
+            {
+              key: entry.field,
+              term: <span>{entry.label}</span>,
+              value: <span className="dcard-fact">{entry.value}</span>,
+            },
+          ],
+    );
+  }
   const consumed = new Set<string>();
   if (draft.subject) {
     consumed.add("subject");
@@ -430,22 +475,34 @@ function DraftBody({
   );
 }
 
-// What the proposal actually says, in the order a reader needs it: the words
-// they are being asked to put their name on, then the values that would move,
-// then whatever else the payload carries.
+// What the proposal actually says, in the order a reader needs it: why they
+// are being asked, then the words they are being asked to put their name on,
+// then the values that would move, then the rest.
+//
+// The reason comes FIRST and unlabelled. It is a sentence the server wrote for
+// a person — the close-date sweep calls its own field "the plain-language
+// derivation" — so captioning it would frame an explanation as a data point,
+// and burying it under the values it explains asks the reader to work out the
+// question from the answer.
 function DecisionContent({
   draft,
   diffs,
+  lead,
   rest,
+  raw,
   labels,
 }: Readonly<{
   draft: DecisionDraft;
   diffs: readonly DecisionDiff[];
+  lead: string | null;
   rest: readonly Fact[];
+  /** The facts are wire keys, not declared fields — see restOf. */
+  raw: boolean;
   labels: DecisionCardLabels;
 }>) {
   return (
     <>
+      {lead && <p className="dcard-lead">{lead}</p>}
       {draft.body && (
         <div className="dcard-draft">
           <span className="t-eyebrow dcard-draft-label">
@@ -462,7 +519,12 @@ function DecisionContent({
           <FieldDiff oldValue={diff.from} newValue={diff.to} />
         </div>
       ))}
-      {rest.length > 0 && <FactList facts={rest} className="dcard-rest" />}
+      {rest.length > 0 && (
+        <FactList
+          facts={rest}
+          className={raw ? "dcard-rest dcard-rest-raw" : "dcard-rest"}
+        />
+      )}
     </>
   );
 }
@@ -576,6 +638,12 @@ export type DecisionCardProps = Readonly<{
   children?: ReactNode;
   className?: string;
   testId?: string;
+  /**
+   * What THIS kind of proposal shows, resolved into the reader's language by
+   * the caller. Empty leaves the generic reading — wire keys as written — which
+   * is what a kind carrying untyped tool arguments honestly has.
+   */
+  display?: readonly DecisionDisplay[];
 }>;
 
 // What the payload says, once, for the whole render. A reading rather than four
@@ -585,25 +653,39 @@ export type DecisionCardProps = Readonly<{
 type PayloadReading = Readonly<{
   draft: DecisionDraft;
   diffs: readonly DecisionDiff[];
+  /** The declared sentence that says WHY this is being asked, if the kind has one. */
+  lead: string | null;
   rest: readonly Fact[];
+  /** True when `rest` holds wire keys because the kind declared no display policy. */
+  raw: boolean;
   hasContent: boolean;
 }>;
 
 function readPayload(
   approval: DecisionApproval,
   layout: "deck" | "row",
+  display: readonly DecisionDisplay[],
 ): PayloadReading {
   const change = approval.proposed_change ?? {};
   const draft = draftOf(change);
   const diffs = diffsOf(change);
-  const rest = layout === "deck" ? restOf(change, draft, diffs) : [];
+  // The lead survives both layouts. The fact list is deck-only because a queue
+  // of rows each unrolling nine keys is unreadable, but the one sentence
+  // explaining why a decision is in front of somebody is the thing a row is
+  // MOST missing — it is what turns "Confirm the real close date for Riverty"
+  // into a question a reader can answer without opening anything.
+  const lead = display.find((entry) => entry.lead)?.value ?? null;
+  const rest = layout === "deck" ? restOf(change, draft, diffs, display) : [];
   return {
     draft,
     diffs,
+    lead,
     rest,
+    raw: display.length === 0,
     hasContent:
       draft.subject !== null ||
       draft.body !== null ||
+      lead !== null ||
       diffs.length > 0 ||
       rest.length > 0,
   };
@@ -705,9 +787,10 @@ export function DecisionCard({
   children,
   className,
   testId,
+  display = [],
 }: DecisionCardProps) {
   const headingId = useId();
-  const payload = readPayload(approval, layout);
+  const payload = readPayload(approval, layout, display);
   const lapsed = !decided && decisionLapsed(approval, now);
   const named = payload.draft.subject ?? approval.summary ?? null;
 
@@ -746,7 +829,9 @@ export function DecisionCard({
           <DecisionContent
             draft={payload.draft}
             diffs={payload.diffs}
+            lead={payload.lead}
             rest={payload.rest}
+            raw={payload.raw}
             labels={labels}
           />
         </SurfaceState>

@@ -3,6 +3,7 @@ import { useId } from "react";
 import { api } from "../api/client";
 import {
   Button,
+  Disclosure,
   Field,
   Modal,
   Textarea,
@@ -17,6 +18,8 @@ import {
   EDITABLE_FIELDS,
   type EditableField,
   humanizeKind,
+  resolveDisplay,
+  stagedDayFormatter,
 } from "./approvalkind";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 import type { Approval } from "./inbox.queries";
@@ -128,29 +131,11 @@ export function ApprovalDetailModal({
       {open && (
         <QueryGate query={detail}>
           {(approval) => (
-            <div
-              style={{
-                display: "flex",
-                flexDirection: "column",
-                gap: "var(--space-2)",
-              }}
-            >
-              {Object.entries(
-                (approval.proposed_change ?? {}) as Record<string, unknown>,
-              ).map(([key, value]) => (
-                <FieldLine
-                  key={key}
-                  name={key}
-                  value={
-                    typeof value === "string" ? value : JSON.stringify(value)
-                  }
-                />
-              ))}
-              <EvidenceList evidence={approval.evidence} />
-              {detailMeta(approval, locale, zone).map(([key, value]) => (
-                <FieldLine key={key} name={key} value={value} />
-              ))}
-            </div>
+            <ApprovalDetailBody
+              approval={approval}
+              locale={locale}
+              zone={zone}
+            />
           )}
         </QueryGate>
       )}
@@ -158,8 +143,96 @@ export function ApprovalDetailModal({
   );
 }
 
+/**
+ * What "view everything" shows.
+ *
+ * Ordered the way a person reads a decision rather than the way the row is
+ * stored: the sentence saying what is being asked, then what the proposal says
+ * in named fields, then the quoted evidence behind it, and only then — behind a
+ * disclosure — the identifiers and versions.
+ *
+ * The summary leads and used to be absent entirely. It is the one field the
+ * server documents as prose ("the sentence a human reads before deciding"), and
+ * a dialog that opened on `deal_id` while omitting it was showing the reader
+ * everything except the question.
+ *
+ * The technical block is kept rather than dropped. Somebody debugging a stuck
+ * proposal needs the target version and the proposing actor, and a support
+ * conversation needs the id — but none of that is why a person is being asked
+ * to agree to something, so it does not open the dialog.
+ */
+function ApprovalDetailBody({
+  approval,
+  locale,
+  zone,
+}: Readonly<{
+  approval: Approval;
+  locale: ReturnType<typeof useLocale>["locale"];
+  zone: string;
+}>) {
+  const t = useT();
+  const change = (approval.proposed_change ?? {}) as Record<string, unknown>;
+  const display = resolveDisplay(
+    approval.kind,
+    change,
+    t,
+    stagedDayFormatter(locale, zone),
+  );
+  const named = display.filter((entry) => entry.value !== null);
+  // The raw payload is shown ONCE, and where it goes says what it is. A kind
+  // that named its fields has already told the reader what the proposal says,
+  // so the keys behind that are reference material; a kind that named none has
+  // nothing else to show, so they are the content.
+  const rawPayload = <RawPayload change={change} />;
+  return (
+    <div className="approval-detail">
+      {approval.summary && (
+        <p className="approval-detail-lead">{approval.summary}</p>
+      )}
+      {named.length > 0
+        ? named.map((entry) => (
+            <FieldLine
+              key={entry.field}
+              name={entry.label}
+              value={entry.value ?? ""}
+            />
+          ))
+        : rawPayload}
+      <EvidenceList evidence={approval.evidence} />
+      <Disclosure summary={t("inbox.detailTechnical")}>
+        <div className="approval-detail">
+          {named.length > 0 && rawPayload}
+          {detailMeta(approval, locale, zone).map(([key, value]) => (
+            <FieldLine key={key} name={key} mono value={value} />
+          ))}
+        </div>
+      </Disclosure>
+    </div>
+  );
+}
+
+// The payload as the wire spells it. A nested document prints as its JSON
+// rather than as "[object Object]".
+function RawPayload({
+  change,
+}: Readonly<{ change: Readonly<Record<string, unknown>> }>) {
+  return (
+    <>
+      {Object.entries(change).map(([key, value]) => (
+        <FieldLine
+          key={key}
+          name={key}
+          mono
+          value={typeof value === "string" ? value : JSON.stringify(value)}
+        />
+      ))}
+    </>
+  );
+}
+
 // Wire field identifiers (contract shape), not translatable prose — rendered
-// raw, exactly like the proposed_change keys above them.
+// raw, behind the technical disclosure where a payload path is what the reader
+// actually came for.
 function detailMeta(
   approval: Approval,
   locale: ReturnType<typeof useLocale>["locale"],
@@ -182,11 +255,18 @@ function detailMeta(
   return meta;
 }
 
-function FieldLine({ name, value }: Readonly<{ name: string; value: string }>) {
+// `mono` marks a value the WIRE spells — a uuid, a version, a payload path.
+// A named field carries a person's own words and a date they recognise, and
+// setting those in mono would dress a business fact as machine output.
+function FieldLine({
+  name,
+  value,
+  mono,
+}: Readonly<{ name: string; value: string; mono?: boolean }>) {
   return (
     <div className="field">
       <span className="t-label">{name}</span>
-      <p className="t-mono">{value}</p>
+      <p className={mono ? "t-mono" : "approval-detail-value"}>{value}</p>
     </div>
   );
 }
