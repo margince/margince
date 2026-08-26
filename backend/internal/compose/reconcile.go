@@ -22,8 +22,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
+	"github.com/gradionhq/margince/backend/internal/modules/automation"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/diffhash"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -45,13 +47,55 @@ import (
 // long as that entry exists.
 type followUpStager struct {
 	svc *approvals.Service
+	// draft composes the reply when the evidence is an email thread. Nil is a
+	// real configuration rather than a missing one: a role with no send path
+	// wired stages the task proposal for every candidate, which is what the
+	// pass did before the drafted reply existed.
+	draft followUpReplySeam
 }
 
+// HasPendingFollowUp answers for BOTH shapes a follow-up can take.
+//
+// The pass proposes either a task or a drafted reply, and they are different
+// approval kinds. Asking only about the task let a second email stack a second
+// drafted reply on a deal whose first was still pending — two independently
+// approvable messages, and approving both sends both. The question the caller
+// is really asking is "has this deal already been asked about", which neither
+// kind answers alone.
 func (s followUpStager) HasPendingFollowUp(ctx context.Context, dealID ids.UUID) (bool, error) {
-	return s.svc.HasPendingKind(ctx, deals.FollowUpReconcileKind, dealID)
+	for _, kind := range []string{deals.FollowUpReconcileKind, automation.HeldDraftKind} {
+		pending, err := s.svc.HasPendingKind(ctx, kind, dealID)
+		if err != nil {
+			return false, err
+		}
+		if pending {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summary string, proposal deals.FollowUpProposal) error {
+	// An INBOUND email can be answered, so the rep gets the reply itself rather
+	// than a task telling them to write one.
+	//
+	// Both halves of that condition matter. A call or a meeting has no thread
+	// and no address, so a drafted reply to one would be a message to nobody.
+	// And OUR OWN last email is not a message anybody is waiting on: the
+	// address resolver deliberately answers the counterparty on an outbound
+	// message too, so without the direction check the pass drafts a reply to
+	// mail the rep sent — and approving it creates another outbound email,
+	// which becomes the next night's latest evidence. The deal would then
+	// propose a reply every night, forever.
+	if s.draft != nil && answerableThread(proposal) {
+		staged, err := s.stageDraftedReply(ctx, dealID, proposal)
+		if err != nil {
+			return err
+		}
+		if staged {
+			return nil
+		}
+	}
 	raw, err := json.Marshal(proposal)
 	if err != nil {
 		return fmt.Errorf("compose: marshal follow-up proposal: %w", err)
@@ -92,7 +136,7 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 		Kind:           deals.FollowUpReconcileKind,
 		ProposedChange: canonical,
 		DiffHash:       hash,
-		TargetType:     "deal",
+		TargetType:     approvalTargetDeal,
 		TargetID:       dealID,
 		Summary:        summary,
 		Identity:       identity,
@@ -101,10 +145,51 @@ func (s followUpStager) StageFollowUp(ctx context.Context, dealID ids.UUID, summ
 	return err
 }
 
+// answerableThread reports whether the evidence is a message somebody is
+// waiting for a reply to.
+func answerableThread(proposal deals.FollowUpProposal) bool {
+	return proposal.EvidenceKind == string(crmcontracts.ActivityKindEmail) &&
+		proposal.EvidenceDirection == string(crmcontracts.ActivityDirectionInbound)
+}
+
+// stageDraftedReply offers the drafted reply, and reports whether it was
+// taken. A thread with no answerable counterparty falls back to the task
+// proposal rather than dropping the candidate — the rep is still told about
+// the deal, they simply get "write a follow-up" instead of a draft to send.
+func (s followUpStager) stageDraftedReply(
+	ctx context.Context, dealID ids.UUID, proposal deals.FollowUpProposal,
+) (bool, error) {
+	draft, answerable, err := draftFollowUpReply(ctx, s.draft, proposal)
+	if err != nil || !answerable {
+		return false, err
+	}
+	// Its OWN summary rather than the task proposal's with a clause appended.
+	// The task's line names a task ("Draft a follow-up on …"), and a reply
+	// waiting to be sent is a different thing to tell a rep — appending to it
+	// produced a sentence that described both and read as neither.
+	//
+	// The draft's own subject is what the rep recognises: it is the thread
+	// they are answering, in the words the counterparty used.
+	replySummary := fmt.Sprintf("A reply to %q is drafted and waiting to be sent — "+
+		"the conversation left no next step planned", draft.Subject)
+	if err := stageFollowUpDraft(ctx, s.svc, replySummary,
+		dealID, proposal.EvidenceActivityID.UUID, draft); err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
 // NewFollowUpReconciler assembles the nightly follow-up reconciler for
 // the worker process role.
 func NewFollowUpReconciler(pool *pgxpool.Pool, log *slog.Logger) *deals.FollowUpReconciler {
-	return deals.NewFollowUpReconciler(InstallationDB(pool), followUpStager{svc: approvals.NewService(InstallationDB(pool))}, log)
+	db := InstallationDB(pool)
+	// The drafting seam is the same adapter the workflow executors compose
+	// through, so an overnight reply and an automation's draft are one drafting
+	// engine. The zero SendPath matches that surface: nothing here sends, the
+	// held-draft release does, through the fully wired path it builds itself.
+	drafter := newCommsAdapter(pool, nil, SendPath{})
+	stager := followUpStager{svc: approvals.NewService(db), draft: drafter}
+	return deals.NewFollowUpReconciler(db, stager, log)
 }
 
 // followUpPrecheck refuses a DECISION whose payload the effect could not use.

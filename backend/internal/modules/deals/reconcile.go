@@ -75,7 +75,10 @@ type FollowUpProposal struct {
 	// proposal; EvidenceKind/EvidenceOccurredAt render it without a join.
 	EvidenceActivityID ids.ActivityID `json:"evidence_activity_id"`
 	EvidenceKind       string         `json:"evidence_kind"`
-	EvidenceOccurredAt time.Time      `json:"evidence_occurred_at"`
+	// EvidenceDirection says whether the evidence was a message TO us or FROM
+	// us. Only the first can be replied to.
+	EvidenceDirection  string    `json:"evidence_direction,omitempty"`
+	EvidenceOccurredAt time.Time `json:"evidence_occurred_at"`
 }
 
 // UnmarshalFollowUpProposal decodes a staged (possibly human-edited)
@@ -138,8 +141,13 @@ type followUpCandidate struct {
 	dealName     string
 	activityID   ids.ActivityID
 	activityKind string
-	occurredAt   time.Time
-	subject      *string
+	// activityDirection is 'inbound' or 'outbound' on a message, and empty on
+	// a kind that has no direction. It travels because "can this be answered"
+	// is a different question from "what kind was it": our own last email is a
+	// real interaction and not a message anybody is waiting for a reply to.
+	activityDirection string
+	occurredAt        time.Time
+	subject           *string
 }
 
 func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
@@ -152,10 +160,10 @@ func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 		// A note or a done task is not a next step; an undone task is (so
 		// the sweep does not nag a rep who already has one queued).
 		rows, err := tx.Query(ctx, `
-			SELECT d.id, d.name, ev.activity_id, ev.kind, ev.occurred_at, ev.subject
+			SELECT d.id, d.name, ev.activity_id, ev.kind, ev.direction, ev.occurred_at, ev.subject
 			FROM deal d
 			JOIN LATERAL (
-				SELECT a.id AS activity_id, a.kind, a.occurred_at, a.subject
+				SELECT a.id AS activity_id, a.kind, coalesce(a.direction, '') AS direction, a.occurred_at, a.subject
 				FROM activity a
 				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
 				WHERE a.kind IN ('call','email','meeting')
@@ -182,7 +190,8 @@ func (r *FollowUpReconciler) reconcileWorkspace(ctx context.Context) error {
 		defer rows.Close()
 		for rows.Next() {
 			var c followUpCandidate
-			if err := rows.Scan(&c.dealID, &c.dealName, &c.activityID, &c.activityKind, &c.occurredAt, &c.subject); err != nil {
+			if err := rows.Scan(&c.dealID, &c.dealName, &c.activityID, &c.activityKind,
+				&c.activityDirection, &c.occurredAt, &c.subject); err != nil {
 				return err
 			}
 			candidates = append(candidates, c)
@@ -219,6 +228,7 @@ func (r *FollowUpReconciler) stage(ctx context.Context, cand followUpCandidate, 
 		Body:               followUpBody(cand),
 		EvidenceActivityID: cand.activityID,
 		EvidenceKind:       cand.activityKind,
+		EvidenceDirection:  cand.activityDirection,
 		EvidenceOccurredAt: cand.occurredAt,
 	}
 	summary := fmt.Sprintf("Draft a follow-up on %q — a %s on %s left no next step planned",

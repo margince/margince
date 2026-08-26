@@ -40,6 +40,17 @@ func bookMeeting(t *testing.T, e *integration.Env, subject string, at time.Time,
 	return ids.UUID(row.Id)
 }
 
+// todayAt pins the pass's clock to a fixed hour of TODAY.
+//
+// The date must be real — the lane's window is a SQL predicate against the
+// database's own now, so a fabricated day matches nothing. The hour must not
+// be: truncating to the hour keeps the hour the suite happens to run in, so
+// "still ahead today" changed meaning through the day and these tests passed
+// in the morning and failed in the afternoon.
+func todayAt(offset time.Duration) time.Time {
+	return time.Now().UTC().Truncate(24 * time.Hour).Add(offset)
+}
+
 func meetingSubjects(t *testing.T, e *integration.Env, now time.Time) []string {
 	t.Helper()
 	lane := attentionMeetings{store: activities.NewStore(InstallationDB(e.Pool))}
@@ -59,7 +70,7 @@ func meetingSubjects(t *testing.T, e *integration.Env, now time.Time) []string {
 // cannot be prepared for; one tomorrow is not today's page.
 func TestTheMeetingLaneCarriesOnlyWhatIsStillAheadToday(t *testing.T) {
 	e := integration.Setup(t)
-	now := time.Now().UTC().Truncate(time.Hour).Add(9 * time.Hour)
+	now := todayAt(9 * time.Hour)
 	bookMeeting(t, e, "Started an hour ago", now.Add(-1*time.Hour), "")
 	bookMeeting(t, e, "This afternoon", now.Add(4*time.Hour), "")
 	bookMeeting(t, e, "In an hour", now.Add(1*time.Hour), "")
@@ -78,7 +89,7 @@ func TestTheMeetingLaneCarriesOnlyWhatIsStillAheadToday(t *testing.T) {
 // lane must not ask for work that cannot be done.
 func TestAFinishedOrCancelledMeetingLeavesTheLane(t *testing.T) {
 	e := integration.Setup(t)
-	now := time.Now().UTC().Truncate(time.Hour).Add(9 * time.Hour)
+	now := todayAt(9 * time.Hour)
 	bookMeeting(t, e, "Still booked", now.Add(2*time.Hour), "booked")
 	bookMeeting(t, e, "Already held", now.Add(3*time.Hour), "held")
 	bookMeeting(t, e, "Called off", now.Add(4*time.Hour), "canceled")
@@ -95,7 +106,7 @@ func TestAFinishedOrCancelledMeetingLeavesTheLane(t *testing.T) {
 // whose calendars are connected — the failure nobody would report as a bug.
 func TestAMeetingWithNoStatusIsStillWorthPreparingFor(t *testing.T) {
 	e := integration.Setup(t)
-	now := time.Now().UTC().Truncate(time.Hour).Add(9 * time.Hour)
+	now := todayAt(9 * time.Hour)
 	bookMeeting(t, e, "From the calendar", now.Add(2*time.Hour), "")
 
 	got := meetingSubjects(t, e, now)
@@ -111,7 +122,7 @@ func TestAMeetingWithNoStatusIsStillWorthPreparingFor(t *testing.T) {
 // booked one. The window is the database's now, so the bound is the day.
 func TestABusyCalendarStillShowsTheSoonestMeetings(t *testing.T) {
 	e := integration.Setup(t)
-	now := time.Now().UTC().Truncate(time.Hour).Add(6 * time.Hour)
+	now := todayAt(6 * time.Hour)
 	// Far more later-today meetings than the lane carries, booked out of order
 	// so the answer cannot come from insertion order.
 	for hour := 17; hour >= 8; hour-- {
@@ -138,7 +149,7 @@ func TestABusyCalendarStillShowsTheSoonestMeetings(t *testing.T) {
 // this pins that rather than leaving it as a property nobody checked.
 func TestAPileOfPastMeetingsDoesNotPushTodaysOffTheLane(t *testing.T) {
 	e := integration.Setup(t)
-	now := time.Now().UTC().Truncate(time.Hour).Add(9 * time.Hour)
+	now := todayAt(9 * time.Hour)
 	// Comfortably more than the lane's scan (12 * taskScanFactor).
 	for day := 1; day <= 130; day++ {
 		bookMeeting(t, e, fmt.Sprintf("Long ago %d", day), now.AddDate(0, 0, -day), "held")
