@@ -4,6 +4,7 @@ import {
   Handshake,
   Sparkles,
   Sunrise,
+  TrendingDown,
 } from "lucide-react";
 import { useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
@@ -86,6 +87,13 @@ function leadLine(
   if (promises > 0) {
     return t("day.lead.promises", { count: formatNumber(promises, locale) });
   }
+  // Below promises, above the briefing. A drifting deal is money leaving on its
+  // own and a promise is a duty already accepted — the duty wins, but both
+  // outrank a suggestion about where to start.
+  const drifting = day.counts.at_risk ?? 0;
+  if (drifting > 0) {
+    return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
+  }
   // Before "clear", because the briefing lane is on this page: a line reading
   // "your day is clear" above two items the night picked out is the one thing
   // this line exists to prevent. It sits below decisions and planned work,
@@ -104,7 +112,10 @@ function leadLine(
   // states that nothing was found ANYWHERE, and a feed that never read the
   // claims has not looked where promises live. The weaker line says only what
   // is true — nothing is waiting among the lanes this page did read.
-  if (day.counts.commitments === undefined) {
+  if (
+    day.counts.commitments === undefined ||
+    day.counts.at_risk === undefined
+  ) {
     return t("day.lead.clearOfWhatWasRead");
   }
   return t("day.lead.clear");
@@ -148,6 +159,24 @@ function itemDetail(
   locale: Locale,
   zone: string,
 ): string | null {
+  // A risk card's sentence is written HERE, not sent: the server has no
+  // language, and "quiet 19 days" versus "the close date passed" read
+  // differently in each of the three. `kind` names the ground and `detail`
+  // carries the number the server actually measured, so the line can never
+  // imply a patience nobody applied.
+  if (item.source === "deal_at_risk") {
+    if (item.kind === "close_overdue" && item.due_at) {
+      return t("day.risk.closeOverdue", {
+        date: formatDateTime(item.due_at, locale, zone),
+      });
+    }
+    if (item.detail) {
+      return t("day.risk.quiet", {
+        days: formatNumber(Number(item.detail), locale),
+      });
+    }
+    return null;
+  }
   // A promise is the one item whose supporting line carries TWO facts, and it
   // needs both: the words it was read from are what make the claim checkable,
   // and the deadline is why it is on today's page at all. Showing only the
@@ -497,6 +526,8 @@ function TodayLanes({
   // Absent means this installation serves no commitments lane; empty means the
   // rep owes nothing today. The two draw differently, so they stay apart.
   const commitments = day.commitments;
+  // Same absent-versus-empty rule: no lane at all when nothing reads deals.
+  const atRisk = day.at_risk;
   const done = day.done_for_you ?? [];
   const omitted = day.lanes_omitted ?? [];
   // How many decisions this reader has answered since the page opened, and
@@ -563,6 +594,22 @@ function TodayLanes({
         onSnooze={onSnooze}
         completing={complete.isPending}
       />
+      {(atRisk !== undefined || omitted.includes("at_risk")) && (
+        <Lane
+          shape={{
+            title: t("day.atRisk"),
+            empty: t("day.atRisk.empty"),
+            withheld: t("day.lane.withheld"),
+            icon: TrendingDown,
+          }}
+          items={atRisk ?? []}
+          withheld={omitted.includes("at_risk")}
+          total={day.counts.at_risk ?? 0}
+          onComplete={onComplete}
+          onSnooze={onSnooze}
+          completing={complete.isPending}
+        />
+      )}
       {(commitments !== undefined || omitted.includes("commitments")) && (
         <Lane
           shape={{

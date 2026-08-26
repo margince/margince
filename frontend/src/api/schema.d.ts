@@ -21482,10 +21482,22 @@ export interface components {
              *     Absent — not empty — on an installation whose feed does not read claims.
              */
             commitments?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description Open deals going quiet, or whose expected close date has already passed — the
+             *     ones most likely to be lost by inattention rather than by a decision.
+             *
+             *     The idle window here is DELIBERATELY shorter than the product-wide `stalled`
+             *     threshold: a queue that only speaks once a deal meets the stalled bar is
+             *     reporting a two-month-old fact rather than warning. `detail` names the window
+             *     actually used, so the card never implies a patience the server did not apply.
+             *
+             *     Absent — not empty — on an installation whose feed does not read deals.
+             */
+            at_risk?: components["schemas"]["AttentionItem"][];
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -21500,6 +21512,8 @@ export interface components {
             planned: number;
             /** @description Open duplicate pairs both of whose sides this caller can see. */
             duplicates_open?: number;
+            /** @description How many at-risk deals this lane is CARRYING, the bounded page rather than every deal at risk — the same bound the other lanes report under. */
+            at_risk?: number;
             /** @description How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
             commitments?: number;
         };
@@ -21516,7 +21530,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

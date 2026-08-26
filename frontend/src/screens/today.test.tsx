@@ -455,6 +455,58 @@ describe("what the night left on the worklist", () => {
       screen.queryByText(/found nothing worth your first hour/),
     ).toBeNull();
   });
+  // A drifting deal says how long it has been quiet, in the reader's own
+  // language. The server sends the ground and the number and never the
+  // sentence, so a card that dropped either would say "at risk" and leave the
+  // rep to guess which patience produced it.
+  it("says how long a deal has been quiet rather than only that it is at risk", async () => {
+    stub({
+      ...emptyDay,
+      at_risk: [
+        {
+          id: "deal-1",
+          source: "deal_at_risk",
+          kind: "quiet",
+          title: "Fleet retrofit",
+          detail: "19",
+          subject: { type: "deal", id: "deal-1" },
+          actions: ["open"],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0, at_risk: 1 },
+    });
+    renderToday();
+
+    await screen.findByText("Fleet retrofit");
+    expect(screen.getByText("No contact for 19 days.")).toBeTruthy();
+    expect(screen.queryByText("Your day is clear.")).toBeNull();
+  });
+  // A deal past its close date reports THAT, not a silence. The two grounds are
+  // different facts and the card must not blur them.
+  it("names the passed close date rather than reporting silence", async () => {
+    stub({
+      ...emptyDay,
+      at_risk: [
+        {
+          id: "deal-1",
+          source: "deal_at_risk",
+          kind: "close_overdue",
+          title: "Closing last month",
+          detail: "2",
+          due_at: "2026-07-26T00:00:00Z",
+          overdue: true,
+          subject: { type: "deal", id: "deal-1" },
+          actions: ["open"],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0, at_risk: 1 },
+    });
+    renderToday();
+
+    await screen.findByText("Closing last month");
+    expect(screen.getByText(/Expected to close/)).toBeTruthy();
+    expect(screen.queryByText(/No contact for/)).toBeNull();
+  });
   // An installation whose feed reads no claims sends NO commitments lane and no
   // count — a different fact from "the rep owes nobody anything". Reading the
   // absent count as zero would answer "your day is clear" for a page that never
