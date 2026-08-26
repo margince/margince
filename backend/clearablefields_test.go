@@ -51,6 +51,10 @@ var clearableMapsByRecordType = map[string]string{
 func storeClearableFields(t *testing.T) map[string][]string {
 	t.Helper()
 	found := map[string][]string{}
+	// A map key the walk cannot reduce to a string — a constant in the key
+	// position — is a field this census would silently not see. The keys are
+	// wire field names and are declared as literals for exactly that reason.
+	unreadable := map[string][]string{}
 	roots := []string{
 		filepath.Join("internal", "modules", "people"),
 		filepath.Join("internal", "modules", "deals"),
@@ -71,14 +75,21 @@ func storeClearableFields(t *testing.T) map[string][]string {
 			if err != nil {
 				t.Fatalf("parse %s: %v", path, err)
 			}
-			collectClearableMaps(file, found)
+			collectClearableMaps(file, found, unreadable)
 		}
+	}
+	for recordType, where := range unreadable {
+		t.Errorf("%s: %v declares a clearable field under a key this census cannot read "+
+			"(a constant rather than a literal). The keys are wire field names and must "+
+			"stay literals: a constant there is invisible here, and the census then "+
+			"reports fewer fields than the store clears while still passing.",
+			recordType, where)
 	}
 	return found
 }
 
 // collectClearableMaps reads the keys of each clearable-column map literal.
-func collectClearableMaps(file *ast.File, into map[string][]string) {
+func collectClearableMaps(file *ast.File, into map[string][]string, unreadable map[string][]string) {
 	ast.Inspect(file, func(node ast.Node) bool {
 		decl, isFunc := node.(*ast.FuncDecl)
 		if !isFunc {
@@ -100,10 +111,16 @@ func collectClearableMaps(file *ast.File, into map[string][]string) {
 				}
 				key, isString := pair.Key.(*ast.BasicLit)
 				if !isString || key.Kind != token.STRING {
+					// A key this walk cannot read is a field it cannot census,
+					// and skipping it silently is how the gate comes to read a
+					// smaller tree and still report PASS. Recorded as unreadable
+					// so the assertion below names it instead.
+					unreadable[recordType] = append(unreadable[recordType], decl.Name.Name)
 					continue
 				}
 				field, err := strconv.Unquote(key.Value)
 				if err != nil {
+					unreadable[recordType] = append(unreadable[recordType], decl.Name.Name)
 					continue
 				}
 				into[recordType] = append(into[recordType], field)

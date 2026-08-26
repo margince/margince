@@ -185,13 +185,21 @@ func applyClears(p *storekit.Patch, fields []string, columns map[string]clearabl
 }
 
 // clearableProjectColumns names the wire fields a project restore may set to
-// NULL, with literal column names.
+// NULL, against the column holding each.
+//
+// The KEY is a wire field name and the VALUE is a column: two vocabularies that
+// spell the same words here by coincidence. The keys stay literals because
+// clearablefields_test.go reads them as the declaration of what this store can
+// clear — a constant in their place is invisible to it, and the census then
+// under-reports rather than failing.
+//
+//nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns in the people module
 func clearableProjectColumns(current crmcontracts.Project) map[string]clearable {
 	return map[string]clearable{
-		"description":       {"description", current.Description},
-		"owner_id":          {"owner_id", current.OwnerId},
-		startedAtColumn:     {startedAtColumn, current.StartedAt},
-		targetEndDateColumn: {targetEndDateColumn, current.TargetEndDate},
-		endedAtColumn:       {endedAtColumn, current.EndedAt},
+		"description":     {"description", current.Description},
+		"owner_id":        {"owner_id", current.OwnerId},
+		"started_at":      {startedAtColumn, current.StartedAt},
+		"target_end_date": {targetEndDateColumn, current.TargetEndDate},
+		"ended_at":        {endedAtColumn, current.EndedAt},
 	}
 }
