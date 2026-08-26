@@ -27,6 +27,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/modules/approvals"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
@@ -69,9 +70,67 @@ func setupReconcile(t *testing.T) *reconcileEnv {
 	// the drafting seam would exercise a stager that can only ever propose a
 	// task, and would report the drafted-reply branch as working while nothing
 	// in production reached it.
-	stager := followUpStager{svc: e.svc, draft: newCommsAdapter(e.Pool, nil, SendPath{})}
+	stager := followUpStager{
+		svc:   e.svc,
+		draft: newCommsAdapter(e.Pool, nil, SendPath{}),
+		owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())},
+	}
 	e.reconciler = deals.NewFollowUpReconciler(e.DB(), stager, quiet)
+	// The deal owner needs REAL grants, not the harness's in-memory ones: the
+	// drafter composes under the owner's authority resolved from the database,
+	// which is the whole point — a draft is only written under grants that
+	// person actually holds. Without this every deal falls back to the task
+	// proposal, which is correct behaviour and would make the draft tests
+	// silently prove nothing.
+	e.grantOwner(t, e.Rep1, reconcileOwnerPolicy)
 	return e
+}
+
+// setupReconcileWithOwnerPolicy is setupReconcile with the deal owner's stored
+// grants named by the caller, for the suites that prove WHICH grant the drafting
+// path depends on. Everything else is identical, so a test using it isolates the
+// one grant it varies.
+//
+// The default role is REPLACED rather than added to. Grants accumulate across
+// role assignments, so layering a narrow document on the broad one would leave
+// the owner holding everything and the test would pass while proving nothing.
+func setupReconcileWithOwnerPolicy(t *testing.T, document string) *reconcileEnv {
+	t.Helper()
+	e := setupReconcile(t)
+	if _, err := e.owner.Exec(context.Background(),
+		`DELETE FROM role_assignment WHERE user_id = $1`, e.Rep1); err != nil {
+		t.Fatalf("clearing the default owner role: %v", err)
+	}
+	e.grantOwner(t, e.Rep1, document)
+	return e
+}
+
+// reconcileOwnerPolicy mirrors reconcilePerms as a stored role document: an
+// activity-and-deal rep WITH person read, since composing a reply resolves the
+// counterparty's address. The suite that proves the gate bites uses the
+// narrower policy below instead.
+const reconcileOwnerPolicy = `{"objects":{"activity":{"create":true,"read":true,"update":true},
+	  "deal":{"read":true,"update":true},"person":{"read":true},
+	  "organization":{"read":true},"pipeline":{"read":true}},"row_scope":"all"}`
+
+// grantOwner gives a member an actual role row, which is what
+// EffectiveAuthority reads. The harness's As(...) permissions never reach this
+// path, deliberately: the drafter resolves authority from the database so a
+// card is only ever composed under grants the owner really holds.
+func (e *reconcileEnv) grantOwner(t *testing.T, userID ids.UUID, document string) {
+	t.Helper()
+	ctx := context.Background()
+	roleID := ids.NewV7()
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO role (id, key, name, permissions) VALUES ($1, $2, 'Reconcile rep', $3)`,
+		roleID, "reconcile_rep_"+roleID.String(), document); err != nil {
+		t.Fatalf("seeding the owner's role: %v", err)
+	}
+	if _, err := e.owner.Exec(ctx,
+		`INSERT INTO role_assignment (id, user_id, role_id) VALUES ($1, $2, $3)`,
+		ids.NewV7(), userID, roleID); err != nil {
+		t.Fatalf("assigning the owner's role: %v", err)
+	}
 }
 
 // reconcile runs the reconciler over this env's workspace under exactly the

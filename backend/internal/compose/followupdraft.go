@@ -92,6 +92,14 @@ func draftFollowUpReply(
 		// database failure — is a real failure and must not be reported as a
 		// nightly pass that quietly chose the other proposal. That reading hid
 		// the failure and never retried the draft.
+		//
+		// A denial stays a failure HERE on purpose, even though the caller
+		// treats one as a fallback. The two are different questions. This
+		// function is handed an authority and asked to draft under it, so a
+		// refusal means the authority did not match the work — a defect worth
+		// surfacing. The caller knows something this cannot: that the authority
+		// is the deal owner's, and that an owner who lacks the grant is a
+		// settled fact about the workspace rather than a fault to retry.
 		return automation.HeldDraftProposal{}, false, nil
 	case err != nil:
 		return automation.HeldDraftProposal{}, false,

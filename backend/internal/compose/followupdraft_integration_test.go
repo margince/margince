@@ -400,3 +400,64 @@ func TestTheDraftedFollowUpUsesTheExistingHeldDraftKind(t *testing.T) {
 			kinds, automation.HeldDraftKind)
 	}
 }
+
+// The reply is composed under the DEAL OWNER's authority, never the sweep's.
+//
+// This is the security argument for the whole drafting path. ReplyAddressFor
+// opens with a person-read gate whose own comment forbids exactly this — "a
+// caller who may read activities but not people must not be told through this
+// door what the people surface withholds" — and auth.Require passes a system
+// principal unconditionally, so the overnight pass walked straight past it.
+// Every string it then resolved (the counterparty's address, the subject and
+// body of their message) was stored in proposed_change, where reading the card
+// back needs only activity:create plus deal visibility. Neither person:read nor
+// activity:read is in that set, so the card handed a reader an address they may
+// not look up and content from a message they cannot open.
+//
+// An owner who lacks person:read gets the TASK proposal: the rep is still told
+// the deal has no next step, and no address reaches the card.
+func TestADraftIsNotComposedForAnOwnerWhoMayNotReadPeople(t *testing.T) {
+	e := setupReconcileWithOwnerPolicy(t, `{"objects":{"activity":{"create":true,"read":true,"update":true},
+		  "deal":{"read":true,"update":true},"organization":{"read":true},
+		  "pipeline":{"read":true}},"row_scope":"all"}`)
+	deal := e.SeedDeal(t, "No person read", e.pipeline, e.open, &e.Rep1)
+	e.seedAnswerableThread(t, deal, "Kickoff")
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+
+	if n := e.WsCount(t, `SELECT count(*) FROM approval
+		WHERE kind = 'held_draft' AND target_entity_id = $1`, deal); n != 0 {
+		t.Errorf("staged %d drafts for an owner without person:read, want 0 — "+
+			"the address on that card is one they may not look up", n)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Errorf("task proposals = %d, want 1 — the rep is still told the deal "+
+			"has no next step, they simply get no draft", got)
+	}
+}
+
+// A deal nobody owns has no authority to compose under. owner_id is nullable
+// and ON DELETE SET NULL clears it when a member is removed, so this is an
+// ordinary state rather than an edge case — and it must degrade to the task
+// proposal rather than falling back to the sweep's own unbounded principal.
+func TestAnUnownedDealGetsTheTaskProposalRatherThanADraft(t *testing.T) {
+	e := setupReconcile(t)
+	deal := e.SeedDeal(t, "Orphaned", e.pipeline, e.open, &e.Rep1)
+	e.seedAnswerableThread(t, deal, "Kickoff")
+	e.WsExec(t, `UPDATE deal SET owner_id = NULL WHERE id = $1`, deal)
+
+	if err := e.reconcile(); err != nil {
+		t.Fatal(err)
+	}
+
+	if n := e.WsCount(t, `SELECT count(*) FROM approval
+		WHERE kind = 'held_draft' AND target_entity_id = $1`, deal); n != 0 {
+		t.Errorf("staged %d drafts on an unowned deal, want 0 — there is no "+
+			"authority under which a reply may be composed", n)
+	}
+	if got := e.pendingFollowUps(t, deal); got != 1 {
+		t.Errorf("task proposals = %d, want 1", got)
+	}
+}

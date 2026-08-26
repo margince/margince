@@ -71,7 +71,7 @@ func setupCloseDate(t *testing.T) *closeDateEnv {
 	e.svc = approvals.NewService(e.DB())
 	e.svc.WithEffect(deals.CloseDateCorrectionKind, closeDateConfirmEffect(e.svc, deals.NewStore(e.DB(), DealsInstallation())))
 	e.corrector = deals.NewCloseDateCorrector(e.DB(), closeDateStager{svc: e.svc},
-		quietReviewReader{db: e.DB(), users: identity.NewServiceFor(e.DB())}, quiet, installseam.Deals())
+		quietReviewReader{db: e.DB(), owner: dealOwnerAuthority{db: e.DB(), users: identity.NewServiceFor(e.DB())}}, quiet, installseam.Deals())
 	return e
 }
 
