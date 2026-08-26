@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	trace "github.com/gradionhq/margince/backend/internal/shared/kernel/pipelinetrace"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	trace "github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 )
 
 func TestThePostureIsEnforcedAtTheWire(t *testing.T) {

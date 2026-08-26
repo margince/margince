@@ -33,7 +33,7 @@ package migrations
 import (
 	"embed"
 
-	"github.com/gradionhq/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
 
 //go:embed core custom

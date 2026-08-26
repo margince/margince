@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // TestJobMetricsNameTheWorkspaceThatOwnsTheWorkAndLeaveItEmptyForADispatcher

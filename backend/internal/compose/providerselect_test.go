@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 func TestAnUnconfiguredInstallationStillOffersTheProviderSurface(t *testing.T) {

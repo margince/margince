@@ -10,7 +10,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // streamMaxLineBytes caps one stream line — an SSE data line or an NDJSON

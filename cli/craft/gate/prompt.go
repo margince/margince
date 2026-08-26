@@ -5,7 +5,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/rubric"
 )
 
 // Inputs is everything the reviewer reads for one PR. The full touched-file

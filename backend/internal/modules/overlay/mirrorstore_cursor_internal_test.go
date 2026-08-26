@@ -14,7 +14,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 func TestMirrorCursorRoundTrips(t *testing.T) {

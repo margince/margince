@@ -20,7 +20,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // writeDeclaredInfo renders one series per declared kind, valued 1.

@@ -49,7 +49,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // privacyNonScrubVerbs are the verbs privacy writes that certify NOTHING about

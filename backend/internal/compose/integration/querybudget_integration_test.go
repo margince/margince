@@ -19,8 +19,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/search"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // budgetVolumeRows is how many outer rows the plan below must visit before it

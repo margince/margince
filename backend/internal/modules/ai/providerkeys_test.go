@@ -11,9 +11,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func sealed(t *testing.T, vault keyvault.Vault, ws ids.WorkspaceID, secret string) string {

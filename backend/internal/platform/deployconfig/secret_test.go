@@ -14,7 +14,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // The variable names in these tests are the OPERATOR's to choose — an ${env:}

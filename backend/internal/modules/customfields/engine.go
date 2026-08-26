@@ -21,8 +21,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // The closed type/object sets (CUSTOM-FIELDS-PARAM-1/PARAM-2). No cap,

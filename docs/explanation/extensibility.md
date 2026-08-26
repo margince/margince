@@ -195,8 +195,8 @@ disk under one import path**.
 
 | | Module path | `Extensions()` returns |
 |---|---|---|
-| `composition/` — committed vanilla stub | `github.com/gradionhq/margince/composition` | `nil` |
-| `build/composition/backend/` — generated, git-ignored | `github.com/gradionhq/margince/composition` | the enabled set |
+| `composition/` — committed vanilla stub | `github.com/margince/margince/composition` | `nil` |
+| `build/composition/backend/` — generated, git-ignored | `github.com/margince/margince/composition` | the enabled set |
 
 Core code carries one unconditional `composition.Extensions()` call — no build tags, no `if enabled`.
 **Which function body that call links to is decided by the active Go workspace**, through two

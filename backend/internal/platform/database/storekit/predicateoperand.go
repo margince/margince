@@ -14,7 +14,7 @@ import (
 	"math"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // comparisonSQL is closed over the operator constants above; compileLeaf

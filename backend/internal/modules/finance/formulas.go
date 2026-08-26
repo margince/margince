@@ -16,7 +16,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
 )
 
 // Window parameters (FIN-PARAM-1..3). Named rather than inlined because each

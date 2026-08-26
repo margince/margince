@@ -11,7 +11,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Retriever serves grounded context to the AI layers. Results carry

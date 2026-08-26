@@ -16,7 +16,7 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // periodicFor is the periodic entry a kind's declaration asks for, and no

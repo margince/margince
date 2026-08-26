@@ -11,8 +11,8 @@ package approvals
 import (
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // keysetStart is where a scan resumes: the (created_at, id) of the last row the

@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/buildinfo"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 func quietLogger() *slog.Logger {

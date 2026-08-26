@@ -16,7 +16,7 @@ import (
 	"reflect"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestLeadCreatedCapturePayload(t *testing.T) {

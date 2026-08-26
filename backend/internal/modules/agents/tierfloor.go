@@ -22,7 +22,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // TierFloor answers the tier the contract declares for this verb against this

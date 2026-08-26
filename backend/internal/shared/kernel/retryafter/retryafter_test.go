@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
+	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
 
 // The instant every date case is measured against, so no case reads a clock.

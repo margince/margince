@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay/hubspot"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/modules/overlay/hubspot"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // TestAdapterCreatePostsMappedProps: a canonical person Create projects onto

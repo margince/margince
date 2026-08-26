@@ -41,7 +41,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // RetargetedEditError maps to 422: the payload is well-formed, but it describes

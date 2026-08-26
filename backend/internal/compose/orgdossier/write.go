@@ -22,13 +22,13 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
-	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/compose/promptvoice"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 const dossierSystem = `You describe one company for a salesperson about to talk to them, from a JSON summary of what their CRM has recorded about it.

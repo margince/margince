@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 func discardLogger() *slog.Logger {

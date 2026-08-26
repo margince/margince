@@ -19,8 +19,8 @@ import (
 	"context"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // CachedSentencesMax bounds what a draft may take from a dossier.

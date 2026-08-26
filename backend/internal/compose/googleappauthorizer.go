@@ -10,14 +10,14 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/gcal"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/gmail"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/googleconn"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/oauthflow"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // googleAppResolver reports the installation's STORED Google app: the pair, and

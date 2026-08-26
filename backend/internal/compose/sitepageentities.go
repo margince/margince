@@ -15,7 +15,7 @@ import (
 	"strings"
 	"unicode"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func gatePageEntities(parsed pageFactsReply, page crawlPage, idx snippetIndex, drop func(lane, field, value, reason string)) []corpusLegalEntity {

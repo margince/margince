@@ -9,7 +9,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // scanBatch bounds one SCAN round trip. SCAN is incremental by contract, so

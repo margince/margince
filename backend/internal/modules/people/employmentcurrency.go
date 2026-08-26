@@ -8,7 +8,7 @@ package people
 // decide the flag with it, and four separate READS derive currency with it
 // rather than trusting a flag written months earlier.
 
-import "github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+import "github.com/margince/margince/backend/internal/platform/database/storekit"
 
 // EmploymentIsCurrentSQL is the ONE spelling of "this job is still theirs".
 //

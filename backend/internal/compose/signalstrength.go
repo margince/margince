@@ -7,9 +7,9 @@ import (
 	"context"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/modules/signals"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // signalStrength bridges people's §4 relationship-strength computation to

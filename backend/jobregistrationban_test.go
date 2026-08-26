@@ -46,7 +46,7 @@ import (
 
 const (
 	riverModulePath   = "github.com/riverqueue/river"
-	backendModulePath = "github.com/gradionhq/margince/backend"
+	backendModulePath = "github.com/margince/margince/backend"
 )
 
 // moduleDir asks the go command where a module's source lives. Derived rather

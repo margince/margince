@@ -6,7 +6,7 @@ package policy
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestEverySystemRoleHasAValidDefaultDocument(t *testing.T) {

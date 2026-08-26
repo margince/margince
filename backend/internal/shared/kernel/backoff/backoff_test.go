@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/backoff"
+	"github.com/margince/margince/backend/internal/shared/kernel/backoff"
 )
 
 const (

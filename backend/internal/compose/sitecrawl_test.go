@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // fakeSite is an in-memory site behind the siteFetcher seam. It records every

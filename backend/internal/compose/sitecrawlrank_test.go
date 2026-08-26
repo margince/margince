@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestClassifyKindSeparatesLegalIdentityFromLegalProductsAndPolicies(t *testing.T) {

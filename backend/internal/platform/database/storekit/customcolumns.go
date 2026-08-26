@@ -33,7 +33,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // quoteColumnIdentifier wraps a physical column name as a double-quoted

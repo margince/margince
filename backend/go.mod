@@ -1,4 +1,4 @@
-module github.com/gradionhq/margince/backend
+module github.com/margince/margince/backend
 
 // Go 1.26 is a deliberate floor (M5): the code uses composite-FK
 // `ON DELETE SET NULL (column_list)` semantics and current-toolchain
@@ -12,9 +12,9 @@ go 1.26.6
 // vanilla stub via this replace, `make` lanes override it with the
 // generated module under build/composition/ via the generated go.work (a
 // workspace `use` wins over a member replace).
-require github.com/gradionhq/margince/composition v0.0.0
+require github.com/margince/margince/composition v0.0.0
 
-replace github.com/gradionhq/margince/composition => ../composition
+replace github.com/margince/margince/composition => ../composition
 
 require (
 	github.com/andybalholm/brotli v1.2.2

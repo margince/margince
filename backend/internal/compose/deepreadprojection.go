@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 func deepReadFields(fields []evidencedField) []people.DeepReadField {

@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // bandRank orders the vocabulary (DOSS-PARAM-8) so a cap can be applied by

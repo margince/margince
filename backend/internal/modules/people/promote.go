@@ -11,14 +11,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // PromoteTrigger is the genuine-engagement vocabulary (features/01
@@ -63,12 +63,15 @@ type AlreadyPromotedError struct{ PersonID ids.PersonID }
 
 func (e *AlreadyPromotedError) Error() string { return "lead is already promoted" }
 
-// PromoteNeedsIdentityError maps to 422: a lead with neither a name nor
-// an email cannot become a person worth having.
+// PromoteNeedsIdentityError maps to 422: a lead nothing names cannot become a
+// person worth having.
 type PromoteNeedsIdentityError struct{}
 
+// Error says what is missing rather than which field is absent. A full_name
+// that is present and empty is refused here, and telling that caller the lead
+// "has no full_name" contradicts the record they can see.
 func (e *PromoteNeedsIdentityError) Error() string {
-	return "lead has neither full_name nor email; enrich it before promoting"
+	return "lead has no name and no email to be named by; enrich it before promoting"
 }
 
 // MessageFault names the condition and no field: the remedy is EITHER of two
@@ -291,7 +294,10 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 	if lead.ArchivedAt != nil {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
-	if lead.FullName == nil && lead.Email == nil {
+	// Read through the same derivation the ladder matches on, not through a
+	// nil check: a full_name that is present and empty passes `!= nil` and
+	// names nobody, so such a lead promotes into a person with no name at all.
+	if leadIdentityName(lead) == "" {
 		return crmcontracts.Lead{}, &PromoteNeedsIdentityError{}
 	}
 	if in.EvidenceActivityID != nil {
@@ -316,23 +322,15 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 // creates (DEDUPE_FUZZY_AUTOMERGE is pinned never) and now leaves the pair on
 // the review queue instead of nothing at all.
 func (s *Store) promoteTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead, by string, merged *bool) (ids.PersonID, map[string]any, error) {
-	name := deref(lead.FullName)
-	if name == "" {
-		// Identity was checked upstream, so an email exists; a person
-		// needs SOME name until enrichment fills it.
-		name = string(*lead.Email)
-	}
-	var emails []string
-	if lead.Email != nil {
-		emails = []string{string(*lead.Email)}
-	}
-	consumerMail, err := s.consumerMailMatcher(ctx, tx)
+	candidate, err := s.leadPersonCandidate(ctx, tx, lead)
 	if err != nil {
 		return ids.PersonID{}, nil, err
 	}
-	match, err := DedupePerson(ctx, tx, PersonCandidate{
-		FullName: name, Emails: emails, ConsumerMail: consumerMail,
-	})
+	// The person is created under the SAME name the ladder matched on, so a
+	// lead that resolved as a new person is stored as the candidate that was
+	// compared, not as a second reading of the lead.
+	name := candidate.FullName
+	match, err := DedupePerson(ctx, tx, candidate)
 	if err != nil {
 		return ids.PersonID{}, nil, err
 	}

@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // This file is the adapter's write half (the Incumbent write seam, design.md

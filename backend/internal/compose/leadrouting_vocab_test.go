@@ -7,8 +7,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/automation"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // The routable-lead-field vocabulary lives in two modules that cannot

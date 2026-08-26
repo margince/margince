@@ -36,7 +36,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // migrationsPackage owns the migrations themselves. Its suites drive them —
@@ -135,7 +135,7 @@ func TestIntegrationSuitesMigrateOncePerProcess(t *testing.T) {
 
 // dbmigratePath is the migrate entry point's package, matched by import path
 // rather than by the identifier a file happens to bind it to.
-const dbmigratePath = "github.com/gradionhq/margince/backend/internal/platform/dbmigrate"
+const dbmigratePath = "github.com/margince/margince/backend/internal/platform/dbmigrate"
 
 // referencesInlineMigrate reports whether the file reaches the migrate entry
 // point at all — as a call, or as a value it could call later. gatekit.References

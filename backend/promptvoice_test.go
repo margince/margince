@@ -40,7 +40,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
+	"github.com/margince/margince/backend/internal/compose/promptvoice"
 )
 
 // The heading a voice rule opens with, read from the package that DEFINES it

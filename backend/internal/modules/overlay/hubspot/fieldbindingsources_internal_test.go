@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay"
 )
 
 // A mapped binding makes two claims: that a canonical key holds the value, and

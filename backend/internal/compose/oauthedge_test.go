@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // tokenRequest builds one form-encoded authorization-code exchange.

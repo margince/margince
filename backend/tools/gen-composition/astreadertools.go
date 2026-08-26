@@ -16,7 +16,7 @@ package main
 import (
 	"go/ast"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // readTools reads the unit's Tools slice. After the narrowing, a Tools entry

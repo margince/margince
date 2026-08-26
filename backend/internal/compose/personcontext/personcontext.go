@@ -22,7 +22,7 @@ package personcontext
 import (
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // CurrentEmployer names where this person works now, or nothing.

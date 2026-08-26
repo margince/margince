@@ -16,7 +16,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // frontendGenHeader is shared by the committed vanilla stub and every composed

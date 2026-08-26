@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The two quotas the spec ends WITH THE WINDOW cannot be widened from inside

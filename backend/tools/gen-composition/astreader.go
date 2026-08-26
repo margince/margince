@@ -14,7 +14,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // scannableGoFile reports whether to parse this .go file for the

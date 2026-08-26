@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestSplitFactKeyNamesBothColumnsOrNeither(t *testing.T) {

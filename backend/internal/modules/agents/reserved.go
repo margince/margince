@@ -34,9 +34,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/diffhash"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The reserved member names, spelled once. Both the pop below and the schema

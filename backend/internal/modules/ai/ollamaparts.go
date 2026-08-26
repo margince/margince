@@ -15,7 +15,7 @@ package ai
 import (
 	"encoding/base64"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 type ollamaMessage struct {

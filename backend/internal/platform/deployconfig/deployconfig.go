@@ -17,9 +17,9 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Config is the root of margince.yaml. Every section beyond `version` is

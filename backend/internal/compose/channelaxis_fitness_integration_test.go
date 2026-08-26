@@ -20,8 +20,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // contractEnumRe finds enum members spelled anywhere in the contract document.

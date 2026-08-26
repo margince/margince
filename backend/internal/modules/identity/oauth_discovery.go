@@ -9,8 +9,8 @@ package identity
 import (
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 // OAuthServerMetadata is the RFC 8414 discovery document. The issuer is

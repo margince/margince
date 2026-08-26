@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/platform/httpserver"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // mcpCallDeadline bounds one JSON-RPC exchange's response write. A dynamic

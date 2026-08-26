@@ -6,7 +6,7 @@ package de
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
 
 // TestNewDeclaresTheGoBDFloors pins the statutory content: the §147

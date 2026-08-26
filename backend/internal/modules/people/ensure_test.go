@@ -6,7 +6,7 @@ package people
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // The fourth mail-domain gate of the capture ladder, and the one that is easy

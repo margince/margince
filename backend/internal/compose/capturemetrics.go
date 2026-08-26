@@ -15,7 +15,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
 // writeCaptureMetrics renders one counter per traced outcome.

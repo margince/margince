@@ -19,7 +19,7 @@ package orgdossier
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestTheDossierFingerprintMovesWhenTheInstallationChangesLanguage(t *testing.T) {

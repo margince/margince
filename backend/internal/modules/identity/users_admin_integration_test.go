@@ -21,8 +21,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The roster read gates the role-key lookup on WithRoles, and the wire mapping

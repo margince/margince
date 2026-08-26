@@ -15,8 +15,8 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/cliflags"
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/cliflags"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // workerSurface rebuilds the role's flag set and its declared items together,

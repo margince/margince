@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aicert"
 )
 
 func sampleRecord() aicert.Record {

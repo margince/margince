@@ -25,7 +25,7 @@ import (
 // backendModulePath is this module's own import path — spelled once so
 // every import-path comparison below reads the same literal arch_test.go
 // (backend/arch_test.go) already pins at the repo root.
-const backendModulePath = "github.com/gradionhq/margince/backend"
+const backendModulePath = "github.com/margince/margince/backend"
 
 // backendModuleRoot resolves the backend Go module's root directory from
 // this test file's own location: `go test` always chdirs into the

@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"reflect"
 
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 func main() {

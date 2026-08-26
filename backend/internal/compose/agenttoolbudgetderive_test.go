@@ -29,7 +29,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // toolNameInProse matches an identifier shaped like a tool name. It is

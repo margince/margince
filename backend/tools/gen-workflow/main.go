@@ -168,8 +168,8 @@ package automation
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 type %[2]s struct {
@@ -237,7 +237,7 @@ package automation
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // TestGenerated%[2]sDeclaresTriggerAndTier is the AC-W1 scaffold

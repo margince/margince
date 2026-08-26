@@ -23,11 +23,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	"github.com/gradionhq/margince/backend/internal/compose/personcontext"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/compose/personcontext"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // The citable record types. A brief may only point at things the reader can

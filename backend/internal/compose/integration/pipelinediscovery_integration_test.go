@@ -22,8 +22,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // toolPipeline is what a caller can see of the answer: only the fields the tool

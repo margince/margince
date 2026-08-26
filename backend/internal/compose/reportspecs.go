@@ -4,8 +4,8 @@
 package compose
 
 import (
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // The activity report's own vocabulary. Spelled here rather than borrowed from

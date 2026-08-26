@@ -10,7 +10,7 @@ package dealstatus
 import (
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // factsCitingOneRow is a deal whose timeline holds the row every test below

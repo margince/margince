@@ -14,8 +14,8 @@ package compose
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture/graph"
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/capture/graph"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // GraphConfig is the composed Microsoft (Graph) OAuth app for a deployment:

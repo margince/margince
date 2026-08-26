@@ -22,7 +22,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/provider"
+	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 // The wire shapes, named as SURFE names them. The tags must match its

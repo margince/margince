@@ -7,7 +7,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // The unit-facing half of the merge-key gate. It is the ATTRIBUTABLE refusal —

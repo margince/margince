@@ -19,7 +19,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestRequireBodyIDNamesTheFieldAndClassifiesAsTheCallersMistake(t *testing.T) {

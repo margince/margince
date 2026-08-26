@@ -12,7 +12,7 @@ package compose
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/consent"
 )
 
 type preferenceLinkAdapter struct {

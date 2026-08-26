@@ -26,8 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // pageExtractConcurrency bounds the fan-out. The calls are tiny and the

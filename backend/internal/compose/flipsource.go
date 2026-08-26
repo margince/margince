@@ -11,8 +11,8 @@ package compose
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/modules/migration"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/modules/overlay"
 )
 
 // The estate's object classes, named once so the source, the writers,

@@ -23,8 +23,8 @@ import (
 	"fmt"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // The verbs the client performs on click. Unchanged from the card this

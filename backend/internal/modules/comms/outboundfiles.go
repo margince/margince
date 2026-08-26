@@ -12,7 +12,7 @@ package comms
 // already went out. A pointer would let a later edit rewrite history; this
 // cannot.
 
-import "github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
 // OutboundFile is one file this delivery carries, as it was when the message
 // was staged. A SNAPSHOT: archiving or superseding the document later changes

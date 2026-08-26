@@ -40,7 +40,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
 )
 
 const (

@@ -10,7 +10,7 @@ package crmcontracts
 // (v2.8.0 renames the enum constants), turning any backend PR red on drift the
 // author never touched. Bump this deliberately, regenerating in the same change.
 
-//go:generate go run github.com/gradionhq/margince/backend/tools/contract-overlay -in ../../api/crm.yaml -out .build/openapi30.yaml
+//go:generate go run github.com/margince/margince/backend/tools/contract-overlay -in ../../api/crm.yaml -out .build/openapi30.yaml
 //go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.1 --config oapi.yaml .build/openapi30.yaml
 
 // The event payloads are SEPARATE, isolated contracts compiled by the generic
@@ -20,4 +20,4 @@ package crmcontracts
 // crm.yaml because crm.yaml's webhooks: block is pruned by kin-openapi and
 // global skip-prune there trips a pre-existing ApprovalToken name collision
 // (B-E10.14).
-//go:generate go run github.com/gradionhq/margince/backend/tools/gen-payloads
+//go:generate go run github.com/margince/margince/backend/tools/gen-payloads

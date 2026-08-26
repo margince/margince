@@ -28,9 +28,9 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 func TestEveryEmittedAITaskIsDeclaredInTheContract(t *testing.T) {

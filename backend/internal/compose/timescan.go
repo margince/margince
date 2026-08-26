@@ -15,11 +15,11 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/automation"
-	"github.com/gradionhq/margince/backend/internal/modules/customfields"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // activityScanAdapter maps automation.ActivityScan onto

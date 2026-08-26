@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/personcontext"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/compose/personcontext"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // The employer reading, including the two cases that make it a refusal rather

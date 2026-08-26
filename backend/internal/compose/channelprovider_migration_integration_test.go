@@ -17,7 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
 func TestActivityKindAndChannelProviderAreSeededByMigration(t *testing.T) {

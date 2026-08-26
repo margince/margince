@@ -24,10 +24,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture/googleconn"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/oauthflow"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // watchOp names the users.watch call in a ProviderError. The other Gmail calls

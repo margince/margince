@@ -27,7 +27,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // queueDepthStates are the states a job is WAITING in. A job backing off

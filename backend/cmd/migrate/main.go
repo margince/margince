@@ -25,17 +25,17 @@ import (
 	// extension tables exist only if this process creates them, and a
 	// migrate resolving the vanilla stub would report "schema is at head"
 	// over a database missing every extension's schema.
-	"github.com/gradionhq/margince/composition"
 	"github.com/jackc/pgx/v5"
+	"github.com/margince/margince/composition"
 	"golang.org/x/term"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/dbmigrate"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/migrations"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/dbmigrate"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/migrations"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func main() {

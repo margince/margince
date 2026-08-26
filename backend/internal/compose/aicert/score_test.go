@@ -6,7 +6,7 @@ package aicert_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aicert"
 )
 
 var testBands = aicert.Bands{CertifiedMin: 70, DegradedMin: 50, Floor: 40}

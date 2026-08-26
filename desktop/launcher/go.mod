@@ -3,6 +3,6 @@
 // importing them, so it shares no dependency graph with the backend module and
 // must not perturb the workspace the existing gates resolve against. Build it
 // with GOWORK=off.
-module github.com/gradionhq/margince/desktop/launcher
+module github.com/margince/margince/desktop/launcher
 
 go 1.26.5

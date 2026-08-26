@@ -9,8 +9,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
-	"github.com/gradionhq/margince/backend/pkg/extension/crm"
+	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/crm"
 )
 
 // filingSource is what the activity's provenance says about where it came from.

@@ -29,8 +29,8 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // gateProbeDecl is one well-formed extension job declaration. The queue is the

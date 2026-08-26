@@ -23,9 +23,9 @@ package draftcore
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/compose/draftcheck"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/convstate"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/compose/draftcheck"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Writer produces one draft. correction is empty on the first attempt and

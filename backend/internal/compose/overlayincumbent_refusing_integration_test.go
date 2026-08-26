@@ -26,7 +26,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay"
 )
 
 // refusals is every way the connect and reconcile paths can reach this

@@ -12,7 +12,7 @@ package comms
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A bot token holds no OAuth scope and still sends. Read through the old

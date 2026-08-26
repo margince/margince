@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture/googleconn"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/oauthflow"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // recordingAuthorizer stands in for a built OAuth client and reports which

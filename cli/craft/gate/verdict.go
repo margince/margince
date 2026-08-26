@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gradionhq/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/rubric"
 )
 
 // The BLOCK rule lives in code, not in the prompt: the model classifies findings,

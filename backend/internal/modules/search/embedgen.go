@@ -11,7 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // EmbedGen keeps the vector store current: it consumes entity events

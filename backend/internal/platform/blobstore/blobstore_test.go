@@ -10,8 +10,8 @@ import (
 	"io"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestMemoryStorePutGetRoundTrip(t *testing.T) {

@@ -18,7 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // LocalDayAt is the calendar date the given instant falls on in the

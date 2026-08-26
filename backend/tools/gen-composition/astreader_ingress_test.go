@@ -12,7 +12,7 @@ import (
 func ingressUnitSource(entries string) string {
 	return `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func New() extension.Extension {
 	return extension.Extension{
@@ -99,7 +99,7 @@ func TestIngressRulesAreThePublishedOnes(t *testing.T) {
 func TestIngressFieldMustBeASliceLiteral(t *testing.T) {
 	src := `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func sources() []extension.IngressSource { return nil }
 

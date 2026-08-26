@@ -6,7 +6,7 @@ package activities
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // linkTarget is one arm of activity_link's polymorphic reference: the

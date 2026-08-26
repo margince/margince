@@ -19,7 +19,7 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // website_url is DERIVED from the primary domain row and never stored

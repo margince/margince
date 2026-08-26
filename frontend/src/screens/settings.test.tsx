@@ -1,11 +1,18 @@
 /** @vitest-environment jsdom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
 import { LOCALES, localeNameKey, translate } from "../i18n";
-import { SettingsScreen, settingsAddress } from "./settings";
+import {
+  SETTINGS_TABS,
+  SettingsScreen,
+  type SettingsTabId,
+  settingsAddress,
+  tabContent,
+} from "./settings";
 import {
   auditEntry,
   IDLE_JOB_HEALTH,
@@ -438,5 +445,59 @@ describe("SettingsScreen restructured entries", () => {
       screen.getByText(/Only an admin can see background-job health/),
     ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();
+  });
+});
+
+// Where a settings card LIVES is a claim about whose setting it is, and the two
+// groups mean different things: "you" is a credential or connection the reader
+// personally holds, "admin" is the installation's posture.
+//
+// The Google app is one app per installation, supplied by whoever operates it,
+// and every rep's mailbox is connected through it. It shipped on `connections`
+// — a personal entry — which put installation configuration on a page the
+// register describes as holding "their own mailbox and their own LinkedIn
+// network". The server gates the read on capture_settings, so a rep saw a
+// refused card rather than the operator's client id; the defect was that the
+// page offered them a setting that was never theirs.
+//
+// Walked from the register rather than asserted against a hard-coded tab name:
+// the rule is "admin group", so a future move to any other admin entry passes
+// and a move back to a personal one fails.
+describe("installation-wide cards live under the admin group", () => {
+  // The card names itself; searching the returned tree for that name avoids
+  // rendering fourteen tabs and their API calls.
+  function tabRenders(id: SettingsTabId, componentName: string): boolean {
+    const seen = new Set<unknown>();
+    const walk = (node: ReactNode): boolean => {
+      if (!node || typeof node !== "object") {
+        return false;
+      }
+      if (Array.isArray(node)) {
+        return node.some(walk);
+      }
+      if (seen.has(node)) {
+        return false;
+      }
+      seen.add(node);
+      // The props generic is what lets `children` be read without asserting a
+      // shape nothing checked: isValidElement narrows both halves at once.
+      if (!isValidElement<{ children?: ReactNode }>(node)) {
+        return false;
+      }
+      // A function component's `name` is what the register renders it under.
+      if (typeof node.type === "function" && node.type.name === componentName) {
+        return true;
+      }
+      return walk(node.props.children);
+    };
+    return walk(tabContent(id));
+  }
+
+  it("puts the Google app on an admin entry, not beside a person's own connections", () => {
+    const hosts = SETTINGS_TABS.filter((tab) =>
+      tabRenders(tab.id, "GoogleAppCard"),
+    );
+    expect(hosts).toHaveLength(1);
+    expect(hosts[0]?.group).toBe("admin");
   });
 });

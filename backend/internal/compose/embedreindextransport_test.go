@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/modules/search"
 )
 
 // TestEmbedReindexRunningDetailTellsEachCallerWhatItCanChange pins the house

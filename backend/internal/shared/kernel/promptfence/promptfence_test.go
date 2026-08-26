@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
 // The attacks that defeated every recognition-based fence. None of them can

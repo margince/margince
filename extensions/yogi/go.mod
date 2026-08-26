@@ -1,3 +1,3 @@
-module github.com/gradionhq/margince/extensions/yogi
+module github.com/margince/margince/extensions/yogi
 
 go 1.26.6

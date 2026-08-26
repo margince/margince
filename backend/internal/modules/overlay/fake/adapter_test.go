@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay/fake"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay/fake"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // fixedModified is a deterministic ModifiedAt for fixtures that don't

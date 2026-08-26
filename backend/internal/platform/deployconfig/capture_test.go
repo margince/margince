@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/runtimeenv"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // The yaml tag is the contract, not the field name: the loader runs with

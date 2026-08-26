@@ -20,7 +20,7 @@ package ai
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // routingSettingsObject is the RBAC object gating the routing binding.

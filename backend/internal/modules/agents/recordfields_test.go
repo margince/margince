@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // The write tools' schemas are JSON handed to a client, and their field

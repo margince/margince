@@ -29,7 +29,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 )
 
 const frontendIdleBase = "../frontend/src/format/idlebase.ts"

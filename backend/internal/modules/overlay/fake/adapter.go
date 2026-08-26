@@ -12,8 +12,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // pageSize is the fixed Backfill/Modified page size the fake pages by.

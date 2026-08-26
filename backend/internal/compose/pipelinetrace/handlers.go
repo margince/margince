@@ -16,11 +16,11 @@ package pipelinetrace
 import (
 	"net/http"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	trace "github.com/gradionhq/margince/backend/internal/shared/kernel/pipelinetrace"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	trace "github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 )
 
 // Handlers serves the pipeline trace.

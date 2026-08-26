@@ -20,7 +20,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // fakeProvider serves /api/auth/me, /api/notifications/inbox and

@@ -10,9 +10,9 @@ package compose
 // length cap.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/modules/projects"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 const (

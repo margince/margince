@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // boundWorkspace names the workspace this service's transactions run against

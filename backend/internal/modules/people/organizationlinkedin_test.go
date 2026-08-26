@@ -17,7 +17,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // columnShape mirrors organization_linkedin_url_shape from migration 0191. A

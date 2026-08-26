@@ -15,8 +15,8 @@ package orgdossier
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func citingFields(text string, ids ...string) claims.Sentence {

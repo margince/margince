@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay"
 )
 
 // TestTargetKindString pins the three declared TargetKind names plus the

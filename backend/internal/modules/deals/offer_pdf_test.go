@@ -11,7 +11,7 @@ import (
 
 	"github.com/go-pdf/fpdf"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // testRenderOffer builds a minimal but complete offer for the PDF unit

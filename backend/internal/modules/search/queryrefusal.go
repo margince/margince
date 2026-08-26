@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // The refusal classes. One code per way a plan can fail to be a plan; the

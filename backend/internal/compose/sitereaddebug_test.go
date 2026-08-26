@@ -12,7 +12,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 func TestSiteReadDebugReportsPagesLanesAndProposal(t *testing.T) {

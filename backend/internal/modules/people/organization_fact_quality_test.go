@@ -6,7 +6,7 @@ package people
 import (
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // The rules exist because the extractor can pick the right FIELD and still

@@ -37,12 +37,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/accountdraft"
-	"github.com/gradionhq/margince/backend/internal/compose/draftrules"
-	"github.com/gradionhq/margince/backend/internal/compose/persondraft"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/draftfloor"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/draftrules"
+	"github.com/margince/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
 // draftingSurfaces is every surface's assembled system turn, keyed by the file

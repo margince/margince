@@ -16,7 +16,7 @@ package ai
 import (
 	"encoding/json"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 type openAICompatMessage struct {

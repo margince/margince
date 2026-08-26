@@ -17,9 +17,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/personcontext"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/compose/personcontext"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // promptVersion changes whenever anything about how a brief is WRITTEN

@@ -14,8 +14,8 @@ package draftcheck
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/convstate"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // SubjectMaxRunes is where a subject line stops being read.

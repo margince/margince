@@ -7,8 +7,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/geocode"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/geocode"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // The geocode job's ceiling must sit ABOVE everything it can wait for.

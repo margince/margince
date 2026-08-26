@@ -10,8 +10,8 @@ package main
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
 
 // jobRunnerBanner names, for every lane, the configuration that enabled it or

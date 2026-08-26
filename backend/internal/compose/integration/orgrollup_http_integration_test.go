@@ -28,8 +28,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // orgRollupMoneyWire mirrors the contract's Money schema.

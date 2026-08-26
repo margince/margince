@@ -28,8 +28,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/convstate"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Finding is one thing wrong with a draft, in words a person can act on.

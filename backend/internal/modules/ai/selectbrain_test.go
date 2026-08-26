@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // noCloudKeys is the fail-closed lookup: every provider's BYOK key is unset.

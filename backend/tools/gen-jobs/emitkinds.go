@@ -23,7 +23,7 @@ func emitKinds(c contract, contractHash string) (string, error) {
 	b.WriteString("import (\n")
 	b.WriteString("\t\"time\"\n\n")
 	b.WriteString("\t\"github.com/riverqueue/river\"\n\n")
-	b.WriteString("\t\"github.com/gradionhq/margince/backend/internal/platform/jobs\"\n")
+	b.WriteString("\t\"github.com/margince/margince/backend/internal/platform/jobs\"\n")
 	b.WriteString(")\n\n")
 
 	b.WriteString("// jobContractHash is the sha256 of api/jobs.yaml this file was generated\n")

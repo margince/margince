@@ -13,7 +13,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // anthropicClient is the cloud-frontier adapter (B-EP06.2): the

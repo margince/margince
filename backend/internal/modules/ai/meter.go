@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // Usage is one model call's metering record (§6): who spent, on what,

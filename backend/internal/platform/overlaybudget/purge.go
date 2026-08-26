@@ -7,7 +7,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // purgeScanBatch bounds one SCAN round trip; SCAN is incremental by contract,

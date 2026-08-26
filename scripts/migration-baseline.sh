@@ -29,7 +29,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-CONTAINER="${MARGINCE_PG_CONTAINER:-margince-poc-v1-postgres-1}"
+CONTAINER="${MARGINCE_PG_CONTAINER:-margince-postgres-1}"
 OWNER="${MARGINCE_PG_OWNER:-margince_owner}"
 
 # Tracking tables are excluded from every dump: they record which migrations ran,

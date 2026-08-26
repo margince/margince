@@ -12,8 +12,8 @@ package compose
 // engine around it is claim, apply, and sweep machinery that does not.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
 // The closed KIND vocabulary the model may answer with, and the lifecycle

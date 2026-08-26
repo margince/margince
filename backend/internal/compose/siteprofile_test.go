@@ -14,8 +14,8 @@ import (
 	"strings"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
 // profileFixtureIndex numbers the pages IN GIVEN ORDER (home s0,

@@ -16,9 +16,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	"github.com/gradionhq/margince/backend/internal/modules/webhooks"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/webhooks"
 )
 
 // A confirm-first CREATE stages the record TYPE with NO target id — the row

@@ -27,11 +27,11 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Two rules, and the read now holds both itself: a value_key duplicate is

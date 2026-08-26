@@ -12,7 +12,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func TestATaskCreatedThroughItsOwnDoorIsATaskOnTheTimeline(t *testing.T) {

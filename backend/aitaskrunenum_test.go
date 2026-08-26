@@ -28,7 +28,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/aiactivity"
 )
 
 // The wire's state vocabulary is the projection's PLUS one value nothing

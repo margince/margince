@@ -6,7 +6,7 @@ package people
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (

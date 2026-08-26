@@ -9,8 +9,8 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // A name a human reads, from an id a machine keys on.

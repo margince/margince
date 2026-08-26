@@ -8,7 +8,7 @@
 
 package backendarch
 
-import "github.com/gradionhq/margince/backend/internal/shared/gatekit"
+import "github.com/margince/margince/backend/internal/shared/gatekit"
 
 // crossStoreWrites are the ratified writes outside the writer's own tables,
 // keyed "module-dir:table:file:receiver.func" — the write INSTANCE, so a second

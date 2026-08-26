@@ -15,12 +15,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // projectStakeholderSource is the origin of an edge created through the
@@ -123,6 +123,8 @@ func (s *Store) SetProjectStakeholder(ctx context.Context, in SetProjectStakehol
 // workspace, so without it any seat holding `project.update` could rewrite any
 // team's roster. Out of the caller's reach reads as ErrNotFound; a project they
 // can see but not change answers ErrPermissionDenied.
+//
+// Held by: TestEveryProjectStakeholderVerbTakesTheRowAnchorGate (backend/internal/modules/people/projectanchorgate_test.go)
 func (s *Store) ensureProjectWritable(ctx context.Context, projectID ids.ProjectID) error {
 	return s.tx(ctx, func(tx pgx.Tx) error {
 		return auth.EnsureWritableLive(ctx, tx, projectObjectName, projectID.UUID)

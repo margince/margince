@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"sort"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // NewSecretStripper builds the credential-hygiene pass that runs over

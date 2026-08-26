@@ -24,7 +24,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // Site is one registered model-invocation site. Variant matches a name in the

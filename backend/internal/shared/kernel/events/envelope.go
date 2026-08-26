@@ -15,7 +15,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Envelope is the events.md §2 shape every bus entry carries. Payload is

@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // provider is this unit's key in channel_provider. It is NOT an activity kind:

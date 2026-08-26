@@ -9,8 +9,8 @@ package compose
 // model path never calls this.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // NewTaskCensus registers this build's AI invocation sites with the

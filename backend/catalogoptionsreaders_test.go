@@ -48,7 +48,7 @@ import (
 // The port whose Column type this is about. Only this module can import it —
 // it is internal, and each extension is its own module — so the walk is
 // backend/ alone rather than the license gate's three trees.
-const fieldcatalogPort = "github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+const fieldcatalogPort = "github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 
 // gatekit:fixture the reader set this gate asserts, not a waived cost — a
 // package listed here is claimed to gate the read, and an entry no file reaches

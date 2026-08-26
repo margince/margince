@@ -14,9 +14,9 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/provenance"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // RequiredFieldError maps to 422 on both surfaces — via FieldFault, so the
@@ -243,6 +243,8 @@ func leadCreateInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error
 // distinct from omitting the field (leave it alone). Both transports —
 // the HTTP handler and the SoR provider — decode into this one type, so
 // the gesture cannot drift between surfaces.
+//
+// Held by: TestEveryLeadUpdateDecodeKeepsTheNullGesture (backend/internal/modules/people/onederivation_test.go)
 type LeadUpdateRequest struct {
 	crmcontracts.UpdateLeadRequest
 	scoreNull  bool

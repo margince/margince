@@ -8,8 +8,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/shared/runtimeenv"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // LicenseTokenEnvVar overrides license.token_file when it is set. It is the

@@ -17,9 +17,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // logoFixture encodes a width x height opaque PNG — a stand-in for whatever a

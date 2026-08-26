@@ -9,10 +9,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/jurisdiction"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // RegisterExtensions reconciles the composed extension set (the

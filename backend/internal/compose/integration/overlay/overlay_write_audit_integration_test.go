@@ -24,8 +24,8 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // auditRow is one audit_log row's governance-relevant columns.
