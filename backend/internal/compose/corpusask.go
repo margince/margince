@@ -1,0 +1,387 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package compose
+
+// The written half of asking a corpus.
+//
+// Everything a refusal rests on was settled before this file is reached:
+// readiness, the embed binding and the grounding floor are decided in the
+// knowledge module without a model, so the lane is asked ONLY when passages
+// have already cleared the floor. This file's whole job is prose, and it is
+// allowed to produce none.
+//
+// The guardrail has four steps, and only the fourth involves reading a reply:
+//
+//  1. readiness            — deterministic, upstream
+//  2. retrieval            — deterministic, upstream
+//  3. the grounding floor  — deterministic, upstream
+//  4. the quote check      — here
+//
+// A claim whose quote is not found verbatim in the passage it cites is dropped.
+// An answer with no surviving claim is not_covered, because an answer that
+// cites nothing is not a grounded answer that happens to be short — it is an
+// ungrounded one.
+
+import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net/http"
+	"strings"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
+	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
+	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/gradionhq/margince/backend/internal/modules/knowledge"
+	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/gradionhq/margince/backend/internal/platform/vectorkit"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/gradionhq/margince/backend/internal/shared/schema"
+)
+
+// corpusAskSystem is this site's prompt.
+//
+// It is written against ONE failure: a model handed passages and asked a
+// question will, given the chance, write a fluent paragraph that is mostly
+// about the passages and partly about what it already believed. The verbatim
+// quote is what makes that detectable — not because a quote proves a claim is
+// true, but because a claim with no quote is one the checker can drop without
+// having to judge it.
+const corpusAskSystem = `You answer questions using ONLY the numbered passages you are given.
+
+Write one claim per sentence of the answer. Every claim carries:
+  - text: one sentence of the answer, in your own words.
+  - id: the id of the passage that sentence rests on.
+  - quote: a span copied from that passage, CHARACTER FOR CHARACTER.
+
+The quote must appear in the passage exactly as written there. Do not
+paraphrase it, do not fix its spelling, do not join two parts of the passage
+with an ellipsis. If you cannot find a span that supports your sentence, do not
+write the sentence.
+
+If the passages do not answer the question, return no claims at all. An empty
+answer is correct and expected. Never answer from anything you know that is not
+in the passages, and never say the passages are insufficient — just return
+nothing.`
+
+// corpusAskLane is the chat lane this site takes. Nil is a composition without
+// one, and the answer is then the passages themselves.
+type corpusAskLane interface {
+	Complete(ctx context.Context, req model.Request) (model.Response, error)
+}
+
+// The reply's field names, named once. They are spelled in the schema, in the
+// required-key list beside it, and in the struct tags below, and a key that
+// disagreed between any two of those would be a field the model is asked for
+// and the parser never reads.
+const (
+	claimTextKey  = "text"
+	claimIDKey    = "id"
+	claimQuoteKey = "quote"
+)
+
+// askedClaim is one claim as the model returns it.
+type askedClaim struct {
+	Text  string `json:"text"`
+	ID    string `json:"id"`
+	Quote string `json:"quote"`
+}
+
+type askedAnswer struct {
+	Claims []askedClaim `json:"claims"`
+}
+
+// CorpusAskRequest builds the ONE model call this site makes.
+//
+// It is a pure function of the passages so the certification lane can issue the
+// same request the product issues, rather than re-creating one — a re-creation
+// certifies a copy, and a copy stays green through the change that breaks the
+// original.
+//
+// The citation enum is DERIVED here, per call, from the passages this call was
+// given. A fixed enum would offer ids this call cannot resolve and withhold the
+// ids it can; deriving it makes an out-of-set citation structurally impossible
+// rather than something the checker has to catch afterwards.
+//
+// The fence is minted per request: a boundary reused across calls is one some
+// uploaded document may already have been shown, and every passage in this
+// prompt is a third party's own writing.
+func CorpusAskRequest(question string, passages []knowledge.Passage, lang string) model.Request {
+	fence := promptfence.New()
+	return model.Request{
+		System:         corpusAskSystemFor(lang),
+		Messages:       []model.Message{{Role: chatRoleUser, Content: fence.Wrap(renderCorpusAsk(question, passages))}},
+		MaxTokens:      ai.ReasoningOutputMaxTokens,
+		ResponseSchema: corpusAskSchema(passageIDs(passages)),
+		SecretStripper: ai.NewSecretStripper(),
+	}
+}
+
+// corpusAskSystemFor composes the site's prompt with the two house rules.
+//
+// The language rule is composed rather than waived even though a quote must
+// stay verbatim, because the rule already says exactly that: it instructs the
+// model to leave "any text you are quoting from a source" as it is. So the
+// claim's SENTENCE follows the workspace's language and its QUOTE follows the
+// document's, which is the behaviour a reader of a German handbook asking in
+// German needs.
+//
+// The voice rule is composed for the sentences, which a person reads as prose.
+func corpusAskSystemFor(lang string) string {
+	return corpusAskSystem + "\n" + promptlang.Rule(lang) + "\n" + promptvoice.Rule
+}
+
+// corpusAskSchema is the reply shape, with this call's own passage ids as the
+// citation enum.
+func corpusAskSchema(ids []string) json.RawMessage {
+	return schema.Must(schema.Object(
+		map[string]schema.Node{
+			"claims": schema.Array(schema.Object(
+				map[string]schema.Node{
+					claimTextKey:  schema.String().Describe("One sentence of the answer, in your own words."),
+					claimIDKey:    schema.Enum(ids...).Describe("The passage this sentence rests on."),
+					claimQuoteKey: schema.String().Describe("A span copied from that passage, character for character."),
+				},
+				claimTextKey, claimIDKey, claimQuoteKey,
+			)),
+		},
+		"claims",
+	))
+}
+
+func passageIDs(passages []knowledge.Passage) []string {
+	ids := make([]string, len(passages))
+	for i, p := range passages {
+		ids[i] = p.ChunkID.String()
+	}
+	return ids
+}
+
+// renderCorpusAsk lays out the question and the numbered passages.
+func renderCorpusAsk(question string, passages []knowledge.Passage) string {
+	var b strings.Builder
+	b.WriteString("Question: ")
+	b.WriteString(question)
+	b.WriteString("\n\nPassages:\n")
+	for _, p := range passages {
+		fmt.Fprintf(&b, "\n[%s] from %s\n%s\n", p.ChunkID, p.DocumentName, p.Text)
+	}
+	return b.String()
+}
+
+// AnswerCorpus turns retrieved passages into the reply the endpoint serves.
+//
+// With no lane, or a reply nothing survives, the answer is the PASSAGES
+// THEMSELVES with their citations and no written summary, and generated_by says
+// deterministic. That is deal_health's rule for deal_health's reason, and it is
+// honest here for a reason of its own: the grounded part of a grounded answer
+// was never the prose. A reader gets the passages that answer their question,
+// correctly attributed, and is told nobody wrote them a summary.
+func AnswerCorpus(
+	ctx context.Context, lane corpusAskLane, state knowledge.Readiness,
+	question string, passages []knowledge.Passage, lang string, log *slog.Logger,
+) crmcontracts.KnowledgeAnswer {
+	answer := crmcontracts.KnowledgeAnswer{
+		Outcome:     state.Outcome,
+		Corpus:      state.Corpus,
+		Coverage:    state.Coverage,
+		GeneratedBy: crmcontracts.Deterministic,
+	}
+	if state.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
+		return answer
+	}
+	claims := passageClaims(passages)
+	answer.Claims = &claims
+	if lane == nil {
+		return answer
+	}
+
+	written, err := askCorpusLane(ctx, lane, question, passages, lang)
+	if err != nil {
+		// The degrade is declared, but a SILENT one is indistinguishable from a
+		// lane nobody wired: the reader sees the passages either way, and only
+		// this line says which. It carries the reason rather than the reply,
+		// because the reply quotes a third party's document.
+		log.WarnContext(ctx, "corpus ask fell back to the retrieved passages",
+			"corpus_id", state.Corpus.Id.String(), "reason", err)
+		return answer
+	}
+	if len(written) == 0 {
+		// The model read the passages and found nothing in them that answers
+		// the question — or wrote only claims the quote check dropped. Either
+		// way this is not_covered, and it is the honest answer: an answer that
+		// cites nothing is an ungrounded one, not a short grounded one.
+		answer.Outcome = crmcontracts.KnowledgeAnswerOutcomeNotCovered
+		answer.Claims = nil
+		return answer
+	}
+	answer.Claims = &written
+	answer.GeneratedBy = crmcontracts.Model
+	return answer
+}
+
+// askCorpusLane makes the call and keeps what survives the quote check.
+func askCorpusLane(
+	ctx context.Context, lane corpusAskLane, question string, passages []knowledge.Passage, lang string,
+) ([]crmcontracts.KnowledgeClaim, error) {
+	resp, err := lane.Complete(ctx, CorpusAskRequest(question, passages, lang))
+	if err != nil {
+		return nil, fmt.Errorf("the corpus ask lane: %w", err)
+	}
+	return GroundCorpusAnswer(resp.Text, passages)
+}
+
+// GroundCorpusAnswer parses a reply and keeps only the claims whose quote is
+// actually in the passage they cite.
+//
+// Exported because the certification lane reads a reply with the SAME checker
+// production uses. A cert that re-implemented this would measure a copy, and
+// the copy stays green through the change that breaks the original.
+func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) ([]crmcontracts.KnowledgeClaim, error) {
+	var parsed askedAnswer
+	if err := json.Unmarshal([]byte(ai.Unfence(replyText)), &parsed); err != nil {
+		return nil, fmt.Errorf("the corpus ask reply is not the shape this site takes: %w", err)
+	}
+	byID := make(map[string]knowledge.Passage, len(passages))
+	for _, p := range passages {
+		byID[p.ChunkID.String()] = p
+	}
+	var kept []crmcontracts.KnowledgeClaim
+	for _, c := range parsed.Claims {
+		p, ok := byID[c.ID]
+		if !ok {
+			// The schema's enum should make this unreachable; it is checked
+			// anyway because "should be unreachable" is not a guarantee about
+			// a provider's output, and a citation to a passage this call never
+			// saw is the exact failure the enum exists to prevent.
+			continue
+		}
+		if !quotedFromDocument(p.Text, c.Quote) {
+			continue
+		}
+		text := strings.TrimSpace(c.Text)
+		claim := crmcontracts.KnowledgeClaim{
+			ChunkId:      openapi_types.UUID(p.ChunkID),
+			DocumentId:   openapi_types.UUID(p.DocumentID),
+			DocumentName: p.DocumentName,
+			Quote:        strings.TrimSpace(c.Quote),
+		}
+		if text != "" {
+			claim.Text = &text
+		}
+		kept = append(kept, claim)
+	}
+	return kept, nil
+}
+
+// The quote check is quotedFromDocument, shared with the field-extract lane
+// rather than spelled again here. It is the same question — are these the
+// document's own words — and two spellings of one invariant drift until they
+// disagree about a reply one of them would have refused.
+
+// passageClaims renders the retrieved passages as the deterministic answer:
+// each passage IS a claim, quoting itself, with no sentence written over it.
+//
+// The Text field is deliberately absent rather than empty. The contract says a
+// claim's text is absent when generated_by is deterministic — then the quote
+// stands on its own and no prose was written — and an empty string would render
+// as a blank sentence rather than as no sentence.
+func passageClaims(passages []knowledge.Passage) []crmcontracts.KnowledgeClaim {
+	claims := make([]crmcontracts.KnowledgeClaim, len(passages))
+	for i, p := range passages {
+		claims[i] = crmcontracts.KnowledgeClaim{
+			ChunkId:      openapi_types.UUID(p.ChunkID),
+			DocumentId:   openapi_types.UUID(p.DocumentID),
+			DocumentName: p.DocumentName,
+			Quote:        strings.TrimSpace(p.Text),
+		}
+	}
+	return claims
+}
+
+// corpusAskEngine serves askCorpus: retrieve deterministically, then write.
+//
+// It lives in compose because the ask joins two things a module may not join —
+// the knowledge module's retrieval and the AI router's chat lane — and because
+// the certification lane drives the same request builder and the same checker
+// this engine uses.
+type corpusAskEngine struct {
+	store *knowledge.Store
+	// embedder is what makes retrieval possible at all. Never nil: an
+	// installation with no embed lane gets unboundEmbedder, so the ask takes
+	// ONE path and Retrieve's own identity check produces the
+	// retrieval_unavailable outcome — which is a statement about the
+	// installation, never about the question.
+	embedder vectorkit.Embedder
+	// lane writes the prose. Nil is a composition without a chat lane, and the
+	// answer is the passages themselves.
+	lane corpusAskLane
+	// pool resolves the workspace's base language, which is what the answer's
+	// sentences are written in.
+	pool *pgxpool.Pool
+	log  *slog.Logger
+}
+
+// ask serves one question against one corpus.
+func (e *corpusAskEngine) ask(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.AskCorpusJSONRequestBody
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	state, passages, err := e.store.Retrieve(r.Context(), ids.UUID(id), req.Question, e.embedder)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	answer := AnswerCorpus(r.Context(), e.lane, state, req.Question, passages,
+		identity.BaseLanguageForPrompt(r.Context(), e.pool), e.log)
+	httperr.WriteJSON(w, http.StatusOK, answer)
+}
+
+// WithCorpusAsk enables the corpus ask. Without it the endpoint keeps its
+// explicit 501: an installation that composed no retrieval at all cannot answer
+// the question, and pretending to search would be worse than saying so.
+func WithCorpusAsk(embedder vectorkit.Embedder, lane completer, log *slog.Logger) Option {
+	return func(s *Server, pool *pgxpool.Pool) {
+		if embedder == nil {
+			embedder = unboundEmbedder{}
+		}
+		engine := &corpusAskEngine{
+			store:    knowledge.NewStore(InstallationDB(pool)),
+			embedder: embedder,
+			lane:     lane,
+			pool:     pool,
+			log:      log,
+		}
+		s.knowledgeHandlers = knowledgeWithAsk(s.knowledgeHandlers, engine.ask)
+	}
+}
+
+// unboundEmbedder stands where an installation composed no embed lane.
+//
+// It exists so the ask has one path rather than two. Retrieve already reports
+// retrieval_unavailable for an empty identity, and that branch is tested; a
+// second nil-check in the engine would be a parallel spelling of the same
+// decision, reachable only in the deployment shape nobody runs the suite
+// against.
+//
+// Embed is unreachable by construction — the empty identity is checked before
+// any call — and returns an error rather than a plausible vector, so a future
+// caller that reaches it fails loudly instead of ranking against nonsense.
+type unboundEmbedder struct{}
+
+func (unboundEmbedder) EmbedIdentity() (string, int) { return "", 0 }
+
+func (unboundEmbedder) Embed(context.Context, model.EmbedRequest) (model.Embeddings, error) {
+	return model.Embeddings{}, errors.New("compose: this installation has no embed lane, so nothing can be embedded")
+}
