@@ -669,13 +669,20 @@ function readPayload(
   const change = approval.proposed_change ?? {};
   const draft = draftOf(change);
   const diffs = diffsOf(change);
-  // The lead survives both layouts. The fact list is deck-only because a queue
-  // of rows each unrolling nine keys is unreadable, but the one sentence
-  // explaining why a decision is in front of somebody is the thing a row is
-  // MOST missing — it is what turns "Confirm the real close date for Riverty"
-  // into a question a reader can answer without opening anything.
+  // The lead survives both layouts: the one sentence explaining why a decision
+  // is in front of somebody is the thing a row is MOST missing.
   const lead = display.find((entry) => entry.lead)?.value ?? null;
-  const rest = layout === "deck" ? restOf(change, draft, diffs, display) : [];
+  // Declared fields survive a row too, and only declared ones. The deck-only
+  // rule was written against the RAW reading, where a row unrolling nine wire
+  // keys made a queue unreadable — a real defect, and the reason it stays for
+  // an undeclared kind. A declared list is at most four short labelled rows,
+  // and suppressing them cost the reader the thing they were being asked
+  // about: the Worklist shows one decision at a time, and its close-date card
+  // rendered the reason with no proposed date under it.
+  const rest =
+    layout === "deck" || display.length > 0
+      ? restOf(change, draft, diffs, display)
+      : [];
   return {
     draft,
     diffs,
