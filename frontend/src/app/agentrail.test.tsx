@@ -644,24 +644,20 @@ describe("AgentRail", () => {
     const user = userEvent.setup();
     stubPhoneViewport();
     stubAgentRailApi();
-    const well = { top: 700, left: 167, width: 56 };
-    const cell = { top: 716, left: 151, width: 88 };
-    const nowhere = { top: 0, left: 0, width: 0 };
+    // Real DOMRects rather than object literals cast into the shape: a rect
+    // whose `top` was supplied and whose `bottom` was not is a box no element
+    // has, and the derived fields would then be whatever the literal happened to
+    // spell. The well stands 16px clear of the cell behind it, which is the one
+    // difference every assertion below turns on.
+    const well = new DOMRect(167, 700, 56, 56);
+    const cell = new DOMRect(151, 716, 88, 48);
+    const nowhere = new DOMRect(0, 0, 0, 0);
     vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
       function (this: Element) {
-        const seen = this.classList.contains("arhit")
-          ? well
-          : this.classList.contains("arblock")
-            ? cell
-            : nowhere;
-        return {
-          ...seen,
-          bottom: 0,
-          height: 0,
-          right: 0,
-          x: 0,
-          y: 0,
-        } as DOMRect;
+        if (this.classList.contains("arhit")) {
+          return well;
+        }
+        return this.classList.contains("arblock") ? cell : nowhere;
       },
     );
     const { container } = render(ROUTE);

@@ -795,6 +795,20 @@ type PanelFrame = Readonly<{
 }>;
 
 /**
+ * The two custom properties the portalled wrapper is placed by.
+ *
+ * Declared rather than asserted onto `CSSProperties`: React's own type carries
+ * the CSS properties it knows, and a cast to it would say these two are among
+ * them. The intersection says what is true — the wrapper takes a style object
+ * that is one of those PLUS the two this file mints.
+ */
+type NotchPlacement = CSSProperties &
+  Readonly<{
+    "--arCaretX"?: string;
+    "--arPanelBottom": string;
+  }>;
+
+/**
  * The notch's place, handed to the stylesheet rather than drawn here.
  *
  * Where it points is a MEASUREMENT and how it is drawn is the sheet's business,
@@ -802,11 +816,11 @@ type PanelFrame = Readonly<{
  * sidebar there is no notch and no `--arCaretX`: the panel and the card that
  * opened it are already touching, and a tail would have no gap to cross.
  */
-function looseStyle(frame: PanelFrame): CSSProperties {
+function looseStyle(frame: PanelFrame): NotchPlacement {
   return {
     "--arCaretX": frame.caret === undefined ? undefined : `${frame.caret}px`,
     "--arPanelBottom": `${frame.bottom}px`,
-  } as CSSProperties;
+  };
 }
 
 /**
