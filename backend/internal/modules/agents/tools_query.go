@@ -236,7 +236,11 @@ func (t queryWorkspace) hydrate(ctx context.Context, answer QueryAnswer) (QueryW
 	// Named AFTER the page is assembled, so the seat lookup is one query for
 	// the whole page. Only served rows are named: a dropped row was never the
 	// caller's to see, and naming its owner would disclose it.
-	result.Rows = attachOwners(ctx, t.name, result.Rows)
+	rows, ownerNote := attachOwners(ctx, t.name, result.Rows)
+	result.Rows = rows
+	if ownerNote != nil {
+		result.Notes = append(result.Notes, *ownerNote)
+	}
 	if dropped {
 		result.Coverage = CoveragePartialDegraded
 		result.Notes = append(result.Notes, QueryNote{

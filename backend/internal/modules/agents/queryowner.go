@@ -52,9 +52,11 @@ type RecordOwner struct {
 	// by someone not currently a member" rather than silently reading as
 	// unowned.
 	Name string `json:"name,omitempty"`
-	// IsYou is false for an agent principal, and that is correct rather than a
-	// gap: an agent holds no seat, so no record is its own, and every record it
-	// reports belongs to a human it should name.
+	// IsYou answers for the HUMAN the call is made as — the caller themselves,
+	// or the person whose authority an agent is acting under. An assistant
+	// reading a page on your behalf must see your own accounts as yours; an
+	// agent that marked them as somebody else's would send you to check with
+	// yourself and bury the colleague-owned rows in the same noise.
 	IsYou bool `json:"is_you"`
 }
 
@@ -84,22 +86,41 @@ func ownerIDOf(fields json.RawMessage) (ids.UUID, bool) {
 	return *envelope.OwnerID, true
 }
 
-// callerSeat is the human seat asking, when there is one.
+// callerSeat is the human a call is made AS: the caller themselves, or the
+// person whose authority an agent or connector is acting under.
 //
-// An agent or a system principal has no seat, so nothing is "yours" to it. It
-// answers not-ok rather than a zero UUID for the same reason ownerIDOf does:
-// a zero seat compared against a zero owner would mark an unowned record as
-// the caller's own.
+// This is identity's actingHuman rule, and it has to be the same rule. A
+// passport carries its represented human in UserID and OnBehalfOf both, so
+// reading only a human principal's seat would leave every assistant-driven
+// read marking its own operator's accounts as a colleague's — the exact
+// inversion this disclosure exists to prevent.
+//
+// A system principal has no human behind it and answers not-ok, rather than a
+// zero UUID: a zero seat compared against a zero owner would mark an unowned
+// record as the caller's own.
 func callerSeat(ctx context.Context) (ids.UUID, bool) {
 	p, ok := principal.Actor(ctx)
-	if !ok || p.Type != principal.PrincipalHuman {
+	if !ok {
 		return ids.UUID{}, false
 	}
-	if p.UserID == (ids.UUID{}) {
+	seat := p.UserID
+	if seat.IsZero() {
+		seat = p.OnBehalfOf
+	}
+	if seat.IsZero() {
 		return ids.UUID{}, false
 	}
-	return p.UserID, true
+	return seat, true
 }
+
+// CodeOwnerNamesUnavailable says the seat lookup failed, so the rows carry
+// owner ids and is_you markers but no names.
+//
+// It exists because the alternative reading is WRONG in a way that matters: an
+// unnamed owner otherwise looks exactly like a departed one, and a caller
+// cannot tell a database timeout from a colleague who left. Only one of those
+// means "ask around before you contact this account".
+const CodeOwnerNamesUnavailable = "owner_names_unavailable"
 
 // attachOwners names the owner on every row that has one, in ONE lookup.
 //
@@ -107,8 +128,9 @@ func callerSeat(ctx context.Context) (ids.UUID, bool) {
 // per PAGE and not per row. A naming failure is not fatal and does not fail
 // the read: the rows are already admitted and already the caller's to see, and
 // answering them unnamed is strictly better than answering nothing. The id and
-// is_you still ride out, so the disclosure degrades rather than disappearing.
-func attachOwners(ctx context.Context, name SeatNamer, rows []QueryWorkspaceRow) []QueryWorkspaceRow {
+// is_you still ride out, so the disclosure degrades rather than disappearing —
+// and the caller is TOLD it degraded, which is what keeps "no name" honest.
+func attachOwners(ctx context.Context, name SeatNamer, rows []QueryWorkspaceRow) ([]QueryWorkspaceRow, *QueryNote) {
 	owners := make(map[int]ids.UUID, len(rows))
 	seats := make([]ids.UUID, 0, len(rows))
 	seen := make(map[ids.UUID]bool, len(rows))
@@ -124,13 +146,24 @@ func attachOwners(ctx context.Context, name SeatNamer, rows []QueryWorkspaceRow)
 		}
 	}
 	if len(owners) == 0 {
-		return rows
+		return rows, nil
 	}
 	named := map[ids.UUID]string{}
+	var note *QueryNote
+	// A nil namer is not a failure and is not noted: the installation cannot
+	// name seats at all, which is a standing property, and noting it per call
+	// would put the same warning on every answer it ever gives.
 	if name != nil {
-		if resolved, err := name(ctx, seats); err == nil {
-			named = resolved
+		resolved, err := name(ctx, seats)
+		if err != nil {
+			note = &QueryNote{
+				Code: CodeOwnerNamesUnavailable,
+				Detail: "the owner of one or more of these records could not be named; " +
+					"each row still says who owns it by id and whether it is yours, " +
+					"but a missing name here does not mean the owner has left",
+			}
 		}
+		named = resolved
 	}
 	me, haveSeat := callerSeat(ctx)
 	for i, owner := range owners {
@@ -138,5 +171,5 @@ func attachOwners(ctx context.Context, name SeatNamer, rows []QueryWorkspaceRow)
 			ID: owner, Name: named[owner], IsYou: haveSeat && owner == me,
 		}
 	}
-	return rows
+	return rows, note
 }

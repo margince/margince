@@ -54,7 +54,7 @@ func TestARecordOwnedByAColleagueIsNamedAndMarkedNotYours(t *testing.T) {
 	me, sofia := ids.NewV7(), ids.NewV7()
 	rows := rowsFor(ownedRecord(datasource.EntityOrganization, sofia))
 
-	named := attachOwners(humanCtx(me), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+	named, _ := attachOwners(humanCtx(me), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{sofia: "Sofia Meier"}, nil
 	}, rows)
 
@@ -78,7 +78,7 @@ func TestYourOwnRecordIsMarkedAsYours(t *testing.T) {
 	me := ids.NewV7()
 	rows := rowsFor(ownedRecord(datasource.EntityOrganization, me))
 
-	named := attachOwners(humanCtx(me), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+	named, _ := attachOwners(humanCtx(me), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{me: "Lars"}, nil
 	}, rows)
 
@@ -92,7 +92,7 @@ func TestYourOwnRecordIsMarkedAsYours(t *testing.T) {
 func TestAnUnownedRecordCarriesNoOwner(t *testing.T) {
 	rows := rowsFor(ownedRecord(datasource.EntityOrganization, ids.UUID{}))
 
-	named := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+	named, _ := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		t.Error("an unowned record still asked for a seat name")
 		return map[ids.UUID]string{}, nil
 	}, rows)
@@ -114,7 +114,7 @@ func TestAPageOfRowsIsNamedInOneLookup(t *testing.T) {
 	)
 
 	calls, asked := 0, 0
-	attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+	_, _ = attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		calls, asked = calls+1, len(seats)
 		return map[ids.UUID]string{sofia: "Sofia Meier", lena: "Lena Fischer"}, nil
 	}, rows)
@@ -135,7 +135,7 @@ func TestAnArchivedOwnerStillReadsAsOwnedBySomeoneElse(t *testing.T) {
 	gone := ids.NewV7()
 	rows := rowsFor(ownedRecord(datasource.EntityOrganization, gone))
 
-	named := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+	named, _ := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return map[ids.UUID]string{}, nil
 	}, rows)
 
@@ -153,11 +153,15 @@ func TestAnArchivedOwnerStillReadsAsOwnedBySomeoneElse(t *testing.T) {
 // Naming is a courtesy on rows the caller has ALREADY been granted. A namer
 // that fails must not fail the read — the rows are admitted either way, and
 // the id plus the marker still disclose that someone else holds the account.
-func TestANamingFailureStillDisclosesTheOwner(t *testing.T) {
+//
+// But it must SAY it failed. Without the note, a lookup timeout and a
+// colleague who left the company produce the same unnamed owner, and only one
+// of those means "ask around before you contact this account".
+func TestANamingFailureDisclosesTheOwnerAndSaysItFailed(t *testing.T) {
 	sofia := ids.NewV7()
 	rows := rowsFor(ownedRecord(datasource.EntityOrganization, sofia))
 
-	named := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+	named, note := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 		return nil, context.DeadlineExceeded
 	}, rows)
 
@@ -167,6 +171,27 @@ func TestANamingFailureStillDisclosesTheOwner(t *testing.T) {
 	if named[0].Owner.IsYou {
 		t.Error("a failed lookup marked a colleague's record as the caller's own")
 	}
+	if note == nil {
+		t.Fatal("a failed lookup is indistinguishable from an owner who left the company")
+	}
+	if note.Code != CodeOwnerNamesUnavailable {
+		t.Errorf("the note carries %q rather than the code a client branches on", note.Code)
+	}
+}
+
+// The mirror of the above: a seat that simply does not resolve is NOT a
+// failure, and must not raise the alarm. An owner who left is an ordinary
+// answer.
+func TestAnArchivedOwnerRaisesNoFailureNote(t *testing.T) {
+	rows := rowsFor(ownedRecord(datasource.EntityOrganization, ids.NewV7()))
+
+	_, note := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+		return map[ids.UUID]string{}, nil
+	}, rows)
+
+	if note != nil {
+		t.Errorf("an owner who left was reported as a lookup failure: %+v", note)
+	}
 }
 
 // An installation with no seat namer wired still serves the query and still
@@ -175,34 +200,79 @@ func TestNoSeatNamerStillDisclosesTheOwner(t *testing.T) {
 	sofia := ids.NewV7()
 	rows := rowsFor(ownedRecord(datasource.EntityOrganization, sofia))
 
-	named := attachOwners(humanCtx(ids.NewV7()), nil, rows)
+	named, _ := attachOwners(humanCtx(ids.NewV7()), nil, rows)
 	if named[0].Owner == nil || named[0].Owner.ID != sofia {
 		t.Fatal("without a namer the owner vanished rather than going unnamed")
 	}
 }
 
-// An AGENT holds no seat, so no record is its own. Marking one is_you would
-// tell a model it owns an account it cannot own, and suppress the very
-// check-in the disclosure asks for.
-func TestAnAgentOwnsNothing(t *testing.T) {
-	owner := ids.NewV7()
-	rows := rowsFor(ownedRecord(datasource.EntityOrganization, owner))
+// An agent reads on a HUMAN's behalf, so "yours" means that human's.
+//
+// This is the case the first cut of this file got backwards. Reading only a
+// human principal's seat left every assistant-driven query marking its own
+// operator's accounts as a colleague's — the exact inversion the disclosure
+// exists to prevent, and worse than saying nothing, because it sends someone
+// to check with themselves.
+func TestAnAgentReadsAsTheHumanItActsFor(t *testing.T) {
+	me := ids.NewV7()
+	rows := rowsFor(ownedRecord(datasource.EntityOrganization, me))
 
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: owner,
+		Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: me,
 		Scopes: principal.NewScopeSet(principal.ScopeRead),
 	})
 
-	named := attachOwners(ctx, func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
-		return map[ids.UUID]string{owner: "Sofia Meier"}, nil
+	named, _ := attachOwners(ctx, func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+		return map[ids.UUID]string{me: "Lars"}, nil
 	}, rows)
 
 	if named[0].Owner == nil {
 		t.Fatal("an agent's read lost the owner")
 	}
-	if named[0].Owner.IsYou {
-		t.Error("an agent is marked as owning a record; an agent holds no seat")
+	if !named[0].Owner.IsYou {
+		t.Error("an assistant reading on my behalf marked MY OWN account as somebody else's")
+	}
+}
+
+// And the other half: a colleague's account stays a colleague's when an agent
+// reads it, or the marker means nothing.
+func TestAnAgentStillSeesAColleaguesRecordAsTheirs(t *testing.T) {
+	me, sofia := ids.NewV7(), ids.NewV7()
+	rows := rowsFor(ownedRecord(datasource.EntityOrganization, sofia))
+
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:probe", OnBehalfOf: me,
+		Scopes: principal.NewScopeSet(principal.ScopeRead),
+	})
+
+	named, _ := attachOwners(ctx, func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+		return map[ids.UUID]string{sofia: "Sofia Meier"}, nil
+	}, rows)
+
+	if named[0].Owner == nil || named[0].Owner.IsYou {
+		t.Fatal("a colleague's account read as the operator's own")
+	}
+}
+
+// A system principal has no human behind it, so nothing is its own.
+func TestASystemPrincipalOwnsNothing(t *testing.T) {
+	owner := ids.NewV7()
+	rows := rowsFor(ownedRecord(datasource.EntityOrganization, owner))
+
+	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalSystem, ID: "system:sweep",
+		Scopes: principal.NewScopeSet(principal.ScopeRead),
+	})
+
+	named, _ := attachOwners(ctx, func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+		return map[ids.UUID]string{owner: "Sofia Meier"}, nil
+	}, rows)
+
+	if named[0].Owner == nil || named[0].Owner.IsYou {
+		t.Error("a system principal is marked as owning a record")
 	}
 }
 
@@ -215,7 +285,7 @@ func TestEveryOwnedRecordTypeIsNamed(t *testing.T) {
 		datasource.EntityPerson, datasource.EntityLead,
 	} {
 		rows := rowsFor(ownedRecord(entity, owner))
-		named := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
+		named, _ := attachOwners(humanCtx(ids.NewV7()), func(_ context.Context, seats []ids.UUID) (map[ids.UUID]string, error) {
 			return map[ids.UUID]string{owner: "Sofia Meier"}, nil
 		}, rows)
 		if named[0].Owner == nil || named[0].Owner.Name != "Sofia Meier" {
