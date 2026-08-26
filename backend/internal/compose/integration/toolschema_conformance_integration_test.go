@@ -138,6 +138,11 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 		// precisely so an absent one cannot read as a complete one.
 		{"query_workspace", `{"plan":{"version":"v1","target":"deal","where":[{"field":"status","op":"eq","value":"open"}]}}`},
 		{"query_workspace", `{"plan":{"version":"v1","target":"deal","where":[{"field":"name","op":"eq","value":"nothing here matches this"}]}}`},
+		// The vocabulary the two plans above are written against. It takes no
+		// arguments and needs no seam the lane is missing, so it is a call here
+		// rather than a waiver: the census does not accept "registered and
+		// unproven" for a tool this sweep can simply invoke.
+		{"describe_query_vocabulary", `{}`},
 		{"read_record", `{"record_type":"deal","id":"` + deal.String() + `"}`},
 		// A ranked sweep that finds rows and one that finds none. The empty page
 		// is the one worth pinning: it still carries `coverage` and `notes`, and
