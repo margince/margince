@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { type ReactNode, useState } from "react";
+import { type ReactNode, useEffect, useRef, useState } from "react";
 import { formatMoney, formatNumber, ordinalNumber } from "../format/format";
 import { useLocale } from "../i18n";
 import { Button } from "./atoms";
@@ -99,6 +99,7 @@ const chips: readonly ListChip[] = [
 function Surface({
   rows,
   columns: shownColumns = columns,
+  openSortMenu = false,
   ...rest
 }: Readonly<{
   rows: Company[];
@@ -112,11 +113,33 @@ function Surface({
   /** Passed through, for the story that holds the page itself. */
   page?: number;
   onPage?: (next: number) => void;
+  /**
+   * Open the sort menu on mount, for the story that is ABOUT the menu.
+   *
+   * A press, not a prop on the surface: the menus are the surface's own state
+   * by design, so a story that reached inside to set them open would be
+   * documenting a shape the product does not have.
+   */
+  openSortMenu?: boolean;
 }>) {
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState("display_name");
   const [chosen, setChosen] = useState<Record<string, string>>({});
   const [view, setView] = useState(0);
+  const frame = useRef<HTMLDivElement>(null);
+
+  // Pressed, not set. The menus belong to the surface's own state, so a story
+  // that reached in to open one would be documenting a shape the product does
+  // not have — and a screenshot of a menu nobody can open is worse than none.
+  useEffect(() => {
+    if (!openSortMenu) {
+      return;
+    }
+    const trigger = [...(frame.current?.querySelectorAll("button") ?? [])].find(
+      (button) => button.textContent?.trim() === "Sort",
+    );
+    trigger?.click();
+  }, [openSortMenu]);
 
   const needle = search.trim().toLowerCase();
   // Only the two attributes the chips offer, read by name rather than by
@@ -133,25 +156,27 @@ function Surface({
   );
 
   return (
-    <ListTable<Company>
-      rows={shown}
-      columns={shownColumns}
-      rowKey={(row) => row.id}
-      unit="companies"
-      action={<Button small>New company</Button>}
-      search={{ value: search, onChange: setSearch }}
-      sort={{ value: sort, onChange: setSort }}
-      chips={chips}
-      chosen={chosen}
-      onChipChange={(key, value) =>
-        setChosen((prev) => ({ ...prev, [key]: value }))
-      }
-      archived={{ checked: false, onChange: () => undefined }}
-      views={[{ label: "All" }, { label: "DACH" }]}
-      activeView={view}
-      onViewChange={setView}
-      {...rest}
-    />
+    <div ref={frame}>
+      <ListTable<Company>
+        rows={shown}
+        columns={shownColumns}
+        rowKey={(row) => row.id}
+        unit="companies"
+        action={<Button small>New company</Button>}
+        search={{ value: search, onChange: setSearch }}
+        sort={{ value: sort, onChange: setSort }}
+        chips={chips}
+        chosen={chosen}
+        onChipChange={(key, value) =>
+          setChosen((prev) => ({ ...prev, [key]: value }))
+        }
+        archived={{ checked: false, onChange: () => undefined }}
+        views={[{ label: "All" }, { label: "DACH" }]}
+        activeView={view}
+        onViewChange={setView}
+        {...rest}
+      />
+    </div>
   );
 }
 
@@ -165,6 +190,16 @@ export const Default: Story = {
 // count reads as a range, and the page resets whenever the set narrows.
 export const Paged: Story = {
   render: () => <Surface rows={companies(60)} />,
+};
+
+// The sort dial as a menu, which is the route a column header cannot be: it
+// offers every orderable column including the ones the reader has hidden or a
+// phone has no room for, it says which way the current one runs, and it offers
+// the server's own order — a state a saved view can ask for and a header
+// cannot. Opened here with a sort already applied, so the tick and the
+// direction arrow are both on screen.
+export const SortedByAMenu: Story = {
+  render: () => <Surface rows={companies(12)} openSortMenu />,
 };
 
 // The same pager, with the PAGE held by the caller. A list screen keeps it in
