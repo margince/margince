@@ -27,6 +27,10 @@ import (
 )
 
 type UpdateActivityInput struct {
+	// Trail names what the audit trail calls this write. The zero value is an
+	// ordinary update, so every caller that is not the reversal path is
+	// unchanged.
+	Trail      storekit.AuditTrail
 	Subject    *string
 	Body       *string
 	OccurredAt *time.Time
@@ -95,7 +99,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 			return err
 		}
 		before, after := storekit.ChangedColumns(activityColumnImage(current), activityColumnImage(out))
-		auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, before, after)
+		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "activity", id.UUID, before, after)
 		if err != nil {
 			return err
 		}

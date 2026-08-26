@@ -24,6 +24,10 @@ import (
 
 // UpdateProjectInput is one project partial update: every field optional.
 type UpdateProjectInput struct {
+	// Trail names what the audit trail calls this write. The zero value is an
+	// ordinary update, so every caller that is not the reversal path is
+	// unchanged.
+	Trail         storekit.AuditTrail
 	Name          *string
 	OwnerID       *ids.UserID
 	Description   *string
@@ -74,7 +78,7 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 			return fmt.Errorf("apply project patch: %w", err)
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "update", projectObject, id.UUID, p.Before(), p.After())
+		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, projectObject, id.UUID, p.Before(), p.After())
 		if err != nil {
 			return fmt.Errorf("audit project update: %w", err)
 		}

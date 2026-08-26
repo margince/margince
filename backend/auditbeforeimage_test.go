@@ -44,17 +44,33 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
 )
 
-// The four doors into audit_log, and which of them carries a before-image.
+// The doors into audit_log, and which of them carries a before-image.
 var auditDoorsWithBeforeImage = map[string]bool{
 	"Audit":                  true,
 	"AuditWithEvidence":      true,
+	"AuditWithTrail":         true,
 	"AuditEvent":             false,
 	"AuditEventWithEvidence": false,
 }
 
-// Argument positions shared by all four doors: (ctx, tx, action, entityType,
+// Doors whose verb is fixed by construction rather than passed as an argument.
+// AuditWithTrail takes a verb the caller cannot spell freely — Trail.Resolve
+// admits update and restore and nothing else — so every call through it is
+// update-shaped and the rule binds it without this walk having to reduce
+// anything.
+//
+// This is why threading a runtime verb through the record types costs no
+// ratification: the one door that carries a verb the walk cannot see is also
+// the one door whose verb set is closed.
+var auditDoorsAlwaysUpdateShaped = map[string]bool{
+	"AuditWithTrail": true,
+}
+
+// Argument positions shared by every door: (ctx, tx, verb, entityType,
 // entityID, …). Only the images differ after that, which is the point of the
-// split.
+// split. AuditWithTrail carries a Trail where the others carry an action
+// string; the positions are the same, and its verb is answered by
+// auditDoorsAlwaysUpdateShaped rather than read from the argument.
 const (
 	auditActionArg     = 2
 	auditEntityTypeArg = 3
@@ -251,6 +267,9 @@ type auditSite struct {
 // file's package declares. Anything else — a parameter, a struct field, a value
 // read at runtime — is unknown, and saying so is the point.
 func (s auditSite) action(consts map[string]string) (string, bool) {
+	if auditDoorsAlwaysUpdateShaped[s.door] {
+		return "update", true
+	}
 	return resolveString(s.argAt(auditActionArg), consts)
 }
 

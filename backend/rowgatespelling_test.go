@@ -51,7 +51,7 @@ import (
 // mutation SPELLINGS themselves are built, so counting a lock as a write would
 // make every one of them its own violation.
 var rowGateWriteMarkers = map[string]bool{
-	"Audit": true, "AuditWithEvidence": true,
+	"Audit": true, "AuditWithEvidence": true, "AuditWithTrail": true,
 	"AuditEvent": true, "AuditEventWithEvidence": true,
 	"Emit": true, "StampFields": true,
 	"ApplyWithVersion": true, "ApplyGuarded": true, "ApplyLocked": true,

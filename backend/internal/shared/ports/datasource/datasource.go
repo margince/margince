@@ -14,6 +14,7 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/auditverb"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -196,6 +197,13 @@ type UpdateInput struct {
 	Source     string
 	CapturedBy string
 	IfVersion  *int64
+	// Trail names what the audit trail calls this write and what it records
+	// about it. The zero value is an ordinary update carrying no evidence, so
+	// a caller that does not care never names one. Only the reversal path sets
+	// it: a restore is an ordinary update in every respect except what the
+	// trail calls it, which is why it travels on this input rather than
+	// through a second write engine.
+	Trail auditverb.Trail
 }
 
 // AdvanceDealInput moves a deal to a stage; the provider appends

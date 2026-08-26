@@ -71,8 +71,9 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
-	v, err := p.store.UpdateActivity(ctx, ids.From[ids.ActivityKind](in.Ref.ID),
-		activityUpdateInput(req, in.IfVersion))
+	update := activityUpdateInput(req, in.IfVersion)
+	update.Trail = in.Trail
+	v, err := p.store.UpdateActivity(ctx, ids.From[ids.ActivityKind](in.Ref.ID), update)
 	return ref(datasource.EntityActivity, v.Id), err
 }
 

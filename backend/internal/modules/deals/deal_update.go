@@ -27,6 +27,10 @@ import (
 // UpdateDealInput is one deal partial update: every field is optional, and
 // CustomFields carries the request body's extra top-level keys.
 type UpdateDealInput struct {
+	// Trail names what the audit trail calls this write. The zero value is an
+	// ordinary update, so every caller that is not the reversal path is
+	// unchanged.
+	Trail                 storekit.AuditTrail
 	Name                  *string
 	AmountMinor           *int64
 	Currency              *string

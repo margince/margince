@@ -206,6 +206,10 @@ func createOrganizationInTx(ctx context.Context, tx pgx.Tx, in CreateOrganizatio
 }
 
 type UpdateOrganizationInput struct {
+	// Trail names what the audit trail calls this write. The zero value is an
+	// ordinary update, so every caller that is not the reversal path is
+	// unchanged.
+	Trail       storekit.AuditTrail
 	DisplayName *string
 	LegalName   *string
 	// Description, when non-nil, sets or (when empty) clears the one-line
@@ -337,7 +341,7 @@ func (s *Store) UpdateOrganization(ctx context.Context, id ids.OrganizationID, i
 			return err
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "update", "organization", id.UUID, before, after)
+		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "organization", id.UUID, before, after)
 		if err != nil {
 			return fmt.Errorf("audit organization update: %w", err)
 		}

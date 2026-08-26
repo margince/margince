@@ -21,6 +21,10 @@ import (
 )
 
 type UpdateLeadInput struct {
+	// Trail names what the audit trail calls this write. The zero value is an
+	// ordinary update, so every caller that is not the reversal path is
+	// unchanged.
+	Trail           storekit.AuditTrail
 	FullName        *string
 	Email           *string
 	Title           *string
@@ -266,7 +270,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 		}
 		return crmcontracts.Lead{}, err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", "lead", id.UUID, p.Before(), p.After())
+	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "lead", id.UUID, p.Before(), p.After())
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
