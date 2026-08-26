@@ -19,6 +19,7 @@ import (
 	"log/slog"
 	"time"
 
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/gradionhq/margince/backend/internal/modules/activities"
@@ -138,9 +139,6 @@ func followUpPrecheck() approvals.ReleasePrecheck {
 // decision's own audit row.
 func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) approvals.ApprovedEffect {
 	return func(ctx context.Context, approvalID ids.ApprovalID, proposedChange json.RawMessage, diffHash string) error {
-		if _, _, err := svc.Redeem(ctx, approvalID, deals.FollowUpReconcileKind, diffHash); err != nil {
-			return err
-		}
 		proposal, err := deals.UnmarshalFollowUpProposal(proposedChange)
 		if err != nil {
 			return err
@@ -163,16 +161,25 @@ func followUpConfirmEffect(svc *approvals.Service, store *activities.Store) appr
 		body := proposal.Body
 		sourceSystem := "overnight-reconcile"
 		sourceID := approvalID.String()
-		_, _, err = store.LogActivity(execCtx, activities.LogActivityInput{
-			Kind:         "task",
-			Subject:      &subject,
-			Body:         &body,
-			DueAt:        &due,
-			SourceSystem: &sourceSystem,
-			SourceID:     &sourceID,
-			Source:       "overnight-reconcile",
-			Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
-		})
-		return err
+		// Redemption and the write in ONE transaction, which is what makes a
+		// failure recoverable. Consuming the approval first and writing after
+		// means a failed write spends the human's yes and leaves no task and no
+		// way to try again — the approval is decided, redeemed, and no surface
+		// can re-drive it. Here a failed write rolls the redemption back with
+		// it, so the decision stays releasable.
+		return svc.RedeemAndApply(ctx, approvalID, deals.FollowUpReconcileKind, diffHash,
+			func(tx pgx.Tx) error {
+				_, _, err := store.LogActivityTx(execCtx, tx, activities.LogActivityInput{
+					Kind:         "task",
+					Subject:      &subject,
+					Body:         &body,
+					DueAt:        &due,
+					SourceSystem: &sourceSystem,
+					SourceID:     &sourceID,
+					Source:       "overnight-reconcile",
+					Links:        []activities.ActivityLinkInput{{EntityType: "deal", EntityID: proposal.DealID.UUID}},
+				})
+				return err
+			})
 	}
 }
