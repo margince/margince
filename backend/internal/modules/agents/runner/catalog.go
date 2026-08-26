@@ -4,8 +4,12 @@
 package runner
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"fmt"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // AgentSpec is one catalog entry: a named, scheduled, budgeted goal.
@@ -78,10 +82,39 @@ func Catalog() []AgentSpec {
 	}
 }
 
-// TriggerRef names one occurrence of a scheduled spec; the runner's
-// idempotency (one run per trigger occurrence) hangs off this string.
-func (a AgentSpec) TriggerRef(day time.Time) string {
-	return fmt.Sprintf("%s:%s", a.Name, day.UTC().Format("2006-01-02"))
+// TriggerRef names one occurrence of a scheduled spec FOR ONE SEAT; the
+// runner's idempotency (one run per trigger occurrence) hangs off this string.
+//
+// The seat belongs in the identity because the agent acts for a person. Both
+// uniqueness rules that stop a double run are keyed on this ref —
+// agent_run_trigger_unique on the ref alone, runner_job_trigger_unique on
+// (agent_spec, ref) — so a ref naming only the spec and the day makes the
+// night's work workspace-wide: whichever seat is seeded first wins the
+// constraint and every other rep silently gets no run. Nothing errors, because
+// one row inserting and the rest conflicting is exactly what a correct
+// re-seed looks like.
+//
+// The seat is a DIGEST, not the user's uuid. This value is printed in the
+// prompt in the runner's own voice, one line above grounding refs of the form
+// `<type>:<uuid>` that name records the run actually read — so a raw id here
+// gives a model a record-shaped string it may prepare against, though nothing
+// was ever read to obtain it. The digest carries no such shape. It is an
+// identity, never a lookup key: no reader resolves a seat from it, and the
+// passport on the job row is what says who the run acts for.
+func (a AgentSpec) TriggerRef(day time.Time, seat ids.UserID) string {
+	return fmt.Sprintf("%s:%s:%s", a.Name, day.UTC().Format("2006-01-02"), seatDigest(seat))
+}
+
+// seatDigest is the short, stable, non-record-shaped name of one seat.
+//
+// Truncated to 12 hex characters: this distinguishes seats within one
+// workspace-day, which is all the ref has to do, and the uniqueness that
+// matters is still enforced by the database rather than by this string being
+// unguessable. A collision would cost one rep one night's run, and at 48 bits
+// across the seats of a single workspace it is not a risk anyone will meet.
+func seatDigest(seat ids.UserID) string {
+	sum := sha256.Sum256([]byte(seat.String()))
+	return hex.EncodeToString(sum[:6])
 }
 
 // DueAt is when the given day's occurrence becomes runnable.

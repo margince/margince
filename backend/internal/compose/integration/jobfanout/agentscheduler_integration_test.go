@@ -126,22 +126,26 @@ func runnerJobOutcome(t *testing.T, owner *pgx.Conn, trigger string) (status, la
 	return status, lastError
 }
 
-// assertOccurrencesSeeded fails unless every catalog occurrence due at now
-// exists. This is the half of a pass that has no other trace: an unseeded
+// assertSpecSeededFor fails unless this seat holds the given spec's occurrence
+// for the day. This is the half of a pass that has no other trace: an unseeded
 // occurrence is simply a brief that never happens, with no row anywhere to
 // notice its absence.
-func assertOccurrencesSeeded(t *testing.T, owner *pgx.Conn, now time.Time) {
+//
+// It asks about ONE spec rather than the whole catalog, because a grant is per
+// agent. A rep who said yes to the morning brief has said nothing about the
+// at-risk sweep, and a helper that demanded both would be asserting a
+// consent-everywhere model the product deliberately does not have.
+func assertSpecSeededFor(t *testing.T, owner *pgx.Conn, spec runner.AgentSpec, now time.Time, seat ids.UserID) {
 	t.Helper()
-	for _, spec := range runner.Catalog() {
-		var seeded bool
-		if err := owner.QueryRow(context.Background(), `
-			SELECT EXISTS (SELECT 1 FROM runner_job WHERE trigger_ref = $1)`,
-			spec.TriggerRef(now)).Scan(&seeded); err != nil {
-			t.Fatalf("reading the seeded occurrences of %s: %v", spec.Name, err)
-		}
-		if !seeded {
-			t.Errorf("no %s occurrence exists for %s — that agent simply never runs, and no row records it", spec.Name, now.Format(time.DateOnly))
-		}
+	var seeded bool
+	if err := owner.QueryRow(context.Background(), `
+		SELECT EXISTS (SELECT 1 FROM runner_job WHERE trigger_ref = $1)`,
+		spec.TriggerRef(now, seat)).Scan(&seeded); err != nil {
+		t.Fatalf("reading the seeded occurrences of %s: %v", spec.Name, err)
+	}
+	if !seeded {
+		t.Errorf("no %s occurrence exists for %s on seat %s — that rep's agent simply never runs, and no row records it",
+			spec.Name, now.Format(time.DateOnly), seat)
 	}
 }
 
@@ -184,11 +188,18 @@ func TestAgentSchedulerSeedsAndClaimsWhatIsDue(t *testing.T) {
 	const trigger = "morning_brief:seed-and-claim"
 	seedDueRunnerJob(t, owner, trigger)
 
+	// The pass seeds for the reps who granted, so a seat that said yes is what
+	// gives the seeding half anything to prove.
+	me := re.sessionUser(t)
+	if err := re.recordDecision(t, me, runner.GrantStateGranted, &re.passportID); err != nil {
+		t.Fatalf("record the grant: %v", err)
+	}
+
 	now := afterEveryDueHour()
 	if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
 		t.Fatalf("the scheduling pass: %v", err)
 	}
-	assertOccurrencesSeeded(t, owner, now)
+	assertSpecSeededFor(t, owner, grantedSpec(t), now, me)
 
 	status, lastError := runnerJobOutcome(t, owner, trigger)
 	if status == "queued" {
@@ -277,4 +288,223 @@ func TestAgentSchedulerWithoutAnIntervalSchedulesNothingButStillWorksAQueuedRow(
 		t.Errorf("%d %s rows exist after a runner was given no scheduler interval, want only the one queued here — a zero duration is not a cadence, and River spins on it rather than refusing it",
 			dispatched, compose.AgentSchedulerArgs{}.Kind())
 	}
+}
+
+// TestEverySeatThatGrantedGetsItsOwnNightlyOccurrence is the regression this
+// whole change exists for.
+//
+// Before the trigger ref carried a seat, both uniqueness rules made the night
+// workspace-wide: the first rep seeded took the row and every other rep's
+// insert conflicted away. NOTHING FAILED WHEN THAT HAPPENED — ON CONFLICT DO
+// NOTHING is the intended re-seed path, the pass returned nil, and the only
+// symptom was reps quietly not getting briefs. So the assertion is a count
+// across seats, not the success of the pass.
+func TestEverySeatThatGrantedGetsItsOwnNightlyOccurrence(t *testing.T) {
+	re := setupRunner(t)
+	owner := integration.OwnerConn(t)
+
+	me := re.sessionUser(t)
+	colleague := seedColleague(t, owner)
+	theirs := re.mintPassportForColleague(t, colleague)
+	if err := re.recordDecision(t, me, runner.GrantStateGranted, &re.passportID); err != nil {
+		t.Fatalf("record the grant for %s: %v", me, err)
+	}
+	if err := re.recordDecision(t, colleague, runner.GrantStateGranted, &theirs); err != nil {
+		t.Fatalf("record the grant for %s: %v", colleague, err)
+	}
+
+	now := afterEveryDueHour()
+	if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
+		t.Fatalf("the scheduling pass: %v", err)
+	}
+
+	// Count the DISTINCT rows first. Asking per seat whether "a row for this
+	// ref exists" is satisfied by one shared row answering for both seats —
+	// which is precisely the workspace-wide behaviour this test exists to
+	// catch, so that form of the assertion passes exactly when the bug is
+	// present. The count is what cannot be satisfied by one row.
+	spec := grantedSpec(t)
+	var rows int
+	if err := owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM runner_job WHERE agent_spec = $1`, grantSpec).Scan(&rows); err != nil {
+		t.Fatalf("counting the seeded occurrences: %v", err)
+	}
+	if rows != 2 {
+		t.Fatalf("%d occurrence(s) were seeded for 2 granting seats: the trigger ref does not "+
+			"distinguish reps, so the uniqueness constraints admit one run for the whole "+
+			"workspace and every seat after the first silently gets nothing", rows)
+	}
+	for _, seat := range []ids.UserID{me, colleague} {
+		var passport *string
+		if err := owner.QueryRow(context.Background(),
+			`SELECT passport_id::text FROM runner_job WHERE agent_spec = $1 AND trigger_ref = $2`,
+			grantSpec, spec.TriggerRef(now, seat)).Scan(&passport); err != nil {
+			t.Fatalf("seat %s has no occurrence of its own — the night ran for somebody else and this rep silently got nothing: %v", seat, err)
+		}
+		if passport == nil {
+			t.Fatalf("seat %s was seeded with no passport: the run can only fail at execution, which is a broken night rather than an honest refusal", seat)
+		}
+	}
+}
+
+// TestASeatIsSeededWithItsOwnCredentialAndNobodyElses pins WHOSE authority the
+// night carries.
+//
+// A fan-out that seeded the right number of rows against one shared passport
+// would satisfy the count above while acting for every rep as one person —
+// which is the exact thing the standing grant exists to prevent.
+func TestASeatIsSeededWithItsOwnCredentialAndNobodyElses(t *testing.T) {
+	re := setupRunner(t)
+	owner := integration.OwnerConn(t)
+
+	me := re.sessionUser(t)
+	colleague := seedColleague(t, owner)
+	theirs := re.mintPassportForColleague(t, colleague)
+	if err := re.recordDecision(t, me, runner.GrantStateGranted, &re.passportID); err != nil {
+		t.Fatalf("record the grant for %s: %v", me, err)
+	}
+	if err := re.recordDecision(t, colleague, runner.GrantStateGranted, &theirs); err != nil {
+		t.Fatalf("record the grant for %s: %v", colleague, err)
+	}
+
+	now := afterEveryDueHour()
+	if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
+		t.Fatalf("the scheduling pass: %v", err)
+	}
+
+	spec := grantedSpec(t)
+	for seat, want := range map[ids.UserID]ids.PassportID{me: re.passportID, colleague: theirs} {
+		var got string
+		if err := owner.QueryRow(context.Background(),
+			`SELECT passport_id::text FROM runner_job WHERE trigger_ref = $1`,
+			spec.TriggerRef(now, seat)).Scan(&got); err != nil {
+			t.Fatalf("reading seat %s's occurrence: %v", seat, err)
+		}
+		if got != want.String() {
+			t.Errorf("seat %s is seeded with passport %s, want its own %s — the night would act for this rep under somebody else's authority", seat, got, want)
+		}
+	}
+}
+
+// TestARepWhoDeclinedIsNotSeeded holds the other direction: the standing grant
+// is a real gate on the fan-out, not a row the seeder reads past.
+//
+// The declining rep is the case that makes the feature honest. A pass that
+// seeded them anyway would run an agent overnight for somebody who said no,
+// and the only reason it would not act is that they hold no passport — which
+// is a failure at 2am rather than a decision respected at seeding time.
+func TestARepWhoDeclinedIsNotSeeded(t *testing.T) {
+	re := setupRunner(t)
+	owner := integration.OwnerConn(t)
+
+	me := re.sessionUser(t)
+	if err := re.recordDecision(t, me, runner.GrantStateGranted, &re.passportID); err != nil {
+		t.Fatalf("record the grant for %s: %v", me, err)
+	}
+
+	colleague := seedColleague(t, owner)
+	if err := re.recordDecision(t, colleague, runner.GrantStateDeclined, nil); err != nil {
+		t.Fatalf("recording the decline: %v", err)
+	}
+
+	now := afterEveryDueHour()
+	if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
+		t.Fatalf("the scheduling pass: %v", err)
+	}
+
+	spec := grantedSpec(t)
+	var seeded bool
+	if err := owner.QueryRow(context.Background(),
+		`SELECT EXISTS (SELECT 1 FROM runner_job WHERE trigger_ref = $1)`,
+		spec.TriggerRef(now, colleague)).Scan(&seeded); err != nil {
+		t.Fatalf("reading the declining rep's occurrence: %v", err)
+	}
+	if seeded {
+		t.Error("a rep who declined was seeded an overnight run: the grant is not gating the fan-out, and the agent works for somebody who said no")
+	}
+	// The granting rep still got theirs, or the assertion above passes for the
+	// wrong reason — a pass that seeded nobody satisfies it too.
+	assertSpecSeededFor(t, owner, grantedSpec(t), now, me)
+}
+
+// TestAWorkspaceWhereNobodyGrantedSeedsNothing is the empty case, and it is a
+// PASS rather than a fault: no live grant means nobody has said yes yet.
+func TestAWorkspaceWhereNobodyGrantedSeedsNothing(t *testing.T) {
+	re := setupRunner(t)
+	owner := integration.OwnerConn(t)
+
+	now := afterEveryDueHour()
+	if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
+		t.Fatalf("a pass over a workspace where nobody granted must succeed, not fault: %v", err)
+	}
+
+	var jobs int
+	if err := owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM runner_job WHERE agent_spec = $1`, grantSpec).Scan(&jobs); err != nil {
+		t.Fatalf("counting the seeded occurrences: %v", err)
+	}
+	if jobs != 0 {
+		t.Errorf("%d occurrence(s) were seeded with no live grant behind them — a run nothing can authorize, which fails in the small hours with nobody watching", jobs)
+	}
+}
+
+// TestASecondPassSeedsNoSecondRunForTheSameSeat keeps the idempotency the seat
+// segment could have broken. Uniqueness is per seat per day now, and a ref that
+// varied per pass would queue a rep the same brief every tick.
+func TestASecondPassSeedsNoSecondRunForTheSameSeat(t *testing.T) {
+	re := setupRunner(t)
+	owner := integration.OwnerConn(t)
+
+	me := re.sessionUser(t)
+	if err := re.recordDecision(t, me, runner.GrantStateGranted, &re.passportID); err != nil {
+		t.Fatalf("record the grant for %s: %v", me, err)
+	}
+
+	now := afterEveryDueHour()
+	for pass := 0; pass < 2; pass++ {
+		if err := re.svc.Tick(schedulerPassCtx(re.wsID), now); err != nil {
+			t.Fatalf("scheduling pass %d: %v", pass+1, err)
+		}
+	}
+
+	var jobs int
+	if err := owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM runner_job WHERE agent_spec = $1 AND trigger_ref = $2`,
+		grantSpec, grantedSpec(t).TriggerRef(now, me)).Scan(&jobs); err != nil {
+		t.Fatalf("counting this seat's occurrences: %v", err)
+	}
+	if jobs != 1 {
+		t.Errorf("this seat holds %d occurrences of one day's brief, want exactly 1 — a rep queued the same brief every tick", jobs)
+	}
+}
+
+// seedColleague adds a second real seat to the workspace.
+func seedColleague(t *testing.T, owner *pgx.Conn) ids.UserID {
+	t.Helper()
+	var raw string
+	if err := owner.QueryRow(context.Background(), `
+		INSERT INTO app_user (email, display_name, status)
+		VALUES ($1, 'Second Seat', 'active')
+		RETURNING id::text`, "seat-"+ids.NewV7().String()+"@fable.test").Scan(&raw); err != nil {
+		t.Fatalf("seeding a second seat: %v", err)
+	}
+	id, err := ids.ParseAs[ids.UserKind](raw)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// grantedSpec resolves the catalog entry these tests grant, so a test builds
+// its trigger ref the way production does rather than formatting a second copy
+// of the shape.
+func grantedSpec(t *testing.T) runner.AgentSpec {
+	t.Helper()
+	for _, spec := range runner.Catalog() {
+		if spec.Name == grantSpec {
+			return spec
+		}
+	}
+	t.Fatalf("no catalog entry named %s", grantSpec)
+	return runner.AgentSpec{}
 }
