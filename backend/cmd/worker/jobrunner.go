@@ -76,7 +76,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 		ClientID:     cfg.graphClientID,
 		ClientSecret: cfg.graphClientSecret,
 		Tenant:       cfg.graphTenant,
-	}, cfg.captureConfig).WithSyncInterval(cfg.gmailSyncInterval)
+	}, cfg.captureConfig, logger).WithSyncInterval(cfg.gmailSyncInterval)
 	watchCfg := gmailWatchConfig(cfg, cfg.gmailAppWired())
 	configuredVault := vault
 	if !vaultConfigured {

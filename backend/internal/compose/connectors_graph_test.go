@@ -200,13 +200,13 @@ func TestWithGraphCaptureWiresSharesOrSkips(t *testing.T) {
 func TestCaptureSyncRegistryRegistersConfiguredProviders(t *testing.T) {
 	both := CaptureSyncRegistry(nil, nil,
 		GmailConfig{ClientID: "id", ClientSecret: "sec"},
-		GraphConfig{ClientID: "ms-id", ClientSecret: "ms-sec"}, CaptureConfig{})
+		GraphConfig{ClientID: "ms-id", ClientSecret: "ms-sec"}, CaptureConfig{}, nil)
 	names := registeredNames(both.Connectors())
 	if !names["imap"] || !names["gmail"] || !names["graph"] {
 		t.Errorf("connectors = %v, want imap+gmail+graph", names)
 	}
 
-	bare := CaptureSyncRegistry(nil, nil, GmailConfig{}, GraphConfig{}, CaptureConfig{})
+	bare := CaptureSyncRegistry(nil, nil, GmailConfig{}, GraphConfig{}, CaptureConfig{}, nil)
 	names = registeredNames(bare.Connectors())
 	if !names["imap"] || names["gmail"] || names["graph"] {
 		t.Errorf("connectors = %v, want imap only when neither app is configured", names)

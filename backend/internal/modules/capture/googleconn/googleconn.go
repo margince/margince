@@ -295,7 +295,7 @@ func Descriptor(name string) connector.Descriptor {
 // (the internal-vs-external anchor) and the short-lived access token. A stored
 // bundle we cannot read is a corruption, surfaced as an error rather than
 // silently treated as a fresh connection.
-func Session(ctx context.Context, oauth OAuth, auth connector.Auth) (owner, accessToken string, err error) {
+func Session(ctx context.Context, oauth Authorizer, auth connector.Auth) (owner, accessToken string, err error) {
 	var st AuthState
 	if err := json.Unmarshal(auth, &st); err != nil {
 		return "", "", fmt.Errorf("googleconn: malformed auth state: %w", err)
@@ -307,12 +307,27 @@ func Session(ctx context.Context, oauth OAuth, auth connector.Auth) (owner, acce
 	return st.Owner, access, nil
 }
 
-// OAuth is the OAuth2 handshake surface each Google connector supplies to
-// Authenticate — the same three-method shape gmail and gcal implement.
-type OAuth interface {
-	AuthCodeURL(state, redirectURI string) string
+// Authorizer is the half of the handshake a CONNECTOR performs: trade an
+// authorization code for a grant, and mint an access token from a stored
+// refresh token.
+//
+// Split from OAuth because both of these carry a context and can report an
+// error, which is what lets an implementation resolve the installation's app
+// when the call is made rather than holding a copy from boot. Building the
+// consent URL can do neither — it returns a bare string — so it stays on OAuth,
+// which the transport holds; a connector is handed this narrower half so the
+// type says it cannot start a consent flow.
+type Authorizer interface {
 	Exchange(ctx context.Context, code, redirectURI string) (oauthflow.TokenGrant, error)
 	AccessToken(ctx context.Context, refreshToken string) (accessToken string, err error)
+}
+
+// OAuth is the full handshake surface: an Authorizer that can also send a
+// person to the provider's consent screen. The transport holds this; a
+// connector holds the narrower half.
+type OAuth interface {
+	Authorizer
+	AuthCodeURL(state, redirectURI string) string
 }
 
 // AuthState is the persisted credential bundle (the opaque connector.Auth). The
@@ -368,7 +383,7 @@ type OwnerResolver func(ctx context.Context, accessToken string) (string, error)
 // connector's declared scopes, frozen into the bundle; resolveOwner is the
 // per-connector call that names the account. The access token is discarded —
 // only the durable refresh token persists.
-func Authenticate(ctx context.Context, oauth OAuth, req connector.AuthRequest, scopes []principal.Scope, resolveOwner OwnerResolver) (connector.Auth, error) {
+func Authenticate(ctx context.Context, oauth Authorizer, req connector.AuthRequest, scopes []principal.Scope, resolveOwner OwnerResolver) (connector.Auth, error) {
 	var p authPayload
 	if err := json.Unmarshal(req.Payload, &p); err != nil {
 		return nil, fmt.Errorf("googleconn: malformed auth payload: %w", err)
