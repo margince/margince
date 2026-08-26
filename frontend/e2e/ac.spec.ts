@@ -223,7 +223,7 @@ test("AC-shell-1: the rail renders the canonical 10 items in order", async ({
     "Firmen",
     "Leads",
     "Filter & Ansichten",
-    "Heute",
+    "Arbeitsliste",
     "Pipeline",
     "Projekte",
     "Berichte",
@@ -1251,7 +1251,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
       await page.goto(`/#/${view}`);
       await page.waitForLoadState("networkidle");
       await expectShellRendered(page);
-      await animationsSettled(page);
+      await settleAnimations(page);
       await expectNoAaViolations(page, view);
     });
   }
