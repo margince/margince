@@ -3,6 +3,7 @@ package rubric
 import (
 	"os"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -152,5 +153,84 @@ func TestTheSectionScanSurvivesAFencedExample(t *testing.T) {
 	}
 	if strings.Contains(section, "## Next") {
 		t.Errorf("the section did not stop at the next H2:\n%s", section)
+	}
+}
+
+// TestTheProseRangeReachesTheHighestRule closes the OTHER direction of the
+// binding above.
+//
+// That test walks prose→rubric: every id the prose names must exist. Nothing
+// walked rubric→prose, so a rule ADDED to the standard left the range in
+// AGENTS.md naming a smaller set, and both files stayed green. The prose then
+// under-reports the standard — the failure that is invisible, because a reader
+// who trusts "T1–T10" over a rubric of T1–T11 never learns the rule exists and
+// has no reason to look.
+//
+// The range is derived from the rubric on both sides, so a T12 added tomorrow is
+// enrolled the day it lands and there is no list here to go short.
+func TestTheProseRangeReachesTheHighestRule(t *testing.T) {
+	const rulebook = "../../../AGENTS.md"
+
+	raw, err := os.ReadFile(rulebook)
+	if err != nil {
+		t.Fatalf("read %s: %v", rulebook, err)
+	}
+	section, found := CraftsmanshipSection(string(raw))
+	if !found {
+		t.Fatalf("%s carries no ## Craftsmanship section", rulebook)
+	}
+	loaded, err := Load()
+	if err != nil {
+		t.Fatalf("load rubric: %v", err)
+	}
+
+	// The prose wraps, so the range's two ends can sit on different lines;
+	// whitespace is normalised before matching rather than the pattern being
+	// taught about line breaks.
+	flat := strings.Join(strings.Fields(section), " ")
+	// En dash and hyphen alike: the rulebook uses the typographic dash and a
+	// pattern that only knew the ASCII one would match nothing and pass.
+	rangePattern := regexp.MustCompile(`\b([TP])(\d{1,2})\s*[–-]\s*([TP])(\d{1,2})\b`)
+
+	highest := map[string]int{}
+	for _, r := range loaded.Rules {
+		prefix := "T"
+		if r.Kind == KindPositive {
+			prefix = "P"
+		}
+		n, err := strconv.Atoi(strings.TrimPrefix(r.ID, prefix))
+		if err != nil {
+			t.Errorf("rule id %q is not <prefix><number>, so the prose range cannot be checked against it", r.ID)
+			continue
+		}
+		if n > highest[prefix] {
+			highest[prefix] = n
+		}
+	}
+
+	covered := map[string]int{}
+	for _, m := range rangePattern.FindAllStringSubmatch(flat, -1) {
+		if m[1] != m[3] {
+			// A range that changes prefix mid-way (T1–P3) states no upper bound
+			// for either class; the sibling test already reports it.
+			continue
+		}
+		if n, err := strconv.Atoi(m[4]); err == nil && n > covered[m[1]] {
+			covered[m[1]] = n
+		}
+	}
+
+	for prefix, top := range highest {
+		if covered[prefix] == 0 {
+			t.Errorf("%s's Craftsmanship section states no %s1–%s%d range at all, so a reader cannot tell how many "+
+				"%s-rules the gate applies", rulebook, prefix, prefix, top, prefix)
+			continue
+		}
+		if covered[prefix] < top {
+			t.Errorf("%s's Craftsmanship section advertises %s-rules only up to %s%d, but rubric.json carries %s%d. "+
+				"A rule added to the standard is one the rulebook never mentions: the reader is not told it exists, "+
+				"and unlike a range that overshoots, nothing else will tell them either",
+				rulebook, prefix, prefix, covered[prefix], prefix, top)
+		}
 	}
 }

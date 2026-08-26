@@ -209,8 +209,8 @@ backend/piicoverage_test.go core 0245
 backend/rbacgate_test.go core 0217
 backend/rlsclaims_test.go core 0217
 backend/rlsclaims_test.go migration 0217
-backend/tableownership_test.go core 0245
 backend/tableownership_test.go migration 0219
+backend/tableownershipwaivers_test.go core 0245
 backend/tools/extmigrategate/role.go core 0213
 backend/tools/extmigrategate/role.go migration 0206
 backend/tools/gen-composition/extmigrations.go core 0213
