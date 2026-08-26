@@ -81,6 +81,49 @@ var held = ` + "`" + marker + "`" + `
 func write(tx T) { held := "SELECT 1"; tx.Exec(ctx, held) }`,
 			judged: false,
 		}, {
+			// A whole-function shadow set answers this one wrong, and wrong in
+			// the silent direction: the send is the package's statement, and a
+			// local declared in a branch that does not contain it says nothing
+			// about it. Go scopes the inner name to the inner block, and so
+			// does the reader.
+			name: "a local shadowing inside a branch the send is not in",
+			source: `package p
+var held = ` + "`" + marker + "`" + `
+func write(tx T, cond bool) {
+	tx.Exec(ctx, held)
+	if cond {
+		held := "SELECT 1"
+		tx.Exec(ctx, held)
+	}
+}`,
+			judged: true,
+		}, {
+			name: "a send inside the branch that shadows, and nowhere else",
+			source: `package p
+var held = ` + "`" + marker + "`" + `
+func write(tx T, cond bool) {
+	if cond {
+		held := "SELECT 1"
+		tx.Exec(ctx, held)
+	}
+}`,
+			judged: false,
+		}, {
+			// The right-hand side stands before the declaration it feeds, so
+			// this reads the package's statement and then sends it under a
+			// local name.
+			name: "a local initialised from the package value it shadows",
+			source: `package p
+var held = ` + "`" + marker + "`" + `
+func write(tx T) { held := held; tx.Exec(ctx, held) }`,
+			judged: true,
+		}, {
+			name: "a parameter shadowing the package name",
+			source: `package p
+var held = ` + "`" + marker + "`" + `
+func write(tx T, held string) { tx.Exec(ctx, held) }`,
+			judged: false,
+		}, {
 			name: "a package-level name this function never mentions",
 			source: `package p
 var held = ` + "`" + marker + "`" + `

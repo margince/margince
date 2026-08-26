@@ -315,25 +315,133 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 // Held by: TestTheGuardCensusJudgesEveryStatementAFunctionAnswersFor
 // (backend/updateguardcases_test.go)
 func statementsJudged(fn *ast.FuncDecl, held map[string][]string) []string {
-	shadowed := declaredNames(fn)
-	var out []string
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		switch node := n.(type) {
-		case *ast.Ident:
-			if !shadowed[node.Name] {
-				out = append(out, held[node.Name]...)
-			}
-		case *ast.BasicLit:
-			if node.Kind != token.STRING {
-				return true
-			}
-			if lit, err := strconv.Unquote(node.Value); err == nil {
-				out = append(out, lit)
+	walker := &lexicalStatements{held: held}
+	walker.open()
+	walker.declareFields(fn.Type.Params, fn.Type.Results)
+	if fn.Recv != nil {
+		walker.declareFields(fn.Recv)
+	}
+	ast.Walk(walker, fn.Body)
+	return walker.out
+}
+
+// lexicalStatements resolves each identifier against Go's own scoping while it
+// gathers, which declaredNames deliberately does not: that helper treats a name
+// declared anywhere in a function as shadowing the package value throughout, and
+// says so, because the privacy census it serves would rather miss a statement on
+// both sides than add one to the side that does not write it.
+//
+// This census wants the opposite conservatism. A local declared inside one
+// branch would suppress a package-level statement named before it and outside
+// it, and the whole point here is that a statement nobody judges produces no
+// finding — only a smaller silence. So scope is tracked rather than approximated.
+type lexicalStatements struct {
+	held   map[string][]string
+	scopes []map[string]bool
+	out    []string
+}
+
+func (l *lexicalStatements) open()  { l.scopes = append(l.scopes, map[string]bool{}) }
+func (l *lexicalStatements) close() { l.scopes = l.scopes[:len(l.scopes)-1] }
+
+func (l *lexicalStatements) declare(expr ast.Expr) {
+	if ident, isIdent := expr.(*ast.Ident); isIdent && ident.Name != "_" {
+		l.scopes[len(l.scopes)-1][ident.Name] = true
+	}
+}
+
+func (l *lexicalStatements) declareFields(lists ...*ast.FieldList) {
+	for _, list := range lists {
+		if list == nil {
+			continue
+		}
+		for _, field := range list.List {
+			for _, name := range field.Names {
+				l.declare(name)
 			}
 		}
-		return true
-	})
-	return out
+	}
+}
+
+func (l *lexicalStatements) shadowed(name string) bool {
+	for _, scope := range l.scopes {
+		if scope[name] {
+			return true
+		}
+	}
+	return false
+}
+
+// Visit gathers on the way down, so a name is read against the bindings that
+// stood where it was written: `held` used before a later `held := …` in the same
+// block is still the package's, which is what Go compiles it to.
+func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
+	switch n := node.(type) {
+	case nil:
+		return nil
+	case *ast.BlockStmt, *ast.IfStmt, *ast.ForStmt, *ast.RangeStmt,
+		*ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt,
+		*ast.CaseClause, *ast.CommClause:
+		l.open()
+		return scopeCloser{l}
+	case *ast.FuncLit:
+		l.open()
+		l.declareFields(n.Type.Params, n.Type.Results)
+		return scopeCloser{l}
+	case *ast.AssignStmt:
+		// The right-hand side is evaluated against the bindings that stand
+		// BEFORE the declaration, so it is walked first and the names are
+		// declared after: `held := held` reads the package's value.
+		for _, rhs := range n.Rhs {
+			ast.Walk(l, rhs)
+		}
+		if n.Tok == token.DEFINE {
+			for _, lhs := range n.Lhs {
+				l.declare(lhs)
+			}
+		} else {
+			for _, lhs := range n.Lhs {
+				ast.Walk(l, lhs)
+			}
+		}
+		return nil
+	case *ast.ValueSpec:
+		for _, value := range n.Values {
+			ast.Walk(l, value)
+		}
+		for _, name := range n.Names {
+			l.declare(name)
+		}
+		return nil
+	case *ast.Ident:
+		if !l.shadowed(n.Name) {
+			l.out = append(l.out, l.held[n.Name]...)
+		}
+		return nil
+	case *ast.BasicLit:
+		if n.Kind == token.STRING {
+			if lit, err := strconv.Unquote(n.Value); err == nil {
+				l.out = append(l.out, lit)
+			}
+		}
+		return nil
+	}
+	return l
+}
+
+// scopeCloser pops the scope its node opened once ast.Walk has finished that
+// node's children. Nested inside the walker rather than folded into it because
+// ast.Walk signals "children done" by calling Visit(nil) on the visitor a node
+// RETURNED, and a walker that popped on every such call would pop for every
+// plain node too.
+type scopeCloser struct{ walker *lexicalStatements }
+
+func (c scopeCloser) Visit(node ast.Node) ast.Visitor {
+	if node == nil {
+		c.walker.close()
+		return nil
+	}
+	return c.walker.Visit(node)
 }
 
 // heldStatements are the SQL statements a package holds in its package-level
