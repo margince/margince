@@ -182,17 +182,17 @@ func coupledImage(after json.RawMessage) ([]byte, error) {
 	if err := json.Unmarshal(after, &image); err != nil {
 		return nil, fmt.Errorf("compose: after-image is not a JSON object: %w", err)
 	}
-	comparable := map[string]json.RawMessage{}
+	judged := map[string]json.RawMessage{}
 	for key, value := range image {
 		if derivedColumns[key] {
 			continue
 		}
-		comparable[key] = value
+		judged[key] = value
 	}
-	if len(comparable) == 0 {
+	if len(judged) == 0 {
 		return nil, nil
 	}
-	return json.Marshal(comparable)
+	return json.Marshal(judged)
 }
 
 // imageKeys is the after-image's keys, for reporting a move under the name the

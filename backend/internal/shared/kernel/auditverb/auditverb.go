@@ -20,6 +20,8 @@ import "fmt"
 // which is why it travels here rather than in a second write engine.
 type Verb string
 
+// The two verbs an update-shaped write may record. Update is the zero value's
+// meaning; Restore is the reversal path's.
 const (
 	Update  Verb = "update"
 	Restore Verb = "restore"

@@ -36,33 +36,33 @@ import (
 type Reason string
 
 const (
-	// ReasonNoBeforeImage: the FILTERED image is absent, empty, or has no key
+	// ReasonNoBeforeImage — the FILTERED image is absent, empty, or has no key
 	// the update path could write. Judged after the filter, never before —
 	// an image whose only keys are non-writable filters to nothing, and an
 	// entry that says "restore" over nothing is a button that does nothing.
 	ReasonNoBeforeImage Reason = "no_before_image"
-	// ReasonNotAReplayableVerb: the action is outside {update, restore}. A
+	// ReasonNotAReplayableVerb — the action is outside {update, restore}. A
 	// restore row IS replayable — it carries real images by construction, and
 	// admitting it is what makes undoing an undo work. archive, promote and
 	// merge have their own verbs; a field patch is not how you reverse them.
 	ReasonNotAReplayableVerb Reason = "not_a_replayable_verb"
-	// ReasonUnsupportedRecordType: the type is outside the six this path
+	// ReasonUnsupportedRecordType — the type is outside the six this path
 	// serves. relationship is in the write shapes and has no history endpoint,
 	// so it is honestly unsupported here rather than silently absent.
 	ReasonUnsupportedRecordType Reason = "unsupported_record_type"
-	// ReasonSuperseded: a later audit row wrote one of these fields. The
+	// ReasonSuperseded — a later audit row wrote one of these fields. The
 	// product refuses; it never clobbers. Where another person edited in
 	// between, the result is ambiguous and saying so IS the behaviour.
 	ReasonSuperseded Reason = "superseded"
-	// ReasonBehindErasureBoundary: a scrub tombstone is newer than this row, so
+	// ReasonBehindErasureBoundary — a scrub tombstone is newer than this row, so
 	// its images are past an Art. 17 erasure. Restoring from them would write
 	// back what an erasure removed.
 	ReasonBehindErasureBoundary Reason = "behind_erasure_boundary"
-	// ReasonAlreadyUndone: a live restore already reverses this row. It is not
+	// ReasonAlreadyUndone — a live restore already reverses this row. It is not
 	// terminal — reversing that restore reopens this entry, which is what makes
 	// the trail navigable in both directions.
 	ReasonAlreadyUndone Reason = "already_undone"
-	// ReasonNotRestorableByThisPath: the reversal path cannot put this entry
+	// ReasonNotRestorableByThisPath — the reversal path cannot put this entry
 	// back. Three things reach it: a custom field retired since the change, an
 	// image holding keys the record's update shape cannot spell, and a record
 	// whose system of record is external.
@@ -72,11 +72,11 @@ const (
 	// Those still surface as the module's own error, and closing that gap means
 	// asking each module what it would accept, which is its own change.
 	ReasonNotRestorableByThisPath Reason = "not_restorable_by_this_path"
-	// ReasonRecordArchived: the record is archived. Its update path refuses on
+	// ReasonRecordArchived — the record is archived. Its update path refuses on
 	// its own terms; naming it here makes the refusal legible rather than a
 	// surprise.
 	ReasonRecordArchived Reason = "record_archived"
-	// ReasonNullUnwritableByModule: the image puts a field back to NULL, and no
+	// ReasonNullUnwritableByModule — the image puts a field back to NULL, and no
 	// update path here can write one. Every field on every update request is an
 	// optional pointer, so a JSON null decodes to "not supplied" and is
 	// indistinguishable from omitting the field; activity's columns are
@@ -85,7 +85,7 @@ const (
 	// worse than a refusal — the person reads the confirmation and stops
 	// looking.
 	ReasonNullUnwritableByModule Reason = "null_unwritable_by_module"
-	// ReasonNotWritableByCaller: the caller may read this history but not
+	// ReasonNotWritableByCaller — the caller may read this history but not
 	// change the record, so the button is honest rather than a 403 waiting to
 	// happen.
 	ReasonNotWritableByCaller Reason = "not_writable_by_caller"
@@ -147,6 +147,8 @@ type AuditRow struct {
 // under a lock; Binding answers all of them after taking it.
 type Mode int
 
+// Advisory is the read's evaluation and Binding the write's. Named rather than
+// a bool so a call site says which it is.
 const (
 	Advisory Mode = iota
 	Binding
@@ -313,7 +315,7 @@ func (e Evaluator) trailState(ctx context.Context, tx pgx.Tx, row AuditRow, patc
 			// honest as a read can make it, and the write is what binds. A read
 			// that failed here must not hide the whole page.
 			if mode == Advisory {
-				return undoable(), nil
+				return undoable(), nil //nolint:nilerr // a read that could not judge this must not hide the whole page; the write is what binds
 			}
 			return Undoability{}, err
 		}

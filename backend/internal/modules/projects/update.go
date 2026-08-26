@@ -164,8 +164,8 @@ func (e *NotClearableError) FieldFault() (field, code, message string) {
 // cannot clear. A field the map does not hold is either not nullable or not
 // clearable through this path, and either way the honest answer is to say so
 // rather than accept the instruction and drop it.
-func applyClears(p *storekit.Patch, clear []string, columns map[string]clearable) error {
-	for _, field := range clear {
+func applyClears(p *storekit.Patch, fields []string, columns map[string]clearable) error {
+	for _, field := range fields {
 		target, clearableHere := columns[field]
 		if !clearableHere {
 			return &NotClearableError{Field: field}

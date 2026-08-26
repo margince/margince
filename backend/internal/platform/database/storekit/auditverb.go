@@ -19,6 +19,8 @@ import (
 // value, not two that a conversion could silently disagree about.
 type AuditVerb = auditverb.Verb
 
+// The kernel's two verbs under this package's names, so a store names the verb
+// it writes without importing the kernel package directly.
 const (
 	VerbUpdate  = auditverb.Update
 	VerbRestore = auditverb.Restore
