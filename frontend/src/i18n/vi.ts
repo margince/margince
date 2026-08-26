@@ -5453,7 +5453,7 @@ export const vi = {
   "googleApp.replace": "Thay ứng dụng",
   "googleApp.removeConfirmTitle": "Xoá ứng dụng Google?",
   "googleApp.removeConfirmBody":
-    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Kết nối Gmail và Lịch đi qua ứng dụng này — hộp thư Microsoft và IMAP không bị ảnh hưởng — và bước thiết lập lần đầu sẽ hỏi lại.",
+    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Kết nối Gmail và Lịch đi qua ứng dụng này. Hộp thư Microsoft và IMAP không bị ảnh hưởng. Bước thiết lập lần đầu sẽ hỏi lại.",
   "googleApp.remove": "Xoá ứng dụng",
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
@@ -5506,11 +5506,14 @@ export const vi = {
   "aiRouting.profile.eu_hosted": "Đặt tại EU",
   "aiRouting.profile.sovereign": "Sovereign (không ra ngoài)",
   "aiRouting.profile.cloud_frontier": "Cloud frontier (đám mây cao cấp)",
+  "aiRouting.dimensions.label": "Độ rộng vector",
+  "aiRouting.dimensions.help":
+    "Để trống để dùng mặc định của nhà cung cấp. Giá trị ngoài khoảng 1 đến 2000 sẽ bị từ chối.",
   "aiRouting.embeddings.label": "Embeddings",
   "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
   "aiRouting.baseUrl.label": "Máy chủ",
   "aiRouting.baseUrl.help":
-    "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản — bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
+    "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
   "aiRouting.model.label": "Mô hình",
   "aiRouting.save": "Lưu định tuyến",
   "aiRouting.saving": "Đang lưu ràng buộc…",

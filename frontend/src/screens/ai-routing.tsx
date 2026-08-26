@@ -280,6 +280,33 @@ function EmbeddingsRow({
           )}
         </Field>
       )}
+      {/* The width this lane asks the provider for, which only it has. Blank
+          means the compiled default rather than zero: the contract reads an
+          omitted value and a 0 the same way, so an empty box must send neither
+          a 0 nor a NaN. */}
+      <Field
+        label={t("aiRouting.dimensions.label")}
+        hint={t("aiRouting.dimensions.help")}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            type="number"
+            inputMode="numeric"
+            value={binding.dimensions?.toString() ?? ""}
+            disabled={disabled}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              const parsed = Number.parseInt(raw, 10);
+              onChange({
+                ...binding,
+                dimensions:
+                  raw === "" || Number.isNaN(parsed) ? undefined : parsed,
+              });
+            }}
+          />
+        )}
+      </Field>
     </div>
   );
 }

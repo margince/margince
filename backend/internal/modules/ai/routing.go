@@ -300,13 +300,6 @@ func (cfg RoutingConfig) validate() error {
 	if cfg.Embeddings.Provider == "" {
 		return fmt.Errorf("ai: routing config: embeddings lane has no provider")
 	}
-	// The same rule as a chat tier, and for the same reason: SelectBrain builds
-	// this lane's client too, and refuses openai_compatible without a host.
-	if cfg.Embeddings.Provider == providerOpenAICompatible && strings.TrimSpace(cfg.Embeddings.BaseURL) == "" {
-		return fmt.Errorf("ai: routing config: the embeddings lane binds openai_compatible with no base_url — " +
-			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
-			"e.g. https://openrouter.ai/api")
-	}
 	// EmbeddingsConfig embeds ProviderConfig INLINE, so `input:` under
 	// `embeddings:` decodes happily and would reach the embedder's client. The
 	// embedding lane sends no attachments, so the declaration could only mislead
@@ -326,6 +319,18 @@ func (cfg RoutingConfig) validate() error {
 		if err := requireSovereignEndpoint("the embeddings lane", cfg.Embeddings.Provider, cfg.Embeddings.BaseURL); err != nil {
 			return err
 		}
+	}
+	// AFTER the sovereign check, matching ValidateTierBinding's order. A
+	// sovereign profile forbids openai_compatible outright, so reporting a
+	// missing host first would answer a question the reader does not have and
+	// send them to fill in a field on a binding that is refused either way.
+	//
+	// The rule itself is the chat tiers': SelectBrain builds this lane's client
+	// too, and refuses openai_compatible without a host.
+	if cfg.Embeddings.Provider == providerOpenAICompatible && strings.TrimSpace(cfg.Embeddings.BaseURL) == "" {
+		return fmt.Errorf("ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
+			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
+			"e.g. https://openrouter.ai/api")
 	}
 	return nil
 }
@@ -382,7 +387,7 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 	// operator sees "saved" and no change, with the reason in a log they are not
 	// reading.
 	if binding.Provider == providerOpenAICompatible && strings.TrimSpace(binding.BaseURL) == "" {
-		return fmt.Errorf("ai: routing config: tier %s binds openai_compatible with no base_url — "+
+		return fmt.Errorf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
 			"give it the vendor host root, with no version segment (the adapter adds /v1), "+
 			"e.g. https://openrouter.ai/api", tier)
 	}

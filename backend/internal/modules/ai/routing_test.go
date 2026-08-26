@@ -350,6 +350,17 @@ func TestABindingWithNoHostIsRefusedRatherThanStoredUnservable(t *testing.T) {
 			refused: true, says: "no base_url",
 		},
 		{
+			// Under a sovereign profile the missing host is beside the point:
+			// openai_compatible is refused there whatever its endpoint, and
+			// answering about base_url first sends the reader to fill in a
+			// field on a binding that is refused either way.
+			name: "a sovereign profile outranks the missing host",
+			cfg: RoutingConfig{Profile: ProfileSovereign,
+				Tiers:      map[Tier]ProviderConfig{TierCheapCloud: {Provider: providerOllama, BaseURL: "http://127.0.0.1:11434"}},
+				Embeddings: EmbeddingsConfig{ProviderConfig: broker}},
+			refused: true, says: "forbids cloud provider",
+		},
+		{
 			// The other arm, so the rule cannot pass by refusing everything.
 			name: "the same binding with its host",
 			cfg: RoutingConfig{Profile: ProfileEUHosted,

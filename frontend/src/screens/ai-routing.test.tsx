@@ -32,6 +32,13 @@ function jsonResponse(body: unknown, status = 200) {
 const ROUTING_EDITOR: GrantSpec = { ai_routing: ["read", "update"] };
 const ROUTING_READER: GrantSpec = { ai_routing: ["read"] };
 
+/** What PUT /ai/routing carries, as these tests read it back. */
+type CapturedRouting = {
+  profile: string;
+  tiers: Record<string, { provider: string; model: string; base_url?: string }>;
+  embeddings: { provider: string; model: string; base_url?: string };
+};
+
 const BOUND = {
   profile: "eu_hosted",
   tiers: {
@@ -43,7 +50,11 @@ const BOUND = {
 
 function backendFor(allow: GrantSpec, routing: unknown = BOUND) {
   let stored = routing;
-  let capturedPut: unknown = null;
+  // Typed as the document this endpoint takes, so an assertion can read a field
+  // off it without an unchecked cast at every call site. The stub still stores
+  // whatever arrives — the type is a claim about the ENDPOINT, not a check on
+  // the body, and a test asserting the wrong shape fails on the assertion.
+  let capturedPut: CapturedRouting | null = null;
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
@@ -53,7 +64,7 @@ function backendFor(allow: GrantSpec, routing: unknown = BOUND) {
       }
       if (req.url.includes("/ai/routing")) {
         if (req.method === "PUT") {
-          capturedPut = await req.json();
+          capturedPut = (await req.json()) as CapturedRouting;
           stored = capturedPut;
         }
         return jsonResponse(stored);
@@ -61,7 +72,10 @@ function backendFor(allow: GrantSpec, routing: unknown = BOUND) {
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
   );
-  return { fetchMock, getCapturedPut: () => capturedPut };
+  return {
+    fetchMock,
+    getCapturedPut: (): CapturedRouting | null => capturedPut,
+  };
 }
 
 const render = (ui: ReactNode, locale: Locale = "en") => {
@@ -198,10 +212,9 @@ describe("AiRoutingCard", () => {
     );
 
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
-    expect(
-      (backend.getCapturedPut() as { embeddings: { model: string } }).embeddings
-        .model,
-    ).toBe("gemini-embedding-002");
+    expect(backend.getCapturedPut()?.embeddings.model).toBe(
+      "gemini-embedding-002",
+    );
   });
 
   // openai_compatible has no default host and the server refuses a binding
@@ -233,10 +246,8 @@ describe("AiRoutingCard", () => {
     );
 
     await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
-    const sent = backend.getCapturedPut() as {
-      tiers: Record<string, { provider: string; base_url?: string }>;
-    };
-    expect(sent.tiers.premium.provider).toBe("openai_compatible");
-    expect(sent.tiers.premium.base_url).toBe("https://openrouter.ai/api");
+    const sent = backend.getCapturedPut();
+    expect(sent?.tiers.premium.provider).toBe("openai_compatible");
+    expect(sent?.tiers.premium.base_url).toBe("https://openrouter.ai/api");
   });
 });
