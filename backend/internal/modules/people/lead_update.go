@@ -489,18 +489,3 @@ func statusSetByFor(ctx context.Context) (string, error) {
 	}
 	return string(crmcontracts.LeadStatusSetByHuman), nil
 }
-
-// clearableLeadColumns names the wire fields a lead restore may set to NULL,
-// with literal column names. `status` and the score pair are absent on purpose:
-// a lead's status is a lifecycle position rather than a value, and the score
-// override is sticky by design (clearing its reason resumes recompute, which is
-// a decision rather than a field edit).
-func clearableLeadColumns(current crmcontracts.Lead) map[string]clearable {
-	return map[string]clearable{
-		"title":             {"title", current.Title},
-		"company_name":      {leadCompanyColumn, current.CompanyName},
-		"candidate_org_key": {"candidate_org_key", current.CandidateOrgKey},
-		"project_id":        {"project_id", current.ProjectId},
-		"owner_id":          {ownerIDColumn, current.OwnerId},
-	}
-}

@@ -416,19 +416,3 @@ func (s *Store) EnsurePersonByEmail(ctx context.Context, fullName, email, source
 	}
 	return ids.Nil, err
 }
-
-// clearablePersonColumns maps the wire fields a person restore may set to NULL
-// onto the column holding each, with the row's current value for the audit
-// image. The column names are literals here and never come from a caller, so
-// nothing caller-supplied reaches the UPDATE text.
-//
-// A field absent from this map cannot be cleared, and the reversal path refuses
-// rather than reporting a success it did not have.
-func clearablePersonColumns(current crmcontracts.Person) map[string]clearable {
-	return map[string]clearable{
-		"first_name": {"first_name", current.FirstName},
-		"last_name":  {"last_name", current.LastName},
-		"title":      {"title", current.Title},
-		"owner_id":   {ownerIDColumn, current.OwnerId},
-	}
-}
