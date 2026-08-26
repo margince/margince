@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./margince.schema.json
 # config/margince.example.yaml — the dev deployment configuration (A107/ADR-0061).
 #
 # `make dev` copies this to config/margince.yaml on first run and then LEAVES it

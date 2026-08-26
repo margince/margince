@@ -228,9 +228,20 @@ function importsTheMapping(parsed: ts.SourceFile): boolean {
   const imported = parsed.statements.some((statement) => {
     if (
       !ts.isImportDeclaration(statement) ||
-      !ts.isStringLiteral(statement.moduleSpecifier) ||
-      !/\/format\/format$/.test(statement.moduleSpecifier.text)
+      !ts.isStringLiteral(statement.moduleSpecifier)
     ) {
+      return false;
+    }
+    // The module by its NAME, however the specifier spells the way to it. This
+    // used to require the path to end `/format/format`, which is what a caller
+    // outside this directory writes — and it silently failed the first SIBLING
+    // to own a locale rule, `format/plural.ts`, whose honest import is
+    // `./format`. The gate's answer was "this file does not use the mapping"
+    // about a file whose every line does, which is the shape of hard-coded
+    // subject this whole gate is written against. The pair — a module named
+    // `format` AND a named `INTL_LOCALE` binding out of it — is what makes this
+    // precise, since nothing else in the tree exports that name.
+    if (statement.moduleSpecifier.text.split("/").pop() !== "format") {
       return false;
     }
     const bindings = statement.importClause?.namedBindings;

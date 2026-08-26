@@ -81,7 +81,7 @@ func TestCoreChannelProvidersEnumeratesEveryComposedCoreTransport(t *testing.T) 
 	richest := CaptureSyncRegistry(nil, nil,
 		GmailConfig{ClientID: "id", ClientSecret: "secret"},
 		GraphConfig{ClientID: "id", ClientSecret: "secret"},
-		CaptureConfig{}).ChannelProviders()
+		CaptureConfig{}, nil).ChannelProviders()
 	if !slices.Equal(enumerated, richest) {
 		t.Errorf("the fully-composed registry supplies transports %v, but the boot step would register %v — "+
 			"a transport the boot step cannot see is one no captured message may name",

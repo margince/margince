@@ -5,10 +5,11 @@ import { useEffect, useState } from "react";
 
 // The phone breakpoint, spelled once for the code that has to KNOW it rather
 // than merely be laid out by it: at this width the sidebar is a bottom bar of
-// four destinations, which changes what the panel renders and not only how it
-// looks. The `@media (max-width: 700px)` block in app/shell.css is the other
-// half of the same rule — a stylesheet cannot read a TypeScript constant, so
-// that block cites this file and the two are changed together.
+// three destinations, the agent and More, which changes what the panel renders
+// and where it is measured from, not only how it looks. The
+// `@media (max-width: 700px)` block in app/shell.css is the other half of the
+// same rule — a stylesheet cannot read a TypeScript constant, so that block
+// cites this file and the two are changed together.
 export const PHONE_MAX_WIDTH = 700;
 
 const PHONE_QUERY = `(max-width: ${PHONE_MAX_WIDTH}px)`;

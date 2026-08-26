@@ -308,11 +308,19 @@ jobs:
         env:
           # The last commit this gate does NOT cover — `A..B` excludes A, so a
           # baseline naming the first COVERED commit would leave that commit
-          # itself unchecked. This names the unsigned commit instead, so
-          # everything after it is in range and it is not, which is exactly the
-          # boundary. It moves to the unsigned commit's own parent once that
-          # commit is remediated by its author.
-          DCO_MAIN_BASELINE: 85bd56dc1
+          # itself unchecked. History predating the DCO rule sits before it.
+          #
+          # It moves BACKWARD as holes close, and only forward for a hole that
+          # cannot: three squashes landed unsigned (2736937c0, cd388fa09,
+          # 85bd56dc1) and this named the newest of them, so all three sat out
+          # of range. Each has since been attested by its own author, which the
+          # gate now reads, so the baseline returns to the parent of the oldest
+          # — the three are covered again and pass on their attestations.
+          #
+          # Moving it forward is what a hole costs, and it is why remediation is
+          # worth reading: every advance is a stretch of main this gate stops
+          # asking about, and nothing afterwards reports that it stopped.
+          DCO_MAIN_BASELINE: c4a230155
         # The ancestry is asserted before the range is used, because
         # `git rev-list A..B` does not complain when A is not behind B — it
         # answers with whatever that range happens to mean. A baseline that has

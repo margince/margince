@@ -1069,8 +1069,8 @@ The lanes that probe a binding without opening a database are told their model
 outright rather than handed a file: `worker siteread` and `worker aitask` take
 `--model provider:model` or `--ai-fake`, and `make e2e-ai` takes `MODEL=` and
 `JUDGE=` (see the certification variables below). The shape a binding has —
-`profile` plus a `tiers` map — is still described by
-[`config/ai-routing.schema.json`](../../config/ai-routing.schema.json), which is
+`profile` plus a `tiers` map — is described under `$defs.aiRouting` in
+[`config/margince.schema.json`](../../config/margince.schema.json), which is
 what an editor validates a `seeds.ai_routing` block against.
 
 The providers a binding may name, and what each requires. A cloud provider's
@@ -1225,9 +1225,10 @@ pointed at boot, and a profile satisfied by an answer that can change an hour
 later is not a guarantee. Use the IP, or `localhost`.
 
 An editor with a YAML language server picks up
-[`config/ai-routing.schema.json`](../../config/ai-routing.schema.json)
-(referenced from the example's first line) for autocomplete, enum
-validation, and hover docs; the parser remains the sole runtime authority.
+[`config/margince.schema.json`](../../config/margince.schema.json)
+(referenced from the shipped configs' first line) for autocomplete, enum
+validation, and hover docs across the WHOLE file rather than the routing block
+alone; the parser remains the sole runtime authority.
 
 The `embeddings:` binding also takes `dimensions` — the vector width the
 provider is asked to emit. Default `1536` (a gemini-recommended width); the

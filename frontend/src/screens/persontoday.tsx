@@ -12,7 +12,7 @@ import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import { interactionIcon } from "./interactionchrome";
 
 // "Today with {first name}" (concept §5.5, ADR-0096 D2).
@@ -39,6 +39,7 @@ export function PersonToday({
   firstName: string;
   onAction: (action: PersonMomentAction) => void;
 }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   // The amber treatment is the finding itself — a relationship that stopped,
@@ -66,12 +67,9 @@ export function PersonToday({
       footer={
         <div className="pe-today-foot">
           <span>
-            {t(
-              moment.evidence.length === 1
-                ? "person.today.source"
-                : "person.today.sources",
-              { count: formatNumber(moment.evidence.length, locale) },
-            )}
+            {plural("person.today.source", moment.evidence.length, {
+              count: formatNumber(moment.evidence.length, locale),
+            })}
           </span>
           {moment.freshness_at && (
             <>

@@ -125,10 +125,15 @@ export function ProductsAdmin() {
   const canCreate = useCanWrite("product", "create");
   const canUpdate = useCanWrite("product", "update");
   const canArchive = useCanWrite("product", "delete");
+  // Scoped: this table and the offer-template table are drawn together on the
+  // settings Data-model tab, so one flat parameter space described both at once
+  // — sorting products by `sku` sent `sort=sku` to `/offer-templates`, and the
+  // `active` chip narrowed the templates read as well.
   const list = useListQuery<Product>({
     key: "products",
     fetchPage: fetchProductsPage,
     initialSort: "name",
+    paramScope: "products",
   });
 
   const createProduct = async (values: Record<string, string>) => {

@@ -127,15 +127,20 @@ export const NAV: readonly NavItem[] = NAV_GROUPS.flatMap(
 // one, and a decorative count contradicts the badge rule.
 export const BADGE_SCREENS: ReadonlySet<Screen> = new Set();
 
-// At phone width the sidebar becomes a bottom bar, which fits four thumb-sized
-// destinations plus More — ten would need horizontal scrolling, and a nav you
-// have to scroll is a nav you cannot see. Today is non-negotiable here: the
-// 390px approval path is required for V1, and Today is where it now runs.
+// At phone width the sidebar becomes a bottom bar, which fits five thumb-sized
+// cells — ten destinations would need horizontal scrolling, and a nav you have
+// to scroll is a nav you cannot see. The CENTRE cell is not a destination: it is
+// the agent, which is app-level chrome and reports rather than navigates, so
+// three destinations ride the bar and More carries the rest.
+//
+// Today is one of the three the bar gives up, and it is the one worth saying out
+// loud: the 390px approval path runs on it. It is a tap away in the sheet, which
+// is the same distance every destination this list omits already is, and what
+// the centre cell buys instead is the agent reachable without opening anything.
 export const MOBILE_PRIMARY: ReadonlySet<Screen> = new Set([
   "home",
   "contacts",
   "deals",
-  "today",
 ]);
 
 // Which RECORD screens keep the reading column instead of taking the width they

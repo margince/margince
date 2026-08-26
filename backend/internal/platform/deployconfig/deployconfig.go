@@ -288,7 +288,8 @@ func (e Email) SMTPPassword(lookup config.Lookup) (string, error) {
 }
 
 // AIConfig carries operator-posture switches for the AI runtime. It names
-// no providers or models (that is ai-routing.yaml) and holds no secret —
+// no providers or models (that is `seeds.ai_routing`, and the stored binding
+// once an installation is running) and holds no secret —
 // only deployment posture. capture_payloads turns on Layer-3 AI payload
 // capture (ai_call_payload); OFF by default, because it stores
 // special-category-adjacent content that then ages under the retention

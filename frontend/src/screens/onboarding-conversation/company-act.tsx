@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { formatNumber, ordinalNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePluralKey, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   coldFieldLabel,
@@ -13,6 +13,11 @@ import {
   throwProblem,
   useMe,
 } from "../common";
+import {
+  InstallationSetup,
+  outstandingStep,
+  useInstallationSetup,
+} from "../installation-setup";
 import type { CompanyDraft } from "../onboarding";
 import {
   changeDraftField,
@@ -148,6 +153,7 @@ export function CompanyAct({
   adoptedRead = null,
 }: CompanyActProps) {
   const t = useT();
+  const keyFor = usePluralKey();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   // The gate greets by name, and uses the whole display_name rather than a
@@ -718,6 +724,12 @@ export function CompanyAct({
   // for the length of one request.
   const beforeReview =
     state.phase === "co.intro" || state.phase === "co.reading";
+  // Only asked before there is anything to review. Once a read is running the
+  // installation is plainly configured, and a query fired then would be a
+  // request per render of a screen whose answer cannot have changed.
+  const setup = useInstallationSetup();
+  const setupOutstanding =
+    beforeReview && outstandingStep(setup.data) !== undefined;
   const scanning =
     state.phase === "co.reading" && state.activeReadId !== null && read
       ? { read, host: normalizeUrl(read.root_url).host, locale }
@@ -727,6 +739,15 @@ export function CompanyAct({
   // twice in half a second.
   const awaitingRead =
     state.phase === "co.reading" && state.activeReadId !== null && !read;
+
+  // BEFORE the website question, and before the read theatre: an installation
+  // that has bound no model cannot perform a cold-start read at all, so asking
+  // for a website first would take an answer and then refuse to act on it. The
+  // component draws nothing once the server says every blocking step is done,
+  // which is what lets this sit in front of the gate rather than beside it.
+  if (setupOutstanding) {
+    return <InstallationSetup />;
+  }
 
   if (beforeReview) {
     return (
@@ -977,13 +998,14 @@ export function CompanyAct({
                   ? {
                       kind: "narration",
                       id: "guide:review-blocked",
-                      // German pluralises differently from English (and by a
-                      // different rule than "add an s"), so the count picks a
-                      // whole key, never a suffix glued onto one string.
-                      i18nKey:
-                        blockingCount === 1
-                          ? "ob.conv.guide.reviewBlocked.one"
-                          : "ob.conv.guide.reviewBlocked.other",
+                      // The count picks a whole key rather than a suffix glued
+                      // onto one string, and WHICH key comes from the reader's
+                      // own plural rule: German does not pluralise the way
+                      // English does, and neither does the next language.
+                      i18nKey: keyFor(
+                        "ob.conv.guide.reviewBlocked",
+                        blockingCount,
+                      ),
                       params: { count: formatNumber(blockingCount, locale) },
                       findingIds: blockingFindingIds,
                     }
@@ -991,10 +1013,10 @@ export function CompanyAct({
                     ? {
                         kind: "narration",
                         id: "guide:review-advisory",
-                        i18nKey:
-                          advisoryCount === 1
-                            ? "ob.conv.guide.reviewAdvisory.one"
-                            : "ob.conv.guide.reviewAdvisory.other",
+                        i18nKey: keyFor(
+                          "ob.conv.guide.reviewAdvisory",
+                          advisoryCount,
+                        ),
                         params: { count: formatNumber(advisoryCount, locale) },
                         findingIds: advisoryFindingIds,
                       }

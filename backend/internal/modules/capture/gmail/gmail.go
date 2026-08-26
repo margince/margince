@@ -21,6 +21,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/gradionhq/margince/backend/internal/modules/capture/googleconn"
 	"github.com/gradionhq/margince/backend/internal/modules/capture/mailmap"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
@@ -43,13 +44,15 @@ const (
 // never race. (owner is a field only for the pure Normalize surface, which is
 // test-only — Sync never touches it.)
 type Connector struct {
-	oauth OAuth
+	oauth googleconn.Authorizer
 	api   API
 	owner string // used ONLY by Normalize (the test-guarded pure mapping); never set by Sync
 }
 
 // New returns a Gmail connector over the given OAuth + API surfaces.
-func New(oauth OAuth, api API) *Connector { return &Connector{oauth: oauth, api: api} }
+func New(oauth googleconn.Authorizer, api API) *Connector {
+	return &Connector{oauth: oauth, api: api}
+}
 
 var (
 	_ connector.Connector      = (*Connector)(nil)

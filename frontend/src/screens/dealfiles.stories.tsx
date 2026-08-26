@@ -6,6 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { LocaleProvider } from "../i18n";
 import { DealFiles, dealDocumentsKey } from "./dealfiles";
+import { installFetchStub, jsonResponse } from "./story-utils";
 
 // The deal's Files area with both kinds of row — an upload and a captured
 // email attachment — and the empty state, so each reads right without a
@@ -55,18 +56,17 @@ const CAPTURED = {
   },
 };
 
+// Both the seeded cache AND the routes are answered, and both are load-bearing:
+// data written with setQueryData is stale the moment it lands, so the mount
+// fires a background refetch of each key that went to the real network and came
+// back 404. In jsdom nothing noticed; in the render gate's browser that 404 is a
+// console error and the story fails on it.
 function Served({
   docs,
   children,
 }: Readonly<{ docs: unknown[]; children: ReactNode }>) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
-  client.setQueryData(dealDocumentsKey("deal-1", false), {
-    data: docs,
-    page: {},
-  });
-  client.setQueryData(["me"], {
+  const documents = { data: docs, page: {} };
+  const session = {
     user: { id: "u1" },
     authorization: {
       seat_type: "full",
@@ -74,7 +74,16 @@ function Served({
         deal: { create: true, read: true, update: true, delete: true },
       },
     },
+  };
+  installFetchStub({
+    "GET /deals/deal-1/documents": () => jsonResponse(documents),
+    "GET /me": () => jsonResponse(session),
   });
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false } },
+  });
+  client.setQueryData(dealDocumentsKey("deal-1", false), documents);
+  client.setQueryData(["me"], session);
   return (
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">{children}</LocaleProvider>

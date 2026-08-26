@@ -42,6 +42,10 @@ const PROVIDERS = [
 
 const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 
+// The one adapter with no host of its own: every OpenAI-wire vendor is reached
+// through it, so the endpoint is the binding rather than a tweak to it.
+const OPENAI_WIRE = "openai_compatible";
+
 function useRouting(enabled: boolean) {
   return useQuery({
     enabled,
@@ -187,6 +191,18 @@ function RoutingForm({
         />
       ))}
 
+      {/* The embed lane, which the form used to leave out entirely — so a
+          reader could re-point every chat tier and still be sending their
+          retrieval to the vendor they had just moved away from, with nothing on
+          screen saying so. It binds SEPARATELY on purpose: retrieval has to
+          survive a chat-budget exhaustion, and the model is a different one even
+          on the same vendor. */}
+      <EmbeddingsRow
+        binding={draft.embeddings}
+        disabled={!canManage || replace.isPending}
+        onChange={(embeddings) => setDraft((d) => ({ ...d, embeddings }))}
+      />
+
       {replace.isError && (
         <Callout tone="danger" live="alert">
           {problemMessageOf(replace.error, t)}
@@ -206,6 +222,132 @@ function RoutingForm({
         {t("aiRouting.save")}
       </Button>
     </>
+  );
+}
+
+// The three controls that name an adapter: which vendor, which model on it,
+// and -- only where the vendor has no address of its own -- where to reach it.
+//
+// One component rather than one per row. Both lanes ask the identical question
+// and the answers are governed by the identical rule, so a second copy would
+// only be a second place to forget when that rule moves. The label is the one
+// thing that genuinely differs: a tier row names the tier, the embedding row
+// names itself.
+function AdapterFields<
+  B extends { provider: string; model: string; base_url?: string },
+>({
+  label,
+  binding,
+  disabled,
+  onChange,
+}: Readonly<{
+  label: string;
+  binding: B;
+  disabled: boolean;
+  onChange: (next: B) => void;
+}>) {
+  const t = useT();
+  return (
+    <>
+      <Field label={label}>
+        {(control) => (
+          <Select
+            {...control}
+            value={binding.provider}
+            disabled={disabled}
+            options={PROVIDERS.map((p) => ({ value: p, label: p }))}
+            onChange={(provider) => onChange({ ...binding, provider })}
+          />
+        )}
+      </Field>
+      <Field label={t("aiRouting.model.label")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={binding.model}
+            disabled={disabled}
+            onChange={(e) => onChange({ ...binding, model: e.target.value })}
+          />
+        )}
+      </Field>
+      {/* Only where it is load-bearing. openai_compatible has no default host
+          and the server refuses a binding without one, so leaving this off the
+          form made every broker unbindable from here: the write was accepted
+          and the running role then declined to adopt it. A native vendor
+          addresses its own API, and an empty box beside it invites somebody to
+          fill it in with something that overrides a working default. */}
+      {binding.provider === OPENAI_WIRE && (
+        <Field
+          label={t("aiRouting.baseUrl.label")}
+          hint={t("aiRouting.baseUrl.help")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={binding.base_url ?? ""}
+              disabled={disabled}
+              placeholder={t("aiRouting.baseUrl.placeholder")}
+              onChange={(e) =>
+                onChange({ ...binding, base_url: e.target.value })
+              }
+            />
+          )}
+        </Field>
+      )}
+    </>
+  );
+}
+
+// The embeddings lane. Its own row rather than a TierRow, because the two
+// shapes differ in both directions: this one takes `dimensions` and no `input`,
+// and a widened row that accepted either field on either lane would offer a
+// setting the server refuses.
+function EmbeddingsRow({
+  binding,
+  disabled,
+  onChange,
+}: Readonly<{
+  binding: Routing["embeddings"];
+  disabled: boolean;
+  onChange: (next: Routing["embeddings"]) => void;
+}>) {
+  const t = useT();
+  return (
+    <div className="form-row" data-testid="ai-routing-embeddings">
+      <AdapterFields
+        label={t("aiRouting.embeddings.label")}
+        binding={binding}
+        disabled={disabled}
+        onChange={onChange}
+      />
+      {/* The width this lane asks the provider for, which only it has. Blank
+          means the compiled default rather than zero: the contract reads an
+          omitted value and a 0 the same way, so an empty box must send neither
+          a 0 nor a NaN. */}
+      <Field
+        label={t("aiRouting.dimensions.label")}
+        hint={t("aiRouting.dimensions.help")}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            type="number"
+            inputMode="numeric"
+            value={binding.dimensions?.toString() ?? ""}
+            disabled={disabled}
+            onChange={(e) => {
+              const raw = e.target.value.trim();
+              const parsed = Number.parseInt(raw, 10);
+              onChange({
+                ...binding,
+                dimensions:
+                  raw === "" || Number.isNaN(parsed) ? undefined : parsed,
+              });
+            }}
+          />
+        )}
+      </Field>
+    </div>
   );
 }
 
@@ -229,30 +371,14 @@ function TierRow({
   disabled: boolean;
   onChange: (next: TierBinding) => void;
 }>) {
-  const t = useT();
   return (
     <div className="form-row" data-testid={`ai-routing-tier-${tier}`}>
-      <Field label={tier}>
-        {(control) => (
-          <Select
-            {...control}
-            value={binding.provider}
-            disabled={disabled}
-            options={PROVIDERS.map((p) => ({ value: p, label: p }))}
-            onChange={(provider) => onChange({ ...binding, provider })}
-          />
-        )}
-      </Field>
-      <Field label={t("aiRouting.model.label")}>
-        {(control) => (
-          <TextInput
-            {...control}
-            value={binding.model}
-            disabled={disabled}
-            onChange={(e) => onChange({ ...binding, model: e.target.value })}
-          />
-        )}
-      </Field>
+      <AdapterFields
+        label={tier}
+        binding={binding}
+        disabled={disabled}
+        onChange={onChange}
+      />
     </div>
   );
 }

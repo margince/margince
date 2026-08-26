@@ -85,9 +85,23 @@ export function roleLabelKey(role: CommitteeRole): MessageKey {
   return ROLE_LABELS[role];
 }
 
+/** One open deal, and the committee roles nobody holds ON IT. */
+export type DealGap = {
+  dealId: string;
+  dealName: string;
+  missing: CommitteeRole[];
+};
+
 /**
- * missingRoles reports which of the named committee roles nobody holds on the
- * account's OPEN deals.
+ * missingRolesByDeal reports, for each of the account's OPEN deals, which of
+ * the named committee roles nobody holds on THAT deal.
+ *
+ * Per deal, because a role is missing from the deal that lacks it. Taking the
+ * union across the account answered a question nobody asked: deal A has a
+ * champion but no economic buyer, deal B has an economic buyer but no champion,
+ * and the union covers both roles — so a two-deal account with a gap on each
+ * reported no gap at all, and the callout that reads this said nothing on
+ * exactly the accounts that needed it.
  *
  * Scoped to open deals because a champion on a deal that closed last year says
  * nothing about the one running now.
@@ -95,26 +109,47 @@ export function roleLabelKey(role: CommitteeRole): MessageKey {
  * `incomplete` says the caller could not see the whole picture — contacts past
  * the first page, contacts withheld by the reader's grants, or open deals past
  * their own first page. It returns nothing at all in that case, because "nobody
- * is champion" is a claim about EVERY contact on EVERY open deal: the
- * twenty-sixth contact is exactly where the champion would be, and a role held
- * on a deal this page did not list reads as a role nobody holds. A partial
- * answer here is worse than none — the reader cannot tell which one they got.
+ * is champion" is a claim about EVERY contact on the deal: the twenty-sixth
+ * contact is exactly where the champion would be, and a role held on a deal
+ * this page did not list reads as a role nobody holds. A partial answer here is
+ * worse than none — the reader cannot tell which one they got.
  */
-export function missingRoles(
+export function missingRolesByDeal(
   contacts: readonly Contact[],
-  openDealIds: ReadonlySet<string>,
+  openDeals: readonly { id: string; name: string }[],
   incomplete: boolean,
-): CommitteeRole[] {
-  if (incomplete || openDealIds.size === 0) {
+): DealGap[] {
+  if (incomplete) {
     return [];
   }
-  const held = new Set<string>();
+  const heldByDeal = new Map<string, Set<string>>();
   for (const contact of contacts) {
     for (const role of contact.deal_roles) {
-      if (openDealIds.has(role.deal_id)) {
-        held.add(role.role);
-      }
+      const held = heldByDeal.get(role.deal_id) ?? new Set<string>();
+      held.add(role.role);
+      heldByDeal.set(role.deal_id, held);
     }
   }
-  return ROLES_WORTH_NAMING.filter((role) => !held.has(role));
+  const gaps: DealGap[] = [];
+  for (const deal of openDeals) {
+    const held = heldByDeal.get(deal.id) ?? new Set<string>();
+    const missing = ROLES_WORTH_NAMING.filter((role) => !held.has(role));
+    if (missing.length > 0) {
+      gaps.push({ dealId: deal.id, dealName: deal.name, missing });
+    }
+  }
+  return gaps;
+}
+
+/**
+ * countGaps is what the coverage summary line reports: how many (deal, role)
+ * pairs are unfilled.
+ *
+ * The number the summary used to carry was how many ROLE TYPES were missing
+ * account-wide, which is at most two however many deals are short of them.
+ * Counting the pairs is the only reading under which "4 role gaps" on a
+ * two-deal account is true.
+ */
+export function countGaps(gaps: readonly DealGap[]): number {
+  return gaps.reduce((total, gap) => total + gap.missing.length, 0);
 }

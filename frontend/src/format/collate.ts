@@ -75,3 +75,23 @@ export function stable(a: string, b: string): number {
 export function foldForMatch(value: string): string {
   return value.toLowerCase();
 }
+
+/**
+ * A sentence written as a CONTINUATION, made to open a line instead.
+ *
+ * "sorted by Name" is written lowercase because it almost always continues a
+ * count ("1–25 of 196 companies, sorted by Name"). When the count is withheld
+ * it becomes the whole line, and a line may not open lowercase — so the first
+ * character is recased rather than the words being translated a second time,
+ * which also leaves a script with no case alone.
+ *
+ * The READER's locale, through `INTL_LOCALE` like every other rendering here:
+ * Turkish maps `i` to `İ` and everywhere else to `I`, so the machine's own
+ * locale leaking in would capitalise a Turkish sentence as an English one.
+ */
+export function openingCase(sentence: string, locale: Locale): string {
+  return (
+    sentence.charAt(0).toLocaleUpperCase(INTL_LOCALE[locale]) +
+    sentence.slice(1)
+  );
+}

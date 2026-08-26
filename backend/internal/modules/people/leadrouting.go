@@ -52,8 +52,14 @@ type RoutingConfig struct {
 // RoutableLeadFields is the closed set a routing rule may match on —
 // lead-local columns only (segregation-in-scoring: routing never reads
 // the contact graph). leadRoutingFacts.field must resolve exactly these
-// keys; the agents catalog mirrors this set for the editor schema, and a
-// compose fitness test binds the two so they cannot drift.
+// keys, and the agents catalog mirrors this set for the editor schema.
+//
+// Two gates, because the halves fail differently: a name this list offers
+// that `field` cannot resolve routes on the empty string and refuses
+// nothing, while a set the catalog does not mirror 422s a field the engine
+// supports. The mirror is TestRoutableLeadFieldVocabularyIsSingleSourced,
+// in compose — the only place both modules are visible.
+// Held by: TestEveryRoutableLeadFieldResolvesToItsOwnFact (backend/internal/modules/people/leadroutingvocab_test.go)
 var RoutableLeadFields = []string{"source", "company_name", "candidate_org_key"}
 
 // ParseRoutingConfig decodes automation params into a RoutingConfig.

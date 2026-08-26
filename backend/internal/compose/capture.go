@@ -304,12 +304,40 @@ func newGcalOAuth(c GmailConfig) gcal.OAuth {
 // can resolve each by name. A deployment without the app configured gets a
 // plain registry (both absent by omission). Returns nil only if pool is nil.
 func NewCaptureRegistryWithGmail(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig, cfg CaptureConfig) *capture.Registry {
+	return newCaptureRegistryWithGoogle(pool, vault, nil, c, cfg)
+}
+
+// newCaptureRegistryWithGoogle registers the Google connectors where the app
+// can be resolved from EITHER source: the stored setting this installation
+// wrote, or the pair the deployment composed.
+//
+// The registration used to require the environment's pair, which made the
+// stored app unusable rather than merely unread: the transport asks the
+// registry whether a connector exists before it will run the consent flow, so
+// an installation that set its app through Settings was sent to the declared
+// 501 and had no way to connect Gmail at all. A resolver is enough to register
+// on, because the connector resolves the app when it uses it.
+func newCaptureRegistryWithGoogle(
+	pool *pgxpool.Pool,
+	vault keyvault.Vault,
+	resolve googleAppResolver,
+	c GmailConfig,
+	cfg CaptureConfig,
+) *capture.Registry {
 	reg := NewCaptureRegistry(pool, vault, cfg)
-	if c.canSync() {
-		reg.Register(gmail.New(newGmailOAuth(c), gmail.NewAPI(nil, "")))
-		reg.Register(gcal.New(newGcalOAuth(c), gcal.NewAPI(nil, "")))
+	if googleAppReachable(resolve, c) {
+		reg.Register(gmail.New(newGmailAuthorizer(resolve, c), gmail.NewAPI(nil, "")))
+		reg.Register(gcal.New(newGcalAuthorizer(resolve, c), gcal.NewAPI(nil, "")))
 	}
 	return reg
+}
+
+// googleAppReachable reports whether anything in this composition could supply
+// the Google app. Registering on neither would leave a connector that fails
+// every call with "no app configured", which is a worse answer than the
+// declared 501: it looks configured and is not.
+func googleAppReachable(resolve googleAppResolver, c GmailConfig) bool {
+	return resolve != nil || c.canSync()
 }
 
 // GmailPollRegistry returns a Google-registered capture registry for the
@@ -327,13 +355,12 @@ func GmailPollRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig, 
 // the standing IMAP connector needs no deployment config — with the gmail
 // and graph connectors added when their OAuth apps are configured. A provider
 // nobody registered simply never appears in the dispatcher's provider list.
-func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig, g GraphConfig, cfg CaptureConfig) *capture.Registry {
-	var reg *capture.Registry
-	if c.canSync() {
-		reg = NewCaptureRegistryWithGmail(pool, vault, c, cfg)
-	} else {
-		reg = NewCaptureRegistry(pool, vault, cfg)
-	}
+func CaptureSyncRegistry(pool *pgxpool.Pool, vault keyvault.Vault, c GmailConfig, g GraphConfig, cfg CaptureConfig, log *slog.Logger) *capture.Registry {
+	// The worker resolves the STORED app exactly as the api does. Without this
+	// a mailbox connected against a stored app would connect and then never
+	// sync: the poll would find no Google connector registered and skip it
+	// silently, which reads as an empty inbox rather than as a broken one.
+	reg := newCaptureRegistryWithGoogle(pool, vault, newGoogleAppResolver(pool, vault, log), c, cfg)
 	if g.canSync() {
 		reg.Register(graph.New(newGraphOAuth(g), graph.NewAPI(nil, "")))
 	}
@@ -386,7 +413,7 @@ func WithGmailCapture(c GmailConfig, cfg CaptureConfig) Option {
 			gmailOAuth, gcalOAuth = newGmailOAuth(c), newGcalOAuth(c)
 		}
 		s.connectorHandlers = connectorHandlers{
-			registry:      NewCaptureRegistryWithGmail(pool, s.vault, c, cfg),
+			registry:      newCaptureRegistryWithGoogle(pool, s.vault, s.googleAppResolver, c, cfg),
 			authority:     identity.NewService(pool),
 			oauth:         gmailOAuth,
 			gmailAPI:      gmail.NewAPI(nil, ""),

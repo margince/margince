@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
-import { translate } from "../i18n";
+import { translate, translatePlural } from "../i18n";
 import {
   configuredModelLabel,
   configuredModelSummary,
@@ -25,6 +25,19 @@ const de = (
   key: Parameters<typeof translate>[1],
   params?: Record<string, string>,
 ) => translate("de", key, params);
+// The real plural selector, not a two-arm stub: what these cases are about is
+// which sentence a count produces, and a fake that compared against 1 would be
+// asserting the test's own rule rather than the catalogue's.
+const enPlural = (
+  base: Parameters<typeof translatePlural>[1],
+  count: number,
+  params?: Record<string, string>,
+) => translatePlural("en", base, count, params);
+const dePlural = (
+  base: Parameters<typeof translatePlural>[1],
+  count: number,
+  params?: Record<string, string>,
+) => translatePlural("de", base, count, params);
 
 function profile(overrides: Partial<AiProfile>): AiProfile {
   return {
@@ -56,9 +69,9 @@ describe("configuredModelSummary", () => {
     });
     // inference_mode is the server's own aggregate call, not one this
     // function infers from the per-model tiers itself.
-    expect(configuredModelSummary(three, "unavailable", en, "en")).toBe(
-      "3 models, running in the cloud",
-    );
+    expect(
+      configuredModelSummary(three, "unavailable", en, enPlural, "en"),
+    ).toBe("3 models, running in the cloud");
   });
 
   it("reads as singular, not '1 models', for exactly one configured model", () => {
@@ -68,10 +81,10 @@ describe("configuredModelSummary", () => {
         { tier: "local_small", provider: "ollama", model: "gemma3" },
       ],
     });
-    expect(configuredModelSummary(one, "unavailable", en, "en")).toBe(
+    expect(configuredModelSummary(one, "unavailable", en, enPlural, "en")).toBe(
       "1 model, running locally",
     );
-    expect(configuredModelSummary(one, "unavailable", de, "de")).toBe(
+    expect(configuredModelSummary(one, "unavailable", de, dePlural, "de")).toBe(
       "1 Modell, läuft lokal",
     );
   });
@@ -84,9 +97,9 @@ describe("configuredModelSummary", () => {
         { tier: "local_large", provider: "ollama", model: "llama3-70b" },
       ],
     });
-    expect(configuredModelSummary(mixed, "unavailable", en, "en")).toBe(
-      "2 models, split between cloud and local",
-    );
+    expect(
+      configuredModelSummary(mixed, "unavailable", en, enPlural, "en"),
+    ).toBe("2 models, split between cloud and local");
   });
 
   it("dedupes a model bound to more than one tier before counting", () => {
@@ -96,7 +109,7 @@ describe("configuredModelSummary", () => {
         { tier: "premium", provider: "gemini", model: "gemini-3.5-flash" },
       ],
     });
-    expect(configuredModelSummary(dup, "unavailable", en, "en")).toBe(
+    expect(configuredModelSummary(dup, "unavailable", en, enPlural, "en")).toBe(
       "1 model, running in the cloud",
     );
   });
@@ -106,22 +119,22 @@ describe("configuredModelSummary", () => {
       configured_models: [],
       providers: ["anthropic", "gemini"],
     });
-    expect(configuredModelSummary(providersOnly, "unavailable", en, "en")).toBe(
-      "2 providers configured",
-    );
+    expect(
+      configuredModelSummary(providersOnly, "unavailable", en, enPlural, "en"),
+    ).toBe("2 providers configured");
   });
 
   it("says nothing is configured rather than a false zero-count sentence", () => {
     const empty = profile({ configured_models: [], providers: [] });
-    expect(configuredModelSummary(empty, "unavailable", en, "en")).toBe(
-      "No model configured yet",
-    );
+    expect(
+      configuredModelSummary(empty, "unavailable", en, enPlural, "en"),
+    ).toBe("No model configured yet");
   });
 
   it("hands back the unavailable label while the profile has not loaded", () => {
-    expect(configuredModelSummary(undefined, "unavailable", en, "en")).toBe(
-      "unavailable",
-    );
+    expect(
+      configuredModelSummary(undefined, "unavailable", en, enPlural, "en"),
+    ).toBe("unavailable");
   });
 
   it("leaves the exact identifiers reachable through the detail label", () => {

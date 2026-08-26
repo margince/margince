@@ -9,6 +9,8 @@ import { ifMatch, requireVersion } from "../api/version";
 import { navigate, routeHash } from "../app/router";
 import { Button } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { FieldGuard } from "../design-system/rbac";
+import { Chip } from "../design-system/readings";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { dealRecordKeys } from "./activitykeys";
@@ -222,6 +224,18 @@ export async function resolveDealProject(
 export function DealProjectChip({ deal }: Readonly<{ deal: Deal }>) {
   const t = useT();
   const { name } = useEntityName("project", deal.project_id);
+  // A withheld project arrives as a null `project_id` with the field named in
+  // `masked_fields`, and drawing nothing at all would say this deal has no
+  // project — the same reading a deal that genuinely has none gets. The chip
+  // slot stays, carrying the mask, so the reader is told there IS a project and
+  // that it is not theirs to see. Not a link: there is no id to send them to.
+  if (deal.masked_fields?.includes("project_id")) {
+    return (
+      <Chip icon={Briefcase}>
+        <FieldGuard mode="masked" />
+      </Chip>
+    );
+  }
   if (!deal.project_id) {
     return null;
   }

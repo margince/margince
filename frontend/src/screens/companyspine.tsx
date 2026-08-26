@@ -26,7 +26,7 @@ import {
   formatMoneyCompact,
   formatNumber,
 } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import "./companyspine.css";
 
@@ -340,11 +340,9 @@ function earlierStop(
     when: cut ? "" : on(conversations[conversations.length - 1].at, ctx),
     title: cut
       ? ctx.t("co.spine.earlierMore")
-      : earlier === 1
-        ? ctx.t("co.spine.earlierOne")
-        : ctx.t("co.spine.earlier", {
-            count: formatNumber(earlier, ctx.locale),
-          }),
+      : translatePlural(ctx.locale, "co.spine.earlier", earlier, {
+          count: formatNumber(earlier, ctx.locale),
+        }),
   };
 }
 

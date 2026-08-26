@@ -366,7 +366,9 @@ func addressMergedOnto(current []byte, mapped *crmcontracts.Address) (*crmcontra
 //
 // The vocabulary is read off the generated contract, not hand-copied, for the
 // same reason people.validSizeBands is: a band added to crm.yaml must not
-// leave a second list behind saying otherwise.
+// leave a second list behind saying otherwise. That obligation is on the set
+// rather than on the spelling, so it is gated rather than stated.
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/contractvocabulary_test.go)
 func unwritableReason(object string, fields map[string]string) string {
 	if object == migration.ObjectPerson {
 		// A person's addresses are parsed before the write transaction opens

@@ -15,8 +15,13 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { formatDateTime, formatNumber, ordinalNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import {
+  type Locale,
+  type PluralTranslator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import { problemMessageOf, useMe } from "./common";
 import { useImportFlow } from "./importflow";
 import { ImportMappingTable } from "./importmapping";
@@ -308,6 +313,7 @@ function ImportOutcome({
   undoBusy: boolean;
 }>) {
   const t = useT();
+  const plural = usePlural();
   // The run's own timestamp is rendered in the reader's locale, not the
   // browser's default: everything else on this card already follows the catalog.
   const { locale } = useLocale();
@@ -384,7 +390,7 @@ function ImportOutcome({
         <Button small variant="primary" disabled={busy} onClick={onCommit}>
           {busy
             ? t("import.importing")
-            : commitLabel(t, locale, d.created + d.updated)}
+            : commitLabel(plural, locale, d.created + d.updated)}
         </Button>
       ) : null}
 
@@ -443,6 +449,7 @@ function UndoSection({
   onUndo: () => void;
 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   return (
     <>
@@ -460,7 +467,7 @@ function UndoSection({
             ? t("import.undoing")
             : undoInterrupted
               ? t("import.continueUndo")
-              : undoLabel(t, locale, report.disposition.created)}
+              : undoLabel(plural, locale, report.disposition.created)}
         </Button>
       ) : null}
       {undoError ? (
@@ -483,6 +490,7 @@ function UndoSection({
 // than rendering nothing.
 function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   return (
     <div className="import__undoOutcome">
@@ -492,12 +500,9 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
       {undo ? (
         <>
           <p className="import__hint">
-            {t(
-              undo.reversed_count === 1
-                ? "import.undoReversed.one"
-                : "import.undoReversed.other",
-              { rows: formatNumber(undo.reversed_count, locale) },
-            )}
+            {plural("import.undoReversed", undo.reversed_count, {
+              rows: formatNumber(undo.reversed_count, locale),
+            })}
           </p>
           {undo.kept.length > 0 ? (
             <>
@@ -535,25 +540,24 @@ function UndoOutcome({ undo }: Readonly<{ undo: ImportReport["undo"] }>) {
 // button is the last thing a human reads before the least reversible write in
 // the product, and "1 rows" reads like a machine wrote it.
 function commitLabel(
-  t: ReturnType<typeof useT>,
+  plural: PluralTranslator,
   locale: Locale,
   rows: number,
 ): string {
-  const key: MessageKey =
-    rows === 1 ? "import.commit.one" : "import.commit.other";
-  return t(key, { rows: formatNumber(rows, locale) });
+  return plural("import.commit", rows, {
+    rows: formatNumber(rows, locale),
+  });
 }
 
 // undoLabel names the count on the undo button for the same reason
 // commitLabel does: it is the last thing a human reads before undo
 // archives every row this run created.
 function undoLabel(
-  t: ReturnType<typeof useT>,
+  plural: PluralTranslator,
   locale: Locale,
   rows: number,
 ): string {
-  const key: MessageKey = rows === 1 ? "import.undo.one" : "import.undo.other";
-  return t(key, { rows: formatNumber(rows, locale) });
+  return plural("import.undo", rows, { rows: formatNumber(rows, locale) });
 }
 
 function Count({ label, value }: Readonly<{ label: string; value: number }>) {

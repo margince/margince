@@ -124,7 +124,7 @@ Per task:
 | `cost_unit` | rule name, or absent | which pre-flight estimator rule prices this task (`per_message`, `per_person`; `per_entity` for embed). The arithmetic stays in code — naming the rule here is what lets the build prove the mapping is **total** in both directions. Absent means unpriced. |
 | `doc` | string | carried through into the generated constant's comment. Prose only: nothing may depend on it. |
 
-`make gen` compiles this into `tasks_gen.go` (and `config/ai-routing.schema.json`);
+`make gen` compiles this into `tasks_gen.go` (and the routing shape in `config/margince.schema.json`);
 the drift gate fails the build if the generated files don't match, so the contract
 can't silently rot. Adding a task or a site is a checklist of its own:
 [how-to/add-an-ai-task.md](../how-to/add-an-ai-task.md).
@@ -366,7 +366,7 @@ writing the case that certifies one:
 |---|---|
 | Task contract (tasks, tiers, ladders, budget posture, status/sites/context/cost unit) | `backend/api/ai-tasks.yaml` → `tasks_gen.go` (via `tools/gen-aitasks`, `make gen`) |
 | Invocation-site census (which sites this build ships, and the case certifying each) | `internal/compose/aitaskregistry.go` (`NewTaskCensus`) · `internal/compose/aitasks` |
-| Runtime binding (tier → provider/model, profile) | the `ai.routing` setting — seeded from `seeds.ai_routing`, changed under Settings → AI. Same shape as the file the debug lanes read (schema: `config/ai-routing.schema.json`) |
+| Runtime binding (tier → provider/model, profile) | the `ai.routing` setting — seeded from `seeds.ai_routing`, changed under Settings → AI. Shape declared under `$defs.aiRouting` in `config/margince.schema.json` |
 | BYOK keys | the key vault, set under Settings → AI → Model provider keys. The conventional environment variables (`GEMINI_API_KEY`, `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `OPENAI_COMPATIBLE_API_KEY`) are read once, to seal a key into the vault on first boot |
 | The gate | `internal/modules/ai` — `ai.Router` / `ai.NewLocalRouter`; `--ai-fake` flag |
 | Providers | `anthropic`, `openai`, `gemini` (native) · `ollama`, `vllm`, `openai_compatible` · `fake` |

@@ -159,9 +159,15 @@ describe("ChangePasswordCard", () => {
     await user.click(submitButton());
 
     await waitFor(() => expect(globalThis.fetch).toHaveBeenCalledOnce());
-    const [url, init] = vi.mocked(globalThis.fetch).mock.calls[0];
-    expect(String(url)).toContain("/v1/auth/change-password");
-    const body = JSON.parse(String(init?.body));
+    // The generated client hands its transport one Request rather than a URL
+    // and an init pair, so the wire claim is read off the request itself.
+    const [sent] = vi.mocked(globalThis.fetch).mock.calls[0];
+    if (!(sent instanceof Request)) {
+      throw new Error(`expected a Request on the wire, got ${typeof sent}`);
+    }
+    expect(sent.url).toContain("/v1/auth/change-password");
+    expect(sent.method).toBe("POST");
+    const body = JSON.parse(await sent.text());
     expect(body.current_password).toBe("old password!");
     expect(body.new_password).toBe("a fine new password");
     // The confirmation is a client-side check and has no business on the wire.

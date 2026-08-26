@@ -73,6 +73,61 @@ function pageSizeOf(value: string | undefined): number | undefined {
 }
 
 /**
+ * The address prefix a list uses when it is not the only one on its route.
+ *
+ * Two lists on one route share one address, and the flat vocabulary below then
+ * describes both at once: the settings Data-model tab draws the product table
+ * and the offer-template table side by side, so sorting products by `sku` sent
+ * `sort=sku` to `/offer-templates` (a 422 the reader never asked for) and the
+ * product `active` chip narrowed the templates read as well. A scope answers
+ * that by naming every dial the list owns — `products.q`, `products.sort` — so
+ * the two lists on one route hold two parameter spaces.
+ *
+ * Undefined, and the dials keep their bare names. That is not laziness: a bare
+ * `#/companies?q=acme` is a link people paste, and prefixing every list in the
+ * product would break every one of them for no reader's benefit. A scope is for
+ * the lists that genuinely share an address, and only those.
+ *
+ * The two spaces are told apart by the DOT, which is why a wire filter may not
+ * contain one: a scoped list reads only the keys carrying its own prefix, and an
+ * unscoped list reads only the keys carrying no prefix at all. Neither writes
+ * over the other's.
+ */
+function scoped(scope: string | undefined, name: string): string {
+  return scope ? `${scope}.${name}` : name;
+}
+
+/** Is `key` a dial of the list at `scope`, rather than another list's? */
+function ownedBy(key: string, scope: string | undefined): boolean {
+  return scope ? key.startsWith(`${scope}.`) : !key.includes(".");
+}
+
+/**
+ * `live` with every dial the list at `scope` owns replaced by `mine`.
+ *
+ * A list writes its whole state at once, so without this the second list on a
+ * route would erase the first one's dials with every keystroke. For a list that
+ * owns the address alone this is the plain replacement it always was, since
+ * every key is then its own.
+ */
+function replaceOwn(
+  live: UrlParams,
+  mine: UrlParams,
+  scope: string | undefined,
+): UrlParams {
+  const next = new Map<string, string>();
+  for (const [key, value] of live) {
+    if (!ownedBy(key, scope)) {
+      next.set(key, value);
+    }
+  }
+  for (const [key, value] of mine) {
+    next.set(key, value);
+  }
+  return next;
+}
+
+/**
  * The list's own dials, and the names they go by in the address.
  *
  * `q`, `sort` and `include_archived` are the WIRE's own spellings, because a
@@ -94,19 +149,31 @@ function pageSizeOf(value: string | undefined): number | undefined {
 // last page there is.
 const PAGE_PARAM = "page";
 
-/** The page `params` names, or 1 for an address that names none or names junk. */
-function pageOf(params: UrlParams): number {
-  const asked = Number(params.get(PAGE_PARAM));
+/**
+ * The rendered page `params` names, or 1 for an address naming none or junk.
+ *
+ * Exported for the ONE screen that composes this codec by hand rather than
+ * through `useListQuery` — the deals screen drives a board and a table from a
+ * single query, and reaches for these pieces instead of growing a second answer
+ * to what a narrowed list's address looks like.
+ */
+export function listPageOf(params: UrlParams, scope?: string): number {
+  const asked = Number(params.get(scoped(scope, PAGE_PARAM)));
   return Number.isInteger(asked) && asked > 1 ? asked : 1;
 }
 
 /** `params` with the rendered page set, page one being spelled by absence. */
-function withPage(params: UrlParams, page: number): UrlParams {
+export function withListPage(
+  params: UrlParams,
+  page: number,
+  scope?: string,
+): UrlParams {
   const next = new Map(params);
+  const name = scoped(scope, PAGE_PARAM);
   if (page > 1) {
-    next.set(PAGE_PARAM, String(page));
+    next.set(name, String(page));
   } else {
-    next.delete(PAGE_PARAM);
+    next.delete(name);
   }
   return next;
 }
@@ -123,6 +190,29 @@ const LIST_OWN_PARAMS: ReadonlySet<string> = new Set([
   PER_PAGE_PARAM,
   PAGE_PARAM,
 ]);
+
+/**
+ * This list's dials in `params`, keyed by their BARE names.
+ *
+ * One reading for both spellings: a scoped list's `products.q` and an unscoped
+ * list's `q` arrive here as `q`, so everything below is written once against the
+ * vocabulary rather than twice against two prefixes. Another list's keys are not
+ * in the result at all, which is what keeps the second table on a route from
+ * reading the first one's filters as its own.
+ */
+function ownDials(
+  params: UrlParams,
+  scope: string | undefined,
+): Map<string, string> {
+  const mine = new Map<string, string>();
+  const prefix = scope ? `${scope}.` : "";
+  for (const [key, value] of params) {
+    if (ownedBy(key, scope)) {
+      mine.set(key.slice(prefix.length), value);
+    }
+  }
+  return mine;
+}
 
 /**
  * The address keys a SCREEN owns, held out of the list's parameter space.
@@ -203,9 +293,12 @@ export function listQueryFromParams(
    * behaviour of the owner chip's "all".
    */
   seeded: boolean,
+  /** The address prefix this list's dials carry; see `scoped`. */
+  scope?: string,
 ): ListQuery {
+  const mine = ownDials(params, scope);
   const filters: Record<string, string> = {};
-  for (const [key, value] of params) {
+  for (const [key, value] of mine) {
     if (!LIST_OWN_PARAMS.has(key)) {
       filters[key] = value;
     }
@@ -213,17 +306,21 @@ export function listQueryFromParams(
   // An address carrying a dial, or a reader who has turned one, has EXPRESSED
   // what the list should be. Only a reader who has expressed nothing at all
   // gets the screen's opening answers.
-  const expressed = seeded || params.size > 0;
+  //
+  // THIS list's dials, not the address's size: on a route holding two lists the
+  // other one seeds first, and counting its keys would tell this list that a
+  // reader had cleared filters they never saw.
+  const expressed = seeded || mine.size > 0;
   return {
-    q: params.get("q") ?? "",
+    q: mine.get("q") ?? "",
     // No sort in an EXPRESSED address means the server's own order, not the
     // screen's. The two are different lists — a saved view that names no sort
     // asks for the former — and absence can only spell one of them, which is
     // why the writer below spells a sort out even when it is the default one.
-    sort: params.get("sort") ?? (expressed ? "" : opening.sort),
-    includeArchived: params.get("include_archived") === "true",
+    sort: mine.get("sort") ?? (expressed ? "" : opening.sort),
+    includeArchived: mine.get("include_archived") === "true",
     filters: expressed ? filters : opening.filters,
-    perPage: pageSizeOf(params.get(PER_PAGE_PARAM)) ?? opening.perPage,
+    perPage: pageSizeOf(mine.get(PER_PAGE_PARAM)) ?? opening.perPage,
   };
 }
 
@@ -244,19 +341,26 @@ export function listQueryFromParams(
 export function paramsFromListQuery(
   query: ListQuery,
   opening: ListQuery,
+  /** The address prefix this list's dials carry; see `scoped`. */
+  scope?: string,
 ): UrlParams {
-  const params = new Map<string, string>(Object.entries(query.filters));
+  const params = new Map<string, string>();
+  const set = (name: string, value: string) =>
+    params.set(scoped(scope, name), value);
+  for (const [key, value] of Object.entries(query.filters)) {
+    set(key, value);
+  }
   if (query.q) {
-    params.set("q", query.q);
+    set("q", query.q);
   }
   if (query.sort) {
-    params.set("sort", query.sort);
+    set("sort", query.sort);
   }
   if (query.includeArchived) {
-    params.set("include_archived", "true");
+    set("include_archived", "true");
   }
   if (query.perPage !== opening.perPage) {
-    params.set(PER_PAGE_PARAM, String(query.perPage));
+    set(PER_PAGE_PARAM, String(query.perPage));
   }
   return params;
 }
@@ -363,6 +467,7 @@ export function useListQuery<Row>({
   initialSort,
   initialFilters,
   screenDials = NO_SCREEN_DIALS,
+  paramScope,
 }: Readonly<{
   key: string;
   fetchPage: (
@@ -394,6 +499,14 @@ export function useListQuery<Row>({
    * query, and with it the react-query key, on every one.
    */
   screenDials?: readonly string[];
+  /**
+   * The address prefix this list's dials carry, for a route that holds MORE
+   * THAN ONE list — the settings Data-model tab draws the products table and
+   * the offer-template table together, and one flat parameter space described
+   * both at once. Omit it everywhere else: a scope on a list that owns its
+   * address alone only makes the link people paste uglier. See `scoped`.
+   */
+  paramScope?: string;
 }>) {
   // In overlay mode the incumbent mirror refuses sort/filter dials (422), so
   // list reads must carry neither: an empty sort (ListTable hides the controls
@@ -442,8 +555,9 @@ export function useListQuery<Row>({
             withoutScreenDials(params, screenDials),
             opening,
             seeded.current,
+            paramScope,
           ),
-    [overlay, params, opening, screenDials],
+    [overlay, params, opening, screenDials, paramScope],
   );
 
   // Spell the opening state into the address, once, on arrival.
@@ -458,7 +572,7 @@ export function useListQuery<Row>({
       return;
     }
     seeded.current = true;
-    if (currentParams().size > 0) {
+    if (ownDials(currentParams(), paramScope).size > 0) {
       // The address already says what the list should be — a reload, a link
       // somebody was sent, or Back onto a list this mount did not narrow.
       // Writing the opening state over it would throw away exactly what was
@@ -466,8 +580,14 @@ export function useListQuery<Row>({
       // watches their own filter vanish.
       return;
     }
-    setParams(paramsFromListQuery(opening, opening));
-  }, [overlay, opening, setParams]);
+    setParams(
+      replaceOwn(
+        currentParams(),
+        paramsFromListQuery(opening, opening, paramScope),
+        paramScope,
+      ),
+    );
+  }, [overlay, opening, setParams, paramScope]);
 
   const setQuery = useCallback(
     (update: SetStateAction<ListQuery>) => {
@@ -487,6 +607,7 @@ export function useListQuery<Row>({
                 withoutScreenDials(currentParams(), screenDials),
                 opening,
                 seeded.current,
+                paramScope,
               ),
             )
           : update;
@@ -497,13 +618,21 @@ export function useListQuery<Row>({
       // table's own reset fires straight after and takes it back to one.
       setParams(
         mergeScreenDials(
-          withPage(paramsFromListQuery(next, opening), pageOf(live)),
+          replaceOwn(
+            live,
+            withListPage(
+              paramsFromListQuery(next, opening, paramScope),
+              listPageOf(live, paramScope),
+              paramScope,
+            ),
+            paramScope,
+          ),
           live,
           screenDials,
         ),
       );
     },
-    [overlay, opening, setParams, screenDials],
+    [overlay, opening, setParams, screenDials, paramScope],
   );
 
   const infinite = useInfiniteQuery({
@@ -520,6 +649,7 @@ export function useListQuery<Row>({
     rows,
     query,
     setQuery,
+    paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
     isPending: infinite.isPending,
@@ -533,6 +663,12 @@ export type ListState<Row> = Readonly<{
   rows: Row[];
   query: ListQuery;
   setQuery: Dispatch<SetStateAction<ListQuery>>;
+  /**
+   * The address prefix this list's dials carry, so the surface addresses the
+   * rendered page under the same name the rest of the dials go by. Undefined for
+   * a list that owns its address alone, which is most of them.
+   */
+  paramScope?: string;
   isPending: boolean;
   isError: boolean;
   error: unknown;
@@ -655,6 +791,9 @@ export function ListTable<Row>({
   const rowsScroller = useRef<HTMLDivElement>(null);
   useScrollMemory(rowsScroller, useHash(), "rows");
   const [localSearch, setLocalSearch] = useState(query.q);
+  // What this box last put on the wire, so a `q` that moved for any OTHER
+  // reason can be told apart from this box's own debounce landing.
+  const committed = useRef(query.q);
   // Which view tab is lit is READ from the query rather than remembered: a tab
   // is a claim about what the list is showing, and a reader who then edits a
   // filter or a sort is no longer looking at that preset. Stored, the highlight
@@ -741,11 +880,53 @@ export function ListTable<Row>({
   // (which sets query immediately, before this timer fires) is preserved
   // instead of being reverted by a stale closure over `query`. Skipped when
   // the screen isn't searchable — there is no debounce to race in that case.
+  // The address moves without this screen unmounting — Back, Forward, a link to
+  // the same list narrowed differently — and the box has to follow it or it
+  // shows words the rows are not answering. Pressing Back out of a search left
+  // the typed word sitting in a box over the unnarrowed list it had just left.
+  //
+  // Only for a `q` this box did not commit itself: the ref carries what it last
+  // put on the wire, so a reader mid-word is never overwritten by their own
+  // debounce arriving.
+  useEffect(() => {
+    if (query.q !== committed.current) {
+      committed.current = query.q;
+      setLocalSearch(query.q);
+    }
+  }, [query.q]);
+
+  // The reader LEFT, with a word still settling.
+  //
+  // The effect above follows `q`, and a word typed against a list the reader
+  // then walked away from has a `q` that never moved: type "acme", press Back
+  // to a differently sorted view of the same list, and both addresses carry no
+  // `q` at all. Nothing above fires, the timer keeps its appointment, and the
+  // word lands on a list it was not typed into.
+  //
+  // `hashchange` is the discriminator and it is exact: `replaceParams` writes
+  // with `history.replaceState`, which fires no such event and announces itself
+  // in-app instead, so every dial this surface turns is silent here. What
+  // reaches this listener is the browser's own navigation — Back, Forward, a
+  // pasted link — which is precisely the case where a pending word belongs to a
+  // list that is gone. Re-reading the address also re-arms the debounce with
+  // the value now in it, so the stale timer commits nothing.
+  useEffect(() => {
+    const abandonPendingSearch = () => {
+      const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
+      committed.current = live;
+      setLocalSearch(live);
+    };
+    globalThis.addEventListener("hashchange", abandonPendingSearch);
+    return () =>
+      globalThis.removeEventListener("hashchange", abandonPendingSearch);
+  }, [state.paramScope]);
+
   useEffect(() => {
     if (!searchable) {
       return;
     }
     const timer = setTimeout(() => {
+      committed.current = localSearch;
       setQuery((prev) =>
         prev.q === localSearch ? prev : { ...prev, q: localSearch },
       );
@@ -845,7 +1026,17 @@ export function ListTable<Row>({
       // grants it to anyone) than a genuinely empty HubSpot portal — name that
       // cause rather than letting the generic empty copy imply "there is
       // nothing here".
-      emptyNote={overlay ? t("overlay.emptyOwnerHint") : emptyNote}
+      //
+      // Not while a search is narrowing it, though: then the reader's own words
+      // are the likeliest cause, and blaming the mirror's owner mapping for
+      // what a typo did would send them looking in the wrong place.
+      emptyNote={
+        overlay
+          ? query.q
+            ? undefined
+            : t("overlay.emptyOwnerHint")
+          : emptyNote
+      }
       action={action}
       caption={caption ? t(caption) : undefined}
       footer={footer}
@@ -894,8 +1085,10 @@ export function ListTable<Row>({
       // opening a record no longer costs the reader their place. Page one is
       // left OUT of it: it is where every list opens, and an address that said
       // so on arrival would put a dial in front of a reader who turned nothing.
-      page={pageOf(params)}
-      onPage={(next) => setParams(withPage(currentParams(), next))}
+      page={listPageOf(params, state.paramScope)}
+      onPage={(next) =>
+        setParams(withListPage(currentParams(), next, state.paramScope))
+      }
       bodyRef={rowsScroller}
       // The unit key names the table for the widths it remembers.
       widthsKey={unit}

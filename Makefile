@@ -68,7 +68,7 @@ SEED_STACK = set -e; . scripts/lib-devstate.sh; \
     seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
   fi;
 
-.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
+.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -102,7 +102,7 @@ install: fe-install tools hooks
 ## #1639 is about: a backend-only author never runs the lane that would
 ## otherwise catch a stranded frontend schema. On a pull request CI covers the
 ## same ground from the other side, through fe-quality's fe-drift.
-check-backend: check-craft-doc craft-test test-dev-isolation test-golangci-guard test-scheduled-report test-ci-verdict test-laneorder check-image-pins check-host-ports ci-doc-parity make-target-parity contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze
+check-backend: check-craft-doc craft-test test-dev-isolation test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco test-laneorder check-image-pins check-host-ports ci-doc-parity make-target-parity contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze
 	$(MAKE) -C backend check
 
 ## check — the full merge gate: backend + frontend
@@ -397,8 +397,11 @@ frontend-check:
 	$(MAKE) fe-unit
 	$(MAKE) fe-build
 
-## fe-ds-gates — the design-system script gates on their own, so the CI job that
-## wants only the cheap greps does not also pull a vitest run behind them.
+## fe-ds-gates — the frontend's cheap grep gates on their own, so the CI job that
+## wants only them does not also pull a vitest run behind them. Most are
+## design-system rules; check-contract-fetch.sh is a contract-transport one, and
+## it lives here because what makes a gate belong is being a grep over both
+## frontend trees, not which rule it holds.
 ##
 ## This recipe is also the list check-ext-frontend-walk.test.sh reads: it holds
 ## that every gate here reads extensions/*/frontend and not frontend/src alone,
@@ -411,6 +414,8 @@ fe-ds-gates:
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh
 	frontend/scripts/check-space-tokens.sh
+	frontend/scripts/check-contract-fetch.sh
+	bash frontend/scripts/check-contract-fetch.test.sh
 	bash frontend/scripts/check-ext-frontend-walk.test.sh
 
 ## fe-drift — the TS type-drift gate on its own: regenerate from the contract
@@ -690,6 +695,14 @@ test-scheduled-report:
 ## the real thing on every dashboard.
 test-ci-verdict:
 	@./scripts/test-ci-verdict.sh
+
+## test-check-dco — prove the DCO gate still catches, and that an author's
+## retroactive attestation excuses exactly the commit it names. Remediation is
+## the permissive direction: its whole purpose is to make a commit stop failing,
+## so a loose sha match or an unanchored trailer turns the gate into a rubber
+## stamp that reports the same clean history as a strict one.
+test-check-dco:
+	@./scripts/test-check-dco.sh
 
 ## test-laneorder — prove the integration lane still dispatches its long pole
 ## first. The order is only a scheduling hint, so a regression here never turns

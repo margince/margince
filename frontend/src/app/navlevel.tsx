@@ -4,6 +4,8 @@
 import { ChevronLeft } from "lucide-react";
 import {
   createContext,
+  Fragment,
+  type ReactNode,
   type RefObject,
   useCallback,
   useContext,
@@ -249,6 +251,8 @@ function NavLevelGroupView({
   counts,
   state,
   onSelect,
+  centre,
+  centreAfter,
 }: Readonly<{
   level: NavTrailLevel;
   group: NavLevelGroup;
@@ -256,6 +260,8 @@ function NavLevelGroupView({
   counts?: NavCounts;
   state: TipState;
   onSelect: (entry: NavLevelEntry) => void;
+  centre?: ReactNode;
+  centreAfter?: string;
 }>) {
   const t = useT();
   return (
@@ -267,22 +273,28 @@ function NavLevelGroupView({
         <Heading className="navheading">{t(group.headingKey)}</Heading>
       )}
       {group.items.map((entry) => (
-        <div
-          className={
-            level.barIds?.has(entry.id) ? "navwrap primary" : "navwrap"
-          }
-          key={entry.id}
-        >
-          <NavLevelRow
-            level={level}
-            entry={entry}
-            count={
-              level.badgeIds?.has(entry.id) ? counts?.[entry.id] : undefined
+        <Fragment key={entry.id}>
+          <div
+            className={
+              level.barIds?.has(entry.id) ? "navwrap primary" : "navwrap"
             }
-            state={state}
-            onSelect={onSelect}
-          />
-        </div>
+          >
+            <NavLevelRow
+              level={level}
+              entry={entry}
+              count={
+                level.badgeIds?.has(entry.id) ? counts?.[entry.id] : undefined
+              }
+              state={state}
+              onSelect={onSelect}
+            />
+          </div>
+          {/* The centre cell stands in the ROW STREAM rather than beside it, so
+              the bar's tab order is the order a thumb reads it in. Placing it
+              with a grid column alone would have left it third on screen and
+              last to the keyboard. */}
+          {entry.id === centreAfter && centre}
+        </Fragment>
       ))}
     </div>
   );
@@ -338,6 +350,25 @@ function levelTitle(
   return level.titleKey ? t(level.titleKey) : "";
 }
 
+/**
+ * Which bar row the centre cell stands after.
+ *
+ * The phone bar is this level's bar rows, plus More on the right, plus the one
+ * cell the caller hands in — and that cell is its MIDDLE, so half of everything
+ * else stands to its left. Derived from the level's own bar set rather than
+ * pinned to a screen id: a destination added to or taken off the bar has to move
+ * the cell, not leave it standing off-centre.
+ */
+function centreAfterId(level: NavTrailLevel): string | undefined {
+  const bar = level.groups
+    .flatMap((group) => group.items)
+    .filter((entry) => level.barIds?.has(entry.id));
+  if (bar.length === 0) {
+    return undefined;
+  }
+  return bar[Math.ceil((bar.length + 1) / 2) - 1]?.id;
+}
+
 export function NavLevelView({
   level,
   parent,
@@ -345,6 +376,7 @@ export function NavLevelView({
   state,
   onSelect,
   onWalkUp,
+  centre,
 }: Readonly<{
   level: NavTrailLevel;
   // Absent on the primary level, which is where the sidebar already is: there
@@ -354,8 +386,13 @@ export function NavLevelView({
   state: TipState;
   onSelect: (entry: NavLevelEntry) => void;
   onWalkUp: () => void;
+  // One cell that is NOT a destination, standing in the middle of the phone
+  // bar's row of them. The sidebar passes nothing: a column of places to go has
+  // no middle for a reading to stand in, and the agent keeps its own foot there.
+  centre?: ReactNode;
 }>) {
   const t = useT();
+  const centreAfter = centre ? centreAfterId(level) : undefined;
   return (
     <div className={parent ? "navlevel drilled" : "navlevel"}>
       {parent && (
@@ -375,6 +412,8 @@ export function NavLevelView({
           counts={counts}
           state={state}
           onSelect={onSelect}
+          centre={centre}
+          centreAfter={centreAfter}
         />
       ))}
     </div>

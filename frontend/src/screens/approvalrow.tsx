@@ -36,6 +36,7 @@ import {
   resolveDisplay,
   stagedDayFormatter,
 } from "./approvalkind";
+import type { Approval } from "./approvals.queries";
 import {
   isAlreadyDecided,
   isVersionSkew,
@@ -44,7 +45,6 @@ import {
   throwProblem,
   useViewerId,
 } from "./common";
-import type { Approval } from "./inbox.queries";
 import "./approvalrow.css";
 
 // One staged proposal as a decidable row, and the screen-level sink that
@@ -59,8 +59,8 @@ import "./approvalrow.css";
 // instead of offering a re-stage retry.
 //
 // It lives beside the approvals queries rather than inside any one screen
-// because several surfaces draw it: the inbox queue, Home, and the company
-// record's decisions panel.
+// because several surfaces draw it: the workspace-wide decisions queue, Home,
+// and the company record's decisions panel.
 
 // Shared decision sink (AC-6, cross-surface): owns the screen-level state that
 // must OUTLIVE the row that triggered it — a decide invalidates the pending
@@ -92,10 +92,10 @@ export function useDecisionSink(): {
       }}
     >
       <p className="t-caption" style={{ color: "var(--danger)", flex: 1 }}>
-        {t("inbox.alreadyDecided")}
+        {t("decision.alreadyDecided")}
       </p>
       <Button small onClick={() => setAlreadyDecided(false)}>
-        {t("inbox.dismiss")}
+        {t("decision.dismiss")}
       </Button>
     </Card>
   ) : null;
@@ -120,10 +120,10 @@ function rowLabels(t: Translator): DecisionCardLabels {
   return {
     accept: t("trust.accept"),
     edit: t("trust.edit"),
-    reject: t("inbox.reject"),
-    expired: t("inbox.expired"),
-    draftSubject: t("inbox.draftSubject"),
-    draftBody: t("inbox.draftBody"),
+    reject: t("decision.reject"),
+    expired: t("decision.expired"),
+    draftSubject: t("decision.draftSubject"),
+    draftBody: t("decision.draftBody"),
     noContent: t("common.empty"),
   };
 }
@@ -133,12 +133,12 @@ function rowLabels(t: Translator): DecisionCardLabels {
 function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
   return {
     expiresIn: (msRemaining) =>
-      t("inbox.expiresIn", {
+      t("decision.expiresIn", {
         countdown: formatCountdown(msRemaining, t, locale),
       }),
-    approved: t("inbox.status.approved"),
-    rejected: t("inbox.status.rejected"),
-    expired: t("inbox.status.expired"),
+    approved: t("decision.status.approved"),
+    rejected: t("decision.status.rejected"),
+    expired: t("decision.status.expired"),
   };
 }
 
@@ -288,7 +288,7 @@ export function ApprovalRow({
           <span className="t-small">{approvalKindLabel(approval.kind, t)}</span>
           <DecisionToolChip
             verb={KIND_TO_VERB[approval.kind]}
-            label={(verb) => t("inbox.viaTool", { verb })}
+            label={(verb) => t("decision.viaTool", { verb })}
           />
           <DecisionStatusChip
             approval={approval}
@@ -305,7 +305,7 @@ export function ApprovalRow({
           className="link-button"
           onClick={() => setDetailOpen(true)}
         >
-          {t("inbox.detail")}
+          {t("decision.detail")}
         </button>
       }
       editor={
@@ -342,15 +342,15 @@ export function ApprovalRow({
       <ConfirmModal
         open={rejecting}
         onClose={() => setRejecting(false)}
-        title={t("inbox.reject")}
-        confirmLabel={t("inbox.reject")}
+        title={t("decision.reject")}
+        confirmLabel={t("decision.reject")}
         confirmVariant="danger"
         pending={decide.isPending}
         onConfirm={confirmReject}
       >
         <Field
-          label={t("inbox.rejectReason")}
-          hint={t("inbox.rejectReasonHint")}
+          label={t("decision.rejectReason")}
+          hint={t("decision.rejectReasonHint")}
         >
           {(control) => (
             <Textarea

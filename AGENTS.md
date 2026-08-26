@@ -129,8 +129,8 @@ sandboxed.
 4. Push and open a PR.
 5. CI, DCO, CodeRabbit and SonarCloud must all pass. Address review findings
    rather than dismissing them.
-6. Merge only when everything is green: `gh pr merge <n> --squash`. Then delete
-   the branch.
+6. Merge only when everything is green: `gh pr merge <n> --squash`, never with a
+   replaced body — it drops the commits' sign-off. Then delete the branch.
 
 **Commit only product.** Before `git add`, check `git status` for build caches
 (`node_modules/`, `.pnpm-store/`, binaries), working notes — those go in the
@@ -236,7 +236,7 @@ The rule under every rule: **code that reads best to a human reads best to the
 next agent that edits it.** Legibility is the product.
 
 The standard the gate applies is `cli/craft/rubric/rubric.json` — anti-tells
-T1–T10 plus positive rules P1–P5 (idiomatic, small-focused, tests-as-spec,
+T1–T11 plus positive rules P1–P5 (idiomatic, small-focused, tests-as-spec,
 pr-tells-story, restraint). When this prose and the rubric disagree, the rubric is
 what blocked your push.
 
@@ -246,6 +246,9 @@ what blocked your push.
   to do, and never leak internals (no stack, SQL or table names to a client).
 - No `any`, `as`, or unchecked assertions (T6). No dead or speculative code, no
   abstraction without a second caller today, no `TODO` without an issue (T3/T8).
+- **Search the tree before you add a capability** (T11) — *Reuse before you
+  build*, asked of a reviewer. MAJOR, never BLOCKER: a reviewer sees the diff
+  and not the tree, so it raises the question rather than vetoing.
 - Handle the honest hard cases (T7): empty page, version skew, cross-tenant,
   GUC unset.
 - **Tests prove behaviour or they are noise** (P3): no assertion-free test, no

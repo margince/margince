@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
 import { formatNumber, hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 // The first thing a reader sees each morning: who they are, what hour it is for
@@ -179,6 +179,7 @@ export function HomeGlance({
   onGoToDuplicates,
   onGoToWatch,
 }: GlanceProps) {
+  const plural = usePlural();
   const t = useT();
   const hour = hourInZone(now, viewerZone());
   // No name yet is not a reason to greet nobody: the hour is known either way,
@@ -204,11 +205,7 @@ export function HomeGlance({
             onClick={onGoToDecisions}
             goLabel={t("home.glance.goDecisions")}
           >
-            {t(
-              decisions.pending === 1
-                ? "home.glance.decisions.one"
-                : "home.glance.decisions.other",
-            )}
+            {plural("home.glance.decisions", decisions.pending)}
           </GlanceLine>
         )}
         {decisions !== null && decisions.expiringToday > 0 && (
@@ -218,11 +215,7 @@ export function HomeGlance({
             onClick={onGoToDecisions}
             goLabel={t("home.glance.goDecisions")}
           >
-            {t(
-              decisions.expiringToday === 1
-                ? "home.glance.expiring.one"
-                : "home.glance.expiring.other",
-            )}
+            {plural("home.glance.expiring", decisions.expiringToday)}
           </GlanceLine>
         )}
         {brief !== null && brief.ranked > 0 && (
@@ -232,11 +225,7 @@ export function HomeGlance({
             onClick={onGoToToday}
             goLabel={t("home.glance.goToday")}
           >
-            {t(
-              brief.ranked === 1
-                ? "home.glance.ranked.one"
-                : "home.glance.ranked.other",
-            )}{" "}
+            {plural("home.glance.ranked", brief.ranked)}{" "}
             {/* The leader is named only when both halves are known. A deal
                 named without its figure reads as one nobody priced, and a
                 figure without the name belongs to no deal at all. */}
@@ -252,11 +241,7 @@ export function HomeGlance({
         )}
         {overnight !== null && (
           <GlanceLine testId="glance-captured" count={overnight.captured}>
-            {t(
-              overnight.captured === 1
-                ? "home.glance.captured.one"
-                : "home.glance.captured.other",
-            )}
+            {plural("home.glance.captured", overnight.captured)}
           </GlanceLine>
         )}
         {overnight !== null && overnight.duplicates > 0 && (
@@ -266,11 +251,7 @@ export function HomeGlance({
             onClick={onGoToDuplicates}
             goLabel={t("home.glance.goDuplicates")}
           >
-            {t(
-              overnight.duplicates === 1
-                ? "home.glance.duplicates.one"
-                : "home.glance.duplicates.other",
-            )}
+            {plural("home.glance.duplicates", overnight.duplicates)}
           </GlanceLine>
         )}
         {stalled !== null && stalled > 0 && (
@@ -280,11 +261,7 @@ export function HomeGlance({
             onClick={onGoToWatch}
             goLabel={t("home.glance.goWatch")}
           >
-            {t(
-              stalled === 1
-                ? "home.glance.quiet.one"
-                : "home.glance.quiet.other",
-            )}
+            {plural("home.glance.quiet", stalled)}
           </GlanceLine>
         )}
       </div>

@@ -14,7 +14,7 @@ import {
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate } from "./common";
 import { errorClassKey, isUnhealthy } from "./connector-status";
@@ -260,6 +260,7 @@ export function OvernightPanel() {
  * settled error keeps the panel and says the figure is unavailable.
  */
 export function PositionPanel() {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const query = usePipelineValue();
@@ -317,12 +318,9 @@ export function PositionPanel() {
               })}
             </span>
             <span className="t-caption">
-              {t(
-                row.deals === 1
-                  ? "home.pipelineCount.one"
-                  : "home.pipelineCount.other",
-                { count: formatNumber(row.deals, locale) },
-              )}
+              {plural("home.pipelineCount", row.deals, {
+                count: formatNumber(row.deals, locale),
+              })}
             </span>
           </span>
         </PanelRow>

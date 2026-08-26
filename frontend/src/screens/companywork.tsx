@@ -33,7 +33,7 @@ import {
   formatNumber,
   relativeDays,
 } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 // The row shapes this card draws — `co-rowlink`, `co-row-meta` — are the
 // record page's, defined in company360.css. Imported here rather than left to
 // whichever screen happens to mount the card: without it the card renders
@@ -171,6 +171,7 @@ export function CompanyWorkCard({
  */
 function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const since = newActivities(view);
   const first = firstVisit(view);
@@ -186,10 +187,9 @@ function SinceLastVisit({ view }: Readonly<{ view?: Organization360 }>) {
       {first && <span className="t-caption">{t("co.since.first")}</span>}
       {!first && since > 0 && (
         <span className="t-caption">
-          {t(
-            since === 1 ? "co.read.newActivityOne" : "co.read.newActivityMany",
-            { count: formatNumber(since, locale) },
-          )}
+          {plural("co.read.newActivity", since, {
+            count: formatNumber(since, locale),
+          })}
         </span>
       )}
       {withheld && <span className="t-caption">{t("co.prep.withheld")}</span>}

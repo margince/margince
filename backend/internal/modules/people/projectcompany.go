@@ -45,6 +45,7 @@ const projectCompanyDefaultRole = "customer"
 
 // relationshipRoleField is the audit key the edge's role is recorded under,
 // spelled once so the three writers cannot disagree about it.
+// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/claimedspelling_test.go)
 const relationshipRoleField = "role"
 
 // AttachCompanyToProjectTx puts one company on a project, inside the caller's

@@ -12,7 +12,8 @@ package backendarch
 // INSERT/UPDATE/DELETE target from SQL string literals (plus the storekit
 // applier and row-lock table arguments), and asserts each module only writes its own
 // tables. Cross-store writes exist by design (merge relinks, GDPR erasure,
-// ingest materialization); each one is ratified below with a self-contained
+// ingest materialization); each one is ratified in crossStoreWrites
+// (tableownershipwaivers_test.go) with a self-contained
 // rationale — an entry without a rationale is a finding, not a pass, and a
 // waiver that matches no remaining write is stale and fails too. SELECTs are
 // out of scope: reads are governed by each statement's own workspace predicate
@@ -29,6 +30,7 @@ package backendarch
 
 import (
 	"bufio"
+	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -417,126 +419,6 @@ var tableOwners = map[string]string{
 	"system_log":       storekitOwned,
 }
 
-// crossStoreWrites are the ratified writes outside the writer's own tables,
-// keyed "module-dir:table". Every entry carries its rationale inline so the
-// gate is self-contained on a clean checkout.
-var crossStoreWrites = gatekit.Waive(map[string]string{
-	// people's merge/promotion relink rows across aggregates inside their
-	// single transaction — the primary aggregate owns the single-tx
-	// cross-aggregate write, because a merge that could half-commit its
-	// relinks would corrupt referential history.
-	"internal/modules/people:deal":                 "merge/promote relink deal FK rows in the single transaction",
-	"internal/modules/people:project":              "org merge re-anchors the merged-away company's projects onto the survivor in the same transaction (PROJ-LIFE-4) — the anchor is NOT NULL ... ON DELETE RESTRICT, so a project cannot stay behind, and leaving it turns the survivor's deals un-editable against the deal_project_same_org trigger",
-	"internal/modules/people:activity_link":        "merge/promote relink timeline links in the single transaction",
-	"internal/modules/people:attachment":           "org merge carries the document library's account pointer onto the survivor in the same transaction — organization_id is a denormalized READ path nothing else maintains, so a file left on the dissolved company is filed under a record that no longer exists and reads to a user as the contract having vanished",
-	"internal/modules/people:activity_participant": "capture records the counterparty by ADDRESS because no person exists yet — the creation gate runs after that transaction commits, and for a suppressed sender never runs at all. linkActivityToPerson is the one chokepoint every ensure path reaches AND the one that has already settled the person against a merge, so naming that party is the same write, on the same row, in the same transaction as the link",
-	"internal/modules/people:list_member":          "merge relinks list memberships (and archive purges them) in the single transaction",
-	"internal/modules/people:taggable":             "merge relinks tag rows (and archive purges them) in the single transaction",
-	"internal/modules/people:person_consent":       "merge carries the survivor's consent state in the single transaction",
-	"internal/modules/people:consent_event":        "merge re-points the append-only consent proof log in the single transaction",
-
-	// The outbound-send reconcile folds the provider's own captured echo of a
-	// message this workspace sent into the send's own row. That fold is one
-	// indivisible act — links copied, review moved, key released, row archived
-	// — run in one best-effort transaction the delivery store may roll back
-	// whole. The queued counterparty review is part of it: a human verdict the
-	// survivor does not re-queue, which must not be left asking about a message
-	// the workspace can no longer see.
-	"internal/modules/activities:capture_pending_counterparty": "the message-identity absorb re-points the archived echo's queued counterparty dispositions onto the surviving send, in the same transaction as the rest of the fold — a sibling call would have to write on this very transaction anyway, so routing it through capture would buy a hop and no isolation, while splitting the fold across two owners would let half of it survive a rollback",
-
-	// capture is the ONE connector.Sink (interfaces.md §1): one transaction
-	// per inbound record writes raw original + normalized domain row, so a
-	// crash can never keep evidence without the record or vice versa.
-	"internal/modules/capture:activity":             "the connector sink materializes the normalized activity in the same transaction as its raw_capture original",
-	"internal/modules/capture:activity_link":        "the connector sink links the materialized activity in the same ingest transaction",
-	"internal/modules/capture:activity_participant": "the connector principal is the ONLY place the mailbox owner is known (capture_connection is per-user-per-provider); by the time any other module sees the activity its captured_by reads connector:gmail and the human behind it is unrecoverable, so the participant rows commit in the same ingest transaction as the activity they describe",
-	"internal/modules/capture:lead":                 "the connector sink materializes inbound leads in the same transaction as their raw_capture original",
-
-	// deals' archive purges the archived deal's collection memberships in
-	// the same transaction — a dangling list/tag row would resurrect the
-	// deal in segment queries.
-	"internal/modules/deals:list_member":  "archiving a deal removes its list memberships in the archive transaction",
-	"internal/modules/deals:taggable":     "archiving a deal removes its tag rows in the archive transaction",
-	"internal/modules/deals:relationship": "archiving a deal archives its stakeholder relationships in the archive transaction — a live relationship to an archived deal would leak it into row-scope walks",
-	// The project's archive carries the same three, for the same reasons: the
-	// edges are attributes of the grouping being archived, and each must go in
-	// the SAME transaction or a reader sees a live edge to a record that no
-	// longer exists.
-	"internal/modules/projects:list_member":  "archiving a project removes its list memberships in the archive transaction",
-	"internal/modules/projects:taggable":     "archiving a project removes its tag rows in the archive transaction",
-	"internal/modules/projects:relationship": "archiving a project archives its stakeholder relationships in the archive transaction — a live relationship to an archived project would leak it into row-scope walks",
-
-	// privacy is the module whose JOB is crossing stores: a data-subject
-	// obligation (erasure Art. 17, retention ADR-0011) must reach every
-	// table holding the subject in ONE transaction per record — the
-	// sanctioned single-transaction exception; routing each purge
-	// through the owning module's API would trade the atomicity that IS
-	// the guarantee for boundary hygiene.
-	"internal/modules/privacy:person":                       "erasure/retention anonymize the person row in place in the single erasure transaction (Art. 17)",
-	"internal/modules/privacy:deal_room_participant":        "erasure anonymizes the subject's Deal Room seat in place — the one named outside person stored without a person row — in the single erasure transaction",
-	"internal/modules/privacy:deal_room_session":            "erasure deletes the erased subject's live room credentials in the same transaction: access they did not consent to keep must not outlive the request",
-	"internal/modules/privacy:deal_room_engagement":         "erasure deletes the erased subject's room activity trail (when they signed in, what they took) in the same transaction",
-	"internal/modules/privacy:person_email":                 "erasure deletes the subject's email channel rows in the single erasure transaction",
-	"internal/modules/privacy:preference_token":             "erasure deletes the subject's preference-center token in the single erasure transaction — it is a live capability over their consent record on a session-less edge, and anonymize-in-place means 0048's ON DELETE CASCADE never fires, so an erased subject would keep accruing consent rows through the capability the erasure certifies destroyed",
-	"internal/modules/privacy:consent_doi_token":            "erasure deletes the subject's double-opt-in token in the same transaction and for the same reason as the preference-center token beside it — a bearer secret in their mailbox whose only function is to authorise a grant, which anonymize-in-place would otherwise leave live for its full 72 hours after the erasure certified the data destroyed",
-	"internal/modules/privacy:activity_participant":         "erasure nulls the subject's person and address arms on the interaction participants in the single erasure transaction — the address arm exists precisely for a party who never became a record, so it survives the person_email purge and would keep the erased address readable and re-matchable; the ROW is kept where other participants remain, because the other people in that conversation are not the subject",
-	"internal/modules/identity:linkedin_connection":         "deactivation deletes the departing user's imported LinkedIn network in the single deactivation transaction — it is their private address book of third parties whose only tie to this installation was that person's employment, so it cannot outlive the employment; doing it here keeps it atomic with the session and passport revocation rather than leaving a window in which the account is gone and the address book is not",
-	"internal/modules/privacy:linkedin_connection":          "erasure deletes the subject's LinkedIn ghosts in the single erasure transaction — a ghost holds the subject's name, employer and address, imported from a colleague's export without the subject ever being asked, and it is invisible to every person-keyed clause because a ghost is not a person row",
-	"internal/modules/privacy:graph_interaction_edge":       "erasure drops the subject's interaction edges in the single erasure transaction rather than leaving it to the cg:graph-edge consumer — an Art. 17 obligation discharged by an event is one that fails silently when the bus is behind, and the projection holds who corresponded with the subject, how often and how recently",
-	"internal/modules/privacy:capture_pending_counterparty": "erasure drops the capture dispositions keyed on the subject's own address in the single erasure transaction — left behind, they would keep the erased address readable and still answering the capture gates",
-	"internal/modules/privacy:person_social":                "erasure and retention delete the subject's social-handle rows in the same anonymization transaction",
-	"internal/modules/privacy:voice_learning_signal":        "the nightly retention sweep erases over-age draft plaintext in place; the counters row survives (voice_draftread.go stamps the per-row deadline)",
-	"internal/modules/privacy:person_phone":                 "erasure deletes the subject's phone channel rows in the single erasure transaction",
-	"internal/modules/privacy:person_channel_identity":      "erasure and the retention anonymizer delete the subject's channel-identity rows in the single erasure/per-record transaction — the identity is the key an inbound message would re-bind them by, so it has to go in the same commit that hashes it onto the suppression list",
-	"internal/modules/privacy:lead":                         "erasure/retention anonymize the subject's segregated lead rows in the same transaction",
-	"internal/modules/privacy:lead_score_history":           "the score's explanation is about the subject: its factors embed the ids of activities they took part in, inside JSON no field-level scrub reaches, and the lead is ANONYMIZED rather than deleted so nothing cascades",
-	"internal/modules/privacy:lead_manual_signal":           "a manual scoring signal is a colleague's written judgement about the subject, carrying their name — it cannot outlive the record it judges, and the anonymize fires no cascade",
-	"internal/modules/privacy:activity":                     "retention archives/erases over-age timeline rows, and Art. 17 erasure redacts subject-only activity subject/body — or, for a Handelsbrief inside its statutory window, restricts the row and redacts its identifiers — in the single erasure/per-record transaction; the expiry sweep completes the suspended erasure when the window closes",
-	"internal/modules/privacy:activity_retention_evidence":  "Art. 17 erasure stamps a Handelsbrief captured before the stamp writer existed, and writes the evidence its restriction rests on, in the single erasure transaction — the guard refuses a restriction with no evidence behind it, and for a pre-stamp row the deal links the erasure reads are the only evidence there is",
-	"internal/modules/privacy:attachment":                   "Art. 17 erasure deletes attachments hung off the subject or a subject-only activity in the single erasure transaction",
-	"internal/modules/privacy:deal":                         "retention archives over-age lost deals per its audited per-record transaction",
-	"internal/modules/privacy:embedding":                    "erasure/retention purge the subject's vectors — a similarity probe must not reconstruct erased text",
-	"internal/modules/activities:embedding":                 "the ADR-0072 noise redaction drops the vectors built from the mail it just nulled, in the same transaction — an embedding of redacted text is that text in another shape, and leaving it would let a similarity probe reconstruct what the workspace decided not to retain. Same obligation as the privacy waiver above, at the other place content is destroyed; the embed lane cannot do it itself because it never observes an archived row",
-	"internal/modules/privacy:capture_trace":                "erasure deletes the subject's rows from the 24-hour capture trace in the single erasure transaction, beside raw_capture and ai_call_payload above. The trace's sweep bounds exposure to a day; it does not ANSWER a request made inside that day, and an erasure honoured everywhere except one diagnostic table is not honoured. Only the payload columns can name anybody, and only when the deployment enabled capture.trace_payloads — on the default posture this statement matches nothing, which is the correct amount of work for a table holding no identifiers. Exact equality rather than the ILIKE its neighbours use, because this column is written normalized and indexed",
-	"internal/modules/privacy:raw_capture":                  "erasure purges raw provider payloads carrying the subject's identifiers in the single erasure transaction",
-	"internal/modules/privacy:person_profile_field":         "Art. 17 and the retention sweep delete the subject's enrichment sidecar inside the single erasure transaction, beside field_provenance and ai_feedback: anonymize-in-place leaves the person row standing, so nothing cascades here, and the row holds the subject's title and employer with the verbatim sentence naming them",
-	"internal/modules/privacy:person_provider_claim":        "Art. 17 and the retention sweep delete what a licensed data provider asserted about the subject, inside the single erasure transaction and for the same reason person_profile_field is here: anonymize-in-place leaves the person row standing, so nothing cascades, and a claim IS the purchased value — a bought email and employer would otherwise sit on the page beside an \"Erased Subject\" name. Deleted rather than nulled, because a claim nulled in place is a row asserting something about a person nobody may now assert anything about",
-	"internal/modules/privacy:provider_run":                 "the same two paths scrub the runs that bought that data, using storekit.ScrubProviderRunColumns — the SAME six-column clause integrations' own delete-data action uses, shared precisely because the two drifted once and the erasure cleaned less than the settings toggle did. It is a scrub and not a delete on purpose: the row stops naming anybody while the spend it records survives, because what the installation paid is an accounting fact about the installation once it names no one (PI-AC-8), and that is what keeps a spend history stable across an erasure",
-	"internal/modules/people:provider_run":                  "the person merge relinks the merged-away record's runs onto the survivor, and must decide the collision between two live runs where the unique index admits only one. It happens inside the merge transaction because that is the only place both person ids and both sides' run states are known at once; integrations cannot see a merge and people cannot hand the decision over mid-transaction. The write touches person_id, state and input_fingerprint only — never a reservation, never a credit — and the rule it enforces is integrations' own: a run past `queued` may have been paid for, so it is re-fingerprinted out of the live-run index rather than cancelled, the same idiom markSkipped uses",
-	"internal/modules/privacy:ai_feedback":                  "Art. 17 deletes the subject's correction ledger inside the single erasure transaction, exactly as it does field_provenance beside it: the ledger holds a human-typed value ABOUT the subject, and a claim nobody may now assert anything about has nothing left to suppress",
-	"internal/modules/privacy:ai_call_payload":              "erasure purges captured AI payloads mentioning the subject's identifiers, and retention ages every payload out at 365d — the special-category-adjacent content, deleted in the single erasure/per-record transaction while the ai_call metadata row survives",
-	"internal/modules/privacy:ai_call":                      "retention erases embedding-kind ai_call trace rows past their fixed 90-day cap (spec §4) in the single erasure/per-record transaction — a fixed operational cap, not an admin-editable retention_policy row",
-	"internal/modules/consent:retention_policy":             "bootstrap plants the DM-SEED-1..6 defaults inside the workspace-creation transaction, beside the consent purposes it ships with, so a new installation is compliant before it serves a request. Boot-time only and one row per scope — the table's store, its RBAC gate and every runtime write live in privacy, which owns it",
-	"internal/modules/privacy:field_provenance":             "Art. 17 erasure deletes the subject's field-origin metadata in the single erasure transaction — provenance must not outlive the fields it annotates",
-	"internal/modules/privacy:scheduled_send":               "a message the rep chose to send later holds the subject's address, subject line and body BEFORE any activity exists, so the activity-keyed scrubs cannot reach it — Art. 17 empties the payload and cancels a pending one in the same transaction as the rest of the cascade, because a scheduled send that survived it would arrive the morning after the erasure certified the data destroyed",
-	"internal/modules/privacy:approval":                     "a staged approval holds a whole composed message — for a held draft (#707) an addressee, a subject line and a body — BEFORE any scheduled row or activity exists, so neither the activity-keyed scrubs nor the scheduled-send one can reach it. Art. 17 empties the proposal and EXPIRES a pending card in the same transaction as the rest of the cascade: a blanked card left decidable is one a colleague can still approve, which would run its effect with nobody named in it",
-	"internal/modules/privacy:transcript_read":              "a reading of a transcript is a record OF a body — how many lines it addressed, which proposals came out of them — so it cannot outlive that body, and both destructive engines delete it in the SAME transaction that nulls the body. Its own schema means it to go by cascade (core 0245), but neither engine ever DELETES an activity: Art. 17 redacts the row in place and retention nulls its content, both because a timeline row is other people's record too, so that cascade has never once fired. Routing it through activities would leave the transcript committed as a tombstone while a reading still answered questions about how long it was",
-	"internal/modules/privacy:workflow_run":                 "an automation run records what it planned and what it produced, which for a drafted email is the message itself — the greeting by name, the body. It is history rather than a record anybody addresses, so nothing is withdrawn here; the columns are emptied in the same transaction, because a run that outlived the erasure would keep a copy of the message the subject asked us to destroy",
-	"internal/modules/privacy:agent_run":                    "an agent run parks in awaiting_approval behind a staged approval and is only ever resumed by an approval.decided event. Erasure withdraws that approval without emitting one, so the run would wait forever holding the payload just destroyed — pending carries the staged call's arguments, which for a send is the recipient and the body. Ended here, in the same transaction as the withdrawal, for the reason workflow_run is",
-	"internal/modules/privacy:comms_outbound":               "the send log stores a second copy of an outbound message's recipients, subject and body, so Art. 17 erasure and the retention erase action scrub it in the SAME transaction that scrubs the activity it belongs to — routing it through comms would let the timeline row commit as a tombstone while the delivery still served the whole message",
-
-	// direct audit_log/event_outbox writers: these paths need columns
-	// storekit's writer does not carry.
-	"internal/modules/approvals:audit_log":    "approval evidence stamps passport_id/on_behalf_of, columns storekit's writer does not carry; same append-only table, this module's own writer",
-	"internal/modules/approvals:event_outbox": "approvals stages its events with the full envelope (passport actor fields) storekit.Emit does not carry; still outbox-only publishing",
-
-	// the non-production admin data-reset orchestration (compose, cross-module
-	// by nature — it sweeps every module's workspace_id tables in one
-	// transaction) must clear the workspace's staged events alongside the
-	// domain rows it just deleted: event_outbox has no workspace_id column
-	// (tenancy lives in the envelope) and no owning module's store call could
-	// scope a delete to "this workspace's queued events" without compose
-	// growing a dependency on every module it sweeps.
-	"internal/compose:event_outbox": "the reset orchestration clears this workspace's staged events in the same transaction as the domain sweep, so no relay ever wakes on an envelope pointing at a row the reset just deleted",
-
-	// identity owns login/failed-login, which land in system_log (a login
-	// mutates no record). They fire before/without an authenticated
-	// principal for storekit.LogSystem to stamp — bootstrap and failed
-	// logins have no session yet — so identity appends the append-only rows
-	// directly.
-	"internal/modules/identity:system_log": "login and failed-login land in system_log but fire before/without an authenticated principal for storekit.LogSystem to stamp; identity appends the append-only rows itself",
-})
-
 // sqlWriteTargets extracts write-statement table names from one SQL (or
 // SQL-carrying format) string. UPDATE requires a SET clause so prose and
 // `DO UPDATE SET`/`FOR UPDATE` never match; INSERT/DELETE are unambiguous.
@@ -674,6 +556,12 @@ func stringConstsByPackage(t *testing.T, fset *token.FileSet, roots []string) ma
 type tableWrite struct {
 	pos   string // file:line for the finding
 	table string
+	// site is the write's INSTANCE — "path/to/file.go:enclosingFunc" — and it
+	// is what a waiver ratifies. The enclosing FUNCTION rather than the line:
+	// a line moves whenever anything above it does, so a line-keyed waiver
+	// goes stale on edits that never touched the write, and a map that is
+	// re-typed on unrelated diffs stops being read.
+	site string
 }
 
 // indirectTableArg ratifies the storekit call sites whose table arrives through
@@ -730,31 +618,44 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 			}
 			dir := filepath.ToSlash(filepath.Dir(path))
 			owner := owningDir(dir)
+			// enclosing is the declaration the walk is currently inside. Set
+			// per top-level declaration below rather than tracked during the
+			// walk: ast.Inspect is flat, and a stack maintained by hand here
+			// would be a second traversal to keep correct.
+			enclosing := unnamedDeclSite
 			record := func(pos token.Pos, tables []string) {
 				for _, table := range tables {
-					writes[owner] = append(writes[owner], tableWrite{pos: fset.Position(pos).String(), table: table})
+					writes[owner] = append(writes[owner], tableWrite{
+						pos:   fset.Position(pos).String(),
+						table: table,
+						// Relative to the owner, which the key already names:
+						// the absolute path would repeat that prefix in every
+						// entry and push the part a reader is actually
+						// comparing off the end of the line.
+						site: strings.TrimPrefix(path, owner+"/") + ":" + enclosing,
+					})
 				}
 			}
-			ast.Inspect(file, func(n ast.Node) bool {
+			visit := func(n ast.Node) {
 				switch node := n.(type) {
 				case *ast.BasicLit:
 					if node.Kind != token.STRING {
-						return true
+						return
 					}
 					text, err := strconv.Unquote(node.Value)
 					if err != nil {
-						return true
+						return
 					}
 					record(node.Pos(), sqlWriteTargets(text))
 				case *ast.CallExpr:
 					sel, ok := node.Fun.(*ast.SelectorExpr)
 					if !ok || !storekitTableArg[sel.Sel.Name] || len(node.Args) < 4 {
-						return true
+						return
 					}
 					table, ok := tableArgText(node.Args[2], consts[dir])
 					if !ok {
 						if indirectTableArg.Waived(t, owner+":"+exprText(fset, node.Args[2])) {
-							return true
+							return
 						}
 						// A table this walker cannot read is a table it cannot
 						// attribute, and a skip here reads exactly like a module
@@ -764,12 +665,15 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 							"name the table in a string literal or a package-level string constant, "+
 							"or the write is attributed to no owner at all",
 							fset.Position(node.Pos()), exprText(fset, sel.X), sel.Sel.Name)
-						return true
+						return
 					}
 					record(node.Pos(), []string{strings.ToLower(table)})
 					storekitWrites++
 				}
-				return true
+			}
+			walkDeclSites(fset, file, func(site string, n ast.Node) {
+				enclosing = site
+				visit(n)
 			})
 			return nil
 		})
@@ -788,29 +692,202 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 // not trip it; it catches the arm going to zero, not a write being deleted.
 const storekitWriteFloor = 25
 
-func TestEveryPackageOnlyWritesTablesItOwns(t *testing.T) {
-	defer crossStoreWrites.AssertAllMatched(t)
-	defer indirectTableArg.AssertAllMatched(t)
+// waiverKey is the subject crossStoreWrites ratifies: the writing package, the
+// table it reaches into, and the INSTANCE that reaches it.
+//
+// The declaration is the point. Keyed on owner and table alone, one entry
+// ratifies the CATEGORY — "people may write activity_link" — and a second,
+// differently written copy of that write inside the same package is admitted by
+// the entry the first one earned, with no finding to notice. A cross-store
+// write is ratified on its own evidence or it is not ratified.
+func waiverKey(owner string, w tableWrite) string {
+	return owner + ":" + w.table + ":" + w.site
+}
 
-	writes := collectTableWrites(t)
-
-	for owner, ws := range writes {
-		for _, w := range ws {
+// unratifiedCrossStoreWrites returns one finding per write that reaches a table
+// its package does not own and that no waiver ratifies.
+//
+// It RETURNS the findings rather than reporting them, so the gate's decision can
+// be exercised against synthetic writes without failing the test that exercises
+// it, and it takes the waiver set rather than reaching for the package-level one
+// so such a test can pass a throwaway copy. Querying the real set MARKS entries
+// matched, and gatekit accumulates that across every test in the package — a
+// probe that consulted it would silently satisfy AssertAllMatched for the entry
+// it named, which is the one staleness a stale-waiver gate exists to report. A gate whose only input is the tree it happens to be checked out over can
+// be tested for what it accepts today and never for what it would refuse — and
+// refusing is the half that has to keep working.
+func unratifiedCrossStoreWrites(t testing.TB, waivers *gatekit.Waivers[string], writes map[string][]tableWrite) []string {
+	t.Helper()
+	owners := slices.Sorted(maps.Keys(writes))
+	var findings []string
+	for _, owner := range owners {
+		for _, w := range writes[owner] {
 			declared, known := tableOwners[w.table]
 			if !known {
-				t.Errorf("%s: %s writes table %q which has no declared owner — add it to tableOwners in %s",
-					w.pos, owner, w.table, "backend/tableownership_test.go")
+				findings = append(findings, fmt.Sprintf(
+					"%s: %s writes table %q which has no declared owner — add it to tableOwners in backend/tableownership_test.go",
+					w.pos, owner, w.table,
+				))
 				continue
 			}
 			if declared == owner {
 				continue
 			}
-			key := owner + ":" + w.table
-			if crossStoreWrites.Waived(t, key) {
+			key := waiverKey(owner, w)
+			if waivers.Waived(t, key) {
 				continue
 			}
-			t.Errorf("%s: %s writes table %q owned by %s — move the write into the owning module, or ratify it in crossStoreWrites[%q] with a self-contained rationale",
-				w.pos, owner, w.table, declared, key)
+			findings = append(findings, fmt.Sprintf(
+				"%s: %s writes table %q owned by %s — move the write into the owning module, or ratify THIS write in crossStoreWrites[%q] with a self-contained rationale. "+
+					"A waiver a sibling write in the same package already holds does not cover this one: the key names the function, so every copy is ratified on its own evidence",
+				w.pos, owner, w.table, declared, key,
+			))
 		}
 	}
+	return findings
+}
+
+func TestEveryPackageOnlyWritesTablesItOwns(t *testing.T) {
+	defer crossStoreWrites.AssertAllMatched(t)
+	defer indirectTableArg.AssertAllMatched(t)
+
+	for _, finding := range unratifiedCrossStoreWrites(t, crossStoreWrites, collectTableWrites(t)) {
+		t.Error(finding)
+	}
+}
+
+// TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst is this gate's own
+// defect case, and it is why the key names a declaration rather than a package
+// and a table.
+//
+// Keyed on package and table alone, a waiver ratifies the CATEGORY, and a
+// second, differently written copy of the same cross-store write is admitted by
+// the entry the first one earned — silently, because a key that already exists
+// produces no finding to notice.
+//
+// The waiver set is a throwaway rather than crossStoreWrites: querying the real
+// one marks its entries matched for the whole package, which would quietly
+// satisfy the staleness sweep for whichever entry this case names.
+func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
+	const (
+		owner = "internal/modules/people"
+		table = "activity_link"
+		first = "ensure.go:Store.linkActivityToPerson"
+	)
+	ratified := tableWrite{pos: "internal/modules/people/ensure.go:1:1", table: table, site: first}
+	// Same package, same table, a different declaration.
+	planted := tableWrite{
+		pos:   "internal/modules/people/planted.go:1:1",
+		table: table,
+		site:  "planted.go:aSecondWriterOfARatifiedTable",
+	}
+
+	// The plant only tests coverage if it is a write the tree really ratifies
+	// and really does not own; both halves can drift out from under it.
+	declared, known := tableOwners[table]
+	if !known || declared == owner {
+		t.Fatalf("%s is no longer a table %s writes without owning, so this case plants nothing", table, owner)
+	}
+	if !slices.Contains(crossStoreWrites.Subjects(), waiverKey(owner, ratified)) {
+		t.Fatalf("crossStoreWrites no longer ratifies %s — repoint this case at a live waiver",
+			waiverKey(owner, ratified))
+	}
+	// And the two must differ ONLY in the part the key added, or the case would
+	// pass on a distinction the superseded key already drew.
+	if owner+":"+ratified.table != owner+":"+planted.table {
+		t.Fatalf("the plant differs from the ratified write in package or table, so a key naming " +
+			"neither would already separate them and this case proves nothing about the declaration")
+	}
+
+	waivers := gatekit.Waive(map[string]string{
+		waiverKey(owner, ratified): "the write this case treats as already ratified",
+	})
+
+	t.Run("the second copy is refused", func(t *testing.T) {
+		findings := unratifiedCrossStoreWrites(t, waivers, map[string][]tableWrite{owner: {planted}})
+		if len(findings) != 1 {
+			t.Fatalf("planted one unratified write, got %d findings: %v", len(findings), findings)
+		}
+		// Named, not merely counted: a finding about some other write would
+		// satisfy a bare count while the planted copy went through.
+		if !strings.Contains(findings[0], planted.site) {
+			t.Errorf("the finding does not name the planted write %q, so this case cannot tell that the "+
+				"planted copy was the one refused:\n%s", planted.site, findings[0])
+		}
+	})
+
+	t.Run("the ratified copy still passes", func(t *testing.T) {
+		// The other direction. A gate that refused the planted write by
+		// refusing every write would pass the subtest above and fail every
+		// ratified write in the tree on the next push.
+		if findings := unratifiedCrossStoreWrites(t, waivers, map[string][]tableWrite{owner: {ratified}}); len(findings) != 0 {
+			t.Errorf("the ratified write is no longer covered by its own waiver: %v", findings)
+		}
+	})
+
+	t.Run("two same-named methods on different receivers are two sites", func(t *testing.T) {
+		// This tree writes two workers into one file as a matter of course, and
+		// a bare method name would collapse both onto one site — the category
+		// ratification above, one level down.
+		const src = `package p
+
+type aWorker struct{}
+type aWorkspaceWorker struct{}
+
+func (w *aWorker) Work() {}
+func (w *aWorkspaceWorker) Work() {}
+`
+		// The type declarations are in the fixture only so the methods have
+		// receivers; the sites under test are the two Work methods.
+		sites := methodSitesOf(t, "jobs.go", src)
+		if len(sites) != 2 {
+			t.Fatalf("the fixture no longer declares exactly two methods: %v", sites)
+		}
+		if sites[0] == sites[1] {
+			t.Errorf("both methods name the site %q, so one waiver would ratify both writes — "+
+				"the receiver has stopped reaching the key", sites[0])
+		}
+	})
+
+	t.Run("two package-level statements in one file are two sites", func(t *testing.T) {
+		// GROUPED, which is the shape a per-declaration answer gets wrong:
+		// `const (...)` is ONE declaration holding two statements. Separate
+		// `const` statements are two declarations and pass either way, so a
+		// fixture written that way exercises the walk only where it was
+		// already right.
+		const src = `package p
+
+const (
+	blankOne  = ` + "`UPDATE t SET a = NULL`" + `
+	deleteOne = ` + "`DELETE FROM t`" + `
+)
+`
+		sites := literalSitesOf(t, "statements.go", src)
+		if len(sites) != 2 {
+			t.Fatalf("the fixture no longer declares exactly two statements: %v", sites)
+		}
+		if sites[0] == sites[1] {
+			t.Errorf("both statements name the site %q, so one waiver would ratify both — the walk "+
+				"is answering a grouped block per declaration rather than per statement", sites[0])
+		}
+	})
+
+	t.Run("two statements bound by one spec are two sites", func(t *testing.T) {
+		// ONE ValueSpec binding two names. The grouped-block arm above answers
+		// per spec, which is still one answer for both statements here — the
+		// same collapse a third level in, and the reason the walk pairs values
+		// with names rather than stopping at the spec.
+		const src = `package p
+
+const blankOne, deleteOne = ` + "`UPDATE t SET a = NULL`" + `, ` + "`DELETE FROM t`" + `
+`
+		sites := literalSitesOf(t, "onespec.go", src)
+		if len(sites) != 2 {
+			t.Fatalf("the fixture no longer binds exactly two statements: %v", sites)
+		}
+		if sites[0] == sites[1] {
+			t.Errorf("both statements name the site %q, so one waiver would ratify both — the walk "+
+				"is answering one spec per spec rather than per value bound in it", sites[0])
+		}
+	})
 }

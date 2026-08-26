@@ -3,8 +3,18 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { type QueryLike, throwProblem } from "./common";
 
-// The approvals query-hook family, split out of inbox.tsx (which had grown
-// past ~690 lines). The Decided view is an Option-1 client-side partition:
+// The approvals query-hook family.
+//
+// TWO names, and which one belongs where is the whole rule: the surface a reader
+// meets is **Decisions** — that is the panel title, and every `decision.*` copy
+// key — and the thing on the wire is an **approval**, which is what `crm.yaml`
+// calls it and therefore what this file, its hooks and its types are named for.
+// Nothing is called an inbox, a drafts queue or a staged list: those were three
+// more names for one surface, and a reader who is told four names for one thing
+// has been told none. This file was `inbox.queries.ts` and was the last of them
+// in the tree.
+//
+// The Decided view is an Option-1 client-side partition:
 // the listApprovals contract only accepts status ∈ {pending, approved,
 // rejected} (crm.yaml enum), and the server computes expiry LAZILY at read
 // time (approvals/inbox.go effectiveStatus) — a pending row past its expiry
@@ -138,8 +148,8 @@ export function useDecidedApprovals(enabled = true): QueryLike<ApprovalPage> {
 // What is staged against ONE record. A record page showing its own queue must
 // read the queue itself: the composite 360 carries a capped first page of
 // approvals for the count, and deciding through that page would leave the rest
-// reachable only through the workspace-wide inbox, which is not the queue the
-// reader was working.
+// reachable only through the workspace-wide Decisions surface, which is not the
+// queue the reader was working.
 export function useTargetApprovals(
   entityType: string,
   entityId: string,

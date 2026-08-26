@@ -37,8 +37,9 @@ const (
 const defaultEmbedDimensions = 1536
 
 // maxEmbedDimensions bounds an operator-set `dimensions` from above (spec
-// ai-operational-spec.md §1.4); config/ai-routing.schema.json's generated
-// embeddingsBinding $def carries the same bound.
+// ai-operational-spec.md §1.4); the routing shape under $defs in
+// config/margince.schema.json carries the same bound on its
+// embeddingsBinding, so an editor refuses what the parser would.
 const maxEmbedDimensions = 2000
 
 // EmbeddingsConfig is the embeddings-lane binding: the shared ProviderConfig
@@ -319,6 +320,18 @@ func (cfg RoutingConfig) validate() error {
 			return err
 		}
 	}
+	// AFTER the sovereign check, matching ValidateTierBinding's order. A
+	// sovereign profile forbids openai_compatible outright, so reporting a
+	// missing host first would answer a question the reader does not have and
+	// send them to fill in a field on a binding that is refused either way.
+	//
+	// The rule itself is the chat tiers': SelectBrain builds this lane's client
+	// too, and refuses openai_compatible without a host.
+	if cfg.Embeddings.Provider == providerOpenAICompatible && strings.TrimSpace(cfg.Embeddings.BaseURL) == "" {
+		return fmt.Errorf("ai: routing config: the embeddings lane binds openai_compatible with no base_url: " +
+			"give it the vendor host root, with no version segment (the adapter adds /v1), " +
+			"e.g. https://openrouter.ai/api")
+	}
 	return nil
 }
 
@@ -365,6 +378,18 @@ func ValidateTierBinding(profile Profile, tier Tier, binding ProviderConfig) err
 		if err := requireSovereignEndpoint(fmt.Sprintf("tier %s", tier), binding.Provider, binding.BaseURL); err != nil {
 			return err
 		}
+	}
+	// An OpenAI-wire host has no default to fall back on, so a binding without
+	// one cannot be SERVED — SelectBrain refuses to build the client. Refused
+	// HERE, at the write, rather than there, at the rebind: accepted at the door
+	// it saves cleanly, the caller is told it worked, and the running role then
+	// declines to adopt it and goes on serving the binding it already had. The
+	// operator sees "saved" and no change, with the reason in a log they are not
+	// reading.
+	if binding.Provider == providerOpenAICompatible && strings.TrimSpace(binding.BaseURL) == "" {
+		return fmt.Errorf("ai: routing config: tier %s binds openai_compatible with no base_url: "+
+			"give it the vendor host root, with no version segment (the adapter adds /v1), "+
+			"e.g. https://openrouter.ai/api", tier)
 	}
 	return validateInput(fmt.Sprintf("tier %s", tier), binding.Input)
 }

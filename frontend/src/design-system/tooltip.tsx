@@ -130,7 +130,12 @@ function clipped(element: HTMLElement | null): boolean {
   return element !== null && element.scrollWidth > element.clientWidth;
 }
 
-type TruncationTooltip<T extends HTMLElement> = Readonly<{
+/** A control's own name is always worth showing: it is not on screen at all. */
+function always(): boolean {
+  return true;
+}
+
+type Tooltip<T extends HTMLElement> = Readonly<{
   /** Goes on the element that truncates. */
   ref: RefObject<T | null>;
   /** Spread onto the same element: what opens, closes and describes the tip. */
@@ -146,6 +151,8 @@ type TruncationTooltip<T extends HTMLElement> = Readonly<{
   /** Render inside the same element; it portals to the body regardless. */
   tip: ReactNode;
 }>;
+
+export type { Tooltip };
 
 /**
  * Reveal, on hover or focus, a string that its own row had to truncate.
@@ -167,7 +174,41 @@ type TruncationTooltip<T extends HTMLElement> = Readonly<{
  */
 export function useTruncationTooltip<T extends HTMLElement = HTMLElement>(
   text: string,
-): TruncationTooltip<T> {
+): Tooltip<T> {
+  return useTip<T>(text, clipped, true);
+}
+
+/**
+ * A control's name, on hover and on focus, for a control that cannot draw it.
+ *
+ * The icon-only button is the case: `aria-label` carries the name to a screen
+ * reader, and without this a sighted reader is left to recognise a glyph. Same
+ * machinery as `useTruncationTooltip` above — the two differ only in WHEN the
+ * tip is worth showing, and in whether the anchor needs a tab stop, which a
+ * button already has.
+ *
+ * `aria-describedby`, never the name: the control owns its name already, and a
+ * tip that repeated it would make the control announce itself twice.
+ */
+export function useTooltip<T extends HTMLElement = HTMLElement>(
+  text: string,
+): Tooltip<T> {
+  return useTip<T>(text, always, false);
+}
+
+/**
+ * The tip itself: what opens it, what closes it, and where it is drawn.
+ *
+ * `worthShowing` is asked at the moment of hover rather than at render, because
+ * the same string is clipped at one window width and whole at the next and no
+ * render happens in between. `earnsTabStop` says whether the anchor needs a tab
+ * stop of its own — a truncated heading does, and a button already has one.
+ */
+function useTip<T extends HTMLElement>(
+  text: string,
+  worthShowing: (anchor: T | null) => boolean,
+  earnsTabStop: boolean,
+): Tooltip<T> {
   const anchor = useRef<T | null>(null);
   const box = useRef<HTMLDivElement | null>(null);
   const [open, setOpen] = useState(false);
@@ -184,20 +225,25 @@ export function useTruncationTooltip<T extends HTMLElement = HTMLElement>(
   // narrowed, a sibling badge that appeared — and re-reading it is one property
   // read. Setting the same answer twice is a no-op, so this cannot loop.
   useLayoutEffect(() => {
-    setReachable(clipped(anchor.current));
+    if (earnsTabStop) {
+      setReachable(worthShowing(anchor.current));
+    }
   });
 
   useEffect(() => {
-    const measure = () => setReachable(clipped(anchor.current));
+    if (!earnsTabStop) {
+      return;
+    }
+    const measure = () => setReachable(worthShowing(anchor.current));
     globalThis.addEventListener("resize", measure);
     return () => globalThis.removeEventListener("resize", measure);
-  }, []);
+  }, [earnsTabStop, worthShowing]);
 
   const reveal = useCallback(() => {
-    const isClipped = clipped(anchor.current);
-    setReachable(isClipped);
-    setOpen(isClipped);
-  }, []);
+    const worth = worthShowing(anchor.current);
+    setReachable(worth);
+    setOpen(worth);
+  }, [worthShowing]);
 
   return {
     ref: anchor,
@@ -206,7 +252,7 @@ export function useTruncationTooltip<T extends HTMLElement = HTMLElement>(
       // A truncated string is the one case where a heading or a label earns a
       // tab stop: without it the whole of it is reachable by pointer only.
       // Untruncated, it earns nothing and takes none.
-      tabIndex: reachable ? 0 : undefined,
+      tabIndex: earnsTabStop && reachable ? 0 : undefined,
       onPointerEnter: reveal,
       onPointerLeave: close,
       onFocus: reveal,

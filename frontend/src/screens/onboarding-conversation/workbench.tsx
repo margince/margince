@@ -10,7 +10,7 @@ import {
   type WorkbenchStep,
 } from "../../design-system/margince-workbench";
 import { ordinalNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePlural, useT } from "../../i18n";
 import { throwProblem, useMe } from "../common";
 import {
   configuredModelLabel,
@@ -51,6 +51,7 @@ export function useConfiguredModel(): string {
 // can never name a different configuration.
 function useConfiguredModelSummary(): string {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const profile = useQuery({
     queryKey: ["ai-profile"],
@@ -67,6 +68,7 @@ function useConfiguredModelSummary(): string {
     profile.data,
     t("ob.ai.runtimeUnavailable"),
     t,
+    plural,
     locale,
   );
 }

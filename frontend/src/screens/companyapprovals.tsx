@@ -6,7 +6,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
 import { ApprovalRow, useDecisionSink } from "./approvalrow";
-import { useTargetApprovals } from "./inbox.queries";
+import { useTargetApprovals } from "./approvals.queries";
 
 // What is waiting on a decision FOR THIS ACCOUNT, where the account is being
 // read. The count alone ("27 decisions waiting") told a reader that something

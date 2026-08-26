@@ -38,7 +38,7 @@ vendors:
   # shapes conform to the contract schema.
   kinopenapi: { in: github.com/getkin/** }
   # the JSON Schema validator: airoutingschema_test.go runs the GENERATED
-  # config/ai-routing.schema.json against the same acceptance matrix the parser
+  # the routing shape in config/margince.schema.json against the same acceptance matrix the parser
   # enforces, so the editor's answer and the runtime's cannot drift apart.
   jsonschema: { in: github.com/santhosh-tekuri/** }
   river:  { in: github.com/riverqueue/** }

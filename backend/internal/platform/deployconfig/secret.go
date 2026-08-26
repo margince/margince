@@ -56,7 +56,38 @@ const (
 )
 
 // secretRef matches the two accepted forms and captures which and what.
-var secretRef = regexp.MustCompile(`^\$\{(env|file):([^}]+)\}$`)
+// SecretRefPattern is the shape a secret reference must have.
+//
+// Exported so the margince.yaml schema can carry the same pattern an editor
+// checks against, without writing the regex a second time — a schema that
+// accepted what the loader refuses would let an operator paste a literal
+// secret, see no complaint, and find out at boot.
+//
+// SecretRefPattern is what an EDITOR should accept for a secret field, which is
+// not quite what the parser below matches.
+//
+// Two spellings on purpose, and the difference is the point. `secretRef` is
+// deliberately loose: it matches `${env:   }` so UnmarshalYAML can trim, notice
+// the argument names nothing, and say exactly that. Tightening it would push
+// that input into the "holds a literal secret" branch, which tells an operator
+// to rotate a credential they never wrote.
+//
+// This pattern is what the loader accepts END TO END, which is what an editor
+// has to be checking: a reference whose argument holds at least one real
+// character, or a blank scalar, which Unmarshal reads as "no source named".
+// Outer whitespace is allowed because Unmarshal trims the WHOLE scalar before
+// it matches anything — so ` ${env:NAME} ` and `   ` are both values it takes,
+// and an anchored pattern that forgot the trim flagged valid yaml.
+// TestTheSecretPatternAcceptsWhatTheLoaderAccepts holds the two together in
+// both directions.
+//
+//nolint:gosec // G101: a regex describing the SHAPE of a reference, not a credential — it is precisely what refuses one
+const SecretRefPattern = `^\s*$|^\s*\$\{(env|file):[^}]*[^}\s][^}]*\}\s*$`
+
+//nolint:gosec // G101: as above — the parser's looser shape, so its refusals can be specific
+const secretRefPattern = `^\$\{(env|file):([^}]+)\}$`
+
+var secretRef = regexp.MustCompile(secretRefPattern)
 
 // Secret is a reference to a value held somewhere else.
 //

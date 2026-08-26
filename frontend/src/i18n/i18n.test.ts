@@ -30,6 +30,19 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",
+  // Google's own field names. An admin reads these off the Google Cloud
+  // console, which shows them in English whatever the reader's locale, so
+  // translating them here would have the form ask for something the page they
+  // are copying from does not call by that name. The placeholder is an id
+  // SHAPE rather than prose and is the same string everywhere.
+  "firstRun.google.clientId",
+  "firstRun.google.clientSecret",
+  "firstRun.google.clientIdPlaceholder",
+  // "Embeddings" is the vocabulary of the routing document itself, which this
+  // form renders raw beside `premium` and `gemini`. The host placeholder is a
+  // URL, which is the same string in every language.
+  "aiRouting.embeddings.label",
+  "aiRouting.baseUrl.placeholder",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
@@ -39,6 +52,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "room.create.defaultTitle",
   "buyer.poweredBy",
   "buyer.poweredByMargince",
+  // TEMPORARY, with the release marker it labels (app/shell.tsx): "Alpha" is
+  // the release stage's own name and Vietnamese keeps it, the same way it keeps
+  // "Email" and "pipeline". Delete this entry with the marker.
+  "shell.alpha",
   // A placeholder and a percent sign. Vietnamese writes a percentage the way
   // English does — digits then the sign, no space — so the value is identical by
   // agreement rather than by omission. German differs (it takes the space) and
@@ -414,13 +431,61 @@ function renderedStems(): string[] {
   return [...stems];
 }
 
+/**
+ * The plural bases this catalog carries: every key with an `_one` arm whose
+ * `_other` arm is here too.
+ *
+ * A plural base is a key stem like any other, reached the same way a template
+ * stem is — `plural("share.teamMembers", n)` renders `share.teamMembers_one` or
+ * `_other` and writes neither in full. Without this, every arm of every plural
+ * pair reads as an orphan and this gate tells the next person to delete
+ * ninety-four strings the product is displaying.
+ *
+ * DERIVED from the catalog rather than listed, and derived from the PAIR rather
+ * than from a suffix: `x_one` alone vouches for nothing, because half a
+ * translated pair is the orphan this check exists to find.
+ */
+function pluralBases(): Set<string> {
+  const keys = new Set(Object.keys(en));
+  const bases = new Set<string>();
+  for (const key of keys) {
+    const base = key.endsWith("_one") ? key.slice(0, -"_one".length) : null;
+    if (base !== null && keys.has(`${base}_other`)) {
+      bases.add(base);
+    }
+  }
+  return bases;
+}
+
 describe("catalog keys against the surfaces that render them", () => {
   it("every key is rendered by a source file, literally or under a stem", () => {
     const literals = renderedLiterals();
     const stems = renderedStems();
+    const bases = pluralBases();
+    // An arm is rendered when its BASE is: the call site names the base and the
+    // reader's own plural rule picks the arm, so the arm's full key never
+    // appears in source at all.
+    //
+    // Only the two ARMS get this, not any key whose last underscore happens to
+    // follow a plural base. Cutting at the last `_` exempted
+    // `<renderedBase>_anythingElse` as well, which is a hole in exactly the
+    // direction that matters: this gate's job is to find a key nothing renders,
+    // and an exemption that reaches further than the convention it models makes
+    // it report PASS over one.
+    const arms: readonly ["_one", "_other"] = ["_one", "_other"];
+    const underPluralBase = (key: string): boolean => {
+      const arm = arms.find((suffix) => key.endsWith(suffix));
+      if (arm === undefined) {
+        return false;
+      }
+      const base = key.slice(0, -arm.length);
+      return bases.has(base) && literals.has(base);
+    };
     const orphans = Object.keys(en).filter(
       (key) =>
-        !literals.has(key) && !stems.some((stem) => key.startsWith(stem)),
+        !literals.has(key) &&
+        !underPluralBase(key) &&
+        !stems.some((stem) => key.startsWith(stem)),
     );
     expect(
       orphans,

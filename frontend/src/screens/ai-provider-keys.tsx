@@ -46,7 +46,11 @@ function useProviderKeys(enabled: boolean) {
   });
 }
 
-function useSetProviderKey() {
+// Exported for onboarding's AI step, which writes the same credential through
+// the same endpoint. A second mutation there would be a second set of rules
+// about how long a key lives in memory, and the ones below are not obvious
+// enough to expect anybody to rediscover them.
+export function useSetProviderKey() {
   const queryClient = useQueryClient();
   return useMutation({
     // Collected the moment nothing observes it, because what this mutation's

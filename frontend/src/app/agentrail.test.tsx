@@ -16,7 +16,7 @@ import {
   waitFor,
 } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import type { ReactNode, RefObject } from "react";
 import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
@@ -26,6 +26,7 @@ import { AgentRail } from "./agentrail";
 import { LABELS, REVIEW_ONLY, TASK_SAID, VOCABULARY } from "./agentrail-copy";
 import { type GrantSpec, meFixture } from "./mefixture";
 import type { Route } from "./router";
+import { stubPhoneViewport } from "./testing/shellharness";
 
 // The agent section at the foot of the workspace rail reads every one of its
 // facts off the wire (approvals, connectors, dedupe, AI posture, licence
@@ -255,7 +256,11 @@ function PendingWrite() {
 
 function render(
   route: Route,
-  options: Readonly<{ client?: QueryClient; children?: ReactNode }> = {},
+  options: Readonly<{
+    client?: QueryClient;
+    children?: ReactNode;
+    bar?: RefObject<HTMLElement | null>;
+  }> = {},
 ) {
   const client =
     options.client ??
@@ -266,7 +271,7 @@ function render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
         {options.children}
-        <AgentRail route={route} />
+        <AgentRail route={route} bar={options.bar} />
       </LocaleProvider>
     </QueryClientProvider>,
   );
@@ -319,6 +324,10 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
   vi.unstubAllEnvs();
+  // The frame case spies on Element.prototype.getBoundingClientRect, which every
+  // later case in this file shares. Restored here rather than there: a spy left
+  // on a prototype is the kind of leak whose failure names a case that is fine.
+  vi.restoreAllMocks();
   vi.useRealTimers();
 });
 
@@ -623,6 +632,74 @@ describe("AgentRail", () => {
       ).toBeNull(),
     );
     expect(container.querySelector(".arbadge")).toBeNull();
+  });
+
+  // Where the panel is measured from at phone width, what it spans, and what
+  // points at it.
+  //
+  // There it stands OVER its anchor rather than beside it, and the anchor is the
+  // round well the orb sits in — which rises clear of the bar's top edge. Take
+  // the measurement from the CELL behind that well and the panel opens across
+  // the orb it belongs to; take the notch's x from the middle of the SCREEN and
+  // it stops pointing at the thing that was pressed the moment the bar's cells
+  // stop being even. Both come off the same measured box, and this is the case
+  // that says so: the well and the cell are deliberately given different boxes,
+  // and every number below is the well's.
+  it("spans the bar and measures the phone panel from the well the orb sits in", async () => {
+    const user = userEvent.setup();
+    stubPhoneViewport();
+    stubAgentRailApi();
+    // Real DOMRects rather than object literals cast into the shape: a rect
+    // whose `top` was supplied and whose `bottom` was not is a box no element
+    // has, and the derived fields would then be whatever the literal happened to
+    // spell. The well stands 16px clear of the cell behind it, which is the one
+    // difference every assertion below turns on.
+    const well = new DOMRect(167, 700, 56, 56);
+    const cell = new DOMRect(151, 716, 88, 48);
+    const rail = new DOMRect(12, 716, 366, 58);
+    const nowhere = new DOMRect(0, 0, 0, 0);
+    const boxFor = (element: Element) => {
+      if (element.classList.contains("arhit")) {
+        return well;
+      }
+      if (element.classList.contains("arblock")) {
+        return cell;
+      }
+      return element.classList.contains("rail") ? rail : nowhere;
+    };
+    vi.spyOn(Element.prototype, "getBoundingClientRect").mockImplementation(
+      function (this: Element) {
+        return boxFor(this);
+      },
+    );
+    const bar = document.createElement("nav");
+    bar.className = "rail";
+    const { container } = render(ROUTE, { bar: { current: bar } });
+
+    await openPanel(user, container);
+    const loose = panel();
+    const surface = loose.querySelector<HTMLElement>(".arpanel");
+    // 8px of air over the WELL's top edge, not over the cell 16px below it.
+    expect(surface?.style.bottom).toBe(`${globalThis.innerHeight - 700 + 8}px`);
+    // The bar's own span, edge to edge: the panel and the bar are one object,
+    // and a panel inset by a margin of its own reads as a sheet that happened to
+    // arrive over it.
+    expect(surface?.style.left).toBe("12px");
+    expect(surface?.style.right).toBe(`${globalThis.innerWidth - 378}px`);
+    // The well's own middle: 167 + 56 / 2.
+    expect(loose.getAttribute("style")).toContain("--arCaretX: 195px");
+  });
+
+  // Beside the card on a sidebar, and nothing pointing at anything: the panel
+  // and the block it came from are side by side and a notch would have no gap to
+  // cross. The variable is absent rather than set to a value the sheet ignores.
+  it("carries no notch on the sidebar", async () => {
+    const user = userEvent.setup();
+    stubAgentRailApi();
+    const { container } = render(ROUTE);
+
+    await openPanel(user, container);
+    expect(panel().getAttribute("style")).not.toContain("--arCaretX");
   });
 
   it("opens the panel on a click of the section and flips its expanded state", async () => {
