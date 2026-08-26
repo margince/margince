@@ -203,18 +203,33 @@ func counterpartFor(c *client, act demoActivity, orgID string) (string, error) {
 		}
 		return staff[0], nil
 	}
+	// Every match, not the first. staffBySeniority orders by title, so taking
+	// the first would hand the activity to the more SENIOR of two colleagues
+	// who share a name — silently, and that is the same wrong-person link this
+	// function exists to stop. Two people called "Alex Kim" at one account is
+	// a question the dataset has to answer, not one to guess at.
+	var matched []string
 	for _, personID := range staff {
 		name, err := personName(c, personID)
 		if err != nil {
 			return "", err
 		}
 		if strings.EqualFold(strings.TrimSpace(name), strings.TrimSpace(act.Person)) {
-			return personID, nil
+			matched = append(matched, personID)
 		}
 	}
-	return "", fmt.Errorf(
-		"activity on %s names person %q, who is not employed there — the body's sign-off and the dataset have to agree",
-		act.Company, act.Person)
+	switch len(matched) {
+	case 1:
+		return matched[0], nil
+	case 0:
+		return "", fmt.Errorf(
+			"activity on %s names person %q, who is not employed there — the body's sign-off and the dataset have to agree",
+			act.Company, act.Person)
+	default:
+		return "", fmt.Errorf(
+			"activity on %s names person %q, and %d people there answer to it — the dataset cannot say which, so it must not guess",
+			act.Company, act.Person, len(matched))
+	}
 }
 
 // personNames caches a person's name for the run.
