@@ -91,6 +91,20 @@ const (
 // JSON-schema drift test. Add a provider here when you add its case.
 var knownProviders = []string{ProviderFake, providerAnthropic, providerOllama, providerVLLM, providerOpenAICompatible, providerOpenAI, providerGemini}
 
+// KnownProviders lists the adapter names knownProviders holds, which is the
+// same slice SelectBrain's switch and the config enum read.
+//
+// Exported for the gate that holds onboarding's provider list to this one: the
+// screen offers a first-time admin a vendor, and a name this switch does not
+// accept is a write refused with a message about an adapter they never chose.
+// Returned as a copy — a caller that sorted the package's own slice in place
+// would reorder the config enum's source.
+func KnownProviders() []string {
+	out := make([]string, len(knownProviders))
+	copy(out, knownProviders)
+	return out
+}
+
 // SelectBrain turns one binding into a Client (interfaces.md §4):
 // "offline fake ↔ API key ↔ local, one line" — swapping providers is a
 // config change, never a code change.

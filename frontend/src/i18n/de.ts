@@ -5476,6 +5476,36 @@ export const de = {
   "installationSettings.edit": "Ändern",
   "installationSettings.editField": "{field} ändern",
   "installationSettings.save": "Speichern",
+  "googleApp.title": "Google-App",
+  "googleApp.sub":
+    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört — Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen, nicht mit unseren.",
+  "googleApp.configured": "In Verwendung: {clientId}",
+  "googleApp.absent":
+    "Keine App hinterlegt. Gmail und Kalender lassen sich erst danach verbinden.",
+  "googleApp.replaceHint":
+    "Ein neues Paar ersetzt das hinterlegte. Bereits bestehende Verbindungen laufen weiter, bis sie neu verbunden werden.",
+  "googleApp.store": "App hinterlegen",
+  "googleApp.replace": "App ersetzen",
+  "googleApp.remove": "App entfernen",
+  "firstRun.continue": "Weiter",
+  "firstRun.ai.title": "Modellanbieter wählen",
+  "firstRun.ai.sub":
+    "Margince stellt keine eigene Inferenz bereit und arbeitet über Ihr Anbieterkonto. Alles davon lässt sich später unter Einstellungen → KI ändern.",
+  "firstRun.ai.provider": "Anbieter",
+  "firstRun.ai.key": "API-Schlüssel",
+  "firstRun.ai.keyHint":
+    "Einmal gesendet und im Schlüsseltresor versiegelt. Ist stattdessen {envVar} in der Umgebung gesetzt, liest der Server ihn von dort.",
+  "firstRun.ai.chatModel": "Modell",
+  "firstRun.ai.modelHint":
+    "Ein Ausgangspunkt. Jede Modell-ID, die Ihr Anbieter bedient, ist möglich.",
+  "firstRun.ai.embedModel": "Embedding-Modell",
+  "firstRun.google.title": "Google-App verbinden",
+  "firstRun.google.sub":
+    "Postfächer werden über eine Google-OAuth-App verbunden, die Ihnen gehört — Mail wird also mit den Zugangsdaten Ihrer Organisation gelesen. Später unter Einstellungen änderbar.",
+  "firstRun.google.clientIdPlaceholder":
+    "000000000000-xxxx.apps.googleusercontent.com",
+  "firstRun.google.clientId": "Client-ID",
+  "firstRun.google.clientSecret": "Client-Secret",
   "aiProviderKeys.title": "Anbieter-Schlüssel",
   "aiProviderKeys.sub":
     "Die Zugangsdaten, mit denen diese Installation die Modellanbieter aufruft. Ein Schlüssel wird im Schlüsseltresor versiegelt und nie wieder angezeigt — ersetze ihn, wenn du ihn ändern willst.",

@@ -5426,6 +5426,36 @@ export const vi = {
   "installationSettings.edit": "Sửa",
   "installationSettings.editField": "Sửa {field}",
   "installationSettings.save": "Lưu",
+  "googleApp.title": "Ứng dụng Google",
+  "googleApp.sub":
+    "Hộp thư được kết nối qua ứng dụng Google OAuth của bạn, nên thư được đọc bằng thông tin xác thực của tổ chức bạn chứ không phải của chúng tôi.",
+  "googleApp.configured": "Đang dùng: {clientId}",
+  "googleApp.absent":
+    "Chưa lưu ứng dụng nào. Chưa thể kết nối Gmail và Lịch cho tới khi có.",
+  "googleApp.replaceHint":
+    "Nhập cặp mới sẽ thay thế cặp đã lưu. Các kết nối đã tạo vẫn chạy cho tới khi kết nối lại.",
+  "googleApp.store": "Lưu ứng dụng",
+  "googleApp.replace": "Thay ứng dụng",
+  "googleApp.remove": "Xoá ứng dụng",
+  "firstRun.continue": "Tiếp tục",
+  "firstRun.ai.title": "Chọn nhà cung cấp mô hình",
+  "firstRun.ai.sub":
+    "Margince không tự suy luận mà hoạt động qua tài khoản nhà cung cấp của bạn. Bạn có thể đổi mọi thứ ở đây sau, trong Cài đặt → AI.",
+  "firstRun.ai.provider": "Nhà cung cấp",
+  "firstRun.ai.key": "Khóa API",
+  "firstRun.ai.keyHint":
+    "Gửi một lần và niêm phong trong két khóa. Nếu môi trường đã đặt {envVar}, máy chủ đọc từ đó.",
+  "firstRun.ai.chatModel": "Mô hình",
+  "firstRun.ai.modelHint":
+    "Chỉ là điểm khởi đầu. Bất kỳ mã mô hình nào nhà cung cấp phục vụ đều dùng được.",
+  "firstRun.ai.embedModel": "Mô hình embedding",
+  "firstRun.google.title": "Kết nối ứng dụng Google",
+  "firstRun.google.sub":
+    "Hộp thư được kết nối qua ứng dụng Google OAuth của bạn, nên thư được đọc bằng thông tin xác thực của tổ chức bạn. Có thể đổi sau trong Cài đặt.",
+  "firstRun.google.clientIdPlaceholder":
+    "000000000000-xxxx.apps.googleusercontent.com",
+  "firstRun.google.clientId": "Client ID",
+  "firstRun.google.clientSecret": "Client secret",
   "aiProviderKeys.title": "Khóa nhà cung cấp mô hình",
   "aiProviderKeys.sub":
     "Thông tin xác thực mà bản cài đặt này dùng để gọi từng nhà cung cấp mô hình. Khóa được niêm phong trong kho khóa và không bao giờ hiển thị lại — hãy thay thế nếu bạn cần đổi.",

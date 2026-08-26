@@ -30,6 +30,14 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",
+  // Google's own field names. An admin reads these off the Google Cloud
+  // console, which shows them in English whatever the reader's locale, so
+  // translating them here would have the form ask for something the page they
+  // are copying from does not call by that name. The placeholder is an id
+  // SHAPE rather than prose and is the same string everywhere.
+  "firstRun.google.clientId",
+  "firstRun.google.clientSecret",
+  "firstRun.google.clientIdPlaceholder",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it
