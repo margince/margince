@@ -55,6 +55,11 @@ var versionPredicate = regexp.MustCompile(`(?i)\bversion\s*=\s*\$\d+`)
 // the only part where a predicate can constrain which row is written.
 var whereClause = regexp.MustCompile(`(?is)\bWHERE\b(.*)$`)
 
+// byIDUpdateFloor is the smallest number of by-id-updating functions this
+// census may find and still be believed. Set well below the real count, because
+// its job is to catch a reader that has gone quiet, not to track the tree.
+const byIDUpdateFloor = 90
+
 var (
 	// createTableLine opens a CREATE TABLE block; versionColumnLine marks
 	// the block's table as optimistic-locking. Line-based on purpose:
@@ -118,6 +123,12 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	// arrives as pgx.ErrNoRows, which the caller handles as the decline it is
 	// rather than as a failure.
 	"internal/modules/people:bindSiteReadLogo": "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
+
+	// The second of that shape, and the reason it is ratified rather than
+	// taught to the witness: crediting a bare mention of pgx.ErrNoRows would
+	// hand a free pass to any function that checks it on an unrelated read. A
+	// third occurrence is the point at which that trade stops being worth it.
+	"internal/modules/privacy:PinToFloor": "the same QueryRow compare-and-set: `WHERE a.id = $1 AND a.restricted_at IS NULL ... RETURNING a.restricted_until` matches nothing once any restriction stands, and the zero-row result arrives as pgx.ErrNoRows, which the caller turns into ErrConflict — a second controller pinning the same record is declined rather than overwriting the first one's window. A version guard would be wrong besides: nothing pins a version here, the administrator is acting on a record rather than on a value they read",
 
 	// Archive is an absolute idempotent transition: the write sets
 	// archived_at unconditionally (no state derived from a pre-read),
@@ -379,7 +390,7 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 	switch n := node.(type) {
 	case nil:
 		return nil
-	case *ast.BlockStmt, *ast.IfStmt, *ast.ForStmt, *ast.RangeStmt,
+	case *ast.BlockStmt, *ast.IfStmt, *ast.ForStmt,
 		*ast.SwitchStmt, *ast.TypeSwitchStmt, *ast.SelectStmt,
 		*ast.CaseClause, *ast.CommClause:
 		l.open()
@@ -388,6 +399,61 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 		l.open()
 		l.declareFields(n.Type.Params, n.Type.Results)
 		return scopeCloser{l}
+	case *ast.RangeStmt:
+		// Its own scope, and its own declaration: the loop variables are
+		// declared by the clause rather than by an AssignStmt below it, so the
+		// generic arm above would open the scope and then never put them in it.
+		// The range expression is evaluated in the OUTER bindings.
+		l.open()
+		defer l.close()
+		ast.Walk(l, n.X)
+		if n.Tok == token.DEFINE {
+			l.declare(n.Key)
+			l.declare(n.Value)
+		} else {
+			for _, target := range []ast.Expr{n.Key, n.Value} {
+				if target != nil {
+					ast.Walk(l, target)
+				}
+			}
+		}
+		ast.Walk(l, n.Body)
+		return nil
+	case *ast.BinaryExpr:
+		// The same fold packageLevelStatements does, for the same reason:
+		// neither half of `UPDATE x SET a = $1 ` + `WHERE id = $2` carries the
+		// statement, so a census matching a shape sees nothing in either. The
+		// walk continues into the parts as well — adding a reading can only
+		// widen what is judged.
+		if n.Op == token.ADD {
+			if folded, readable := concatenatedString(n); readable {
+				l.out = append(l.out, folded)
+			}
+		}
+		return l
+	case *ast.LabeledStmt:
+		// A label shares the identifier namespace with nothing this reads —
+		// neither where it is declared nor where a break or continue names it.
+		ast.Walk(l, n.Stmt)
+		return nil
+	case *ast.BranchStmt:
+		return nil
+	case *ast.SelectorExpr:
+		// `spec.update` names a FIELD, not the package's `update`. The base is
+		// still walked, because that half can be a package value.
+		ast.Walk(l, n.X)
+		return nil
+	case *ast.KeyValueExpr:
+		// A struct literal's field name is not a variable reference either, and
+		// the AST cannot tell one from a map key without types. An identifier
+		// key is therefore left unread: a package-level SQL statement used as a
+		// map KEY would be a statement nobody sends, so declining it costs no
+		// coverage, while reading it credits every `{update: …}` in the tree.
+		if _, named := n.Key.(*ast.Ident); !named {
+			ast.Walk(l, n.Key)
+		}
+		ast.Walk(l, n.Value)
+		return nil
 	case *ast.AssignStmt:
 		// The right-hand side is evaluated against the bindings that stand
 		// BEFORE the declaration, so it is walked first and the names are
@@ -489,6 +555,7 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 	fset := token.NewFileSet()
 	constCache := map[string]map[string]string{}
 	heldCache := map[string]map[string][]string{}
+	judged := 0
 	for _, root := range []string{"internal/modules", "internal/compose", "internal/platform"} {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
 			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") ||
@@ -560,7 +627,11 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 						guarded = true
 					}
 				}
-				if len(updated) > 0 && !guarded {
+				if len(updated) == 0 {
+					continue
+				}
+				judged++
+				if !guarded {
 					key := filepath.ToSlash(filepath.Dir(path)) + ":" + fn.Name.Name
 					if unguardedByIDUpdates.Waived(t, key) {
 						continue
@@ -574,5 +645,17 @@ func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+	}
+
+	// A census that judged nothing certifies nothing, and this one has two ways
+	// to go quiet: the walk can stop finding files, and the reader can stop
+	// finding statements inside them. Neither produces a finding on its own —
+	// they produce a smaller silence, which is what the floor is for. It sits
+	// below the real count so it catches a broken reader rather than a tree
+	// that has changed.
+	if judged < byIDUpdateFloor { 
+		t.Fatalf("this census judged %d function(s) running a by-id UPDATE and expects at least %d — "+
+			"the reader has stopped seeing statements rather than the tree having lost them",
+			judged, byIDUpdateFloor)
 	}
 }

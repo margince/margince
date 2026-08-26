@@ -71,6 +71,20 @@ var held = ` + "`UPDATE organization SET legal_name = $2 `" + ` + ` + "`WHERE id
 func write(tx T) { tx.Exec(ctx, held) }`,
 			judged: true,
 		}, {
+			// The same defect one line lower, and the shape five functions in
+			// this tree already write: a `+` chain assembled at the call site
+			// rather than at package level. Folding only the hoisted spelling
+			// would have fixed one half of one shape.
+			name: "assembled in the body from two literals",
+			source: `package p
+func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 `" + ` + ` + "`WHERE id = $1`" + `) }`,
+			judged: true,
+		}, {
+			name: "assembled in the body around a helper's output",
+			source: `package p
+func write(tx T) { tx.Exec(ctx, ` + "`UPDATE organization SET legal_name = $2 WHERE id = $1 AND `" + ` + extra()) }`,
+			judged: true,
+		}, {
 			// The direction that MISSES a writer is the dangerous one, but this
 			// is the direction that invents one: a local of the same name is
 			// not the package's value, and crediting it would attribute a
@@ -122,6 +136,48 @@ func write(tx T) { held := held; tx.Exec(ctx, held) }`,
 			source: `package p
 var held = ` + "`" + marker + "`" + `
 func write(tx T, held string) { tx.Exec(ctx, held) }`,
+			judged: false,
+		}, {
+			// A range clause declares its own variables rather than through an
+			// assignment below it, so a reader that only opened the scope would
+			// leave them out of it and read every loop body as the package's.
+			name: "a range value shadowing the package name",
+			source: `package p
+var held = ` + "`" + marker + "`" + `
+func write(tx T, rows []string) { for _, held := range rows { tx.Exec(ctx, held) } }`,
+			judged: false,
+		}, {
+			name: "a range key shadowing the package name",
+			source: `package p
+var held = ` + "`" + marker + "`" + `
+func write(tx T, rows map[string]int) { for held := range rows { tx.Exec(ctx, held) } }`,
+			judged: false,
+		}, {
+			// The range EXPRESSION stands outside the loop's own scope, so a
+			// package statement ranged over is still the package's.
+			name: "the package value ranged over",
+			source: `package p
+var held = []string{` + "`" + marker + "`" + `}
+func write(tx T) { for _, q := range held { tx.Exec(ctx, q) } }`,
+			judged: true,
+		}, {
+			// Three identifiers that are not variable references at all. Each
+			// would be looked up in the package's statements by a reader that
+			// treated every ast.Ident alike, and each would credit a function
+			// that sends nothing — a finding that teaches the next author to
+			// distrust this census.
+			name: "a struct field, a label and a selector spelled like the package name",
+			source: `package p
+type row struct{ held string }
+var held = ` + "`" + marker + "`" + `
+func write(tx T, v row) {
+held:
+	for {
+		_ = row{held: "SELECT 1"}
+		_ = v.held
+		break held
+	}
+}`,
 			judged: false,
 		}, {
 			name: "a package-level name this function never mentions",

@@ -267,6 +267,12 @@ func packageLevelStatements(files []*ast.File) map[string][]string {
 					// nothing in either half. Both are kept because adding a
 					// reading can only widen what a consumer sees, and it is
 					// under-recognition that passes silently.
+					//
+					// So what a name holds is a SET OF READINGS of one value,
+					// overlapping on purpose, and not a list of the statements
+					// that value contains. A consumer that took the first entry
+					// as "the statement" would be reading whichever reading this
+					// walk happened to record first.
 					ast.Inspect(value.Values[i], func(node ast.Node) bool {
 						if binary, isBinary := node.(*ast.BinaryExpr); isBinary && binary.Op == token.ADD {
 							if folded, readable := concatenatedString(binary); readable {
