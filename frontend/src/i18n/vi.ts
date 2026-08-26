@@ -4845,6 +4845,13 @@ export const vi = {
   "license.state.licensed": "Đã có giấy phép",
   "license.state.uncapped": "Đã có giấy phép, không giới hạn chỗ",
   "license.state.unlicensed": "Chưa cấu hình giấy phép",
+  "license.state.refused": "Giấy phép bị từ chối",
+  "license.absent.title": "Bản cài đặt này chưa có giấy phép",
+  "license.absent.body":
+    "Mọi thứ vẫn hoạt động và không có giới hạn nào. Hãy cấu hình token giấy phép trong deployment khi bạn muốn đếm số chỗ theo một hạn mức.",
+  "license.refused.title": "Giấy phép của bản cài đặt này bị từ chối",
+  "license.refused.body":
+    "Token trong deployment đã được xuất trình và bị từ chối. Mọi thứ vẫn hoạt động, không giới hạn, cho đến khi token được thay — hãy kiểm tra token và đồng hồ của bản cài đặt.",
   "license.seats.title": "Số chỗ",
   "license.seats.used": "Chỗ đang dùng",
   "license.seats.granted": "Chỗ được cấp",

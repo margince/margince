@@ -86,6 +86,32 @@ export const Unlicensed: Story = {
   }),
 };
 
+// Asked and told no, which is NOT the state above: a token was presented and
+// rejected, so there is a repair behind it, and this card is the one place that
+// says so — the orb stopped carrying it because an unlicensed installation wore
+// permanent amber and the colour stopped meaning anything. Warn rather than
+// info, and neither interrupts: over-the-grant owns the only alert here.
+export const LicenseRefused: Story = {
+  render: story({
+    state: "rejected",
+    seats_used: 12,
+    over_limit: false,
+    checked_at: CHECKED_AT,
+  }),
+};
+
+// The refusal in dark, where the warn callout's tint is a color-mix that follows
+// the dark accent lift and has to stay apart from the card under it.
+export const LicenseRefusedDark: Story = {
+  globals: { theme: "dark" },
+  render: story({
+    state: "rejected",
+    seats_used: 12,
+    over_limit: false,
+    checked_at: CHECKED_AT,
+  }),
+};
+
 // Over the grant in dark, because this is the surface with the most colour on it
 // and every derived value is a color-mix that follows the dark accent lift: the
 // danger callout, the alert-tinted slot beside a plain one, and the meter's fill

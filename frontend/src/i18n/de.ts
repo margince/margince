@@ -4887,6 +4887,13 @@ export const de = {
   "license.state.licensed": "Lizenziert",
   "license.state.uncapped": "Lizenziert, ohne Sitzplatzgrenze",
   "license.state.unlicensed": "Keine Lizenz konfiguriert",
+  "license.state.refused": "Lizenz abgelehnt",
+  "license.absent.title": "Diese Installation hat keine Lizenz",
+  "license.absent.body":
+    "Alles funktioniert weiter, nichts ist begrenzt. Konfiguriere ein Lizenz-Token im Deployment, wenn Sitzplätze gegen eine Zusage gezählt werden sollen.",
+  "license.refused.title": "Die Lizenz dieser Installation wurde abgelehnt",
+  "license.refused.body":
+    "Das Token im Deployment wurde vorgelegt und abgelehnt. Alles funktioniert weiter und unbegrenzt, bis es ersetzt wird — prüfe das Token und die Uhr der Installation.",
   "license.seats.title": "Plätze",
   "license.seats.used": "Belegte Sitzplätze",
   "license.seats.granted": "Gewährte Sitzplätze",

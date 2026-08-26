@@ -4934,6 +4934,13 @@ export const en = {
   "license.state.licensed": "Licensed",
   "license.state.uncapped": "Licensed, no seat limit",
   "license.state.unlicensed": "No license configured",
+  "license.state.refused": "License refused",
+  "license.absent.title": "This installation has no license",
+  "license.absent.body":
+    "Everything keeps working and nothing is capped. Configure a license token in the deployment when you want seats counted against a grant.",
+  "license.refused.title": "This installation's license was refused",
+  "license.refused.body":
+    "The token in the deployment was presented and rejected. Everything keeps working, uncapped, until it is replaced — check the token and the installation's clock.",
   "license.seats.title": "Seats",
   "license.seats.used": "Seats in use",
   "license.seats.granted": "Seats granted",

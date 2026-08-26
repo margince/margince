@@ -186,6 +186,61 @@ describe("LicenseCard", () => {
     expect(screen.queryByRole("alert")).toBeNull();
   });
 
+  // This card is the one place the licence gap is stated. The orb used to carry
+  // it and no longer does — an unlicensed installation wore permanent amber, so
+  // the colour stopped meaning "a fault that can wait" — and a sub-line above a
+  // seat meter that reads fine is not somewhere an operator looks. These two
+  // cases hold that the fact is still said, and that the two absences are not
+  // said as one thing.
+  it("says an installation with no license has none, and what that costs", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor({
+        state: "absent",
+        seats_used: 12,
+        over_limit: false,
+        checked_at: checkedAt,
+      }),
+    );
+    render(<LicenseCard />);
+
+    expect(
+      await waitFor(() =>
+        screen.getByText("This installation has no license"),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText(/nothing is capped/)).toBeTruthy();
+    // A standing condition does not interrupt: over-the-grant owns the only
+    // alert on this screen.
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("keeps a refused license apart from one that was never configured", async () => {
+    // Asked and told no is a live fault with a repair behind it; never
+    // configured is a standing condition. Both used to print "No license
+    // configured", which told an operator with a token to fix that there was
+    // nothing to fix.
+    vi.stubGlobal(
+      "fetch",
+      backendFor({
+        state: "rejected",
+        seats_used: 12,
+        over_limit: false,
+        checked_at: checkedAt,
+      }),
+    );
+    render(<LicenseCard />);
+
+    expect(
+      await waitFor(() =>
+        screen.getByText("This installation's license was refused"),
+      ),
+    ).toBeTruthy();
+    expect(screen.getByText("License refused")).toBeTruthy();
+    expect(screen.queryByText("No license configured")).toBeNull();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
   it("interrupts with the numbers and the way back when the installation is over its entitlement", async () => {
     vi.stubGlobal(
       "fetch",
