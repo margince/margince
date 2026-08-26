@@ -70,9 +70,8 @@ func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string,
 	return auth.EnsureWritable(ctx, tx, entityType, id)
 }
 
-// entityTypeActivity names the one record kind whose row-scope checks dispatch
-// differently — spelled once so the gate above and any sibling read from the
-// same word.
+// entityTypeActivity is the record kind whose row-scope checks dispatch
+// differently, named rather than typed inline at the branch above.
 const entityTypeActivity = "activity"
 
 // rowIsBehindTheErasureBoundary reuses privacy's own boundary predicate rather

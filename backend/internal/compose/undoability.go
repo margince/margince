@@ -86,8 +86,13 @@ const (
 	ReasonNotWritableByCaller Reason = "not_writable_by_caller"
 )
 
-// Reasons is every refusal this evaluator can return, in the order the branches
-// are asked. The census reads it; nothing may hold a second copy.
+// Reasons lists the refusals in the order the branches are asked. It is the
+// corpus the contract, the frontend copy and the branch walk are all held
+// against, so a reason missing from it is a refusal nothing checks.
+//
+// Held by: TestEveryReasonABranchReturnsIsListed and
+// TestTheContractAdmitsExactlyTheReasonsTheEvaluatorCanReturn
+// (backend/undoreasoncensus_test.go)
 var Reasons = []Reason{
 	ReasonNotAReplayableVerb,
 	ReasonUnsupportedRecordType,

@@ -83,6 +83,34 @@ func declaredReasons() []string {
 // constant with no enum member is a 409 whose code the client cannot type; an
 // enum member with no constant is a reason the product promises and no branch
 // produces.
+// Every reason a branch actually returns is in compose.Reasons. Without this
+// the list is a hand-kept claim: a branch refusing with a constant nobody
+// listed would publish no enum member, get no frontend copy, and reach a person
+// as a raw identifier under a disabled button — and no gate here would notice,
+// because all three of the others read the list rather than the branches.
+func TestEveryReasonABranchReturnsIsListed(t *testing.T) {
+	body, err := parser.ParseFile(token.NewFileSet(),
+		filepath.Join("internal", "compose", "undoability.go"), nil, 0)
+	if err != nil {
+		t.Fatalf("parse the evaluator: %v", err)
+	}
+	listed := map[string]bool{}
+	for _, reason := range declaredReasons() {
+		listed["Reason"+reasonConstantName(reason)] = true
+	}
+	returned := reasonsReturnedUnderAModeGuard(body)
+	if len(returned.anywhere) == 0 {
+		t.Fatal("no refuse() call found in the evaluator; the walk is broken, not the tree")
+	}
+	for name := range returned.anywhere {
+		if !listed[name] {
+			t.Errorf("%s is returned by a branch and is not in compose.Reasons; "+
+				"it would publish no enum member and get no copy, and reach a person "+
+				"as a raw identifier under a disabled button", name)
+		}
+	}
+}
+
 func TestTheContractAdmitsExactlyTheReasonsTheEvaluatorCanReturn(t *testing.T) {
 	declared, published := declaredReasons(), contractReasonEnum(t)
 	if len(declared) == 0 {
