@@ -27,6 +27,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import "./companyspine.css";
 
 type Organization360 = components["schemas"]["Organization360"];
@@ -87,18 +88,19 @@ type Ctx = {
   zone: string;
 };
 
-// The thread, oldest first: the last real conversation, the silence since it,
-// then what is dated ahead.
+// The thread, oldest first: the conversations that have happened, the silence
+// since the last of them, then what is dated ahead.
 //
-// Only three stops, never a full timeline — the history tab is the history.
-// This answers "where does this account stand today", and a reader scrolling
-// twelve rows to find the gap has lost the one thing the shape is for.
+// One stop per CONVERSATION, not per message and not per row of the timeline.
+// A reader arriving at an account they do not remember asks "what was going on
+// here", and a single stop naming the newest email answered that with one
+// line out of a story — the June kickoff that explains the account was on the
+// page, three scrolls down, under the day's suggestions. Grouping is what
+// keeps this a thread rather than the history tab: six emails in two
+// conversations are two stops, and the tab is still where an individual
+// message is read.
 function spineStops(view: Organization360, ctx: Ctx): Stop[] {
-  const stops: Stop[] = [];
-  const spoke = lastExchange(view, ctx);
-  if (spoke) {
-    stops.push(spoke);
-  }
+  const stops: Stop[] = [...pastStops(view, ctx)];
   const waiting = silence(view, ctx);
   if (waiting) {
     stops.push(waiting);
@@ -206,47 +208,246 @@ function on(at: string, ctx: Ctx): string {
   return formatDateAbbrev(at, ctx.locale, ctx.zone);
 }
 
-// The kinds that are an EXCHANGE with the account. The timeline section is
-// unfiltered — it carries tasks from the same table — and a task is something
-// we wrote to ourselves rather than something that was said.
-const EXCHANGE_KINDS: ReadonlySet<string> = new Set([
-  "email",
-  "call",
-  "meeting",
-  "note",
-  "message",
-]);
-
-// The last thing that was actually SAID, and when.
+// The kinds that are an EXCHANGE with the account, each with what a single one
+// of it is called. The timeline section is unfiltered — it carries tasks from
+// the same table — and a task is something we wrote to ourselves rather than
+// something that was said.
 //
-// Dated off the exchange itself rather than off `health.last_meeting_at`,
+// A map rather than a set plus a template-literal key: `t` takes a declared
+// MessageKey, so writing the key from the kind would put the catalog beyond
+// what the compiler can check and let a new kind ship printing its own id.
+const EXCHANGE_KINDS = {
+  email: "co.spine.kind.email",
+  call: "co.spine.kind.call",
+  meeting: "co.spine.kind.meeting",
+  note: "co.spine.kind.note",
+  message: "co.spine.kind.message",
+} as const satisfies Record<string, MessageKey>;
+
+type ExchangeKind = keyof typeof EXCHANGE_KINDS;
+
+function isExchange(kind: string): kind is ExchangeKind {
+  return kind in EXCHANGE_KINDS;
+}
+
+// How many conversations the thread draws before the silence.
+//
+// Three is what fits above the fold beside the gap and what is left ahead. An
+// account with more history than that has its older conversations on the
+// history tab, and the reader is told the count rather than left to assume
+// three is all there was.
+const PAST_STOPS = 3;
+
+// One conversation, as the thread tells it. `key` is the identity it was
+// grouped under and outlives its newest message, so React keeps the same list
+// item when a reply arrives and moves the conversation's date.
+type Exchange = {
+  readonly key: string;
+  readonly at: string;
+  readonly subject: string;
+  readonly kind: ExchangeKind;
+  readonly count: number;
+};
+
+// What was actually SAID here, newest conversation last.
+//
+// Dated off the exchanges themselves rather than off `health.last_meeting_at`,
 // because those are two different facts and the thread states one of them: a
 // meeting date beside an email's subject reads as a meeting about that
 // subject. Falls back to the meeting/outbound date only when the timeline is
-// withheld or empty — a date with no subject is still the start of the
-// thread, and losing it would leave the gap below measuring from nothing.
-function lastExchange(view: Organization360, ctx: Ctx): Stop | undefined {
-  const said = (view.activities?.data ?? []).find(
-    (entry) =>
-      EXCHANGE_KINDS.has(entry.kind) &&
-      Boolean(entry.subject) &&
-      // Already happened, as of the read the rest of the card describes: an
-      // `occurred_at DESC` list sorts a meeting booked for next week to the
-      // top, and it has not been said yet.
-      Boolean(entry.occurred_at) &&
-      (entry.occurred_at as string) <= view.as_of,
+// withheld or empty — a date with no subject is still the start of the thread,
+// and losing it would leave the gap below measuring from nothing.
+function pastStops(view: Organization360, ctx: Ctx): Stop[] {
+  const conversations = exchanges(view);
+  if (conversations.length === 0) {
+    const at = silenceSince(view);
+    return at
+      ? [
+          {
+            key: "spoke",
+            tone: "past",
+            when: on(at, ctx),
+            title: ctx.t("co.spine.lastSpoke"),
+          },
+        ]
+      : [];
+  }
+  // Newest conversations, then re-read oldest-first: the thread runs down the
+  // page in time order, and it is the OLDEST that gets dropped when an account
+  // has more history than the thread draws.
+  const shown = conversations.slice(0, PAST_STOPS).reverse();
+  const earlier = conversations.length - shown.length;
+  // Our last word, when it is later than every conversation the thread could
+  // name: a message with no subject, or one whose content this reader may not
+  // see. The gap below is counted from it, so it takes the head's label and
+  // its own date — otherwise the thread dates "You last spoke" at one
+  // conversation while the gap beneath counts from another.
+  const unnamed = unnamedLastWord(view, shown.at(-1), ctx);
+  const stops = shown.map((conversation, index) =>
+    pastStop(conversation, !unnamed && index === shown.length - 1, ctx),
   );
-  const at = said?.occurred_at ?? silenceSince(view);
-  if (!at) {
+  if (unnamed) {
+    stops.push(unnamed);
+  }
+  if (earlier > 0) {
+    stops.unshift(earlierStop(conversations, earlier, view, ctx));
+  }
+  return stops;
+}
+
+// The stop for a last word the thread cannot name, or undefined when the
+// newest drawn conversation already IS our last word.
+function unnamedLastWord(
+  view: Organization360,
+  newest: Exchange | undefined,
+  ctx: Ctx,
+): Stop | undefined {
+  const spoke = silenceSince(view);
+  if (!spoke || !newest) {
+    return undefined;
+  }
+  const said = Date.parse(spoke);
+  const drawn = Date.parse(newest.at);
+  if (Number.isNaN(said) || Number.isNaN(drawn) || said <= drawn) {
     return undefined;
   }
   return {
     key: "spoke",
     tone: "past",
-    when: on(at, ctx),
+    when: on(spoke, ctx),
     title: ctx.t("co.spine.lastSpoke"),
-    detail: said?.subject ?? undefined,
   };
+}
+
+// The conversations the thread did not draw, as one stop.
+//
+// It counts what the 360 SENT, and the 360 sends one capped page of the
+// timeline. On an account with more history than that page holds, an exact
+// count would be a number the reader can check against the history tab and
+// find wrong, so a cut page says "more" instead — and its date is dropped with
+// the count, because the oldest conversation on a cut page is not where the
+// account began.
+function earlierStop(
+  conversations: readonly Exchange[],
+  earlier: number,
+  view: Organization360,
+  ctx: Ctx,
+): Stop {
+  const cut = view.activities?.page?.has_more === true;
+  return {
+    key: "earlier",
+    tone: "past",
+    when: cut ? "" : on(conversations[conversations.length - 1].at, ctx),
+    title: cut
+      ? ctx.t("co.spine.earlierMore")
+      : earlier === 1
+        ? ctx.t("co.spine.earlierOne")
+        : ctx.t("co.spine.earlier", {
+            count: formatNumber(earlier, ctx.locale),
+          }),
+  };
+}
+
+// A conversation's own stop. The newest one keeps "You last spoke" as its
+// title, because the gap below is counted from it and a reader has to see what
+// the waiting is waiting on. The older ones lead with their subject: they are
+// what happened, and repeating one label down the thread would say nothing.
+function pastStop(conversation: Exchange, newest: boolean, ctx: Ctx): Stop {
+  const messages =
+    conversation.count > 1
+      ? ctx.t("co.spine.exchangeCount", {
+          count: formatNumber(conversation.count, ctx.locale),
+        })
+      : ctx.t(EXCHANGE_KINDS[conversation.kind]);
+  return {
+    key: `said-${conversation.key}`,
+    tone: "past",
+    when: on(conversation.at, ctx),
+    title: newest ? ctx.t("co.spine.lastSpoke") : conversation.subject,
+    detail: newest ? conversation.subject : messages,
+  };
+}
+
+// The account's conversations, newest first, each folded to one entry.
+//
+// `thread_key` is capture's own conversation id and is what makes a thread a
+// thread; a note or a hand-logged call carries none, so those fall back to
+// their subject. Grouping by subject alone would merge two unrelated "Re:
+// Update" exchanges — acceptable as a fallback for the rows that have no
+// better key, wrong as the rule.
+function exchanges(view: Organization360): Exchange[] {
+  const asOf = Date.parse(view.as_of);
+  const conversations = new Map<string, Exchange>();
+  for (const entry of view.activities?.data ?? []) {
+    const subject = bareSubject(entry.subject);
+    const at = Date.parse(entry.occurred_at ?? "");
+    if (
+      !isExchange(entry.kind) ||
+      !subject ||
+      // Already happened, as of the read the rest of the card describes: an
+      // `occurred_at DESC` list sorts a meeting booked for next week to the
+      // top, and it has not been said yet. Compared as instants: the same
+      // moment is written with any offset, and comparing the strings would
+      // read 08:30-02:00 as earlier than 09:00Z when it is ninety minutes
+      // later. NaN from a malformed date fails both tests and drops the row,
+      // which is the only safe reading of a timestamp nothing can order.
+      Number.isNaN(at) ||
+      Number.isNaN(asOf) ||
+      at > asOf
+    ) {
+      continue;
+    }
+    // The two key spaces never meet: a provider whose thread ids look like our
+    // own fallback would otherwise merge an unrelated conversation into one it
+    // has nothing to do with.
+    const key = entry.thread_key
+      ? `thread:${entry.thread_key}`
+      : // Lowercased against the invariant locale, never the machine's: this is
+        // a grouping key rather than a rendered value, and a Turkish browser
+        // folding "I" to "ı" would file one account's conversations differently
+        // from every other reader's.
+        `subject:${subject.toLowerCase()}`;
+    const seen = conversations.get(key);
+    // The list arrives newest-first, so the first row of a conversation is its
+    // latest message: that is the date the thread shows it at, and its subject
+    // is the one the conversation currently goes by after a mid-thread rename.
+    conversations.set(
+      key,
+      seen
+        ? { ...seen, count: seen.count + 1 }
+        : {
+            key,
+            at: entry.occurred_at as string,
+            subject,
+            kind: entry.kind,
+            count: 1,
+          },
+    );
+  }
+  return [...conversations.values()];
+}
+
+// A subject with its reply and forward markers taken off, so "Re: Kickoff" and
+// "Kickoff" are recognised as one conversation when neither row was threaded
+// by capture.
+//
+// Repeated markers are stripped to the end: a chain that has been replied to
+// and forwarded arrives as "Re: Fwd: Kickoff", and taking one prefix off would
+// file it apart from the conversation it belongs to. Only the ASCII prefixes
+// every mail client writes — a localized "AW:" that slips through costs one
+// extra stop, which is the cheap direction to be wrong in.
+//
+// Returns "" for a subject that is absent, blank, or nothing but markers.
+// Those are not conversations the thread can name, and folding them together
+// under one empty key would merge unrelated calls into a stop with no title.
+function bareSubject(subject: string | null | undefined): string {
+  let bare = (subject ?? "").trim();
+  let stripped = bare.replace(/^(?:re|fwd?)\s*:\s*/i, "").trim();
+  while (stripped !== bare) {
+    bare = stripped;
+    stripped = bare.replace(/^(?:re|fwd?)\s*:\s*/i, "").trim();
+  }
+  return bare;
 }
 
 // What is riding on the close date. An unpriced pipeline says so rather than
