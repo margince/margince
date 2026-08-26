@@ -46,13 +46,16 @@ its own, so you can also come straight to the one you need.
 
 ## Related reading
 
-Two end-to-end walkthroughs live in [`user-guide/`](../../user-guide/README.md) —
+Two end-to-end walkthroughs sit in the repository's `user-guide/` directory —
 one ERP rollout followed from first conversation to close, and one partner deal
 followed from introduction to the money it earns. Read those once; come back
-here for one answer.
+here for one answer. Field-by-field references for projects and partner programs
+sit under `docs/how-to/`, beside the engineering ones.
 
-Field-by-field references for projects and partner programs are in
-[`docs/how-to/`](../README.md), beside the engineering ones.
+This handbook links nowhere outside its own folder, on purpose: each page is a
+self-contained document, so the whole folder can be uploaded to a knowledge base
+as a corpus and every cross-reference still resolves. Names above are written
+out rather than linked for that reason.
 
 ## A note on how this handbook is written
 
