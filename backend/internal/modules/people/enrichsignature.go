@@ -54,21 +54,18 @@ type SignatureApplyResult struct {
 // exists is counted skipped — the earlier answer (human or agent) stands.
 func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID, sourceActivity ids.UUID, fields []SignatureField) (SignatureApplyResult, error) {
 	var res SignatureApplyResult
-	if len(fields) == 0 {
-		return res, nil
-	}
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return res, err
 	}
+	if len(fields) == 0 {
+		return res, nil
+	}
 	sourceRef := "activity:" + sourceActivity.String()
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// LIVE, and the window this closes is the pass's own shape rather than
-		// a race to argue about: SignatureCandidates selects a live person,
-		// then a model call runs, then this applies. An Art. 17 erasure landing
-		// in between stamps archived_at, deletes the person_profile_field rows
-		// and leaves the person row standing — so an apply arriving afterwards
-		// writes the erased subject's title and phone back into a declared PII
-		// table the erasure had just cleared.
+		// LIVE, not merely visible: SignatureCandidates selects a live person,
+		// a model call runs, and this applies afterwards —
+		// auth.EnsureWritableLive says why that window is the write's own
+		// obligation rather than the entry gate's.
 		//
 		// writePersonProfileField carries the same liveness on its INSERT and
 		// that is not this: it answers "nothing landed", which this pass counts
@@ -224,11 +221,25 @@ func (s *Store) applySignatureField(ctx context.Context, tx pgx.Tx, personID ids
 		}
 	case "phone":
 		// A first phone only — a person with any live phone row keeps it.
+		//
+		// archived_at on the PERSON as well, and this arm needs it said rather
+		// than inferred, because its own emptiness predicate argues the wrong
+		// way round: Art. 17 erasure DELETEs person_phone outright, so an
+		// erased subject is exactly what "no live phone row" answers true for.
+		//
+		// Not reachable that way today — the evidence row above refuses first
+		// and this returns before here. But that safety is a row lock
+		// writePersonProfileField takes for a person COLUMN's sake, which its
+		// own doc says in those words, and a child-table row is not one. The
+		// predicate is what stops this arm's correctness depending on a
+		// sentence written about something else.
 		tag, err := tx.Exec(ctx, `
 			INSERT INTO person_phone (person_id, phone, phone_type, is_primary, position, source, captured_by)
 			SELECT $1, $2, 'work', true, 0, $3, $4
 			WHERE NOT EXISTS (
-				SELECT 1 FROM person_phone WHERE person_id = $1 AND archived_at IS NULL)`,
+				SELECT 1 FROM person_phone WHERE person_id = $1 AND archived_at IS NULL)
+			  AND EXISTS (
+				SELECT 1 FROM person WHERE id = $1 AND archived_at IS NULL)`,
 			personID, value, enrichSource, enrichCapturedBy)
 		if err != nil {
 			return signatureVerdict{}, fmt.Errorf("people: signature phone fill: %w", err)
