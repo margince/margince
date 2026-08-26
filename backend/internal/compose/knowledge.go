@@ -96,6 +96,10 @@ func (h knowledgeHandlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.R
 	h.module.DeleteCorpusDocument(w, r, id)
 }
 
+func (h knowledgeHandlers) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.module.DownloadCorpusDocument(w, r, id)
+}
+
 // Not yet written. The ask is answered at compose level rather than by the
 // module, which is why it is the one operation still shaped this way.
 

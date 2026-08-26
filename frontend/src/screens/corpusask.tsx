@@ -11,6 +11,7 @@ import {
   Textarea,
 } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { FileChip } from "../design-system/filechip";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
@@ -160,6 +161,9 @@ export function CorpusAskCard({
 
 function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
   const t = useT();
+  // A line and a column are MAGNITUDES a person counts with, so they take the
+  // reader's own notation like every other figure on the page.
+  const { locale } = useLocale();
   if (answer.outcome !== "answered") {
     return <Refusal answer={answer} />;
   }
@@ -183,7 +187,24 @@ function AnswerView({ answer }: Readonly<{ answer: Answer }>) {
                 prose. */}
             {claim.text ? <p>{claim.text}</p> : null}
             <blockquote className="t-small">{claim.quote}</blockquote>
-            <p className="t-caption">{claim.document_name}</p>
+            {/* The file itself, downloadable, beside where in it the quote
+                sits. A citation nobody can follow is a citation in name only —
+                the reader has the sentence and the quote, and this is what lets
+                them open the document and see it in place. */}
+            <div className="card-actions">
+              <FileChip
+                href={`/v1/knowledge/documents/${claim.document_id}`}
+                filename={claim.document_name}
+              />
+              {claim.line ? (
+                <span className="t-caption">
+                  {t("corpusAsk.atLine", {
+                    line: formatNumber(claim.line, locale),
+                    column: formatNumber(claim.column ?? 1, locale),
+                  })}
+                </span>
+              ) : null}
+            </div>
           </div>
         </PanelRow>
       ))}

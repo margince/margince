@@ -29197,6 +29197,21 @@ components:
         chunk_id: { type: string, format: uuid }
         document_id: { type: string, format: uuid }
         document_name: { type: string }
+        line:
+          type: integer
+          minimum: 1
+          description: >-
+            The 1-based line of the document where this quote begins, so a reader can
+            open the file and land on it. Absent when the quote could not be located
+            in the passage's own text — a line number pointing at the wrong line is
+            worse than none.
+        column:
+          type: integer
+          minimum: 1
+          description: >-
+            The 1-based column on that line, counted in CHARACTERS rather than bytes:
+            it is read by a person counting across a line, not by a program seeking in
+            a file. Absent whenever `line` is.
         quote:
           type: string
           description: >-

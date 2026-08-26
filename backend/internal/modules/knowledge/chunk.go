@@ -26,6 +26,12 @@ const overlapChars = 120
 type Chunk struct {
 	Text string
 	Ix   int
+	// StartLine is the 1-based line of the document this span begins on.
+	//
+	// Counted HERE, where the whole document is in hand, because the alternative
+	// is re-reading its bytes at ask time for every answer — and the ask is the
+	// hot path while the ingest runs once.
+	StartLine int
 }
 
 // Hash identifies this span's exact text. It is what decides whether a
@@ -51,25 +57,48 @@ func ChunkText(text string) []Chunk {
 		return nil
 	}
 	var chunks []Chunk
-	for _, span := range splitToWidth(text) {
-		span = strings.TrimSpace(span)
-		if span == "" {
+	for _, sp := range splitToWidth(text) {
+		trimmed := strings.TrimLeft(sp.text, " \t\r\n")
+		// The leading whitespace the trim removed, so the line is the one the
+		// span's own TEXT starts on. A span cut at a paragraph break carries the
+		// blank line before it, and a citation pointing a reader at a blank line
+		// has pointed them one line short.
+		start := sp.at + (len(sp.text) - len(trimmed))
+		trimmed = strings.TrimSpace(trimmed)
+		if trimmed == "" {
 			continue
 		}
-		chunks = append(chunks, Chunk{Text: span, Ix: len(chunks)})
+		chunks = append(chunks, Chunk{
+			Text: trimmed,
+			Ix:   len(chunks),
+			// Taken from the offset splitToWidth CUT at rather than searched
+			// for. The spans overlap by design, so the same text appears twice
+			// in the document and a search has no way to say which occurrence
+			// it is looking at — an earlier version of this walked an offset
+			// forward past each span and ran off the end of the string.
+			StartLine: strings.Count(text[:start], "\n") + 1,
+		})
 	}
 	return chunks
+}
+
+// span is one cut of the document: its text, and where in the document it
+// began. The offset is carried rather than recovered, because these overlap and
+// a search for one cannot tell which occurrence it found.
+type span struct {
+	text string
+	at   int
 }
 
 // splitToWidth walks the text emitting spans no longer than maxChunkChars,
 // cutting at the best boundary available within reach and carrying overlapChars
 // of the previous span forward.
-func splitToWidth(text string) []string {
-	var spans []string
+func splitToWidth(text string) []span {
+	var spans []span
 	for start := 0; start < len(text); {
 		end := start + maxChunkChars
 		if end >= len(text) {
-			spans = append(spans, text[start:])
+			spans = append(spans, span{text: text[start:], at: start})
 			break
 		}
 		cut := bestBoundary(text[start:end])
@@ -88,7 +117,7 @@ func splitToWidth(text string) []string {
 			// try again, which they will, forever.
 			cut = runeStartAtOrBefore(text[start:], maxChunkChars)
 		}
-		spans = append(spans, text[start:start+cut])
+		spans = append(spans, span{text: text[start : start+cut], at: start})
 		// The next span begins overlapChars back, so a sentence crossing this
 		// cut is whole in one of the two. A boundary at or inside the overlap
 		// width would otherwise hand back a start no further along than this

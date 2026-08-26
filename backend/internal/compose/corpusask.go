@@ -294,6 +294,7 @@ func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) ([]crmco
 		if text != "" {
 			claim.Text = &text
 		}
+		locateClaim(&claim, p, c.Quote)
 		kept = append(kept, claim)
 	}
 	return kept, nil
@@ -303,6 +304,32 @@ func GroundCorpusAnswer(replyText string, passages []knowledge.Passage) ([]crmco
 // rather than spelled again here. It is the same question — are these the
 // document's own words — and two spellings of one invariant drift until they
 // disagree about a reply one of them would have refused.
+
+// locateClaim stamps where in the document the quote begins, when the passage
+// can say.
+//
+// The quote is located by its RAW text rather than the trimmed or
+// whitespace-collapsed form, because the offset has to be an offset into the
+// document's real bytes — collapsing runs of spaces would shift every column
+// after the first one that collapsed. A quote the passage cannot locate leaves
+// both fields absent: a line number pointing at the wrong line is worse than
+// none, and the whole value of a citation is that following it lands you on the
+// sentence.
+func locateClaim(claim *crmcontracts.KnowledgeClaim, p knowledge.Passage, quote string) {
+	line, column := p.Locate(quote)
+	if line == 0 {
+		// A model may return a quote that only matches once whitespace is
+		// collapsed — a re-wrapped line. The claim survived the check on that
+		// basis, so try the collapsed text too rather than dropping a location
+		// the reader could have used.
+		line, column = p.Locate(collapseSpace(quote))
+	}
+	if line == 0 {
+		return
+	}
+	claim.Line = &line
+	claim.Column = &column
+}
 
 // passageClaims renders the retrieved passages as the deterministic answer:
 // each passage IS a claim, quoting itself, with no sentence written over it.
@@ -319,6 +346,14 @@ func passageClaims(passages []knowledge.Passage) []crmcontracts.KnowledgeClaim {
 			DocumentId:   openapi_types.UUID(p.DocumentID),
 			DocumentName: p.DocumentName,
 			Quote:        strings.TrimSpace(p.Text),
+		}
+		// The whole passage IS the quote here, so it begins where the passage
+		// begins — no search needed, and none possible: locating a string
+		// inside itself always answers offset zero.
+		if p.StartLine > 0 {
+			line, column := p.StartLine, 1
+			claims[i].Line = &line
+			claims[i].Column = &column
 		}
 	}
 	return claims

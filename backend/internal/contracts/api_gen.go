@@ -17772,9 +17772,15 @@ type KnowledgeAnswerCorpus struct {
 
 // KnowledgeClaim defines model for KnowledgeClaim.
 type KnowledgeClaim struct {
-	ChunkId      openapi_types.UUID `json:"chunk_id"`
+	ChunkId openapi_types.UUID `json:"chunk_id"`
+
+	// Column The 1-based column on that line, counted in CHARACTERS rather than bytes: it is read by a person counting across a line, not by a program seeking in a file. Absent whenever `line` is.
+	Column       *int               `json:"column,omitempty"`
 	DocumentId   openapi_types.UUID `json:"document_id"`
 	DocumentName string             `json:"document_name"`
+
+	// Line The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none.
+	Line *int `json:"line,omitempty"`
 
 	// Quote A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist.
 	Quote string `json:"quote"`

@@ -237,3 +237,57 @@ func TestACJKChunkHashesConsistently(t *testing.T) {
 		}
 	}
 }
+
+// Every chunk knows the line it starts on, and it is the line a reader opening
+// the file would land on — the first line of the span's own text, not the blank
+// line a paragraph break left in front of it.
+func TestEachChunkKnowsTheLineItStartsOn(t *testing.T) {
+	// Line numbers written into the text, so the assertion reads as the
+	// document does rather than as arithmetic.
+	text := "line one\nline two\n\nline four begins a paragraph\n" +
+		strings.Repeat("filler that pushes past the chunk ceiling. ", 30) +
+		"\n\nlast paragraph starts here"
+
+	chunks := ChunkText(text)
+	if len(chunks) < 2 {
+		t.Fatalf("the fixture produced %d chunks; it must be cut for this to test anything", len(chunks))
+	}
+	if chunks[0].StartLine != 1 {
+		t.Fatalf("the first chunk starts on line %d, want 1", chunks[0].StartLine)
+	}
+	lines := strings.Split(text, "\n")
+	for i, c := range chunks {
+		if c.StartLine < 1 || c.StartLine > len(lines) {
+			t.Fatalf("chunk %d claims line %d, and the document has %d", i, c.StartLine, len(lines))
+		}
+		// The claimed line CONTAINS the start of this chunk's text.
+		//
+		// Contains rather than begins-with, and the difference is the reason
+		// `column` exists: a span cut at the width ceiling starts in the MIDDLE
+		// of a long line, so the line it points at legitimately begins earlier
+		// than the span does.
+		first := strings.SplitN(c.Text, "\n", 2)[0]
+		probe := first[:min(len(first), 20)]
+		if !strings.Contains(lines[c.StartLine-1], probe) {
+			t.Fatalf("chunk %d claims line %d (%q), which does not contain %q",
+				i, c.StartLine, lines[c.StartLine-1][:min(len(lines[c.StartLine-1]), 40)], probe)
+		}
+	}
+}
+
+// A chunk that begins after a paragraph break points at its own first line, not
+// at the blank line before it.
+func TestAChunkAfterABlankLinePointsAtItsOwnText(t *testing.T) {
+	head := strings.Repeat("The first paragraph runs on for a while. ", 25)
+	text := head + "\n\nThe second paragraph starts here."
+
+	chunks := ChunkText(text)
+	if len(chunks) < 2 {
+		t.Fatalf("the fixture produced %d chunks", len(chunks))
+	}
+	last := chunks[len(chunks)-1]
+	lines := strings.Split(text, "\n")
+	if strings.TrimSpace(lines[last.StartLine-1]) == "" {
+		t.Fatalf("the last chunk points at line %d, which is blank", last.StartLine)
+	}
+}
