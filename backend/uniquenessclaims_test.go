@@ -66,8 +66,8 @@ package backendarch
 // first. Priced per shape, looking away has to say which shape stopped looking
 // and what it cost.
 //
-// The register is 638 lines with no reasons, and that is deliberate rather than
-// sloppy: a reason per entry would be 638 rationalisations written by somebody
+// The register is 621 lines with no reasons, and that is deliberate rather than
+// sloppy: a reason per entry would be 621 rationalisations written by somebody
 // who has not audited the claim, which is worse than an honest count of what is
 // unaudited. The number is the point. It is meant to go down.
 
@@ -422,11 +422,11 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // a row falling, so the two kinds of progress are told apart by which number
 // moved and whether the tree moved with it.
 var shapeCensus = map[string]int{
-	"cannot-drift":   181,
-	"once":           160,
-	"one-of-a-kind":  156,
+	"cannot-drift":   173,
+	"once":           158,
+	"one-of-a-kind":  155,
 	"is-every-named": 95,
-	"only-noun":      22,
+	"only-noun":      16,
 	"no-second":      10,
 	"never-twice":    6,
 	"is-every":       5,
@@ -676,6 +676,45 @@ func TestNoShapeReadsOrdinaryProseAsAClaim(t *testing.T) {
 // TestTheBindingIsReadOffTheCommentRatherThanGuessedAt proves the `Held by:`
 // parser on the shapes an author will actually write, including the ones that
 // must NOT bind.
+// TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt covers both
+// directions of the compound-word exclusion.
+//
+// One direction is the six false readings it removes. The other is the one that
+// would make it a NEW blind spot: a doc comment holding a compound AND a real
+// claim must still register the real one, because skipping the first match and
+// returning "" would silently un-see every claim that happens to follow a
+// hyphenated word. The register would fall and nothing would say why.
+func TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt(t *testing.T) {
+	onlyNoun := claimShapes["only-noun"]
+	if onlyNoun == nil {
+		t.Fatal("the only-noun shape is gone, so the cases below prove nothing about it")
+	}
+	compounds := []string{
+		"letting a bare status edit set them lets a lead:update-only caller skip the person mint",
+		"a Go-only definition of live would drift from the config layer the product reads",
+		"the empty single-row read, through a stdlib-only implementation",
+		"that is the defect the old body-only reader had in mirroring",
+	}
+	for _, sentence := range compounds {
+		if phrase := firstClaimPhrase(onlyNoun, sentence); phrase != "" {
+			t.Errorf("%q read as a claim (%q) — `only` there is the tail of a hyphenated "+
+				"modifier and quantifies nothing", sentence, phrase)
+		}
+		// The pattern itself still matches: the exclusion is the reader's, so
+		// a case that stopped grazing the shape would stop proving anything.
+		if !onlyNoun.MatchString(sentence) {
+			t.Errorf("%q no longer matches the only-noun shape at all, so it is not a "+
+				"near-miss of anything and this case has gone decorative", sentence)
+		}
+	}
+	// The claim survives a compound earlier in the same comment.
+	const both = "It stops the CREATE-only caller. The store is the only writer of that column."
+	if phrase := firstClaimPhrase(onlyNoun, both); phrase != "only writer" {
+		t.Errorf("firstClaimPhrase(%q) = %q, want %q — a compound before a claim must not "+
+			"swallow it", both, phrase, "only writer")
+	}
+}
+
 func TestTheBindingIsReadOffTheCommentRatherThanGuessedAt(t *testing.T) {
 	binds := []struct {
 		comment, test, file string

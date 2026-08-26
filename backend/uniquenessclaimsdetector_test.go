@@ -112,6 +112,35 @@ func namedExhaustiveness(decl string) *regexp.Regexp {
 	return regexp.MustCompile(`(?i)\b` + regexp.QuoteMeta(name) + `\b\s+(?:is|are) every\s+(\w+)`)
 }
 
+// firstClaimPhrase returns the first match that is a claim rather than the tail
+// of a hyphenated modifier, and "" when the pattern only reaches the latter.
+//
+// `\bonly caller` matches inside "a lead:update-only caller", where "only"
+// binds leftwards into the compound and quantifies nothing: the sentence says
+// which KIND of caller, not that there is one. Six claims in this tree were
+// registered from that reading — "Go-only definition", "CREATE-only caller",
+// "live-only caller", "stdlib-only implementation", "body-only reader" — and
+// each is ordinary prose the register was counting as unaudited debt.
+//
+// A hyphen is the discriminator rather than a list of the compounds seen so
+// far, because the next one will be spelled differently and a list would miss
+// it. Applied to every shape, not just the one that has the problem today: a
+// match that begins immediately after a hyphen is the second half of a word in
+// any of them.
+//
+// Go's regexp has no lookbehind, so this reads the byte before the match rather
+// than expressing the exclusion in the pattern — the same trade `intensifier`
+// makes below, for the same missing feature.
+func firstClaimPhrase(pattern *regexp.Regexp, text string) string {
+	for _, span := range pattern.FindAllStringIndex(text, -1) {
+		if span[0] > 0 && text[span[0]-1] == '-' {
+			continue
+		}
+		return text[span[0]:span[1]]
+	}
+	return ""
+}
+
 // intensifier reports whether "every <word>" is an English idiom rather than a
 // set assertion.
 //
@@ -282,7 +311,7 @@ func findClaims(root string) ([]claim, error) {
 				}
 			}
 			for _, shape := range shapes {
-				phrase := patterns[shape].FindString(text)
+				phrase := firstClaimPhrase(patterns[shape], text)
 				if phrase == "" {
 					continue
 				}

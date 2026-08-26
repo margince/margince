@@ -145,6 +145,8 @@ func TestAdmitReadsATitleThroughItsAttributesAndEntities(t *testing.T) {
 // document that passes the build check and is refused in production is an outage
 // no CI lane can see, because the lane that builds the document never runs the
 // server that refuses it. `make mcp-apps-vocab` is how the copy is made.
+//
+// Held by: TestTheAdmissionVocabularyMatchesTheFrontend (backend/internal/modules/agents/apps/validate_test.go) — this test.
 func TestTheAdmissionVocabularyMatchesTheFrontend(t *testing.T) {
 	authored, err := os.ReadFile(filepath.Join("..", "..", "..", "..", "..",
 		"frontend", "src", "mcp-apps", "forbidden.json"))

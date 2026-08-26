@@ -26,6 +26,8 @@ import (
 // Derived from relationshipConflictDetails, not restated beside it: a rule
 // added to the mapper without being covered here would otherwise be a rule
 // nothing checks, and the mapper is the one list that has to be complete.
+//
+// Held by: TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint (backend/internal/modules/people/relationship_conflict_test.go) — this test.
 func TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint(t *testing.T) {
 	for constraint := range relationshipConflictDetails {
 		t.Run(constraint, func(t *testing.T) {

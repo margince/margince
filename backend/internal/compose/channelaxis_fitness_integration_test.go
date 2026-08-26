@@ -144,6 +144,8 @@ func TestNoContractEnumSpellsARegisteredTransport(t *testing.T) {
 // Activity.kind from an unrelated `kind` enum elsewhere in the document (the
 // legal-page kinds are home/impressum/team), and a test that has to be taught
 // which node to look at is a list again.
+//
+// Held by: TestActivityKindTableMatchesTheContractKindEnum (backend/internal/compose/channelaxis_fitness_integration_test.go) — this test.
 func TestActivityKindTableMatchesTheContractKindEnum(t *testing.T) {
 	integration.Setup(t)
 	owner := integration.OwnerConn(t)

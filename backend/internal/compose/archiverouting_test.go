@@ -25,6 +25,8 @@ import (
 // Pinned as a set rather than a count: a count agrees with a routing table that
 // has swapped two types, and the refusal a caller reads is built from these
 // names.
+//
+// Held by: TestTheCompositeArchivesWhatItsModulesArchive (backend/internal/compose/archiverouting_test.go) — this test.
 func TestTheCompositeArchivesWhatItsModulesArchive(t *testing.T) {
 	types, err := NewProvider(nil).ArchivableTypes(context.Background())
 	if err != nil {

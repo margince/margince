@@ -185,6 +185,8 @@ func TestMCPIsServedAtTheAPIOriginWithDiscovery(t *testing.T) {
 // the registry the api ALREADY built rather than a second one: a passport
 // minted through the session surface reaches the same governed tools the REST
 // agent surface reports, so the two transports cannot drift in capability.
+//
+// Held by: TestMCPOnTheAPIServesTheAPIsOwnToolSurface (backend/internal/compose/integration/agentaccess/mcp_transport_integration_test.go) — this test.
 func TestMCPOnTheAPIServesTheAPIsOwnToolSurface(t *testing.T) {
 	env := setupConnector(t)
 

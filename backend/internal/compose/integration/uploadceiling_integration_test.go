@@ -199,6 +199,8 @@ func TestAnOversizeUploadIsRefusedWithTheConfiguredNumber(t *testing.T) {
 // number the client is told is the number the server enforces. It is published
 // so an upload surface can refuse before sending rather than after, which is
 // only honest while the two cannot drift.
+//
+// Held by: TestTheInstallationReadPublishesTheConfiguredCeiling (backend/internal/compose/integration/uploadceiling_integration_test.go) — this test.
 func TestTheInstallationReadPublishesTheConfiguredCeiling(t *testing.T) {
 	e := appWithUploads(t)
 	var settings crmcontracts.InstallationSettings
