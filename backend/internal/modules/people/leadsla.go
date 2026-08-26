@@ -10,7 +10,6 @@ package people
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -100,6 +99,12 @@ const firstResponseSet = firstResponseColumn + ` = COALESCE(` + firstResponseCol
 
 // SLABreach is one lead whose first-response deadline passed unanswered on
 // this scan — what the escalation acts on.
+//
+// Name is what the lead is called, and the SELECT works it out the way
+// leadIdentityName does: a full_name that is present and empty is not a name,
+// so the address behind it is. A bare COALESCE would answer the empty string,
+// and the escalation would page an owner about a lead it could not name while
+// the promotion of the same lead names it by its address.
 type SLABreach struct {
 	LeadID   ids.LeadID
 	OwnerID  *ids.UserID
@@ -131,7 +136,8 @@ func (s *Store) ScanLeadSLA(ctx context.Context, now time.Time) ([]SLABreach, er
 			return nil
 		}
 		rows, err := tx.Query(ctx, `
-			SELECT id, owner_id, COALESCE(routed_at, created_at) + $1 * interval '1 minute', COALESCE(full_name, email, '')
+			SELECT id, owner_id, COALESCE(routed_at, created_at) + $1 * interval '1 minute',
+			       COALESCE(NULLIF(btrim(full_name), ''), email::text, '')
 			FROM lead
 			WHERE archived_at IS NULL AND first_response_at IS NULL AND sla_breached_at IS NULL
 			  AND COALESCE(routed_at, created_at) + $1 * interval '1 minute' < $2
@@ -279,7 +285,7 @@ func isFirstResponseActivity(t leadResponseTouch) bool {
 	if t.direction != "outbound" {
 		return false
 	}
-	if strings.HasPrefix(t.capturedBy, string(principal.PrincipalHuman)+":") {
+	if humanCaptured(t) {
 		return true
 	}
 	return t.hadInbound

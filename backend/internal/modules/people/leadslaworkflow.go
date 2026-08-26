@@ -170,9 +170,22 @@ const activitySourceManual = "manual"
 // humanLoggedNote is the ONE spelling of "a rep typed this note into the
 // composer" — the ladder's contact arm and the first-response rule
 // (isFirstResponseActivity) both read it, so they cannot drift apart.
+//
+// Held by: TestEachRuleBearingTouchFieldHasOneReader (backend/internal/modules/people/responsetouch_test.go)
 func humanLoggedNote(t leadResponseTouch) bool {
-	return t.kind == "note" && t.source == activitySourceManual &&
-		strings.HasPrefix(t.capturedBy, string(principal.PrincipalHuman)+":")
+	return t.kind == "note" && t.source == activitySourceManual && humanCaptured(t)
+}
+
+// humanCaptured reads the captured_by grammar's human namespace off a touch.
+//
+// Its own function because §18.1 asks the question twice and about different
+// touches — once as one conjunct of "a rep typed this note", once on its own
+// for an outbound that a person sent. Both are the same question, and the
+// grammar's prefix is a thing that can change; spelled twice it would change in
+// one of the two, and the ladder and the first-response clock would then
+// disagree about whether a person was involved.
+func humanCaptured(t leadResponseTouch) bool {
+	return strings.HasPrefix(t.capturedBy, string(principal.PrincipalHuman)+":")
 }
 
 // leadResponseTouches answers which leads the activity is linked to, with

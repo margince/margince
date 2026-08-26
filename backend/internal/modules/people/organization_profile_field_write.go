@@ -135,6 +135,8 @@ func (s *Store) ConfirmOrganizationProfileField(
 // writeProfileField is the one path both verbs take, so the provenance flip,
 // the canonical-column write, the audit image and the event cannot diverge
 // between correcting and confirming.
+//
+// Held by: TestBothProfileFieldVerbsWriteThroughTheOnePath (backend/internal/modules/people/profilefieldonepath_test.go)
 func (s *Store) writeProfileField(
 	ctx context.Context, orgID ids.OrganizationID, field string, in ProfileFieldWriteInput,
 ) (crmcontracts.CompanyProfileField, error) {

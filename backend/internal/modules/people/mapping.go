@@ -243,6 +243,8 @@ func leadCreateInput(req crmcontracts.CreateLeadRequest) (CreateLeadInput, error
 // distinct from omitting the field (leave it alone). Both transports —
 // the HTTP handler and the SoR provider — decode into this one type, so
 // the gesture cannot drift between surfaces.
+//
+// Held by: TestEveryLeadUpdateDecodeKeepsTheNullGesture (backend/internal/modules/people/onederivation_test.go)
 type LeadUpdateRequest struct {
 	crmcontracts.UpdateLeadRequest
 	scoreNull  bool
