@@ -32,7 +32,7 @@ import (
 
 func compiledRoutingSchema(t *testing.T) *jsonschema.Schema {
 	t.Helper()
-	const path = "../config/ai-routing.schema.json"
+	const path = "../config/margince.schema.json"
 	raw, err := os.Open(path)
 	if err != nil {
 		t.Fatalf("open schema: %v", err)
@@ -47,10 +47,13 @@ func compiledRoutingSchema(t *testing.T) *jsonschema.Schema {
 		t.Fatalf("parse schema: %v", err)
 	}
 	c := jsonschema.NewCompiler()
-	if err := c.AddResource("ai-routing.json", doc); err != nil {
+	if err := c.AddResource("margince.json", doc); err != nil {
 		t.Fatalf("add schema: %v", err)
 	}
-	sch, err := c.Compile("ai-routing.json")
+	// The routing shape is a subtree now, so this compiles the pointer to it
+	// rather than the whole document: the cases below write a BINDING, not a
+	// whole margince.yaml.
+	sch, err := c.Compile("margince.json#/$defs/aiRouting")
 	if err != nil {
 		t.Fatalf("compile schema: %v", err)
 	}

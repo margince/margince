@@ -79,7 +79,7 @@ tiers:
 > exists changes nothing — `make dev-fresh` re-runs the bootstrap, and Settings →
 > AI rebinds a stack that is already up. The shape a binding has — `profile` plus
 > a `tiers` map — is schema-validated in any editor with a YAML language server
-> (autocomplete, enum checks, hover docs) against `config/ai-routing.schema.json`.
+> (autocomplete, enum checks, hover docs) against `config/margince.schema.json`, which the shipped configs point at with a `# yaml-language-server:` line.
 >
 > **One key, every open-weight model:** bind `openai_compatible` with
 > `base_url: https://openrouter.ai/api` and one `OPENAI_COMPATIBLE_API_KEY`, and

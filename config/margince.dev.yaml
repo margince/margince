@@ -1,3 +1,4 @@
+# yaml-language-server: $schema=./margince.schema.json
 # config/margince.dev.yaml — what a DEV stack does differently.
 #
 # Read only when MARGINCE_ENV=dev, on top of config/margince.yaml, later layer

@@ -14,9 +14,21 @@ import (
 // silently lies to operators (autocompletes a provider the parser rejects, or
 // omits one it accepts). Adding a provider without touching the schema fails here.
 func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
-	raw, err := os.ReadFile("../../../../config/ai-routing.schema.json")
+	raw, err := os.ReadFile("../../../../config/margince.schema.json")
 	if err != nil {
 		t.Fatalf("read schema: %v", err)
+	}
+	// The routing shape lives under $defs now: it is a subtree of margince.yaml
+	// rather than a file of its own, and this gate follows it there rather than
+	// being deleted with the file it used to read.
+	var doc struct {
+		Defs struct {
+			//nolint:tagliatelle // a $defs member name, camelCase like its siblings binding/embeddingsBinding
+			AiRouting json.RawMessage `json:"aiRouting"`
+		} `json:"$defs"`
+	}
+	if err := json.Unmarshal(raw, &doc); err != nil {
+		t.Fatalf("parse schema: %v", err)
 	}
 	var schema struct {
 		Properties struct {
@@ -49,8 +61,14 @@ func TestRoutingSchemaEnumsMatchCode(t *testing.T) {
 			} `json:"embeddingsBinding"`
 		} `json:"$defs"`
 	}
+	// $defs/binding and $defs/embeddingsBinding sit at the document root, so
+	// they read straight off it; profile and tiers moved INSIDE $defs/aiRouting
+	// with the routing shape, and are read from there.
 	if err := json.Unmarshal(raw, &schema); err != nil {
 		t.Fatalf("parse schema: %v", err)
+	}
+	if err := json.Unmarshal(doc.Defs.AiRouting, &schema); err != nil {
+		t.Fatalf("parse the routing subtree: %v", err)
 	}
 
 	assertSetEqual(t, "profiles", schema.Properties.Profile.Enum,

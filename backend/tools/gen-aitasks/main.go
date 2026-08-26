@@ -5,7 +5,7 @@
 // contract (ai-operational-spec §1.2) — into the tables package ai
 // consumes at runtime: the Task/Tier constants, the per-task routing
 // ladders, the degrade-to map, and each task's execution mode. It also regenerates
-// config/ai-routing.schema.json's tier enum from the same contract, so a
+// the routing shape's tier enum from the same contract, so a
 // tier can be added or renamed in exactly one place (ai-tasks.yaml) and
 // every downstream artifact — the binary and the deployment schema —
 // picks it up on the next `make gen`.
@@ -32,9 +32,8 @@ import (
 )
 
 var (
-	contractPath  = flag.String("contract", "../api/ai-tasks.yaml", "the AI task contract to compile")
-	outGoPath     = flag.String("out-go", "../internal/modules/ai/tasks_gen.go", "generated Go table destination")
-	outSchemaPath = flag.String("out-schema", "../../config/ai-routing.schema.json", "generated routing-schema destination")
+	contractPath = flag.String("contract", "../api/ai-tasks.yaml", "the AI task contract to compile")
+	outGoPath    = flag.String("out-go", "../internal/modules/ai/tasks_gen.go", "generated Go table destination")
 )
 
 func main() {
@@ -57,14 +56,6 @@ func main() {
 	}
 	if err := os.WriteFile(*outGoPath, []byte(goSrc), 0o600); err != nil {
 		log.Fatalf("gen-aitasks: writing %s: %v", *outGoPath, err)
-	}
-
-	schemaSrc, err := emitSchema(c.Tiers)
-	if err != nil {
-		log.Fatalf("gen-aitasks: %v", err)
-	}
-	if err := os.WriteFile(*outSchemaPath, []byte(schemaSrc), 0o600); err != nil {
-		log.Fatalf("gen-aitasks: writing %s: %v", *outSchemaPath, err)
 	}
 
 	fmt.Printf("%d tasks, %d tiers generated\n", len(c.Tasks), len(c.Tiers))

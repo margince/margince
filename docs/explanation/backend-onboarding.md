@@ -104,7 +104,7 @@ edit. Everything else you author.
 | `internal/compose/stubs_gen.go` | one explicit **501** stub per operation (the shadow-able fallback) | `ServerInterface` |
 | `internal/compose/agentpolicy_gen.go` | the agent admission table (verb/tier per route) | `crm.yaml` `x-mcp-tool` / `x-agent-access` |
 | `internal/modules/ai/tasks_gen.go` | the AI task registry (task → tier ladder / execution mode) | `api/ai-tasks.yaml` (via `tools/gen-aitasks`) |
-| `config/ai-routing.schema.json` | the routing-config validation schema | `api/ai-tasks.yaml` (via `tools/gen-aitasks`) |
+| `config/margince.schema.json` | the margince.yaml validation schema, routing shape included under `$defs` | `deployconfig.Config` + `api/ai-tasks.yaml` (via `tools/gen-configschema`) |
 | `.build/openapi30.yaml` | the downgraded contract (build artifact, gitignored) | `crm.yaml` |
 | `frontend/src/api/schema.d.ts` | the SPA's TS types | `crm.yaml` (via `pnpm gen:api`) |
 
@@ -242,7 +242,7 @@ codegen, and the store shape above into one checklist:
 | App DSN (api/worker) | `postgres://margince_app:margince_app_dev@localhost:15432/margince` |
 | Tenant GUC | `app.workspace_id` (set transaction-local by `WithWorkspaceTx`) |
 | Contract | `backend/api/crm.yaml` — regenerate with `make gen` |
-| Generated (never edit) | `internal/contracts/api_gen.go`, `compose/stubs_gen.go`, `compose/agentpolicy_gen.go`, `modules/ai/tasks_gen.go`, `config/ai-routing.schema.json` |
+| Generated (never edit) | `internal/contracts/api_gen.go`, `compose/stubs_gen.go`, `compose/agentpolicy_gen.go`, `modules/ai/tasks_gen.go`, `config/margince.schema.json` |
 | Merge gate | `make check` (+ `make test-integration`, needs `make db-up`) |
 
 Every flag/env: [configuration.md](../reference/configuration.md). Every target:

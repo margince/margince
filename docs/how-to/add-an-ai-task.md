@@ -142,7 +142,7 @@ and it caps how much of the site one certification run can cover:
 2. **Regenerate** — `make gen`. `tools/gen-aitasks` compiles the contract into
    `internal/modules/ai/tasks_gen.go` (your `ai.TaskX` constant, `ai.SitesFor`,
    `ai.Status`, `ai.CompanyContextFor`) and rewrites
-   `config/ai-routing.schema.json`. Never hand-edit either; commit both **with**
+   `config/margince.schema.json`. Never hand-edit either; commit both **with**
    the contract in one commit, or the drift gate fails.
 
 3. **Give the task a lane, and wire it into a process role** *(new task only)*.

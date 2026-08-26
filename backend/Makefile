@@ -196,9 +196,9 @@ test: composition ## Unit tests (the root fitness tests run uncached)
 	# cache cannot key — run them uncached so a new module can never
 	# ride a stale green.
 	$(GOWORK_COMPOSED) $(GO) test -count=1 .
-	# Same reason, one module up: the ai package's config gates read
-	# ../config/ai-routing*.{json,yaml}, which live OUTSIDE this module and so
-	# are invisible to the cache. Editing the schema or an example alone
+	# Same reason, one module up: the config gates read ../config/margince*.yaml
+	# and ../config/margince.schema.json, which live OUTSIDE this module and so
+	# are invisible to the cache. Editing the schema or a shipped config alone
 	# therefore replays the previous pass — verified: deleting the schema's
 	# provider restriction left the gate reporting ok (cached). CI is cold and
 	# never saw it; the engineer who broke it locally would not either.
@@ -287,7 +287,7 @@ e2e-ai-report: ## Print the certification readiness report — every shipped sit
 # nothing; only `run` calls a model, and --ai-fake makes even that free.
 # Artifacts land in the gitignored .tmp/aitask — a fetched page carries whatever
 # the source carried.
-ai-probe: composition ## Probe one AI task site against real input (free except `run`, which calls a model). BYOK key auto-loaded from .env.local. ARGS='list' | ARGS='scaffold <task>/<variant>' | ARGS='fetch <url>' | ARGS='run --site <task>/<variant> --fixture f.json --ai-routing ../config/ai-routing.example.yaml'
+ai-probe: composition ## Probe one AI task site against real input (free except `run`, which calls a model). BYOK key auto-loaded from .env.local. ARGS='list' | ARGS='scaffold <task>/<variant>' | ARGS='fetch <url>' | ARGS='run --site <task>/<variant> --fixture f.json --model provider:model'
 	$(LOAD_ENV_LOCAL) $(GOWORK_COMPOSED) $(GO) run ./cmd/worker aitask $(ARGS) \
 	  --corpus $(CURDIR)/internal/compose/aicert/corpus --work-dir $(CURDIR)/../.tmp/aitask
 
@@ -501,7 +501,8 @@ gen: mcp-apps-vocab ## Regenerate everything derived from the contract
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-stubs
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-agentpolicy -in api/crm.yaml -out internal/compose/agentpolicy_gen.go
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-recordfields -in api/crm.yaml -out internal/modules/agents/recordshapes_gen.go
-	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go -out-schema ../config/ai-routing.schema.json
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-aitasks -contract api/ai-tasks.yaml -out-go internal/modules/ai/tasks_gen.go
+	$(GOWORK_ROOT) $(GO) run ./tools/gen-configschema -pkg internal/platform/deployconfig -out ../config/margince.schema.json
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-jobs -contract api/jobs.yaml \
 		-out-specs internal/platform/jobs/specs_gen.go \
 		-out-kinds internal/compose/jobkinds_gen.go
@@ -510,7 +511,7 @@ drift: gen ## Fail when any generated file drifted from the contract
 	# gen regenerates the committed per-unit manifests too (via composition);
 	# without them here a stale or hand-edited extensions/<name>/manifest.generated.json
 	# would be silently healed by the mutating gen step instead of failing.
-	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/ai-routing.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json
+	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.

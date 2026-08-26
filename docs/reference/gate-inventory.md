@@ -25,6 +25,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `aitaskrunenum_test.go` | H3 | The ai\_task.state\_changed payload's closed vocabularies must equal the ai\_task\_run column CHECKs they are projected into. |
 | `auditcoherence_test.go` | H3 | The audit\_log enum-coherence gate as a fitness function. |
 | `backfillwindow_test.go` | H3 | The CAP-PARAM-4 window set as a fitness function: the contract's four enums, the Go validator and the capture\_backfill CHECK all state the SAME set, derived from the tree rather than remembered here. |
+| `configschema_test.go` | H3 | The margince.yaml schema is editor tooling, and editor tooling that lies is worse than none: an operator trusts the squiggle. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts exactly the record types the search module can search, and the contract has to say the same set. |
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the FRONTEND types is enforced in two different places for two different readers. |
 | `corepicklistcontract_test.go` | H3 | The core picklist value sets against the contract that owns them. |
@@ -51,7 +52,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 
-## Census (51)
+## Census (52)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -80,6 +81,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobcensus_test.go` | H3 | The census as a fitness function, in both directions. |
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for ONE workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
+| `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the CALLER wrote is one number, declared in platform/database as CallerPredicateBudget. |
