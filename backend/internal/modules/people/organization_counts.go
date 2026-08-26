@@ -135,6 +135,7 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 // for the page — the ONE spelling of "open deal" this module reads, so the
 // list's count and the company page's open-pipeline tile derive from the
 // same rows and cannot disagree.
+// Held by: TestEveryOpenDealCountComesFromTheRollup (backend/internal/modules/people/opendealcount_test.go)
 func fillOpenDealCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Organization, orgIDs []ids.UUID) error {
 	return fillCount(ctx, tx, idx,
 		`SELECT organization_id, open_deal_count

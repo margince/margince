@@ -151,10 +151,16 @@ type listFilters struct {
 
 // capturedByKindClause is the ONE spelling of the provenance filter
 // (ADR-0075/A121 §3a): it refuses a kind outside the contract's enum and, for
-// an accepted one, builds the clause. It lives outside listFilters because the
-// lead list builds its own WHERE chain rather than using that struct, and two
-// copies of "which prefix counts as an AI" is exactly how the person list and
-// the lead list end up disagreeing about what the review list contains.
+// an accepted one, builds the clause. Every list surface reaches it through
+// listFilters, the lead work queue included — that one assembles its own WHERE
+// chain and still takes the shared clauses from the struct, which is what keeps
+// "which prefix counts as an AI" from having a second answer. Two answers is
+// exactly how the person list and the lead list come to disagree about what the
+// review list contains, and they are read side by side.
+//
+// Held by: TestTheProvenanceClauseIsBuiltInOnePlace (backend/internal/modules/people/provenancefilter_test.go)
+// The filter is dropped more easily than it is duplicated, and a literal that
+// omits it is held by TestEveryListFiltersLiteralCarriesTheProvenanceFilter.
 //
 // The check is HERE, in the store, rather than at the handler, because the
 // store is where authorization runs. Both list paths call auth.Require before
@@ -183,9 +189,21 @@ func capturedByKindClause(kind *string, arg func(any) int) (string, bool, error)
 	}
 	if !crmcontracts.CapturedByKind(*kind).Valid() {
 		return "", false, httperr.Validation("captured_by_kind", "invalid",
-			"must be one of human, agent, connector, system")
+			vocabularyOf(capturedByKinds))
 	}
 	return storekit.SQLf("captured_by LIKE $%d", arg(likePrefix(*kind+":"))), true, nil
+}
+
+// capturedByKinds is the vocabulary the refusal above NAMES. Acceptance is
+// decided by the generated Valid(), which cannot fall behind crm.yaml; a
+// message typed out beside it can, and then the refusal withholds the one kind
+// the caller was reaching for. Spelled from the contract's constants so the two
+// answer out of the same place.
+var capturedByKinds = map[string]bool{
+	string(crmcontracts.CapturedByKindHuman):     true,
+	string(crmcontracts.CapturedByKindAgent):     true,
+	string(crmcontracts.CapturedByKindConnector): true,
+	string(crmcontracts.CapturedByKindSystem):    true,
 }
 
 // agentPrefix matches the captured_by grammar's AI namespace. Shared by every

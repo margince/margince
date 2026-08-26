@@ -468,9 +468,7 @@ internal/modules/people/linkedinrenormalize.go#func matchRank
 internal/modules/people/linkedinrenormalize.go#var matchRankOrder
 internal/modules/people/listfilters.go#const block at const filterOwnerID
 internal/modules/people/listpage.go#func aiWrittenClause
-internal/modules/people/listpage.go#func capturedByKindClause
 internal/modules/people/mapping.go#type LeadUpdateRequest
-internal/modules/people/organization_counts.go#func fillOpenDealCounts
 internal/modules/people/organization_profile_field_write.go#const block at const auditKeyValue
 internal/modules/people/organization_profile_field_write.go#method Store.writeProfileField
 internal/modules/people/projectstakeholder.go#method Store.PersonNames
