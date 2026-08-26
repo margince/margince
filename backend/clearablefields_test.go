@@ -31,9 +31,12 @@ import (
 )
 
 // clearableMapsByRecordType names the declaration in each module that lists what
-// that record type can clear, and the record type it serves. Derived from the
-// naming convention the stores share; a new one that does not follow it is
-// caught by TestEveryRecordTypeThatCanClearDeclaresIt below.
+// that record type can clear, and the record type it serves. The values are the
+// record types themselves, not reasons anything is excused.
+//
+// Derived from the naming convention the stores share.
+//
+// gatekit:fixture the record type each module's clearable-column map serves
 var clearableMapsByRecordType = map[string]string{
 	"clearablePersonColumns":       "person",
 	"clearableOrganizationColumns": "organization",
