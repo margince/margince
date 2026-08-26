@@ -3,7 +3,11 @@
 
 package knowledge
 
-import "strings"
+import (
+	"crypto/sha256"
+	"encoding/hex"
+	"strings"
+)
 
 // maxChunkChars is the ceiling one chunk may reach. It is a character count
 // rather than a token count on purpose: tokens are the embedder's unit and vary
@@ -21,6 +25,18 @@ const overlapChars = 120
 type Chunk struct {
 	Text string
 	Ix   int
+}
+
+// Hash identifies this span's exact text. It is what decides whether a
+// re-ingest costs a model call: the chunker is pure, so identical prose yields
+// an identical hash, and vectorkit.Unchanged reads it against the stored one.
+//
+// Spelled here rather than at the writer because the value belongs to the span,
+// not to the row — two writers computing it two ways is how a corpus starts
+// paying to re-embed text that never moved.
+func (c Chunk) Hash() string {
+	sum := sha256.Sum256([]byte(c.Text))
+	return hex.EncodeToString(sum[:])
 }
 
 // ChunkText splits a document into embeddable spans, preferring paragraph then

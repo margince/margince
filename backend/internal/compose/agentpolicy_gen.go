@@ -416,6 +416,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/imports/{id}/undo":                                         {Op: "undoImportRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/knowledge/corpora":                                         {Op: "createCorpus", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/knowledge/corpora/{id}/ask":                                {Op: "askCorpus", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/knowledge/corpora/{id}/documents":                          {Op: "uploadCorpusDocument", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/lead-disqualify-reasons":                                   {Op: "createLeadDisqualifyReason", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/lead-sources":                                              {Op: "createLeadSource", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/leads":                                                     {Op: "createLead", Access: "tool", Tool: "create_record", RecordType: "lead", Tier: "auto_execute", Scope: "write"},

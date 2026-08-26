@@ -17,6 +17,8 @@ const (
 	defaultAttachmentBytes = 25_000_000
 	defaultCSVImportBytes  = 10_000_000
 	defaultLinkedInBytes   = 8_000_000
+
+	defaultKnowledgeDocumentBytes = 5_000_000
 )
 
 func parseUploads(t *testing.T, body string) (deployconfig.UploadLimits, error) {
@@ -34,9 +36,10 @@ func TestAFileWithNoUploadsSectionGetsTheCompiledCeilings(t *testing.T) {
 		t.Fatalf("a minimal file was refused: %v", err)
 	}
 	want := deployconfig.UploadLimits{
-		Attachment:     defaultAttachmentBytes,
-		CSVImport:      defaultCSVImportBytes,
-		LinkedInImport: defaultLinkedInBytes,
+		Attachment:        defaultAttachmentBytes,
+		CSVImport:         defaultCSVImportBytes,
+		LinkedInImport:    defaultLinkedInBytes,
+		KnowledgeDocument: defaultKnowledgeDocumentBytes,
 	}
 	if limits != want {
 		t.Errorf("unconfigured limits are %+v, want %+v — an installation that "+
@@ -56,7 +59,8 @@ func TestOneConfiguredCeilingLeavesTheOthersAlone(t *testing.T) {
 	if limits.Attachment != 40_000_000 {
 		t.Errorf("attachment ceiling is %d, want the configured 40 MB", limits.Attachment)
 	}
-	if limits.CSVImport != defaultCSVImportBytes || limits.LinkedInImport != defaultLinkedInBytes {
+	if limits.CSVImport != defaultCSVImportBytes || limits.LinkedInImport != defaultLinkedInBytes ||
+		limits.KnowledgeDocument != defaultKnowledgeDocumentBytes {
 		t.Errorf("configuring one route changed the others: %+v", limits)
 	}
 }
@@ -66,12 +70,14 @@ func TestEveryRouteIsSeparatelyConfigurable(t *testing.T) {
   attachment_mb: 50
   csv_import_mb: 20
   linkedin_import_mb: 3
+  knowledge_document_mb: 7
 `)
 	if err != nil {
 		t.Fatalf("a full uploads section was refused: %v", err)
 	}
 	want := deployconfig.UploadLimits{
 		Attachment: 50_000_000, CSVImport: 20_000_000, LinkedInImport: 3_000_000,
+		KnowledgeDocument: 7_000_000,
 	}
 	if limits != want {
 		t.Errorf("limits are %+v, want %+v — three keys that resolve to the "+

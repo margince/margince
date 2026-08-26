@@ -409,6 +409,7 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	// ticked: the api enqueues the dispatcher once per confirmed reindex
 	// (jobs_embedreindex.go).
 	addEmbedReindexJobs(reg, pool, cfg.Embedder)
+	addKnowledgeIngestJobs(reg, pool, cfg.Blobstore, log)
 	// Both refreshes read a source the deployment configures. An unconfigured
 	// one — a nil brain, an empty url, no pricing sources — leaves the worker
 	// registered and its producer proposing nothing, which is the honest

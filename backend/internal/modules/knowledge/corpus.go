@@ -14,6 +14,7 @@ import (
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
 	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
 	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
@@ -38,10 +39,24 @@ type Store struct {
 	// db binds the installation's workspace, so a caller does not have to have
 	// put it in ctx first.
 	db *database.DB
+	// blob holds uploaded document bytes. Nil is a legitimate deployment — an
+	// installation with no object storage — and the upload says so rather than
+	// blaming the file; every other path works without it.
+	blob blobstore.Store
 }
 
-// NewStore wires the store over the workspace-bound app pool.
+// NewStore wires the store over the workspace-bound app pool. It carries no
+// object store: a role opts in with WithBlobstore, and one that does not still
+// serves every path but the upload.
 func NewStore(db *database.DB) *Store { return &Store{db: db} }
+
+// WithBlobstore binds where uploaded document bytes live. Returns a copy, so a
+// role that never calls it keeps a store whose upload refuses honestly.
+func (s *Store) WithBlobstore(blob blobstore.Store) *Store {
+	clone := *s
+	clone.blob = blob
+	return &clone
+}
 
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error { return s.db.Tx(ctx, fn) }
 

@@ -32,6 +32,9 @@ type Uploads struct {
 	CSVImportMB *int `yaml:"csv_import_mb"`
 	// LinkedInImportMB bounds POST /v1/me/linkedin-connections.
 	LinkedInImportMB *int `yaml:"linkedin_import_mb"`
+	// KnowledgeDocumentMB bounds POST /v1/knowledge/corpora/{id}/documents — a
+	// document filed into an asked corpus.
+	KnowledgeDocumentMB *int `yaml:"knowledge_document_mb"`
 }
 
 // UploadLimits is Uploads resolved: every ceiling present, in bytes. It is what
@@ -39,9 +42,10 @@ type Uploads struct {
 // re-applies a default — the two places a default is applied are the two places
 // they can disagree.
 type UploadLimits struct {
-	Attachment     int64
-	CSVImport      int64
-	LinkedInImport int64
+	Attachment        int64
+	CSVImport         int64
+	LinkedInImport    int64
+	KnowledgeDocument int64
 }
 
 // The compiled-in ceilings, in decimal MB. Decimal, not binary, because the
@@ -57,6 +61,12 @@ const (
 	defaultAttachmentMB     = 25
 	defaultCSVImportMB      = 10
 	defaultLinkedInImportMB = 8
+	// A corpus document is plain text by construction — the route accepts
+	// nothing else — and 5 MB of it is roughly a million words, well past any
+	// handbook. The ceiling is low because the cost of a large one is not
+	// storage but chunks: every megabyte admitted here becomes rows the ask
+	// scans on the hot path.
+	defaultKnowledgeDocumentMB = 5
 )
 
 // The range an operator may choose inside.
@@ -80,9 +90,10 @@ const bytesPerMB = 1_000_000
 // value here is one an upload can actually ride.
 func (c Config) EffectiveUploads() UploadLimits {
 	return UploadLimits{
-		Attachment:     megabytes(c.Uploads.AttachmentMB, defaultAttachmentMB),
-		CSVImport:      megabytes(c.Uploads.CSVImportMB, defaultCSVImportMB),
-		LinkedInImport: megabytes(c.Uploads.LinkedInImportMB, defaultLinkedInImportMB),
+		Attachment:        megabytes(c.Uploads.AttachmentMB, defaultAttachmentMB),
+		CSVImport:         megabytes(c.Uploads.CSVImportMB, defaultCSVImportMB),
+		LinkedInImport:    megabytes(c.Uploads.LinkedInImportMB, defaultLinkedInImportMB),
+		KnowledgeDocument: megabytes(c.Uploads.KnowledgeDocumentMB, defaultKnowledgeDocumentMB),
 	}
 }
 
@@ -104,6 +115,7 @@ func (u Uploads) validate() error {
 		{"attachment_mb", u.AttachmentMB},
 		{"csv_import_mb", u.CSVImportMB},
 		{"linkedin_import_mb", u.LinkedInImportMB},
+		{"knowledge_document_mb", u.KnowledgeDocumentMB},
 	} {
 		if k.value == nil {
 			continue
