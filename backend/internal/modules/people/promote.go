@@ -291,7 +291,10 @@ func promotableLead(ctx context.Context, tx pgx.Tx, id ids.LeadID, in PromoteLea
 	if lead.ArchivedAt != nil {
 		return crmcontracts.Lead{}, apperrors.ErrNotFound
 	}
-	if lead.FullName == nil && lead.Email == nil {
+	// Read through the same derivation the ladder matches on, not through a
+	// nil check: a full_name that is present and empty passes `!= nil` and
+	// names nobody, so such a lead promotes into a person with no name at all.
+	if leadIdentityName(lead) == "" {
 		return crmcontracts.Lead{}, &PromoteNeedsIdentityError{}
 	}
 	if in.EvidenceActivityID != nil {

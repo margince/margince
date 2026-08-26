@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -106,6 +107,29 @@ func (s *Store) previewTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 	return DedupePerson(ctx, tx, candidate)
 }
 
+// leadIdentityName is what a lead is called, worked out once: its own name if
+// it has one, otherwise the email address that is the only other thing naming
+// it, and the empty string when it has neither.
+//
+// The promotion's identity guard and the ladder candidate both read it here.
+// A guard that decides "this lead has an identity" one way while the candidate
+// works the name out another way admits exactly the leads it meant to refuse:
+// `FullName != nil` is true of a full_name that is PRESENT and EMPTY, which is
+// not a name, and such a lead reaches the ladder carrying nothing to match on.
+//
+// The name is trimmed for the reason the address is (values.ParseEmail):
+// padding is not identity, and a person stored under a padded name is a person
+// the next search does not find.
+func leadIdentityName(lead crmcontracts.Lead) string {
+	if name := strings.TrimSpace(deref(lead.FullName)); name != "" {
+		return name
+	}
+	if lead.Email != nil {
+		return string(*lead.Email)
+	}
+	return ""
+}
+
 // leadPersonCandidate turns a lead into the candidate the §1.3 ladder matches
 // on. The preview and the promotion take it from here rather than each
 // assembling one, because "the same candidate" is a promise about the
@@ -119,10 +143,7 @@ func (s *Store) previewTarget(ctx context.Context, tx pgx.Tx, lead crmcontracts.
 // therefore read through its own nil check rather than on the strength of that
 // check having passed.
 func (s *Store) leadPersonCandidate(ctx context.Context, tx pgx.Tx, lead crmcontracts.Lead) (PersonCandidate, error) {
-	name := deref(lead.FullName)
-	if name == "" && lead.Email != nil {
-		name = string(*lead.Email)
-	}
+	name := leadIdentityName(lead)
 	var emails []string
 	if lead.Email != nil {
 		emails = []string{string(*lead.Email)}

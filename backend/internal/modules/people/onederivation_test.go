@@ -157,3 +157,124 @@ func buildsA(body *ast.BlockStmt, typeName string) bool {
 	})
 	return found
 }
+
+// A third derivation lives one field away from the two above, and it fails in
+// the opposite direction: not two answers to who the lead is, but two readings
+// of whether it is anybody.
+//
+// The promotion refuses a lead with no identity, and the ladder candidate works
+// out the name to match on. Both turn on the same question — what is this lead
+// called — and while each answers it for itself, the guard admits leads the
+// candidate cannot name. `FullName != nil` is true of a full_name that is
+// present and empty, so a lead carrying one and no email clears the guard and
+// promotes into a person with no name at all: a row nobody searching for that
+// person will ever match, created by a verb whose whole job is to name them.
+
+// identityRefusal is the refusal a lead with nothing to be called earns.
+const identityRefusal = "PromoteNeedsIdentityError"
+
+// leadNaming is the one place a lead's name is worked out.
+const leadNaming = "leadIdentityName"
+
+// leadNameField is the field whose present-but-empty reading is the defect. A
+// function in the corpus reading it directly has started a second answer,
+// whatever it then does with it.
+const leadNameField = "FullName"
+
+func TestTheIdentityGuardAndTheCandidateReadOneName(t *testing.T) {
+	var guards, builders int
+	forEachModuleFile(t, func(name string, fset *token.FileSet, file *ast.File) {
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || fn.Body == nil || fn.Name == nil || fn.Name.Name == leadNaming {
+				continue
+			}
+			// Both halves are found by what they DO — one refuses a lead for
+			// having no identity, the other builds the candidate the ladder
+			// matches on — so a third function joining either half is judged
+			// the day it is written rather than the day somebody remembers
+			// this test.
+			guard := refusesWith(fn.Body, identityRefusal)
+			builder := takesA(fn, "crmcontracts.Lead") && buildsA(fn.Body, candidateType)
+			if !guard && !builder {
+				continue
+			}
+			if guard {
+				guards++
+			}
+			if builder {
+				builders++
+			}
+			if !callsFunc(fn, leadNaming) {
+				t.Errorf("%s (%s) decides what a lead is called without %s.\n\nThe guard and the "+
+					"candidate agree on whether a lead has an identity only while ONE function "+
+					"answers it. Take %s.", fn.Name.Name, name, leadNaming, leadNaming)
+			}
+			if pos := readsField(fn.Body, leadNameField); pos.IsValid() {
+				t.Errorf("%s reads .%s directly at %s.\n\nThat is the second reading: `!= nil` and "+
+					"`== \"\"` disagree about a full_name that is present and empty, and the lead "+
+					"that falls between them promotes into a person with no name. Read %s.",
+					fn.Name.Name, leadNameField, fset.Position(pos), leadNaming)
+			}
+		}
+	})
+	// Either half at zero means this gate examined a population that no longer
+	// exists — the refusal renamed, the candidate moved — and a gate holding
+	// nothing reports exactly what a gate holding everything does.
+	if guards == 0 {
+		t.Fatalf("no function builds a %s, so nothing in this package refuses a lead for having "+
+			"no identity and this gate is watching a rule that has moved", identityRefusal)
+	}
+	if builders == 0 {
+		t.Fatalf("no function builds a %s from a lead, so this gate is watching a derivation "+
+			"that has moved", candidateType)
+	}
+}
+
+// refusesWith reports whether body constructs the named error type. Unlike
+// buildsA it counts an EMPTY literal: a sentinel error carries its meaning in
+// its type, and `&PromoteNeedsIdentityError{}` is the whole refusal.
+func refusesWith(body *ast.BlockStmt, typeName string) bool {
+	found := false
+	ast.Inspect(body, func(n ast.Node) bool {
+		lit, ok := n.(*ast.CompositeLit)
+		if ok && lit.Type != nil && typeText(lit.Type) == typeName {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// callsFunc reports whether fn calls the named package-level function. Plain
+// identifiers only: a method of the same name on some other receiver answers a
+// different question, and counting it would report a derivation that is not
+// shared.
+func callsFunc(fn *ast.FuncDecl, name string) bool {
+	found := false
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		call, ok := n.(*ast.CallExpr)
+		if !ok {
+			return true
+		}
+		if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == name {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// readsField answers where body selects the named field, or an invalid
+// position when it does not.
+func readsField(body *ast.BlockStmt, field string) token.Pos {
+	var at token.Pos
+	ast.Inspect(body, func(n ast.Node) bool {
+		sel, ok := n.(*ast.SelectorExpr)
+		if ok && sel.Sel != nil && sel.Sel.Name == field {
+			at = sel.Sel.Pos()
+		}
+		return !at.IsValid()
+	})
+	return at
+}
