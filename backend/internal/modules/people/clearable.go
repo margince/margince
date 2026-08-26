@@ -15,15 +15,34 @@ type clearable struct {
 	current any
 }
 
-// applyClears sets each named field to NULL. A name the map does not hold is
-// ignored HERE and refused by the reversal path before the write, so a caller
-// cannot reach a column this store did not name.
-func applyClears(p *storekit.Patch, clear []string, columns map[string]clearable) {
+// NotClearableError refuses an explicit null on a field this record cannot set
+// to nothing. It maps to 422 through the FieldFault seam.
+//
+// Refusing matters: the caller sent a null on a field the contract declares
+// nullable, so ignoring it would answer 200 having changed nothing — a success
+// they cannot trust.
+type NotClearableError struct{ Field string }
+
+func (e *NotClearableError) Error() string {
+	return e.Field + " cannot be set to null on this record; omit the field to leave it unchanged"
+}
+
+// FieldFault names the field the caller tried to clear.
+func (e *NotClearableError) FieldFault() (field, code, message string) {
+	return e.Field, "field_not_clearable", e.Error()
+}
+
+// applyClears sets each named field to NULL, and refuses a name this store
+// cannot clear. A field the map does not hold is either not nullable or not
+// clearable through this path, and either way the honest answer is to say so
+// rather than accept the instruction and drop it.
+func applyClears(p *storekit.Patch, clear []string, columns map[string]clearable) error {
 	for _, field := range clear {
 		target, clearableHere := columns[field]
 		if !clearableHere {
-			continue
+			return &NotClearableError{Field: field}
 		}
 		p.Set(target.column, target.current, nil)
 	}
+	return nil
 }

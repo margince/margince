@@ -274,7 +274,10 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 			return fmt.Errorf("read person before update: %w", err)
 		}
 
-		p := buildPersonPatch(current, in)
+		p, err := buildPersonPatch(current, in)
+		if err != nil {
+			return err
+		}
 		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
 		if in.Social != nil || in.Emails != nil {
 			// The relation replacement rides the person row's version
@@ -336,7 +339,7 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 // buildPersonPatch stages only the fields the caller supplied, each
 // diffed against the current row so the audit before/after captures the
 // real change and an unchanged field is left out of the UPDATE.
-func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) *storekit.Patch {
+func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if in.FullName != nil {
 		p.Set("full_name", current.FullName, *in.FullName)
@@ -353,7 +356,9 @@ func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) *storek
 	if in.OwnerID != nil {
 		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
 	}
-	applyClears(p, in.Clear, clearablePersonColumns(current))
+	if err := applyClears(p, in.Clear, clearablePersonColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.Address != nil {
 		cur := addressColumns(current.Address)
 		p.Set("address_line1", cur.Line1, in.Address.Line1)
@@ -363,7 +368,7 @@ func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) *storek
 		p.Set("address_postal_code", cur.PostalCode, in.Address.PostalCode)
 		p.Set("address_country", cur.Country, in.Address.Country)
 	}
-	return p
+	return p, nil
 }
 
 func (s *Store) EnsurePersonByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error) {

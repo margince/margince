@@ -329,7 +329,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 // resumes recompute.
 func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Patch, bool, error) {
 	p := storekit.NewPatch()
-	applyClears(p, in.Clear, clearableLeadColumns(current))
+	if err := applyClears(p, in.Clear, clearableLeadColumns(current)); err != nil {
+		return nil, false, err
+	}
 	if in.FullName != nil {
 		p.Set("full_name", current.FullName, *in.FullName)
 	}

@@ -56,12 +56,12 @@ func TestProjectPhaseChangedPayloadDropsAnEmptyReason(t *testing.T) {
 func TestProjectUpdatePatchOnlyCarriesSuppliedFields(t *testing.T) {
 	current := crmcontracts.Project{Name: "ERP replacement", Key: projectStr("ERP-27")}
 
-	empty := projectUpdatePatch(current, UpdateProjectInput{})
+	empty, _ := projectUpdatePatch(current, UpdateProjectInput{})
 	if !empty.Empty() {
 		t.Errorf("an empty input produced a patch: %v", empty.After())
 	}
 
-	named := projectUpdatePatch(current, UpdateProjectInput{Name: projectStr("ERP replacement 2027")})
+	named, _ := projectUpdatePatch(current, UpdateProjectInput{Name: projectStr("ERP replacement 2027")})
 	after := named.After()
 	if len(after) != 1 {
 		t.Fatalf("patch touched %d columns, want 1: %v", len(after), after)
@@ -80,7 +80,7 @@ func TestProjectUpdatePatchOnlyCarriesSuppliedFields(t *testing.T) {
 // has no path that writes one.
 func TestProjectUpdatePatchNeverSetsPhase(t *testing.T) {
 	current := crmcontracts.Project{Name: "ERP replacement"}
-	p := projectUpdatePatch(current, UpdateProjectInput{
+	p, _ := projectUpdatePatch(current, UpdateProjectInput{
 		Name:        projectStr("renamed"),
 		Description: projectStr("still the same body of work"),
 	})

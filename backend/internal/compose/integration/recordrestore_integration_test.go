@@ -730,3 +730,65 @@ func undoabilityOf(page historyPage) string {
 	}
 	return out.String()
 }
+
+// An explicit null on a nullable field CLEARS it, and does not answer success
+// having changed nothing.
+//
+// The contract declares these fields `[string, 'null']`, so a null is a request
+// the server promised to honour. The decoded pointer cannot tell it from an
+// absent field, which is why it used to be dropped — a 200 the caller could not
+// trust, on the public API and nothing to do with undo.
+func TestEndToEnd_anExplicitNullClearsTheFieldRatherThanBeingIgnored(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people",
+		apptest.AnyMap{"full_name": "Nullable", "title": "Head of Nothing"}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+		apptest.AnyMap{"title": nil}, nil, nil); status != 200 {
+		t.Fatalf("clear the title → %d", status)
+	}
+	if title := readPerson(t, e, created.ID).Title; title != nil && *title != "" {
+		t.Errorf("title = %q after an explicit null; the field was not cleared and the "+
+			"caller was told it was", *title)
+	}
+
+	// An absent field is still left alone — the whole point of telling the two
+	// apart. A patch of one field must not wipe the others.
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+		apptest.AnyMap{"title": "Restored By Hand"}, nil, nil); status != 200 {
+		t.Fatalf("set the title again → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+		apptest.AnyMap{"first_name": "Nully"}, nil, nil); status != 200 {
+		t.Fatalf("patch a different field → %d", status)
+	}
+	if title := readPerson(t, e, created.ID).Title; title == nil || *title != "Restored By Hand" {
+		t.Errorf("title = %v after patching another field; an absent field was treated "+
+			"as a clear", title)
+	}
+}
+
+// A null on a field this record cannot clear is REFUSED by name, not dropped.
+func TestEndToEnd_aNullOnAnUnclearableFieldIsRefusedByName(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people",
+		apptest.AnyMap{"full_name": "Named Forever"}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	// full_name is not nullable in the contract and a record with no name is
+	// not a record anybody can find again.
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+		apptest.AnyMap{"full_name": nil}, nil, nil); status != 422 {
+		t.Errorf("clearing full_name → %d, want 422 naming the field", status)
+	}
+	if name := readPerson(t, e, created.ID).FullName; name != "Named Forever" {
+		t.Errorf("full_name = %q; the refused clear wrote anyway", name)
+	}
+}

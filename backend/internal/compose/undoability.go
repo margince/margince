@@ -192,6 +192,18 @@ var addressColumns = map[string]string{
 // that accepts an address spells it this way.
 const addressField = "address"
 
+// objectFieldsClearedByAnEmptyObject are fields the record holds in their own
+// table or document rather than in a column, and whose update shape takes a
+// whole object. A null image means "there was none", and the way to say that is
+// an EMPTY object: it is supplied, so the module replaces the contents with
+// nothing, where a bare null would decode to "not supplied" and change nothing.
+//
+// This is the same reason the address folds. The difference is only that an
+// address arrives as columns and these arrive already whole.
+var objectFieldsClearedByAnEmptyObject = map[string]bool{
+	"social": true,
+}
+
 // namedByTheShapeButNotWrittenByThePatch: keys a record type's update REQUEST
 // declares that its update path does not write. The generated shape is the
 // contract's, and the module's mapper is narrower than it — a key in the gap is
@@ -253,6 +265,12 @@ func filterImage(entityType string, before json.RawMessage) (map[string]json.Raw
 		}
 		if nested, isAddress := addressColumns[key]; isAddress && allowed[addressField] {
 			address[nested] = value
+			continue
+		}
+		// A null on one of these is "there was none", which an empty object
+		// says and a null cannot.
+		if objectFieldsClearedByAnEmptyObject[key] && allowed[key] && string(value) == "null" {
+			patch[key] = json.RawMessage(`{}`)
 			continue
 		}
 		// A cf_* key is a custom field: the catalog decides whether it is still

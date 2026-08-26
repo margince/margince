@@ -450,7 +450,9 @@ func recheckRenamedOrganization(ctx context.Context, tx pgx.Tx, id ids.Organizat
 // it is visibility-probed before the edge lands.
 func buildOrganizationPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Organization, in UpdateOrganizationInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
-	applyClears(p, in.Clear, clearableOrganizationColumns(current))
+	if err := applyClears(p, in.Clear, clearableOrganizationColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.DisplayName != nil {
 		p.Set("display_name", current.DisplayName, *in.DisplayName)
 	}

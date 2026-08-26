@@ -275,3 +275,43 @@ func TestAnAddressIsNotFoldedForAShapeThatCannotTakeOne(t *testing.T) {
 		t.Errorf("unspellable = %v, want [address_city] named rather than folded", unspellable)
 	}
 }
+
+// A null on a field the record holds as a whole object becomes an EMPTY object,
+// which is how "there was none" is said. A bare null would decode to "not
+// supplied" and the restore would report success having changed nothing.
+func TestANullObjectFieldIsRestoredAsAnEmptyObject(t *testing.T) {
+	patch, unspellable, err := filterImage("person", json.RawMessage(`{"social":null}`))
+	if err != nil {
+		t.Fatalf("filter: %v", err)
+	}
+	if len(unspellable) > 0 {
+		t.Fatalf("social reported unspellable: %v", unspellable)
+	}
+	if string(patch["social"]) != `{}` {
+		t.Errorf("social = %s, want an empty object", patch["social"])
+	}
+	// And so it is not a clear the module has to refuse.
+	if _, _, unclearable := splitNulls("person", patch); len(unclearable) > 0 {
+		t.Errorf("social still reads as an unclearable null: %v", unclearable)
+	}
+}
+
+// A field the record holds in its own table is not judged for supersession: the
+// row's jsonb cannot answer what it holds, so comparing would report every one
+// of them as moved and refuse every restore that touched one.
+func TestARelationBackedFieldIsNotComparedForSupersession(t *testing.T) {
+	asked, err := coupledImage(json.RawMessage(`{"social":{"linkedin":"x"},"title":"CTO"}`))
+	if err != nil {
+		t.Fatalf("narrow the image: %v", err)
+	}
+	var compared map[string]json.RawMessage
+	if err := json.Unmarshal(asked, &compared); err != nil {
+		t.Fatalf("the narrowed image is not an object: %v", err)
+	}
+	if _, judged := compared["social"]; judged {
+		t.Error("social was compared; its value does not live in a column and would always read as moved")
+	}
+	if _, judged := compared["title"]; !judged {
+		t.Error("title was not compared; it is an ordinary column and must be judged")
+	}
+}

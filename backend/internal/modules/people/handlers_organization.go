@@ -145,7 +145,9 @@ func (h Handlers) UpdateOrganization(w http.ResponseWriter, r *http.Request, id 
 		return
 	}
 
-	org, err := h.store.UpdateOrganization(r.Context(), pathID[ids.OrganizationKind](id), organizationUpdateInput(req, ifVersion))
+	update := organizationUpdateInput(req, ifVersion)
+	update.Clear = httperr.ClearedFields(r)
+	org, err := h.store.UpdateOrganization(r.Context(), pathID[ids.OrganizationKind](id), update)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

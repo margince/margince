@@ -158,6 +158,21 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, entityType string, id 
 	return reportedAs(moved, imageKeys(after)), nil
 }
 
+// relationBackedFields live in their own table rather than in a column on the
+// record, so `to_jsonb(row) -> key` cannot answer what they hold and every one
+// of them would read as moved.
+//
+// They are therefore NOT judged for supersession, and that is a stated gap: two
+// people editing a person's social profiles in turn will not block each other
+// the way two people editing a title do. Comparing them properly means reading
+// each relation, which is worth doing when a second such field appears — one
+// field with a narrow blast radius does not earn a second comparison engine.
+var relationBackedFields = map[string]bool{
+	"social": true,
+	"emails": true,
+	"phones": true,
+}
+
 // coupledImage is the after-image narrowed to the keys worth comparing, with
 // the money pair pulled in whole: a restore of the amount under a currency that
 // moved states a value that never existed.
@@ -168,7 +183,7 @@ func coupledImage(after json.RawMessage) ([]byte, error) {
 	}
 	comparable := map[string]json.RawMessage{}
 	for key, value := range image {
-		if derivedColumns[key] {
+		if derivedColumns[key] || relationBackedFields[key] {
 			continue
 		}
 		comparable[key] = value
