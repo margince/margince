@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import type { ReactNode } from "react";
+import { isValidElement, type ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { pickOption } from "../design-system/select-testing";
@@ -479,14 +479,16 @@ describe("installation-wide cards live under the admin group", () => {
         return false;
       }
       seen.add(node);
-      const el = node as {
-        type?: { name?: string };
-        props?: { children?: ReactNode };
-      };
-      if (typeof el.type === "function" && el.type.name === componentName) {
+      // The props generic is what lets `children` be read without asserting a
+      // shape nothing checked: isValidElement narrows both halves at once.
+      if (!isValidElement<{ children?: ReactNode }>(node)) {
+        return false;
+      }
+      // A function component's `name` is what the register renders it under.
+      if (typeof node.type === "function" && node.type.name === componentName) {
         return true;
       }
-      return walk(el.props?.children);
+      return walk(node.props.children);
     };
     return walk(tabContent(id));
   }
