@@ -106,8 +106,10 @@ it("stays open when an item inside the portalled panel is clicked", async () => 
 it("opens the panel toward whichever side of the trigger has room", () => {
   const viewport = 800;
   vi.stubGlobal("innerHeight", viewport);
-  const near = (top: number) =>
-    ({ top, bottom: top + 30 }) as unknown as DOMRect;
+  // A real DOMRect, not a two-field literal cast into the shape: a box whose
+  // `top` was supplied and whose height was not is a box no element has, and
+  // `verticalPlacement` is free to read a field the literal never spelled.
+  const near = (top: number) => new DOMRect(0, top, 0, 30);
 
   // Room below: the panel hangs from the trigger.
   const down = verticalPlacement(near(100), 200);

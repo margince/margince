@@ -248,6 +248,19 @@ function sizeOf(column: {
  */
 const WIDTHS_PREFIX = "margince.table.widths.v2.";
 
+/**
+ * The table's width floor, as the custom property the stylesheet reads.
+ *
+ * Declared rather than asserted onto `CSSProperties`: React's own type carries
+ * the CSS properties it knows, and a cast to it would say this one is among
+ * them. The intersection says what is true.
+ */
+type FloorStyle = CSSProperties & Readonly<{ "--lt-floor": string }>;
+
+function floorStyle(floor: number): FloorStyle {
+  return { "--lt-floor": `${floor}px` };
+}
+
 function readWidths(key?: string): Record<string, number> {
   if (!key) {
     return {};
@@ -973,7 +986,7 @@ export function ListTable<Row>({
             // itself: an inline width cannot be overridden by a stylesheet, and
             // the phone layout has to drop this floor to lay the rows out as
             // cards that fit the screen.
-            style={{ "--lt-floor": `${floor}px` } as CSSProperties}
+            style={floorStyle(floor)}
           >
             {/* The widths live here rather than on the header cells: under fixed
               layout a col wins over the cell below it, so one place decides

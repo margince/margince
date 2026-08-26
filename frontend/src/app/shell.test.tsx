@@ -574,11 +574,27 @@ describe("Shell", () => {
     const agents = container.querySelectorAll(".arblock");
     expect(agents).toHaveLength(1);
     expect(
-      container.querySelector(".rail .railfoot")?.contains(agents[0]),
+      container.querySelector(".rail .railagent")?.contains(agents[0]),
     ).toBe(true);
     expect(
       container.querySelector("main")?.querySelector(".arblock"),
     ).toBeNull();
+  });
+
+  // The same one agent, in the one place a bottom bar has for a thing that is
+  // not a destination. A foot needs a column to be at the foot OF, so at this
+  // width the block moves into the bar's row of cells instead — and it MOVES: a
+  // second one rendered in the bar beside the one in the foot would be two Cores
+  // reporting the same session at two sizes.
+  it("mounts the agent once, in the bar's centre at phone width", () => {
+    stubPhoneViewport();
+    window.location.hash = "#/contacts";
+    const { container } = render(
+      <Shell onOpenSearch={ignoreSearch}>{null}</Shell>,
+    );
+    expect(container.querySelectorAll(".arblock")).toHaveLength(1);
+    expect(container.querySelector(".railagent")).toBeNull();
+    expect(container.querySelector(".rail .navlevel .arblock")).not.toBeNull();
   });
 
   // A sidebar showing a section's entries is navigation inside ONE destination,
@@ -601,7 +617,7 @@ describe("Shell", () => {
       await within(rail).findByRole("link", { name: "Account" }),
     ).toBeTruthy();
     expect(container.querySelector(".arblock")).toBeNull();
-    expect(container.querySelector(".railfoot")).toBeNull();
+    expect(container.querySelector(".railagent")).toBeNull();
   });
 
   it("renders rail-less for the documented exceptions (AC-shell layout exception)", () => {

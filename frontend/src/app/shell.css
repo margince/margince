@@ -344,12 +344,56 @@
   height: var(--topbarH);
   margin-top: calc(-1 * var(--space-3));
   margin-bottom: 0;
+  /* The release marker below hangs off this box. */
+  position: relative;
 }
 /* Collapsed, the head is the logomark alone, centred: the control that opens
    and closes this panel now stands in the top bar, where it does not travel
    with the panel it opens and does not have to be discovered on hover. */
 .rail.collapsed .railhead {
   justify-content: center;
+}
+/* TEMPORARY — the release marker.
+ *
+ * The whole thing goes when the product leaves alpha: this rule, the span in
+ * app/shell.tsx, the `shell.alpha` key and the case in rail.test.tsx that holds
+ * it through the collapse, in one change.
+ *
+ * A corner ribbon across the head's top-left, which is the one place a marker
+ * can go without competing with anything: the head holds the mark and the
+ * wordmark and nothing else, and this crosses the corner both of them leave
+ * empty.
+ *
+ * ABSOLUTE, so it takes no space: the head's height is the strip's to the pixel
+ * and every row below it is aligned to that, so a marker in the flow would move
+ * the whole column. And it hangs off the HEAD's own corner, which is at the same
+ * place in both rail states — the head narrows around the mark rather than
+ * moving it — so one placement is on screen at 252px, at 64px, and in the phone
+ * sheet's head. */
+.rail .alphamark {
+  position: absolute;
+  left: 2px; /* ds:ignore the ribbon's own corner anchor */
+  top: 10px; /* ds:ignore the ribbon's own corner anchor */
+  translate: -50% 0;
+  rotate: -45deg;
+  transform-origin: 50% 0;
+  width: 75px; /* ds:ignore the ribbon's own span across the corner */
+  padding: 1px 0; /* ds:ignore a cap-height band, not spaced content */
+  border-radius: 4px; /* ds:ignore the ribbon's own corner */
+  /* The status amber, and a fixed dark ink on it. `--bgRail` is the one near
+     black this palette holds STILL across both themes (tokens.css says so where
+     it is declared) — every other dark ink here lightens with the theme, and
+     this ribbon's ground does not, so it would go unreadable in one of them. */
+  background: var(--away);
+  color: var(--bgRail);
+  font-family: var(--f-mono);
+  font-size: 8px; /* ds:ignore below the type scale on purpose — it must not compete with the mark */
+  font-weight: var(--fw-bold);
+  line-height: 1.4;
+  text-align: center;
+  text-transform: uppercase;
+  white-space: nowrap;
+  pointer-events: none;
 }
 
 /* brand block */
@@ -756,14 +800,14 @@
   flex: 1;
   min-height: var(--space-3);
 }
-/* `:has()` rather than a bare selector: without `license:read` the row inside
-   returns nothing, and a foot that drew its rule anyway left a 12px band with a
-   hairline over it under the navigation — a divider dividing one thing from
-   nothing. */
-.rail .railfoot:not(:has(*)) {
+/* `:has()` rather than a bare selector: the agent draws nothing on the Ask
+   screen (app/agentrail.tsx), and a foot that drew its band anyway left a 12px
+   strip with a hairline over it under the navigation — a divider dividing one
+   thing from nothing. */
+.rail .railagent:not(:has(*)) {
   display: none;
 }
-.rail .railfoot {
+.rail .railagent {
   /* As the head: the reading keeps its height whether the panel scrolls or not. */
   flex: none;
   /* No rule and barely any air. This band held a rule and a `--space-3` on each
@@ -774,55 +818,6 @@
   margin: var(--space-1) calc(-1 * var(--space-2)) 0;
   padding: 0 var(--space-2);
 }
-.rail .raillicense {
-  display: flex;
-  align-items: center;
-  /* The destinations' own geometry, to the pixel: same gap, same inset, same
-     type, same glyph size. It is a different KIND of row — a reading, not a
-     place to go — and it says so in its ink, not by standing on a second grid. */
-  gap: 9px; /* ds:ignore matches .navitem's icon-to-label gap so the rows align */
-  position: relative;
-  min-height: 34px;
-  padding: 0 14px; /* ds:ignore the nav rows' own inset, which this row stands in */
-  border-radius: 8px; /* ds:ignore the nav rows' own radius */
-  color: var(--textMeta);
-  font-size: var(--fs-body);
-  text-decoration: none;
-}
-.rail .raillicense:hover {
-  background: var(--bgHover);
-  color: var(--textPrimary);
-}
-/* `--accent`, not `--accentBrand`: the brand token is deliberately unthemed
-   (tokens.css) and in the dark theme it falls to 3.0:1 against the panel — and to
-   2.5:1 over a hovered row, which is where this ring is actually drawn. A focus
-   ring is a UI state and takes the state colour. */
-.rail .raillicense:focus-visible {
-  outline: var(--focus-ring);
-  outline-offset: -2px;
-}
-.rail .raillicense svg {
-  width: 18px;
-  height: 18px;
-  flex: none;
-}
-/* Something to act on rather than merely know: over the cap, refused, in grace,
-   or due for renewal. Reported here and explained on the surface this leads to —
-   the chrome enforces nothing. */
-.rail .raillicense.pressing {
-  color: var(--warn);
-}
-/* Collapsed, this row changes exactly what a destination's row changes: the
-   reading goes and the glyph stays where it was. It keeps the destinations'
-   height and their 14px inset, so the whole column — ten places and the reading
-   under them — holds still through the collapse instead of re-spacing itself.
-   The label is absolutely positioned like theirs and fades with them; it is
-   taken out of the flow here as well so a screen reader is not offered a name
-   that is no longer drawn. */
-.rail.collapsed .raillicense .navlabel {
-  display: none;
-}
-
 /* The More control belongs to the phone-width bottom bar only. */
 .rail .railmore {
   display: none;
@@ -1146,11 +1141,23 @@
        ledge everywhere else. */
     bottom: max(var(--space-2), env(safe-area-inset-bottom));
     z-index: 30;
-    flex-direction: row;
+    /* A GRID of equal cells, not a flex row: the cells are thumb targets and a
+       thumb learns where a destination is by its position, so a bar whose cells
+       resize with their glyph moves every target the day a row is added. Equal
+       columns also put the agent's cell on the bar's own centre line without
+       anything measuring it. `grid-auto-flow: column` keeps the whole bar on one
+       row; the cells are the level's rows, the agent and More, in that order. */
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
     align-items: center;
-    justify-content: space-between;
     padding: var(--space-1) var(--space-1);
     gap: 2px;
+    /* How far the bar's own top edge stands above a cell: its padding and its
+       border. Published because the agent's cell rises out of that edge and has
+       to measure the rise from it (app/agentrail.css) — a second opinion about
+       this bar's padding is a rise that drifts the day the padding changes. */
+    --phoneBarLip: calc(var(--space-1) + 1px);
     overflow: visible;
     /* Here the panel IS a floating object — it hovers over the content rather
        than bounding it — so it takes the card chrome the flush sidebar gives
@@ -1203,9 +1210,15 @@
      below is where they come back. */
   .rail .navheading,
   .rail .ws,
-  .rail .railfoot,
   .rail .grow,
   .rail .navtip {
+    display: none;
+  }
+  /* The head is the brand block's box, and the brand block is hidden above: what
+     is left is an empty cell, which a flex row gave no width and this grid would
+     give a whole column. The sheet brings the head back (below), where there is
+     a row for it to stand on. */
+  .rail .railhead {
     display: none;
   }
   /* No captions in the bar. Five glyphs at 9.5px carried five words nobody
@@ -1233,9 +1246,11 @@
     align-items: center;
     justify-content: center;
     gap: 0;
-    width: 56px;
+    /* The cell's whole width: the bar's columns are the target grid, and a
+       56px control inside a wider cell is a target that ends before the cell a
+       thumb aimed at does. */
+    width: 100%;
     min-height: 48px;
-    flex: none;
     border: 0;
     border-radius: 10px;
     background: transparent;
@@ -1247,7 +1262,7 @@
     height: 20px;
   }
   .rail .navwrap {
-    flex: 1;
+    display: flex;
     justify-content: center;
   }
   .rail .navitem,
@@ -1288,16 +1303,29 @@
   .rail.sheetopen,
   .rail.sheetopen.expanded,
   .rail.sheetopen.collapsed {
+    /* The sheet is a COLUMN of rows, not a bar of cells: the grid above is the
+       bar's arrangement and says nothing about a list of ten places. */
+    display: flex;
     flex-direction: column;
     align-items: stretch;
     justify-content: flex-start;
     gap: 1px;
     padding: var(--space-2) var(--space-2)
       max(var(--space-2), env(safe-area-inset-bottom));
-    /* dvh, not vh: on iOS the browser chrome is subtracted from the wrong side
+    /* Everything between the two ledges. The sheet already stands on the bar's
+       own bottom inset, so what it may take is the viewport less that, less the
+       same air again at the top — a sheet that ended flush with the top edge
+       would read as a page rather than as a layer over one, and would leave the
+       reader nothing to press to dismiss it. Ten destinations do not fill it, so
+       this is a CEILING for the locales and the levels that come closer.
+       dvh, not vh: on iOS the browser chrome is subtracted from the wrong side
        of vh, and a sheet measured against the larger viewport runs its last row
        under the address bar. */
-    max-height: 80dvh;
+    max-height: calc(
+      100dvh -
+      max(var(--space-2), env(safe-area-inset-bottom)) -
+      var(--space-6)
+    );
     overflow-y: auto;
     /* The page behind is already locked; this stops the scroll chaining into
        the page's scroller when the sheet itself hits its end. */
@@ -1424,39 +1452,6 @@
     display: flex;
     flex-direction: column;
     gap: var(--space-1);
-  }
-  /* The foot comes back with the sheet: the entitlement is as true on a phone as
-     anywhere, and the sheet is the one place at this width with room to say it.
-     It divides the sheet on the sheet's own 4px gutter rather than the sidebar's
-     8px one.
-     The `.rail.collapsed …` variants are restated for the row and its label for
-     the reason this block states three times over: the desktop preference
-     survives a resize and outranks a bare `.rail` selector — without it a reader
-     who left the sidebar collapsed opened the sheet to a centred glyph with no
-     seat count and nothing saying what it was. */
-  /* `:has(*)` carried through: the bar hides this foot at this width and the
-     sheet brings it back, but only when there IS a reading in it. Without it the
-     re-show outranks the empty-foot guard above by one class, and a reader
-     without `license:read` — for whom `RailLicense` renders nothing — opened the
-     sheet to the bare rule and 12px of band that guard exists to prevent. */
-  .rail.sheetopen .railfoot:has(*) {
-    display: block;
-    margin: var(--space-3) calc(-1 * var(--space-2)) 0;
-    padding: var(--space-3) var(--space-2) 0;
-  }
-  .rail.sheetopen .raillicense,
-  .rail.sheetopen.collapsed .raillicense {
-    justify-content: flex-start;
-    min-height: 48px;
-    padding: 0 var(--space-3);
-  }
-  .rail.sheetopen .raillicense .navlabel,
-  .rail.sheetopen.collapsed .raillicense .navlabel {
-    display: block;
-    opacity: 1;
-  }
-  .rail.sheetopen .raillicense {
-    min-height: 48px;
   }
   /* Open, the sheet shows the active row itself, and More has become its close
      control — a state on a close button would name the wrong thing. */

@@ -1103,6 +1103,85 @@ test.describe("§3.8: 390px mobile", () => {
     ).toBeVisible();
     await page.getByRole("button", { name: "Übernehmen" }).click();
   });
+
+  // The bar's centre cell and the panel it opens, neither of which exists above
+  // this breakpoint: there the agent is the sidebar's foot and the panel stands
+  // beside it. So every sweep in this file runs with that panel shut, and it is
+  // the largest surface in the product no other case opens.
+  //
+  // Three things at once, because they are one act: it opens ABOVE the well
+  // rather than across it (a frame measured from the cell behind the well would
+  // cover the orb that opened it), the page does not grow sideways under it, and
+  // it scores no AA violation.
+  test("the agent's panel opens clear of the bar and fits 390px", async ({
+    page,
+  }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+
+    await page
+      .getByRole("button", { name: "Expand the agent panel" })
+      .click();
+    const panel = page.locator(".arpanel");
+    await expect(panel).toBeVisible();
+    await settleAnimations(page);
+
+    // By class, not by name: the control renames itself the moment it is open
+    // ("Collapse the agent panel"), which is the point of it — and what is
+    // measured here is a BOX, not an identity.
+    const panelBox = await panel.boundingBox();
+    const wellBox = await page.locator(".arhit").boundingBox();
+    if (!panelBox || !wellBox) {
+      throw new Error("the panel or the well it points at is not laid out");
+    }
+    expect(panelBox.y + panelBox.height).toBeLessThanOrEqual(wellBox.y);
+    expect(panelBox.y).toBeGreaterThanOrEqual(0);
+    expect(await pageOverflow(page)).toEqual([]);
+    await expectNoAaViolations(page, "home — the agent's panel (390px)");
+  });
+
+  // The whole keyboard path this surface has: it opens from the bar, Escape
+  // closes it from inside, and focus lands back on the control that opened it
+  // rather than on <body> — from where the next Tab starts at the top of a page
+  // the reader had not left.
+  test("the agent's panel closes on Escape and hands focus back to the orb", async ({
+    page,
+  }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+
+    const orb = page.getByRole("button", { name: "Expand the agent panel" });
+    await orb.click();
+    await expect(page.locator(".arpanel")).toBeVisible();
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator(".arpanel")).toHaveCount(0);
+    await expect(
+      page.getByRole("button", { name: "Expand the agent panel" }),
+    ).toBeFocused();
+  });
+});
+
+// The same panel under the dark palette. It is the one surface where the
+// stylesheet paints a fill of its own at this width — the well's ground and the
+// notch's — and tokens.css publishes dark as its own set of values, so passing
+// in light says nothing about it.
+test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark", () => {
+  test.use({ viewport: { width: 390, height: 844 }, colorScheme: "dark" });
+
+  test("no AA violations with the agent's panel open", async ({ page }) => {
+    await page.goto("/#/home");
+    await page.waitForLoadState("networkidle");
+    await expectShellRendered(page);
+    await page
+      .getByRole("button", { name: "Expand the agent panel" })
+      .click();
+    await expect(page.locator(".arpanel")).toBeVisible();
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "home — the agent's panel (390px, dark)");
+  });
 });
 
 /**

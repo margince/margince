@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
 import {
+  type CSSProperties,
   type RefObject,
   useCallback,
   useEffect,
@@ -781,7 +782,79 @@ type PanelFrame = Readonly<{
   bottom: number;
   width?: number;
   maxHeight: number;
+  /**
+   * Where the notch under the panel points, in viewport coordinates.
+   *
+   * Only the phone frame carries one: there the panel stands OVER the anchor
+   * rather than beside it, and a full-width sheet with nothing pointing at what
+   * opened it is a panel that could have come from anywhere. Measured from the
+   * anchor rather than assumed to be the middle of the screen, so the notch
+   * still lands on the orb if the bar's cells ever stop being symmetric.
+   */
+  caret?: number;
 }>;
+
+/**
+ * The two custom properties the portalled wrapper is placed by.
+ *
+ * Declared rather than asserted onto `CSSProperties`: React's own type carries
+ * the CSS properties it knows, and a cast to it would say these two are among
+ * them. The intersection says what is true — the wrapper takes a style object
+ * that is one of those PLUS the two this file mints.
+ */
+type NotchPlacement = CSSProperties &
+  Readonly<{
+    "--arCaretX"?: string;
+    "--arPanelBottom": string;
+  }>;
+
+/**
+ * The notch's place, handed to the stylesheet rather than drawn here.
+ *
+ * Where it points is a MEASUREMENT and how it is drawn is the sheet's business,
+ * so the frame travels as custom properties on the portalled wrapper. Beside a
+ * sidebar there is no notch and no `--arCaretX`: the panel and the card that
+ * opened it are already touching, and a tail would have no gap to cross.
+ */
+function looseStyle(frame: PanelFrame): NotchPlacement {
+  return {
+    "--arCaretX": frame.caret === undefined ? undefined : `${frame.caret}px`,
+    "--arPanelBottom": `${frame.bottom}px`,
+  };
+}
+
+/**
+ * The frame over the phone bar: the bar's own span, clear of the well.
+ *
+ * Edge to edge with the BAR rather than inset by a margin of its own. The panel
+ * hangs off one of the bar's cells, so the two are one object seen from two
+ * distances — a panel inset by a different amount reads as a sheet that happened
+ * to arrive over the bar. Falls back to its own margin only where no bar was
+ * handed in, which is a caller that has none.
+ */
+function overTheBar(well: DOMRect, bar: DOMRect | undefined): PanelFrame {
+  return {
+    left: bar ? bar.left : PANEL_MARGIN,
+    right: bar ? globalThis.innerWidth - bar.right : PANEL_MARGIN,
+    bottom: globalThis.innerHeight - well.top + PANEL_GAP,
+    maxHeight: well.top - PANEL_GAP * 2,
+    caret: well.left + well.width / 2,
+  };
+}
+
+/**
+ * The frame beside the sidebar: bottom-aligned to the card, so opening the panel
+ * does not move the thing that opened it.
+ */
+function besideTheCard(card: DOMRect): PanelFrame {
+  const height = globalThis.innerHeight;
+  return {
+    left: card.right + PANEL_GAP,
+    bottom: Math.max(PANEL_MARGIN, height - card.bottom),
+    width: PANEL_WIDTH,
+    maxHeight: height - PANEL_MARGIN * 2,
+  };
+}
 
 /**
  * Where the panel goes, in viewport coordinates.
@@ -797,7 +870,9 @@ type PanelFrame = Readonly<{
  * block instead.
  */
 function usePanelFrame(
-  anchor: RefObject<HTMLElement | null>,
+  card: RefObject<HTMLElement | null>,
+  well: RefObject<HTMLElement | null>,
+  bar: RefObject<HTMLElement | null> | undefined,
   open: boolean,
   phone: boolean,
 ): PanelFrame | null {
@@ -809,26 +884,20 @@ function usePanelFrame(
       return;
     }
     const place = () => {
-      const box = anchor.current?.getBoundingClientRect();
+      // Two anchors, because the panel stands in two places. Beside the whole
+      // CARD on the sidebar, where the card is what the reader is looking at;
+      // above the round WELL on the phone bar, which rises out of the bar's top
+      // edge — a frame measured from the cell behind it would open the panel
+      // across the orb it belongs to.
+      const box = (phone ? well : card).current?.getBoundingClientRect();
       if (!box) {
         return;
       }
-      const height = globalThis.innerHeight;
-      if (phone) {
-        setFrame({
-          left: PANEL_MARGIN,
-          right: PANEL_MARGIN,
-          bottom: height - box.top + PANEL_GAP,
-          maxHeight: box.top - PANEL_GAP * 2,
-        });
-        return;
-      }
-      setFrame({
-        left: box.right + PANEL_GAP,
-        bottom: Math.max(PANEL_MARGIN, height - box.bottom),
-        width: PANEL_WIDTH,
-        maxHeight: height - PANEL_MARGIN * 2,
-      });
+      setFrame(
+        phone
+          ? overTheBar(box, bar?.current?.getBoundingClientRect())
+          : besideTheCard(box),
+      );
     };
     place();
     // The anchor moves when the rail collapses, when the window changes size and
@@ -840,7 +909,7 @@ function usePanelFrame(
       globalThis.removeEventListener("resize", place);
       globalThis.removeEventListener("scroll", place, true);
     };
-  }, [anchor, open, phone]);
+  }, [bar, card, well, open, phone]);
   return frame;
 }
 
@@ -1035,7 +1104,20 @@ function barLine(
   return LABELS.idle;
 }
 
-export function AgentRail({ route }: Readonly<{ route: Route }>) {
+export function AgentRail({
+  route,
+  bar,
+}: Readonly<{
+  route: Route;
+  /**
+   * The bottom bar this block is a cell of, at phone width.
+   *
+   * Only the panel needs it, and only there: it spans the bar rather than
+   * insetting itself, so the two read as one object. Absent on the sidebar,
+   * where the panel stands beside the card and the bar does not exist.
+   */
+  bar?: RefObject<HTMLElement | null>;
+}>) {
   const t = useT();
   // The switcher's choice, and null while the rail is reporting what it read.
   const [override, setOverride] = useState<MarginceCoreState | null>(null);
@@ -1093,7 +1175,7 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
     }
   }, []);
 
-  const frame = usePanelFrame(block, open, phone);
+  const frame = usePanelFrame(block, trigger, bar, open, phone);
   const money =
     spend.minor === undefined
       ? ""
@@ -1145,7 +1227,11 @@ export function AgentRail({ route }: Readonly<{ route: Route }>) {
       {open &&
         frame &&
         createPortal(
-          <div className="arloose" data-core-state={state}>
+          <div
+            className="arloose"
+            data-core-state={state}
+            style={looseStyle(frame)}
+          >
             <AgentPanel
               state={state}
               setState={setOverride}
