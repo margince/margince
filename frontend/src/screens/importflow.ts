@@ -329,6 +329,7 @@ export function useImportFlow() {
       const body = new FormData();
       body.append("object", object);
       body.append("file", file);
+      // contract-fetch:allow multipart — see the note above
       const response = await fetch("/v1/imports/sources", {
         method: "POST",
         body,

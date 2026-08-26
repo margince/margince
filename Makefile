@@ -397,8 +397,11 @@ frontend-check:
 	$(MAKE) fe-unit
 	$(MAKE) fe-build
 
-## fe-ds-gates — the design-system script gates on their own, so the CI job that
-## wants only the cheap greps does not also pull a vitest run behind them.
+## fe-ds-gates — the frontend's cheap grep gates on their own, so the CI job that
+## wants only them does not also pull a vitest run behind them. Most are
+## design-system rules; check-contract-fetch.sh is a contract-transport one, and
+## it lives here because what makes a gate belong is being a grep over both
+## frontend trees, not which rule it holds.
 ##
 ## This recipe is also the list check-ext-frontend-walk.test.sh reads: it holds
 ## that every gate here reads extensions/*/frontend and not frontend/src alone,
@@ -411,6 +414,8 @@ fe-ds-gates:
 	frontend/scripts/check-ds-spacing.sh
 	bash frontend/scripts/check-ds-spacing.test.sh
 	frontend/scripts/check-space-tokens.sh
+	frontend/scripts/check-contract-fetch.sh
+	bash frontend/scripts/check-contract-fetch.test.sh
 	bash frontend/scripts/check-ext-frontend-walk.test.sh
 
 ## fe-drift — the TS type-drift gate on its own: regenerate from the contract

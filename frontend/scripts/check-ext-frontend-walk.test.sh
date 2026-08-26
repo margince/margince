@@ -52,6 +52,7 @@ CASES=(
   "check-icon-glyph.sh|const label = \"launch $GLYPH\";"
   "check-font-lock.sh|const sheet = \"font-family: Comic Sans MS;\";"
   "check-space-tokens.sh|const gap = \"var(--space-not-a-token)\";"
+  "check-contract-fetch.sh|const rows = await fetch(\"/v1/deals\");"
 )
 
 # Named, with the reason, because a gate silently absent from the census is the
@@ -61,8 +62,18 @@ CASES=(
 #                           invisible to it by design. Its own census lives in
 #                           check-ds-spacing.test.sh.
 #   check-ds-spacing.test.sh — that census; a test, not a gate.
+#   check-contract-fetch.test.sh — the contract-fetch gate's own census, which
+#                           holds the two properties this file cannot see: that
+#                           the refused mount is DERIVED from crm.yaml, and that
+#                           a waiver without a reason is still a finding. A test,
+#                           not a gate; the gate itself is measured above.
 #   check-ext-frontend-walk.test.sh — this file.
-EXCUSED=(check-ds-spacing.sh check-ds-spacing.test.sh check-ext-frontend-walk.test.sh)
+EXCUSED=(
+  check-ds-spacing.sh
+  check-ds-spacing.test.sh
+  check-contract-fetch.test.sh
+  check-ext-frontend-walk.test.sh
+)
 
 # ---------------------------------------------------------------------------
 # 1. Every script the fe-ds-gates lane runs is either measured here or excused
