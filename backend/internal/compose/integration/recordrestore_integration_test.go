@@ -475,3 +475,61 @@ func TestEndToEnd_aRestoreWithoutAUsableIfMatchIsRefused(t *testing.T) {
 		t.Errorf("a restore with an unparseable If-Match → %d, want 422", status)
 	}
 }
+
+// The window the version guard cannot see.
+//
+// Retiring a custom field writes `custom_field` and not the record, so the
+// record's version does not move. A restore decided while the field was live
+// therefore passes If-Match after it is retired — the one precondition that
+// closes every other such gap cannot see this one.
+//
+// What catches it is that the BINDING evaluation reads the live catalog at
+// write time rather than trusting the reading the screen was decided from.
+// This test holds that, and the assertion on the version is what stops it
+// becoming vacuous if a retire ever starts touching the record.
+func TestEndToEnd_aRetireTheVersionGuardCannotSeeIsCaughtAtWriteTime(t *testing.T) {
+	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(SchemaPool(t)))
+	e.BootstrapWorkspace(t)
+
+	var field struct {
+		ID         string `json:"id"`
+		ColumnName string `json:"column_name"`
+	}
+	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+		"object": "person", "label": "Budget", "type": "text", "source": "manual",
+	}, nil, &field); status != 201 {
+		t.Fatalf("create custom field → %d", status)
+	}
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+		"full_name": "Greta Dropped", field.ColumnName: "first",
+	}, nil, &created); status != 201 {
+		t.Fatalf("create person → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+		apptest.AnyMap{field.ColumnName: "second"}, nil, nil); status != 200 {
+		t.Fatalf("patch → %d", status)
+	}
+	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	// The version a person reading the screen would hold, taken while the
+	// field is still live and the entry still reads as undoable.
+	decided := readPerson(t, e, created.ID).Version
+
+	if status := e.Call(t, "POST", "/v1/custom-fields/"+field.ID+"/retire", nil, nil, nil); status != 200 {
+		t.Fatalf("retire → %d", status)
+	}
+	if now := readPerson(t, e, created.ID).Version; now != decided {
+		t.Fatalf("the retire moved the record's version from %d to %d; the window this "+
+			"test exists for is not real any more and the test proves nothing",
+			decided, now)
+	}
+
+	status, _ := restore(t, e, "person", created.ID, entry.ID, decided)
+	if status == 200 {
+		t.Error("a restore of a since-retired field answered 200; the person is told a " +
+			"change was put back that the write dropped")
+	}
+	if status != 409 {
+		t.Errorf("restore → %d, want 409", status)
+	}
+}

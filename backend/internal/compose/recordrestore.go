@@ -15,6 +15,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -60,6 +62,9 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 		return privacy.RecordHistoryEntry{}, err
 	}
 	if err := s.write(ctx, row, patch, ifVersion); err != nil {
+		return privacy.RecordHistoryEntry{}, err
+	}
+	if err := s.verifyLanded(ctx, row, patch); err != nil {
 		return privacy.RecordHistoryEntry{}, err
 	}
 	return s.readRestoreEntry(ctx, entityType, id, auditID)
@@ -127,6 +132,75 @@ func (s RestoreSeam) write(ctx context.Context, row AuditRow, patch map[string]j
 		},
 	})
 	return err
+}
+
+// verifyLanded reads the record back and confirms every field the restore sent
+// now holds the value it sent. It is the answer to the one failure this feature
+// must not have: a write that reports success and changed nothing.
+//
+// Two things produce that outcome. A column the module guards with coalesce
+// cannot be set to NULL, which the evaluator refuses in advance. And a value
+// can stop being writable BETWEEN the decision and the write — retiring a
+// custom field writes `custom_field` and not the record, so the record's
+// version does not move and the required If-Match, which closes every other
+// such gap, cannot see it. The module then drops the unknown key and answers
+// success.
+//
+// So this closes it by DETECTION rather than prevention: the write has already
+// committed, and what a reader is owed at that point is the truth about which
+// fields moved, not a confirmation that some of them did. The audit trail is
+// already honest — the restore's own images record what actually happened —
+// and this is what makes the caller as well informed as the trail.
+func (s RestoreSeam) verifyLanded(ctx context.Context, row AuditRow, patch map[string]json.RawMessage) error {
+	var dropped []string
+	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		var err error
+		dropped, err = fieldsThatDidNotLand(ctx, tx, row.EntityType, row.EntityID, patch)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("compose: confirm the restore landed: %w", err)
+	}
+	if len(dropped) > 0 {
+		sort.Strings(dropped)
+		return RefusedRestore{
+			Reason: ReasonNotRestorableByThisPath,
+			Detail: strings.Join(dropped, ", "),
+		}
+	}
+	return nil
+}
+
+// fieldsThatDidNotLand names the patch keys whose value on the record is not
+// what the restore sent. The comparison is on jsonb, so each column is read
+// through the same representation the image was written in rather than through
+// a per-type Go conversion that would disagree about dates and money.
+func fieldsThatDidNotLand(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, patch map[string]json.RawMessage) ([]string, error) {
+	if !servesRecordType(entityType) {
+		return nil, fmt.Errorf("compose: %q is not a record type this path reads", entityType)
+	}
+	sent, err := json.Marshal(patch)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, `
+		SELECT k.key
+		FROM jsonb_each($2::jsonb) AS k(key, value)
+		JOIN `+pgx.Identifier{entityType}.Sanitize()+` r ON r.id = $1
+		WHERE to_jsonb(r) -> k.key IS DISTINCT FROM k.value`, id, sent)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var dropped []string
+	for rows.Next() {
+		var key string
+		if err := rows.Scan(&key); err != nil {
+			return nil, err
+		}
+		dropped = append(dropped, key)
+	}
+	return dropped, rows.Err()
 }
 
 // readRestoreEntry returns the restore's own history line, looked up by the

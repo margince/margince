@@ -27,9 +27,7 @@ import (
 )
 
 type UpdateActivityInput struct {
-	// Trail names what the audit trail calls this write. The zero value is an
-	// ordinary update, so every caller that is not the reversal path is
-	// unchanged.
+	// Trail names what the audit trail calls this write; zero is an update.
 	Trail      storekit.AuditTrail
 	Subject    *string
 	Body       *string
