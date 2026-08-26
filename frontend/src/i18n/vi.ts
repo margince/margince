@@ -2268,6 +2268,16 @@ export const vi = {
   "co.spine.worth": "{amount} \u0111ang \u0111\u1eb7t c\u01b0\u1ee3c",
   "co.spine.unpriced":
     "{count} \u0111ang m\u1edf, ch\u01b0a \u0111\u1ecbnh gi\u00e1",
+  "co.spine.earlier":
+    "{count} cu\u1ed9c trao \u0111\u1ed5i tr\u01b0\u1edbc \u0111\u00f3",
+  "co.spine.earlierOne":
+    "M\u1ed9t cu\u1ed9c trao \u0111\u1ed5i tr\u01b0\u1edbc \u0111\u00f3",
+  "co.spine.exchangeCount": "{count} tin nh\u1eafn",
+  "co.spine.kind.email": "M\u1ed9t email",
+  "co.spine.kind.call": "M\u1ed9t cu\u1ed9c g\u1ecdi",
+  "co.spine.kind.meeting": "M\u1ed9t cu\u1ed9c h\u1ecdp",
+  "co.spine.kind.note": "M\u1ed9t ghi ch\u00fa",
+  "co.spine.kind.message": "M\u1ed9t tin nh\u1eafn",
   "co.360.title": "Company 360",
   "today.title": "Hôm nay ở tài khoản này",
   "today.failed":

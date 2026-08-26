@@ -7,10 +7,11 @@ import { Panel } from "../design-system/panel";
 import { CompanySpine } from "./companyspine";
 import { StoryProviders } from "./story-utils";
 
-// The account's story as a thread. The three stories are the three shapes a
-// real account takes: one that has gone quiet, one in live conversation, and
-// one nobody has spoken to at all — the gap stop is what separates them, and
-// it is the only stop drawn from an ABSENCE rather than from a record.
+// The account's story as a thread. The stories are the shapes a real account
+// takes: one that has gone quiet, one in live conversation, one nobody has
+// spoken to at all, and one with more history than the thread draws. The gap
+// stop separates the first three, and it is the only stop drawn from an
+// ABSENCE rather than from a record.
 
 type View = components["schemas"]["Organization360"];
 
@@ -130,6 +131,74 @@ const neverSpoken = {
 } as unknown as View;
 
 export const NeverSpoken: Story = { render: () => <Card view={neverSpoken} /> };
+
+// An account with a past. Two conversations ran here before the invoice
+// question, and the roll-up says how many the thread did not draw — the shape
+// a reader who does not remember the account actually arrives at.
+const withHistory = {
+  ...goneQuiet,
+  activities: {
+    data: [
+      {
+        id: "m-6",
+        kind: "email",
+        direction: "outbound",
+        subject: "Re: Rechnung Position 3",
+        occurred_at: "2026-08-18T09:00:00Z",
+        thread_key: "t-invoice",
+        links: [],
+      },
+      {
+        id: "m-5",
+        kind: "email",
+        direction: "inbound",
+        subject: "Rechnung Position 3",
+        occurred_at: "2026-08-16T09:00:00Z",
+        thread_key: "t-invoice",
+        links: [],
+      },
+      {
+        id: "m-4",
+        kind: "meeting",
+        direction: "outbound",
+        subject: "Kickoff Kugellager-online.de",
+        occurred_at: "2026-07-26T09:00:00Z",
+        thread_key: "t-kickoff",
+        links: [],
+      },
+      {
+        id: "m-3",
+        kind: "email",
+        direction: "inbound",
+        subject: "Re: Kickoff Kugellager-online.de",
+        occurred_at: "2026-07-21T09:00:00Z",
+        thread_key: "t-kickoff",
+        links: [],
+      },
+      {
+        id: "m-2",
+        kind: "email",
+        direction: "outbound",
+        subject: "Angebot Lagerhaltung",
+        occurred_at: "2026-06-30T09:00:00Z",
+        thread_key: "t-quote",
+        links: [],
+      },
+      {
+        id: "m-1",
+        kind: "email",
+        direction: "outbound",
+        subject: "Erstkontakt über die Messe",
+        occurred_at: "2026-06-02T09:00:00Z",
+        thread_key: "t-intro",
+        links: [],
+      },
+    ],
+    page,
+  },
+} as unknown as View;
+
+export const WithHistory: Story = { render: () => <Card view={withHistory} /> };
 
 const meta: Meta<typeof CompanySpine> = {
   title: "Records/Company 360/Spine",

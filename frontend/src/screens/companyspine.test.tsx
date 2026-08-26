@@ -175,6 +175,35 @@ describe("what the thread says is coming", () => {
   });
 });
 
+// The 360 serves activities newest-first (ORDER BY occurred_at DESC), so the
+// head of the list is the most recent and the thread makes no ordering
+// decision of its own.
+function activities(
+  rows: readonly {
+    id: string;
+    kind: string;
+    subject: string;
+    at: string;
+    thread?: string;
+  }[],
+) {
+  return {
+    data: rows.map((row) => ({
+      id: row.id,
+      kind: row.kind,
+      is_done: false,
+      subject: row.subject,
+      occurred_at: row.at,
+      thread_key: row.thread ?? null,
+      source: "manual",
+      captured_by: "human:test",
+      created_at: row.at,
+      updated_at: row.at,
+    })),
+    page,
+  };
+}
+
 // What the thread's head says, and what it refuses to say it about.
 //
 // These rules moved here with the fact itself: the day's brief used to carry a
@@ -183,29 +212,9 @@ describe("what the thread says is coming", () => {
 // fact and the brief lost the reading — and these are the three ways picking
 // the wrong row goes wrong.
 describe("the last thing that was actually said", () => {
-  // The 360 serves activities newest-first (ORDER BY occurred_at DESC), so the
-  // head of the list is the most recent and the thread makes no ordering
-  // decision of its own.
-  function activities(
-    rows: readonly { id: string; kind: string; subject: string; at: string }[],
-  ) {
-    return {
-      data: rows.map((row) => ({
-        id: row.id,
-        kind: row.kind,
-        is_done: false,
-        subject: row.subject,
-        occurred_at: row.at,
-        source: "manual",
-        captured_by: "human:test",
-        created_at: row.at,
-        updated_at: row.at,
-      })),
-      page,
-    };
-  }
-
-  it("names the newest exchange, not an older one", () => {
+  it("heads the thread with the newest conversation", () => {
+    // The older conversation stays on the thread — it is the history a reader
+    // came for — but only the newest carries the label the gap counts from.
     draw(
       view({
         last_outbound_at: SPOKE,
@@ -221,8 +230,16 @@ describe("the last thing that was actually said", () => {
       }),
     );
 
+    const titles = [...document.querySelectorAll(".co-spine-title")].map(
+      (node) => node.textContent,
+    );
+    // Oldest first down the page, and "You last spoke" sits on the newest.
+    expect(titles).toEqual([
+      "An older thread",
+      "You last spoke",
+      "They have never written back",
+    ]);
     expect(screen.getByText("Where we landed")).toBeTruthy();
-    expect(screen.queryByText("An older thread")).toBeNull();
   });
 
   // The timeline is unfiltered: tasks live in the same table and sort by the
@@ -269,6 +286,193 @@ describe("the last thing that was actually said", () => {
 
     expect(screen.getByText("About scope")).toBeTruthy();
     expect(screen.queryByText("Executive alignment")).toBeNull();
+  });
+});
+
+// One stop per conversation, not per message.
+//
+// The thread exists so a reader who does not remember an account can see what
+// was going on here. Six emails drawn as six stops is the history tab, and
+// six emails drawn as ONE stop was the shape that sent that reader scrolling
+// past the day's suggestions to find the kickoff that explains the account.
+describe("the conversations behind the last word", () => {
+  const KICKOFF = "thread-kickoff";
+  const INVOICE = "thread-invoice";
+
+  it("folds a conversation into one stop and counts its messages", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "m-3",
+            kind: "email",
+            subject: "Re: Kickoff",
+            at: SPOKE,
+            thread: KICKOFF,
+          },
+          {
+            id: "m-2",
+            kind: "email",
+            subject: "Re: Kickoff",
+            at: "2026-08-15T09:00:00Z",
+            thread: KICKOFF,
+          },
+          {
+            id: "m-1",
+            kind: "email",
+            subject: "Kickoff",
+            at: "2026-08-12T09:00:00Z",
+            thread: KICKOFF,
+          },
+        ]),
+      }),
+    );
+
+    // One conversation, dated at its newest message and named once.
+    expect(screen.getAllByText("Kickoff")).toHaveLength(1);
+    expect(screen.getByText("18 Aug 2026")).toBeTruthy();
+    expect(screen.queryByText("12 Aug 2026")).toBeNull();
+  });
+
+  it("keeps two conversations apart and puts the older one first", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          {
+            id: "i-1",
+            kind: "email",
+            subject: "Invoice query",
+            at: SPOKE,
+            thread: INVOICE,
+          },
+          {
+            id: "k-2",
+            kind: "meeting",
+            subject: "Kickoff",
+            at: "2026-07-02T09:00:00Z",
+            thread: KICKOFF,
+          },
+          {
+            id: "k-1",
+            kind: "email",
+            subject: "Kickoff",
+            at: "2026-07-01T09:00:00Z",
+            thread: KICKOFF,
+          },
+        ]),
+      }),
+    );
+
+    const titles = [...document.querySelectorAll(".co-spine-title")].map(
+      (node) => node.textContent,
+    );
+    expect(titles).toEqual([
+      "Kickoff",
+      "You last spoke",
+      "They have never written back",
+    ]);
+    expect(screen.getByText("2 messages")).toBeTruthy();
+    expect(screen.getByText("Invoice query")).toBeTruthy();
+  });
+
+  // Capture threads what a provider threaded. A note or a hand-logged call
+  // carries no thread_key, and "Re: Kickoff" beside "Kickoff" is one
+  // conversation the reader would never accept as two.
+  it("recognises a reply as the same conversation when nothing threaded it", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          { id: "u-2", kind: "email", subject: "Re: Pricing", at: SPOKE },
+          {
+            id: "u-1",
+            kind: "email",
+            subject: "Pricing",
+            at: "2026-08-11T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    expect(screen.getAllByText("Pricing")).toHaveLength(1);
+  });
+
+  // A long-running account has more history than the thread draws, and a
+  // reader told nothing would read three stops as all there ever was.
+  it("says how many earlier conversations it did not draw", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          { id: "c-5", kind: "email", subject: "Fifth", at: SPOKE },
+          {
+            id: "c-4",
+            kind: "email",
+            subject: "Fourth",
+            at: "2026-08-10T09:00:00Z",
+          },
+          {
+            id: "c-3",
+            kind: "email",
+            subject: "Third",
+            at: "2026-08-05T09:00:00Z",
+          },
+          {
+            id: "c-2",
+            kind: "email",
+            subject: "Second",
+            at: "2026-07-20T09:00:00Z",
+          },
+          {
+            id: "c-1",
+            kind: "email",
+            subject: "First",
+            at: "2026-07-01T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    expect(screen.getByText("2 earlier conversations")).toBeTruthy();
+    // The two it dropped are the OLDEST, and the roll-up is dated at the
+    // oldest of them so the thread still starts where the account started.
+    expect(screen.queryByText("First")).toBeNull();
+    expect(screen.queryByText("Second")).toBeNull();
+    expect(screen.getByText("1 Jul 2026")).toBeTruthy();
+    expect(screen.getByText("Third")).toBeTruthy();
+  });
+
+  it("counts one dropped conversation in the singular", () => {
+    draw(
+      view({
+        last_outbound_at: SPOKE,
+        activities: activities([
+          { id: "d-4", kind: "email", subject: "Fourth", at: SPOKE },
+          {
+            id: "d-3",
+            kind: "email",
+            subject: "Third",
+            at: "2026-08-10T09:00:00Z",
+          },
+          {
+            id: "d-2",
+            kind: "email",
+            subject: "Second",
+            at: "2026-08-05T09:00:00Z",
+          },
+          {
+            id: "d-1",
+            kind: "email",
+            subject: "First",
+            at: "2026-07-01T09:00:00Z",
+          },
+        ]),
+      }),
+    );
+
+    expect(screen.getByText("One earlier conversation")).toBeTruthy();
   });
 });
 
