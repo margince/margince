@@ -170,6 +170,12 @@ var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
 var writeAuthorityProbes = map[string]bool{
 	"EnsureWritable": true, "EnsureWritableLive": true,
 	"EnsureWritableForSubjectRights": true, "WritableBy": true,
+	// HoldWritableLive is EnsureWritableLive plus the subject row lock, so it
+	// answers this gate's question and one more. Listed rather than left to the
+	// vocabulary derived next door because a site is recorded HERE, by spelling,
+	// before that vocabulary is consulted — a probe missing from this map
+	// produces no site at all, and its callers then read as ungated.
+	"HoldWritableLive": true,
 }
 
 // recordAuthorityProbes are the single-row probes that answer "may this caller

@@ -98,7 +98,18 @@ func ensureAttachmentParentWritableLive(ctx context.Context, tx pgx.Tx, entityTy
 	if entityType == "activity" {
 		return auth.EnsureActivityWritable(ctx, tx, id)
 	}
-	return auth.EnsureWritableLive(ctx, tx, entityType, id)
+	// HELD, not merely probed: the probe reads a snapshot and the attachment row
+	// is a later statement of the same transaction. attachment is a table
+	// Art. 17 erasure DELETEs and a filename routinely names the subject, so an
+	// upload committing after the erasure restores a row whose destruction the
+	// tombstone certifies — and the bytes reached the object store before the
+	// transaction opened, so the erasure's own blob purge has already run past
+	// them.
+	//
+	// The activity arm above is untouched: an activity is not an erasure subject,
+	// and EnsureActivityWritable resolves liveness through the record it hangs
+	// off rather than through a row this could lock.
+	return auth.HoldWritableLive(ctx, tx, entityType, id)
 }
 
 // requireParentOrHide checks the parent object grant AFTER the attachment row

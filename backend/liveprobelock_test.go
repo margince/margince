@@ -44,8 +44,12 @@ import (
 )
 
 const (
-	liveProbe   = "EnsureWritableLive"
-	subjectLock = "LockSubjectLive"
+	// Either spelling of the live probe. HoldWritableLive is that probe and the
+	// lock as ONE call, which is what a site owing both should read as — and
+	// because it discharges the lock too, it satisfies both halves below.
+	liveProbe     = "EnsureWritableLive"
+	liveProbeHeld = "HoldWritableLive"
+	subjectLock   = "LockSubjectLive"
 )
 
 // unlockedLiveWrites ratifies a live-probed writer of an erasure-cleared table
@@ -66,14 +70,14 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 
 	var findings []string
 	probed, locked := 0, 0
-	for _, dir := range moduleDirsWith(t, liveProbe) {
+	for _, dir := range moduleDirsWith(t, "WritableLive") {
 		graph := packageCallGraph(t, dir)
 		for name := range graph {
 			// Through reaches, which reads identifiers rather than call
 			// edges: both of these are cross-package, and packageCallGraph
 			// records a selector call as an edge only when its base is the
 			// receiver. The Sel is an identifier either way.
-			if !reaches(graph, name, liveProbe) {
+			if !reaches(graph, name, liveProbe) && !reaches(graph, name, liveProbeHeld) {
 				continue
 			}
 			probed++
@@ -81,7 +85,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 			if table == "" {
 				continue
 			}
-			if reaches(graph, name, subjectLock) {
+			if reaches(graph, name, subjectLock) || reaches(graph, name, liveProbeHeld) {
 				locked++
 				continue
 			}
@@ -118,7 +122,8 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 // moduleDirsWith are the module package directories whose source mentions the
 // given identifier, so the graph is built only where it can matter. Derived from
 // the tree rather than listed: a module that starts live-probing joins this
-// census without anybody editing it.
+// census without anybody editing it. The caller passes the SHARED substring of
+// the two probe spellings, so neither has to be enumerated here.
 func moduleDirsWith(t *testing.T, identifier string) []string {
 	t.Helper()
 	paths, err := filepath.Glob("internal/modules/*/*.go")

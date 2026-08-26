@@ -152,7 +152,7 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, personID i
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritableLive(ctx, tx, entityPerson, personID); err != nil {
+		if err := auth.HoldWritableLive(ctx, tx, entityPerson, personID); err != nil {
 			return err
 		}
 		// And HELD, before the connection row below. person_social is a declared
@@ -164,9 +164,6 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, personID i
 		// connection two statements down. Person second would close a cycle
 		// against it — the same ordering the DOI issuer takes, and for the same
 		// reason.
-		if err := auth.LockSubjectLive(ctx, tx, entityPerson, personID); err != nil {
-			return err
-		}
 		// The prior values come from the write itself, through a pre-write
 		// self-join: a separate read would be a different look at the same row,
 		// and the audit row would attest to something other than what this

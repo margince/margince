@@ -73,7 +73,7 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 		// The `archived_at IS NULL` on the purpose read below is a different
 		// question and does not cover this one: it asks whether the PURPOSE is
 		// live, not whether the subject is.
-		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+		if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
 		// And HELD, before this transaction takes any other row lock. What this
@@ -90,9 +90,6 @@ func (s *Store) IssueDoubleOptIn(ctx context.Context, personID ids.PersonID, pur
 		// person second would close the cycle, and nothing in this tree retries a
 		// deadlock — one of the two transactions dies, and when the eraser is the
 		// one that loses, an Art. 17 fulfilment fails.
-		if err := auth.LockSubjectLive(ctx, tx, "person", personID.UUID); err != nil {
-			return err
-		}
 		var requiresDOI bool
 		err := tx.QueryRow(ctx,
 			`SELECT requires_double_opt_in FROM consent_purpose WHERE id = $1 AND archived_at IS NULL`,

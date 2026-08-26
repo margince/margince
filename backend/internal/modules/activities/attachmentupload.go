@@ -132,16 +132,6 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		if err := ensureAttachmentParentWritableLive(ctx, tx, in.EntityType, in.EntityID); err != nil {
 			return err
 		}
-		// And the parent HELD, because that probe reads a snapshot and the row
-		// below is a later statement. attachment is a table Art. 17 erasure
-		// DELETEs, and a filename routinely names the subject — so an upload
-		// committing after the erasure restores a row whose destruction the
-		// tombstone certifies. Worse than the row: the bytes reached the object
-		// store before this transaction opened, so the erasure's own blob purge
-		// has already run past them.
-		if err := auth.LockSubjectLive(ctx, tx, in.EntityType, in.EntityID); err != nil {
-			return err
-		}
 		if err := ensureContractFileable(ctx, tx, in.ContractID); err != nil {
 			return err
 		}

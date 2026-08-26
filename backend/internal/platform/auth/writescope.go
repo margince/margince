@@ -103,6 +103,21 @@ func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUI
 	return ensureWriteAuthority(ctx, tx, table, id)
 }
 
+// HoldWritableLive is EnsureWritableLive and LockSubjectLive as one decision,
+// which is how every entry point that owes both should ask: probe, then hold,
+// with nothing in between that could take another row lock first.
+//
+// The order inside is the deadlock rule. The eraser is subject-first, so the
+// subject must be the first row this transaction holds; a caller that locked
+// something else on the way here has already lost that guarantee, which is why
+// this is one call rather than two the caller sequences.
+func HoldWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	if err := EnsureWritableLive(ctx, tx, table, id); err != nil {
+		return err
+	}
+	return LockSubjectLive(ctx, tx, table, id)
+}
+
 // LockSubjectLive holds the subject's row for the rest of the transaction and
 // refuses if it is not live, so a write that follows cannot be overtaken by an
 // archive or an Art. 17 erasure the probe could not see.
