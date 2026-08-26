@@ -5553,6 +5553,11 @@ export const de = {
   "aiRouting.profile.eu_hosted": "In der EU gehostet",
   "aiRouting.profile.sovereign": "Souverän (kein Datenabfluss)",
   "aiRouting.profile.cloud_frontier": "Cloud-Frontier",
+  "aiRouting.embeddings.label": "Embeddings",
+  "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
+  "aiRouting.baseUrl.label": "Host",
+  "aiRouting.baseUrl.help":
+    "Die Host-Wurzel des Anbieters, ohne Versionssegment — der Adapter hängt /v1 an. Für openai_compatible erforderlich, das keinen eigenen Standard hat.",
   "aiRouting.model.label": "Modell",
   "aiRouting.save": "Routing speichern",
   "aiRouting.saving": "Bindung wird gespeichert…",

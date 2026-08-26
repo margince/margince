@@ -5,11 +5,13 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { pickOption } from "../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../i18n";
 import { AiRoutingCard } from "./ai-routing";
 
@@ -178,5 +180,63 @@ describe("AiRoutingCard", () => {
       "ai-routing-tier-premium",
       "ai-routing-tier-frontier",
     ]);
+  });
+
+  // The embed lane was missing from this form entirely, so a reader could
+  // re-point every chat tier and go on sending their retrieval to the vendor
+  // they had just moved away from, with nothing on screen saying so.
+  it("lets the embedding lane be re-pointed, and sends it", async () => {
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+
+    const model = await screen.findByDisplayValue("gemini-embedding-001");
+    await userEvent.clear(model);
+    await userEvent.type(model, "gemini-embedding-002");
+    await userEvent.click(
+      screen.getByRole("button", { name: /save routing/i }),
+    );
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    expect(
+      (backend.getCapturedPut() as { embeddings: { model: string } }).embeddings
+        .model,
+    ).toBe("gemini-embedding-002");
+  });
+
+  // openai_compatible has no default host and the server refuses a binding
+  // without one. With no field for it, choosing that adapter produced a write
+  // the running role could never adopt: saved cleanly, then declined at the
+  // rebind, leaving the OLD models serving with the reason only in a log.
+  it("asks for a host when the adapter has no default, and only then", async () => {
+    // An instance rather than the default export: pickOption drives a portalled
+    // listbox and needs a session that keeps pointer state across the open.
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-3.5-flash");
+
+    // A native vendor addresses its own API, so no host is asked for.
+    expect(screen.queryByLabelText("Host")).toBeNull();
+
+    const tier = screen.getByTestId("ai-routing-tier-premium");
+    await pickOption(
+      user,
+      within(tier).getByRole("combobox"),
+      "openai_compatible",
+    );
+    const host = await within(tier).findByLabelText("Host");
+    await user.type(host, "https://openrouter.ai/api");
+    await userEvent.click(
+      screen.getByRole("button", { name: /save routing/i }),
+    );
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    const sent = backend.getCapturedPut() as {
+      tiers: Record<string, { provider: string; base_url?: string }>;
+    };
+    expect(sent.tiers.premium.provider).toBe("openai_compatible");
+    expect(sent.tiers.premium.base_url).toBe("https://openrouter.ai/api");
   });
 });

@@ -42,6 +42,10 @@ const PROVIDERS = [
 
 const PROFILES = ["eu_hosted", "sovereign", "cloud_frontier"] as const;
 
+// The one adapter with no host of its own: every OpenAI-wire vendor is reached
+// through it, so the endpoint is the binding rather than a tweak to it.
+const OPENAI_WIRE = "openai_compatible";
+
 function useRouting(enabled: boolean) {
   return useQuery({
     enabled,
@@ -187,6 +191,18 @@ function RoutingForm({
         />
       ))}
 
+      {/* The embed lane, which the form used to leave out entirely — so a
+          reader could re-point every chat tier and still be sending their
+          retrieval to the vendor they had just moved away from, with nothing on
+          screen saying so. It binds SEPARATELY on purpose: retrieval has to
+          survive a chat-budget exhaustion, and the model is a different one even
+          on the same vendor. */}
+      <EmbeddingsRow
+        binding={draft.embeddings}
+        disabled={!canManage || replace.isPending}
+        onChange={(embeddings) => setDraft((d) => ({ ...d, embeddings }))}
+      />
+
       {replace.isError && (
         <Callout tone="danger" live="alert">
           {problemMessageOf(replace.error, t)}
@@ -206,6 +222,65 @@ function RoutingForm({
         {t("aiRouting.save")}
       </Button>
     </>
+  );
+}
+
+// The embeddings lane. Its own row rather than a TierRow, because the two
+// shapes differ in both directions: this one takes `dimensions` and no `input`,
+// and a widened row that accepted either field on either lane would offer a
+// setting the server refuses.
+function EmbeddingsRow({
+  binding,
+  disabled,
+  onChange,
+}: Readonly<{
+  binding: Routing["embeddings"];
+  disabled: boolean;
+  onChange: (next: Routing["embeddings"]) => void;
+}>) {
+  const t = useT();
+  return (
+    <div className="form-row" data-testid="ai-routing-embeddings">
+      <Field label={t("aiRouting.embeddings.label")}>
+        {(control) => (
+          <Select
+            {...control}
+            value={binding.provider}
+            disabled={disabled}
+            options={PROVIDERS.map((p) => ({ value: p, label: p }))}
+            onChange={(provider) => onChange({ ...binding, provider })}
+          />
+        )}
+      </Field>
+      <Field label={t("aiRouting.model.label")}>
+        {(control) => (
+          <TextInput
+            {...control}
+            value={binding.model}
+            disabled={disabled}
+            onChange={(e) => onChange({ ...binding, model: e.target.value })}
+          />
+        )}
+      </Field>
+      {binding.provider === OPENAI_WIRE && (
+        <Field
+          label={t("aiRouting.baseUrl.label")}
+          hint={t("aiRouting.baseUrl.help")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={binding.base_url ?? ""}
+              disabled={disabled}
+              placeholder={t("aiRouting.baseUrl.placeholder")}
+              onChange={(e) =>
+                onChange({ ...binding, base_url: e.target.value })
+              }
+            />
+          )}
+        </Field>
+      )}
+    </div>
   );
 }
 
@@ -253,6 +328,30 @@ function TierRow({
           />
         )}
       </Field>
+      {/* Only where it is load-bearing. openai_compatible has no default host
+          and the server refuses a binding without one, so leaving this off the
+          form made every broker unbindable from here — the write was accepted
+          and the running role then declined to adopt it. A native vendor
+          addresses its own API, and an empty box beside it invites somebody to
+          fill it in with something that overrides a working default. */}
+      {binding.provider === OPENAI_WIRE && (
+        <Field
+          label={t("aiRouting.baseUrl.label")}
+          hint={t("aiRouting.baseUrl.help")}
+        >
+          {(control) => (
+            <TextInput
+              {...control}
+              value={binding.base_url ?? ""}
+              disabled={disabled}
+              placeholder={t("aiRouting.baseUrl.placeholder")}
+              onChange={(e) =>
+                onChange({ ...binding, base_url: e.target.value })
+              }
+            />
+          )}
+        </Field>
+      )}
     </div>
   );
 }

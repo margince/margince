@@ -38,6 +38,11 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "firstRun.google.clientId",
   "firstRun.google.clientSecret",
   "firstRun.google.clientIdPlaceholder",
+  // "Embeddings" is the vocabulary of the routing document itself, which this
+  // form renders raw beside `premium` and `gemini`. The host placeholder is a
+  // URL, which is the same string in every language.
+  "aiRouting.embeddings.label",
+  "aiRouting.baseUrl.placeholder",
   // The same noun, captioning a staged proposal's email field.
   "approval.field.email",
   // Vietnamese sales usage keeps "pipeline" as the loanword, the same way it

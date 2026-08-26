@@ -5506,6 +5506,11 @@ export const vi = {
   "aiRouting.profile.eu_hosted": "Đặt tại EU",
   "aiRouting.profile.sovereign": "Sovereign (không ra ngoài)",
   "aiRouting.profile.cloud_frontier": "Cloud frontier (đám mây cao cấp)",
+  "aiRouting.embeddings.label": "Embeddings",
+  "aiRouting.baseUrl.placeholder": "https://openrouter.ai/api",
+  "aiRouting.baseUrl.label": "Máy chủ",
+  "aiRouting.baseUrl.help":
+    "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản — bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
   "aiRouting.model.label": "Mô hình",
   "aiRouting.save": "Lưu định tuyến",
   "aiRouting.saving": "Đang lưu ràng buộc…",
