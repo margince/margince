@@ -19,6 +19,15 @@ maps the codebase and links everything below.
 
 ## Map
 
+### Handbook — how to USE the product
+
+The only tree here written for the person using Margince rather than building it:
+no code, no API, just the app.
+
+- [handbook/README.md](handbook/README.md) — eleven pages covering records, the
+  pipeline, capture, what the AI does and does not do, approvals, documents,
+  retention, seats and settings.
+
 ### Principles — how this codebase decides things
 
 - [principles/README.md](principles/README.md) — the index. Each page carries the statement, the method for checking the tree still holds it, and what it explicitly does not ask for.

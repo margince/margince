@@ -118,8 +118,9 @@ Create no contact and no company.
 **Have we already decided about this address?** Reuse that decision. No model
 call.
 
-**Is it a personal mail domain** (gmail.com and about eight thousand others
-Margince ships with)? Create the person, but no company.
+**Is it a personal mail domain?** Margince ships with a long list of known
+consumer-mail domains, and the Capture settings screen prints the current count.
+If it is one of those, create the person, but no company.
 
 **Nobody knows who this is.** Create nothing yet. Write down the question.
 
