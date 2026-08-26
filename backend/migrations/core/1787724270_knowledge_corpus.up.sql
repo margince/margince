@@ -55,6 +55,20 @@ CREATE TABLE knowledge_document (
 
 ALTER TABLE knowledge_document ADD CONSTRAINT knowledge_document_pkey PRIMARY KEY (id);
 
+-- One live document per distinct content per corpus, held by the SCHEMA rather
+-- than by the upload being careful.
+--
+-- The upload reads before it inserts, and two uploads of identical bytes can
+-- both run that read before either commits — so the check that produces the
+-- useful refusal cannot also be the thing that guarantees it. The same posture
+-- as knowledge_chunk_one_per_span below: the application says WHY, the index
+-- says never.
+--
+-- Partial on archived_at, because an archived document is out of the corpus and
+-- must not stop the same file being filed again.
+CREATE UNIQUE INDEX knowledge_document_one_per_content
+    ON knowledge_document (corpus_id, checksum) WHERE archived_at IS NULL;
+
 -- A document's audit image names its filename and audit_log is append-only, so
 -- a document may only die by a path that read it first: deleting a corpus that
 -- still has documents is refused rather than silently taking them with it.
