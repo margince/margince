@@ -179,13 +179,12 @@ bootstrap_admin: null
 uploads:
   attachment_mb: null
 `
-	// The loader first: if this ever stops being accepted, the schema should
-	// stop accepting it too, and this test should fail on the loader's arm
-	// rather than quietly asserting a rule nobody holds any more.
-	var loaded deployconfig.Config
-	dec := yaml.NewDecoder(strings.NewReader(withNulls))
-	dec.KnownFields(true)
-	if err := dec.Decode(&loaded); err != nil {
+	// Through deployconfig.Parse, which is what the server actually calls:
+	// decoding ALONE is a weaker claim, because Parse also validates, and a
+	// schema matched against the decoder would accept a file the loader goes on
+	// to reject. If this ever stops being accepted the test fails here, on the
+	// premise, rather than quietly asserting a rule nobody holds any more.
+	if _, err := deployconfig.Parse([]byte(withNulls)); err != nil {
 		t.Fatalf("the loader refuses an explicit null — this test's premise is gone: %v", err)
 	}
 

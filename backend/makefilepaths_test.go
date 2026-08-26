@@ -19,6 +19,8 @@ package backendarch
 // compiled, and no gate read it.
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -74,7 +76,16 @@ func TestEveryConfigPathAMakefileNamesExists(t *testing.T) {
 				}
 				continue
 			}
-			if _, err := os.Stat(path); err == nil {
+			_, err := os.Stat(path)
+			if err == nil {
+				continue
+			}
+			// Absence is the only failure this gate can interpret. A permission
+			// or I/O error means the question went UNANSWERED, and treating that
+			// as "missing" would hand it to the gitignore fallback, which could
+			// then wave through a path nothing ever inspected.
+			if !errors.Is(err, fs.ErrNotExist) {
+				t.Errorf("%s names %q and it could not be inspected: %v", mk, match, err)
 				continue
 			}
 			// A gitignored path is one the tooling CREATES — config/margince.yaml
