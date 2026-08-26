@@ -33,15 +33,6 @@ import (
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
-// relationBackedFields are written into their own tables rather than into a
-// column on the record, so the record's own jsonb cannot answer whether they
-// landed. They are checked by the module's own tests, where the relation is
-// visible; naming them here keeps this gate from reporting a field that did
-// land, which would teach its readers to ignore it.
-var relationBackedFields = map[string]map[string]bool{
-	"person": {"social": true, "emails": true},
-}
-
 // fieldsSentButNotHeld names the patch keys whose value on the record is not
 // what was sent. It reads each column as jsonb, through the same representation
 // the image was written in, rather than through a per-type Go conversion that
@@ -50,7 +41,10 @@ func fieldsSentButNotHeld(t *testing.T, e *integration.Env, entityType string, i
 	t.Helper()
 	checkable := map[string]json.RawMessage{}
 	for key, value := range patch {
-		if relationBackedFields[entityType][key] {
+		// The production set: these live in their own tables, so the record's
+		// own jsonb cannot answer whether they landed. Reading it here rather
+		// than keeping a copy is what stops the two drifting.
+		if relationBackedFields[key] {
 			continue
 		}
 		checkable[key] = value

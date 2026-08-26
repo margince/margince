@@ -405,6 +405,15 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 	if len(patch) == 0 && len(unspellable) == 0 {
 		return refuse(ReasonNoBeforeImage, ""), nil
 	}
+	// An entry that changed nothing has nothing to put back. Both images are
+	// normalised jsonb by the time they are written, so this compares what the
+	// store actually recorded rather than the Go values it recorded them from —
+	// which is why the store could not tell and this can.
+	if changed, err := recordsAChange(row.Before, row.After); err != nil {
+		return Undoability{}, err
+	} else if !changed {
+		return refuse(ReasonNoBeforeImage, "this change left every field as it was"), nil
+	}
 	// Judged before the patch is: an entry that can only be put back in part
 	// must refuse, not put back the part it can.
 	if len(unspellable) > 0 {
@@ -490,4 +499,30 @@ func (e Evaluator) trailState(ctx context.Context, tx pgx.Tx, row AuditRow, patc
 		}
 	}
 	return undoable(), nil
+}
+
+// recordsAChange reports whether the entry's images differ on any key. A store
+// that assigns a column the value it already holds records before and after as
+// the same, and replaying that is a write nobody would notice.
+func recordsAChange(before, after json.RawMessage) (bool, error) {
+	var was, now map[string]json.RawMessage
+	if len(before) > 0 {
+		if err := json.Unmarshal(before, &was); err != nil {
+			return false, fmt.Errorf("compose: before-image is not a JSON object: %w", err)
+		}
+	}
+	if len(after) > 0 {
+		if err := json.Unmarshal(after, &now); err != nil {
+			return false, fmt.Errorf("compose: after-image is not a JSON object: %w", err)
+		}
+	}
+	for key, value := range now {
+		if derivedColumns[key] {
+			continue
+		}
+		if string(was[key]) != string(value) {
+			return true, nil
+		}
+	}
+	return false, nil
 }

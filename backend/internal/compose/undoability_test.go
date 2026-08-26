@@ -37,6 +37,10 @@ func evaluateWithoutTheTrail(t *testing.T, e Evaluator, row AuditRow) Undoabilit
 	return answer
 }
 
+// personRow is one audited person update. The after image differs from the
+// before by construction: an entry whose images match changed nothing, which is
+// its own refusal, and a fixture that tripped it would test that branch instead
+// of the one each case names.
 func personRow(before string) AuditRow {
 	return AuditRow{
 		ID:         ids.NewV7(),
@@ -44,6 +48,7 @@ func personRow(before string) AuditRow {
 		EntityID:   ids.NewV7(),
 		Action:     "update",
 		Before:     json.RawMessage(before),
+		After:      json.RawMessage(`{"full_name":"After The Change"}`),
 	}
 }
 
@@ -194,6 +199,7 @@ func TestAFieldTheRecordTypeCannotClearIsRefusedByName(t *testing.T) {
 	answer := evaluateWithoutTheTrail(t, Evaluator{}, AuditRow{
 		ID: ids.NewV7(), EntityType: "activity", EntityID: ids.NewV7(),
 		Action: "update", Before: json.RawMessage(`{"subject":"Call","due_at":null}`),
+		After: json.RawMessage(`{"subject":"Call Greta","due_at":"2026-09-01T10:00:00Z"}`),
 	})
 	if answer.Reason != ReasonNullUnwritableByModule {
 		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNullUnwritableByModule)
@@ -313,5 +319,53 @@ func TestARelationBackedFieldIsNotComparedForSupersession(t *testing.T) {
 	}
 	if _, judged := compared["title"]; !judged {
 		t.Error("title was not compared; it is an ordinary column and must be judged")
+	}
+}
+
+// An entry whose images are the same changed nothing, so there is nothing to
+// put back. A store that assigns a column the value it already holds records
+// such a row — it compares a *string against a string and cannot tell — and
+// offering a button for it is a button that does nothing.
+func TestAnEntryThatChangedNothingHasNothingToPutBack(t *testing.T) {
+	row := personRow(`{"title":"CTO"}`)
+	row.After = json.RawMessage(`{"title":"CTO"}`)
+	answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
+	if answer.Reason != ReasonNoBeforeImage {
+		t.Fatalf("reason = %q, want %q", answer.Reason, ReasonNoBeforeImage)
+	}
+	if answer.Detail == "" {
+		t.Error("the refusal does not say the entry left every field as it was")
+	}
+}
+
+// A derived stamp moving is not a change worth reversing on its own: the write
+// path set it, not a person.
+func TestAnEntryWhoseOnlyDifferenceIsAStampHasNothingToPutBack(t *testing.T) {
+	row := personRow(`{"title":"CTO","updated_at":"2026-01-01T00:00:00Z"}`)
+	row.After = json.RawMessage(`{"title":"CTO","updated_at":"2026-02-02T00:00:00Z"}`)
+	if answer := evaluateWithoutTheTrail(t, Evaluator{}, row); answer.Reason != ReasonNoBeforeImage {
+		t.Errorf("reason = %q, want %q", answer.Reason, ReasonNoBeforeImage)
+	}
+}
+
+// A real change is still a change — the check must not refuse everything. Held
+// on the function rather than the evaluator, because an entry that passes this
+// branch goes on to read the trail.
+func TestARealChangeIsRecognisedAsOne(t *testing.T) {
+	changed, err := recordsAChange(
+		json.RawMessage(`{"title":"CTO"}`), json.RawMessage(`{"title":"CEO"}`))
+	if err != nil {
+		t.Fatalf("compare the images: %v", err)
+	}
+	if !changed {
+		t.Error("a title moving from CTO to CEO was read as no change")
+	}
+	// A field appearing for the first time is a change too.
+	changed, err = recordsAChange(json.RawMessage(`{"title":null}`), json.RawMessage(`{"title":"CTO"}`))
+	if err != nil {
+		t.Fatalf("compare the images: %v", err)
+	}
+	if !changed {
+		t.Error("a field filled in for the first time was read as no change")
 	}
 }
