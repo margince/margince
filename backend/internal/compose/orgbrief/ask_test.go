@@ -21,11 +21,11 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // openingTag matches the fence's opening marker, whatever promptfence names it

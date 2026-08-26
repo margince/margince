@@ -80,7 +80,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // extSchema is the one schema an extension's tables live in (ADR-0069 §9); the

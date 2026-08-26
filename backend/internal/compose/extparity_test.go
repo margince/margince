@@ -54,7 +54,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // noopInvoker stands in for the tool registry. These tests are about which

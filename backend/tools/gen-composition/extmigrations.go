@@ -11,7 +11,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // migrationsLayer is the unit subdirectory holding its SQL migrations —

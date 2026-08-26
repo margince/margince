@@ -43,8 +43,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // composeImportPath is the package whose ModelPath the roles hand around.

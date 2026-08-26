@@ -32,7 +32,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/oapi-codegen/oapi-codegen/v2/pkg/codegen"
 
-	"github.com/gradionhq/margince/backend/tools/internal/oas30"
+	"github.com/margince/margince/backend/tools/internal/oas30"
 )
 
 func main() {
@@ -339,7 +339,7 @@ func backendRoot() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	const want = "module github.com/gradionhq/margince/backend"
+	const want = "module github.com/margince/margince/backend"
 	isBackendModule := func(gomod string) bool {
 		data, err := os.ReadFile(gomod) // #nosec G304 -- walking to locate the module root
 		if err != nil {

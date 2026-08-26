@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Projecting ONE audit_log row into per-field changes: the mask applied to

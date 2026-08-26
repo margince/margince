@@ -31,7 +31,7 @@ package relayprobe
 // unit polling a single account on one workspace-wide credential has no use for
 // that class and should not copy it.
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 var (
 	// classTokenRejected is a member's token being refused OR absent, which are

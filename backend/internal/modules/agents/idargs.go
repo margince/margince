@@ -21,7 +21,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // uuidFormat is the JSON Schema `format` an id argument declares. Named because

@@ -193,7 +193,7 @@ func digitParamName(fn *ast.FuncDecl) string {
 // reports the wrong subject is worse than one that reports none: somebody has
 // to go and disprove it.
 func importedAs(file *ast.File) string {
-	return importAlias(file, "github.com/gradionhq/margince/backend/"+valuesOwner)
+	return importAlias(file, "github.com/margince/margince/backend/"+valuesOwner)
 }
 
 // importAlias returns the local name an import path is bound to in this file,
@@ -601,7 +601,7 @@ func TestTheHandScaledDetectorSeesWhatItClaimsTo(t *testing.T) {
 				head = "package values\n"
 			case "noimport":
 			default:
-				head += "import (\n\t\"fmt\"\n\t\"math\"\n\t\"strconv\"\n\t\"strings\"\n\n\t\"github.com/gradionhq/margince/backend/" + valuesOwner + "\"\n)\n"
+				head += "import (\n\t\"fmt\"\n\t\"math\"\n\t\"strconv\"\n\t\"strings\"\n\n\t\"github.com/margince/margince/backend/" + valuesOwner + "\"\n)\n"
 			}
 			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
 			if err != nil {

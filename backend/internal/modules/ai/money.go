@@ -7,7 +7,7 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // RateValidationError is the ai module's typed 422 for a rejected model-rate

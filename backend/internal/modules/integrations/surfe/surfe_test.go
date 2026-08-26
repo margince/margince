@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/provider"
+	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 // recorder answers with a canned status and body, and keeps the request so a

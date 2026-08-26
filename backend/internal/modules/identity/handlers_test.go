@@ -6,7 +6,7 @@ package identity
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/ratelimit"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 func TestResetRateLimitsReopensASpentBucket(t *testing.T) {

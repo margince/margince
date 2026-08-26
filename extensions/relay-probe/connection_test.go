@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 const testBaseURL = "https://workspace.example.com"

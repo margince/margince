@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/aicert"
 )
 
 func main() {

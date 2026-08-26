@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // The dedupe evidence snapshot is stored as free JSON, so nothing about a field

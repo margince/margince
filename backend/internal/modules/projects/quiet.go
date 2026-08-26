@@ -12,7 +12,7 @@ package projects
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 )
 
 // DefaultProjectQuietDays is how long a project in flight may go without a

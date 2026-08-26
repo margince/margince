@@ -11,8 +11,8 @@ import (
 	"errors"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func TestOrganizationUpdateInputMapsDomains(t *testing.T) {

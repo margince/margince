@@ -6,7 +6,7 @@ package person360
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // The claim path is the join between the page that RENDERS a correction and

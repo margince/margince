@@ -14,9 +14,9 @@ import (
 	"testing"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/extraction"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/extraction"
 )
 
 // acceptPatchFixture grounds the four deal-writable fields plus one

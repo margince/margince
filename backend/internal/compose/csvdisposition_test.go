@@ -19,7 +19,7 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
 func TestAFinishedDispositionNeverExceedsTheRowsRead(t *testing.T) {

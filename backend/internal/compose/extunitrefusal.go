@@ -12,9 +12,9 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // unitRefusal maps the four published refusal classes onto the product's own

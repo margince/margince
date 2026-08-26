@@ -20,7 +20,7 @@ package agents
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // MeetingBriefReader assembles the brief for ONE meeting, under the calling

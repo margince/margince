@@ -32,7 +32,7 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // declaredJobKindFloor guards against a vacuous pass. The contract declares 55

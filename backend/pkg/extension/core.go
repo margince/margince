@@ -7,7 +7,7 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gradionhq/margince/backend/pkg/extension/crm"
+	"github.com/margince/margince/backend/pkg/extension/crm"
 )
 
 // Core is the governed door onto the installation's own records, reached from

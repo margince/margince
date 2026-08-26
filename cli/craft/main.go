@@ -12,13 +12,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/gradionhq/margince/cli/craft/gate"
-	"github.com/gradionhq/margince/cli/craft/golden"
-	"github.com/gradionhq/margince/cli/craft/learn"
-	"github.com/gradionhq/margince/cli/craft/rubric"
-	"github.com/gradionhq/margince/cli/craft/static"
-	"github.com/gradionhq/margince/cli/craft/upstream"
-	"github.com/gradionhq/margince/cli/craft/version"
+	"github.com/margince/margince/cli/craft/gate"
+	"github.com/margince/margince/cli/craft/golden"
+	"github.com/margince/margince/cli/craft/learn"
+	"github.com/margince/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/static"
+	"github.com/margince/margince/cli/craft/upstream"
+	"github.com/margince/margince/cli/craft/version"
 )
 
 func main() {

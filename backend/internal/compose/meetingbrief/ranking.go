@@ -19,8 +19,8 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // rankedClaims is the single ordered set the sections draw from.

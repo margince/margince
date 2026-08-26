@@ -25,7 +25,7 @@ import (
 	"slices"
 	"strconv"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // FilterBinding narrows one list input by one caller-supplied value.

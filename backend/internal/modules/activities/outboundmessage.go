@@ -12,7 +12,7 @@ package activities
 // unsubscribe token and the recorded one carries a redacted copy, and having
 // both projections in one place is what keeps that difference deliberate.
 
-import "github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
 // outboundMessage is one send's derived facts, computed before the
 // transaction opens so the transaction holds writes only. The timeline row and

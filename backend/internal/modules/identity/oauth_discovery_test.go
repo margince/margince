@@ -15,7 +15,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // A grant type a client cannot see is a grant type it will not use: without

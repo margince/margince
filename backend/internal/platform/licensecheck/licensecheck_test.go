@@ -16,7 +16,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/gradionhq/margince/backend/internal/shared/runtimeenv"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // checkedAt is the fixed instant every posture in this file is stamped with, so

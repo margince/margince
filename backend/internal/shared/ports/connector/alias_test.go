@@ -7,8 +7,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // The core's file types ARE the published ones, not copies of them. A fork would

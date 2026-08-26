@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // A reason for a loss must not outlive the loss. The report that counts why

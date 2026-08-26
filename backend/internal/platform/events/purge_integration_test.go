@@ -17,8 +17,8 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // purgeTestRedis mirrors bus_integration_test.go's setup: a per-test Redis

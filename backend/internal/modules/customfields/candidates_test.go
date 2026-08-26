@@ -16,7 +16,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 func TestProjectOccurrence(t *testing.T) {

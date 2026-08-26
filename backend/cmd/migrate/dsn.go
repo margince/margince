@@ -8,7 +8,7 @@ import (
 	"errors"
 	"flag"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // ownerDSN resolves which credential migrates: an explicit --dsn, else

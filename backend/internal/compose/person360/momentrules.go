@@ -20,9 +20,9 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/relstrength"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // roleChangeMoment: the relationship crossed a threshold. Derived from what the

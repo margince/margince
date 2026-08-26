@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // traceRecorder is the runner's ai.CallRecorder: the cert lane has no

@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr/faulttest"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httperr/faulttest"
 )
 
 // The B-E03.18 golden cases: line_net = round(qty × unit_price ×

@@ -12,8 +12,8 @@ package compose
 import (
 	"errors"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // overlayObjectClasses are the HubSpot object classes design.md §9 maps —

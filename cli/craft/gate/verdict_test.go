@@ -3,7 +3,7 @@ package gate
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/rubric"
 )
 
 func TestComputeVerdict_blocksOnlyOnHighConfidenceBlockEligibleBlocker(t *testing.T) {

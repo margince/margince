@@ -9,7 +9,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/provider"
+	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 // reserve holds this run's worst-case cost, per pool, before anything is

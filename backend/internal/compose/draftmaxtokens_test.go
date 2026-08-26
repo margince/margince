@@ -15,9 +15,9 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/accountdraft"
-	"github.com/gradionhq/margince/backend/internal/compose/persondraft"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 func TestEveryDraftingRequestCarriesThinkingHeadroom(t *testing.T) {

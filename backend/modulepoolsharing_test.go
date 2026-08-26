@@ -36,7 +36,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // modulesTree is where this obligation lives — see the file comment for why it
@@ -47,9 +47,9 @@ const modulesTree = "internal/modules"
 // driver's own, and testdbPath is the lane's shared one. All matched by import
 // path rather than by whichever identifier a file binds them to.
 const (
-	databasePath = "github.com/gradionhq/margince/backend/internal/platform/database"
+	databasePath = "github.com/margince/margince/backend/internal/platform/database"
 	pgxpoolPath  = "github.com/jackc/pgx/v5/pgxpool"
-	testdbPath   = "github.com/gradionhq/margince/backend/internal/platform/testdb"
+	testdbPath   = "github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // poolConstructors is every way a file can obtain a pool of its own, and the

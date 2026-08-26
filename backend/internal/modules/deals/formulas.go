@@ -14,7 +14,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 )
 
 // StalledThresholdDays is the §8 tunable: open deals idle longer than

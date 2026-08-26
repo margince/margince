@@ -4,8 +4,8 @@
 package costestimate
 
 import (
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
 // unitRule is the single source of truth for how ONE unit rule's units and

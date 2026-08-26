@@ -18,7 +18,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // PatchSplit is one patch partitioned by field ownership. Staged holds

@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // Each optional lane fills ITS OWN field. The three are wired through

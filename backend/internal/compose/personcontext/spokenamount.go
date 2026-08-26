@@ -6,7 +6,7 @@ package personcontext
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // currencySymbols is the short form a reader recognises without being told

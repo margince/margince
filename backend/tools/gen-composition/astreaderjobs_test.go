@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // deriveWithJobs lays a one-file unit under a temp root and derives its
@@ -38,7 +38,7 @@ func syntheticJob(unit, job string) extension.JobDeclaration {
 
 const jobUnitSource = `package j
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func New() extension.Extension {
 	return extension.Extension{

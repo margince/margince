@@ -13,8 +13,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func noopHandler(context.Context, extension.Runtime, extension.Delivery) error { return nil }

@@ -13,7 +13,7 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 func TestFaultRendersAKnownSentinelAsItsFixedSentence(t *testing.T) {

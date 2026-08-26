@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/approvals"
 )
 
 // A staging's version pin is what stops a confirmed action executing against a

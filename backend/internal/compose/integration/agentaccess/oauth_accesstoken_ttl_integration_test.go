@@ -18,7 +18,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose"
 )
 
 // accessTokenLifetime reads the RFC 6749 §5.1 expires_in a token response

@@ -13,7 +13,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 	"strconv"
 	"strings"
 	"testing"

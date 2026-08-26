@@ -15,7 +15,7 @@ import (
 	"maps"
 	"slices"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // coreObjects is the closed set of RBAC-governed object types

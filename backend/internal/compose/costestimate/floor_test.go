@@ -6,7 +6,7 @@ package costestimate
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // The floor is the cold-start estimate most first-connect previews land on, so

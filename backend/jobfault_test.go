@@ -20,8 +20,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // workerFloor guards against a vacuous pass, as in the role gate.

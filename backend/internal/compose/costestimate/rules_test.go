@@ -6,7 +6,7 @@ package costestimate
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // The build guardrail for the rule table: every backfill task the estimator

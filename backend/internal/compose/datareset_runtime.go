@@ -13,7 +13,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ResetRuntime is the non-Postgres runtime a data reset must clear: the job

@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Seat is one person on the deal, as the card needs them: who they are, what

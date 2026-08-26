@@ -13,11 +13,11 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/gmail"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/telegram"
-	"github.com/gradionhq/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/telegram"
+	"github.com/margince/margince/backend/internal/modules/comms"
 )
 
 // The scope the authority gate DEMANDS must be the scope the connector

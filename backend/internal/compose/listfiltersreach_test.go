@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Every filter a store binds reaches the tool's published schema, UNDER ITS OWN

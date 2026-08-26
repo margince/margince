@@ -15,7 +15,7 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // ctxHonouringVault is the memory fake made context-sensitive: the memory

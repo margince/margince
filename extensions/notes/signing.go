@@ -30,7 +30,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // signingKeyName is the unit's own bare key name, and must equal the Secrets

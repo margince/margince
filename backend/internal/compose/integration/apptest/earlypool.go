@@ -11,7 +11,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // EarlyPool opens a pool onto the app database BEFORE the harness boots, for the

@@ -15,7 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // unitManifestFile is the per-unit generated manifest: what
@@ -39,7 +39,7 @@ const opAgentToolInvoke = "agent.tool.invoke"
 // cannot carry to a job that happens to share every other field.
 const kindAgentTool = "agent_tool"
 
-const extensionPkgPath = "github.com/gradionhq/margince/backend/pkg/extension"
+const extensionPkgPath = "github.com/margince/margince/backend/pkg/extension"
 
 // unitManifest is one extension's manifest.generated.json: identity plus
 // the RISK TIERS it requests — every operation the extension adds

@@ -10,7 +10,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // TestNewDeclaresAServedTool: the unit declares exactly one governed tool,

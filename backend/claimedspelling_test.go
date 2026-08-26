@@ -38,7 +38,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // thisGate is the name a claim writes in `Held by:` to be judged here. Spelled

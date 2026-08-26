@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
 
 // A scenario shaped like something else asserts nothing about the reply, and a

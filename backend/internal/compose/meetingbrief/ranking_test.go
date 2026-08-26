@@ -6,7 +6,7 @@ package meetingbrief
 import (
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // The same objection used to appear in deal state, risks AND talking points,

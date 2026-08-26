@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // Two failures, two answers. One message for both misdirects whichever caller

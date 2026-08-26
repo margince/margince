@@ -18,9 +18,9 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // siteReadRetryAfter is how long a retryable failure waits. Long enough that a

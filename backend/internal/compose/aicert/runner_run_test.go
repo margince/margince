@@ -30,8 +30,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aicert"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // scenarioYAML builds one minimal, always-"basic"-named scenario for

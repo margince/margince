@@ -14,8 +14,8 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/search"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestTheContactFetchReportsACapOnlyWhenARowWasActuallyCut(t *testing.T) {

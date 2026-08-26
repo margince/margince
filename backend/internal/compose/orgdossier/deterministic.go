@@ -15,8 +15,8 @@ package orgdossier
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // Section is one part of the dossier: a heading's worth of claims about one

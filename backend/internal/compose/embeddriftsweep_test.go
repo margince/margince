@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // staticIdentityEmbedder answers a fixed EmbedIdentity and is never asked

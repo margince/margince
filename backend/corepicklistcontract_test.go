@@ -39,8 +39,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/modules/collections"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // contractDocument is the OpenAPI document these sets mirror.

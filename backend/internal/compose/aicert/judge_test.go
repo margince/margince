@@ -6,7 +6,7 @@ package aicert
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 func TestSelfJudgedComparesTheResolvedIdentities(t *testing.T) {

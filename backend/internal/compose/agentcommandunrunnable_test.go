@@ -28,8 +28,8 @@ import (
 
 	chi "github.com/go-chi/chi/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // unrunnableCall is one call an operation's executor would refuse, together with

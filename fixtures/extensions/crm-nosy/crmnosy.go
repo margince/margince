@@ -26,7 +26,7 @@
 // is all the wall needs on this side.
 package crmnosy
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 // New returns the unit's declaration.
 func New() extension.Extension {

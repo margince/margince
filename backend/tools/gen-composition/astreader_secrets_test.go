@@ -13,7 +13,7 @@ import (
 func secretsUnitSource(secretsFields string) string {
 	return `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func New() extension.Extension {
 	return extension.Extension{
@@ -170,7 +170,7 @@ func TestSecretWithEmptyKeyIsRejected(t *testing.T) {
 func TestSecretsFieldMustBeASliceLiteral(t *testing.T) {
 	src := `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func secrets() []extension.SecretsRequest { return nil }
 

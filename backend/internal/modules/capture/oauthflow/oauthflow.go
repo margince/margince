@@ -21,8 +21,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // httpTimeout bounds every token-endpoint call; a wedged IdP must not hang a

@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // inventoryFixture is the shape a real composed set has: two units, one owning

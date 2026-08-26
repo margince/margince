@@ -6,7 +6,7 @@ package ai
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 )
 
 func briefLike(fence promptfence.Fence) string {

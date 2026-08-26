@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // ns is the namespace, spelled apart from every suffix below for the reason

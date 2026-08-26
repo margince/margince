@@ -3,7 +3,7 @@
 
 package costestimate
 
-import "github.com/gradionhq/margince/backend/internal/modules/ai"
+import "github.com/margince/margince/backend/internal/modules/ai"
 
 // The work-shape floor: the cold-start estimate used when a workspace has no
 // ai_call history to measure a real per-unit cost from. First connect has

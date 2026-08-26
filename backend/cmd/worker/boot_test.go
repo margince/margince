@@ -9,8 +9,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // run() closes the bus and the pool on deferred calls that fire after the lanes

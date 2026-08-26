@@ -24,7 +24,7 @@ package cliflags
 import (
 	"flag"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/config"
 )
 
 // Env collects the flag-to-environment bindings of one FlagSet.

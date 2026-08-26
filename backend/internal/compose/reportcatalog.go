@@ -20,8 +20,8 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // reportToolCatalog publishes the prebuilt catalog to the run_report tool: the

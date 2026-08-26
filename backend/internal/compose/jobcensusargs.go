@@ -24,7 +24,7 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // JobArgsField is one field of one registered kind's COMPILED args struct,

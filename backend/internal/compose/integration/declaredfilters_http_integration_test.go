@@ -22,8 +22,9 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
 	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // disownOverDB nulls a record's owner at the database. A create over the wire

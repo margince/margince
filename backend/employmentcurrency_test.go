@@ -41,7 +41,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // blockedByTheModuleDAG ratifies the statements that cannot adopt the helper
@@ -129,7 +129,7 @@ func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		scope := helperScope{
-			qualifier: importAliasOf(file, "github.com/gradionhq/margince/backend/internal/modules/people"),
+			qualifier: importAliasOf(file, "github.com/margince/margince/backend/internal/modules/people"),
 			inside:    file.Name != nil && file.Name.Name == "people",
 			names:     map[string]bool{employmentHelper: true, primaryHelper: true},
 		}
@@ -321,7 +321,7 @@ func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
 			case "noimport":
 				scope = helperScope{names: names}
 			default:
-				head += "import (\n\t\"fmt\"\n\n\t\"github.com/gradionhq/margince/backend/internal/modules/people\"\n)\n"
+				head += "import (\n\t\"fmt\"\n\n\t\"github.com/margince/margince/backend/internal/modules/people\"\n)\n"
 			}
 			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
 			if err != nil {
@@ -500,7 +500,7 @@ func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		scope := helperScope{
-			qualifier: importAliasOf(file, "github.com/gradionhq/margince/backend/internal/modules/people"),
+			qualifier: importAliasOf(file, "github.com/margince/margince/backend/internal/modules/people"),
 			inside:    file.Name != nil && file.Name.Name == "people",
 			names:     map[string]bool{currentPrimarySlotPredicate: true},
 		}
@@ -633,7 +633,7 @@ func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
 			case "noimport":
 				scope = helperScope{names: names}
 			default:
-				head += "import \"github.com/gradionhq/margince/backend/internal/modules/people\"\n"
+				head += "import \"github.com/margince/margince/backend/internal/modules/people\"\n"
 			}
 			file, err := parser.ParseFile(fset, "probe.go", head+tc.src, 0)
 			if err != nil {

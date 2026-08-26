@@ -45,7 +45,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/freemail"
+	"github.com/margince/margince/backend/internal/platform/freemail"
 )
 
 // The subject set comes from the OWNER, not from a sample.

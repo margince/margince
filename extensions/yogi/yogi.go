@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"math/rand/v2"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // New returns the unit's declaration (the constructor

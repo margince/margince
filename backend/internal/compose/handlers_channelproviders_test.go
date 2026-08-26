@@ -20,7 +20,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // The contract's own `CaptureSourceEntry.source` pattern. Restated rather than

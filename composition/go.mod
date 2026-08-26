@@ -6,10 +6,10 @@
 // imports only the stdlib-only published surface. It is committed so
 // module-mode builds verify hashes the moment a real dependency ever
 // appears, instead of silently resolving unverified.
-module github.com/gradionhq/margince/composition
+module github.com/margince/margince/composition
 
 go 1.26.6
 
-require github.com/gradionhq/margince/backend v0.0.0
+require github.com/margince/margince/backend v0.0.0
 
-replace github.com/gradionhq/margince/backend => ../backend
+replace github.com/margince/margince/backend => ../backend

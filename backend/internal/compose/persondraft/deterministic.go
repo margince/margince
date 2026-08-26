@@ -17,9 +17,9 @@ package persondraft
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/compose/personcontext"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/compose/personcontext"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 )
 
 // Draft is the written message plus what it was written from, before the wire

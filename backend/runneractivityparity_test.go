@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 )
 
 func TestEveryAgentRunStatusHasAProjectionState(t *testing.T) {

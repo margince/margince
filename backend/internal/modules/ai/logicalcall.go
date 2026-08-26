@@ -8,7 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Attempt-reason vocabulary (ai_call.attempt_reason, spec §4): why THIS

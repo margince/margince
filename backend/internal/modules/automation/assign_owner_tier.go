@@ -11,7 +11,7 @@ package automation
 // human retrying the same call cannot upgrade or downgrade the tier by
 // how they ask.
 
-import "github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+import "github.com/margince/margince/backend/internal/shared/ports/mcp"
 
 // AssignOwnerScope is the fire-time scale signal the resolver reads.
 // Bulk true means the automation's own scope widened this firing past a

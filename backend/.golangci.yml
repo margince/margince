@@ -98,8 +98,8 @@ linters:
           list-mode: strict
           allow:
             - $gostd
-            - github.com/gradionhq/margince/backend/internal/shared
-            - github.com/gradionhq/margince/backend/pkg
+            - github.com/margince/margince/backend/internal/shared
+            - github.com/margince/margince/backend/pkg
         # The published extension surface (backend/pkg, ADR-0069 §3) is the
         # outermost Tier-0 leaf: stdlib + itself, nothing else — anything
         # else it imported would become transitively-frozen published API.
@@ -109,14 +109,14 @@ linters:
           list-mode: strict
           allow:
             - $gostd
-            - github.com/gradionhq/margince/backend/pkg
+            - github.com/margince/margince/backend/pkg
         platform:
           files:
             - "**/internal/platform/**"
           deny:
-            - pkg: github.com/gradionhq/margince/backend/internal/modules
+            - pkg: github.com/margince/margince/backend/internal/modules
               desc: platform owns no domain module
-            - pkg: github.com/gradionhq/margince/backend/internal/compose
+            - pkg: github.com/margince/margince/backend/internal/compose
               desc: platform never sees the composition layer
         # Sibling isolation ("a module never imports a sibling module",
         # ADR-0054 §9) is NOT spelled here: depguard cannot say "no
@@ -130,9 +130,9 @@ linters:
           files:
             - "**/internal/modules/**"
           deny:
-            - pkg: github.com/gradionhq/margince/backend/internal/compose
+            - pkg: github.com/margince/margince/backend/internal/compose
               desc: modules never see the composition layer
-            - pkg: github.com/gradionhq/margince/backend/cmd
+            - pkg: github.com/margince/margince/backend/cmd
               desc: modules never see the process roles
     revive:
       # package-comments stays ON: package docs are onboarding

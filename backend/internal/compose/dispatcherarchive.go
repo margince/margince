@@ -15,8 +15,8 @@ package compose
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Archive dispatches to the overlay mirror or the native SoR modules

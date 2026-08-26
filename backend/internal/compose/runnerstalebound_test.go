@@ -20,7 +20,7 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 )
 
 func TestTheRailNeverCallsARunStaleBeforeTheSweepWould(t *testing.T) {

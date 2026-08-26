@@ -44,7 +44,7 @@ package relayprobe
 import (
 	"embed"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // migrations carries the unit's SQL layer INTO the binary. Shipping the

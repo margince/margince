@@ -14,8 +14,8 @@ import (
 	"strings"
 	"unicode/utf8"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // DebugCaps echoes the caps the run enforced.

@@ -20,9 +20,9 @@ package pipelinetrace
 import (
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	trace "github.com/gradionhq/margince/backend/internal/shared/kernel/pipelinetrace"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	trace "github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 )
 
 // rung answers one registered stage.

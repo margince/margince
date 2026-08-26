@@ -12,7 +12,7 @@ package signals
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func mustID(t *testing.T, s string) ids.OrganizationID {

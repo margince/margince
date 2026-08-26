@@ -9,7 +9,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose"
 )
 
 func TestAssertRuntimeRoleAcceptsTheRuntimePool(t *testing.T) {

@@ -25,7 +25,7 @@ package compose
 // record's visibility instead.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 var schemaObjects = []datasource.ObjectDef{

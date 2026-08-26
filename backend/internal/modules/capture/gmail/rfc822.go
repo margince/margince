@@ -20,8 +20,8 @@ import (
 	"net/mail"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // buildRFC822 renders the provider-neutral message as the wire format Gmail

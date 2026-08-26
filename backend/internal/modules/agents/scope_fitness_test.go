@@ -15,7 +15,7 @@ package agents
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // passportScopeVocabulary is the closed set a passport may carry

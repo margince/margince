@@ -20,7 +20,7 @@ import (
 
 	"github.com/emersion/go-message/mail"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // The inbound bounds (DOC-PARAM-3/4/5), which are the PUBLISHED bounds

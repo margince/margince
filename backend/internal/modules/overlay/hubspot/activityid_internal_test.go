@@ -7,7 +7,7 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay"
 )
 
 // TestNamespacedClassesAreExactlyTheModulesEngagementList binds the list that

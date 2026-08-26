@@ -6,7 +6,7 @@
 package composition
 
 import (
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // Extensions returns the composed extension set for this installation;

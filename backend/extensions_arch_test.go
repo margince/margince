@@ -23,7 +23,7 @@ import (
 	"testing"
 )
 
-const compositionModulePath = "github.com/gradionhq/margince/composition"
+const compositionModulePath = "github.com/margince/margince/composition"
 
 // extensionTrees lists every extension source directory: the enabled set
 // under ../extensions plus the CI fixtures under ../fixtures/extensions.

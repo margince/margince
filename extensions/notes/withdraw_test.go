@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 const archivedActivityID = "22222222-2222-4222-8222-222222222222"

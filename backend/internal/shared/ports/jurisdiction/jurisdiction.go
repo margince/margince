@@ -21,7 +21,7 @@ import (
 	"sort"
 	"sync"
 
-	pub "github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+	pub "github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
 
 // Pack is the published pack contract

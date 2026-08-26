@@ -25,9 +25,9 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // companyConversationExpectation is what the corpus asserts about one reply: the

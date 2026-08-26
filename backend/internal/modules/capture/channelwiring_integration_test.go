@@ -16,7 +16,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
 // A deployment with no keyvault cannot seal a bot token or destroy one, and

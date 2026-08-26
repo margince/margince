@@ -17,9 +17,9 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func stageFxIdentity(ctx context.Context, t *testing.T, svc *approvals.Service, ws ids.UUID, cur, rate, prior string) ids.ApprovalID {

@@ -9,8 +9,8 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // toWireEnvelope maps the INTERNAL bus envelope (events.md §2 — the shape

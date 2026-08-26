@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func stringPointer(s string) *string { return &s }

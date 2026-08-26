@@ -16,7 +16,7 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // EmailSender is the OPTIONAL outbound seam a connector implements when its

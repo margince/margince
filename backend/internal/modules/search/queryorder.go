@@ -18,7 +18,7 @@ package search
 import (
 	"slices"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // scoreOnly attaches similarity scores WITHOUT reordering.

@@ -16,7 +16,7 @@ import (
 	"math/big"
 	"strconv"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // OfferLineInput is one line as the engine consumes it: exact decimal

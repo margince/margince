@@ -39,8 +39,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/netguard"
-	"github.com/gradionhq/margince/backend/internal/platform/outbound"
+	"github.com/margince/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/internal/platform/outbound"
 )
 
 // The fetch's bounds. Each is a refusal, not a preference.

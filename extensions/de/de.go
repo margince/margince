@@ -12,8 +12,8 @@
 package de
 
 import (
-	"github.com/gradionhq/margince/backend/pkg/extension"
-	"github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
 
 // New returns the unit's declaration (the ADR-0069 §4 constructor

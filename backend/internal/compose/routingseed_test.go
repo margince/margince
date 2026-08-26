@@ -13,7 +13,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // declaredSeed builds the fixture the way PRODUCTION does: a margince.yaml

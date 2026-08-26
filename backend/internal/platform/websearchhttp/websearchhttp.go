@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/websearch"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/ports/websearch"
 )
 
 // defaultMaxResults is what an unbounded query takes. Small on purpose: the

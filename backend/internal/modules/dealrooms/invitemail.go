@@ -8,7 +8,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 )
 
 // WithInviteMailer wires the operator's outbound mail relay. Nil means the

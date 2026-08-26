@@ -32,8 +32,8 @@ import (
 	"strconv"
 	"strings"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // createShapes and updateShapes bind each record_type to the crm.yaml body its

@@ -21,9 +21,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/projects"
-	"github.com/gradionhq/margince/backend/internal/modules/signals"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/modules/signals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // kindProjectGoneQuiet is spelled once: the fingerprint, the INSERT and the

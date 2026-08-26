@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/jurisdiction"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // Pack codes in this file use ISO user-assigned codes (z*) unique per

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/internal/platform/netguard"
 )
 
 // HTTPDoer is the delivery transport seam. Production wires a netguard-

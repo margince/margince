@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // stamp is one fixed instant, so a formatted timestamp can be asserted
