@@ -65,6 +65,7 @@ import {
   ownerColumn,
   standardViews,
 } from "./recordlist";
+import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
@@ -674,9 +675,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                 restore={{
                   version: person.version,
                   onRestored: () =>
-                    queryClient.invalidateQueries({
-                      queryKey: ["person", person.id],
-                    }),
+                    invalidateRecord(queryClient, "person", person.id),
                 }}
               />
             )}

@@ -123,6 +123,7 @@ import {
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import type { Project } from "./projects.form";
+import { invalidateRecord } from "./recordwritekeys";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
@@ -3647,9 +3648,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   restore={{
                     version: deal.version,
                     onRestored: () =>
-                      queryClient.invalidateQueries({
-                        queryKey: ["deal", deal.id],
-                      }),
+                      invalidateRecord(queryClient, "deal", deal.id),
                   }}
                 />
               )}

@@ -98,6 +98,7 @@ export {
 } from "./leadpresentation";
 
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
+import { invalidateRecord } from "./recordwritekeys";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -1720,9 +1721,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
                 restore={{
                   version: lead.version,
                   onRestored: () =>
-                    queryClient.invalidateQueries({
-                      queryKey: leadKey(lead.id),
-                    }),
+                    invalidateRecord(queryClient, "lead", lead.id),
                 }}
               />
             )}

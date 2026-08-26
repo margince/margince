@@ -37,6 +37,7 @@ import {
 } from "./recordchronology";
 import { groupChronology } from "./timelinegroups";
 import "./person360.css";
+import { invalidateRecord } from "./recordwritekeys";
 
 // The tabs beside Overview that read what the 360 already assembled — the same
 // rule the overview cards hold to (personcards.tsx): a tab can never show a
@@ -133,9 +134,7 @@ export function PersonTimelineTab({
                 : {
                     version: view.person.version,
                     onRestored: () =>
-                      queryClient.invalidateQueries({
-                        queryKey: ["person360", personId],
-                      }),
+                      invalidateRecord(queryClient, "person", personId),
                   }
             }
           />

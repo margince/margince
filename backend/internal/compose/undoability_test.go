@@ -18,12 +18,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 

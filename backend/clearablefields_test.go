@@ -180,17 +180,29 @@ func composeClearableFields(t *testing.T) map[string][]string {
 			return true
 		}
 		for _, element := range literal.Elts {
+			// The key half of the same rule the field half states below: an
+			// entry this reader skips is a record type left out of BOTH sides,
+			// which the census then reports agreement on. Every shape it
+			// cannot read fails by name rather than being passed over.
 			pair, isPair := element.(*ast.KeyValueExpr)
 			if !isPair {
-				continue
+				t.Fatal("compose.clearableFields holds an entry that is not key: value; this " +
+					"census can only read a keyed literal, and skipping one would hide a divergence")
 			}
-			recordType, err := strconv.Unquote(pair.Key.(*ast.BasicLit).Value)
+			key, isLiteral := pair.Key.(*ast.BasicLit)
+			if !isLiteral {
+				t.Fatal("compose.clearableFields is keyed by a non-literal record type; spell " +
+					"it as a quoted literal so the census can read it")
+			}
+			recordType, err := strconv.Unquote(key.Value)
 			if err != nil {
-				continue
+				t.Fatalf("compose.clearableFields is keyed by %s, which is not a quoted record type: %v",
+					key.Value, err)
 			}
 			fields, isList := pair.Value.(*ast.CompositeLit)
 			if !isList {
-				continue
+				t.Fatalf("compose.clearableFields[%q] is not a field list literal; this census can "+
+					"only read one, and skipping it would hide a divergence", recordType)
 			}
 			declared[recordType] = []string{}
 			for _, item := range fields.Elts {
