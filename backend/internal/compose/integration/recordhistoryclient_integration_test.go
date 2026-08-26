@@ -60,17 +60,18 @@ func TestAHandMintedPassportKeepsTheGenericQualifier(t *testing.T) {
 	human := seedWorkspaceUser(t, e, "Ada Authority")
 
 	passport := seedUngrantedPassport(t, e, human)
-	seedDelegatedAuditRow(t, e, person, human, passport, // Dated FORWARD: SeedPerson's own create row is stamped at real now, and
-		// the read is newest first, so a forward-dated row is served FIRST.
+	// Dated FORWARD: SeedPerson's own create row is stamped at real now, and the
+	// read is newest first, so a forward-dated row is served FIRST.
+	seedDelegatedAuditRow(t, e, person, human, passport,
 		time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond))
 
 	page := readRecordHistory(t, e, person)
-	last := page.Entries[len(page.Entries)-1]
-	if last.Summary != "Ada Authority, via an agent, updated the record" {
-		t.Errorf("the line reads %q, want the generic qualifier", last.Summary)
+	newest := page.Entries[0]
+	if newest.Summary != "Ada Authority, via an agent, updated the record" {
+		t.Errorf("the line reads %q, want the generic qualifier", newest.Summary)
 	}
-	if last.AgentClient != nil {
-		t.Errorf("agent_client = %v, want nil — there is no registered client to name", *last.AgentClient)
+	if newest.AgentClient != nil {
+		t.Errorf("agent_client = %v, want nil — there is no registered client to name", *newest.AgentClient)
 	}
 }
 

@@ -68,9 +68,9 @@ func queryRestoreOf(ctx context.Context, tx pgx.Tx, entityType string, entityID,
 		       actor_user.display_name, obo.display_name, oc.client_name
 		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
 		WHERE a.entity_type = $1 AND a.entity_id = $2
-		  AND a.evidence ->> '`+UndidAuditLogID+`' = $3::text
+		  AND a.evidence ->> $4 = $3::text
 		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT 1`, entityType, entityID, undidID), &row)
+		LIMIT 1`, entityType, entityID, undidID, UndidAuditLogID), &row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordAuditRow{}, apperrors.ErrNotFound
 	}

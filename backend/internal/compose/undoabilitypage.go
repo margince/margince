@@ -94,12 +94,17 @@ func (p UndoabilityPage) recordFacts(ctx context.Context, tx pgx.Tx, entityType 
 	if err != nil {
 		return recordFacts{}, err
 	}
-	// The row-scope error is reduced to a boolean here, and only here: this
-	// asks whether the caller COULD write, and "no" is the answer rather than
-	// a failure. Carrying the error further would put "not yours" versus "does
-	// not exist" one careless log line away from a caller.
-	writable := recordIsWritableByCaller(ctx, tx, entityType, entityID) == nil
-	return recordFacts{archived: archived, writable: writable}, nil
+	// The REFUSAL is reduced to a boolean here, and only here: this asks whether
+	// the caller COULD write, and "no" is the answer rather than a failure.
+	// Carrying it further would put "not yours" versus "does not exist" one
+	// careless log line away from a caller. A fault is a different thing and is
+	// returned: reduced to false it would claim the caller has no write
+	// authority on every entry of the page.
+	err = recordIsWritableByCaller(ctx, tx, entityType, entityID)
+	if err != nil && !isWriteScopeRefusal(err) {
+		return recordFacts{}, err
+	}
+	return recordFacts{archived: archived, writable: err == nil}, nil
 }
 
 // pageRow is an AuditRow with the boundary answer the page query already found.
@@ -143,7 +148,7 @@ func (p UndoabilityPage) liveReversals(ctx context.Context, tx pgx.Tx, entityTyp
 	rows, err := tx.Query(ctx, `
 		SELECT undo.evidence ->> $3 FROM audit_log undo
 		WHERE undo.entity_type = $1 AND undo.entity_id = $2
-		  AND undo.evidence ? $3
+		  AND undo.evidence ->> $3 IS NOT NULL
 		  AND NOT EXISTS (
 		    SELECT 1 FROM audit_log reundo
 		    WHERE reundo.entity_type = undo.entity_type
@@ -154,6 +159,10 @@ func (p UndoabilityPage) liveReversals(ctx context.Context, tx pgx.Tx, entityTyp
 		return nil, err
 	}
 	defer rows.Close()
+	// A key present but JSON null reads as SQL NULL, which cannot scan into a
+	// string: the query filters it out above rather than failing the whole page
+	// over one malformed row. The sibling queries COMPARE this expression
+	// instead of scanning it, and a comparison against NULL is already false.
 	undone := map[string]bool{}
 	for rows.Next() {
 		var undid string
@@ -165,6 +174,32 @@ func (p UndoabilityPage) liveReversals(ctx context.Context, tx pgx.Tx, entityTyp
 	return undone, rows.Err()
 }
 
+// advisoryEvaluator is the page's evaluator: every port the WRITE binds, with
+// the four the page already holds facts for answered from those facts. Derived
+// from the binding evaluator rather than assembled beside it, so a port added
+// to the write is bound here without anyone remembering — which is how the page
+// came to omit ExternallyGoverned and light a restore button the write refuses.
+// Held by TestTheAdvisoryPathBindsEveryPortTheWriteBinds.
+func advisoryEvaluator(binding Evaluator, shared recordFacts, row pageRow, undone map[string]bool) Evaluator {
+	advisory := binding
+	advisory.Archived = func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) {
+		return shared.archived, nil
+	}
+	advisory.Writable = func(context.Context, pgx.Tx, string, ids.UUID) error {
+		if shared.writable {
+			return nil
+		}
+		return errRecordNotWritable
+	}
+	advisory.BehindErasure = func(context.Context, pgx.Tx, AuditRow) (bool, error) {
+		return row.behindErasure, nil
+	}
+	advisory.AlreadyUndone = func(_ context.Context, _ pgx.Tx, r AuditRow) (bool, error) {
+		return undone[r.ID.String()], nil
+	}
+	return advisory
+}
+
 // judge asks the same branches the write binds, in the same order, with the
 // page-level facts already in hand. The ports answer from those facts rather
 // than querying, which is what makes the page flat in its size while leaving
@@ -172,24 +207,7 @@ func (p UndoabilityPage) liveReversals(ctx context.Context, tx pgx.Tx, entityTyp
 func (p UndoabilityPage) judge(ctx context.Context, tx pgx.Tx, row pageRow,
 	shared recordFacts, undone map[string]bool,
 ) (privacy.UndoabilityAnswer, error) {
-	advisory := Evaluator{
-		Archived: func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) {
-			return shared.archived, nil
-		},
-		Writable: func(context.Context, pgx.Tx, string, ids.UUID) error {
-			if shared.writable {
-				return nil
-			}
-			return errRecordNotWritable
-		},
-		BehindErasure: func(context.Context, pgx.Tx, AuditRow) (bool, error) {
-			return row.behindErasure, nil
-		},
-		AlreadyUndone: func(_ context.Context, _ pgx.Tx, r AuditRow) (bool, error) {
-			return undone[r.ID.String()], nil
-		},
-		Unwritable: valuesNoLongerWritable,
-	}
+	advisory := advisoryEvaluator(p.seam.evaluator, shared, row, undone)
 	answer, err := advisory.Evaluate(ctx, tx, row.AuditRow, Advisory)
 	if err != nil {
 		return privacy.UndoabilityAnswer{}, err

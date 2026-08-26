@@ -4,31 +4,30 @@
 package compose
 
 import (
-	"strings"
+	"context"
+	"encoding/json"
 	"testing"
 )
 
-// A supersession question about either half of the money pair must ask about
-// both. Restoring a minor-unit count under a currency it was never denominated
-// in produces a number wrong by the scale difference, and it is wrong silently:
-// the figure is plausible in both denominations.
-func TestSupersessionAsksAboutBothHalvesOfTheMoneyPair(t *testing.T) {
-	asked := strings.Join(coupledKeys([]string{"amount_minor"}), ",")
-	if asked != "amount_minor,currency" {
-		t.Errorf("coupledKeys([amount_minor]) = %q, want the pair", asked)
-	}
-	asked = strings.Join(coupledKeys([]string{"currency"}), ",")
-	if asked != "amount_minor,currency" {
-		t.Errorf("coupledKeys([currency]) = %q, want the pair", asked)
-	}
-}
-
-// A field with no sibling is asked about alone. Coupling every key would refuse
-// restores nothing superseded.
-func TestSupersessionDoesNotCoupleAnOrdinaryField(t *testing.T) {
-	asked := strings.Join(coupledKeys([]string{"full_name"}), ",")
-	if asked != "full_name" {
-		t.Errorf("coupledKeys([full_name]) = %q, want it alone", asked)
+// The money pair is judged jointly, and the half of that judgement which needs
+// no trail is pinned here: an image stating BOTH halves is judged by the
+// ordinary value comparison, and an image stating neither has no money to
+// judge. Both return before any query, which the nil transaction proves — the
+// trail branch, where one half is stated alone, is held by the integration
+// test that writes a real later currency change.
+func TestTheMoneyCouplingAsksTheTrailOnlyWhenOneHalfStandsAlone(t *testing.T) {
+	for name, image := range map[string]string{
+		"both halves stated": `{"amount_minor":1000,"currency":"EUR"}`,
+		"no money at all":    `{"full_name":"Ada"}`,
+	} {
+		half, err := moneyMovedUnderIt(context.Background(), nil,
+			AuditRow{After: json.RawMessage(image)})
+		if err != nil {
+			t.Errorf("%s: %v", name, err)
+		}
+		if half != "" {
+			t.Errorf("%s: named %q, want no coupled half to judge", name, half)
+		}
 	}
 }
 

@@ -331,6 +331,12 @@ export function FieldHistoryTimeline({
 export function changeTimeline(
   changes: FieldHistoryEntry[],
   label: (field: string) => string,
+  // The record's own money context. A minor-unit column is an integer count of
+  // units its currency defines, so rendering one raw shows a figure a hundred
+  // times the price on most currencies — the reason this goes through
+  // historyValue rather than to the diff directly, on every field, whether or
+  // not the record type happens to hold money today.
+  money: Readonly<{ currency: string | null | undefined; locale: Locale }>,
   viewerUserId?: string,
 ): TimelineEntry[] {
   return changes.map((change) => ({
@@ -350,8 +356,18 @@ export function changeTimeline(
     via: <ChangeGrounding change={change} />,
     detail: (
       <FieldDiff
-        oldValue={change.old_value ?? null}
-        newValue={change.new_value ?? null}
+        oldValue={historyValue(
+          change.field,
+          change.old_value,
+          money.currency,
+          money.locale,
+        )}
+        newValue={historyValue(
+          change.field,
+          change.new_value,
+          money.currency,
+          money.locale,
+        )}
       />
     ),
   }));

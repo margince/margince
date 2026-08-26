@@ -16,6 +16,9 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"fmt"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"strings"
 	"testing"
 
@@ -231,11 +234,29 @@ func TestAnAnswerCarriesAReasonExactlyWhenItRefuses(t *testing.T) {
 	}
 }
 
-var errNotYours = &rowScopeError{}
+// The row-scope refusal as PRODUCTION spells it. An error of the double's own
+// invention would satisfy the branch while telling nothing about the sentinel
+// auth.EnsureWritable actually returns — and the evaluator now has to tell that
+// refusal apart from a database fault.
+var errNotYours = fmt.Errorf("record not found: %w", apperrors.ErrNotFound)
 
-type rowScopeError struct{}
+// A fault, not a refusal: the port queries, so it can fail for reasons that
+// have nothing to do with who is asking.
+var errPortFailed = fmt.Errorf("connection reset")
 
-func (*rowScopeError) Error() string { return "record not found" }
+// A restore button is drawn from a check that may not have run. Reporting a
+// database fault as "you may not change this record" tells the person a retry
+// is pointless when a retry is the entire answer, and on the write path it
+// becomes a 409 whose code says the same.
+func TestAFailedWritabilityCheckIsAFaultAndNotARefusal(t *testing.T) {
+	e := Evaluator{Writable: func(context.Context, pgx.Tx, string, ids.UUID) error {
+		return errPortFailed
+	}}
+	_, err := e.Evaluate(context.Background(), nil, personRow(`{"full_name":"Greta"}`), Binding)
+	if !errors.Is(err, errPortFailed) {
+		t.Errorf("err = %v, want the port's own failure to reach the caller", err)
+	}
+}
 
 // An address arrives in the image one column at a time and is written back as
 // one nested object, because that is the only shape the update path accepts.
@@ -368,5 +389,34 @@ func TestARealChangeIsRecognisedAsOne(t *testing.T) {
 	}
 	if !changed {
 		t.Error("a field filled in for the first time was read as no change")
+	}
+}
+
+// Setting a custom field from empty cannot be undone, and the refusal is the
+// point rather than a shortfall. A cf_* value travels in the request body's
+// additionalProperties, where storekit.SQLValue converts it per catalog type
+// and DROPS what does not match — a JSON null matches no type, so the write
+// would report success and leave the value standing.
+//
+// Refusing says so. Clearing a custom field is a capability of the platform's
+// custom-column contract, which every module's write shares; until it exists,
+// this test is what keeps the silent drop from being reintroduced as a
+// convenience.
+func TestSettingACustomFieldFromEmptyIsRefusedRatherThanSilentlyDropped(t *testing.T) {
+	patch := map[string]json.RawMessage{
+		"cf_referral_code": json.RawMessage("null"),
+		"title":            json.RawMessage(`"CTO"`),
+	}
+	values, cleared, unclearable := splitNulls("person", patch)
+	if len(unclearable) != 1 || unclearable[0] != "cf_referral_code" {
+		t.Errorf("unclearable = %v, want the custom field named", unclearable)
+	}
+	if _, sent := values["cf_referral_code"]; sent {
+		t.Error("the null travelled in the patch, where the module drops it and answers success")
+	}
+	for _, field := range cleared {
+		if field == "cf_referral_code" {
+			t.Error("the custom field was asked to be cleared, which no module's write can do")
+		}
 	}
 }

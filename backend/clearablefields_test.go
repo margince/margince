@@ -194,13 +194,20 @@ func composeClearableFields(t *testing.T) map[string][]string {
 			}
 			declared[recordType] = []string{}
 			for _, item := range fields.Elts {
+				// A field this reader cannot read is a field the census would
+				// leave out of BOTH sides and still report agreement on — the
+				// one failure mode a census must not have. It fails by name
+				// instead, so the fix is to spell the field as a literal here
+				// rather than to discover the divergence in production.
 				value, isString := item.(*ast.BasicLit)
 				if !isString {
-					continue
+					t.Fatalf("compose.clearableFields[%q] holds a non-literal field; this census can "+
+						"only read literals, and skipping one would hide a divergence", recordType)
 				}
 				field, err := strconv.Unquote(value.Value)
 				if err != nil {
-					continue
+					t.Fatalf("compose.clearableFields[%q] holds %s, which is not a quoted field name: %v",
+						recordType, value.Value, err)
 				}
 				declared[recordType] = append(declared[recordType], field)
 			}

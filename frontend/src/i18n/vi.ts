@@ -84,7 +84,7 @@ export const vi = {
   "history.undo.recordArchived":
     "Bản ghi đang được lưu trữ. Hãy khôi phục bản ghi trước khi hoàn tác một thay đổi.",
   "history.undo.nullUnwritable":
-    "Hoàn tác sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống, nên sẽ báo thành công mà không đổi gì.",
+    "Không thể hoàn tác vì thao tác này sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
   "history.field.address": "Địa chỉ",
   "history.field.amount_minor": "Giá trị",

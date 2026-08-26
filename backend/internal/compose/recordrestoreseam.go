@@ -172,15 +172,20 @@ func valuesNoLongerWritable(ctx context.Context, tx pgx.Tx, entityType string, _
 // defined, naming both sides.
 var _ privacy.ChangeRestorer = RestoreSeam{}
 
-// withReversal gives the history surface both halves of the reversal: the
+// wireReversal gives the history surface both halves of the reversal: the
 // executor that puts a change back, and the reader that says in advance which
-// changes can be. They share ONE seam so the button and the write cannot come
+// changes can be. They share ONE seam, so the button and the write cannot come
 // to disagree about what is possible.
 //
-// This is wired at construction rather than as an option: undoability is part
-// of what the history surface MEANS, and a server serving that history without
-// it would render buttons that answer 404.
-func withReversal(handlers privacy.Handlers, pool *pgxpool.Pool) privacy.Handlers {
-	seam := NewRestoreSeam(pool, NewDispatcher(NewProvider(pool), NewOverlayProvider(pool, failClosedOverlayMeter(), nil), pool))
-	return handlers.WithChangeRestorer(seam).WithUndoabilityReader(NewUndoabilityPage(seam))
+// It runs AFTER assembly and takes the server's OWN dispatcher rather than
+// building one. A second dispatcher is a second per-workspace overlay cache and
+// a second overlay meter, so the reversal path would answer "is this workspace
+// overlay-governed" from a different reading than every other write the server
+// makes — and two answers to that question is what the dispatcher exists to
+// prevent.
+func (s *Server) wireReversal(pool *pgxpool.Pool) {
+	seam := NewRestoreSeam(pool, s.sorDispatch)
+	s.privacyHandlers = s.privacyHandlers.
+		WithChangeRestorer(seam).
+		WithUndoabilityReader(NewUndoabilityPage(seam))
 }

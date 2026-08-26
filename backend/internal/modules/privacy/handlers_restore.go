@@ -11,6 +11,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/gradionhq/margince/backend/internal/platform/auth"
 	"github.com/gradionhq/margince/backend/internal/platform/httperr"
 	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
@@ -50,6 +51,15 @@ func (h Handlers) RestoreRecordChange(w http.ResponseWriter, r *http.Request,
 	}
 	if h.restorer == nil {
 		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	// Human-only, and checked here rather than left to the record's own write
+	// gate: an agent holding write authority on the record would otherwise pass
+	// every later check and land a `restore` row declaring a person's change
+	// undone. Undoing is an act of authority over what somebody else decided,
+	// which is why the contract reserves it to a human.
+	if err := auth.RequireHuman(r.Context()); err != nil {
+		httperr.Write(w, r, err)
 		return
 	}
 	// If-Match is REQUIRED on this route alone. A restore is decided from a

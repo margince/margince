@@ -18475,7 +18475,7 @@ export interface components {
         Undoability: {
             undoable: boolean;
             /**
-             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would report success and change nothing, which is worse than refusing.
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
              * @enum {string|null}
              */
             reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | null;

@@ -240,5 +240,8 @@ func (s *Server) wireSystemOfRecordReads(pool *pgxpool.Pool) {
 	// dispatch, so it is wired here rather than beside the handler sets: a
 	// workspace on the incumbent mirror refuses both the same way.
 	s.wirePerson360(pool)
+	// After sorDispatch exists: the reversal reads the SAME dispatcher every
+	// other write on this server does.
+	s.wireReversal(pool)
 	s.wireProject360(pool)
 }

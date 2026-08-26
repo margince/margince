@@ -40,8 +40,6 @@ import (
 	"sort"
 
 	"github.com/jackc/pgx/v5"
-
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
 // moneyPair is read as ONE field for supersession. amount_minor is a count of
@@ -52,32 +50,6 @@ import (
 //
 //nolint:goconst // the pair IS the declaration; a constant for either half would read as if one were special
 var moneyPair = []string{"amount_minor", "currency"}
-
-// coupledKeys expands the keys a supersession question must actually ask about.
-// A restore is refused per audit ROW, so pulling the sibling in here — rather
-// than at each caller — is what keeps the coupling one rule instead of one per
-// reader.
-func coupledKeys(keys []string) []string {
-	asked := make(map[string]bool, len(keys)+1)
-	for _, key := range keys {
-		asked[key] = true
-	}
-	for _, half := range moneyPair {
-		if !asked[half] {
-			continue
-		}
-		for _, other := range moneyPair {
-			asked[other] = true
-		}
-		break
-	}
-	out := make([]string, 0, len(asked))
-	for key := range asked {
-		out = append(out, key)
-	}
-	sort.Strings(out)
-	return out
-}
 
 // reportedAs maps a superseded key back onto the keys the caller asked about.
 // The money pair travels together in both directions: a later change to the
@@ -122,7 +94,8 @@ func reportedAs(superseded []string, asked []string) []string {
 // The comparison is on jsonb, through the same representation the image was
 // written in, rather than a per-type Go conversion that would disagree about
 // dates and money.
-func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, after json.RawMessage) ([]string, error) {
+func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]string, error) {
+	after, entityType, id := row.After, row.EntityType, row.EntityID
 	if len(after) == 0 {
 		return nil, nil
 	}
@@ -158,7 +131,61 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, entityType string, id 
 	if err := rows.Err(); err != nil {
 		return nil, err
 	}
+	half, err := moneyMovedUnderIt(ctx, tx, row)
+	if err != nil {
+		return nil, err
+	}
+	if half != "" {
+		moved = append(moved, half)
+	}
 	return reportedAs(moved, imageKeys(after)), nil
+}
+
+// moneyMovedUnderIt names the money half this entry states ALONE when the other
+// half has been written since. Putting the amount back under a currency that
+// moved states a price that never existed — wrong by the scale difference
+// values.MinorUnitExceptions() encodes, and wrong silently, because the number
+// is plausible in both denominations.
+//
+// The trail is what answers it, not the image: an update records only the
+// fields the request set, so an entry that changed the amount alone carries no
+// currency to compare the record against. Asking whether a LATER row wrote the
+// sibling is the difference between refusing this restore and refusing every
+// amount change ever made.
+func moneyMovedUnderIt(ctx context.Context, tx pgx.Tx, row AuditRow) (string, error) {
+	var image map[string]json.RawMessage
+	if err := json.Unmarshal(row.After, &image); err != nil {
+		return "", fmt.Errorf("compose: after-image is not a JSON object: %w", err)
+	}
+	stated, sibling := "", ""
+	for i, half := range moneyPair {
+		if _, ok := image[half]; ok {
+			if stated != "" {
+				// Both halves stated: the ordinary comparison above already
+				// judged each against the record.
+				return "", nil
+			}
+			stated, sibling = half, moneyPair[1-i]
+		}
+	}
+	if stated == "" {
+		return "", nil
+	}
+	var moved bool
+	if err := tx.QueryRow(ctx, `
+		SELECT EXISTS (
+		  SELECT 1 FROM audit_log later
+		  WHERE later.entity_type = $1 AND later.entity_id = $2
+		    AND later.after ? $4
+		    AND (later.occurred_at, later.id) >
+		        (SELECT this.occurred_at, this.id FROM audit_log this WHERE this.id = $3))`,
+		row.EntityType, row.EntityID, row.ID, sibling).Scan(&moved); err != nil {
+		return "", fmt.Errorf("compose: reading whether %s moved since: %w", sibling, err)
+	}
+	if !moved {
+		return "", nil
+	}
+	return stated, nil
 }
 
 // Only keys the record holds as COLUMNS are compared, and the row itself says
@@ -176,9 +203,11 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, entityType string, id 
 // way two editing its name do. Judging them means reading each relation, which
 // earns its own engine when it is worth building.
 
-// coupledImage is the after-image narrowed to the keys worth comparing, with
-// the money pair pulled in whole: a restore of the amount under a currency that
-// moved states a value that never existed.
+// coupledImage is the after-image narrowed to the keys worth comparing: the
+// derived columns are dropped, because a row that changed carries a new
+// updated_at whatever else moved, and comparing it would read every entry as
+// superseded. The money pair's coupling is judged by moneyMovedUnderIt, which
+// needs the trail rather than the image alone.
 func coupledImage(after json.RawMessage) ([]byte, error) {
 	var image map[string]json.RawMessage
 	if err := json.Unmarshal(after, &image); err != nil {

@@ -23794,12 +23794,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would report success and change nothing, which is worse than refusing.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would report success and change nothing, which is worse than refusing.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
 type UndoabilityReason string
 
 // UpdateActivityRequest defines model for UpdateActivityRequest.

@@ -17,11 +17,14 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/auditverb"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -267,10 +270,15 @@ func (e Evaluator) liveState(ctx context.Context, tx pgx.Tx, row AuditRow, patch
 	}
 	if e.Writable != nil {
 		if err := e.Writable(ctx, tx, row.EntityType, row.EntityID); err != nil {
-			// The row-scope error is not surfaced: it distinguishes "not yours"
+			if !isWriteScopeRefusal(err) {
+				// The port queries, so it can also fail. Reporting a database
+				// fault as a permission decision tells the person a retry is
+				// pointless when a retry is the whole answer.
+				return Undoability{}, false, err
+			}
+			// The refusal itself is not surfaced: it distinguishes "not yours"
 			// from "does not exist", and that distinction is what the row-scope
 			// gate keeps hidden.
-			//nolint:nilerr // dropping this error is the point: surfacing it would tell the caller which of the two it was
 			return refuse(ReasonNotWritableByCaller, ""), true, nil
 		}
 	}
@@ -278,6 +286,17 @@ func (e Evaluator) liveState(ctx context.Context, tx pgx.Tx, row AuditRow, patch
 		return refuse(ReasonNullUnwritableByModule, strings.Join(unclearable, ", ")), true, nil
 	}
 	return Undoability{}, false, nil
+}
+
+// isWriteScopeRefusal reports whether the writability port answered "no" rather
+// than failing. Both sentinels count: the row-scope gate answers a scope miss
+// with ErrNotFound so existence stays hidden, and an object denial with
+// ErrPermissionDenied. errRecordNotWritable is the page's own stand-in, which
+// carries neither so that the two can never be told apart from a log line.
+func isWriteScopeRefusal(err error) bool {
+	return errors.Is(err, apperrors.ErrNotFound) ||
+		errors.Is(err, apperrors.ErrPermissionDenied) ||
+		errors.Is(err, errRecordNotWritable)
 }
 
 // trailState asks the refusals that read the audit trail, then the value check
@@ -295,7 +314,7 @@ func (e Evaluator) trailState(ctx context.Context, tx pgx.Tx, row AuditRow, patc
 			return refuse(ReasonAlreadyUndone, ""), nil
 		}
 	}
-	moved, err := fieldsThatMovedSince(ctx, tx, row.EntityType, row.EntityID, row.After)
+	moved, err := fieldsThatMovedSince(ctx, tx, row)
 	if err != nil {
 		return Undoability{}, err
 	}
@@ -318,6 +337,9 @@ func (e Evaluator) trailState(ctx context.Context, tx pgx.Tx, row AuditRow, patc
 			// honest as a read can make it, and the write is what binds. A read
 			// that failed here must not hide the whole page.
 			if mode == Advisory {
+				slog.ErrorContext(ctx, "compose: a restore's value check could not run; the entry is "+
+					"offered as undoable and the write will decide",
+					"entity_type", row.EntityType, "entity_id", row.EntityID, "error", err)
 				return undoable(), nil
 			}
 			return Undoability{}, err

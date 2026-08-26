@@ -91,8 +91,25 @@ func TestARestoreLandsEveryFieldItSends(t *testing.T) {
 		t.Fatalf("change the field through the real writer: %v", err)
 	}
 
-	// The image the reversal would send, filtered exactly as the executor
-	// filters it — so what this asserts is what a restore actually writes.
+	// The entry a person would press Undo on.
+	// The version comes from the record rather than from a count of the writes
+	// above: If-Match is what the executor pins the write with, and a guessed
+	// version would fail the restore for a reason this test is not about.
+	var auditID ids.UUID
+	var version int64
+	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := tx.QueryRow(ctx, `
+			SELECT id FROM audit_log
+			WHERE entity_type = 'person' AND entity_id = $1 AND action = 'update'
+			ORDER BY occurred_at DESC, id DESC LIMIT 1`, id).Scan(&auditID); err != nil {
+			return err
+		}
+		return tx.QueryRow(ctx, `SELECT version FROM person WHERE id = $1`, id).Scan(&version)
+	}); err != nil {
+		t.Fatalf("find the entry and the version to pin: %v", err)
+	}
+
+	// The image the reversal WILL send, read from the entry the executor reads.
 	patch, _, err := filterImage("person", json.RawMessage(`{"title":"CTO"}`))
 	if err != nil {
 		t.Fatalf("filter the image: %v", err)
@@ -101,9 +118,15 @@ func TestARestoreLandsEveryFieldItSends(t *testing.T) {
 		t.Fatal("the filtered image is empty; this test would then assert nothing")
 	}
 
-	if _, err := e.People.UpdatePerson(ctx, ids.From[ids.PersonKind](id),
-		people.UpdatePersonInput{Title: &first, Source: "manual"}); err != nil {
-		t.Fatalf("put it back through the real writer: %v", err)
+	// Through the EXECUTOR, not through a hand-built module input: the silent
+	// drop this test exists to catch happens in dispatcher.Update, where the
+	// patch travels as a JSON body and a key the mapper ignores is accepted and
+	// forgotten. A test that assembles UpdatePersonInput itself never reaches
+	// that step and would pass with the drop in place.
+	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
+		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool))
+	if _, err := seam.Restore(ctx, "person", id, auditID, version); err != nil {
+		t.Fatalf("put it back through the executor: %v", err)
 	}
 
 	if missed := fieldsSentButNotHeld(t, e, "person", id, patch); len(missed) > 0 {

@@ -77,7 +77,7 @@ export const de = {
   "history.undo.recordArchived":
     "Der Datensatz ist archiviert. Holen Sie ihn zuerst zurück, bevor Sie eine Änderung zurücksetzen.",
   "history.undo.nullUnwritable":
-    "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann — es würde Erfolg melden und nichts ändern.",
+    "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann, und ist daher nicht möglich.",
   "history.undo.notWritableByCaller":
     "Sie haben keine Berechtigung, diese Felder zu schreiben.",
   "history.field.address": "Adresse",

@@ -153,6 +153,12 @@ func readFrontendReasonCopy(t *testing.T) string {
 		if info.IsDir() || !strings.HasSuffix(path, ".ts") && !strings.HasSuffix(path, ".tsx") {
 			return nil
 		}
+		// A reason named only in a test satisfies nobody: the gate exists to
+		// prove a PERSON is given words for the refusal, and a test file is not
+		// a sentence anyone reads.
+		if strings.HasSuffix(path, ".test.ts") || strings.HasSuffix(path, ".test.tsx") {
+			return nil
+		}
 		body, err := os.ReadFile(path)
 		if err != nil {
 			return err
@@ -206,10 +212,18 @@ func TestBothEvaluationModesCanReturnTheSameReasons(t *testing.T) {
 type reasonsReturned struct {
 	anywhere       map[string]bool
 	underModeGuard map[string]bool
+	// Collected separately so the difference can be taken once at the end,
+	// rather than clearing a flag mid-walk and depending on which branch the
+	// walk happens to reach last.
+	unguarded map[string]bool
 }
 
 func reasonsReturnedUnderAModeGuard(file *ast.File) reasonsReturned {
-	found := reasonsReturned{anywhere: map[string]bool{}, underModeGuard: map[string]bool{}}
+	found := reasonsReturned{
+		anywhere:       map[string]bool{},
+		underModeGuard: map[string]bool{},
+		unguarded:      map[string]bool{},
+	}
 	var guards int
 	var walk func(node ast.Node) bool
 	walk = func(node ast.Node) bool {
@@ -236,16 +250,22 @@ func reasonsReturnedUnderAModeGuard(file *ast.File) reasonsReturned {
 			return true
 		}
 		if guards > 0 {
-			// Provisional: a reason returned here AND outside a guard is not
-			// mode-dependent, so the flag is cleared below.
 			found.underModeGuard[reason.Name] = true
 		} else {
-			found.anywhere[reason.Name] = true
-			delete(found.underModeGuard, reason.Name)
+			found.unguarded[reason.Name] = true
 		}
 		return true
 	}
 	ast.Inspect(file, walk)
+	// Both sets are collected in full and the difference taken here, never
+	// cleared as the walk goes: a reason returned unguarded EARLY and again
+	// inside a mode-guarded branch later would otherwise keep the flag its
+	// second visit set, and the census would report a mode-only reason because
+	// of the order the branches happen to appear in.
+	for name := range found.unguarded {
+		found.anywhere[name] = true
+		delete(found.underModeGuard, name)
+	}
 	for name := range found.underModeGuard {
 		found.anywhere[name] = true
 	}

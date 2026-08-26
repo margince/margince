@@ -45,8 +45,9 @@ type personRecord struct {
 	Title    *string `json:"title"`
 }
 
-// readHistory returns the record's history, newest LAST (the projection is
-// chronological), with each entry's undoability as the surface would show it.
+// readHistory returns the record's history, NEWEST FIRST — the order the
+// projection serves and the order every reader in this file assumes — with each
+// entry's undoability as the surface would show it.
 func readHistory(t *testing.T, e *apptest.AppEnv, entityType, id string) historyPage {
 	t.Helper()
 	var page historyPage

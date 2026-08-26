@@ -1737,17 +1737,13 @@ function useChronologySlots({
           <RecordHistoryTab
             kind="organization"
             id={org.id}
-            restore={
-              org.version === undefined
-                ? undefined
-                : {
-                    version: org.version,
-                    onRestored: () =>
-                      queryClient.invalidateQueries({
-                        queryKey: ["organization360", org.id],
-                      }),
-                  }
-            }
+            restore={{
+              version: org.version,
+              onRestored: () =>
+                queryClient.invalidateQueries({
+                  queryKey: ["organization360", org.id],
+                }),
+            }}
           />
         ) : (
           chronologyNotice(

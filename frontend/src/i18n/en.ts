@@ -81,7 +81,7 @@ export const en = {
   "history.undo.recordArchived":
     "The record is archived. Restore the record itself before putting a change back.",
   "history.undo.nullUnwritable":
-    "Putting this back would have to clear a field this record cannot clear, so it would report success and change nothing.",
+    "Putting this back would have to clear a field this record cannot clear, so it cannot be put back.",
   "history.undo.notWritableByCaller":
     "You do not have permission to write these fields.",
   "history.field.address": "Address",
