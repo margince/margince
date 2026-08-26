@@ -293,6 +293,40 @@ describe("the search box follows the address", () => {
     await waitFor(() => expect(search).toHaveProperty("value", "brandt"));
     expect(fetchPage.mock.calls.at(-1)?.[0].q).toBe("brandt");
   });
+
+  it("drops a word still settling when the reader leaves the list it was typed into", async () => {
+    const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    render(<ListTableHarness fetchPage={fetchPage} />);
+    const search = await screen.findByPlaceholderText("Search");
+
+    vi.useFakeTimers();
+    try {
+      // Typed, and NOT yet committed.
+      fireEvent.change(search, { target: { value: "acme" } });
+
+      // The reader leaves for an address that carries no `q` either — Back to a
+      // differently sorted view of the same list. `q` never moved, so following
+      // `q` alone would leave the timer with its appointment kept.
+      await act(async () => {
+        window.location.hash = "#/contacts?sort=full_name";
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+        await Promise.resolve();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await waitFor(() => expect(search).toHaveProperty("value", ""));
+    // The word lands on no list at all, least of all the one the reader is on.
+    expect(fetchPage.mock.calls.every(([query]) => query.q !== "acme")).toBe(
+      true,
+    );
+  });
 });
 
 describe("two lists on one route", () => {

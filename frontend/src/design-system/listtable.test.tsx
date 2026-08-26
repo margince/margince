@@ -1184,6 +1184,26 @@ describe("empty state", () => {
     expect(screen.getByText("Sorted by Name")).toBeTruthy();
   });
 
+  it("says nothing exists only when nothing is narrowing, scope included", () => {
+    // A screen's own scope — which pipeline's board is being read — narrows the
+    // rows and no button here can undo it. Switching to a pipeline with no
+    // deals said "no deals yet" about a workspace full of them.
+    render(
+      <ListTable
+        rows={[]}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        scopeKey="pipeline-2"
+      />,
+    );
+    expect(screen.queryByText(/No rows yet/)).toBeNull();
+    expect(screen.getByText(/No rows match these filters/)).toBeTruthy();
+    // And no verb, because there is nothing here that could clear it. A Clear
+    // that cleared nothing is a control that does nothing.
+    expect(screen.queryByRole("button", { name: "Clear filters" })).toBeNull();
+  });
+
   it("names a likelier cause under the none-yet copy", () => {
     render(
       <ListTable

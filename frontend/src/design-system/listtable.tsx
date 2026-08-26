@@ -767,6 +767,14 @@ export function ListTable<Row>({
   // records do not exist rather than that a filter is hiding them.
   const filtered =
     Boolean(search?.value) || Object.values(chosen).some(Boolean);
+  // Whether ANYTHING is cutting the set down, which is a wider question than
+  // whether a CLEARABLE dial is. A screen's own scope — which pipeline's board
+  // is being read — narrows the rows and no button here can undo it, so the two
+  // answers have to be separate: offering "clear filters" for a scope this
+  // table cannot clear would be a control that does nothing, and calling an
+  // empty scope "no deals yet" is a claim about the workspace when the truth is
+  // that this pipeline has none.
+  const narrowed = filtered || Boolean(scopeKey);
 
   // Narrowing the set changes what page 1 even means, so go back to it rather
   // than stranding the reader on a page that no longer exists. Clamping alone
@@ -919,7 +927,7 @@ export function ListTable<Row>({
             last={from + pageRows.length}
             total={rows.length}
             more={hasMore}
-            narrowed={filtered}
+            narrowed={narrowed}
             sortedBy={sorted?.header}
           />
         )
@@ -1120,9 +1128,21 @@ export function ListTable<Row>({
               {!pending && !problem && rows.length === 0 && (
                 <tr className="lt-empty" role="row">
                   <td colSpan={shown.length + 1} role="cell">
-                    {filtered ? (
+                    {/* Three states, not two. "No rows yet" is a claim about
+                        the SET and is false the moment anything is cutting it
+                        down — including a narrowing this table cannot clear,
+                        which is what a screen's own scope is: switching to a
+                        pipeline with no deals said "no deals yet" about a
+                        workspace full of them. So what is narrowing decides the
+                        sentence, and whether it is CLEARABLE decides whether a
+                        verb is offered, because a Clear that cleared nothing
+                        would be a control that does nothing. */}
+                    {narrowed
+                      ? t("table.noMatches", { unit })
+                      : t("table.none", { unit })}
+                    {filtered && (
                       <>
-                        {t("table.noMatches", { unit })}{" "}
+                        {" "}
                         <button
                           type="button"
                           className="lt-linkish"
@@ -1131,8 +1151,6 @@ export function ListTable<Row>({
                           {t("table.clearFilters")}
                         </button>
                       </>
-                    ) : (
-                      t("table.none", { unit })
                     )}
                     {/* Under EITHER line, because WHICH emptiness a note
                         explains is the caller's to know and not this table's.

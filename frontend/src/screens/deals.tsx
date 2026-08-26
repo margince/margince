@@ -411,7 +411,7 @@ function OverlayDealsTable({
   }
   return (
     <>
-      <DealTable deals={deals} stages={[]} />
+      <DealTable deals={deals} />
       <LoadMoreButton query={query} />
     </>
   );
@@ -2481,19 +2481,10 @@ function WonReasonFields({
  * is no server order to ask for either. This table therefore draws rows in
  * cursor order and says nothing about sorting at all.
  */
-function DealTable({
-  deals,
-  stages,
-}: Readonly<{ deals: Deal[]; stages: Stage[] }>) {
+function DealTable({ deals }: Readonly<{ deals: Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const stageName = useMemo(
-    () => new Map(stages.map((stage) => [stage.id, stage.name])),
-    [stages],
-  );
-
-  const rows = deals;
 
   return (
     <div>
@@ -2508,10 +2499,13 @@ function DealTable({
           {
             key: "stage",
             header: t("deals.stage"),
-            // stage_id is null for an overlay-mirror deal (OVA-MAP-6) — no
-            // native stage row to name; a native deal always has one.
-            render: (deal: Deal) =>
-              deal.stage_id ? (stageName.get(deal.stage_id) ?? "") : "",
+            // Always empty HERE, and named rather than looked up. This table
+            // draws the overlay mirror and nothing else, and a mirror deal
+            // carries no native pipeline or stage (OVA-MAP-6) — so the column
+            // keeps the shape the native table has while having nothing of its
+            // own to say. A stage map passed in to be read would only ever
+            // answer for a row this table cannot hold.
+            render: () => "",
           },
           {
             key: "amount",
@@ -2534,7 +2528,7 @@ function DealTable({
             ),
           },
         ]}
-        rows={rows}
+        rows={deals}
         rowKey={(deal) => deal.id}
         onRowClick={(deal) => navigate({ screen: "deals", id: deal.id })}
       />

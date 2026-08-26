@@ -895,6 +895,32 @@ export function ListTable<Row>({
     }
   }, [query.q]);
 
+  // The reader LEFT, with a word still settling.
+  //
+  // The effect above follows `q`, and a word typed against a list the reader
+  // then walked away from has a `q` that never moved: type "acme", press Back
+  // to a differently sorted view of the same list, and both addresses carry no
+  // `q` at all. Nothing above fires, the timer keeps its appointment, and the
+  // word lands on a list it was not typed into.
+  //
+  // `hashchange` is the discriminator and it is exact: `replaceParams` writes
+  // with `history.replaceState`, which fires no such event and announces itself
+  // in-app instead, so every dial this surface turns is silent here. What
+  // reaches this listener is the browser's own navigation — Back, Forward, a
+  // pasted link — which is precisely the case where a pending word belongs to a
+  // list that is gone. Re-reading the address also re-arms the debounce with
+  // the value now in it, so the stale timer commits nothing.
+  useEffect(() => {
+    const abandonPendingSearch = () => {
+      const live = ownDials(currentParams(), state.paramScope).get("q") ?? "";
+      committed.current = live;
+      setLocalSearch(live);
+    };
+    globalThis.addEventListener("hashchange", abandonPendingSearch);
+    return () =>
+      globalThis.removeEventListener("hashchange", abandonPendingSearch);
+  }, [state.paramScope]);
+
   useEffect(() => {
     if (!searchable) {
       return;
