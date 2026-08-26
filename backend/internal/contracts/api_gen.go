@@ -590,6 +590,7 @@ const (
 	AiActivityKindCaptureCounterpartyVerdict AiActivityKind = "capture_counterparty_verdict"
 	AiActivityKindCertJudge                  AiActivityKind = "cert_judge"
 	AiActivityKindColdStart                  AiActivityKind = "cold_start"
+	AiActivityKindCorpusAsk                  AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                 AiActivityKind = "deal_health"
 	AiActivityKindDocumentExtract            AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                 AiActivityKind = "draft_reply"
@@ -622,6 +623,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCertJudge:
 		return true
 	case AiActivityKindColdStart:
+		return true
+	case AiActivityKindCorpusAsk:
 		return true
 	case AiActivityKindDealHealth:
 		return true
@@ -1451,6 +1454,7 @@ const (
 	AuditLogEntryActionConsentGrant       AuditLogEntryAction = "consent_grant"
 	AuditLogEntryActionConsentWithdraw    AuditLogEntryAction = "consent_withdraw"
 	AuditLogEntryActionCreate             AuditLogEntryAction = "create"
+	AuditLogEntryActionDelete             AuditLogEntryAction = "delete"
 	AuditLogEntryActionDemote             AuditLogEntryAction = "demote"
 	AuditLogEntryActionDisconnect         AuditLogEntryAction = "disconnect"
 	AuditLogEntryActionDisqualify         AuditLogEntryAction = "disqualify"
@@ -1514,6 +1518,8 @@ func (e AuditLogEntryAction) Valid() bool {
 	case AuditLogEntryActionConsentWithdraw:
 		return true
 	case AuditLogEntryActionCreate:
+		return true
+	case AuditLogEntryActionDelete:
 		return true
 	case AuditLogEntryActionDemote:
 		return true

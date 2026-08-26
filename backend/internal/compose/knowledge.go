@@ -92,11 +92,12 @@ func (h knowledgeHandlers) ListCorpusDocuments(w http.ResponseWriter, r *http.Re
 	h.module.ListCorpusDocuments(w, r, id)
 }
 
-// Not yet written.
-
-func (knowledgeHandlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, _ crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "deleteCorpusDocument")
+func (h knowledgeHandlers) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	h.module.DeleteCorpusDocument(w, r, id)
 }
+
+// Not yet written. The ask is answered at compose level rather than by the
+// module, which is why it is the one operation still shaped this way.
 
 // AskCorpus is answered by the compose-level engine rather than by the module:
 // the ask joins the knowledge module's retrieval to the AI router's chat lane,

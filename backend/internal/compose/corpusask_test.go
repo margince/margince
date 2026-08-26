@@ -17,6 +17,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -63,7 +64,7 @@ func (l *fixedLane) Complete(_ context.Context, req model.Request) (model.Respon
 	return model.Response{Text: l.text}, nil
 }
 
-func quietLog() *slog.Logger {
+func corpusQuietLog() *slog.Logger {
 	return slog.New(slog.NewTextHandler(io.Discard, nil))
 }
 
@@ -197,7 +198,7 @@ func TestAnAnswerWhoseClaimsAllFailIsNotCovered(t *testing.T) {
 		Quote: "49 EUR per seat",
 	})}
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "what does it cost", passages,
-		string(textlang.English), quietLog())
+		string(textlang.English), corpusQuietLog())
 
 	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeNotCovered {
 		t.Fatalf("outcome = %q, want not_covered", answer.Outcome)
@@ -212,7 +213,7 @@ func TestAnAnswerWhoseClaimsAllFailIsNotCovered(t *testing.T) {
 func TestWithNoLaneTheAnswerIsThePassagesThemselves(t *testing.T) {
 	passages := askPassages()
 	answer := AnswerCorpus(t.Context(), nil, answeredState(), "how long are messages kept", passages,
-		string(textlang.English), quietLog())
+		string(textlang.English), corpusQuietLog())
 
 	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
 		t.Fatalf("outcome = %q, want answered", answer.Outcome)
@@ -241,7 +242,7 @@ func TestAFailedLaneDegradesToThePassages(t *testing.T) {
 	passages := askPassages()
 	lane := &fixedLane{err: errors.New("the lane timed out")}
 	answer := AnswerCorpus(t.Context(), lane, answeredState(), "how long are messages kept", passages,
-		string(textlang.English), quietLog())
+		string(textlang.English), corpusQuietLog())
 
 	if answer.Outcome != crmcontracts.KnowledgeAnswerOutcomeAnswered {
 		t.Fatalf("outcome = %q, want answered", answer.Outcome)
@@ -266,7 +267,7 @@ func TestARefusalNeverReachesTheLane(t *testing.T) {
 	} {
 		state := answeredState()
 		state.Outcome = outcome
-		answer := AnswerCorpus(t.Context(), lane, state, "anything", nil, string(textlang.English), quietLog())
+		answer := AnswerCorpus(t.Context(), lane, state, "anything", nil, string(textlang.English), corpusQuietLog())
 		if answer.Outcome != outcome {
 			t.Fatalf("%s became %s", outcome, answer.Outcome)
 		}
@@ -297,5 +298,59 @@ func TestTheRequestOffersOnlyThisCallsPassageIDs(t *testing.T) {
 	}
 	if !strings.Contains(req.Messages[0].Content, "how long are messages kept") {
 		t.Fatal("the prompt does not carry the question")
+	}
+}
+
+// The schema and the parser name the same keys.
+//
+// Three places spell each one — the schema's property map, its required list,
+// and askedClaim's struct tags — and a key that disagreed between any two would
+// be a field the model is asked for and the parser silently never reads. The
+// symptom would be an answer that always has empty text, or always drops every
+// claim, with nothing failing.
+func TestTheReplySchemaAndTheParserAgreeOnEveryKey(t *testing.T) {
+	req := CorpusAskRequest("anything", askPassages(), string(textlang.English))
+
+	var doc struct {
+		Properties struct {
+			Claims struct {
+				Items struct {
+					Properties map[string]json.RawMessage `json:"properties"`
+					Required   []string                   `json:"required"`
+				} `json:"items"`
+			} `json:"claims"`
+		} `json:"properties"`
+	}
+	if err := json.Unmarshal(req.ResponseSchema, &doc); err != nil {
+		t.Fatalf("the reply schema is not the shape this test reads: %v", err)
+	}
+	claim := doc.Properties.Claims.Items
+
+	// Every key the PARSER decodes must be offered by the schema, under exactly
+	// the name the parser reads.
+	for _, key := range []string{claimTextKey, claimIDKey, claimQuoteKey} {
+		if _, offered := claim.Properties[key]; !offered {
+			t.Fatalf("the parser reads %q and the schema does not offer it", key)
+		}
+	}
+	// And the schema must offer nothing else: a property the parser ignores is
+	// a field the model spends output on for no reader.
+	if len(claim.Properties) != 3 {
+		t.Fatalf("the schema offers %d properties, want the three the parser reads: %v",
+			len(claim.Properties), claim.Properties)
+	}
+	// The struct tags are the third spelling, read from the type itself rather
+	// than restated here.
+	tags := map[string]bool{}
+	for _, f := range reflect.VisibleFields(reflect.TypeOf(askedClaim{})) {
+		tags[f.Tag.Get("json")] = true
+	}
+	for key := range claim.Properties {
+		if !tags[key] {
+			t.Fatalf("the schema offers %q and askedClaim has no field tagged for it", key)
+		}
+	}
+	if len(claim.Required) != 3 {
+		t.Fatalf("the schema requires %d keys, want all three", len(claim.Required))
 	}
 }

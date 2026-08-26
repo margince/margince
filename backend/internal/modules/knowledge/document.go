@@ -244,3 +244,84 @@ func scanDocument(row pgx.Row) (crmcontracts.KnowledgeDocument, error) {
 	doc.ChunkCount = &chunkCount
 	return doc, nil
 }
+
+// DeleteDocument removes a document, its passages, their vectors and its
+// stored file.
+//
+// A HARD delete, not an archive. An embedding is the document's text in another
+// shape — a similarity probe reconstructs neighbourhoods of what it was made
+// from — and a stored original left behind would make the deletion decorative.
+//
+// It REFUSES when no object store is bound rather than deleting the rows and
+// leaving the bytes. A partial delete that reports success is the worst
+// available outcome: the screen says the document is gone, and the file it was
+// made from is still there with nothing left pointing at it to find it by.
+//
+// The blob goes LAST, after the rows commit. The other order deletes bytes that
+// a failed transaction then leaves a live row promising. This way a failure
+// leaves at worst an orphan object — recoverable, and invisible to every read —
+// rather than a row whose document cannot be opened.
+func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
+	if err := auth.Require(ctx, "knowledge_document", principal.ActionDelete); err != nil {
+		return err
+	}
+	if s.blob == nil {
+		return ErrBlobstoreUnconfigured
+	}
+	var storageKey string
+	if err := s.tx(ctx, func(tx pgx.Tx) error {
+		var doc deletedDocument
+		if err := tx.QueryRow(ctx,
+			`SELECT storage_key, filename, checksum, content_type, chunk_count
+			   FROM knowledge_document WHERE id = $1 FOR UPDATE`, documentID).
+			Scan(&doc.storageKey, &doc.filename, &doc.checksum, &doc.contentType, &doc.chunkCount); err != nil {
+			return notFoundOr(err, "read the document to delete")
+		}
+		storageKey = doc.storageKey
+		// The chunks go explicitly rather than by the FK's ON DELETE CASCADE.
+		// The cascade would do it, but a delete that names what it destroys is
+		// the one a reader of this function can check against the tombstone
+		// below — and the two must agree.
+		if err := deleteChunksOf(ctx, tx, documentID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `DELETE FROM knowledge_document WHERE id = $1`, documentID); err != nil {
+			return fmt.Errorf("delete the corpus document: %w", err)
+		}
+		// The tombstone: what was destroyed, in four keys and NOT ONE MORE.
+		//
+		// audit_log is append-only and outlives the erasure that clears what it
+		// quotes, so a chunk of document text in here would stay readable
+		// through field history, record history and the compliance log after
+		// the document itself was deleted — a deletion that leaves the prose
+		// behind in the audit trail is not a deletion.
+		if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", documentID,
+			map[string]any{
+				"filename":     doc.filename,
+				"checksum":     doc.checksum,
+				"content_type": doc.contentType,
+				"chunk_count":  doc.chunkCount,
+			}, nil); err != nil {
+			return fmt.Errorf("audit corpus document delete: %w", err)
+		}
+		return nil
+	}); err != nil {
+		return err
+	}
+	// Idempotent by contract, so a crash between the commit and here leaves a
+	// retry able to finish the job rather than fail on bytes already gone.
+	if err := s.blob.Delete(ctx, storageKey); err != nil {
+		return fmt.Errorf("delete the stored document: %w", err)
+	}
+	return nil
+}
+
+// deletedDocument is the row read under the delete's own lock: what the
+// tombstone records, and where the bytes are.
+type deletedDocument struct {
+	storageKey  string
+	filename    string
+	checksum    string
+	contentType string
+	chunkCount  int
+}

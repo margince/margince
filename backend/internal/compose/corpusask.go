@@ -80,10 +80,14 @@ type corpusAskLane interface {
 	Complete(ctx context.Context, req model.Request) (model.Response, error)
 }
 
-// The reply's field names, named once. They are spelled in the schema, in the
-// required-key list beside it, and in the struct tags below, and a key that
+// The reply's field names. They appear in the schema's property map, in the
+// required-key list beside it, and in the struct tags below; a key that
 // disagreed between any two of those would be a field the model is asked for
 // and the parser never reads.
+//
+// Held by: TestTheReplySchemaAndTheParserAgreeOnEveryKey (corpusask_test.go) —
+// it reads the generated schema and requires every key the parser decodes to
+// appear in it, so a fourth spelling introduced anywhere fails there.
 const (
 	claimTextKey  = "text"
 	claimIDKey    = "id"

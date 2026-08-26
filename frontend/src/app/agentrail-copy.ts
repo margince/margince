@@ -39,6 +39,7 @@ export const TASK_SAID: Readonly<Record<string, string>> = {
   capture_counterparty_verdict: "Decided who a message was with",
   cert_judge: "Checked its own answer",
   cold_start: "Set up your workspace",
+  corpus_ask: "Answered from your documents",
   deal_health: "Read the health of a deal",
   document_extract: "Pulled fields out of a document",
   draft_reply: "Drafted a reply",
