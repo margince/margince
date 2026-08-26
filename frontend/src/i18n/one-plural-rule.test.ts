@@ -206,24 +206,67 @@ function findingsIn(path: string, source: string): Finding[] {
   return found;
 }
 
+/**
+ * This gate's own ceiling, because it does not belong to the population
+ * `vitest.budget.ts` measures.
+ *
+ * That ceiling is arithmetic over WAITING — the longest chain of one-second
+ * waiters a test legitimately composes, plus the slowest measured test. This
+ * gate waits for nothing. It type-parses every source file in the tree, so its
+ * cost is the corpus, and the two numbers have no relationship at all. It sat
+ * under that ceiling only while the tree was small enough for the coincidence
+ * to hold, and stopped when the tree grew: `Test timed out in 13437ms` on main,
+ * on two consecutive runs, with every assertion in it passing.
+ *
+ * Derived per FILE and then multiplied out, not picked whole: 1400 files at
+ * 40ms each. The corpus is 1066 today, so the headroom is ~330 files — chosen
+ * against this tree's merge rate rather than as a round margin, because a
+ * budget with thirty files of slack is one that fails next week. Measured at ~3.3ms per file on an idle ten-core machine and
+ * unchanged under eight spinners — the cost is the parse, not contention for a
+ * core. A CI runner is smaller and saturated by the rest of the suite running
+ * in parallel, and needed more than 12.5ms per file there, so the allowance is
+ * an order of magnitude over the local measurement rather than a margin
+ * trimmed to fit.
+ *
+ * A LITERAL, not the product, because scripts/test-budget.test.ts refuses a
+ * timeout it cannot statically fold — correctly, since a ceiling no reader can
+ * evaluate is one no reader can audit. The cost of that is the number cannot
+ * scale itself, so the corpus size it assumes is asserted in the test body
+ * instead: the tree outgrowing this budget fails by name rather than by
+ * timeout.
+ */
+const PARSE_BUDGET_PER_FILE_MS = 40;
+const BUDGETED_CORPUS_FILES = 1_400;
+const SCAN_TIMEOUT_MS = 56_000;
+
 describe("one plural rule", () => {
-  it("finds no count-picks-the-key outside i18n/", () => {
-    const files = sourceFiles();
-    // Fail closed. A walk pointed at the wrong tree reports PASS over nothing,
-    // and under-recognition is the one way a gate must not break.
-    expect(files.length).toBeGreaterThan(100);
+  it(
+    "finds no count-picks-the-key outside i18n/",
+    () => {
+      const files = sourceFiles();
+      // Fail closed. A walk pointed at the wrong tree reports PASS over
+      // nothing, and under-recognition is the one way a gate must not break.
+      expect(files.length).toBeGreaterThan(100);
+      // And fail LOUDLY when the tree outgrows the ceiling's premise. The
+      // ceiling above is a literal because scripts/test-budget.test.ts must be
+      // able to read it, which means it cannot scale itself — so the premise it
+      // rests on is asserted here instead. Without this the next growth spurt
+      // returns as `Test timed out`, which names this test and not the reason.
+      expect(files.length).toBeLessThanOrEqual(BUDGETED_CORPUS_FILES);
 
-    const findings = files.flatMap((path) =>
-      findingsIn(path, readFileSync(path, "utf8")),
-    );
+      const findings = files.flatMap((path) =>
+        findingsIn(path, readFileSync(path, "utf8")),
+      );
 
-    expect(
-      findings.map((f) => `${f.file}:${f.line} — ${f.text}`),
-      "A count picks a message key outside i18n/. Use usePlural() and a " +
-        "<base>_one / <base>_other pair, so the form comes from the reader's " +
-        "own plural rule rather than from a comparison with 1.",
-    ).toEqual([]);
-  });
+      expect(
+        findings.map((f) => `${f.file}:${f.line} — ${f.text}`),
+        "A count picks a message key outside i18n/. Use usePlural() and a " +
+          "<base>_one / <base>_other pair, so the form comes from the reader's " +
+          "own plural rule rather than from a comparison with 1.",
+      ).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
 
   // The gate's own census. It reads a smaller tree than it claims, or matches a
   // shape the real defect does not take, and it reports PASS either way — so
