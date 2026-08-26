@@ -175,6 +175,16 @@ type demoActivity struct {
 	MeetingStatus   string `json:"meeting_status"`
 	DurationSeconds int    `json:"duration_seconds"`
 	Assignee        string `json:"assignee"`
+	// Person is WHO AT THE CUSTOMER this was with, by their full name as the
+	// crawl recorded it. Omitted, the link falls back to the account's most
+	// senior employee, which is what every activity used to get.
+	//
+	// That fallback is why this field exists. A mail signed "Karoline Juettner"
+	// linked to the Geschaeftsfuehrer instead, because he sorts first — so the
+	// body named one person and the record named another. An assistant asked
+	// who raised the complaint read the signature, answered with a name the
+	// CRM did not hold, and looked like it had invented one.
+	Person string `json:"person"`
 }
 
 // demoContract is one agreement. Status is ASSERTED where it can be — the
