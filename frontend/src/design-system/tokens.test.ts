@@ -231,8 +231,10 @@ describe("Ledger-Green token layer (B-EP09.1)", () => {
         return [r, g, b, 1];
       }
       const inside = v.match(/rgba?\(([^)]+)\)/);
-      expect(inside, `${value} is neither a hex nor an rgb()`).not.toBeNull();
-      const parts = (inside as RegExpMatchArray)[1]
+      if (!inside) {
+        throw new Error(`${value} is neither a hex nor an rgb()`);
+      }
+      const parts = inside[1]
         .replace(/\//g, ",")
         .split(",")
         .map((n) => Number.parseFloat(n.trim()));
