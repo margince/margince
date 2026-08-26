@@ -186,17 +186,27 @@ async function patchPersonField(
 // person's own fields from (the identity line, the strip, this rail), so it
 // is what gets refetched; personBrief comes with it because a changed name
 // or title can change what the brief's own sentences say about this person.
+// Through useMutation rather than a bare async call, so the write is a
+// MUTATION as far as the query client is concerned. The policy that refreshes
+// a record's open history after any successful write hangs off the mutation
+// cache, and an inline edit that bypassed it left the history on screen showing
+// the state before the edit — with no list of "writes that change a history"
+// able to catch it, because that list is every write.
 function usePersonFieldPatch(person: Person) {
   const queryClient = useQueryClient();
-  return async (body: UpdatePersonRequest) => {
-    await patchPersonField(person, body);
-    await queryClient.invalidateQueries({
-      queryKey: ["person360", person.id],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["personBrief", person.id],
-    });
-  };
+  const save = useMutation({
+    mutationFn: (body: UpdatePersonRequest) => patchPersonField(person, body),
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["person360", person.id],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["personBrief", person.id],
+      });
+    },
+  });
+  return (body: UpdatePersonRequest) =>
+    save.mutateAsync(body).then(() => undefined);
 }
 
 // usePersonReadOnlyReason says why this record cannot be edited, when there
