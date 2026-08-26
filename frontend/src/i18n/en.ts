@@ -5516,7 +5516,7 @@ export const en = {
   "googleApp.replace": "Replace app",
   "googleApp.removeConfirmTitle": "Remove the Google app?",
   "googleApp.removeConfirmBody":
-    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Every mailbox is connected through this app, and first-run setup will ask for one again.",
+    "The client secret cannot be read back, so removing it means re-entering both halves from the Google console. Gmail and Calendar connections are made through this app — Microsoft and IMAP mailboxes are not affected — and first-run setup will ask for one again.",
   "googleApp.remove": "Remove app",
   "firstRun.continue": "Continue",
   "firstRun.ai.title": "Choose a model provider",

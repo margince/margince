@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { api } from "../api/client";
 import { useCanWrite } from "../app/capability";
 import { Button, Field, TextInput } from "../design-system/atoms";
@@ -91,6 +91,11 @@ export function GoogleAppCard() {
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
   const [confirming, setConfirming] = useState(false);
+  // Focus has to land somewhere that still exists. The button that opened the
+  // dialog is the natural target and the one that disappears: a successful
+  // removal invalidates the query, the app reads as absent, and the Remove
+  // button is gone by the time focus is restored to it.
+  const clientIdRef = useRef<HTMLInputElement>(null);
 
   const busy = save.isPending || remove.isPending;
   const ready = clientId.trim() !== "" && clientSecret.trim() !== "";
@@ -120,6 +125,7 @@ export function GoogleAppCard() {
                 {(control) => (
                   <TextInput
                     {...control}
+                    ref={clientIdRef}
                     value={clientId}
                     autoComplete="off"
                     disabled={!canManage || busy}
@@ -186,6 +192,12 @@ export function GoogleAppCard() {
                 confirmLabel={t("googleApp.remove")}
                 confirmVariant="danger"
                 pending={remove.isPending}
+                // A refused DELETE leaves this dialog OPEN, so the reason has
+                // to be inside it: the background Callout is behind a modal the
+                // reader cannot see past, which reads as a button that did
+                // nothing.
+                error={remove.error ? problemMessageOf(remove.error, t) : null}
+                returnFocusTo={() => clientIdRef.current}
                 onConfirm={() => {
                   save.reset();
                   remove.mutate(undefined, {

@@ -5438,7 +5438,7 @@ export const vi = {
   "googleApp.replace": "Thay ứng dụng",
   "googleApp.removeConfirmTitle": "Xoá ứng dụng Google?",
   "googleApp.removeConfirmBody":
-    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Mọi hộp thư đều kết nối qua ứng dụng này, và bước thiết lập lần đầu sẽ hỏi lại.",
+    "Không thể đọc lại client secret, nên xoá xong phải nhập lại cả hai phần từ bảng điều khiển Google. Kết nối Gmail và Lịch đi qua ứng dụng này — hộp thư Microsoft và IMAP không bị ảnh hưởng — và bước thiết lập lần đầu sẽ hỏi lại.",
   "googleApp.remove": "Xoá ứng dụng",
   "firstRun.continue": "Tiếp tục",
   "firstRun.ai.title": "Chọn nhà cung cấp mô hình",

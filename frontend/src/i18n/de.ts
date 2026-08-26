@@ -5488,7 +5488,7 @@ export const de = {
   "googleApp.replace": "App ersetzen",
   "googleApp.removeConfirmTitle": "Google-App entfernen?",
   "googleApp.removeConfirmBody":
-    "Das Client-Secret lässt sich nicht wieder auslesen — nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Jedes Postfach ist über diese App verbunden, und die Ersteinrichtung fragt wieder danach.",
+    "Das Client-Secret lässt sich nicht wieder auslesen — nach dem Entfernen müssen beide Hälften erneut aus der Google-Konsole eingetragen werden. Gmail- und Kalender-Verbindungen laufen über diese App — Microsoft- und IMAP-Postfächer sind nicht betroffen —, und die Ersteinrichtung fragt wieder danach.",
   "googleApp.remove": "App entfernen",
   "firstRun.continue": "Weiter",
   "firstRun.ai.title": "Modellanbieter wählen",
