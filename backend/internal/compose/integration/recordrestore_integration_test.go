@@ -15,7 +15,9 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/gradionhq/margince/backend/internal/compose"
 	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
 
 type historyEntry struct {
@@ -326,6 +328,10 @@ func TestEndToEnd_anEntryFromAnotherRecordIsNotFound(t *testing.T) {
 	}
 }
 
+// newUUID is a well-formed id that names nothing, for the paths that must be
+// refused before anything is looked up.
+func newUUID() string { return ids.NewV7().String() }
+
 // reasonOf spells an entry's refusal, so a failure names the reason rather than
 // the address of a pointer to it.
 func reasonOf(entry historyEntry) string {
@@ -352,4 +358,120 @@ func theEntryByID(t *testing.T, page historyPage, id string) historyEntry {
 	}
 	t.Fatalf("entry %s is no longer in the record's history", id)
 	return historyEntry{}
+}
+
+// An archived record's update path refuses on its own terms. Naming it here
+// makes the refusal legible instead of a surprise the person reads as a bug.
+func TestEndToEnd_anArchivedRecordSaysSoRatherThanFailingLater(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people",
+		apptest.AnyMap{"full_name": "Greta Archived", "title": "CTO"}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+		t.Fatalf("patch → %d", status)
+	}
+	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	version := readPerson(t, e, created.ID).Version
+	if status := e.Call(t, "DELETE", "/v1/people/"+created.ID, nil, nil, nil); status != 200 && status != 204 {
+		t.Fatalf("archive → %d", status)
+	}
+
+	if status, _ := restore(t, e, "person", created.ID, entry.ID, version); status == 200 {
+		t.Error("restoring an archived record answered 200")
+	}
+}
+
+// A restore whose image names a custom field the workspace has since retired
+// cannot be written back. Without this refusal the module's own "unknown field
+// cf_budget" is what a person reads, and that is not an answer to pressing Undo.
+func TestEndToEnd_aRetiredCustomFieldRefusesByNamingIt(t *testing.T) {
+	// The schema pool is what lets a custom field actually add its column;
+	// without it the catalog route answers 501 and the case cannot be built.
+	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(SchemaPool(t)))
+	e.BootstrapWorkspace(t)
+
+	var field struct {
+		ID         string `json:"id"`
+		ColumnName string `json:"column_name"`
+		Version    int64  `json:"version"`
+	}
+	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+		"object": "person", "label": "Budget", "type": "text", "source": "manual",
+	}, nil, &field); status != 201 {
+		t.Fatalf("create custom field → %d", status)
+	}
+
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+		"full_name": "Greta Custom", field.ColumnName: "first",
+	}, nil, &created); status != 201 {
+		t.Fatalf("create person → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
+		apptest.AnyMap{field.ColumnName: "second"}, nil, nil); status != 200 {
+		t.Fatalf("patch custom field → %d", status)
+	}
+	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	if !entry.Undoable.Undoable {
+		t.Fatalf("a live custom field's change reads as not undoable: %s", reasonOf(entry))
+	}
+
+	if status := e.Call(t, "POST", "/v1/custom-fields/"+field.ID+"/retire",
+		nil, nil, nil); status != 200 {
+		t.Fatalf("retire the field → %d", status)
+	}
+
+	after := theEntryByID(t, readHistory(t, e, "person", created.ID), entry.ID)
+	if after.Undoable.Undoable {
+		t.Fatal("a change to a retired custom field still reads as undoable; the write " +
+			"would fail inside the module with a message written for another surface")
+	}
+	if reasonOf(after) != "not_restorable_by_this_path" {
+		t.Errorf("reason = %s, want not_restorable_by_this_path", reasonOf(after))
+	}
+	if detailOf(after) != field.ColumnName {
+		t.Errorf("detail = %s, want the field that cannot be written back", detailOf(after))
+	}
+}
+
+// A record type the history screens do not serve is refused as a validation
+// error, not carried into the seam. The path parameter is a bare string the
+// generator does not validate, so this handler is its enforcement point.
+func TestEndToEnd_anUnservedRecordTypeIsRefusedAtTheRoute(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	if status, _ := restore(t, e, "relationship", newUUID(), newUUID(), 1); status != 422 {
+		t.Errorf("restoring a relationship → %d, want 422", status)
+	}
+}
+
+// If-Match is required here and must be a version. A restore is decided from a
+// screen the person has been reading, so a missing or unparseable precondition
+// is a refusal rather than a last-write-wins default.
+func TestEndToEnd_aRestoreWithoutAUsableIfMatchIsRefused(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+
+	var created personRecord
+	if status := e.Call(t, "POST", "/v1/people",
+		apptest.AnyMap{"full_name": "Greta Precondition", "title": "CTO"}, nil, &created); status != 201 {
+		t.Fatalf("create → %d", status)
+	}
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+		t.Fatalf("patch → %d", status)
+	}
+	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
+	path := fmt.Sprintf("/v1/records/person/%s/history/%s/restore", created.ID, entry.ID)
+
+	if status := e.Call(t, "POST", path, nil, nil, nil); status == 200 {
+		t.Error("a restore with no If-Match answered 200; the precondition is required here")
+	}
+	if status := e.Call(t, "POST", path, nil, map[string]string{"If-Match": "not-a-version"}, nil); status != 422 {
+		t.Errorf("a restore with an unparseable If-Match → %d, want 422", status)
+	}
 }
