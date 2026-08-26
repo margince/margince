@@ -12,6 +12,7 @@ import (
 	"testing"
 
 	"github.com/gradionhq/margince/backend/internal/compose/network"
+	"github.com/gradionhq/margince/backend/internal/modules/agents"
 	"github.com/gradionhq/margince/backend/internal/modules/deals"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 )
@@ -65,23 +66,26 @@ func TestAStakeholderSeatCarriesTheirName(t *testing.T) {
 	}
 }
 
-// A person the caller may not read keeps their SEAT and loses only their name.
+// A seat whose name did not resolve keeps its seat and its role.
 //
-// Dropping the seat would hide that the deal has an economic buyer at all,
-// which is the opposite of what a coverage answer is for: how many people carry
-// a deal is not the secret, only who they are.
-func TestAnUnreadablePersonKeepsTheirSeat(t *testing.T) {
-	hidden := ids.NewV7()
+// This is the MAPPING's contract, not a privacy claim: the integration test
+// TestCoverageWithoutPersonReadIsRefusedRatherThanUnnamed proves a caller who
+// may not read people gets no seats at all, refused upstream. What this pins
+// is that if a name is ever missing for an ordinary reason — a person row with
+// no full_name, a lookup that came back short — the seat still carries its
+// role, so the gap stays legible instead of vanishing.
+func TestASeatWithNoResolvedNameKeepsItsRole(t *testing.T) {
+	unnamed := ids.NewV7()
 	answer := toAgentCoverage(network.DealCoverage{
 		DealID:       ids.NewV7(),
-		Stakeholders: []deals.DealStakeholder{{PersonID: hidden, Role: "economic_buyer"}},
+		Stakeholders: []deals.DealStakeholder{{PersonID: unnamed, Role: "economic_buyer"}},
 	}, nil, map[ids.UUID]string{})
 
 	if len(answer.Stakeholders) != 1 {
 		t.Fatalf("a seat vanished with its name: %+v", answer.Stakeholders)
 	}
 	if answer.Stakeholders[0].PersonName != "" {
-		t.Errorf("a name was invented for an unreadable person: %q", answer.Stakeholders[0].PersonName)
+		t.Errorf("a name was invented: %q", answer.Stakeholders[0].PersonName)
 	}
 	if answer.Stakeholders[0].Role != "economic_buyer" {
 		t.Error("the role was lost, so the gap is no longer legible")
@@ -100,20 +104,26 @@ func TestAFindingNamesThePeopleItIsAbout(t *testing.T) {
 	if len(risks) != 1 {
 		t.Fatalf("mapped %d risks, want 1", len(risks))
 	}
-	if len(risks[0].PersonNames) != 1 || risks[0].PersonNames[0] != "Jim Roth" {
+	if len(risks[0].People) != 1 || risks[0].People[0].Name != "Jim Roth" {
 		t.Errorf("the finding names nobody: %+v", risks[0])
+	}
+	if risks[0].People[0].PersonID != jim {
+		t.Error("the name did not travel with its own id")
 	}
 	if len(risks[0].PersonIDs) != 1 {
 		t.Error("naming lost the ids, which stay the handle")
 	}
 }
 
-// The names on a finding are a SET, never a parallel array.
+// A name that did not resolve cannot shift another name onto the wrong person.
 //
-// A private contact resolves to no name, so pairing the two lists by index
-// would attach the wrong person's name to the wrong id the first time that
-// happens — silently, and in a sentence a rep then repeats.
-func TestFindingNamesAreNotPositionallyPairedWithIDs(t *testing.T) {
+// This is why the finding carries {person_id, name} objects rather than a
+// second array beside person_ids. Two arrays can diverge — a caller with
+// deal:read and no person:read has ids and no names, and the transaction is
+// Read Committed, so a person archived mid-read leaves one list shorter. A
+// consumer indexing across them would then repeat the wrong name in a
+// sentence. Codex found the isolation case; the shape makes it impossible.
+func TestAnUnresolvedNameCannotShiftOntoAnotherPerson(t *testing.T) {
 	hidden, jim := ids.NewV7(), ids.NewV7()
 	risks := toAgentRisks([]network.Risk{{
 		Kind: "single_threaded_theirs", Summary: "the deal rests on one relationship",
@@ -123,9 +133,14 @@ func TestFindingNamesAreNotPositionallyPairedWithIDs(t *testing.T) {
 	if len(risks[0].PersonIDs) != 2 {
 		t.Fatalf("an id was dropped: %+v", risks[0].PersonIDs)
 	}
-	if len(risks[0].PersonNames) != 1 || risks[0].PersonNames[0] != "Jim Roth" {
-		t.Fatalf("names %+v — the readable person must be named and the hidden one skipped",
-			risks[0].PersonNames)
+	if len(risks[0].People) != 1 {
+		t.Fatalf("people %+v — the readable person is named and the unreadable one skipped",
+			risks[0].People)
+	}
+	// The whole point: the surviving name is attached to ITS OWN id, not to
+	// the first id in the list.
+	if risks[0].People[0].PersonID != jim {
+		t.Errorf("Jim Roth's name landed on %v, which is somebody else", risks[0].People[0].PersonID)
 	}
 }
 
@@ -135,7 +150,48 @@ func TestAFindingWithNoReadableNamesOmitsThem(t *testing.T) {
 		Kind: "going_cold", Summary: "nobody is talking", PersonIDs: []ids.UUID{ids.NewV7()},
 	}}, map[ids.UUID]string{})
 
-	if risks[0].PersonNames != nil {
-		t.Errorf("empty names shipped as %+v rather than being omitted", risks[0].PersonNames)
+	if risks[0].People != nil {
+		t.Errorf("empty names shipped as %+v rather than being omitted", risks[0].People)
+	}
+}
+
+// The at-risk SWEEP names its findings too, in one read for the whole sweep.
+//
+// A first cut left this surface unnamed, arguing twenty-five deals meant
+// twenty-five gated person reads. Codex pointed out the ids can be collected
+// across every finding and resolved once — so the cost was never per deal, and
+// the inconsistency was real: the SAME CoverageRisk shape carried names under
+// account_coverage and bare ids here, which a model reads as "withheld" rather
+// than "not looked up".
+func TestTheSweepNamesEveryFindingInOneRead(t *testing.T) {
+	jim, athina := ids.NewV7(), ids.NewV7()
+	flagged := []agents.AtRiskDeal{
+		{DealID: ids.NewV7(), Name: "one", Risks: []agents.CoverageRisk{
+			{Kind: "single_threaded_theirs", PersonIDs: []ids.UUID{jim}},
+		}},
+		{DealID: ids.NewV7(), Name: "two", Risks: []agents.CoverageRisk{
+			{Kind: "going_cold", PersonIDs: []ids.UUID{athina, jim}},
+		}},
+	}
+	names := map[ids.UUID]string{jim: "Jim Roth", athina: "Athina Kanioura"}
+
+	// The mapping half, exercised directly: nameSweepFindings' own read needs a
+	// transaction, and what has to be right here is that EVERY finding across
+	// EVERY deal is named, not only the first.
+	for i, d := range flagged {
+		for j, r := range d.Risks {
+			flagged[i].Risks[j].People = namedPeople(r.PersonIDs, names)
+		}
+	}
+
+	if len(flagged[0].Risks[0].People) != 1 {
+		t.Fatalf("the first deal's finding is unnamed: %+v", flagged[0].Risks[0])
+	}
+	if len(flagged[1].Risks[0].People) != 2 {
+		t.Fatalf("the second deal's finding named %d of 2 people — a later deal was skipped",
+			len(flagged[1].Risks[0].People))
+	}
+	if flagged[1].Risks[0].People[0].Name != "Athina Kanioura" {
+		t.Errorf("names are attached in the wrong order: %+v", flagged[1].Risks[0].People)
 	}
 }

@@ -50,17 +50,30 @@
                 "kind": {
                   "type": "string"
                 },
+                "people": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "person_id": {
+                        "type": "string",
+                        "format": "uuid"
+                      }
+                    },
+                    "required": [
+                      "name",
+                      "person_id"
+                    ]
+                  }
+                },
                 "person_ids": {
                   "type": "array",
                   "items": {
                     "type": "string",
                     "format": "uuid"
-                  }
-                },
-                "person_names": {
-                  "type": "array",
-                  "items": {
-                    "type": "string"
                   }
                 },
                 "summary": {
@@ -633,17 +646,30 @@
                       "kind": {
                         "type": "string"
                       },
+                      "people": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "person_id": {
+                              "type": "string",
+                              "format": "uuid"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "person_id"
+                          ]
+                        }
+                      },
                       "person_ids": {
                         "type": "array",
                         "items": {
                           "type": "string",
                           "format": "uuid"
-                        }
-                      },
-                      "person_names": {
-                        "type": "array",
-                        "items": {
-                          "type": "string"
                         }
                       },
                       "summary": {

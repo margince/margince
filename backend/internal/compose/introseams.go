@@ -237,7 +237,7 @@ const atRiskScanLimit = 25
 // sweep sees precisely the book the caller sees. Deals are assessed in the
 // order that list returns them, and the sweep stops at the cap rather than
 // sampling: a deterministic prefix can be explained to a rep, a sample cannot.
-func atRiskLister(pool *pgxpool.Pool) agents.AtRiskLister {
+func atRiskLister(pool *pgxpool.Pool, ppl *people.Store) agents.AtRiskLister {
 	store := deals.NewStore(InstallationDB(pool), DealsInstallation())
 	return func(ctx context.Context) (agents.AtRiskReport, error) {
 		var out agents.AtRiskReport
@@ -274,10 +274,57 @@ func atRiskLister(pool *pgxpool.Pool) agents.AtRiskLister {
 				case dealNoFinding:
 				}
 			}
-			return nil
+			// The findings are named ONCE for the whole sweep, not once per
+			// deal. A first cut left this surface unnamed on a cost argument —
+			// twenty-five deals, one gated person read each — but the ids can
+			// simply be collected across every finding and resolved in a
+			// single batched read, so the cost was never twenty-five reads. It
+			// matters because the SAME CoverageRisk shape is named under
+			// account_coverage: a model seeing names on one tool and bare ids
+			// on the other reads the absence as "withheld" rather than "not
+			// looked up".
+			return nameSweepFindings(ctx, tx, ppl, out.Deals)
 		})
 		return out, err
 	}
+}
+
+// nameSweepFindings names the people every finding in the sweep is about, in
+// one read.
+//
+// Same gate as the coverage read: people.PersonNamesTx carries the person
+// object check as well as the row scope, and a caller who may read the deals
+// but not people gets the findings unnamed rather than no findings — the
+// findings are about the DEALS.
+func nameSweepFindings(ctx context.Context, tx pgx.Tx, ppl *people.Store, flagged []agents.AtRiskDeal) error {
+	seen := map[ids.UUID]bool{}
+	wanted := make([]ids.PersonID, 0)
+	for _, d := range flagged {
+		for _, r := range d.Risks {
+			for _, id := range r.PersonIDs {
+				if !seen[id] {
+					seen[id] = true
+					wanted = append(wanted, ids.From[ids.PersonKind](id))
+				}
+			}
+		}
+	}
+	if len(wanted) == 0 {
+		return nil
+	}
+	names, err := ppl.PersonNamesTx(ctx, tx, wanted)
+	if err != nil {
+		if errors.Is(err, apperrors.ErrPermissionDenied) {
+			return nil
+		}
+		return err
+	}
+	for i, d := range flagged {
+		for j, r := range d.Risks {
+			flagged[i].Risks[j].People = namedPeople(r.PersonIDs, names)
+		}
+	}
+	return nil
 }
 
 // dealAssessment is what the sweep learned about one deal.
@@ -326,11 +373,9 @@ func dealAtRisk(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal, now time.Ti
 	if len(coverage.Risks) == 0 {
 		return agents.AtRiskDeal{}, dealNoFinding, nil
 	}
-	// No stakeholder names on the SWEEP. It assesses up to atRiskScanLimit
-	// deals, so naming them would be one gated person read per deal to answer
-	// a question the list does not ask — which deals are at risk, not who sits
-	// on each. A caller who wants the names calls account_coverage on the one
-	// deal they picked, and that read names them.
+	// Unnamed HERE and named by the caller: nameSweepFindings resolves every
+	// finding's people in one read once the sweep is done, rather than each
+	// deal paying for its own.
 	return agents.AtRiskDeal{
 		DealID: ids.UUID(d.Id), Name: d.Name, Risks: toAgentRisks(coverage.Risks, nil),
 	}, dealFlagged, nil

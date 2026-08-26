@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 58 |
 | Resources | 9 |
-| Tool catalog | 160.2 KB |
+| Tool catalog | 160.4 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 41889 |
+| Approx. wire tokens | 41945 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 74.8 KB | 46% | **No** — a result's shape, never listed to a model |
+| Output schemas | 75.1 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 38.2 KB | 23% | Yes, every step |
 | Input schemas | 34.9 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.3 KB | 7% | Partly |
@@ -61,12 +61,12 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
-| [`account_coverage`](#account_coverage) | Relationship coverage on a deal | yes |  | 3.1 KB |
+| [`account_coverage`](#account_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.2 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.0 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.2 KB |
-| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.5 KB |
+| [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
 | [`book_meeting`](#book_meeting) | Book a meeting |  |  | 2.7 KB |
 | [`catch_me_up_on`](#catch_me_up_on) | Catch me up on a record | yes |  | 2.8 KB |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 2.2 KB |
@@ -388,15 +388,28 @@ Answer "is this deal covered?": which roles on the account we have a relationshi
               "kind": {
                 "type": "string"
               },
-              "person_ids": {
+              "people": {
                 "items": {
-                  "format": "uuid",
-                  "type": "string"
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "person_id": {
+                      "format": "uuid",
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "person_id"
+                  ],
+                  "type": "object"
                 },
                 "type": "array"
               },
-              "person_names": {
+              "person_ids": {
                 "items": {
+                  "format": "uuid",
                   "type": "string"
                 },
                 "type": "array"
@@ -1239,15 +1252,28 @@ Answer "where are our relationships thin?": across the caller's OPEN deals, the 
                     "kind": {
                       "type": "string"
                     },
-                    "person_ids": {
+                    "people": {
                       "items": {
-                        "format": "uuid",
-                        "type": "string"
+                        "properties": {
+                          "name": {
+                            "type": "string"
+                          },
+                          "person_id": {
+                            "format": "uuid",
+                            "type": "string"
+                          }
+                        },
+                        "required": [
+                          "name",
+                          "person_id"
+                        ],
+                        "type": "object"
                       },
                       "type": "array"
                     },
-                    "person_names": {
+                    "person_ids": {
                       "items": {
+                        "format": "uuid",
                         "type": "string"
                       },
                       "type": "array"

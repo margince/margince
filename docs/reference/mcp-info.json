@@ -10,15 +10,15 @@
   "totals": {
     "tools": 58,
     "resources": 9,
-    "tool_catalog_bytes": 164043,
+    "tool_catalog_bytes": 164267,
     "resource_catalog_bytes": 3513,
-    "approx_wire_tokens_total": 41889,
+    "approx_wire_tokens_total": 41945,
     "largest_tool_bytes": 6414,
     "largest_tool": "read_project_360",
     "tool_catalog_composition": {
       "description_bytes": 39101,
       "input_schema_bytes": 35709,
-      "output_schema_bytes": 76639,
+      "output_schema_bytes": 76863,
       "description_plus_input_schema_bytes": 74810
     }
   },
@@ -101,15 +101,28 @@
                       "kind": {
                         "type": "string"
                       },
-                      "person_ids": {
+                      "people": {
                         "items": {
-                          "format": "uuid",
-                          "type": "string"
+                          "properties": {
+                            "name": {
+                              "type": "string"
+                            },
+                            "person_id": {
+                              "format": "uuid",
+                              "type": "string"
+                            }
+                          },
+                          "required": [
+                            "name",
+                            "person_id"
+                          ],
+                          "type": "object"
                         },
                         "type": "array"
                       },
-                      "person_names": {
+                      "person_ids": {
                         "items": {
+                          "format": "uuid",
                           "type": "string"
                         },
                         "type": "array"
@@ -902,15 +915,28 @@
                             "kind": {
                               "type": "string"
                             },
-                            "person_ids": {
+                            "people": {
                               "items": {
-                                "format": "uuid",
-                                "type": "string"
+                                "properties": {
+                                  "name": {
+                                    "type": "string"
+                                  },
+                                  "person_id": {
+                                    "format": "uuid",
+                                    "type": "string"
+                                  }
+                                },
+                                "required": [
+                                  "name",
+                                  "person_id"
+                                ],
+                                "type": "object"
                               },
                               "type": "array"
                             },
-                            "person_names": {
+                            "person_ids": {
                               "items": {
+                                "format": "uuid",
                                 "type": "string"
                               },
                               "type": "array"

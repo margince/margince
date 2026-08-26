@@ -16,6 +16,7 @@ package compose
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -23,6 +24,7 @@ import (
 	"github.com/gradionhq/margince/backend/internal/compose/integration"
 	"github.com/gradionhq/margince/backend/internal/modules/people"
 	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
 	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
 	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
@@ -109,7 +111,7 @@ func TestTheAtRiskSweepReportsItsOwnReach(t *testing.T) {
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
 	seedOpenDeal(t, e)
 
-	report, err := atRiskLister(e.Pool)(ctx)
+	report, err := atRiskLister(e.Pool, people.NewStore(InstallationDB(e.Pool)))(ctx)
 	if err != nil {
 		t.Fatalf("at-risk sweep: %v", err)
 	}
@@ -254,7 +256,7 @@ func TestTheAtRiskSweepSaysADealCouldNotBeAssessedRatherThanCallingItClean(t *te
 	e := integration.Setup(t)
 	seedOpenDeal(t, e)
 
-	granted, err := atRiskLister(e.Pool)(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms))
+	granted, err := atRiskLister(e.Pool, people.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms))
 	if err != nil {
 		t.Fatalf("the granted sweep: %v", err)
 	}
@@ -263,7 +265,7 @@ func TestTheAtRiskSweepSaysADealCouldNotBeAssessedRatherThanCallingItClean(t *te
 			"nothing about the denied caller", len(granted.Deals), granted.CoverageWithheld)
 	}
 
-	denied, err := atRiskLister(e.Pool)(e.As(e.Rep1, []ids.UUID{e.Team1}, coverageDeniedPerms()))
+	denied, err := atRiskLister(e.Pool, people.NewStore(InstallationDB(e.Pool)))(e.As(e.Rep1, []ids.UUID{e.Team1}, coverageDeniedPerms()))
 	if err != nil {
 		t.Fatalf("the denied sweep failed instead of reporting what it could not assess: %v", err)
 	}
@@ -314,4 +316,76 @@ func sectionNamed(ctx retrieval.Context, name string) *retrieval.Section {
 		}
 	}
 	return nil
+}
+
+// personDeniedPerms reads deals and their relationships but no people: the
+// caller who may see that a deal has an economic buyer and not who it is.
+func personDeniedPerms() principal.Permissions {
+	return principal.Permissions{
+		RoleKeys: []string{"rep"},
+		Objects: map[string]principal.ObjectGrant{
+			"deal":         {Read: true},
+			"relationship": {Read: true},
+			"organization": {Read: true},
+			"activity":     {Read: true},
+		},
+		RowScope: principal.RowScopeAll,
+	}
+}
+
+// A caller who may read the deal but NOT people gets NO seats — not seats with
+// the names blanked.
+//
+// This is the boundary the naming touches, and asserting it is what stopped a
+// wrong claim shipping in the contract. The first version of CoverageSeat's
+// comment said an unreadable person's seat still ships and only its name is
+// withheld. It cannot: deals.Stakeholders carries the edge's own admission and
+// refuses before any row is read — "knowing a deal does not license learning
+// who sits on it" — so the seat, the uuid and the risks all go together, and
+// there is no state in which a seat exists with an empty name.
+//
+// The test therefore pins the REFUSAL, not a degraded payload. A future change
+// that started returning half-populated seats here would be a disclosure
+// regression wearing the shape of an improvement.
+func TestCoverageWithoutPersonReadIsRefusedRatherThanUnnamed(t *testing.T) {
+	e := integration.Setup(t)
+	dealID := seedOpenDeal(t, e)
+	ppl := people.NewStore(InstallationDB(e.Pool))
+
+	// seedOpenDeal seats nobody — it exists to test a THREADLESS deal — so this
+	// test seats its own stakeholder. Without one there is no name to lose and
+	// the granted assertion below would pass over an empty list.
+	seedAsAdmin(t, e, func(ctx context.Context, tx pgx.Tx) error {
+		var personID ids.UUID
+		if err := tx.QueryRow(ctx, `
+			INSERT INTO person (full_name, source, captured_by)
+			VALUES ('Athina Kanioura', 'manual', 'human:test') RETURNING id`).Scan(&personID); err != nil {
+			return err
+		}
+		_, err := tx.Exec(ctx, `
+			INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
+			VALUES ('deal_stakeholder', $1, $2, 'economic_buyer', 'manual', 'human:test')`,
+			personID, dealID)
+		return err
+	}, "seating an economic buyer")
+
+	// The granted caller first, so the fixture is proven to name somebody
+	// before the denied caller's silence is read as meaningful.
+	named, err := coverageReader(e.Pool, ppl)(e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms), dealID)
+	if err != nil {
+		t.Fatalf("the granted coverage: %v", err)
+	}
+	if len(named.Stakeholders) == 0 {
+		t.Fatal("the fixture seats no stakeholder, so it proves nothing about the denied caller")
+	}
+	if named.Stakeholders[0].PersonName != "Athina Kanioura" {
+		t.Fatalf("the granted caller sees %q rather than the seated name — this is the naming "+
+			"the whole change is for", named.Stakeholders[0].PersonName)
+	}
+
+	_, err = coverageReader(e.Pool, ppl)(e.As(e.Rep1, []ids.UUID{e.Team1}, personDeniedPerms()), dealID)
+	if !errors.Is(err, apperrors.ErrPermissionDenied) {
+		t.Fatalf("a caller without person:read got %v — the seats are an EDGE and the read is "+
+			"refused whole, so anything else here is a disclosure", err)
+	}
 }

@@ -193,7 +193,7 @@ func toAgentRisks(risks []network.Risk, seated map[ids.UUID]string) []agents.Cov
 	for _, r := range risks {
 		risk := agents.CoverageRisk{
 			Kind: r.Kind, Summary: r.Summary, PersonIDs: r.PersonIDs, UserIDs: r.UserIDs,
-			PersonNames: namedPeople(r.PersonIDs, seated),
+			People: namedPeople(r.PersonIDs, seated),
 		}
 		// Only going-cold carries a day count; a zero on the others would read
 		// as "touched today", which is the opposite of what a departure finding
@@ -237,9 +237,12 @@ func requireVisibleDeal(ctx context.Context, tx pgx.Tx, dealID ids.UUID) error {
 // with the row scope and no object gate, which named a deal's contacts to a
 // caller holding deal:read without person:read.
 //
-// A caller who may read the deal but not people gets their coverage with the
-// seats unnamed rather than no coverage at all: the findings are about the
-// DEAL, and taking them away to withhold a name withholds the wrong thing.
+// The ErrPermissionDenied fallback below is defence in depth rather than a
+// live path: a caller without person:read is already refused upstream, by
+// deals.Stakeholders, and never reaches a payload to name. Swallowing it here
+// means a future change that softened that refusal would ship unnamed seats
+// rather than a failed read — the safe direction. Every other error still
+// propagates.
 func coveragePersonNames(ctx context.Context, tx pgx.Tx, ppl *people.Store, c network.DealCoverage) (map[ids.UUID]string, error) {
 	if len(c.Stakeholders) == 0 {
 		return map[ids.UUID]string{}, nil
@@ -266,14 +269,22 @@ func coveragePersonNames(ctx context.Context, tx pgx.Tx, ppl *people.Store, c ne
 // than one that names nobody, and the ids are still there to look up. The
 // result is deliberately not positionally paired with PersonIDs — see the
 // field's own comment.
-func namedPeople(people []ids.UUID, seated map[ids.UUID]string) []string {
+// namedPeople is the people a finding can put in a sentence, each id carrying
+// its own name.
+//
+// A person with no name resolved is SKIPPED rather than shipped with an empty
+// name: "the deal rests on one relationship: ”" is worse than naming nobody,
+// and CoverageRisk.PersonIDs still carries every id to look up. Because each
+// name travels WITH its id, skipping one cannot shift another — which is the
+// whole reason this returns objects rather than a second array.
+func namedPeople(people []ids.UUID, seated map[ids.UUID]string) []agents.FindingPerson {
 	if len(people) == 0 {
 		return nil
 	}
-	out := make([]string, 0, len(people))
+	out := make([]agents.FindingPerson, 0, len(people))
 	for _, id := range people {
 		if name := seated[id]; name != "" {
-			out = append(out, name)
+			out = append(out, agents.FindingPerson{PersonID: id, Name: name})
 		}
 	}
 	if len(out) == 0 {

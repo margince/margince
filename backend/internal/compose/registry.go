@@ -267,7 +267,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// change nothing.
 	agents.RegisterNetworkTools(registry, whoKnowsLister(pool), coverageReader(pool, people.NewStore(InstallationDB(pool))),
 		nativeOnlyIntroPath(sorMode, introPathLister(pool)),
-		nativeOnlyAtRisk(sorMode, atRiskLister(pool)))
+		nativeOnlyAtRisk(sorMode, atRiskLister(pool, people.NewStore(InstallationDB(pool)))))
 	agents.RegisterCommsTools(registry, newCommsAdapter(pool, drafter, send), provider)
 	// The location check (🟢), and the verb the probe card hangs off. It reads
 	// no record and takes no seam, so it registers unconditionally.
