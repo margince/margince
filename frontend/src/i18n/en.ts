@@ -2620,7 +2620,6 @@ export const en = {
   "explain.sources": "Source rows",
 
   "ai.sub": "bring your own agent — governed by the two-tier contract",
-  "ai.carriedQuestion": "Your question",
   "ai.tiers": "What an agent may do",
   "ai.tierAutoExecute": "Read & draft run instantly.",
   "ai.tierAutoExecuteDetail":
@@ -4794,6 +4793,21 @@ export const en = {
   "settings.tab.data-model": "Data model",
   "settings.tab.ai": "AI",
   "settings.tab.knowledge": "Knowledge",
+  "corpusAsk.title": "Ask your documents",
+  "corpusAsk.sub":
+    "A question in your own words, answered only from one set of documents this organization filed. What the set does not cover is refused rather than guessed at, and every sentence carries the passage it rests on.",
+  "corpusAsk.whichSet": "Which set",
+  "corpusAsk.question": "Your question",
+  "corpusAsk.submit": "Ask",
+  "corpusAsk.byModel": "Written from the passages below",
+  "corpusAsk.byPassages": "The passages themselves — nobody wrote a summary",
+  "corpusAsk.notReady":
+    "This set is not finished being read yet — {embedded} of {total} passages are searchable. Nothing is wrong with your question; try again shortly.",
+  "corpusAsk.retrievalUnavailable":
+    "Nothing was searched: this installation has no search index configured, so the documents could not be looked at. That is a setup matter rather than anything about your question.",
+  "corpusAsk.notCovered.title": "Not covered by this set",
+  "corpusAsk.notCovered.body":
+    "{name} was searched in full and holds nothing close enough to answer this. It covers:",
   "knowledge.title": "Document sets",
   "knowledge.sub":
     "Bodies of text this organization can be asked questions of. An answer comes only from what is filed here, and a question they do not cover is refused rather than guessed at.",
