@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
@@ -35,7 +36,23 @@ import { TaskQuickActions, useTaskUpdate } from "./taskactions";
 //   - a workspace reading from an incumbent mirror gets one refusal, not a
 //     page that quietly omits most of itself.
 
-const org = {
+type Organization = components["schemas"]["Organization"];
+type Organization360 = components["schemas"]["Organization360"];
+// The sections these tests build fixtures for, named once. A fixture declared
+// standalone gets no contextual type from `view()`, so its enums widen to
+// `string` and stop being checked at all — which is how eight of the shapes in
+// this file drifted off the contract while every test went on passing.
+type People360 = NonNullable<Organization360["people"]>;
+type Deals360 = NonNullable<Organization360["deals"]>;
+type StateStrip360 = NonNullable<Organization360["state_strip"]>;
+
+// Typed against the contract, not asserted into it. A fixture the compiler only
+// sees as `Record<string, unknown>` can name a field the wire dropped, spell an
+// enum the server no longer accepts, or miss one it now requires, and the tests
+// built on it go on passing while the shape moves underneath them. That is the
+// one thing a fixture must not do — so `view()` returns `Organization360`, and
+// every caller takes it as that type rather than through `as never`.
+const org: Organization = {
   id: "o-1",
   // The server answers this per row; a fixture without it reads as NOT
   // writable, which is the correct fail-closed default and would strip the
@@ -52,7 +69,7 @@ const org = {
 
 const emptyPage = { has_more: false, next_cursor: null };
 
-function view(overrides: Record<string, unknown> = {}) {
+function view(overrides: Partial<Organization360> = {}): Organization360 {
   return {
     as_of: "2026-06-01T09:00:00Z",
     organization: org,
@@ -238,10 +255,10 @@ function renderCompany() {
 // directly rather than through the company page: the page does not render
 // either, so reaching for them through it would assert nothing.
 function renderNextSteps(
-  three60: ReturnType<typeof view>,
+  three60: Organization360,
   onOpenTask?: (step: { activity_id: string }) => void,
 ) {
-  render(<NextSteps view={three60 as never} onOpenTask={onOpenTask} />);
+  render(<NextSteps view={three60} onOpenTask={onOpenTask} />);
 }
 
 // NextSteps plus the per-row verbs, which the list takes as a render slot
@@ -250,11 +267,11 @@ function renderNextSteps(
 // date to move.
 function NextStepsWithVerbs({
   three60,
-}: Readonly<{ three60: ReturnType<typeof view> }>) {
+}: Readonly<{ three60: Organization360 }>) {
   const update = useTaskUpdate(taskWriteKeys("organization", "o-1"));
   return (
     <NextSteps
-      view={three60 as never}
+      view={three60}
       onOpenTask={() => {}}
       renderAction={(step) => (
         <TaskQuickActions
@@ -267,21 +284,21 @@ function NextStepsWithVerbs({
   );
 }
 
-function renderWork(three60: ReturnType<typeof view>) {
-  render(<CompanyWorkCard view={three60 as never} onOpenRecord={() => {}} />);
+function renderWork(three60: Organization360) {
+  render(<CompanyWorkCard view={three60} onOpenRecord={() => {}} />);
 }
 
 // The lead panel, rendered on its own: it moved out of AccountBrief so the
 // stack could tint and box it separately, and the advice it carries is
 // exercised through it directly now.
 function renderSuggestions(
-  three60: ReturnType<typeof view>,
+  three60: Organization360,
   onPerform: (action: SuggestionAction) => void = () => {},
 ) {
   render(
     <SuggestionsSection
       orgId="o-1"
-      view={three60 as never}
+      view={three60}
       onOpenRecord={() => {}}
       onPerform={onPerform}
     />,
@@ -860,7 +877,7 @@ describe("company view — one section never answers for another", () => {
   it("still shows the tags a caller can read when lists are withheld", async () => {
     stub(
       view({
-        tags: [{ id: "t-1", workspace_id: "w", name: "Key account" }],
+        tags: [{ id: "t-1", name: "Key account" }],
         list_memberships: undefined,
         sections_omitted: ["list_memberships"],
       }),
@@ -907,7 +924,11 @@ describe("company view — the citations under a finding", () => {
   // The chips are shared by every grounded surface on this page. They are
   // exercised through the advice the brief carries, which is where a reader
   // meets them now that the standing summary card is gone.
-  const suggestion = (evidence: unknown[]) => ({
+  // The citations are typed from the contract rather than taken as `unknown[]`:
+  // an `entity_type` the server no longer serves is exactly the drift these
+  // chips would go on rendering without complaint.
+  type Suggestion = NonNullable<Organization360["suggestions"]>[number];
+  const suggestion = (evidence: Suggestion["evidence"]) => ({
     kind: "no_reply" as const,
     fingerprint: "f-1",
     reason: "You reached out 13 days ago and nobody has come back.",
@@ -1011,7 +1032,13 @@ describe("company view — the citations under a finding", () => {
 });
 
 describe("company view — what is waiting on a decision", () => {
-  const staged = {
+  // `status` is a closed union on the wire, so it is annotated rather than
+  // inferred as `string`: a fixture that widens it can name a status the server
+  // never sends and the card would go on drawing it.
+  type StagedApproval = NonNullable<
+    Organization360["pending_approvals"]
+  >["data"][number];
+  const staged: StagedApproval = {
     id: "ap-1",
     kind: "site_lead",
     status: "pending",
@@ -1104,7 +1131,7 @@ describe("company view — an open task can be acted on", () => {
   it("draws no checkbox when the caller has no write path for it", async () => {
     const three60 = view({ next_steps: { data: [step], page: emptyPage } });
     stub(three60);
-    render(<NextSteps view={three60 as never} />);
+    render(<NextSteps view={three60} />);
     await waitFor(() =>
       expect(screen.getByText("Send the retrofit proposal")).toBeTruthy(),
     );
@@ -1129,7 +1156,7 @@ describe("CommercialPanel — a capped deals page says so", () => {
         lost_count: 0,
       },
     });
-    render(<CommercialPanel view={three60 as never} />);
+    render(<CommercialPanel view={three60} />);
     await waitFor(() => expect(screen.getByText("Pilot rollout")).toBeTruthy());
     expect(
       screen.getByText(
@@ -1147,7 +1174,7 @@ describe("CommercialPanel — a capped deals page says so", () => {
         lost_count: 0,
       },
     });
-    render(<CommercialPanel view={three60 as never} />);
+    render(<CommercialPanel view={three60} />);
     await waitFor(() => expect(screen.getByText("Pilot rollout")).toBeTruthy());
     expect(
       screen.queryByText(
@@ -1263,7 +1290,7 @@ describe("company view — naming the buying committee", () => {
 // nobody on another. Rendering the role alone made two clauses that read
 // identically.
 describe("company view — a buying role names the deal it is on", () => {
-  const contactOnTwoDeals = {
+  const contactOnTwoDeals: People360["data"][number] = {
     person_id: "p-1",
     full_name: "Dana Buyer",
     deal_roles: [
@@ -1277,7 +1304,7 @@ describe("company view — a buying role names the deal it is on", () => {
       factors: { recency: 1, frequency: 1, reciprocity: 1, direction: 1 },
     },
   };
-  const twoOpenDeals = {
+  const twoOpenDeals: Deals360 = {
     data: [
       { deal_id: "d-1", name: "Renewal", status: "open", stalled: false },
       { deal_id: "d-2", name: "New business", status: "open", stalled: false },
@@ -1337,7 +1364,7 @@ describe("company view — a buying role names the deal it is on", () => {
 });
 
 describe("company view — a recorded role reaches the screen", () => {
-  const contact = {
+  const contact: People360["data"][number] = {
     person_id: "p-1",
     full_name: "Christian Hagemeyer",
     deal_roles: [],
@@ -1553,7 +1580,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // GET (what the header reads) — because now that both draw a lifecycle
     // control, a fixture that only overrode one would fail for the same
     // reason two real reads of one row never disagree: there is only one row.
-    const withLifecycle = {
+    const withLifecycle: Organization = {
       ...org,
       lifecycle: "former_customer",
       relationship_types: ["customer", "supplier"],
@@ -1608,7 +1635,7 @@ describe("company view — where the account stands, and what it is to us", () =
     // a save through EITHER control reaches the server exactly once, and the
     // OTHER control reflects the new value once the record refetches — not a
     // second write, and not one control left showing the stale value.
-    let currentOrg = { ...org, lifecycle: "unknown" as const };
+    let currentOrg: Organization = { ...org, lifecycle: "unknown" };
     let patchCount = 0;
     let lastIfMatch: string | null = null;
     vi.stubGlobal(
@@ -1627,10 +1654,18 @@ describe("company view — where the account stands, and what it is to us", () =
           if (request.method === "PATCH") {
             patchCount += 1;
             lastIfMatch = request.headers.get("if-match");
-            const body = (await request.json()) as { lifecycle?: string };
+            const body = (await request.json()) as {
+              lifecycle?: Organization["lifecycle"];
+            };
+            if (currentOrg.version === undefined) {
+              // What this case asserts is the If-Match the second write sends,
+              // so a fixture with no version to increment would be measuring
+              // nothing.
+              throw new Error("the account fixture carries no version");
+            }
             currentOrg = {
               ...currentOrg,
-              lifecycle: (body.lifecycle ?? currentOrg.lifecycle) as "unknown",
+              lifecycle: body.lifecycle ?? currentOrg.lifecycle,
               version: currentOrg.version + 1,
             };
           }
@@ -1669,7 +1704,9 @@ describe("company view — where the account stands, and what it is to us", () =
 // below is one of its bullets. They are about what the page must NOT claim,
 // which is exactly what a refactor loses silently.
 describe("company view — the KPI row never invents a figure", () => {
-  const commercial = (over: Record<string, unknown>) => ({
+  const commercial = (
+    over: Partial<NonNullable<StateStrip360["commercial"]>>,
+  ): StateStrip360 => ({
     account: { lifecycle: "prospect", relationship_types: [] },
     commercial: {
       open_count: 2,
@@ -2057,9 +2094,21 @@ describe("company view — the account's own tabs", () => {
               person_id: "p-1",
               full_name: "Christian Hagemeyer",
               title: "Managing director",
-              strength: { score: 0, bucket: "dormant" },
+              strength: {
+                score: 0,
+                bucket: "dormant",
+                factors: {
+                  recency: 0,
+                  frequency: 0,
+                  reciprocity: 0,
+                  direction: 0,
+                },
+              },
               deal_roles: [],
-              consent: [],
+              // A map of purpose → verdict, not a list. The old `[]` was the
+              // wrong SHAPE for "no consent recorded", and default-deny is the
+              // one reading on this page that must not be guessed at.
+              consent: {},
             },
           ],
           page: emptyPage,
@@ -2512,6 +2561,8 @@ describe("the money slot says its reason once and borrows no figure", () => {
           open_pipeline_minor_base: 500000,
           base_currency: "EUR",
           stalled_count: 0,
+          priced_count: 2,
+          converted_count: 2,
         },
       },
       health: {
