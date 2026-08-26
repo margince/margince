@@ -390,6 +390,13 @@
             "integer",
             "null"
           ]
+        },
+        "knowledge_document_mb": {
+          "description": "KnowledgeDocumentMB bounds POST /v1/knowledge/corpora/{id}/documents — a document filed into an asked corpus.",
+          "type": [
+            "integer",
+            "null"
+          ]
         }
       }
     }

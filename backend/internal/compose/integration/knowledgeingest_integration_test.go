@@ -83,14 +83,15 @@ func (ie *ingestEnv) upload(t *testing.T, name, contentType, body string) ids.UU
 // ingest runs one full attempt the way the worker does.
 func (ie *ingestEnv) ingest(t *testing.T, documentID ids.UUID) int {
 	t.Helper()
-	chunks, err := ie.attempt(documentID)
+	chunks, err := ie.attempt(t, documentID)
 	if err != nil {
 		t.Fatalf("ingest: %v", err)
 	}
 	return chunks
 }
 
-func (ie *ingestEnv) attempt(documentID ids.UUID) (int, error) {
+func (ie *ingestEnv) attempt(t *testing.T, documentID ids.UUID) (int, error) {
+	t.Helper()
 	src, err := ie.store.BeginIngest(ie.ctx, documentID)
 	if err != nil {
 		return 0, err
@@ -99,7 +100,11 @@ func (ie *ingestEnv) attempt(documentID ids.UUID) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	defer func() { _ = body.Close() }()
+	defer func() {
+		if cerr := body.Close(); cerr != nil {
+			t.Errorf("closing the stored document: %v", cerr)
+		}
+	}()
 	raw, err := io.ReadAll(body)
 	if err != nil {
 		return 0, err
@@ -394,7 +399,7 @@ func TestADocumentCrossingTheCorpusPassageCeilingIsRefused(t *testing.T) {
 	// Distinct bytes from the filler, or the duplicate refusal fires first and
 	// this case would never reach the ceiling it names.
 	docID := ie.upload(t, "one-more.md", "text/markdown", prose(2))
-	_, err := ie.attempt(docID)
+	_, err := ie.attempt(t, docID)
 
 	var full *knowledge.CorpusFullError
 	if !errors.As(err, &full) {

@@ -189,6 +189,10 @@ bootstrap_admin:
 #   attachment_mb: 25        # POST /v1/attachments — the documents surface
 #   csv_import_mb: 10        # POST /v1/imports/sources
 #   linkedin_import_mb: 8    # POST /v1/me/linkedin-connections
+#   knowledge_document_mb: 5 # POST /v1/knowledge/corpora/{id}/documents — a
+#                            # document filed into an asked corpus. Low because
+#                            # the cost of a big one is passages the ask scans,
+#                            # not the bytes on disk.
 
 # Capture pipeline posture (optional).
 #
