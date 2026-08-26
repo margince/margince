@@ -268,7 +268,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterEnrichTool(r, seamProbeProvider{}, seamProbeLifecycle{})
 	RegisterQueryTool(r, seamProbeProvider{}, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{}, errSeamReached
-	})
+	}, nil)
 	RegisterVocabularyTool(r, seamProbeVocabulary{})
 	RegisterContextSearchTool(r, seamProbeProvider{}, seamProbeRetriever{})
 	RegisterResolveTool(r, seamProbeProvider{}, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {

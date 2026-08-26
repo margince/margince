@@ -109,16 +109,23 @@ type QueryRef struct {
 // the same conditional registration the other injected-engine tools take. An
 // installation whose executor is unwired serves no query tool rather than one
 // that refuses every call.
-func RegisterQueryTool(r *Registry, p datasource.SystemOfRecordProvider, run QueryRunner) {
+// The seat namer is separately optional: an installation that cannot name
+// seats still serves the tool, and its rows carry an owner id and an is_you
+// marker without a name. Refusing to serve the query at all because ownership
+// cannot be spelled out would trade a whole capability for a label.
+func RegisterQueryTool(r *Registry, p datasource.SystemOfRecordProvider, run QueryRunner, name SeatNamer) {
 	if run == nil {
 		return
 	}
-	r.Register(queryWorkspace{p: p, run: run})
+	r.Register(queryWorkspace{p: p, run: run, name: name})
 }
 
 type queryWorkspace struct {
 	p   datasource.SystemOfRecordProvider
 	run QueryRunner
+	// name resolves owner ids to seat names. Nil is tolerated and degrades to
+	// an unnamed owner rather than a failed read — see attachOwners.
+	name SeatNamer
 }
 
 func (t queryWorkspace) Spec() mcp.ToolSpec {
@@ -225,6 +232,14 @@ func (t queryWorkspace) hydrate(ctx context.Context, answer QueryAnswer) (QueryW
 			continue
 		}
 		result.Rows = append(result.Rows, t.serve(ctx, ref, row, served))
+	}
+	// Named AFTER the page is assembled, so the seat lookup is one query for
+	// the whole page. Only served rows are named: a dropped row was never the
+	// caller's to see, and naming its owner would disclose it.
+	rows, ownerNote := attachOwners(ctx, t.name, result.Rows)
+	result.Rows = rows
+	if ownerNote != nil {
+		result.Notes = append(result.Notes, *ownerNote)
 	}
 	if dropped {
 		result.Coverage = CoveragePartialDegraded

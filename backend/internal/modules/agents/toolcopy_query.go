@@ -22,5 +22,9 @@ var queryWorkspaceCopy = toolCopy{
 		"the plan is here, `ranked_semantic` means these ranked highest and others may match, and " +
 		"`partial_degraded` means something in the plan could not be answered as asked — `notes` " +
 		"says which. Keep each row's record_type and id for any follow-up call, and its `evidence` " +
-		"for the related record that admitted it.",
+		"for the related record that admitted it. A row's `owner` is the colleague who holds that " +
+		"account: rows come back from across the whole workspace, so most of them belong to " +
+		"someone other than the person asking. When `owner.is_you` is false, say whose it is when " +
+		"you report the record, and treat contacting it as theirs to decide rather than advising " +
+		"an approach as though the account were unowned.",
 }

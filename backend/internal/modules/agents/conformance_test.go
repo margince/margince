@@ -203,7 +203,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterEnrichTool(r, nil, inertLifecycle{})
 	RegisterQueryTool(r, nil, func(context.Context, json.RawMessage) (QueryAnswer, error) {
 		return QueryAnswer{Coverage: CoverageCompleteExact}, nil
-	})
+	}, nil)
 	RegisterVocabularyTool(r, inertVocabulary{})
 	RegisterContextSearchTool(r, nil, inertRetriever{})
 	RegisterResolveTool(r, nil, func(context.Context, []ResolveCandidate) ([]ResolveOutcome, error) {
