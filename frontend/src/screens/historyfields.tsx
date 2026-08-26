@@ -23,7 +23,7 @@ import {
   toEvidence,
 } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type Locale, useLocale, useT } from "../i18n";
 import {
   LoadMoreButton,
   QueryStates,

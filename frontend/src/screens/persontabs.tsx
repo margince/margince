@@ -128,15 +128,16 @@ export function PersonTimelineTab({
           <RecordHistoryTab
             kind="person"
             id={personId}
-            restore={
-              view?.person.version === undefined
-                ? undefined
-                : {
-                    version: view.person.version,
-                    onRestored: () =>
-                      invalidateRecord(queryClient, "person", personId),
-                  }
-            }
+            restore={{
+              // Handed over whether or not it is there. `RecordRestore.version`
+              // is optional and the panel withholds the button when it is
+              // absent, so a second guard here would be the same policy in two
+              // places — and the company surface, which does not repeat it,
+              // would be the one that looked wrong.
+              version: view?.person.version,
+              onRestored: () =>
+                invalidateRecord(queryClient, "person", personId),
+            }}
           />
         ) : (
           <SurfaceState
