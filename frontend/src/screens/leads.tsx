@@ -1714,7 +1714,17 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
               }}
             />
             {tab === "history" && !overlay && (
-              <RecordHistoryTab kind="lead" id={lead.id} />
+              <RecordHistoryTab
+                kind="lead"
+                id={lead.id}
+                restore={{
+                  version: lead.version,
+                  onRestored: () =>
+                    queryClient.invalidateQueries({
+                      queryKey: leadKey(lead.id),
+                    }),
+                }}
+              />
             )}
             {tab === "history" && overlay && <OverlayUnavailable />}
           </RecordView>

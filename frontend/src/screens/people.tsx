@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -409,6 +409,7 @@ type PersonTab = (typeof PERSON_TABS)[number];
 
 export function PersonScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("person");
   // ONE sentence about this contact being archived, minted here and pointed at
@@ -667,7 +668,17 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
               </div>
             )}
             {tab === "history" && (
-              <RecordHistoryTab kind="person" id={person.id} />
+              <RecordHistoryTab
+                kind="person"
+                id={person.id}
+                restore={{
+                  version: person.version,
+                  onRestored: () =>
+                    queryClient.invalidateQueries({
+                      queryKey: ["person", person.id],
+                    }),
+                }}
+              />
             )}
           </RecordView>
         )}

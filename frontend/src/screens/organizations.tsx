@@ -1874,6 +1874,7 @@ function CompanyPage({
   onTab: (next: CompanyTab) => void;
 }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const archivedReasonId = useId();
   // ONE composer, opened two ways. Anchored on a timeline message it answers
@@ -2064,7 +2065,19 @@ function CompanyPage({
         {/* Mounted only while open: the two history reads behind it are the
             page's most expensive, and nobody who never opens the panel should
             pay for them. */}
-        {auditOpen && <RecordHistoryTab kind="organization" id={org.id} />}
+        {auditOpen && (
+          <RecordHistoryTab
+            kind="organization"
+            id={org.id}
+            restore={{
+              version: org.version,
+              onRestored: () =>
+                queryClient.invalidateQueries({
+                  queryKey: ["organization360", org.id],
+                }),
+            }}
+          />
+        )}
         <div className="form-actions">
           <Button onClick={() => setAuditOpen(false)}>
             {t("common.close")}

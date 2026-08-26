@@ -54,6 +54,32 @@ export const de = {
   "history.actorAgent": "Agent",
   "history.tabChanges": "Änderungen",
   "history.tabFields": "Nach Feld",
+  "history.undo.action": "Zurücksetzen",
+  "history.undo.busy": "Änderung wird zurückgesetzt…",
+  "history.undo.confirmTitle": "Diese Änderung zurücksetzen?",
+  "history.undo.confirmBody":
+    "{count} Felder kehren auf den Stand vor dieser Änderung zurück:",
+  "history.undo.versionSkew":
+    "Der Datensatz hat sich beim Lesen verändert. Der Verlauf wurde neu geladen — prüfen Sie die Änderung erneut, bevor Sie sie zurücksetzen.",
+  "history.undo.noBeforeImage":
+    "Diese Änderung hat nicht festgehalten, was der Datensatz vorher enthielt — es gibt nichts zurückzusetzen.",
+  "history.undo.notReplayable":
+    "Diese Art von Änderung wird nicht rückwärts abgespielt.",
+  "history.undo.unsupportedRecordType":
+    "Änderungen an dieser Art von Datensatz lassen sich nicht zurücksetzen.",
+  "history.undo.superseded":
+    "Jemand hat diese Felder seitdem geändert. Ein Zurücksetzen würde auch diese Entscheidung aufheben.",
+  "history.undo.behindErasureBoundary":
+    "Diese Änderung liegt hinter einer Löschung; ihr Inhalt wurde endgültig entfernt.",
+  "history.undo.alreadyUndone": "Diese Änderung wurde bereits zurückgesetzt.",
+  "history.undo.notRestorableByThisPath":
+    "Diese Felder werden nicht über den Weg geschrieben, den ein Zurücksetzen nimmt.",
+  "history.undo.recordArchived":
+    "Der Datensatz ist archiviert. Holen Sie ihn zuerst zurück, bevor Sie eine Änderung zurücksetzen.",
+  "history.undo.nullUnwritable":
+    "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann — es würde Erfolg melden und nichts ändern.",
+  "history.undo.notWritableByCaller":
+    "Sie haben keine Berechtigung, diese Felder zu schreiben.",
   "history.field.address": "Adresse",
   "history.field.amount_minor": "Wert",
   "history.field.assignee_id": "Zuständig",

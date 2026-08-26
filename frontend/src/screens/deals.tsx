@@ -3644,6 +3644,13 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   kind="deal"
                   id={deal.id}
                   currency={deal.currency}
+                  restore={{
+                    version: deal.version,
+                    onRestored: () =>
+                      queryClient.invalidateQueries({
+                        queryKey: ["deal", deal.id],
+                      }),
+                  }}
                 />
               )}
               {tab === "history" && overlay && <OverlayUnavailable />}

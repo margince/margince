@@ -1,4 +1,4 @@
-import type { MessageKey } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 
 // What a changed field is CALLED, for a reader who never sees a column name
 // anywhere else on the record.

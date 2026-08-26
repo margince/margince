@@ -241,7 +241,11 @@ export function FieldHistoryTimeline({
     body = (
       <EmptyState>
         <p>{t("history.filterEmpty")}</p>
-        <Button small onClick={clearFilters} style={{ marginTop: 10 }}>
+        <Button
+          small
+          onClick={clearFilters}
+          style={{ marginTop: "var(--space-3)" }}
+        >
           {t("history.clearFilter")}
         </Button>
       </EmptyState>
@@ -278,8 +282,8 @@ export function FieldHistoryTimeline({
           alignItems: "center",
           justifyContent: "space-between",
           flexWrap: "wrap",
-          gap: 10,
-          marginBottom: 12,
+          gap: "var(--space-3)",
+          marginBottom: "var(--space-3)",
         }}
       >
         <SegmentedControl
@@ -289,7 +293,9 @@ export function FieldHistoryTimeline({
           labels={actorLabels}
         />
         {fieldOptions.length > 0 && (
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          <div
+            style={{ display: "flex", flexWrap: "wrap", gap: "var(--space-2)" }}
+          >
             <Button
               small
               variant={fieldFilter === undefined ? "primary" : "ghost"}

@@ -12,14 +12,18 @@ import { useT } from "../i18n";
 // here because "./history" is the name every record screen already reaches
 // for, and a split that renamed the door would touch six screens to say
 // nothing.
-export { RecordHistory, useRecordHistory } from "./historyentries";
+export {
+  RecordHistory,
+  type RecordRestore,
+  useRecordHistory,
+} from "./historyentries";
 export {
   changeTimeline,
   FieldHistoryTimeline,
   useFieldHistory,
 } from "./historyfields";
 
-import { RecordHistory } from "./historyentries";
+import { RecordHistory, type RecordRestore } from "./historyentries";
 import { FieldHistoryTimeline } from "./historyfields";
 
 // One vocabulary, whatever record the panel is opened on: `changes` is
@@ -34,12 +38,17 @@ export function RecordHistoryTab({
   kind,
   id,
   currency,
+  restore,
 }: Readonly<{
   kind: EntityKind;
   id: string;
   // Handed down to the field panel, which needs it to read a minor-unit
   // amount at the scale its currency actually has.
   currency?: string | null;
+  // What a change put back needs from the record: the version it pins the
+  // write against, and the re-read that follows. Absent on a surface holding
+  // neither, where the panel reads the history and offers no verb.
+  restore?: RecordRestore;
 }>) {
   const t = useT();
   const [tab, setTab] = useState<HistoryTab>("changes");
@@ -62,7 +71,12 @@ export function RecordHistoryTab({
         />
       </div>
       {tab === "changes" ? (
-        <RecordHistory kind={kind} id={id} currency={currency} />
+        <RecordHistory
+          kind={kind}
+          id={id}
+          currency={currency}
+          restore={restore}
+        />
       ) : (
         <FieldHistoryTimeline kind={kind} id={id} currency={currency} />
       )}

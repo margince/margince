@@ -184,3 +184,88 @@ export const AgentAttribution: Story = {
     );
   },
 };
+
+// The verb and its two refusals, on the tab a reader lands on. `restore`
+// carries the version the write pins against and the record re-read that
+// follows, so the button is offered; without it the panel is read-only.
+const RESTORE = { version: 7, onRestored: () => {} };
+
+const repriced = {
+  id: "h3",
+  actor_type: "human",
+  actor_id: "u1",
+  actor_name: "Demo Admin",
+  action: "update",
+  occurred_at: "2026-07-15T10:00:00Z",
+  summary: "Demo Admin repriced the deal",
+  before: { amount_minor: 2500000, name: "Globex" },
+  after: { amount_minor: 4150000, name: "Globex Renewal" },
+};
+
+export const CanBePutBack: Story = {
+  render: () => {
+    seedWorkspace();
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /records/deal/d1/history": () =>
+        jsonResponse({
+          data: [
+            { ...repriced, undoable: { undoable: true } },
+            { ...created, undoable: { undoable: true } },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /field-history": () => jsonResponse(emptyPage),
+    });
+    return (
+      <StoryProviders>
+        <RecordHistoryTab
+          kind="deal"
+          id="d1"
+          currency="EUR"
+          restore={RESTORE}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+// The state this feature exists for: a refused verb that SAYS why, in the same
+// words the server answers a refused press with.
+export const RefusedWithItsReason: Story = {
+  render: () => {
+    seedWorkspace();
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /records/deal/d1/history": () =>
+        jsonResponse({
+          data: [
+            {
+              ...repriced,
+              undoable: {
+                undoable: false,
+                reason: "superseded",
+                detail: "amount_minor",
+              },
+            },
+            {
+              ...created,
+              undoable: { undoable: false, reason: "not_a_replayable_verb" },
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /field-history": () => jsonResponse(emptyPage),
+    });
+    return (
+      <StoryProviders>
+        <RecordHistoryTab
+          kind="deal"
+          id="d1"
+          currency="EUR"
+          restore={RESTORE}
+        />
+      </StoryProviders>
+    );
+  },
+};

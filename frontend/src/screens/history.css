@@ -58,22 +58,39 @@
  * on. */
 .entry-fields {
   list-style: none;
-  margin: 6px 0 0;
+  margin: var(--space-2) 0 0;
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--space-1);
 }
 
 .entry-field {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 8px;
+  gap: var(--space-2);
 }
 
 .entry-field-name {
   font-size: 12px;
   font-weight: 600;
+  color: var(--textMeta);
+}
+
+/* The verb on one entry, and the sentence a refused press comes back with.
+ * The refusal sits BESIDE the control rather than replacing it: the reader has
+ * to be able to read what happened while still looking at the row it happened
+ * on. */
+.entry-undo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.entry-undo-refusal {
+  font-size: 12px;
   color: var(--textMeta);
 }

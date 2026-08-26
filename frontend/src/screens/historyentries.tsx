@@ -2,24 +2,36 @@ import {
   type InfiniteData,
   type UseInfiniteQueryResult,
   useInfiniteQuery,
+  useMutation,
+  useQueryClient,
 } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { type ReactNode, useState } from "react";
 import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
+import { ifMatch } from "../api/version";
 import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
-import { Card, EmptyState } from "../design-system/atoms";
+import { Button, Card, EmptyState } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { FieldDiff, ProvenanceTag } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import {
   LoadMoreButton,
+  problemCodeOf,
+  problemMessageOf,
   QueryStates,
   throwProblem,
   useViewerId,
 } from "./common";
-import { entryFieldChanges, provenanceOfEntry } from "./history.logic";
+import {
+  type EntryFieldChange,
+  entryFieldChanges,
+  provenanceOfEntry,
+} from "./history.logic";
 import { historyFieldLabel } from "./historyfieldlabels";
+import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
 import { historyValue } from "./historyvalues";
 import "./history.css";
 
@@ -71,15 +83,14 @@ export function useRecordHistory(
 // the list a reader opens first, and a change nobody can see is a change
 // nobody can check.
 function EntryFieldDetail({
-  entry,
+  changes,
   currency,
 }: Readonly<{
-  entry: AuditHistoryEntry;
+  changes: readonly EntryFieldChange[];
   currency: string | null | undefined;
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const changes = entryFieldChanges(entry);
   if (changes.length === 0) {
     return null;
   }
@@ -110,17 +121,196 @@ function EntryFieldDetail({
   );
 }
 
-function HistoryEntryRow({
+// The variables one press carries. A mutationFn takes what it needs rather
+// than closing over render state: the click belongs to the committed render,
+// so what it passes cannot be older than the control that carried it.
+type RestorePress = Readonly<{ auditId: string; version: number }>;
+
+// What a change put back needs from the record it belongs to.
+export type RecordRestore = Readonly<{
+  // The last-seen version, which the restore pins with If-Match. Undefined is
+  // a caller holding no claim about what it would overwrite, and the button is
+  // not offered: last-write-wins is not something this control may choose.
+  version: number | undefined;
+  // Re-read the record. The history's own queries are this panel's to
+  // invalidate; the record the change belongs to is the caller's, and the two
+  // must arrive together or the new `restore` entry describes a record on
+  // screen that does not yet show it.
+  onRestored: () => void;
+}>;
+
+// A refusal in the reader's own words.
+//
+// The SAME words in both places: shown up front under a button nobody may
+// press, and after a press the server refused with the same code. A refusal
+// found at press time and one shown in advance must not read as two different
+// products, so there is one sentence per reason and both readers ask for it
+// here.
+function refusalSentence(
+  reason: string | null | undefined,
+  detail: string | null | undefined,
+  t: (key: MessageKey) => string,
+): string | undefined {
+  const key = undoRefusalKey(reason);
+  if (key) {
+    return t(key);
+  }
+  // A server naming a reason this build predates. Its own detail is the only
+  // honest wording left — inventing one here would describe a case nobody has
+  // written down.
+  return detail ?? undefined;
+}
+
+function UndoButton({
   entry,
-  locale,
+  kind,
+  id,
+  changes,
   currency,
+  restore,
 }: Readonly<{
   entry: AuditHistoryEntry;
+  kind: EntityKind;
+  id: string;
+  changes: readonly EntryFieldChange[];
+  currency: string | null | undefined;
+  restore: RecordRestore;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const client = useQueryClient();
+  const [confirming, setConfirming] = useState(false);
+  // What the server said when it refused the press. Held apart from the
+  // advisory answer below because the two can differ: the read cannot hold a
+  // lock, so a change that looked restorable a moment ago may not be one now.
+  const [refused, setRefused] = useState<string | null>(null);
+
+  const putBack = useMutation({
+    mutationFn: async ({ auditId, version }: RestorePress) => {
+      const { data, error } = await api.POST(
+        "/records/{entity_type}/{id}/history/{audit_id}/restore",
+        {
+          params: {
+            path: { entity_type: kind, id, audit_id: auditId },
+            ...ifMatch(version),
+          },
+        },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+    onSuccess: () => {
+      setRefused(null);
+      setConfirming(false);
+      client.invalidateQueries({ queryKey: ["record-history", kind, id] });
+      client.invalidateQueries({ queryKey: ["field-history", kind, id] });
+      restore.onRestored();
+    },
+    onError: (error) => {
+      const code = problemCodeOf(error);
+      if (code === VERSION_SKEW_CODE) {
+        // The record moved rather than the change being unrestorable. Re-read
+        // both, so the reader decides against what the record says NOW.
+        client.invalidateQueries({ queryKey: ["record-history", kind, id] });
+        client.invalidateQueries({ queryKey: ["field-history", kind, id] });
+        restore.onRestored();
+        setRefused(t("history.undo.versionSkew"));
+        setConfirming(false);
+        return;
+      }
+      setRefused(refusalSentence(code, null, t) ?? problemMessageOf(error, t));
+      setConfirming(false);
+    },
+  });
+
+  const advisory = entry.undoable;
+  const version = restore.version;
+  // Nothing to offer: an installation whose read does not answer the question,
+  // or a caller with no version to pin the write against.
+  if (!advisory || version === undefined) {
+    return null;
+  }
+
+  const upFront = advisory.undoable
+    ? undefined
+    : (refusalSentence(advisory.reason, advisory.detail, t) ??
+      t("common.errorNoCause"));
+  const press = () => {
+    // More than one field moves: the reader is told which, and what each goes
+    // back to, before a write lands on somebody else's data.
+    if (changes.length > 1) {
+      setConfirming(true);
+      return;
+    }
+    putBack.mutate({ auditId: entry.id, version });
+  };
+
+  return (
+    <span className="entry-undo">
+      <Button
+        small
+        variant="ghost"
+        reason={upFront}
+        pending={putBack.isPending}
+        busyLabel={t("history.undo.busy")}
+        onClick={press}
+      >
+        {t("history.undo.action")}
+      </Button>
+      {refused && <span className="entry-undo-refusal">{refused}</span>}
+      <ConfirmModal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={t("history.undo.confirmTitle")}
+        confirmLabel={t("history.undo.action")}
+        pending={putBack.isPending}
+        onConfirm={() => putBack.mutate({ auditId: entry.id, version })}
+      >
+        <p>
+          {t("history.undo.confirmBody", { count: String(changes.length) })}
+        </p>
+        <ul className="entry-fields">
+          {changes.map((change) => (
+            <li key={change.field} className="entry-field">
+              <span className="entry-field-name">
+                {historyFieldLabel(change.field, t)}
+              </span>
+              <span>
+                {historyValue(
+                  change.field,
+                  change.oldValue,
+                  currency,
+                  locale,
+                ) ?? t("history.cleared")}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </ConfirmModal>
+    </span>
+  );
+}
+
+function HistoryEntryRow({
+  entry,
+  kind,
+  id,
+  locale,
+  currency,
+  restore,
+}: Readonly<{
+  entry: AuditHistoryEntry;
+  kind: EntityKind;
+  id: string;
   locale: ReturnType<typeof useLocale>["locale"];
   currency: string | null | undefined;
+  restore: RecordRestore | undefined;
 }>) {
   const viewerId = useViewerId();
   const recordZone = useRecordZone();
+  const changes = entryFieldChanges(entry);
   return (
     <li>
       <span className="tl-body">
@@ -141,7 +331,17 @@ function HistoryEntryRow({
             renderUser={() => entry.actor_name}
           />
         </span>
-        <EntryFieldDetail entry={entry} currency={currency} />
+        <EntryFieldDetail changes={changes} currency={currency} />
+        {restore && (
+          <UndoButton
+            entry={entry}
+            kind={kind}
+            id={id}
+            changes={changes}
+            currency={currency}
+            restore={restore}
+          />
+        )}
       </span>
     </li>
   );
@@ -151,12 +351,17 @@ export function RecordHistory({
   kind,
   id,
   currency,
+  restore,
 }: Readonly<{
   kind: EntityKind;
   id: string;
   // The record's ISO currency, which is what gives a minor-unit column in the
   // detail below a row its scale.
   currency?: string | null;
+  // What a change put back needs from the record. Absent on a surface that
+  // reads the history without holding the record — no version to pin the
+  // write with, so no button.
+  restore?: RecordRestore;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -177,8 +382,11 @@ export function RecordHistory({
             <HistoryEntryRow
               key={entry.id}
               entry={entry}
+              kind={kind}
+              id={id}
               locale={locale}
               currency={currency}
+              restore={restore}
             />
           ))}
         </ul>

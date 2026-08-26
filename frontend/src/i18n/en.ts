@@ -58,6 +58,32 @@ export const en = {
   "history.actorAgent": "Agent",
   "history.tabChanges": "Changes",
   "history.tabFields": "By field",
+  "history.undo.action": "Put back",
+  "history.undo.busy": "Putting this change back…",
+  "history.undo.confirmTitle": "Put this change back?",
+  "history.undo.confirmBody":
+    "{count} fields go back to what they were before this change:",
+  "history.undo.versionSkew":
+    "The record moved while you were reading it. The history has been re-read — check the change again before putting it back.",
+  "history.undo.noBeforeImage":
+    "This change did not record what the record held before it, so there is nothing to put back.",
+  "history.undo.notReplayable":
+    "This kind of change is not replayed backwards.",
+  "history.undo.unsupportedRecordType":
+    "Changes to this kind of record cannot be put back.",
+  "history.undo.superseded":
+    "Somebody has changed these fields since. Putting this back would undo their decision as well.",
+  "history.undo.behindErasureBoundary":
+    "This change is behind an erasure, and what it held has been deleted for good.",
+  "history.undo.alreadyUndone": "This change has already been put back.",
+  "history.undo.notRestorableByThisPath":
+    "These fields are not written through the path a restore uses.",
+  "history.undo.recordArchived":
+    "The record is archived. Restore the record itself before putting a change back.",
+  "history.undo.nullUnwritable":
+    "Putting this back would have to clear a field this record cannot clear, so it would report success and change nothing.",
+  "history.undo.notWritableByCaller":
+    "You do not have permission to write these fields.",
   "history.field.address": "Address",
   "history.field.amount_minor": "Value",
   "history.field.assignee_id": "Assignee",

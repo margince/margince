@@ -62,6 +62,30 @@ export const vi = {
   "history.actorAgent": "Agent",
   "history.tabChanges": "Thay đổi",
   "history.tabFields": "Theo trường",
+  "history.undo.action": "Hoàn tác",
+  "history.undo.busy": "Đang hoàn tác thay đổi…",
+  "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
+  "history.undo.confirmBody":
+    "{count} trường sẽ trở lại giá trị trước thay đổi này:",
+  "history.undo.versionSkew":
+    "Bản ghi đã thay đổi trong lúc bạn đang xem. Lịch sử vừa được tải lại — hãy kiểm tra lại thay đổi trước khi hoàn tác.",
+  "history.undo.noBeforeImage":
+    "Thay đổi này không ghi lại giá trị trước đó của bản ghi, nên không có gì để hoàn tác.",
+  "history.undo.notReplayable": "Loại thay đổi này không được phát ngược lại.",
+  "history.undo.unsupportedRecordType":
+    "Không thể hoàn tác thay đổi trên loại bản ghi này.",
+  "history.undo.superseded":
+    "Đã có người sửa các trường này sau đó. Hoàn tác sẽ xoá cả quyết định của họ.",
+  "history.undo.behindErasureBoundary":
+    "Thay đổi này nằm sau một lần xoá dữ liệu, nội dung của nó đã bị xoá vĩnh viễn.",
+  "history.undo.alreadyUndone": "Thay đổi này đã được hoàn tác.",
+  "history.undo.notRestorableByThisPath":
+    "Các trường này không được ghi qua đường mà thao tác hoàn tác đi.",
+  "history.undo.recordArchived":
+    "Bản ghi đang được lưu trữ. Hãy khôi phục bản ghi trước khi hoàn tác một thay đổi.",
+  "history.undo.nullUnwritable":
+    "Hoàn tác sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống, nên sẽ báo thành công mà không đổi gì.",
+  "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
   "history.field.address": "Địa chỉ",
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",
