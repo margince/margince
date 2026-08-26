@@ -70,12 +70,19 @@ func clampEchoedType(got string) string {
 // AlreadyFiledError is a file whose bytes are already in this corpus.
 //
 // It names the document that holds them, because the useful answer to "why was
-// my upload refused" is "you already uploaded it, it is called X".
+// my upload refused" is "you already uploaded it, it is called X". The name is
+// empty only when two identical uploads raced and the index refused the second.
 type AlreadyFiledError struct {
 	Filename string
 }
 
 func (e *AlreadyFiledError) Error() string {
+	if e.Filename == "" {
+		// The name is unknown only on the racing path, where the index refused
+		// the second of two simultaneous uploads and the transaction that would
+		// have read it is already aborted.
+		return "these exact bytes are already filed in this set"
+	}
 	return fmt.Sprintf("these exact bytes are already filed in this set as %q", e.Filename)
 }
 
@@ -191,6 +198,19 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 			   (id, corpus_id, filename, content_type, byte_size, storage_key, checksum, captured_by)
 			 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
 			id, in.CorpusID, in.Filename, media, size, key, checksum, by); err != nil {
+			// The index catching what the read above could not: two uploads of
+			// identical bytes can both pass that read before either commits.
+			// The loser gets the SAME refusal the reader would have given,
+			// rather than a constraint name.
+			//
+			// Without the winner's NAME, and that is not a shortcut: this
+			// transaction is already aborted by the violation, so a query for
+			// it here would fail. The name is what the ordinary path supplies;
+			// this path is the rare one, and saying less is better than
+			// failing differently.
+			if storekit.IsUniqueViolation(err) {
+				return &AlreadyFiledError{}
+			}
 			return fmt.Errorf("insert corpus document: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "knowledge_document", id, nil, map[string]any{

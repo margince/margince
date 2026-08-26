@@ -2147,6 +2147,7 @@ public.knowledge_document.knowledge_document_touch CREATE TRIGGER knowledge_docu
 public.knowledge_document.storage_key text NOT NULL gen=- def=-
 public.knowledge_document.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.knowledge_document_by_corpus CREATE INDEX knowledge_document_by_corpus ON public.knowledge_document USING btree (corpus_id, archived_at)
+public.knowledge_document_one_per_content CREATE UNIQUE INDEX knowledge_document_one_per_content ON public.knowledge_document USING btree (corpus_id, checksum) WHERE (archived_at IS NULL)
 public.knowledge_document_pkey CREATE UNIQUE INDEX knowledge_document_pkey ON public.knowledge_document USING btree (id)
 public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at)
