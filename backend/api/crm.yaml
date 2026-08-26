@@ -15299,13 +15299,7 @@ paths:
           description: The corpora.
           content:
             application/json:
-              schema:
-                type: object
-                required: [items]
-                properties:
-                  items:
-                    type: array
-                    items: { $ref: '#/components/schemas/KnowledgeCorpus' }
+              schema: { $ref: '#/components/schemas/KnowledgeCorpusList' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
     post:
@@ -15418,13 +15412,7 @@ paths:
           description: The documents.
           content:
             application/json:
-              schema:
-                type: object
-                required: [items]
-                properties:
-                  items:
-                    type: array
-                    items: { $ref: '#/components/schemas/KnowledgeDocument' }
+              schema: { $ref: '#/components/schemas/KnowledgeDocumentList' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -29080,6 +29068,25 @@ components:
         coverage: { $ref: '#/components/schemas/KnowledgeCoverage' }
         created_at: { type: string, format: date-time }
 
+    KnowledgeCorpusList:
+      type: object
+      description: >-
+        Every corpus, unpaged. A workspace defines these by hand, in ones and
+        twos, and the screen shows all of them — a cursor here would be a
+        promise with no producer behind it.
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/KnowledgeCorpus' }
+    KnowledgeDocumentList:
+      type: object
+      description: Every document filed in one corpus, whatever state its ingest reached.
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/KnowledgeDocument' }
     KnowledgeCoverage:
       type: object
       required: [chunks_total, chunks_embedded, documents_total]
