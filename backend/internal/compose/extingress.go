@@ -351,7 +351,15 @@ func refuseUnitIdentity(unit, provider string) error {
 // system half is core-derived, so two units — or one unit and a core connector
 // — can never collide in it whatever they name their records.
 func (r *callRuntime) naturalKey(rec extension.Record) connector.NaturalKey {
-	return connector.NaturalKey{SourceSystem: r.sourceSystem(rec.System), SourceID: rec.Key}
+	return connector.NaturalKey{
+		SourceSystem: r.sourceSystem(rec.System),
+		SourceID:     rec.Key,
+		// Carried from the unit's own answer rather than inferred here: a key
+		// is opaque to the core, and the trace used to guess at it from how the
+		// record named its counterparty — which had one unit's direct messages
+		// hashed and its mentions not, on identical key semantics.
+		SourceIDNamesAPerson: rec.KeyNamesAPerson,
+	}
 }
 
 func (r *callRuntime) sourceSystem(system string) string {

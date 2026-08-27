@@ -198,6 +198,25 @@ type NormalizedRecord struct {
 type NaturalKey struct {
 	SourceSystem string
 	SourceID     string
+
+	// SourceIDNamesAPerson reports that SourceID embeds the provider's
+	// identifier for a HUMAN — a chat id that is the customer's own account id,
+	// say — rather than naming a message, an event or a notification.
+	//
+	// It decides whether the pipeline trace stores the id or a hash of it, and
+	// it is declared HERE because the producer is the only party that knows.
+	// The trace used to infer it from how the record named its counterparty,
+	// which is a different question with a different answer: a connector whose
+	// key is a notification id on every branch, and which names some
+	// counterparties by a channel account and others by an address, had half
+	// its traces hashed and half not (issue #1465). Neither half was wrong
+	// about privacy and both were wrong about the key.
+	//
+	// False is the ordinary case and the zero value on purpose: a message id is
+	// what a natural key almost always is, and it is what ADR-0082 §1 permits a
+	// trace to record — it identifies a message rather than a person, and it is
+	// what makes a support question answerable.
+	SourceIDNamesAPerson bool
 }
 
 type (

@@ -202,7 +202,17 @@ func Normalize(_ context.Context, raw connector.RawRecord) ([]connector.Normaliz
 
 	return []connector.NormalizedRecord{{
 		EntityType: datasource.EntityActivity,
-		NaturalKey: connector.NaturalKey{SourceSystem: Provider, SourceID: naturalID},
+		NaturalKey: connector.NaturalKey{
+			SourceSystem: Provider,
+			SourceID:     naturalID,
+			// A private chat's id IS the human's own Telegram account id, which
+			// this key embeds — so the pipeline trace stores a hash of it. Set
+			// unconditionally rather than per chat type: a group chat's id is
+			// not an account, but a connector that hashed only some of its keys
+			// would answer "was this hashed" with the chat's shape, which is
+			// the inference this field exists to replace.
+			SourceIDNamesAPerson: true,
+		},
 		Fields: ActivityFields{
 			// The two axes, stated separately (ADR-0107/A158): WHAT happened is
 			// a message, WHAT CARRIED IT is telegram. They were briefly spelled
