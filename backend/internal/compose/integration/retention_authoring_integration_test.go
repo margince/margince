@@ -608,3 +608,65 @@ func TestRetentionAnonymizesAnUnattachedPersonAndArchivesAnAgedNote(t *testing.T
 		t.Error("the 1200-day internal note was not archived by the bare activity policy")
 	}
 }
+
+// The clock must reach the same LinkedIn ghosts a request-driven erasure does.
+// It used to reach fewer: the sweep carried its own copy of the ghost predicate
+// and the copy had drifted, missing the profile-URL arm entirely and comparing
+// an employer only for equality where the eraser also matches a longer name.
+// Both gaps left a third party's name, employer and profile standing after the
+// installation's own clock said the subject was gone — data imported from a
+// colleague's export without that person ever being asked.
+func TestTheClockReachesEveryLinkedInGhostAnErasureWould(t *testing.T) {
+	e := Setup(t)
+	SeedRetentionPolicies(t, e)
+
+	personID, orgID := ids.NewV7(), ids.NewV7()
+	byURL, bySuffix, stranger := ids.NewV7(), ids.NewV7(), ids.NewV7()
+	const handle = "https://linkedin.com/in/old-contact"
+
+	e.WsExec(t, `INSERT INTO person (id, full_name, first_name, last_name, source, captured_by, created_at)
+		VALUES ($1, 'Old Contact', 'Old', 'Contact', 'manual', 'human:x', now() - interval '800 days')`, personID)
+	// The subject's LinkedIn address lives here, and the sweep clears this
+	// table on its way past — so the handles have to be read before it does.
+	e.WsExec(t, `INSERT INTO person_social (person_id, platform, handle)
+		VALUES ($1, 'linkedin', $2)`, personID, handle)
+	// An employer whose display name is LONGER than the ghost's company text,
+	// which is the shape the equality-only copy could not match.
+	e.WsExec(t, `INSERT INTO organization (id, display_name, source, captured_by)
+		VALUES ($1, 'Acme GmbH', 'manual', 'human:x')`, orgID)
+	e.WsExec(t, `INSERT INTO relationship (kind, person_id, organization_id, source, captured_by)
+		VALUES ('employment', $1, $2, 'manual', 'human:x')`, personID, orgID)
+
+	ghost := `INSERT INTO linkedin_connection
+		  (id, owner_user_id, full_name, normalized_name, company_name, normalized_company,
+		   email, profile_url, source)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'csv_export')`
+	// Reachable ONLY by the subject's profile URL: no match, no address, no name.
+	e.WsExec(t, ghost, byURL, e.Rep1, "Someone Else", "someone else", nil, nil, nil, handle)
+	// Reachable ONLY through the employer's longer name.
+	e.WsExec(t, ghost, bySuffix, e.Rep1, "Old Contact", "old contact", "Acme", "acme", nil, nil)
+	// A stranger neither path should ever touch — the guard on a delete this
+	// wide is that it stays bounded to the subject.
+	e.WsExec(t, ghost, stranger, e.Rep1, "Nobody Related", "nobody related", "Other", "other", nil, nil)
+
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(os.Stderr, nil)))
+	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
+		t.Fatal(err)
+	}
+
+	alive := func(id ids.UUID) int {
+		return e.WsCount(t, `SELECT count(*) FROM linkedin_connection WHERE id = $1`, id)
+	}
+	if n := alive(byURL); n != 0 {
+		t.Errorf("the ghost carrying the subject's profile URL survived the clock (%d row(s)) — "+
+			"an erasure would have taken it", n)
+	}
+	if n := alive(bySuffix); n != 0 {
+		t.Errorf("the ghost naming the subject at %q survived the clock (%d row(s)) — "+
+			"the employer's display name is longer than the ghost's company text, "+
+			"which an equality-only match cannot see", "Acme GmbH", n)
+	}
+	if n := alive(stranger); n != 1 {
+		t.Errorf("the unrelated ghost was deleted (%d row(s) left) — the sweep must stay bounded to the subject", n)
+	}
+}

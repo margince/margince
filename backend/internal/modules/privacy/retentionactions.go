@@ -307,6 +307,14 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// again, not by an old token in an old mailbox still working.
 		_, err = tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE person_id = $1`, id)
 	}
+	// Read BEFORE the delete below, for the reason the eraser gives at its own
+	// copy of this: the LinkedIn ghost sweep identifies rows by this address,
+	// and person_social is about to stop holding it.
+	var linkedInHandles []string
+	if err == nil {
+		linkedInHandles, err = collectStrings(ctx, tx,
+			`SELECT handle FROM person_social WHERE person_id = $1 AND platform = 'linkedin'`, id)
+	}
 	if err == nil {
 		_, err = tx.Exec(ctx, `DELETE FROM person_social WHERE person_id = $1`, id)
 	}
@@ -375,7 +383,7 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 			DELETE FROM capture_pending_counterparty WHERE email = ANY($1)`, subjectEmails)
 	}
 	if err == nil {
-		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName)
+		err = scrubPersonGraphTraces(ctx, tx, id, subjectEmails, subjectName, linkedInHandles)
 	}
 	return err
 }
