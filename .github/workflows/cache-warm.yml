@@ -85,9 +85,25 @@ jobs:
       # against a design note that described it as ~550 MB. Eleven Go jobs
       # restore it per run, and the restore alone was 6m35s of a 13m merge gate.
       #
-      # Compiled from cold, what this saves is exactly the working set of the
-      # lane it mirrors — bounded by the build rather than by history. The cold
-      # compile costs THIS job, which is scheduled and which nobody waits on.
+      # Compiled from an empty GOCACHE (the step above; skipping the restore here
+      # is necessary but NOT sufficient, because setup-go restores one too), what
+      # this saves is exactly the working set of the lane it mirrors — bounded by
+      # the build rather than by history. The cold compile costs THIS job, which
+      # is scheduled and which nobody waits on.
+      # setup-go restores a build cache of its own — small (~25 MB) but not
+      # nothing, and it lands in GOCACHE before anything here runs. Without this
+      # the entry saved below would carry those artifacts forward, which is the
+      # accumulation this job exists to stop, just with a smaller seed.
+      #
+      # `go clean -cache` rather than `cache: false` on setup-go: only the BUILD
+      # cache has to be cold. Turning setup-go's caching off entirely would also
+      # drop the module cache and make this job re-download every dependency to
+      # produce the same artifacts.
+      - name: Start from an empty build cache
+        shell: bash
+        run: |
+          go clean -cache
+          echo "GOCACHE is $(go env GOCACHE), now $(du -sm "$(go env GOCACHE)" 2>/dev/null | cut -f1 || echo 0) MB"
       - name: Compute the Go build cache key (this job writes it, never reads it)
         id: go-cache
         uses: ./.github/actions/go-build-cache
@@ -149,6 +165,20 @@ jobs:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
       # Key only, for the reason spelled out on the `plain` job above.
+      # setup-go restores a build cache of its own — small (~25 MB) but not
+      # nothing, and it lands in GOCACHE before anything here runs. Without this
+      # the entry saved below would carry those artifacts forward, which is the
+      # accumulation this job exists to stop, just with a smaller seed.
+      #
+      # `go clean -cache` rather than `cache: false` on setup-go: only the BUILD
+      # cache has to be cold. Turning setup-go's caching off entirely would also
+      # drop the module cache and make this job re-download every dependency to
+      # produce the same artifacts.
+      - name: Start from an empty build cache
+        shell: bash
+        run: |
+          go clean -cache
+          echo "GOCACHE is $(go env GOCACHE), now $(du -sm "$(go env GOCACHE)" 2>/dev/null | cut -f1 || echo 0) MB"
       - name: Compute the Go build cache key (this job writes it, never reads it)
         id: go-cache
         uses: ./.github/actions/go-build-cache
