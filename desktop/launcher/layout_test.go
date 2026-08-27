@@ -194,6 +194,11 @@ func TestConfiguredAdminEmailFallsBackRatherThanFailing(t *testing.T) {
 		// bootstrap_admin.contact.email is not bootstrap_admin.email. Announcing
 		// a nested address would name an account nothing bootstrapped.
 		"only a nested email": ptr("bootstrap_admin:\n  contact:\n    email: ops@demo.test\n"),
+		// A double-quoted scalar may carry YAML escapes, and decoding them is a
+		// parser's job. Returning the literal would announce an address nothing
+		// bootstrapped, so an escaped value is declined.
+		"a double-quoted value carrying an escape": ptr(
+			"bootstrap_admin:\n  email: \"admin\\u0040demo.test\"\n"),
 	} {
 		t.Run(name, func(t *testing.T) {
 			l := newTestLayout(t)

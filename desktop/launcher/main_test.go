@@ -47,12 +47,15 @@ func capture(t *testing.T, run func()) string {
 	}
 	saved := os.Stdout
 	os.Stdout = write
-	done := make(chan string, 1)
+	type read1 struct {
+		text string
+		err  error
+	}
+	done := make(chan read1, 1)
 	go func() {
 		var buf bytes.Buffer
-		//craft:ignore swallowed-errors a copy from a pipe this test owns; a short read shows up as a failed assertion on the text
-		_, _ = io.Copy(&buf, read)
-		done <- buf.String()
+		_, err := io.Copy(&buf, read)
+		done <- read1{text: buf.String(), err: err}
 	}()
 
 	run()
@@ -61,5 +64,11 @@ func capture(t *testing.T, run func()) string {
 	if err := write.Close(); err != nil {
 		t.Fatalf("close the write end: %v", err)
 	}
-	return <-done
+	// A partial copy would otherwise read as an absent line, failing the caller's
+	// assertion for a reason that has nothing to do with what was printed.
+	got := <-done
+	if got.err != nil {
+		t.Fatalf("read the captured console: %v", got.err)
+	}
+	return got.text
 }

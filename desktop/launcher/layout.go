@@ -185,7 +185,15 @@ func scalarValue(rest string) string {
 		if closing < 0 {
 			return ""
 		}
-		return rest[1 : 1+closing]
+		value := rest[1 : 1+closing]
+		// A double-quoted scalar may carry escapes, and `"admin@demo.test"`
+		// is a legal spelling of an ordinary address. Decoding them is a YAML
+		// parser's job, so an escaped value is declined outright: the default is
+		// a reader's own address, where a half-decoded one is nobody's.
+		if quote == '"' && strings.ContainsRune(value, '\\') {
+			return ""
+		}
+		return value
 	}
 	for i := 1; i < len(rest); i++ {
 		if rest[i] == '#' && (rest[i-1] == ' ' || rest[i-1] == '\t') {
