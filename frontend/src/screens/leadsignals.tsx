@@ -39,7 +39,7 @@ const SIGNAL_KINDS: readonly SignalKind[] = ["fact", "assumption", "judgement"];
 const CONFIDENCE_LEVELS = ["0.5", "0.7", "0.9", "1"] as const;
 
 /**
- * What the wire carries when the rep never opens "More…".
+ * What the wire carries when the rep never opens "More".
  *
  * `assumption`, not `fact`: the three questions ask what a rep believes about
  * an account, not what they can show. Recording an unqualified answer as a
@@ -79,7 +79,7 @@ const NO_ANSWERS: Answers = {
  *
  * The form asks the three plain questions and nothing else. Evidence quality
  * and confidence still reach the wire, because they are what makes a manual
- * signal auditable, but they sit behind "More…" with the defaults above: a
+ * signal auditable, but they sit behind "More" with the defaults above: a
  * form that opens by asking a rep to grade their own evidence is a form a rep
  * abandons.
  *

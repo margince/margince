@@ -4,10 +4,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { useRoster } from "./entityref";
 import { leadWriteKeys } from "./leadkeys";
@@ -60,10 +61,15 @@ export function LeadBulkBar({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const queryClient = useQueryClient();
   const [ownerId, setOwnerId] = useState("");
   const roster = useRoster("user", true);
   const [reasonId, setReasonId] = useState("");
+  // The batch confirm's own open state. It is not part of the run's state:
+  // a refused batch leaves the bar showing what failed, with the dialog
+  // already gone.
+  const [confirming, setConfirming] = useState(false);
   const reasons = useLeadDisqualifyReasons();
   const [outcomes, setOutcomes] = useState<readonly BulkOutcome[]>([]);
 
@@ -177,7 +183,12 @@ export function LeadBulkBar({
   // The reason is read where the CLICK happens and travels as the mutation's
   // variable, so what reaches every row's DELETE is the reason that was on
   // screen when the reader pressed the verb.
-  const disqualify = () => run.mutate({ kind: "disqualify", reasonId });
+  const disqualify = () => {
+    setConfirming(false);
+    run.mutate({ kind: "disqualify", reasonId });
+  };
+  const reasonLabel =
+    activeReasons.find((reason) => reason.id === reasonId)?.label ?? "";
 
   const failed = outcomes.filter((o) => o.error);
   return (
@@ -224,12 +235,32 @@ export function LeadBulkBar({
         // dialog: a batch closed with no reason is exactly what the
         // administered list exists to prevent.
         reason={reasonId ? undefined : t("lead.disqualify.reasonRequired")}
-        onClick={disqualify}
+        onClick={() => setConfirming(true)}
       >
         {t("lead.bulkDisqualify")}
       </Button>
+      {/* Closing one lead opens a dialog; closing forty from a toolbar used to
+          fire on the press. The batch is the LESS reversible of the two — the
+          reader cannot see the rows they are about to close, only a count —
+          so it asks the same question, and names the reason it is about to
+          write on all of them. */}
+      <ConfirmModal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={plural("lead.bulkDisqualifyTitle", leads.length, {
+          count: formatNumber(leads.length, locale),
+        })}
+        confirmLabel={t("lead.bulkDisqualify")}
+        confirmVariant="danger"
+        onConfirm={disqualify}
+        pending={run.isPending}
+      >
+        <p className="t-small">
+          {t("lead.bulkDisqualifyBody", { reason: reasonLabel })}
+        </p>
+      </ConfirmModal>
       {failed.length > 0 && (
-        <span className="t-caption" style={{ color: "var(--danger)" }}>
+        <span className="t-caption t-danger">
           {t("lead.bulkFailed", {
             count: formatNumber(failed.length, locale),
           })}{" "}

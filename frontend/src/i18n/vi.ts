@@ -304,7 +304,7 @@ export const vi = {
   "record.edit": "Sửa",
   "record.save": "Lưu",
   "record.archive": "Lưu trữ",
-  "record.disqualify": "Loại…",
+  "record.disqualify": "Loại",
   "record.archiveConfirm":
     "Bạn chắc chứ? Thao tác này lưu trữ bản ghi — không có nút hoàn tác.",
   "record.archived": "Đã lưu trữ",
@@ -1690,7 +1690,7 @@ export const vi = {
     "Khách hàng tiềm năng được chờ bao lâu cho phản hồi đầu tiên sau khi được phân (hoặc tạo). Từ 15 phút đến 7 ngày.",
   "lead.boardCount": "{count} lead",
   "lead.duplicateFound": "Đã có lead với email hoặc hồ sơ LinkedIn này.",
-  "lead.promote": "Đủ điều kiện…",
+  "lead.promote": "Đủ điều kiện",
   "lead.promoteIneligible": "cần địa chỉ email và trạng thái đang mở",
   "lead.filterStatus": "Trạng thái",
   "lead.filterStatusAll": "Tất cả trạng thái",
@@ -1700,7 +1700,13 @@ export const vi = {
   "lead.bulkOwner": "Người phụ trách mới",
   "lead.bulkOwnerPick": "Chọn người phụ trách",
   "lead.bulkAssign": "Gán",
-  "lead.bulkDisqualify": "Loại",
+  "lead.bulkDisqualify": "Lo\u1ea1i",
+  "lead.bulkDisqualifyTitle_one":
+    "Lo\u1ea1i kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y?",
+  "lead.bulkDisqualifyTitle_other":
+    "Lo\u1ea1i {count} kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng?",
+  "lead.bulkDisqualifyBody":
+    "\u0110\u00f3ng v\u1edbi l\u00fd do \u201c{reason}\u201d. M\u1ed7i kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng v\u1eabn gi\u1eef h\u1ed3 s\u01a1 ri\u00eang, v\u00e0 kh\u00f4ng c\u00f3 m\u1ed9t b\u01b0\u1edbc n\u00e0o ho\u00e0n t\u00e1c t\u1ea5t c\u1ea3.",
   "lead.bulkFailed": "{count} không áp dụng được —",
   "lead.bulkFailedRow": "không lưu được",
   "lead.bulkSelectRow": "Chọn {name}",
@@ -1794,7 +1800,7 @@ export const vi = {
   "lead.signalUnset": "Chưa nhập",
   "lead.signalClear": "Rút lại",
   "lead.signalBandPick": "Chọn giá trị",
-  "lead.signalMore": "Thêm…",
+  "lead.signalMore": "Thêm",
   "lead.signalProvenanceHint":
     "Nếu không thay đổi, câu trả lời được lưu là ước tính và không nêu độ tin cậy.",
   "lead.signalEvidenceQuality": "Thông tin này đáng tin đến mức nào?",

@@ -22,6 +22,7 @@ export function ConfirmModal({
   confirmLabel,
   confirmVariant = "primary",
   confirmDisabled = false,
+  confirmReason,
   onConfirm,
   pending,
   error,
@@ -55,6 +56,13 @@ export function ConfirmModal({
   // native `disabled` and a busy announcement — a control that has lost focus
   // telling a reader who is no longer on it that their write is going.
   confirmDisabled?: boolean;
+  // Why the confirm is refused, when the reason is a sentence rather than a
+  // state. `Button`'s own `reason` does the work — it disables the control,
+  // prints the sentence beside it and points `aria-describedby` at it — which
+  // `confirmDisabled` alone cannot: a dialog whose confirm is dead with no
+  // explanation is a dead end, and a `title` on a disabled button reaches
+  // nobody. Pass this instead of `confirmDisabled`, not as well.
+  confirmReason?: string;
   onConfirm: () => void;
   pending?: boolean;
   error?: string | null;
@@ -115,6 +123,7 @@ export function ConfirmModal({
           onClick={onConfirm}
           pending={pending}
           disabled={confirmDisabled}
+          reason={confirmReason}
         >
           {confirmLabel}
         </Button>

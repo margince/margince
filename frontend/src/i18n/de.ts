@@ -300,7 +300,7 @@ export const de = {
   "record.edit": "Bearbeiten",
   "record.save": "Speichern",
   "record.archive": "Archivieren",
-  "record.disqualify": "Disqualifizieren…",
+  "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
     "Bist du sicher? Das archiviert den Datensatz — es gibt keine Rückgängig-Funktion.",
   "record.archived": "Archiviert",
@@ -1697,7 +1697,7 @@ export const de = {
   "lead.boardCount": "{count} Leads",
   "lead.duplicateFound":
     "Ein Lead mit dieser E-Mail oder diesem LinkedIn-Profil existiert bereits.",
-  "lead.promote": "Qualifizieren…",
+  "lead.promote": "Qualifizieren",
   "lead.promoteIneligible":
     "braucht eine E-Mail-Adresse und einen offenen Status",
   "lead.filterStatus": "Status",
@@ -1709,6 +1709,10 @@ export const de = {
   "lead.bulkOwnerPick": "Verantwortlichen wählen",
   "lead.bulkAssign": "Zuweisen",
   "lead.bulkDisqualify": "Disqualifizieren",
+  "lead.bulkDisqualifyTitle_one": "Diesen Lead disqualifizieren?",
+  "lead.bulkDisqualifyTitle_other": "{count} Leads disqualifizieren?",
+  "lead.bulkDisqualifyBody":
+    "Geschlossen mit dem Grund \u201e{reason}\u201c. Jeder Lead beh\u00e4lt seinen eigenen Datensatz, und es gibt keinen einzelnen Schritt zur\u00fcck.",
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
   "lead.bulkSelectRow": "{name} auswählen",
@@ -1803,7 +1807,7 @@ export const de = {
   "lead.signalUnset": "Nicht erfasst",
   "lead.signalClear": "Zurückziehen",
   "lead.signalBandPick": "Wert wählen",
-  "lead.signalMore": "Mehr …",
+  "lead.signalMore": "Mehr",
   "lead.signalProvenanceHint":
     "Unverändert wird eine Antwort als Schätzung ohne Konfidenzangabe festgehalten.",
   "lead.signalEvidenceQuality": "Wie verlässlich ist das?",

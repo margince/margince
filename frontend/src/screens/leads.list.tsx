@@ -50,11 +50,13 @@ import {
   useOwnerChips,
 } from "./listquery";
 import {
+  createdColumn,
   lastActivityColumn,
   mineEmptyNote,
   ownerColumn,
   standardViews,
 } from "./recordlist";
+import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
@@ -214,6 +216,7 @@ function LeadsWorkbench({
   opensOnAll,
 }: Readonly<{ viewerId: string; opensOnAll: boolean }>) {
   const ownerChips = useOwnerChips();
+  const savedViews = useSavedViewTabs("leads");
   const roster = useRoster("user", true);
   const t = useT();
   const { locale } = useLocale();
@@ -283,38 +286,23 @@ function LeadsWorkbench({
   ];
 
   return (
-    <div className="wrap lead-surface">
+    <div className="wrap lead-surface lead-queue">
       {!noteDismissed && (
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <Callout tone="info">
-            {t("lead.segregation")}{" "}
-            <Button
-              small
-              data-testid="lead-segregation-dismiss"
-              onClick={() => {
-                window.localStorage.setItem(SEGREGATION_NOTE_KEY, "1");
-                setNoteDismissed(true);
-              }}
-            >
-              {t("lead.segregationDismiss")}
-            </Button>
-          </Callout>
-        </div>
+        <Callout tone="info">
+          {t("lead.segregation")}{" "}
+          <Button
+            small
+            data-testid="lead-segregation-dismiss"
+            onClick={() => {
+              window.localStorage.setItem(SEGREGATION_NOTE_KEY, "1");
+              setNoteDismissed(true);
+            }}
+          >
+            {t("lead.segregationDismiss")}
+          </Button>
+        </Callout>
       )}
       <ToastRegion toast={toast} />
-      {!overlay && (
-        <div style={{ marginBottom: "var(--space-3)" }}>
-          <SegmentedControl
-            options={["table", "board"] as const}
-            value={view}
-            onChange={setView}
-            labels={{
-              table: t("deals.viewTable"),
-              board: t("deals.viewBoard"),
-            }}
-          />
-        </div>
-      )}
       <ListTable
         emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })}
         // The board renders INSIDE the surface, so the search, the chips and
@@ -381,6 +369,10 @@ function LeadsWorkbench({
                 </span>
               );
             },
+            // `full_name` is in the server's lead sort vocabulary, so the
+            // header is live and the attribute joins the sort menu — the same
+            // A–Z route the contacts list offers.
+            sort: "full_name",
             fixed: true,
           },
           {
@@ -451,6 +443,7 @@ function LeadsWorkbench({
             ),
           },
           ownerColumn<Lead>(t),
+          createdColumn<Lead>(t, locale, recordZone),
         ]}
         rowKey={(lead) => lead.id}
         selection={{
@@ -585,7 +578,33 @@ function LeadsWorkbench({
                 },
               ]
             : []),
+          { label: "list.viewAZ", sort: "full_name" },
         ]}
+        // The reader's own saved narrowings, beside the presets above. Leads
+        // was the one record list without them, while the contract has
+        // carried `leads` in the saved-view vocabulary all along.
+        dataViews={savedViews}
+        tools={
+          <>
+            {/* Board or table is how the SAME rows are drawn, so it belongs
+                with the drawing dials rather than above the surface — the
+                slot the deals screen's pipeline picker already uses. The
+                mirror refuses the board's status write, so overlay gets the
+                table and no toggle. */}
+            {!overlay && (
+              <SegmentedControl
+                options={["table", "board"] as const}
+                value={view}
+                onChange={setView}
+                labels={{
+                  table: t("deals.viewTable"),
+                  board: t("deals.viewBoard"),
+                }}
+              />
+            )}
+            <SaveViewAction resource="leads" query={state.query} />
+          </>
+        }
       />
     </div>
   );

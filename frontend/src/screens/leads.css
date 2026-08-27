@@ -2,6 +2,16 @@
   min-width: 0;
 }
 
+/* The queue page's own stack: the segregation notice, the toast region and
+   the surface, with one interval between them. It is a stack rather than a
+   margin on each child so that a child which is not rendered — a dismissed
+   notice, an overlay with no toggle — leaves no gap behind it. */
+.lead-queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
 .lead-email {
   min-width: 0;
   max-width: 100%;
@@ -41,7 +51,7 @@
 }
 
 .lead-ladder-sep {
-  color: var(--color-text-muted, inherit);
+  color: var(--textMeta);
   margin-right: var(--space-1);
 }
 

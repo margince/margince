@@ -1,9 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Button, Field, Modal, Textarea } from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { Field, Textarea } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
@@ -30,7 +30,6 @@ export function DisqualifyDialog({
   onDisqualified: (closed: Lead) => void;
 }>) {
   const t = useT();
-  const headingId = useId();
   const queryClient = useQueryClient();
   const reasons = useLeadDisqualifyReasons();
   const [reasonId, setReasonId] = useState("");
@@ -68,14 +67,21 @@ export function DisqualifyDialog({
   const name = leadIdentityName(lead);
 
   return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
-        {t("lead.disqualify.title", { name })}
-      </h2>
+    <ConfirmModal
+      open={open}
+      onClose={close}
+      title={t("lead.disqualify.title", { name })}
+      confirmLabel={t("lead.disqualify.confirm")}
+      confirmVariant="danger"
+      // Required, and said so: a closed lead with no reason is what the
+      // administered list exists to prevent.
+      confirmReason={reasonId ? undefined : t("lead.disqualify.reasonRequired")}
+      onConfirm={() => disqualify.mutate()}
+      pending={disqualify.isPending}
+      error={
+        disqualify.isError ? problemMessageOf(disqualify.error, t) : undefined
+      }
+    >
       <div className="lead-qualify">
         <Field label={t("lead.disqualify.reason")} required>
           {(control) => (
@@ -100,35 +106,7 @@ export function DisqualifyDialog({
             />
           )}
         </Field>
-        {disqualify.isError && (
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(disqualify.error, t)}
-          </Callout>
-        )}
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Button small onClick={close} disabled={disqualify.isPending}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            small
-            variant="danger"
-            data-testid="lead-disqualify-confirm"
-            // Required, and said so: a closed lead with no reason is what the
-            // list exists to prevent.
-            reason={reasonId ? undefined : t("lead.disqualify.reasonRequired")}
-            disabled={disqualify.isPending}
-            onClick={() => disqualify.mutate()}
-          >
-            {t("lead.disqualify.confirm")}
-          </Button>
-        </div>
       </div>
-    </Modal>
+    </ConfirmModal>
   );
 }
