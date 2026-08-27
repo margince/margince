@@ -163,6 +163,34 @@ func technicalDelta(field, valueKey, value string) map[string]any {
 	}
 }
 
+// withoutHumanSettledFields drops every observation for a single-valued field
+// a human already answered.
+//
+// Only single-valued fields: a person confirming one operated service says
+// nothing about whether the company also runs another, so a multi-valued
+// field keeps taking new rows beside the one they hold.
+func withoutHumanSettledFields(
+	in TechnicalEnrichment, held []heldFact,
+) TechnicalEnrichment {
+	settled := map[string]bool{}
+	for _, fact := range held {
+		if fact.HumanHeld && singleValuedTechnicalFields[fact.Field] {
+			settled[fact.Field] = true
+		}
+	}
+	if len(settled) == 0 {
+		return in
+	}
+	kept := make([]TechnicalObservation, 0, len(in.Observations))
+	for _, observation := range in.Observations {
+		if !settled[observation.Field] {
+			kept = append(kept, observation)
+		}
+	}
+	in.Observations = kept
+	return in
+}
+
 // technicalChanges is the difference between what the record held and what the
 // lookup read, in the words a company event will use.
 //

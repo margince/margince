@@ -202,6 +202,15 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 	if err != nil {
 		return err
 	}
+	// A single-valued field a human has answered is settled, and the lookup
+	// yields the WHOLE field rather than only the row it collides with.
+	//
+	// The row-level guard alone is not enough here: a person who corrected the
+	// mail provider to `self_hosted` holds that row, and a later reading of
+	// `microsoft365` is a different value_key — so it would insert BESIDE
+	// their answer and the record would claim two mail systems, one of them
+	// the one a person had just rejected.
+	in = withoutHumanSettledFields(in, held)
 	written, err := writeTechnicalFacts(ctx, tx, in)
 	if err != nil {
 		return err

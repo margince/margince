@@ -116,17 +116,21 @@ func OperatedServices(domain string, hostnames []string) []Signal {
 		if hostname == "" || hostname == domain {
 			continue
 		}
-		label, _, found := strings.Cut(strings.TrimSuffix(hostname, "."+domain), ".")
-		if !found {
-			// A single-label subdomain: the whole remainder IS the label.
-			label = strings.TrimSuffix(hostname, "."+domain)
+		// EXACTLY ONE label under the domain, and that is the privacy rule
+		// rather than a tidiness one. Reading only the first label of a deeper
+		// name admits `shop.jan-mueller.example.de` as a webshop and then
+		// stores the whole hostname — a person's name — as the evidence that
+		// proved it. A service a company operates is published at one label;
+		// anything deeper is somebody's box.
+		sub := strings.TrimSuffix(hostname, "."+domain)
+		if sub == hostname || strings.Contains(sub, ".") {
+			continue
 		}
-		service, allowed := serviceLabelAllowlist[label]
+		service, allowed := serviceLabelAllowlist[sub]
 		if !allowed {
 			continue
 		}
-		// The shortest proving hostname wins, so `shop.example.de` is cited
-		// rather than `shop.staging.old.example.de` when both exist.
+		// The shortest proving hostname wins among equals.
 		if existing, seen := best[service]; !seen || len(hostname) < len(existing) {
 			best[service] = hostname
 		}

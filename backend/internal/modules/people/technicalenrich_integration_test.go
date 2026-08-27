@@ -418,3 +418,103 @@ func TestTheLaneLedgerRecordsEachSourceSeparately(t *testing.T) {
 		}
 	}
 }
+
+// TestAHumanAnswerSettlesTheWholeSingleValuedField is the cross-key half of
+// precedence, and the row-level guard does not cover it.
+//
+// A person who corrects the mail provider holds THAT row. A later reading of a
+// different provider is a different value_key, so an upsert guarded only on
+// the row would insert beside their answer — and the record would then claim
+// two mail systems, one of them the one a person had just rejected.
+func TestAHumanAnswerSettlesTheWholeSingleValuedField(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	orgID := seedTechnicalOrg(ctx, t, e, "Entschieden GmbH", "entschieden.de")
+
+	read := TechnicalEnrichment{
+		OrganizationID: orgID,
+		Completed:      []TechnicalLane{LaneDNS},
+		Observations:   []TechnicalObservation{observation(FactMailProvider, "google_workspace", "Google Workspace")},
+		ObservedAt:     technicalObservedAt,
+	}
+	if err := e.store.ApplyTechnicalEnrichment(ctx, read, nil); err != nil {
+		t.Fatalf("apply the machine reading: %v", err)
+	}
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		_, err := tx.Exec(ctx, `
+			UPDATE organization_fact
+			   SET value = 'Eigener Mailserver', captured_by = 'human:' || $2, source = 'human'
+			 WHERE organization_id = $1 AND field = $3`,
+			orgID, e.rep.String(), FactMailProvider)
+		return err
+	}); err != nil {
+		t.Fatalf("record the human's correction: %v", err)
+	}
+
+	// The next pass reads a DIFFERENT provider — a new value_key, so it misses
+	// the row-level guard entirely.
+	moved := read
+	moved.Observations = []TechnicalObservation{observation(FactMailProvider, "microsoft365", "Microsoft 365")}
+	moved.ObservedAt = technicalObservedAt.Add(time.Hour)
+	if err := e.store.ApplyTechnicalEnrichment(ctx, moved, nil); err != nil {
+		t.Fatalf("apply the later reading: %v", err)
+	}
+
+	held := technicalFactsOf(ctx, t, e, orgID)
+	if len(held[FactMailProvider]) != 1 {
+		t.Fatalf("the record claims %v mail providers — a company has one, and a person had already "+
+			"said which", held[FactMailProvider])
+	}
+	var value string
+	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(ctx, `
+			SELECT value FROM organization_fact
+			 WHERE organization_id = $1 AND field = $2`, orgID, FactMailProvider).Scan(&value)
+	}); err != nil {
+		t.Fatalf("read back the surviving fact: %v", err)
+	}
+	if value != "Eigener Mailserver" {
+		t.Errorf("the surviving mail provider is %q, want the person's answer", value)
+	}
+}
+
+// TestAPartialDNSReadIsNotAuthoritative holds the other blocker's fix: a lane
+// that read some of what it owns and not the rest must not reconcile.
+//
+// Reported here rather than only in the engine's own tests because the damage
+// happens HERE: an incomplete lane marked complete deletes the mail posture it
+// simply did not read this time.
+func TestAPartialDNSReadIsNotAuthoritative(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	orgID := seedTechnicalOrg(ctx, t, e, "Teilweise GmbH", "teilweise.de")
+
+	full := TechnicalEnrichment{
+		OrganizationID: orgID,
+		Completed:      []TechnicalLane{LaneDNS},
+		Observations: []TechnicalObservation{
+			observation(FactMailProvider, "microsoft365", "Microsoft 365"),
+			observation(FactEmailSecurity, "dmarc_reject", "DMARC durchgesetzt"),
+		},
+		ObservedAt: technicalObservedAt,
+	}
+	if err := e.store.ApplyTechnicalEnrichment(ctx, full, nil); err != nil {
+		t.Fatalf("apply the full reading: %v", err)
+	}
+
+	// The engine reports the lane as NOT completed when a sub-lookup fails, so
+	// the apply reconciles nothing at all.
+	partial := TechnicalEnrichment{
+		OrganizationID: orgID,
+		Completed:      nil,
+		ObservedAt:     technicalObservedAt.Add(time.Hour),
+	}
+	if err := e.store.ApplyTechnicalEnrichment(ctx, partial, nil); err != nil {
+		t.Fatalf("apply the partial reading: %v", err)
+	}
+
+	held := technicalFactsOf(ctx, t, e, orgID)
+	if len(held[FactEmailSecurity]) != 1 || len(held[FactMailProvider]) != 1 {
+		t.Errorf("a read that could not complete removed what it did not see: %v", held)
+	}
+}

@@ -26,7 +26,13 @@ import (
 type Fingerprint struct {
 	// URL is where the body came from after redirects, matching Page.FinalURL.
 	URL string
-	// Headers is the response header, keys canonicalized by net/http.
+	// Headers is the response header with Set-Cookie REMOVED, keys
+	// canonicalized by net/http.
+	//
+	// The removal is the type's promise kept rather than a nicety: a
+	// Set-Cookie value is a visitor's session, and callers match these headers
+	// against rules and store the matched value as evidence on a company
+	// record. CookieNames below carries the part that identifies software.
 	Headers http.Header
 	// CookieNames are the names of the cookies the response set, in the order
 	// the response set them, deduplicated. Values are never carried.
@@ -79,12 +85,27 @@ func (f *Fetcher) FetchFingerprint(ctx context.Context, rawURL string) (Fingerpr
 	scripts, generator := extractStackMarkers(body, final)
 	return Fingerprint{
 		URL:         final.String(),
-		Headers:     got.header,
+		Headers:     withoutCookies(got.header),
 		CookieNames: cookieNames(got.header),
 		ScriptSrcs:  scripts,
 		Generator:   generator,
 		Body:        body,
 	}, nil
+}
+
+// withoutCookies copies the response header without Set-Cookie.
+//
+// A copy rather than a delete on the original, because the response header
+// belongs to the http.Response the caller may still be reading.
+func withoutCookies(header http.Header) http.Header {
+	stripped := make(http.Header, len(header))
+	for name, values := range header {
+		if http.CanonicalHeaderKey(name) == "Set-Cookie" {
+			continue
+		}
+		stripped[name] = values
+	}
+	return stripped
 }
 
 // cookieNames reads the Set-Cookie headers for their names alone.

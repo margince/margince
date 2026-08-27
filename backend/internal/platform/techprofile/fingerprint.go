@@ -160,15 +160,24 @@ func (r Rule) match(evidence loweredEvidence) (string, bool) {
 		for _, want := range wanted {
 			// An empty wanted value means presence alone is the match.
 			if want == "" || strings.Contains(got, strings.ToLower(want)) {
-				return strings.ToLower(name) + ": " + truncate(got), true
+				// The MARKER, never the header's own value: the value is
+				// whatever a server chose to send, it is stored as evidence on
+				// a company record, and a header carrying something else
+				// entirely would carry it there.
+				if want == "" {
+					return "Header: " + strings.ToLower(name), true
+				}
+				return "Header " + strings.ToLower(name) + ": " + strings.ToLower(want), true
 			}
 		}
 	}
-	if marker, ok := containsAny(evidence.cookies, r.Cookies); ok {
+	if marker, _, ok := containsAny(evidence.cookies, r.Cookies); ok {
+		// A cookie NAME is safe to quote: it identifies software, and its
+		// value never reaches this package.
 		return "Cookie: " + marker, true
 	}
-	if marker, ok := containsAny(evidence.scripts, r.Scripts); ok {
-		return "Script: " + truncate(marker), true
+	if _, needle, ok := containsAny(evidence.scripts, r.Scripts); ok {
+		return "Script: " + needle, true
 	}
 	for _, want := range r.Body {
 		if want != "" && strings.Contains(evidence.body, strings.ToLower(want)) {
@@ -178,14 +187,19 @@ func (r Rule) match(evidence loweredEvidence) (string, bool) {
 	return "", false
 }
 
-// containsAny reports the first haystack entry containing any needle.
-func containsAny(haystacks, needles []string) (string, bool) {
-	for _, haystack := range haystacks {
-		for _, needle := range needles {
-			if needle != "" && strings.Contains(haystack, strings.ToLower(needle)) {
-				return haystack, true
+// containsAny reports the first haystack entry containing any needle, and the
+// needle that matched.
+//
+// Both, because they are quotable in different places: a cookie name is the
+// company's own software announcing itself, while a script URL is a whole
+// address a page chose and only the marker inside it is the finding.
+func containsAny(haystacks, needles []string) (haystack, needle string, found bool) {
+	for _, entry := range haystacks {
+		for _, want := range needles {
+			if want != "" && strings.Contains(entry, strings.ToLower(want)) {
+				return entry, strings.ToLower(want), true
 			}
 		}
 	}
-	return "", false
+	return "", "", false
 }

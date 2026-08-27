@@ -9675,16 +9675,13 @@ func (e TechnicalEnrichLaneOutcome) Valid() bool {
 
 // Defines values for TechnicalEnrichStartedStatus.
 const (
-	TechnicalEnrichStartedStatusQueued  TechnicalEnrichStartedStatus = "queued"
-	TechnicalEnrichStartedStatusRunning TechnicalEnrichStartedStatus = "running"
+	TechnicalEnrichStartedStatusQueued TechnicalEnrichStartedStatus = "queued"
 )
 
 // Valid indicates whether the value is a known member of the TechnicalEnrichStartedStatus enum.
 func (e TechnicalEnrichStartedStatus) Valid() bool {
 	switch e {
 	case TechnicalEnrichStartedStatusQueued:
-		return true
-	case TechnicalEnrichStartedStatusRunning:
 		return true
 	default:
 		return false
@@ -24536,11 +24533,19 @@ type TechnicalEnrichLaneOutcome string
 type TechnicalEnrichStarted struct {
 	OrganizationId openapi_types.UUID `json:"organization_id"`
 
-	// Status Running when a lookup for this account is already in flight — asking again joins it rather than queuing a second.
+	// Status The lookup this call asked for is on its way. One value, because that is all
+	// the caller can be told honestly: River deduplicates by arguments, so pressing
+	// the button while a lookup is already in flight JOINS it — and the insert does
+	// not report which of the two happened. A `running` this endpoint could not tell
+	// apart from `queued` would be a promise the handler cannot keep.
 	Status TechnicalEnrichStartedStatus `json:"status"`
 }
 
-// TechnicalEnrichStartedStatus Running when a lookup for this account is already in flight — asking again joins it rather than queuing a second.
+// TechnicalEnrichStartedStatus The lookup this call asked for is on its way. One value, because that is all
+// the caller can be told honestly: River deduplicates by arguments, so pressing
+// the button while a lookup is already in flight JOINS it — and the insert does
+// not report which of the two happened. A `running` this endpoint could not tell
+// apart from `queued` would be a promise the handler cannot keep.
 type TechnicalEnrichStartedStatus string
 
 // TechnicalEnrichStatus What each public source last did for one account. Per lane rather than per run: the

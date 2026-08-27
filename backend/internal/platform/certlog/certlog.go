@@ -25,11 +25,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/netguard"
 	"github.com/margince/margince/backend/internal/platform/outbound"
 	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
@@ -62,6 +65,23 @@ const (
 	// has no subdomains", which is the one wrong answer this package must not
 	// produce.
 	queryTimeout = 30 * time.Second
+
+	// maxRedirects caps how far a redirect chain is followed.
+	maxRedirects = 5
+
+	// maxAnswerBytes caps the body read.
+	//
+	// A domain with a long certificate history answers with megabytes of JSON,
+	// and a hostile endpoint can answer with as much as it likes. One worker
+	// drains this whole lane, so an unbounded decode is the whole lane's
+	// memory. 8 MiB is far more than any real domain's list and far less than
+	// a problem.
+	maxAnswerBytes = 8 << 20
+
+	// maxHostnames caps what one answer may yield. Beyond this the domain is
+	// not telling us about a handful of services any more, and the classifier
+	// would drop the tail regardless.
+	maxHostnames = 5000
 )
 
 // UserAgent names this software to the log.
@@ -89,12 +109,35 @@ func NewCrtSh(baseURL string, httpClient *http.Client) *CrtSh {
 		baseURL = PublicBaseURL
 	}
 	if httpClient == nil {
-		httpClient = &http.Client{Timeout: queryTimeout}
+		httpClient = guardedClient()
 	}
 	return &CrtSh{
 		baseURL: strings.TrimSuffix(baseURL, "/"),
 		http:    httpClient,
 		pacer:   NewPacer(RecurringInterval),
+	}
+}
+
+// guardedClient is the default client: SSRF-guarded and redirect-capped.
+//
+// The guard matters here for the same reason it does in webread. This client
+// talks to a host an operator configured, but it FOLLOWS REDIRECTS, and a
+// redirect is chosen by the far end — so without the dialer hook a log that
+// answered 302 to an internal address would have this process dial it.
+func guardedClient() *http.Client {
+	dialer := &net.Dialer{Timeout: 10 * time.Second, Control: netguard.RefusePrivate}
+	return &http.Client{
+		Timeout: queryTimeout,
+		Transport: &http.Transport{
+			DialContext:         dialer.DialContext,
+			TLSHandshakeTimeout: 10 * time.Second,
+		},
+		CheckRedirect: func(req *http.Request, via []*http.Request) error {
+			if len(via) >= maxRedirects {
+				return fmt.Errorf("certlog: the certificate log redirected more than %d times", maxRedirects)
+			}
+			return nil
+		},
 	}
 }
 
@@ -152,7 +195,18 @@ func (c *CrtSh) Hostnames(ctx context.Context, domain string) ([]string, bool, e
 	}
 
 	var entries []crtShEntry
-	if err := json.NewDecoder(resp.Body).Decode(&entries); err != nil {
+	// Capped: an answer larger than this is refused as a lane FAILURE rather
+	// than truncated into a shorter list, because a truncated list read as
+	// authoritative would delete the services it did not reach.
+	capped := io.LimitReader(resp.Body, maxAnswerBytes+1)
+	body, err := io.ReadAll(capped)
+	if err != nil {
+		return nil, false, fmt.Errorf("certlog: reading the certificate log's answer: %w", err)
+	}
+	if len(body) > maxAnswerBytes {
+		return nil, false, fmt.Errorf("certlog: the certificate log answered more than %d bytes", maxAnswerBytes)
+	}
+	if err := json.Unmarshal(body, &entries); err != nil {
 		return nil, false, fmt.Errorf("certlog: reading the certificate log's answer: %w", err)
 	}
 	names := hostnamesUnder(entries, domain)
@@ -187,6 +241,9 @@ func hostnamesUnder(entries []crtShEntry, domain string) []string {
 			}
 			seen[name] = true
 			names = append(names, name)
+			if len(names) >= maxHostnames {
+				return names
+			}
 		}
 	}
 	return names

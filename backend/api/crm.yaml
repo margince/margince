@@ -27600,12 +27600,17 @@ components:
         organization_id: { type: string, format: uuid }
         status:
           type: string
-          enum: [queued, running]
-          description: 'Running when a lookup for this account is already in flight — asking again joins it rather than queuing a second.'
-          # Pinned: without it the generator sees two enums sharing these members
-          # and drops the type prefix from the OTHER one, renaming VoiceBuildStatus's
-          # constants to a bare `Queued` and `Running` that read as nobody's.
-          x-enum-varnames: [TechnicalEnrichStartedStatusQueued, TechnicalEnrichStartedStatusRunning]
+          enum: [queued]
+          description: |
+            The lookup this call asked for is on its way. One value, because that is all
+            the caller can be told honestly: River deduplicates by arguments, so pressing
+            the button while a lookup is already in flight JOINS it — and the insert does
+            not report which of the two happened. A `running` this endpoint could not tell
+            apart from `queued` would be a promise the handler cannot keep.
+          # Pinned: without it the generator sees two enums sharing this member and
+          # drops the type prefix from the OTHER one, renaming VoiceBuildStatus's
+          # constants to a bare `Queued` that reads as nobody's.
+          x-enum-varnames: [TechnicalEnrichStartedStatusQueued]
 
     TechnicalEnrichStatus:
       type: object

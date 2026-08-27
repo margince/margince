@@ -149,10 +149,18 @@ func (s *Store) RecordTechnicalLane(
 	succeeded := outcome == TechnicalOutcomeApplied || outcome == TechnicalOutcomeEmpty ||
 		outcome == TechnicalOutcomeRefused
 	return s.tx(ctx, func(tx pgx.Tx) error {
+		// Row-scoped like every other write: object RBAC says this caller may
+		// update organizations, and this says WHICH. Without it an admitted
+		// caller could write a ledger row for an organization outside its
+		// scope — and the ledger is what decides when that company is read.
+		if err := auth.EnsureWritableLive(ctx, tx, "organization", orgID.UUID); err != nil {
+			return err
+		}
 		_, err := tx.Exec(ctx, `
 			INSERT INTO organization_technical_state
 			  (organization_id, lane, attempts, last_outcome, last_success_at, next_attempt_at, updated_at)
-			VALUES ($1, $2, 1, $3, CASE WHEN $4 THEN $5::timestamptz END, $5::timestamptz + $6::interval, now())
+			VALUES ($1, $2, CASE WHEN $4 THEN 0 ELSE 1 END, $3,
+			        CASE WHEN $4 THEN $5::timestamptz END, $5::timestamptz + $6::interval, now())
 			ON CONFLICT (organization_id, lane)
 			DO UPDATE SET
 			  -- Reset on success, climb on failure: the attempt count is what

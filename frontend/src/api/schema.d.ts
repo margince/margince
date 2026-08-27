@@ -20189,10 +20189,14 @@ export interface components {
             /** Format: uuid */
             organization_id: string;
             /**
-             * @description Running when a lookup for this account is already in flight — asking again joins it rather than queuing a second.
+             * @description The lookup this call asked for is on its way. One value, because that is all
+             *     the caller can be told honestly: River deduplicates by arguments, so pressing
+             *     the button while a lookup is already in flight JOINS it — and the insert does
+             *     not report which of the two happened. A `running` this endpoint could not tell
+             *     apart from `queued` would be a promise the handler cannot keep.
              * @enum {string}
              */
-            status: "queued" | "running";
+            status: "queued";
         };
         /**
          * @description What each public source last did for one account. Per lane rather than per run: the

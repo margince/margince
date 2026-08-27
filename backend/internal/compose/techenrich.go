@@ -166,60 +166,104 @@ func (e *TechnicalEnricher) readDNS(
 		result.Observations = append(result.Observations, observationOf(provider, sourceURL))
 	}
 
-	e.appendEmailSecurity(ctx, domain, sourceURL, result)
-	e.appendHosting(ctx, domain, sourceURL, result)
+	// EVERY sub-lookup must answer for this lane to be authoritative. A lane
+	// that completes on a partial read is worse than one that fails: the
+	// reconciliation then deletes the mail posture and the hosting provider
+	// because one TXT query timed out, and the next pass writes them back —
+	// so the record flickers with the resolver's mood.
+	if !e.appendEmailSecurity(ctx, domain, sourceURL, result) {
+		return laneOutcome{Lane: people.LaneDNS, Err: errPartialDNS}
+	}
+	if !e.appendHosting(ctx, domain, sourceURL, result) {
+		return laneOutcome{Lane: people.LaneDNS, Err: errPartialDNS}
+	}
 
 	outcome.Completed = true
 	return outcome
 }
 
+// errPartialDNS marks a DNS read that answered about some of what it owns and
+// not the rest — reported as a lane failure, because partial authority over a
+// set of fields is not authority at all.
+var errPartialDNS = errors.New("compose: the DNS lane could not read every record it is authoritative for")
+
 // appendEmailSecurity reads SPF, DMARC and the bounded DKIM probe.
 //
-// A failure here does not fail the lane: the mail provider is the answer that
-// matters most, and losing the whole DNS lane because one TXT lookup timed out
-// would cost the record more than the missing posture does.
+// The classifier runs BEFORE the cache, so what is remembered is the posture
+// — `spf`, `dmarc_reject`, `dkim` — and never the records themselves. A DMARC
+// record carries `rua=mailto:someone@example.de` as a matter of course, and a
+// cache holding that would put a person's address in an installation-global
+// table the erasure path does not reach.
+//
+// It returns whether the posture is authoritative. A lookup that did not
+// complete leaves it false, and the DNS lane then does not claim these fields
+// — the alternative is deleting a company's whole mail posture because one TXT
+// query timed out.
 func (e *TechnicalEnricher) appendEmailSecurity(
 	ctx context.Context, domain, sourceURL string, result *people.TechnicalEnrichment,
-) {
-	rootTXT, err := e.cachedStrings(ctx, domain, people.CacheKindTXT, func() ([]string, bool, error) {
-		return e.dns.TXT(ctx, domain)
-	})
+) bool {
+	cached, hit, err := e.cache.LookupTechnical(ctx, domain, people.CacheKindTXT)
 	if err != nil {
-		return
+		return false
 	}
-	dmarcTXT, err := e.cachedStrings(ctx, "_dmarc."+domain, people.CacheKindDMARC, func() ([]string, bool, error) {
-		return e.dns.TXT(ctx, "_dmarc."+domain)
-	})
-	if err != nil {
-		return
-	}
-	dkim, err := e.cachedStrings(ctx, domain, people.CacheKindDKIM, func() ([]string, bool, error) {
-		for _, selector := range dkimSelectors {
-			records, found, err := e.dns.TXT(ctx, selector+"."+domain)
-			if err != nil {
-				return nil, false, err
-			}
-			if found && len(records) > 0 {
-				// The selector NAME is kept, never the key material in the
-				// record: the fact worth storing is that DKIM is set up.
-				return []string{selector}, true, nil
-			}
+	var keys []string
+	if hit {
+		keys = cached.Answer
+	} else {
+		keys, err = e.readEmailSecurity(ctx, domain)
+		if err != nil {
+			return false
 		}
-		return nil, false, nil
-	})
-	if err != nil {
-		return
+		if err := e.cache.RememberTechnical(ctx, domain, people.CacheKindTXT, people.CachedLookup{
+			Answer: keys, Found: len(keys) > 0,
+		}); err != nil {
+			return false
+		}
 	}
-	for _, signal := range techprofile.EmailSecurity(rootTXT, dmarcTXT, len(dkim) > 0) {
+	for _, signal := range techprofile.EmailSecurityFromKeys(keys) {
 		result.Observations = append(result.Observations, observationOf(signal, sourceURL))
 	}
+	return true
+}
+
+// readEmailSecurity asks the resolver and classifies in one step, so no raw
+// record is returned to a caller that could store it.
+func (e *TechnicalEnricher) readEmailSecurity(ctx context.Context, domain string) ([]string, error) {
+	rootTXT, _, err := e.dns.TXT(ctx, domain)
+	if err != nil {
+		return nil, err
+	}
+	dmarcTXT, _, err := e.dns.TXT(ctx, "_dmarc."+domain)
+	if err != nil {
+		return nil, err
+	}
+	dkim := false
+	for _, selector := range dkimSelectors {
+		records, found, err := e.dns.TXT(ctx, selector+"."+domain)
+		if err != nil {
+			return nil, err
+		}
+		if found && len(records) > 0 {
+			dkim = true
+			break
+		}
+	}
+	keys := make([]string, 0, 3)
+	for _, signal := range techprofile.EmailSecurity(rootTXT, dmarcTXT, dkim) {
+		keys = append(keys, signal.Key)
+	}
+	return keys, nil
 }
 
 // appendHosting reads where the domain resolves and who signs that address
 // space, preferring the reverse name and falling back to the CNAME target.
+//
+// Reports whether the read was authoritative, for the reason readDNS states: a
+// hosting provider deleted because one address lookup failed is a fact removed
+// by a network blip rather than by anything the company did.
 func (e *TechnicalEnricher) appendHosting(
 	ctx context.Context, domain, sourceURL string, result *people.TechnicalEnrichment,
-) {
+) bool {
 	addrText, err := e.cachedStrings(ctx, domain, people.CacheKindAddress, func() ([]string, bool, error) {
 		addrs, found, err := e.dns.Addresses(ctx, domain)
 		text := make([]string, 0, len(addrs))
@@ -229,7 +273,7 @@ func (e *TechnicalEnricher) appendHosting(
 		return text, found, err
 	})
 	if err != nil {
-		return
+		return false
 	}
 	var addrs []net.IP
 	for _, text := range addrText {
@@ -243,7 +287,9 @@ func (e *TechnicalEnricher) appendHosting(
 			return e.dns.Names(ctx, addr)
 		})
 		if err != nil {
-			continue
+			// A host with no PTR record answers ok=false, not an error, so an
+			// error here really is a lookup that did not complete.
+			return false
 		}
 		reverseNames = append(reverseNames, names...)
 	}
@@ -255,7 +301,7 @@ func (e *TechnicalEnricher) appendHosting(
 		return []string{target}, true, err
 	})
 	if err != nil {
-		cname = nil
+		return false
 	}
 	var cnameTarget string
 	if len(cname) > 0 {
@@ -264,6 +310,7 @@ func (e *TechnicalEnricher) appendHosting(
 	if hosting, ok := techprofile.HostingProvider(reverseNames, cnameTarget); ok {
 		result.Observations = append(result.Observations, observationOf(hosting, sourceURL))
 	}
+	return true
 }
 
 // readCertLog reads the services the domain's certificate hostnames reveal.

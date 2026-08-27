@@ -58,11 +58,13 @@ func technicalChangeRecorder() people.TechnicalChangeRecorder {
 			Severity: severityInfo,
 			Channel:  technicalChannel,
 			Source:   technicalSource,
-			// The identity is the STATE the change arrived at, so a pass over
-			// an unchanged company raises nothing and a company that moves
-			// back to a provider it left raises a new event for the move back.
+			// The state it arrived at AND the state it left, so a company that
+			// moves Google → Microsoft → Google → Microsoft raises an event
+			// each time rather than the second Microsoft move colliding with
+			// the first. A pass over an UNCHANGED company still raises
+			// nothing, because it produces no change to file at all.
 			Fingerprint: fingerprintOf(technicalSource, change.OrganizationID.String(),
-				change.Field, change.ValueKey, string(change.Kind)),
+				change.Field, change.ValueKey, string(change.Kind), change.Previous),
 			// The evidence is the public record that proved it — the MX host,
 			// the certificate hostname, the matched marker — because "how do
 			// you know?" is the first question this claim invites.

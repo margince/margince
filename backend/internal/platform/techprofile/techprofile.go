@@ -132,24 +132,28 @@ const (
 // records: the root records for SPF, the _dmarc records for DMARC policy, and
 // whether any well-known DKIM selector answered.
 //
-// The evidence is the record itself, truncated: an SPF record names the hosts
-// a company sends from, which is a technical fact about the company and the
-// proof a reader would want to see.
+// The evidence names WHAT WAS FOUND rather than quoting the record, and that
+// is a privacy rule rather than brevity. A DMARC record routinely carries
+// `rua=mailto:someone@example.de`, which is a person's address; storing the
+// record verbatim would put it in a company fact, an audit row and a
+// installation-global cache, none of which the erasure path reaches. The
+// canonical marker is all a reader needs — the record itself is one DNS query
+// away for anyone who wants it.
 func EmailSecurity(rootTXT, dmarcTXT []string, dkimFound bool) []Signal {
 	var signals []Signal
 	for _, record := range rootTXT {
 		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(record)), "v=spf1") {
 			signals = append(signals, Signal{
 				Field: FieldEmailSecurity, Key: SecuritySPF,
-				Label: "SPF veröffentlicht", Evidence: truncate(record),
+				Label: "SPF veröffentlicht", Evidence: evidenceSPF,
 			})
 			break
 		}
 	}
-	if policy, record, ok := dmarcPolicy(dmarcTXT); ok {
+	if policy, ok := dmarcPolicy(dmarcTXT); ok {
 		signals = append(signals, Signal{
 			Field: FieldEmailSecurity, Key: policy.key,
-			Label: policy.label, Evidence: truncate(record),
+			Label: policy.label, Evidence: policy.evidence,
 		})
 	}
 	if dkimFound {
@@ -161,14 +165,52 @@ func EmailSecurity(rootTXT, dmarcTXT []string, dkimFound bool) []Signal {
 	return signals
 }
 
-type dmarcLevel struct{ key, label string }
+// The evidence strings, which name the record kind and its policy rather than
+// quoting anything the record contains.
+const (
+	evidenceSPF = "SPF-Eintrag (v=spf1)"
+)
+
+// EmailSecurityFromKeys rebuilds the posture signals from the canonical keys a
+// cache remembered.
+//
+// The label and the evidence are DERIVED rather than cached, so a wording
+// changed here takes effect on the next read instead of surviving in whatever
+// stored it — and, more to the point, so the cache never has to hold anything
+// but the keys.
+func EmailSecurityFromKeys(keys []string) []Signal {
+	known := map[string]struct{ label, evidence string }{
+		SecuritySPF:             {"SPF veröffentlicht", evidenceSPF},
+		SecurityDMARCNone:       {"DMARC nur beobachtend", "DMARC-Eintrag: p=none"},
+		SecurityDMARCQuarantine: {"DMARC in Quarantäne", "DMARC-Eintrag: p=quarantine"},
+		SecurityDMARCReject:     {"DMARC durchgesetzt", "DMARC-Eintrag: p=reject"},
+		SecurityDKIM:            {"DKIM eingerichtet", "DKIM-Selector beantwortet"},
+	}
+	signals := make([]Signal, 0, len(keys))
+	for _, key := range keys {
+		if entry, ok := known[key]; ok {
+			signals = append(signals, Signal{
+				Field: FieldEmailSecurity, Key: key,
+				Label: entry.label, Evidence: entry.evidence,
+			})
+		}
+	}
+	return signals
+}
+
+type dmarcLevel struct{ key, label, evidence string }
 
 // dmarcPolicy reads the p= tag out of a _dmarc TXT record.
-func dmarcPolicy(dmarcTXT []string) (dmarcLevel, string, bool) {
+//
+// It returns the POLICY and nothing else. The record is deliberately not
+// carried out of this function: everything after `p=` — the reporting
+// addresses in particular — is either irrelevant to the posture or a person's
+// email address.
+func dmarcPolicy(dmarcTXT []string) (dmarcLevel, bool) {
 	levels := map[string]dmarcLevel{
-		"none":       {SecurityDMARCNone, "DMARC nur beobachtend"},
-		"quarantine": {SecurityDMARCQuarantine, "DMARC in Quarantäne"},
-		"reject":     {SecurityDMARCReject, "DMARC durchgesetzt"},
+		"none":       {SecurityDMARCNone, "DMARC nur beobachtend", "DMARC-Eintrag: p=none"},
+		"quarantine": {SecurityDMARCQuarantine, "DMARC in Quarantäne", "DMARC-Eintrag: p=quarantine"},
+		"reject":     {SecurityDMARCReject, "DMARC durchgesetzt", "DMARC-Eintrag: p=reject"},
 	}
 	for _, record := range dmarcTXT {
 		trimmed := strings.TrimSpace(record)
@@ -181,11 +223,11 @@ func dmarcPolicy(dmarcTXT []string) (dmarcLevel, string, bool) {
 				continue
 			}
 			if level, known := levels[strings.ToLower(strings.TrimSpace(value))]; known {
-				return level, trimmed, true
+				return level, true
 			}
 		}
 	}
-	return dmarcLevel{}, "", false
+	return dmarcLevel{}, false
 }
 
 // evidenceLimit caps a stored evidence string. A TXT record can be long and
