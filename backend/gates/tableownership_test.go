@@ -208,9 +208,12 @@ var tableOwners = map[string]string{
 	"attachment":          "internal/modules/activities",
 	"deal_document_hide":  "internal/modules/activities",
 	"booking_page":        "internal/modules/activities",
-	// approvals (signing_key backs the approval-token JWS)
-	"approval":    "internal/modules/approvals",
-	"signing_key": "internal/modules/approvals",
+	// approvals (signing_key backs the approval-token JWS; the autonomy policy
+	// is what each rep has decided about a KIND of proposal, so it belongs to
+	// the module that owns the kinds and records the decisions it counts)
+	"approval":                 "internal/modules/approvals",
+	"signing_key":              "internal/modules/approvals",
+	"approval_autonomy_policy": "internal/modules/approvals",
 	// consent (the DSR case queue and the retention-policy catalog are
 	// consent's; the engines that EXECUTE them live in privacy)
 	"consent_purpose":   "internal/modules/consent",

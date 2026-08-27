@@ -156,9 +156,15 @@ func TestABundleIsDecidedOnceAndRecordedPerMember(t *testing.T) {
 			t.Errorf("member %s stored status = %s, want approved", id, status)
 		}
 	}
-	if n := e.count(t, `SELECT count(*) FROM audit_log
-		WHERE entity_type = 'approval' AND action = 'approve'`); n != 3 {
-		t.Errorf("approve audit rows = %d, want one per member", n)
+	// Scoped by SUBJECT for the reason the event assertion below states: this
+	// package's tests share one database, so counting the action alone counts
+	// every other test's approvals and grows as the suite does.
+	for _, id := range []ids.ApprovalID{facts, first, second} {
+		if n := e.count(t, `SELECT count(*) FROM audit_log
+			WHERE entity_type = 'approval' AND action = 'approve' AND entity_id = $1`,
+			id.UUID); n != 1 {
+			t.Errorf("approve audit rows for member %s = %d, want exactly one", id, n)
+		}
 	}
 	// Scoped by SUBJECT: the envelope carries no tenant (ADR-0091 §6), and this
 	// package's tests share one database, so counting the type alone would
