@@ -153,17 +153,22 @@ export function TeamsCard() {
   // The one archive in this product with a way back: a team is archived by
   // PATCHing a flag, so the same endpoint restores it. Everything else called
   // "archive" here is a DELETE the contract offers no inverse for.
+  // It takes the NAME as well as the id, rather than looking the name up again
+  // on the way back. The archive that offered this Undo invalidated ["teams"],
+  // so by the time a reader presses it the archived row may already be gone
+  // from the roster — and a lookup that misses falls back to a uuid, which is
+  // the one thing a confirmation must not call a team.
   const restore = useMutation({
-    mutationFn: async (id: string) => {
+    mutationFn: async ({ id }: { id: string; name: string }) => {
       const { error } = await api.PATCH("/teams/{id}", {
         params: { path: { id } },
         body: { archived: false },
       });
       if (error) throwProblem(error);
     },
-    onSuccess: (_restored, id) => {
+    onSuccess: (_restored, { name }) => {
       qc.invalidateQueries({ queryKey: ["teams"] });
-      toast.show(t("users.teamRestored", { name: teamName(teams.data, id) }));
+      toast.show(t("users.teamRestored", { name }));
     },
   });
   const archive = useMutation({
@@ -180,7 +185,10 @@ export function TeamsCard() {
       const name = teamName(teams.data, id);
       qc.invalidateQueries({ queryKey: ["teams"] });
       toast.show(t("users.teamArchived", { name }), {
-        action: { label: t("common.undo"), onAct: () => restore.mutate(id) },
+        action: {
+          label: t("common.undo"),
+          onAct: () => restore.mutate({ id, name }),
+        },
       });
     },
   });

@@ -42,10 +42,29 @@ const allowMissing = process.argv.includes("--allow-missing");
 function entryModule() {
   const html = join(repoRoot, "frontend/index.html");
   if (!existsSync(html)) return null;
-  const src = /<script[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/.exec(
-    readFileSync(html, "utf8"),
-  );
-  return src ? "frontend" + src[1] : null;
+  // Each `<script>` tag's attributes are read INDEPENDENTLY rather than matched
+  // in one fixed order. A single pattern pinning `type` before `src` and double
+  // quotes is a detector that answers correctly for the file as it is written
+  // today and wrongly the moment somebody swaps two attributes — and its way of
+  // being wrong is to exclude nothing, which fails the gate on a file no story
+  // can ever cover.
+  for (const tag of readFileSync(html, "utf8").matchAll(
+    /<script\b([^>]*)>/gi,
+  )) {
+    const attributes = tag[1];
+    const read = (name) =>
+      new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i").exec(
+        attributes,
+      );
+    const type = read("type");
+    if (!type || (type[2] ?? type[3]).trim().toLowerCase() !== "module") {
+      continue;
+    }
+    const src = read("src");
+    const value = src ? (src[2] ?? src[3]).trim() : "";
+    if (value.startsWith("/")) return "frontend" + value;
+  }
+  return null;
 }
 
 const documentEntry = entryModule();

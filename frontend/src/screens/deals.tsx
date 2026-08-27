@@ -2808,10 +2808,10 @@ function DealActions({
     : undefined;
   return (
     <>
-      <EditAction
+      <EditAction<Deal>
         disabledReasonId={refusedByArchive}
         label={t("deal.edit")}
-        savedMessage={t("record.saveDone", { name: deal.name })}
+        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
         fields={[
           ...dealEditFields(t, {

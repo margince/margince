@@ -567,14 +567,14 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                     pointing at the page's one sentence about the archive
                     (STATE-4a): a missing control says nothing about the
                     record, while a refused one names the reason. */}
-                <EditAction
+                <EditAction<Person>
                   disabledReasonId={
                     person.archived_at ? archivedReasonId : undefined
                   }
                   label={t("record.edit")}
-                  savedMessage={t("record.saveDone", {
-                    name: person.full_name,
-                  })}
+                  savedMessage={(saved) =>
+                    t("record.saveDone", { name: saved.full_name })
+                  }
                   notice={overlay ? t("overlay.partialWriteBack") : undefined}
                   fields={[...personEditFields, ...cf.formFields]}
                   record={{

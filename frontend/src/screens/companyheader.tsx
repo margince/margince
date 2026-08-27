@@ -516,10 +516,12 @@ function CompanyEditAction({
     });
   }
   return (
-    <EditAction
+    <EditAction<Organization>
       disabledReasonId={disabledReasonId}
       label={t("record.edit")}
-      savedMessage={t("record.saveDone", { name: org.display_name })}
+      savedMessage={(saved) =>
+        t("record.saveDone", { name: saved.display_name })
+      }
       notice={overlay ? t("overlay.partialWriteBack") : undefined}
       fields={[
         ...companyEditFields(owners, Boolean(org.owner_id), t),

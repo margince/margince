@@ -61,7 +61,7 @@ function Harness(props: React.ComponentProps<typeof Triggers>) {
 
 // A confirmation whose BODY carries a control, which is what several callers
 // actually show — a name is worth linking to from the sentence that names it.
-function Bodied() {
+function Bodied({ sticky = false }: Readonly<{ sticky?: boolean }>) {
   const toast = useToast();
   return (
     <Button
@@ -74,7 +74,7 @@ function Bodied() {
                 what this suite is about. */}
             <a href="#/contacts/p-1">Jana Brandt</a>
           </span>,
-          { sticky: true },
+          { sticky },
         )
       }
     >
@@ -254,16 +254,39 @@ describe("the clock a reader can stop", () => {
     expect(screen.queryByRole("status")).toBeNull();
   });
 
-  it("holds while focus is inside the message", async () => {
-    // The keyboard half of the same courtesy: a reader who has tabbed to Undo is
-    // mid-reach, and a deadline that ran anyway would take the control out from
-    // under the focus ring.
+  it("holds while focus is inside the message, and releases on blur", async () => {
+    // The keyboard half of the same courtesy: a reader who has tabbed to a
+    // control the message carries is mid-reach, and a deadline that ran anyway
+    // would take it out from under the focus ring.
+    //
+    // A TIMED toast, deliberately. Written against a sticky one this asserted
+    // nothing at all: sticky means no timer, so the message would have survived
+    // the wait with the pause removed entirely. The toast that actually needs
+    // this — the lead-qualified confirmation, which carries a link to the new
+    // contact — withdraws itself on the clock like any other.
     const acting = steppedClock();
-    show({ options: { sticky: true } });
-    await acting.click(press("show"));
-    act(() => press("Close").focus());
+    render(
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Bodied />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    await acting.click(press("show a link"));
+    const carried = screen.getByRole("link", { name: "Jana Brandt" });
+
+    act(() => carried.focus());
     wait(30_000);
-    expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+    expect(screen.getByRole("status")).toBeInTheDocument();
+
+    // Blurring hands the FULL life back rather than what was left of it: a
+    // reader who focused it was reading, and deserves the whole time again.
+    act(() => carried.blur());
+    wait(3400);
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    wait(200);
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("puts the message down on Escape from a control the MESSAGE owns", async () => {
@@ -275,7 +298,7 @@ describe("the clock a reader can stop", () => {
     render(
       <LocaleProvider initial="en">
         <ToastProvider>
-          <Bodied />
+          <Bodied sticky />
           <ToastRegion />
         </ToastProvider>
       </LocaleProvider>,

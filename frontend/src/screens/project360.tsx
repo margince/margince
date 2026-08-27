@@ -246,10 +246,10 @@ function ProjectActions({
   const overlay = useSorMode() === "overlay";
   return (
     <>
-      <EditAction
+      <EditAction<Project>
         disabledReasonId={refusedReasonId}
         label={t("project.edit")}
-        savedMessage={t("record.saveDone", { name: project.name })}
+        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
         fields={projectFields(t, {
           companies,
           me: me.data?.user.id ?? "",

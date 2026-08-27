@@ -1432,10 +1432,12 @@ function LeadActions({
           disqualified lead and, since ADR-0119/A170, a promoted one — and the
           band above names which, so these controls point at that one
           sentence rather than guessing at it. */}
-      <EditAction
+      <EditAction<Lead>
         disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
         label={t("record.edit")}
-        savedMessage={t("record.saveDone", { name: lead.full_name ?? "" })}
+        savedMessage={(saved) =>
+          t("record.saveDone", { name: saved.full_name ?? "" })
+        }
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
         fields={[...leadEditFields, ...cf.formFields]}
         record={{

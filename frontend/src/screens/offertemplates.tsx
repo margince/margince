@@ -166,7 +166,7 @@ export function OfferTemplatesAdmin() {
         {canUpdate && (
           <EditAction
             label={t("template.edit")}
-            savedMessage={t("record.saveDone", { name: tpl.name })}
+            savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
             invalidate="offer-templates"
             recordKey="offer-template"
             record={{

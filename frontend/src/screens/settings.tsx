@@ -2299,9 +2299,9 @@ function StageRow({
           holding one without the other still sees the one it may use. */}
       <span className="stage-verbs">
         {canEdit && (
-          <EditAction
+          <EditAction<Stage>
             label={t("stage.edit")}
-            savedMessage={t("record.saveDone", { name: stage.name })}
+            savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
             invalidate="pipelines"
             recordKey="stage"
             record={{
@@ -2368,9 +2368,11 @@ function PipelineRow({
             </Badge>
             {canEdit && (
               <>
-                <EditAction
+                <EditAction<Pipeline>
                   label={t("pipeline.edit")}
-                  savedMessage={t("record.saveDone", { name: pipeline.name })}
+                  savedMessage={(saved) =>
+                    t("record.saveDone", { name: saved.name })
+                  }
                   invalidate="pipelines"
                   recordKey="pipeline"
                   record={{

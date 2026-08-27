@@ -1,4 +1,5 @@
 /** @vitest-environment jsdom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -10,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { type ReactNode, useLayoutEffect, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button } from "../design-system/atoms";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -30,7 +32,14 @@ function render(ui: ReactNode) {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        {/* The region is the shell's in the running app (`main.tsx`), so a
+            suite whose subject is what a save SAYS mounts it the same way. */}
+        <ToastProvider>
+          {ui}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -177,5 +186,58 @@ describe("edit record flow", () => {
       expect(screen.getByText(en["common.errorNoCause"])).toBeTruthy(),
     );
     expect(screen.queryByText(/Cannot read properties/)).toBeNull();
+  });
+});
+
+describe("what a save says", () => {
+  it("names the record the SERVER returned, not the one the form opened on", async () => {
+    // The defect this pins: the message was built at render from the row behind
+    // the dialog, so renaming "Alice" to "Alice M" announced "Alice saved" —
+    // confidently, and about a name that no longer existed.
+    render(
+      <EditAction<typeof record>
+        label="Edit"
+        fields={fields}
+        record={record}
+        update={async (values) => ({
+          ...record,
+          full_name: String(values.full_name),
+        })}
+        invalidate="people"
+        recordKey="person"
+        savedMessage={(saved) => `${saved.full_name} saved`}
+      />,
+    );
+    await userEvent.click(screen.getByTestId("edit-record"));
+    const input = screen.getByLabelText("Full name *");
+    await userEvent.clear(input);
+    await userEvent.type(input, "Alice M");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      "Alice M saved",
+    );
+  });
+
+  it("says nothing when the write was refused", async () => {
+    // The confirmation and the refusal come from one choreography, so the arm
+    // that must never fire on this path is worth an assertion rather than an
+    // assumption.
+    render(
+      <EditAction
+        label="Edit"
+        fields={fields}
+        record={record}
+        update={async () => throwProblem({ detail: "the record is locked" })}
+        invalidate="people"
+        recordKey="person"
+        savedMessage="Saved."
+      />,
+    );
+    await userEvent.click(screen.getByTestId("edit-record"));
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await screen.findByText("the record is locked");
+    expect(screen.queryByRole("status")).toBeNull();
   });
 });

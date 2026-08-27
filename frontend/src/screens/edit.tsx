@@ -56,7 +56,20 @@ export function useUpdateRecord<Updated extends { id: string }>({
   // the dialog closing is the caller dismissing its own form, not the server
   // agreeing to anything, and an edit that changes a field the reader cannot
   // see behind the dialog left them with no evidence either way.
-  savedMessage: string;
+  //
+  // A FUNCTION wherever the sentence names the record, because the edit may be
+  // what changed that name: built from the row the form opened on, renaming
+  // "Discovery" to "Qualification" announced "Discovery saved". It is handed
+  // what the server returned, which is the only version of the record that
+  // reflects the write being confirmed. A plain string stays right for a
+  // sentence that names a KIND rather than an instance.
+  //
+  // `NoInfer` so this parameter does not decide what `Updated` is. Inference
+  // reads every position at once, and a callback here dragged the type down to
+  // the constraint — leaving every caller with an `{ id: string }` that has no
+  // name to read. What the record is comes from `update`, which is what
+  // actually returns it.
+  savedMessage: string | ((updated: NoInfer<Updated>) => string);
   onDone: () => void;
 }>) {
   const queryClient = useQueryClient();
@@ -83,7 +96,11 @@ export function useUpdateRecord<Updated extends { id: string }>({
         queryClient.invalidateQueries({ queryKey });
       }
       onDone();
-      toast.show(savedMessage);
+      toast.show(
+        typeof savedMessage === "function"
+          ? savedMessage(updated)
+          : savedMessage,
+      );
     },
   });
 }
@@ -279,7 +296,7 @@ export function EditAction<Updated extends { id: string }>({
   invalidate: string;
   recordKey: string;
   // What the reader is told once it has landed. See `useUpdateRecord`.
-  savedMessage: string;
+  savedMessage: string | ((updated: NoInfer<Updated>) => string);
   // Symmetric with CreateAction's dedupe link — edit rarely collides, but the
   // API stays uniform for the screens that adopt it.
   resolveExisting?: (code: string, id: string) => Route;

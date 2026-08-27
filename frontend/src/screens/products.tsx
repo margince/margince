@@ -216,7 +216,7 @@ export function ProductsAdmin() {
         {canUpdate && (
           <EditAction
             label={t("product.edit")}
-            savedMessage={t("record.saveDone", { name: p.name })}
+            savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
             invalidate="products"
             recordKey="product"
             record={{
