@@ -614,7 +614,18 @@ describe("AgentRail", () => {
     stubAgentRailApi();
     const { container } = render(ROUTE);
     await openPanel(user, container);
-    await waitFor(() => expect(panel().textContent).toContain(LABELS.allClear));
+    // Scoped to the workspace section on purpose: the resting LINE in the
+    // header reads all-clear too, so a whole-panel match would still pass with
+    // this paragraph gone and prove nothing about the answered zero.
+    await waitFor(() =>
+      expect(
+        [...panel().querySelectorAll(".arsect")]
+          .find((section) =>
+            section.textContent?.includes(LABELS.acrossWorkspace),
+          )
+          ?.querySelector(".arnone")?.textContent,
+      ).toBe(LABELS.allClear),
+    );
     // A real zero is an answer, not a tile: "0 Decisions waiting" is a number
     // nobody has to act on dressed as one somebody does.
     expect(
