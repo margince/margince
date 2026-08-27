@@ -130,9 +130,9 @@ sandboxed.
 1. Branch off `main`: `git switch -c <type>/<slug> origin/main`.
 2. Sign off every commit (`git commit -s`) — the DCO gate rejects any commit
    without a `Signed-off-by` trailer.
-3. Run `make check` before pushing; add `make frontend-check` when `frontend/`
-   changed. The pre-push hook runs `craft static --strict` diff-scoped on top —
-   fix what it finds, never bypass it. Install it once with `make hooks`.
+3. Run `make check` before pushing — it is both halves, `frontend/` included,
+   with nothing to add on top. The pre-push hook runs `craft static --strict`
+   diff-scoped too — fix what it finds, never bypass it; install it via `make hooks`.
 4. Push and open a PR.
 5. CI, DCO, CodeRabbit and SonarCloud must all pass. Address review findings
    rather than dismissing them.
