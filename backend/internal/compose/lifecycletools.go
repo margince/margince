@@ -144,8 +144,21 @@ func (c companyEnricher) EnrichCompany(
 			return nil, err
 		}
 		return json.Marshal(proposal)
+	case agents.EnrichDepthTechnical:
+		if c.srv == nil || c.srv.technicalHandlers.enqueue == nil {
+			return nil, fmt.Errorf("enrich: depth %q needs a job runner, which this deployment has not configured", depth)
+		}
+		// The override is deliberately NOT passed on: this depth reads the
+		// domain the record holds and has no way to be pointed elsewhere,
+		// which is the guardrail that keeps it from becoming company discovery.
+		started, err := c.srv.technicalHandlers.startTechnicalEnrich(ctx, orgID)
+		if err != nil {
+			return nil, err
+		}
+		return json.Marshal(started)
 	}
-	return nil, fmt.Errorf("enrich: depth %q is neither %q nor %q", depth, agents.EnrichDepthPage, agents.EnrichDepthSite)
+	return nil, fmt.Errorf("enrich: depth %q is none of %q, %q or %q",
+		depth, agents.EnrichDepthPage, agents.EnrichDepthSite, agents.EnrichDepthTechnical)
 }
 
 // lifecycleSeams builds the three adapters over one pool.
