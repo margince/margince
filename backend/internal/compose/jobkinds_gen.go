@@ -13,7 +13,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "1e473398d88deb309e6867e4ab19cb3222bbd8052b31c5c97a70b955d6fc23e0"
+const jobContractHash = "ff957b6159f1a2b5f46061e2c9df9d52e1e330d69a8849e0a3ee2db85bddedf8"
 
 // declaredJobArgs is every args type api/jobs.yaml declares, and nothing
 // else. A job kind the file has never heard of cannot satisfy it, so it
@@ -94,7 +94,9 @@ type declaredJobArgs interface {
 		TranscriptProposeArgs |
 		VoiceBuildArgs |
 		VoiceBuildRetryArgs |
-		WebhookRetryArgs
+		WebhookRetryArgs |
+		WeeklyReviewGenerateArgs |
+		WeeklyReviewGenerateWorkspaceArgs
 }
 
 // addDeclaredWorker is the sanctioned registration path. Its type parameter
@@ -151,6 +153,7 @@ var (
 	_ jobs.FleetWide = TelegramPollSweepArgs{}
 	_ jobs.FleetWide = TimeScanArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
+	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
 )
 
 // The declared tenant-scoped kinds: each says which workspace it is for
@@ -192,4 +195,5 @@ var (
 	_ jobs.WorkspaceScoped = TimeScanWorkspaceArgs{}
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}
+	_ jobs.WorkspaceScoped = WeeklyReviewGenerateWorkspaceArgs{}
 )
