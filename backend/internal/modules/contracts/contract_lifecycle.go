@@ -235,22 +235,12 @@ func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effecti
 		patch := storekit.NewPatch()
 		patch.Set("cancellation_notice_on", existing.CancellationNoticeOn, noticeOn)
 		patch.Set("cancellation_effective_on", existing.CancellationEffectiveOn, effectiveOn)
-		if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
-			if constraint, ok := storekit.CheckViolation(err); ok {
-				return contractCheckError(constraint)
-			}
-			return fmt.Errorf("record contract cancellation: %w", err)
-		}
-		auditID, err := storekit.Audit(ctx, tx, "update", contractObject, id.UUID, patch.Before(), patch.After())
-		if err != nil {
-			return fmt.Errorf("audit contract cancellation: %w", err)
-		}
 		// A cancellation is a column patch, not a transition, so it rides
-		// contract.updated. A consumer watching for the state change gets it
-		// when the status actually moves, which is the honest moment.
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-			crmcontracts.PublicEventContractUpdated{ChangedFields: patch.After()}); err != nil {
-			return fmt.Errorf("emit contract.updated: %w", err)
+		// contract.updated like any other field write. A consumer watching for
+		// the state change gets it when the status actually moves, which is the
+		// honest moment.
+		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract cancellation"); err != nil {
+			return err
 		}
 		out, err = readContract(ctx, tx, id, s.today())
 		return err

@@ -152,25 +152,42 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			out = existing
 			return nil
 		}
-		if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
-			if constraint, ok := storekit.CheckViolation(err); ok {
-				return contractCheckError(constraint)
-			}
-			return fmt.Errorf("patch contract: %w", err)
-		}
-
-		auditID, err := storekit.Audit(ctx, tx, "update", contractObject, id.UUID, patch.Before(), patch.After())
-		if err != nil {
-			return fmt.Errorf("audit contract update: %w", err)
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-			crmcontracts.PublicEventContractUpdated{ChangedFields: patch.After()}); err != nil {
-			return fmt.Errorf("emit contract.updated: %w", err)
+		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
+			return err
 		}
 		out, err = readContract(ctx, tx, id, s.today())
 		return err
 	})
 	return out, err
+}
+
+// applyContractUpdate is the update write shape: guard the patch, audit it,
+// emit contract.updated, and leave the row read to the caller.
+//
+// Two verbs spelled this out identically — a field patch and a cancellation
+// notice — and the only difference between the two copies was the noun in the
+// error text. Two copies of a write shape drift towards whichever one gets
+// edited, and the half that does not is where an audit row or an event goes
+// missing while the domain row still lands.
+func applyContractUpdate(ctx context.Context, tx pgx.Tx, id ids.ContractID,
+	patch *storekit.Patch, ifVersion *int64, what string,
+) error {
+	if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
+		if constraint, ok := storekit.CheckViolation(err); ok {
+			return contractCheckError(constraint)
+		}
+		return fmt.Errorf("write %s: %w", what, err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", contractObject, id.UUID,
+		patch.Before(), patch.After())
+	if err != nil {
+		return fmt.Errorf("audit %s: %w", what, err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
+		crmcontracts.PublicEventContractUpdated{ChangedFields: patch.After()}); err != nil {
+		return fmt.Errorf("emit contract.updated: %w", err)
+	}
+	return nil
 }
 
 // ArchiveContract soft-deletes an agreement. The row and its history stay:
