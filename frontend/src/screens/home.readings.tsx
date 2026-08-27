@@ -103,9 +103,17 @@ export function HomeReadingsStrip({
           numeric
           label={t("home.readings.quiet")}
           value={cappedCountLabel(quiet, locale)}
-          tone={quiet.seen > 0 ? "warn" : "good"}
+          // "None have gone quiet" is a claim, and only a reading that saw the
+          // whole list may make it. A count of zero off a page with another
+          // behind it is neither bad news nor an all-clear: it is a floor, and
+          // the tile says the figure and nothing more.
+          tone={quiet.seen > 0 ? "warn" : quiet.more ? undefined : "good"}
           dot={quiet.seen > 0}
-          detail={quiet.seen === 0 ? t("home.readings.quietNone") : undefined}
+          detail={
+            quiet.seen === 0 && !quiet.more
+              ? t("home.readings.quietNone")
+              : undefined
+          }
         />
       )}
     </StatStrip>

@@ -101,6 +101,9 @@ export function LeadBulkBar({
       // rep's own leads buys nothing but contention.
       leads.reduce<Promise<BulkOutcome[]>>(async (acc, lead) => {
         const done = await acc;
+        // The id, not the word: this name goes into a per-row outcome the
+        // reader reads back afterwards, and two unnamed leads must be tellable
+        // apart there.
         const name = leadIdentityName(lead) || lead.id;
         try {
           await apply(lead, action);

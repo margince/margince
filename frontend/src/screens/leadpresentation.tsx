@@ -136,7 +136,7 @@ function LeadCard({
       {...dragHandlers}
     >
       <span className="deal-name">
-        {leadIdentityName(lead) || t("nav.leads")}
+        {leadIdentityName(lead) || t("lead.unnamed")}
       </span>
       {lead.company_name && (
         <span className="deal-org">

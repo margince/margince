@@ -1677,6 +1677,7 @@ export const en = {
   "lead.bulkFailed": "{count} not applied —",
   "lead.bulkFailedRow": "could not be saved",
   "lead.bulkSelectRow": "Select {name}",
+  "lead.unnamed": "Unnamed lead",
   "lead.sla.breached": "Overdue",
   "lead.sla.atRisk": "Due soon",
   "lead.sla.withinTarget": "On time",

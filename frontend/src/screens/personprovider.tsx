@@ -34,7 +34,6 @@ import {
 type Profile = components["schemas"]["PersonProviderProfile"];
 type Provider = components["schemas"]["Provider"];
 
-/** Which contact to look up, and at which provider. */
 type EnrichRun = { personId: string; provider: Provider };
 
 /** The mark every value in this section carries: bought from a named third

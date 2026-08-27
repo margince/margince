@@ -1599,7 +1599,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
       <QueryGate query={leadQuery}>
         {(lead) => (
           <RecordView
-            name={leadIdentityName(lead) || t("nav.leads")}
+            name={leadIdentityName(lead) || t("lead.unnamed")}
             avatarSrc={null}
             // The "Lead" marker rides the identity, not a badge among badges:
             // a reader has to know this is a prospect and not a contact

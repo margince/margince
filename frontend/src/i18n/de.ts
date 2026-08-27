@@ -1639,6 +1639,7 @@ export const de = {
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
   "lead.bulkSelectRow": "{name} auswählen",
+  "lead.unnamed": "Lead ohne Namen",
   "lead.sla.breached": "Überfällig",
   "lead.sla.atRisk": "Bald fällig",
   "lead.sla.withinTarget": "Im Rahmen",

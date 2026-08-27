@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
 import { describe, expect, it } from "vitest";
+import { filesUnder, scriptKindFor } from "../../scripts/lib/source-tree";
 
 // Fitness function for a screen that works out for itself what a lead is
 // called.
@@ -63,17 +64,24 @@ function chainOperands(node: ts.BinaryExpression): ts.Expression[] {
   return [...head, node.right];
 }
 
-/** The property a term reads, or null for a term that reads none. */
-function fieldRead(expression: ts.Expression): string | null {
+/** One term of a chain: WHOSE field it reads, and which. The receiver is half
+ *  the finding — `person.full_name ?? lead.email` reads two records and is not
+ *  this rule, so a gate comparing property names alone would send somebody to
+ *  "fix" a fallback that means what it says. */
+type FieldRead = Readonly<{ receiver: string; field: string }>;
+
+function fieldRead(expression: ts.Expression): FieldRead | null {
   const inner = ts.isParenthesizedExpression(expression)
     ? expression.expression
     : expression;
   if (ts.isPropertyAccessExpression(inner)) {
-    return inner.name.text;
+    return { receiver: inner.expression.getText(), field: inner.name.text };
   }
   if (ts.isElementAccessExpression(inner)) {
     const argument = inner.argumentExpression;
-    return ts.isStringLiteral(argument) ? argument.text : null;
+    return ts.isStringLiteral(argument)
+      ? { receiver: inner.expression.getText(), field: argument.text }
+      : null;
   }
   return null;
 }
@@ -85,7 +93,13 @@ function fallbacksIn(fileName: string, text: string): string[] {
     text,
     ts.ScriptTarget.Latest,
     true,
-    ts.ScriptKind.TSX,
+    // The file's OWN kind, from the one place this tree decides that. Under
+    // `TSX` a plain `.ts` generic arrow — `<T>(value: T) => value` — parses as
+    // an unclosed JSX element, and everything after it is parse recovery
+    // rather than the tree this scan means to walk. A census that reads a
+    // smaller tree reports PASS and nothing fails, which is the one way a gate
+    // must not break.
+    scriptKindFor(fileName),
   );
   const found: string[] = [];
   const visit = (node: ts.Node) => {
@@ -100,9 +114,15 @@ function fallbacksIn(fileName: string, text: string): string[] {
         node.parent.left === node
       )
     ) {
-      const fields = chainOperands(node).map(fieldRead);
-      const name = fields.indexOf("full_name");
-      if (name >= 0 && fields.indexOf("email", name) > name) {
+      const terms = chainOperands(node).map(fieldRead);
+      const name = terms.findIndex((term) => term?.field === "full_name");
+      const address = terms.findIndex(
+        (term, at) =>
+          at > name &&
+          term?.field === "email" &&
+          term.receiver === terms[name]?.receiver,
+      );
+      if (name >= 0 && address > name) {
         found.push(
           `${fileName}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1}`,
         );
@@ -114,15 +134,11 @@ function fallbacksIn(fileName: string, text: string): string[] {
   return found;
 }
 
+/** Every TypeScript source under `src/`, through the shared walk — which
+ *  descends a symlinked directory a bundler would ship and this scan would
+ *  otherwise read straight past. */
 function sourceFiles(dir: string): string[] {
-  return readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const path = join(dir, entry.name);
-    return entry.isDirectory()
-      ? sourceFiles(path)
-      : /\.tsx?$/.test(entry.name)
-        ? [path]
-        : [];
-  });
+  return filesUnder(dir).filter((path) => /\.tsx?$/.test(path));
 }
 
 // The files that OWN the rule, named one by one rather than by directory: a
@@ -136,7 +152,7 @@ const LEAD_NAME_OWNERS = [
 
 function fallbacks(): string[] {
   const files = sourceFiles(srcRoot)
-    .map((file) => [relative(srcRoot, file), file] as const)
+    .map((file): readonly [string, string] => [relative(srcRoot, file), file])
     .filter(([name]) => !LEAD_NAME_OWNERS.includes(name));
   // A sweep that found no files and a tree with no fallbacks look identical.
   expect(files.length).toBeGreaterThan(0);
@@ -205,6 +221,14 @@ describe("what a lead is called", () => {
       "const name = lead.email ?? lead.full_name;",
       0,
     ],
+    [
+      // Two records, one chain: a person's name with a lead's address behind
+      // it is a fallback somebody meant, and calling it this rule would send
+      // the next author to break it.
+      "two different receivers, which is not one record being named",
+      "const name = person.full_name ?? lead.email;",
+      0,
+    ],
   ];
 
   for (const [what, code, count] of planted) {
@@ -212,4 +236,15 @@ describe("what a lead is called", () => {
       expect(fallbacksIn("planted.tsx", code)).toHaveLength(count);
     });
   }
+
+  // The shape a census goes blind to rather than the shape it reports: parsed
+  // as TSX, a `.ts` generic arrow opens a JSX element that never closes, and
+  // the fallback after it is inside parse recovery rather than the tree. The
+  // same source under both extensions is the only assertion that can tell.
+  const genericArrowThenFallback =
+    "const id = <T>(value: T) => value;\nconst name = lead.full_name ?? lead.email;";
+
+  it("reads a .ts generic arrow as TypeScript, so what follows it is still scanned", () => {
+    expect(fallbacksIn("planted.ts", genericArrowThenFallback)).toHaveLength(1);
+  });
 });

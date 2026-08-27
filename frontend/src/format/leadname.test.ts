@@ -57,4 +57,17 @@ describe("what a lead is called", () => {
   it("answers nothing for an empty full_name with no address behind it", () => {
     expect(leadIdentityName({ full_name: "" })).toBe("");
   });
+
+  it("carries no padding out of an address either", () => {
+    expect(leadIdentityName({ email: "  vera@nordwind.example  " })).toBe(
+      "vera@nordwind.example",
+    );
+  });
+
+  // A padded name over a padded address names nobody. Answering the padding
+  // would hand back a TRUTHY blank, and every caller's own last resort — the
+  // id, the word for a lead — is reached with `||` and would never fire.
+  it("answers nothing when both fields are nothing but padding", () => {
+    expect(leadIdentityName({ full_name: " ", email: "   " })).toBe("");
+  });
 });
