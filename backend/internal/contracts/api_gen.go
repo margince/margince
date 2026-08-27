@@ -5653,6 +5653,27 @@ func (e MorningDigestConnectorsStatus) Valid() bool {
 	}
 }
 
+// Defines values for MyAgentGrantState.
+const (
+	MyAgentGrantStateDeclined   MyAgentGrantState = "declined"
+	MyAgentGrantStateGranted    MyAgentGrantState = "granted"
+	MyAgentGrantStateNeverAsked MyAgentGrantState = "never_asked"
+)
+
+// Valid indicates whether the value is a known member of the MyAgentGrantState enum.
+func (e MyAgentGrantState) Valid() bool {
+	switch e {
+	case MyAgentGrantStateDeclined:
+		return true
+	case MyAgentGrantStateGranted:
+		return true
+	case MyAgentGrantStateNeverAsked:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferStatus.
 const (
 	OfferStatusAccepted   OfferStatus = "accepted"
@@ -8725,6 +8746,24 @@ func (e SavedViewResource) Valid() bool {
 	}
 }
 
+// Defines values for ScheduledAgentName.
+const (
+	ScheduledAgentNameMorningBrief         ScheduledAgentName = "morning_brief"
+	ScheduledAgentNameOvernightAtRiskSweep ScheduledAgentName = "overnight_at_risk_sweep"
+)
+
+// Valid indicates whether the value is a known member of the ScheduledAgentName enum.
+func (e ScheduledAgentName) Valid() bool {
+	switch e {
+	case ScheduledAgentNameMorningBrief:
+		return true
+	case ScheduledAgentNameOvernightAtRiskSweep:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ScheduledSendHeldReason.
 const (
 	ConsentWithdrawn ScheduledSendHeldReason = "consent_withdrawn"
@@ -10548,22 +10587,22 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	DeadLettered WebhookDeliveryStatus = "dead_lettered"
-	Delivered    WebhookDeliveryStatus = "delivered"
-	Pending      WebhookDeliveryStatus = "pending"
-	Retrying     WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
+	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
+	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
+	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
 func (e WebhookDeliveryStatus) Valid() bool {
 	switch e {
-	case DeadLettered:
+	case WebhookDeliveryStatusDeadLettered:
 		return true
-	case Delivered:
+	case WebhookDeliveryStatusDelivered:
 		return true
-	case Pending:
+	case WebhookDeliveryStatusPending:
 		return true
-	case Retrying:
+	case WebhookDeliveryStatusRetrying:
 		return true
 	default:
 		return false
@@ -18521,6 +18560,41 @@ type MorningDigestConnectorsProvider string
 // MorningDigestConnectorsStatus defines model for MorningDigest.Connectors.Status.
 type MorningDigestConnectorsStatus string
 
+// MyAgentGrant One rep's standing answer for one scheduled agent.
+type MyAgentGrant struct {
+	// CredentialUsable Whether the passport behind a granted answer is live RIGHT NOW — not revoked,
+	// not expired. Read from the passport at request time, never stored, because it
+	// changes at a moment nothing writes to the grant. False against `granted` is
+	// the renewal case: the rep agreed and has nothing to act with.
+	CredentialUsable bool `json:"credential_usable"`
+
+	// DecidedAt When the rep last answered. Absent when they never were asked.
+	DecidedAt *time.Time `json:"decided_at,omitempty"`
+
+	// Spec A scheduled agent a rep can grant standing authority to. The set matches
+	// runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
+	// and this enum moves with it.
+	Spec ScheduledAgentName `json:"spec"`
+
+	// State The rep's answer. `never_asked` is not stored — it is the absence of a row, and it
+	// is a distinct answer from `declined` on purpose: the product asks once, so it has
+	// to tell "said no" apart from "has not been asked", or it asks the declining rep
+	// again every night.
+	State MyAgentGrantState `json:"state"`
+}
+
+// MyAgentGrantState The rep's answer. `never_asked` is not stored — it is the absence of a row, and it
+// is a distinct answer from `declined` on purpose: the product asks once, so it has
+// to tell "said no" apart from "has not been asked", or it asks the declining rep
+// again every night.
+type MyAgentGrantState string
+
+// MyAgentGrants defines model for MyAgentGrants.
+type MyAgentGrants struct {
+	// Data One entry per scheduled agent, including the ones never answered.
+	Data []MyAgentGrant `json:"data"`
+}
+
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
 	AcceptedAt *time.Time `json:"accepted_at,omitempty"`
@@ -22910,6 +22984,11 @@ type SavedViewListResponse struct {
 // SavedViewResource The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
 type SavedViewResource string
 
+// ScheduledAgentName A scheduled agent a rep can grant standing authority to. The set matches
+// runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
+// and this enum moves with it.
+type ScheduledAgentName string
+
 // ScheduledSend One message waiting for its moment (ADR-0104/A155). It is not an activity and not a
 // delivery: nothing is on the timeline and nothing has been handed to a provider.
 type ScheduledSend struct {
@@ -23288,6 +23367,15 @@ type SetLeadManualSignalRequest struct {
 
 // SetLeadManualSignalRequestFactor defines model for SetLeadManualSignalRequest.Factor.
 type SetLeadManualSignalRequestFactor string
+
+// SetMyAgentGrantRequest The rep's answer for one scheduled agent.
+type SetMyAgentGrantRequest struct {
+	// Granted True grants and mints the rep's own passport; false withdraws and revokes the
+	// one it named. There is no field naming a user or a passport: the rep comes from
+	// the session, and the credential is the server's to mint, so a caller cannot
+	// answer for somebody else or point a grant at a credential they do not own.
+	Granted bool `json:"granted"`
+}
 
 // SetOverlayUserMapRequest defines model for SetOverlayUserMapRequest.
 type SetOverlayUserMapRequest struct {
@@ -29087,6 +29175,9 @@ type CreateListJSONRequestBody = CreateListRequest
 
 // AddListMemberJSONRequestBody defines body for AddListMember for application/json ContentType.
 type AddListMemberJSONRequestBody = AddListMemberRequest
+
+// SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
+type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 
 // SaveMyEmailSignatureJSONRequestBody defines body for SaveMyEmailSignature for application/json ContentType.
 type SaveMyEmailSignatureJSONRequestBody = SaveEmailSignatureRequest
@@ -37727,6 +37818,12 @@ type ServerInterface interface {
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
+	// The calling rep's own standing answers, one per scheduled agent.
+	// (GET /me/agent-grants)
+	ListMyAgentGrants(w http.ResponseWriter, r *http.Request)
+	// The calling rep answers for one agent — granting or withdrawing.
+	// (PUT /me/agent-grants/{spec})
+	SetMyAgentGrant(w http.ResponseWriter, r *http.Request, spec ScheduledAgentName)
 	// What the AI is doing for THIS person, right now and lately.
 	// (GET /me/ai-activity)
 	GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams)
@@ -39854,6 +39951,18 @@ func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id 
 // Get the current authenticated principal (user or agent).
 // (GET /me)
 func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The calling rep's own standing answers, one per scheduled agent.
+// (GET /me/agent-grants)
+func (_ Unimplemented) ListMyAgentGrants(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The calling rep answers for one agent — granting or withdrawing.
+// (PUT /me/agent-grants/{spec})
+func (_ Unimplemented) SetMyAgentGrant(w http.ResponseWriter, r *http.Request, spec ScheduledAgentName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -51059,6 +51168,58 @@ func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCurrentPrincipal(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyAgentGrants operation middleware
+func (siw *ServerInterfaceWrapper) ListMyAgentGrants(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyAgentGrants(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetMyAgentGrant operation middleware
+func (siw *ServerInterfaceWrapper) SetMyAgentGrant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "spec" -------------
+	var spec ScheduledAgentName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "spec", chi.URLParam(r, "spec"), &spec, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "spec", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetMyAgentGrant(w, r, spec)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -63654,6 +63815,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/agent-grants", wrapper.ListMyAgentGrants)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/agent-grants/{spec}", wrapper.SetMyAgentGrant)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/ai-activity", wrapper.GetMyAiActivity)

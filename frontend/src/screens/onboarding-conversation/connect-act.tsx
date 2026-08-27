@@ -14,6 +14,12 @@ import {
   OAuthReturnPanel,
   peekOAuthAttempt,
 } from "../onboarding-connect-panels";
+import {
+  forgetOvernightChoice,
+  rememberedOvernightChoice,
+  rememberOvernightChoice,
+  useSetAgentGrant,
+} from "../overnight-grant";
 import type { MailProvider } from "./connect-scene";
 import { ConnectScene } from "./connect-scene";
 import type {
@@ -103,6 +109,9 @@ export function ConnectAct({
   );
   const [finishing, setFinishing] = useState(false);
   const [finishFailed, setFinishFailed] = useState(false);
+  // The overnight answer could not be recorded. The step still completes — see
+  // finish() — so this is a notice, not a blocker.
+  const [overnightFailed, setOvernightFailed] = useState(false);
   const [entering, setEntering] = useState(false);
   // Whether a returning OAuth trip has an actually-confirmed live mailbox,
   // told to us by `OAuthReturnPanel` itself (see `showSkip` below): false
@@ -153,9 +162,68 @@ export function ConnectAct({
     );
   };
 
+  // Preselected: the features it feeds are the ones the product opens on, so
+  // an unticked default ships an installation whose morning brief is
+  // permanently empty for reasons nobody is told.
+  //
+  // Seeded from this tab's remembered answer, because an OAuth "allow" leaves
+  // the page and this component remounts on the way back. Without the seed a
+  // rep who UNTICKED the box, authorized Google, and returned would be granted
+  // anyway — their opt-out silently reversed by a default. `undefined` means
+  // this tab holds no answer, which is when the default is genuinely the
+  // default rather than an override.
+  const [wantsOvernight, setWantsOvernight] = useState(
+    () => rememberedOvernightChoice() ?? true,
+  );
+  const grantOvernight = useSetAgentGrant();
+  const chooseOvernight = (next: boolean) => {
+    setWantsOvernight(next);
+    rememberOvernightChoice(next);
+  };
+
+  // The answer, recorded once, whichever way the reader leaves the step.
+  //
+  // It is idempotent at the server (re-answering replaces), and the local mark
+  // is dropped after it lands so a second pass through this screen in the same
+  // tab starts from the default rather than from a settled answer.
+  const recordOvernightAnswer = async () => {
+    try {
+      await grantOvernight.mutateAsync(wantsOvernight);
+      forgetOvernightChoice();
+    } catch {
+      setOvernightFailed(true);
+    }
+  };
+
+  const recordOvernightThenEnter = async () => {
+    await recordOvernightAnswer();
+    setEntering(true);
+  };
+
   const finish = async (skipped: boolean) => {
     setFinishing(true);
     setFinishFailed(false);
+    // The overnight answer rides with the step rather than being written when
+    // the box is ticked: it is preselected, so writing on tick would grant an
+    // authority for every reader who merely passed through this screen. Here it
+    // is recorded only by a rep who actually completed the step.
+    //
+    // BOTH answers are recorded, not only the yes. A decline is a real answer
+    // the product needs stored: unanswered and declined are different states,
+    // and leaving an opt-out as unanswered is what makes the product ask the
+    // declining rep again every night.
+    //
+    // A rep who SKIPS the connect records nothing, whatever the box says — the
+    // agent reads their mail to build the brief, so an answer about a mailbox
+    // that was never connected is an answer about nothing.
+    //
+    // Its failure does not fail the step, but it is not swallowed either: the
+    // rep is told, and the question is askable again in Settings. Blocking
+    // onboarding on it would trade a recoverable gap for an unrecoverable one;
+    // saying nothing would leave them believing they answered.
+    if (!skipped) {
+      await recordOvernightAnswer();
+    }
     // Step "complete" (classic STEPS index 4). Voice flags are NOT sent:
     // the merge keeps whatever the voice act (or an earlier session)
     // recorded, so finishing can never overwrite a built voice as skipped.
@@ -203,6 +271,9 @@ export function ConnectAct({
           // result, not a fresh ask, so the dialog's own chrome must say so.
           dialogShowsResult={provider !== null && provider === resultFor}
           onSkip={() => void finish(true)}
+          wantsOvernight={wantsOvernight}
+          onWantsOvernightChange={chooseOvernight}
+          overnightFailed={overnightFailed}
           skipDisabled={finishing}
           // Once a mailbox is actually CONFIRMED live, "skip connecting" is
           // no longer a true option and recording the step as skipped would
@@ -219,8 +290,15 @@ export function ConnectAct({
           linkedinError={
             linkedin.isError ? problemMessageOf(linkedin.error, t) : null
           }
+          // Entering from cn.done is a completion too, and the overnight answer
+          // has to be recorded on THIS path as well: the step is already
+          // persisted by the time the reader gets here (the connect panel's
+          // own onComplete ran finish), so the answer is all that is left, and
+          // routing it through finish again would re-persist the step.
           onEnter={
-            state.phase === "cn.done" ? () => setEntering(true) : undefined
+            state.phase === "cn.done"
+              ? () => void recordOvernightThenEnter()
+              : undefined
           }
           // The ask, still open: rendered INSIDE the dialog ConnectScene
           // wraps around `provider`. A real OAuth "allow" leaves the page

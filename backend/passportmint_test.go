@@ -64,8 +64,8 @@ func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
 				if !ok {
 					return true
 				}
-				sel, ok := call.Fun.(*ast.SelectorExpr)
-				if !ok || sel.Sel.Name != "IssuePassport" || len(call.Args) < 2 {
+				name, identityArg, ok := mintCall(call)
+				if !ok {
 					return true
 				}
 				calls++
@@ -73,11 +73,11 @@ func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
 				// the function obtained. A composite literal is somebody
 				// building an identity, which is exactly the shape that mints
 				// for a person who did not ask.
-				if _, plain := call.Args[1].(*ast.Ident); !plain {
-					t.Errorf("%s calls IssuePassport with a constructed identity (%s) — "+
+				if _, plain := identityArg.(*ast.Ident); !plain {
+					t.Errorf("%s calls %s with a constructed identity (%s) — "+
 						"the user must come from the session, or the mint acts for "+
 						"somebody who never asked",
-						fset.Position(call.Pos()), exprText(fset, call.Args[1]))
+						fset.Position(call.Pos()), name, exprText(fset, identityArg))
 				}
 				return true
 			})
@@ -252,4 +252,45 @@ func sqlStringsIn(t *testing.T, path string, body []byte) []string {
 		return true
 	})
 	return out
+}
+
+// mintNames is every function that mints a passport, by name, with the
+// position of its Identity argument.
+//
+// It is a LIST because the mint is reachable by more than one spelling: the
+// session path calls IssuePassport, and a caller with its own half of the same
+// fact to commit calls IssuePassportTx so the two land in one transaction. A
+// gate matching one name proves nothing about the other, and the one it misses
+// is the one a future caller reaches for — which is how a mint for a person who
+// never asked would get past a green gate.
+//
+// Held by: TestOnlyIdentityMintsAPassportAndOnlyForTheSessionUser (backend/passportmint_test.go)
+var mintNames = map[string]int{
+	// IssuePassport(ctx, id, in)
+	"IssuePassport": 1,
+	// IssuePassportTx(ctx, tx, id, in) — the transaction displaces the identity.
+	"IssuePassportTx": 2,
+}
+
+// mintCall reports whether a call is a passport mint, and which argument
+// carries the identity.
+//
+// It matches a bare identifier as well as a selector: IssuePassportTx is a
+// package-level function called unqualified from inside identity, so a matcher
+// that only understood `x.IssuePassport(...)` would not see the call that
+// actually mints there.
+func mintCall(call *ast.CallExpr) (name string, identityArg ast.Expr, ok bool) {
+	switch fun := call.Fun.(type) {
+	case *ast.SelectorExpr:
+		name = fun.Sel.Name
+	case *ast.Ident:
+		name = fun.Name
+	default:
+		return "", nil, false
+	}
+	at, known := mintNames[name]
+	if !known || len(call.Args) <= at {
+		return "", nil, false
+	}
+	return name, call.Args[at], true
 }

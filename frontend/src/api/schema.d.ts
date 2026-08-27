@@ -5456,6 +5456,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/agent-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The calling rep's own standing answers, one per scheduled agent.
+         * @description Every scheduled agent this build runs, each carrying the rep's answer: granted,
+         *     declined, or never asked. Human-only — an agent reading whether it is allowed to
+         *     run, and by extension being able to ask, is the self-grant this model forbids.
+         *
+         *     `credential_usable` is read from the passport at request time rather than stored:
+         *     a passport expires at a moment nothing writes to the grant, so a stored copy would
+         *     say "granted" about a credential that stopped working hours ago. When it is false
+         *     against a granted answer, the rep agreed and has nothing to act with — the renewal
+         *     case, which the client must offer rather than silently showing the feature as on.
+         */
+        get: operations["listMyAgentGrants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/agent-grants/{spec}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Which scheduled agent this answer is about. */
+                spec: components["schemas"]["ScheduledAgentName"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * The calling rep answers for one agent — granting or withdrawing.
+         * @description Idempotent: re-answering replaces the previous answer, because a rep who declined
+         *     and later changes their mind is giving a NEW answer to the same question rather
+         *     than a second one.
+         *
+         *     GRANTING MINTS. What authorizes an overnight run is a passport, and the single
+         *     production mint binds `on_behalf_of` and `granted_by` to the same session user —
+         *     so granting mints the rep's own credential inside the same transaction as the
+         *     answer. A mint that committed beside a failed grant would be live authority
+         *     nothing points at; a grant beside a failed mint would claim an authority that does
+         *     not exist. The token is never returned: this passport is for the scheduler, not
+         *     for the caller, and re-disclosing it would put an agent credential on a screen.
+         *
+         *     WITHDRAWING REVOKES. The answer flips to declined and the passport it named is
+         *     revoked, so the authority actually ends rather than merely being unreferenced.
+         *     The declined row is kept on purpose — a rep who said no and a rep who was never
+         *     asked are indistinguishable from the passport table alone, and a product that
+         *     cannot tell them apart asks the declining rep again every night.
+         *
+         *     Human-only: an agent granting itself standing authority is the self-grant this
+         *     whole model exists to refuse.
+         */
+        put: operations["setMyAgentGrant"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/settings": {
         parameters: {
             query?: never;
@@ -18562,6 +18632,52 @@ export interface components {
             recent: components["schemas"]["AiActivityItem"][];
         };
         /**
+         * @description A scheduled agent a rep can grant standing authority to. The set matches
+         *     runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
+         *     and this enum moves with it.
+         * @enum {string}
+         */
+        ScheduledAgentName: "morning_brief" | "overnight_at_risk_sweep";
+        /**
+         * @description The rep's answer. `never_asked` is not stored — it is the absence of a row, and it
+         *     is a distinct answer from `declined` on purpose: the product asks once, so it has
+         *     to tell "said no" apart from "has not been asked", or it asks the declining rep
+         *     again every night.
+         * @enum {string}
+         */
+        MyAgentGrantState: "granted" | "declined" | "never_asked";
+        /** @description One rep's standing answer for one scheduled agent. */
+        MyAgentGrant: {
+            spec: components["schemas"]["ScheduledAgentName"];
+            state: components["schemas"]["MyAgentGrantState"];
+            /**
+             * @description Whether the passport behind a granted answer is live RIGHT NOW — not revoked,
+             *     not expired. Read from the passport at request time, never stored, because it
+             *     changes at a moment nothing writes to the grant. False against `granted` is
+             *     the renewal case: the rep agreed and has nothing to act with.
+             */
+            credential_usable: boolean;
+            /**
+             * Format: date-time
+             * @description When the rep last answered. Absent when they never were asked.
+             */
+            decided_at?: string;
+        };
+        MyAgentGrants: {
+            /** @description One entry per scheduled agent, including the ones never answered. */
+            data: components["schemas"]["MyAgentGrant"][];
+        };
+        /** @description The rep's answer for one scheduled agent. */
+        SetMyAgentGrantRequest: {
+            /**
+             * @description True grants and mints the rep's own passport; false withdraws and revokes the
+             *     one it named. There is no field naming a user or a passport: the rep comes from
+             *     the session, and the credential is the server's to mint, so a caller cannot
+             *     answer for somebody else or point a grant at a credential they do not own.
+             */
+            granted: boolean;
+        };
+        /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
          *     because a task that reports nothing is AI work the product performed and then denied.
          *     What a reader is SHOWN is a separate decision and belongs to the client: a complete
@@ -31483,6 +31599,58 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listMyAgentGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rep's standing answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAgentGrants"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setMyAgentGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Which scheduled agent this answer is about. */
+                spec: components["schemas"]["ScheduledAgentName"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMyAgentGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description The rep's updated answer for this agent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAgentGrant"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCaptureSettings: {

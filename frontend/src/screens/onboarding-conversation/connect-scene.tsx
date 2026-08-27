@@ -8,6 +8,7 @@ import { ProviderMark } from "../../design-system/provider-mark";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { throwProblem } from "../common";
+import { OvernightGrantChoice } from "../overnight-grant";
 import { ConnectDialog } from "./connect-dialog";
 
 // The connect act's work surface: two sections of real-width cards — the
@@ -142,6 +143,9 @@ export function ConnectScene({
   returnPanel,
   onSkip,
   skipDisabled,
+  wantsOvernight,
+  onWantsOvernightChange,
+  overnightFailed,
   showSkip,
   linkedinStatus,
   onLinkedinConnect,
@@ -175,6 +179,14 @@ export function ConnectScene({
   returnPanel: ReactNode;
   onSkip: () => void;
   skipDisabled: boolean;
+  /** The rep's preselected answer to the overnight question. Owned by the act,
+   * because that is where it rides along with the connect the step performs —
+   * this scene only asks it. */
+  wantsOvernight: boolean;
+  onWantsOvernightChange: (next: boolean) => void;
+  /** The answer could not be recorded. The step completed anyway, so this says
+   * so rather than blocking — the question is askable again in Settings. */
+  overnightFailed: boolean;
   /** Once consent has returned, skipping is no longer a true option. */
   showSkip: boolean;
   linkedinStatus: LinkedinStatus;
@@ -251,6 +263,18 @@ export function ConnectScene({
           );
         })}
       </div>
+
+      {/* Under the mailboxes, because it is the same decision seen from the
+          other side: the cards above say what Margince may READ, this says
+          whether it may act on it overnight while nobody is watching. Asked
+          here rather than inside a provider dialog because a real OAuth allow
+          leaves the page entirely — a box ticked in that dialog would not
+          survive the redirect back. */}
+      <OvernightGrantChoice
+        checked={wantsOvernight}
+        onChange={onWantsOvernightChange}
+        failed={overnightFailed}
+      />
 
       {/* The inline fallback: a real finding either way, but shown here
           rather than inside a dialog because this tab has no proof it just

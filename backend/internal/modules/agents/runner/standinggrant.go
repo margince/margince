@@ -114,26 +114,66 @@ func (s *Store) grantFor(ctx context.Context, userID ids.UserID, spec string) (S
 	var out StandingGrant
 	found := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Liveness resolved in the SAME statement the fan-out resolves it in, so
-		// the card a rep reads and the run the scheduler queues cannot disagree
-		// about whether their authority still works.
-		row := tx.QueryRow(ctx, `
-			SELECT g.user_id, g.agent_spec, g.state, g.passport_id, g.decided_at,
-			       coalesce(p.revoked_at IS NULL AND p.expires_at > now(), false)
-			  FROM agent_standing_grant g
-			  LEFT JOIN passport p ON p.id = g.passport_id
-			 WHERE g.user_id = $1 AND g.agent_spec = $2`, userID, spec)
-		switch err := row.Scan(&out.UserID, &out.Spec, &out.State,
-			&out.PassportID, &out.DecidedAt, &out.CredentialUsable); {
-		case errors.Is(err, pgx.ErrNoRows):
-			return nil
-		case err != nil:
-			return fmt.Errorf("read the rep's standing grant: %w", err)
-		}
-		found = true
-		return nil
+		var err error
+		out, found, err = grantForTx(ctx, tx, userID, spec)
+		return err
 	})
 	return out, found, err
+}
+
+// grantForTx is the statement itself, inside a transaction the caller owns.
+//
+// It exists because answering a grant and minting the credential it names must
+// commit together, so the read that reports the result has to join that same
+// transaction — a read afterwards could be answered by a state a concurrent
+// revoke had already changed.
+func grantForTx(ctx context.Context, tx pgx.Tx, userID ids.UserID, spec string) (StandingGrant, bool, error) {
+	var out StandingGrant
+	// Liveness resolved in the SAME statement the fan-out resolves it in, so
+	// the card a rep reads and the run the scheduler queues cannot disagree
+	// about whether their authority still works.
+	row := tx.QueryRow(ctx, `
+		SELECT g.user_id, g.agent_spec, g.state, g.passport_id, g.decided_at,
+		       coalesce(p.revoked_at IS NULL AND p.expires_at > now(), false)
+		  FROM agent_standing_grant g
+		  LEFT JOIN passport p ON p.id = g.passport_id
+		 WHERE g.user_id = $1 AND g.agent_spec = $2`, userID, spec)
+	switch err := row.Scan(&out.UserID, &out.Spec, &out.State,
+		&out.PassportID, &out.DecidedAt, &out.CredentialUsable); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return StandingGrant{}, false, nil
+	case err != nil:
+		return StandingGrant{}, false, fmt.Errorf("read the rep's standing grant: %w", err)
+	}
+	return out, true, nil
+}
+
+// MyGrantTx is MyGrant inside the caller's transaction — the same
+// acting-principal rule, so it too cannot be pointed at a colleague.
+//
+// IT TAKES A LOCK, and the lock is the reason this exists rather than callers
+// reusing the pool-opening read. Answering a grant is read-then-write across
+// two tables: read the previous answer, revoke the passport it named, mint a
+// new one, write the answer. Two concurrent answers from one rep would both
+// read "no live credential", both mint, and the upsert would keep one — leaving
+// the other live and referenced by nothing, which is standing authority nobody
+// can find in order to end it.
+//
+// A row lock cannot serialize this: on the first answer there IS no row to
+// lock. So the lock is on the (rep, agent) PAIR, taken before the read and held
+// to commit, which is exactly the span the decision spans.
+func (s *Store) MyGrantTx(ctx context.Context, tx pgx.Tx, spec string) (StandingGrant, bool, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return StandingGrant{}, false, apperrors.ErrPermissionDenied
+	}
+	userID := ids.From[ids.UserKind](actor.UserID)
+	if _, err := tx.Exec(ctx,
+		`SELECT pg_advisory_xact_lock(hashtextextended($1, 0))`,
+		"agent_standing_grant:"+userID.String()+":"+spec); err != nil {
+		return StandingGrant{}, false, fmt.Errorf("hold this rep's answer while it is decided: %w", err)
+	}
+	return grantForTx(ctx, tx, userID, spec)
 }
 
 // LiveGrantsFor reads every rep who granted this agent and still holds the
