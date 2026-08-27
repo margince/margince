@@ -129,7 +129,7 @@ func projectForActivity(refs pipelineRefs, act demoActivity) string {
 // decide an unchanged activity now belongs to a different project. It would
 // then relink it, which stamps six-year retention that cannot be lifted.
 func projectForActivityOn(refs pipelineRefs, company, when string) string {
-	projects := refs.projectsByCompany[strings.ToLower(company)]
+	projects := refs.projectsByOrg[refs.orgForDomain(company)]
 	if len(projects) == 0 {
 		return ""
 	}

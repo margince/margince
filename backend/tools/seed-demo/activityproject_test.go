@@ -14,8 +14,12 @@ import (
 // oldest-first order loadProjects guarantees.
 func refsWithProjects(projects ...seededProject) pipelineRefs {
 	return pipelineRefs{
-		now:               time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC),
-		projectsByCompany: map[string][]seededProject{"acme.test": projects},
+		now: time.Date(2026, 8, 24, 12, 0, 0, 0, time.UTC),
+		// Two domains onto one account, because that is the shape the
+		// by-domain keying used to lose: whichever alias the reversal
+		// happened to keep was the only one that resolved.
+		orgsByDom:     map[string]string{"acme.test": "org-acme", "acme.example": "org-acme"},
+		projectsByOrg: map[string][]seededProject{"org-acme": projects},
 	}
 }
 
@@ -264,5 +268,27 @@ func TestTheIndexReadsBothLinksItActsOn(t *testing.T) {
 	}
 	if got.OccurredAt == "" {
 		t.Error("occurred_at was dropped; the reconciliation dates against it")
+	}
+}
+
+// TestEitherDomainOfOneAccountFindsTheSameWork — the defect the organization
+// keying exists for.
+//
+// The projects map was keyed by domain and built by reversing orgsByDom, so an
+// account with two domains kept exactly one of them and which one was Go map
+// iteration order. An activity naming the other found no projects at all, and
+// found them again on the next run. Both of an account's domains name the same
+// account, so both must reach the same delivery work.
+func TestEitherDomainOfOneAccountFindsTheSameWork(t *testing.T) {
+	refs := refsWithProjects(seededProject{ID: "migration", StartedAt: "2026-01-15"})
+
+	named := projectForActivity(refs, demoActivity{Company: "acme.test", DaysAgo: 30})
+	alias := projectForActivity(refs, demoActivity{Company: "acme.example", DaysAgo: 30})
+
+	if named != "migration" {
+		t.Fatalf("the account's own domain reaches %q, want the migration", named)
+	}
+	if alias != named {
+		t.Errorf("the alias reaches %q and the domain reaches %q; one account, one answer", alias, named)
 	}
 }

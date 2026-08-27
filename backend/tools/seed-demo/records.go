@@ -163,7 +163,7 @@ func activityLinks(c *client, refs pipelineRefs, act demoActivity, orgID string)
 		}
 	}
 
-	for _, deal := range refs.dealsByCompany[strings.ToLower(act.Company)] {
+	for _, deal := range refs.dealsByOrg[refs.orgForDomain(act.Company)] {
 		links = append(links, jsonBody{"entity_type": "deal", "entity_id": deal})
 		break // one deal: an account with two is ambiguous, and guessing wrong is worse than not guessing
 	}
