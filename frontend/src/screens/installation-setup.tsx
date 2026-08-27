@@ -130,7 +130,7 @@ function AiStep() {
   // What this installation can already price. On a fresh install that is the
   // seeded sheet, so the two fields open with the vendor's own family in them
   // rather than with one id and no way to learn a second.
-  const catalogue = useAiModelCatalogue(true);
+  const catalogue = useAiModelCatalogue();
 
   // Switching vendor re-seeds the models, because the previous vendor's ids
   // mean nothing to this one — leaving them would offer a binding that cannot

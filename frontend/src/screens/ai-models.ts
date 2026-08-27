@@ -31,9 +31,11 @@ type ModelRate = components["schemas"]["AiModelRate"];
 /** The lane a field binds: what a tier picker asks for, what the embed row does. */
 export type ModelLane = ModelRate["lane"];
 
-export function useAiModelCatalogue(enabled: boolean) {
+/** The sheet as a caller holds it, before the read has landed. */
+export type ModelCatalogue = readonly ModelRate[] | undefined;
+
+export function useAiModelCatalogue() {
   return useQuery({
-    enabled,
     queryKey: ["ai-model-rates"],
     // The sheet changes when an operator adds a price, which is not something
     // that happens while somebody is filling in this form.
@@ -65,7 +67,7 @@ export function useAiModelCatalogue(enabled: boolean) {
  * must see it in the same order.
  */
 export function suggestionsFor(
-  catalogue: readonly ModelRate[] | undefined,
+  catalogue: ModelCatalogue,
   provider: string,
   lane: ModelLane,
 ): readonly ComboBoxSuggestion[] {

@@ -11,6 +11,7 @@ import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
 import {
+  type ModelCatalogue,
   type ModelLane,
   suggestionsFor,
   useAiModelCatalogue,
@@ -32,9 +33,6 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type Routing = components["schemas"]["AiRouting"];
 type TierBinding = components["schemas"]["AiTierBinding"];
-type ModelCatalogue =
-  | readonly components["schemas"]["AiModelRate"][]
-  | undefined;
 
 // The adapters a tier may name. Written out because the wire carries a free
 // string — the server refuses an unknown one, and a reader choosing from a list
@@ -147,11 +145,11 @@ function RoutingForm({
 }: Readonly<{ routing: Routing; canManage: boolean }>) {
   const t = useT();
   const replace = useReplaceRouting();
-  // One read for every row on the card. Enabled unconditionally because this
+  // One read for every row on the card. No grant check in front of it: this
   // form only renders for a reader who already holds `ai_routing:read`, and the
   // hook answers an empty list rather than throwing when the sheet's own grant
   // is withheld — a field with nothing to suggest, which is what it was before.
-  const catalogue = useAiModelCatalogue(true);
+  const catalogue = useAiModelCatalogue();
   // The stored document is the starting point, and the reader's edits live
   // here until they save. Keyed on the routing version so a binding another
   // role changed replaces an untouched form rather than being overwritten by

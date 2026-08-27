@@ -46,13 +46,11 @@ export type ComboBoxProps = Readonly<{
   onChange: (value: string) => void;
   suggestions: readonly ComboBoxSuggestion[];
   placeholder?: string;
-  id?: string;
-  name?: string;
   disabled?: boolean;
+  /** The four a `Field` hands its control, spread at every call site. */
+  id?: string;
   required?: boolean;
-  className?: string;
   "aria-label"?: string;
-  "aria-labelledby"?: string;
   "aria-describedby"?: string;
   "aria-invalid"?: boolean;
 }>;
@@ -72,7 +70,7 @@ export type ComboBoxProps = Readonly<{
  * a reader who opens it is asking what ELSE there is. Narrowing to the one row
  * they already have would make them clear the field to see the alternatives.
  */
-export function matchingSuggestions(
+function matchingSuggestions(
   suggestions: readonly ComboBoxSuggestion[],
   typed: string,
 ): readonly ComboBoxSuggestion[] {
@@ -87,7 +85,7 @@ export function matchingSuggestions(
 }
 
 export function ComboBox(props: ComboBoxProps) {
-  const { value, onChange, suggestions, disabled, name } = props;
+  const { value, onChange, suggestions, disabled } = props;
   const inputRef = useRef<HTMLInputElement>(null);
   const popupRef = useRef<HTMLDivElement>(null);
   const listboxId = useId();
@@ -156,11 +154,10 @@ export function ComboBox(props: ComboBoxProps) {
 
   return (
     <>
-      <div className={["combobox", props.className].filter(Boolean).join(" ")}>
+      <div className="combobox">
         <input
           ref={inputRef}
           id={props.id}
-          name={name}
           className="input combobox-input"
           type="text"
           autoComplete="off"
@@ -176,7 +173,6 @@ export function ComboBox(props: ComboBoxProps) {
             listOpen && active !== -1 ? optionDomId(active) : undefined
           }
           aria-label={props["aria-label"]}
-          aria-labelledby={props["aria-labelledby"]}
           aria-describedby={props["aria-describedby"]}
           aria-invalid={props["aria-invalid"]}
           aria-required={props.required}
