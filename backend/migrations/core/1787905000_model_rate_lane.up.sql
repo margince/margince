@@ -5,6 +5,8 @@
 -- every local chat row too. Existing rows default to 'chat', which is what the
 -- overwhelming majority are; an operator whose sheet already carries an embedder
 -- corrects that one row the same way they correct a price.
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE ai_model_rate
     ADD COLUMN lane text NOT NULL DEFAULT 'chat';
 

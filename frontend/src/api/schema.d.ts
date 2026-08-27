@@ -10806,6 +10806,14 @@ export interface components {
         AiModelRate: {
             provider: string;
             model_id: string;
+            /**
+             * @description What the model is FOR. A property of the model rather than of this dated row: the
+             *     routing form offers a `chat` model where a chat tier binds and an `embeddings` one
+             *     where the embeddings lane binds, and a zero output price cannot tell them apart —
+             *     every local chat row carries one too.
+             * @enum {string}
+             */
+            lane: "chat" | "embeddings";
             input_per_mtok: string;
             output_per_mtok: string;
             cache_read_per_mtok: string;
@@ -10819,6 +10827,14 @@ export interface components {
         SetAiModelRateRequest: {
             provider: string;
             model_id: string;
+            /**
+             * @description What the model is for. OMIT to keep what the sheet already files this model as —
+             *     a re-price must never re-file an embedder as a chat model, and a refresh knows
+             *     only the price. A model the sheet has never seen is filed as `chat`. Supply it to
+             *     correct a mis-filed model.
+             * @enum {string}
+             */
+            lane?: "chat" | "embeddings";
             /** @description USD per 1M input tokens. Plain non-negative decimal, up to 12 integer and 6 fractional digits (keeps the stored µUSD within int64). */
             input_per_mtok: string;
             /** @description USD per 1M output tokens. */
