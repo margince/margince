@@ -111,6 +111,14 @@ function tableRows(section: string): string[][] {
 // without JSX admits `MAX_DPR`'s neighbours and every exported type; JSX
 // without PascalCase admits the local render helpers a big module keeps to
 // itself, which are not primitives and have nothing to document.
+//
+// A module publishes a component two ways, and a gate that knows only one goes
+// blind to the other while still reporting PASS — the one direction a census
+// must not be wrong in. `export function Card` carries the keyword on the
+// declaration; `export { Card }` carries it in a list elsewhere in the file,
+// and `export { Card as Plate }` publishes a name the declaration never spells.
+// The PUBLIC name is the one the catalog has to carry, because it is what a
+// caller imports and therefore what a reader greps for.
 function componentsIn(path: string, text: string): string[] {
   const source = ts.createSourceFile(
     path,
@@ -119,16 +127,38 @@ function componentsIn(path: string, text: string): string[] {
     true,
     scriptKindFor(path),
   );
-  const found: string[] = [];
+  const declarations = new Map<string, ts.Node>();
+  const published: [string, string][] = [];
   for (const statement of source.statements) {
-    if (!isExported(statement)) continue;
-    for (const [name, declaration] of declaredValues(statement)) {
-      if (/^[A-Z][A-Za-z0-9]*$/.test(name) && rendersMarkup(declaration)) {
-        found.push(name);
+    for (const [local, declaration] of declaredValues(statement)) {
+      declarations.set(local, declaration);
+      if (isExported(statement)) published.push([local, local]);
+    }
+    // A re-export names a module of its own (`export { x } from "./y"`), and
+    // what it publishes is that module's, not this one's — judging it here
+    // would report a neighbour's component against this file.
+    if (
+      ts.isExportDeclaration(statement) &&
+      statement.moduleSpecifier === undefined &&
+      statement.exportClause !== undefined &&
+      ts.isNamedExports(statement.exportClause)
+    ) {
+      for (const element of statement.exportClause.elements) {
+        published.push([
+          (element.propertyName ?? element.name).text,
+          element.name.text,
+        ]);
       }
     }
   }
-  return found;
+  return published.flatMap(([local, name]) => {
+    const declaration = declarations.get(local);
+    return declaration !== undefined &&
+      /^[A-Z][A-Za-z0-9]*$/.test(name) &&
+      rendersMarkup(declaration)
+      ? [name]
+      : [];
+  });
 }
 
 // The `export` keyword on the statement itself, read off its modifiers.
@@ -194,9 +224,10 @@ function storyTitle(path: string, text: string): string | null {
   );
   const exported = source.statements.find(ts.isExportAssignment);
   if (!exported) return null;
-  const meta = ts.isIdentifier(exported.expression)
-    ? metaObjectNamed(source, exported.expression.text)
-    : exported.expression;
+  const named = unwrap(exported.expression);
+  const meta = ts.isIdentifier(named)
+    ? metaObjectNamed(source, named.text)
+    : named;
   if (!meta || !ts.isObjectLiteralExpression(meta)) return null;
   for (const property of meta.properties) {
     if (
@@ -218,11 +249,30 @@ function metaObjectNamed(
     if (!ts.isVariableStatement(statement)) continue;
     for (const declaration of statement.declarationList.declarations) {
       if (ts.isIdentifier(declaration.name) && declaration.name.text === name) {
-        return declaration.initializer;
+        return declaration.initializer && unwrap(declaration.initializer);
       }
     }
   }
   return undefined;
+}
+
+// The type-only wrappers a story's metadata may be written through. They change
+// nothing about the object underneath, so a scanner that stops at them reads no
+// title — and an absent title is SKIPPED by the root check rather than
+// reported, which is the one direction this gate must not be wrong in. This
+// tree already writes `as const satisfies` elsewhere, so the form is one edit
+// away from appearing here.
+function unwrap(expression: ts.Expression): ts.Expression {
+  let node = expression;
+  while (
+    ts.isParenthesizedExpression(node) ||
+    ts.isAsExpression(node) ||
+    ts.isSatisfiesExpression(node) ||
+    ts.isTypeAssertionExpression(node)
+  ) {
+    node = node.expression;
+  }
+  return node;
 }
 
 const catalogTable = catalogSection(CATALOG_HEADING);
@@ -317,6 +367,30 @@ describe("the detectors report what they are for", () => {
     ]);
   });
 
+  it("sees a component published through an export list", () => {
+    expect(
+      componentsIn(probe, "const Card = () => <div />;\nexport { Card };"),
+    ).toEqual(["Card"]);
+  });
+
+  it("sees an export list's PUBLIC name, not the local one", () => {
+    // `export { Card as Plate }` is imported as Plate, so Plate is the noun a
+    // reader greps the catalog for. Reporting Card would send them looking for
+    // a name no caller ever writes.
+    expect(
+      componentsIn(
+        probe,
+        "const Card = () => <div />;\nexport { Card as Plate };",
+      ),
+    ).toEqual(["Plate"]);
+  });
+
+  it("does not see a re-export from another module", () => {
+    // What `export { Card } from "./card"` publishes belongs to that module.
+    // Judging it here would report a neighbour's component against this file.
+    expect(componentsIn(probe, 'export { Card } from "./card";')).toEqual([]);
+  });
+
   it("does not see a component in a comment", () => {
     expect(
       componentsIn(probe, "// export function Card() { return <div />; }"),
@@ -356,6 +430,27 @@ describe("the detectors report what they are for", () => {
   it("reads a title off an inline default export", () => {
     expect(
       storyTitle(probe, 'export default { title: "Shell/Top bar" };'),
+    ).toBe("Shell/Top bar");
+  });
+
+  it("reads a title through the type-only wrappers", () => {
+    // Each of these changes nothing about the object underneath. A scanner that
+    // stopped at one would read no title, and an absent title is skipped rather
+    // than reported — so this form would walk past the root check.
+    for (const meta of [
+      'const meta = { title: "Shell/Top bar" } satisfies Meta<typeof Bar>;',
+      'const meta = { title: "Shell/Top bar" } as Meta<typeof Bar>;',
+      'const meta = ({ title: "Shell/Top bar" });',
+    ]) {
+      expect(storyTitle(probe, `${meta}\nexport default meta;`)).toBe(
+        "Shell/Top bar",
+      );
+    }
+    expect(
+      storyTitle(
+        probe,
+        'export default { title: "Shell/Top bar" } satisfies Meta<typeof Bar>;',
+      ),
     ).toBe("Shell/Top bar");
   });
 
