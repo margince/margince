@@ -13115,6 +13115,59 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /weekly-reviews:
+    get:
+      tags: [Brief]
+      operationId: listWeeklyReviews
+      summary: The weeks the acting rep has a review for, newest first.
+      description: |
+        The archive's index — a list of doors, not the reviews themselves. Reachable without a
+        nav entry of its own: the weekly is a view of the work Today already collects.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The weeks with a review, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyReviewIndex' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /weekly-reviews/latest:
+    get:
+      tags: [Brief]
+      operationId: getLatestWeeklyReview
+      summary: The acting rep's most recent weekly review, or a named week's.
+      description: |
+        Serves a review that was WRITTEN when its week closed; it never assembles one. A read
+        that could re-derive the week would answer differently depending on when it was asked —
+        the deal you closed on Friday reclassified in March because somebody edited its stage —
+        and a record of a past week that does that is not a record.
+
+        The deal lines are frozen: the label is what the deal was called that week, stored beside
+        its id rather than joined, so a rename does not rewrite history and a deletion does not
+        erase it. That is also why the weekly is its own aggregate rather than living on
+        `brief_item`, whose rows cascade away with their deal.
+      parameters:
+        - name: week
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The weekly review.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: The rep has no review for that week.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /brief/annotations:
     put:
       tags: [Brief]
@@ -29061,6 +29114,84 @@ components:
             When the activity that re-qualified the deal occurred. An instant, because it names a
             specific event. It is the EARLIEST activity after the dismissal: a later one did not
             bring the deal back, it arrived once the deal was already coming.
+
+    WeeklyReviewIndex:
+      type: object
+      additionalProperties: false
+      required: [weeks]
+      properties:
+        weeks:
+          type: array
+          items: { type: string, format: date }
+          description: The Monday of each week with a review, newest first.
+
+    WeeklyReview:
+      type: object
+      additionalProperties: false
+      description: |
+        One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
+        which is why they are stored rather than recomputed.
+      required: [id, local_week_start, generated_at, as_of, counts, deals]
+      properties:
+        id: { type: string, format: uuid }
+        local_week_start:
+          type: string
+          format: date
+          description: The Monday of the week under review, in the installation reporting timezone.
+        generated_at: { type: string, format: date-time, description: 'When the review was written.' }
+        as_of: { type: string, format: date-time, description: 'The instant the week was measured to.' }
+        counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
+        deals:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewDeal' }
+          description: |
+            The deals the week is about, won and lost first. Capped for reading — the counts stay
+            complete, so a busy week reads "12 moved" beside the most recent of them rather than
+            a truncated number.
+
+    WeeklyReviewCounts:
+      type: object
+      additionalProperties: false
+      required: [tasks_due, tasks_done, tasks_carried_over, deals_moved, deals_won, deals_lost,
+                 proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed]
+      properties:
+        tasks_due: { type: integer, minimum: 0, description: 'Tasks assigned to this rep that fell due in the week.' }
+        tasks_done: { type: integer, minimum: 0, description: 'And were finished inside it.' }
+        tasks_carried_over: { type: integer, minimum: 0, description: 'Still open now and older than the week: work postponed at least twice.' }
+        deals_moved: { type: integer, minimum: 0, description: 'Deals that changed stage, excluding those that closed.' }
+        deals_won: { type: integer, minimum: 0 }
+        deals_lost: { type: integer, minimum: 0 }
+        proposals_accepted:
+          type: integer
+          minimum: 0
+          description: |
+            Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
+            `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
+            decisions nobody made.
+        proposals_rejected: { type: integer, minimum: 0, description: 'The same, rejected.' }
+        brief_items_acted: { type: integer, minimum: 0, description: 'Morning-brief items this rep acted on in the week.' }
+        brief_items_dismissed: { type: integer, minimum: 0, description: 'And dismissed.' }
+
+    WeeklyReviewDeal:
+      type: object
+      additionalProperties: false
+      description: |
+        One deal the week is about, FROZEN. Every word was written when the review was, so a deal
+        renamed, archived or deleted since leaves the line exactly as the week recorded it.
+      required: [deal_id, label, outcome, occurred_at]
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: 'The deal, for a link. It may no longer exist; the line stands either way.'
+        label: { type: string, description: 'What the deal was called that week.' }
+        outcome: { type: string, enum: [moved, won, lost] }
+        to_stage_label:
+          type: [string, 'null']
+          description: 'Where it moved to, as words: a renamed or deleted stage must not make an old review unreadable.'
+        amount_minor_at_close: { type: [integer, 'null'], format: int64 }
+        currency_at_close: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time, description: 'When it closed or moved.' }
 
     AnnotateBriefRequest:
       type: object

@@ -10708,6 +10708,27 @@ func (e WebhookSubscriptionState) Valid() bool {
 	}
 }
 
+// Defines values for WeeklyReviewDealOutcome.
+const (
+	WeeklyReviewDealOutcomeLost  WeeklyReviewDealOutcome = "lost"
+	WeeklyReviewDealOutcomeMoved WeeklyReviewDealOutcome = "moved"
+	WeeklyReviewDealOutcomeWon   WeeklyReviewDealOutcome = "won"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewDealOutcome enum.
+func (e WeeklyReviewDealOutcome) Valid() bool {
+	switch e {
+	case WeeklyReviewDealOutcomeLost:
+		return true
+	case WeeklyReviewDealOutcomeMoved:
+		return true
+	case WeeklyReviewDealOutcomeWon:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for WorkspaceEmailDomainSource.
 const (
 	Admin   WorkspaceEmailDomainSource = "admin"
@@ -11664,22 +11685,22 @@ func (e ListOrganizationDocumentsParamsCategory) Valid() bool {
 
 // Defines values for ListOrganizationDocumentsParamsDocState.
 const (
-	ListOrganizationDocumentsParamsDocStateCurrent    ListOrganizationDocumentsParamsDocState = "current"
-	ListOrganizationDocumentsParamsDocStateDraft      ListOrganizationDocumentsParamsDocState = "draft"
-	ListOrganizationDocumentsParamsDocStateFinal      ListOrganizationDocumentsParamsDocState = "final"
-	ListOrganizationDocumentsParamsDocStateSuperseded ListOrganizationDocumentsParamsDocState = "superseded"
+	Current    ListOrganizationDocumentsParamsDocState = "current"
+	Draft      ListOrganizationDocumentsParamsDocState = "draft"
+	Final      ListOrganizationDocumentsParamsDocState = "final"
+	Superseded ListOrganizationDocumentsParamsDocState = "superseded"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationDocumentsParamsDocState enum.
 func (e ListOrganizationDocumentsParamsDocState) Valid() bool {
 	switch e {
-	case ListOrganizationDocumentsParamsDocStateCurrent:
+	case Current:
 		return true
-	case ListOrganizationDocumentsParamsDocStateDraft:
+	case Draft:
 		return true
-	case ListOrganizationDocumentsParamsDocStateFinal:
+	case Final:
 		return true
-	case ListOrganizationDocumentsParamsDocStateSuperseded:
+	case Superseded:
 		return true
 	default:
 		return false
@@ -25028,6 +25049,86 @@ type WebhookSubscriptionListResponse struct {
 	Page            PageInfo `json:"page"`
 }
 
+// WeeklyReview One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
+// which is why they are stored rather than recomputed.
+type WeeklyReview struct {
+	// AsOf The instant the week was measured to.
+	AsOf   time.Time          `json:"as_of"`
+	Counts WeeklyReviewCounts `json:"counts"`
+
+	// Deals The deals the week is about, won and lost first. Capped for reading — the counts stay
+	// complete, so a busy week reads "12 moved" beside the most recent of them rather than
+	// a truncated number.
+	Deals []WeeklyReviewDeal `json:"deals"`
+
+	// GeneratedAt When the review was written.
+	GeneratedAt time.Time          `json:"generated_at"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+}
+
+// WeeklyReviewCounts defines model for WeeklyReviewCounts.
+type WeeklyReviewCounts struct {
+	// BriefItemsActed Morning-brief items this rep acted on in the week.
+	BriefItemsActed int `json:"brief_items_acted"`
+
+	// BriefItemsDismissed And dismissed.
+	BriefItemsDismissed int `json:"brief_items_dismissed"`
+	DealsLost           int `json:"deals_lost"`
+
+	// DealsMoved Deals that changed stage, excluding those that closed.
+	DealsMoved int `json:"deals_moved"`
+	DealsWon   int `json:"deals_won"`
+
+	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
+	// `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
+	// decisions nobody made.
+	ProposalsAccepted int `json:"proposals_accepted"`
+
+	// ProposalsRejected The same, rejected.
+	ProposalsRejected int `json:"proposals_rejected"`
+
+	// TasksCarriedOver Still open now and older than the week: work postponed at least twice.
+	TasksCarriedOver int `json:"tasks_carried_over"`
+
+	// TasksDone And were finished inside it.
+	TasksDone int `json:"tasks_done"`
+
+	// TasksDue Tasks assigned to this rep that fell due in the week.
+	TasksDue int `json:"tasks_due"`
+}
+
+// WeeklyReviewDeal One deal the week is about, FROZEN. Every word was written when the review was, so a deal
+// renamed, archived or deleted since leaves the line exactly as the week recorded it.
+type WeeklyReviewDeal struct {
+	AmountMinorAtClose *int64  `json:"amount_minor_at_close,omitempty"`
+	CurrencyAtClose    *string `json:"currency_at_close,omitempty"`
+
+	// DealId The deal, for a link. It may no longer exist; the line stands either way.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// Label What the deal was called that week.
+	Label string `json:"label"`
+
+	// OccurredAt When it closed or moved.
+	OccurredAt time.Time               `json:"occurred_at"`
+	Outcome    WeeklyReviewDealOutcome `json:"outcome"`
+
+	// ToStageLabel Where it moved to, as words: a renamed or deleted stage must not make an old review unreadable.
+	ToStageLabel *string `json:"to_stage_label,omitempty"`
+}
+
+// WeeklyReviewDealOutcome defines model for WeeklyReviewDeal.Outcome.
+type WeeklyReviewDealOutcome string
+
+// WeeklyReviewIndex defines model for WeeklyReviewIndex.
+type WeeklyReviewIndex struct {
+	// Weeks The Monday of each week with a review, newest first.
+	Weeks []openapi_types.Date `json:"weeks"`
+}
+
 // WorkspaceEmailDomain defines model for WorkspaceEmailDomain.
 type WorkspaceEmailDomain struct {
 	CreatedAt *time.Time `json:"created_at,omitempty"`
@@ -29273,6 +29374,12 @@ type UpdateWebhookSubscriptionParams struct {
 type ListWebhookDeliveriesParams struct {
 	// Limit Max items in the page.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
+}
+
+// GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
+type GetLatestWeeklyReviewParams struct {
+	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
+	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
 }
 
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
@@ -39006,6 +39113,12 @@ type ServerInterface interface {
 	// Rotate a subscription's signing secret (returns the new secret once).
 	// (POST /webhook-subscriptions/{id}/rotate-secret)
 	RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id)
+	// The weeks the acting rep has a review for, newest first.
+	// (GET /weekly-reviews)
+	ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
+	// The acting rep's most recent weekly review, or a named week's.
+	// (GET /weekly-reviews/latest)
+	GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -41967,6 +42080,18 @@ func (_ Unimplemented) ReplayWebhookDelivery(w http.ResponseWriter, r *http.Requ
 // Rotate a subscription's signing secret (returns the new secret once).
 // (POST /webhook-subscriptions/{id}/rotate-secret)
 func (_ Unimplemented) RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The weeks the acting rep has a review for, newest first.
+// (GET /weekly-reviews)
+func (_ Unimplemented) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The acting rep's most recent weekly review, or a named week's.
+// (GET /weekly-reviews/latest)
+func (_ Unimplemented) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -63916,6 +64041,69 @@ func (siw *ServerInterfaceWrapper) RotateWebhookSecret(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListWeeklyReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWeeklyReviews(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLatestWeeklyReview operation middleware
+func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestWeeklyReviewParams
+
+	// ------------- Optional query parameter "week" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "week", r.URL.Query(), &params.Week, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "week"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "week", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLatestWeeklyReview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -65507,6 +65695,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/webhook-subscriptions/{id}/rotate-secret", wrapper.RotateWebhookSecret)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-reviews", wrapper.ListWeeklyReviews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-reviews/latest", wrapper.GetLatestWeeklyReview)
 	})
 
 	return r

@@ -125,9 +125,10 @@ func (s *Store) SaveResearchClaims(ctx context.Context, personID ids.PersonID, c
 			}
 			if !landed {
 				// An acceptance REPLACES, so the only way a row does not land
-				// is the writer's liveness predicate refusing it: an erasure
-				// committed between EnsureWritableLive above and this
-				// statement, which at READ COMMITTED is a fresh snapshot. The
+				// is the writer refusing it for the subject: an erasure
+				// committed between EnsureWritableLive above and the row lock
+				// the writer takes, which at READ COMMITTED is a fresh
+				// snapshot. The
 				// whole acceptance fails rather than counting a claim that is
 				// not there — the count rides the audit row and the outbox
 				// event, so a saved++ here would record a mutation that never

@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/orgbrief"
 	"github.com/margince/margince/backend/internal/compose/orgdossier"
 	"github.com/margince/margince/backend/internal/compose/person360"
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -63,6 +64,12 @@ type Server struct {
 	voiceHandlers
 	reportHandlers
 	briefs.Handlers
+	// The weekly retrospective. Named rather than embedded because
+	// briefs.Handlers already claims the unqualified name, and because the
+	// weekly is deliberately its OWN aggregate — a weekly row on brief_run
+	// would become "the latest brief" to the reader that decides the next
+	// morning's overnight window.
+	weeklyHandlers weekly.Handlers
 	// The day's one surface, assembled across approvals, dedupe and tasks.
 	// Named rather than embedded: briefs.Handlers already claims the
 	// unqualified name, and two embedded `Handlers` is a compile error rather

@@ -42,9 +42,11 @@ func (s *Store) RecomputeLeadScore(ctx context.Context, leadID ids.LeadID, now t
 		// UpdateLead each probe before they reach it. Putting it in the shared
 		// function instead would have turned an archived lead from a silent
 		// no-op into a 404 for all four.
-		if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
+		if err := auth.HoldWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}
+		// And held, for the reason SetLeadManualSignal states
+		// (leadmanualsignal.go).
 		return recomputeLeadScoreTx(ctx, tx, leadID, now, false)
 	})
 }

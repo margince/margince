@@ -18,6 +18,7 @@ import { attentionKey } from "./today.queries";
 // exist on the server.
 
 export type MorningBrief = components["schemas"]["MorningBrief"];
+export type WeeklyReview = components["schemas"]["WeeklyReview"];
 export type MorningBriefItem = components["schemas"]["MorningBriefItem"];
 export type MorningDigest = components["schemas"]["MorningDigest"];
 export type Deal = components["schemas"]["Deal"];
@@ -280,6 +281,57 @@ export function useBriefItemMark() {
       // cache would leave the row on screen until the next refetch, which reads
       // exactly like a click that did nothing.
       void queryClient.invalidateQueries({ queryKey: attentionKey });
+    },
+  });
+}
+
+/**
+ * The rep's weekly retrospective — the most recent, or a named week.
+ *
+ * `404` is not a failure: a rep whose first Monday has not come round yet has
+ * no review, and that is a page saying so rather than an error.
+ */
+export function useWeeklyReview(
+  week?: string,
+): UseQueryResult<WeeklyReview | null> {
+  return useQuery({
+    queryKey: ["weekly-review", week ?? "latest"],
+    queryFn: async (): Promise<WeeklyReview | null> => {
+      const { data, error, response } = await api.GET(
+        "/weekly-reviews/latest",
+        {
+          params: { query: week === undefined ? {} : { week } },
+        },
+      );
+      if (response.status === 404) {
+        return null;
+      }
+      if (error) {
+        throwProblem(error);
+      }
+      // A payload that is not a review reads as no review, not as one with
+      // undefined fields. The panel formats local_week_start straight away, so
+      // a half-shaped answer would take Home's whole render down rather than
+      // drawing the honest "no review yet" state.
+      return data?.local_week_start === undefined ? null : data;
+    },
+  });
+}
+
+/** The weeks this rep has a review for — the archive's index. */
+export function useWeeklyReviewIndex(): UseQueryResult<readonly string[]> {
+  return useQuery({
+    queryKey: ["weekly-review-index"],
+    queryFn: async (): Promise<readonly string[]> => {
+      const { data, error } = await api.GET("/weekly-reviews");
+      if (error) {
+        throwProblem(error);
+      }
+      // Never undefined out of this hook. React Query refuses an undefined
+      // result, and a payload without the field is a server that answered
+      // something else — which must read as "no weeks", not as a crash that
+      // takes Home's whole render with it.
+      return data?.weeks ?? [];
     },
   });
 }

@@ -165,6 +165,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		BriefGenerateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&briefGenerateWorkspaceWorker{}).Work(ctx, &river.Job[BriefGenerateWorkspaceArgs]{})
 		},
+		WeeklyReviewGenerateWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
+			return (&weeklyGenerateWorkspaceWorker{}).Work(ctx, &river.Job[WeeklyReviewGenerateWorkspaceArgs]{})
+		},
 		CaptureTraceSweepWorkspaceArgs{}.Kind(): func(ctx context.Context) error {
 			return (&captureTraceSweepWorkspaceWorker{}).Work(ctx, &river.Job[CaptureTraceSweepWorkspaceArgs]{})
 		},

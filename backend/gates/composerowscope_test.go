@@ -88,6 +88,18 @@ var unscopedReferenceReads = gatekit.Waive(map[string]string{
 	"internal/compose:scanQuietProjects":  "the quiet-project rule's scan, under the same sweep and the same system principal: the organization it names is the account the project's signal is attributed to, handed to signals.RecordDerived and never to a reader",
 	"internal/compose:dueThreads":         "the signal extractor's settled-conversation backlog, under the same sweep and the same system principal: the single organization a thread resolves to is what the extraction is filed against, and the rows go to the model lane rather than to a caller",
 
+	// The weekly retrospective's frozen deal lines. The id is served beside a
+	// label written when the review was, and NOTHING live is read: the query
+	// joins no deal, no stage and no organization, so there is no current row
+	// for a scope to narrow. Freezing is the point — a past week that changed
+	// when a deal was renamed, archived or deleted would not be a record of
+	// that week. The review itself is already the acting rep's own
+	// (weeklystore.go's reviewUser reads the principal and takes no user id),
+	// so the lines a caller reaches are the lines of their own weeks; the deal
+	// id travels so the card can offer a link, which the deal page then gates
+	// on its own terms.
+	"internal/compose/weekly:readDealLines": "the weekly review's frozen deal lines: every word served was written when the review was and no live record is joined, and the review row is already scoped to the acting rep by reviewUser",
+
 	"internal/compose:employerOf": "the person auto-enrich consumer's employer resolution, under the PrincipalSystem actor its own systemContext binds before the pass (compose/personautoenrich.go): it answers which company's published site may describe this person, and the id is spent inside the same transaction choosing that site — a caller never sees it",
 
 	// The project reports' company columns. The scope IS applied — by

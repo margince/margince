@@ -1994,3 +1994,11 @@ func (stubs) ReplayWebhookDelivery(w nethttp.ResponseWriter, r *nethttp.Request,
 func (stubs) RotateWebhookSecret(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RotateWebhookSecret")
 }
+
+func (stubs) ListWeeklyReviews(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListWeeklyReviews")
+}
+
+func (stubs) GetLatestWeeklyReview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetLatestWeeklyReviewParams) {
+	httperr.NotImplemented(w, r, "GetLatestWeeklyReview")
+}

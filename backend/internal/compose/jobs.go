@@ -21,6 +21,7 @@ import (
 	"github.com/riverqueue/river/rivertype"
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/compose/weekly"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
@@ -372,6 +373,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		periodicFor(cfg, OrgNamePromotionArgs{}),
 		periodicFor(cfg, CaptureDigestArgs{}),
 		periodicFor(cfg, BriefGenerateArgs{}),
+		periodicFor(cfg, WeeklyReviewGenerateArgs{}),
 		periodicFor(cfg, GmailSyncArgs{}),
 		periodicFor(cfg, GmailWatchArgs{}),
 		periodicFor(cfg, OverlayReconcileArgs{}),
@@ -444,6 +446,7 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	})
 	addAIActivitySweepJobs(reg, pool, log)
 	addBriefGenerateJobs(reg, pool, log)
+	addWeeklyReviewJobs(reg, pool, log)
 }
 
 // addBriefGenerateJobs registers the overnight Morning-Brief assembly. Its own
@@ -458,6 +461,21 @@ func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger
 	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{pool: pool})
 	addDeclaredWorker[BriefGenerateWorkspaceArgs](reg, &briefGenerateWorkspaceWorker{
 		engine: briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool))),
+		pool:   pool,
+		users:  identity.NewService(pool),
+		now:    time.Now,
+		log:    log,
+	})
+}
+
+// addWeeklyReviewJobs registers the weekly retrospective's pass. Its own
+// function for the same reason the brief's is: the workspace worker needs the
+// weekly engine and the identity service, neither of which the group's other
+// members carry.
+func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
+	addDeclaredWorker[WeeklyReviewGenerateArgs](reg, &weeklyGenerateWorker{pool: pool})
+	addDeclaredWorker[WeeklyReviewGenerateWorkspaceArgs](reg, &weeklyGenerateWorkspaceWorker{
+		engine: weekly.NewEngine(pool),
 		pool:   pool,
 		users:  identity.NewService(pool),
 		now:    time.Now,

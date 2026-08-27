@@ -87,11 +87,92 @@ func EnsureWritable(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) e
 // retention sweep, the archive transition itself, a merge retiring its source,
 // or a refusal path that writes nothing — it uses EnsureWritable and says why
 // at the call site.
+//
+// It NARROWS the window rather than closing it, and a caller whose write would
+// be harmful on the far side of it owes LockSubjectLive as well. This reads a
+// snapshot; the write happens in a later statement of the same transaction, and
+// under READ COMMITTED an archive or an erasure committing in between lands
+// anyway. For most callers the
+// residue is a stale write. Where it is a live capability or a PII row an
+// erasure had just cleared, it is not, and the lock is what makes the two take
+// turns. Which writers owe it is derived in backend/liveprobelock_test.go.
 func EnsureWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
 	if err := EnsureVisibleLive(ctx, tx, table, id); err != nil {
 		return err
 	}
 	return ensureWriteAuthority(ctx, tx, table, id)
+}
+
+// HoldWritableLive is EnsureWritableLive and LockSubjectLive as one decision,
+// which is how every entry point that owes both should ask: probe, then hold,
+// with nothing in between that could take another row lock first.
+//
+// The order inside is the deadlock rule. The eraser is subject-first, so the
+// subject must be the first row this transaction holds; a caller that locked
+// something else on the way here has already lost that guarantee, which is why
+// this is one call rather than two the caller sequences.
+func HoldWritableLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	if err := EnsureWritableLive(ctx, tx, table, id); err != nil {
+		return err
+	}
+	return LockSubjectLive(ctx, tx, table, id)
+}
+
+// LockSubjectLive holds the subject's row for the rest of the transaction and
+// refuses if it is not live, so a write that follows cannot be overtaken by an
+// archive or an Art. 17 erasure the probe could not see.
+//
+// It is NOT storekit.LockRow, which runs the same SELECT … FOR UPDATE and
+// answers the same sentinel, and the reason is the layer rather than the SQL.
+// LockRow is a STORE helper: tableownership_test.go counts its table argument as
+// a write by that module and writeauthorityreach_test.go counts it as a mutation
+// owing a row probe. Both are right for the 58 sites where a module locks its
+// own row before patching it. Every call here locks somebody ELSE'S subject —
+// consent locking person, activities locking a polymorphic parent — purely to
+// refuse a race, writing nothing. Routed through LockRow, five reads that mutate
+// nothing would each need a cross-store write ratification and a probe waiver.
+// Row-level authority over another module's subject is what this package is for,
+// so the lock lives beside the probe it completes.
+//
+// The lock is taken at the WRITE rather than inside EnsureWritableLive, where
+// every live-probed path would take it. That probe runs at the top of two dozen
+// transactions, several in `people`, where a documented order already exists and
+// renamerecheck.go records a deadlock found only by review when a row lock was
+// taken out of turn. Locking in the primitive adds an edge to every one of those
+// orders at once; locking at the write adds it only where the residue is
+// harmful. Call sites take it BEFORE any other row lock in their transaction,
+// because the eraser is subject-first and the opposite order closes a cycle.
+//
+// FOR NO KEY UPDATE rather than FOR UPDATE: the subject is a parent row other
+// tables reference, and this must not block a child insert taking a foreign key
+// to it (FOR KEY SHARE). It conflicts with everything else — the archive and the
+// erasure, which UPDATE the row, and any concurrent lock on the same subject.
+//
+// Held by: TestALockedSubjectMakesTheEraserWait and
+// TestLockSubjectLiveRefusesWhatItCannotHold
+// (backend/internal/modules/people/subjectlock_integration_test.go) for what the
+// lock does, and TestALiveProbedWriteOfAHeldRowLocksItsSubject
+// (backend/liveprobelock_test.go) for which writers owe it.
+func LockSubjectLive(ctx context.Context, tx pgx.Tx, table string, id ids.UUID) error {
+	// The same closed set every sibling in this file gates on. One call site
+	// passes a request-body value (ai.RecordInput.SubjectType), so this is the
+	// check rather than a formality: Sanitize below stops an injection, but a
+	// table outside this set has no archived_at and would reach the caller as a
+	// raw SQL error where a sentinel is owed.
+	if !ownerScopedTables[table] {
+		return fmt.Errorf("auth: %q is not a row-scoped subject table: %w", table, apperrors.ErrNotFound)
+	}
+	q := fmt.Sprintf(
+		`SELECT 1 FROM %s WHERE id = $1 AND archived_at IS NULL FOR NO KEY UPDATE`,
+		pgx.Identifier{table}.Sanitize())
+	var held int
+	if err := tx.QueryRow(ctx, q, id).Scan(&held); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return apperrors.ErrNotFound
+		}
+		return err
+	}
+	return nil
 }
 
 // EnsureWritableForSubjectRights is EnsureVisibleForSubjectRights' write-authority

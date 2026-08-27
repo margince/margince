@@ -381,6 +381,12 @@ var tableOwners = map[string]string{
 	"channel_provider": "internal/compose",
 	"brief_run":        "internal/compose/briefs",
 	"brief_item":       "internal/compose/briefs",
+	// The weekly retrospective, in its own aggregate rather than the brief's:
+	// a weekly row on brief_run would become "the latest brief" to the reader
+	// that decides the next morning's overnight window, and weekly content on
+	// brief_item would be cascaded away by deleting a deal.
+	"weekly_review":      "internal/compose/weekly",
+	"weekly_review_deal": "internal/compose/weekly",
 	// The company view's per-user visit baseline: view state, not a record
 	// fact, so it is written without an audit row — the saved-view ruling.
 	// The person view acknowledges visits into the SAME table (one baseline

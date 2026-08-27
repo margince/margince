@@ -9,10 +9,13 @@ import { mockApi } from "./seed";
  * profile at 390px. The BUDGET is PERF-1's and is single-homed there;
  * MOBILE-PARAM-2 pins only the condition it has to hold under.
  *
- * This is the throttled half of PERF-1's perceived budget. The unthrottled half
- * already exists as `PERF-1: record open renders under the 300ms perceived
- * budget` in ac.spec.ts, and it stays there — this file does not restate it on
- * a fast link, it measures the same interaction on a slow one.
+ * This is the ONLY place PERF-1's perceived budget is asserted. The acceptance
+ * lane keeps the structural claim — the head renders from the route, not from
+ * the read — and no number, because one wall-clock sample on a runner shared
+ * with six integration shards measures the machine. Throttled p95 is the harder
+ * condition: a budget that holds on Fast-3G holds on a fast link by
+ * construction, so an unthrottled copy would add a second answer, not a second
+ * question.
  *
  * Run it with `make bench-mobile`. It is not collected by `pnpm e2e`.
  */

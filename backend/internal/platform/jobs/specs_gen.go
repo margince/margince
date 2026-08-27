@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "8b4840618414c1f832c486b908f31ae0a7c61f7d423c31728158c77ceec37c4e"
+const JobContractHash = "cd7f781896c39868ad3cc722651a6ecb38b98b6445a4ad8ef544784be18bb3d0"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -774,6 +774,27 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsArgs,
 		Cadence:      Cadence{OperatorField: "WebhookRetry.Interval", ScheduleWhenPositive: "WebhookRetry.Interval"},
 		Registration: Registration{When: []string{"WebhookRetry.Deliverer"}},
+	},
+	"weekly_review_generate": {
+		Kind:       "weekly_review_generate",
+		GoType:     "WeeklyReviewGenerateArgs",
+		Role:       Dispatcher,
+		Queue:      "default",
+		Timeout:    TimeoutPolicy{Fixed: 2 * time.Minute},
+		FanOutUnit: FanOutWorkspace,
+		FanOutTo:   "weekly_review_generate_workspace",
+		OptsOwner:  OptsCaller,
+		Cadence:    Cadence{Fixed: 6 * time.Hour},
+	},
+	"weekly_review_generate_workspace": {
+		Kind:        "weekly_review_generate_workspace",
+		GoType:      "WeeklyReviewGenerateWorkspaceArgs",
+		Role:        Worker,
+		Queue:       "default",
+		Timeout:     TimeoutPolicy{Fixed: 10 * time.Minute},
+		MaxAttempts: 3,
+		OptsOwner:   OptsFanOut,
+		Args:        []ArgField{{Name: "Workspace"}},
 	},
 }
 

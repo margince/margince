@@ -1,0 +1,106 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package weekly
+
+// The weekly review's HTTP surface: the archive index, and one week.
+//
+// Both are reads. There is no assemble endpoint — a retrospective is written
+// when its week closes, by the job, and a rep pressing a button to build last
+// week again would get a different answer than the one they read on Monday.
+
+import (
+	"net/http"
+	"time"
+
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+)
+
+// weekIndexCap bounds the archive index. A year of weeks is more than anybody
+// scrolls, and the index is a list of doors rather than a report.
+const weekIndexCap = 52
+
+// Handlers serves the weekly review.
+type Handlers struct{ engine *Engine }
+
+// NewHandlers binds the handlers to the engine.
+func NewHandlers(engine *Engine) Handlers { return Handlers{engine: engine} }
+
+// ListWeeklyReviews implements (GET /weekly-reviews): the archive's index.
+func (h Handlers) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
+	weeks, err := h.engine.ListWeeks(r.Context(), weekIndexCap)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	// Never null on the wire: a reader seeing `null` has to decide whether it
+	// means "no weeks yet" or "the list was not read".
+	out := make([]openapi_types.Date, 0, len(weeks))
+	for _, week := range weeks {
+		out = append(out, openapi_types.Date{Time: week})
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.WeeklyReviewIndex{Weeks: out})
+}
+
+// GetLatestWeeklyReview implements (GET /weekly-reviews/latest): one week.
+func (h Handlers) GetLatestWeeklyReview(
+	w http.ResponseWriter, r *http.Request, params crmcontracts.GetLatestWeeklyReviewParams,
+) {
+	var week *time.Time
+	if params.Week != nil {
+		day := params.Week.Time
+		week = &day
+	}
+	review, err := h.engine.LatestReview(r.Context(), week)
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, reviewToWire(review))
+}
+
+func reviewToWire(review Review) crmcontracts.WeeklyReview {
+	deals := make([]crmcontracts.WeeklyReviewDeal, 0, len(review.Deals))
+	for _, line := range review.Deals {
+		deals = append(deals, dealLineToWire(line))
+	}
+	c := review.Counts
+	return crmcontracts.WeeklyReview{
+		Id:             openapi_types.UUID(review.ID),
+		LocalWeekStart: openapi_types.Date{Time: review.LocalWeekStart},
+		GeneratedAt:    review.GeneratedAt,
+		AsOf:           review.AsOf,
+		Counts: crmcontracts.WeeklyReviewCounts{
+			TasksDue: c.TasksDue, TasksDone: c.TasksDone,
+			TasksCarriedOver: c.TasksCarriedOver,
+			DealsMoved:       c.DealsMoved, DealsWon: c.DealsWon, DealsLost: c.DealsLost,
+			ProposalsAccepted: c.ProposalsAccepted, ProposalsRejected: c.ProposalsRejected,
+			BriefItemsActed: c.BriefItemsActed, BriefItemsDismissed: c.BriefItemsDismissed,
+		},
+		Deals: deals,
+	}
+}
+
+func dealLineToWire(line DealLine) crmcontracts.WeeklyReviewDeal {
+	out := crmcontracts.WeeklyReviewDeal{
+		DealId:     openapi_types.UUID(line.DealID),
+		Label:      line.Label,
+		Outcome:    crmcontracts.WeeklyReviewDealOutcome(line.Outcome),
+		OccurredAt: line.OccurredAt,
+	}
+	if line.ToStageLabel != "" {
+		stage := line.ToStageLabel
+		out.ToStageLabel = &stage
+	}
+	// Money is a pair or it is absent — a bare amount is a number nobody can
+	// read, and this tree refuses to print one.
+	if line.AmountMinor != nil && line.Currency != "" {
+		amount, currency := *line.AmountMinor, line.Currency
+		out.AmountMinorAtClose = &amount
+		out.CurrencyAtClose = &currency
+	}
+	return out
+}

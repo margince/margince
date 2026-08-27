@@ -330,7 +330,7 @@ discipline even if the test tree regresses.
 | Typecheck + build | `pnpm build` (`tsc -b && vite build`) | any type error |
 | Unit tests | `pnpm test` (Vitest) | co-located `*.test.tsx` |
 | Render UAT | `make fe-uat` → `frontend/scripts/fe-uat.mjs` | a changed component with no co-located story, a changed story the build does not register, or an unclean headless render. **Not** in `make check` — it is the frontend-only UAT lane, artifact at `.tmp/fe-uat/manifest.json` |
-| Screen acceptance | `make frontend-e2e` → `frontend/e2e/` | AC-named Playwright cases, axe WCAG 2.2 AA, the 390px no-horizontal-scroll sweep, the perceived-perf budget |
+| Screen acceptance | `make frontend-e2e` → `frontend/e2e/` | AC-named Playwright cases, axe WCAG 2.2 AA, the 390px no-horizontal-scroll sweep. The perceived-perf budget is `make bench-mobile`'s: a sampled p95, because one wall-clock reading in a shared lane measures the runner |
 
 The backend's `craft static` pre-push hook does **not** cover `frontend/` — the
 frontend lane is separate from the Go merge gate and needs node + pnpm. Run

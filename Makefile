@@ -599,7 +599,7 @@ fe-typecheck-composed: composition
 	cd frontend && pnpm exec tsc -p tsconfig.composed-tests.json
 
 ## frontend-e2e — the screen-acceptance harness (AC-<screen>-N + axe WCAG AA
-## + perceived perf budgets) against the built app over the seed mock.
+## + PERF-1's held-read claim) against the built app over the seed mock.
 ## Set BASE_URL to point the same suite at a live backend.
 frontend-e2e:
 	cd frontend && pnpm install --frozen-lockfile && pnpm e2e
@@ -607,8 +607,9 @@ frontend-e2e:
 ## bench-mobile — MOBILE-AC-2: record open p95 under the 300ms PERCEIVED budget
 ## on a throttled Fast-3G profile at 390px (MOBILE-PARAM-2). A measurement run
 ## BY HAND, like the backend bench-* targets: `pnpm e2e` does not collect this
-## spec and this target collects nothing else. The UNTHROTTLED half of the same
-## budget stays where it already is, as a normal AC test in e2e/ac.spec.ts.
+## spec and this target collects nothing else. It is the ONLY place that budget
+## is asserted: throttled p95 is the harder of the two conditions, so a budget
+## that holds here holds unthrottled by construction.
 bench-mobile:
 	cd frontend && pnpm install --frozen-lockfile && pnpm build && \
 		MARGINCE_BENCH_MOBILE=1 pnpm exec playwright test
