@@ -5,9 +5,7 @@ package people
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"os"
 	"strings"
 	"testing"
 )
@@ -121,28 +119,4 @@ func listFiltersLiterals(t *testing.T) []listFiltersLiteral {
 		})
 	})
 	return found
-}
-
-// forEachModuleFile parses the module's own non-test sources and hands each to
-// visit. Test sources are left out: a listFilters a test builds is a fixture,
-// and holding a fixture to the shape of a shipped surface would refuse cases
-// written to exercise one filter at a time.
-func forEachModuleFile(t *testing.T, visit func(name string, fset *token.FileSet, file *ast.File)) {
-	t.Helper()
-	entries, err := os.ReadDir(".")
-	if err != nil {
-		t.Fatalf("reading the module directory: %v", err)
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, name, nil, 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", name, err)
-		}
-		visit(name, fset, file)
-	}
 }
