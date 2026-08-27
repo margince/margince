@@ -283,9 +283,9 @@ Margince sends the contact a link through which they can view and correct their 
 
 This flow actively reduces the risk of everything else on this page.
 
-### Tier B: could be built, is not being built
+### Tier B: Could be built... theoretically....
 
-Three ideas live here. All three are legal in principle. None of them is planned. We only touch this section if a customer need forces one item, and then a lawyer reviews that one item before we write code. Nobody reviews the whole section. It is a fence around future ideas, not a backlog.
+Three ideas. All three are legal in principle. None of them is planned yet. We only touch this section if a customer need forces one item, and then a lawyer reviews that one item before we write code. These are a bit more tricky.
 
 **B1. Reading about a person on other websites.** Today Margince reads only the counterparty's own company website. B1 would go further: also read conference pages, speaker bios and contact lines on other companies' sites where the same person shows up.
 
@@ -318,49 +318,49 @@ Two parts do not exist yet:
 
 Both go on the table together with the provider contract, if that day ever comes. And never for Vietnamese people: Vietnamese law flatly forbids trading personal data.
 
-### Tier C: refuse
+### Tier C: Nah, we won't implement these...
 
-**Bulk background enrichment of a market.** This is the Bisnode and Lusha pattern: a permanent shadow database of everyone, created before any user asks for a specific person. It has no realistic Article 14 story. Scale destroys the balancing argument, and Italy has demonstrated that a regulator will order deletion of an entire national dataset.
+**A database of a whole market, built in advance.** This is what Bisnode and Lusha did: collect everyone in a market before any user ever asked for a specific person. The problem is simple. You must tell every one of those people that you stored them, and at millions of records nobody does. The bigger the database, the weaker the justification. And Italy has shown that a regulator will order an entire national dataset deleted.
 
-Reading one company's own website for a human researching that company, as in A2, sits at the opposite end of the proportionality scale.
+The opposite of that: one user reads one company's own website because they are working on that company. That is A2, and it is fine.
 
-**LinkedIn or Xing ingestion in any automated form.** LinkedIn ingestion breaches the quoted contract for everyone who accepted it, repeats the Kaspr fact pattern and has no open sanctioned API route. Moving the action into the user's browser solves nothing. LinkedIn sues this exact model.
+**Pulling data out of LinkedIn or Xing automatically, in any form.** It breaks the contract every LinkedIn user signed, it is exactly what Kaspr was fined for, and there is no official API we could apply for. Running the whole thing inside the user's browser instead of on our servers changes nothing. That is precisely the model LinkedIn takes to court.
 
-I cite no Xing contract clause here. The GDPR and works-council analyses independently put Xing ingestion in Tier C. That is enough.
+For Xing I quote no contract clause. The data-protection and works-council problems alone are enough to refuse it.
 
-**Any browser extension.** It fails twice. LinkedIn's clause expressly names plugins, and software that observes what an employee views in a browser is textbook Section 87(1)(6) surveillance.
+**Any browser extension.** It fails twice. LinkedIn's contract bans plugins by name. And software that watches which pages an employee opens in their browser is exactly the kind of employee surveillance a works council exists to stop.
 
-Some narrow extension might survive a lawyer's reading. This product line has no reason to live inside that argument.
+Maybe some very narrow extension would survive a lawyer's reading. We have no reason to build our product on top of that argument.
 
-**Purchased lists and broker data of unclear provenance.** The recipient becomes controller of data without a lawful-basis chain. If the list contains Vietnamese subjects, the trading ban and its ten-times-revenue penalty sit on top.
+**Buying contact lists of unclear origin.** The moment the list is in your CRM, the legal responsibility for it is yours, and you cannot prove where the data came from. If Vietnamese people are on the list, Vietnam's ban on trading personal data sits on top, with fines of up to ten times the revenue made.
 
-**Rep scoring.** We refuse it, and the precision matters because Margince DOES compute from correspondence, as explained in Section 4.
+**Grading salespeople.** We refuse this, and the wording matters, because Margince does read correspondence, as Section 4 explains.
 
-Margince creates no inferred employee traits, conduct profiles or performance scores. It exposes no surface that ranks reps against one another. The relationship graph answers one account question: "Who can open this door for this contact?" It answers per contact, using bands designed not to be summed into a scoreboard.
+Margince builds no profiles of its users. It guesses no character traits, computes no performance scores and shows no ranking of one rep against another. The relationship graph answers exactly one question: "Who on our side knows this contact well enough to open the door?" It answers per contact, and the answer is deliberately built so it cannot be added up into a leaderboard.
 
-Whether mailbox processing satisfies Section 26 BDSG must be assessed purpose by purpose. Account coverage with these controls is a purpose we can defend in writing. Rep scoring is not. It remains refused.
+Whether reading mailboxes is allowed under German employee-data law depends on what you do it for. "Which of us knows this customer" is a purpose we can defend in writing. "Which of our reps is the worst" is not. So it stays refused.
 
 ## 6. Why this wins deals
 
-This paper defines what Margince can sell with a straight face.
+This paper says what Margince can sell with a straight face.
 
-The scraping vendors made a bet. They assumed LinkedIn enforcement would stay slow, DPAs would remain busy elsewhere and no works council would read CNIL's press releases.
+The scraping vendors made a bet. They bet that LinkedIn would not bother suing, that the data-protection authorities would stay busy elsewhere, and that no works council would ever read the regulators' press releases.
 
 That bet gets worse every year.
 
-Since 2022, the count is one permanent injunction, consented and no less permanent for it; two additional LinkedIn lawsuits; three DPA fines covering untold numbers of data subjects; and one nationwide erasure order.
+Since 2022: LinkedIn shut down the best-known scraper for good and filed two more lawsuits. Three European authorities fined enrichment vendors. Italy ordered one of them to delete every Italian person in its database.
 
-We took the other side.
+We bet the other way.
 
-Verified registers, the counterparty's own website, first-party signals, consent flows and notification automation produce real data quality with an audit trail behind every field. Our market is DACH companies whose buying committees include works councils, DPOs and regulators.
+Our data comes from places nobody can attack: official registers, the customer's own website, what contacts send us themselves, and what people confirm with their own click. Every field says where it came from. Our buyers are companies in Germany, Austria and Switzerland where the works council, the data-protection officer and sometimes a regulator sit at the table when software gets bought.
 
-For those customers, compliance IS the product. For Vietnamese contacts, I have yet to find another CRM with a considered answer at all.
+For those buyers, being clean is not a checkbox on our product. It is the product. And for Vietnamese contacts I have not found a single other CRM that has even thought about the question.
 
-Ask your current vendor two questions:
+If you use one of the other CRMs today, ask your vendor two questions:
 
-Who indemnifies you when your sales reps' LinkedIn accounts are banned?
+Who pays when LinkedIn bans your sales reps' accounts?
 
-Who sends the Article 14 notices for the ten thousand contacts that its plugin just imported?
+Who tells the ten thousand people your plugin just imported that they are now in your database, as the law requires?
 
 We have answers to both.
 
