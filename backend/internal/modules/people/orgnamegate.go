@@ -94,55 +94,6 @@ var orgNameStopwords = map[string]bool{
 	"or": true, "ne": true, "ac": true, "gov": true, "edu": true,
 }
 
-// orgCommonNameWords are ordinary words that many unrelated companies put in
-// their names, so two names meeting on one have said nothing about being one
-// company.
-//
-// DIFFERENT FROM orgNameStopwords, which is why this is a second map rather than
-// more entries in that one. A stopword is REMOVED from the name: it is market
-// vocabulary and never a brand, so "Digital Solutions" and "Digital Ocean" must
-// not meet on either word. These words CAN be a brand — Bank of America is a
-// bank, Central Group is a real company, Star Alliance is named Star — so they
-// stay in the name and reach the score, and only stop being counted as the
-// evidence that two names are one company.
-//
-// Measured on the pairs that reached review wrongly: "Bank of the West" against
-// "Bank of the East" scored 0.9750, "Union Pacific" against "Union Carbide"
-// 0.8547, "Central Park Media" against "Central Valley Media" 0.8967. Each
-// shares exactly one ordinary word and nothing else.
-//
-// SMALL AND ENGLISH-SHAPED on purpose. This is not a frequency list and must not
-// grow into one: a long list starts deleting real brands, and the escape below
-// (a word IS evidence when it is all a name has) is what keeps a company
-// actually called "Bank" or "Star" findable. A market whose common words are
-// missing keeps today's false positives rather than gaining new ones.
-var orgCommonNameWords = map[string]bool{
-	// Sector nouns that name a whole industry rather than a company in it.
-	"bank": true, "insurance": true, "energy": true, "motors": true, "airlines": true,
-	"telecom": true, "pharma": true, "foods": true, "realty": true, "properties": true,
-	// Qualifiers a company adds to say it is large, old or first.
-	"first": true, "premier": true, "prime": true, "standard": true, "general": true,
-	"united": true, "allied": true, "associated": true, "union": true, "central": true,
-	"metro": true, "regional": true, "continental": true, "universal": true,
-	// Direction and place words that qualify a name rather than being one.
-	"north": true, "south": true, "east": true, "west": true, "northern": true,
-	"southern": true, "eastern": true, "western": true, "pacific": true, "atlantic": true,
-	"american": true, "european": true, "asia": true, "asian": true,
-	// Ornaments.
-	"royal": true, "crown": true, "star": true, "sun": true, "summit": true, "apex": true,
-	// The country a company operates in, which subsidiaries carry and rivals
-	// share: "Rimi Latvia" and "Maxima Latvija" are two Latvian grocers, and
-	// two unrelated firms both add "Deutschland" to their German arm. The
-	// escape below still finds "Air France" and "Bank of Ireland", which share
-	// a second word, and a company whose whole name is a country keeps it.
-	"latvia": true, "latvija": true, "lietuva": true, "eesti": true,
-	"deutschland": true, "france": true, "espana": true, "italia": true,
-	"nederland": true, "polska": true, "suomi": true, "sverige": true, "norge": true,
-	"danmark": true, "osterreich": true, "schweiz": true, "belgique": true,
-	"ireland": true, "britain": true, "indonesia": true, "malaysia": true,
-	"singapore": true, "australia": true, "canada": true, "mexico": true, "brasil": true,
-}
-
 // orgNameArticles are the words that can never be the whole of a name.
 //
 // Every other stopword can: "Capital", "Health" and "Digital" are all real
@@ -391,34 +342,6 @@ func sharesADistinctiveWord(a, b string) bool {
 	return true
 }
 
-// weakEvidenceWord answers whether a shared word says nothing about two names
-// being one company.
-func weakEvidenceWord(word string) bool {
-	return ambiguousFormWord[word] || orgCommonNameWords[word]
-}
-
-// coversEveryWord answers whether the shorter name appears whole inside the
-// longer one — every word of it matched, none left over.
-func coversEveryWord(shorter, longer []string) bool {
-	if len(shorter) == 0 {
-		return false
-	}
-	taken := make([]bool, len(longer))
-	for _, x := range shorter {
-		found := false
-		for j, y := range longer {
-			if !taken[j] && sameOrgToken(x, y) {
-				taken[j], found = true, true
-				break
-			}
-		}
-		if !found {
-			return false
-		}
-	}
-	return true
-}
-
 // isSyllabicMarket answers whether a name's market builds its brands from a
 // small pool of shared syllables, where one word in common is a coincidence.
 func isSyllabicMarket(market *marketForms) bool {
@@ -442,12 +365,14 @@ func sharedTokenCount(left, right []string) int {
 	// "Bank of Ireland" and "Bank of Ireland Group" are ordinary words end to
 	// end, so discounting all of them would leave the company matching nothing.
 	//
-	// The escape is EVERY word, not merely a weak one: those two agree on all of
-	// "bank" and "ireland", while "Bank of the West" and "Bank of the East"
-	// agree on "bank" and disagree on the word that names them. Sharing the
-	// whole of a common-word name is evidence; sharing part of one is the
-	// coincidence this discount exists to reject.
-	if coversEveryWord(shorter, longer) {
+	// The escape asks that the shorter name appear whole in the longer AND that
+	// what the longer adds be a word that names something. "Sun" and "Sun
+	// Microsystems" pass: the addition is a brand, so this is one company said
+	// twice. "Bank" and "Bank of the West" do not: the addition is "west", and
+	// two names built entirely from words every company shares have not said
+	// they are one company — a company called Bank must not meet every bank in
+	// the estate.
+	if agreeEntirely(shorter, longer) {
 		return len(shorter)
 	}
 	taken := make([]bool, len(longer))
@@ -460,11 +385,9 @@ func sharedTokenCount(left, right []string) int {
 		// recur across unrelated names in a market ("Bank of the West" against
 		// "Bank of the East", "Union Pacific" against "Union Carbide").
 		//
-		// Discounted HERE rather than removed from the name, so it still reaches
-		// the score. And not discounted at all when it is the WHOLE of the
-		// shorter name: "PT Solutions" reduces to "pt" once "solutions" is gone
-		// as English market vocabulary, and it must still find "PT Solutions
-		// Physical Therapy" rather than becoming a name with no evidence in it.
+		// Discounted HERE rather than removed from the name, so the word still
+		// reaches the score. The case where such a word IS the evidence is
+		// answered above, before this loop runs.
 		if weakEvidenceWord(x) {
 			continue
 		}

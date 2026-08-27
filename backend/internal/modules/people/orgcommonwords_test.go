@@ -7,11 +7,9 @@ import "testing"
 
 // TWO COMPANIES THAT SHARE ONE ORDINARY WORD ARE NOT ONE COMPANY.
 //
-// The gate counts a shared word as evidence of identity, which is right when the
-// word is a brand and wrong when it is the vocabulary of a whole market. Every
-// pair here shares exactly one such word and scored above the review threshold
-// on it: "Bank of the West" against "Bank of the East" at 0.9750, "Union
-// Pacific" against "Union Carbide" at 0.8547.
+// A shared word is evidence of identity when it is a brand and not when it is
+// the vocabulary of a whole market. Every pair here shares exactly one such word
+// and nothing else.
 func TestTwoCompaniesSharingOneOrdinaryWordStayApart(t *testing.T) {
 	for _, p := range [][2]string{
 		{"Bank of the West", "Bank of the East"},
@@ -61,6 +59,40 @@ func TestACommonWordIsEvidenceWhenItIsTheWholeName(t *testing.T) {
 				"of these names is the whole of the other",
 				p[0], p[1], got, dedupeReviewThreshold)
 		}
+	}
+	// AND THE ESCAPE REACHES NO FURTHER. A bare common word must not meet every
+	// longer name that begins with it: what the longer name ADDS has to name
+	// something. "Sun Microsystems" adds a brand to "Sun" and meets it; "Bank of
+	// the West" adds only "west" to "Bank" and does not.
+	for _, p := range [][2]string{
+		{"Bank", "Bank of the West"},
+		{"United", "United Airlines"},
+		{"Metro", "Metro Bank"},
+		{"Star", "North Star"},
+		{"Prime", "Prime Standard"},
+	} {
+		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got >= dedupeReviewThreshold {
+			t.Errorf("%q vs %q scores %.4f — a company named after one ordinary "+
+				"word must not meet every longer name carrying it",
+				p[0], p[1], got)
+		}
+	}
+	// A distinctive addition IS a qualified version of the same brand.
+	for _, p := range [][2]string{
+		{"Sun", "Sun Microsystems"},
+		{"Star", "Star Alliance"},
+	} {
+		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got < dedupeReviewThreshold {
+			t.Errorf("%q vs %q scores %.4f, below the %.2f threshold — the longer "+
+				"name adds a brand, which makes this one company said twice",
+				p[0], p[1], got, dedupeReviewThreshold)
+		}
+	}
+	// Finding: order is not consulted, which a reader must not have to guess.
+	if got := bestOrgNamePairing("Union Pacific Bank", "", "Pacific Union Bank", "").Confidence; got < dedupeReviewThreshold {
+		t.Errorf("two names of the same words in a different order score %.4f — "+
+			"a registry and a letterhead disagree about order more often than "+
+			"two companies do", got)
 	}
 }
 
