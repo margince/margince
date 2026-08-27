@@ -24,6 +24,12 @@ const PROMPTED = { en: true, de: true, vi: true } satisfies Record<
   true
 >;
 
+// The prompted set as a runtime value, for a test that has to name it without
+// restating it. Reading these keys is not circular: what ties PROMPTED to the
+// CONTRACT is the `satisfies` above, which the compiler checks, so a test that
+// ties this function's output to these keys is tying it to the enum by proxy.
+export const PROMPTED_LOCALES = Object.keys(PROMPTED) as OnboardingLocale[];
+
 function isPrompted(locale: Locale): locale is Locale & OnboardingLocale {
   return Object.hasOwn(PROMPTED, locale);
 }
