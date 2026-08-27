@@ -114,15 +114,21 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	if !ok {
 		return "", errors.New("compose: no actor bound to export context")
 	}
-	if auth.UnboundedFor(actor, "person", "organization", "deal") {
+	if auth.UnboundedFor(actor, "person", "organization", "deal", "project") {
 		return "", nil
 	}
+	// Every endpoint column the table HAS, not the ones an author remembered.
+	// A relationship kind anchored on a column missing from this list exports
+	// without its far side being tested, which is the disclosure the comment
+	// above claims cannot happen. gates/edgeendpointcensus_test.go holds this
+	// list against the table's own shape constraints.
 	var clauses []string
 	for _, endpoint := range []struct{ column, table string }{
 		{"person_id", "person"},
 		{"organization_id", "organization"},
 		{"counterparty_org_id", "organization"},
 		{"deal_id", "deal"},
+		{"project_id", "project"},
 	} {
 		predicate := auth.VisiblePredicate(actor, endpoint.table, arg)
 		clauses = append(clauses, fmt.Sprintf(

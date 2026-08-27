@@ -304,3 +304,83 @@ func sortedEndpointColumns(set map[string]bool) []string {
 	sort.Strings(out)
 	return out
 }
+
+// The EXPORT of relationships tests the same endpoints the history read does.
+//
+// compose.relationshipExportScope carries the same obligation as the read —
+// "every non-null endpoint must be visible, so an edge never discloses a record
+// on the far side the caller cannot see" — and it carries it as a hand-written
+// list. A column the table has and that list omits is an edge exported without
+// its far side being tested, which is the disclosure its own comment says
+// cannot happen. Two surfaces answering one question, so the corpus is derived
+// once and held against both.
+const (
+	edgeExportSource = "internal/compose/export_scope.go"
+	edgeExportFunc   = "relationshipExportScope"
+)
+
+func TestTheRelationshipExportTestsEveryEndpointTheTableHas(t *testing.T) {
+	t.Parallel()
+	declared, _ := endpointColumnsFromShapeConstraints(t)
+	if len(declared) < minEdgeEndpointColumns {
+		t.Fatalf("the shape constraints name only %d endpoint column(s) (%v), want at least %d — "+
+			"an empty corpus certifies a clean tree", len(declared), declared, minEdgeEndpointColumns)
+	}
+	scoped := endpointColumnsInTheExport(t)
+	if len(scoped) == 0 {
+		t.Fatalf("%s declares no endpoint list the census could read inside %s — renamed or moved?",
+			edgeExportSource, edgeExportFunc)
+	}
+	for _, column := range declared {
+		if !scoped[column] {
+			t.Errorf("relationship.%s is an endpoint the table's shape constraints declare, and %s's "+
+				"%s does not test it. An edge whose far side sits in that column is exported without "+
+				"the caller's visibility of that record being checked — the disclosure that function's "+
+				"own comment says it prevents. Add {%q, <its table>} to the endpoint list.",
+				column, edgeExportSource, edgeExportFunc, column)
+		}
+	}
+}
+
+// endpointColumnsInTheExport reads the FIRST string of each element in the
+// endpoint list inside relationshipExportScope. The elements are unkeyed
+// (`{"person_id", "person"}`), so there is no field name to match on — position
+// is the contract, and the column is first.
+func endpointColumnsInTheExport(t *testing.T) map[string]bool {
+	t.Helper()
+	fset := token.NewFileSet()
+	file, err := parser.ParseFile(fset, edgeExportSource, nil, parser.SkipObjectResolution)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", edgeExportSource, err)
+	}
+	out := map[string]bool{}
+	for _, decl := range file.Decls {
+		fn, isFunc := decl.(*ast.FuncDecl)
+		if !isFunc || fn.Name == nil || fn.Name.Name != edgeExportFunc {
+			continue
+		}
+		ast.Inspect(fn.Body, func(node ast.Node) bool {
+			lit, isComposite := node.(*ast.CompositeLit)
+			if !isComposite || len(lit.Elts) == 0 {
+				return true
+			}
+			for _, elt := range lit.Elts {
+				pair, isPair := elt.(*ast.CompositeLit)
+				if !isPair || len(pair.Elts) == 0 {
+					continue
+				}
+				first, isLit := pair.Elts[0].(*ast.BasicLit)
+				if !isLit || first.Kind != token.STRING {
+					continue
+				}
+				column, unquoteErr := strconv.Unquote(first.Value)
+				if unquoteErr != nil {
+					t.Fatalf("%s: %s is not a readable string: %v", edgeExportSource, first.Value, unquoteErr)
+				}
+				out[column] = true
+			}
+			return true
+		})
+	}
+	return out
+}
