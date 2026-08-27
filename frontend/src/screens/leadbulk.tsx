@@ -6,6 +6,7 @@ import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
+import { leadIdentityName } from "../format/leadname";
 import { useLocale, useT } from "../i18n";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { useRoster } from "./entityref";
@@ -100,7 +101,7 @@ export function LeadBulkBar({
       // rep's own leads buys nothing but contention.
       leads.reduce<Promise<BulkOutcome[]>>(async (acc, lead) => {
         const done = await acc;
-        const name = lead.full_name ?? lead.email ?? lead.id;
+        const name = leadIdentityName(lead) || lead.id;
         try {
           await apply(lead, action);
           done.push({ id: lead.id, name });

@@ -6,6 +6,7 @@ import { api, FIRST_PAGE } from "../api/client";
 import type { components } from "../api/schema";
 import { ENTITY, type EntityKind } from "../app/entity";
 import { navigate } from "../app/router";
+import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
 import { throwProblem } from "./common";
 
@@ -80,7 +81,7 @@ const NAME_READERS: Record<EntityKind, (id: string) => Promise<string | null>> =
         params: { path: { id } },
       });
       if (error) return unnamedOrThrow(error, response);
-      return data.full_name ?? data.email ?? null;
+      return leadIdentityName(data) || null;
     },
     project: async (id) => {
       const { data, error, response } = await api.GET("/projects/{id}", {
