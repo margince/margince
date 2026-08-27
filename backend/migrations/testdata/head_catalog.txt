@@ -533,6 +533,7 @@ public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING 
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
 public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL (decided_by)
+public.approval.approval_effect_failure_is_stated CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL))) NOT VALID
 public.approval.approval_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
 public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE SET NULL (passport_id)
 public.approval.approval_pkey PRIMARY KEY (id)
@@ -545,6 +546,8 @@ public.approval.decided_by uuid gen=- def=-
 public.approval.decided_by_system boolean NOT NULL gen=- def=false
 public.approval.decision_reason text gen=- def=-
 public.approval.diff_hash text NOT NULL gen=- def=-
+public.approval.effect_failed_at timestamp with time zone gen=- def=-
+public.approval.effect_failure text gen=- def=-
 public.approval.evidence jsonb gen=- def=-
 public.approval.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.approval.id uuid NOT NULL gen=- def=uuidv7()
@@ -584,6 +587,7 @@ public.approval_autonomy_policy.uq_approval_autonomy_policy_user_kind UNIQUE (us
 public.approval_autonomy_policy.user_id uuid NOT NULL gen=- def=-
 public.approval_autonomy_policy.veto_window interval gen=- def=-
 public.approval_autonomy_policy_pkey CREATE UNIQUE INDEX approval_autonomy_policy_pkey ON public.approval_autonomy_policy USING btree (id)
+public.approval_effect_failed_idx CREATE INDEX approval_effect_failed_idx ON public.approval USING btree (effect_failed_at DESC) WHERE (effect_failed_at IS NOT NULL)
 public.approval_pkey CREATE UNIQUE INDEX approval_pkey ON public.approval USING btree (id)
 public.assert_deal_project_same_org() secdef=false cfg=- acl=- 
 BEGIN
