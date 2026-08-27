@@ -342,9 +342,6 @@ func sharesADistinctiveWord(a, b string) bool {
 	return true
 }
 
-// onlyWord answers whether a name came down to a single word.
-func onlyWord(fields []string) bool { return len(fields) == 1 }
-
 // isSyllabicMarket answers whether a name's market builds its brands from a
 // small pool of shared syllables, where one word in common is a coincidence.
 func isSyllabicMarket(market *marketForms) bool {
@@ -364,20 +361,34 @@ func sharedTokenCount(left, right []string) int {
 	// One word of the longer name answers for at most one word of the shorter.
 	// Without that, "Acme Acme" drew two matches from the single "acme" in
 	// "Acme Beta" and counted a repetition as a second piece of evidence.
+	// A name of nothing but common words is still a name, and must find itself.
+	// "Bank of Ireland" and "Bank of Ireland Group" are ordinary words end to
+	// end, so discounting all of them would leave the company matching nothing.
+	//
+	// The escape asks that the shorter name appear whole in the longer AND that
+	// what the longer adds be a word that names something. "Sun" and "Sun
+	// Microsystems" pass: the addition is a brand, so this is one company said
+	// twice. "Bank" and "Bank of the West" do not: the addition is "west", and
+	// two names built entirely from words every company shares have not said
+	// they are one company — a company called Bank must not meet every bank in
+	// the estate.
+	if agreeEntirely(shorter, longer) {
+		return len(shorter)
+	}
 	taken := make([]bool, len(longer))
 	shared := 0
 	for _, x := range shorter {
-		// A word that is ANOTHER MARKET'S legal form is that market's
-		// vocabulary rather than a brand, so two names sharing it have not said
-		// they are one company: "SIA Rimi Latvia" and "SIA Maxima Latvija" are
-		// two Latvian grocers, "AS Roma" and "AS Monaco" two football clubs.
+		// A word that many companies share is not evidence that two of them are
+		// one company. Two kinds qualify: another market's legal form ("SIA Rimi
+		// Latvia" and "SIA Maxima Latvija" are two Latvian grocers, "AS Roma"
+		// and "AS Monaco" two football clubs), and the ordinary words that
+		// recur across unrelated names in a market ("Bank of the West" against
+		// "Bank of the East", "Union Pacific" against "Union Carbide").
 		//
-		// Discounted HERE rather than removed from the name, so it still reaches
-		// the score. And not discounted at all when it is the WHOLE of the
-		// shorter name: "PT Solutions" reduces to "pt" once "solutions" is gone
-		// as English market vocabulary, and it must still find "PT Solutions
-		// Physical Therapy" rather than becoming a name with no evidence in it.
-		if ambiguousFormWord[x] && !onlyWord(shorter) {
+		// Discounted HERE rather than removed from the name, so the word still
+		// reaches the score. The case where such a word IS the evidence is
+		// answered above, before this loop runs.
+		if weakEvidenceWord(x) {
 			continue
 		}
 		for j, y := range longer {
