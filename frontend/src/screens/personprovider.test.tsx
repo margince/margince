@@ -23,9 +23,13 @@ afterEach(() => {
   cleanup();
 });
 
-/** A contact nobody has looked up. `provider` is absent because the server
- *  fills it from the newest run, and there is none — the panel has to name the
- *  provider itself to send a request at all. */
+/** A contact nobody has looked up: EVERY bought field empty, not merely the
+ *  headline ones. The server has no run to fold values out of, so a fixture
+ *  that kept a location or a department would be a payload this state cannot
+ *  produce — and would quietly prove the plate on a profile that has data.
+ *
+ *  `provider` is absent for the same reason: it is filled from the newest run,
+ *  so the panel has to name the provider itself to send a request at all. */
 function neverRun(): Profile {
   return {
     ...providerCompletedProfile,
@@ -37,6 +41,9 @@ function neverRun(): Profile {
     linkedin_url: null,
     current_employment: undefined,
     job_history: [],
+    location: null,
+    departments: [],
+    seniorities: [],
     latest_run: undefined,
     contributing_runs: undefined,
     categories_not_requested: [],
@@ -84,10 +91,17 @@ describe("a contact nobody has bought data for", () => {
 
     // The plate names what is missing AND what a lookup costs. Without it the
     // panel is a blank body whose only verb sits in the header corner.
-    expect(
-      await screen.findByText("Nothing bought for this contact yet"),
-    ).toBeDefined();
+    const title = await screen.findByText(
+      "Nothing bought for this contact yet",
+    );
     expect(await screen.findByText(/It spends credits/)).toBeDefined();
+
+    // The verb lives INSIDE the plate, which is the whole point: a button that
+    // stayed in the header corner would satisfy every text assertion above
+    // while leaving the invitation exactly as easy to miss as before.
+    const plate = title.closest(".empty-instructional");
+    expect(plate).not.toBeNull();
+    expect(plate?.querySelector(".empty-action button")).not.toBeNull();
   });
 
   it("asks the provider named in the contract when the profile carries none", async () => {
@@ -135,6 +149,12 @@ describe("a contact whose data was already bought", () => {
   it("keeps the values and offers a re-run from the header", async () => {
     mount(providerCompletedProfile, queuedRun);
 
+    // The purchased values themselves, not merely the absence of the plate: a
+    // panel that rendered nothing at all would pass a queryByText assertion
+    // and hide everything this section exists to show.
+    expect(
+      await screen.findByText(providerCompletedProfile.emails[0].value),
+    ).toBeDefined();
     // The plate belongs to the empty case only — a panel with values that also
     // said "nothing bought yet" would contradict what is under it.
     expect(
@@ -143,5 +163,20 @@ describe("a contact whose data was already bought", () => {
     expect(
       await screen.findByRole("button", { name: /Look this contact up/ }),
     ).toBeDefined();
+  });
+
+  // A merge cancels the losing side's queued run and relinks the claims both
+  // sides paid for, so the survivor can read never_run while holding
+  // purchases. Keying the plate on the state alone would cover them and
+  // invite a second lookup for data already on file.
+  it("shows purchases a cancelled run left behind instead of claiming nothing was bought", async () => {
+    mount({ ...providerCompletedProfile, state: "never_run" }, queuedRun);
+
+    expect(
+      await screen.findByText(providerCompletedProfile.emails[0].value),
+    ).toBeDefined();
+    expect(
+      screen.queryByText("Nothing bought for this contact yet"),
+    ).toBeNull();
   });
 });

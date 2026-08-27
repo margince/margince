@@ -341,7 +341,7 @@ it("marks only the options told to carry one", () => {
   ).not.toBeNull();
 });
 
-it("keeps a marked option's accessible name free of the mark", () => {
+it("hides the mark from the accessibility tree", () => {
   render(
     <SegmentedControl
       options={TABS}
@@ -351,8 +351,13 @@ it("keeps a marked option's accessible name free of the mark", () => {
       marks={{ research: true }}
     />,
   );
-  // The name is the label alone. A mark that reached the accessible name would
-  // be announced as a word nobody wrote.
+  // The attribute itself, not the accessible name it protects: the mark is an
+  // empty span, so a name assertion passes whether or not it is hidden and
+  // proves nothing about the contract this test is named for.
+  const mark = screen
+    .getByRole("button", { name: "Data & tools" })
+    .querySelector(".segmented-mark");
+  expect(mark?.getAttribute("aria-hidden")).toBe("true");
   expect(screen.getByRole("button", { name: "Data & tools" })).toBeDefined();
 });
 

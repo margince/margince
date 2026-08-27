@@ -56,6 +56,24 @@ export function PersonProviderSection({
   return <ProviderPanel personId={personId} profile={profile} />;
 }
 
+/** Whether this profile holds anything a provider sold us. Every field the
+ *  panel can draw is asked about, including the "nobody asked for this"
+ *  caption: each one is a purchase or a receipt, and a plate claiming the
+ *  panel is empty must not cover any of them. */
+function hasValues(profile: Profile): boolean {
+  return (
+    profile.emails.length > 0 ||
+    profile.mobile_phones.length > 0 ||
+    profile.job_history.length > 0 ||
+    profile.departments.length > 0 ||
+    profile.seniorities.length > 0 ||
+    profile.categories_not_requested.length > 0 ||
+    profile.linkedin_url != null ||
+    profile.current_employment != null ||
+    profile.location != null
+  );
+}
+
 // Split from the section so the mutation hook sits above no early return: the
 // section leaves before it knows there is a profile, and a hook cannot live
 // behind that.
@@ -70,7 +88,13 @@ function ProviderPanel({
   // that names the action instead: the reader came here to buy data, and a
   // blank card with a quiet button in its corner is how they miss that they
   // can.
-  const firstRun = profile.state === "never_run";
+  //
+  // Asked of the VALUES rather than of the state alone, because never_run is
+  // also what a cancelled run reads as, and a merge cancels the losing side's
+  // queued run while relinking the claims both sides paid for. Such a profile
+  // says never_run and carries purchases, and a plate reading "nothing bought"
+  // over somebody's bought mobile number invites paying for it twice.
+  const firstRun = profile.state === "never_run" && !hasValues(profile);
   return (
     // The record page's own card, with the provider's state in the header's
     // action slot. It used to be a bare `<section className="pe-card">` — a
