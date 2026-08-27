@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { App } from "./App";
 import { meFixture } from "./app/mefixture";
+import { parseHash, routeHash } from "./app/router";
 import { pickOption } from "./design-system/select-testing";
 import { LocaleProvider } from "./i18n";
 import { memoryStorage, sessionOnlyFetch } from "./testing/appharness";
@@ -31,6 +32,11 @@ beforeEach(() => {
   // fall to their QueryGate error state (the rail still renders — that is what
   // this test asserts). Routing by URL keeps the stub honest per endpoint.
   vi.stubGlobal("fetch", vi.fn(sessionOnlyFetch()));
+  // Every test here mounts at an address, so every test states the one it
+  // mounts at. Inheriting whatever the last one left is a dependency on which
+  // files a worker happened to reuse, and it holds only while the pool keeps
+  // handing each file a fresh jsdom.
+  window.location.hash = "";
 });
 
 afterEach(() => {
@@ -675,7 +681,12 @@ describe("onboarding gate", () => {
     // The company resolves before this settles, so a gate that redirected
     // would have replaced the hash by now.
     await screen.findByRole("navigation", { name: "Primary navigation" });
-    expect(window.location.hash).toBe("#/contacts");
+    // The SCREEN, not the whole address. A list spells its own opening dials
+    // into the hash on arrival, so contacts settles at `#/contacts?sort=…` a
+    // moment after the shell renders; an equality against the bare address
+    // holds only while that write is still pending. Where the gate left the
+    // reader is this test's claim — how the list is sorted is people.tsx's.
+    expect(routeHash(parseHash(window.location.hash))).toBe("#/contacts");
   });
 
   // A pending /oauth/authorize request lives entirely in the hash (the
