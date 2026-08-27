@@ -66,9 +66,11 @@ export type ComboBoxProps = Readonly<{
  * a prefix match would need the reader to know the vendor's own path segment
  * before it offered them anything.
  *
- * An exact match filters to itself, which is what makes the list disappear once
- * a reader has landed on a suggestion instead of hovering over the one row they
- * have already chosen.
+ * A value that EXACTLY matches a suggestion shows the whole list rather than
+ * filtering to itself. Filtering there would be right if the text were always
+ * mid-typing, and it is not: a field arrives holding what is already bound, and
+ * a reader who opens it is asking what ELSE there is. Narrowing to the one row
+ * they already have would make them clear the field to see the alternatives.
  */
 export function matchingSuggestions(
   suggestions: readonly ComboBoxSuggestion[],
@@ -76,6 +78,9 @@ export function matchingSuggestions(
 ): readonly ComboBoxSuggestion[] {
   const needle = typed.trim().toLowerCase();
   if (needle === "") {
+    return suggestions;
+  }
+  if (suggestions.some((s) => s.value.toLowerCase() === needle)) {
     return suggestions;
   }
   return suggestions.filter((s) => s.value.toLowerCase().includes(needle));

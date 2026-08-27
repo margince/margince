@@ -4,9 +4,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { Button, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ComboBox } from "../design-system/combobox";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { useT } from "../i18n";
+import { suggestionsFor, useAiModelCatalogue } from "./ai-models";
 import { useSetProviderKey } from "./ai-provider-keys";
 import { problemMessageOf, throwProblem } from "./common";
 import { useSetGoogleApp } from "./google-app";
@@ -125,6 +127,10 @@ function AiStep() {
   const [embedModel, setEmbedModel] = useState(preset.embedModel);
   const saveKey = useSetProviderKey();
   const bind = useBindModels();
+  // What this installation can already price. On a fresh install that is the
+  // seeded sheet, so the two fields open with the vendor's own family in them
+  // rather than with one id and no way to learn a second.
+  const catalogue = useAiModelCatalogue(true);
 
   // Switching vendor re-seeds the models, because the previous vendor's ids
   // mean nothing to this one — leaving them would offer a binding that cannot
@@ -228,26 +234,40 @@ function AiStep() {
             />
           )}
         </Field>
+        {/* Both fields offer what the sheet can price for the chosen vendor,
+            in the lane that field binds — and take anything typed, because the
+            server accepts any id its vendor serves and the whole point of the
+            preset below is that it is a starting point. */}
         <Field
           label={t("firstRun.ai.chatModel")}
           hint={t("firstRun.ai.modelHint")}
         >
           {(control) => (
-            <TextInput
+            <ComboBox
               {...control}
               value={chatModel}
+              suggestions={suggestionsFor(
+                catalogue.data,
+                preset.provider,
+                "chat",
+              )}
               disabled={busy}
-              onChange={(e) => setChatModel(e.target.value)}
+              onChange={setChatModel}
             />
           )}
         </Field>
         <Field label={t("firstRun.ai.embedModel")}>
           {(control) => (
-            <TextInput
+            <ComboBox
               {...control}
               value={embedModel}
+              suggestions={suggestionsFor(
+                catalogue.data,
+                preset.provider,
+                "embeddings",
+              )}
               disabled={busy}
-              onChange={(e) => setEmbedModel(e.target.value)}
+              onChange={setEmbedModel}
             />
           )}
         </Field>

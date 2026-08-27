@@ -11,7 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { pickOption } from "../design-system/select-testing";
+import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { type Locale, LocaleProvider } from "../i18n";
 import { AiRoutingCard } from "./ai-routing";
 
@@ -44,6 +44,17 @@ type CapturedRouting = {
   };
 };
 
+// The price sheet, which is also the catalogue this card offers from: a model
+// outside it serves calls and reports UNPRICED. Only the three fields the
+// picker reads — the four prices are the endpoint's business, not this card's.
+const SHEET = [
+  { provider: "gemini", model_id: "gemini-3.5-flash", lane: "chat" },
+  { provider: "gemini", model_id: "gemini-3.1-flash-lite", lane: "chat" },
+  { provider: "gemini", model_id: "gemini-3.1-pro-preview", lane: "chat" },
+  { provider: "gemini", model_id: "gemini-embedding-001", lane: "embeddings" },
+  { provider: "anthropic", model_id: "claude-opus-4-8", lane: "chat" },
+];
+
 const BOUND = {
   profile: "eu_hosted",
   tiers: {
@@ -53,7 +64,11 @@ const BOUND = {
   embeddings: { provider: "gemini", model: "gemini-embedding-001" },
 };
 
-function backendFor(allow: GrantSpec, routing: unknown = BOUND) {
+function backendFor(
+  allow: GrantSpec,
+  routing: unknown = BOUND,
+  { sheetStatus = 200 }: { sheetStatus?: number } = {},
+) {
   let stored = routing;
   // Typed as the document this endpoint takes, so an assertion can read a field
   // off it without an unchecked cast at every call site. The stub still stores
@@ -66,6 +81,11 @@ function backendFor(allow: GrantSpec, routing: unknown = BOUND) {
         input instanceof Request ? input : new Request(String(input), init);
       if (req.url.endsWith("/v1/me")) {
         return jsonResponse(meFixture({ allow }));
+      }
+      if (req.url.includes("/ai-model-rates")) {
+        return sheetStatus === 200
+          ? jsonResponse({ data: SHEET })
+          : jsonResponse({ title: "forbidden" }, sheetStatus);
       }
       if (req.url.includes("/ai/routing")) {
         if (req.method === "PUT") {
@@ -239,9 +259,11 @@ describe("AiRoutingCard", () => {
     expect(screen.queryByLabelText("Host")).toBeNull();
 
     const tier = screen.getByTestId("ai-routing-tier-premium");
+    // Named, because the row now holds two comboboxes: the adapter, and the
+    // model picker that offers what this installation can price.
     await pickOption(
       user,
-      within(tier).getByRole("combobox"),
+      within(tier).getByRole("combobox", { name: "premium" }),
       "openai_compatible",
     );
     const host = await within(tier).findByLabelText("Host");
@@ -268,7 +290,7 @@ describe("AiRoutingCard", () => {
     const lane = screen.getByTestId("ai-routing-embeddings");
     await pickOption(
       user,
-      within(lane).getByRole("combobox"),
+      within(lane).getByRole("combobox", { name: "Embeddings" }),
       "openai_compatible",
     );
     await user.type(
@@ -305,5 +327,98 @@ describe("AiRoutingCard", () => {
     const sent = backend.getCapturedPut()?.embeddings;
     expect(sent?.dimensions).toBeUndefined();
     expect(JSON.stringify(sent)).not.toContain("dimensions");
+  });
+
+  // The models this installation can PRICE, offered per lane. A tier picker
+  // that listed the embedder would offer a model that cannot serve one call,
+  // and an embed picker that listed the chat models would do the same.
+  it("offers the priced models for the bound provider, in that row's lane", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-3.5-flash");
+
+    const tier = screen.getByTestId("ai-routing-tier-premium");
+    await user.click(within(tier).getByRole("combobox", { name: "Model" }));
+    const offered = within(screen.getByRole("listbox"))
+      .getAllByRole("option")
+      .map((option) => option.textContent);
+    expect(offered).toEqual([
+      "gemini-3.1-flash-lite",
+      "gemini-3.1-pro-preview",
+      "gemini-3.5-flash",
+    ]);
+    // Neither the embedder nor another vendor's model.
+    expect(offered).not.toContain("gemini-embedding-001");
+    expect(offered).not.toContain("claude-opus-4-8");
+  });
+
+  it("binds the model a reader picks off the list", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-3.5-flash");
+
+    const tier = screen.getByTestId("ai-routing-tier-premium");
+    await pickSuggestion(
+      user,
+      within(tier).getByRole("combobox", { name: "Model" }),
+      "gemini-3.1-pro-preview",
+    );
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    expect(backend.getCapturedPut()?.tiers.premium.model).toBe(
+      "gemini-3.1-pro-preview",
+    );
+  });
+
+  // The half that keeps this from being a Select: the sheet is a starting
+  // point, the server takes any id its vendor serves, and a vendor ships a
+  // model on a Tuesday.
+  it("binds a model the sheet has never heard of", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR);
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-3.5-flash");
+
+    const tier = screen.getByTestId("ai-routing-tier-premium");
+    const model = within(tier).getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "gemini-4-experimental-0731");
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    expect(backend.getCapturedPut()?.tiers.premium.model).toBe(
+      "gemini-4-experimental-0731",
+    );
+  });
+
+  // A seat holding the routing grant but not the sheet's own, or an
+  // installation whose sheet was never seeded. The field is what it was before
+  // the picker existed, and the form still saves.
+  it("still binds by hand when the sheet cannot be read", async () => {
+    const user = userEvent.setup();
+    const backend = backendFor(ROUTING_EDITOR, BOUND, { sheetStatus: 403 });
+    vi.stubGlobal("fetch", backend.fetchMock);
+    render(<AiRoutingCard />);
+    await screen.findByDisplayValue("gemini-3.5-flash");
+
+    const tier = screen.getByTestId("ai-routing-tier-premium");
+    const model = within(tier).getByRole("combobox", { name: "Model" });
+    await user.click(model);
+    expect(screen.queryByRole("listbox")).toBeNull();
+
+    await user.clear(model);
+    await user.type(model, "gemini-3.1-pro-preview");
+    await user.click(screen.getByRole("button", { name: /save routing/i }));
+
+    await waitFor(() => expect(backend.getCapturedPut()).not.toBeNull());
+    expect(backend.getCapturedPut()?.tiers.premium.model).toBe(
+      "gemini-3.1-pro-preview",
+    );
   });
 });

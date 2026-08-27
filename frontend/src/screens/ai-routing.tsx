@@ -5,10 +5,16 @@ import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
 import { Button, EmptyState, Field, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
+import { ComboBox } from "../design-system/combobox";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { useT } from "../i18n";
+import {
+  type ModelLane,
+  suggestionsFor,
+  useAiModelCatalogue,
+} from "./ai-models";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // Which vendor this installation's text is sent to (ai-operational-spec §1.4).
@@ -26,6 +32,9 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 type Routing = components["schemas"]["AiRouting"];
 type TierBinding = components["schemas"]["AiTierBinding"];
+type ModelCatalogue =
+  | readonly components["schemas"]["AiModelRate"][]
+  | undefined;
 
 // The adapters a tier may name. Written out because the wire carries a free
 // string — the server refuses an unknown one, and a reader choosing from a list
@@ -138,6 +147,11 @@ function RoutingForm({
 }: Readonly<{ routing: Routing; canManage: boolean }>) {
   const t = useT();
   const replace = useReplaceRouting();
+  // One read for every row on the card. Enabled unconditionally because this
+  // form only renders for a reader who already holds `ai_routing:read`, and the
+  // hook answers an empty list rather than throwing when the sheet's own grant
+  // is withheld — a field with nothing to suggest, which is what it was before.
+  const catalogue = useAiModelCatalogue(true);
   // The stored document is the starting point, and the reader's edits live
   // here until they save. Keyed on the routing version so a binding another
   // role changed replaces an untouched form rather than being overwritten by
@@ -186,6 +200,7 @@ function RoutingForm({
           key={tier}
           tier={tier}
           binding={draft.tiers[tier]}
+          catalogue={catalogue.data}
           disabled={!canManage || replace.isPending}
           onChange={(next) => setTier(tier, next)}
         />
@@ -199,6 +214,7 @@ function RoutingForm({
           on the same vendor. */}
       <EmbeddingsRow
         binding={draft.embeddings}
+        catalogue={catalogue.data}
         disabled={!canManage || replace.isPending}
         onChange={(embeddings) => setDraft((d) => ({ ...d, embeddings }))}
       />
@@ -230,19 +246,25 @@ function RoutingForm({
 //
 // One component rather than one per row. Both lanes ask the identical question
 // and the answers are governed by the identical rule, so a second copy would
-// only be a second place to forget when that rule moves. The label is the one
-// thing that genuinely differs: a tier row names the tier, the embedding row
-// names itself.
+// only be a second place to forget when that rule moves. Two things genuinely
+// differ, and both arrive as props: the label -- a tier row names the tier, the
+// embedding row names itself -- and the LANE, which decides whether this field
+// offers chat models or embedders. An embedder on a chat tier cannot serve a
+// call, so offering one would be worse than offering nothing.
 function AdapterFields<
   B extends { provider: string; model: string; base_url?: string },
 >({
   label,
+  lane,
   binding,
+  catalogue,
   disabled,
   onChange,
 }: Readonly<{
   label: string;
+  lane: ModelLane;
   binding: B;
+  catalogue: ModelCatalogue;
   disabled: boolean;
   onChange: (next: B) => void;
 }>) {
@@ -260,13 +282,23 @@ function AdapterFields<
           />
         )}
       </Field>
-      <Field label={t("aiRouting.model.label")}>
+      {/* The models this installation can PRICE, which is a different and more
+          useful question than the models the vendor publishes: one outside the
+          sheet serves calls and reports UNPRICED, and nobody notices until a
+          usage report comes back with a week missing. Still a text box, because
+          the server accepts any id its vendor offers and the sheet is a
+          starting point rather than a permitted list. */}
+      <Field
+        label={t("aiRouting.model.label")}
+        hint={t("aiRouting.model.help")}
+      >
         {(control) => (
-          <TextInput
+          <ComboBox
             {...control}
             value={binding.model}
+            suggestions={suggestionsFor(catalogue, binding.provider, lane)}
             disabled={disabled}
-            onChange={(e) => onChange({ ...binding, model: e.target.value })}
+            onChange={(model) => onChange({ ...binding, model })}
           />
         )}
       </Field>
@@ -304,10 +336,12 @@ function AdapterFields<
 // setting the server refuses.
 function EmbeddingsRow({
   binding,
+  catalogue,
   disabled,
   onChange,
 }: Readonly<{
   binding: Routing["embeddings"];
+  catalogue: ModelCatalogue;
   disabled: boolean;
   onChange: (next: Routing["embeddings"]) => void;
 }>) {
@@ -316,7 +350,9 @@ function EmbeddingsRow({
     <div className="form-row" data-testid="ai-routing-embeddings">
       <AdapterFields
         label={t("aiRouting.embeddings.label")}
+        lane="embeddings"
         binding={binding}
+        catalogue={catalogue}
         disabled={disabled}
         onChange={onChange}
       />
@@ -363,11 +399,13 @@ function EmbeddingsRow({
 function TierRow({
   tier,
   binding,
+  catalogue,
   disabled,
   onChange,
 }: Readonly<{
   tier: string;
   binding: TierBinding;
+  catalogue: ModelCatalogue;
   disabled: boolean;
   onChange: (next: TierBinding) => void;
 }>) {
@@ -375,7 +413,9 @@ function TierRow({
     <div className="form-row" data-testid={`ai-routing-tier-${tier}`}>
       <AdapterFields
         label={tier}
+        lane="chat"
         binding={binding}
+        catalogue={catalogue}
         disabled={disabled}
         onChange={onChange}
       />

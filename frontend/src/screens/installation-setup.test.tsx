@@ -1,10 +1,16 @@
 /** @vitest-environment jsdom */
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { pickOption } from "../design-system/select-testing";
+import { pickOption, pickSuggestion } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
 import { InstallationSetup } from "./installation-setup";
@@ -15,6 +21,32 @@ afterEach(() => {
 });
 
 type Step = { step: string; configured: boolean; blocking: boolean };
+
+// The seeded price sheet a fresh installation is provisioned with, which is
+// also the catalogue both model fields offer from. Only the three columns the
+// picker reads.
+const SEEDED_SHEET = [
+  { provider: "gemini", model_id: "gemini-3.1-flash-lite", lane: "chat" },
+  { provider: "gemini", model_id: "gemini-3.5-flash", lane: "chat" },
+  { provider: "gemini", model_id: "gemini-embedding-001", lane: "embeddings" },
+  {
+    provider: "openai_compatible",
+    model_id: "mistralai/mistral-large-2512",
+    lane: "chat",
+  },
+  // The OpenRouter preset's own two, which the sheet always carries — a preset
+  // naming a model SeedModelRates does not price fails a backend gate.
+  {
+    provider: "openai_compatible",
+    model_id: "mistralai/mistral-small-3.2-24b-instruct",
+    lane: "chat",
+  },
+  {
+    provider: "openai_compatible",
+    model_id: "openai/text-embedding-3-small",
+    lane: "embeddings",
+  },
+];
 
 /** The server's answer, in the order the server gives it. */
 function setupReport(
@@ -44,6 +76,9 @@ function mount(
         return jsonResponse({ title: "refused" }, 500);
       }
       return new Response(null, { status: 204 });
+    }
+    if (url.endsWith("/ai-model-rates")) {
+      return jsonResponse({ data: SEEDED_SHEET });
     }
     return jsonResponse(report);
   });
@@ -185,5 +220,94 @@ describe("the first-run setup gate", () => {
       client_id: "123-abc.apps.googleusercontent.com",
       client_secret: "GOCSPX-secret",
     });
+  });
+
+  // A first-time admin should not have to know a model id by heart. The sheet
+  // the installation was seeded with is what it can price, so it is what the
+  // field offers — per lane, because an embedder cannot serve a chat tier.
+  it("offers the seeded models for the chosen vendor, per lane", async () => {
+    const user = userEvent.setup();
+    mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+
+    await user.click(screen.getByRole("combobox", { name: "Model" }));
+    expect(
+      within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["gemini-3.1-flash-lite", "gemini-3.5-flash"]);
+    await user.keyboard("{Escape}");
+
+    await user.click(screen.getByRole("combobox", { name: "Embedding model" }));
+    expect(
+      within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual(["gemini-embedding-001"]);
+  });
+
+  it("binds the model a reader picks off the list", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+
+    await pickSuggestion(
+      user,
+      screen.getByRole("combobox", { name: "Model" }),
+      "gemini-3.5-flash",
+    );
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => expect(writes.length).toBe(2));
+    const routing = writes[1].body as {
+      tiers: Record<string, { model: string }>;
+    };
+    expect(routing.tiers.premium.model).toBe("gemini-3.5-flash");
+  });
+
+  // The sheet is a starting point, never a permitted list: the server takes any
+  // id its vendor serves, and an admin arriving with a model we have not priced
+  // must not be stopped at the door.
+  it("binds a model the seeded sheet does not carry", async () => {
+    const user = userEvent.setup();
+    const { writes } = mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+
+    const model = screen.getByRole("combobox", { name: "Model" });
+    await user.clear(model);
+    await user.type(model, "gemini-4-experimental-0731");
+    await user.type(screen.getByLabelText("API key"), "AIza-secret");
+    await user.click(screen.getByRole("button", { name: "Continue" }));
+
+    await waitFor(() => expect(writes.length).toBe(2));
+    const routing = writes[1].body as {
+      tiers: Record<string, { model: string }>;
+    };
+    expect(routing.tiers.premium.model).toBe("gemini-4-experimental-0731");
+  });
+
+  // Switching vendor re-seeds the fields AND what they offer: the previous
+  // vendor's ids mean nothing to this one, and offering them would be worse
+  // than offering nothing.
+  it("re-offers on the new vendor when the provider changes", async () => {
+    const user = userEvent.setup();
+    mount(setupReport(false, false));
+    await screen.findByText("Choose a model provider");
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Provider" }),
+      "OpenRouter",
+    );
+    await user.click(screen.getByRole("combobox", { name: "Model" }));
+    expect(
+      within(screen.getByRole("listbox"))
+        .getAllByRole("option")
+        .map((option) => option.textContent),
+    ).toEqual([
+      "mistralai/mistral-large-2512",
+      "mistralai/mistral-small-3.2-24b-instruct",
+    ]);
   });
 });

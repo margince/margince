@@ -6055,6 +6055,8 @@ export const en = {
   "aiRouting.baseUrl.help":
     "The vendor's host root, with no version segment. The adapter adds /v1. Required for openai_compatible, which has no default of its own.",
   "aiRouting.model.label": "Model",
+  "aiRouting.model.help":
+    "The models listed are the ones this installation can price. Any other id your provider serves works too — type it.",
   "aiRouting.save": "Save routing",
   "aiRouting.saving": "Saving the binding…",
   "aiRouting.saved": "Routing saved. Every process is now serving it.",

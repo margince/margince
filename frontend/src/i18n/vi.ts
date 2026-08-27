@@ -5952,6 +5952,8 @@ export const vi = {
   "aiRouting.baseUrl.help":
     "Gốc host của nhà cung cấp, không kèm phân đoạn phiên bản. Bộ chuyển thêm /v1. Bắt buộc với openai_compatible vì nó không có mặc định riêng.",
   "aiRouting.model.label": "Mô hình",
+  "aiRouting.model.help":
+    "Danh sách là những mô hình mà bản cài đặt này biết giá. Mọi ID khác mà nhà cung cấp của bạn phục vụ cũng dùng được — hãy nhập vào.",
   "aiRouting.save": "Lưu định tuyến",
   "aiRouting.saving": "Đang lưu ràng buộc…",
   "aiRouting.saved": "Đã lưu định tuyến. Mọi tiến trình đang phục vụ theo nó.",

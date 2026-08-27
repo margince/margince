@@ -6005,6 +6005,8 @@ export const de = {
   "aiRouting.baseUrl.help":
     "Die Host-Wurzel des Anbieters, ohne Versionssegment. Der Adapter hängt /v1 an. Für openai_compatible erforderlich, das keinen eigenen Standard hat.",
   "aiRouting.model.label": "Modell",
+  "aiRouting.model.help":
+    "Aufgeführt sind die Modelle, für die diese Installation Preise kennt. Jede andere ID, die Ihr Anbieter bedient, funktioniert ebenfalls — einfach eintippen.",
   "aiRouting.save": "Routing speichern",
   "aiRouting.saving": "Bindung wird gespeichert…",
   "aiRouting.saved": "Routing gespeichert. Jeder Prozess bedient es jetzt.",

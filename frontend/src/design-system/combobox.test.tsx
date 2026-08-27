@@ -135,6 +135,26 @@ describe("ComboBox", () => {
     );
   });
 
+  // A field arrives holding what is already bound, and a reader who opens it is
+  // asking what ELSE there is. Narrowing to the row they already have would make
+  // them clear the field to find out.
+  it("offers the whole list when the value is already one of the suggestions", async () => {
+    const user = userEvent.setup();
+    render(<Harness initial="gemini-3.5-flash" />);
+
+    await user.click(screen.getByRole("combobox", { name: "Model" }));
+
+    const options = within(screen.getByRole("listbox")).getAllByRole("option");
+    expect(options.map((o) => o.textContent)).toEqual(
+      MODELS.map((m) => m.value),
+    );
+    expect(
+      within(screen.getByRole("listbox")).getByRole("option", {
+        name: "gemini-3.5-flash",
+      }),
+    ).toHaveAttribute("aria-selected", "true");
+  });
+
   // A bound model the sheet no longer prices: it is the value, and the priced
   // ones are still offered beside it.
   it("shows a value that is not among the suggestions", async () => {

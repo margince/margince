@@ -13,6 +13,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import {
+  type PopupFrame,
   useActiveOptionVisible,
   useAnchoredPopup,
   useDismissOnOutsidePress,
