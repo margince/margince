@@ -221,24 +221,24 @@ That negotiation is winnable because the product gives the works council somethi
 
 The product policy now becomes very simple.
 
-Part of Tier A ships today; the rest is in work, ticket by ticket, and each item below says which is which. We release quickly, so the gap between "in work" and "shipped" is weeks, not months, and it may already be closed by the time you read this. We refuse all five Tier C models.
+Part of Tier A ships today. The rest is in work, with the ticket number next to each item. We release quickly, so "in work" means weeks, not months, and it may already be shipped by the time you read this. We refuse all five Tier C models.
 
 Each item below is rated on four axes: GDPR posture, Vietnam compatibility, platform-contract exposure and works-council temperature.
 
 ### Tier A: build freely
 
-**A1. Company enrichment from official sources.** A1 remains simple until a natural person appears. Data about the legal entity itself sits outside the GDPR under Recital 14: company name, legal form, VAT number and registered address.
+**A1. Company enrichment from official sources.** Company data is the easy case. Data about the legal entity itself sits outside the GDPR under Recital 14: company name, legal form, VAT number and registered address.
 
 | Source | Data | Access | Limit |
 |---|---|---|---|
 | VIES[^35] | VAT validity, registered name and address in many member states | Free API; we store the consultation number as proof | Availability varies by state |
-| GLEIF LEI[^36] | Legal entity plus ownership tree | Free API and bulk files, CC0 | Coverage thins outside finance |
-| Swiss Zefix | Commercial register, daily change feed | Free REST API | None that bites |
+| GLEIF LEI[^36] | Legal entity plus ownership tree | Free API and bulk files, CC0 | Weak outside the finance sector |
+| Swiss Zefix | Commercial register, daily change feed | Free REST API | None worth noting |
 | UK Companies House | Register, officers, filings | Free API and streaming | Rate limits only |
 | German Handelsregister | Register data, free since the 2022 DiRUG reform | Web, per-lookup | Portal caps queries and bans bulk |
 | Licensed aggregators (e.g. North Data) | Structured DACH register and financial data | Paid API | The clean bulk route |
 
-The line must stay sharp. The moment a natural person appears in the source, perhaps a director, sole trader or named representative, the information becomes personal data again. Publication under a statutory duty creates the strongest legitimate-interest fact pattern available. It does not remove the duties attached to personal data.
+It stops being easy the moment the data names a person. A director, a sole trader, a named representative: that is personal data again. Yes, those names are published because the law requires it, and that gives us the best legal footing there is. The GDPR duties still apply anyway.
 
 The identifier spine is EUID, LEI, VAT ID and the Vietnamese MST.
 
