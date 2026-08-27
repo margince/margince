@@ -38,6 +38,19 @@ import (
 // its grants, so without the filter a contract would stay readable — and
 // mutable — through a record whose own read already answers 404.
 //
+// That requirement is UNCONDITIONAL, and it is stated here rather than left to
+// hold by accident. This used to return NO CLAUSE when both scopes came back
+// empty — bundling the liveness into the narrowing, so a caller who reads every
+// deal and every organization would have read contracts on archived anchors
+// that the document-filing gate refuses.
+//
+// That caller does not exist today, and the reason is unrelated to contracts:
+// `organization` is owner-private (platform/auth), so its scope clause is never
+// empty and the early return was unreachable. An invariant that survives on a
+// neighbouring table's privacy setting is one a change to that table quietly
+// ends — so liveness is now a property of the anchor rather than of who is
+// asking.
+//
 // The two arms are a disjunction because a contract has one anchor or the
 // other: a contract WITH a deal is judged by that deal, and a contract with no
 // deal is judged by its organization. A contract with a deal is deliberately
@@ -53,12 +66,6 @@ func VisibleClause(ctx context.Context, alias string, arg func(any) int) (string
 	if err != nil {
 		return "", err
 	}
-	// Both empty means the caller reads every row of both anchors, so there is
-	// nothing to narrow and the caller composes no clause at all.
-	if dealScope == "" && orgScope == "" {
-		return "", nil
-	}
-
 	qualified := alias
 	if qualified != "" {
 		qualified += "."
