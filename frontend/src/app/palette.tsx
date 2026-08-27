@@ -4,6 +4,7 @@ import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { SCHEDULED_SCREEN } from "../screens/scheduledsends";
 import {
   settingsAddress,
   useSettingsEntryVisibility,
@@ -122,10 +123,36 @@ export function useBuiltinCommands(): Command[] {
         route: settingsAddress("ai"),
       },
     ];
+    // The scheduled queue, which is off the rail deliberately — a queue of one
+    // person's own unsent mail is not an eleventh destination (pagemeta.ts says
+    // so) — and was therefore reachable only by typing the address. The
+    // composer that queued a message is one door; this is the other, for the
+    // rep who closed that toast an hour ago and now wants the message back.
+    //
+    // Beside the settings shortcuts rather than among the rail screens above,
+    // because those are built FROM the rail: a command for a screen the rail
+    // does not carry belongs where the other off-rail ones already are.
+    const offRailScreens: Command[] = [
+      {
+        id: `screen:${SCHEDULED_SCREEN}`,
+        label: t("nav.scheduled"),
+        // The words a rep would type for it, which are not the words on the
+        // page: they think "send later", which is the control they used.
+        keywords: [SCHEDULED_SCREEN, "send later", "queue"],
+        type: "screen",
+        route: { screen: SCHEDULED_SCREEN },
+      },
+    ];
     const settingsScreens: Command[] = settingsShortcuts.filter(
       (shortcut) => visible[shortcut.entry],
     );
-    return [...screens, ...forkScreens, ...actions, ...settingsScreens];
+    return [
+      ...screens,
+      ...forkScreens,
+      ...actions,
+      ...offRailScreens,
+      ...settingsScreens,
+    ];
   }, [t, visible, locale]);
 }
 

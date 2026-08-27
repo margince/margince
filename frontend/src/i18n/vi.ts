@@ -2766,6 +2766,12 @@ export const vi = {
     "Bạn đang gửi email này ngay bây giờ. Đây là hành động gửi ra ngoài, không đảo ngược được.",
   "compose.schedule": "Hẹn giờ",
   "compose.scheduleConfirmTitle": "Hẹn giờ gửi email này?",
+  // The composer computed that it had scheduled a send and said nothing —
+  // it closed the way a SENT message closes it. The confirm dialog above
+  // promises a place to move or withdraw the message from; these two are how a
+  // rep gets there.
+  "compose.scheduledQueued": "Đã lên lịch. Thư chưa được gửi đi.",
+  "compose.scheduledOpenQueue": "Thư đã lên lịch",
   "compose.scheduleBody":
     "Email không đi ngay lúc này. Nó chờ đến thời điểm bạn đã chọn, và các bước kiểm tra đồng ý cùng hộp thư sẽ chạy lại khi đó. Trước khi nó đi, bạn có thể chuyển thời điểm hoặc thu hồi nó ở “Tin nhắn đã hẹn giờ”.",
   "compose.sendMessageConfirmTitle": "Gửi tin nhắn này?",

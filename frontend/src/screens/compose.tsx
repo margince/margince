@@ -37,6 +37,7 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select, type SelectOption } from "../design-system/select";
+import { useToast } from "../design-system/toast";
 import {
   formatDateAbbrev,
   formatDateTime,
@@ -63,6 +64,7 @@ import {
   useProjectRecord,
   withSubjectTag,
 } from "./projectrecord";
+import { SCHEDULED_SCREEN } from "./scheduledsends";
 import { useVoiceProfile } from "./voice-profile";
 import "./compose.css";
 
@@ -1908,6 +1910,7 @@ export function ComposeModal({
   const [pickingMoment, setPickingMoment] = useState(false);
   const { locale } = useLocale();
   const zone = viewerZone();
+  const toast = useToast();
   const [provenance, setProvenance] = useState<DraftProvenance | null>(null);
   // The served voice draft the body in this form came from. It is what lets the
   // server say whether the rep sent the draft or rewrote it, so it may only ever
@@ -2110,6 +2113,23 @@ export function ComposeModal({
       }
       for (const queryKey of entityTimelineKeys(entityType, entityId)) {
         queryClient.invalidateQueries({ queryKey });
+      }
+      // A scheduled send is the one outcome here the rep may need to UNDO, and
+      // until now the composer computed that it had scheduled one and said
+      // nothing — it closed the same way a sent message closes it. The confirm
+      // dialog they just read promised "you can move it or take it back from
+      // Scheduled messages", and nothing in the product went there.
+      //
+      // The verb makes it sticky, which is what this needs and a plain
+      // confirmation does not: the door is the point, and a toast that withdrew
+      // itself after three and a half seconds would take the door with it.
+      if (result.scheduled) {
+        toast.show(t("compose.scheduledQueued"), {
+          action: {
+            label: t("compose.scheduledOpenQueue"),
+            onAct: () => navigate({ screen: SCHEDULED_SCREEN }),
+          },
+        });
       }
       onClose();
     },

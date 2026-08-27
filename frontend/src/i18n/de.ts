@@ -2787,6 +2787,12 @@ export const de = {
     "Sie senden diese E-Mail jetzt. Dies ist eine ausgehende, unwiderrufliche Aktion.",
   "compose.schedule": "Einplanen",
   "compose.scheduleConfirmTitle": "Diese E-Mail einplanen?",
+  // The composer computed that it had scheduled a send and said nothing —
+  // it closed the way a SENT message closes it. The confirm dialog above
+  // promises a place to move or withdraw the message from; these two are how a
+  // rep gets there.
+  "compose.scheduledQueued": "Geplant. Sie ist noch nicht rausgegangen.",
+  "compose.scheduledOpenQueue": "Geplante Nachrichten",
   "compose.scheduleBody":
     "Sie geht nicht jetzt hinaus. Sie wartet auf den gewählten Zeitpunkt, und die Einwilligungs- und Postfachprüfungen laufen dann erneut. Bis sie hinausgeht, können Sie sie unter „Geplante Nachrichten“ verschieben oder zurückziehen.",
   "compose.sendMessageConfirmTitle": "Diese Nachricht senden?",
