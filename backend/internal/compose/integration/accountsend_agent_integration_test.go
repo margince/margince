@@ -52,11 +52,11 @@ import (
 // agent's differ in the CREDENTIAL and in nothing else. The approved retry has
 // to be the identical request — the diff hash binds it — which is a second
 // reason it is built in one place.
-func accountSendBody(org, subject string) apptest.AnyMap {
-	return apptest.AnyMap{
+func accountSendBody(org, subject string) AnyMap {
+	return AnyMap{
 		"subject": subject, "body": "Good morning — introducing ourselves.",
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
-		"links": []apptest.AnyMap{{"entity_type": "organization", "entity_id": org}},
+		"links": []AnyMap{{"entity_type": "organization", "entity_id": org}},
 	}
 }
 
@@ -251,7 +251,7 @@ func TestAFlooredAccountSendStagesAndOnlyLeavesOnceApproved(t *testing.T) {
 		t.Fatal("the staged send is not in the approvals inbox; nobody could ever release it")
 	}
 	if status := a.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve",
-		apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+		AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 	if n := a.deliveryCount(t); n != 0 {
@@ -390,7 +390,7 @@ func (a *accountSendEnv) mintAccountSendPassport(t *testing.T) string {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := a.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := a.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "outreach agent", "scopes": []string{"read", "send"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)

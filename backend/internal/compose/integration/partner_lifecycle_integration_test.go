@@ -14,8 +14,6 @@ package integration
 import (
 	"net/http"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // partnerWire is the contract Partner shape as this suite reads it.
@@ -36,14 +34,14 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 
 	// Upsert with the full lifecycle block.
 	var upserted partnerWire
-	if status := e.Call(t, "PUT", "/v1/organizations/"+e.orgID+"/partner", apptest.AnyMap{
+	if status := e.Call(t, "PUT", "/v1/organizations/"+e.orgID+"/partner", AnyMap{
 		"partner_role":       "consulting",
 		"cert_status":        "applied",
 		"relationship_stage": "in_conversation",
 		"next_step":          "Send the partnership one-pager",
 		"next_step_due_at":   "2026-08-01",
 		"served_segments":    []string{"manufacturing", "fintech"},
-		"gate_metrics":       apptest.AnyMap{"certified_staff": 4, "retention_rate": 87},
+		"gate_metrics":       AnyMap{"certified_staff": 4, "retention_rate": 87},
 	}, nil, &upserted); status != http.StatusOK {
 		t.Fatalf("upsert partner with lifecycle fields → %d", status)
 	}
@@ -77,7 +75,7 @@ func TestPartnerLifecycleFieldsRoundTrip(t *testing.T) {
 
 	// A stage outside the closed lifecycle vocabulary is refused at the
 	// seam — 422, and the stored stage stands.
-	if status := e.Call(t, "PUT", "/v1/organizations/"+e.orgID+"/partner", apptest.AnyMap{
+	if status := e.Call(t, "PUT", "/v1/organizations/"+e.orgID+"/partner", AnyMap{
 		"partner_role":       "consulting",
 		"relationship_stage": "best_friends",
 	}, map[string]string{"If-Match": "1"}, nil); status != 422 {

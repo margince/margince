@@ -95,7 +95,7 @@ func (p *preflightEnv) sendExpectingAcceptance(t *testing.T, purpose, subject, b
 	var sent struct {
 		ID string `json:"id"`
 	}
-	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", apptest.AnyMap{
+	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": subject, "body": body,
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": purpose,
 	}, nil, &sent)
@@ -339,12 +339,12 @@ func (p *preflightEnv) grantMarketingConsent(t *testing.T) {
 	var issued struct {
 		Token string `json:"token"`
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/double-opt-in", apptest.AnyMap{
+	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent/double-opt-in", AnyMap{
 		"purpose_id": marketing, "deliver": false,
 	}, nil, &issued); status != http.StatusCreated {
 		t.Fatalf("issue the double-opt-in token → %d", status)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", apptest.AnyMap{
+	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", AnyMap{
 		"purpose_id": marketing, "new_state": "granted",
 		"lawful_basis": "consent", "double_opt_in_token": issued.Token,
 	}, nil, nil); status != http.StatusOK {

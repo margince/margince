@@ -28,7 +28,7 @@ func TestStagedCreateWithNoTargetIDIsListedAndDecidable(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "create agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
@@ -38,7 +38,7 @@ func TestStagedCreateWithNoTargetIDIsListedAndDecidable(t *testing.T) {
 	// createWebhookSubscription is confirm-first, so the agent's call stages
 	// instead of writing. The identical body is the redemption key, so it is
 	// sent twice.
-	body := apptest.AnyMap{"target_url": "https://example.test/hook", "event_types": []string{"organization.created"}}
+	body := AnyMap{"target_url": "https://example.test/hook", "event_types": []string{"organization.created"}}
 	var problem struct {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
@@ -67,7 +67,7 @@ func TestStagedCreateWithNoTargetIDIsListedAndDecidable(t *testing.T) {
 	assertDecidableInTheInbox(t, e, approvalID, "webhook_subscription")
 
 	// And the decision releases the identical call, which lands the project.
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 	withToken := map[string]string{

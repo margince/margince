@@ -57,10 +57,10 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 	}
 
 	// An unanswered inbound mail outranks the open task.
-	var mail apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	var mail AnyMap
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "direction": "inbound", "subject": "Re: rollout", "body": "Can you send the DPA?",
-		"links":  []apptest.AnyMap{{"entity_type": "deal", "entity_id": dealID}},
+		"links":  []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
 		"source": "ui",
 	}, nil, &mail); status != http.StatusCreated {
 		t.Fatalf("log mail = %d %v", status, mail)
@@ -82,10 +82,10 @@ func TestTheDealStatusCardFollowsTheDealsOwnRecords(t *testing.T) {
 
 	// Answering it takes the thread away again: the box goes back to offering
 	// a fresh mail, which is the whole behaviour the two labels describe.
-	var reply apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	var reply AnyMap
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "direction": "outbound", "subject": "Re: rollout", "body": "DPA attached.",
-		"links":  []apptest.AnyMap{{"entity_type": "deal", "entity_id": dealID}},
+		"links":  []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
 		"source": "ui",
 	}, nil, &reply); status != http.StatusCreated {
 		t.Fatalf("log the reply = %d %v", status, reply)
@@ -100,7 +100,7 @@ func TestTheDealStatusCardCitesItsRecordsAndHidesADealTheCallerCannotSee(t *test
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
-	var roomRow apptest.AnyMap
+	var roomRow AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
 		t.Fatalf("room = %d", status)
 	}
@@ -127,9 +127,9 @@ func TestTheDealStatusCardCitesItsRecordsAndHidesADealTheCallerCannotSee(t *test
 	}
 }
 
-func readStatus(t *testing.T, e *apptest.AppEnv, dealID string) apptest.AnyMap {
+func readStatus(t *testing.T, e *apptest.AppEnv, dealID string) AnyMap {
 	t.Helper()
-	var card apptest.AnyMap
+	var card AnyMap
 	if status := e.Call(t, "GET", "/v1/deals/"+dealID+"/status", nil, nil, &card); status != http.StatusOK {
 		t.Fatalf("status = %d %v", status, card)
 	}

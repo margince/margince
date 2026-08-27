@@ -129,7 +129,7 @@ func TestLeadScoreOverrideRejectsMissingReasonOverHTTP(t *testing.T) {
 	var lead struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/leads", apptest.AnyMap{"full_name": "Otto Lead", "source": "manual"}, nil, &lead); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/leads", AnyMap{"full_name": "Otto Lead", "source": "manual"}, nil, &lead); status != http.StatusCreated {
 		t.Fatalf("create lead → %d", status)
 	}
 
@@ -142,7 +142,7 @@ func TestLeadScoreOverrideRejectsMissingReasonOverHTTP(t *testing.T) {
 			} `json:"errors"`
 		} `json:"details"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/leads/"+lead.ID, apptest.AnyMap{"score": 80}, nil, &problem); status != http.StatusUnprocessableEntity {
+	if status := e.Call(t, "PATCH", "/v1/leads/"+lead.ID, AnyMap{"score": 80}, nil, &problem); status != http.StatusUnprocessableEntity {
 		t.Fatalf("score without reason → %d, want 422", status)
 	}
 	if problem.Code != "validation_error" ||

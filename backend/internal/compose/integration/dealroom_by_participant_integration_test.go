@@ -21,7 +21,7 @@ func TestRoomsAreListedByTheAddressThatHoldsASeat(t *testing.T) {
 	room := openRoomWithABuyer(t, e)
 
 	byEmail := func(email string) int {
-		var page apptest.AnyMap
+		var page AnyMap
 		if status := e.Call(t, "GET", "/v1/deal-rooms?participant_email="+url.QueryEscape(email), nil, nil, &page); status != http.StatusOK {
 			t.Fatalf("list by %s = %d %v", email, status, page)
 		}
@@ -38,13 +38,13 @@ func TestRoomsAreListedByTheAddressThatHoldsASeat(t *testing.T) {
 		t.Fatalf("rooms for a stranger = %d, want 0", got)
 	}
 
-	var roster apptest.AnyMap
+	var roster AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID+"/participants", nil, nil, &roster); status != http.StatusOK {
 		t.Fatalf("roster = %d", status)
 	}
 	seats, _ := roster["data"].([]any)
 	seat, _ := seats[0].(map[string]any)
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/participants/"+seat["id"].(string)+"/revoke", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/participants/"+seat["id"].(string)+"/revoke", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("revoke = %d", status)
 	}
 	if got := byEmail(room.email); got != 0 {

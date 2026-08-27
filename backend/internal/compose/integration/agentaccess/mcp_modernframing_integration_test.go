@@ -58,7 +58,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 	bearer := apptest.PassportBearer(t, e.AppEnv, "dual-era client", "read", "write")
 
 	t.Run("a modern client needs no handshake", func(t *testing.T) {
-		discovered := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+		discovered := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{`+modernMeta+`}}`,
 			modernHeaders(bearer, "server/discover", ""))
 		if discovered.StatusCode != http.StatusOK {
@@ -77,7 +77,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 
 		// The tool list is filtered by this passport's scopes, so the copy it
 		// hands back may never be shared with another caller.
-		listed := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+		listed := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":2,"method":"tools/list","params":{`+modernMeta+`}}`,
 			modernHeaders(bearer, "tools/list", ""))
 		if listed.StatusCode != http.StatusOK {
@@ -90,7 +90,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 
 		// And the call itself, with no session ever minted: this is what lets a
 		// modern conversation land on any replica.
-		called := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+		called := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{`+modernMeta+
 				`,"name":"create_record","arguments":{"record_type":"person",`+
 				`"fields":{"full_name":"Modern Framing Person"}}}}`,
@@ -107,7 +107,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 	})
 
 	t.Run("a handshake client still connects, and is handed no session", func(t *testing.T) {
-		initialized := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+		initialized := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25"}}`,
 			withContentType(bearer))
 		if initialized.StatusCode != http.StatusOK {
@@ -122,7 +122,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 			t.Fatalf("negotiated %q, want the revision this client asked for", negotiated)
 		}
 
-		called := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+		called := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"create_record",`+
 				`"arguments":{"record_type":"person","fields":{"full_name":"Handshake Era Person"}}}}`,
 			legacyHeaders(bearer, negotiated))
@@ -139,7 +139,7 @@ func TestBothFramingsConnectAndLandTheSameEffect(t *testing.T) {
 		// credential, and the one revision the window dropped (ADR-0092 §3).
 		headers := withContentType(bearer)
 		headers["MCP-Protocol-Version"] = "2025-03-26"
-		refused := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+		refused := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 			`{"jsonrpc":"2.0","id":1,"method":"tools/list"}`, headers)
 
 		if refused.StatusCode != http.StatusBadRequest {
@@ -200,7 +200,7 @@ func TestAModernRequestWhoseHeaderContradictsItsBodyRunsNothing(t *testing.T) {
 	e := setupConnector(t)
 	bearer := apptest.PassportBearer(t, e.AppEnv, "mismatching client", "read", "write")
 
-	refused := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+	refused := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{`+modernMeta+
 			`,"name":"create_record","arguments":{"record_type":"person",`+
 			`"fields":{"full_name":"Never Created"}}}}`,

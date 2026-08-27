@@ -37,7 +37,7 @@ import (
 // request origin to prove the emitted link ignores them.
 func sendMarketing(t *testing.T, e *apptest.AppEnv, activityID, purpose, host, xfProto string) (int, string) {
 	t.Helper()
-	raw, err := json.Marshal(apptest.AnyMap{
+	raw, err := json.Marshal(AnyMap{
 		"subject": "Newsletter", "body": "hello", "to": []string{"subject@consent.test"}, "consent_purpose": purpose,
 	})
 	if err != nil {
@@ -124,7 +124,7 @@ func tokenFromLink(t *testing.T, link string) string {
 
 func grantPurpose(t *testing.T, c *consentEnv, purposeID string) {
 	t.Helper()
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
 		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("grant %s → %d", purposeID, status)
@@ -138,7 +138,7 @@ func createNewsletterPurpose(t *testing.T, c *consentEnv) string {
 	var newsletter struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/consent-purposes", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/consent-purposes", AnyMap{
 		"key": "newsletter", "label": "Newsletter", "requires_double_opt_in": false,
 	}, nil, &newsletter); status != http.StatusCreated {
 		t.Fatalf("create newsletter purpose → %d", status)
@@ -410,7 +410,7 @@ func TestPreferenceCenterRevokedTokenReadsAsAbsent(t *testing.T) {
 	var newsletter struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/consent-purposes", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/consent-purposes", AnyMap{
 		"key": "newsletter", "label": "Newsletter", "requires_double_opt_in": false,
 	}, nil, &newsletter); status != http.StatusCreated {
 		t.Fatalf("create newsletter purpose → %d", status)
@@ -448,7 +448,7 @@ func TestPreferenceCenterRejectsOversizedChoiceArray(t *testing.T) {
 	var newsletter struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/consent-purposes", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/consent-purposes", AnyMap{
 		"key": "newsletter", "label": "Newsletter", "requires_double_opt_in": false,
 	}, nil, &newsletter); status != http.StatusCreated {
 		t.Fatalf("create newsletter purpose → %d", status)
@@ -457,11 +457,11 @@ func TestPreferenceCenterRejectsOversizedChoiceArray(t *testing.T) {
 	sendMarketing(t, c.AppEnv, c.activityID, "newsletter", "", "")
 	token := tokenFromLink(t, unsubscribeLinkIn(t, transmittedBody(t, c)))
 
-	choices := make([]apptest.AnyMap, 0, 100)
+	choices := make([]AnyMap, 0, 100)
 	for i := 0; i < 100; i++ {
-		choices = append(choices, apptest.AnyMap{"purpose_key": "newsletter", "state": "withdrawn"})
+		choices = append(choices, AnyMap{"purpose_key": "newsletter", "state": "withdrawn"})
 	}
-	if s := publicCall(t, c.AppEnv, "PUT", "/v1/public/preferences/"+token, apptest.AnyMap{"choices": choices}, nil, nil); s != http.StatusUnprocessableEntity {
+	if s := publicCall(t, c.AppEnv, "PUT", "/v1/public/preferences/"+token, AnyMap{"choices": choices}, nil, nil); s != http.StatusUnprocessableEntity {
 		t.Fatalf("oversized choices PUT → %d, want 422", s)
 	}
 }

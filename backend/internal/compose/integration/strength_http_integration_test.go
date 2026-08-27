@@ -41,7 +41,7 @@ func seedStrengthPersonWithActivities(t *testing.T, e *apptest.AppEnv) string {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Strength Target", "source": "ui",
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
@@ -52,9 +52,9 @@ func seedStrengthPersonWithActivities(t *testing.T, e *apptest.AppEnv) string {
 	// a live recency/frequency/reciprocity signal rather than a bare
 	// zero-interaction "none" bucket.
 	for _, direction := range []string{"inbound", "outbound"} {
-		if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 			"kind": "email", "subject": "Touch", "source": "ui", "direction": direction,
-			"links": []apptest.AnyMap{{"entity_id": person.ID, "entity_type": "person"}},
+			"links": []AnyMap{{"entity_id": person.ID, "entity_type": "person"}},
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("log %s activity → %d", direction, status)
 		}
@@ -124,13 +124,13 @@ func TestOrganizationStrengthHTTPReconciles(t *testing.T) {
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
 		"display_name": "Strength Co", "source": "ui",
 	}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create organization → %d", status)
 	}
 	personID := seedStrengthPersonWithActivities(t, e)
-	if status := e.Call(t, "POST", "/v1/relationships", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "employment", "person_id": personID, "organization_id": org.ID,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("create employment relationship → %d", status)

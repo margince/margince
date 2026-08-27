@@ -21,6 +21,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -38,7 +39,7 @@ func (o *oauthEnv) mintPassport(t *testing.T, label string, scopes []string) str
 	var minted struct {
 		ID string `json:"passport_id"`
 	}
-	if status := o.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := o.Call(t, "POST", "/v1/passports", integration.AnyMap{
 		"label": label, "scopes": scopes,
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("mint %q → %d", label, status)
@@ -178,7 +179,7 @@ func TestSelectablePassportsExcludesAnotherUsersPassport(t *testing.T) {
 	var other struct {
 		ID string `json:"id"`
 	}
-	if status := o.Call(t, "POST", "/v1/users", apptest.AnyMap{
+	if status := o.Call(t, "POST", "/v1/users", integration.AnyMap{
 		"email": "otherhuman@acme.test", "display_name": "Other Human", "role": "rep",
 	}, nil, &other); status != http.StatusCreated {
 		t.Fatalf("inviting a second user → %d", status)

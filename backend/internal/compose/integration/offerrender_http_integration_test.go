@@ -49,10 +49,10 @@ func TestOfferRenderHTTP_PostRenderReturns200WithPdfAssetRefAndTheBlobExists(t *
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
 
-	var offer apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	var offer AnyMap
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &offer); status != http.StatusCreated {
 		t.Fatalf("create offer for render = %d %v", status, offer)
 	}
@@ -62,7 +62,7 @@ func TestOfferRenderHTTP_PostRenderReturns200WithPdfAssetRefAndTheBlobExists(t *
 	}
 
 	var rendered renderedOffer
-	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", apptest.AnyMap{}, nil, &rendered); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", AnyMap{}, nil, &rendered); status != http.StatusOK {
 		t.Fatalf("render offer = %d %+v, want 200", status, rendered)
 	}
 	if rendered.ID != offerID {
@@ -98,7 +98,7 @@ func TestOfferRenderHTTP_PostRenderReturns200WithPdfAssetRefAndTheBlobExists(t *
 	// re-render still reclaims its now-superseded PREVIOUS ref rather than
 	// accumulating orphans, and stays 200.
 	var renderedAgain renderedOffer
-	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", apptest.AnyMap{}, nil, &renderedAgain); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", AnyMap{}, nil, &renderedAgain); status != http.StatusOK {
 		t.Fatalf("second render = %d", status)
 	}
 	if renderedAgain.PdfAssetRef == rendered.PdfAssetRef {
@@ -148,8 +148,8 @@ func (r *raceLineAdder) Put(ctx context.Context, key string, body io.Reader, siz
 		return err
 	}
 	r.putKey = key
-	var line apptest.AnyMap
-	status := r.e.Call(r.t, "POST", "/v1/offers/"+r.offerID+"/line-items", apptest.AnyMap{
+	var line AnyMap
+	status := r.e.Call(r.t, "POST", "/v1/offers/"+r.offerID+"/line-items", AnyMap{
 		"description": "Concurrent Line", "quantity": 1.0, "unit_price_minor": 1000,
 	}, nil, &line)
 	if status != http.StatusCreated {
@@ -173,10 +173,10 @@ func TestOfferRenderHTTP_ConcurrentLineEditBetweenPrepareAndSetRejectsWithVersio
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
 
-	var offer apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	var offer AnyMap
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &offer); status != http.StatusCreated {
 		t.Fatalf("create offer for render = %d %v", status, offer)
 	}
@@ -189,7 +189,7 @@ func TestOfferRenderHTTP_ConcurrentLineEditBetweenPrepareAndSetRejectsWithVersio
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", apptest.AnyMap{}, nil, &problem)
+	status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", AnyMap{}, nil, &problem)
 	if race.hookErr != nil {
 		t.Fatal(race.hookErr)
 	}
@@ -208,7 +208,7 @@ func TestOfferRenderHTTP_ConcurrentLineEditBetweenPrepareAndSetRejectsWithVersio
 	}
 
 	// The rejected render must not have moved pdf_asset_ref at all.
-	var got apptest.AnyMap
+	var got AnyMap
 	if status := e.Call(t, "GET", "/v1/offers/"+offerID, nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("get offer after rejected render = %d", status)
 	}
@@ -244,7 +244,7 @@ func (r *raceOfferArchiver) Put(ctx context.Context, key string, body io.Reader,
 		return err
 	}
 	r.putKey = key
-	var archived apptest.AnyMap
+	var archived AnyMap
 	if status := r.e.Call(r.t, "DELETE", "/v1/offers/"+r.offerID, nil, nil, &archived); status != http.StatusOK {
 		r.hookErr = fmt.Errorf("archive the offer between prepare and set = %d %v", status, archived)
 	}
@@ -264,10 +264,10 @@ func TestOfferRenderHTTP_OfferArchivedBetweenPrepareAndSetReclaimsTheBlob(t *tes
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
 
-	var offer apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	var offer AnyMap
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &offer); status != http.StatusCreated {
 		t.Fatalf("create offer for render = %d %v", status, offer)
 	}
@@ -280,7 +280,7 @@ func TestOfferRenderHTTP_OfferArchivedBetweenPrepareAndSetReclaimsTheBlob(t *tes
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", apptest.AnyMap{}, nil, &problem)
+	status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", AnyMap{}, nil, &problem)
 	if race.hookErr != nil {
 		t.Fatal(race.hookErr)
 	}
@@ -330,7 +330,7 @@ func (r *raceDoubleRenderer) Put(ctx context.Context, key string, body io.Reader
 	}
 	r.nested = true
 	var winner renderedOffer
-	status := r.e.Call(r.t, "POST", "/v1/offers/"+r.offerID+"/render", apptest.AnyMap{}, nil, &winner)
+	status := r.e.Call(r.t, "POST", "/v1/offers/"+r.offerID+"/render", AnyMap{}, nil, &winner)
 	if status != http.StatusOK {
 		r.hookErr = fmt.Errorf("nested concurrent render = %d %+v, want 200", status, winner)
 	}
@@ -355,10 +355,10 @@ func TestOfferRenderHTTP_ConcurrentDoubleRenderLoserReclaimsOnlyItsOwnBlob(t *te
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
 
-	var offer apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	var offer AnyMap
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &offer); status != http.StatusCreated {
 		t.Fatalf("create offer for render = %d %v", status, offer)
 	}
@@ -371,7 +371,7 @@ func TestOfferRenderHTTP_ConcurrentDoubleRenderLoserReclaimsOnlyItsOwnBlob(t *te
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", apptest.AnyMap{}, nil, &problem)
+	status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", AnyMap{}, nil, &problem)
 	if race.hookErr != nil {
 		t.Fatal(race.hookErr)
 	}
@@ -379,7 +379,7 @@ func TestOfferRenderHTTP_ConcurrentDoubleRenderLoserReclaimsOnlyItsOwnBlob(t *te
 		t.Fatalf("outer render racing a nested concurrent render = %d %+v, want 409 version_skew", status, problem)
 	}
 
-	var got apptest.AnyMap
+	var got AnyMap
 	if status := e.Call(t, "GET", "/v1/offers/"+offerID, nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("get offer after the race = %d", status)
 	}

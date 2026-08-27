@@ -73,7 +73,7 @@ func (q *queueEnv) mintPassport(t *testing.T, label string, scopes ...string) st
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := q.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := q.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": label, "scopes": scopes,
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issuing passport %q → %d", label, status)
@@ -94,7 +94,7 @@ func (q *queueEnv) stageAConfirmFirstCall(t *testing.T, invoke func(tool, args s
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": name}, nil, &org); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": name}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create organization → %d", status)
 	}
 	_, err := invoke("enrich", `{"organization_id":"`+org.ID+`"}`)
@@ -283,19 +283,19 @@ func TestAnAgentRelinksToAPersonWithoutAskingAndStillStagesAProject(t *testing.T
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Relink Subject"}, nil, &person); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Relink Subject"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Relink Account"}, nil, &org); status != http.StatusCreated {
+	if status := q.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": "Relink Account"}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create organization → %d", status)
 	}
 	var project struct {
 		ID string `json:"id"`
 	}
-	if status := q.Call(t, "POST", "/v1/projects", apptest.AnyMap{
+	if status := q.Call(t, "POST", "/v1/projects", AnyMap{
 		"name": "Relink Engagement", "organization_id": org.ID,
 	}, nil, &project); status != http.StatusCreated {
 		t.Fatalf("create project → %d", status)

@@ -24,12 +24,12 @@ import (
 
 // bookingAt shapes one /v1/bookings body for a fixed Tuesday slot,
 // linked to the person; extra fields merge over the base.
-func bookingAt(start time.Time, personID string, extra apptest.AnyMap) apptest.AnyMap {
-	body := apptest.AnyMap{
+func bookingAt(start time.Time, personID string, extra AnyMap) AnyMap {
+	body := AnyMap{
 		"start":   start,
 		"end":     start.Add(30 * time.Minute),
 		"subject": "Consented discovery call",
-		"links":   []apptest.AnyMap{{"entity_type": "person", "entity_id": personID}},
+		"links":   []AnyMap{{"entity_type": "person", "entity_id": personID}},
 	}
 	for k, v := range extra {
 		body[k] = v
@@ -45,13 +45,13 @@ func TestBookingConsentPassthrough(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Carla Consenting"}, nil, &person); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Carla Consenting"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
 
 	// A fixed Tuesday keeps every slot inside business hours.
 	tuesday := time.Date(2026, 7, 14, 10, 0, 0, 0, time.UTC)
-	consent := apptest.AnyMap{
+	consent := AnyMap{
 		"purpose_id":     purposeID,
 		"policy_version": "pp-2026-01",
 		"wording":        "You agree we may contact you about this meeting.",
@@ -70,25 +70,25 @@ func assertConsentRefusalsLeaveNothingBehind(t *testing.T, e *apptest.AppEnv, pe
 	slot := tuesday // 10:00 — reused by every refusal, then proven free
 
 	// An unknown purpose cannot be recorded.
-	unknownPurpose := bookingAt(slot, personID, apptest.AnyMap{
-		"consent": apptest.AnyMap{"purpose_id": ids.NewV7().String(), "policy_version": "pp-2026-01"},
+	unknownPurpose := bookingAt(slot, personID, AnyMap{
+		"consent": AnyMap{"purpose_id": ids.NewV7().String(), "policy_version": "pp-2026-01"},
 	})
 	if status := e.Call(t, "POST", "/v1/bookings", unknownPurpose, nil, nil); status != 422 {
 		t.Fatalf("booking with an unknown consent purpose → %d, want 422", status)
 	}
 
 	// The wording version shown to the subject is the proof's anchor.
-	noPolicy := bookingAt(slot, personID, apptest.AnyMap{
-		"consent": apptest.AnyMap{"purpose_id": purposeID},
+	noPolicy := bookingAt(slot, personID, AnyMap{
+		"consent": AnyMap{"purpose_id": purposeID},
 	})
 	if status := e.Call(t, "POST", "/v1/bookings", noPolicy, nil, nil); status != 422 {
 		t.Fatalf("booking consent without policy_version → %d, want 422", status)
 	}
 
 	// Consent is person-keyed: no linked person, nothing to attach to.
-	subjectless := bookingAt(slot, personID, apptest.AnyMap{
-		"links":   []apptest.AnyMap{},
-		"consent": apptest.AnyMap{"purpose_id": purposeID, "policy_version": "pp-2026-01"},
+	subjectless := bookingAt(slot, personID, AnyMap{
+		"links":   []AnyMap{},
+		"consent": AnyMap{"purpose_id": purposeID, "policy_version": "pp-2026-01"},
 	})
 	if status := e.Call(t, "POST", "/v1/bookings", subjectless, nil, nil); status != 422 {
 		t.Fatalf("booking consent without a linked person → %d, want 422", status)
@@ -132,10 +132,10 @@ func assertConsentlessBookingStaysPlain(t *testing.T, e *apptest.AppEnv, personI
 // assertConsentedBookingLandsGrantWithProof books with the consent block
 // and proves both facts of the seam: the meeting on the timeline AND the
 // person_consent grant carrying the passthrough proof verbatim.
-func assertConsentedBookingLandsGrantWithProof(t *testing.T, e *apptest.AppEnv, personID string, tuesday time.Time, purposeID string, consent apptest.AnyMap) {
+func assertConsentedBookingLandsGrantWithProof(t *testing.T, e *apptest.AppEnv, personID string, tuesday time.Time, purposeID string, consent AnyMap) {
 	t.Helper()
 	if status := e.Call(t, "POST", "/v1/bookings",
-		bookingAt(tuesday.Add(2*time.Hour), personID, apptest.AnyMap{"consent": consent}), nil, nil); status != http.StatusCreated {
+		bookingAt(tuesday.Add(2*time.Hour), personID, AnyMap{"consent": consent}), nil, nil); status != http.StatusCreated {
 		t.Fatalf("consented booking → %d", status)
 	}
 

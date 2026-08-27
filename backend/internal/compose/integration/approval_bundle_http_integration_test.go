@@ -99,7 +99,7 @@ func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
 		"display_name": "Acme GmbH", "source": "ui",
 	}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create org → %d", status)
@@ -121,7 +121,7 @@ func TestABundleIsListedAndDecidedThroughTheAPI(t *testing.T) {
 
 	var decision bundleDecisionBody
 	if status := e.Call(t, "POST", "/v1/approval-bundles/"+bundle.String()+"/approve",
-		apptest.AnyMap{"reason": "the read looks right"}, nil, &decision); status != http.StatusOK {
+		AnyMap{"reason": "the read looks right"}, nil, &decision); status != http.StatusOK {
 		t.Fatalf("approve bundle → %d", status)
 	}
 	if decision.BundleID != bundle.String() || len(decision.Data) != 3 {
@@ -179,7 +179,7 @@ func TestABundleDecisionRefusesAReadOnlyPassport(t *testing.T) {
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
 		"display_name": "Acme GmbH", "source": "ui",
 	}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create org → %d", status)

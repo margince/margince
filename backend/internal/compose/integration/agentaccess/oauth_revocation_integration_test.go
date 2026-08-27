@@ -24,6 +24,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -50,7 +51,7 @@ func setupConnectedClient(t *testing.T) *connectedClient {
 // answer that sends a client back to the human for consent.
 func (c *connectedClient) callMCP(t *testing.T) int {
 	t.Helper()
-	return listTools(c.AppEnv, t, c.access).StatusCode
+	return listTools(t, c.AppEnv, c.access).StatusCode
 }
 
 // refreshSucceeds reports whether the client can still mint itself a fresh
@@ -289,7 +290,7 @@ func TestALocallyMintedPassportIsUnaffectedByADeadConnector(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := c.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/passports", integration.AnyMap{
 		"label": "local agent", "scopes": []string{"read"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue a local passport → %d", status)
@@ -298,7 +299,7 @@ func TestALocallyMintedPassportIsUnaffectedByADeadConnector(t *testing.T) {
 	c.disableClient(t)
 	c.revokeGrant(t)
 
-	if code := listTools(c.AppEnv, t, minted.Token).StatusCode; code != http.StatusOK {
+	if code := listTools(t, c.AppEnv, minted.Token).StatusCode; code != http.StatusOK {
 		t.Fatalf("locally minted passport → %d, want 200: it answers to no grant", code)
 	}
 	if code := c.callMCP(t); code != http.StatusUnauthorized {

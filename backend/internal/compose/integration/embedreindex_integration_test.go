@@ -213,7 +213,7 @@ func embedPreview(t *testing.T, e *apptest.AppEnv) (int, embedReindexPreviewWire
 
 // embedConfirm issues the confirm call. body is nil for a bare confirm
 // (an empty request — decodeEmbedReindexStart's zero-value path) or an
-// apptest.AnyMap carrying previewed_identity/force; passed straight through as
+// AnyMap carrying previewed_identity/force; passed straight through as
 // `any` so a literal nil stays a true nil interface (never a boxed nil
 // map, which would marshal to the 4-byte literal "null" instead of an
 // empty body — harmless to the handler's own decode either way, but this
@@ -428,7 +428,7 @@ func TestEmbedReindexConfirmLifecycle(t *testing.T) {
 	// The released marker is claimable again: the run gave it back, rather
 	// than the confirm having to wait for a job row to age out of some
 	// uniqueness window.
-	if status, _, _ := embedConfirm(t, e, apptest.AnyMap{"force": true}); status != http.StatusAccepted {
+	if status, _, _ := embedConfirm(t, e, AnyMap{"force": true}); status != http.StatusAccepted {
 		t.Fatalf("confirm after the run released -> %d, want 202", status)
 	}
 }
@@ -476,13 +476,13 @@ func TestEmbedReindexConfirmRefusesIdentityDrift(t *testing.T) {
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	seedStaleEmbeddingRow(t, e, wsID)
 
-	status, _, problem := embedConfirm(t, e, apptest.AnyMap{"previewed_identity": "fake/someone-else@1024"})
+	status, _, problem := embedConfirm(t, e, AnyMap{"previewed_identity": "fake/someone-else@1024"})
 	if status != http.StatusConflict || problem.Code != "reindex_identity_drift" {
 		t.Fatalf("drifted confirm -> %d %+v, want 409 reindex_identity_drift", status, problem)
 	}
 
 	identity, _ := router.EmbedIdentity()
-	status, confirmed, _ := embedConfirm(t, e, apptest.AnyMap{"previewed_identity": identity})
+	status, confirmed, _ := embedConfirm(t, e, AnyMap{"previewed_identity": identity})
 	if status != http.StatusAccepted {
 		t.Fatalf("matching-identity confirm -> %d, want 202 (the drifted attempt must not have left a live claim)", status)
 	}
@@ -512,7 +512,7 @@ func TestEmbedReindexIdentityMismatchedJobCancels(t *testing.T) {
 	// force=true: this scenario is about the WORKER's own drift guard,
 	// not about whether the store happens to derive reindex-needed —
 	// force is the affordance that lets the enqueue happen regardless.
-	status, confirmed, _ := embedConfirm(t, e, apptest.AnyMap{"force": true})
+	status, confirmed, _ := embedConfirm(t, e, AnyMap{"force": true})
 	if status != http.StatusAccepted || confirmed.Status != "reembedding" {
 		t.Fatalf("confirm -> %d %+v, want 202/reembedding", status, confirmed)
 	}
@@ -548,7 +548,7 @@ func TestEmbedReindexIdentityMismatchedJobCancels(t *testing.T) {
 	if st.PopulatedIdentity != before {
 		t.Fatalf("populated_identity = %q, want it unmoved at %q — a cancelled run re-embedded nothing and must claim nothing", st.PopulatedIdentity, before)
 	}
-	if status, _, problem := embedConfirm(t, e, apptest.AnyMap{"force": true}); status != http.StatusAccepted {
+	if status, _, problem := embedConfirm(t, e, AnyMap{"force": true}); status != http.StatusAccepted {
 		t.Fatalf("re-confirm after the drifted run cancelled -> %d %+v, want 202 — the marker is what the next run needs back", status, problem)
 	}
 }
@@ -577,7 +577,7 @@ func TestEmbedReindexForceReindexWhenNotNeeded(t *testing.T) {
 		t.Fatalf("bare confirm on a caught-up store -> %d %+v, want 409 reindex_not_needed", status, problem)
 	}
 
-	status, forced, _ := embedConfirm(t, e, apptest.AnyMap{"force": true})
+	status, forced, _ := embedConfirm(t, e, AnyMap{"force": true})
 	if status != http.StatusAccepted {
 		t.Fatalf("forced confirm -> %d, want 202 (force is the rebuild affordance)", status)
 	}

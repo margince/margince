@@ -53,7 +53,7 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 	var problem struct {
 		Detail string `json:"detail"`
 	}
-	if status := o.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := o.Call(t, "POST", "/v1/webhook-subscriptions", integration.AnyMap{
 		"target_url": "https://jws.example/hook", "event_types": []string{"organization.created"},
 	}, agentBearer, &problem); status != http.StatusForbidden {
 		t.Fatalf("agent webhook-subscription create → %d, want staged 403", status)
@@ -63,7 +63,7 @@ func TestApprovalTokenIsASignedEffectBoundJWS(t *testing.T) {
 	var approved struct {
 		ApprovalToken *string `json:"approval_token"`
 	}
-	if status := o.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, &approved); status != http.StatusOK {
+	if status := o.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", integration.AnyMap{}, nil, &approved); status != http.StatusOK {
 		t.Fatalf("approve → %d", status)
 	}
 	if approved.ApprovalToken == nil || strings.Count(*approved.ApprovalToken, ".") != 2 {

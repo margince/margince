@@ -27,7 +27,7 @@ import (
 
 // uploadAttachmentHTTP drives the real multipart upload endpoint (e.Call
 // only speaks JSON) and returns the new attachment's id.
-func uploadAttachmentHTTP(e *apptest.AppEnv, t *testing.T, entityType, entityID, filename string) string {
+func uploadAttachmentHTTP(t *testing.T, e *apptest.AppEnv, entityType, entityID, filename string) string {
 	t.Helper()
 	body, ctype := multipartAttachment(t, entityType, entityID, filename, []byte("attachment bytes"))
 	req, err := http.NewRequest(http.MethodPost, e.TS.URL+"/v1/attachments", body)
@@ -80,10 +80,10 @@ func assertAcceptHTTPHappyPath(t *testing.T, e *apptest.AppEnv, attID, dealID, r
 			Provenance string `json:"provenance"`
 		} `json:"accepted"`
 	}
-	status := e.Call(t, "POST", "/v1/attachments/"+attID+"/extraction:accept", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/attachments/"+attID+"/extraction:accept", AnyMap{
 		"extraction_id": readingID,
 		"field_keys":    []string{"amount_minor", "currency"},
-		"edits":         apptest.AnyMap{"amount_minor": "200000"},
+		"edits":         AnyMap{"amount_minor": "200000"},
 	}, nil, &resp)
 	if status != http.StatusOK {
 		t.Fatalf("accept = %d %+v", status, resp)
@@ -97,7 +97,7 @@ func assertAcceptHTTPHappyPath(t *testing.T, e *apptest.AppEnv, attID, dealID, r
 		t.Errorf("accepted = %+v, want the edited amount as human and the extracted currency as ai-extracted", resp.Accepted)
 	}
 
-	var got apptest.AnyMap
+	var got AnyMap
 	if status := e.Call(t, "GET", "/v1/deals/"+dealID, nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("read back deal = %d", status)
 	}
@@ -110,19 +110,19 @@ func assertAcceptHTTPHappyPath(t *testing.T, e *apptest.AppEnv, attID, dealID, r
 // the typed unsupported_entity_type refusal.
 func assertAcceptHTTPNonDeal422(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	var person apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var person AnyMap
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Attachment Holder", "source": "ui",
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person = %d %v", status, person)
 	}
-	personAtt := uploadAttachmentHTTP(e, t, "person", person["id"].(string), "cv.pdf")
+	personAtt := uploadAttachmentHTTP(t, e, "person", person["id"].(string), "cv.pdf")
 
 	// The entity-type refusal fires before the accept resolves a reading, so a
 	// person-scoped attachment needs none — and naming one it could not have is
 	// what proves the order.
 	var problem acceptProblemWire
-	status := e.Call(t, "POST", "/v1/attachments/"+personAtt+"/extraction:accept", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/attachments/"+personAtt+"/extraction:accept", AnyMap{
 		"extraction_id": ids.NewV7().String(), "field_keys": []string{"amount_minor"},
 	}, nil, &problem)
 	if status != http.StatusUnprocessableEntity || problem.Code != "unsupported_entity_type" {
@@ -137,7 +137,7 @@ func assertAcceptHTTPValidation422(
 ) {
 	t.Helper()
 	var problem acceptProblemWire
-	status := e.Call(t, "POST", "/v1/attachments/"+attID+"/extraction:accept", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/attachments/"+attID+"/extraction:accept", AnyMap{
 		"extraction_id": readingID, "field_keys": fieldKeys,
 	}, nil, &problem)
 	if status != http.StatusUnprocessableEntity || problem.Code != "validation_error" {
@@ -153,15 +153,15 @@ func TestAcceptAttachmentExtractionHTTP(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	stages := apptest.DiscoverSeededPipeline(t, e)
 
-	var deal apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deals", apptest.AnyMap{
+	var deal AnyMap
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "HTTP Accept Deal", "pipeline_id": stages.PipelineID,
 		"stage_id": stages.Open, "source": "ui",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal = %d %v", status, deal)
 	}
 	dealID := deal["id"].(string)
-	attID := uploadAttachmentHTTP(e, t, "deal", dealID, "quote.pdf")
+	attID := uploadAttachmentHTTP(t, e, "deal", dealID, "quote.pdf")
 	readingID := seedExtractionReadingHTTP(e, t, attID, []extraction.ExtractedField{
 		{Field: "amount_minor", Value: "150000", SourceQuote: "Total: EUR 1,500.00", PageOrSection: "p.2", Confidence: "high"},
 		{Field: "currency", Value: "EUR", SourceQuote: "all amounts in EUR", PageOrSection: "p.2", Confidence: "medium"},
@@ -180,7 +180,7 @@ func TestAcceptAttachmentExtractionHTTP(t *testing.T) {
 		assertAcceptHTTPValidation422(t, e, attID, readingID, []string{"probability"}, "field_keys[0]", "not_grounded")
 	})
 	t.Run("404 for a missing attachment", func(t *testing.T) {
-		status := e.Call(t, "POST", "/v1/attachments/"+ids.NewV7().String()+"/extraction:accept", apptest.AnyMap{
+		status := e.Call(t, "POST", "/v1/attachments/"+ids.NewV7().String()+"/extraction:accept", AnyMap{
 			"extraction_id": readingID, "field_keys": []string{"amount_minor"},
 		}, nil, nil)
 		if status != http.StatusNotFound {
@@ -188,7 +188,7 @@ func TestAcceptAttachmentExtractionHTTP(t *testing.T) {
 		}
 	})
 	t.Run("404 for a reading this document never had", func(t *testing.T) {
-		status := e.Call(t, "POST", "/v1/attachments/"+attID+"/extraction:accept", apptest.AnyMap{
+		status := e.Call(t, "POST", "/v1/attachments/"+attID+"/extraction:accept", AnyMap{
 			"extraction_id": ids.NewV7().String(), "field_keys": []string{"amount_minor"},
 		}, nil, nil)
 		if status != http.StatusNotFound {

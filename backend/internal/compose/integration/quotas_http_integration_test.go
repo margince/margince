@@ -120,8 +120,8 @@ func demoteToRep(t *testing.T, e *apptest.AppEnv) {
 // toward an owner-quota's attainment.
 func createAndCloseQuotaDeal(t *testing.T, e *apptest.AppEnv, stages apptest.SeededStages, ownerID string, amountMinor int64, currency string) string {
 	t.Helper()
-	var deal apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/deals", apptest.AnyMap{
+	var deal AnyMap
+	status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Quota Attainment Deal", "amount_minor": amountMinor, "currency": currency,
 		"pipeline_id": stages.PipelineID, "stage_id": stages.Open, "owner_id": ownerID, "source": "ui",
 	}, nil, &deal)
@@ -131,7 +131,7 @@ func createAndCloseQuotaDeal(t *testing.T, e *apptest.AppEnv, stages apptest.See
 	dealID := deal["id"].(string)
 	// This quota fixture wins a deal to make attainment non-zero; it holds no
 	// agreement, and the win gate wants that said rather than assumed.
-	status = e.Call(t, "POST", "/v1/deals/"+dealID+"/advance", apptest.AnyMap{
+	status = e.Call(t, "POST", "/v1/deals/"+dealID+"/advance", AnyMap{
 		"to_stage_id":                 stages.Won,
 		"won_without_contract_reason": "imported",
 	}, nil, &deal)
@@ -145,11 +145,11 @@ func TestQuotasHTTP(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var me apptest.AnyMap
+	var me AnyMap
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("/me = %d", status)
 	}
-	adminID := me["user"].(apptest.AnyMap)["id"].(string)
+	adminID := me["user"].(AnyMap)["id"].(string)
 	teamID := seedQuotaTeam(t, e, "Quota HTTP Team")
 
 	var ownerQuotaID, teamQuotaID string
@@ -205,8 +205,8 @@ func TestQuotasHTTP(t *testing.T) {
 // side and the fresh-row invariants (version 1, no archived_at).
 func assertQuotaCreate201(t *testing.T, e *apptest.AppEnv, ownerID, teamID string) (ownerQuotaID, teamQuotaID string) {
 	t.Helper()
-	var owned apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	var owned AnyMap
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2020-01-01", "period_end": "2030-12-31",
 		"target_minor": 1000000, "currency": "EUR",
 	}, nil, &owned)
@@ -223,8 +223,8 @@ func assertQuotaCreate201(t *testing.T, e *apptest.AppEnv, ownerID, teamID strin
 		t.Errorf("a fresh quota carries version 1 and no archived_at, got %+v", owned)
 	}
 
-	var team apptest.AnyMap
-	status = e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	var team AnyMap
+	status = e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"team_id": teamID, "period_start": "2026-01-01", "period_end": "2026-03-31",
 		"target_minor": 5000000, "currency": "EUR",
 	}, nil, &team)
@@ -243,7 +243,7 @@ func assertQuotaCreate201(t *testing.T, e *apptest.AppEnv, ownerID, teamID strin
 // the both-set and neither-set violations.
 func assertQuotaXOR422(t *testing.T, e *apptest.AppEnv, ownerID, teamID *string) {
 	t.Helper()
-	body := apptest.AnyMap{"period_start": "2026-01-01", "period_end": "2026-03-31", "target_minor": 1000, "currency": "EUR"}
+	body := AnyMap{"period_start": "2026-01-01", "period_end": "2026-03-31", "target_minor": 1000, "currency": "EUR"}
 	if ownerID != nil {
 		body["owner_id"] = *ownerID
 	}
@@ -263,7 +263,7 @@ func assertQuotaXOR422(t *testing.T, e *apptest.AppEnv, ownerID, teamID *string)
 
 func assertQuotaGet(t *testing.T, e *apptest.AppEnv, id string) {
 	t.Helper()
-	var got apptest.AnyMap
+	var got AnyMap
 	if status := e.Call(t, "GET", "/v1/quotas/"+id, nil, nil, &got); status != http.StatusOK || got["id"] != id {
 		t.Fatalf("get quota = %d %+v, want 200 id=%s", status, got, id)
 	}
@@ -275,7 +275,7 @@ func assertQuotaGet(t *testing.T, e *apptest.AppEnv, id string) {
 func assertQuotaList(t *testing.T, e *apptest.AppEnv, ownerQuotaID, teamQuotaID, ownerID, teamID string) {
 	t.Helper()
 	var byOwner struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/quotas?owner_id="+ownerID, nil, nil, &byOwner); status != http.StatusOK {
 		t.Fatalf("list by owner_id = %d", status)
@@ -284,7 +284,7 @@ func assertQuotaList(t *testing.T, e *apptest.AppEnv, ownerQuotaID, teamQuotaID,
 		t.Fatalf("owner_id filter = %+v, want exactly the owner quota", byOwner.Data)
 	}
 	var byTeam struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/quotas?team_id="+teamID, nil, nil, &byTeam); status != http.StatusOK {
 		t.Fatalf("list by team_id = %d", status)
@@ -302,7 +302,7 @@ func assertQuotaList(t *testing.T, e *apptest.AppEnv, ownerQuotaID, teamQuotaID,
 func assertQuotaListSort(t *testing.T, e *apptest.AppEnv, ownerQuotaID, teamQuotaID string) {
 	t.Helper()
 	var asc struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/quotas?sort=period_start", nil, nil, &asc); status != http.StatusOK {
 		t.Fatalf("sort=period_start = %d", status)
@@ -311,7 +311,7 @@ func assertQuotaListSort(t *testing.T, e *apptest.AppEnv, ownerQuotaID, teamQuot
 		t.Fatalf("sort=period_start order = %+v, want [owner %s, team %s]", asc.Data, ownerQuotaID, teamQuotaID)
 	}
 	var desc struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/quotas?sort=-period_start", nil, nil, &desc); status != http.StatusOK {
 		t.Fatalf("sort=-period_start = %d", status)
@@ -336,22 +336,22 @@ func assertQuotaListSort(t *testing.T, e *apptest.AppEnv, ownerQuotaID, teamQuot
 // then a non-numeric If-Match (422 validation_error/malformed_if_match).
 func assertQuotaUpdate(t *testing.T, e *apptest.AppEnv, id string) {
 	t.Helper()
-	var updated apptest.AnyMap
-	status := e.Call(t, "PATCH", "/v1/quotas/"+id, apptest.AnyMap{"target_minor": 2000000},
+	var updated AnyMap
+	status := e.Call(t, "PATCH", "/v1/quotas/"+id, AnyMap{"target_minor": 2000000},
 		map[string]string{"If-Match": "1"}, &updated)
 	if status != http.StatusOK || updated["target_minor"].(float64) != 2000000 || updated["version"].(float64) != 2 {
 		t.Fatalf("update = %d %+v, want 200 target=2000000 version=2", status, updated)
 	}
 
 	var stale quotaProblem
-	status = e.Call(t, "PATCH", "/v1/quotas/"+id, apptest.AnyMap{"target_minor": 3000000},
+	status = e.Call(t, "PATCH", "/v1/quotas/"+id, AnyMap{"target_minor": 3000000},
 		map[string]string{"If-Match": "1"}, &stale)
 	if status != http.StatusConflict || stale.Code != "version_skew" {
 		t.Fatalf("stale If-Match = %d %+v, want 409 version_skew", status, stale)
 	}
 
 	var malformed quotaProblem
-	status = e.Call(t, "PATCH", "/v1/quotas/"+id, apptest.AnyMap{"target_minor": 3000000},
+	status = e.Call(t, "PATCH", "/v1/quotas/"+id, AnyMap{"target_minor": 3000000},
 		map[string]string{"If-Match": "not-a-version"}, &malformed)
 	if status != http.StatusUnprocessableEntity || malformed.Code != "validation_error" {
 		t.Fatalf("malformed If-Match = %d %+v, want 422 validation_error", status, malformed)
@@ -363,8 +363,8 @@ func assertQuotaUpdate(t *testing.T, e *apptest.AppEnv, id string) {
 // house single-get convention: an archived quota stays fetchable by id.
 func assertQuotaArchive(t *testing.T, e *apptest.AppEnv, ownerID string) {
 	t.Helper()
-	var created apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	var created AnyMap
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2026-01-01", "period_end": "2026-03-31",
 		"target_minor": 100, "currency": "EUR",
 	}, nil, &created)
@@ -373,13 +373,13 @@ func assertQuotaArchive(t *testing.T, e *apptest.AppEnv, ownerID string) {
 	}
 	id := created["id"].(string)
 
-	var archived apptest.AnyMap
+	var archived AnyMap
 	status = e.Call(t, "DELETE", "/v1/quotas/"+id, nil, nil, &archived)
 	if status != http.StatusOK || archived["archived_at"] == nil || archived["id"] != id {
 		t.Fatalf("archive = %d %+v, want 200 + the full entity with archived_at set", status, archived)
 	}
 
-	var stillGettable apptest.AnyMap
+	var stillGettable AnyMap
 	if status := e.Call(t, "GET", "/v1/quotas/"+id, nil, nil, &stillGettable); status != http.StatusOK || stillGettable["archived_at"] == nil {
 		t.Fatalf("get archived quota = %d %+v, want 200 with archived_at set", status, stillGettable)
 	}
@@ -408,21 +408,21 @@ func assertQuotaNegativeTarget(t *testing.T, e *apptest.AppEnv, ownerID string) 
 	}
 
 	var problem quotaProblem
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2026-01-01", "period_end": "2026-03-31",
 		"target_minor": -1, "currency": "EUR",
 	}, nil, &problem)
 	assertNegativeTarget422(status, problem, "create")
 
-	var created apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	var created AnyMap
+	if status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2027-01-01", "period_end": "2027-03-31",
 		"target_minor": 1000, "currency": "EUR",
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("seed quota for the patch scenario = %d %+v", status, created)
 	}
 	var patched quotaProblem
-	status = e.Call(t, "PATCH", "/v1/quotas/"+created["id"].(string), apptest.AnyMap{"target_minor": -1},
+	status = e.Call(t, "PATCH", "/v1/quotas/"+created["id"].(string), AnyMap{"target_minor": -1},
 		map[string]string{"If-Match": "1"}, &patched)
 	assertNegativeTarget422(status, patched, "patch")
 }
@@ -430,7 +430,7 @@ func assertQuotaNegativeTarget(t *testing.T, e *apptest.AppEnv, ownerID string) 
 func assertQuotaInvalidCurrency(t *testing.T, e *apptest.AppEnv, ownerID string) {
 	t.Helper()
 	var problem quotaProblem
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2026-01-01", "period_end": "2026-03-31",
 		"target_minor": 1000, "currency": "eur",
 	}, nil, &problem)
@@ -444,7 +444,7 @@ func assertQuotaInvalidCurrency(t *testing.T, e *apptest.AppEnv, ownerID string)
 func assertQuotaInvertedPeriod(t *testing.T, e *apptest.AppEnv, ownerID string) {
 	t.Helper()
 	var problem quotaProblem
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2026-03-31", "period_end": "2026-01-01",
 		"target_minor": 1000, "currency": "EUR",
 	}, nil, &problem)
@@ -481,8 +481,8 @@ func assertCheckBreachIsAnsweredWithoutItsConstraintName(
 // the signed gap, the band, and the per-deal decomposition.
 func assertQuotaAttainmentHappy(t *testing.T, e *apptest.AppEnv, ownerID string) {
 	t.Helper()
-	var quota apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	var quota AnyMap
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2020-01-01", "period_end": "2030-12-31",
 		"target_minor": 1000000, "currency": "EUR",
 	}, nil, &quota)
@@ -494,7 +494,7 @@ func assertQuotaAttainmentHappy(t *testing.T, e *apptest.AppEnv, ownerID string)
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	dealID := createAndCloseQuotaDeal(t, e, stages, ownerID, 1_500_000, "EUR")
 
-	var att apptest.AnyMap
+	var att AnyMap
 	status = e.Call(t, "GET", "/v1/quotas/"+quotaID+"/attainment", nil, nil, &att)
 	if status != http.StatusOK {
 		t.Fatalf("attainment = %d %v", status, att)
@@ -521,7 +521,7 @@ func assertQuotaAttainmentHappy(t *testing.T, e *apptest.AppEnv, ownerID string)
 	if !ok || len(deals) != 1 {
 		t.Fatalf("contributing_deals = %v, want exactly one entry", att["contributing_deals"])
 	}
-	first, _ := deals[0].(apptest.AnyMap)
+	first, _ := deals[0].(AnyMap)
 	if first["deal_id"] != dealID || first["base_value_minor"].(float64) != 1_500_000 {
 		t.Errorf("contributing_deals[0] = %+v, want deal_id=%s base_value_minor=1500000", first, dealID)
 	}
@@ -532,8 +532,8 @@ func assertQuotaAttainmentHappy(t *testing.T, e *apptest.AppEnv, ownerID string)
 
 func assertQuotaAttainmentTargetZero(t *testing.T, e *apptest.AppEnv, ownerID string) {
 	t.Helper()
-	var quota apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	var quota AnyMap
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2026-01-01", "period_end": "2026-03-31",
 		"target_minor": 0, "currency": "EUR",
 	}, nil, &quota)
@@ -553,8 +553,8 @@ func assertQuotaAttainmentTargetZero(t *testing.T, e *apptest.AppEnv, ownerID st
 // wrapped sentinel carries for the server log.
 func assertQuotaAttainmentComputationFailed(t *testing.T, e *apptest.AppEnv, ownerID string) {
 	t.Helper()
-	var quota apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	var quota AnyMap
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2026-01-01", "period_end": "2026-03-31",
 		"target_minor": 1000, "currency": "GBP",
 	}, nil, &quota)
@@ -581,7 +581,7 @@ func assertQuotaRepCannotCreate(t *testing.T, e *apptest.AppEnv, ownerID string)
 	t.Helper()
 	demoteToRep(t, e)
 	var problem quotaProblem
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": ownerID, "period_start": "2026-01-01", "period_end": "2026-03-31",
 		"target_minor": 1000, "currency": "EUR",
 	}, nil, &problem)

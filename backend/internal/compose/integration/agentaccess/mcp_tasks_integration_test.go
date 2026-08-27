@@ -52,7 +52,7 @@ func TestTheExtensionIsAdvertisedAndItsMethodsRequireIt(t *testing.T) {
 	e := setupConnector(t)
 	bearer := apptest.PassportBearer(t, e.AppEnv, "task client", "read")
 
-	discovered := rpcResult(t, mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+	discovered := rpcResult(t, mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 		fmt.Sprintf(`{"jsonrpc":"2.0","id":1,"method":"server/discover","params":{%s}}`, tasksMeta),
 		modernHeaders(bearer, "server/discover", "")).Body)
 	capabilities, _ := discovered["capabilities"].(map[string]any)
@@ -66,7 +66,7 @@ func TestTheExtensionIsAdvertisedAndItsMethodsRequireIt(t *testing.T) {
 
 	// And a request that did not declare it is asking for a method that, for
 	// that caller, does not exist.
-	undeclared := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+	undeclared := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 		fmt.Sprintf(`{"jsonrpc":"2.0","id":2,"method":"tasks/get","params":{%s,"taskId":"019fe000-0000-7000-8000-00000000dead"}}`, modernMeta),
 		modernHeaders(bearer, "tasks/get", "019fe000-0000-7000-8000-00000000dead"))
 	code, message := rpcErrorOf(t, undeclared.Body)

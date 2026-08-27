@@ -348,7 +348,7 @@ func TestJobHealthRefusesAPassportOverHTTP(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "job health probe", "scopes": []string{"read"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)

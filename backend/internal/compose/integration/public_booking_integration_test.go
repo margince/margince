@@ -139,18 +139,18 @@ func assertAnonymousAvailability(t *testing.T, e *apptest.AppEnv, base, window s
 func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base string, monday time.Time) {
 	t.Helper()
 	// A booking without consent is refused before any write.
-	noConsent := apptest.AnyMap{
+	noConsent := AnyMap{
 		"start": monday.Add(1 * time.Hour), "end": monday.Add(90 * time.Minute),
-		"booker": apptest.AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"booker": AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
 	}
 	if status := publicCall(t, e, "POST", base, noConsent, nil, nil); status != 422 {
 		t.Fatalf("booking without consent → %d, want 422", status)
 	}
 	// A bogus purpose is refused before any write too.
-	badPurpose := apptest.AnyMap{
+	badPurpose := AnyMap{
 		"start": monday.Add(1 * time.Hour), "end": monday.Add(90 * time.Minute),
-		"booker":  apptest.AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
-		"consent": apptest.AnyMap{"purpose_id": "018f0000-0000-7000-8000-000000000000", "policy_version": "pp-2026-01"},
+		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"consent": AnyMap{"purpose_id": "018f0000-0000-7000-8000-000000000000", "policy_version": "pp-2026-01"},
 	}
 	if status := publicCall(t, e, "POST", base, badPurpose, nil, nil); status != 422 {
 		t.Fatalf("booking with unknown purpose → %d, want 422", status)
@@ -168,13 +168,13 @@ func assertBookingRequiresValidConsent(t *testing.T, e *apptest.AppEnv, base str
 // else disclosed) plus a second slot under a case-folded email,
 // asserting the booker lands as ONE person. Returns the first booking
 // body so the taken slot can be re-posted.
-func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, consent apptest.AnyMap) apptest.AnyMap {
+func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, consent AnyMap) AnyMap {
 	t.Helper()
 	// The happy path: 201 with the slot and NOTHING else.
-	booking := apptest.AnyMap{
+	booking := AnyMap{
 		"start": monday.Add(1 * time.Hour), "end": monday.Add(90 * time.Minute),
 		"subject": "Intro call",
-		"booker":  apptest.AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
 		"consent": consent,
 	}
 	var confirmation map[string]any
@@ -186,9 +186,9 @@ func bookHappyPathSlot(t *testing.T, e *apptest.AppEnv, base string, monday time
 	}
 
 	// The booker exists once; a second booking re-uses the person.
-	second := apptest.AnyMap{
+	second := AnyMap{
 		"start": monday.Add(3 * time.Hour), "end": monday.Add(3*time.Hour + 30*time.Minute),
-		"booker":  apptest.AnyMap{"name": "Anna Anonymous", "email": "ANNA@visitor.example"},
+		"booker":  AnyMap{"name": "Anna Anonymous", "email": "ANNA@visitor.example"},
 		"consent": consent,
 	}
 	if status := publicCall(t, e, "POST", base, second, nil, nil); status != http.StatusCreated {
@@ -238,20 +238,20 @@ func assertBookingProofAndProvenance(t *testing.T, e *apptest.AppEnv) {
 // assertWithdrawalStandsAgainstBooking covers the consent-hijack guard:
 // a withdrawal on record STANDS — an anonymous booking naming the same
 // email may proceed but cannot flip the state back to granted.
-func assertWithdrawalStandsAgainstBooking(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, purposeID string, consent apptest.AnyMap) {
+func assertWithdrawalStandsAgainstBooking(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, purposeID string, consent AnyMap) {
 	t.Helper()
 	var annaID string
 	if err := e.Owner.QueryRow(context.Background(), `SELECT id FROM person`).Scan(&annaID); err != nil {
 		t.Fatal(err)
 	}
-	if status := e.Call(t, "POST", "/v1/people/"+annaID+"/consent", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people/"+annaID+"/consent", AnyMap{
 		"purpose_id": purposeID, "new_state": "withdrawn",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("withdraw → %d", status)
 	}
-	fourth := apptest.AnyMap{
+	fourth := AnyMap{
 		"start": monday.Add(7 * time.Hour), "end": monday.Add(7*time.Hour + 30*time.Minute),
-		"booker":  apptest.AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
 		"consent": consent,
 	}
 	if status := publicCall(t, e, "POST", base, fourth, nil, nil); status != http.StatusCreated {
@@ -274,12 +274,12 @@ func assertWithdrawalStandsAgainstBooking(t *testing.T, e *apptest.AppEnv, base 
 // another (see idempotentOperations' exemption). A keyed retry therefore
 // re-executes and the slot's natural key refuses it — a duplicate meeting
 // never lands, but neither does a stranger's recorded response.
-func assertIdempotencyKeyNotClaimed(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, consent apptest.AnyMap) {
+func assertIdempotencyKeyNotClaimed(t *testing.T, e *apptest.AppEnv, base string, monday time.Time, consent AnyMap) {
 	t.Helper()
 	replayKey := map[string]string{"Idempotency-Key": "public-replay-1"}
-	third := apptest.AnyMap{
+	third := AnyMap{
 		"start": monday.Add(5 * time.Hour), "end": monday.Add(5*time.Hour + 30*time.Minute),
-		"booker":  apptest.AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
+		"booker":  AnyMap{"name": "Anna Anonymous", "email": "anna@visitor.example"},
 		"consent": consent,
 	}
 	if status := publicCall(t, e, "POST", base, third, replayKey, nil); status != http.StatusCreated {
@@ -314,7 +314,7 @@ func TestPublicBookingEndToEnd(t *testing.T) {
 	assertAnonymousAvailability(t, e, base, window)
 	assertBookingRequiresValidConsent(t, e, base, monday)
 
-	consent := apptest.AnyMap{"purpose_id": purposeID, "policy_version": "pp-2026-01", "wording": "You agree we may contact you about this meeting."}
+	consent := AnyMap{"purpose_id": purposeID, "policy_version": "pp-2026-01", "wording": "You agree we may contact you about this meeting."}
 	booking := bookHappyPathSlot(t, e, base, monday, consent)
 	assertBookingProofAndProvenance(t, e)
 	assertWithdrawalStandsAgainstBooking(t, e, base, monday, purposeID, consent)
@@ -339,7 +339,7 @@ func TestPublicBookingRateLimited(t *testing.T) {
 
 	last := 0
 	for i := 0; i < 21; i++ {
-		last = publicCall(t, e, "POST", "/v1/public/booking/"+slug, apptest.AnyMap{}, nil, nil)
+		last = publicCall(t, e, "POST", "/v1/public/booking/"+slug, AnyMap{}, nil, nil)
 	}
 	if last != http.StatusTooManyRequests {
 		t.Fatalf("21st burst booking → %d, want 429", last)

@@ -24,13 +24,13 @@ func seedTaskAndTarget(t *testing.T, e *apptest.AppEnv) (personID, taskID string
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Task Target"}, nil, &person); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Task Target"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
 	var task struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "task", "subject": "Send offer",
 	}, nil, &task); status != http.StatusCreated {
 		t.Fatalf("log task → %d", status)
@@ -48,7 +48,7 @@ func TestActivityUpdateArchiveRelink(t *testing.T) {
 		IsDone bool    `json:"is_done"`
 		DoneAt *string `json:"done_at"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/activities/"+taskID, apptest.AnyMap{"is_done": true}, nil, &updated); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/activities/"+taskID, AnyMap{"is_done": true}, nil, &updated); status != http.StatusOK {
 		t.Fatalf("complete task → %d", status)
 	}
 	if !updated.IsDone || updated.DoneAt == nil {
@@ -58,7 +58,7 @@ func TestActivityUpdateArchiveRelink(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/activities/"+taskID, apptest.AnyMap{"subject": "x"},
+	if status := e.Call(t, "PATCH", "/v1/activities/"+taskID, AnyMap{"subject": "x"},
 		map[string]string{"If-Match": "999"}, &problem); status != http.StatusConflict || problem.Code != "version_skew" {
 		t.Fatalf("stale If-Match → %d %q", status, problem.Code)
 	}
@@ -77,7 +77,7 @@ func TestActivityUpdateArchiveRelink(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/activities/"+taskID, nil, nil, &archived); status != http.StatusOK || archived.ArchivedAt == nil {
 		t.Fatalf("archive did not stamp: %d %+v", status, archived)
 	}
-	if status := e.Call(t, "PATCH", "/v1/activities/"+taskID, apptest.AnyMap{"subject": "zombie"}, nil, nil); status != http.StatusNotFound {
+	if status := e.Call(t, "PATCH", "/v1/activities/"+taskID, AnyMap{"subject": "zombie"}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("mutating an archived activity → %d, want 404", status)
 	}
 }
@@ -90,7 +90,7 @@ func assertRelinkIdempotentAndVisibilityScoped(t *testing.T, e *apptest.AppEnv, 
 	t.Helper()
 	// Relink: idempotent association onto a visible person.
 	for i := 0; i < 2; i++ {
-		if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", AnyMap{
 			"entity_type": "person", "entity_id": personID,
 		}, nil, nil); status != http.StatusOK {
 			t.Fatalf("relink (round %d) → %d", i, status)
@@ -114,25 +114,25 @@ func assertRelinkIdempotentAndVisibilityScoped(t *testing.T, e *apptest.AppEnv, 
 		t.Fatalf("relink audits = %d, want 1 (idempotent replay is silent)", relinks)
 	}
 	// An invisible relink target reads as absent (H1).
-	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", AnyMap{
 		"entity_type": "person", "entity_id": "00000000-0000-7000-8000-00000000dead",
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("invisible relink target → %d, want 404", status)
 	}
 	// The lead arm (0038): relinking onto a real lead lands on the lead's
 	// timeline; a guessed lead id reads as absent like any other target.
-	var lead apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/leads", apptest.AnyMap{
+	var lead AnyMap
+	if status := e.Call(t, "POST", "/v1/leads", AnyMap{
 		"full_name": "Relink Lead", "email": "relink@lead.test", "source": "manual",
 	}, nil, &lead); status != http.StatusCreated {
 		t.Fatalf("create lead → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", AnyMap{
 		"entity_type": "lead", "entity_id": lead["id"],
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("lead relink → %d, want 200", status)
 	}
-	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/"+taskID+"/relink", AnyMap{
 		"entity_type": "lead", "entity_id": "00000000-0000-7000-8000-00000000dead",
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("guessed lead relink → %d, want 404", status)

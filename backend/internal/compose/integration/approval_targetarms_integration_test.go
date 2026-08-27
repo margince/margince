@@ -43,25 +43,25 @@ func TestConfirmFirstArchivesAreDecidableForEveryTargetArm(t *testing.T) {
 	// for an agent and performs — the half that used to be hidden behind the
 	// approval.
 	t.Run("list", func(t *testing.T) {
-		id := createdID(t, e, "/v1/lists", apptest.AnyMap{"name": "Q3 Targets", "entity_type": "person"})
+		id := createdID(t, e, "/v1/lists", AnyMap{"name": "Q3 Targets", "entity_type": "person"})
 		archivesOnItsOwnPassport(t, e, bearer, "/v1/lists/"+id)
 	})
 
 	t.Run("tag", func(t *testing.T) {
-		id := createdID(t, e, "/v1/tags", apptest.AnyMap{"name": "Champion"})
+		id := createdID(t, e, "/v1/tags", AnyMap{"name": "Champion"})
 		archivesOnItsOwnPassport(t, e, bearer, "/v1/tags/"+id)
 	})
 
 	t.Run("saved_view", func(t *testing.T) {
-		id := createdID(t, e, "/v1/views", apptest.AnyMap{
-			"resource": "people", "name": "My people", "query": apptest.AnyMap{"columns": []any{"full_name"}},
+		id := createdID(t, e, "/v1/views", AnyMap{
+			"resource": "people", "name": "My people", "query": AnyMap{"columns": []any{"full_name"}},
 		})
 		archivesOnItsOwnPassport(t, e, bearer, "/v1/views/"+id)
 	})
 
 	t.Run("offer_template", func(t *testing.T) {
-		id := createdID(t, e, "/v1/offer-templates", apptest.AnyMap{
-			"name": "Standard DE", "layout": apptest.AnyMap{"logo_url": "https://example.test/logo.png"},
+		id := createdID(t, e, "/v1/offer-templates", AnyMap{
+			"name": "Standard DE", "layout": AnyMap{"logo_url": "https://example.test/logo.png"},
 		})
 		archivesOnItsOwnPassport(t, e, bearer, "/v1/offer-templates/"+id)
 	})
@@ -72,13 +72,13 @@ func TestConfirmFirstArchivesAreDecidableForEveryTargetArm(t *testing.T) {
 				ID string `json:"id"`
 			} `json:"subscription"`
 		}
-		if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
 			"target_url": "https://ok.example/hook", "event_types": []string{"deal.created"},
 		}, nil, &created); status != http.StatusCreated {
 			t.Fatalf("create subscription → %d", status)
 		}
 		releaseStagedCall(t, e, bearer, "PATCH", "/v1/webhook-subscriptions/"+created.Subscription.ID,
-			apptest.AnyMap{"state": "paused"}, "webhook_subscription")
+			AnyMap{"state": "paused"}, "webhook_subscription")
 	})
 }
 
@@ -106,13 +106,13 @@ func TestAStagedPatchIsRefusedWhenItsTargetMovedBeforeTheApproval(t *testing.T) 
 			Version int64  `json:"version"`
 		} `json:"subscription"`
 	}
-	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
 		"target_url": "https://ok.example/hook", "event_types": []string{"deal.created"},
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create subscription → %d", status)
 	}
 	path := "/v1/webhook-subscriptions/" + created.Subscription.ID
-	staged := apptest.AnyMap{"state": "paused"}
+	staged := AnyMap{"state": "paused"}
 
 	var problem struct {
 		Code   string `json:"code"`
@@ -131,7 +131,7 @@ func TestAStagedPatchIsRefusedWhenItsTargetMovedBeforeTheApproval(t *testing.T) 
 			Version int64 `json:"version"`
 		} `json:"subscription"`
 	}
-	if status := e.Call(t, "PATCH", path, apptest.AnyMap{"event_types": []string{"deal.updated"}}, nil, &edited); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", path, AnyMap{"event_types": []string{"deal.updated"}}, nil, &edited); status != http.StatusOK {
 		t.Fatalf("admin re-point → %d", status)
 	}
 	if edited.Subscription.Version == created.Subscription.Version {
@@ -139,7 +139,7 @@ func TestAStagedPatchIsRefusedWhenItsTargetMovedBeforeTheApproval(t *testing.T) 
 			edited.Subscription.Version)
 	}
 
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 	withToken := map[string]string{"X-Approval-Token": approvalID}
@@ -166,7 +166,7 @@ func agentBearer(t *testing.T, e *apptest.AppEnv, label string) map[string]strin
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": label, "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
@@ -176,7 +176,7 @@ func agentBearer(t *testing.T, e *apptest.AppEnv, label string) map[string]strin
 
 // createdID creates one record as the bootstrap admin over their session and
 // returns its id — the human-owned row a later agent call stages against.
-func createdID(t *testing.T, e *apptest.AppEnv, path string, body apptest.AnyMap) string {
+func createdID(t *testing.T, e *apptest.AppEnv, path string, body AnyMap) string {
 	t.Helper()
 	var created struct {
 		ID string `json:"id"`
@@ -231,7 +231,7 @@ func archivesOnItsOwnPassport(t *testing.T, e *apptest.AppEnv, bearer map[string
 	}
 }
 
-func releaseStagedCall(t *testing.T, e *apptest.AppEnv, bearer map[string]string, method, path string, body apptest.AnyMap, wantTargetType string) {
+func releaseStagedCall(t *testing.T, e *apptest.AppEnv, bearer map[string]string, method, path string, body AnyMap, wantTargetType string) {
 	t.Helper()
 	var problem struct {
 		Code   string `json:"code"`
@@ -245,7 +245,7 @@ func releaseStagedCall(t *testing.T, e *apptest.AppEnv, bearer map[string]string
 
 	assertDecidableInTheInbox(t, e, approvalID, wantTargetType)
 
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d, want 200 — a row the inbox lists and cannot decide is the same dead "+
 			"end one step later", status)
 	}

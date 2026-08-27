@@ -117,7 +117,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Acme"}, nil, &org); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": "Acme"}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create org → %d", status)
 	}
 	var pipelines struct {
@@ -143,7 +143,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 		t.Fatalf("no open stage in the seeded pipeline: %+v", pipelines)
 	}
 	for i := 0; i < 2; i++ {
-		if status := e.Call(t, "POST", "/v1/deals", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 			"name": fmt.Sprintf("Acme Deal %d", i), "pipeline_id": pipelines.Data[0].ID,
 			"stage_id": stageID, "organization_id": org.ID,
 		}, nil, nil); status != http.StatusCreated {
@@ -171,7 +171,7 @@ func TestPrebuiltReportOverHTTPAndVocabulary(t *testing.T) {
 		Code string `json:"code"`
 	}
 	status := e.Call(t, "POST", "/v1/reports/open-deals-per-company",
-		apptest.AnyMap{"group_by": []string{"captured_by"}}, nil, &problem)
+		AnyMap{"group_by": []string{"captured_by"}}, nil, &problem)
 	if status != 422 || problem.Code != "report_field_not_allowed" {
 		t.Fatalf("OOV field → %d %q, want 422 report_field_not_allowed", status, problem.Code)
 	}

@@ -76,11 +76,11 @@ type orgRollupFxProblem struct {
 // optionally hanging it under parentID (empty = a root).
 func createOrgRollupOrg(t *testing.T, e *apptest.AppEnv, name, parentID string) string {
 	t.Helper()
-	body := apptest.AnyMap{"display_name": name, "source": "ui"}
+	body := AnyMap{"display_name": name, "source": "ui"}
 	if parentID != "" {
 		body["parent_org_id"] = parentID
 	}
-	var org apptest.AnyMap
+	var org AnyMap
 	if status := e.Call(t, "POST", "/v1/organizations", body, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create organization %q = %d %v", name, status, org)
 	}
@@ -124,8 +124,8 @@ func orgRollupOpenStage(t *testing.T, e *apptest.AppEnv) (pipelineID, stageID st
 // rounding stays exact arithmetic in the caller's test, not a guess.
 func createOrgRollupOpenDeal(t *testing.T, e *apptest.AppEnv, pipelineID, stageID, orgID string, amountMinor int64, currency string) {
 	t.Helper()
-	var deal apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/deals", apptest.AnyMap{
+	var deal AnyMap
+	status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name":            "Rollup HTTP Deal",
 		"amount_minor":    amountMinor,
 		"currency":        currency,

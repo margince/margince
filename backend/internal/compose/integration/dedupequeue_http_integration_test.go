@@ -49,15 +49,15 @@ func seedOrgPairHTTP(t *testing.T, e *apptest.AppEnv, stem, incumbentDomain, dup
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
 		"display_name": stem + " GmbH",
-		"domains":      []apptest.AnyMap{{"domain": incumbentDomain, "is_primary": true}},
+		"domains":      []AnyMap{{"domain": incumbentDomain, "is_primary": true}},
 	}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("incumbent create → %d, want 201", status)
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
 		"display_name": stem + " Inc",
-		"domains":      []apptest.AnyMap{{"domain": dupDomain, "is_primary": true}},
+		"domains":      []AnyMap{{"domain": dupDomain, "is_primary": true}},
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("fuzzy create must still 201, got %d", status)
 	}
@@ -97,18 +97,18 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 
 	// DH-EXT-2 refusals: an unknown verb and a merge without a winner.
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/disposition",
-		apptest.AnyMap{"disposition": "merge"}, nil, nil); status != http.StatusUnprocessableEntity {
+		AnyMap{"disposition": "merge"}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("merge without winner → %d, want 422", status)
 	}
 
 	// Dismiss, verify the flip, refuse the second decision, undo.
 	var decided dedupeCandidateDTO
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/disposition",
-		apptest.AnyMap{"disposition": "not_a_duplicate"}, nil, &decided); status != http.StatusOK || decided.Status != "not_a_duplicate" {
+		AnyMap{"disposition": "not_a_duplicate"}, nil, &decided); status != http.StatusOK || decided.Status != "not_a_duplicate" {
 		t.Fatalf("dismiss → %d/%s, want 200/not_a_duplicate", status, decided.Status)
 	}
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/disposition",
-		apptest.AnyMap{"disposition": "not_a_duplicate"}, nil, nil); status != http.StatusConflict {
+		AnyMap{"disposition": "not_a_duplicate"}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("second decision → %d, want 409", status)
 	}
 	var reopened dedupeCandidateDTO
@@ -119,7 +119,7 @@ func TestDedupeQueueOverHTTP(t *testing.T) {
 	// Merge: the winner survives, and a merged pair cannot be undone.
 	var merged dedupeCandidateDTO
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/disposition",
-		apptest.AnyMap{"disposition": "merge", "winner_id": incumbentID}, nil, &merged); status != http.StatusOK || merged.Status != "merged" {
+		AnyMap{"disposition": "merge", "winner_id": incumbentID}, nil, &merged); status != http.StatusOK || merged.Status != "merged" {
 		t.Fatalf("merge → %d/%s, want 200/merged", status, merged.Status)
 	}
 	if status := e.Call(t, "POST", "/v1/dedupe/candidates/"+c.ID+"/undo", nil, nil, nil); status != http.StatusConflict {

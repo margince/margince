@@ -28,6 +28,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -97,7 +98,7 @@ func setupRunner(t *testing.T) *runnerEnv {
 	var minted struct {
 		PassportID string `json:"passport_id"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", integration.AnyMap{
 		"label": "overnight runner", "scopes": []string{"read", "write", "enrich"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
@@ -256,7 +257,7 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Unknown Co"}, nil, &person); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{"display_name": "Unknown Co"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create organization → %d", status)
 	}
 
@@ -281,7 +282,7 @@ func TestRunnerConfirmationRequiredSuspendApproveResume(t *testing.T) {
 	}
 
 	// A human approves in the same inbox every surface stages into.
-	if got := re.Call(t, "POST", "/v1/approvals/"+*approvalID+"/approve", apptest.AnyMap{}, nil, nil); got != http.StatusOK {
+	if got := re.Call(t, "POST", "/v1/approvals/"+*approvalID+"/approve", integration.AnyMap{}, nil, nil); got != http.StatusOK {
 		t.Fatalf("approve → %d", got)
 	}
 
@@ -314,7 +315,7 @@ func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Keep Me"}, nil, &person); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{"display_name": "Keep Me"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create organization → %d", status)
 	}
 
@@ -329,7 +330,7 @@ func TestRunnerConfirmationRequiredRejectionReplansWithoutEffect(t *testing.T) {
 	if approvalID == nil {
 		t.Fatal("no staged approval")
 	}
-	if got := re.Call(t, "POST", "/v1/approvals/"+*approvalID+"/reject", apptest.AnyMap{"reason": "not a duplicate"}, nil, nil); got != http.StatusOK {
+	if got := re.Call(t, "POST", "/v1/approvals/"+*approvalID+"/reject", integration.AnyMap{"reason": "not a duplicate"}, nil, nil); got != http.StatusOK {
 		t.Fatalf("reject → %d", got)
 	}
 	if err := re.svc.HandleEvent(context.Background(), decidedEnvelope(re.wsID, *approvalID, "rejected")); err != nil {
@@ -403,7 +404,7 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": "Resume Once"}, nil, &person); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{"display_name": "Resume Once"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create organization → %d", status)
 	}
 
@@ -421,7 +422,7 @@ func TestRunnerResumeIsClaimedSoARedeliveryIsANoOp(t *testing.T) {
 	if approvalID == nil {
 		t.Fatal("no staged approval")
 	}
-	if got := re.Call(t, "POST", "/v1/approvals/"+*approvalID+"/approve", apptest.AnyMap{}, nil, nil); got != http.StatusOK {
+	if got := re.Call(t, "POST", "/v1/approvals/"+*approvalID+"/approve", integration.AnyMap{}, nil, nil); got != http.StatusOK {
 		t.Fatalf("approve → %d", got)
 	}
 
@@ -478,7 +479,7 @@ func TestTheSweepMayNotArchiveEvenWithAModelThatTriesTo(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Stale Duplicate"}, nil, &person); status != http.StatusCreated {
+	if status := re.Call(t, "POST", "/v1/people", integration.AnyMap{"full_name": "Stale Duplicate"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
 
@@ -533,7 +534,7 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := re.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+	if status := re.Call(t, "POST", "/v1/organizations", integration.AnyMap{
 		"display_name": "Authority Dies Parked",
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create organization → %d", status)
@@ -551,7 +552,7 @@ func TestASuspendedRunWhoseAuthorityDiesIsClosedRatherThanParkedForever(t *testi
 	if status != "awaiting_approval" || approvalID == nil {
 		t.Fatalf("run = %s approval=%v, want a parked run", status, approvalID)
 	}
-	if got := re.Call(t, "POST", "/v1/approvals/"+*approvalID+"/approve", apptest.AnyMap{}, nil, nil); got != http.StatusOK {
+	if got := re.Call(t, "POST", "/v1/approvals/"+*approvalID+"/approve", integration.AnyMap{}, nil, nil); got != http.StatusOK {
 		t.Fatalf("approve → %d", got)
 	}
 

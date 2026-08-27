@@ -31,6 +31,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
@@ -76,7 +77,7 @@ func (c *telegramEnv) grantConsent(t *testing.T, personID, purposeKey string) {
 	if purposeID == "" {
 		t.Fatalf("the bootstrap seeded no %q consent purpose", purposeKey)
 	}
-	if status := c.Call(t, "POST", "/v1/people/"+personID+"/consent", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/people/"+personID+"/consent", integration.AnyMap{
 		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("record consent → %d", status)
@@ -120,7 +121,7 @@ func TestInboundThenReplyRoundTrip(t *testing.T) {
 		Direction       string `json:"direction"`
 		Body            string `json:"body"`
 	}
-	status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", apptest.AnyMap{
+	status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
 		"body": reply, "consent_purpose": "transactional",
 	}, nil, &sent)
 	if status != http.StatusAccepted {
@@ -187,7 +188,7 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 	// The rep answers, which is what puts an outbound activity in this chat's
 	// thread for the customer's next message to match against.
 	c.grantConsent(t, personID, "transactional")
-	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
 		"body": repReply, "consent_purpose": "transactional",
 	}, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("the rep's reply → %d, want 202", status)
@@ -256,7 +257,7 @@ func TestAnArchivedOutboundIsNotAConversationToReplyInto(t *testing.T) {
 	var sent struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
 		"body": "We are — hall 4.", "consent_purpose": "transactional",
 	}, nil, &sent); status != http.StatusAccepted {
 		t.Fatalf("the rep's reply → %d, want 202", status)
@@ -327,7 +328,7 @@ func TestAForgedThreadKeyCannotReplyIntoAnotherMediumsConversation(t *testing.T)
 
 	// A real outbound goes into the Telegram conversation.
 	c.grantConsent(t, personID, "transactional")
-	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/activities/"+activityID+"/send-message", integration.AnyMap{
 		"body": "Sending it over today.", "consent_purpose": "transactional",
 	}, nil, nil); status != http.StatusAccepted {
 		t.Fatalf("the rep's reply → %d, want 202", status)

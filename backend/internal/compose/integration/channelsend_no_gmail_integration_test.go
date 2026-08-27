@@ -59,7 +59,7 @@ func setupChannelSendNoGmail(t *testing.T) *channelSendEnv {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Telegram Buyer"}, nil, &person); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Telegram Buyer"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
 	c.personID = person.ID

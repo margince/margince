@@ -39,6 +39,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	overlaymod "github.com/margince/margince/backend/internal/modules/overlay"
@@ -75,17 +76,17 @@ func setupOverlayWrite(t *testing.T) overlayWriteEnv {
 	e.BootstrapWorkspace(t)
 
 	var conn map[string]any
-	if status := e.Call(t, "POST", "/v1/overlay/connection", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/overlay/connection", integration.AnyMap{
 		"incumbent": "hubspot", "region": "eu1", "privateAppToken": "fake-token-never-used",
 	}, nil, &conn); status != http.StatusCreated {
 		t.Fatalf("connect overlay = %d %v", status, conn)
 	}
 
-	var me apptest.AnyMap
+	var me integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("/me status = %d", status)
 	}
-	adminID, err := ids.Parse(me["user"].(apptest.AnyMap)["id"].(string))
+	adminID, err := ids.Parse(me["user"].(integration.AnyMap)["id"].(string))
 	if err != nil {
 		t.Fatalf("parsing admin user id: %v", err)
 	}
@@ -166,7 +167,7 @@ func TestOverlayUpdateDealWritesBackAndReturnsTheMirroredRow(t *testing.T) {
 	id := firstListedID(t, e.AppEnv, "/v1/deals")
 
 	var deal crmcontracts.Deal
-	if status := e.Call(t, "PATCH", "/v1/deals/"+id, apptest.AnyMap{"name": "Acme Renewal — Q3"}, nil, &deal); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/deals/"+id, integration.AnyMap{"name": "Acme Renewal — Q3"}, nil, &deal); status != http.StatusOK {
 		t.Fatalf("PATCH /v1/deals/%s = %d", id, status)
 	}
 	if deal.Name != "Acme Renewal — Q3" {
@@ -229,11 +230,11 @@ func TestOverlayUnsupportedWritesStillRefused(t *testing.T) {
 	placeholder := ids.NewV7().String()
 
 	if status := e.Call(t, "POST", "/v1/deals/"+placeholder+"/advance",
-		apptest.AnyMap{"to_stage_id": placeholder}, nil, nil); status != http.StatusUnprocessableEntity {
+		integration.AnyMap{"to_stage_id": placeholder}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("advance_deal in overlay mode = %d, want 422 unsupported_by_sor", status)
 	}
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Should Never Land"}, nil, nil); status != http.StatusUnprocessableEntity {
+		integration.AnyMap{"full_name": "Should Never Land"}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("create person in overlay mode = %d, want 422 unsupported_by_sor", status)
 	}
 	if status := e.Call(t, "DELETE", "/v1/activities/"+placeholder, nil, nil, nil); status != http.StatusUnprocessableEntity {
@@ -269,7 +270,7 @@ func TestOverlayTagWriteStillWorks(t *testing.T) {
 	e := setupOverlayWrite(t)
 
 	var tag crmcontracts.Tag
-	if status := e.Call(t, "POST", "/v1/tags", apptest.AnyMap{"name": "hot-lead"}, nil, &tag); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/tags", integration.AnyMap{"name": "hot-lead"}, nil, &tag); status != http.StatusCreated {
 		t.Fatalf("POST /v1/tags in overlay mode = %d, want 201", status)
 	}
 	if tag.Name != "hot-lead" {
@@ -287,7 +288,7 @@ func TestOverlayUpdateIgnoresIfMatch(t *testing.T) {
 	id := firstListedID(t, e.AppEnv, "/v1/people")
 
 	var person crmcontracts.Person
-	status := e.Call(t, "PATCH", "/v1/people/"+id, apptest.AnyMap{"first_name": "Grace2"},
+	status := e.Call(t, "PATCH", "/v1/people/"+id, integration.AnyMap{"first_name": "Grace2"},
 		map[string]string{"If-Match": "999"}, &person)
 	if status != http.StatusOK {
 		t.Fatalf("PATCH with a stale If-Match = %d, want 200 (If-Match is not evaluated on the overlay path)", status)
@@ -344,7 +345,7 @@ func TestOverlayUpdateDropsUnmappedFields(t *testing.T) {
 
 	var person crmcontracts.Person
 	status := e.Call(t, "PATCH", "/v1/people/"+id,
-		apptest.AnyMap{"first_name": "Rosalind2", "owner_id": ids.NewV7().String()}, nil, &person)
+		integration.AnyMap{"first_name": "Rosalind2", "owner_id": ids.NewV7().String()}, nil, &person)
 	if status != http.StatusOK {
 		t.Fatalf("PATCH with an owner_id field = %d, want 200", status)
 	}
@@ -370,7 +371,7 @@ type overlayUpdateCase struct {
 	path       string
 	externalID string
 	seedFields map[string]any
-	patch      apptest.AnyMap
+	patch      integration.AnyMap
 	field      string
 	want       string
 }
@@ -403,11 +404,11 @@ type overlayArchiveCase struct {
 // uniform proof per type rather than five ad hoc ones.
 func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 	updates := []overlayUpdateCase{
-		{"person", "/v1/people", "9301", map[string]any{"first_name": "Marie"}, apptest.AnyMap{"first_name": "Marie2"}, "first_name", "Marie2"},
-		{"organization", "/v1/organizations", "9302", map[string]any{"display_name": "Acme Org"}, apptest.AnyMap{"display_name": "Acme Org 2"}, "display_name", "Acme Org 2"},
-		{"deal", "/v1/deals", "9303", map[string]any{"name": "Widget Deal"}, apptest.AnyMap{"name": "Widget Deal 2"}, "name", "Widget Deal 2"},
-		{"lead", "/v1/leads", "9304", map[string]any{"full_name": "Grace Lead"}, apptest.AnyMap{"full_name": "Grace Lead 2"}, "full_name", "Grace Lead 2"},
-		{"activity", "/v1/activities", "9305", map[string]any{"kind": "call", "subject": "Intro Call"}, apptest.AnyMap{"subject": "Intro Call 2"}, "subject", "Intro Call 2"},
+		{"person", "/v1/people", "9301", map[string]any{"first_name": "Marie"}, integration.AnyMap{"first_name": "Marie2"}, "first_name", "Marie2"},
+		{"organization", "/v1/organizations", "9302", map[string]any{"display_name": "Acme Org"}, integration.AnyMap{"display_name": "Acme Org 2"}, "display_name", "Acme Org 2"},
+		{"deal", "/v1/deals", "9303", map[string]any{"name": "Widget Deal"}, integration.AnyMap{"name": "Widget Deal 2"}, "name", "Widget Deal 2"},
+		{"lead", "/v1/leads", "9304", map[string]any{"full_name": "Grace Lead"}, integration.AnyMap{"full_name": "Grace Lead 2"}, "full_name", "Grace Lead 2"},
+		{"activity", "/v1/activities", "9305", map[string]any{"kind": "call", "subject": "Intro Call"}, integration.AnyMap{"subject": "Intro Call 2"}, "subject", "Intro Call 2"},
 	}
 	for _, tc := range updates {
 		t.Run("update/"+tc.entityType, func(t *testing.T) {
@@ -415,7 +416,7 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 			e.seed(t, tc.entityType, tc.externalID, tc.seedFields)
 			id := firstListedID(t, e.AppEnv, tc.path)
 
-			var body apptest.AnyMap
+			var body integration.AnyMap
 			if status := e.Call(t, "PATCH", tc.path+"/"+id, tc.patch, nil, &body); status != http.StatusOK {
 				t.Fatalf("PATCH %s/%s = %d", tc.path, id, status)
 			}
@@ -436,7 +437,7 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 			e.seed(t, tc.entityType, tc.externalID, tc.seedFields)
 			id := firstListedID(t, e.AppEnv, tc.path)
 
-			var body apptest.AnyMap
+			var body integration.AnyMap
 			if status := e.Call(t, "DELETE", tc.path+"/"+id, nil, nil, &body); status != http.StatusOK {
 				t.Fatalf("DELETE %s/%s = %d, want 200", tc.path, id, status)
 			}

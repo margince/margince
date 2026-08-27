@@ -29,7 +29,7 @@ import (
 func listPeopleNames(t *testing.T, e *apptest.AppEnv, query string) []string {
 	t.Helper()
 	var list struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []integration.AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/people"+query, nil, nil, &list); status != http.StatusOK {
 		t.Fatalf("GET /v1/people%s status = %d", query, status)
@@ -60,7 +60,7 @@ func walkCFSortedPagesOverWire(t *testing.T, e *apptest.AppEnv, col string) []st
 			t.Fatalf("pagination did not terminate after %d pages (walked %v)", page, walked)
 		}
 		var list struct {
-			Data []apptest.AnyMap `json:"data"`
+			Data []integration.AnyMap `json:"data"`
 			Page struct {
 				HasMore    bool    `json:"has_more"`
 				NextCursor *string `json:"next_cursor"`
@@ -106,7 +106,7 @@ func assert422Code(t *testing.T, e *apptest.AppEnv, path, wantCode string) {
 // under one sort reused under another.
 func assertCursorSortRefusals(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	status, score, problem := createCustomField(t, e, apptest.AnyMap{
+	status, score, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "person", "label": "Score", "type": "number", "source": "ui",
 	})
 	if status != http.StatusCreated {
@@ -145,7 +145,7 @@ func assertCursorSortRefusals(t *testing.T, e *apptest.AppEnv) {
 func TestCustomFieldVocabHTTP(t *testing.T) {
 	e := schemaWiredEnv(t)
 
-	status, tier, problem := createCustomField(t, e, apptest.AnyMap{
+	status, tier, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "person", "label": "Tier", "type": "text", "source": "ui",
 	})
 	if status != http.StatusCreated {
@@ -153,9 +153,9 @@ func TestCustomFieldVocabHTTP(t *testing.T) {
 	}
 	col := tier.ColumnName
 
-	createWithCF(t, e, "/v1/people", apptest.AnyMap{"full_name": "Person B", "source": "ui", col: "beta"})
-	createWithCF(t, e, "/v1/people", apptest.AnyMap{"full_name": "Person A", "source": "ui", col: "alpha"})
-	createWithCF(t, e, "/v1/people", apptest.AnyMap{"full_name": "Person N", "source": "ui"})
+	createWithCF(t, e, "/v1/people", integration.AnyMap{"full_name": "Person B", "source": "ui", col: "beta"})
+	createWithCF(t, e, "/v1/people", integration.AnyMap{"full_name": "Person A", "source": "ui", col: "alpha"})
+	createWithCF(t, e, "/v1/people", integration.AnyMap{"full_name": "Person N", "source": "ui"})
 
 	t.Run("cf_ sort orders the page, NULL last", func(t *testing.T) {
 		got := listPeopleNames(t, e, "?sort="+col)

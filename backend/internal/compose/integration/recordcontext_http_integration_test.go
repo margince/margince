@@ -54,14 +54,14 @@ func seedPersonWithActivity(t *testing.T, e *apptest.AppEnv) string {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Context Anchor",
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "note", "body": "Discussed renewal terms",
-		"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
@@ -77,9 +77,9 @@ func seedMeetingLinkedTo(t *testing.T, e *apptest.AppEnv, personID string) strin
 	var meeting struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Renewal review",
-		"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": personID}},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": personID}},
 	}, nil, &meeting); status != http.StatusCreated {
 		t.Fatalf("log meeting → %d", status)
 	}
@@ -188,7 +188,7 @@ func TestGetRecordContextReturnsAnchorAndIsRowScoped(t *testing.T) {
 		var lead struct {
 			ID string `json:"id"`
 		}
-		if s := e.Call(t, "POST", "/v1/leads", apptest.AnyMap{"full_name": "Context Lead"}, nil, &lead); s != http.StatusCreated {
+		if s := e.Call(t, "POST", "/v1/leads", AnyMap{"full_name": "Context Lead"}, nil, &lead); s != http.StatusCreated {
 			t.Fatalf("create lead → %d", s)
 		}
 		var got contextResponseWire

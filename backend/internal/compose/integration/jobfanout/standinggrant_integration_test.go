@@ -24,7 +24,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -40,7 +40,7 @@ func (re *runnerEnv) mintPassportFor(t *testing.T) ids.PassportID {
 	var minted struct {
 		PassportID string `json:"passport_id"`
 	}
-	if status := re.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := re.Call(t, "POST", "/v1/passports", integration.AnyMap{
 		"label": "overnight brief", "scopes": []string{"read"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)

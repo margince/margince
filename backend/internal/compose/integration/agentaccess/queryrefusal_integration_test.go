@@ -102,7 +102,7 @@ type toolCallEnvelope struct {
 // it wanted one — and fail if the call actually ran.
 func refusedToolText(t *testing.T, env *connectorEnv, bearer, payload string) string {
 	t.Helper()
-	called := mcpRaw(env.AppEnv, t, http.MethodPost, "/mcp", payload,
+	called := mcpRaw(t, env.AppEnv, http.MethodPost, "/mcp", payload,
 		map[string]string{"Content-Type": "application/json", "Authorization": "Bearer " + bearer})
 	if called.StatusCode != http.StatusOK {
 		t.Fatalf("tools/call → %d %s", called.StatusCode, called.Body)

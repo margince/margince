@@ -23,7 +23,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -136,12 +135,12 @@ func TestEmbedReindexForceTakesTheMarkerBackFromAWedgedRun(t *testing.T) {
 	router := embedReindexRouter(t, "reindex-wedged-v1")
 	e := setupEmbedReindex(t, router)
 
-	if status, _, _ := embedConfirm(t, e, apptest.AnyMap{"force": true}); status != http.StatusAccepted {
+	if status, _, _ := embedConfirm(t, e, AnyMap{"force": true}); status != http.StatusAccepted {
 		t.Fatalf("first confirm -> %d, want 202", status)
 	}
 	// A forced confirm while the run is genuinely moving must still be refused:
 	// the marker was claimed a moment ago, so nothing here is stale.
-	if status, _, problem := embedConfirm(t, e, apptest.AnyMap{"force": true}); status != http.StatusConflict || problem.Code != "reindex_running" {
+	if status, _, problem := embedConfirm(t, e, AnyMap{"force": true}); status != http.StatusConflict || problem.Code != "reindex_running" {
 		t.Fatalf("forced confirm over a live run -> %d %+v, want 409 reindex_running", status, problem)
 	}
 
@@ -156,7 +155,7 @@ func TestEmbedReindexForceTakesTheMarkerBackFromAWedgedRun(t *testing.T) {
 	if status, _, problem := embedConfirm(t, e, nil); status != http.StatusConflict || problem.Code != "reindex_running" {
 		t.Fatalf("bare confirm over a wedged marker -> %d %+v, want 409 — taking a run's marker away is something a human asks for", status, problem)
 	}
-	status, confirmed, problem := embedConfirm(t, e, apptest.AnyMap{"force": true})
+	status, confirmed, problem := embedConfirm(t, e, AnyMap{"force": true})
 	if status != http.StatusAccepted {
 		t.Fatalf("forced confirm over a wedged marker -> %d %+v, want 202 — an installation with no way back answers 409 forever", status, problem)
 	}

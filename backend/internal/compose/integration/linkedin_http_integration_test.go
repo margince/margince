@@ -28,7 +28,7 @@ type importSummaryDTO struct {
 }
 
 // uploadExport posts a CSV as multipart, the way the browser does.
-func uploadExport(e *apptest.AppEnv, t *testing.T, csv string) (int, importSummaryDTO) {
+func uploadExport(t *testing.T, e *apptest.AppEnv, csv string) (int, importSummaryDTO) {
 	t.Helper()
 	var body bytes.Buffer
 	writer := multipart.NewWriter(&body)
@@ -80,7 +80,7 @@ func TestUploadingAnExportImportsItAndReportsWhatItDid(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	status, got := uploadExport(e, t, exportWithPreamble)
+	status, got := uploadExport(t, e, exportWithPreamble)
 	if status != http.StatusOK {
 		t.Fatalf("upload status = %d, want 200", status)
 	}
@@ -100,7 +100,7 @@ func TestUploadingAnExportImportsItAndReportsWhatItDid(t *testing.T) {
 	// Re-uploading a refreshed export updates rather than duplicating —
 	// people re-export regularly, and a doubled network makes every reach
 	// count a lie.
-	status, again := uploadExport(e, t, exportWithPreamble)
+	status, again := uploadExport(t, e, exportWithPreamble)
 	if status != http.StatusOK {
 		t.Fatalf("re-upload status = %d", status)
 	}
@@ -114,15 +114,15 @@ func TestAnExactAddressMatchConfirmsOverHTTP(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	// A contact carrying the address the export names.
-	var person apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var person AnyMap
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Dana Buyer",
-		"emails":    []apptest.AnyMap{{"email": "dana@acme.test", "is_primary": true}},
+		"emails":    []AnyMap{{"email": "dana@acme.test", "is_primary": true}},
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("creating the contact: %d", status)
 	}
 
-	status, got := uploadExport(e, t, exportWithPreamble)
+	status, got := uploadExport(t, e, exportWithPreamble)
 	if status != http.StatusOK {
 		t.Fatalf("upload status = %d", status)
 	}
@@ -144,7 +144,7 @@ func TestAFileThatIsNotAnExportIsRefusedWithAReadableReason(t *testing.T) {
 
 	// Picking the wrong file is a mistake a sentence can fix. Answering 500
 	// would send someone to support for something they can solve themselves.
-	status, _ := uploadExport(e, t, "id,amount\n1,20\n")
+	status, _ := uploadExport(t, e, "id,amount\n1,20\n")
 	if status != http.StatusUnprocessableEntity {
 		t.Errorf("a non-export answered %d, want 422", status)
 	}

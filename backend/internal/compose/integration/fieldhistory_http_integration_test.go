@@ -152,8 +152,8 @@ type fieldHistoryHTTPFixture struct {
 // diff rows the happy-path subtest below asserts on.
 func seedFieldHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) fieldHistoryHTTPFixture {
 	t.Helper()
-	var person apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var person AnyMap
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "History Wire Subject",
 		"source":    "ui",
 	}, nil, &person); status != http.StatusCreated {

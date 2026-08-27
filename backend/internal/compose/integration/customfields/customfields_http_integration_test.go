@@ -108,7 +108,7 @@ func schemaWiredEnv(t *testing.T) *apptest.AppEnv {
 // number http.StatusCode, while CustomField's own `status` is the
 // lifecycle string (active/retired) — unmarshaling one body into the
 // other's struct would fail on that type mismatch, not just leave zeros.
-func createCustomField(t *testing.T, e *apptest.AppEnv, body apptest.AnyMap) (int, customFieldWire, customFieldProblem) {
+func createCustomField(t *testing.T, e *apptest.AppEnv, body integration.AnyMap) (int, customFieldWire, customFieldProblem) {
 	t.Helper()
 	var raw json.RawMessage
 	status := e.Call(t, "POST", "/v1/custom-fields", body, nil, &raw)

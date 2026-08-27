@@ -31,14 +31,14 @@ import (
 // mailbox pull takes, so the row carries exactly what capture stamps.
 func captureFileOnEmail(t *testing.T, e *apptest.AppEnv, blob blobstore.Store, dealID string) (activityID, attachmentID string) {
 	t.Helper()
-	var email apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	var email AnyMap
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Re: MSA", "direction": "inbound",
 	}, nil, &email); status != http.StatusCreated {
 		t.Fatalf("log email = %d %v", status, email)
 	}
 	activityID, _ = email["id"].(string)
-	if status := e.Call(t, "POST", "/v1/activities/"+activityID+"/relink", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/"+activityID+"/relink", AnyMap{
 		"entity_type": "deal", "entity_id": dealID,
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("link the email to the deal = %d", status)
@@ -86,7 +86,7 @@ func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T)
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
-	var roomRow apptest.AnyMap
+	var roomRow AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
 		t.Fatalf("room = %d", status)
 	}
@@ -94,23 +94,23 @@ func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T)
 	_, attachmentID := captureFileOnEmail(t, e, blob, dealID)
 
 	// The emailed file is in the deal's Files area, and so admissible to the room.
-	var area apptest.AnyMap
+	var area AnyMap
 	if status := e.Call(t, "GET", "/v1/deals/"+dealID+"/documents", nil, nil, &area); status != http.StatusOK {
 		t.Fatalf("deal files = %d %v", status, area)
 	}
 	if list, _ := area["data"].([]any); len(list) != 1 {
 		t.Fatalf("deal files = %v, want the emailed file", list)
 	}
-	var doc apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", apptest.AnyMap{
+	var doc AnyMap
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
 		"attachment_id": attachmentID, "group_key": "legal", "source": "ui",
 	}, nil, &doc); status != http.StatusCreated {
 		t.Fatalf("add emailed file to the room = %d %v", status, doc)
 	}
 	docID, _ := doc["id"].(string)
 
-	var session apptest.AnyMap
-	if status := publicCall(t, e, "POST", "/v1/public/rooms/exchange", apptest.AnyMap{"credential": room.credential}, nil, &session); status != http.StatusOK {
+	var session AnyMap
+	if status := publicCall(t, e, "POST", "/v1/public/rooms/exchange", AnyMap{"credential": room.credential}, nil, &session); status != http.StatusOK {
 		t.Fatalf("exchange = %d", status)
 	}
 	token, _ := session["session_token"].(string)
@@ -126,14 +126,14 @@ func TestAnEmailedFileReachesTheBuyerThroughTheRoomUntilItIsHidden(t *testing.T)
 	if status := publicCall(t, e, "GET", "/v1/public/rooms/documents/"+docID+"/file", nil, bearer(token), nil); status != http.StatusNotFound {
 		t.Fatalf("download after hide = %d, want 404", status)
 	}
-	var sellerDocs apptest.AnyMap
+	var sellerDocs AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID+"/documents", nil, nil, &sellerDocs); status != http.StatusOK {
 		t.Fatalf("seller documents = %d", status)
 	}
 	if list, _ := sellerDocs["data"].([]any); len(list) != 1 {
 		t.Fatalf("the seller's list dropped the hidden entry (%v); only the seller can remove it", list)
 	}
-	var buyerDocs apptest.AnyMap
+	var buyerDocs AnyMap
 	if status := publicCall(t, e, "GET", "/v1/public/rooms/documents", nil, bearer(token), &buyerDocs); status != http.StatusOK {
 		t.Fatalf("buyer documents = %d", status)
 	}
@@ -147,7 +147,7 @@ func TestARepCannotShareATeammatesLimitedAudienceMailAttachment(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithBlobstore(blob))
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
-	var roomRow apptest.AnyMap
+	var roomRow AnyMap
 	if status := e.Call(t, "GET", "/v1/deal-rooms/"+room.roomID, nil, nil, &roomRow); status != http.StatusOK {
 		t.Fatalf("room = %d", status)
 	}
@@ -165,7 +165,7 @@ func TestARepCannotShareATeammatesLimitedAudienceMailAttachment(t *testing.T) {
 		`DELETE FROM activity_participant WHERE activity_id = $1`, activityID); err != nil {
 		t.Fatalf("take the rep off the mail: %v", err)
 	}
-	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deal-rooms/"+room.roomID+"/documents", AnyMap{
 		"attachment_id": attachmentID, "group_key": "legal", "source": "ui",
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("sharing a teammate's limited-audience attachment = %d, want 404", status)

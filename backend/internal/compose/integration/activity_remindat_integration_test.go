@@ -25,7 +25,7 @@ func TestRemindAtIsTaskOnlyAndRoundTrips(t *testing.T) {
 		ID       string  `json:"id"`
 		RemindAt *string `json:"remind_at"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "task", "subject": "Call back", "remind_at": "2026-07-08T09:00:00Z",
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create task with remind_at → %d", status)
@@ -38,7 +38,7 @@ func TestRemindAtIsTaskOnlyAndRoundTrips(t *testing.T) {
 	var patched struct {
 		RemindAt *string `json:"remind_at"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/activities/"+created.ID, apptest.AnyMap{
+	if status := e.Call(t, "PATCH", "/v1/activities/"+created.ID, AnyMap{
 		"remind_at": "2026-07-09T10:30:00Z",
 	}, nil, &patched); status != http.StatusOK {
 		t.Fatalf("patch remind_at → %d", status)
@@ -52,7 +52,7 @@ func TestRemindAtIsTaskOnlyAndRoundTrips(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "note", "body": "no reminders on notes", "remind_at": "2026-07-08T09:00:00Z",
 	}, nil, &problem)
 	if status != http.StatusUnprocessableEntity {
@@ -64,10 +64,10 @@ func TestRemindAtIsTaskOnlyAndRoundTrips(t *testing.T) {
 	var note struct {
 		ID string `json:"id"`
 	}
-	if s := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{"kind": "note", "body": "plain"}, nil, &note); s != http.StatusCreated {
+	if s := e.Call(t, "POST", "/v1/activities", AnyMap{"kind": "note", "body": "plain"}, nil, &note); s != http.StatusCreated {
 		t.Fatalf("create note → %d", s)
 	}
-	if s := e.Call(t, "PATCH", "/v1/activities/"+note.ID, apptest.AnyMap{"remind_at": "2026-07-08T09:00:00Z"}, nil, nil); s != http.StatusUnprocessableEntity {
+	if s := e.Call(t, "PATCH", "/v1/activities/"+note.ID, AnyMap{"remind_at": "2026-07-08T09:00:00Z"}, nil, nil); s != http.StatusUnprocessableEntity {
 		t.Fatalf("patch remind_at onto a note → %d, want 422", s)
 	}
 }

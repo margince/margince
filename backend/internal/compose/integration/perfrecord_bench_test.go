@@ -154,7 +154,7 @@ func benchRecordSave(t *testing.T, e *apptest.AppEnv, personID string) search.Qu
 	stats, err := benchRuns("record_save_person", perf4RecordSaveBudget, recordBenchSpec, func() error {
 		edit++
 		return benchExpectOK(t, e, http.MethodPatch, "/v1/people/"+personID,
-			apptest.AnyMap{"title": "Rear Admiral " + strconv.Itoa(edit)})
+			AnyMap{"title": "Rear Admiral " + strconv.Itoa(edit)})
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -229,11 +229,11 @@ func recordBenchSeeds(workspace string) []struct {
 // the row the benchmark opens is one the product's own writer produced.
 func createBenchPerson(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	var person apptest.AnyMap
-	if status := e.Call(t, http.MethodPost, "/v1/people", apptest.AnyMap{
+	var person AnyMap
+	if status := e.Call(t, http.MethodPost, "/v1/people", AnyMap{
 		"full_name": "Grace Hopper",
 		"source":    "ui",
-		"emails":    []apptest.AnyMap{{"email": "grace@navy.mil", "is_primary": true}},
+		"emails":    []AnyMap{{"email": "grace@navy.mil", "is_primary": true}},
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person = %d %v", status, person)
 	}
@@ -247,18 +247,18 @@ func createBenchOrganizationAndDeal(t *testing.T, e *apptest.AppEnv) (string, st
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
 
-	var org apptest.AnyMap
-	if status := e.Call(t, http.MethodPost, "/v1/organizations", apptest.AnyMap{
+	var org AnyMap
+	if status := e.Call(t, http.MethodPost, "/v1/organizations", AnyMap{
 		"display_name": "Acme GmbH",
 		"source":       "ui",
-		"domains":      []apptest.AnyMap{{"domain": "acme.example", "is_primary": true}},
+		"domains":      []AnyMap{{"domain": "acme.example", "is_primary": true}},
 	}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create organization = %d %v", status, org)
 	}
 	orgID := benchID(t, org, "organization")
 
-	var deal apptest.AnyMap
-	if status := e.Call(t, http.MethodPost, "/v1/deals", apptest.AnyMap{
+	var deal AnyMap
+	if status := e.Call(t, http.MethodPost, "/v1/deals", AnyMap{
 		"name": "Acme rollout", "amount_minor": 250_000_00, "currency": "EUR",
 		"pipeline_id": stages.PipelineID, "stage_id": stages.Open,
 		"organization_id": orgID, "source": "ui",
@@ -270,7 +270,7 @@ func createBenchOrganizationAndDeal(t *testing.T, e *apptest.AppEnv) (string, st
 
 // benchID reads the created record's id, failing on a payload that carries none
 // rather than measuring requests against an empty path.
-func benchID(t *testing.T, record apptest.AnyMap, what string) string {
+func benchID(t *testing.T, record AnyMap, what string) string {
 	t.Helper()
 	id, ok := record["id"].(string)
 	if !ok {
@@ -286,13 +286,13 @@ func benchID(t *testing.T, record apptest.AnyMap, what string) string {
 //
 // reqBody stays a nil interface when there is no body: a typed nil map handed
 // to Call is not nil to it, and would be marshalled as a literal `null`.
-func benchExpectOK(t *testing.T, e *apptest.AppEnv, method, path string, body apptest.AnyMap) error {
+func benchExpectOK(t *testing.T, e *apptest.AppEnv, method, path string, body AnyMap) error {
 	t.Helper()
 	var reqBody any
 	if body != nil {
 		reqBody = body
 	}
-	var out apptest.AnyMap
+	var out AnyMap
 	if status := e.Call(t, method, path, reqBody, nil, &out); status != http.StatusOK {
 		return fmt.Errorf("%s %s → %d %v", method, path, status, out)
 	}

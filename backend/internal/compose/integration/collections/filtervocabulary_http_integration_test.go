@@ -36,8 +36,8 @@ func TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T)
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 
-	var field apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+	var field integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
 		"object": "person", "label": "Loyalty Tier HTTP", "type": "text", "source": "ui",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
@@ -47,8 +47,8 @@ func TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T)
 		t.Fatalf("created field carries no column_name: %v", field)
 	}
 
-	var matching apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var matching integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
 		"full_name": "Match", "source": "ui",
 	}, nil, &matching); status != http.StatusCreated {
 		t.Fatalf("create matching person: status=%d body=%v", status, matching)
@@ -58,8 +58,8 @@ func TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T)
 		t.Fatalf("created matching person carries no id: %v", matching)
 	}
 
-	var other apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var other integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
 		"full_name": "Other", "source": "ui",
 	}, nil, &other); status != http.StatusCreated {
 		t.Fatalf("create non-matching person: status=%d body=%v", status, other)
@@ -67,17 +67,17 @@ func TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T)
 
 	// Set through the update path, exactly like the store-level scenario:
 	// a value a customer fills in after the fact must filter the same way.
-	var updated apptest.AnyMap
-	if status := e.Call(t, "PATCH", "/v1/people/"+matchID, apptest.AnyMap{column: "gold"}, nil, &updated); status != http.StatusOK {
+	var updated integration.AnyMap
+	if status := e.Call(t, "PATCH", "/v1/people/"+matchID, integration.AnyMap{column: "gold"}, nil, &updated); status != http.StatusOK {
 		t.Fatalf("set the custom field through the update path: status=%d body=%v", status, updated)
 	}
 
 	// The regression's own repro: this exact call used to answer 422 at
 	// the endpoint filtered export already accepted the same predicate on.
-	var list apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	var list integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/lists", integration.AnyMap{
 		"name": "Gold tier", "entity_type": "person", "list_type": "dynamic",
-		"definition": apptest.AnyMap{"field": column, "op": "eq", "value": "gold"},
+		"definition": integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 	}, nil, &list); status != http.StatusCreated {
 		t.Fatalf("a dynamic list on a custom field was refused over HTTP: status=%d body=%v", status, list)
 	}
@@ -87,7 +87,7 @@ func TestADynamicListOverHTTPAcceptsAndEvaluatesACustomFieldFilter(t *testing.T)
 	}
 
 	var members struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []integration.AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/lists/"+listID+"/members", nil, nil, &members); status != http.StatusOK {
 		t.Fatalf("list members: status=%d", status)
@@ -115,8 +115,8 @@ func TestTheFilterVocabularyOverHTTPOffersWhatADynamicListAccepts(t *testing.T) 
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 
-	var field apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+	var field integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
 		"object": "person", "label": "Vocabulary Probe", "type": "picklist", "source": "ui",
 		"options": []string{"gold", "silver"},
 	}, nil, &field); status != http.StatusCreated {
@@ -215,24 +215,24 @@ func TestTheFilterVocabularyOverHTTPOffersWhatADynamicListAccepts(t *testing.T) 
 	}
 
 	// The equivalence, forwards: a listed field is one a dynamic list accepts.
-	var accepted apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	var accepted integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/lists", integration.AnyMap{
 		"name": "Reported field is accepted", "entity_type": "person", "list_type": "dynamic",
-		"definition": apptest.AnyMap{"field": column, "op": "eq", "value": "gold"},
+		"definition": integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 	}, nil, &accepted); status != http.StatusCreated {
 		t.Fatalf("the vocabulary listed %s but a dynamic list on it was refused: status=%d body=%v", column, status, accepted)
 	}
 
 	// And backwards: a field it does not list is one the same endpoint refuses,
 	// so the omission is a real answer rather than an incomplete one.
-	var refused apptest.AnyMap
+	var refused integration.AnyMap
 	unlisted := column + "_not_in_the_catalog"
 	if reported[unlisted] {
 		t.Fatalf("%s was meant to be absent from the vocabulary", unlisted)
 	}
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists", integration.AnyMap{
 		"name": "Unreported field is refused", "entity_type": "person", "list_type": "dynamic",
-		"definition": apptest.AnyMap{"field": unlisted, "op": "eq", "value": "gold"},
+		"definition": integration.AnyMap{"field": unlisted, "op": "eq", "value": "gold"},
 	}, nil, &refused); status != http.StatusUnprocessableEntity {
 		t.Fatalf("the vocabulary omits %s but a dynamic list on it was not refused 422: status=%d body=%v", unlisted, status, refused)
 	}
@@ -241,7 +241,7 @@ func TestTheFilterVocabularyOverHTTPOffersWhatADynamicListAccepts(t *testing.T) 
 	// bare 404: the generated wrapper binds this as a plain string and never
 	// calls the Valid() it also generates, so the handler is the only thing that
 	// can tell a typo from a real absence.
-	var badResource apptest.AnyMap
+	var badResource integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/filters/vocabulary?resource=peron", nil, nil, &badResource); status != http.StatusUnprocessableEntity {
 		t.Fatalf("a misspelled resource: status=%d body=%v, want 422", status, badResource)
 	}
@@ -261,8 +261,8 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 
-	var field apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+	var field integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
 		"object": "person", "label": "Retiring Tier", "type": "text", "source": "ui",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
@@ -274,10 +274,10 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 	}
 
 	// A segment built while the field is live — the one that has to keep working.
-	var list apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	var list integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/lists", integration.AnyMap{
 		"name": "Built before retirement", "entity_type": "person", "list_type": "dynamic",
-		"definition": apptest.AnyMap{"field": column, "op": "eq", "value": "gold"},
+		"definition": integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 	}, nil, &list); status != http.StatusCreated {
 		t.Fatalf("create the list while the field is live: status=%d body=%v", status, list)
 	}
@@ -287,8 +287,8 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 		t.Fatalf("%s is active and the vocabulary does not offer it", column)
 	}
 
-	var retired apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/custom-fields/"+fieldID+"/retire", apptest.AnyMap{}, nil, &retired); status != http.StatusOK {
+	var retired integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/custom-fields/"+fieldID+"/retire", integration.AnyMap{}, nil, &retired); status != http.StatusOK {
 		t.Fatalf("retire the field: status=%d body=%v", status, retired)
 	}
 
@@ -298,7 +298,7 @@ func TestARetiredCustomFieldLeavesTheVocabularyAndKeepsEvaluating(t *testing.T) 
 
 	// And the segment written against it still evaluates rather than erroring.
 	var members struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []integration.AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/lists/"+listID+"/members", nil, nil, &members); status != http.StatusOK {
 		t.Errorf("the segment naming the retired %s no longer evaluates: status=%d", column, status)
