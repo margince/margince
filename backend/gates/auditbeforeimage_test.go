@@ -163,7 +163,7 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 	"internal/modules/capture/freemaildomain.go:Add":                                  "a fresh carve-out and an amended one take different verbs, and the amended one carries the rule it replaced",
 	"internal/modules/commissions/decide.go:decideTx":                                 "the verb names the decision and the images are the patch's own, so what the decision moved is recorded with it",
 	"internal/modules/commissions/decide.go:voidOne":                                  "a void is spelled as its own verb and carries the patch images for the row it retired",
-	"internal/modules/consent/store.go:Record":                                        "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
+	"internal/modules/consent/store.go:recordAdmittedTx":                              "a grant and a withdrawal are separate verbs, and both record the consent state they moved from",
 	"internal/modules/dealrooms/lifecycle.go:moveRoom":                                "each room transition names its own verb and carries the patch images the move built",
 	"internal/modules/privacy/retentionpolicystore.go:Delete":                         "the verb is an archive of the policy row, and the image is the policy as it stood",
 	"internal/platform/settings/store.go:SetRawTx":                                    "each setting declares its own verb, and the value on either side is rendered by the same declaration",

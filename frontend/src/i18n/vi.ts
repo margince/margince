@@ -4676,6 +4676,8 @@ export const vi = {
   "prefs.notSubscribed": "Chưa đăng ký — bạn không nhận gì cho mục đích này",
   "prefs.alwaysOn": "luôn bật",
   "prefs.lockedWhy": "Thư giao dịch — không thuộc diện từ chối nhận.",
+  "prefs.confirmationNeededWhy":
+    "Để bắt đầu nhận, hãy dùng liên kết xác nhận trong email của chúng tôi. Bạn có thể dừng nhận tại đây bất cứ lúc nào.",
   "prefs.notSaved": "Chưa lưu.",
   "prefs.savePending": "Đang chờ: {changes}.",
   "prefs.saveProof":
