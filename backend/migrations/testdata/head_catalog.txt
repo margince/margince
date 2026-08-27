@@ -423,6 +423,7 @@ public.ai_model_rate.ai_model_rate_cache_read_per_mtok_microusd_check CHECK ((ca
 public.ai_model_rate.ai_model_rate_cache_write_per_mtok_microusd_check CHECK ((cache_write_per_mtok_microusd >= 0))
 public.ai_model_rate.ai_model_rate_input_per_mtok_microusd_check CHECK ((input_per_mtok_microusd >= 0))
 public.ai_model_rate.ai_model_rate_key UNIQUE (provider, model_id, effective_date)
+public.ai_model_rate.ai_model_rate_lane_check CHECK ((lane = ANY (ARRAY['chat'::text, 'embeddings'::text])))
 public.ai_model_rate.ai_model_rate_output_per_mtok_microusd_check CHECK ((output_per_mtok_microusd >= 0))
 public.ai_model_rate.ai_model_rate_pkey PRIMARY KEY (id)
 public.ai_model_rate.cache_read_per_mtok_microusd bigint NOT NULL gen=- def=0
@@ -431,6 +432,7 @@ public.ai_model_rate.created_at timestamp with time zone NOT NULL gen=- def=now(
 public.ai_model_rate.effective_date date NOT NULL gen=- def=-
 public.ai_model_rate.id uuid NOT NULL gen=- def=uuidv7()
 public.ai_model_rate.input_per_mtok_microusd bigint NOT NULL gen=- def=-
+public.ai_model_rate.lane text NOT NULL gen=- def='chat'::text
 public.ai_model_rate.model_id text NOT NULL gen=- def=-
 public.ai_model_rate.output_per_mtok_microusd bigint NOT NULL gen=- def=-
 public.ai_model_rate.provider text NOT NULL gen=- def=-
