@@ -10,6 +10,7 @@ import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ToastRegion, useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
+import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -370,7 +371,7 @@ function LeadsWorkbench({
               const terminal = terminalBadge(lead.status);
               return (
                 <span>
-                  <strong>{lead.full_name ?? lead.email ?? ""}</strong>
+                  <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>
                   {lead.company_name && (
                     <span className="t-caption"> · {lead.company_name}</span>
                   )}
@@ -468,7 +469,9 @@ function LeadsWorkbench({
             }),
           label: (lead) =>
             t("lead.bulkSelectRow", {
-              name: lead.full_name ?? lead.email ?? lead.id,
+              // The id, not the word: this is an accessible NAME, and every
+              // unnamed row would otherwise announce as the same control.
+              name: leadIdentityName(lead) || lead.id,
             }),
           bar: (
             <LeadBulkBar

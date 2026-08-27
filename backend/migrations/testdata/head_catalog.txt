@@ -710,6 +710,7 @@ public.brief_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/ma
 public.brief_item.brief_item_composite_check CHECK (((composite >= (0)::double precision) AND (composite <= (1)::double precision)))
 public.brief_item.brief_item_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.brief_item.brief_item_finding_length CHECK (((finding IS NULL) OR (char_length(finding) <= 600)))
+public.brief_item.brief_item_lineage_whole CHECK (((returned_after_dismissal_on IS NULL) = (returned_with_activity_at IS NULL)))
 public.brief_item.brief_item_pkey PRIMARY KEY (id)
 public.brief_item.brief_item_rank_check CHECK ((rank >= 1))
 public.brief_item.brief_item_run_fkey FOREIGN KEY (brief_run_id) REFERENCES brief_run(id) ON DELETE CASCADE
@@ -724,6 +725,8 @@ public.brief_item.feature_vector jsonb NOT NULL gen=- def=-
 public.brief_item.finding text gen=- def=-
 public.brief_item.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_item.rank integer NOT NULL gen=- def=-
+public.brief_item.returned_after_dismissal_on date gen=- def=-
+public.brief_item.returned_with_activity_at timestamp with time zone gen=- def=-
 public.brief_item.snoozed_until timestamp with time zone gen=- def=-
 public.brief_item.state text NOT NULL gen=- def='new'::text
 public.brief_item.state_at timestamp with time zone gen=- def=-

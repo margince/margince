@@ -14,6 +14,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
 import { formatDate } from "../format/format";
+import { leadIdentityName } from "../format/leadname";
 import { toMinorUnits } from "../format/minorunits";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -179,8 +180,8 @@ export function QualifyDialog({
   const stages = openStagesOf(chosenPipeline);
   const chosenStage = stages.find((s) => s.id === stageId) ?? stages[0];
   const suggestedName = chosenStage
-    ? `${lead.company_name ?? lead.full_name ?? lead.email ?? ""} — ${chosenStage.name}`
-    : (lead.company_name ?? lead.full_name ?? "");
+    ? `${lead.company_name ?? leadIdentityName(lead)} — ${chosenStage.name}`
+    : (lead.company_name ?? leadIdentityName(lead));
 
   const qualify = useMutation({
     mutationFn: async (body: PromoteLeadRequest) => {
@@ -240,7 +241,7 @@ export function QualifyDialog({
     amount,
     currency,
   );
-  const name = lead.full_name ?? lead.email ?? "";
+  const name = leadIdentityName(lead);
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>

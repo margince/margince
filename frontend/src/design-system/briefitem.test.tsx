@@ -52,6 +52,8 @@ const LABELS: BriefItemLabels = {
   dismissed: "Dismissed",
   snoozed: "Snoozed",
   resurfaces: "Back",
+  previouslyDismissed: "Flagged 03.06.2026 — you dismissed it.",
+  returnedWith: "It came back with activity on",
 };
 
 const ITEM: BriefItem = {
@@ -344,4 +346,39 @@ describe("BriefItemCardPending", () => {
     expect(region.getAttribute("aria-busy")).toBe("true");
     expect(region.textContent).toContain("Reading this morning's brief");
   });
+});
+
+// A deal the rep dismissed and that has come back says so.
+//
+// The suppression rule holds a dismissed deal out of every later queue until a
+// linked activity arrives after the mark, so the line states that rule rather
+// than guessing — and it is a deterministic fact from brief_item rows, never a
+// model's sentence, which is why it carries no agent provenance.
+it("says why a dismissed deal is back, without claiming an agent wrote it", () => {
+  render(
+    <BriefItemCard
+      {...cardProps({
+        item: {
+          ...ITEM,
+          lineage: {
+            dismissed_on: "2026-06-03",
+            returned_with_activity_at: "2026-06-04T10:00:00Z",
+          },
+        },
+      })}
+    />,
+  );
+
+  expect(
+    screen.getByText("Flagged 03.06.2026 — you dismissed it."),
+  ).toBeTruthy();
+  // Indigo is a claim that a model wrote something. Tagging a row-derived fact
+  // that way would be false in the one place the product asks a reader to
+  // trust the marking.
+  expect(document.querySelector(".provenance-agent")).toBeNull();
+});
+
+it("says nothing about a dismissal for an item that never had one", () => {
+  render(<BriefItemCard {...cardProps()} />);
+  expect(screen.queryByText(/you dismissed it/)).toBeNull();
 });

@@ -112,6 +112,7 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 	facts := map[ids.UUID]briefDealFacts{}
 	var order []ids.UUID
 	stakeholders := map[ids.UUID][]ids.UUID{}
+	lineage := map[ids.UUID]dealLineage{}
 	revenueNorm := int64(briefRevenueNormFallbackMinor)
 
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
@@ -138,7 +139,14 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 		if err := briefCandidates(ctx, tx, userID, now, base, facts, &order); err != nil {
 			return err
 		}
-		return briefEvidenceRows(ctx, tx, lastView, facts, order, stakeholders)
+		if err := briefEvidenceRows(ctx, tx, lastView, facts, order, stakeholders); err != nil {
+			return err
+		}
+		// Why each returning deal is back, for the whole candidate set at once.
+		// It reads AFTER the candidates because it is asked about them: a deal
+		// the suppression rule is still holding out has no lineage to tell.
+		lineage, err = briefLineage(ctx, tx, userID, order, now)
+		return err
 	})
 	if err != nil {
 		return BriefRanking{}, err
@@ -150,7 +158,18 @@ func (e *BriefEngine) Rank(ctx context.Context, now time.Time) (BriefRanking, er
 
 	scored := make([]BriefQueueItem, 0, len(order))
 	for _, dealID := range order {
-		scored = append(scored, briefScore(facts[dealID], revenueNorm, now))
+		item := briefScore(facts[dealID], revenueNorm, now)
+		// Attached AFTER scoring, never inside it. briefScore is a pure
+		// function of the ranking facts and is tested as one; lineage explains
+		// why a deal is in the queue and must not be able to change where it
+		// sits, or "you dismissed this" would become a reason to rank it.
+		if back, returning := lineage[dealID]; returning {
+			item.Lineage = &ItemLineage{
+				DismissedOn:  back.dismissedOn,
+				ReturnedWith: back.returnedWith,
+			}
+		}
+		scored = append(scored, item)
 	}
 
 	// The deterministic floor first: the full §10.1 candidate set, ordered
@@ -274,8 +293,14 @@ func briefCandidates(ctx context.Context, tx pgx.Tx, userID ids.UUID, now time.T
 			      ELSE NOT EXISTS (
 				SELECT 1 FROM activity a
 				JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = d.id
-				WHERE a.archived_at IS NULL AND a.occurred_at > bi.state_at) END)`,
-		briefBaseValueSQL(asOfPos, basePos), userPos, asOfPos)
+				WHERE a.archived_at IS NULL AND a.occurred_at > bi.state_at
+				  -- Not after this instant. A future-dated activity has not
+				  -- happened, so treating it as "the deal moved" brings a
+				  -- dismissed deal back for something still to come — and the
+				  -- lineage read bounds itself the same way, so an unbounded
+				  -- one here would return deals whose card can say nothing.
+				  AND a.occurred_at <= $%d) END)`,
+		briefBaseValueSQL(asOfPos, basePos), userPos, asOfPos, asOfPos)
 	if scope != "" {
 		q += " AND " + scope
 	}

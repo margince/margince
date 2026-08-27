@@ -3,6 +3,7 @@
 
 import { StatCard } from "../design-system/atoms";
 import { StatStrip } from "../design-system/statstrip";
+import { type CappedCount, cappedCountLabel } from "../format/cappedcount";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 
@@ -23,12 +24,13 @@ import { useLocale, usePlural, useT } from "../i18n";
 export type HomeReadings = Readonly<{
   /** Decisions waiting, and how many stop waiting today. Null when unread. */
   decisions: { pending: number; expiringToday: number } | null;
-  /** Open deals and the currencies they are priced in. Null when unread. */
-  open: { deals: number; currencies: number } | null;
+  /** Open deals and the currencies they are priced in. Null when unread. The
+   *  deal count is a floor: Home reads one page. */
+  open: { deals: CappedCount; currencies: number } | null;
   /** The ranked queue: how many, and the top composite. Null when no run. */
   ranked: { count: number; topPct: number | null } | null;
-  /** Open deals that have gone quiet. Null when unread. */
-  quiet: number | null;
+  /** Open deals that have gone quiet, as a floor. Null when unread. */
+  quiet: CappedCount | null;
 }>;
 
 export function HomeReadingsStrip({
@@ -76,7 +78,7 @@ export function HomeReadingsStrip({
         <StatCard
           numeric
           label={t("home.readings.openDeals")}
-          value={formatNumber(open.deals, locale)}
+          value={cappedCountLabel(open.deals, locale)}
           detail={plural("home.readings.currencies", open.currencies, {
             count: formatNumber(open.currencies, locale),
           })}
@@ -100,10 +102,18 @@ export function HomeReadingsStrip({
         <StatCard
           numeric
           label={t("home.readings.quiet")}
-          value={formatNumber(quiet, locale)}
-          tone={quiet > 0 ? "warn" : "good"}
-          dot={quiet > 0}
-          detail={quiet === 0 ? t("home.readings.quietNone") : undefined}
+          value={cappedCountLabel(quiet, locale)}
+          // "None have gone quiet" is a claim, and only a reading that saw the
+          // whole list may make it. A count of zero off a page with another
+          // behind it is neither bad news nor an all-clear: it is a floor, and
+          // the tile says the figure and nothing more.
+          tone={quiet.seen > 0 ? "warn" : quiet.more ? undefined : "good"}
+          dot={quiet.seen > 0}
+          detail={
+            quiet.seen === 0 && !quiet.more
+              ? t("home.readings.quietNone")
+              : undefined
+          }
         />
       )}
     </StatStrip>

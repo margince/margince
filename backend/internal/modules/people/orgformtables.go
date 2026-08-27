@@ -96,6 +96,12 @@ var prefixMarkets = []marketForms{
 	thailand,
 }
 
+// cjkMarket names the scripts whose forms are matched by substring rather than
+// by word (orgnamecjk.go). It carries no tables of its own — the forms live
+// there, because they are matched a different way — and exists so a caller can
+// tell that a name declared one of these markets.
+var cjkMarket = marketForms{name: "cjk"}
+
 // unambiguous builds markers from forms that collide with nothing.
 func unambiguous(forms ...[]string) []orgFormMarker {
 	markers := make([]orgFormMarker, 0, len(forms))

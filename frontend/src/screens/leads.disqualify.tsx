@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { Button, Field, Modal, Textarea } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Select } from "../design-system/select";
+import { leadIdentityName } from "../format/leadname";
 import { useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
 import { leadWriteKeys } from "./leadkeys";
@@ -64,7 +65,7 @@ export function DisqualifyDialog({
     disqualify.reset();
     onClose();
   };
-  const name = lead.full_name ?? lead.email ?? "";
+  const name = leadIdentityName(lead);
 
   return (
     <Modal open={open} onClose={close} labelledBy={headingId}>

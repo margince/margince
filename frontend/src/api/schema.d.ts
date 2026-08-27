@@ -21660,6 +21660,7 @@ export interface components {
              * @description When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.
              */
             snoozed_until?: string | null;
+            lineage?: components["schemas"]["MorningBriefItemLineage"];
             /**
              * @description What the overnight agent found about this deal — why it is on the list, what changed,
              *     and the one next move. Null when no pass has annotated this run. It is agent-authored
@@ -21668,6 +21669,32 @@ export interface components {
              */
             finding?: string | null;
         };
+        /**
+         * @description Why this deal is back after the rep dismissed it. Absent on an item that was never
+         *     dismissed, which is the ordinary case.
+         *
+         *     The suppression rule holds a dismissed deal out of every later queue until a linked
+         *     activity occurs after the mark — so a deal that reappears is always one the rep waved
+         *     away and that has since moved. That is what makes the pair honest rather than a guess:
+         *     it is the rule that put the deal back, stated.
+         */
+        MorningBriefItemLineage: {
+            /**
+             * Format: date
+             * @description The local day the rep dismissed this deal, in the installation reporting timezone —
+             *     the same zone `local_day` is stamped in, so "you dismissed it Tuesday" and "this is
+             *     Thursday's brief" are measured the same way. A date, not an instant: the sentence
+             *     names a day.
+             */
+            dismissed_on: string;
+            /**
+             * Format: date-time
+             * @description When the activity that re-qualified the deal occurred. An instant, because it names a
+             *     specific event. It is the EARLIEST activity after the dismissal: a later one did not
+             *     bring the deal back, it arrived once the deal was already coming.
+             */
+            returned_with_activity_at: string;
+        } | null;
         /**
          * @description One overnight pass's findings for the acting rep's own current run.
          *

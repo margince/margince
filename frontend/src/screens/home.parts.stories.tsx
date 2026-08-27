@@ -106,7 +106,7 @@ export const Glance: Story = {
         topAmount: "€48,000.00",
       }}
       overnight={{ captured: 42, duplicates: 3 }}
-      stalled={2}
+      stalled={{ seen: 2, more: false }}
       {...GLANCE_GO}
     />,
   ),
@@ -122,7 +122,27 @@ export const GlanceCalm: Story = {
       decisions={{ pending: 0, expiringToday: 0 }}
       brief={{ ranked: 0, topDeal: null, topAmount: null }}
       overnight={{ captured: 0, duplicates: 0 }}
-      stalled={0}
+      stalled={{ seen: 0, more: false }}
+      {...GLANCE_GO}
+    />,
+  ),
+};
+
+// The quiet count came off one page with another behind it, so the numeral in
+// the briefing line is a floor and reads as one.
+export const GlanceCapped: Story = {
+  render: part(
+    <HomeGlance
+      firstName="Lena"
+      now={NOW_DATE}
+      decisions={{ pending: 6, expiringToday: 2 }}
+      brief={{
+        ranked: 3,
+        topDeal: "Fleet retrofit",
+        topAmount: "\u20ac48,000.00",
+      }}
+      overnight={{ captured: 42, duplicates: 3 }}
+      stalled={{ seen: 100, more: true }}
       {...GLANCE_GO}
     />,
   ),
@@ -139,7 +159,7 @@ export const GlanceUnread: Story = {
       decisions={{ pending: 4, expiringToday: 0 }}
       brief={null}
       overnight={null}
-      stalled={2}
+      stalled={{ seen: 2, more: false }}
       {...GLANCE_GO}
     />,
   ),
@@ -154,9 +174,23 @@ export const Readings: Story = {
   render: part(
     <HomeReadingsStrip
       decisions={{ pending: 6, expiringToday: 2 }}
-      open={{ deals: 5, currencies: 2 }}
+      open={{ deals: { seen: 5, more: false }, currencies: 2 }}
       ranked={{ count: 3, topPct: 74 }}
-      quiet={2}
+      quiet={{ seen: 2, more: false }}
+    />,
+  ),
+};
+
+// The page ended short of the list, so every reading taken from it is a FLOOR.
+// The figure carries the "+" rather than the caption, because a reader who takes
+// a bounded number for a total does it while looking at the number.
+export const ReadingsCapped: Story = {
+  render: part(
+    <HomeReadingsStrip
+      decisions={{ pending: 6, expiringToday: 2 }}
+      open={{ deals: { seen: 100, more: true }, currencies: 3 }}
+      ranked={{ count: 3, topPct: 74 }}
+      quiet={{ seen: 12, more: true }}
     />,
   ),
 };
@@ -272,13 +306,30 @@ export const Position: Story = {
 // carries no edge stripe saying the same thing a second time.
 export const Watch: Story = {
   render: part(
-    <WatchPanel deals={deals.filter((deal) => deal.stalled)} state="ready" />,
+    <WatchPanel
+      deals={deals.filter((deal) => deal.stalled)}
+      more={false}
+      state="ready"
+    />,
+  ),
+};
+
+// The deals read stopped at one page. What is on the panel is some of the quiet
+// deals and not all of them, so it says so under the rows — "nothing has gone
+// quiet" is a claim this read cannot make.
+export const WatchPartial: Story = {
+  render: part(
+    <WatchPanel
+      deals={deals.filter((deal) => deal.stalled)}
+      more
+      state="ready"
+    />,
   ),
 };
 
 // Nothing has gone quiet, which is news worth drawing rather than an empty rail.
 export const WatchClear: Story = {
-  render: part(<WatchPanel deals={[]} state="ready" />),
+  render: part(<WatchPanel deals={[]} more={false} state="ready" />),
 };
 
 // The deals read failed. "Nothing has gone quiet" is a claim about the deals, so
@@ -286,5 +337,5 @@ export const WatchClear: Story = {
 // sentence told a reader their pipeline was healthy on the strength of a request
 // that never answered.
 export const WatchRefused: Story = {
-  render: part(<WatchPanel deals={[]} state="failed" />),
+  render: part(<WatchPanel deals={[]} more={false} state="failed" />),
 };

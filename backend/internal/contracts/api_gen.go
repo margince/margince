@@ -18574,6 +18574,15 @@ type MorningBriefItem struct {
 	Finding *string            `json:"finding,omitempty"`
 	Id      openapi_types.UUID `json:"id"`
 
+	// Lineage Why this deal is back after the rep dismissed it. Absent on an item that was never
+	// dismissed, which is the ordinary case.
+	//
+	// The suppression rule holds a dismissed deal out of every later queue until a linked
+	// activity occurs after the mark — so a deal that reappears is always one the rep waved
+	// away and that has since moved. That is what makes the pair honest rather than a guess:
+	// it is the rule that put the deal back, stated.
+	Lineage *MorningBriefItemLineage `json:"lineage,omitempty"`
+
 	// Rank Position in the queue (1 = top), after the L2 re-order.
 	Rank int `json:"rank"`
 
@@ -18589,6 +18598,26 @@ type MorningBriefItem struct {
 
 // MorningBriefItemState The acting rep's queue state for this item.
 type MorningBriefItemState string
+
+// MorningBriefItemLineage Why this deal is back after the rep dismissed it. Absent on an item that was never
+// dismissed, which is the ordinary case.
+//
+// The suppression rule holds a dismissed deal out of every later queue until a linked
+// activity occurs after the mark — so a deal that reappears is always one the rep waved
+// away and that has since moved. That is what makes the pair honest rather than a guess:
+// it is the rule that put the deal back, stated.
+type MorningBriefItemLineage struct {
+	// DismissedOn The local day the rep dismissed this deal, in the installation reporting timezone —
+	// the same zone `local_day` is stamped in, so "you dismissed it Tuesday" and "this is
+	// Thursday's brief" are measured the same way. A date, not an instant: the sentence
+	// names a day.
+	DismissedOn openapi_types.Date `json:"dismissed_on"`
+
+	// ReturnedWithActivityAt When the activity that re-qualified the deal occurred. An instant, because it names a
+	// specific event. It is the EARLIEST activity after the dismissal: a later one did not
+	// bring the deal back, it arrived once the deal was already coming.
+	ReturnedWithActivityAt time.Time `json:"returned_with_activity_at"`
+}
 
 // MorningDigest The CAP-DDL-6 payload: what capture did overnight and what awaits the human (CAP-WIRE-6).
 type MorningDigest struct {

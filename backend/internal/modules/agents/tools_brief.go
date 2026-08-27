@@ -121,6 +121,23 @@ type BriefItem struct {
 	// SnoozedUntil is when a snoozed item re-surfaces, and is absent unless the
 	// item is snoozed.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
+	// Lineage is set when this deal is back after the person dismissed it, and
+	// it is SERVED rather than withheld: it is a deterministic fact about what
+	// they did, not something an agent wrote, so reading it is not a loop
+	// reading its own output. It is also the context an agent most needs — a
+	// finding that ignores "you already waved this away once" is a finding that
+	// repeats an argument the reader has already rejected.
+	Lineage *BriefItemLineage `json:"lineage,omitempty"`
+}
+
+// BriefItemLineage is why a dismissed deal came back.
+type BriefItemLineage struct {
+	// DismissedOn is the local day the person dismissed it, as a calendar date
+	// in the installation's reporting zone.
+	DismissedOn string `json:"dismissed_on"`
+	// ReturnedWith is when the activity that re-qualified it occurred — the
+	// EARLIEST one after the dismissal, which is the one that brought it back.
+	ReturnedWith time.Time `json:"returned_with_activity_at"`
 }
 
 // BriefFactors is the §10.1 factor decomposition, each normalized 0..1.

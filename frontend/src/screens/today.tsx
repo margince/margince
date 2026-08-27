@@ -538,7 +538,7 @@ function MorningCards({
           <BriefQueueItem
             key={item.id}
             item={item}
-            deals={deals.data ?? []}
+            deals={deals.data?.rows ?? []}
             nowMs={nowMs}
             mark={mark}
           />

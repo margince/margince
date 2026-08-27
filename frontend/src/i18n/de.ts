@@ -1712,6 +1712,7 @@ export const de = {
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
   "lead.bulkSelectRow": "{name} auswählen",
+  "lead.unnamed": "Lead ohne Namen",
   "lead.sla.breached": "Überfällig",
   "lead.sla.atRisk": "Bald fällig",
   "lead.sla.withinTarget": "Im Rahmen",
@@ -2227,6 +2228,9 @@ export const de = {
   "home.deck.bundleMembers": "Die {count} Vorgänge anzeigen",
   "home.brief.rank": "Rang",
   "home.brief.composite": "Bewertung",
+  "home.brief.previouslyDismissed":
+    "Am {day} markiert — du hast es weggeklickt.",
+  "home.brief.returnedWith": "Zurück durch Aktivität am",
   "home.brief.resurfaces": "Zurück",
   "home.evidenceNone": "keine Belege erfasst",
   "home.snooze": "Zurückstellen",

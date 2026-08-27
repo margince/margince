@@ -251,3 +251,45 @@ describe("two providers connected", () => {
     expect(posted[0]).toEqual({ provider: "acmedata" });
   });
 });
+
+// A lookup spends the installation's credits on a NAMED contact, and a run
+// charged to the wrong one succeeds — so nothing on screen reports it. Which
+// contact the request is about therefore travels with the click, as a mutation
+// variable, rather than being read out of whichever render armed the mutation.
+describe("which contact a lookup is charged to", () => {
+  it("posts for the contact the panel is showing, not the one it opened on", async () => {
+    const user = userEvent.setup();
+    const paths: string[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "POST /people/p-1/enrichment-runs": () => {
+        paths.push("p-1");
+        return queuedRun();
+      },
+      "POST /people/p-2/enrichment-runs": () => {
+        paths.push("p-2");
+        return queuedRun();
+      },
+    });
+    const { rerender } = render(
+      <StoryProviders>
+        <PersonProviderSection personId="p-1" profiles={[neverRun()]} />
+      </StoryProviders>,
+    );
+    await screen.findByRole("button", { name: /Look this contact up/ });
+
+    // The panel stays mounted across the change of subject: the record page
+    // keys its subtree by contact today, and this is the case that breaks the
+    // moment it stops.
+    rerender(
+      <StoryProviders>
+        <PersonProviderSection personId="p-2" profiles={[neverRun()]} />
+      </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /Look this contact up/ }),
+    );
+
+    await expect.poll(() => paths).toEqual(["p-2"]);
+  });
+});
