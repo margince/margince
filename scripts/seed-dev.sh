@@ -143,7 +143,9 @@ sign_in_as_admin() {
 # A failure between the two leaves the account on the detour value; the error
 # says so rather than making the next run guess.
 rotate_admin_password_via_detour() {
-  local detour="${ADMIN_PASSWORD}-seed-dev-detour" status
+  # Truncated so the detour value never exceeds the service's 256-character
+  # ceiling (passwordLengthError) even when ADMIN_PASSWORD is near it itself.
+  local detour="${ADMIN_PASSWORD:0:240}-seed-dev-detour" status
 
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
   if [ "$status" != "200" ]; then
@@ -165,7 +167,7 @@ rotate_admin_password_via_detour() {
   if [ "$status" != "200" ]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
-    fail "login with the detour password returned HTTP $status — the account is now on an intermediate password; re-run with ADMIN_PASSWORD=\"$detour\" to recover it, then re-run again with the original ADMIN_PASSWORD"
+    fail "login with the detour password returned HTTP $status — the account is now on an intermediate password (ADMIN_PASSWORD with the literal suffix '-seed-dev-detour' appended, truncated to 256 characters; see rotate_admin_password_via_detour). Recover by exporting that value as ADMIN_PASSWORD and re-running, then running once more with the original ADMIN_PASSWORD"
   fi
   capture_session
 
@@ -174,7 +176,7 @@ rotate_admin_password_via_detour() {
   if [ "$status" != "204" ]; then
     echo "  response body:" >&2
     cat "$workdir/body" >&2
-    fail "POST /v1/auth/change-password (restoring $ADMIN_PASSWORD) returned HTTP $status — the account is stuck on the detour password \"$detour\""
+    fail "POST /v1/auth/change-password (restoring the chosen password) returned HTTP $status — the account is stuck on the detour password (see rotate_admin_password_via_detour for how it's derived from ADMIN_PASSWORD)"
   fi
 
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
