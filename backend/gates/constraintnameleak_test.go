@@ -39,6 +39,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"slices"
 	"strings"
 	"testing"
 
@@ -82,12 +83,38 @@ func storekitDoor(file *ast.File, expr ast.Expr) bool {
 	return false
 }
 
-// The formatters a leak would travel through. A name reaching one of these is
-// on its way into a string, and every string this tree builds from an error is
-// a string somebody may write to a client.
-var stringBuilders = map[string]bool{
-	"Sprintf": true, "Errorf": true, "Sprint": true, "Sprintln": true,
-	"Join": true, "Replace": true, "ReplaceAll": true,
+// The formatters a leak would travel through, BY PACKAGE. A name reaching one
+// of these is on its way into a string, and every string this tree builds from
+// an error is a string somebody may write to a client.
+//
+// Keyed on the import path rather than the function name, because the name
+// alone is wrong in both directions. `logger.Errorf(…, constraint)` is a LOG
+// line — which is exactly where this design says the name should go — and a
+// matcher on `Errorf` reports it as a leak. And a dot-imported `fmt` calls
+// `Errorf` bare, which a selector-only matcher never sees at all.
+var stringBuilders = map[string][]string{
+	"fmt":     {"Sprintf", "Errorf", "Sprint", "Sprintln"},
+	"strings": {"Join", "Replace", "ReplaceAll"},
+}
+
+// buildsAString names the formatter this call is, or "" for a call that is not
+// one of them — resolved through the file's own imports, dot-imports included.
+func buildsAString(file *ast.File, fun ast.Expr) string {
+	for path, names := range stringBuilders {
+		qualifier, dotImported := gatekit.ImportedAs(file, path)
+		switch f := fun.(type) {
+		case *ast.Ident:
+			if dotImported && slices.Contains(names, f.Name) {
+				return path + "." + f.Name
+			}
+		case *ast.SelectorExpr:
+			pkg, ok := f.X.(*ast.Ident)
+			if ok && qualifier != "" && pkg.Name == qualifier && slices.Contains(names, f.Sel.Name) {
+				return path + "." + f.Sel.Name
+			}
+		}
+	}
+	return ""
 }
 
 func TestNoConstraintNameIsBuiltIntoAMessage(t *testing.T) {
@@ -159,13 +186,13 @@ func constraintNameLeaksIn(parsed gatekit.ParsedFile) []string {
 					leaks = append(leaks, "`"+name+"` is concatenated into a string")
 				}
 			case *ast.CallExpr:
-				sel, ok := node.Fun.(*ast.SelectorExpr)
-				if !ok || !stringBuilders[sel.Sel.Name] {
+				formatter := buildsAString(parsed.File, node.Fun)
+				if formatter == "" {
 					return true
 				}
 				for _, arg := range node.Args {
 					if identIs(arg, name) {
-						leaks = append(leaks, "`"+name+"` is formatted by "+sel.Sel.Name)
+						leaks = append(leaks, "`"+name+"` is formatted by "+formatter)
 					}
 				}
 			}
@@ -330,6 +357,42 @@ import (
 func f(err error) error {
 	if constraint, ok := CheckViolation(err); ok {
 		return fmt.Errorf("violates %s", constraint)
+	}
+	return err
+}`,
+			reads: true,
+			leaks: 1,
+		},
+		// A LOG line, which is where this design says the name belongs — the
+		// operator needs it and the caller must not have it. A matcher on the
+		// function name alone reports `Errorf` here as a leak, which would make
+		// the gate refuse the very thing it tells you to do.
+		"a logger of the same shape": {
+			source: `package p
+import (
+	"example.test/logger"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
+func f(l *logger.Logger, err error) error {
+	if constraint, ok := storekit.CheckViolation(err); ok {
+		l.Errorf("a schema rule refused a write: %s", constraint)
+	}
+	return err
+}`,
+			reads: true,
+			leaks: 0,
+		},
+		// fmt dot-imported: the formatter is a bare identifier, which a
+		// selector-only matcher never sees.
+		"a dot-imported formatter, leaked": {
+			source: `package p
+import (
+	. "fmt"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
+func f(err error) error {
+	if constraint, ok := storekit.CheckViolation(err); ok {
+		return Errorf("violates %s", constraint)
 	}
 	return err
 }`,
