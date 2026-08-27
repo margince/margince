@@ -20,8 +20,19 @@ import "fmt"
 const recordAuditColumns = `
 		a.id, a.actor_type, a.actor_id, a.on_behalf_of, a.action, a.occurred_at,
 		a.authorization_rule, a.before, a.after, a.passport_id,
-		actor_user.display_name, obo.display_name, oc.client_name`
+		actor_user.display_name, obo.display_name, oc.client_name,
+		` + reversalLinkColumn
 
+// auditActorNameJoins resolves the two display names every audit read owes its
+// reader: the human who acted, and the human whose authority a machine acted
+// under. It is ONE spelling shared by the two audit read paths in this package —
+// the per-record history and the workspace-wide compliance log in auditlog.go —
+// because two surfaces resolving attribution differently is how a reader ends up
+// trusting one and doubting the other.
+//
+// The audit row is aliased `a`; the caller supplies that alias and selects
+// `actor_user.display_name, obo.display_name` in that order.
+//
 // The actor join builds the prefixed key FROM app_user ('human:' || id) rather
 // than casting actor_id, so a non-uuid actor id (agent:*, connector:*, system)
 // simply resolves to no name instead of raising a cast error. A LEFT JOIN both
@@ -63,11 +74,17 @@ type auditRowScanner interface {
 
 func scanRecordAuditRow(src auditRowScanner, r *recordAuditRow) error {
 	var beforeJSON, afterJSON []byte
+	var reversalLink *string
 	if err := src.Scan(&r.id, &r.actorType, &r.actorID, &r.onBehalfOf, &r.action, &r.occurredAt,
 		&r.authorizationRule, &beforeJSON, &afterJSON, &r.passportID,
-		&r.actorDisplayName, &r.onBehalfOfName, &r.agentClientName); err != nil {
+		&r.actorDisplayName, &r.onBehalfOfName, &r.agentClientName, &reversalLink); err != nil {
 		return err
 	}
+	undid, err := reversalLinkFromColumn(reversalLink)
+	if err != nil {
+		return fmt.Errorf("audit row %s reversal link: %w", r.id, err)
+	}
+	r.undidAuditLogID = undid
 	if err := unmarshalJSONBMap(beforeJSON, &r.before); err != nil {
 		return fmt.Errorf("audit row %s before: %w", r.id, err)
 	}

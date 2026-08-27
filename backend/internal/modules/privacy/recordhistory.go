@@ -31,16 +31,6 @@ const (
 	actionArchive      = "archive"
 )
 
-// auditActorNameJoins resolves the two display names every audit read owes
-// its reader: the human who acted, and the human whose authority a machine
-// acted under. It is ONE spelling shared by the two audit read paths in this
-// package — the per-record history here and the workspace-wide compliance log
-// in auditlog.go — because two surfaces resolving attribution differently is
-// how a reader ends up trusting one and doubting the other.
-//
-// The audit row is aliased `a`; the caller supplies that alias and selects
-// `actor_user.display_name, obo.display_name` in that order.
-//
 // RecordHistoryFilter carries the validated query surface of
 // (GET /records/{entity_type}/{id}/history).
 type RecordHistoryFilter struct {
@@ -54,10 +44,10 @@ type RecordHistoryFilter struct {
 // the whole-mutation view, one entry per row (field-history's per-field
 // projection is the sibling read). Before/After are the row's own field
 // images with the entity's mask applied by omission. Scrub tombstones and
-// retention rows carry their operational tallies on audit_log.evidence,
-// which this read never selects; other meta verbs' before/after payloads
-// are served verbatim—workspace-operational context behind the same
-// record-read gate, never subject PII.
+// retention rows carry their operational tallies on audit_log.evidence, of
+// which this read projects the reversal link and never the blob; other meta
+// verbs' before/after payloads are served verbatim—workspace-operational
+// context behind the same record-read gate, never subject PII.
 type RecordHistoryEntry struct {
 	ID                ids.UUID
 	ActorType         string
@@ -76,6 +66,12 @@ type RecordHistoryEntry struct {
 	// the Summary line already reads correctly either way, and this is here so
 	// a client rendering its own sentence does not have to parse one.
 	AgentClient *string
+	// UndidAuditLogID is the entry this one REVERSES, so a reader can pair the
+	// two instead of counting a reversal as a fresh change. Nil on every row a
+	// restore did not write. The opposite direction is not here: a row that HAS
+	// been reversed says so through its undoability answer, computed for the
+	// whole record rather than for one page.
+	UndidAuditLogID *ids.UUID
 }
 
 // RecordHistoryPage is one keyset window of the timeline, NEWEST first — the
@@ -111,6 +107,9 @@ type recordAuditRow struct {
 	// came from an OAuth grant. Nil for a hand-minted passport, for a deleted
 	// client, and for every write that was not delegated.
 	agentClientName *string
+	// undidAuditLogID names the row this one reversed; nil on every row that was
+	// not written by a restore.
+	undidAuditLogID *ids.UUID
 }
 
 // recordHistoryEntry renders one audit row as a history entry: mask both
@@ -136,6 +135,7 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 		Action:            row.action,
 		OccurredAt:        row.occurredAt,
 		AuthorizationRule: row.authorizationRule,
+		UndidAuditLogID:   row.undidAuditLogID,
 		Before:            applyFieldMask(row.before, mask),
 		After:             applyFieldMask(row.after, mask),
 		Summary: composeRecordSummary(row.actorType, display, row.onBehalfOfName,
