@@ -481,11 +481,18 @@ func TestRecordHistoryAnswersOneVerbWithoutAWalk(t *testing.T) {
 	}
 }
 
-// A verb that happened to this record NEVER answers the same as a verb that
-// does not exist. The first is a fact about the record; the second is a
-// mistyped request, and a caller who reads an empty page for it concludes
-// something false about their data.
-func TestRecordHistoryRefusesAVerbItDoesNotRecord(t *testing.T) {
+// A KNOWN verb this record never saw answers an honest empty page.
+//
+// Named for what it checks, which is the store's half. The other half — a verb
+// the installation does not record at all — is refused 422 by the HANDLER, and
+// asserting it here would be asserting it of a function that never sees it:
+// ListRecordHistory takes a filter, not a request, so a bad verb reaching it
+// has already passed the door that was supposed to stop it.
+//
+// The two answers must stay different. This one is a fact about the record;
+// the other is a mistyped request, and a caller who reads an empty page for it
+// concludes something false about their data.
+func TestRecordHistoryAnswersAnEmptyPageForAVerbThisRecordNeverSaw(t *testing.T) {
 	e := Setup(t)
 	personID := e.SeedPerson(t, "Refusal Subject", nil)
 
