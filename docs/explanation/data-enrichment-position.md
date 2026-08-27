@@ -242,13 +242,13 @@ The line must stay sharp. The moment a natural person appears in the source, per
 
 The identifier spine is EUID, LEI, VAT ID and the Vietnamese MST.
 
-**A2. The counterparty's own website, read deeper.** Built already, and it needs to be enhanced.
+**A2. The counterparty's own website, read deeper.** Built already; the enhancements are in work ([#2855](https://github.com/margince/margince/issues/2855)).
 
 Margince already reads company websites, as described in [company-context.md](company-context.md). The deeper read handles people named on those sites in exactly the shape this paper argues for. A stranger found on a team page is staged as a lead and remains staged until a human accepts. The system never auto-creates a new person.
 
 When the published person unmistakably matches someone already recorded at that company, through an exact email match or a single high-confidence name match, Margince fills empty fields such as role, title and profile link. Every value is evidence-backed with the source stored on the row. The system never overwrites information entered by a human.
 
-The clean extensions are straightforward: parse the Impressum, whose publication German law *mandates* under Section 5 DDG, and consume newsroom RSS feeds for company events. We store the signal and a link, never a cached copy of the full text.
+The enhancements under way: parse the Impressum, whose publication German law *mandates* under Section 5 DDG, and consume newsroom RSS feeds for company events. We store the signal and a link, never a cached copy of the full text.
 
 Crawling stays polite and respects robots.txt. The existing rule also remains: a human click can write directly; an automatic read stages the suggestion.
 
@@ -258,27 +258,27 @@ MX and DNS records, TLS certificate-transparency logs, and technology-stack fing
 
 The A1 caveat still applies. A personal name inside a certificate or domain record is personal data, so Margince keeps the stored signal at company level.
 
-**A4. First-party person capture.** Half built.
+**A4. First-party person capture.** Half built; the other half is in work ([#2856](https://github.com/margince/margince/issues/2856)).
 
 The contact sent you the details. Margince's capture works from that fact. Connected mailboxes are processed automatically. A nightly pass extracts only stated fields from email signatures: name, title and phone number, with nothing inferred. Workspace exclusion lists keep entire addresses and domains outside capture.
 
-Next, this tier extends cleanly to vCard import and a per-mailbox switch for the signature pass. An organisation can turn the granularity all the way down.
+The second half, in work now: vCard import and a per-mailbox switch for the signature pass, so an organisation can turn the granularity all the way down.
 
 First-party collection is the only person-data channel that scales cleanly. See [capture-connectors.md](capture-connectors.md) and [ingress-gate-and-auto-capture.md](ingress-gate-and-auto-capture.md).
 
 **A5. LinkedIn as a link, plus the member's own export.** We store the LinkedIn profile URL as a clickable link. Margince never fetches the page server-side.
 
-The user reads the profile in their own browser and manually enters what they learned into a structured form. LinkedIn also allows every member to download their own data. The flow in [import-your-linkedin-network.md](../how-to/import-your-linkedin-network.md) imports the member's `Connections.csv` in a deliberately limited form.
+The user reads the profile in their own browser and manually enters what they learned; a quick-capture form built for exactly that moment is in work ([#2857](https://github.com/margince/margince/issues/2857)). LinkedIn also allows every member to download their own data. The flow in [import-your-linkedin-network.md](../how-to/import-your-linkedin-network.md) imports the member's `Connections.csv` in a deliberately limited form.
 
 The imported connections become private graph substrate, "ghosts", used only for reach and warmth. They are visible only to the importer. They never become contact records and never create people.
 
 I do not claim that LinkedIn's terms permit anything beyond this private graph use. Margince therefore stops there. It does not create contacts and provides no parser for pasted profile text. Once software copies the page on the user's behalf, the scraping clause is back in play. We draw the line on the safe side.
 
-**A6. The "confirm your details" flow.** Build. Nothing of this ships yet; it is the first Tier A item on the roadmap.
+**A6. The "confirm your details" flow.** In work now ([#2858](https://github.com/margince/margince/issues/2858)), bundled with the marketing-consent ask.
 
-The design: Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91.
+The design: Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91. And the same email asks the contact to grant or decline marketing consent, with the answer landing on the consent proof log and the send itself logged in the record's history.
 
-Once built, this flow actively reduces the risk of everything else on this page.
+This flow actively reduces the risk of everything else on this page.
 
 ### Tier B: build with controls, counsel signs off first
 
