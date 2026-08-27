@@ -131,11 +131,16 @@ function componentsIn(path: string, text: string): string[] {
   return found;
 }
 
+// The `export` keyword on the statement itself, read off its modifiers.
+// `getCombinedModifierFlags` wants a Declaration and a Statement is not one, so
+// reaching it would mean asserting something the parser has not said.
 function isExported(node: ts.Statement): boolean {
   return (
-    (ts.getCombinedModifierFlags(node as ts.Declaration) &
-      ts.ModifierFlags.Export) !==
-    0
+    ts.canHaveModifiers(node) &&
+    (ts
+      .getModifiers(node)
+      ?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword) ??
+      false)
   );
 }
 
