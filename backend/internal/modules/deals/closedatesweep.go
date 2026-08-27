@@ -292,6 +292,22 @@ func forecastDowngrade(category string) string {
 	}
 }
 
+// setCloseDate assigns the sweep's proposed date only where it differs from the
+// one the deal already claims.
+//
+// The sweep re-flags a deal every night it stays quiet, and its proposal is
+// derived from stage velocity rather than from the calendar — so it frequently
+// recomputes the date the deal already has. storekit.Patch records an assignment
+// without comparing it, so an unconditional Set would put that date in the audit
+// diff and in deal_forecast_history on every pass, and a reconstruction would
+// read a forecast moving nightly while standing still.
+func setCloseDate(p *storekit.Patch, before *time.Time, proposed time.Time) {
+	if before != nil && before.Equal(proposed) {
+		return
+	}
+	p.Set(closeDateField, before, proposed)
+}
+
 // correct applies one deal's A6 tier. The write runs in its own audited
 // transaction; the 🟡 staging follows it (Stage opens its own) — if the
 // staging fails the provisional row simply re-enters the next sweep.
@@ -322,7 +338,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 	switch hygiene.Action {
 	case CloseDateActionAutoApply:
 		_, err := c.apply(ctx, cand, "auto_apply", func(p *storekit.Patch) {
-			p.Set("expected_close_date", cand.expectedClose, *hygiene.ProposedClose)
+			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
 			if cand.provisional {
 				p.Set("close_date_provisional", true, false)
 			}
@@ -331,7 +347,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 
 	case CloseDateActionProvisionalConfirm:
 		version, err := c.apply(ctx, cand, "provisional_confirm", func(p *storekit.Patch) {
-			p.Set("expected_close_date", cand.expectedClose, *hygiene.ProposedClose)
+			setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
 			if !cand.provisional {
 				p.Set("close_date_provisional", false, true)
 			}
@@ -348,7 +364,7 @@ func (c *CloseDateCorrector) correct(ctx context.Context, cand closeDateCandidat
 			if hygiene.Provisional {
 				// Only the invariant forces a date onto a quiet deal —
 				// never an optimistic re-date on top of the downgrade.
-				p.Set("expected_close_date", cand.expectedClose, *hygiene.ProposedClose)
+				setCloseDate(p, cand.expectedClose, *hygiene.ProposedClose)
 				if !cand.provisional {
 					p.Set("close_date_provisional", false, true)
 				}
@@ -396,7 +412,7 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 	err := c.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The candidate scan and this write are separate transactions:
 		// a deal closed or archived in between must not be re-dated.
-		lock, err := storekit.LockRow(ctx, tx, "deal", cand.id.UUID, storekit.LiveOnly)
+		lock, err := storekit.LockRow(ctx, tx, dealTable, cand.id.UUID, storekit.LiveOnly)
 		if errors.Is(err, apperrors.ErrNotFound) {
 			return nil
 		}
@@ -412,7 +428,14 @@ func (c *CloseDateCorrector) apply(ctx context.Context, cand closeDateCandidate,
 		}
 		patch := storekit.NewPatch()
 		build(patch)
-		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
+		if patch.Empty() {
+			// The tier fired but the deal already holds everything it proposes —
+			// a quiet deal re-flagged on a night its velocity date has not moved.
+			// There is no write to make, and no audit row or event to raise about
+			// one. The version is still read, because a 🟡 staging binds to it.
+			return tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version)
+		}
+		if err := applyDealPatchLocked(ctx, tx, patch, lock); err != nil {
 			return fmt.Errorf("apply %s patch: %w", correction, err)
 		}
 		if err := tx.QueryRow(ctx, `SELECT version FROM deal WHERE id = $1`, cand.id).Scan(&version); err != nil {

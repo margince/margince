@@ -116,7 +116,7 @@ func (s *Store) AdvanceDeal(ctx context.Context, id ids.DealID, in AdvanceDealIn
 		if err != nil {
 			return err
 		}
-		if err := p.ApplyGuarded(ctx, tx, "deal", id.UUID, in.IfVersion); err != nil {
+		if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
 			return fmt.Errorf("apply stage advance: %w", err)
 		}
 
@@ -215,7 +215,7 @@ func dealStageChangedPayload(current crmcontracts.Deal, toStageID ids.StageID, t
 // consumer reading the deal back afterwards can lose the rate entirely — a
 // reopen clears the column.
 func frozenFxFromPatch(p *storekit.Patch, current crmcontracts.Deal) *string {
-	rate, changed := p.After()["fx_rate_to_base"]
+	rate, changed := p.After()[fxRateColumn]
 	if !changed {
 		return current.FxRateToBase
 	}
@@ -252,26 +252,6 @@ func resolveAdvanceTarget(ctx context.Context, tx pgx.Tx, toStage ids.StageID, c
 // and the resulting status: terminal fields (closed_at, lost_reason,
 // frozen FX) are set when the target semantic closes the deal and
 // cleared when a won/lost deal reopens.
-// freezeClosingRate resolves the installation's base currency and stamps the
-// frozen conversion onto the patch. Split out of stageTransitionPatch so the
-// resolve-then-freeze pair reads as one step there rather than as four more
-// branches in an already-branchy transition.
-func (s *Store) freezeClosingRate(ctx context.Context, tx pgx.Tx,
-	currency string, p *storekit.Patch,
-) error {
-	base, err := s.installation.BaseCurrency(ctx, tx)
-	if err != nil {
-		return err
-	}
-	rate, rateDate, err := s.freezeFx(ctx, tx, base, currency, time.Now().UTC())
-	if err != nil {
-		return fmt.Errorf("freeze fx at close: %w", err)
-	}
-	p.Set("fx_rate_to_base", nil, rate)
-	p.Set("fx_rate_date", nil, rateDate)
-	return nil
-}
-
 func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in AdvanceDealInput, semantic string,
 ) (*storekit.Patch, string, error) {
@@ -317,11 +297,16 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 		p.Set("won_without_contract_reason", current.WonWithoutContractReason, nil)
 		p.Set("won_without_contract_detail", current.WonWithoutContractDetail, nil)
 	}
-	// Closing with an amount freezes today's FX rate so base-currency
-	// roll-ups stay reproducible (deal_closed_fx).
+	// Closing with an amount freezes the FX rate so base-currency roll-ups stay
+	// reproducible (deal_closed_fx). As of the moment recorded as the close, and
+	// read from `closedAt` rather than from the clock a second time: two reads
+	// either side of UTC midnight would date the frozen rate a day after the
+	// close it is supposed to price, and the roll-up would then reconcile
+	// against a rate the deal never closed at.
 	if DealStatus(status) != DealOpen && current.AmountMinor != nil && current.Currency != nil {
-		if err := s.freezeClosingRate(ctx, tx, *current.Currency, p); err != nil {
-			return nil, "", err
+		rateBefore, rateDateBefore := frozenBefore(current)
+		if err := s.freezeBaseRate(ctx, tx, p, string(*current.Currency), *closedAt, rateBefore, rateDateBefore); err != nil {
+			return nil, "", fmt.Errorf("freeze fx at close: %w", err)
 		}
 	}
 	// Reopening a won/lost deal must clear the remaining terminal fields —
@@ -331,8 +316,12 @@ func (s *Store) stageTransitionPatch(ctx context.Context, tx pgx.Tx,
 	// which covers the reopen too.
 	if DealStatus(status) == DealOpen && DealStatus(current.Status) != DealOpen {
 		p.Set("closed_at", current.ClosedAt, nil)
-		p.Set("fx_rate_to_base", nil, nil)
-		p.Set("fx_rate_date", nil, nil)
+		// The pre-images are what the row HELD, not nil. A closed deal carrying an
+		// amount carries a rate — deal_closed_fx requires it — and the reopen's
+		// audit row is precisely what a reversal reads to put the old rate back.
+		rateBefore, rateDateBefore := frozenBefore(current)
+		p.Set(fxRateColumn, rateBefore, nil)
+		p.Set(fxRateDateColumn, rateDateBefore, nil)
 	}
 	return p, status, nil
 }
@@ -371,6 +360,58 @@ func (s *Store) FreezeRateAt(ctx context.Context, tx pgx.Tx, currency string, as
 		return "", time.Time{}, err
 	}
 	return s.freezeFx(ctx, tx, base, currency, asOf)
+}
+
+// frozenBefore is a deal's currently frozen pair in the shape the patch records
+// it. The rate is already a decimal string; the date sheds the contract's Date
+// wrapper, because a `date` column is what the driver is being handed and a
+// wrapper it has to be taught about is a second place the column's type is
+// decided.
+func frozenBefore(deal crmcontracts.Deal) (rate *string, rateDate *time.Time) {
+	if deal.FxRateDate == nil {
+		return deal.FxRateToBase, nil
+	}
+	return deal.FxRateToBase, &deal.FxRateDate.Time
+}
+
+// freezeBaseRate stamps a frozen conversion onto a patch: FreezeRateAt above
+// decides WHAT the rate is, and this decides which two columns carry it.
+//
+// It is built on that seam rather than resolving the base currency itself,
+// because "the latest rate on or before this day" is one question and two
+// spellings of it would be free to disagree about the day boundary, the
+// same-currency shortcut, or what a missing rate means.
+//
+// A closed deal must carry a rate for the currency it is priced in. Re-pricing
+// one into a DIFFERENT currency and leaving the old rate would convert the wrong
+// pair, which corrupts the base-currency roll-up silently; and a deal closed
+// with no amount has no frozen rate at all, so the write that first prices it
+// trips deal_closed_fx unless it freezes one in the same statement.
+//
+// asOf is the caller's, because it is the only thing the three writers disagree
+// about: a stage advance closing the deal freezes as of the close, while the two
+// re-pricing doors freeze as of the ORIGINAL close date, for the reason freezeFx
+// states below.
+//
+// The caller passes what the row held, because two of the three writers reach
+// here for a deal that ALREADY carries a frozen rate — deal_closed_fx requires
+// one on any closed deal with an amount — and re-pricing replaces it. Recording
+// the pre-image as nil would put "there was no rate" in the audit diff of every
+// re-price, which is the one row a reversal reads to restore the old one.
+//
+// The error comes back unwrapped: a caller closing a deal, re-pricing one and
+// accepting an offer each tell an operator more by naming which than a shared
+// sentence could.
+func (s *Store) freezeBaseRate(ctx context.Context, tx pgx.Tx, p *storekit.Patch,
+	currency string, asOf time.Time, rateBefore *string, rateDateBefore *time.Time,
+) error {
+	rate, rateDate, err := s.FreezeRateAt(ctx, tx, currency, asOf)
+	if err != nil {
+		return err
+	}
+	p.Set(fxRateColumn, rateBefore, rate)
+	p.Set(fxRateDateColumn, rateDateBefore, rateDate)
+	return nil
 }
 
 // freezeFx resolves the frozen currency→base conversion for a closed
