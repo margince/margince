@@ -1,0 +1,280 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package weekly
+
+// The weekly retrospective as a plain-text message.
+//
+// IT RENDERS THE SAME Review THE SCREEN DOES, and that is the whole reason
+// this file takes a Review rather than a query of its own. A mail assembled
+// from a second read would drift from the panel the moment either changed, and
+// the two disagreeing about somebody's own week is worse than either being
+// absent — the rep has no way to tell which one lied.
+//
+// Plain text, English, no link tracking and no images. It follows the
+// invitation and reset mail already in this tree: the operator relay carries
+// product-originated transactional mail, and the body says what it has to say
+// without needing a browser to render it.
+
+import (
+	"context"
+	"errors"
+	"fmt"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5"
+
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+)
+
+// mailDealCap bounds the deal lines a message carries.
+//
+// The mail is a nudge toward the screen, not a replacement for it: a rep who
+// closed thirty deals wants the panel, and a mail that lists all thirty is one
+// nobody reads to the end. The overflow is COUNTED rather than dropped
+// silently — a message that quietly stops at ten reads as a complete week that
+// happened to have ten.
+const mailDealCap = 10
+
+// MailSubject names the week the message is about.
+//
+// The week is in the subject on purpose: these arrive weekly into a mailbox
+// that already has last week's, and two identical subjects are two messages a
+// reader cannot tell apart in a list.
+func MailSubject(review Review) string {
+	return "Your week: " + review.LocalWeekStart.Format("2 January 2006")
+}
+
+// MailBody renders one review as the message a rep reads on Monday.
+//
+// homeURL is the installation's own Home. Empty omits the closing line rather
+// than mailing a link built on an empty origin — an unusable URL in a message
+// whose only call to action it is.
+func MailBody(review Review, homeURL string) string {
+	var b strings.Builder
+	fmt.Fprintf(&b, "Your week of %s\n\n", review.LocalWeekStart.Format("2 January 2006"))
+
+	// The sentence first, when a pass wrote one. It is the only part of the
+	// message that reads as a person talking, so it goes above the numbers it
+	// is about rather than under them.
+	if review.Narrative != "" {
+		b.WriteString(review.Narrative + "\n\n")
+	}
+
+	c := review.Counts
+	b.WriteString("Promised, delivered:  " +
+		strconv.Itoa(c.TasksDone) + " of " + strconv.Itoa(c.TasksDue) + "\n")
+	b.WriteString("Deals:                " +
+		strconv.Itoa(c.DealsWon) + " won · " +
+		strconv.Itoa(c.DealsLost) + " lost · " +
+		strconv.Itoa(c.DealsMoved) + " moved\n")
+	b.WriteString("You decided:          " +
+		strconv.Itoa(c.ProposalsAccepted) + " yes · " +
+		strconv.Itoa(c.ProposalsRejected) + " no\n")
+	b.WriteString("Morning queue:        " +
+		strconv.Itoa(c.BriefItemsActed) + " acted · " +
+		strconv.Itoa(c.BriefItemsDismissed) + " dismissed\n")
+	b.WriteString("Carried into Monday:  " +
+		strconv.Itoa(c.TasksCarriedOver) + "\n")
+
+	writeDealLines(&b, review.Deals)
+
+	if homeURL != "" {
+		b.WriteString("\nThe full week, and the ones before it:\n  " + homeURL + "\n")
+	}
+	return b.String()
+}
+
+// writeDealLines writes the week's deals, capped, saying so when it caps.
+func writeDealLines(b *strings.Builder, deals []DealLine) {
+	if len(deals) == 0 {
+		return
+	}
+	b.WriteString("\nWhat moved:\n")
+	shown := deals
+	if len(shown) > mailDealCap {
+		shown = shown[:mailDealCap]
+	}
+	for _, line := range shown {
+		b.WriteString("  · " + mailDealLine(line) + "\n")
+	}
+	if rest := len(deals) - len(shown); rest > 0 {
+		fmt.Fprintf(b, "  … and %d more, on Home\n", rest)
+	}
+}
+
+// mailDealLine is one deal, as the week recorded it.
+//
+// The LABEL is what was frozen when the review was written, never a lookup: a
+// deal renamed or deleted since still reads here as it did that week, which is
+// the same promise the panel makes.
+//
+// The label is also the one part of this message that carries text somebody
+// outside the installation may have chosen, so newlines are stripped: a label
+// holding "\n\nFrom: " would otherwise let a deal name forge structure inside
+// the body. mailer.Send already refuses them in the recipient and subject,
+// which are the header fields; the body is this function's to keep honest.
+func mailDealLine(line DealLine) string {
+	label := strings.Join(strings.FieldsFunc(line.Label, func(r rune) bool {
+		return r == '\n' || r == '\r'
+	}), " ")
+	parts := []string{label, line.Outcome}
+	if line.ToStageLabel != "" {
+		parts = append(parts, line.ToStageLabel)
+	}
+	// Money is a pair or it is absent — the same rule the wire follows. A bare
+	// amount is a number nobody can read.
+	if line.AmountMinor != nil && line.Currency != "" {
+		parts = append(parts, values.MajorUnits(*line.AmountMinor, line.Currency)+" "+line.Currency)
+	}
+	parts = append(parts, line.OccurredAt.Format(time.DateOnly))
+	return strings.Join(parts, " — ")
+}
+
+// MailAttempt is what one claim won: the review to render and the address to
+// render it to, or nothing at all.
+type MailAttempt struct {
+	Review Review
+	// Email is the rep's own address. A claim is never issued without one — a
+	// review whose seat has no address is left unclaimed rather than burned.
+	Email string
+}
+
+// ClaimMailAttempt takes the one attempt this week's mail is allowed, and
+// hands back what to send. Claimed reports whether this caller won it.
+//
+// THE CLAIM IS WRITTEN BEFORE THE RELAY IS DIALLED, and that ordering is the
+// design rather than an optimisation.
+//
+// The transport is a synchronous SMTP call with no retry identity and no
+// receipt (platform/mailer). There is nothing to reconcile against afterwards,
+// so the only thing that can bound duplicates is a claim taken first: the
+// UPDATE below is conditional on mail_attempted_at being NULL, exactly one
+// transaction can win it, and every retry after it reads zero rows and does
+// nothing.
+//
+// WHAT THIS COSTS, so the next reader does not "fix" it: any failure after the
+// claim loses the mail. A crash before the relay is contacted, a refused
+// envelope, a connection dropped mid-body — all of them leave a claimed row
+// and no message. That is deliberate. A weekly retrospective delivered twice
+// is a person told their own week twice on the one morning the mail exists to
+// make calm, and this installation cannot tell a failed send from a delivered
+// one, so it cannot retry without risking exactly that.
+//
+// Do NOT turn this into a retry loop. If confirmed delivery is ever wanted,
+// the answer is a delivery ledger with a real receipt from the transport, not
+// a second attempt over a transport that reports nothing.
+//
+// The failure is RECORDED rather than only logged: MailFailed writes the cause
+// beside the stamp, so a missing weekly is answerable from the row.
+//
+// Held by: TestTheWeeklyMailIsAttemptedOnce
+// (backend/internal/compose/weeklymail_integration_test.go)
+func (e *Engine) ClaimMailAttempt(ctx context.Context, reviewID ids.UUID, now time.Time) (MailAttempt, bool, error) {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return MailAttempt{}, false, err
+	}
+	userID, err := reviewUser(ctx)
+	if err != nil {
+		return MailAttempt{}, false, err
+	}
+	var attempt MailAttempt
+	var claimed bool
+	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		// The row scope and the claim in ONE statement. A review belongs to
+		// the rep whose week it was, so the user predicate is what stops an id
+		// alone from burning somebody else's attempt.
+		row := tx.QueryRow(ctx, `
+			UPDATE weekly_review
+			   SET mail_attempted_at = $3
+			 WHERE id = $1 AND user_id = $2 AND mail_attempted_at IS NULL
+			 RETURNING id`, reviewID, userID, now.UTC())
+		var got ids.UUID
+		switch err := row.Scan(&got); {
+		case errors.Is(err, pgx.ErrNoRows):
+			// Either the review is not this rep's, or the attempt is already
+			// spent. Both mean the same thing to a caller: do not send.
+			return nil
+		case err != nil:
+			return err
+		}
+		if _, err := storekit.Audit(ctx, tx, "update", "weekly_review", reviewID,
+			map[string]any{"mail_attempted_at": nil},
+			map[string]any{"mail_attempted_at": now.UTC()}); err != nil {
+			return err
+		}
+		attempt.Review, err = readReviewTx(ctx, tx, reviewID, userID)
+		if err != nil {
+			return err
+		}
+		// LIVE MEMBERSHIP, both halves. Deactivating a seat leaves archived_at
+		// NULL, so archived_at alone would go on mailing a departed colleague
+		// their week every Monday.
+		//
+		// A seat that is no longer live reads as no address, which leaves the
+		// claim spent and the row saying why — the honest record of a mail that
+		// was not sent, rather than one sent to somebody who left.
+		switch err := tx.QueryRow(ctx,
+			`SELECT email FROM app_user WHERE id = $1 AND `+identity.LiveMemberSQL(""),
+			userID).Scan(&attempt.Email); {
+		case errors.Is(err, pgx.ErrNoRows):
+			attempt.Email = ""
+		case err != nil:
+			return fmt.Errorf("weekly: reading the recipient: %w", err)
+		}
+		claimed = true
+		return nil
+	})
+	if err != nil {
+		return MailAttempt{}, false, err
+	}
+	return attempt, claimed, nil
+}
+
+// MailFailed records why the claimed attempt produced no message.
+//
+// It does NOT release the claim, and that is the point: the attempt is spent
+// either way, and a caller that could clear the stamp would have rebuilt the
+// retry loop this design refuses. What it adds is the reason, so somebody
+// asking "where is my weekly" gets an answer from the row.
+func (e *Engine) MailFailed(ctx context.Context, reviewID ids.UUID, cause string) error {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return err
+	}
+	userID, err := reviewUser(ctx)
+	if err != nil {
+		return err
+	}
+	if n := len([]rune(cause)); n > maxMailErrorRunes {
+		cause = string([]rune(cause)[:maxMailErrorRunes])
+	}
+	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		tag, err := tx.Exec(ctx, `
+			UPDATE weekly_review SET mail_error = $3
+			 WHERE id = $1 AND user_id = $2 AND mail_attempted_at IS NOT NULL`,
+			reviewID, userID, cause)
+		if err != nil {
+			return err
+		}
+		if tag.RowsAffected() == 0 {
+			return apperrors.ErrNotFound
+		}
+		_, err = storekit.Audit(ctx, tx, "update", "weekly_review", reviewID,
+			map[string]any{"mail_error": nil}, map[string]any{"mail_error": cause})
+		return err
+	})
+}
+
+// maxMailErrorRunes matches the column's CHECK. A driver error's text is
+// unbounded, and a row nothing can render helps nobody — so the cause is cut
+// here rather than learned from a constraint violation at 06:00 on a Monday.
+const maxMailErrorRunes = 500

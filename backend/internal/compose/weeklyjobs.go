@@ -96,6 +96,9 @@ type weeklyGenerateWorkspaceWorker struct {
 	// only the sentence is absent, and the screen says so rather than
 	// pretending the week was unremarkable.
 	narrator completer
+	// mail is the outbound channel, off by omission the same way. An
+	// installation with no operator relay measures every week and mails none.
+	mail WeeklyMailConfig
 }
 
 func (w *weeklyGenerateWorkspaceWorker) Work(
@@ -196,6 +199,16 @@ func (w *weeklyGenerateWorkspaceWorker) measureFor(
 	if review.NarratedAt == nil {
 		w.narrate(repCtx, review, now)
 	}
+	// The mail LAST, after the sentence, so the message carries the whole
+	// review rather than the counts alone. It re-reads the row inside its own
+	// claim: the narration above wrote to the same row, and mailing the
+	// in-memory copy would post a week whose sentence had just been written
+	// and was not in it.
+	//
+	// Attempted on every pass, not only the creating one — the claim is what
+	// makes that safe, and it is also what makes a Monday the worker was down
+	// still reach the rep on Tuesday.
+	w.mailWeekly(repCtx, review.ID, now)
 	_ = created
 	return nil
 }

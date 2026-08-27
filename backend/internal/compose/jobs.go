@@ -171,6 +171,11 @@ type JobRunnerConfig struct {
 	// role with no weekly_review lane: every rep still gets the measured
 	// review, without the remark.
 	WeeklyReviewBrain completer
+
+	// WeeklyMail is the retrospective's outbound channel. A zero value mails
+	// nothing, which is the posture of an installation with no operator relay
+	// configured — the review is on Home either way.
+	WeeklyMail WeeklyMailConfig
 	// TranscriptProposeBrain is the lane a queued transcript reading runs on.
 	// Nil = no AI configured, and the kind registers anyway so the reading
 	// FAILS with a message the rep can see rather than sitting queued behind a
@@ -410,7 +415,7 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	// role holds — only the sentence is absent without a lane — but a group
 	// documented as taking no config is the wrong place for something that
 	// reads one.
-	addWeeklyReviewJobs(reg, pool, log, cfg.WeeklyReviewBrain)
+	addWeeklyReviewJobs(reg, pool, log, cfg.WeeklyReviewBrain, cfg.WeeklyMail)
 	addDeclaredWorker[VoiceBuildRetryArgs](reg, &voiceBuildRetryWorker{store: ai.NewVoiceStore(InstallationDB(pool)), log: log})
 	// The reindex is a dispatcher plus a workspace worker, and neither is
 	// ticked: the api enqueues the dispatcher once per confirmed reindex

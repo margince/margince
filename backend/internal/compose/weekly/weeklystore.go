@@ -127,37 +127,62 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 
 	var review Review
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
-		row := tx.QueryRow(ctx, `
-			SELECT id, user_id, local_week_start, generated_at, as_of,
-			       tasks_due, tasks_done, tasks_carried_over,
-			       deals_moved, deals_won, deals_lost,
-			       proposals_accepted, proposals_rejected,
-			       brief_items_acted, brief_items_dismissed,
-			       coalesce(narrative, ''), narrated_at
-			  FROM weekly_review
+		row := tx.QueryRow(ctx, reviewSelect+`
 			 WHERE user_id = $1 AND ($2::date IS NULL OR local_week_start = $2)
 			 ORDER BY local_week_start DESC
 			 LIMIT 1`, userID, weekStart)
-		c := &review.Counts
-		switch err := row.Scan(&review.ID, &review.UserID, &review.LocalWeekStart,
-			&review.GeneratedAt, &review.AsOf,
-			&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
-			&c.DealsMoved, &c.DealsWon, &c.DealsLost,
-			&c.ProposalsAccepted, &c.ProposalsRejected,
-			&c.BriefItemsActed, &c.BriefItemsDismissed,
-			&review.Narrative, &review.NarratedAt); {
-		case errors.Is(err, pgx.ErrNoRows):
-			return apperrors.ErrNotFound
-		case err != nil:
-			return err
-		}
-		review.Deals, err = readDealLines(ctx, tx, review.ID)
+		var err error
+		review, err = scanReview(ctx, tx, row)
 		return err
 	})
 	if err != nil {
 		return Review{}, err
 	}
 	return review, nil
+}
+
+// reviewSelect is the review's columns, in the order scanReview reads them.
+//
+// ONE spelling for both readers — the screen's and the mail's. Two copies of
+// this list is how the same week comes to render two different ways, which is
+// the one thing a record of a past week must never do.
+const reviewSelect = `
+	SELECT id, user_id, local_week_start, generated_at, as_of,
+	       tasks_due, tasks_done, tasks_carried_over,
+	       deals_moved, deals_won, deals_lost,
+	       proposals_accepted, proposals_rejected,
+	       brief_items_acted, brief_items_dismissed,
+	       coalesce(narrative, ''), narrated_at
+	  FROM weekly_review`
+
+// scanReview reads one review row and its frozen deal lines.
+func scanReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (Review, error) {
+	var review Review
+	c := &review.Counts
+	switch err := row.Scan(&review.ID, &review.UserID, &review.LocalWeekStart,
+		&review.GeneratedAt, &review.AsOf,
+		&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
+		&c.DealsMoved, &c.DealsWon, &c.DealsLost,
+		&c.ProposalsAccepted, &c.ProposalsRejected,
+		&c.BriefItemsActed, &c.BriefItemsDismissed,
+		&review.Narrative, &review.NarratedAt); {
+	case errors.Is(err, pgx.ErrNoRows):
+		return Review{}, apperrors.ErrNotFound
+	case err != nil:
+		return Review{}, err
+	}
+	lines, err := readDealLines(ctx, tx, review.ID)
+	if err != nil {
+		return Review{}, err
+	}
+	review.Deals = lines
+	return review, nil
+}
+
+// readReviewTx reads one review by id, scoped to the rep whose week it was.
+func readReviewTx(ctx context.Context, tx pgx.Tx, reviewID, userID ids.UUID) (Review, error) {
+	return scanReview(ctx, tx,
+		tx.QueryRow(ctx, reviewSelect+` WHERE id = $1 AND user_id = $2`, reviewID, userID))
 }
 
 // ListWeeks serves the weeks this rep has a review for, newest first — the

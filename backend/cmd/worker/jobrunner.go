@@ -47,7 +47,7 @@ func gmailWatchConfig(cfg workerConfig, gmailWired bool) compose.GmailWatchConfi
 // drain — what the bare tickers lacked. The domain logic (Sweep/Reconcile)
 // is unchanged; only the scheduler is River now. The returned stop function
 // drains in-flight jobs on shutdown.
-func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, overlayBudget overlaybudget.Config, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, boundModels map[string]map[string]bool, lanes workerLanes, stdout io.Writer) (func(), error) {
+func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, overlayBudget overlaybudget.Config, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, boundModels map[string]map[string]bool, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
 	// The sweep registry is always live — the standing IMAP connector needs
 	// no deployment config; gmail joins it when the OAuth app is configured.
 	// The vault holds every connection's sealed credential (the standing
@@ -110,7 +110,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 	// attachment store rather than two that drift.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
 
-	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, configuredVault, lanes, rdb, overlayBudget, modelPath, boundModels)
+	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, configuredVault, lanes, rdb, overlayBudget, modelPath, boundModels, weeklyMail)
 	if err != nil {
 		return nil, err
 	}
@@ -133,7 +133,7 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 // deployment condition that turns it on — or the omission that honestly leaves
 // it off. One declaration, so no lane can be enabled by one boot phase and
 // starved by another.
-func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, configuredVault keyvault.Vault, lanes workerLanes, rdb *redis.Client, overlayBudget overlaybudget.Config, modelPath compose.ModelPath, boundModels map[string]map[string]bool) (*jobs.Runner, error) {
+func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, configuredVault keyvault.Vault, lanes workerLanes, rdb *redis.Client, overlayBudget overlaybudget.Config, modelPath compose.ModelPath, boundModels map[string]map[string]bool, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
 	// Firing a scheduled message stages its delivery and enqueues the dispatch
 	// job, through the SAME machinery an immediate send uses. Insert-only, like
 	// the api's: this role works what it inserts, and a stager built on the
@@ -189,11 +189,14 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		ChannelVault: configuredVault,
 		// The classify + enrich passes run only where a model is
 		// configured; without one both are absent by omission.
-		ClassifyBrain:          modelPath.CaptureClassify,
-		VerdictBrain:           modelPath.CaptureCounterpartyVerdict,
-		EnrichBrain:            modelPath.Enrich,
-		SignalExtractBrain:     modelPath.SignalExtract,
-		WeeklyReviewBrain:      modelPath.WeeklyReview,
+		ClassifyBrain:      modelPath.CaptureClassify,
+		VerdictBrain:       modelPath.CaptureCounterpartyVerdict,
+		EnrichBrain:        modelPath.Enrich,
+		SignalExtractBrain: modelPath.SignalExtract,
+		WeeklyReviewBrain:  modelPath.WeeklyReview,
+		// The retrospective's outbound channel, resolved in main from the same
+		// deployment file cmd/api reads. Zero mails nothing.
+		WeeklyMail:             weeklyMail,
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
 		DocumentExtractBrain:   modelPath.DocumentExtract,
 		OverlayVault:           configuredVault,
