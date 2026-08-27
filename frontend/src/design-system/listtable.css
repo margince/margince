@@ -1058,6 +1058,19 @@
   vertical-align: middle;
 }
 
+/* WCAG 2.2 AA §2.5.8: 24×24 CSS px, and this box has no visible label to
+   stand in for the missing area — its name is screen-reader-only, so the
+   `.checkfield` label a form checkbox is pressed by is 13px wide here. The
+   native box is scaled rather than overlaid: the target-size rule measures the
+   focusable control itself, so a pseudo-element covering it would satisfy a
+   reader's finger and not the rule, which is the case that matters least. Only
+   the row and header boxes grow; a checkbox with words beside it is pressed by
+   those words and is left alone. */
+.lt-select > input[type="checkbox"] {
+  inline-size: 24px;
+  block-size: 24px;
+}
+
 .lt-bulkbar {
   display: flex;
   align-items: center;
