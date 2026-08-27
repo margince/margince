@@ -19,7 +19,7 @@ package privacy
 //     name and keeps whatever was written beside it.
 //
 // Both are asserted here because neither shows up in the table-set census in
-// backend/personscrub_test.go: the first is an ordering property, and the
+// backend/gates/personscrub_test.go: the first is an ordering property, and the
 // second is two acts clearing one table to different depths.
 
 import (

@@ -12,12 +12,12 @@ import "github.com/margince/margince/backend/internal/platform/database/storekit
 
 // EmploymentIsCurrentSQL is the ONE spelling of "this job is still theirs".
 //
-// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/employmentcurrency_test.go)
+// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/gates/employmentcurrency_test.go)
 // — it reads every hand-written Go source outside this file for a hand-spelled
 // `ended_at` currency test, so a second definition fails rather than drifting.
 // With ONE gap, stated because a binding that overclaims is what this
 // convention exists to stop: the census skips its own file whole, so a
-// hand-written currency test added to `backend/employmentcurrency_test.go`
+// hand-written currency test added to `backend/gates/employmentcurrency_test.go`
 // itself is outside this guard.
 // `date` is the
 // end-date expression at the call site: a column on a read, the incoming value
@@ -46,7 +46,7 @@ import "github.com/margince/margince/backend/internal/platform/database/storekit
 // readers in this package do — one definition, or the copies drift.
 //
 // "One definition" is held by TestEveryEmploymentCurrencyTestUsesTheOneDefinition
-// in backend/employmentcurrency_test.go, and it is written down here because
+// in backend/gates/employmentcurrency_test.go, and it is written down here because
 // this comment used to say "the only definition of a current employment in this
 // product" with nothing holding it — and it was false eleven times over. Eight
 // statements asked with a bare `ended_at IS NULL`, which is the notice-period
@@ -67,7 +67,7 @@ func EmploymentIsCurrentSQL(date string) string {
 // cannot trust the flag alone, which is what let somebody go on counting at a
 // company after their last day had passed.
 //
-// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/employmentcurrency_test.go)
+// Held by: TestEveryEmploymentCurrencyTestUsesTheOneDefinition (backend/gates/employmentcurrency_test.go)
 // — the same census: a reader that pairs the flag with its own date test is a
 // second definition and fails there.
 //
@@ -102,7 +102,7 @@ func CurrentPrimaryEmploymentSQL(alias string) string {
 //
 // Two gates and not one, because either alone reads green over a second
 // spelling: TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling in
-// backend/employmentcurrency_test.go reads every hand-written Go source for the
+// backend/gates/employmentcurrency_test.go reads every hand-written Go source for the
 // FRAGMENT — the flag sharing a conjunction with an archived test — which a
 // census that knows only the whole predicate cannot see.
 func CurrentPrimarySlotSQL(alias string) string {

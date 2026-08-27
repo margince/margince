@@ -56,7 +56,7 @@ var ErrNoAddressee = errors.New("comms: a delivery needs at least one recipient 
 
 // Store is the comms_outbound seam: staging, loading with attempt-counting,
 // and the four terminal/retry transitions. It carries no RBAC gate of its
-// own — see the internal/modules/comms waivers in backend/rbacgate_test.go
+// own — see the internal/modules/comms waivers in backend/gates/rbacgate_test.go
 // for why.
 type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).

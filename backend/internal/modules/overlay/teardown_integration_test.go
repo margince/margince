@@ -563,7 +563,7 @@ func TestDisconnectWithNoActiveConnectionAnswersNotFound(t *testing.T) {
 
 // overlayWorkspaceTables derives, from the live catalog, every table the
 // overlay migrations own — the overlay_% and mirror_% clusters plus
-// incumbent_connection, the same name set backend/tableownership_test.go pins
+// incumbent_connection, the same name set backend/gates/tableownership_test.go pins
 // to internal/modules/overlay — so the teardown purge assertion's coverage
 // grows with the schema instead of trailing it as a hand-kept list.
 //

@@ -38,7 +38,7 @@ import (
 // so they commit together or not at all.
 type extensionCore struct {
 	// tx is the CALLER's transaction, held rather than taken as a parameter —
-	// which is also why this file is outside what backend/txseamacquire_test.go
+	// which is also why this file is outside what backend/gates/txseamacquire_test.go
 	// can see. That gate walks functions that TAKE a pgx.Tx; nothing here does,
 	// so a verb added below that reaches for a connection of its own would pass
 	// it green and deadlock under a saturated pool. It happened once already in

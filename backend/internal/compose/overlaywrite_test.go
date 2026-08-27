@@ -206,7 +206,7 @@ func TestGuardRefusalMatchesProviderCapability(t *testing.T) {
 // method set cannot tell a hand-written shadow apart from a promoted
 // fallback (both simply appear as "Server has a method named X"), so the
 // fitness test below reads the source directly, the same static-analysis
-// idiom backend/arch_test.go already uses for its own package-boundary
+// idiom backend/gates/arch_test.go already uses for its own package-boundary
 // fitness functions.
 func serverDeclaredMethods(t *testing.T) map[string]bool {
 	t.Helper()

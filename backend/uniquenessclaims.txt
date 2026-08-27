@@ -6,11 +6,11 @@
 # every one was found months later by a human reading the file for some other
 # reason.
 #
-# This file is CLOSED to new entries. backend/uniquenessclaims_test.go refuses a
+# This file is CLOSED to new entries. backend/gates/uniquenessclaims_test.go refuses a
 # claim that is neither registered here nor bound to a test, so a claim written
 # tomorrow must carry:
 #
-#     // Held by: TestSomethingHasOneWriter (backend/somethingwriters_test.go)
+#     // Held by: TestSomethingHasOneWriter (backend/gates/somethingwriters_test.go)
 #
 # WIDENING A DETECTOR SHAPE IS NOT ADDING A CLAIM. A shape that learns to see a
 # wording it used to miss finds claims that were already here, and this file
@@ -41,20 +41,30 @@
 ../extensions/relay-probe/relayprobe.go#const connectionTable
 ../extensions/relay-probe/relayprobe.go#const ingressSystem
 ../extensions/relay-probe/walk.go#type walkResult.items
-aiactivitycatalogparity_test.go#func producedKinds
-aitaskrailcensus_test.go#func everyRoutableTask
-aitaskrailcensus_test.go#var carrierSources
-arch_test.go#var modelClientConstructors
 cmd/api/configitems.go#const oauthAccessTokenTTLEnv
 cmd/api/resetruntime.go#func newResetLane
 cmd/worker/boot.go#func workerModelPathSpec
-consumermailonelist_test.go#var baselineDomains
-edgereaders_test.go#const edgeTable
-edgereaders_test.go#var edgeReaderScope
-enumsync_test.go#func recordChecks
-envcontract_test.go#func liveEnvVars
-fieldnames_test.go#const internalTree
-geocodestaleness_test.go#var addressColumns
+gates/aiactivitycatalogparity_test.go#func producedKinds
+gates/aitaskrailcensus_test.go#func everyRoutableTask
+gates/aitaskrailcensus_test.go#var carrierSources
+gates/arch_test.go#var modelClientConstructors
+gates/consumermailonelist_test.go#var baselineDomains
+gates/edgereaders_test.go#const edgeTable
+gates/edgereaders_test.go#var edgeReaderScope
+gates/enumsync_test.go#func recordChecks
+gates/envcontract_test.go#func liveEnvVars
+gates/fieldnames_test.go#const internalTree
+gates/geocodestaleness_test.go#var addressColumns
+gates/jobargscontent_test.go#func declaredArgsRationales
+gates/jobfleetwideshapes_test.go#func fleetWideShapesInTheTree
+gates/jobregistrationban_test.go#var lintConfigs
+gates/manifestdigest_test.go#func committedManifests
+gates/manifestdigest_test.go#var manifestDigestEncoding
+gates/modulepoolsharing_test.go#var poolConstructors
+gates/netguardparity_test.go#func TestPublishedReservedNetsMatchTheGuard
+gates/replayscope_test.go#var replayScopeConsts
+gates/restrictedreaders_test.go#var activityReaderScope
+gates/tableownership_test.go#var tableOwners
 internal/compose/accountdraft/deterministic.go#type Draft
 internal/compose/accountdraft/service.go#const aiDisclosure
 internal/compose/accountdraft/write.go#func writeChecked
@@ -584,14 +594,7 @@ internal/shared/ports/connector/recipient.go#func EmailRecipients
 internal/shared/ports/datasource/shapewords.go#const block at const objectShape
 internal/shared/ports/mcp/mcp.go#type ToolSpec
 internal/shared/ports/model/model.go#func CarriesMIME
-jobargscontent_test.go#func declaredArgsRationales
-jobfleetwideshapes_test.go#func fleetWideShapesInTheTree
-jobregistrationban_test.go#var lintConfigs
-manifestdigest_test.go#func committedManifests
-manifestdigest_test.go#var manifestDigestEncoding
 migrations/headcatalog_integration_test.go#func catalogProjection
-modulepoolsharing_test.go#var poolConstructors
-netguardparity_test.go#func TestPublishedReservedNetsMatchTheGuard
 pkg/extension/args.go#func DecodeArgs
 pkg/extension/channel.go#method Channel.SuppliesTransport
 pkg/extension/channel_test.go#func TestSuppliesTransportIsTheDeclarationsOwnAnswer
@@ -610,9 +613,6 @@ pkg/extension/verb.go#const APIBasePath
 pkg/extension/verb.go#const RoutePrefix
 pkg/extension/verb.go#method Verb.Validate
 pkg/extension/verb_test.go#func TestServedPathPutsTheBasePathBackExactlyOnce
-replayscope_test.go#var replayScopeConsts
-restrictedreaders_test.go#var activityReaderScope
-tableownership_test.go#var tableOwners
 tools/contract-overlay/main.go#package main
 tools/extmigrategate/gate_integration_test.go#func namespaceOf
 tools/gen-composition/astreader_ingress.go#method unitReader.readIngressSource

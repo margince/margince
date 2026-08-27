@@ -20,7 +20,7 @@ import (
 // going through a module store, which is the line the two files are split on.
 //
 // That line is load-bearing, not tidiness. This file is the identity-mint site
-// backend/dedupespine_test.go sanctions BY PATH, so a direct
+// backend/gates/dedupespine_test.go sanctions BY PATH, so a direct
 // `INSERT INTO person|organization|lead` belongs here and nowhere else in the
 // package — put one in harness.go and the gate fails, which is the point.
 

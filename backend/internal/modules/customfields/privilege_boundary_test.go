@@ -12,7 +12,7 @@ package customfields
 // system pins that ordering, and the owner role can issue the catalog and
 // audit writes perfectly well, so deleting the downgrade call changes
 // nothing a test can read: every existing test still passes green. This mirrors
-// backend/writeshape_test.go's approach (fitness function over point
+// backend/gates/writeshape_test.go's approach (fitness function over point
 // fix): derive "runs owner DDL, then touches a tenant table" structurally
 // — a value literally named "ddl" flowing into tx.Exec/tx.QueryRow marks
 // the DDL step, a literal INSERT/UPDATE on custom_field or a
@@ -123,7 +123,7 @@ func firstDDLExecPos(body *ast.BlockStmt) (token.Pos, bool) {
 // built as a string concatenation, not a single literal), or a
 // storekit.Audit/AuditWithEvidence call (the audit_log write every
 // mutation makes in the same transaction — the same selector match
-// backend/writeshape_test.go's paired event gate uses).
+// backend/gates/writeshape_test.go's paired event gate uses).
 func firstTenantWritePos(body *ast.BlockStmt) (token.Pos, bool) {
 	var pos token.Pos
 	found := false
@@ -206,7 +206,7 @@ func callHasTenantTableLiteral(call *ast.CallExpr) bool {
 
 // isStorekitAuditCall reports whether call is storekit.Audit or
 // storekit.AuditWithEvidence — the one spelling of the audit_log write
-// (the same selector match backend/writeshape_test.go's
+// (the same selector match backend/gates/writeshape_test.go's
 // TestEveryAuditedMutationEmitsAnEvent uses for the paired event gate).
 func isStorekitAuditCall(call *ast.CallExpr) bool {
 	sel, ok := call.Fun.(*ast.SelectorExpr)

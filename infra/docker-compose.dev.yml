@@ -107,7 +107,7 @@ services:
     # stays near its average is decided by how the bursts overlap, which is the
     # entire content of #1109.
     #
-    # TestTheLaneFitsInsideTheClusterItRunsAgainst (backend/laneconnbudget_test.go)
+    # TestTheLaneFitsInsideTheClusterItRunsAgainst (backend/gates/laneconnbudget_test.go)
     # reads INTEGRATION_JOBS from the workflow and this number from this file, and
     # asks the lane script's own declare_lane_budget for the sum rather than
     # re-implementing it. It fails `make check` when the two stop fitting. Raising INTEGRATION_JOBS without raising this is

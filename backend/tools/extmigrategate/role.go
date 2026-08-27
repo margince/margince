@@ -248,7 +248,7 @@ func (r *extRole) assertRestricted(ctx context.Context) error {
 // make that refusal quietly disappear while every test still passed, so the
 // premise is asserted rather than assumed.
 //
-// (The example is described rather than quoted on purpose: backendarch's
+// (The example is described rather than quoted on purpose: the gates package's
 // identity-spine fitness test greps the tree for the literal statement, and a
 // comment carrying it reads to that gate as a new unsanctioned mint site.)
 //

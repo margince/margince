@@ -204,7 +204,7 @@ The DB-less variant `ai.NewLocalRouter` serves the same seam for offline
 fixtures and the certification lane; `--ai-fake` binds the offline fake *through
 the Router*, so dev and test exercise the exact metering/tracing/budget path
 production does. `TestNoModelClientOutsideTheGate` and `TestOneModelPathPerRole`
-(in `backend/arch_test.go`) keep it that way — the gate is a property of the
+(in `backend/gates/arch_test.go`) keep it that way — the gate is a property of the
 build, not a habit.
 
 ## Honest tracing — the certification grain

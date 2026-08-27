@@ -13,7 +13,7 @@ package org360
 // user_record_view is view state, not a record fact: it is written on
 // every visit, no other user may read it, and no consumer can act on it.
 // It therefore carries no audit row and no outbox event — the saved-view
-// ruling, recorded against this package in backend/tableownership_test.go.
+// ruling, recorded against this package in backend/gates/tableownership_test.go.
 
 import (
 	"context"
@@ -98,7 +98,7 @@ func (s *Service) Acknowledge(ctx context.Context, orgID ids.OrganizationID) (cr
 // the plain probe would still admit them. That difference is a ruling per
 // record type; the upsert is not.
 //
-// Held by: TestUserRecordViewHasOneWriter (backend/userrecordviewwriter_test.go)
+// Held by: TestUserRecordViewHasOneWriter (backend/gates/userrecordviewwriter_test.go)
 // — it censuses every statement in the tree that writes this table and fails on
 // a second one.
 //

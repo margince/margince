@@ -44,7 +44,7 @@ UAT guides call by name (`docs/target-minimum-setup.md §3`). `check-q`,
 | `check-backend` / `check-fe` | The two halves of the root gate, runnable alone: `check-backend` = backend `check` + the root script gates below (what CI's deterministic-gates job runs; it needs no frontend toolchain — `contract-frontend-drift` skips loudly without pnpm); `check-fe` = `frontend-check` with a loud fail if `frontend/node_modules` is missing |
 | `build` | `go build ./...` |
 | `vet` | `go vet ./...` |
-| `test` | Unit tests; the root fitness tests (license header, write shape, architecture, enum sync, `audit_log` enum coherence, contract `$ref` resolution) run uncached |
+| `test` | Unit tests; the fitness gates in `backend/gates/` (license header, write shape, architecture, enum sync, `audit_log` enum coherence, contract `$ref` resolution) run uncached |
 | `test-integration` | Real-Postgres lane (`-tags integration`): RLS gates, governed-agent loop, HTTP end-to-end. Runs on its own `margince_test` namespace, never the dev `margince` DB, so it can run concurrently with `make dev`. **Parallel** — each package runs on its own throwaway clone db (`CREATE DATABASE … TEMPLATE margince_test`) + private MinIO bucket + its own Redis logical db (1..15 by slot; db 0 stays reserved for `make dev`), so packages share nothing; within a package still `-p 1`. Fails loudly without a database — never skips. Tune concurrency with `INTEGRATION_JOBS=N`. CI additionally slices the lane per test across six runners: `INTEGRATION_SHARD=k/N` runs the k-th deterministic slice (debug a red CI shard locally with exactly that), `INTEGRATION_SHARD_OUT=dir` collects the manifests + coverage pods `scripts/test-integration-reconcile.sh` verifies and merges |
 | `test-db-up` | (Re)build the migrated `margince_test` template the parallel lane clones from |
 | `test-it` | Run ONE integration package on a throwaway clone (+ own MinIO bucket + Redis db 15): `make test-it DIR=backend/internal/modules/people [RUN=TestName]` |
@@ -63,7 +63,7 @@ UAT guides call by name (`docs/target-minimum-setup.md §3`). `check-q`,
 | `gen-workflow` | `make gen-workflow NAME=<snake_case_handler_name>` — scaffold a new automation `workflow.Handler` + its test stub (write-once; refuses to overwrite an existing scaffold). See [how-to/create-a-workflow.md](../how-to/create-a-workflow.md) |
 
 The root `make check` runs the backend gate above **and** these deterministic
-root gates (each is a small script; all merge-blocking):
+root script gates (each is a small script; all merge-blocking, and `check-backend` fans them out):
 
 | Target | What it does |
 |---|---|

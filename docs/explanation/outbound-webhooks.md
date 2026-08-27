@@ -171,7 +171,7 @@ it, since a staged approval's entity is always itself).
 
 A payload's `x-version` may only grow by **addition**: a new optional field, never a renamed, removed,
 or re-typed one. `PublicEventVersions` and `events.VersionOf` are the two ends of the same fact
-(pinned equal by the root fitness test `backend/publicevents_test.go`), and `payload_version_test.go`'s golden wire snapshots
+(pinned equal by the fitness gate `backend/gates/publicevents_test.go`), and `payload_version_test.go`'s golden wire snapshots
 (`testdata/wire/<type>.v<n>.json`) ratchet the shape byte-for-byte — a field rename or removal changes
 the marshaled bytes and fails the snapshot comparison, forcing a reviewed, deliberate regeneration
 (`UPDATE_SNAPSHOTS=1`) rather than letting a breaking change slip out unnoticed.
@@ -495,7 +495,7 @@ viewer with read-only access sees the list and deliveries but not the mutating a
 | The public payload contract (§3) | `backend/api/public-events.yaml` |
 | The payload generator | `backend/tools/gen-payloads/` → `internal/contracts/publicevents_gen.go` |
 | The typed emit seam (compile-time payload↔event binding) | `internal/platform/database/storekit/storekit.go` (`EmitEvent`, `EmitEventForEntity`) |
-| The whole-catalog fitness gate (coverage/no-orphan/version/delivery-resolvability, A15) | `backend/publicevents_test.go` |
+| The whole-catalog fitness gate (coverage/no-orphan/version/delivery-resolvability, A15) | `backend/gates/publicevents_test.go` |
 | The upstream-reconciliation note for the two deferred-delivery families | `.tmp/webhooks-contract-ui/UPSTREAM-P3.md` |
 | The Settings → Integrations UI (§9) | `frontend/src/screens/webhooks.tsx` |
 | The generated frontend event-type projection | `frontend/src/api/public-events.ts` |
