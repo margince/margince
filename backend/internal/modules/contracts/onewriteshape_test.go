@@ -139,11 +139,22 @@ func declaredPackageName(t *testing.T, dir string) string {
 	fset := token.NewFileSet()
 	for _, entry := range entries {
 		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") {
+		// A `_test.go` may declare the EXTERNAL test package — `crmcontracts_test`
+		// — and os.ReadDir returns entries by name, so one sorting first would
+		// hand back a package no production file imports. That is the fail-short
+		// direction again, and it is not caught by the fatal below: a wrong name
+		// is not an absent one.
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
 			continue
 		}
 		file, perr := parser.ParseFile(fset, dir+"/"+name, nil, parser.PackageClauseOnly)
 		if perr != nil || file.Name == nil {
+			continue
+		}
+		if strings.HasSuffix(file.Name.Name, "_test") {
+			// Belt and braces: every source in the directory being a test
+			// package would otherwise resolve to one, and the skip above only
+			// covers the filename convention rather than the clause itself.
 			continue
 		}
 		return file.Name.Name
