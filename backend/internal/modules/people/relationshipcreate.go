@@ -117,6 +117,16 @@ func writeRelationshipInTx(
 	capturedBy string,
 ) (relationshipRow, error) {
 	var out relationshipRow
+	// Before the endpoints are checked, because the check is what this lock
+	// makes true: an archive in flight either commits first and LiveOnly
+	// refuses this attach, or waits and sweeps the edge this writes with
+	// everything else. Without it the two can interleave into a live
+	// relationship on an archived person.
+	if in.PersonID != nil {
+		if err := lockPersonForAttach(ctx, tx, *in.PersonID); err != nil {
+			return out, err
+		}
+	}
 	if err := ensureRelationshipEndpoints(ctx, tx, in); err != nil {
 		return out, err
 	}

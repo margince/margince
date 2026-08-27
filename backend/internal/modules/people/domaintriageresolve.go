@@ -276,6 +276,13 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 	if err != nil {
 		return 0, err
 	}
+	// The lock is IN the statement here, not beside it: this writer attaches a
+	// SET of people found by domain rather than one named person, so there is
+	// no id to lock before the select that finds it. `FOR UPDATE OF p` at the
+	// bottom locks each person this insert is about to attach, which is the
+	// same guarantee lockPersonForAttach gives the single-person writers — an
+	// archive in flight either commits first and drops the row out of this
+	// select, or waits and sweeps the edge this plants.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
 		SELECT 'employment', p.id, $1, true, $2, $3
@@ -295,6 +302,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, orgID 
 		  AND NOT EXISTS (
 			SELECT 1 FROM relationship r
 			WHERE r.person_id = p.id AND `+CurrentPrimarySlotSQL("r")+`)
+		FOR UPDATE OF p
 		ON CONFLICT DO NOTHING`,
 		orgID, domainTriageSource(domain), by, domain)
 	if err != nil {

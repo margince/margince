@@ -70,6 +70,11 @@ func organizationIsLive(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 // employment that already exists. The NOT EXISTS keeps a concurrent race with
 // the first from surfacing as a 500.
 func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyInput, personID ids.PersonID, orgID ids.OrganizationID) error {
+	// The employment edge hangs off the person, so an archive in flight must
+	// not be outrun — see lockPersonForAttach.
+	if err := lockPersonForAttach(ctx, tx, personID); err != nil {
+		return err
+	}
 	var edgeID ids.UUID
 	err := tx.QueryRow(ctx, `
 		INSERT INTO relationship (kind, person_id, organization_id, is_current_primary, source, captured_by)
