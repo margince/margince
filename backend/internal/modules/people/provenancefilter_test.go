@@ -164,8 +164,12 @@ func carriedFieldValues(file *ast.File, field string) map[ast.Node]bool {
 }
 
 // consumingReads reports where body reads the field for anything other than
-// carrying it or handing it to its owner — the only shape that can be a second
-// answer to which prefix counts.
+// carrying it, handing it to its owner, or asking whether it is set at all.
+//
+// The third is a category the carry/decide split does not cover: `f.X != nil`
+// asks whether the caller supplied a filter, which is neither plumbing the
+// value onward nor deciding what it means, and the advice this gate gives —
+// pass it to the owner — does not apply to it.
 func consumingReads(body *ast.BlockStmt, field, owner string, carried map[ast.Node]bool) []token.Pos {
 	handed := map[ast.Node]bool{}
 	ast.Inspect(body, func(node ast.Node) bool {
@@ -178,13 +182,27 @@ func consumingReads(body *ast.BlockStmt, field, owner string, carried map[ast.No
 		}
 		return true
 	})
+	presence := map[ast.Node]bool{}
+	ast.Inspect(body, func(node ast.Node) bool {
+		compare, isCompare := node.(*ast.BinaryExpr)
+		if !isCompare || (compare.Op != token.EQL && compare.Op != token.NEQ) {
+			return true
+		}
+		for _, side := range []ast.Expr{compare.X, compare.Y} {
+			if isNilExpr(side) {
+				presence[compare.X] = true
+				presence[compare.Y] = true
+			}
+		}
+		return true
+	})
 	var found []token.Pos
 	ast.Inspect(body, func(node ast.Node) bool {
 		sel, isSel := node.(*ast.SelectorExpr)
 		if !isSel || sel.Sel == nil || sel.Sel.Name != field {
 			return true
 		}
-		if handed[ast.Node(sel)] || carried[ast.Node(sel)] {
+		if handed[ast.Node(sel)] || carried[ast.Node(sel)] || presence[ast.Node(sel)] {
 			return true
 		}
 		found = append(found, sel.Sel.Pos())
@@ -212,6 +230,14 @@ func listFiltersBuilds(t *testing.T) []filtersBuild {
 		ast.Inspect(parsed.file, func(node ast.Node) bool {
 			lit, isLit := node.(*ast.CompositeLit)
 			if !isLit || lit.Type == nil || typeText(lit.Type) != filtersType {
+				return true
+			}
+			// An EMPTY literal is where an assembled build starts, not a build
+			// on its own — `f := listFilters{}` followed by eleven field
+			// assignments carries every filter, and reading the literal as a
+			// finished value reports a surface that does everything right.
+			// assembledFiltersIn below is what judges that shape.
+			if len(lit.Elts) == 0 {
 				return true
 			}
 			build := filtersBuild{
@@ -287,15 +313,6 @@ func assembledFiltersIn(parsed moduleFile) []filtersBuild {
 		}
 	}
 	return found
-}
-
-func sortedKeys(builds map[string]*filtersBuild) []string {
-	names := make([]string, 0, len(builds))
-	for name := range builds {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
 }
 
 // isNilExpr reports the untyped nil, which is what an explicitly dropped filter

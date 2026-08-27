@@ -5,9 +5,11 @@ package people
 
 import (
 	"go/ast"
-	"sort"
+	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // Correcting a profile field and confirming one are the same write with a
@@ -38,23 +40,33 @@ import (
 
 const profileFieldOnePath = "writeProfileField"
 
+// profileFieldTable is what a verb writing around the one path would have to
+// name, and it is how such a verb is found.
+const profileFieldTable = "organization_profile_field"
+
 func TestBothProfileFieldVerbsWriteThroughTheOnePath(t *testing.T) {
 	home, onePath := declarationOf(t, profileFieldOnePath)
-	reserved := effectCallees(onePath, importsOf(home))
+	reserved := effectsOwnedBy(onePath, importsOf(home))
 	if len(reserved) == 0 {
 		t.Fatalf("%s reaches no effect of its own, so there is nothing for a verb to duplicate "+
-			"— either the write moved out of it or the callee walk is broken", profileFieldOnePath)
+			"— either the write moved out of it or the effect walk is broken", profileFieldOnePath)
 	}
 
-	// The verbs are those declared beside the one path, plus any that reach it
-	// from elsewhere: a verb moved to another file is still one of the two this
-	// claim is about.
+	// The verbs are the exported methods that WRITE a profile field: one that
+	// reaches the one path, and one that writes the table with its own SQL —
+	// which is the shape this holds against and must therefore be IN the
+	// population rather than selected out of it.
+	//
+	// Writing is the claim, so proximity is not the test. Selecting every
+	// exported method declared beside the one path put the module's profile
+	// field READ verbs in the population and told each of them to go through a
+	// write path, which is advice nobody can take.
 	verbs := map[string]*ast.FuncDecl{}
-	forEachModuleFunc(t, func(parsed moduleFile, fn *ast.FuncDecl) {
+	forEachModuleFunc(t, func(_ moduleFile, fn *ast.FuncDecl) {
 		if fn.Recv == nil || !fn.Name.IsExported() {
 			return
 		}
-		if parsed.name == home.name || callsFunc(fn, profileFieldOnePath) {
+		if callsFunc(fn, profileFieldOnePath) || writesTable(fn, profileFieldTable) {
 			verbs[fn.Name.Name] = fn
 		}
 	})
@@ -63,7 +75,7 @@ func TestBothProfileFieldVerbsWriteThroughTheOnePath(t *testing.T) {
 			"confirmation take one path, and one verb cannot disagree with itself",
 			len(verbs), profileFieldOnePath)
 	}
-	for _, name := range sortedNames(verbs) {
+	for _, name := range sortedKeys(verbs) {
 		fn := verbs[name]
 		if !callsFunc(fn, profileFieldOnePath) {
 			t.Errorf("%s does not go through %s.\n\nCorrecting and confirming are the same write "+
@@ -116,17 +128,51 @@ func importsOf(parsed moduleFile) map[string]string {
 	return paths
 }
 
-// effectCallees names what fn reaches that could BE an effect: its own methods,
-// this package's functions, and calls into other modules — but not the standard
-// library.
+// effectsOwnedBy names what the ONE PATH reaches that is an effect on the
+// record — the set a verb may not reach around it.
 //
-// The standard library is excluded because the reserved set is derived, and a
-// derived set inherits whatever the owner happens to call. The day
-// writeProfileField gains an fmt.Errorf, a bare-identifier walk puts `Errorf`
-// in the reserved set and every verb that formats an error is reported as
-// reaching around the one path. The finding would be entirely an artifact of
-// how the gate looks, and it would arrive on somebody else's diff.
-func effectCallees(fn *ast.FuncDecl, imports map[string]string) map[string]bool {
+// Two exclusions, and each closes a way this gate would otherwise accuse
+// correct code with advice nobody can follow. The set is DERIVED from the one
+// path's callees, so it inherits whatever that function happens to call, and a
+// name in it is an instruction to move work inside the one path.
+//
+//   - The standard library. The day writeProfileField gains an `fmt.Errorf`, a
+//     bare-identifier walk reserves `Errorf` and every verb that formats an
+//     error is reported as reaching around the path.
+//   - Anything the one path does not hand the transaction. An effect on the
+//     record is something done to the database, and it needs the tx to do it.
+//     `canonicalOrgColumn` is a closed switch from a field name to a column
+//     name; reserving it tells a verb to move a pure lookup inside a write.
+//
+// The tx test is the honest one available here: this walk has no type
+// information, so "is it an effect" cannot be asked directly, and what the one
+// path HANDS the call is the closest derivable stand-in.
+//
+// It belongs on this side only. Asking the same of a VERB's calls would let a
+// verb reach a reserved effect and escape by handing it something this walk
+// does not recognise as the transaction — which is the hole the filter was
+// meant to leave alone, reopened from the other end. What a verb hands an
+// effect is not the question; that it reaches one is.
+func effectsOwnedBy(fn *ast.FuncDecl, imports map[string]string) map[string]bool {
+	owned := map[string]bool{}
+	if fn.Body == nil {
+		return owned
+	}
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall || !handedTheTransaction(call) {
+			return true
+		}
+		if name, isEffect := effectNameOf(call.Fun, imports); isEffect {
+			owned[name] = true
+		}
+		return true
+	})
+	return owned
+}
+
+// callsMade names every call fn makes, by the name a reader sees at the site.
+func callsMade(fn *ast.FuncDecl, imports map[string]string) map[string]bool {
 	callees := map[string]bool{}
 	if fn.Body == nil {
 		return callees
@@ -136,12 +182,65 @@ func effectCallees(fn *ast.FuncDecl, imports map[string]string) map[string]bool 
 		if !isCall {
 			return true
 		}
-		if name, isEffect := effectNameOf(call.Fun, imports); isEffect {
+		if name, named := effectNameOf(call.Fun, imports); named {
 			callees[name] = true
 		}
 		return true
 	})
 	return callees
+}
+
+// handedTheTransaction reports whether a call is given something named like the
+// transaction — which is what separates a write from a lookup at a call site.
+func handedTheTransaction(call *ast.CallExpr) bool {
+	for _, arg := range call.Args {
+		if name, isIdent := arg.(*ast.Ident); isIdent && (name.Name == "tx" || name.Name == "s") {
+			return true
+		}
+		if closure, isClosure := arg.(*ast.FuncLit); isClosure && closureTakesTx(closure) {
+			return true
+		}
+	}
+	return false
+}
+
+// closureTakesTx reports a function literal that is handed a transaction — the
+// shape `writeEvidence` uses to run each effect inside the one transaction.
+func closureTakesTx(closure *ast.FuncLit) bool {
+	if closure.Type.Params == nil {
+		return false
+	}
+	for _, param := range closure.Type.Params.List {
+		if strings.HasSuffix(typeText(param.Type), "Tx") {
+			return true
+		}
+	}
+	return false
+}
+
+// writesTable reports whether fn contains a statement writing the named table.
+func writesTable(fn *ast.FuncDecl, table string) bool {
+	if fn.Body == nil {
+		return false
+	}
+	found := false
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		lit, isLit := node.(*ast.BasicLit)
+		if !isLit {
+			return true
+		}
+		text, isText := gatekit.LiteralText(lit)
+		if isText && tableWriteStatement(table).MatchString(text) {
+			found = true
+		}
+		return !found
+	})
+	return found
+}
+
+// tableWriteStatement matches a statement that changes the named table's rows.
+func tableWriteStatement(table string) *regexp.Regexp {
+	return regexp.MustCompile(`(?is)(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+` + regexp.QuoteMeta(table) + `\b`)
 }
 
 // effectNameOf renders a call target, and reports whether it is one an effect
@@ -183,22 +282,12 @@ func isStandardLibrary(path string) bool {
 // reachedAround reports which of the one path's own effects fn reaches
 // directly, sorted so a failure reads the same on every run.
 func reachedAround(fn *ast.FuncDecl, reserved map[string]bool, imports map[string]string) []string {
-	reached := effectCallees(fn, imports)
-	var around []string
+	reached := callsMade(fn, imports)
+	around := map[string]bool{}
 	for name := range reserved {
 		if reached[name] {
-			around = append(around, name)
+			around[name] = true
 		}
 	}
-	sort.Strings(around)
-	return around
-}
-
-func sortedNames(verbs map[string]*ast.FuncDecl) []string {
-	names := make([]string, 0, len(verbs))
-	for name := range verbs {
-		names = append(names, name)
-	}
-	sort.Strings(names)
-	return names
+	return sortedKeys(around)
 }

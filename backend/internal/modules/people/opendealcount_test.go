@@ -64,15 +64,17 @@ func TestEveryOpenDealCountComesFromTheRollup(t *testing.T) {
 			continue
 		}
 		dealReads++
-		if match := dealStatusConstraint.FindString(sql.text); match != "" {
-			t.Errorf("%s reads the deal table and constrains its status (`%s`):\n\n\t%s\n\n"+
-				"That assembles the definition of open here rather than taking it from %s, "+
-				"whichever statuses it names — the complement of won and lost is the same set "+
-				"written backwards. Read the rollup, or say beside the query why this "+
-				"population is not the one the rollup counts.",
-				sql.where, strings.TrimSpace(match), gatekit.FirstLineOf(sql.text),
-				openPipelineRollupView)
+		match := dealStatusConstraint.FindString(sql.text)
+		if match == "" || sql.reasoned {
+			continue
 		}
+		t.Errorf("%s reads the deal table and constrains its status (`%s`):\n\n\t%s\n\n"+
+			"That assembles the definition of open here rather than taking it from %s, "+
+			"whichever statuses it names — the complement of won and lost is the same set "+
+			"written backwards. Read the rollup, or say beside the query why this "+
+			"population is not the one the rollup counts.",
+			sql.where, strings.TrimSpace(match), gatekit.FirstLineOf(sql.text),
+			openPipelineRollupView)
 	}
 	// Both arms need a subject. The first has one only while the module still
 	// serves the count; the second only while the module still reaches the deal
@@ -88,10 +90,19 @@ func TestEveryOpenDealCountComesFromTheRollup(t *testing.T) {
 	}
 }
 
-// moduleSQL is one string literal in the module's own sources, with where it is.
+// moduleSQL is one string in the module's own sources, with where it is and
+// whether a comment sits beside it.
+//
+// The reason matters because this gate offers one. Its failure says "or say
+// beside the query why this population is not the one the rollup counts", and
+// an instruction a gate does not read is an instruction that cannot be
+// followed — the author writes the sentence, the gate fails anyway, and the
+// only remaining move is to delete the gate. A legitimate join that constrains
+// a LEAD's status alongside a deal read needs that door to exist.
 type moduleSQL struct {
-	where string
-	text  string
+	where    string
+	text     string
+	reasoned bool
 }
 
 // moduleSQLLiterals returns every string in the module's non-test sources, with
@@ -110,10 +121,14 @@ func moduleSQLLiterals(t *testing.T) []moduleSQL {
 	t.Helper()
 	var found []moduleSQL
 	for _, parsed := range moduleFiles(t) {
+		// Both the literals a chain consumed AND the chain's own inner nodes.
+		// `a + b + c` parses as `(a + b) + c`, so walking every BinaryExpr
+		// reports the outer chain and then the inner one again — the same query
+		// found twice, at two positions, which reads as two defects.
 		folded := map[ast.Node]bool{}
 		ast.Inspect(parsed.file, func(node ast.Node) bool {
 			binary, isBinary := node.(*ast.BinaryExpr)
-			if !isBinary || binary.Op != token.ADD || folded[node] {
+			if !isBinary || binary.Op != token.ADD || folded[ast.Node(binary)] {
 				return true
 			}
 			text, parts := concatenatedText(binary)
@@ -123,8 +138,16 @@ func moduleSQLLiterals(t *testing.T) []moduleSQL {
 			for _, part := range parts {
 				folded[part] = true
 			}
+			ast.Inspect(binary, func(inner ast.Node) bool {
+				if nested, isNested := inner.(*ast.BinaryExpr); isNested {
+					folded[ast.Node(nested)] = true
+				}
+				return true
+			})
 			found = append(found, moduleSQL{
-				where: parsed.fset.Position(binary.Pos()).String(), text: text,
+				where:    parsed.fset.Position(binary.Pos()).String(),
+				text:     text,
+				reasoned: hasReasonNear(parsed, binary.Pos()),
 			})
 			return true
 		})
@@ -138,7 +161,9 @@ func moduleSQLLiterals(t *testing.T) []moduleSQL {
 				return true
 			}
 			found = append(found, moduleSQL{
-				where: parsed.fset.Position(lit.Pos()).String(), text: text,
+				where:    parsed.fset.Position(lit.Pos()).String(),
+				text:     text,
+				reasoned: hasReasonNear(parsed, lit.Pos()),
 			})
 			return true
 		})

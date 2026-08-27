@@ -5,8 +5,6 @@ package people
 
 import (
 	"go/ast"
-	"go/token"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -58,10 +56,11 @@ var touchFieldsReadByMany = map[string]string{
 func TestEachRuleBearingTouchFieldHasOneReader(t *testing.T) {
 	readers := map[string]map[string]bool{}
 	forEachModuleFunc(t, func(_ moduleFile, fn *ast.FuncDecl) {
-		if !takesA(fn, touchType) {
-			return
-		}
-		for field := range fieldReadsIn(fn.Body) {
+		// Fields read OFF A TOUCH, not fields whose name matches. A function
+		// holding both a touch and an activity reads `source` on each, and a
+		// census keyed on the bare name reports the second as a reader of the
+		// first — then tells the author to ratify a read that never happened.
+		for field := range fieldsReadOf(fn, touchType) {
 			if readers[field] == nil {
 				readers[field] = map[string]bool{}
 			}
@@ -78,11 +77,7 @@ func TestEachRuleBearingTouchFieldHasOneReader(t *testing.T) {
 		}
 		switch {
 		case len(found) > 1 && !excepted:
-			names := make([]string, 0, len(found))
-			for name := range found {
-				names = append(names, name)
-			}
-			sort.Strings(names)
+			names := sortedKeys(found)
 			t.Errorf("%s.%s is read by %s.\n\nThat is a second opinion about the same rule: the "+
 				"captured_by grammar and the composer's stamp are things that change, and read "+
 				"in two places they change in one. The ladder then shows a lead as contacted "+
@@ -105,30 +100,4 @@ func TestEachRuleBearingTouchFieldHasOneReader(t *testing.T) {
 		t.Fatalf("nothing in this module reads any field of a %s, so this gate judged nothing "+
 			"and the rules it holds have moved", touchType)
 	}
-}
-
-// fieldReadsIn returns the field names selected in body, excluding those taken
-// by ADDRESS: `&t.capturedBy` in a row Scan fills the field rather than asking
-// it anything, and counting it would report the builder as a second reader of
-// every rule it populates.
-func fieldReadsIn(body *ast.BlockStmt) map[string]bool {
-	addressed := map[ast.Node]bool{}
-	ast.Inspect(body, func(node ast.Node) bool {
-		if unary, isUnary := node.(*ast.UnaryExpr); isUnary && unary.Op == token.AND {
-			addressed[unary.X] = true
-		}
-		return true
-	})
-	read := map[string]bool{}
-	ast.Inspect(body, func(node ast.Node) bool {
-		sel, isSel := node.(*ast.SelectorExpr)
-		if !isSel || addressed[ast.Node(sel)] {
-			return true
-		}
-		if _, isIdent := sel.X.(*ast.Ident); isIdent {
-			read[sel.Sel.Name] = true
-		}
-		return true
-	})
-	return read
 }

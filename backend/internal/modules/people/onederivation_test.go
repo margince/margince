@@ -40,10 +40,15 @@ const candidateBuilder = "leadPersonCandidate"
 const leadType = "crmcontracts.Lead"
 
 func TestTheLadderCandidateIsDerivedInOnePlace(t *testing.T) {
-	// Every function handed a lead is placed, rather than a subset being
-	// selected and judged. Under-recognition is then loud: a derivation written
-	// in a spelling this does not know still lands in the population, and the
-	// only way out of it is to be neither a build nor a change.
+	// Every function handed a lead is placed — one, a pointer to one, or an
+	// element of a slice of them — rather than a subset being selected and
+	// judged. Within that population under-recognition is loud: a derivation
+	// written in a spelling `constructs` does not know still lands in the
+	// population, and the only way out is to be neither a build nor a change.
+	//
+	// The population itself is the limit worth stating: a function that reaches
+	// a lead some other way again — out of a map, off a struct field — is not
+	// placed, and this gate would not see a derivation inside it.
 	population, deriving := 0, map[string]string{}
 	forEachModuleFunc(t, func(_ moduleFile, fn *ast.FuncDecl) {
 		if !takesA(fn, leadType) {
@@ -244,53 +249,4 @@ func callsFunc(fn *ast.FuncDecl, name string) bool {
 		return !found
 	})
 	return found
-}
-
-// holdersOf names the identifiers in fn bound to the named type — its receiver
-// and its parameters. A field read is only about that type when it is selected
-// on one of these.
-func holdersOf(fn *ast.FuncDecl, typeName string) map[string]bool {
-	held := map[string]bool{}
-	fields := []*ast.Field{}
-	if fn.Recv != nil {
-		fields = append(fields, fn.Recv.List...)
-	}
-	if fn.Type.Params != nil {
-		fields = append(fields, fn.Type.Params.List...)
-	}
-	for _, field := range fields {
-		if typeText(field.Type) != typeName {
-			continue
-		}
-		for _, name := range field.Names {
-			held[name.Name] = true
-		}
-	}
-	return held
-}
-
-// readsFieldOf answers where fn selects the named field ON A VALUE OF THE NAMED
-// TYPE, or an invalid position when it does not.
-//
-// The type matters. Selecting `.FullName` on the candidate is reading what the
-// ladder matched on; selecting it on the LEAD is the second reading this holds
-// against. A gate matching the field name alone cannot tell them apart, and
-// would refuse the correct one.
-func readsFieldOf(fn *ast.FuncDecl, typeName, field string) token.Pos {
-	holders := holdersOf(fn, typeName)
-	if len(holders) == 0 {
-		return token.NoPos
-	}
-	var at token.Pos
-	ast.Inspect(fn.Body, func(node ast.Node) bool {
-		sel, isSel := node.(*ast.SelectorExpr)
-		if !isSel || sel.Sel == nil || sel.Sel.Name != field {
-			return true
-		}
-		if base, isIdent := sel.X.(*ast.Ident); isIdent && holders[base.Name] {
-			at = sel.Sel.Pos()
-		}
-		return !at.IsValid()
-	})
-	return at
 }

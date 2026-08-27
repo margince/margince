@@ -8,6 +8,7 @@ import (
 	"go/parser"
 	"go/token"
 	"os"
+	"sort"
 	"strings"
 	"sync"
 	"testing"
@@ -25,8 +26,12 @@ import (
 // literal its author had in front of them and none recognising `var x T`,
 // `new(T)`, or a zero literal filled in afterwards.
 //
-// So there is one walk and one set of recognisers, and a gate says what it is
-// asking rather than how to look for it.
+// So the gates rewritten here share one walk and one set of recognisers, and
+// each says what it is asking rather than how to look for it. Two older gates in
+// this package still walk the directory themselves — dedupeorg_seam_test.go, and
+// projectanchorgate_test.go, which parses one filename. Converting them is worth
+// doing and is not done here; naming them is the difference between a scope and
+// a claim that the next author would grep, find, and stop looking behind.
 
 // moduleFile is one of the module's own non-test sources, parsed.
 type moduleFile struct {
@@ -106,31 +111,166 @@ func forEachModuleFunc(t *testing.T, visit func(parsed moduleFile, fn *ast.FuncD
 	}
 }
 
-// takesA reports whether fn is handed the named type — as a parameter, or as
-// its receiver. Both are what make a body's reads and literals be ABOUT that
-// type rather than about some other value that happens to share a field.
+// takesA reports whether fn is handed the named type.
 //
-// The receiver is not a special case: a method ON the type reads its fields
-// with the same authority a function taking one does, and a gate that read only
-// parameters would let a second opinion be written as a method and stay
-// invisible.
+// It is `holdersOf` asked as a yes/no, and it must stay that way: two walks of
+// the same receiver-and-parameter list would answer this question and "which
+// identifier holds one" differently the first time either learned a new shape,
+// and the gates here ask both.
 func takesA(fn *ast.FuncDecl, typeName string) bool {
+	return len(holdersOf(fn, typeName)) > 0
+}
+
+// holdersOf names the identifiers in fn that hold a value of the named type.
+//
+// Three ways a function comes to hold one, and a gate that knows fewer than all
+// three judges a smaller population while reporting a clean module:
+//
+//	func (t T) …              the receiver — a method ON the type reads its
+//	                          fields with exactly the authority a function
+//	                          taking one does
+//	func f(t T)               a parameter, including *T
+//	func f(ts []T) { for _, t := range ts … }
+//	                          an element of a slice of them, which is how this
+//	                          module's workflow steps actually receive touches
+//
+// The third is not a corner. Both lead-SLA workflow steps range over a
+// `[]leadResponseTouch`, so a gate reading only receivers and parameters cannot
+// see the two functions its own header is about.
+func holdersOf(fn *ast.FuncDecl, typeName string) map[string]bool {
+	held := map[string]bool{}
+	fields := []*ast.Field{}
 	if fn.Recv != nil {
-		for _, field := range fn.Recv.List {
-			if typeText(field.Type) == typeName {
-				return true
+		fields = append(fields, fn.Recv.List...)
+	}
+	if fn.Type.Params != nil {
+		fields = append(fields, fn.Type.Params.List...)
+	}
+	collections := map[string]bool{}
+	for _, field := range fields {
+		switch {
+		case typeText(field.Type) == typeName:
+			for _, name := range field.Names {
+				held[name.Name] = true
+			}
+		case isSliceOf(field.Type, typeName):
+			for _, name := range field.Names {
+				collections[name.Name] = true
 			}
 		}
 	}
-	if fn.Type.Params == nil {
-		return false
+	if len(collections) == 0 || fn.Body == nil {
+		return held
 	}
-	for _, param := range fn.Type.Params.List {
-		if typeText(param.Type) == typeName {
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		loop, isRange := node.(*ast.RangeStmt)
+		if !isRange || loop.Value == nil {
 			return true
 		}
+		source, isIdent := loop.X.(*ast.Ident)
+		if !isIdent || !collections[source.Name] {
+			return true
+		}
+		if name, namesValue := loop.Value.(*ast.Ident); namesValue && name.Name != "_" {
+			held[name.Name] = true
+		}
+		return true
+	})
+	return held
+}
+
+// isSliceOf reports a `[]T` or `[]*T` of the named type.
+func isSliceOf(expr ast.Expr, typeName string) bool {
+	slice, isSlice := expr.(*ast.ArrayType)
+	return isSlice && slice.Len == nil && typeText(slice.Elt) == typeName
+}
+
+// readsFieldOf answers where fn selects the named field ON A VALUE OF THE NAMED
+// TYPE, or an invalid position when it does not.
+//
+// The type matters, and matching the field name alone is the defect this
+// replaces. Selecting `.FullName` on the candidate is reading what the ladder
+// matched on; selecting it on the LEAD is a second reading. Selecting `.source`
+// on some other struct that happens to have one is neither, and a gate that
+// counted it would tell an author to ratify a read that never happened.
+func readsFieldOf(fn *ast.FuncDecl, typeName, field string) token.Pos {
+	var at token.Pos
+	for _, pos := range fieldReadsOf(fn, typeName, field) {
+		at = pos
+		break
 	}
-	return false
+	return at
+}
+
+// fieldReadsOf reports every position at which fn reads the named field off a
+// value of the named type, excluding reads taken by ADDRESS: `&t.capturedBy` in
+// a row Scan fills the field rather than asking it anything, and counting it
+// would report the builder as a reader of every rule it populates.
+func fieldReadsOf(fn *ast.FuncDecl, typeName, field string) []token.Pos {
+	holders := holdersOf(fn, typeName)
+	if len(holders) == 0 || fn.Body == nil {
+		return nil
+	}
+	addressed := map[ast.Node]bool{}
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		if unary, isUnary := node.(*ast.UnaryExpr); isUnary && unary.Op == token.AND {
+			addressed[unary.X] = true
+		}
+		return true
+	})
+	var found []token.Pos
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		sel, isSel := node.(*ast.SelectorExpr)
+		if !isSel || sel.Sel == nil || addressed[ast.Node(sel)] {
+			return true
+		}
+		if field != "" && sel.Sel.Name != field {
+			return true
+		}
+		if base, isIdent := sel.X.(*ast.Ident); isIdent && holders[base.Name] {
+			found = append(found, sel.Sel.Pos())
+		}
+		return true
+	})
+	return found
+}
+
+// fieldsReadOf names which fields of the named type fn reads.
+func fieldsReadOf(fn *ast.FuncDecl, typeName string) map[string]bool {
+	holders := holdersOf(fn, typeName)
+	if len(holders) == 0 || fn.Body == nil {
+		return nil
+	}
+	addressed := map[ast.Node]bool{}
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		if unary, isUnary := node.(*ast.UnaryExpr); isUnary && unary.Op == token.AND {
+			addressed[unary.X] = true
+		}
+		return true
+	})
+	read := map[string]bool{}
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		sel, isSel := node.(*ast.SelectorExpr)
+		if !isSel || sel.Sel == nil || addressed[ast.Node(sel)] {
+			return true
+		}
+		if base, isIdent := sel.X.(*ast.Ident); isIdent && holders[base.Name] {
+			read[sel.Sel.Name] = true
+		}
+		return true
+	})
+	return read
+}
+
+// sortedKeys names a map's keys in a stable order, so a failure reads the same
+// on every run.
+func sortedKeys[V any](values map[string]V) []string {
+	names := make([]string, 0, len(values))
+	for name := range values {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 // constructs reports whether body produces a POPULATED value of the named type.
@@ -266,10 +406,12 @@ func mutatesResultOf(body *ast.BlockStmt, callee string) bool {
 			if !callsNamed(rhs, callee) {
 				continue
 			}
-			// A multi-value call binds its results positionally; the value is
-			// whichever name sits where the type does, and taking all of them
-			// costs nothing because a field write to an error or an id does
-			// not parse.
+			// A multi-value call binds its results positionally, and this
+			// walk has no type information to say which name is the one.
+			// Taking all of them widens the question from "the value" to
+			// "anything this call returned", which is the safe direction: it
+			// can only over-report a derivation, and nothing in this module
+			// writes a field on a returned error or id.
 			for _, lhs := range assign.Lhs {
 				if name, isIdent := lhs.(*ast.Ident); isIdent && name.Name != "_" {
 					held[name.Name] = true
