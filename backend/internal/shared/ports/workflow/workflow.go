@@ -94,6 +94,23 @@ type Event struct {
 // audit, and the 🟡 gate can reason about it.
 type Effect struct {
 	Actions []Action
+
+	// Handler and OccurrenceKey scope the effect-level idempotency claim
+	// the create executor takes before writing (automation's applyCreate):
+	// N enabled instances of one handler each dispatch off the same
+	// occurrence, and an IDENTICAL planned create must apply once across
+	// all of them — the per-instance run claim cannot see that, because
+	// its key carries the automation id. OccurrenceKey is the handler's
+	// own IdempotencyKey(ev) WITHOUT the instance suffix: for an event
+	// trigger that carries the bus event id (one delivery, one key), and
+	// for a clock trigger the anchor-derived occurrence key — the scan
+	// synthesizes a fresh event id per instance pass, so an event-id key
+	// would silently give every instance its own claim and no dedupe at
+	// all. The engine stamps both just before Apply; a caller applying an
+	// effect outside the engine leaves Handler empty and applies
+	// unclaimed, which is the pre-existing single-caller contract.
+	Handler       string
+	OccurrenceKey string
 }
 
 // ActionKind enumerates the closed action set (features/03 §5.1); the
@@ -137,6 +154,13 @@ type Action struct {
 	Kind   ActionKind
 	Target datasource.EntityRef
 	Args   json.RawMessage
+
+	// Deduplicated marks a create the effect-level claim folded: a sibling
+	// instance's identical firing performed the write, so this action was
+	// recorded but deliberately not executed (automation's applyCreate sets
+	// it). Typed here rather than smuggled into Args so a trace reader can
+	// render the fold instead of reporting a write that never happened.
+	Deduplicated bool `json:"deduplicated,omitempty"`
 }
 
 // ApprovalToken references the typed, signed, single-use, effect-bound

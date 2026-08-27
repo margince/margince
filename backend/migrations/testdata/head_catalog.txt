@@ -725,6 +725,16 @@ public.automation.tier text NOT NULL gen=- def='confirmation_required'::text
 public.automation.trigger jsonb NOT NULL gen=- def=-
 public.automation.updated_at timestamp with time zone gen=- def=-
 public.automation.version bigint NOT NULL gen=- def=1
+public.automation_effect_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.automation_effect_claim.automation_effect_claim_pkey PRIMARY KEY (id)
+public.automation_effect_claim.automation_effect_claim_unique UNIQUE (handler, occurrence_key, effect_fingerprint)
+public.automation_effect_claim.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.automation_effect_claim.effect_fingerprint text NOT NULL gen=- def=-
+public.automation_effect_claim.handler text NOT NULL gen=- def=-
+public.automation_effect_claim.id uuid NOT NULL gen=- def=uuidv7()
+public.automation_effect_claim.occurrence_key text NOT NULL gen=- def=-
+public.automation_effect_claim_pkey CREATE UNIQUE INDEX automation_effect_claim_pkey ON public.automation_effect_claim USING btree (id)
+public.automation_effect_claim_unique CREATE UNIQUE INDEX automation_effect_claim_unique ON public.automation_effect_claim USING btree (handler, occurrence_key, effect_fingerprint)
 public.automation_pkey CREATE UNIQUE INDEX automation_pkey ON public.automation USING btree (id)
 public.booking_page acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.booking_page.booking_page_host_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE CASCADE

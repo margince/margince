@@ -314,8 +314,9 @@ var tableOwners = map[string]string{
 	// events that FEED it carry the write shape at their own writers.
 	"ai_task_run": "internal/modules/aiactivity",
 	// automation (the deterministic trigger-and-action catalog)
-	"workflow_run": "internal/modules/automation",
-	"automation":   "internal/modules/automation",
+	"workflow_run":            "internal/modules/automation",
+	"automation_effect_claim": "internal/modules/automation",
+	"automation":              "internal/modules/automation",
 	// signals (the warm-room signal spine + its append-only resolution log)
 	"finance_connection":         "internal/modules/finance",
 	"provider_connection":        "internal/modules/integrations",
