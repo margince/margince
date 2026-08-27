@@ -157,6 +157,12 @@ var feedTimeLayouts = []string{
 	time.RFC1123Z,
 	time.RFC1123,
 	time.RFC3339,
+	// Two-digit years are valid RSS 2.0 and real generators still emit them.
+	// Unparsed, such a date became "no date", which then read as today — an
+	// old announcement arriving as this week's news. Go's own RFC822 layouts
+	// carry no weekday and RSS dates do, so these are spelled out.
+	"Mon, 02 Jan 06 15:04:05 -0700",
+	"Mon, 02 Jan 06 15:04:05 MST",
 	"2006-01-02T15:04:05Z0700",
 	"2006-01-02 15:04:05",
 	"2006-01-02",

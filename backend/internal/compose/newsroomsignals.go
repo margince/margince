@@ -91,10 +91,14 @@ func WriteNewsroomSignals(
 			// Never `warn` or `urgent`: a company announcing something is news
 			// about the account, not a problem with it, and the severity
 			// vocabulary is what a reader triages by.
-			Severity:    severityInfo,
-			Channel:     newsroomChannel,
-			Source:      newsroomSource,
-			Fingerprint: fingerprintOf(item.Kind, orgID.String(), item.URL),
+			Severity: severityInfo,
+			Channel:  newsroomChannel,
+			Source:   newsroomSource,
+			// The article's ADDRESS is the identity, and the kind is
+			// deliberately not in it: a headline the CMS rewords, or a rule
+			// that later places it differently, is the same announcement and
+			// must not arrive as a second event.
+			Fingerprint: fingerprintOf(newsroomSource, orgID.String(), item.URL),
 			// The article is CITED, never copied: the snippet is the headline
 			// the company itself published, and the source is where to read the
 			// rest.
@@ -164,13 +168,45 @@ func publishedForAudit(published time.Time) *string {
 func classifyHeadline(headline string) string {
 	lowered := strings.ToLower(headline)
 	for _, rule := range headlineRules {
-		for _, word := range rule.words {
-			if strings.Contains(lowered, word) {
+		for _, phrase := range rule.words {
+			if containsPhrase(lowered, phrase) {
 				return rule.kind
 			}
 		}
 	}
 	return kindOtherEvent
+}
+
+// containsPhrase matches on word boundaries rather than as a substring.
+//
+// A bare Contains claims every word the token merely sits inside: "praises"
+// would answer to "raises", and a company praising its new CEO would be filed
+// as having raised money. The phrases themselves may hold spaces ("series b"),
+// so the test is on what surrounds the match rather than on a split.
+func containsPhrase(haystack, phrase string) bool {
+	from := 0
+	for {
+		at := strings.Index(haystack[from:], phrase)
+		if at < 0 {
+			return false
+		}
+		at += from
+		before := at == 0 || !isWordByte(haystack[at-1])
+		end := at + len(phrase)
+		after := end == len(haystack) || !isWordByte(haystack[end])
+		if before && after {
+			return true
+		}
+		from = at + 1
+	}
+}
+
+// isWordByte reports whether a byte continues a word. ASCII only, deliberately:
+// what it guards against is a token sitting inside a longer ASCII word, and a
+// multi-byte rune's bytes are all >= 0x80 and answer false — the right answer
+// at a boundary like "übernimmt".
+func isWordByte(b byte) bool {
+	return b >= 'a' && b <= 'z' || b >= 'A' && b <= 'Z' || b >= '0' && b <= '9'
 }
 
 // headlineRules is read in order, so an earlier rule wins a headline both would

@@ -56,6 +56,19 @@ func TestClassifyHeadlineReadsTheFirstRuleThatClaimsIt(t *testing.T) {
 	}
 }
 
+func TestClassifyHeadlineDoesNotClaimAWordItMerelySitsInside(t *testing.T) {
+	// "praises" contains "raises". A substring match files a company praising
+	// its new chief executive as having raised money — which is both wrong and
+	// the kind of wrong a reader believes, because funding is what they were
+	// hoping to see on the account.
+	if got := classifyHeadline("Acme praises its new CEO"); got == kindFunding {
+		t.Errorf("classified as %q — \"praises\" is not \"raises\"", got)
+	}
+	if got := classifyHeadline("Acme raises a Series A"); got != kindFunding {
+		t.Errorf("classified as %q, want %q", got, kindFunding)
+	}
+}
+
 func TestStaleDropsAnArchivedAnnouncementAndKeepsAnUndatedOne(t *testing.T) {
 	now := time.Date(2026, 8, 27, 12, 0, 0, 0, time.UTC)
 

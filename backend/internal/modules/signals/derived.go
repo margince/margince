@@ -209,7 +209,10 @@ func derivedEvidenceRows(in []DerivedEvidence) []map[string]any {
 	for _, cited := range in {
 		row := map[string]any{"snippet": cited.Snippet}
 		if cited.SourceURL != "" {
-			row["source_type"] = "url"
+			// `page` is the contract's own word for a cited web page
+			// (SignalEvidence.source_type). Inventing a second one here would
+			// write rows the published enum refuses.
+			row["source_type"] = "page"
 			row["source_id"] = cited.SourceURL
 		} else {
 			row["source_type"] = "activity"

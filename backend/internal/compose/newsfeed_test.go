@@ -93,6 +93,25 @@ func TestParseFeedLeavesAnUnreadableDateBlankRatherThanGuessing(t *testing.T) {
 	}
 }
 
+func TestParseFeedReadsATwoDigitYear(t *testing.T) {
+	// Valid RSS 2.0, and real generators still emit it. Unparsed it became "no
+	// date", which then read as today — an old press release arriving as this
+	// week's news.
+	feed := `<rss version="2.0"><channel><item>
+	  <title>An older announcement</title>
+	  <link>https://acme.example/news/older</link>
+	  <pubDate>Tue, 12 Aug 08 09:00:00 +0000</pubDate>
+	</item></channel></rss>`
+
+	items, err := ParseFeed(strings.NewReader(feed))
+	if err != nil {
+		t.Fatalf("parsing: %v", err)
+	}
+	if items[0].Published.Year() != 2008 {
+		t.Errorf("published = %v, want 2008", items[0].Published)
+	}
+}
+
 func TestParseFeedDropsAnItemWithNothingToFile(t *testing.T) {
 	feed := `<rss version="2.0"><channel>
 	  <item><title>No link here</title></item>
