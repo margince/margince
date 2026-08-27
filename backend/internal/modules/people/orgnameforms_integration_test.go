@@ -120,6 +120,22 @@ func TestVietnameseCompaniesResolveThroughTheLadder(t *testing.T) {
 				name, m.Decision, m.Confidence)
 		}
 	}
+	// A TWO-CHARACTER CHINESE BRAND is the shortest thing this tier has to
+	// retrieve, and whole-string similarity cannot: measured, "小米" against its
+	// own registered name scores 0.167, under the trigram limit. The containment
+	// arm is what finds it.
+	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "小米科技有限责任公司", Source: "manual",
+	}); err != nil {
+		t.Fatalf("seeding the short Chinese brand: %v", err)
+	}
+	short := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{DisplayName: "小米科技"})
+	if short.Decision != DecisionFuzzyReview {
+		t.Errorf("a two-character Chinese brand got %s (confidence %.4f), want "+
+			"fuzzy_review — its own company is seeded",
+			short.Decision, short.Confidence)
+	}
+
 	unrelated := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{
 		DisplayName: "주식회사 현대자동차",
 	})

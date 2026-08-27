@@ -6,6 +6,7 @@ package people
 import (
 	"strings"
 	"testing"
+	"time"
 )
 
 // cjkCompany is one real-shaped CJK name and the brand it must reduce to.
@@ -203,6 +204,57 @@ func TestACJKFormInsideABrandIsKept(t *testing.T) {
 	for alias, form := range cjkFormAliases {
 		if !strings.Contains(normalizeCJKName("ゼット"+alias), form) {
 			t.Errorf("alias %q does not resolve to %q", alias, form)
+		}
+	}
+}
+
+// THE STRIP IS BOUNDED, because the work happens while the workspace-wide
+// organization-name write lock is held and `display_name` has no length cap in
+// the contract. Measured before the bound, a name of 10 000 concatenated forms
+// took 370ms; every other organization-name writer waits behind that.
+func TestTheCJKStripIsBounded(t *testing.T) {
+	name := strings.Repeat("株式会社", 20000) + "ガナ"
+	start := time.Now()
+	got, isCJK := cjkNameForMatching(name)
+	elapsed := time.Since(start)
+	if !isCJK {
+		t.Fatal("a name of nothing but legal forms is still this path's to answer")
+	}
+	if elapsed > 200*time.Millisecond {
+		t.Errorf("stripping took %v — the bound is not holding, and this runs "+
+			"under the organization-name write lock", elapsed)
+	}
+	// Bounded, not wrong: the brand is still found at the end of what remains.
+	if !strings.HasSuffix(got, "ガナ") {
+		t.Errorf("the bounded strip lost the brand: %q", got[max(0, len(got)-24):])
+	}
+}
+
+// A name this path claims must actually CARRY one of its forms. A stray Han or
+// Kana character in a Vietnamese, Latin or Russian name is not this path's
+// business — routing it here left the other market's legal form in place.
+func TestOnlyANameCarryingACJKFormIsClaimed(t *testing.T) {
+	for _, k := range []struct{ name, want string }{
+		{"CÔNG TY TNHH 東京 Việt", "東京 viet"},
+		{"Acme 漢 GmbH", "acme 漢"},
+		{"ООО Ромашка 中", "ромашка 中"},
+	} {
+		if _, isCJK := cjkNameForMatching(k.name); isCJK {
+			t.Errorf("%q was claimed by the CJK path, which owns no form in it", k.name)
+		}
+		if got := orgNameForMatching(k.name); got != k.want {
+			t.Errorf("%q reduces to %q, want %q — its own market's handling was "+
+				"skipped", k.name, got, k.want)
+		}
+	}
+	// And a name that DOES carry one is claimed, whatever else it is written in.
+	for _, k := range []struct{ name, want string }{
+		{"Toyota株式会社", "toyota"},
+		{"ABC有限公司", "abc"},
+		{"Toyota Motor 株式会社", "toyota motor"},
+	} {
+		if got := orgNameForMatching(k.name); got != k.want {
+			t.Errorf("%q reduces to %q, want %q", k.name, got, k.want)
 		}
 	}
 }

@@ -38,7 +38,6 @@ package people
 
 import (
 	"strings"
-	"unicode"
 
 	"golang.org/x/text/unicode/norm"
 )
@@ -105,6 +104,22 @@ var cjkFormAliases = map[string]string{
 // needs a lookup: the forms above simply do not contain them.
 var cjkBrandTierWords = []string{"集团", "集團", "控股", "控股集团"}
 
+// cjkMaxFormsStripped bounds how many legal forms one name may shed.
+//
+// The strip is a loop over a shrinking string, so its cost is quadratic in the
+// number of forms — measured, a name of 10 000 concatenated forms takes 370ms,
+// and `display_name` is `text` with no maxLength in the contract. That work
+// happens inside DedupeOrganizationForCreate, which holds the workspace-wide
+// organization-name write lock, so an unbounded name pins every other
+// organization-name writer behind it. The same reasoning as nameScoringMaxRunes
+// (namesim.go), which bounds the metric for the same lock.
+//
+// FOUR is far past any real name: a company carries a form at one end, or at
+// both, and "株式会社ガナ株式会社" is already the strange case. Past the bound the
+// name keeps whatever forms are left, which for a name this shape is the same
+// answer any comparison would give.
+const cjkMaxFormsStripped = 4
+
 // cjkMinimumBrandRunes is the shortest name a strip may leave behind.
 //
 // A name that is nothing but its legal form — a bare "株式会社" or "㈜" in a CRM
@@ -113,16 +128,21 @@ var cjkBrandTierWords = []string{"集团", "集團", "控股", "控股集团"}
 // Japan and Korea have no such floor and dirty data has no floor at all.
 const cjkMinimumBrandRunes = 1
 
-// hasCJKScript answers whether a name is written in one of these scripts, and so
-// whether the character-level path applies to it at all.
+// carriesCJKForm answers whether this path owns the name: does it end or begin
+// with one of the legal forms above?
 //
-// Any Han, Hiragana, Katakana or Hangul character is enough. A name mixing Latin
-// with Han — common for a Japanese company writing its own name — still needs
-// the form stripped off the Han half.
-func hasCJKScript(s string) bool {
-	for _, r := range s {
-		if unicode.Is(unicode.Han, r) || unicode.Is(unicode.Hiragana, r) ||
-			unicode.Is(unicode.Katakana, r) || unicode.Is(unicode.Hangul, r) {
+// THE FORM, NOT THE SCRIPT. An earlier version claimed any name containing a
+// single Han, Kana or Hangul character, which is far too much — "CÔNG TY TNHH
+// 東京 Việt" is a Vietnamese company with a Han word in its name, and routing it
+// here left its Vietnamese legal form in place and squashed its spaces. The same
+// for "Acme 漢 GmbH", which needs the Latin suffix strip.
+//
+// A name that carries one of these forms is one of these markets, whatever else
+// it is written in: "Toyota株式会社" and "ABC有限公司" are how those companies
+// write themselves.
+func carriesCJKForm(name string) bool {
+	for _, form := range cjkLegalForms {
+		if strings.HasPrefix(name, form) || strings.HasSuffix(name, form) {
 			return true
 		}
 	}
@@ -146,12 +166,16 @@ func normalizeCJKName(s string) string {
 	var out strings.Builder
 	out.Grow(len(folded))
 	for _, r := range folded {
-		if isVariationSelector(r) || unicode.IsSpace(r) {
+		if isVariationSelector(r) {
 			continue
 		}
 		out.WriteRune(r)
 	}
-	return strings.ToLower(out.String())
+	// The SAME fold the rest of the package uses, not strings.ToLower: full
+	// Unicode folding is what makes Greek final sigma and ß behave, and a second
+	// spelling of "lowercase" here would make this path disagree with every
+	// other one about the same Latin name.
+	return normalizeName(strings.Join(strings.Fields(out.String()), " "))
 }
 
 // isVariationSelector reports the two ranges that pick a glyph shape.
@@ -180,10 +204,10 @@ func cjkNameForMatching(s string) (string, bool) {
 	// of its own: "㈱" is one compatibility character, and the script only
 	// appears once NFKC and the alias map have rewritten it as "株式会社".
 	name := normalizeCJKName(s)
-	if !hasCJKScript(name) {
+	if !carriesCJKForm(name) {
 		return "", false
 	}
-	for {
+	for stripped := 0; stripped < cjkMaxFormsStripped; stripped++ {
 		longest := ""
 		for _, form := range cjkLegalForms {
 			if len(form) <= len(longest) {
@@ -203,9 +227,11 @@ func cjkNameForMatching(s string) (string, bool) {
 		// A name that IS its legal form keeps it: an empty string would match
 		// every other empty string, and a bare "株式会社" in an export names no
 		// company at all.
+		trimmed = strings.TrimSpace(trimmed)
 		if len([]rune(trimmed)) < cjkMinimumBrandRunes {
 			return name, true
 		}
 		name = trimmed
 	}
+	return name, true
 }
