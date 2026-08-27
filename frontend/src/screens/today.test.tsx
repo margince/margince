@@ -809,3 +809,31 @@ describe("a decision lane handed something it cannot decide", () => {
     expect(screen.queryByText(/Two contacts/)).toBeNull();
   });
 });
+
+describe("pushing a decision to the back of the queue", () => {
+  // "Later" deferred the head of the LANE rather than the card on screen. The
+  // two are the same only until the first deferral, after which the lane's head
+  // is already at the back — so the second card's "Later" deferred something
+  // already deferred and the queue stopped moving. A reader who cannot pass the
+  // second card cannot reach the third.
+  it("advances past the second card too", async () => {
+    const user = userEvent.setup();
+    stub({
+      ...emptyDay,
+      needs_you: [
+        { id: "t-1", source: "task", title: "First promise", actions: [] },
+        { id: "t-2", source: "task", title: "Second promise", actions: [] },
+        { id: "t-3", source: "task", title: "Third promise", actions: [] },
+      ],
+      counts: { this_morning: 0, needs_you: 3, planned: 0 },
+    });
+    renderToday();
+
+    await screen.findByText("First promise");
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    expect(await screen.findByText("Second promise")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    expect(await screen.findByText("Third promise")).toBeTruthy();
+  });
+});

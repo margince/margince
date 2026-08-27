@@ -21,6 +21,14 @@ package gates
 // yet. Both directions are compared — a source with no entry fails, and an entry
 // naming no source fails too, because a dead entry teaches the next author that
 // the map is not maintained.
+//
+// The contract is PARSED, not pattern-matched. A first cut read the enum with a
+// regex over the raw file and had the one defect a gate must not have: writing
+// the same enum block-style instead of inline — an edit that changes nothing
+// about the contract — walked the match onto a different schema's vocabulary
+// entirely, and it reported a confident wrong answer about a list it was no
+// longer reading. Every way the document can be reshaped without changing its
+// meaning has to leave this corpus identical, and only a parser gives that.
 
 import (
 	"os"
@@ -28,16 +36,14 @@ import (
 	"slices"
 	"strings"
 	"testing"
+
+	"gopkg.in/yaml.v3"
 )
 
 const (
-	attentionContract      = "api/crm.yaml"
-	frontendAttentionMap   = "../frontend/src/screens/attentionsource.ts"
-	attentionItemSchemaKey = "\n    AttentionItem:"
+	attentionContract    = "api/crm.yaml"
+	frontendAttentionMap = "../frontend/src/screens/attentionsource.ts"
 )
-
-// sourceEnumLine reads the inline enum off the `source` property.
-var sourceEnumLine = regexp.MustCompile(`(?m)^\s*enum:\s*\[([^\]]*)\]`)
 
 // focusSurfaceEntry reads one `source: "surface"` pair out of the map.
 var focusSurfaceEntry = regexp.MustCompile(`["']?\b([a-z][a-z0-9_]*)\b["']?:\s*["']([a-z]+)["']`)
@@ -47,38 +53,45 @@ var focusSurfaceEntry = regexp.MustCompile(`["']?\b([a-z][a-z0-9_]*)\b["']?:\s*[
 // mentioned above it would keep this gate green.
 var tsCommentInSources = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
+// contract is as much of the OpenAPI document as this gate reads: one schema's
+// one property's enum. Named down to that so the corpus comes from the path the
+// contract actually declares, rather than from whatever the first match in a
+// 30,000-line file happened to be.
+type contract struct {
+	Components struct {
+		Schemas struct {
+			// The tag spells the schema's own name, which OpenAPI writes in
+			// PascalCase. A snake_case tag would match no key in the document
+			// and leave this gate reading an empty enum.
+			//nolint:tagliatelle // the key is the contract's schema name, not ours to style
+			AttentionItem struct {
+				Properties struct {
+					Source struct {
+						Enum []string `yaml:"enum"`
+					} `yaml:"source"`
+				} `yaml:"properties"`
+			} `yaml:"AttentionItem"`
+		} `yaml:"schemas"`
+	} `yaml:"components"`
+}
+
 // contractSources reads the AttentionItem.source enum out of the OpenAPI schema.
-//
-// Scoped to the AttentionItem schema rather than the whole document: crm.yaml
-// holds hundreds of inline enums, and the first one a file-wide scan met would
-// be some other schema's vocabulary entirely.
 func contractSources(t *testing.T) []string {
 	t.Helper()
 	document, err := os.ReadFile(attentionContract)
 	if err != nil {
 		t.Fatalf("reading the API contract: %v", err)
 	}
-	start := strings.Index(string(document), attentionItemSchemaKey)
-	if start < 0 {
-		t.Fatalf("no %s schema in %s — this gate is reading the wrong document", attentionItemSchemaKey, attentionContract)
+	var parsed contract
+	if err := yaml.Unmarshal(document, &parsed); err != nil {
+		t.Fatalf("parsing the API contract: %v", err)
 	}
-	schema := string(document)[start:]
-	property := strings.Index(schema, "\n        source:")
-	if property < 0 {
-		t.Fatalf("AttentionItem declares no source property: this gate no longer knows what it is guarding")
-	}
-	match := sourceEnumLine.FindStringSubmatch(schema[property:])
-	if match == nil {
-		t.Fatalf("AttentionItem.source carries no inline enum: the corpus this gate derives has moved")
-	}
-	var sources []string
-	for _, value := range strings.Split(match[1], ",") {
-		if trimmed := strings.TrimSpace(value); trimmed != "" {
-			sources = append(sources, trimmed)
-		}
-	}
+	sources := parsed.Components.Schemas.AttentionItem.Properties.Source.Enum
 	if len(sources) == 0 {
-		t.Fatalf("read no values out of the AttentionItem.source enum — the parser has stopped seeing it")
+		// Not "no sources" — there is no such contract. The schema was renamed
+		// or the property moved, and a gate that shrugged at that would report
+		// PASS over a list it had stopped reading.
+		t.Fatalf("components.schemas.AttentionItem.properties.source declares no enum in %s: this gate no longer knows what it is guarding", attentionContract)
 	}
 	slices.Sort(sources)
 	return slices.Compact(sources)

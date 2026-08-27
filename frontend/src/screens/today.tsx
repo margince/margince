@@ -528,12 +528,6 @@ function TodayLanes({
   const [decided, setDecided] = useState(0);
   const [deferred, setDeferred] = useState<readonly string[]>([]);
   const onDecided = () => setDecided((n) => n + 1);
-  const onSkip = () =>
-    setDeferred((ids) =>
-      needsYou[0] && !ids.includes(needsYou[0].id)
-        ? [...ids, needsYou[0].id]
-        : ids,
-    );
   // Deferred items go to the BACK, never away: a reader who put three things
   // off still has three things to do, and a queue that dropped them would
   // report a clear day that is not one.
@@ -541,6 +535,14 @@ function TodayLanes({
     ...needsYou.filter((item) => !deferred.includes(item.id)),
     ...needsYou.filter((item) => deferred.includes(item.id)),
   ];
+  // Defers the card the reader is LOOKING at, which is the head of the queue
+  // and not the head of the lane. The two are the same only until the first
+  // deferral; after that the lane's head has moved to the back, so deferring it
+  // again is a no-op and every later press of "later" does nothing.
+  const onSkip = () =>
+    setDeferred((ids) =>
+      queue[0] && !ids.includes(queue[0].id) ? [...ids, queue[0].id] : ids,
+    );
   const onComplete = (id: string) =>
     complete.mutate({ id, body: { is_done: true } });
   // One day later, through the same helper the task queue snoozes with, so the
