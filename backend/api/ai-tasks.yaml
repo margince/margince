@@ -203,7 +203,7 @@ tasks:
       - {name: loop, kind: agent_loop}
     agents:
       morning_brief:
-        tools: [catch_me_up_on, list_records, read_record]
+        tools: [annotate_brief, catch_me_up_on, list_records, read_brief, read_record]
       overnight_at_risk_sweep:
         tools: [at_risk_relationships, catch_me_up_on, list_records, log_activity,
                 read_record, review_commitments, whats_slipping_this_week]

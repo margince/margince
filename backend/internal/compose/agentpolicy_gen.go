@@ -504,6 +504,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/webhook-subscriptions/{id}/rotate-secret":                  {Op: "rotateWebhookSecret", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/provider-keys/{provider}":                                {Op: "setAiProviderKey", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/ai/routing":                                                 {Op: "replaceAiRouting", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/brief/annotations":                                          {Op: "annotateMorningBrief", Access: "tool", Tool: "annotate_brief", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/capture/blocked-domains":                                    {Op: "setBlockedDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/company":                                                    {Op: "putCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/deal-rooms/{id}/expiry":                                     {Op: "setDealRoomExpiry", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
