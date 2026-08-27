@@ -70,8 +70,19 @@ var subjectTimelineLockSQL = `
 // The same three id sets the destroy and the hold select from, so a row cannot
 // be judged by one spelling and locked by another.
 func lockSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string) error {
-	// ORDER BY id: two erasures against overlapping subjects take the same rows
-	// in the same order, so they queue instead of deadlocking.
+	// ORDER BY id is BEST EFFORT against a deadlock between two erasures whose
+	// subjects share activities, and is written down as best effort because it
+	// is not a guarantee: Postgres does not promise that `FOR UPDATE` acquires
+	// in the sort's order, only that the rows come back in it. The plan it
+	// usually chooses locks after sorting, which is why this helps at all.
+	//
+	// When it does not hold, the loser gets 40P01 and ErasePerson returns it —
+	// the whole transaction rolls back, so no half-erasure commits and the
+	// request is safe to re-issue. That is the honest cost, and it is small
+	// because the collision needs two erasures overlapping on the same
+	// activities at the same moment. Retrying inside the eraser was considered
+	// and left alone: a retry loop around a transaction this long belongs to
+	// whoever decides the policy for every such write, not to this one.
 	_, err := tx.Exec(ctx, subjectTimelineLockSQL, personID, emails, channelKeys)
 	return err
 }
