@@ -12,6 +12,7 @@ package privacy
 
 import (
 	"context"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -27,6 +28,65 @@ import (
 // the timeline text and its field-level provenance. It returns the
 // redacted activity ids so the caller can tombstone each record's own
 // audit spine.
+// subjectTimelineLockSQL selects every row this erasure will judge, FOR UPDATE.
+//
+// The three id sets come from the same fragments the destroy and the hold
+// select from, so a row cannot be judged by one spelling and locked by another.
+// Only the NUMBERING is adapted: the fragments are written for the destroy's
+// argument list, where the channel keys are $6 behind the floor and the
+// tombstone name, and this statement wants none of those. Renumbering one
+// placeholder is the smallest adaptation that keeps one definition of the row
+// set; TestTheTimelineLockBindsEveryPlaceholderItNames holds it to three.
+var subjectTimelineLockSQL = `
+	SELECT a.id FROM activity a
+	WHERE a.id IN (` + subjectOnlyActivities + `)
+	   OR a.id IN (` + unlinkedSubjectMail + `)
+	   OR a.id IN (` + strings.ReplaceAll(unlinkedSubjectChannel, "$6", "$3") + `)
+	ORDER BY a.id
+	FOR UPDATE`
+
+// lockSubjectTimeline takes a row lock on every activity this erasure will
+// judge, BEFORE it judges any of them.
+//
+// The judgement is erase-or-hold, and it reads `retention_class` — which a deal
+// win or a sent offer stamps on the same rows, in its own transaction
+// (activities.StampCorrespondenceForDeal). Without this lock the two can
+// interleave: the erasure reads a NULL class, destroys the correspondence, and
+// the qualification commits afterwards. The row is gone either way, so nothing
+// readable survives — but A165/ADR-0114 §1 says that correspondence was to be
+// HELD, and the obligation was not honoured (issue #1618).
+//
+// The lock is what makes the race have a winner. Under READ COMMITTED a
+// qualification already holding these rows makes this statement wait, and the
+// erasure then re-reads the class it just waited for — so an in-flight
+// qualification wins and its correspondence is held. One that starts after this
+// lock waits for the commit and stamps a row already erased, which is the
+// residual and is the honest one: by then there was nothing to hold.
+//
+// NO FLOOR PREDICATE, deliberately. The floor is what the judgement uses to
+// decide, and a lock that pre-applied it would leave exactly the rows whose
+// class is about to change unlocked — the ones this exists for.
+//
+// The same three id sets the destroy and the hold select from, so a row cannot
+// be judged by one spelling and locked by another.
+func lockSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string) error {
+	// ORDER BY id is BEST EFFORT against a deadlock between two erasures whose
+	// subjects share activities, and is written down as best effort because it
+	// is not a guarantee: Postgres does not promise that `FOR UPDATE` acquires
+	// in the sort's order, only that the rows come back in it. The plan it
+	// usually chooses locks after sorting, which is why this helps at all.
+	//
+	// When it does not hold, the loser gets 40P01 and ErasePerson returns it —
+	// the whole transaction rolls back, so no half-erasure commits and the
+	// request is safe to re-issue. That is the honest cost, and it is small
+	// because the collision needs two erasures overlapping on the same
+	// activities at the same moment. Retrying inside the eraser was considered
+	// and left alone: a retry loop around a transaction this long belongs to
+	// whoever decides the policy for every such write, not to this one.
+	_, err := tx.Exec(ctx, subjectTimelineLockSQL, personID, emails, channelKeys)
+	return err
+}
+
 func redactSubjectTimeline(ctx context.Context, tx pgx.Tx, personID ids.PersonID, emails []string, channelKeys []string, floorInterval string, floorAnchor bool) ([]ids.UUID, error) {
 	// Redact the subject's own timeline rows, the unlinked mail about them — in
 	// both directions, captured and sent (unlinkedSubjectMail) — and the

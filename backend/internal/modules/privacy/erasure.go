@@ -136,6 +136,12 @@ func (e *Eraser) ErasePerson(ctx context.Context, personID ids.UUID, reason stri
 		if err := eraseDealRoomSeats(ctx, tx, emails, reason); err != nil {
 			return err
 		}
+		// Before the timeline is JUDGED, not merely before it is written: the
+		// erase-or-hold decision reads a column another transaction stamps, so
+		// the lock has to precede the read that decides.
+		if err := lockSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities)); err != nil {
+			return err
+		}
 		activitiesRedacted, err := redactSubjectTimeline(ctx, tx, subject, emails, channelActivityKeys(identities), floorInterval, floorAnchor)
 		if err != nil {
 			return err
