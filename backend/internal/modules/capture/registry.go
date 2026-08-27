@@ -60,6 +60,10 @@ type Registry struct {
 	// digestProjects answers the morning digest's projects section
 	// (digestprojects.go); nil builds a digest without one.
 	digestProjects DigestProjectsSource
+
+	// digestReview answers what is waiting for the digest's reader
+	// (digestreview.go); nil leaves those counts at zero.
+	digestReview DigestReviewSource
 }
 
 // defaultSyncInterval paces a healthy connection between syncs; the push
