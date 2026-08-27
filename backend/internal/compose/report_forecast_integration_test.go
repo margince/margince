@@ -80,8 +80,7 @@ func setupForecast(t *testing.T) *forecastEnv {
 	}
 	// The installation's identity as settings rows: the forecast's
 	// slipped-category dimension resolves its zone from the SETTING now, and
-	// this env builds its workspace by raw SQL, so bootstrap never seeded them
-	// (issue #521).
+	// this env builds its workspace by raw SQL, so bootstrap never seeded them.
 	if _, err := owner.Exec(ctx, `INSERT INTO setting (key, value) VALUES
 			('installation.name', '"Forecast"'::jsonb),
 			('installation.base_currency', '"EUR"'::jsonb),
@@ -161,7 +160,7 @@ func (e *forecastEnv) dealReadCtx(userID ids.UUID, teams []ids.UUID, scope princ
 			Objects: map[string]principal.ObjectGrant{
 				"deal": {Read: true},
 				// The forecast buckets "today" in the installation's zone, and
-				// that zone is read behind this object now (issue #521). 0191
+				// that zone is read behind this object now. 0191
 				// grants it to all five seeded roles, so no real caller of a
 				// report is without it.
 				"installation_settings": {Read: true},

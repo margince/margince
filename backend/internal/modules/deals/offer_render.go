@@ -143,9 +143,9 @@ func resolveRenderBuyerBlock(ctx context.Context, tx pgx.Tx, offer crmcontracts.
 // once sent, else the installation's current live name.
 //
 // The live half reads the SAME source the frozen half was written from
-// (sendSnapshots). Reading it from the retiring column here would make a draft
-// and a sent offer disagree about who issued them the moment the two copies
-// drift — one fact, one source (issue #521).
+// (sendSnapshots), which is what stops a draft and a sent offer disagreeing
+// about who issued them. One fact, one source — and since the workspace row's
+// copy was dropped there is no second source left to read it from.
 func (s *Store) resolveRenderIssuerName(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) (string, error) {
 	if offer.IssuerSnapshot != nil {
 		if name, ok := (*offer.IssuerSnapshot)["workspace_name"].(string); ok && name != "" {

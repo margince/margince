@@ -218,7 +218,7 @@ func TestForecastSpecShape(t *testing.T) {
 	// One join, a to-one lookup for win_probability, never a row multiplier.
 	// The workspace join went with the §11 reporting-zone "today": that zone
 	// is an installation SETTING now, bound as a parameter, so the join had
-	// nothing left to carry (issue #521).
+	// nothing left to carry.
 	if got := spec.fromClause(); got != "deal t JOIN stage s ON s.id = t.stage_id" {
 		t.Errorf("fromClause = %q", got)
 	}

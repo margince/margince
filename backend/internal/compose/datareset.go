@@ -192,8 +192,8 @@ func (h dataResetHandlers) runQuiesced(ctx context.Context, wsID ids.UUID, clear
 // organization's name.
 func confirmResetOrgName(ctx context.Context, tx pgx.Tx, confirmation string) error {
 	// The SETTING, because that is the name the operator is reading off the
-	// screen when they type it. Demanding the column's copy would, the moment
-	// the two drifted, refuse the only spelling they can see (issue #521).
+	// screen when they type it — and, since the workspace row's copy was
+	// dropped, the only name there is.
 	orgName, err := identity.NameOf(ctx, tx)
 	if err != nil {
 		return err

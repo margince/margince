@@ -153,7 +153,7 @@ func (s *Store) SetRawTx(ctx context.Context, tx pgx.Tx, key string, next json.R
 		// succeeded, while every reader that refuses an absent row
 		// (RequireTx) kept refusing — with no way to repair it through the
 		// product. Reachable wherever 0191's conditional backfill wrote
-		// nothing (issue #521).
+		// nothing.
 		unchanged := string(canonical) == string(next)
 		if stored && unchanged {
 			return nil
