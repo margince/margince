@@ -24,8 +24,8 @@ import (
 // dollar-quoted body yet executes, so the table it creates is invisible here."
 //
 // declaredTables returns [] with no error for this fixture. The table is
-// nevertheless created, without a workspace_id, and every row in it would be
-// readable by every workspace.
+// nevertheless created, and it reaches the catalog sweep carrying none of the
+// grants the tier requires — which is what the sweep, not the parser, catches.
 func TestGateCatchesATableCreatedInsideADoBlock(t *testing.T) {
 	unit := unitName(t, "doblk")
 	ns := namespaceOf(t, unit)
@@ -38,7 +38,7 @@ END $$;
 	down := fmt.Sprintf("DROP TABLE IF EXISTS ext.%s_hidden;\n", ns)
 
 	err := runGate(t, unit, migrationDir(t, up, down))
-	requireRefusal(t, err, "ext."+ns+"_hidden", "workspace_id")
+	requireRefusal(t, err, "ext."+ns+"_hidden", "margince_app")
 }
 
 // Gap 2 — "A quote inside a double-quoted identifier (ext.\"it's\") or a
@@ -80,16 +80,11 @@ CREATE TABLE ext.stowaway (id uuid NOT NULL PRIMARY KEY);
 		up := scaffoldUp(ns) + fmt.Sprintf(`
 CREATE TABLE %[2]s (
     id           uuid NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE
+    body         text NOT NULL
 );
 CREATE TABLE ext.stowaway2 (id uuid NOT NULL PRIMARY KEY);
-ALTER TABLE %[2]s ENABLE ROW LEVEL SECURITY;
-ALTER TABLE %[2]s FORCE ROW LEVEL SECURITY;
-CREATE POLICY %[1]s_quoted_isolation ON %[2]s
-    USING      %[3]s
-    WITH CHECK %[3]s;
 GRANT SELECT, INSERT, UPDATE, DELETE ON %[2]s TO margince_app;
-`, ns, quoted, predicateSQL)
+`, ns, quoted)
 		down := "DROP TABLE IF EXISTS ext.stowaway2;\nDROP TABLE IF EXISTS " + quoted + ";\n" + scaffoldDown(ns)
 
 		requireRefusal(t, runGate(t, unit, migrationDir(t, up, down)),

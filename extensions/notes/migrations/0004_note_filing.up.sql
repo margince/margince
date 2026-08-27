@@ -6,9 +6,9 @@
 -- still only the unit's.
 --
 -- A plain uuid and NOT a foreign key onto activity, which is the one thing
--- worth stating about this column. A unit's tables may reference workspace(id)
--- and nothing else in public (the migration gate mints a role that CAN point
--- nowhere else): a foreign key onto a core table takes a lock on core writes
+-- worth stating about this column. A unit's tables may reference nothing at all
+-- in public (the migration gate mints a role that CAN point nowhere else): a
+-- foreign key onto a core table takes a lock on core writes
 -- and can refuse a core delete forever after, which is a unit reaching into the
 -- product's own operations. What this column holds is a RECEIPT — the id the
 -- port answered with — and a receipt for a record that later went away is

@@ -4,9 +4,9 @@
 -- One row per connected member: where their Relay is, how far the poll has
 -- read, and whether the connection still works. It is applied by the pre-merge
 -- gate as a restricted ext_relay_probe role and at runtime by
--- margince_owner; what isolates it in production is the FORCE row level
--- security and the workspace-bound policy below, not its ownership
--- (extensions/notes/migrations/0001 carries the long form of that note).
+-- margince_owner; what bounds it in production is the grant surface the gate
+-- polices and the ext schema the unit owns, not its ownership and not a
+-- row-level policy (extensions/notes/migrations/0001 carries the long form).
 --
 -- THE TOKEN IS NOT HERE. A member's personal access token lives in the unit's
 -- user-scoped secret namespace, sealed by the installation's custodian. This
@@ -15,11 +15,6 @@
 
 CREATE TABLE ext.ext_relay_probe_connection (
     id              uuid        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    -- The tenant claim, and the column the policy below compares. The cascade
-    -- is load-bearing: without it, deleting a workspace fails on this unit's
-    -- rows, so erasing a tenant would stop at the first installed extension.
-    workspace_id    uuid        NOT NULL REFERENCES workspace(id) ON DELETE CASCADE,
-
     -- WHOSE connection this is: the member whose token produced the records,
     -- and the authority every ingest from this row runs under. Stamped by the
     -- handler from the invocation's Caller and never from the request body —
@@ -27,7 +22,7 @@ CREATE TABLE ext.ext_relay_probe_connection (
     -- would forge the consent the ingress port checks.
     --
     -- NO FOREIGN KEY to the core user table: the role this file is applied as
-    -- holds REFERENCES (id) on workspace and nothing else on public. The cost
+    -- holds nothing on public at all. The cost
     -- is real and worth stating — nothing deletes this row when the account is
     -- deleted, so a reader must treat the id as one that may no longer
     -- resolve. The poll does: identity refuses a member who is gone, and the
@@ -98,31 +93,19 @@ CREATE TABLE ext.ext_relay_probe_connection (
     created_at      timestamptz NOT NULL DEFAULT now(),
     updated_at      timestamptz NOT NULL DEFAULT now(),
 
-    -- One connection per member per workspace. Without it a member could
+    -- One connection per member. Without it a member could
     -- connect twice and have both rows poll the same inbox, which is not a
     -- duplicate-record problem — the capture key makes the second landing a
     -- no-op — but two cursors advancing over one account, each hiding the
     -- other's gaps.
     CONSTRAINT ext_relay_probe_connection_one_per_member
-        UNIQUE (workspace_id, user_id)
+        UNIQUE (user_id)
 );
 
--- ENABLE and FORCE, both. The owner at runtime is margince_owner, and ENABLE
--- alone exempts a table's owner from its own policies — so without FORCE the
--- isolation would hold for margince_app and not for the role every migration
--- and every operator psql session arrives as.
-ALTER TABLE ext.ext_relay_probe_connection ENABLE ROW LEVEL SECURITY;
-ALTER TABLE ext.ext_relay_probe_connection FORCE ROW LEVEL SECURITY;
+-- NO ROW-LEVEL SECURITY: a unit table carries none, for the reasons
+-- extensions/notes/migrations/0001 states in full.
 
--- Exactly one policy, permissive, ALL commands, to PUBLIC. A second permissive
--- policy ORs with this one and can only widen it, and USING without WITH CHECK
--- would admit writes into another workspace.
-CREATE POLICY ext_relay_probe_connection_tenant_isolation
-    ON ext.ext_relay_probe_connection
-    USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
-    WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
-
--- The app role runs the unit's handlers, under the policy above. TRUNCATE is
--- deliberately absent: it empties every tenant's rows without consulting the
--- policy's USING clause.
+-- The app role runs the unit's handlers. TRUNCATE is deliberately absent: no
+-- unit verb issues one, and a privilege nothing reaches for is one more thing a
+-- compromised unit could.
 GRANT SELECT, INSERT, UPDATE, DELETE ON ext.ext_relay_probe_connection TO margince_app;

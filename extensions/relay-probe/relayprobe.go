@@ -141,9 +141,3 @@ const tokenKey = "api-token"
 // because audit_log.entity_type names a kind of record rather than a path to
 // one. One is derived from the other so the two cannot drift into two tables.
 const connectionTable = "ext." + connectionEntity
-
-// callerWorkspace is the tenant the invocation is pinned to, as SQL sees it.
-// The Runtime binds app.workspace_id before any statement runs and the table's
-// policy compares this exact expression, so an INSERT spelling it names the
-// only workspace the policy's WITH CHECK would accept anyway.
-const callerWorkspace = `NULLIF(current_setting('app.workspace_id', true), '')::uuid`

@@ -6,12 +6,9 @@
 -- exactly the installations that did not need it — a fresh one — and never on
 -- the ones that do. An upgrade is a new number.
 --
--- The index earns its place twice. The table is cross-tenant, so every read the
--- policy admits still has to FIND this workspace's rows among every other
--- workspace's; leading on workspace_id turns the list into a range scan, and
--- trailing on created_at DESC is the order listNotes asks for, so the sort
--- comes free. The leading column is also what the workspace cascade needs:
--- without an index beginning with the referencing column, deleting one
--- workspace sequentially scans this whole table once per row it removes.
-CREATE INDEX ext_notes_note_workspace_created
-    ON ext.ext_notes_note (workspace_id, created_at DESC);
+-- The index serves listNotes, which reads the table newest-first and bounds the
+-- page. Without it that read is a sequential scan plus a sort of every note the
+-- installation has ever taken, which is fine at the size a unit starts at and
+-- is not the size it stays at.
+CREATE INDEX ext_notes_note_created
+    ON ext.ext_notes_note (created_at DESC);

@@ -162,9 +162,9 @@ func connect(ctx context.Context, rt extension.Runtime, in json.RawMessage) (jso
 			return err
 		}
 		stored, err = scanConnection(tx.QueryRow(ctx,
-			`INSERT INTO `+connectionTable+` (workspace_id, user_id, base_url)
-			 VALUES (`+callerWorkspace+`, $1::uuid, $2)
-			 ON CONFLICT (workspace_id, user_id) DO UPDATE
+			`INSERT INTO `+connectionTable+` (user_id, base_url)
+			 VALUES ($1::uuid, $2)
+			 ON CONFLICT (user_id) DO UPDATE
 			    SET base_url = EXCLUDED.base_url,
 			        status = '`+statusConnected+`',
 			        last_error_class = NULL,

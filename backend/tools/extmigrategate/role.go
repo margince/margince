@@ -18,10 +18,10 @@ import (
 // core owns public (backend/migrations/core/0213_ext_schema.up.sql).
 const extSchema = "ext"
 
-// coreTenantParent is the core table every extension tenant table hangs off.
-// It is the ONLY core relation the extension role is granted anything on, and
-// the grant is REFERENCES on one column — enough to declare the foreign key
-// this gate requires and not enough to read a row of it.
+// coreTenantParent is the core table extension tables used to hang off. The
+// role is granted nothing on it, or on anything else in public; the constant
+// survives only so assertNoCorePrivileges can name the last exemption that was
+// dropped when the tier stopped carrying a tenant column.
 const coreTenantParent = "public.workspace"
 
 // extRole is the restricted role a unit's migrations are applied as: the
@@ -51,13 +51,14 @@ type extRole struct {
 //     gen-composition's textual rule makes when it accepts a bare
 //     `CREATE TABLE ext_<name>_thing`.
 //
-//   - REFERENCES on workspace(id) alone. The tenant-table rule requires
-//     `workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE`,
-//     and declaring that foreign key needs the REFERENCES privilege on the
-//     parent, so "no grants on public at all" is not achievable alongside the
-//     rule. Column-scoped and privilege-scoped is the minimum that works: the
-//     role can point at workspace, and cannot select, insert or alter a byte of
-//     it. It also cannot point at any OTHER unique column of workspace, which
+//   - NOTHING ON PUBLIC AT ALL, which became reachable when the tier stopped
+//     carrying a tenant column. The role held REFERENCES (id) on workspace for
+//     exactly as long as a unit table was required to declare a foreign key
+//     onto it; with no such key to declare there is no core object a unit's
+//     migration may name, and PostgreSQL refuses the rest. The older shape,
+//     kept here because the reasoning still binds anything that would restore
+//     it: a key onto core is not an inert declaration — it takes a lock on core
+//     writes and can refuse a core delete forever after, which
 //     is what lets assertWorkspaceForeignKeys skip checking confkey.
 //
 //     Accepted residue: a foreign key is an existence oracle. A role holding it
@@ -109,7 +110,6 @@ func mintRole(ctx context.Context, admin *pgx.Conn, namespace, dsn string) (mint
 	}()
 	for _, statement := range []string{
 		`GRANT CREATE, USAGE ON SCHEMA ` + extSchema + ` TO ` + role.name,
-		`GRANT REFERENCES (id) ON TABLE ` + coreTenantParent + ` TO ` + role.name,
 	} {
 		if _, err := admin.Exec(ctx, statement); err != nil {
 			return nil, fmt.Errorf("preparing the %s role (%s): %w", role.name, statement, err)
@@ -257,14 +257,11 @@ func (r *extRole) assertRestricted(ctx context.Context) error {
 // function of its own on a core table, and from then on every core write runs
 // that function. Nothing else in this gate would notice.
 //
-// REFERENCES is probed separately rather than excluded, because the gate grants
-// exactly `REFERENCES (id) ON public.workspace` itself and the required tenant
-// foreign key cannot be declared without it. Excluding the verb outright was the
-// earlier posture and it was too broad: a cluster that had widened REFERENCES to
-// some other core table would let a unit's migration hang a foreign key off it,
-// which is not an inert declaration — it takes a lock on core writes and can
-// refuse a core delete forever after. So the exemption is narrowed to the exact
-// column the gate itself grants.
+// REFERENCES is still probed separately, and now with no exemption at all: the
+// gate grants none, so any column a unit's role can reference is a widening the
+// cluster brought, not one this gate made. A foreign key onto core is not an
+// inert declaration — it takes a lock on core writes and can refuse a core
+// delete forever after.
 func (r *extRole) assertNoCorePrivileges(ctx context.Context) error {
 	var reachable string
 	err := r.conn.QueryRow(ctx, `
@@ -285,13 +282,11 @@ func (r *extRole) assertNoCorePrivileges(ctx context.Context) error {
 	return r.assertNoWiderReferences(ctx)
 }
 
-// assertNoWiderReferences proves the one core grant the gate makes is the only
-// core grant the role holds: REFERENCES on public.workspace(id), nothing else on
-// that table and nothing at all on any other.
+// assertNoWiderReferences proves the role can reference nothing in public.
 //
 // The probe is column-scoped, not table-scoped: has_table_privilege answers for
-// the whole relation and so returns false for the very grant this gate makes,
-// which would make a table-level probe blind to a widening on any column.
+// the whole relation and returns false for a single-column grant, which would
+// make a table-level probe blind to a widening on any one column.
 func (r *extRole) assertNoWiderReferences(ctx context.Context) error {
 	var reachable string
 	err := r.conn.QueryRow(ctx, `
@@ -301,21 +296,20 @@ func (r *extRole) assertNoWiderReferences(ctx context.Context) error {
 		  JOIN pg_attribute a ON a.attrelid = c.oid AND a.attnum > 0 AND NOT a.attisdropped
 		 WHERE n.nspname = 'public' AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
 		   AND has_column_privilege(c.oid, a.attnum, 'REFERENCES')
-		   AND NOT (n.nspname || '.' || c.relname = $1 AND a.attname = 'id')
-		 ORDER BY 1 LIMIT 1`, coreTenantParent).Scan(&reachable)
+		 ORDER BY 1 LIMIT 1`).Scan(&reachable)
 	switch {
 	case errors.Is(err, pgx.ErrNoRows):
 		return nil
 	case err != nil:
 		return fmt.Errorf("checking what %s can reference in public: %w", r.name, err)
 	}
-	return fmt.Errorf("role %s can declare a foreign key against %s — the only core dependency a unit may take is %s(id), and a key on anything else makes core deletes wait on, or refuse for, a unit's table", r.name, reachable, coreTenantParent)
+	return fmt.Errorf("role %s can declare a foreign key against %s — a unit takes no core dependency at all since %s(id) stopped being one, and a key onto core makes core deletes wait on, or refuse for, a unit's table", r.name, reachable, coreTenantParent)
 }
 
 // drop removes the role and everything it owns. A failure is returned rather
 // than logged away: a login role left on the cluster owns the tables it just
-// created and can drop their tenant-isolation policies, which is a standing
-// credential, not a tidiness issue.
+// created and can rewrite or drop them, which is a standing credential, not a
+// tidiness issue.
 func (r *extRole) drop(ctx context.Context, admin *pgx.Conn) error {
 	for _, statement := range []string{
 		`DROP OWNED BY ` + r.name + ` CASCADE`,
