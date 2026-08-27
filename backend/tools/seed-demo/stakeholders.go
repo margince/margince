@@ -65,11 +65,7 @@ func containsAnyOf(haystack string, needles ...string) bool {
 // same reason, and the verify pass fails on it either way.
 func seedStakeholders(c *client, _ demoConfig, refs pipelineRefs, mode runMode) (int, error) {
 	created := 0
-	for _, domain := range sortedCompanyDomains(refs.dealsByCompany) {
-		orgID, ok := refs.orgsByDom[domain]
-		if !ok {
-			continue
-		}
+	for _, orgID := range sortedAccountIDs(refs.dealsByOrg) {
 		// One read per company rather than per deal: a company with three
 		// deals has one staff list, and it is the same list each time.
 		staff, err := staffBySeniority(c, orgID)
@@ -82,7 +78,7 @@ func seedStakeholders(c *client, _ demoConfig, refs pipelineRefs, mode runMode) 
 			// exempts on purpose.
 			continue
 		}
-		for _, dealID := range refs.dealsByCompany[domain] {
+		for _, dealID := range refs.dealsByOrg[orgID] {
 			for i, personID := range staff {
 				if i >= len(buyingRoles) {
 					break
@@ -93,7 +89,9 @@ func seedStakeholders(c *client, _ demoConfig, refs pipelineRefs, mode runMode) 
 				}
 				added, err := ensureStakeholder(c, dealID, personID, buyingRoles[i])
 				if err != nil {
-					return created, fmt.Errorf("deal at %s: %w", domain, err)
+					// The account's settled domain, which is what a reader
+					// recognises an account by — the loop now walks ids.
+					return created, fmt.Errorf("deal at %s: %w", refs.domainByOrgID[orgID], err)
 				}
 				if added {
 					created++
@@ -173,12 +171,12 @@ func seedProjectStakeholders(c *client, mode runMode) (int, error) {
 	return created, nil
 }
 
-// sortedCompanyDomains keeps the write order stable across runs, so the same
+// sortedAccountIDs keeps the write order stable across runs, so the same
 // input produces the same audit trail.
-func sortedCompanyDomains(byCompany map[string][]string) []string {
-	out := make([]string, 0, len(byCompany))
-	for domain := range byCompany {
-		out = append(out, domain)
+func sortedAccountIDs(byAccount map[string][]string) []string {
+	out := make([]string, 0, len(byAccount))
+	for orgID := range byAccount {
+		out = append(out, orgID)
 	}
 	sort.Strings(out)
 	return out

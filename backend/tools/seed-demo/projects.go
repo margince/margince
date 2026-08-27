@@ -253,12 +253,8 @@ func projectIndex(c *client, mode runMode) (map[string]bool, error) {
 // dataset does not name still has delivery work, and its correspondence
 // should reach it.
 func (r *pipelineRefs) loadProjects(c *client) error {
-	domainByOrg := map[string]string{}
-	for domain, orgID := range r.orgsByDom {
-		domainByOrg[orgID] = domain
-	}
-	r.projectsByCompany = map[string][]seededProject{}
-	byDomain := map[string][]seededProject{}
+	r.projectsByOrg = map[string][]seededProject{}
+	byOrg := map[string][]seededProject{}
 	if err := c.getAll("/v1/projects", nil, func(raw json.RawMessage) error {
 		var rows []struct {
 			ID             string `json:"id"`
@@ -269,11 +265,12 @@ func (r *pipelineRefs) loadProjects(c *client) error {
 			return err
 		}
 		for _, row := range rows {
-			domain, ok := domainByOrg[row.OrganizationID]
-			if !ok {
+			// Same reason loadDeals gives: an account no domain names is an
+			// account no phase looks up.
+			if _, named := r.domainByOrgID[row.OrganizationID]; !named {
 				continue
 			}
-			byDomain[domain] = append(byDomain[domain], seededProject{ID: row.ID, StartedAt: row.StartedAt})
+			byOrg[row.OrganizationID] = append(byOrg[row.OrganizationID], seededProject{ID: row.ID, StartedAt: row.StartedAt})
 		}
 		return nil
 	}); err != nil {
@@ -291,7 +288,7 @@ func (r *pipelineRefs) loadProjects(c *client) error {
 	//
 	// A project with no start date sorts last: it is the one an activity has
 	// the weakest claim to belong to.
-	for domain, projects := range byDomain {
+	for orgID, projects := range byOrg {
 		sort.Slice(projects, func(i, j int) bool {
 			a, b := projects[i].StartedAt, projects[j].StartedAt
 			if (a == "") != (b == "") {
@@ -302,7 +299,7 @@ func (r *pipelineRefs) loadProjects(c *client) error {
 			}
 			return projects[i].ID < projects[j].ID
 		})
-		r.projectsByCompany[domain] = projects
+		r.projectsByOrg[orgID] = projects
 	}
 	return nil
 }

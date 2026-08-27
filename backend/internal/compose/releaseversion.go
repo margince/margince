@@ -143,12 +143,6 @@ func RecordInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 		if _, err := tx.Exec(ctx, bootLedgerLock, releaseLedgerFact); err != nil {
 			return fmt.Errorf("compose: serializing the release observation: %w", err)
 		}
-
-		// Plus the legacy workspace-qualified key, for the rolling-deploy
-		// window storekit.LockWriteIdentity explains.
-		if _, err := tx.Exec(ctx, bootLedgerLockLegacy, releaseLedgerFact); err != nil {
-			return fmt.Errorf("compose: serializing the release observation (legacy key): %w", err)
-		}
 		last, err := lastObservedRelease(ctx, tx)
 		if err != nil {
 			return err

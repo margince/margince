@@ -3,22 +3,13 @@
 
 package people
 
-// The legal forms that come BEFORE the company name, for every market that
-// writes them that way.
+// The legal forms that come BEFORE the company name, per market.
 //
-// WHY A TABLE PER MARKET AND NOT ONE LIST. The forms differ in how safely they
-// can be removed, and the difference is what this file is for. "ООО" is Cyrillic
-// and collides with nothing, so it can go wherever it appears at the front.
-// "PT" is two Latin letters, and "PT Solutions Physical Therapy" is a company in
-// Georgia — removing it there leaves a name that matches every other firm whose
-// name begins "Solutions". So the ambiguous markers are held to a second signal
-// before they are believed, and the unambiguous ones are not.
-//
-// Measured against real companies. These ten are all real, and a rule that
-// stripped a two-letter marker on position alone damages every one of them:
-// PT Solutions Physical Therapy, AO World, AS Roma, CV Sciences, SIA
-// Engineering, II-VI Incorporated, TOO Group, AB InBev, SA Recycling, MB
-// Financial.
+// A TABLE PER MARKET because the forms differ in how safely they can be removed.
+// "ООО" is Cyrillic and collides with nothing. "PT" is two Latin letters, and
+// "PT Solutions Physical Therapy" is a company — removing it there leaves a name
+// matching every firm whose name begins "Solutions". So is "AO World", and so is
+// "AS Roma"; orgformtables_test.go holds the rest.
 
 // orgFormMarker is one legal form as it appears after folding, split into the
 // words a name is split into.
@@ -34,16 +25,12 @@ type orgFormMarker struct {
 
 // marketForms are the prefix legal forms of one market.
 //
-// `fillers` is the trade vocabulary that stacks between the form and the brand,
-// and only Vietnam has one here: it is the market whose names are built that
-// way. A filler is only ever removed from a name that carried this market's
-// legal form, because the abbreviations are short enough to be words elsewhere.
+// `fillers` is the trade vocabulary stacking between the form and the brand,
+// removed only from a name that carried this market's legal form — the
+// abbreviations are short enough to be words elsewhere.
 //
-// `continuations` are forms that appear only as the second half of a stacked
-// one, where they arrive without their leading word — "TỔNG CÔNG TY CỔ PHẦN"
-// leaves a bare "cổ phần" once "tổng công ty" is gone. They are consulted only
-// after a form has already been removed, so a name that simply begins with those
-// words keeps them.
+// `continuations` appear only as the second half of a stacked form, arriving
+// without their leading word: "TỔNG CÔNG TY CỔ PHẦN" leaves a bare "cổ phần".
 type marketForms struct {
 	name          string
 	prefixes      []orgFormMarker
@@ -75,15 +62,10 @@ type marketForms struct {
 // prefixMarkets carries the markets whose legal form precedes the name, in the
 // order matchingFormOf consults them.
 //
-// A HAND-WRITTEN, VERSIONED LIST, read the same way as orgNameStopwords and for
-// the same reason: a list derived from the workspace's own names would make two
-// names match in one workspace and not in another, and would put a query inside
-// the transaction that holds the organization-name write lock.
-//
-// Seeded from the ISO 20275 Entity Legal Form list, which is the registry of
-// what each jurisdiction actually recognises, then extended with the everyday
-// abbreviations that registry does not carry — it holds "công ty cổ phần" but
-// not "CTCP", and no Russian abbreviations at all.
+// Hand-written and versioned, for the reason orgNameStopwords is. Seeded from
+// the ISO 20275 Entity Legal Form list and extended with the everyday
+// abbreviations it does not carry: it holds "công ty cổ phần" but not "CTCP",
+// and no Russian abbreviations at all.
 var prefixMarkets = []marketForms{
 	vietnam,
 	indonesia,
@@ -96,12 +78,6 @@ var prefixMarkets = []marketForms{
 	thailand,
 }
 
-// cjkMarket names the scripts whose forms are matched by substring rather than
-// by word (orgnamecjk.go). It carries no tables of its own — the forms live
-// there, because they are matched a different way — and exists so a caller can
-// tell that a name declared one of these markets.
-var cjkMarket = marketForms{name: "cjk"}
-
 // unambiguous builds markers from forms that collide with nothing.
 func unambiguous(forms ...[]string) []orgFormMarker {
 	markers := make([]orgFormMarker, 0, len(forms))
@@ -112,17 +88,11 @@ func unambiguous(forms ...[]string) []orgFormMarker {
 }
 
 // ambiguousFormWords are the words of every ambiguous form, which the gate must
-// not count as evidence of identity.
+// not count as evidence: "SIA Rimi Latvia" and "SIA Maxima Latvija" are two
+// Latvian grocers. They cannot be REMOVED without corroboration, so they stay in
+// the string the score compares.
 //
-// These forms cannot be REMOVED from a name without corroboration — "PT
-// Solutions" is a company and "AO World" is another — so they stay in the string
-// the score compares. But a word that is a legal form somewhere is market
-// vocabulary rather than a brand, and two names must not meet on it: "SIA Rimi
-// Latvia" and "SIA Maxima Latvija" are two Latvian grocers, and "AS Roma" and
-// "AS Monaco" are two football clubs.
-//
-// Derived from the tables rather than written out again, so a form added above
-// cannot be forgotten here.
+// Derived from the tables rather than written out again.
 var ambiguousFormWord = ambiguousFormWords()
 
 func ambiguousFormWords() map[string]bool {
@@ -151,13 +121,10 @@ func ambiguous(forms ...[]string) []orgFormMarker {
 
 // Vietnam writes the form, then the trade, then the brand: "CÔNG TY CỔ PHẦN SỮA
 // VIỆT NAM" is the joint-stock company Sữa Việt Nam. Both spellings of each form
-// are here because both are how companies write themselves — the legal "công ty
-// trách nhiệm hữu hạn" and the everyday "công ty tnhh".
+// are here because companies write themselves both ways.
 //
-// The syllables recur because the language builds its legal forms out of them,
-// and the point of writing the table this way is that a reader can check it
-// against the language. Naming "cong" as a constant would hide what the entries
-// say, so the repetition is the readable form here rather than a smell.
+// The syllables recur because the language builds its forms out of them, and a
+// reader must be able to check the table against the language.
 //
 //nolint:goconst // Vietnamese words, not repeated magic strings — see above.
 var vietnam = marketForms{

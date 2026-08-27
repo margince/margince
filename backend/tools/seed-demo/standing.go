@@ -44,7 +44,7 @@ func seedLifecycle(c *client, cfg demoConfig, refs pipelineRefs, plan map[string
 		stage := plan[domain].Lifecycle
 		if stage == "" {
 			stage = "target"
-			if len(refs.dealsByCompany[domain]) > 0 {
+			if len(refs.dealsByOrg[refs.orgForDomain(domain)]) > 0 {
 				stage = "opportunity"
 			}
 		}

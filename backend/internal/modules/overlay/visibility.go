@@ -223,22 +223,11 @@ func (s *MirrorStore) RecomputeForOwner(ctx context.Context, incumbentUserID str
 // installation-wide costs effectively nothing.
 func lockWorkspaceVisibility(ctx context.Context, tx pgx.Tx) error {
 	// A constant key: one installation is one organization (ADR-0061), so the
-	// workspace this used to carry distinguished nothing. It needs no GUC and
-	// so cannot be silently skipped by an unbound transaction, which is what
-	// the workspace-qualified form risked.
+	// workspace this used to carry distinguished nothing. It reads no GUC, so
+	// an unbound transaction cannot change what it locks.
 	if _, err := tx.Exec(ctx,
 		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility')::bigint)`); err != nil {
 		return fmt.Errorf("overlay: acquiring the workspace visibility lock: %w", err)
-	}
-	// Plus the legacy workspace-qualified key, for the rolling-deploy window
-	// storekit.LockWriteIdentity explains. Byte-identical to the previous
-	// release's statement, including current_setting WITHOUT missing_ok: this
-	// site alone failed CLOSED on an unset GUC, raising rather than resolving
-	// to NULL, and softening that here would be a new behaviour rather than a
-	// compatibility key.
-	if _, err := tx.Exec(ctx,
-		`SELECT pg_advisory_xact_lock(hashtext('margince:overlay-visibility:' || current_setting('app.workspace_id'))::bigint)`); err != nil {
-		return fmt.Errorf("overlay: acquiring the workspace visibility lock (legacy key): %w", err)
 	}
 	return nil
 }

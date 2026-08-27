@@ -57,8 +57,10 @@ func (e *dedupeEnv) holdOrgNameLock(ctx context.Context, t *testing.T) (pgx.Tx, 
 	// holds, which is sound only while every one of them belongs to the name
 	// lock. Reading zero here and taking the name lock as the very next
 	// statement is what makes that true — and it stays true however many keys
-	// the name lock is currently spelled with, so neither this nor the
-	// assertion needs editing when ADR-0091 §5's legacy key comes out (#2528).
+	// the name lock is spelled with. It went from two to one when ADR-0091 §5's
+	// legacy key came out (#2528) and neither this nor the assertion below
+	// needed touching, which is what asserting provenance rather than a count
+	// buys.
 	if held := grantedAdvisoryLocks(ctx, t, tx, pid); held != 0 {
 		t.Fatalf("the lock holder's transaction already holds %d advisory lock(s) before taking the name lock; "+
 			"the waiter lookup joins through any advisory lock it holds, so it could report a backend queued "+
@@ -249,12 +251,9 @@ func assertParkedBeforeTheOrganizationRow(ctx context.Context, t *testing.T, hol
 	// been granted, so it is unambiguous only while every lock the holder holds
 	// belongs to the name lock. holdOrgNameLock establishes that at the source:
 	// it reads zero advisory locks and then takes the name lock as its next
-	// statement, so whatever is held here came from that one call. The name
-	// lock is currently TWO keys — ADR-0091 §5 dropped the workspace from its
-	// identity, and the transition holds the new key and the legacy
-	// workspace-qualified one together for one release
-	// (storekit.LockWriteIdentity) — and asserting provenance rather than a
-	// count is what keeps this indifferent to that.
+	// statement, so whatever is held here came from that one call. Provenance,
+	// not a count — which is why the name lock going from two keys to one
+	// (#2528) changed nothing here.
 	//
 	// A count is still read, for the one thing provenance does not cover: zero
 	// means the holder took no lock at all, and the join would then match
