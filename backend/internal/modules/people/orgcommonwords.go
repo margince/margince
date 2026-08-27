@@ -87,8 +87,31 @@ func weakEvidenceWord(word string) bool {
 // a registry and a letterhead disagree about it more often than two companies
 // do. "Union Pacific Bank" and "Pacific Union Bank" therefore agree entirely,
 // which is the answer a human would give.
+// anyStrongWord answers whether a name has a word of its own — one that is not
+// vocabulary every company shares.
+func anyStrongWord(fields []string) bool {
+	for _, word := range fields {
+		if !weakEvidenceWord(word) {
+			return true
+		}
+	}
+	return false
+}
+
 func agreeEntirely(shorter, longer []string) bool {
 	if len(shorter) == 0 {
+		return false
+	}
+	// A name of nothing but common words may only agree with a name of exactly
+	// the same words. "Bank of Ireland" and "Bank of Ireland Group" are one
+	// company — "group" is deleted upstream, so both arrive as the same two
+	// words. "First National Bank" arrives as "first bank" and "First Republic
+	// Bank" as "first republic bank": one is a strict subset of the other, both
+	// are vocabulary end to end, and there is no company between them to find.
+	//
+	// A one-word name is exempt, because a company called "Sun" has said all it
+	// has to say and "Sun Microsystems" is that name qualified.
+	if len(shorter) > 1 && !anyStrongWord(shorter) && len(shorter) != len(longer) {
 		return false
 	}
 	taken := make([]bool, len(longer))

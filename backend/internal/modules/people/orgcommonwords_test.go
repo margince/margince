@@ -96,6 +96,40 @@ func TestACommonWordIsEvidenceWhenItIsTheWholeName(t *testing.T) {
 	}
 }
 
+// A NAME OF NOTHING BUT COMMON WORDS AGREES ONLY WITH THE SAME WORDS.
+//
+// "First National Bank" reduces to "first bank" — market vocabulary end to end,
+// because "national" is deleted upstream as a stopword — and that is a strict
+// subset of "first republic bank". The addition reads as distinctive and is not:
+// there is no company between the two names, only words half the market uses.
+//
+// "Bank of Ireland" is the shape this must not catch: it reduces to the SAME two
+// words as "Bank of Ireland Group", not to a subset of them.
+func TestAnAllCommonNameAgreesOnlyWithTheSameWords(t *testing.T) {
+	for _, p := range [][2]string{
+		{"First National Bank", "First Republic Bank"},
+		{"United Pacific Group", "United Atlantic Group"},
+		{"Central National Bank", "Central Regional Bank"},
+	} {
+		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got >= dedupeReviewThreshold {
+			t.Errorf("%q vs %q scores %.4f — one name is a subset of the other and "+
+				"every word of both is vocabulary, so there is no company between them",
+				p[0], p[1], got)
+		}
+	}
+	// Same words, one of them qualified away: still one company.
+	for _, p := range [][2]string{
+		{"Bank of Ireland", "Bank of Ireland Group"},
+		{"Air France", "Air France KLM"},
+		{"Union Pacific Bank", "Pacific Union Bank"},
+	} {
+		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got < dedupeReviewThreshold {
+			t.Errorf("%q vs %q scores %.4f, below the %.2f threshold — these are "+
+				"the same words", p[0], p[1], got, dedupeReviewThreshold)
+		}
+	}
+}
+
 // The discount must not reach a name built from rare words, which is where one
 // shared word really is nearly the whole of the evidence.
 func TestARareSharedWordIsStillEvidence(t *testing.T) {
