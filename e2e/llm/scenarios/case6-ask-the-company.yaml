@@ -30,15 +30,32 @@ may_call:
   - search_records
 
 # Criterion 3: the record wins. September is what the email says.
+#
+# "Sep" is in the alternation because a real answer writes the date the way a
+# person does — every run of 2026-08-27 said "18 Sep 2025" and the pattern,
+# which demanded the month spelled out or a numeric 09, called all three a
+# failure. That was a bug in this file, not in the answer.
 must_mention:
-  - "September|09/|09-|-09-"
+  - "September|Sept|Sep 2025|09/|09-|-09-"
 # Criterion 1 needs it to find the accounts without being told which.
   - "Reply|valantic|Körber"
 
-# The note says "im Oktober" and it is wrong. Saying October means the prose
-# was preferred over the record, which is the defect this case exists to catch.
+# The note says "im Oktober" and it is wrong.
+#
+# A bare /Oktober|October/ cannot express the thing being tested. An answer
+# SHOULD quote the note — it is a real record and hiding it would be its own
+# defect. What must not happen is the model adopting the note's month as its
+# own finding, which is what all three runs of 2026-08-27 did: each cited the
+# email as 18 Sep 2025, quoted the note correctly, and then wrote "the customer
+# raised it clearly in October" in its own voice, with no mention that the two
+# disagree.
+#
+# So the forbidden shape is October asserted OUTSIDE a quotation: "raised it in
+# October", "flagged it in October", "told us in September/October". The
+# quotation itself is allowed through.
 must_not_mention:
-  - "Oktober|October"
+  - "raised (it|this) (clearly )?in Okt|flagged (it|this) (clearly )?in Okt|told us (clearly )?in (September/)?Okt|complained in Okt"
+  - "raised (it|this) (clearly )?in Octo|flagged (it|this) (clearly )?in Octo|told us (clearly )?in (September/)?Octo|complained in Octo"
 
 runs: 3
 pass_at: 2
