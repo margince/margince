@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"go/parser"
 	"go/token"
+	"io/fs"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -190,26 +191,35 @@ func TestDeManifestMatchesItsDerivation(t *testing.T) {
 // the enrolment, not the claim about what a particular fixture publishes.
 func TestEveryFixtureManifestMatchesItsDerivation(t *testing.T) {
 	root := filepath.Join(repoRoot, "fixtures", "extensions")
-	entries, err := os.ReadDir(root)
-	if err != nil {
-		t.Fatalf("reading the fixture tree: %v", err)
-	}
 	found := 0
-	for _, entry := range entries {
-		if !entry.IsDir() {
-			continue
+	// WalkDir, not ReadDir: the manifest is found wherever it is, rather than
+	// only one level down. A fixture nested a directory deeper would otherwise
+	// be exactly the case this replaced a hand-named test to cover — enrolled
+	// by nothing, and passing.
+	err := filepath.WalkDir(root, func(dir string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
 		}
-		dir := filepath.Join(root, entry.Name())
+		if !entry.IsDir() {
+			return nil
+		}
 		if _, err := os.Stat(filepath.Join(dir, unitManifestFile)); err != nil {
-			// A fixture with no manifest has nothing to hold. Several exist on
-			// purpose — the bad-* units are shaped to be REFUSED, and a
+			// A directory with no manifest has nothing to hold. Several exist
+			// on purpose — the bad-* units are shaped to be REFUSED, and a
 			// refused unit never gets one.
-			continue
+			return nil
 		}
 		found++
-		t.Run(entry.Name(), func(t *testing.T) {
-			assertCommittedManifest(t, dir, entry.Name())
+		// The unit's name is its own directory's, whatever the depth: that is
+		// what scanUnit reads and what the manifest names itself.
+		name := filepath.Base(dir)
+		t.Run(name, func(t *testing.T) {
+			assertCommittedManifest(t, dir, name)
 		})
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("walking the fixture tree: %v", err)
 	}
 	// The walk has to have found the fixture that exists. A tree-derived
 	// enrolment that enrolled nothing reports the same green as one where every
