@@ -261,11 +261,13 @@ Legally this is the cleanest item on the page. All of it describes the company, 
 
 **A4. First-party person capture.** Built.[^44]
 
-The contact sent you the details. Margince's capture works from that fact. Connected mailboxes are processed automatically. A nightly pass extracts only stated fields from email signatures: name, title and phone number, with nothing inferred. Workspace exclusion lists keep entire addresses and domains outside capture.
+When a contact sends you their details, Margince uses them. An email arrives with a signature: we read name, title and phone number out of it and enrich the person's record automatically. Someone sends a vCard: we import it into the record the same way. Only what the contact actually wrote, nothing guessed, nothing inferred.
 
-vCard import and a per-mailbox switch for the signature pass complete the channel, so an organisation can turn the granularity all the way down.
+The legal basis could not be simpler: the contact sent this data to you themselves.
 
-First-party collection is the only person-data channel that scales cleanly.[^39]
+Two controls sit on top. Exclusion lists keep chosen addresses and whole domains out of capture entirely, and every mailbox has its own switch for the signature pass, so an organisation can turn the granularity all the way down.
+
+Data the contact hands you is the only person-data channel that scales cleanly.[^39]
 
 **A5. LinkedIn as a link, plus the member's own export.** We store the LinkedIn profile URL as a clickable link. Margince never fetches the page server-side.
 
