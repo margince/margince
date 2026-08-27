@@ -5,19 +5,18 @@ package people
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
-	"os"
+	"sort"
 	"strings"
 	"testing"
 )
 
 // The provenance filter fails by being DROPPED, not by being spelled twice.
-// Every list surface assembles its WHERE through a listFilters literal, and a
-// literal that omits CapturedByKind hands back an unfiltered page to a caller
-// who did ask to filter — the same confident-wrong-answer capturedByKindClause
-// refuses an empty enum value to avoid, arriving one layer up where nothing
-// looks at the value at all.
+// Every list surface assembles its WHERE through a listFilters value, and one
+// that omits CapturedByKind hands back an unfiltered page to a caller who did
+// ask to filter — the same confident-wrong-answer capturedByKindClause refuses
+// an empty enum value to avoid, arriving one layer up where nothing looks at
+// the value at all.
 //
 // Silent at every layer: the request validates, the query runs, the page is
 // well-formed, and the only symptom is rows the caller asked not to see. The
@@ -25,124 +24,315 @@ import (
 // filtering for agent-created rows cannot tell "no AI wrote here" from "the
 // filter was ignored".
 //
-// The literals are found rather than listed. A list surface added tomorrow is
+// The surfaces are found rather than listed. A list surface added tomorrow is
 // judged by this without anyone remembering to add it here, which is the whole
 // difference between a gate and a checklist.
 
-// provenanceField is the filter this holds: the field a listFilters literal
-// must carry from its caller.
+// provenanceField is the filter this holds: the field a listFilters value must
+// carry from its caller.
 const provenanceField = "CapturedByKind"
 
+// filtersType is the struct every list surface assembles its WHERE through.
+const filtersType = "listFilters"
+
+// provenanceOwner is the one spelling of the clause the field turns into.
+//
+// Held by: TestTheProvenanceClauseIsBuiltInOnePlace
+// (backend/internal/modules/people/provenancefilter_test.go)
+const provenanceOwner = "capturedByKindClause"
+
 func TestEveryListFiltersLiteralCarriesTheProvenanceFilter(t *testing.T) {
-	literals := listFiltersLiterals(t)
-	if len(literals) == 0 {
-		t.Fatal("no listFilters literal found in this module, so this gate judged nothing — " +
-			"either the struct was renamed or the list surfaces have moved")
+	builds := listFiltersBuilds(t)
+	if len(builds) == 0 {
+		t.Fatalf("no %s is built in this module, so this gate judged nothing — either the "+
+			"struct was renamed or the list surfaces have moved", filtersType)
 	}
-	for _, lit := range literals {
-		if lit.sets[provenanceField] {
+	for _, build := range builds {
+		value, set := build.sets[provenanceField]
+		if !set {
+			t.Errorf("%s builds a %s without %s.\n\nThe surface then answers a request that "+
+				"asked to filter on provenance with a page that did not, and nothing anywhere "+
+				"refuses: set it from the caller's input, or give the field the zero value "+
+				"explicitly beside a reason this surface has no provenance to filter on.",
+				build.where, filtersType, provenanceField)
 			continue
 		}
-		t.Errorf("%s builds a listFilters without %s.\n\nThe surface then answers a request that "+
-			"asked to filter on provenance with a page that did not, and nothing anywhere "+
-			"refuses: set it from the caller's input, or give the field the zero value "+
-			"explicitly beside a reason this surface has no provenance to filter on.",
-			lit.where, provenanceField)
+		// Presence is not the claim. `CapturedByKind: nil` satisfies a gate
+		// that asks only whether the key is there, and it is the exact defect
+		// spelled out loud — the filter dropped, with the field named. What
+		// makes an explicit zero honest is the reason beside it, which the
+		// failure above already demands and nothing used to check.
+		if isNilExpr(value) && !build.reasoned[provenanceField] {
+			t.Errorf("%s sets %s to nil with no reason beside it.\n\nAn explicit zero is how a "+
+				"surface says it has no provenance to filter on, and it is indistinguishable "+
+				"from the filter being dropped unless the reason is written down. Say why this "+
+				"surface has none, or set it from the caller's input.",
+				build.where, provenanceField)
+		}
 	}
 }
 
-// The other half of the claim: one spelling means one caller. A second place
-// building the clause is how the person list and the lead list come to disagree
-// about which prefix counts as an AI — the two are read side by side, so the
-// disagreement reaches a person before it reaches a test.
+// The other half of the claim: one spelling means the field is read in one
+// place. A second place turning CapturedByKind into SQL is how the person list
+// and the lead list come to disagree about which prefix counts as an AI — the
+// two are read side by side, so the disagreement reaches a person before it
+// reaches a test.
+//
+// The subject is the FIELD, not the SQL. This module hand-writes
+// `captured_by LIKE` for three other questions — was this human-written, did a
+// connector capture it, has an AI written INTO it — and those are fixed
+// questions rather than the caller's filter. A census over the SQL idiom would
+// refuse all three; a census over who reads the field refuses only a second
+// answer to the same question.
 func TestTheProvenanceClauseIsBuiltInOnePlace(t *testing.T) {
-	callers := map[string]int{}
-	forEachModuleFile(t, func(name string, fset *token.FileSet, file *ast.File) {
-		ast.Inspect(file, func(n ast.Node) bool {
-			call, ok := n.(*ast.CallExpr)
-			if !ok {
-				return true
+	var offenders []string
+	owners := 0
+	for _, parsed := range moduleFiles(t) {
+		carried := carriedFieldValues(parsed.file, provenanceField)
+		for _, decl := range parsed.file.Decls {
+			fn, isFunc := decl.(*ast.FuncDecl)
+			if !isFunc || fn.Body == nil || fn.Name == nil {
+				continue
 			}
-			if id, ok := call.Fun.(*ast.Ident); ok && id.Name == "capturedByKindClause" {
-				callers[fset.Position(call.Pos()).String()]++
+			if fn.Name.Name == provenanceOwner {
+				owners++
+				continue
+			}
+			for _, pos := range consumingReads(fn.Body, provenanceField, provenanceOwner, carried) {
+				offenders = append(offenders,
+					fn.Name.Name+" ("+parsed.fset.Position(pos).String()+")")
+			}
+		}
+	}
+	if owners == 0 {
+		t.Fatalf("this module declares no %s, so the provenance filter has no owner and every "+
+			"list silently decides for itself", provenanceOwner)
+	}
+	if len(offenders) == 0 {
+		return
+	}
+	sort.Strings(offenders)
+	t.Errorf("%s is consumed outside %s by %s.\n\nOne reader is what makes it one spelling: "+
+		"every list reaches the prefix rule through %s, so a second reader is a surface that "+
+		"has started deciding for itself which prefix counts as an AI. Pass the field to %s "+
+		"rather than reading it here.",
+		provenanceField, provenanceOwner, strings.Join(offenders, ", "), provenanceOwner,
+		provenanceOwner)
+}
+
+// carriedFieldValues collects the reads that merely CARRY the field from one
+// place to the next: the value in `CapturedByKind: in.CapturedByKind`, and the
+// right-hand side of an assignment onto a field of the same name.
+//
+// Carrying is not deciding. Every list surface plumbs the caller's input into
+// the filter set, and a gate counting those as readers would name seven correct
+// surfaces and no defect — which is how a gate stops being read.
+//
+// The read may sit UNDER a conversion — `CapturedByKind: capturedByKindArg(
+// params.CapturedByKind)` turns a contract enum into the pointer the field
+// holds — so the whole value expression is walked rather than compared. A
+// converted carry is still a carry; what it is not is a second answer to which
+// prefix counts.
+func carriedFieldValues(file *ast.File, field string) map[ast.Node]bool {
+	carried := map[ast.Node]bool{}
+	carry := func(value ast.Expr) {
+		ast.Inspect(value, func(node ast.Node) bool {
+			if sel, isSel := node.(*ast.SelectorExpr); isSel && sel.Sel != nil && sel.Sel.Name == field {
+				carried[ast.Node(sel)] = true
 			}
 			return true
 		})
-	})
-	if len(callers) == 0 {
-		t.Fatal("capturedByKindClause has no caller in this module — a provenance filter nothing " +
-			"builds is a filter every list silently ignores")
 	}
-	if len(callers) > 1 {
-		sites := make([]string, 0, len(callers))
-		for site := range callers {
-			sites = append(sites, site)
-		}
-		t.Errorf("capturedByKindClause is called from %d places (%s).\n\nOne caller is what makes "+
-			"it the one spelling: every list reaches the prefix rule through listFilters, so a "+
-			"second caller is a surface that has started deciding for itself which prefix counts "+
-			"as an AI.", len(callers), strings.Join(sites, ", "))
-	}
-}
-
-// listFiltersLiteral is one composite literal building the shared filter set.
-type listFiltersLiteral struct {
-	where string
-	sets  map[string]bool
-}
-
-func listFiltersLiterals(t *testing.T) []listFiltersLiteral {
-	t.Helper()
-	var found []listFiltersLiteral
-	forEachModuleFile(t, func(name string, fset *token.FileSet, file *ast.File) {
-		ast.Inspect(file, func(n ast.Node) bool {
-			lit, ok := n.(*ast.CompositeLit)
-			if !ok {
-				return true
+	ast.Inspect(file, func(node ast.Node) bool {
+		switch stmt := node.(type) {
+		case *ast.KeyValueExpr:
+			if key, isIdent := stmt.Key.(*ast.Ident); isIdent && key.Name == field {
+				carry(stmt.Value)
 			}
-			id, ok := lit.Type.(*ast.Ident)
-			if !ok || id.Name != "listFilters" {
-				return true
-			}
-			sets := map[string]bool{}
-			for _, element := range lit.Elts {
-				kv, ok := element.(*ast.KeyValueExpr)
-				if !ok {
+		case *ast.AssignStmt:
+			for i, lhs := range stmt.Lhs {
+				sel, isSel := lhs.(*ast.SelectorExpr)
+				if !isSel || sel.Sel == nil || sel.Sel.Name != field || i >= len(stmt.Rhs) {
 					continue
 				}
-				if key, ok := kv.Key.(*ast.Ident); ok {
-					sets[key.Name] = true
-				}
+				carry(stmt.Rhs[i])
 			}
-			found = append(found, listFiltersLiteral{
-				where: fset.Position(lit.Pos()).String(), sets: sets,
-			})
+		}
+		return true
+	})
+	return carried
+}
+
+// consumingReads reports where body reads the field for anything other than
+// carrying it, handing it to its owner, or asking whether it is set at all.
+//
+// The third is a category the carry/decide split does not cover: `f.X != nil`
+// asks whether the caller supplied a filter, which is neither plumbing the
+// value onward nor deciding what it means, and the advice this gate gives —
+// pass it to the owner — does not apply to it.
+func consumingReads(body *ast.BlockStmt, field, owner string, carried map[ast.Node]bool) []token.Pos {
+	handed := map[ast.Node]bool{}
+	ast.Inspect(body, func(node ast.Node) bool {
+		call, isCall := node.(*ast.CallExpr)
+		if !isCall || !callsNamed(call, owner) {
 			return true
-		})
+		}
+		for _, arg := range call.Args {
+			handed[arg] = true
+		}
+		return true
+	})
+	presence := map[ast.Node]bool{}
+	ast.Inspect(body, func(node ast.Node) bool {
+		compare, isCompare := node.(*ast.BinaryExpr)
+		if !isCompare || (compare.Op != token.EQL && compare.Op != token.NEQ) {
+			return true
+		}
+		for _, side := range []ast.Expr{compare.X, compare.Y} {
+			if isNilExpr(side) {
+				presence[compare.X] = true
+				presence[compare.Y] = true
+			}
+		}
+		return true
+	})
+	var found []token.Pos
+	ast.Inspect(body, func(node ast.Node) bool {
+		sel, isSel := node.(*ast.SelectorExpr)
+		if !isSel || sel.Sel == nil || sel.Sel.Name != field {
+			return true
+		}
+		if handed[ast.Node(sel)] || carried[ast.Node(sel)] || presence[ast.Node(sel)] {
+			return true
+		}
+		found = append(found, sel.Sel.Pos())
+		return true
 	})
 	return found
 }
 
-// forEachModuleFile parses the module's own non-test sources and hands each to
-// visit. Test sources are left out: a listFilters a test builds is a fixture,
-// and holding a fixture to the shape of a shipped surface would refuse cases
-// written to exercise one filter at a time.
-func forEachModuleFile(t *testing.T, visit func(name string, fset *token.FileSet, file *ast.File)) {
+// filtersBuild is one assembly of the shared filter set, however it is spelled.
+type filtersBuild struct {
+	where    string
+	sets     map[string]ast.Expr
+	reasoned map[string]bool
+}
+
+// listFiltersBuilds finds every assembly of the filter set: a composite
+// literal, and a zero value filled in by assignment afterwards. The second is
+// the same surface written differently, and a census that reads only literals
+// reports a clean module while a list surface assembled field by field carries
+// no provenance filter at all.
+func listFiltersBuilds(t *testing.T) []filtersBuild {
 	t.Helper()
-	entries, err := os.ReadDir(".")
-	if err != nil {
-		t.Fatalf("reading the module directory: %v", err)
+	var found []filtersBuild
+	for _, parsed := range moduleFiles(t) {
+		ast.Inspect(parsed.file, func(node ast.Node) bool {
+			lit, isLit := node.(*ast.CompositeLit)
+			if !isLit || lit.Type == nil || typeText(lit.Type) != filtersType {
+				return true
+			}
+			// An EMPTY literal is where an assembled build starts, not a build
+			// on its own — `f := listFilters{}` followed by eleven field
+			// assignments carries every filter, and reading the literal as a
+			// finished value reports a surface that does everything right.
+			// assembledFiltersIn below is what judges that shape.
+			if len(lit.Elts) == 0 {
+				return true
+			}
+			build := filtersBuild{
+				where:    parsed.fset.Position(lit.Pos()).String(),
+				sets:     map[string]ast.Expr{},
+				reasoned: map[string]bool{},
+			}
+			for _, element := range lit.Elts {
+				kv, isKV := element.(*ast.KeyValueExpr)
+				if !isKV {
+					continue
+				}
+				key, isIdent := kv.Key.(*ast.Ident)
+				if !isIdent {
+					continue
+				}
+				build.sets[key.Name] = kv.Value
+				build.reasoned[key.Name] = hasReasonNear(parsed, kv.Pos())
+			}
+			found = append(found, build)
+			return true
+		})
+		found = append(found, assembledFiltersIn(parsed)...)
 	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+	return found
+}
+
+// assembledFiltersIn finds the zero-value spelling: `var f listFilters` or
+// `f := listFilters{}`, with the fields written on afterwards.
+func assembledFiltersIn(parsed moduleFile) []filtersBuild {
+	var found []filtersBuild
+	for _, decl := range parsed.file.Decls {
+		fn, isFunc := decl.(*ast.FuncDecl)
+		if !isFunc || fn.Body == nil {
 			continue
 		}
-		fset := token.NewFileSet()
-		file, err := parser.ParseFile(fset, name, nil, 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", name, err)
+		zeroed := zeroValuesOf(fn.Body, filtersType)
+		if len(zeroed) == 0 {
+			continue
 		}
-		visit(name, fset, file)
+		builds := map[string]*filtersBuild{}
+		for name := range zeroed {
+			builds[name] = &filtersBuild{
+				where:    fn.Name.Name + " (" + parsed.fset.Position(fn.Pos()).String() + ")",
+				sets:     map[string]ast.Expr{},
+				reasoned: map[string]bool{},
+			}
+		}
+		ast.Inspect(fn.Body, func(node ast.Node) bool {
+			assign, isAssign := node.(*ast.AssignStmt)
+			if !isAssign {
+				return true
+			}
+			for i, lhs := range assign.Lhs {
+				sel, isSel := lhs.(*ast.SelectorExpr)
+				if !isSel {
+					continue
+				}
+				base, isIdent := sel.X.(*ast.Ident)
+				if !isIdent || builds[base.Name] == nil {
+					continue
+				}
+				build := builds[base.Name]
+				if i < len(assign.Rhs) {
+					build.sets[sel.Sel.Name] = assign.Rhs[i]
+				}
+				build.reasoned[sel.Sel.Name] = hasReasonNear(parsed, assign.Pos())
+			}
+			return true
+		})
+		for _, name := range sortedKeys(builds) {
+			found = append(found, *builds[name])
+		}
 	}
+	return found
+}
+
+// isNilExpr reports the untyped nil, which is what an explicitly dropped filter
+// is written as.
+func isNilExpr(expr ast.Expr) bool {
+	ident, isIdent := expr.(*ast.Ident)
+	return isIdent && ident.Name == "nil"
+}
+
+// hasReasonNear reports whether a comment sits on the line above pos or at the
+// end of its own line — the two places a reason is actually written.
+func hasReasonNear(parsed moduleFile, pos token.Pos) bool {
+	at := parsed.fset.Position(pos).Line
+	for _, group := range parsed.file.Comments {
+		for _, comment := range group.List {
+			line := parsed.fset.Position(comment.Pos()).Line
+			if line == at || line == at-1 {
+				return true
+			}
+		}
+	}
+	return false
 }

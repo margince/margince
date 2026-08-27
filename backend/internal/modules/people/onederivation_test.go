@@ -32,36 +32,55 @@ const candidateType = "PersonCandidate"
 // candidateBuilder is where that one place is.
 const candidateBuilder = "leadPersonCandidate"
 
+// leadType is what makes a derivation be about THIS candidate. The ladder
+// matches candidates built from several sources — a channel identity, a
+// resolve, a manual dedupe — and those are different derivations of a different
+// thing. The claim is about the one the preview and the promotion share, and
+// its input is what identifies it.
+const leadType = "crmcontracts.Lead"
+
 func TestTheLadderCandidateIsDerivedInOnePlace(t *testing.T) {
-	builders := map[string]bool{}
-	forEachModuleFile(t, func(_ string, fset *token.FileSet, file *ast.File) {
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil || fn.Name == nil {
-				continue
-			}
-			// From a LEAD specifically. The ladder matches candidates built
-			// from several sources — a channel identity, a resolve, a manual
-			// dedupe — and those are different derivations of a different
-			// thing. The claim is about the one the preview and the promotion
-			// share, and its input is what identifies it.
-			if takesA(fn, "crmcontracts.Lead") && buildsA(fn.Body, candidateType) {
-				builders[fn.Name.Name] = true
-			}
+	// Every function handed a lead is placed — one, a pointer to one, or an
+	// element of a slice of them — rather than a subset being selected and
+	// judged. Within that population under-recognition is loud: a derivation
+	// written in a spelling `constructs` does not know still lands in the
+	// population, and the only way out is to be neither a build nor a change.
+	//
+	// The population itself is the limit worth stating: a function that reaches
+	// a lead some other way again — out of a map, off a struct field — is not
+	// placed, and this gate would not see a derivation inside it.
+	population, deriving := 0, map[string]string{}
+	forEachModuleFunc(t, func(_ moduleFile, fn *ast.FuncDecl) {
+		if !takesA(fn, leadType) {
+			return
+		}
+		population++
+		switch {
+		case constructs(fn.Body, candidateType):
+			deriving[fn.Name.Name] = "builds"
+		case mutatesResultOf(fn.Body, candidateBuilder):
+			// A function that takes what the one builder returned and writes a
+			// field on it has produced a second answer, in a form that reads at
+			// the call site as though it were still the first.
+			deriving[fn.Name.Name] = "changes what " + candidateBuilder + " returned in"
 		}
 	})
-	if !builders[candidateBuilder] {
-		t.Fatalf("%s does not build a %s, so this gate is watching the wrong function and the "+
+	if population == 0 {
+		t.Fatalf("no function in this module is handed a %s, so this gate judged nothing and the "+
+			"derivation it holds has moved", leadType)
+	}
+	if deriving[candidateBuilder] == "" {
+		t.Fatalf("%s does not derive a %s, so this gate is watching the wrong function and the "+
 			"derivation it was meant to hold is somewhere else now", candidateBuilder, candidateType)
 	}
-	if len(builders) == 1 {
-		return
-	}
-	others := make([]string, 0, len(builders))
-	for name := range builders {
+	others := make([]string, 0, len(deriving))
+	for name, how := range deriving {
 		if name != candidateBuilder {
-			others = append(others, name)
+			others = append(others, name+" ("+how+" it)")
 		}
+	}
+	if len(others) == 0 {
+		return
 	}
 	sort.Strings(others)
 	t.Errorf("a %s is derived from a lead by %s as well as by %s.\n\nThe preview and the "+
@@ -78,84 +97,55 @@ const contractLeadUpdate = "UpdateLeadRequest"
 // leadUpdateWrapper is the type that keeps it.
 const leadUpdateWrapper = "LeadUpdateRequest"
 
+// leadUpdateAssembler is what every transport hands its decoded request to. It
+// is what makes the population derivable: a surface that updates a lead reaches
+// this, whatever else it does, so the transports do not have to be counted or
+// named here.
+const leadUpdateAssembler = "leadUpdateInput"
+
 func TestEveryLeadUpdateDecodeKeepsTheNullGesture(t *testing.T) {
-	wrapperSeen, decodes := false, 0
-	forEachModuleFile(t, func(name string, fset *token.FileSet, file *ast.File) {
-		ast.Inspect(file, func(n ast.Node) bool {
-			if spec, ok := n.(*ast.TypeSpec); ok && spec.Name.Name == leadUpdateWrapper {
+	wrapperSeen := false
+	forEachModuleFile(t, func(_ string, _ *token.FileSet, file *ast.File) {
+		ast.Inspect(file, func(node ast.Node) bool {
+			if spec, isSpec := node.(*ast.TypeSpec); isSpec && spec.Name.Name == leadUpdateWrapper {
 				wrapperSeen = true
-				return true
 			}
-			decl, ok := n.(*ast.DeclStmt)
-			if !ok {
-				return true
-			}
-			gen, ok := decl.Decl.(*ast.GenDecl)
-			if !ok || gen.Tok != token.VAR {
-				return true
-			}
-			for _, spec := range gen.Specs {
-				vs, ok := spec.(*ast.ValueSpec)
-				if !ok || vs.Type == nil {
-					continue
-				}
-				switch typeText(vs.Type) {
-				case leadUpdateWrapper:
-					decodes++
-				case "crmcontracts." + contractLeadUpdate:
-					t.Errorf("%s declares a decode target of the bare %s.\n\nJSON erases the "+
-						"difference between null and absent on a pointer field, and only %s "+
-						"records it — decoded this way, a caller asking to CLEAR an override "+
-						"gets a successful response and keeps the override.",
-						fset.Position(vs.Pos()), contractLeadUpdate, leadUpdateWrapper)
-				}
-			}
-			return true
+			return !wrapperSeen
 		})
 	})
 	if !wrapperSeen {
 		t.Fatalf("this module declares no %s, so the gesture has no keeper and this gate judged "+
 			"nothing", leadUpdateWrapper)
 	}
-	if decodes < 2 {
-		t.Errorf("%d transport(s) decode into %s; the claim is that BOTH the handler and the "+
-			"provider do, and one transport cannot drift from itself", decodes, leadUpdateWrapper)
-	}
-}
 
-// takesA reports whether fn accepts the named type as a parameter — which is
-// what makes a body's reads and literals be ABOUT that type rather than about
-// some other value that happens to share a field or a shape. Shared by the
-// gates in this package that identify a function by what it is handed.
-func takesA(fn *ast.FuncDecl, typeName string) bool {
-	if fn.Type.Params == nil {
-		return false
-	}
-	for _, param := range fn.Type.Params.List {
-		if typeText(param.Type) == typeName {
-			return true
+	// The claim is universal over the transports rather than counted at two of
+	// them. A third surface is judged the day it is written, and the gate never
+	// has to be told how many there are supposed to be.
+	transports := 0
+	forEachModuleFunc(t, func(parsed moduleFile, fn *ast.FuncDecl) {
+		if !callsFunc(fn, leadUpdateAssembler) {
+			return
 		}
-	}
-	return false
-}
-
-// buildsA reports whether body contains a composite literal of the named type.
-func buildsA(body *ast.BlockStmt, typeName string) bool {
-	found := false
-	ast.Inspect(body, func(n ast.Node) bool {
-		lit, ok := n.(*ast.CompositeLit)
-		if !ok || lit.Type == nil {
-			return true
+		transports++
+		if bare := zeroValuesOf(fn.Body, "crmcontracts."+contractLeadUpdate); len(bare) > 0 {
+			t.Errorf("%s (%s) decodes a lead update into the bare %s.\n\nJSON erases the "+
+				"difference between null and absent on a pointer field, and only %s records "+
+				"it — decoded this way, a caller asking to CLEAR an override gets a successful "+
+				"response and keeps the override.",
+				fn.Name.Name, parsed.name, contractLeadUpdate, leadUpdateWrapper)
+			return
 		}
-		// An empty literal is a zero value on an error return, not a candidate
-		// anyone matches on; counting it would report every error path as a
-		// second derivation.
-		if typeText(lit.Type) == typeName && len(lit.Elts) > 0 {
-			found = true
+		if len(zeroValuesOf(fn.Body, leadUpdateWrapper)) == 0 {
+			t.Errorf("%s (%s) assembles a lead update without decoding into %s.\n\nThe gesture is "+
+				"kept by that type and by nothing else, so a transport reaching the assembler "+
+				"another way has already lost the difference between clearing an override and "+
+				"leaving it.", fn.Name.Name, parsed.name, leadUpdateWrapper)
 		}
-		return !found
 	})
-	return found
+	if transports == 0 {
+		t.Fatalf("nothing in this module calls %s, so the population this gate judges is empty "+
+			"and the transports have moved", leadUpdateAssembler)
+	}
 }
 
 // A third derivation lives one field away from the two above, and it fails in
@@ -177,68 +167,70 @@ const identityRefusal = "PromoteNeedsIdentityError"
 const leadNaming = "leadIdentityName"
 
 // leadNameField is the field whose present-but-empty reading is the defect. A
-// function in the corpus reading it directly has started a second answer,
+// function in the corpus reading it OFF THE LEAD has started a second answer,
 // whatever it then does with it.
+//
+// Off the lead specifically: the same field name selected on the candidate is a
+// read of what the ladder already matched on, which is the correct thing to do
+// and the whole point of deriving the candidate once.
 const leadNameField = "FullName"
 
 func TestTheIdentityGuardAndTheCandidateReadOneName(t *testing.T) {
 	var guards, builders int
-	forEachModuleFile(t, func(name string, fset *token.FileSet, file *ast.File) {
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil || fn.Name == nil || fn.Name.Name == leadNaming {
-				continue
-			}
-			// Both halves are found by what they DO — one refuses a lead for
-			// having no identity, the other builds the candidate the ladder
-			// matches on — so a third function joining either half is judged
-			// the day it is written rather than the day somebody remembers
-			// this test.
-			guard := refusesWith(fn.Body, identityRefusal)
-			builder := takesA(fn, "crmcontracts.Lead") && buildsA(fn.Body, candidateType)
-			if !guard && !builder {
-				continue
-			}
-			if guard {
-				guards++
-			}
-			if builder {
-				builders++
-			}
-			if !callsFunc(fn, leadNaming) {
-				t.Errorf("%s (%s) decides what a lead is called without %s.\n\nThe guard and the "+
-					"candidate agree on whether a lead has an identity only while ONE function "+
-					"answers it. Take %s.", fn.Name.Name, name, leadNaming, leadNaming)
-			}
-			if pos := readsField(fn.Body, leadNameField); pos.IsValid() {
-				t.Errorf("%s reads .%s directly at %s.\n\nThat is the second reading: `!= nil` and "+
-					"`== \"\"` disagree about a full_name that is present and empty, and the lead "+
-					"that falls between them promotes into a person with no name. Read %s.",
-					fn.Name.Name, leadNameField, fset.Position(pos), leadNaming)
-			}
+	forEachModuleFunc(t, func(parsed moduleFile, fn *ast.FuncDecl) {
+		if fn.Name.Name == leadNaming {
+			return
+		}
+		// Both halves are found by what they DO — one refuses a lead for
+		// having no identity, the other derives the candidate the ladder
+		// matches on — so a third function joining either half is judged
+		// the day it is written rather than the day somebody remembers
+		// this test.
+		guard := refusesWith(fn.Body, identityRefusal)
+		derives := takesA(fn, leadType) &&
+			(constructs(fn.Body, candidateType) || mutatesResultOf(fn.Body, candidateBuilder))
+		if !guard && !derives {
+			return
+		}
+		if guard {
+			guards++
+		}
+		if derives {
+			builders++
+		}
+		if !callsFunc(fn, leadNaming) {
+			t.Errorf("%s (%s) decides what a lead is called without %s.\n\nThe guard and the "+
+				"candidate agree on whether a lead has an identity only while ONE function "+
+				"answers it. Take %s.", fn.Name.Name, parsed.name, leadNaming, leadNaming)
+		}
+		if pos := readsFieldOf(fn, leadType, leadNameField); pos.IsValid() {
+			t.Errorf("%s reads the lead's .%s directly at %s.\n\nThat is the second reading: "+
+				"`!= nil` and `== \"\"` disagree about a full_name that is present and empty, "+
+				"and the lead that falls between them promotes into a person with no name. "+
+				"Read %s.", fn.Name.Name, leadNameField, parsed.fset.Position(pos), leadNaming)
 		}
 	})
 	// Either half at zero means this gate examined a population that no longer
 	// exists — the refusal renamed, the candidate moved — and a gate holding
 	// nothing reports exactly what a gate holding everything does.
 	if guards == 0 {
-		t.Fatalf("no function builds a %s, so nothing in this package refuses a lead for having "+
+		t.Fatalf("nothing in this module constructs a %s, so no verb refuses a lead for having "+
 			"no identity and this gate is watching a rule that has moved", identityRefusal)
 	}
 	if builders == 0 {
-		t.Fatalf("no function builds a %s from a lead, so this gate is watching a derivation "+
+		t.Fatalf("no function derives a %s from a lead, so this gate is watching a derivation "+
 			"that has moved", candidateType)
 	}
 }
 
 // refusesWith reports whether body constructs the named error type. Unlike
-// buildsA it counts an EMPTY literal: a sentinel error carries its meaning in
-// its type, and `&PromoteNeedsIdentityError{}` is the whole refusal.
+// constructs it counts an EMPTY literal: a sentinel error carries its meaning
+// in its type, and `&PromoteNeedsIdentityError{}` is the whole refusal.
 func refusesWith(body *ast.BlockStmt, typeName string) bool {
 	found := false
-	ast.Inspect(body, func(n ast.Node) bool {
-		lit, ok := n.(*ast.CompositeLit)
-		if ok && lit.Type != nil && typeText(lit.Type) == typeName {
+	ast.Inspect(body, func(node ast.Node) bool {
+		lit, isLit := node.(*ast.CompositeLit)
+		if isLit && lit.Type != nil && typeText(lit.Type) == typeName {
 			found = true
 		}
 		return !found
@@ -246,35 +238,15 @@ func refusesWith(body *ast.BlockStmt, typeName string) bool {
 	return found
 }
 
-// callsFunc reports whether fn calls the named package-level function. Plain
-// identifiers only: a method of the same name on some other receiver answers a
-// different question, and counting it would report a derivation that is not
-// shared.
+// callsFunc reports whether fn calls the named function of this package,
+// written bare or through a receiver it holds.
 func callsFunc(fn *ast.FuncDecl, name string) bool {
 	found := false
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
-			return true
-		}
-		if ident, ok := call.Fun.(*ast.Ident); ok && ident.Name == name {
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		if call, isCall := node.(*ast.CallExpr); isCall && callsNamed(call, name) {
 			found = true
 		}
 		return !found
 	})
 	return found
-}
-
-// readsField answers where body selects the named field, or an invalid
-// position when it does not.
-func readsField(body *ast.BlockStmt, field string) token.Pos {
-	var at token.Pos
-	ast.Inspect(body, func(n ast.Node) bool {
-		sel, ok := n.(*ast.SelectorExpr)
-		if ok && sel.Sel != nil && sel.Sel.Name == field {
-			at = sel.Sel.Pos()
-		}
-		return !at.IsValid()
-	})
-	return at
 }

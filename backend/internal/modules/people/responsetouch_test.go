@@ -5,8 +5,6 @@ package people
 
 import (
 	"go/ast"
-	"go/token"
-	"sort"
 	"strings"
 	"testing"
 )
@@ -20,98 +18,86 @@ import (
 // unanswered. Both are on the same screen.
 //
 // So the subject is not the predicate's text, which two readers can respell
-// without agreeing; it is the FIELD. A second function reading `source` or
-// `capturedBy` off a touch is a second opinion about the same rule, whatever
-// words it uses to reach it.
+// without agreeing; it is the FIELD. A second function reading a rule-bearing
+// field off a touch is a second opinion about the same rule, whatever words it
+// uses to reach it.
 //
-// `kind` is deliberately not held: `ladderStepFor` reads it to ask whether the
-// touch is a meeting, which is a different question about the same column.
+// EVERY field is placed, rather than two being named and judged. A gate that
+// lists the fields it holds is a second copy of the struct, and it is short
+// from the moment a field is added — silently, because it goes on passing over
+// the fields it does know. Listing the EXCEPTIONS instead inverts that: a new
+// field is held the day it is written, and an exception that stops being true
+// fails rather than quietly widening what is allowed.
+//
+// The owner is derived too — it is whichever function reads the field, and
+// there is one. Naming it would fail a rename that moved nothing.
 
 // touchType is the struct whose field reads this holds.
 const touchType = "leadResponseTouch"
 
-// ownedTouchFields names, per field, the function that owns the rule the field
-// carries. A field here holds a rule rather than a value, so reading it IS
-// deciding the rule; anyone else wanting the answer calls that function.
+// touchFieldsReadByMany are the fields more than one function may read, and
+// why. Each is asserted to still need its exception below: an exception nobody
+// needs is a hole, because it goes on permitting a second reader long after the
+// reason for the first one has gone.
 //
-// gatekit:fixture the field-to-owner pairing this gate judges, not a set of
-// ratified exceptions: the values name functions, and a stale one fails above
-// rather than quietly widening what is allowed.
-var ownedTouchFields = map[string]string{
-	"source":     "humanLoggedNote",
-	"capturedBy": "humanCaptured",
+// gatekit:fixture the exceptions this gate allows, not a set of ratified debts.
+// Both entries hold for one reason: the field carries a VALUE, and each reader
+// compares it to a different literal to ask a different question. Two questions
+// about one fact are not two answers to one rule — which is what `source` and
+// `capturedBy` are, where deciding what counts as human-typed is a grammar that
+// changes and must change in one place.
+var touchFieldsReadByMany = map[string]string{
+	"direction": "the way the touch went is a fact on the row: the ladder asks whether it was " +
+		"inbound, the clock asks whether it was outbound, and neither is deciding a grammar",
+	"kind": "ladderStepFor asks whether the touch is a meeting, which is a different question " +
+		"about the same column from the one humanLoggedNote asks",
 }
 
 func TestEachRuleBearingTouchFieldHasOneReader(t *testing.T) {
 	readers := map[string]map[string]bool{}
-	forEachModuleFile(t, func(_ string, _ *token.FileSet, file *ast.File) {
-		for _, decl := range file.Decls {
-			fn, ok := decl.(*ast.FuncDecl)
-			if !ok || fn.Body == nil || !takesA(fn, touchType) {
-				continue
+	forEachModuleFunc(t, func(_ moduleFile, fn *ast.FuncDecl) {
+		// Fields read OFF A TOUCH, not fields whose name matches. A function
+		// holding both a touch and an activity reads `source` on each, and a
+		// census keyed on the bare name reports the second as a reader of the
+		// first — then tells the author to ratify a read that never happened.
+		for field := range fieldsReadOf(fn, touchType) {
+			if readers[field] == nil {
+				readers[field] = map[string]bool{}
 			}
-			for field := range fieldReadsIn(fn.Body) {
-				if _, owned := ownedTouchFields[field]; !owned {
-					continue
-				}
-				if readers[field] == nil {
-					readers[field] = map[string]bool{}
-				}
-				readers[field][fn.Name.Name] = true
-			}
+			readers[field][fn.Name.Name] = true
 		}
 	})
-	for field, owner := range ownedTouchFields {
-		found := readers[field]
-		if len(found) == 0 {
-			t.Errorf("nothing reads %s.%s, so the rule %s carries has no subject and this gate "+
-				"judged nothing for it", touchType, field, owner)
-			continue
-		}
-		if !found[owner] {
-			t.Errorf("%s does not read %s.%s, so it is no longer where that rule lives — this "+
-				"gate is now protecting the wrong function", owner, touchType, field)
-		}
-		if len(found) == 1 {
-			continue
-		}
-		others := make([]string, 0, len(found))
-		for name := range found {
-			if name != owner {
-				others = append(others, name)
-			}
-		}
-		sort.Strings(others)
-		t.Errorf("%s.%s is read by %s as well as %s.\n\nThat is a second opinion about the same "+
-			"rule: the captured_by grammar and the composer's stamp are things that change, and "+
-			"read in two places they change in one. The ladder then shows a lead as contacted "+
-			"while the first-response clock counts it unanswered, on one screen. Call %s.",
-			touchType, field, strings.Join(others, ", "), owner, owner)
-	}
-}
 
-// fieldReadsIn returns the field names selected in body, excluding those taken
-// by ADDRESS: `&t.capturedBy` in a row Scan fills the field rather than asking
-// it anything, and counting it would report the builder as a second reader of
-// every rule it populates.
-func fieldReadsIn(body *ast.BlockStmt) map[string]bool {
-	addressed := map[ast.Node]bool{}
-	ast.Inspect(body, func(n ast.Node) bool {
-		if unary, ok := n.(*ast.UnaryExpr); ok && unary.Op == token.AND {
-			addressed[unary.X] = true
+	read := 0
+	for _, field := range fieldsOf(t, touchType) {
+		found := readers[field]
+		reason, excepted := touchFieldsReadByMany[field]
+		if len(found) > 0 {
+			read++
 		}
-		return true
-	})
-	read := map[string]bool{}
-	ast.Inspect(body, func(n ast.Node) bool {
-		sel, ok := n.(*ast.SelectorExpr)
-		if !ok || addressed[ast.Node(sel)] {
-			return true
+		switch {
+		case len(found) > 1 && !excepted:
+			names := sortedKeys(found)
+			t.Errorf("%s.%s is read by %s.\n\nThat is a second opinion about the same rule: the "+
+				"captured_by grammar and the composer's stamp are things that change, and read "+
+				"in two places they change in one. The ladder then shows a lead as contacted "+
+				"while the first-response clock counts it unanswered, on one screen. Give the "+
+				"field one reader and call it — or add it to touchFieldsReadByMany with the "+
+				"reason it carries a value rather than a rule.",
+				touchType, field, strings.Join(names, ", "))
+		case len(found) <= 1 && excepted:
+			// An exception is a statement about the code, and this one has
+			// stopped being true. Left in place it goes on permitting a second
+			// reader that nobody has asked for yet.
+			t.Errorf("%s.%s is listed in touchFieldsReadByMany (%q) but has %d reader(s).\n\n"+
+				"The exception is no longer needed, and an exception nobody needs is a hole. "+
+				"Remove it.", touchType, field, reason, len(found))
 		}
-		if _, isIdent := sel.X.(*ast.Ident); isIdent {
-			read[sel.Sel.Name] = true
-		}
-		return true
-	})
-	return read
+	}
+	// A struct whose fields nothing reads means this gate walked a corpus that
+	// no longer holds the rule — which reads exactly like a clean one.
+	if read == 0 {
+		t.Fatalf("nothing in this module reads any field of a %s, so this gate judged nothing "+
+			"and the rules it holds have moved", touchType)
+	}
 }
