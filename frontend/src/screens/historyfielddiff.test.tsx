@@ -24,8 +24,7 @@ describe("HistoryFieldDiff", () => {
         field="amount_minor"
         oldValue="2500000"
         newValue="4150000"
-        currency="EUR"
-        locale="en"
+        values={{ currency: "EUR", locale: "en", zone: "UTC" }}
       />,
     );
     expect(screen.getByText(/25,000\.00/)).toBeTruthy();
@@ -39,8 +38,7 @@ describe("HistoryFieldDiff", () => {
         field="title"
         oldValue="Ops Lead"
         newValue="Head of Ops"
-        currency="EUR"
-        locale="en"
+        values={{ currency: "EUR", locale: "en", zone: "UTC" }}
       />,
     );
     expect(screen.getByText("Ops Lead")).toBeTruthy();
@@ -56,8 +54,7 @@ describe("HistoryFieldDiff", () => {
         field="title"
         oldValue={null}
         newValue="Head of Ops"
-        currency={null}
-        locale="en"
+        values={{ currency: null, locale: "en", zone: "UTC" }}
       />,
     );
     expect(screen.queryByText("null")).toBeNull();
