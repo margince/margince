@@ -68,7 +68,7 @@ SEED_STACK = set -e; . scripts/lib-devstate.sh; \
     seed_dsn="postgres://margince_owner:dev@localhost:15432/$$seed_db"; \
   fi;
 
-.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
+.PHONY: help install dev-fresh check check-backend check-q check-go check-gates check-fe build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial bench-perf bench-perf-check bench-record bench-capture perfdoc lint arch-lint vet gen gen-workflow mcp-apps-vocab gen-types gen-types-check drift composition check-composition test-extensions db-up db-init db-wait migrate migrate-up migrate-down migrate-create run psql redis-cli tidy dev dev-stop dev-sweep dev-logs clean vuln tools tools-go infra-up infra-down infra-logs infra-reset seed-dev seed-dev-db seed-demo verify-demo seed-reset verify-boot frontend-check frontend-e2e bench-mobile perfdoc e2e-company e2e-llm fe-install fe-typecheck fe-typecheck-composed fe-lint fe-build fe-preview fe-format fe-test fe-test-ext fe-ds-gates fe-drift fe-unit fe-clock-drift fe-quality fe-bundle fe-storybook ds-purity font-lock icon-lint ds-spacing space-tokens native-controls ext-imports fitness-jurisdiction storybook fe-uat craft-static craft-test craft-residue check-craft-doc test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco test-laneorder secret-scan test-secret-scan test-dev-dsn test-dev-isolation test-api-entrypoint check-image-pins check-host-ports ci-doc-parity make-target-parity check-ext-migrations contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze hooks sbom sbom-normalize sbom-supplement sbom-parity sbom-validate sbom-sign sbom-check
 
 # Bare `make` lists every command instead of running the first target.
 .DEFAULT_GOAL := help
@@ -571,6 +571,20 @@ E2E_SHOT_DIR ?= /tmp/e2e-company
 # scripts/lib-devstate.sh is bash (`local`, `[[ ]]`), and make's default shell
 # is /bin/sh — dash on most Linux images, where sourcing it fails before the
 # stack is resolved.
+## e2e-llm — the six use cases driven by a REAL assistant, against a dedicated
+## stack. This is the half the Go suite cannot answer: those tests pin the
+## payloads, the refusals and the legibility fields; this asks whether a model
+## can actually drive the surface and say something true.
+##
+## COSTS MONEY and is opt-in: MARGINCE_E2E_LLM=1 make e2e-llm. Not
+## deterministic — each scenario runs three times and passes at two, because one
+## bad run is the weather and two is a defect. Never touches :8080; it boots,
+## seeds and tears down its own DEV_SLUG stack.
+## SCENARIO=<name> runs one. E2E_LLM_KEEP=1 leaves the stack up.
+e2e-llm: SHELL := /bin/bash
+e2e-llm:
+	@bash scripts/e2e-llm.sh
+
 e2e-company: SHELL := /bin/bash
 e2e-company:
 	@mkdir -p "$(E2E_SHOT_DIR)"

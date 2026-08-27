@@ -31,6 +31,8 @@ package usecases
 // conclusion the records support without stating.
 
 import (
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -47,6 +49,9 @@ const (
 	// thePostMortemSays is a note written months later. It is WRONG about the
 	// month, exactly as a real post-mortem was.
 	thePostMortemSays = "Der Kunde hat das im Oktober klar angesprochen; wir haben zu spät reagiert."
+	// theWrongMonth is what the prose claims. The record says otherwise, and
+	// that disagreement is the entire fixture.
+	theWrongMonth = "Oktober"
 	// sharedAccountWord is what the sweep matches all three accounts on.
 	//
 	// It sits in the DISPLAY NAME because that is the only organization text
@@ -90,8 +95,9 @@ func (s *scenario) seedContradiction(t *testing.T) pastCase {
 
 // seedTwoMorePastCases gives the sweep more than one thing to find, so
 // criterion 4 has something to be about.
-func (s *scenario) seedTwoMorePastCases(t *testing.T) {
+func (s *scenario) seedTwoMorePastCases(t *testing.T) []pastCase {
 	t.Helper()
+	var out []pastCase
 	for _, account := range []struct{ company, complaint string }{
 		{"valantic AG", "Nach dem Wechsel des Ansprechpartners kam fünf Tage lang keine Antwort."},
 		{"Körber Digital GmbH", "Der Tiefpunkt war nicht der Fehler selbst, sondern dass niemand sich meldete."},
@@ -101,8 +107,12 @@ func (s *scenario) seedTwoMorePastCases(t *testing.T) {
 			VALUES ($1, $2, $3, 'Managed Services', 'manual', 'human:x')`,
 			s.Colleague, account.company+" "+sharedAccountWord)
 		person := s.seedPerson(t, "Kontakt "+account.company, org)
-		s.seedOrgActivity(t, "email", "inbound", person, org, daysAgo(200), account.complaint)
+		out = append(out, pastCase{
+			org:       org,
+			complaint: s.seedOrgActivity(t, "email", "inbound", person, org, daysAgo(200), account.complaint),
+		})
 	}
+	return out
 }
 
 // seedOrgActivity logs one dated activity against a company and a person.
@@ -110,6 +120,13 @@ func (s *scenario) seedTwoMorePastCases(t *testing.T) {
 // No deal here, unlike case 5's helper: this case is about a company's history
 // rather than about a deal's coverage, and a deal the scenario never asks about
 // would be a row nothing reads.
+//
+// The provenance is SYNTHETIC and deliberately so. A real write derives
+// captured_by from the authenticated principal and stamps an actor participant
+// beside the linked people; this fixture writes neither, because what case 6
+// asserts is retrieval and dates rather than provenance. Case 1 is where the
+// write path itself is under test, and it inserts nothing by hand. Say it here
+// so a later assertion about who captured a record is not built on this.
 func (s *scenario) seedOrgActivity(
 	t *testing.T, kind, direction string, person, org ids.UUID, occurredAt time.Time, body string,
 ) ids.UUID {
@@ -137,14 +154,17 @@ func (s *scenario) seedOrgActivity(
 // TestCase6BothTheRecordAndTheProseReachTheCaller pins criterion 3's server
 // half.
 //
-// The contradiction is the fixture's whole point. If only the note came back,
-// the assistant would have no dated record to prefer and "the answer said
-// October" would be the product's fault rather than the model's. Both have to
-// arrive, and the dated one has to carry its date.
+// The assertion is about the WORDS, not about two ids appearing in a list.
+// catch_me_up_on summarises an activity as its subject or its kind — never its
+// body (search/graph.go's timeline query) — so a test reading only that surface
+// passes with the contradiction deleted, which is what an earlier version of
+// this test did. The prose reaches a caller through read_record, so that is
+// where it is asserted.
 func TestCase6BothTheRecordAndTheProseReachTheCaller(t *testing.T) {
 	s := boot(t, scopesRead)
 	c := s.seedContradiction(t)
 
+	// The timeline is how an assistant FINDS the two activities.
 	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
 		"record_type": "organization", "record_id": c.org.String(),
 	})
@@ -156,19 +176,29 @@ func TestCase6BothTheRecordAndTheProseReachTheCaller(t *testing.T) {
 	for _, item := range items {
 		byID[item.RecordID] = item
 	}
-
 	record, hasRecord := byID[c.complaint]
 	if !hasRecord {
-		t.Fatalf("case 6 criterion 3: the dated email did not reach the caller, so an assistant "+
-			"answering about this account has only the note's prose to date it by; items were %v",
-			summariesOf(items))
+		t.Fatalf("case 6 criterion 3: the dated email is not on the timeline, so an assistant has "+
+			"nothing to read; items were %v", summariesOf(items))
 	}
 	if _, hasProse := byID[c.postMortem]; !hasProse {
-		t.Fatalf("case 6 criterion 3: the post-mortem note did not reach the caller, so the " +
+		t.Fatalf("case 6 criterion 3: the post-mortem note is not on the timeline, so the " +
 			"contradiction this fixture exists to create was never presented")
 	}
 
-	// The record's own date, which is what makes preferring it possible.
+	// And this is the assertion that binds: the actual words, both of them.
+	// Corrupting either body now fails, where checking ids alone did not.
+	if body := s.activityBody(t, c.complaint); !strings.Contains(body, theRecordSays) {
+		t.Fatalf("case 6 criterion 3: the complaint's own words did not reach the caller; the "+
+			"record read back as %q", body)
+	}
+	if body := s.activityBody(t, c.postMortem); !strings.Contains(body, thePostMortemSays) {
+		t.Fatalf("case 6 criterion 3: the post-mortem's prose did not reach the caller, so nothing "+
+			"contradicts the record and the case tests nothing; it read back as %q", body)
+	}
+
+	// The record's own date, which is what makes preferring it possible. The
+	// prose says a different month; only one of them is a fact.
 	if record.OccurredAt == nil {
 		t.Fatalf("case 6 criterion 2: the complaint email carries no occurred_at; a model holding " +
 			"an undated record and a note that says 'im Oktober' will say October")
@@ -178,6 +208,37 @@ func TestCase6BothTheRecordAndTheProseReachTheCaller(t *testing.T) {
 		t.Fatalf("case 6 criterion 2: the complaint is dated %s and the record says %s",
 			wantMonth, got)
 	}
+	// The fixture is only a fixture if the two genuinely disagree. This guards
+	// the TEST rather than the product: a prose line that stopped naming a
+	// month, or started naming the right one, would leave every assertion above
+	// passing while the case tested nothing.
+	if !strings.Contains(thePostMortemSays, theWrongMonth) {
+		t.Fatalf("case 6: the post-mortem prose no longer names %q, so there is no contradiction "+
+			"for a model to resolve and this case proves nothing", theWrongMonth)
+	}
+	if strings.EqualFold(theWrongMonth, wantMonth.String()) {
+		t.Fatalf("case 6: the prose names %s and so does the record — the fixture has to disagree "+
+			"with itself for the criterion to mean anything", theWrongMonth)
+	}
+}
+
+// activityBody reads one activity's body back through the tool surface.
+//
+// Through read_record rather than out of Postgres, deliberately: the criterion
+// is that the words reach the CALLER, and a row holding the right text that no
+// tool returns is exactly the class of defect this suite exists to catch.
+func (s *scenario) activityBody(t *testing.T, activity ids.UUID) string {
+	t.Helper()
+	got := s.MCP.CallOK(t, "read_record", map[string]any{
+		"record_type": "activity", "id": activity.String(),
+	})
+	var record struct {
+		Fields struct {
+			Body string `json:"body"`
+		} `json:"fields"`
+	}
+	got.JSON(t, &record)
+	return record.Fields.Body
 }
 
 // TestCase6EveryEventCarriesItsOwnDate pins criterion 2.
@@ -212,15 +273,21 @@ func TestCase6EveryEventCarriesItsOwnDate(t *testing.T) {
 	}
 }
 
-// TestCase6EverythingRelevantReachesTheCallerNotJustTheTopHit pins criterion 4.
+// TestCase6EveryPastCaseReachesTheCallerWithItsHistory pins criterion 4.
 //
-// Three past cases exist, so three past cases have to be available. An answer
-// carrying the single best match would let an assistant say "this happened
-// once" about a pattern.
-func TestCase6EverythingRelevantReachesTheCallerNotJustTheTopHit(t *testing.T) {
+// Three accounts lived through this, and all three have to arrive WITH the
+// complaint that makes them relevant. An earlier version searched organization
+// names for a token the fixture planted there, which proved only that lexical
+// search works: breaking the link between a complaint and its company would not
+// have failed it.
+//
+// So the sweep finds the accounts, and then each one's own history is read
+// back. That second half is the criterion — "everything relevant reaches the
+// caller" is about the evidence, not about the names.
+func TestCase6EveryPastCaseReachesTheCallerWithItsHistory(t *testing.T) {
 	s := boot(t, scopesRead)
-	s.seedContradiction(t)
-	s.seedTwoMorePastCases(t)
+	first := s.seedContradiction(t)
+	more := s.seedTwoMorePastCases(t)
 
 	got := s.MCP.CallOK(t, "search_context", map[string]any{
 		"query":        sharedAccountWord,
@@ -230,40 +297,48 @@ func TestCase6EverythingRelevantReachesTheCallerNotJustTheTopHit(t *testing.T) {
 	var answer agents.SearchContextResult
 	got.JSON(t, &answer)
 
-	companies := map[string]bool{}
+	found := map[ids.UUID]bool{}
 	for _, hit := range answer.Hits {
-		companies[recordName(t, hit.Record.Fields)] = true
+		found[hit.Record.ID] = true
 	}
-	for _, want := range []string{
-		"Reply Deutschland " + sharedAccountWord,
-		"valantic AG " + sharedAccountWord,
-		"Körber Digital GmbH " + sharedAccountWord,
-	} {
-		if !companies[want] {
-			t.Fatalf("case 6 criterion 4: %s lived through this and is missing from the answer, so "+
-				"an assistant would call a pattern a one-off; the answer named %v",
-				want, keysOfSet(companies))
+	for _, account := range append([]pastCase{first}, more...) {
+		if !found[account.org] {
+			t.Fatalf("case 6 criterion 4: %s lived through this and is missing from the sweep, so "+
+				"an assistant would call a pattern a one-off",
+				s.readString(t, "organization", "display_name", account.org))
+		}
+		// The complaint itself, through the timeline. A company that arrives
+		// with no history attached is a name, not a past case.
+		if !s.hasComplaintOnTimeline(t, account) {
+			t.Fatalf("case 6 criterion 4: %s came back with no complaint on its timeline — the "+
+				"account is named and the evidence that makes it relevant is not there",
+				s.readString(t, "organization", "display_name", account.org))
 		}
 	}
 
 	// The tool never claims a complete match set — a ranked page is the top of
-	// an ordering. It has to SAY that rather than let a caller read the page as
-	// everything there is.
-	if answer.Coverage == "" {
-		t.Fatalf("case 6 criterion 4: the answer states no coverage, so a caller cannot tell a " +
-			"ranked page from a complete one")
-	}
-	if answer.Coverage == agents.CoverageCompleteExact {
-		t.Fatalf("case 6 criterion 4: a ranked sweep reported %q, a claim this tool never makes",
-			answer.Coverage)
+	// an ordering. It has to say WHICH class it is, from the closed set it
+	// publishes; an unrecognised word tells a caller nothing.
+	if !slices.Contains([]string{agents.CoverageRankedSemantic, agents.CoveragePartialDegraded},
+		answer.Coverage) {
+		t.Fatalf("case 6 criterion 4: coverage is %q, which is not one of the classes this tool "+
+			"publishes — a caller branching on it cannot act", answer.Coverage)
 	}
 }
 
-// keysOfSet names what a set held.
-func keysOfSet(set map[string]bool) []string {
-	out := make([]string, 0, len(set))
-	for k := range set {
-		out = append(out, k)
+// hasComplaintOnTimeline reads an account's history back and says whether the
+// complaint that makes it a past case is on it.
+func (s *scenario) hasComplaintOnTimeline(t *testing.T, account pastCase) bool {
+	t.Helper()
+	got := s.MCP.CallOK(t, "catch_me_up_on", map[string]any{
+		"record_type": "organization", "record_id": account.org.String(),
+	})
+	var answer agents.AssembledContextResult
+	got.JSON(t, &answer)
+	for _, item := range briefingItems(answer) {
+		if item.RecordID == account.complaint {
+			return true
+		}
 	}
-	return out
+	return false
 }

@@ -1,0 +1,45 @@
+# CASE 4 — Use the moment.
+#
+# The [M] criteria the Go suite cannot answer: criterion 6, the assistant
+# telling the rep to check with the owner before turning up.
+#
+# The prompt is the HARD version, verbatim from the 2026-08-26 run. It never
+# says "companies", never says "address", never says "distance", and names no
+# tool. Working out that "nearby" means a distance search — and that it can ASK
+# which fields are geo — is the whole case.
+#
+# Do NOT replace it with the earlier scripted wording ("Which customers are
+# nearby? Rank them by fit and relationship strength"). That version hands over
+# the answer and tests something materially easier.
+name: case4_use_the_moment
+criteria: [1, 6]
+
+prompt: |
+  hey I am in cologne right now and wanted to visit a client but my appointment
+  got canceled. Anyone nearby in our crm I should visit?
+
+# The chain the assistant has to find for itself. query_workspace is the
+# destination; the vocabulary lookup is how it learns a radius search exists,
+# and an assistant that already knows may skip it.
+must_call:
+  - query_workspace
+may_call:
+  - describe_query_vocabulary
+  - search_records
+  - read_record
+  - search_context
+
+# Criterion 6. Naming a nearby company is not enough — two thirds of the CRM
+# belongs to somebody else, and an assistant that knows the owner and does not
+# say so sends a rep into a colleague's account.
+must_mention:
+  - "Sofia Meier|Lena Fischer|Phạm Hương Giang"
+  - "owner|owned by|belongs to|check with|speak to|message"
+
+# Run 1 of the real scenario failed exactly here: correct companies, and it
+# never said whose they were, because the row carried a bare uuid.
+must_not_mention:
+  - "no address field|cannot determine location|unable to search by distance"
+
+runs: 3
+pass_at: 2

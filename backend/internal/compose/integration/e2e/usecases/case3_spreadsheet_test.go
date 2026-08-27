@@ -46,11 +46,15 @@ Alpenblick Sensorik GmbH,München,11-50,DE
 // theCorrection is the same file with one row changed: the city and the size,
 // exactly as the user described them. Everything else is byte-identical, so an
 // import that touched anything but Nordwind is doing work nobody asked for.
-const theCorrectionCSV = `name,city,size,country
-Nordwind Logistik GmbH,Hamburg,201-500,DE
-Elbmarsch Systeme AG,Hamburg,11-50,DE
-Rheinpark Automation KG,Köln,201-500,DE
-Alpenblick Sensorik GmbH,München,11-50,DE
+// The country column is ABSENT, which is the point: criterion 5 is that a
+// field the correction never mentions is left alone. An earlier version of this
+// file kept the column and supplied DE, so it proved only that writing DE over
+// DE leaves DE — a mutation replacing every address component would have passed.
+const theCorrectionCSV = `name,city,size
+Nordwind Logistik GmbH,Hamburg,201-500
+Elbmarsch Systeme AG,Hamburg,11-50
+Rheinpark Automation KG,Köln,201-500
+Alpenblick Sensorik GmbH,München,11-50
 `
 
 // importOutcome is what one preview-then-commit produced.
@@ -60,15 +64,20 @@ type importOutcome struct {
 }
 
 // previewImport runs the dry pass and returns what it says WILL happen.
+//
+// The mapping names only the columns the file actually carries. A mapping that
+// named a column the file lacks would be a different test — and the correction
+// file deliberately lacks one.
 func (s *scenario) previewImport(t *testing.T, csv string) agents.ImportPreviewResult {
 	t.Helper()
+	mapping := map[string]string{
+		"name": "display_name", "city": "address.city", "size": "size_band",
+	}
+	if strings.Contains(strings.SplitN(csv, "\n", 2)[0], "country") {
+		mapping["country"] = "address.country"
+	}
 	got := s.MCP.CallOK(t, "preview_import", map[string]any{
-		"object": "organization",
-		"csv":    csv,
-		"mapping": map[string]string{
-			"name": "display_name", "city": "address.city",
-			"size": "size_band", "country": "address.country",
-		},
+		"object": "organization", "csv": csv, "mapping": mapping,
 	})
 	var preview agents.ImportPreviewResult
 	got.JSON(t, &preview)
@@ -131,9 +140,21 @@ func TestCase3ThePreviewTellsTheTruth(t *testing.T) {
 		t.Fatalf("case 3 criterion 2: the preview promised %d updated and %d happened",
 			promised.Disposition.Updated, happened.Disposition.Updated)
 	}
-	if n := s.countRows(t,
-		`SELECT count(*) FROM organization WHERE display_name = 'Nordwind Logistik GmbH'`); n != 1 {
-		t.Fatalf("case 3 criterion 2: the file names Nordwind once and the CRM holds %d", n)
+	// Every row, bound to its own values. An aggregate of four proves four rows
+	// appeared; it does not prove they are the four the file named, with the
+	// data the file carried.
+	for _, want := range []struct{ name, city, size string }{
+		{"Nordwind Logistik GmbH", "Rostock", "51-200"},
+		{"Elbmarsch Systeme AG", "Hamburg", "11-50"},
+		{"Rheinpark Automation KG", "Köln", "201-500"},
+		{"Alpenblick Sensorik GmbH", "München", "11-50"},
+	} {
+		if n := s.countRows(t, `SELECT count(*) FROM organization
+			WHERE display_name = $1 AND address_city = $2 AND size_band = $3`,
+			want.name, want.city, want.size); n != 1 {
+			t.Fatalf("case 3 criterion 2: the file says %s is in %s at %s, and %d rows match",
+				want.name, want.city, want.size, n)
+		}
 	}
 }
 
@@ -170,6 +191,22 @@ func TestCase3ImportingTheSameFileTwiceChangesNothing(t *testing.T) {
 		t.Fatalf("case 3 criterion 3: the CRM holds %d of the file's companies after importing it "+
 			"twice, want 4", total)
 	}
+
+	// NOTHING WAS WRITTEN, not merely nothing was counted.
+	//
+	// `unchanged` is a residual — rows read minus created, updated and skipped —
+	// so a build that rewrote every row with its own values and reported zero
+	// updates would produce identical counts. The row version is what a write
+	// actually leaves behind: it is bumped by every real update, so four rows
+	// still at version 1 is the claim the disposition alone cannot make.
+	if untouched := s.countRows(t, `SELECT count(*) FROM organization
+		WHERE display_name IN ('Nordwind Logistik GmbH','Elbmarsch Systeme AG',
+		                       'Rheinpark Automation KG','Alpenblick Sensorik GmbH')
+		  AND version = 1`); untouched != 4 {
+		t.Fatalf("case 3 criterion 3: only %d of the 4 companies are still at version 1 — the "+
+			"second import reported no updates and rewrote rows anyway, which puts work that "+
+			"never happened into the audit trail", untouched)
+	}
 }
 
 // TestCase3ChangingOneRowUpdatesOneRecord pins criteria 4 and 5.
@@ -194,18 +231,27 @@ func TestCase3ChangingOneRowUpdatesOneRecord(t *testing.T) {
 			corrected.report.Disposition.Unchanged)
 	}
 
-	// The correction landed.
+	// BOTH halves of the correction landed. The user said two things — the city
+	// and the size — and a city change alone is enough to report one update, so
+	// asserting only the city would pass while losing half of what was asked.
 	if city := s.readStringWhere(t,
 		`SELECT coalesce(address_city, '') FROM organization WHERE display_name = $1`,
 		"Nordwind Logistik GmbH"); city != "Hamburg" {
 		t.Fatalf("case 3 criterion 4: Nordwind should have moved to Hamburg and sits in %q", city)
 	}
-	// Criterion 5: a field the correction did not mention is untouched.
+	if size := s.readStringWhere(t,
+		`SELECT coalesce(size_band, '') FROM organization WHERE display_name = $1`,
+		"Nordwind Logistik GmbH"); size != "201-500" {
+		t.Fatalf("case 3 criterion 4: the correction said 201-500 people and the record reads %q — "+
+			"one update was reported and half the correction was dropped", size)
+	}
+	// Criterion 5: a field the correction's file does not CARRY is untouched.
+	// The original import set DE; the correction has no country column at all.
 	if country := s.readStringWhere(t,
 		`SELECT coalesce(address_country, '') FROM organization WHERE display_name = $1`,
 		"Nordwind Logistik GmbH"); country != "DE" {
-		t.Fatalf("case 3 criterion 5: the correction never mentioned the country and it now reads "+
-			"%q", country)
+		t.Fatalf("case 3 criterion 5: the correction file carries no country column and the "+
+			"country now reads %q — an import must not blank what it was not told about", country)
 	}
 }
 
@@ -236,16 +282,31 @@ Alpenblick Sensorik GmbH,München,11-50,DE
 		t.Fatalf("case 3 criterion 6: a row was dropped and no issue was reported, so a file " +
 			"half-ignored arrives under a success message")
 	}
+	// Criterion 7: the issue names THE row that was bad, not merely a row.
+	//
+	// The blank name is on the fourth line of the file, counting the header as
+	// line 1. An implementation reporting line 2 for everything satisfies "at
+	// least line 2" while sending the user to the wrong row — and a generic
+	// reason tells them nothing about what to fix when they get there.
+	const badLine = 4
+	found := false
 	for _, issue := range outcome.report.Issues {
-		// Criterion 7: findable. Line 1 is the header, so a real refusal names
-		// a line at or after 2 — a zero says "somewhere in your file".
-		if issue.Line < 2 {
-			t.Fatalf("case 3 criterion 7: an issue is reported on line %d, which a user cannot "+
-				"find in their spreadsheet: %s", issue.Line, issue.Reason)
-		}
 		if strings.TrimSpace(issue.Reason) == "" {
 			t.Fatalf("case 3 criterion 6: line %d was refused with no reason", issue.Line)
 		}
+		if issue.Line == badLine {
+			found = true
+			if !mentionsTheMissingName(issue) {
+				t.Fatalf("case 3 criterion 7: line %d was refused because it carries no company "+
+					"name, and the reason given is %q — a user cannot tell what to fix",
+					issue.Line, issue.Reason)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("case 3 criterion 7: the unusable row is line %d of the file and the issues "+
+			"reported are %v — a user sent to the wrong row cannot fix it",
+			badLine, linesOf(outcome.report.Issues))
 	}
 }
 
@@ -255,6 +316,30 @@ func (s *scenario) readStringWhere(t *testing.T, sql, arg string) string {
 	var out string
 	if err := queryRow(t, s, sql, &out, arg); err != nil {
 		t.Fatalf("reading: %v\n%s", err, sql)
+	}
+	return out
+}
+
+// mentionsTheMissingName says whether an issue explains what was wrong with the
+// row, rather than merely that something was.
+func mentionsTheMissingName(issue crmcontracts.ImportRowIssue) bool {
+	haystack := strings.ToLower(issue.Reason)
+	if issue.Column != nil {
+		haystack += " " + strings.ToLower(*issue.Column)
+	}
+	for _, word := range []string{"name", "blank", "empty", "missing", "required"} {
+		if strings.Contains(haystack, word) {
+			return true
+		}
+	}
+	return false
+}
+
+// linesOf names which lines were reported, for a failure worth reading.
+func linesOf(issues []crmcontracts.ImportRowIssue) []int {
+	out := make([]int, 0, len(issues))
+	for _, issue := range issues {
+		out = append(out, issue.Line)
 	}
 	return out
 }

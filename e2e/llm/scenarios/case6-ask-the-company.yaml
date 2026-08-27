@@ -1,0 +1,44 @@
+# CASE 6 — Ask the company.
+#
+# The sharpest assertion in the whole lane, and the half of #2059 no
+# deterministic test can reach.
+#
+# The seeded history contains a deliberate contradiction: an email dated in
+# September, and a post-mortem note whose prose says the complaint was raised
+# "im Oktober". The Go suite proves BOTH reach the caller and the record carries
+# its date — so the assistant has the choice. This scenario asks whether it
+# makes the right one.
+#
+# The record is right. The prose is wrong. An answer that says October has
+# repeated a human's faulty memory back to the person about to walk into the
+# meeting.
+name: case6_ask_the_company
+criteria: [1, 3, 5]
+
+prompt: |
+  We are about to change the account manager on one of our major accounts, and
+  in the past customers complained if we swapped the responsible people too
+  much. Did we have it in the past, what happened, how did we react, what should
+  I be prepared for? Is there something we can learn? Check in our CRM.
+
+must_call:
+  - search_context
+may_call:
+  - query_workspace
+  - catch_me_up_on
+  - read_record
+  - search_records
+
+# Criterion 3: the record wins. September is what the email says.
+must_mention:
+  - "September|09/|09-|-09-"
+# Criterion 1 needs it to find the accounts without being told which.
+  - "Reply|valantic|Körber"
+
+# The note says "im Oktober" and it is wrong. Saying October means the prose
+# was preferred over the record, which is the defect this case exists to catch.
+must_not_mention:
+  - "Oktober|October"
+
+runs: 3
+pass_at: 2

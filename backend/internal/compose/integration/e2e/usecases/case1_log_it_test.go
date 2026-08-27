@@ -35,13 +35,13 @@ package usecases
 
 import (
 	"context"
-	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The meeting this case logs, as the assistant would supply it after reading a
@@ -211,13 +211,20 @@ func TestCase1TheMeetingLandsOnEveryRecordInOneWrite(t *testing.T) {
 		}
 	}
 
-	// Written TOGETHER. Three rows sharing one microsecond is what a single
-	// write looks like; a relink afterwards produces later rows.
-	if stamps := s.countRows(t,
-		`SELECT count(DISTINCT created_at) FROM activity_link WHERE activity_id = $1`,
-		m.activity); stamps != 1 {
-		t.Fatalf("case 1 criterion 4: the meeting's links carry %d distinct timestamps, so they "+
-			"were not written in one call", stamps)
+	// Written together, IN THE SAME TRANSACTION AS THE ACTIVITY.
+	//
+	// The three links sharing a created_at proves only that they shared a
+	// transaction — Postgres now() is transaction-scoped — and a build that
+	// committed the activity and then relinked in a second transaction would
+	// still show one distinct value among the links. Comparing them against the
+	// ACTIVITY's own stamp is what closes that: two transactions cannot agree on
+	// now(), so equality here means one write covered both.
+	if together := s.countRows(t, `SELECT count(*) FROM activity_link l
+		JOIN activity a ON a.id = l.activity_id
+		WHERE l.activity_id = $1 AND l.created_at = a.created_at`, m.activity); together != 3 {
+		t.Fatalf("case 1 criterion 4: %d of the meeting's 3 links were written in the same "+
+			"transaction as the meeting itself — the rest are a relink afterwards, which is what "+
+			"used to stop for three separate approvals", together)
 	}
 
 	// Criterion 5: nothing was staged for a human. An approval here would mean
@@ -265,16 +272,18 @@ func TestCase1TheTranscriptIsStoredAsATranscriptAndReadWithoutAsking(t *testing.
 
 	// Criterion 10: routed to the human, not to the passport.
 	//
-	// An MCP principal is `agent:<passport>`, and a reading requested by an
-	// agent id has nobody to route its proposals to. The value must name the
-	// granting human instead.
-	if strings.HasPrefix(requestedBy, "agent:") {
-		t.Fatalf("case 1 criterion 10: the reading was requested by %q — the proposals it stages "+
-			"would be routed to a software account and reach no rep", requestedBy)
+	// Asserted through the SAME parser the product routes with, not by looking
+	// at the string's shape. A value like "system:<uuid>" or "human:<uuid>:junk"
+	// is neither an agent prefix nor missing the rep's id, so a shape check
+	// passes while the proposals reach nobody — which is the whole failure.
+	routedTo, isHuman := principal.HumanUserID(requestedBy)
+	if !isHuman {
+		t.Fatalf("case 1 criterion 10: the reading was requested by %q, which the product's own "+
+			"parser does not read as a person — the proposals it stages reach no rep", requestedBy)
 	}
-	if !strings.Contains(requestedBy, s.Rep.String()) {
-		t.Fatalf("case 1 criterion 10: the reading is requested by %q, which does not name the "+
-			"human behind the passport (%s)", requestedBy, s.Rep)
+	if routedTo != s.Rep {
+		t.Fatalf("case 1 criterion 10: the reading is routed to %s, and the human behind the "+
+			"passport is %s", routedTo, s.Rep)
 	}
 }
 

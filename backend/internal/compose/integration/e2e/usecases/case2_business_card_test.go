@@ -151,7 +151,7 @@ func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 		t.Fatalf("case 2 criterion 3: the create filed no possible-duplicate candidate, so a second " +
 			"record for the same human sits in the CRM with nobody asked about it")
 	}
-	named := false
+	named, onThePhone := false, false
 	for _, candidate := range second.DuplicateCandidates {
 		if candidate.OtherRecordID == first.ID.String() {
 			named = true
@@ -160,10 +160,30 @@ func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 			t.Fatalf("case 2 criterion 3: a candidate was filed with confidence %v, which tells a "+
 				"reviewer nothing about how sure the match is", candidate.Confidence)
 		}
+		// WHICH axis they met on. Both cards also carry the same name, and the
+		// name lane files a candidate of its own — so a test happy with "some
+		// candidate exists" passes with the phone lane deleted entirely, which
+		// is the lane this scenario is about.
+		for _, evidence := range candidate.Evidence {
+			if evidence.Field != "phone" {
+				continue
+			}
+			onThePhone = true
+			if evidence.Left != cardPhone || evidence.Right != cardPhone {
+				t.Fatalf("case 2 criterion 3: the phone evidence compares %q with %q, and both "+
+					"cards print %q — a reviewer reads these two values out before merging",
+					evidence.Left, evidence.Right, cardPhone)
+			}
+		}
 	}
 	if !named {
 		t.Fatalf("case 2 criterion 3: the candidate does not name the record already in the "+
 			"workspace (%s); a reviewer offered a merge has to be told which is which", first.ID)
+	}
+	if !onThePhone {
+		t.Fatalf("case 2 criterion 3: no candidate cites the shared PHONE. The two cards also " +
+			"share a name, and the name lane files its own candidate — so this scenario only " +
+			"tests what it claims when the phone axis is the one that fired")
 	}
 }
 

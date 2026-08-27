@@ -1,0 +1,37 @@
+# CASE 2 — When somebody hands you a business card.
+#
+# Criterion 4: the assistant REPORTS the possible duplicate it filed. The
+# create's own answer carries it, so this is purely about whether the assistant
+# reads what came back and says it — a queue nobody is told about is a queue
+# nobody reads.
+#
+# The card arrives as FIELDS. Reading the photo is the assistant's job and
+# Margince never sees an image.
+name: case2_business_card
+criteria: [4]
+
+prompt: |
+  I met her at a conference. Tech Sauce in Bangkok actually. Add her to the crm.
+  The card says: Lucy Vo, Cybersecurity Sales Manager, Terralogic,
+  lucy.vo@terralogic-vn.test, +84 28 3825 6789
+
+must_call:
+  - create_record
+may_call:
+  - resolve_entities
+  - search_records
+  - read_record
+  - apply_tag
+  - query_workspace
+
+must_mention:
+  - "Lucy Vo"
+  # Criterion 4: a possible duplicate was filed and the user is told.
+  - "duplicate|already|possible match|review|similar"
+
+must_not_mention:
+  # The earlier run said this while a candidate sat in the queue.
+  - "no duplicates|nothing similar|no existing"
+
+runs: 3
+pass_at: 2
