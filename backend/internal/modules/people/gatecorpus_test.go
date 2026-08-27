@@ -12,6 +12,8 @@ import (
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The corpus the gates in this package judge, and the recognisers they judge it
@@ -474,4 +476,107 @@ func fieldsOf(t *testing.T, typeName string) []string {
 			"has nothing to judge", typeName)
 	}
 	return fields
+}
+
+// packageStrings indexes the module's package-level string constants and
+// variables by name, so a census reading a query can resolve one written as an
+// identifier.
+//
+// A query held in a `const` and passed by name is not a rarer shape than an
+// inline literal; it is the shape a long query takes. A census that reads only
+// the literals inside a function body cannot see it, and what it cannot see
+// leaves the population entirely.
+func packageStrings(t *testing.T) map[string]string {
+	t.Helper()
+	known := map[string]string{}
+	for _, parsed := range moduleFiles(t) {
+		for _, decl := range parsed.file.Decls {
+			gen, isGen := decl.(*ast.GenDecl)
+			if !isGen || (gen.Tok != token.CONST && gen.Tok != token.VAR) {
+				continue
+			}
+			for _, spec := range gen.Specs {
+				value, isValue := spec.(*ast.ValueSpec)
+				if !isValue {
+					continue
+				}
+				for i, name := range value.Names {
+					if i >= len(value.Values) {
+						continue
+					}
+					if text, isText := staticText(value.Values[i], known); isText {
+						known[name.Name] = text
+					}
+				}
+			}
+		}
+	}
+	return known
+}
+
+// staticText renders an expression that is a string known at parse time: a
+// literal, or a `+` chain of them and of names already indexed.
+func staticText(expr ast.Expr, known map[string]string) (string, bool) {
+	switch operand := expr.(type) {
+	case *ast.BasicLit:
+		return gatekit.LiteralText(operand)
+	case *ast.Ident:
+		text, isKnown := known[operand.Name]
+		return text, isKnown
+	case *ast.BinaryExpr:
+		if operand.Op != token.ADD {
+			return "", false
+		}
+		left, leftKnown := staticText(operand.X, known)
+		right, rightKnown := staticText(operand.Y, known)
+		if !leftKnown || !rightKnown {
+			return "", false
+		}
+		return left + right, true
+	}
+	return "", false
+}
+
+// concatenatedText joins the strings of a `+` chain, and names the literal
+// nodes it consumed so they are not also read on their own.
+//
+// A name is resolved against the strings the package declares, because a query
+// assembled from a table constant says the table's name just as plainly as one
+// that spells it out. An operand that resolves to nothing — a column list
+// variable, a fmt verb — is replaced by a SPACE rather than dropped, so two
+// literals either side of it do not fuse into a word appearing in neither.
+func concatenatedText(expr ast.Expr, known map[string]string) (string, []ast.Node) {
+	var parts []ast.Node
+	var text strings.Builder
+	var walk func(ast.Expr)
+	walk = func(node ast.Expr) {
+		switch operand := node.(type) {
+		case *ast.BinaryExpr:
+			if operand.Op != token.ADD {
+				text.WriteString(" ")
+				return
+			}
+			walk(operand.X)
+			walk(operand.Y)
+		case *ast.BasicLit:
+			value, isText := gatekit.LiteralText(operand)
+			if !isText {
+				text.WriteString(" ")
+				return
+			}
+			parts = append(parts, ast.Node(operand))
+			text.WriteString(value)
+		default:
+			if value, isKnown := staticText(operand, known); isKnown {
+				text.WriteString(value)
+				return
+			}
+			text.WriteString(" ")
+		}
+	}
+	walk(expr)
+	if len(parts) == 0 {
+		return "", nil
+	}
+	return text.String(), parts
 }

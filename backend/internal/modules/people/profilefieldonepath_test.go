@@ -5,6 +5,7 @@ package people
 
 import (
 	"go/ast"
+	"go/token"
 	"regexp"
 	"strings"
 	"testing"
@@ -62,11 +63,12 @@ func TestBothProfileFieldVerbsWriteThroughTheOnePath(t *testing.T) {
 	// field READ verbs in the population and told each of them to go through a
 	// write path, which is advice nobody can take.
 	verbs := map[string]*ast.FuncDecl{}
+	known := packageStrings(t)
 	forEachModuleFunc(t, func(_ moduleFile, fn *ast.FuncDecl) {
 		if fn.Recv == nil || !fn.Name.IsExported() {
 			return
 		}
-		if callsFunc(fn, profileFieldOnePath) || writesTable(fn, profileFieldTable) {
+		if callsFunc(fn, profileFieldOnePath) || writesTable(fn, profileFieldTable, known) {
 			verbs[fn.Name.Name] = fn
 		}
 	})
@@ -219,19 +221,60 @@ func closureTakesTx(closure *ast.FuncLit) bool {
 }
 
 // writesTable reports whether fn contains a statement writing the named table.
-func writesTable(fn *ast.FuncDecl, table string) bool {
+//
+// It reads a query the way the SQL census does — folding a `+` chain and
+// resolving a name to the string it stands for — because a verb that escapes
+// this leaves the POPULATION, and a population short by one reports a clean
+// module. Two shapes escaped a single-literal walk, and both are ordinary:
+//
+//	"UPDATE " + profileFieldTable + " SET …"   the table named by identifier
+//	const q = `INSERT INTO …`; tx.Exec(ctx, q) the query held outside the body
+//
+// That is the under-recognition this PR closes elsewhere, reappearing in the
+// fix for it. The prefilter has to be at least as wide as the detector.
+func writesTable(fn *ast.FuncDecl, table string, known map[string]string) bool {
 	if fn.Body == nil {
 		return false
 	}
+	writes := tableWriteStatement(table)
 	found := false
+	folded := map[ast.Node]bool{}
 	ast.Inspect(fn.Body, func(node ast.Node) bool {
-		lit, isLit := node.(*ast.BasicLit)
-		if !isLit {
-			return true
+		binary, isBinary := node.(*ast.BinaryExpr)
+		if !isBinary || binary.Op != token.ADD || folded[ast.Node(binary)] {
+			return !found
 		}
-		text, isText := gatekit.LiteralText(lit)
-		if isText && tableWriteStatement(table).MatchString(text) {
+		text, parts := concatenatedText(binary, known)
+		for _, part := range parts {
+			folded[part] = true
+		}
+		ast.Inspect(binary, func(inner ast.Node) bool {
+			if nested, isNested := inner.(*ast.BinaryExpr); isNested {
+				folded[ast.Node(nested)] = true
+			}
+			return true
+		})
+		if writes.MatchString(text) {
 			found = true
+		}
+		return !found
+	})
+	if found {
+		return true
+	}
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		switch operand := node.(type) {
+		case *ast.BasicLit:
+			if folded[ast.Node(operand)] {
+				return true
+			}
+			if text, isText := gatekit.LiteralText(operand); isText && writes.MatchString(text) {
+				found = true
+			}
+		case *ast.Ident:
+			if writes.MatchString(known[operand.Name]) {
+				found = true
+			}
 		}
 		return !found
 	})
@@ -248,6 +291,15 @@ func tableWriteStatement(table string) *regexp.Regexp {
 func effectNameOf(target ast.Expr, imports map[string]string) (string, bool) {
 	switch fun := target.(type) {
 	case *ast.Ident:
+		// A predeclared function is not an effect, and reserving one is the
+		// same artifact the stdlib exclusion above prevents: the day
+		// writeProfileField gains a `len` or an `append`, every verb using the
+		// same builtin is told to move it inside the one path. The stdlib half
+		// of this was closed first and this half was missed — the sibling copy
+		// of a fixed defect, which is the catch this review loop keeps making.
+		if predeclared[fun.Name] {
+			return "", false
+		}
 		return fun.Name, true
 	case *ast.SelectorExpr:
 		base, isIdent := fun.X.(*ast.Ident)
@@ -267,6 +319,15 @@ func effectNameOf(target ast.Expr, imports map[string]string) (string, bool) {
 		return base.Name + "." + fun.Sel.Name, true
 	}
 	return "", false
+}
+
+// predeclared names Go's own identifiers, which belong to the language rather
+// than to this module and can never be an effect on a record.
+var predeclared = map[string]bool{
+	"append": true, "cap": true, "clear": true, "close": true, "complex": true,
+	"copy": true, "delete": true, "imag": true, "len": true, "make": true,
+	"max": true, "min": true, "new": true, "panic": true, "print": true,
+	"println": true, "real": true, "recover": true,
 }
 
 // isStandardLibrary applies Go's own rule: an import path whose first segment

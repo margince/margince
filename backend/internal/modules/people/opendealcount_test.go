@@ -131,7 +131,7 @@ func moduleSQLLiterals(t *testing.T) []moduleSQL {
 			if !isBinary || binary.Op != token.ADD || folded[ast.Node(binary)] {
 				return true
 			}
-			text, parts := concatenatedText(binary)
+			text, parts := concatenatedText(binary, packageStrings(t))
 			if len(parts) == 0 {
 				return true
 			}
@@ -172,42 +172,4 @@ func moduleSQLLiterals(t *testing.T) []moduleSQL {
 		t.Fatal("no string literal found in the module's sources, so this census read nothing")
 	}
 	return found
-}
-
-// concatenatedText joins the string literals of a `+` chain, and names the
-// literal nodes it consumed so they are not also read on their own.
-//
-// A non-literal operand — a variable holding a column list, a fmt verb — is
-// replaced by a space rather than dropped, so two literals either side of it do
-// not fuse into a word that appears in neither.
-func concatenatedText(expr ast.Expr) (string, []ast.Node) {
-	var parts []ast.Node
-	var text strings.Builder
-	var walk func(ast.Expr)
-	walk = func(node ast.Expr) {
-		switch operand := node.(type) {
-		case *ast.BinaryExpr:
-			if operand.Op != token.ADD {
-				text.WriteString(" ")
-				return
-			}
-			walk(operand.X)
-			walk(operand.Y)
-		case *ast.BasicLit:
-			value, isText := gatekit.LiteralText(operand)
-			if !isText {
-				text.WriteString(" ")
-				return
-			}
-			parts = append(parts, ast.Node(operand))
-			text.WriteString(value)
-		default:
-			text.WriteString(" ")
-		}
-	}
-	walk(expr)
-	if len(parts) == 0 {
-		return "", nil
-	}
-	return text.String(), parts
 }
