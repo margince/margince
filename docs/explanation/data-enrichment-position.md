@@ -14,10 +14,10 @@ build instead.**
 
 ## The position
 
-Every CRM you have ever demoed offers LinkedIn enrichment. A plugin reads the
+Most CRM you have ever demoed offers LinkedIn enrichment. A plugin reads the
 profile, the record fills itself, everybody claps. Margince will never sell
 this. There will always be third-party vendors happy to serve people who want
-to ignore the legal situation, and I can't stop them. But we sell a compliant
+to ignore the legal situation, and I won't stop them. But we sell a compliant
 product to regulated companies and larger SMEs. A compliant product with an
 illegal feature is not a compliant product anymore. Punkt.
 
@@ -149,7 +149,7 @@ infrastructure, not a nice-to-have. Margince ships one; see
 [privacy-and-consent.md](privacy-and-consent.md).
 
 And here is the distinction that decides product design. It took me the whole
-research to see it sharply. A salesperson looking up ONE prospect they are
+research to understand it. A salesperson looking up ONE prospect they are
 about to contact is proportionate, and Art. 14(3)(b) lets the notice ride
 along with the first outreach at zero marginal cost. A silent background
 database of a whole market is the Bisnode pattern. Same data. Opposite legal
@@ -164,7 +164,7 @@ hold what you may not lawfully cold-email from Frankfurt.
 
 ## 3. Vietnam: consent or nothing
 
-I live and build in Vietnam. This jurisdiction is not academic for us. It is
+I live and we build global - not only in Germany but also in Vietnam. This jurisdiction is not academic for us. It is
 also the strictest one in this paper, and most Western vendors have not even
 noticed it exists.
 
