@@ -10,6 +10,7 @@ package ai
 // visibleProfile gate.
 
 import (
+	"math"
 	"strings"
 	"time"
 
@@ -134,8 +135,8 @@ func validateDeclaredSource(in IngestSourceInput) (register string, weight float
 	if weight == 0 {
 		weight = 1.0
 	}
-	if weight < 0 || weight > 2.0 {
-		return "", 0, &CorpusIngestError{Field: voiceKeyWeight, Reason: "must be between 0 and 2"}
+	if voiceWeightRefused(weight) {
+		return "", 0, &CorpusIngestError{Field: voiceKeyWeight, Reason: voiceWeightRange}
 	}
 	if strings.TrimSpace(in.SourceLabel) == "" {
 		return "", 0, &CorpusIngestError{Field: voiceKeySourceLabel, Reason: voiceValidationNotEmpty}
@@ -225,4 +226,25 @@ func transcriptCorpusFormat(content string) string {
 	default:
 		return corpusFormatSRT
 	}
+}
+
+// voiceWeightRange is the refusal both write paths answer with, so a caller
+// hears the same sentence from the ingest and from the manifest patch.
+const voiceWeightRange = "must be a number between 0 and 2"
+
+// voiceWeightRefused reports a weight the corpus cannot use.
+//
+// The finiteness test is the point of this function existing. A weight is a
+// MULTIPLIER in voice-corpus scoring, and every comparison against NaN is
+// false — so `w < 0 || w > 2` admitted NaN, and the JSON decoders on this path
+// take NaN and Infinity as numbers, which is what made it reachable from the
+// wire. One NaN weight then propagates through every sum and average it takes
+// part in and turns the whole computed profile into NaN: a silent failure
+// nobody can attribute, rather than a rejected request.
+//
+// Both infinities were already refused by the bounds (+Inf fails the upper,
+// -Inf the lower). They are named anyway, so the check says what it means
+// instead of catching them by accident.
+func voiceWeightRefused(weight float64) bool {
+	return math.IsNaN(weight) || math.IsInf(weight, 0) || weight < 0 || weight > 2.0
 }
