@@ -3,7 +3,12 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitForElementToBeRemoved,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { useTruncationTooltip } from "./tooltip";
@@ -40,14 +45,16 @@ function Row({ text }: Readonly<{ text: string }>) {
 }
 
 describe("a string too long for its row", () => {
-  it("reveals the whole of it on hover", async () => {
+  it("reveals the whole of it once the pointer has settled", async () => {
     stubWidths({ scroll: 480, client: 220 });
     render(<Row text={LONG} />);
     expect(screen.queryByRole("tooltip")).toBeNull();
 
     await userEvent.hover(screen.getByText(LONG));
 
-    expect(screen.getByRole("tooltip")).toHaveTextContent(LONG);
+    // Found rather than got: the tip waits for the pointer to stop moving, so
+    // a reader crossing a column of rows is not shown every one of them.
+    expect(await screen.findByRole("tooltip")).toHaveTextContent(LONG);
   });
 
   it("takes the tip away again when the pointer leaves", async () => {
@@ -56,9 +63,12 @@ describe("a string too long for its row", () => {
     const row = screen.getByText(LONG);
 
     await userEvent.hover(row);
+    await screen.findByRole("tooltip");
     await userEvent.unhover(row);
 
-    expect(screen.queryByRole("tooltip")).toBeNull();
+    // It lingers first, for exactly as long as it takes a pointer to cross the
+    // gap between the row and the panel under it.
+    await waitForElementToBeRemoved(() => screen.queryByRole("tooltip"));
   });
 
   it("describes the row it belongs to, so a screen reader reads the two as one", async () => {
@@ -68,7 +78,7 @@ describe("a string too long for its row", () => {
 
     await userEvent.hover(row);
 
-    const tip = screen.getByRole("tooltip");
+    const tip = await screen.findByRole("tooltip");
     expect(row).toHaveAttribute("aria-describedby", tip.id);
   });
 

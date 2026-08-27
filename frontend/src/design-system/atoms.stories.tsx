@@ -25,6 +25,7 @@ import {
   TextInput,
 } from "./atoms";
 import { AvatarStack } from "./avatarstack";
+import { FactList } from "./factlist";
 import { usePasswordReveal } from "./passwordreveal";
 import { ProviderMark } from "./provider-mark";
 import { Select } from "./select";
@@ -606,6 +607,43 @@ export const Cards: Story = {
           numeric
           detail="Across 14 closed deals"
         />
+        {/* `basis`: the rows the reading was computed from, folded away until
+            asked for. A native details, so it opens to a click and to Enter —
+            a reading a keyboard cannot reach is a reading half the readers do
+            not have. The detail line still carries the one-line basis, so a
+            reader who never opens this does not meet a bare number. */}
+        <StatCard
+          label="Health"
+          value="At risk"
+          tone="warn"
+          dot
+          detail="1 of 3 at risk"
+          basisLabel="What this rests on"
+          basis={
+            <FactList
+              facts={[
+                {
+                  key: "relationship",
+                  term: "Relationship",
+                  value: "Good",
+                  note: "Two people here have replied this month.",
+                },
+                {
+                  key: "commercial",
+                  term: "Commercial",
+                  value: "Strong",
+                  note: "Three deals open, none stalled.",
+                },
+                {
+                  key: "payment",
+                  term: "Payment",
+                  value: "At risk",
+                  note: "Three invoices past due, oldest by 18 days.",
+                },
+              ]}
+            />
+          }
+        />
       </div>
     </div>
   ),
@@ -715,6 +753,7 @@ const SIDE_LABELS: Record<Side, string> = { owner: "Owner", team: "Team" };
 function ToolbarDemo() {
   const [range, setRange] = useState<Range>("quarter");
   const [side, setSide] = useState<Side>("owner");
+  const [tab, setTab] = useState<Tab>("overview");
   return (
     <div style={stack}>
       <div style={{ ...row, justifyContent: "space-between" }}>
@@ -737,9 +776,29 @@ function ToolbarDemo() {
         labels={SIDE_LABELS}
         label="Quota target"
       />
+      {/* `counts`: how much is behind each option, for a strip that chooses
+          between bodies of a record. Partial on purpose — the first option
+          here has none, which is what a section that is not a list of things
+          needs, and it is NOT the same as the explicit zero on the second. */}
+      <SegmentedControl
+        options={TABS}
+        value={tab}
+        onChange={setTab}
+        labels={TAB_LABELS}
+        counts={{ people: 6, deals: 0 }}
+        label="Record section"
+      />
     </div>
   );
 }
+
+const TABS = ["overview", "people", "deals"] as const;
+type Tab = (typeof TABS)[number];
+const TAB_LABELS: Record<Tab, string> = {
+  overview: "360",
+  people: "People",
+  deals: "Deals",
+};
 
 // The toolbar pair: the segmented switch that scopes a screen and the key
 // legend that sits beside it. Two options and three options are both here —

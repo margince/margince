@@ -12,6 +12,7 @@ import {
   useEffect,
   useRef,
 } from "react";
+import { useHoverIntent } from "../design-system/hoverintent";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -210,14 +211,21 @@ function NavLevelRow({
   const label = t(entry.labelKey);
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
+  // The rail's tips wait for the pointer to settle like every other popover.
+  // A rail crossed on the way to the work column fired one tip per row it
+  // passed, which read as the rail flickering rather than as a page answering.
+  const hover = useHoverIntent(
+    () => state.onTip(key),
+    () => state.onTip(null),
+  );
   return (
     <a
       className={active ? "navitem active" : "navitem"}
       href={navEntryHref(level.path, entry)}
       aria-label={label}
       aria-current={active ? (level.ancestor ? "true" : "page") : undefined}
-      onMouseEnter={() => state.onTip(key)}
-      onMouseLeave={() => state.onTip(null)}
+      onPointerEnter={hover.onPointerEnter}
+      onPointerLeave={hover.onPointerLeave}
       onFocus={() => state.onTip(key)}
       onBlur={() => state.onTip(null)}
       onClick={() => onSelect(entry)}
@@ -319,14 +327,18 @@ function NavLevelBack({
   const t = useT();
   const name = parent.titleKey ? t(parent.titleKey) : t("shell.navTop");
   const label = t("shell.navBackTo", { name });
+  const hover = useHoverIntent(
+    () => state.onTip(BACK_TIP_KEY),
+    () => state.onTip(null),
+  );
   return (
     <button
       type="button"
       className="navitem navback"
       aria-label={label}
       onClick={onWalkUp}
-      onMouseEnter={() => state.onTip(BACK_TIP_KEY)}
-      onMouseLeave={() => state.onTip(null)}
+      onPointerEnter={hover.onPointerEnter}
+      onPointerLeave={hover.onPointerLeave}
       onFocus={() => state.onTip(BACK_TIP_KEY)}
       onBlur={() => state.onTip(null)}
     >

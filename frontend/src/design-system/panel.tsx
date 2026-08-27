@@ -52,16 +52,20 @@ export function Panel({
   // it. This is not a palette — a second tinted panel on the same page is two
   // leads, which is none.
   //
-  // The two tones are the two kinds of lead, not two colours to choose from:
-  // "accent" is the ordinary ask, "warn" is a lead whose FINDING is the bad
+  // The three tones are three kinds of lead, not three colours to choose from:
+  // "accent" is the ordinary ask; "warn" is a lead whose FINDING is the bad
   // news — a relationship that went quiet, a promise that is late — where the
-  // tone is the reading rather than decoration on it.
+  // tone is the reading rather than decoration on it; and "ai" is a panel a
+  // MACHINE wrote or read, which is a fact about its authorship rather than
+  // about the account. That last one is why "ai" is not simply a third accent:
+  // an indigo band means "Margince did this" everywhere in the product, so it
+  // must never be reached for to make an ordinary panel look important.
   //
   // It is a prop rather than a class a screen sheet adds because the tint has
   // to reach `.panel-head` and `.panel-foot`, which are this component's own
   // internals: a screen reaching into them is a second author for a rhythm
   // this file owns, and the two drift the first time either moves.
-  tone?: "accent" | "warn";
+  tone?: "accent" | "warn" | "ai";
   // Verbs that CHANGE this panel, in their own band under the body — not one
   // more row, and not a footer, which reports rather than acts. A caller
   // renders them only when the panel's content is real: an "add a deal"

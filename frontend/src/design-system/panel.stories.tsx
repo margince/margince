@@ -168,6 +168,32 @@ export const WarnTone: Story = {
   },
 };
 
+// tone="ai": the panel a MACHINE wrote or read. It is the same lead geometry
+// again, in the --ai family, and it says something different from the other
+// two: not "this is the ask" or "this is the bad news" but "Margince produced
+// this". That is why it is not a third accent — indigo carries one meaning
+// across the whole product, so a panel takes it only when a machine really did
+// write or read what is inside.
+//
+// Check it in both themes. --aiText lifts on dark (a pale indigo) while
+// --aiLight and --aiMed stay the same translucent indigo, so the title's
+// contrast against the band is the thing to look at twice.
+export const AiTone: Story = {
+  args: {
+    tone: "ai",
+    title: "Margince read this record",
+    children: (
+      <>
+        <PanelRow>
+          It is your move. Akeneo wrote last on 5 August — 16 days ago.
+        </PanelRow>
+        <PanelRow>Three invoices are past due, the oldest by 18 days.</PanelRow>
+      </>
+    ),
+    footer: <span>Read from 41 records · 14:22</span>,
+  },
+};
+
 // actions: verbs that CHANGE the panel, in their own band under the body. The
 // footer reports; this acts. A caller renders it only when the content is
 // real — an "add" button under a section whose read failed offers a write

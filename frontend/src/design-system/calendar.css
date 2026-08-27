@@ -1,0 +1,82 @@
+/* A month of days. Tokens only (make ds-purity). */
+
+.calendar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-inline-size: 0;
+}
+
+/* The month's name owns the row and the two steppers sit at its end, so a
+   reader paging back and forth keeps their hand in one place while the name
+   under their eye changes. */
+.calendar-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+.calendar-month {
+  flex: 1;
+  font-weight: var(--fw-medium);
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: var(--space-1);
+  justify-items: center;
+}
+
+.calendar-weekday {
+  color: var(--textMeta);
+}
+
+/* A day is a circle the size of the tap target, not a cell: the selected day
+   is marked by a disc, and a square mark in a grid of squares reads as a
+   highlighted table cell rather than as a date chosen. */
+.calendar-day {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-full);
+  background: none;
+  font-family: var(--f-body);
+  font-size: var(--fs-sm);
+  color: var(--textPrimary);
+  cursor: pointer;
+}
+.calendar-day:hover {
+  background: var(--bgHover);
+}
+.calendar-day:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* A neighbouring month's day. Still pressable — a reader who wants the 1st of
+   next month should not have to page for it — but quiet, so the month on show
+   is legible as a block. */
+.calendar-day-outside {
+  color: var(--textMuted);
+}
+
+/* Today, unchosen: a quiet disc. It answers "where am I" without competing
+   with the day the reader has actually picked. */
+.calendar-day-today {
+  background: var(--bgHover);
+  font-weight: var(--fw-medium);
+}
+
+.calendar-day[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--textOnAccentControl);
+  font-weight: var(--fw-medium);
+}
+.calendar-day[aria-pressed="true"]:hover {
+  background: var(--accent);
+  filter: brightness(1.05);
+}

@@ -14,6 +14,7 @@ import {
   useState,
 } from "react";
 import { createPortal } from "react-dom";
+import { useHoverIntent } from "./hoverintent";
 import "./tooltip.css";
 
 // The gap between the anchor's box and the tip, and the margin the tip keeps
@@ -244,6 +245,9 @@ function useTip<T extends HTMLElement>(
     setReachable(worth);
     setOpen(worth);
   }, [worthShowing]);
+  // Pointer reveal waits for intent; focus does not. A reader who tabbed here
+  // has said what they want outright, and there is no pointer to measure.
+  const hover = useHoverIntent(reveal, close);
 
   return {
     ref: anchor,
@@ -253,8 +257,8 @@ function useTip<T extends HTMLElement>(
       // tab stop: without it the whole of it is reachable by pointer only.
       // Untruncated, it earns nothing and takes none.
       tabIndex: earnsTabStop && reachable ? 0 : undefined,
-      onPointerEnter: reveal,
-      onPointerLeave: close,
+      onPointerEnter: hover.onPointerEnter,
+      onPointerLeave: hover.onPointerLeave,
       onFocus: reveal,
       onBlur: close,
       onKeyDown: (event: ReactKeyboardEvent<HTMLElement>) => {

@@ -1,0 +1,58 @@
+/* The aside a reading rests on. Tokens only (make ds-purity). */
+
+/* The trigger keeps the caller's own face — it sits inside a reading, a row or
+   a heading, and the popover has no opinion about how those are set. What it
+   owns is that it is pressable at all.
+
+   Except where the caller's face IS a button: a popover opened from one half
+   of a split control is already a `.btn` and has its own ground, padding and
+   radius. Stripping those would draw the caret as bare text inside a filled
+   control. */
+.popover-trigger:not(.btn) {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.popover-trigger:not(.btn):focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* Fixed, because it is placed against the trigger's viewport rectangle
+   (anchored.ts). Narrow on purpose: what goes in here is read once, and a wide
+   panel over the page reads as a second card rather than as an aside to the
+   one underneath. */
+.popover-panel {
+  position: fixed;
+  /* Above the modal (atoms.css: scrim 50, dialog 60), not below it like the
+     overflow menu. A popover is opened from INSIDE whatever is on top —
+     including a dialog's own action row — and a panel underneath the dialog
+     that opened it is a control that answers a press with nothing. Nothing
+     opens a popover from behind a modal, because a modal makes the page
+     behind it inert. */
+  z-index: 70;
+  inline-size: max-content;
+  max-inline-size: 20rem;
+  overflow-y: auto;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  /* The page's brightest ground, not the card's. The panel floats OVER cards
+     that are already --bgCard, and a panel the same value as what it covers
+     loses its own edge and sets its text at the contrast of the layer below
+     rather than its own. */
+  background: var(--bgElevated);
+  box-shadow: var(--shadow-pop);
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--textContent);
+}

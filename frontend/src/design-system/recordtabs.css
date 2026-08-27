@@ -1,0 +1,117 @@
+/* The record's tab strip. Tokens only (make ds-purity). */
+
+/* The rules run the full width of the window, not of the record's column: they
+   divide the record's identity from its content, which are two halves of the
+   page rather than two blocks inside it. Inset to the column they read as a
+   border drawn around the tabs. */
+.recordtabs {
+  border-block: 1px solid var(--borderSubtle);
+  margin-block-end: var(--space-5);
+  /* Out past the reading column entirely, to the edges of the work column.
+     The column decides how wide the RECORD reads; this rule is about the page,
+     and one that stopped at the reading measure would read as a box drawn
+     around the tabs rather than as the seam between a record's name and its
+     contents.
+
+     `cqi` rather than `vw`: the window also holds the nav rail and the
+     account's context column, and a rule measured against it would run under
+     both. Without the `work` container the fallback is the reading column's
+     own gutter, which is the narrower, safe answer. */
+  margin-inline: calc(-1 * var(--pageGutter));
+}
+
+@container work (min-width: 0) {
+  .recordtabs {
+    inline-size: 100cqi;
+    margin-inline: calc((100cqi - 100%) / -2);
+  }
+}
+
+/* The tabs themselves keep the record's own column, so the first tab sits
+   under the record's mark rather than against the window's edge. Only the
+   RULES cross the page; the tabs belong to the document under them. */
+.recordtabs-row {
+  max-inline-size: var(--recordColumn);
+  margin-inline: auto;
+  padding-inline: var(--pageGutter);
+  inline-size: 100%;
+}
+
+/* It scrolls rather than wraps. A second row of tabs pushes the record's own
+   content below the fold, and a reader who cannot see the body has no reason
+   to have opened the record. */
+.recordtabs-strip {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.recordtabs-strip::-webkit-scrollbar {
+  display: none;
+}
+
+/* The current tab is marked by a rule under it rather than by a fill: the
+   strip is a place a reader navigates, and a filled pill among seven plain
+   words reads as a control that does something rather than as where they
+   are. The transparent border on every tab holds the row's height steady, so
+   moving between tabs does not shift the content under them. */
+.recordtabs-tab {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-3);
+  border: 0;
+  border-block-end: 2px solid transparent;
+  background: none;
+  font-family: var(--f-body);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--textMeta);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.recordtabs-tab:first-child {
+  padding-inline-start: 0;
+}
+
+.recordtabs-tab:hover {
+  color: var(--textPrimary);
+}
+
+.recordtabs-tab:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: -2px;
+  border-radius: var(--r-sm);
+}
+
+.recordtabs-tab[aria-pressed="true"] {
+  color: var(--textPrimary);
+  border-block-end-color: var(--textPrimary);
+}
+
+/* The count is a figure, so it reads in the mono face where digits share one
+   width — a strip of counts lines up instead of shifting tab to tab. Quieter
+   than the label it follows: the word is what a reader is looking for and the
+   number is what they check once they have found it. */
+.recordtabs-count {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-regular);
+  color: var(--textMeta);
+}
+
+/* Something waits behind this tab. An accent dot rather than an indigo one:
+   indigo claims an agent proposed something, and what this marks is only that
+   a surface holds an action nobody has taken yet. */
+.recordtabs-mark {
+  display: inline-block;
+  inline-size: 5px;
+  block-size: 5px;
+  border-radius: var(--r-full);
+  background: var(--accent);
+}
