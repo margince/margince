@@ -160,7 +160,7 @@ func (r Rule) match(evidence loweredEvidence) (string, bool) {
 		for _, want := range wanted {
 			// An empty wanted value means presence alone is the match.
 			if want == "" || strings.Contains(got, strings.ToLower(want)) {
-				return strings.ToLower(name) + ": " + truncate(got, evidenceLimit), true
+				return strings.ToLower(name) + ": " + truncate(got), true
 			}
 		}
 	}
@@ -168,7 +168,7 @@ func (r Rule) match(evidence loweredEvidence) (string, bool) {
 		return "Cookie: " + marker, true
 	}
 	if marker, ok := containsAny(evidence.scripts, r.Scripts); ok {
-		return "Script: " + truncate(marker, evidenceLimit), true
+		return "Script: " + truncate(marker), true
 	}
 	for _, want := range r.Body {
 		if want != "" && strings.Contains(evidence.body, strings.ToLower(want)) {

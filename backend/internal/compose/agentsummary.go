@@ -134,6 +134,7 @@ func recordNoun(record agentRecordType) string {
 var opPhrases = map[string]string{
 	opScrapeCompany:            "Read this company's website",
 	opDeepReadCompany:          "Read this company's whole site",
+	opTechnicalEnrichCompany:   "Look up what this company publicly runs",
 	opRetireCustomField:        "Retire a custom field",
 	opUpdateCustomFieldOptions: "Change a custom field's options",
 }
@@ -147,6 +148,7 @@ var opPhrases = map[string]string{
 const (
 	opScrapeCompany            = "scrapeCompany"
 	opDeepReadCompany          = "deepReadCompany"
+	opTechnicalEnrichCompany   = "technicalEnrichCompany"
 	opRetireCustomField        = "retireCustomField"
 	opUpdateCustomFieldOptions = "updateCustomFieldOptions"
 )

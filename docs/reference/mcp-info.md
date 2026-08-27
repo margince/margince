@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 59 |
 | Resources | 9 |
-| Tool catalog | 163.5 KB |
+| Tool catalog | 163.7 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 42740 |
+| Approx. wire tokens | 42778 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -31,9 +31,9 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 |---|---:|---:|---|
 | Output schemas | 76.1 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 39.1 KB | 23% | Yes, every step |
-| Input schemas | 35.8 KB | 21% | Yes, every step |
+| Input schemas | 36.0 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
-| **Description + input schema** | **74.9 KB** | **45%** | **the recurring cost** |
+| **Description + input schema** | **75.0 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -81,7 +81,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`disqualify_lead`](#disqualify_lead) | Disqualify a lead |  |  | 1.9 KB |
 | [`draft_email`](#draft_email) | Draft an email |  |  | 2.5 KB |
 | [`draft_follow_ups_for`](#draft_follow_ups_for) | Draft follow-ups |  |  | 2.6 KB |
-| [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.5 KB |
+| [`enrich`](#enrich) | Enrich an organization from its website |  |  | 2.6 KB |
 | [`intro_path_to`](#intro_path_to) | Find a warm introduction path | yes |  | 2.3 KB |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes |  | 2.9 KB |
 | [`list_channel_providers`](#list_channel_providers) | List messaging transports | yes |  | 2.0 KB |
@@ -3865,10 +3865,11 @@ Learn about an organization by reading its public website, and propose what was 
     },
     "depth": {
       "default": "page",
-      "description": "page reads one page and returns a staged proposal; site queues a multi-page crawl and returns its read id",
+      "description": "page reads one page and returns a staged proposal; site queues a multi-page crawl and returns its read id; technical queues a lookup of what the company publicly runs (DNS, certificate logs, one homepage fingerprint) and returns its queue state",
       "enum": [
         "page",
-        "site"
+        "site",
+        "technical"
       ],
       "type": "string"
     },

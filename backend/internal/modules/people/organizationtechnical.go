@@ -40,6 +40,8 @@ const technicalCapturedBy = "agent:technical-lookup"
 // be recorded as "this company operates no services".
 type TechnicalLane string
 
+// The three public sources, and the whole vocabulary: DNS records, the
+// certificate-transparency log, and the company's own homepage.
 const (
 	LaneDNS      TechnicalLane = "dns"
 	LaneCertLog  TechnicalLane = "certlog"
@@ -49,6 +51,8 @@ const (
 // technicalLanes is every lane, so a reader asking "has this company been
 // fully looked at?" counts against the real set rather than a number written
 // down twice. Derived from laneFields, which is where a new lane is added.
+//
+// Held by: TestEveryTechnicalLaneIsDerivedFromItsFields (backend/gates/technicaldomain_test.go)
 var technicalLanes = func() []TechnicalLane {
 	lanes := make([]TechnicalLane, 0, len(laneFields))
 	for lane := range laneFields {
@@ -219,9 +223,13 @@ func (s *Store) ApplyTechnicalEnrichmentTx(
 
 // auditTechnicalEnrichment commits the audit row and the paired outbox event.
 //
-// The facts are sidecar rows rather than organization columns, so there is no
-// before/after column image to carry: the deltas ride the evidence map, the
-// same way the deep-read apply carries its own.
+// Through the OCCURRENCE door rather than the update door, and the distinction
+// is real: what a company publicly runs lands in organization_fact and no
+// column of the organization moves, so there is no field whose prior value a
+// before-image could name. What was replaced is still recorded, and more
+// precisely than an image would — the evidence carries the rows written AND
+// the rows the reconciliation removed, which is what makes a mail provider
+// moving to Microsoft 365 readable as a move rather than as an arrival.
 func (s *Store) auditTechnicalEnrichment(
 	ctx context.Context, tx pgx.Tx, in TechnicalEnrichment,
 	written, removed []map[string]any, changes []TechnicalChange,
@@ -234,8 +242,8 @@ func (s *Store) auditTechnicalEnrichment(
 		"written": written, "removed": removed,
 		"lanes": lanes, "changes": len(changes),
 	}
-	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "organization", in.OrganizationID.UUID,
-		nil, nil, map[string]any{
+	auditID, err := storekit.AuditEventWithEvidence(ctx, tx, "update", "organization", in.OrganizationID.UUID,
+		nil, map[string]any{
 			auditKeySource: companySourceTechnical,
 			auditKeyFacts:  written,
 			"technical":    delta,

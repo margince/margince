@@ -71,6 +71,13 @@ var factBands = []struct {
 	{10, []string{people.FactServedIndustry, people.FactCompanySize, people.FactGeography, people.FactLanguage}},                    // who it sells to
 	{10, []string{people.FactTechnology, people.FactPartner}},                                                                       // what it builds on
 	{5, []string{people.FactLocation, people.FactFoundedYear, people.FactEmployeeRange, people.FactPhone, people.FactContactEmail}}, // who it is
+	// What the company RUNS, and a quota of zero on purpose. These fields are
+	// written by the technical lookup — from DNS, certificate logs and one
+	// homepage fingerprint — and never by a site read, so no crawl produces one
+	// to curate. They are banded rather than omitted because the gate over this
+	// table demands every fact field be placed: a field nobody banded is a
+	// field this budget would silently drop if a producer ever did emit it.
+	{0, []string{people.FactMailProvider, people.FactEmailSecurity, people.FactHostingProvider, people.FactOperatedService}},
 }
 
 // capFacts applies the bands under the API's own bound

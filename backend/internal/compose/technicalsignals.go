@@ -33,6 +33,9 @@ const (
 	kindTechnicalChange = "technical_change"
 	technicalChannel    = "derived"
 	technicalSource     = "technical-lookup"
+	// technicalPreviousKey names what the record held before, which is what
+	// makes a move readable as a move rather than as an arrival.
+	technicalPreviousKey = "previous"
 )
 
 // technicalChangeRecorder builds the recorder the people module calls inside
@@ -65,10 +68,10 @@ func technicalChangeRecorder() people.TechnicalChangeRecorder {
 			// you know?" is the first question this claim invites.
 			Evidence: []signals.DerivedEvidence{{Snippet: change.Evidence}},
 			Audit: map[string]any{
-				paramKind:  string(change.Kind),
-				"field":    change.Field,
-				"value":    change.Value,
-				"previous": change.Previous,
+				paramKind:            string(change.Kind),
+				extractionFieldKey:   change.Field,
+				extractionValueKey:   change.Value,
+				technicalPreviousKey: change.Previous,
 			},
 		}, at)
 		if err != nil {

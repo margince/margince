@@ -128,10 +128,24 @@ type technicalEnrichWorker struct {
 // what carries the backoff, and a failure nobody recorded is a failure the
 // sweep retries at full rate.
 func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[TechnicalEnrichOrganizationArgs]) error {
-	orgID := ids.From[ids.OrganizationKind](job.Args.OrganizationID)
-	wsCtx := technicalActor(principal.WithWorkspaceID(ctx, job.Args.Workspace))
+	args := job.Args
+	// Bound through the shared helper, so the args' own WorkspaceID() IS the
+	// binding: a worker that picked its own could claim one workspace and work
+	// in another, and a zero id would bind the GUC to nothing and let the pass
+	// read whatever the connection happened to carry. Under a NEW name rather
+	// than reassigning ctx, because workspaceJobCtx returns a nil context
+	// alongside its error and the refusal has to report through one that exists.
+	wsCtx, err := workspaceJobCtx(ctx, args)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	// The lookup reads and writes under an actor of its own: TechnicalDomain
+	// takes organization:read and the apply takes organization:update, both of
+	// which refuse a context with no principal.
+	wsCtx = technicalActor(wsCtx)
+	orgID := ids.From[ids.OrganizationKind](args.OrganizationID)
 	store := people.NewStore(database.Bind(w.pool, func(context.Context) (ids.WorkspaceID, error) {
-		return ids.From[ids.WorkspaceKind](job.Args.Workspace), nil
+		return ids.From[ids.WorkspaceKind](args.Workspace), nil
 	}))
 
 	domain, ok, err := store.TechnicalDomain(wsCtx, orgID)
@@ -148,7 +162,10 @@ func (w *technicalEnrichWorker) Work(ctx context.Context, job *river.Job[Technic
 	if err := store.ApplyTechnicalEnrichment(wsCtx, read, technicalChangeRecorder()); err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	return w.recordOutcomes(ctx, wsCtx, store, orgID, read, outcomes)
+	if err := w.recordOutcomes(ctx, wsCtx, store, orgID, read, outcomes); err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	return nil
 }
 
 // recordOutcomes writes each lane's verdict to the ledger.
@@ -160,7 +177,7 @@ func (w *technicalEnrichWorker) recordOutcomes(
 	for _, outcome := range outcomes {
 		verdict := technicalVerdict(outcome, read)
 		if err := store.RecordTechnicalLane(wsCtx, orgID, outcome.Lane, verdict, now); err != nil {
-			return jobs.FaultContext(ctx, err)
+			return err
 		}
 		if outcome.Err != nil {
 			// Logged rather than returned: one lane failing must not fail the

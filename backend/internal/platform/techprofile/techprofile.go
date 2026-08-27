@@ -58,6 +58,13 @@ const (
 	MailOther           = "other"
 )
 
+// The mail providers a reader sees. Named because each operates several MX
+// suffixes and the label must read the same on all of them.
+const (
+	labelMicrosoft365    = "Microsoft 365"
+	labelGoogleWorkspace = "Google Workspace"
+)
+
 // mailProviderSuffixes maps an MX host suffix to the provider that operates
 // it. Matched against the best-preference host, longest suffix first.
 var mailProviderSuffixes = []struct {
@@ -65,12 +72,12 @@ var mailProviderSuffixes = []struct {
 	key    string
 	label  string
 }{
-	{".mail.protection.outlook.com", MailMicrosoft365, "Microsoft 365"},
-	{".olc.protection.outlook.com", MailMicrosoft365, "Microsoft 365"},
-	{".mail.eo.outlook.com", MailMicrosoft365, "Microsoft 365"},
-	{".google.com", MailGoogleWorkspace, "Google Workspace"},
-	{".googlemail.com", MailGoogleWorkspace, "Google Workspace"},
-	{".mailhost.i.gmail.com", MailGoogleWorkspace, "Google Workspace"},
+	{".mail.protection.outlook.com", MailMicrosoft365, labelMicrosoft365},
+	{".olc.protection.outlook.com", MailMicrosoft365, labelMicrosoft365},
+	{".mail.eo.outlook.com", MailMicrosoft365, labelMicrosoft365},
+	{".google.com", MailGoogleWorkspace, labelGoogleWorkspace},
+	{".googlemail.com", MailGoogleWorkspace, labelGoogleWorkspace},
+	{".mailhost.i.gmail.com", MailGoogleWorkspace, labelGoogleWorkspace},
 }
 
 // MailProvider reads the mail provider from a domain's MX hosts.
@@ -134,7 +141,7 @@ func EmailSecurity(rootTXT, dmarcTXT []string, dkimFound bool) []Signal {
 		if strings.HasPrefix(strings.ToLower(strings.TrimSpace(record)), "v=spf1") {
 			signals = append(signals, Signal{
 				Field: FieldEmailSecurity, Key: SecuritySPF,
-				Label: "SPF veröffentlicht", Evidence: truncate(record, evidenceLimit),
+				Label: "SPF veröffentlicht", Evidence: truncate(record),
 			})
 			break
 		}
@@ -142,7 +149,7 @@ func EmailSecurity(rootTXT, dmarcTXT []string, dkimFound bool) []Signal {
 	if policy, record, ok := dmarcPolicy(dmarcTXT); ok {
 		signals = append(signals, Signal{
 			Field: FieldEmailSecurity, Key: policy.key,
-			Label: policy.label, Evidence: truncate(record, evidenceLimit),
+			Label: policy.label, Evidence: truncate(record),
 		})
 	}
 	if dkimFound {
@@ -185,10 +192,11 @@ func dmarcPolicy(dmarcTXT []string) (dmarcLevel, string, bool) {
 // the reader needs enough to recognize it, not all of it.
 const evidenceLimit = 200
 
-func truncate(s string, limit int) string {
+// truncate bounds one stored evidence string at evidenceLimit.
+func truncate(s string) string {
 	s = strings.TrimSpace(s)
-	if len(s) <= limit {
+	if len(s) <= evidenceLimit {
 		return s
 	}
-	return s[:limit] + "…"
+	return s[:evidenceLimit] + "…"
 }

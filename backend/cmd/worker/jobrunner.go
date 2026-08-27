@@ -309,7 +309,7 @@ func technicalEnricherFor(cfg workerConfig, pool *pgxpool.Pool) *compose.Technic
 		return nil
 	}
 	baseURL := cfg.certLogBaseURL
-	if baseURL == "public" {
+	if baseURL == baseURLPublic {
 		baseURL = certlog.PublicBaseURL
 	}
 	return compose.NewTechnicalEnricher(
@@ -329,11 +329,15 @@ func technicalEnricherFor(cfg workerConfig, pool *pgxpool.Pool) *compose.Technic
 // not a burst anybody notices.
 const dnsReadInterval = 200 * time.Millisecond
 
+// baseURLPublic is the word an operator writes to mean "the free public
+// service", for whichever lane the flag belongs to.
+const baseURLPublic = "public"
+
 func geocoderFor(baseURL string) geocode.Client {
 	switch baseURL {
 	case "":
 		return nil
-	case "public":
+	case baseURLPublic:
 		return geocode.NewNominatim(geocode.PublicBaseURL, nil)
 	default:
 		return geocode.NewNominatim(baseURL, nil)

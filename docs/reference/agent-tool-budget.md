@@ -26,7 +26,7 @@ feature is expected to argue with.
 |---|---:|---:|---:|---:|---:|---:|
 | `morning_brief` | 5 | 1661 | 6% | 15339 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2330 | 9% | 14670 | 15 | 8 |
-| _whole served catalog, for scale_ | 59 | 18683 | 77% | — | — | — |
+| _whole served catalog, for scale_ | 59 | 18721 | 78% | — | — | — |
 
 ### `morning_brief`
 
@@ -146,8 +146,8 @@ a term in an addition.
 | `progress_deal` | 435 | 3 scenarios |
 | `book_meeting` | 431 | — |
 | `create_record` | 429 | 1 scenario |
+| `enrich` | 424 | — |
 | `search_records` | 392 | 6 scenarios |
-| `enrich` | 386 | — |
 | `search_context` | 352 | — |
 | `prep_for_meeting` | 333 | — |
 | `merge_records` | 323 | — |

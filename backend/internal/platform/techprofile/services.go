@@ -155,6 +155,14 @@ const (
 	HostingOther       = "other"
 )
 
+// The provider names a reader sees. Named because each appears on several
+// suffixes — one provider signs more than one address space.
+const (
+	labelHetzner     = "Hetzner"
+	labelAzure       = "Microsoft Azure"
+	labelGoogleCloud = "Google Cloud"
+)
+
 // hostingSuffixes maps a hostname suffix to the provider that operates it.
 // The German market names come first because that is where the accounts are.
 var hostingSuffixes = []struct {
@@ -162,9 +170,9 @@ var hostingSuffixes = []struct {
 	key    string
 	label  string
 }{
-	{"hetzner.de", HostingHetzner, "Hetzner"},
-	{"hetzner.com", HostingHetzner, "Hetzner"},
-	{"your-server.de", HostingHetzner, "Hetzner"},
+	{"hetzner.de", HostingHetzner, labelHetzner},
+	{"hetzner.com", HostingHetzner, labelHetzner},
+	{"your-server.de", HostingHetzner, labelHetzner},
 	{"ionos.de", HostingIONOS, "IONOS"},
 	{"1und1.de", HostingIONOS, "IONOS"},
 	{"kasserver.com", HostingStrato, "STRATO"},
@@ -174,12 +182,12 @@ var hostingSuffixes = []struct {
 	{"cloudfront.net", HostingAWS, "AWS"},
 	{"cloudflare.com", HostingCloudflare, "Cloudflare"},
 	{"cloudflare.net", HostingCloudflare, "Cloudflare"},
-	{"azure.com", HostingAzure, "Microsoft Azure"},
-	{"windows.net", HostingAzure, "Microsoft Azure"},
-	{"azureedge.net", HostingAzure, "Microsoft Azure"},
-	{"googleusercontent.com", HostingGoogleCloud, "Google Cloud"},
-	{"1e100.net", HostingGoogleCloud, "Google Cloud"},
-	{"ghs.google.com", HostingGoogleCloud, "Google Cloud"},
+	{"azure.com", HostingAzure, labelAzure},
+	{"windows.net", HostingAzure, labelAzure},
+	{"azureedge.net", HostingAzure, labelAzure},
+	{"googleusercontent.com", HostingGoogleCloud, labelGoogleCloud},
+	{"1e100.net", HostingGoogleCloud, labelGoogleCloud},
+	{"ghs.google.com", HostingGoogleCloud, labelGoogleCloud},
 }
 
 // HostingProvider reads the hosting provider from the names a domain's

@@ -103,6 +103,9 @@ func (s *Store) ListTechnicalDue(ctx context.Context, limit int, now time.Time) 
 //
 // Reports false when the record carries none, which is a refusal rather than a
 // failure: there is simply nothing to look up.
+//
+// Held by: TestTheTechnicalLookupTakesNoDomainFromACaller (backend/gates/technicaldomain_test.go),
+// with TestTheTechnicalLookupReadsTheDomainFromTheRecordAlone holding the read side.
 func (s *Store) TechnicalDomain(ctx context.Context, orgID ids.OrganizationID) (string, bool, error) {
 	if err := auth.Require(ctx, "organization", principal.ActionRead); err != nil {
 		return "", false, err

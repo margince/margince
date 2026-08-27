@@ -13,6 +13,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// technicalValueKeyKey names the value_key half of one fact's line in the
+// audit evidence — which of a multi-valued field's rows this is.
+const technicalValueKeyKey = "value_key"
+
 // technicalKeySeparator joins a field and a value_key into one comparable
 // string, in Go and in SQL alike. A slug can contain neither a NUL nor this
 // character, so the join is unambiguous in both places.
@@ -90,9 +94,8 @@ func writeTechnicalFacts(ctx context.Context, tx pgx.Tx, in TechnicalEnrichment)
 			return nil, fmt.Errorf("write technical fact %s: %w", observation.Field, err)
 		}
 		if tag.RowsAffected() == 1 {
-			written = append(written, map[string]any{
-				"field": observation.Field, "value_key": observation.ValueKey, "value": observation.Value,
-			})
+			written = append(written, technicalDelta(
+				observation.Field, observation.ValueKey, observation.Value))
 		}
 	}
 	return written, nil
@@ -140,12 +143,24 @@ func removeUnobservedTechnicalFacts(
 		if err := rows.Scan(&field, &valueKey, &value); err != nil {
 			return nil, fmt.Errorf("remove unobserved technical facts: %w", err)
 		}
-		removed = append(removed, map[string]any{"field": field, "value_key": valueKey, "value": value})
+		removed = append(removed, technicalDelta(field, valueKey, value))
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("remove unobserved technical facts: %w", err)
 	}
 	return removed, nil
+}
+
+// technicalDelta is one row's line in the audit evidence.
+//
+// Shared by the written and the removed halves because a reader comparing them
+// is comparing the same three keys — a delta whose two halves named their
+// columns differently would make "what this write replaced" harder to read
+// than it needs to be.
+func technicalDelta(field, valueKey, value string) map[string]any {
+	return map[string]any{
+		evidenceFieldKey: field, technicalValueKeyKey: valueKey, auditKeyValue: value,
+	}
 }
 
 // technicalChanges is the difference between what the record held and what the
@@ -209,9 +224,9 @@ func goneChanges(
 	}
 	var changes []TechnicalChange
 	for _, row := range removed {
-		field, _ := row["field"].(string)
-		valueKey, _ := row["value_key"].(string)
-		value, _ := row["value"].(string)
+		field, _ := row[evidenceFieldKey].(string)
+		valueKey, _ := row[technicalValueKeyKey].(string)
+		value, _ := row[auditKeyValue].(string)
 		if movedFields[field] {
 			continue
 		}
