@@ -441,7 +441,11 @@ jobs:
           name: e2e-llm-transcripts
           path: e2e/llm/records/
           retention-days: 30
-          if-no-files-found: warn
+          # ERROR, not warn. An empty records/ means the lane never drove a
+          # scenario, and the first CI run passed this step while uploading
+          # nothing — a green step on top of a job that had already failed 30
+          # seconds in. The absence of transcripts is itself the finding.
+          if-no-files-found: error
 
   # The suite's verdict must not depend on the calendar.
   #
