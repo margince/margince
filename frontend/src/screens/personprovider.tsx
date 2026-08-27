@@ -34,6 +34,9 @@ import {
 type Profile = components["schemas"]["PersonProviderProfile"];
 type Provider = components["schemas"]["Provider"];
 
+/** Which contact to look up, and at which provider. */
+type EnrichRun = { personId: string; provider: Provider };
+
 /** The mark every value in this section carries: bought from a named third
  *  party, on a date. `connector` rather than `agent` — nothing inferred this,
  *  somebody sold it to us. */
@@ -105,7 +108,7 @@ function ProviderPanel({
   profile,
 }: Readonly<{ personId: string; profile: Profile }>) {
   const t = useT();
-  const enrich = useEnrichRun(personId);
+  const enrich = useEnrichRun();
   // Nobody has looked this contact up yet, so the panel has no values to show
   // and the small header button is the only way to change that. An empty plate
   // that names the action instead: the reader came here to buy data, and a
@@ -146,7 +149,12 @@ function ProviderPanel({
       }
       actions={
         firstRun ? undefined : (
-          <EnrichNow profile={profile} enrich={enrich} small />
+          <EnrichNow
+            personId={personId}
+            profile={profile}
+            enrich={enrich}
+            small
+          />
         )
       }
     >
@@ -162,7 +170,13 @@ function ProviderPanel({
         {firstRun ? (
           <EmptyState
             title={t("provider.profile.emptyTitle")}
-            action={<EnrichNow profile={profile} enrich={enrich} />}
+            action={
+              <EnrichNow
+                personId={personId}
+                profile={profile}
+                enrich={enrich}
+              />
+            }
           >
             {t("provider.profile.emptyBody", { provider: name })}
           </EmptyState>
@@ -315,14 +329,17 @@ function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
  *  pending and error state, and the reader would see a failure on whichever
  *  control they did not press.
  *
- *  The provider arrives as a mutation VARIABLE rather than a captured value.
- *  React Query re-arms a mutation's options in a passive effect, so a function
- *  closing over render state can run against the previous render's copy. */
-function useEnrichRun(personId: string) {
+ *  WHO is looked up and WHERE the answer lands both arrive as mutation
+ *  VARIABLES rather than as captured values. React Query re-arms a mutation's
+ *  options in a passive effect, so between the commit that renders a control
+ *  for one contact and that effect, the observer still holds the previous
+ *  render's closure: a captured id would spend a credit on the contact the
+ *  reader just left and refresh that page instead of this one. A variable
+ *  cannot be older than the control that carried it. */
+function useEnrichRun() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey: ["enrich", personId],
-    mutationFn: async ({ provider }: { provider: Provider }) => {
+    mutationFn: async ({ personId, provider }: EnrichRun) => {
       const { data, error } = await api.POST("/people/{id}/enrichment-runs", {
         params: { path: { id: personId } },
         body: { provider },
@@ -332,19 +349,23 @@ function useEnrichRun(personId: string) {
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, { personId }) => {
       // The run is durable and the provider has not been called yet, so the
-      // page re-reads and RunWatch picks the run up from there.
+      // page re-reads and RunWatch picks the run up from there. Keyed off the
+      // variables the run was started with, so the page that refreshes is the
+      // one the request was sent for.
       void queryClient.invalidateQueries({ queryKey: ["person360", personId] });
     },
   });
 }
 
 function EnrichNow({
+  personId,
   profile,
   enrich,
   small = false,
 }: Readonly<{
+  personId: string;
   profile: Profile;
   enrich: ReturnType<typeof useEnrichRun>;
   small?: boolean;
@@ -361,7 +382,9 @@ function EnrichNow({
       busyLabel={t("provider.profile.lookingUp")}
       // A profile carries no provider name until a run exists, so the first
       // lookup on a contact names the one the contract has.
-      onClick={() => enrich.mutate({ provider: profile.provider ?? "surfe" })}
+      onClick={() =>
+        enrich.mutate({ personId, provider: profile.provider ?? "surfe" })
+      }
     >
       <Search size={15} aria-hidden="true" /> {t("provider.profile.enrichNow")}
     </Button>
