@@ -22,7 +22,7 @@ ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
   test-contract-frontend-drift migration-versions test-migration-versions \
   test-lanes env-reads gofmt lint-modules go-file-length rls-store-path \
   no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale \
-  test-selfdir pkg-freeze
+  test-selfdir pkg-freeze test-desktop-launcher
 
 # How wide the gate fan-out runs. 4 is what the CI runner has and what
 # backend/Makefile's own fan-out already uses; a bigger machine can raise it.
@@ -728,6 +728,20 @@ craft-static:
 ## that proves nothing.
 craft-test:
 	go test -C cli/craft -count=1 ./...
+
+## test-desktop-launcher — the launcher's own suite. It exists for the reason
+## craft-test does, and the reason is worth repeating because this module hid it
+## longer: desktop/launcher is its own module and deliberately OUTSIDE go.work,
+## since it supervises the shipped binaries as child processes rather than
+## importing them. So `./...` inside backend cannot reach it, the workspace
+## cannot reach it, and the seven test files it already carried ran nowhere —
+## which is indistinguishable from carrying none. The program every desktop user
+## meets first was the one package with no lane.
+##
+## GOWORK=off for the reason its go.mod states: inside a workspace that does not
+## list the module, every package fails to resolve.
+test-desktop-launcher:
+	GOWORK=off go test -C desktop/launcher -count=1 ./...
 
 ## craft-residue — fail if any unresolved CRAFT-FIX/CRAFT-DISPUTE marker was
 ## left in the backend tree (the review-loop residue check, ADR-0045). The CI

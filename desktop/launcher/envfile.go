@@ -39,7 +39,15 @@ func loadEnvFile(path string) (env []string, err error) {
 
 	scanner := bufio.NewScanner(file)
 	for line := 1; scanner.Scan(); line++ {
-		entry, parseErr := parseEnvLine(scanner.Text())
+		raw := scanner.Text()
+		// A byte-order mark is a property of the FILE, so line 1 is the only
+		// place it means anything and the only place it is forgiven. On any
+		// other line an invisible character is a mistake, and parseEnvLine
+		// says so rather than carrying it into a variable name.
+		if line == 1 {
+			raw = strings.TrimPrefix(raw, byteOrderMark)
+		}
+		entry, parseErr := parseEnvLine(raw)
 		if parseErr != nil {
 			return nil, fmt.Errorf("%s line %d: %w", path, line, parseErr)
 		}
@@ -52,6 +60,16 @@ func loadEnvFile(path string) (env []string, err error) {
 	}
 	return env, nil
 }
+
+// byteOrderMark opens a UTF-8 file written by most Windows tooling. Notepad can
+// put it here, and so can a PowerShell script: on Windows PowerShell 5.1 —
+// the engine every Windows box has — `Set-Content -Encoding UTF8` adds one
+// whether or not it was asked to.
+//
+// Tolerated rather than refused, because it means nothing here and a user cannot
+// see it. Refusing it fails the whole start over a line the user can plainly
+// read as a comment, which is a diagnosis nobody can act on.
+const byteOrderMark = "\ufeff"
 
 // parseEnvLine returns a KEY=VALUE entry, or "" for a blank or comment line.
 //
@@ -74,6 +92,20 @@ func parseEnvLine(raw string) (string, error) {
 	key = strings.TrimSpace(key)
 	if key == "" {
 		return "", fmt.Errorf("missing a name before '=' in %q", raw)
+	}
+	// A name holding a character nobody can see is the silent failure above
+	// wearing a disguise, so it is refused for the same reason. Cut splits
+	// "\ufeffMARGINCE_PORT=8800" on its "=" quite happily, and the child process
+	// then holds a variable whose name opens with a mark: the setting does
+	// nothing, and no line of output says why. An environment variable name is
+	// plain ASCII by convention, and a character outside it is a paste artifact
+	// far more often than an intention.
+	for _, r := range key {
+		if r < ' ' || r > '~' {
+			return "", fmt.Errorf(
+				"the name in %q holds %q, which is not a plain-ASCII character — "+
+					"a byte-order mark or a pasted space, most likely; retype the line", raw, r)
+		}
 	}
 
 	value = strings.TrimSpace(value)
