@@ -266,6 +266,17 @@ func upsertConnection(ctx context.Context, tx pgx.Tx, in connectionUpsert) (ids.
 		              account_label = EXCLUDED.account_label, provider_scopes = EXCLUDED.provider_scopes,
 		              generation = capture_connection.generation + CASE WHEN $7 THEN 1 ELSE 0 END,
 		              sync_cursor = CASE WHEN $7 THEN NULL ELSE capture_connection.sync_cursor END,
+		              -- A rebind points this row at a DIFFERENT account, so the
+		              -- previous mailbox's answer about reading its signatures
+		              -- is not this one's to inherit. Cleared to NULL rather
+		              -- than to a value: the new mailbox follows the tenant
+		              -- default until somebody judges it, which is the honest
+		              -- state for a mailbox nobody has been asked about. The
+		              -- alternative — carrying the old answer — would silently
+		              -- apply one person's opt-out to another's mail, in either
+		              -- direction.
+		              signature_enrich_enabled = CASE WHEN $7 THEN NULL
+		                                              ELSE capture_connection.signature_enrich_enabled END,
 		              account_bound_at = CASE WHEN $7 THEN now() ELSE capture_connection.account_bound_at END
 		RETURNING id`,
 		in.provider, in.userID, in.scopes, string(in.ref), in.accountLabel, in.providerScopes, rebound).Scan(&id); err != nil {

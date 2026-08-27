@@ -183,6 +183,70 @@ func TestReconnectingTheSameAccountKeepsItsWatermark(t *testing.T) {
 	}
 }
 
+// The signature-enrichment answer belongs to the MAILBOX, not to the row that
+// happens to hold it. A rebind points that row at somebody else's mail, so one
+// person's opt-out must not silently start governing another person's — in
+// either direction.
+func TestReconnectingADifferentAccountDropsTheFirstAccountsSignatureAnswer(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
+	registry.Register(&accountBoundConnector{pagedConnector: &pagedConnector{messages: 5, pageSize: 10}})
+
+	connID := connectAndSync(t, registry, e, "first@example.com")
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	off := false
+	if _, err := registry.SetSignatureEnrichment(grantCtx, "gmail", &off); err != nil {
+		t.Fatalf("switching the first mailbox off: %v", err)
+	}
+
+	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("second@example.com")); err != nil {
+		t.Fatalf("reconnecting as a different account: %v", err)
+	}
+
+	if answer := readSignatureAnswer(t, e, connID); answer != nil {
+		t.Fatalf("signature_enrich_enabled = %v, want cleared — the second mailbox never made that choice, and inheriting it applies one person's answer to another person's mail", *answer)
+	}
+}
+
+func TestReconnectingTheSameAccountKeepsItsSignatureAnswer(t *testing.T) {
+	e := integration.SetupSearch(t)
+	seedCaptureRole(t, e)
+	registry := newTestCaptureRegistry(e, newTestKeyvault(t, e))
+	registry.Register(&accountBoundConnector{pagedConnector: &pagedConnector{messages: 5, pageSize: 10}})
+
+	connID := connectAndSync(t, registry, e, "same@example.com")
+	grantCtx := humanWithScopes(e, e.Rep1, []principal.Scope{principal.ScopeRead})
+	off := false
+	if _, err := registry.SetSignatureEnrichment(grantCtx, "gmail", &off); err != nil {
+		t.Fatalf("switching the mailbox off: %v", err)
+	}
+
+	if _, err := registry.Connect(grantCtx, "gmail", connector.Auth("same@example.com")); err != nil {
+		t.Fatalf("re-granting the same account: %v", err)
+	}
+
+	// A routine reauth is the same person and the same mailbox. Clearing their
+	// answer would quietly re-enable reading mail they asked us not to read.
+	answer := readSignatureAnswer(t, e, connID)
+	if answer == nil || *answer {
+		t.Fatalf("signature_enrich_enabled = %v, want the false this mailbox chose", answer)
+	}
+}
+
+// readSignatureAnswer reads one connection's own answer straight from the row.
+func readSignatureAnswer(t *testing.T, e *integration.SearchEnv, connID ids.UUID) *bool {
+	t.Helper()
+	var answer *bool
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT signature_enrich_enabled FROM capture_connection WHERE id = $1`, connID).Scan(&answer)
+	}); err != nil {
+		t.Fatalf("reading the connection's signature answer: %v", err)
+	}
+	return answer
+}
+
 func TestANewAccountMayImportANarrowerWindowThanTheOldOne(t *testing.T) {
 	e := integration.SetupSearch(t)
 	seedCaptureRole(t, e)

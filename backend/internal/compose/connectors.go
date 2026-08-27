@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/capture/gmail"
 	"github.com/margince/margince/backend/internal/modules/capture/graph"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/authz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -365,6 +366,34 @@ func (h connectorHandlers) DisconnectConnector(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// SetConnectorSignatureEnrichment: PUT /connectors/{provider}/signature-enrichment.
+// The mailbox owner's own switch over the nightly signature pass; the registry
+// owns the scoping and the audit, and this is wire-only.
+func (h connectorHandlers) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider crmcontracts.CaptureProvider) {
+	if h.registry == nil {
+		httperr.NotImplemented(w, r, "SetConnectorSignatureEnrichment")
+		return
+	}
+	var req crmcontracts.SetSignatureEnrichmentRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	view, err := h.registry.SetSignatureEnrichment(r.Context(), string(provider), req.Enabled)
+	// A mailbox this caller has not connected is not theirs to configure, and
+	// answers as absent — the registry's sentinel is a plain error and would
+	// otherwise reach the client as a 500 about a state the product reaches
+	// whenever somebody opens a settings page for a provider they never linked.
+	if errors.Is(err, capture.ErrNoConnection) {
+		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, toContractConnection(view))
+}
+
 // toContractConnection maps a registry connection row onto the wire shape.
 // Storage now uses the contract's own status vocabulary (CAP-DDL-2 reconciled
 // capture_connection to it), so status is a straight cast — no translation. The
@@ -377,6 +406,9 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		Scopes:         v.ProviderScopes,
 		WatchExpiresAt: v.WatchExpiresAt,
 		AccountLabel:   v.AccountLabel,
+		// Carried as the pointer it is: null on the wire is this mailbox
+		// following the tenant default, not a field the read forgot.
+		SignatureEnrichEnabled: v.SignatureEnrichEnabled,
 	}
 	if c.Scopes == nil {
 		c.Scopes = []string{}

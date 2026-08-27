@@ -7878,6 +7878,38 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /connectors/{provider}/signature-enrichment:
+    parameters:
+      - $ref: '#/components/parameters/CaptureProvider'
+    put:
+      tags: [Connectors]
+      operationId: setConnectorSignatureEnrichment
+      summary: Set this mailbox's own answer to the nightly signature pass.
+      description: |
+        The mailbox owner's switch, and an admin's on their behalf. `enabled` is tri-state:
+        true or false is this mailbox's own answer, and null hands the question back to the
+        tenant default so a later change to that default moves this mailbox with it.
+
+        Switched off, nothing from this mailbox is selected for the pass at all — the mail is
+        not read for enrichment and then discarded, it is never read. Audited like every other
+        change to a connection. Human-only: an agent never changes a capture posture.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetSignatureEnrichmentRequest' }
+      responses:
+        '200':
+          description: The connection, with its answer as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /connectors/{provider}/backfill/preview:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -16793,7 +16825,7 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing]
+      required: [auto_enrich, mail_sharing, signature_enrich]
       properties:
         mail_sharing:
           type: boolean
@@ -16809,6 +16841,20 @@ components:
             When true, every organization with a primary domain and no dossier gets a governed
             web deep-read under a daily spend cap — however it was named. The anchor is
             excluded (cold start reads it). Default is ON (the testing posture).
+        signature_enrich:
+          type: boolean
+          description: |
+            The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
+            number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
+            a value the signature does not state is not written.
+
+            A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
+            never chose follows this. Distinct from the exclusion list, which keeps whole messages
+            out of capture by address or domain and says nothing about reading a signature.
+            Default is ON.
+
+            "Workspace" here is the storage tenant, not the word the product shows a reader —
+            the surface calls it the organization's default.
     InstallationSetup:
       type: object
       additionalProperties: false
@@ -16980,6 +17026,7 @@ components:
       properties:
         auto_enrich: { type: boolean, description: Toggle captured-organization auto-enrichment. }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects mail captured from now on.' }
+        signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it.' }
 
     BlockedDomain:
       type: object
@@ -17085,8 +17132,28 @@ components:
         last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
         backfill: { allOf: [ { $ref: '#/components/schemas/BackfillStatus' } ], description: 'Summary of the connection''s backfill run; state `none` when never run.' }
+        signature_enrich_enabled:
+          type: [boolean, 'null']
+          description: |
+            This mailbox's own answer to the nightly signature pass, or null to follow the
+            tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
+            a missing value: a mailbox that never chose moves with the default, and one that
+            did keeps its answer whatever the default becomes.
+
+            False means no mail from this mailbox is ever SELECTED for enrichment — the pass
+            never reads it, rather than reading it and discarding the result.
         created_at: { type: string, format: date-time, readOnly: true }
         updated_at: { type: string, format: date-time, readOnly: true }
+    SetSignatureEnrichmentRequest:
+      type: object
+      additionalProperties: false
+      required: [enabled]
+      description: One mailbox's answer to the nightly signature pass.
+      properties:
+        enabled:
+          type: [boolean, 'null']
+          description: 'true or false is this mailbox''s own answer; null follows the tenant default.'
+
     WorkspaceEmailDomain:
       type: object
       required: [domain, source, verified]

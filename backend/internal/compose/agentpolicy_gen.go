@@ -521,6 +521,7 @@ var agentPolicies = map[string]agentPolicy{
 	"PUT /v1/brief/annotations":                                          {Op: "annotateMorningBrief", Access: "tool", Tool: "annotate_brief", RecordType: "", Tier: "auto_execute", Scope: "write"},
 	"PUT /v1/capture/blocked-domains":                                    {Op: "setBlockedDomain", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/company":                                                    {Op: "putCompany", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"PUT /v1/connectors/{provider}/signature-enrichment":                 {Op: "setConnectorSignatureEnrichment", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/deal-rooms/{id}/expiry":                                     {Op: "setDealRoomExpiry", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/deals/{id}/documents/{attachmentId}/hide":                   {Op: "hideDealDocument", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"PUT /v1/installation/google-app":                                    {Op: "setGoogleApp", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

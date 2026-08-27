@@ -491,6 +491,10 @@ func (stubs) DisconnectConnector(w nethttp.ResponseWriter, r *nethttp.Request, p
 	httperr.NotImplemented(w, r, "DisconnectConnector")
 }
 
+func (stubs) SetConnectorSignatureEnrichment(w nethttp.ResponseWriter, r *nethttp.Request, provider crmcontracts.CaptureProvider) {
+	httperr.NotImplemented(w, r, "SetConnectorSignatureEnrichment")
+}
+
 func (stubs) ListConsentPurposes(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListConsentPurposesParams) {
 	httperr.NotImplemented(w, r, "ListConsentPurposes")
 }

@@ -23,8 +23,11 @@ import (
 
 // Settings is the workspace-shared capture posture (the wire shape).
 type Settings struct {
-	AutoEnrich  bool
-	MailSharing bool
+	AutoEnrich bool
+	// SignatureEnrich is the workspace DEFAULT; a mailbox that set its own
+	// switch keeps it. See settingsentry.go for why the two are separate.
+	SignatureEnrich bool
+	MailSharing     bool
 }
 
 // SettingsStore is the store over the workspace capture posture.
@@ -47,7 +50,15 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 	if err != nil {
 		return Settings{}, fmt.Errorf("capture: reading settings: %w", err)
 	}
-	return Settings{AutoEnrich: autoEnrich, MailSharing: mailSharing}, nil
+	signatureEnrich, err := settings.Get(ctx, s.settings, SignatureEnrich)
+	if err != nil {
+		return Settings{}, fmt.Errorf("capture: reading settings: %w", err)
+	}
+	return Settings{
+		AutoEnrich:      autoEnrich,
+		MailSharing:     mailSharing,
+		SignatureEnrich: signatureEnrich,
+	}, nil
 }
 
 // Update applies a sparse capture-settings patch (admin/ops). A nil field is
@@ -64,7 +75,7 @@ func (s *SettingsStore) Get(ctx context.Context) (Settings, error) {
 // read gets a 403 on an empty patch, because the response comes from Get. No
 // seeded role has that combination — `capture_settings` grants read to every
 // role — so this stays a note rather than a branch.
-func (s *SettingsStore) Update(ctx context.Context, autoEnrich, mailSharing *bool) (Settings, error) {
+func (s *SettingsStore) Update(ctx context.Context, autoEnrich, mailSharing, signatureEnrich *bool) (Settings, error) {
 	if err := auth.Require(ctx, captureSettingsObject, principal.ActionUpdate); err != nil {
 		return Settings{}, err
 	}
@@ -78,7 +89,12 @@ func (s *SettingsStore) Update(ctx context.Context, autoEnrich, mailSharing *boo
 			}
 		}
 		if mailSharing != nil {
-			return settings.SetTx(ctx, s.settings, tx, MailSharing, *mailSharing)
+			if err := settings.SetTx(ctx, s.settings, tx, MailSharing, *mailSharing); err != nil {
+				return err
+			}
+		}
+		if signatureEnrich != nil {
+			return settings.SetTx(ctx, s.settings, tx, SignatureEnrich, *signatureEnrich)
 		}
 		return nil
 	})

@@ -3625,6 +3625,11 @@ export const de = {
     "Die Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
   "connectors.disconnect": "Trennen",
+  "connectors.signatureEnrich.label": "Signaturen aus diesem Postfach lesen",
+  "connectors.signatureEnrich.followingDefault":
+    "Folgt der Einstellung Ihrer Organisation. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
+  "connectors.signatureEnrich.ownAnswer":
+    "Eigene Antwort dieses Postfachs — bleibt bestehen, was auch immer Ihre Organisation einstellt.",
   "connectors.disconnectTitle": "Dieses Postfach trennen?",
   "connectors.disconnectBody":
     "Dies löscht die für dieses Postfach gespeicherte Zugangsdaten. Die Erfassung stoppt sofort; alles bereits Erfasste bleibt in deinem CRM, und beim erneuten Verbinden wird wieder um Erlaubnis gebeten.",
@@ -5781,6 +5786,10 @@ export const de = {
     "Erfasste Unternehmen automatisch anreichern",
   "captureSettings.autoEnrich.help":
     "Wenn aktiviert, erhält jedes aus erfassten E-Mails erstellte Unternehmen automatisch ein Web-Dossier — seine Website wird gelesen und sein Profil ausgefüllt. Läuft unter einem Tageslimit.",
+  "captureSettings.signatureEnrich.label":
+    "Signaturen für Kontaktdaten auswerten",
+  "captureSettings.signatureEnrich.help":
+    "Wenn aktiv, übernimmt ein nächtlicher Durchlauf, was ein Kontakt in seiner eigenen Signatur angibt — Position, Telefonnummer, Firma. Nichts wird erschlossen: Was die Signatur nicht nennt, wird nicht geschrieben. Das ist die Voreinstellung der Organisation; ein Postfach mit eigener Einstellung behält sie.",
   "captureSettings.adminOnly":
     "Nur ein Administrator oder Ops kann dies ändern.",
 

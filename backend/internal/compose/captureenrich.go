@@ -22,7 +22,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/settings"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
@@ -80,7 +82,15 @@ func (e *CaptureEnricher) RunWorkspace(ctx context.Context) error {
 		Type: principal.PrincipalSystem,
 		ID:   "agent:enrich",
 	}), ids.NewV7())
-	candidates, err := e.store.SignatureCandidates(wsCtx, enrichPassLimit)
+	// The workspace default, for every mailbox that never made its own choice.
+	// Read once per pass rather than per candidate: it is one row, and a value
+	// that changed mid-pass would sort one night's candidates by two different
+	// answers to the same question.
+	defaultEnrich, err := settings.Get(wsCtx, NewSettingsStore(e.pool), capture.SignatureEnrich)
+	if err != nil {
+		return fmt.Errorf("reading the signature-enrichment setting: %w", err)
+	}
+	candidates, err := e.store.SignatureCandidates(wsCtx, enrichPassLimit, defaultEnrich)
 	if err != nil {
 		return err
 	}

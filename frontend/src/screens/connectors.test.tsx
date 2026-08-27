@@ -193,7 +193,15 @@ describe("the connected-inboxes card", () => {
     const row = await screen.findByTestId("connector-gmail");
     const backfill = document.querySelector(".connector-backfill");
     expect(backfill).not.toBeNull();
-    expect(row.nextElementSibling).toBe(backfill);
+    // Asserted as "after this mailbox's row and before the next one" rather
+    // than as its immediate sibling: the row now carries its own decisions
+    // between the two (the signature-enrichment switch), and an adjacency
+    // check would fail for every one of them while the import stayed exactly
+    // where it belongs.
+    expect(
+      row.compareDocumentPosition(backfill as Node) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
   });
 
   // An empty roster is the ANSWER to the question this card asks, so it is a
