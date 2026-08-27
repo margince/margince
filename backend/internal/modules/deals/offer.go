@@ -95,7 +95,7 @@ func createOfferTx(ctx context.Context, tx pgx.Tx, dealID ids.DealID, in CreateO
 	wsID := storekit.MustWorkspace(ctx)
 	// The deal anchors the offer's visibility: it must exist, be live
 	// and sit inside the caller's row scope (miss = 404).
-	if err := auth.EnsureLinkTarget(ctx, tx, "deal", dealID.UUID); err != nil {
+	if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 	buyerOrg, err := resolveBuyerOrg(ctx, tx, dealID, in.BuyerOrgID)
@@ -300,7 +300,7 @@ func visibleOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived store
 	if err != nil {
 		return crmcontracts.Offer{}, err
 	}
-	if err := auth.EnsureVisible(ctx, tx, "deal", ids.UUID(offer.DealId)); err != nil {
+	if err := auth.EnsureVisible(ctx, tx, dealTable, ids.UUID(offer.DealId)); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 	return offer, nil
@@ -326,7 +326,7 @@ func writableOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived stor
 	if err != nil {
 		return crmcontracts.Offer{}, err
 	}
-	if err := auth.EnsureWritable(ctx, tx, "deal", ids.UUID(offer.DealId)); err != nil {
+	if err := auth.EnsureWritable(ctx, tx, dealTable, ids.UUID(offer.DealId)); err != nil {
 		return crmcontracts.Offer{}, err
 	}
 	return offer, nil

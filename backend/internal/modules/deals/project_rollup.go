@@ -59,7 +59,7 @@ func (s *Store) ProjectDealTotalsTx(ctx context.Context, tx pgx.Tx, id ids.Proje
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	basePos := arg(base)
 	where := []string{storekit.SQLf("d.project_id = $%d", arg(id)), "d.archived_at IS NULL"}
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := auth.ScopeClauseFor(ctx, dealTable, "d", arg)
 	if err != nil {
 		return ProjectDealTotals{}, err
 	}

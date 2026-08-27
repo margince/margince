@@ -393,7 +393,6 @@ internal/modules/consent/gate.go#type Gate
 internal/modules/contracts/contract_write.go#func contractPatch
 internal/modules/contracts/contract_write.go#func ensureLinksVisible
 internal/modules/contracts/store.go#const contractColumns
-internal/modules/contracts/store.go#const contractObject
 internal/modules/contracts/visibility.go#func VisibleClause
 internal/modules/customfields/create.go#func marshalOptions
 internal/modules/customfields/create.go#func unmarshalOptions

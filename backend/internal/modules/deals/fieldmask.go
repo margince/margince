@@ -92,7 +92,7 @@ func maskDeals(ctx context.Context, tx pgx.Tx, deals []crmcontracts.Deal) error 
 	// both consumers read it: the wire flag a client draws its edit affordances
 	// from, and the masks conditioned on write authority. Asking twice would be
 	// two round trips for one question, and two answers that can disagree.
-	writable, err := auth.StampWritable(ctx, tx, "deal", deals,
+	writable, err := auth.StampWritable(ctx, tx, dealTable, deals,
 		func(d crmcontracts.Deal) ids.UUID { return ids.UUID(d.Id) },
 		func(d *crmcontracts.Deal, may bool) { d.Writable = &may })
 	if err != nil {

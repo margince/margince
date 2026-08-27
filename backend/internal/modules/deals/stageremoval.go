@@ -221,7 +221,7 @@ func refuseIfOccupied(ctx context.Context, tx pgx.Tx, id ids.StageID) error {
 	}
 	args := []any{id, namedBlockingDeals}
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "", arg)
+	scope, err := auth.ScopeClauseFor(ctx, dealTable, "", arg)
 	if err != nil {
 		return err
 	}

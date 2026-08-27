@@ -35,7 +35,7 @@ func (s *Store) RefuseArchiveDeal(ctx context.Context, id ids.DealID) error {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {
-		return auth.EnsureWritable(ctx, tx, "deal", id.UUID)
+		return auth.EnsureWritable(ctx, tx, dealTable, id.UUID)
 	})
 }
 
@@ -55,7 +55,7 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 	}
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritable(ctx, tx, "deal", id.UUID); err != nil {
+		if err := auth.EnsureWritable(ctx, tx, dealTable, id.UUID); err != nil {
 			return err
 		}
 		// A liveness probe, not a wire read — no custom columns needed.
