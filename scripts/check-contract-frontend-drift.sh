@@ -45,7 +45,7 @@
 # would catch it. That is exactly the gap #1639 describes.
 #
 # The CI half is not left to trust either — it is pinned by
-# TestTheContractReachesTheFrontendLane (backend/contractfrontendlane_test.go),
+# TestTheContractReachesTheFrontendLane (backend/gates/contractfrontendlane_test.go),
 # which fails when the classifier stops routing `backend/api/**` to the
 # frontend lane. Dropping that one line is what would actually reopen #1573,
 # and it would otherwise be invisible.

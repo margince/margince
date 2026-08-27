@@ -4,7 +4,7 @@
 // Package promptlang is the one spelling of "write in this language" for the
 // prompts whose output the whole team reads.
 //
-// Held by: TestOnlyPromptlangSpellsTheLanguageRule (backend/promptlanguage_test.go)
+// Held by: TestOnlyPromptlangSpellsTheLanguageRule (backend/gates/promptlanguage_test.go)
 //
 // A model asked nothing about language answers in whatever language its input
 // happened to be in. That is right for a reply to a German thread and wrong for
@@ -29,11 +29,11 @@
 package promptlang
 
 import (
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Heading opens the rule, and it is what the fitness gate in
-// backend/promptlanguage_test.go recognises a governed prompt by.
+// backend/gates/promptlanguage_test.go recognises a governed prompt by.
 //
 // Exported so that gate can READ it rather than restate it. A gate carrying its
 // own copy of the string it looks for is a second spelling of this constant,

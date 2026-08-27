@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 // The contract's oneOf: EXACTLY ONE of url|text|self_description. Zero or

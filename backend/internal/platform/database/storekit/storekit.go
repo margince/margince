@@ -20,10 +20,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // Actor resolves the audit identity of the current call. A missing actor
@@ -86,7 +86,7 @@ func Audit(ctx context.Context, tx pgx.Tx, action, entityType string, entityID i
 //
 //craft:ignore naked-any the audit seam: before/after images are each entity's own snapshot shape, serialized to jsonb
 func AuditWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType string, entityID ids.UUID, before, after any, evidence map[string]any) (ids.UUID, error) {
-	if action == auditActionUpdate && AbsentImage(before) {
+	if bindsTheBeforeImageRule(action) && AbsentImage(before) {
 		// A writer holding the row and recording nothing it held is a writer
 		// that did not look, and the row it lands says a field changed without
 		// saying from what — which nothing can recover afterwards, because an
@@ -103,10 +103,18 @@ func AuditWithEvidence(ctx context.Context, tx pgx.Tx, action, entityType string
 	return writeAuditRow(ctx, tx, action, entityType, entityID, before, after, evidence)
 }
 
-// auditActionUpdate is the one verb the before-image rule binds. archive and the
-// rest are left alone: un-archiving is not a replay of an image but a per-type
-// decision about what that record's archive took down with it.
-const auditActionUpdate = "update"
+// bindsTheBeforeImageRule reports whether a verb records a replacement of field
+// values the record already held. Those must say what they replaced; archive and
+// the rest are left alone, because un-archiving is not a replay of an image but
+// a per-type decision about what that record's archive took down with it.
+//
+// Both update-shaped verbs are named here rather than only "update". A reversal
+// replaces values exactly as an update does, and a rule bound to one spelling
+// would make the reversal verb the one way to write a field change that cannot
+// say what it changed from.
+func bindsTheBeforeImageRule(action string) bool {
+	return AuditVerb(action).Valid()
+}
 
 // withExtensionAttribution adds the bound extension attribution to a write's
 // evidence, and refuses a caller that tried to write the reserved member

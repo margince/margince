@@ -6,7 +6,7 @@ package migrations_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/migrations"
+	"github.com/margince/margince/backend/migrations"
 )
 
 func TestEmbeddedMigrationNamespacesLoad(t *testing.T) {

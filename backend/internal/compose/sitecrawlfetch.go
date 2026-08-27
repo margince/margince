@@ -12,8 +12,8 @@ package compose
 import (
 	"context"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 // ReadSeed fetches the landing page alone, under the crawler's own wall clock

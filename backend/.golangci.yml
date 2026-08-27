@@ -98,8 +98,8 @@ linters:
           list-mode: strict
           allow:
             - $gostd
-            - github.com/gradionhq/margince/backend/internal/shared
-            - github.com/gradionhq/margince/backend/pkg
+            - github.com/margince/margince/backend/internal/shared
+            - github.com/margince/margince/backend/pkg
         # The published extension surface (backend/pkg, ADR-0069 §3) is the
         # outermost Tier-0 leaf: stdlib + itself, nothing else — anything
         # else it imported would become transitively-frozen published API.
@@ -109,30 +109,30 @@ linters:
           list-mode: strict
           allow:
             - $gostd
-            - github.com/gradionhq/margince/backend/pkg
+            - github.com/margince/margince/backend/pkg
         platform:
           files:
             - "**/internal/platform/**"
           deny:
-            - pkg: github.com/gradionhq/margince/backend/internal/modules
+            - pkg: github.com/margince/margince/backend/internal/modules
               desc: platform owns no domain module
-            - pkg: github.com/gradionhq/margince/backend/internal/compose
+            - pkg: github.com/margince/margince/backend/internal/compose
               desc: platform never sees the composition layer
         # Sibling isolation ("a module never imports a sibling module",
         # ADR-0054 §9) is NOT spelled here: depguard cannot say "no
         # sibling but your own subpackages are fine" without an N²
         # hand-maintained rule per module, and that list drifted. The
         # invariant is enforced mechanically instead — the tree-derived
-        # TestNoSiblingModuleImports in backend/arch_test.go enrolls a
+        # TestNoSiblingModuleImports in backend/gates/arch_test.go enrolls a
         # new module the moment its directory exists, and go-arch-lint
         # (.go-arch-lint.yml) gates the same DAG per component.
         modules-common:
           files:
             - "**/internal/modules/**"
           deny:
-            - pkg: github.com/gradionhq/margince/backend/internal/compose
+            - pkg: github.com/margince/margince/backend/internal/compose
               desc: modules never see the composition layer
-            - pkg: github.com/gradionhq/margince/backend/cmd
+            - pkg: github.com/margince/margince/backend/cmd
               desc: modules never see the process roles
     revive:
       # package-comments stays ON: package docs are onboarding

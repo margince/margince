@@ -11,9 +11,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // ErrBindingNotSeeded marks a claim attempt against a marker row that does
@@ -305,7 +305,7 @@ func (s *Store) anyWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
 }
 
 func (s *Store) fleetWorkspaceIDs(ctx context.Context) ([]ids.WorkspaceID, error) {
-	// rls-exempt: fleet enumeration — the workspace table lists every tenant before the per-workspace tx each caller opens next (compose/dispatch.go enumerateWorkspaces is the sanctioned spelling; backend/jobfleetscan_test.go ratifies this site as a read).
+	// rls-exempt: fleet enumeration — the workspace table lists every tenant before the per-workspace tx each caller opens next (compose/dispatch.go enumerateWorkspaces is the sanctioned spelling; backend/gates/jobfleetscan_test.go ratifies this site as a read).
 	rows, err := s.db.Pool().Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at`)
 	if err != nil {
 		return nil, fmt.Errorf("search: enumerating workspaces: %w", err)

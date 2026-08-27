@@ -50,6 +50,7 @@ export async function uploadAttachment(
     body.append(part, value);
   }
   body.append("file", file);
+  // contract-fetch:allow multipart — the generated client serializes JSON only, and this operation takes a file part
   const response = await fetch("/v1/attachments", {
     method: "POST",
     body,

@@ -12,7 +12,7 @@ import (
 // EncodeOpaque and DecodeOpaque are the one envelope a keyset cursor travels
 // in: base64url of the position as JSON.
 //
-// Held by: TestTheCursorEnvelopeIsSpelledOnce (backend/onecursorenvelope_test.go)
+// Held by: TestTheCursorEnvelopeIsSpelledOnce (backend/gates/onecursorenvelope_test.go)
 //
 // Four modules wrote their own, and the KEYSETS differing is the whole reason
 // they did — a dedupe queue pages by confidence, a lead queue by SLA band, a

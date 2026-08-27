@@ -15,7 +15,7 @@ package agents
 import (
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // CommitmentItem is one open promise as review_commitments reports it.

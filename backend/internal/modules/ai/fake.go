@@ -10,7 +10,7 @@ import (
 	"math"
 	"sync"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // FakeClient is the offline model.Client every test drives (B-EP06.2):

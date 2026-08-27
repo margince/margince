@@ -23,7 +23,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 // fetchSeed gets the landing page, or reports why the site could not be read

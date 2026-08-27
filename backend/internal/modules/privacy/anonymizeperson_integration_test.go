@@ -19,7 +19,7 @@ package privacy
 //     name and keeps whatever was written beside it.
 //
 // Both are asserted here because neither shows up in the table-set census in
-// backend/personscrub_test.go: the first is an ordering property, and the
+// backend/gates/personscrub_test.go: the first is an ordering property, and the
 // second is two acts clearing one table to different depths.
 
 import (
@@ -31,8 +31,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {

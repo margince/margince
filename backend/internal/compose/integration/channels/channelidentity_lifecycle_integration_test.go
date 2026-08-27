@@ -8,7 +8,7 @@ package channels
 // person_channel_identity is a person satellite, so it owes every lifecycle
 // path its siblings ride: Art. 17 erasure (plus the suppression row that makes
 // the erasure stick), Art. 15 subject access, the retention anonymizer, the
-// merge relink, and the archive cascade. backend/satellite_lifecycle_test.go
+// merge relink, and the archive cascade. backend/gates/satellite_lifecycle_test.go
 // proves each path WRITES the table; this suite proves the writes do the right
 // thing on real rows, which is the half a source scan cannot see.
 //
@@ -26,13 +26,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/modules/privacy"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // telegramProvider is the only provider the 0152 CHECK admits today.
@@ -150,7 +151,7 @@ func TestRetentionAnonymizeDropsTheChannelIdentityWithoutSuppressingIt(t *testin
 	// granted consent and no deal stake — the selector's own conditions.
 	e.WsExec(t, `UPDATE person SET created_at = now() - interval '800 days' WHERE id = $1`, person)
 
-	svc := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err := svc.EvaluateInstallation(integration.RetentionPassCtx(e.WS)); err != nil {
 		t.Fatalf("retention pass: %v", err)
 	}

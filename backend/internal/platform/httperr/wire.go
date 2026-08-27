@@ -16,10 +16,11 @@ import (
 	"io"
 	"log/slog"
 	"net/http"
+	"sort"
 	"strconv"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // MaxBodyBytes bounds every JSON request body (1 MiB): no contract
@@ -236,7 +237,7 @@ type Download struct {
 // on the wire a header is no longer settable and a failure is no longer
 // reportable, which is the rule both body shapes below live under.
 //
-// Held by: TestADownloadsHeadersAreSpelledOnce (backend/onedownloadheader_test.go)
+// Held by: TestADownloadsHeadersAreSpelledOnce (backend/gates/onedownloadheader_test.go)
 func (d Download) WriteHeaders(w http.ResponseWriter) {
 	contentType := d.ContentType
 	if contentType == "" {
@@ -297,4 +298,34 @@ func IfMatchVersion(w http.ResponseWriter, r *http.Request) (*int64, bool) {
 		return nil, false
 	}
 	return &v, true
+}
+
+// ClearedFields names the top-level keys the body sent as an explicit null.
+//
+// A nullable contract field decodes to a nil pointer whether the caller sent
+// `null` or said nothing, and those are opposite instructions — "clear this"
+// against "leave it alone". A handler that cannot tell them apart accepts the
+// null, answers 200 and changes nothing, which is a success the caller cannot
+// trust: the contract declares those fields nullable, so sending one is a
+// request the server promised to honour.
+//
+// The store decides which of these it can actually clear and refuses a name it
+// cannot, so a null on a field that is not nullable is a stated refusal rather
+// than a silent no-op.
+func ClearedFields(r *http.Request) []string {
+	fields, ok := r.Context().Value(presentFieldsKey{}).(map[string]json.RawMessage)
+	if !ok {
+		return nil
+	}
+	cleared := make([]string, 0, len(fields))
+	for name, raw := range fields {
+		if string(raw) == "null" {
+			cleared = append(cleared, name)
+		}
+	}
+	if len(cleared) == 0 {
+		return nil
+	}
+	sort.Strings(cleared)
+	return cleared
 }

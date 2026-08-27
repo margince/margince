@@ -32,8 +32,8 @@ import (
 	"strconv"
 	"strings"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // createShapes and updateShapes bind each record_type to the crm.yaml body its
@@ -248,4 +248,17 @@ const stageIDNote = `,"description":"The target stage, by id — obtain it from 
 // forbids those rather than leaving the difference to chance.
 func jsonString(s string) string {
 	return strconv.Quote(s)
+}
+
+// UpdatableFields reports the wire field names a patch of recordType may carry,
+// and whether this surface serves that type at all. It reads updateShapes, so a
+// caller asking "could a restore write this key back?" is asking the same
+// question the write tool answers when it refuses an unknown field — one shape,
+// not a second list that drifts from it.
+func UpdatableFields(recordType datasource.EntityType) ([]string, bool) {
+	shape, served := updateShapes[recordType]
+	if !served {
+		return nil, false
+	}
+	return contractFieldNames(shape), true
 }

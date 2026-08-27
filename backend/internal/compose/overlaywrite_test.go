@@ -17,10 +17,10 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // fakeMode is an overlayModeChecker stub returning a fixed answer. It counts
@@ -206,7 +206,7 @@ func TestGuardRefusalMatchesProviderCapability(t *testing.T) {
 // method set cannot tell a hand-written shadow apart from a promoted
 // fallback (both simply appear as "Server has a method named X"), so the
 // fitness test below reads the source directly, the same static-analysis
-// idiom backend/arch_test.go already uses for its own package-boundary
+// idiom backend/gates/arch_test.go already uses for its own package-boundary
 // fitness functions.
 func serverDeclaredMethods(t *testing.T) map[string]bool {
 	t.Helper()

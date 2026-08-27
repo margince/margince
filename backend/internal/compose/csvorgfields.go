@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // storedPrimaryDomain reads the `domain` target's current value.

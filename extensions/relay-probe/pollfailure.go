@@ -24,7 +24,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // fleetFailure classifies a tick in which EVERY connected member failed.

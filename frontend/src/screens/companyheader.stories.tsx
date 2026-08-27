@@ -167,6 +167,22 @@ export const AuthorNamed: Story = {
   ),
 };
 
+// The ordinary shape of a customer: `customer` in the lifecycle AND in the
+// relationship types, plus a second relationship that is separately true. The
+// header says "Customer" ONCE — the editable lifecycle badge beside the name —
+// and draws "Partner" beside it. The relationship whose word the lifecycle is
+// already printing does not draw again; the one it is not still does, because an
+// account can be a partner and a customer and hiding the second would make a
+// true reading look untrue.
+export const CustomerAndPartner: Story = {
+  render: () => (
+    <Header
+      view={withWayIn}
+      record={{ ...org, relationship_types: ["customer", "partner"] }}
+    />
+  ),
+};
+
 // An archived account. Its verbs stay in the menu, refused, over the one
 // sentence that says why — a control blocked by the record's STATE is disabled
 // with its reason, never dropped (STATE-4a), because a missing button reads as

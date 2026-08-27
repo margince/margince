@@ -18,7 +18,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // personCreateFrom builds the create input for one mapped row.

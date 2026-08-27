@@ -6,7 +6,7 @@ package draftfloor
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Substance is the one sentence of substance a floor draft opens on, in one

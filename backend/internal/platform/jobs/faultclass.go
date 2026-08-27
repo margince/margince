@@ -31,7 +31,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // FailureDetail is one classified failure as a reader renders it: what class it

@@ -17,7 +17,7 @@ package ai
 // A struct with a field per column turns that into a compile-time question:
 // a column added to the table is a field nobody fills, and a path that means
 // "no reasons" has to SAY so. TestVoiceVersionsHaveOneWriter
-// (backend/onevoiceversionwriter_test.go) holds the uniqueness.
+// (backend/gates/onevoiceversionwriter_test.go) holds the uniqueness.
 
 import (
 	"context"
@@ -27,8 +27,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // voiceVersionRow is one immutable version as its writer takes it: every

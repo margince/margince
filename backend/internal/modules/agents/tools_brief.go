@@ -30,11 +30,11 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents/apps"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // BriefReader answers the acting human's latest PERSISTED brief run.
@@ -121,6 +121,23 @@ type BriefItem struct {
 	// SnoozedUntil is when a snoozed item re-surfaces, and is absent unless the
 	// item is snoozed.
 	SnoozedUntil *time.Time `json:"snoozed_until,omitempty"`
+	// Lineage is set when this deal is back after the person dismissed it, and
+	// it is SERVED rather than withheld: it is a deterministic fact about what
+	// they did, not something an agent wrote, so reading it is not a loop
+	// reading its own output. It is also the context an agent most needs — a
+	// finding that ignores "you already waved this away once" is a finding that
+	// repeats an argument the reader has already rejected.
+	Lineage *BriefItemLineage `json:"lineage,omitempty"`
+}
+
+// BriefItemLineage is why a dismissed deal came back.
+type BriefItemLineage struct {
+	// DismissedOn is the local day the person dismissed it, as a calendar date
+	// in the installation's reporting zone.
+	DismissedOn string `json:"dismissed_on"`
+	// ReturnedWith is when the activity that re-qualified it occurred — the
+	// EARLIEST one after the dismissal, which is the one that brought it back.
+	ReturnedWith time.Time `json:"returned_with_activity_at"`
 }
 
 // BriefFactors is the §10.1 factor decomposition, each normalized 0..1.
@@ -209,4 +226,116 @@ func chargeBriefItems(ctx context.Context, items []BriefItem) {
 			}
 		}
 	}
+}
+
+// BriefAnnotator writes one overnight pass's findings onto the acting rep's own
+// current run. compose supplies it; nil leaves the tool unregistered.
+type BriefAnnotator func(ctx context.Context, in AnnotateBriefArgs) error
+
+// RegisterAnnotateBriefTool joins annotate_brief to the surface once a writer
+// exists — the same conditional registration read_brief takes, so an
+// installation whose brief engine is unwired serves no annotation tool rather
+// than one that refuses every call.
+func RegisterAnnotateBriefTool(r *Registry, annotate BriefAnnotator) {
+	if annotate == nil {
+		return
+	}
+	r.Register(annotateBrief{annotate: annotate})
+}
+
+// AnnotateBriefArgs is what a model may write onto a brief.
+//
+// WHAT IS ABSENT IS THE DESIGN. No user id, no run id, no local day, no rank,
+// no deal reference and no item ordering: the run is the acting principal's own
+// current one, resolved server-side, and the queue's order stays the
+// deterministic engine's. A model that could supply any of those could annotate
+// somebody else's morning or promote a deal by asserting it belongs first.
+type AnnotateBriefArgs struct {
+	// Narrative is the one sentence about the night. Empty is a real answer: a
+	// quiet night has no sentence, and saying so is better than inventing one.
+	Narrative string `json:"narrative"`
+	// Items carries at most one finding per queued item.
+	Items []AnnotateBriefItem `json:"items"`
+}
+
+// AnnotateBriefItem is one finding about one queued deal.
+type AnnotateBriefItem struct {
+	// ItemID names a row in the brief this caller just read. An id from
+	// anywhere else refuses.
+	ItemID ids.UUID `json:"item_id"`
+	// Finding is the prose the person reads beside the rank.
+	Finding string `json:"finding"`
+	// CitedEvidence is what the finding rests on. Every id is checked against
+	// the evidence the run recorded for this item — a uuid that merely parses
+	// proves nothing, and one that names another rep's record would otherwise
+	// make an ungrounded claim read as a grounded one.
+	CitedEvidence []ids.UUID `json:"cited_evidence"`
+}
+
+type annotateBrief struct {
+	annotate BriefAnnotator
+}
+
+func (t annotateBrief) Spec() mcp.ToolSpec {
+	return mcp.ToolSpec{
+		Name: "annotate_brief", Title: "Write findings onto the morning brief", Version: toolVersionV1,
+		Description: annotateBriefCopy.render(),
+		// Write, because it changes a row a person reads. TierAutoExecute
+		// because there is nothing here for a human to approve in the moment:
+		// the write is confined to prose on that person's own brief, it is
+		// reversible by the next pass, and a nightly agent pausing at 2am for
+		// an approval nobody is awake to give would simply never finish.
+		RequiredScope: principal.ScopeWrite, Tier: mcp.TierAutoExecute,
+		OpenAPIOp:   "annotateMorningBrief",
+		InputSchema: schema(annotateBriefSchema),
+		// No output schema beyond acknowledgement: the tool returns what it
+		// wrote, and a model re-reading its own annotation as new information
+		// is how a loop talks itself into a second pass.
+		OutputSchema: schemaFor[AnnotateBriefResult](),
+	}
+}
+
+// AnnotateBriefResult acknowledges the write without handing the prose back.
+type AnnotateBriefResult struct {
+	// ItemsAnnotated is how many findings landed, so a model can tell a
+	// complete pass from a partial one it should not repeat.
+	ItemsAnnotated int `json:"items_annotated"`
+	// NarrativeWritten reports whether a run-level sentence was stored. False
+	// after an empty narrative is the honest answer, not a failure.
+	NarrativeWritten bool `json:"narrative_written"`
+}
+
+const annotateBriefSchema = `{
+  "type": "object",
+  "properties": {
+    "narrative": {"type": "string", "description": "One sentence about the night as a whole. Empty when there is nothing worth saying."},
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "item_id": {"type": "string", "format": "uuid", "description": "A brief item from the queue you just read."},
+          "finding": {"type": "string", "description": "Why this is on the list, what changed, and the one next move."},
+          "cited_evidence": {"type": "array", "minItems": 1, "items": {"type": "string", "format": "uuid"}, "description": "Evidence ids this item already carries, at least one. A finding citing nothing is refused: the whole point is that the claim is grounded in a record you read."}
+        },
+        "required": ["item_id", "finding", "cited_evidence"],
+        "additionalProperties": false
+      }
+    }
+  },
+  "additionalProperties": false
+}`
+
+func (t annotateBrief) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
+	var args AnnotateBriefArgs
+	if err := decodeArgs(in, &args); err != nil {
+		return nil, err
+	}
+	if err := t.annotate(ctx, args); err != nil {
+		return nil, err
+	}
+	return json.Marshal(AnnotateBriefResult{
+		ItemsAnnotated:   len(args.Items),
+		NarrativeWritten: args.Narrative != "",
+	})
 }

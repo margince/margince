@@ -15,8 +15,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // StageInput describes one refused 🟡 call to hold for decision.

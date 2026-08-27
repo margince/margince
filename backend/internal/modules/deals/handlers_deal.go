@@ -6,10 +6,10 @@ package deals
 import (
 	"net/http"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func (h Handlers) ListDeals(w http.ResponseWriter, r *http.Request, params crmcontracts.ListDealsParams) {
@@ -84,7 +84,9 @@ func (h Handlers) UpdateDeal(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 
-	deal, err := h.store.UpdateDeal(r.Context(), pathID[ids.DealKind](id), dealUpdateInput(req, ifVersion))
+	update := dealUpdateInput(req, ifVersion)
+	update.Clear = httperr.ClearedFields(r)
+	deal, err := h.store.UpdateDeal(r.Context(), pathID[ids.DealKind](id), update)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

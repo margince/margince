@@ -33,7 +33,13 @@ import {
 } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { formatDayMonth, formatNumber, relativeDays } from "../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import {
+  type Locale,
+  type Translator,
+  translatePlural,
+  useLocale,
+  useT,
+} from "../i18n";
 import { useProviderLabel } from "./channelproviders";
 import {
   ProblemError,
@@ -180,18 +186,40 @@ async function patchPersonField(
 // person's own fields from (the identity line, the strip, this rail), so it
 // is what gets refetched; personBrief comes with it because a changed name
 // or title can change what the brief's own sentences say about this person.
+// Through useMutation rather than a bare async call, so the write is a
+// MUTATION as far as the query client is concerned. The policy that refreshes
+// a record's open history after any successful write hangs off the mutation
+// cache, and an inline edit that bypassed it left the history on screen showing
+// the state before the edit — with no list of "writes that change a history"
+// able to catch it, because that list is every write.
 function usePersonFieldPatch(person: Person) {
   const queryClient = useQueryClient();
-  return async (body: UpdatePersonRequest) => {
-    await patchPersonField(person, body);
-    await queryClient.invalidateQueries({
-      queryKey: ["person360", person.id],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["personBrief", person.id],
-    });
-  };
+  const save = useMutation({
+    // The record travels WITH the body. `person.version` is the If-Match this
+    // write pins, and it moves on every successful write — two edits from one
+    // render would otherwise both send the version that predates the first,
+    // and the second would fail a conflict check it should pass.
+    mutationFn: ({ person: target, body }: PersonFieldPress) =>
+      patchPersonField(target, body),
+    onSuccess: async (_result, { person: target }) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["person360", target.id],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["personBrief", target.id],
+      });
+    },
+  });
+  return (body: UpdatePersonRequest) =>
+    save.mutateAsync({ person, body }).then(() => undefined);
 }
+
+// What one inline person edit carries: the record it is written against and
+// the field values, so neither is read out of the closure at click time.
+type PersonFieldPress = Readonly<{
+  person: Person;
+  body: UpdatePersonRequest;
+}>;
 
 // usePersonReadOnlyReason says why this record cannot be edited, when there
 // is something worth saying — the same two reasons companyheader.tsx's own
@@ -580,17 +608,13 @@ function Employers({ view }: Readonly<{ view: Person360 }>) {
     <Disclosure
       className="pe-sect"
       open
-      summary={
+      summary={t("person.rail.employmentTitle")}
+      action={
         canEdit ? (
-          <span className="pe-sect-summary">
-            {t("person.rail.employmentTitle")}
-            <Button small onClick={() => setAdding(true)}>
-              {t("person.rail.addEmployment")}
-            </Button>
-          </span>
-        ) : (
-          t("person.rail.employmentTitle")
-        )
+          <Button small onClick={() => setAdding(true)}>
+            {t("person.rail.addEmployment")}
+          </Button>
+        ) : undefined
       }
     >
       <SurfaceState
@@ -987,13 +1011,11 @@ function RelationshipPulse({
     <Disclosure
       className="pe-sect"
       open
-      summary={
-        <span className="pe-sect-summary">
-          {t("person.rail.pulseTitle")}
-          <Button small onClick={onExplain}>
-            {t("person.rail.explain")}
-          </Button>
-        </span>
+      summary={t("person.rail.pulseTitle")}
+      action={
+        <Button small onClick={onExplain}>
+          {t("person.rail.explain")}
+        </Button>
       }
     >
       {/* Four of these five readings are derived from the two directional
@@ -1013,11 +1035,7 @@ function RelationshipPulse({
       />
       <Row
         label={t("person.rail.coverage")}
-        value={reading(
-          colleagueWords(colleagues, t, locale),
-          hidden.network,
-          t,
-        )}
+        value={reading(colleagueWords(colleagues, locale), hidden.network, t)}
       />
       <Row
         label={t("person.rail.trend")}
@@ -1037,14 +1055,10 @@ function RelationshipPulse({
   );
 }
 
-function colleagueWords(
-  count: number,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-): string {
-  return count === 1
-    ? t("person.rail.colleagueOne")
-    : t("person.rail.colleagues", { count: formatNumber(count, locale) });
+function colleagueWords(count: number, locale: Locale): string {
+  return translatePlural(locale, "person.rail.colleagues", count, {
+    count: formatNumber(count, locale),
+  });
 }
 
 function trendWord(view: Person360, t: ReturnType<typeof useT>): string {

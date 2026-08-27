@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // memoryVault is the in-memory Vault: the default for unit tests and the

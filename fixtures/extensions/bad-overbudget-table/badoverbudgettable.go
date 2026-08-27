@@ -17,7 +17,7 @@
 // by hand; nothing composes it otherwise.
 package badoverbudgettable
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 // New returns the declaration. Well-formed on purpose — the fixture must fail
 // on its SQL and nothing else.

@@ -17,12 +17,12 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // VoiceProfileVersion is an immutable generated Voice DNA artifact and its review state.
@@ -316,7 +316,11 @@ func (s *VoiceStore) RollbackVersion(ctx context.Context, profileID ids.UUID, so
 		}); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "restore", "voice_profile_version", result.ID, nil,
+		// AuditEvent, not Audit: the row this names is the version the rollback
+		// just inserted, so there is no prior state of it to record. What the
+		// after image carries is which artifact went live and which one it
+		// displaced — an occurrence, not a field diff.
+		auditID, err := storekit.AuditEvent(ctx, tx, "restore", "voice_profile_version", result.ID,
 			map[string]any{voiceKeyProfileVersion: result.ProfileVersion, "predecessor_version": profile.ProfileVersion})
 		if err != nil {
 			return err

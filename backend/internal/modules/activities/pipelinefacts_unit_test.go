@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/pipelinetrace"
+	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 )
 
 // Why a message was not classified, and why saying the WRONG why is worse than

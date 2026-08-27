@@ -6,7 +6,7 @@ package workflow_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // The action set is closed: a new kind is a code-and-test change, never data.

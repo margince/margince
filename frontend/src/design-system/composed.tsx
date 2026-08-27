@@ -17,7 +17,7 @@ import {
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
+import { type Locale, translatePlural, useLocale, useT } from "../i18n";
 import { Avatar, Badge, Button } from "./atoms";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
@@ -1013,20 +1013,13 @@ export function GroupedTimelineList({
 // one is reachable both ways — a thread whose other messages are on another
 // page, and a single message the sender attested as a bulk send — and the
 // plural forms rendered "1 messages" and "sent to 1 people" for it.
-function groupCountLabel(
-  group: TimelineGroup,
-  t: Translator,
-  locale: Locale,
-): string {
+function groupCountLabel(group: TimelineGroup, locale: Locale): string {
   const count = group.entries.length;
-  if (group.kind === "bulk") {
-    return count === 1
-      ? t("timeline.group.bulkOne")
-      : t("timeline.group.bulk", { count: formatNumber(count, locale) });
-  }
-  return count === 1
-    ? t("timeline.group.threadOne")
-    : t("timeline.group.thread", { count: formatNumber(count, locale) });
+  const base =
+    group.kind === "bulk" ? "timeline.group.bulk" : "timeline.group.thread";
+  return translatePlural(locale, base, count, {
+    count: formatNumber(count, locale),
+  });
 }
 
 function TimelineGroupRow({
@@ -1053,7 +1046,7 @@ function TimelineGroupRow({
         <span className="tl-title">{newest.title}</span>
         <span className="tl-meta">
           <span className="tl-group-count">
-            {groupCountLabel(group, t, locale)}
+            {groupCountLabel(group, locale)}
           </span>
           <span>{formatDate(newest.atIso, locale, zone)}</span>
           <ProvenanceTag provenance={newest.provenance} />

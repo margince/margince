@@ -23,6 +23,7 @@ function Demo({ empty }: Readonly<{ empty?: boolean }>) {
   const query = useQuery({
     queryKey: ["story-demo"],
     queryFn: async () => {
+      // contract-fetch:allow story fixture — /v1/story-demo is no contract operation; the story needs a query that fails without a stack behind it
       const response = await fetch("/v1/story-demo");
       const body = (await response.json()) as { name: string } | null;
       if (!response.ok) {

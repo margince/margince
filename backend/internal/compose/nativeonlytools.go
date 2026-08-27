@@ -32,13 +32,13 @@ import (
 	"encoding/json"
 	"net/http"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/retrieval"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
 // The guards below take overlayModeChecker (overlaywrite.go), so the cached
@@ -382,5 +382,22 @@ func nativeOnlyBriefReader(mode overlayModeChecker, read agents.BriefReader) age
 			return agents.ReadBriefResult{}, apperrors.ErrUnsupportedBySoR
 		}
 		return read(ctx)
+	}
+}
+
+// nativeOnlyBriefAnnotator guards annotate_brief, the writer's twin of the
+// reader above: an overlay workspace keeps its deals in the incumbent, so there
+// is no native run to annotate and the honest answer is "not available here"
+// rather than a not-found that reads as a missing morning.
+func nativeOnlyBriefAnnotator(mode overlayModeChecker, annotate agents.BriefAnnotator) agents.BriefAnnotator {
+	return func(ctx context.Context, in agents.AnnotateBriefArgs) error {
+		overlay, err := mode.isOverlayUncached(ctx)
+		if err != nil {
+			return err
+		}
+		if overlay {
+			return apperrors.ErrUnsupportedBySoR
+		}
+		return annotate(ctx, in)
 	}
 }

@@ -14,7 +14,7 @@ source:
   # NB: syft has no `source.license` key — the primary component's license
   # cannot be set from config. Margince's own source license is BUSL-1.1;
   # first-party packages are handled in .grant.yaml (allow BUSL-1.1 + ignore
-  # github.com/gradionhq/margince/*).
+  # github.com/margince/margince/*).
 
 # Enrich package coordinates with license metadata. syft pulls Go
 # licenses from the module proxy and npm licenses from the registry, so `make

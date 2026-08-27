@@ -10,7 +10,7 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 )
 
 // The sites whose case deliberately measures less than the production path, and

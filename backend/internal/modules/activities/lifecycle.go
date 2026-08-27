@@ -18,15 +18,17 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 type UpdateActivityInput struct {
+	// Trail names what the audit trail calls this write; zero is an update.
+	Trail      storekit.AuditTrail
 	Subject    *string
 	Body       *string
 	OccurredAt *time.Time
@@ -95,7 +97,7 @@ func (s *Store) UpdateActivity(ctx context.Context, id ids.ActivityID, in Update
 			return err
 		}
 		before, after := storekit.ChangedColumns(activityColumnImage(current), activityColumnImage(out))
-		auditID, err := storekit.Audit(ctx, tx, "update", "activity", id.UUID, before, after)
+		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "activity", id.UUID, before, after)
 		if err != nil {
 			return err
 		}

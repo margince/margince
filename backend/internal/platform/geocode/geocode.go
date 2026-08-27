@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/outbound"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/retryafter"
+	"github.com/margince/margince/backend/internal/platform/outbound"
+	"github.com/margince/margince/backend/internal/shared/kernel/retryafter"
 )
 
 // Point is a resolved location.

@@ -22,8 +22,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // recordHistoryEntryWire mirrors the contract's AuditHistoryEntry field by
@@ -113,7 +113,7 @@ func seedRecordHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) r
 }
 
 // assertRecordHistoryHappyPath drives the GET and checks the wire shape:
-// chronological ordering, the genesis line's resolved display name, the
+// newest-first ordering, the genesis line's resolved display name, the
 // human diff's exact (no-phantom-key) before/after images, and the
 // agent line's woven-in delegated authority.
 func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHistoryHTTPFixture) {
@@ -127,13 +127,21 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 		t.Fatalf("want exactly %d entries (create genesis + unresolvable human + agent + named human): %+v",
 			recordHistoryFixtureRows, page.Data)
 	}
+	// Newest first, so the genesis line is LAST rather than first.
 	for i := 1; i < len(page.Data); i++ {
-		if page.Data[i].OccurredAt.Before(page.Data[i-1].OccurredAt) {
-			t.Fatalf("entries not chronological ASC at index %d: %+v", i, page.Data)
+		if page.Data[i].OccurredAt.After(page.Data[i-1].OccurredAt) {
+			t.Fatalf("entries not newest-first at index %d: %+v", i, page.Data)
 		}
 	}
 
-	genesis := page.Data[0]
+	// The page is newest first; this suite reads the record's story in the
+	// order it happened, so it indexes from the OLD end. Naming the direction
+	// once beats flipping four subscripts and getting one of them wrong.
+	inStoryOrder := func(i int) recordHistoryEntryWire {
+		return page.Data[len(page.Data)-1-i]
+	}
+
+	genesis := inStoryOrder(0)
 	if genesis.Action != "create" {
 		t.Fatalf("genesis action = %q, want create", genesis.Action)
 	}
@@ -144,7 +152,7 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 		t.Errorf("genesis before = %v, want absent (a create row has no prior image)", genesis.Before)
 	}
 
-	human := page.Data[1]
+	human := inStoryOrder(1)
 	if human.Action != "update" || human.ActorType != "human" {
 		t.Fatalf("human entry = %+v, want the seeded update diff", human)
 	}
@@ -164,7 +172,7 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 		t.Errorf("human actor_name = %v, want null when no user row resolves", human.ActorName)
 	}
 
-	agent := page.Data[2]
+	agent := inStoryOrder(2)
 	if agent.ActorType != "agent" {
 		t.Fatalf("agent entry actor_type = %q, want agent", agent.ActorType)
 	}
@@ -183,7 +191,7 @@ func assertRecordHistoryHappyPath(t *testing.T, e *apptest.AppEnv, fx recordHist
 
 	// The resolved name reaches the WIRE, not just the store read: a client
 	// renders the person from this field rather than parsing `summary`.
-	named := page.Data[3]
+	named := inStoryOrder(3)
 	if named.ActorName == nil || *named.ActorName != "Uma Underwriter" {
 		t.Errorf("named human actor_name = %v, want Uma Underwriter", named.ActorName)
 	}

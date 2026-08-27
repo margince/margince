@@ -17,7 +17,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // §10.1 tunables (spec parameter-registry names in comments).
@@ -76,6 +76,23 @@ type BriefQueueItem struct {
 	Composite   float64
 	Features    BriefFeatureVector
 	EvidenceIDs []ids.UUID
+	// Lineage is set when this deal is back after the rep dismissed it. Nil is
+	// the ordinary case — most items were never dismissed — and it does not
+	// affect the ranking: the sentence explains why the deal is here, it does
+	// not decide whether it is.
+	Lineage *ItemLineage
+}
+
+// ItemLineage is why a dismissed deal came back: the day the rep waved it away,
+// and the activity that re-qualified it.
+type ItemLineage struct {
+	// DismissedOn is a calendar day in the installation's reporting zone, the
+	// same zone brief_run.local_day is stamped in — so "you dismissed it
+	// Tuesday" and "this is Thursday's brief" are measured the same way.
+	DismissedOn time.Time
+	// ReturnedWith is when the activity that brought it back occurred. An
+	// instant, because it names a specific event.
+	ReturnedWith time.Time
 }
 
 // briefDealFacts are the raw per-deal facts the candidate query gathers;

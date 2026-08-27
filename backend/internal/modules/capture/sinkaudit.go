@@ -13,7 +13,7 @@ package capture
 // metadata, not its body. Human-authored activities (activities.LogActivity)
 // keep their full audit image.
 
-import "github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+import "github.com/margince/margince/backend/internal/shared/ports/connector"
 
 // capturedActivityAuditImage is the metadata-only after-image for a captured
 // activity's create audit.

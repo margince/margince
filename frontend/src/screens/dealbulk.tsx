@@ -8,7 +8,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { dealRecordKeys } from "./activitykeys";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { RosterPartialNote, useRoster, useRosterPartial } from "./entityref";
@@ -46,6 +46,7 @@ export function DealBulkBar({
   /** Called after any run — the caller refetches and clears the selection. */
   onDone: (outcomes: readonly DealBulkOutcome[]) => void;
 }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
@@ -254,12 +255,9 @@ export function DealBulkBar({
       <ConfirmModal
         open={confirmingArchive}
         onClose={() => setConfirmingArchive(false)}
-        title={t(
-          deals.length === 1
-            ? "deals.bulkArchiveConfirmTitle.one"
-            : "deals.bulkArchiveConfirmTitle.other",
-          { count: formatNumber(deals.length, locale) },
-        )}
+        title={plural("deals.bulkArchiveConfirmTitle", deals.length, {
+          count: formatNumber(deals.length, locale),
+        })}
         confirmLabel={t("deals.bulkArchive")}
         confirmVariant="danger"
         pending={run.isPending}

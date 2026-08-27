@@ -15,7 +15,7 @@ package integration
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // leadName reads the row's display name, which the contract carries as an

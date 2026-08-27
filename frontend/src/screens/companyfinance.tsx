@@ -8,7 +8,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Meter, Sparkline } from "../design-system/readings";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatMoney, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { type PluralBase, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemCodeOf, useFinanceSummary } from "./common";
 import { medianDaysLabel } from "./company360";
@@ -438,6 +438,7 @@ function InvoiceRow({
   locale: ReturnType<typeof useLocale>["locale"];
 }>) {
   const t = useT();
+  const plural = usePlural();
   const recordZone = useRecordZone();
   const late = invoice.days_late != null && invoice.days_late > 0;
   return (
@@ -475,7 +476,7 @@ function InvoiceRow({
       <td className="fin-col-status">
         <Badge tone={STATUS_TONE[invoice.status]} quiet>
           {late && invoice.days_late != null
-            ? t(daysLateKey(invoice.status, invoice.days_late), {
+            ? plural(daysLateBase(invoice.status), invoice.days_late, {
                 days: formatNumber(invoice.days_late, locale),
               })
             : t(STATUS_LABEL[invoice.status])}
@@ -485,18 +486,12 @@ function InvoiceRow({
   );
 }
 
-// One day late is one day late, not "1 days late". The three shipped locales
-// (A100 pins de-DE and en-GB; vi ships alongside) all split at exactly one, so
-// the count picks the key and no plural engine is needed — a locale whose rules
-// differ would need one, and would announce itself by adding a fourth catalog.
-function daysLateKey(
-  status: FinanceInvoice["status"],
-  days: number,
-): MessageKey {
-  if (status === "paid") {
-    return days === 1 ? "finance.paidDayLate" : "finance.paidDaysLate";
-  }
-  return days === 1 ? "finance.overdueDay" : "finance.overdueDays";
+// One day late is one day late, not "1 days late" — and WHICH lateness it is
+// depends on whether the invoice was eventually paid, which is the only thing
+// this function decides. How the count picks a form is the plural helper's
+// business.
+function daysLateBase(status: FinanceInvoice["status"]): PluralBase {
+  return status === "paid" ? "finance.paidDaysLate" : "finance.overdueDays";
 }
 
 const STATUS_LABEL: Record<FinanceInvoice["status"], MessageKey> = {

@@ -16,7 +16,7 @@ func subscriptionsUnitSource(entries string) string {
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func react(context.Context, extension.Runtime, extension.Delivery) error { return nil }
@@ -110,7 +110,7 @@ func TestSubscriptionRulesAreThePublishedOnes(t *testing.T) {
 func TestSubscriptionsFieldMustBeASliceLiteral(t *testing.T) {
 	src := `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func subs() []extension.Subscription { return nil }
 

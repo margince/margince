@@ -16,7 +16,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/gradionhq/margince/backend/tools/internal/oas30"
+	"github.com/margince/margince/backend/tools/internal/oas30"
 )
 
 func main() {

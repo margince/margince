@@ -9,16 +9,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // DuplicateEmailError carries the existing person for the 409 dedupe
@@ -230,6 +229,12 @@ func (s *Store) GetPersonTx(ctx context.Context, tx pgx.Tx, id ids.PersonID,
 }
 
 type UpdatePersonInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
+	// Trail names what the audit trail calls this write; zero is an update.
+	Trail     storekit.AuditTrail
 	FullName  *string
 	FirstName *string
 	LastName  *string
@@ -268,7 +273,10 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 			return fmt.Errorf("read person before update: %w", err)
 		}
 
-		p := buildPersonPatch(current, in)
+		p, err := buildPersonPatch(current, in)
+		if err != nil {
+			return err
+		}
 		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
 		if in.Social != nil || in.Emails != nil {
 			// The relation replacement rides the person row's version
@@ -312,7 +320,7 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 			before["emails"] = current.Emails
 			after["emails"] = in.Emails
 		}
-		auditID, err := storekit.Audit(ctx, tx, "update", "person", id.UUID, before, after)
+		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "person", id.UUID, before, after)
 		if err != nil {
 			return fmt.Errorf("audit person update: %w", err)
 		}
@@ -330,7 +338,7 @@ func (s *Store) UpdatePerson(ctx context.Context, id ids.PersonID, in UpdatePers
 // buildPersonPatch stages only the fields the caller supplied, each
 // diffed against the current row so the audit before/after captures the
 // real change and an unchanged field is left out of the UPDATE.
-func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) *storekit.Patch {
+func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
 	if in.FullName != nil {
 		p.Set("full_name", current.FullName, *in.FullName)
@@ -347,6 +355,9 @@ func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) *storek
 	if in.OwnerID != nil {
 		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
 	}
+	if err := applyClears(p, in.Clear, clearablePersonColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.Address != nil {
 		cur := addressColumns(current.Address)
 		p.Set("address_line1", cur.Line1, in.Address.Line1)
@@ -356,7 +367,7 @@ func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) *storek
 		p.Set("address_postal_code", cur.PostalCode, in.Address.PostalCode)
 		p.Set("address_country", cur.Country, in.Address.Country)
 	}
-	return p
+	return p, nil
 }
 
 func (s *Store) EnsurePersonByEmail(ctx context.Context, fullName, email, source string) (ids.UUID, error) {

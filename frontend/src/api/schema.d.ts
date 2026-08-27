@@ -5456,6 +5456,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/agent-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The calling rep's own standing answers, one per scheduled agent.
+         * @description Every scheduled agent this build runs, each carrying the rep's answer: granted,
+         *     declined, or never asked. Human-only — an agent reading whether it is allowed to
+         *     run, and by extension being able to ask, is the self-grant this model forbids.
+         *
+         *     `credential_usable` is read from the passport at request time rather than stored:
+         *     a passport expires at a moment nothing writes to the grant, so a stored copy would
+         *     say "granted" about a credential that stopped working hours ago. When it is false
+         *     against a granted answer, the rep agreed and has nothing to act with — the renewal
+         *     case, which the client must offer rather than silently showing the feature as on.
+         */
+        get: operations["listMyAgentGrants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/agent-grants/{spec}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Which scheduled agent this answer is about. */
+                spec: components["schemas"]["ScheduledAgentName"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * The calling rep answers for one agent — granting or withdrawing.
+         * @description Idempotent: re-answering replaces the previous answer, because a rep who declined
+         *     and later changes their mind is giving a NEW answer to the same question rather
+         *     than a second one.
+         *
+         *     GRANTING MINTS. What authorizes an overnight run is a passport, and the single
+         *     production mint binds `on_behalf_of` and `granted_by` to the same session user —
+         *     so granting mints the rep's own credential inside the same transaction as the
+         *     answer. A mint that committed beside a failed grant would be live authority
+         *     nothing points at; a grant beside a failed mint would claim an authority that does
+         *     not exist. The token is never returned: this passport is for the scheduler, not
+         *     for the caller, and re-disclosing it would put an agent credential on a screen.
+         *
+         *     WITHDRAWING REVOKES. The answer flips to declined and the passport it named is
+         *     revoked, so the authority actually ends rather than merely being unreferenced.
+         *     The declined row is kept on purpose — a rep who said no and a rep who was never
+         *     asked are indistinguishable from the passport table alone, and a product that
+         *     cannot tell them apart asks the declining rep again every night.
+         *
+         *     Human-only: an agent granting itself standing authority is the self-grant this
+         *     whole model exists to refuse.
+         */
+        put: operations["setMyAgentGrant"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/settings": {
         parameters: {
             query?: never;
@@ -6296,7 +6366,10 @@ export interface paths {
          * Full audit history for one record, rendered as plain-language lines.
          * @description Every audit_log row for the record, rendered as a plain-language `summary` line
          *     naming the actor and, for agent actions, the granting human (`on_behalf_of_name`).
-         *     Chronological oldest-first (`occurred_at` ASC, `id` tiebreak) with keyset pagination.
+         *     Newest first (`occurred_at` DESC, `id` tiebreak) with keyset pagination — the same
+         *     order as `/field-history`, and the order a reader needs: a record's history answers
+         *     "what just happened", and the change somebody wants to put back is almost always the
+         *     last one.
          *     `before`/`after` are masked to the viewer's readable fields by omission — a field the
          *     caller cannot see is absent from the object, never present as `null`. The projection
          *     stops at the record's newest erasure scrub: rows at-or-before that tombstone are
@@ -6308,6 +6381,49 @@ export interface paths {
         get: operations["getRecordHistory"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{entity_type}/{id}/history/{audit_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The history entry to put back. It must belong to the record named by the path; one that does not answers 404, never 403. */
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put one audited change back.
+         * @description Re-applies the named history entry's before-image to the record, as an ordinary
+         *     update recorded with the `restore` verb and an `evidence.undid_audit_log_id` link
+         *     to the entry it reverses. There is no second write engine and no new table: the
+         *     write is the record's own update path, so every rule that path holds still holds.
+         *
+         *     **`If-Match` is REQUIRED here**, unlike every other mutating endpoint where it is
+         *     optional. A restore is decided from a history screen the person has been reading,
+         *     so the record may have moved under them between reading and pressing; last-write-wins
+         *     is not an acceptable default for a write whose entire premise is a prior state.
+         *
+         *     Whether an entry can be put back is COMPUTED, never stored, and it is evaluated
+         *     twice: advisorily on the history read, so the button is honest, and bindingly inside
+         *     this write's own transaction after the row lock, so the write cannot act on a
+         *     snapshot taken before it. The two agree on the SET of reasons; they may differ on
+         *     timing, which is why a `409` here can carry a reason the read did not show.
+         *
+         *     An agent may not call this. A restore is a human's authority, and reaching it
+         *     through an agent would let one launder a change it was not allowed to make directly.
+         */
+        post: operations["restoreRecordChange"];
         delete?: never;
         options?: never;
         head?: never;
@@ -8591,6 +8707,41 @@ export interface paths {
          *     mutates and nothing is sent.
          */
         post: operations["generateMorningBrief"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/brief/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Write the overnight pass's findings onto the acting rep's own brief for today.
+         * @description The overnight `morning_brief` agent's write-back. Its goal has always asked for why each
+         *     deal is on the list, what changed, and one next move; this is where that answer lands, so
+         *     it reaches the person instead of staying in the run's raw result where nothing renders it.
+         *
+         *     SCOPED TO THE CALLER'S OWN CURRENT RUN, resolved server-side. The body carries no user id,
+         *     no run id and no local day, so there is no argument by which a caller could annotate
+         *     another rep's morning or an older run. It carries no rank and no item ordering either:
+         *     the queue's order stays the deterministic engine's, because a writer that could reorder
+         *     could promote a deal by asserting it belongs first rather than by evidence.
+         *
+         *     EVERY CITED EVIDENCE ID IS VERIFIED against what the run already recorded for that item.
+         *     A uuid that merely parses proves nothing, and one naming another rep's record would make
+         *     an ungrounded claim read as a grounded one — so an id outside the item's own evidence
+         *     refuses the whole write rather than being dropped silently.
+         *
+         *     Idempotent by replacement: a second pass is a correction, not an addition.
+         */
+        put: operations["annotateMorningBrief"];
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -12163,10 +12314,15 @@ export interface components {
             outbound_90d?: number;
         };
         /**
-         * @description Licensed provider adapter key; the domain/run contract remains provider-neutral.
-         * @enum {string}
+         * @description A licensed data provider registered in THIS installation; the domain/run contract
+         *     remains provider-neutral. Deliberately a pattern-constrained string rather than an
+         *     enum, for the reason `ProviderRef` gives for messaging transports: which providers
+         *     exist is a deployment fact — what this binary composed — so an enum would assert
+         *     that the legal set is identical everywhere, which is false. The registry refuses a
+         *     name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+         *     live set.
          */
-        Provider: "surfe";
+        Provider: string;
         /** @enum {string} */
         ProviderConnectionStatus: "disconnected" | "validating" | "connected" | "invalid_credentials" | "insufficient_credits" | "rate_limited" | "provider_error";
         /** @enum {string} */
@@ -12406,13 +12562,16 @@ export interface components {
             linkedin_url?: string | null;
         };
         /**
-         * @description Separate “Provided by Surfe” snapshot for the Person360 response. Provider provenance is
-         *     not an underlying webpage citation; these values never silently overwrite canonical fields.
+         * @description One connected provider's snapshot for the Person360 response, named by `provider`.
+         *     Provider provenance is not an underlying webpage citation; these values never silently
+         *     overwrite canonical fields. The reader sees one of these per connection, so every value
+         *     on the page says who was paid for it.
          */
         PersonProviderProfile: {
             /** @enum {string} */
             state: "not_connected" | "not_eligible" | "never_run" | "queued" | "in_progress" | "completed" | "no_match" | "stale" | "invalid_credentials" | "insufficient_credits" | "rate_limited" | "provider_error" | "submission_unknown" | "completed_claims_unwritten";
-            provider?: components["schemas"]["Provider"];
+            /** @description Whose snapshot this is. Required: an entry in a list of providers that did not name itself would leave the reader unable to tell who to ask, or who was already paid. */
+            provider: components["schemas"]["Provider"];
             /** Format: date-time */
             retrieved_at?: string | null;
             safe_status_code?: string | null;
@@ -13924,8 +14083,8 @@ export interface components {
             strength?: components["schemas"]["RelationshipStrength"];
             /** @description The unarchived projects this person is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Organization360Project"][];
-            /** @description The purchased person-data snapshot (PO-EXT-9): what a connected provider returned about this person, kept beside the canonical record and never silently folded into it. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`. */
-            provider_profile?: components["schemas"]["PersonProviderProfile"];
+            /** @description The purchased person-data snapshots (PO-EXT-9), one per CONNECTED provider: what each returned about this person, kept beside the canonical record and never silently folded into it. One entry per connection so a reader can see who was paid for which value, and choose which provider to ask next; a provider nobody has run yet is present with state `never_run` rather than absent, because "we have not asked them" is the state the reader acts on. Ordered by provider name so the sections do not reshuffle between reads. Empty when no provider is connected. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`. */
+            provider_profiles?: components["schemas"]["PersonProviderProfile"][];
             /** @description What CHANGED about this relationship, most consequential first — derived at read from the person's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold. */
             relationship_changes?: components["schemas"]["PersonRelationshipChange"][];
             /** @description The ONE thing this contact needs today, selected server-side by the fixed ladder in `PersonMoment.rule` (ADR-0096 D2). Exactly one primary moment wins: a page that offers five reasons has told the reader to choose, which is the work the ladder exists to do. Deterministic and computed at read from captured data. Absent when the caller lacks a grant the ladder needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence. */
@@ -18181,7 +18340,7 @@ export interface components {
         /**
          * @description The closed set of RBAC-governed object types (features/04 §1).
          *     The web client types every capability check against this enum, which openapi-typescript renders as a string union — so a misspelled object is a compile error there.
-         *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
+         *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
         RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document";
@@ -18417,6 +18576,7 @@ export interface components {
             evidence?: {
                 [key: string]: unknown;
             } | null;
+            undoable?: components["schemas"]["Undoability"];
         };
         FieldHistoryListResponse: {
             data: components["schemas"]["FieldHistoryEntry"][];
@@ -18544,6 +18704,31 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             summary: string;
+            undoable?: components["schemas"]["Undoability"];
+        };
+        /**
+         * @description Whether this history entry can be put back, and if not, why. COMPUTED per read,
+         *     never stored: a stored flag is a second copy of a question the audit spine already
+         *     answers, and it goes stale the moment anyone else writes.
+         *
+         *     Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+         *     `id` carry the same answer — a restore replays the row's whole filtered image, and
+         *     there is no per-field undo.
+         *
+         *     Three reasons — `not_restorable_by_this_path`, `record_archived` and
+         *     `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+         *     are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+         *     a read makes the button as honest as a read can, and the write is the authority.
+         */
+        Undoability: {
+            undoable: boolean;
+            /**
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+             * @enum {string|null}
+             */
+            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | null;
+            /** @description The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says. */
+            detail?: string | null;
         };
         AuditHistoryListResponse: {
             data: components["schemas"]["AuditHistoryEntry"][];
@@ -18695,6 +18880,52 @@ export interface components {
             running: components["schemas"]["AiActivityItem"][];
             /** @description Occurrences that SETTLED since midnight in the server's own timezone (not the reader's, and not UTC unless the server runs on it), newest-settled first, at most 10. */
             recent: components["schemas"]["AiActivityItem"][];
+        };
+        /**
+         * @description A scheduled agent a rep can grant standing authority to. The set matches
+         *     runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
+         *     and this enum moves with it.
+         * @enum {string}
+         */
+        ScheduledAgentName: "morning_brief" | "overnight_at_risk_sweep";
+        /**
+         * @description The rep's answer. `never_asked` is not stored — it is the absence of a row, and it
+         *     is a distinct answer from `declined` on purpose: the product asks once, so it has
+         *     to tell "said no" apart from "has not been asked", or it asks the declining rep
+         *     again every night.
+         * @enum {string}
+         */
+        MyAgentGrantState: "granted" | "declined" | "never_asked";
+        /** @description One rep's standing answer for one scheduled agent. */
+        MyAgentGrant: {
+            spec: components["schemas"]["ScheduledAgentName"];
+            state: components["schemas"]["MyAgentGrantState"];
+            /**
+             * @description Whether the passport behind a granted answer is live RIGHT NOW — not revoked,
+             *     not expired. Read from the passport at request time, never stored, because it
+             *     changes at a moment nothing writes to the grant. False against `granted` is
+             *     the renewal case: the rep agreed and has nothing to act with.
+             */
+            credential_usable: boolean;
+            /**
+             * Format: date-time
+             * @description When the rep last answered. Absent when they never were asked.
+             */
+            decided_at?: string;
+        };
+        MyAgentGrants: {
+            /** @description One entry per scheduled agent, including the ones never answered. */
+            data: components["schemas"]["MyAgentGrant"][];
+        };
+        /** @description The rep's answer for one scheduled agent. */
+        SetMyAgentGrantRequest: {
+            /**
+             * @description True grants and mints the rep's own passport; false withdraws and revokes the
+             *     one it named. There is no field naming a user or a passport: the rep comes from
+             *     the session, and the credential is the server's to mint, so a caller cannot
+             *     answer for somebody else or point a grant at a credential they do not own.
+             */
+            granted: boolean;
         };
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
@@ -21517,6 +21748,19 @@ export interface components {
             revenue_norm_minor?: number;
             /** @description The ranked queue, best-first, capped at the honest-short target (7). */
             items: components["schemas"]["MorningBriefItem"][];
+            /**
+             * @description One sentence about the night, written by the overnight agent. Null when the pass
+             *     never ran, and ALSO null when it ran and honestly had nothing to say — `annotated_at`
+             *     is what tells those apart, which is why both fields exist.
+             */
+            narrative?: string | null;
+            /**
+             * Format: date-time
+             * @description When the overnight agent last wrote its findings, null when no pass has. A reader
+             *     showing a run with no narrative must consult this before saying "a quiet night":
+             *     without it, a model that never ran and a night with nothing in it look identical.
+             */
+            annotated_at?: string | null;
         };
         /**
          * @description One ranked queue entry: the §10.1 composite, its per-factor decomposition (no mystery
@@ -21551,6 +21795,77 @@ export interface components {
              * @description When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.
              */
             snoozed_until?: string | null;
+            lineage?: components["schemas"]["MorningBriefItemLineage"];
+            /**
+             * @description What the overnight agent found about this deal — why it is on the list, what changed,
+             *     and the one next move. Null when no pass has annotated this run. It is agent-authored
+             *     prose and the surface marks it as such; the rank beside it stays the deterministic
+             *     engine's, which no annotation can change.
+             */
+            finding?: string | null;
+        };
+        /**
+         * @description Why this deal is back after the rep dismissed it. Absent on an item that was never
+         *     dismissed, which is the ordinary case.
+         *
+         *     The suppression rule holds a dismissed deal out of every later queue until a linked
+         *     activity occurs after the mark — so a deal that reappears is always one the rep waved
+         *     away and that has since moved. That is what makes the pair honest rather than a guess:
+         *     it is the rule that put the deal back, stated.
+         */
+        MorningBriefItemLineage: {
+            /**
+             * Format: date
+             * @description The local day the rep dismissed this deal, in the installation reporting timezone —
+             *     the same zone `local_day` is stamped in, so "you dismissed it Tuesday" and "this is
+             *     Thursday's brief" are measured the same way. A date, not an instant: the sentence
+             *     names a day.
+             */
+            dismissed_on: string;
+            /**
+             * Format: date-time
+             * @description When the activity that re-qualified the deal occurred. An instant, because it names a
+             *     specific event. It is the EARLIEST activity after the dismissal: a later one did not
+             *     bring the deal back, it arrived once the deal was already coming.
+             */
+            returned_with_activity_at: string;
+        } | null;
+        /**
+         * @description One overnight pass's findings for the acting rep's own current run.
+         *
+         *     WHAT IS ABSENT IS THE DESIGN: no user id, no run id, no local day, no rank and no item
+         *     ordering. The run is resolved server-side from the acting principal and today's local
+         *     day, and the queue's order stays the deterministic engine's.
+         */
+        AnnotateBriefRequest: {
+            /**
+             * @description One sentence about the night as a whole. An empty string is a real answer — a quiet
+             *     night has no sentence — and is stored as null with the pass still stamped.
+             */
+            narrative?: string;
+            /** @description At most one finding per queued item; a repeated item id is refused. */
+            items: components["schemas"]["AnnotateBriefItem"][];
+        };
+        /** @description One finding about one queued deal. */
+        AnnotateBriefItem: {
+            /**
+             * Format: uuid
+             * @description A brief item belonging to the caller's own current run. Anything else refuses.
+             */
+            item_id: string;
+            /** @description The prose the rep reads beside the rank. */
+            finding: string;
+            /**
+             * @description What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
+             *     no sources", it is the verification being skipped, and it is the easy path — a model
+             *     that omits the field would get its prose onto the rep's screen unchecked, under the
+             *     same agent tag a grounded finding carries.
+             *
+             *     Every id is checked against the evidence the run already recorded for this item. An id
+             *     outside it refuses the whole write rather than being dropped, because a finding whose
+             *     citations were silently pruned still reads as grounded.
+             */
+            cited_evidence: string[];
         };
         /** @description Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes. */
         BriefSnoozeRequest: {
@@ -31722,6 +32037,58 @@ export interface operations {
             403: components["responses"]["Forbidden"];
         };
     };
+    listMyAgentGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rep's standing answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAgentGrants"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setMyAgentGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Which scheduled agent this answer is about. */
+                spec: components["schemas"]["ScheduledAgentName"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMyAgentGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description The rep's updated answer for this agent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAgentGrant"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getCaptureSettings: {
         parameters: {
             query?: never;
@@ -32823,6 +33190,48 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreRecordChange: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The last-seen record `version`, required. If the row's current version differs the restore is rejected with `409 code: version_skew` and nothing is written — re-read the record and its history, then decide again. */
+                "If-Match": string;
+            };
+            path: {
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The history entry to put back. It must belong to the record named by the path; one that does not answers 404, never 403. */
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The change was put back. The body is the `restore` entry now in the record's history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditHistoryEntry"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The change cannot be put back. `code` is `version_skew` when the record moved under the caller, and otherwise the `undoable.reason` the binding evaluation returned — which may differ from what the read showed, because the read cannot hold a lock. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -37370,6 +37779,40 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    annotateMorningBrief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotateBriefRequest"];
+            };
+        };
+        responses: {
+            /** @description The findings were written. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The rep has no brief run today, so there is nothing to annotate. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     markBriefItemActed: {

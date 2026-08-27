@@ -5,13 +5,18 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
-import { Badge, Button } from "../design-system/atoms";
+import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
+import {
+  ProviderMark,
+  providerBrandName,
+} from "../design-system/provider-mark";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import {
   canEnrichNow,
   isRunning,
@@ -27,6 +32,9 @@ import {
 // alike invites a rep to treat a purchase as a confirmation.
 
 type Profile = components["schemas"]["PersonProviderProfile"];
+type Provider = components["schemas"]["Provider"];
+
+type EnrichRun = { personId: string; provider: Provider };
 
 /** The mark every value in this section carries: bought from a named third
  *  party, on a date. `connector` rather than `agent` — nothing inferred this,
@@ -41,33 +49,139 @@ function boughtFrom(profile: Profile) {
   };
 }
 
+/**
+ * One panel per connected provider, each named and marked with its own logo.
+ *
+ * Named rather than "the connected data provider": every value here was PAID
+ * for, and a reader deciding whether to spend again has to know who was already
+ * asked, who answered, and who is about to be. With two providers connected the
+ * unnamed card could not even be acted on — there was no way to say which one
+ * the button would spend with.
+ */
 export function PersonProviderSection({
   personId,
-  profile,
-}: Readonly<{ personId: string; profile: Profile | undefined }>) {
-  const t = useT();
-  if (!profile) {
+  profiles,
+}: Readonly<{ personId: string; profiles: Profile[] | undefined }>) {
+  if (!profiles) {
     // Absent means the caller lacks the grant — `sections_omitted` names it —
     // which is not the same as empty, so the section stays away entirely
     // rather than claiming this person has nothing.
     return null;
   }
   return (
+    <>
+      {profiles.map((profile) => (
+        <ProviderPanel
+          key={profile.provider}
+          personId={personId}
+          profile={profile}
+        />
+      ))}
+    </>
+  );
+}
+
+/** Whether this profile holds anything a provider sold us. Every field the
+ *  panel can draw is asked about, including the "nobody asked for this"
+ *  caption: each one is a purchase or a receipt, and a plate claiming the
+ *  panel is empty must not cover any of them. */
+function hasValues(profile: Profile): boolean {
+  return (
+    profile.emails.length > 0 ||
+    profile.mobile_phones.length > 0 ||
+    profile.job_history.length > 0 ||
+    profile.departments.length > 0 ||
+    profile.seniorities.length > 0 ||
+    profile.categories_not_requested.length > 0 ||
+    profile.linkedin_url != null ||
+    profile.current_employment != null ||
+    profile.location != null
+  );
+}
+
+// Split from the section so the mutation hook sits above no early return: the
+// section leaves before it knows there is a profile, and a hook cannot live
+// behind that.
+function ProviderPanel({
+  personId,
+  profile,
+}: Readonly<{ personId: string; profile: Profile }>) {
+  const t = useT();
+  const enrich = useEnrichRun();
+  // Nobody has looked this contact up yet, so the panel has no values to show
+  // and the small header button is the only way to change that. An empty plate
+  // that names the action instead: the reader came here to buy data, and a
+  // blank card with a quiet button in its corner is how they miss that they
+  // can.
+  //
+  // Asked of the VALUES rather than of the state alone, because never_run is
+  // also what a cancelled run reads as, and a merge cancels the losing side's
+  // queued run while relinking the claims both sides paid for. Such a profile
+  // says never_run and carries purchases, and a plate reading "nothing bought"
+  // over somebody's bought mobile number invites paying for it twice.
+  const firstRun = profile.state === "never_run" && !hasValues(profile);
+  // The vendor as the reader should see it named. Spelled once and used by
+  // both the heading and the plate: two spellings would let a section headed
+  // "Surfe" explain a purchase from "surfe".
+  const name = providerBrandName(profile.provider) ?? profile.provider;
+  return (
     // The record page's own card, with the provider's state in the header's
     // action slot. It used to be a bare `<section className="pe-card">` — a
     // class no stylesheet defines — which read as unframed text the moment it
     // was shown anywhere but inside a drawer.
     <Panel
-      title={t("provider.profile.title")}
+      // The vendor's own name and mark, so the reader knows whose data this is
+      // and who the button would spend with. `providerBrandName` falls back to
+      // the contract key for a provider this build has no name for — an
+      // installation can register one this frontend has never heard of, and a
+      // section with no heading would be worse than one headed `acmedata`.
+      title={
+        <span className="pe-provider-title">
+          <ProviderMark providerKey={profile.provider} />
+          {name}
+        </span>
+      }
       titleAction={
         <Badge tone={profileTone(profile.state)}>
           {t(profileLabel(profile.state))}
         </Badge>
       }
-      actions={<EnrichNow personId={personId} profile={profile} />}
+      actions={
+        firstRun ? undefined : (
+          <EnrichNow
+            personId={personId}
+            profile={profile}
+            enrich={enrich}
+            small
+          />
+        )
+      }
     >
       <PanelBody>
-        <ProviderValues profile={profile} />
+        {enrich.error != null && (
+          // The refusal a POST answered with. A run the PLATFORM declined —
+          // no credits, daily cap, a standing objection — never arrives here:
+          // it is a skipped run, and the state badge above says which.
+          <Callout tone="danger" live="alert">
+            {problemMessageOf(enrich.error, t)}
+          </Callout>
+        )}
+        {firstRun ? (
+          <EmptyState
+            title={t("provider.profile.emptyTitle")}
+            action={
+              <EnrichNow
+                personId={personId}
+                profile={profile}
+                enrich={enrich}
+              />
+            }
+          >
+            {t("provider.profile.emptyBody", { provider: name })}
+          </EmptyState>
+        ) : (
+          <ProviderValues profile={profile} />
+        )}
         <RunWatch personId={personId} profile={profile} />
       </PanelBody>
     </Panel>
@@ -209,41 +323,67 @@ function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
   );
 }
 
-function EnrichNow({
-  personId,
-  profile,
-}: Readonly<{ personId: string; profile: Profile }>) {
-  const t = useT();
+/** The lookup itself, hoisted so the header button and the first-run plate
+ *  drive ONE mutation: two `useMutation` calls would each carry their own
+ *  pending and error state, and the reader would see a failure on whichever
+ *  control they did not press.
+ *
+ *  WHO is looked up and WHERE the answer lands both arrive as mutation
+ *  VARIABLES rather than as captured values. React Query re-arms a mutation's
+ *  options in a passive effect, so between the commit that renders a control
+ *  for one contact and that effect, the observer still holds the previous
+ *  render's closure: a captured id would spend a credit on the contact the
+ *  reader just left and refresh that page instead of this one. A variable
+ *  cannot be older than the control that carried it. */
+function useEnrichRun() {
   const queryClient = useQueryClient();
-
-  const enrich = useMutation({
-    mutationKey: ["enrich", personId],
-    mutationFn: async () => {
+  return useMutation({
+    mutationFn: async ({ personId, provider }: EnrichRun) => {
       const { data, error } = await api.POST("/people/{id}/enrichment-runs", {
         params: { path: { id: personId } },
-        body: { provider: profile.provider ?? "surfe" },
+        body: { provider },
       });
       if (error) {
-        throw error;
+        throwProblem(error);
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, { personId }) => {
       // The run is durable and the provider has not been called yet, so the
-      // page re-reads and RunWatch picks the run up from there.
+      // page re-reads and RunWatch picks the run up from there. Keyed off the
+      // variables the run was started with, so the page that refreshes is the
+      // one the request was sent for.
       void queryClient.invalidateQueries({ queryKey: ["person360", personId] });
     },
   });
+}
 
+function EnrichNow({
+  personId,
+  profile,
+  enrich,
+  small = false,
+}: Readonly<{
+  personId: string;
+  profile: Profile;
+  enrich: ReturnType<typeof useEnrichRun>;
+  small?: boolean;
+}>) {
+  const t = useT();
   if (!canEnrichNow(profile.state)) {
     return null;
   }
   return (
     <Button
-      small
+      small={small}
       type="button"
-      disabled={enrich.isPending}
-      onClick={() => enrich.mutate()}
+      pending={enrich.isPending}
+      busyLabel={t("provider.profile.lookingUp")}
+      // A profile carries no provider name until a run exists, so the first
+      // lookup on a contact names the one the contract has.
+      onClick={() =>
+        enrich.mutate({ personId, provider: profile.provider ?? "surfe" })
+      }
     >
       <Search size={15} aria-hidden="true" /> {t("provider.profile.enrichNow")}
     </Button>

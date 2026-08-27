@@ -3,7 +3,7 @@ package version
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/cli/craft/golden"
+	"github.com/margince/margince/cli/craft/golden"
 )
 
 func TestDecide_promoteAndRollback(t *testing.T) {

@@ -1,12 +1,13 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { AlarmClock, ArrowRight, Check, X } from "lucide-react";
+import { AlarmClock, ArrowRight, Check, History, X } from "lucide-react";
 import type { CSSProperties } from "react";
 import type { components } from "../api/schema";
 import { ordinalNumber } from "../format/format";
 import { Badge, Button, Card, PendingBody } from "./atoms";
 import { Meter } from "./readings";
+import { ProvenanceTag } from "./trust";
 import "./briefitem.css";
 
 // BriefItemCard — one ranked entry of a Morning-Brief run, as the card the
@@ -73,6 +74,12 @@ export type BriefItemLabels = Readonly<{
   evidenceNone: string;
   /** The deal link's text before the caller knows the deal's name. */
   openDeal: string;
+  /** The lineage line, already composed by the caller with the day the rep
+   *  dismissed it — "Flagged Tuesday, you dismissed it". The card knows no
+   *  language and no calendar, so the weekday cannot be assembled here. */
+  previouslyDismissed: string;
+  /** What brought it back, before the instant ("came back with"). */
+  returnedWith: string;
   act: string;
   dismiss: string;
   snooze: string;
@@ -194,6 +201,12 @@ export function BriefItemCard({
           <span className="brief-item-amount t-mono">{amount}</span>
         )}
       </div>
+      <BriefItemLineage
+        item={item}
+        labels={labels}
+        formatInstant={formatInstant}
+      />
+      <BriefItemFinding item={item} />
       <BriefFactorVector
         item={item}
         labels={labels}
@@ -357,6 +370,63 @@ function BriefBar({
       <span className="brief-item-bar-value t-mono">
         {formatPercent(clamped)}
       </span>
+    </div>
+  );
+}
+
+// Why this deal is back after the rep dismissed it.
+//
+// ABOVE the finding, because it is context for the answer rather than the
+// answer: the card reads "this deal → you saw it before → here is what the
+// night found → here is the working".
+//
+// It carries NO ProvenanceTag. Indigo is a claim that a model wrote something,
+// and this is a deterministic fact assembled from brief_item rows — tagging it
+// agent-authored would be false in the one place the product asks the reader to
+// trust that marking.
+function BriefItemLineage({
+  item,
+  labels,
+  formatInstant,
+}: Readonly<{
+  item: BriefItem;
+  labels: BriefItemLabels;
+  formatInstant: (utcIso: string) => string;
+}>) {
+  const lineage = item.lineage;
+  if (!lineage) {
+    return null;
+  }
+  return (
+    <p className="brief-item-lineage t-caption">
+      <History aria-hidden="true" />
+      <span>{labels.previouslyDismissed}</span>{" "}
+      <span>
+        {labels.returnedWith}{" "}
+        <time dateTime={lineage.returned_with_activity_at}>
+          {formatInstant(lineage.returned_with_activity_at)}
+        </time>
+      </span>
+    </p>
+  );
+}
+
+// What the overnight agent found about this deal, above the meters rather than
+// below them: the finding is the ANSWER and the factor vector is the working,
+// and a reader who only reads the first line of a card should get the answer.
+//
+// It carries a ProvenanceTag because it is model-authored prose sitting beside
+// numbers a deterministic engine computed, and nothing else on the card would
+// tell those apart. Absent when no pass has annotated the run — the panel above
+// says whether a pass ran at all, so the card does not repeat it per item.
+function BriefItemFinding({ item }: Readonly<{ item: BriefItem }>) {
+  if (!item.finding) {
+    return null;
+  }
+  return (
+    <div className="brief-item-finding">
+      <ProvenanceTag provenance={{ kind: "agent" }} />
+      <p>{item.finding}</p>
     </div>
   );
 }

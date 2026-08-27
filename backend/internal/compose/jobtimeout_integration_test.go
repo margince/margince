@@ -33,8 +33,8 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // deadlineReadMargin is the ONLY slack TestTheDeclaredTimeoutIsTheDeadlineRiverApplies

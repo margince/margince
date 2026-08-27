@@ -1075,6 +1075,7 @@ export function SegmentedControl<Option extends string>({
   onChange,
   labels,
   label,
+  marks,
 }: Readonly<{
   options: readonly Option[];
   value: Option;
@@ -1084,6 +1085,12 @@ export function SegmentedControl<Option extends string>({
   // screen reader announces it alongside each option so the buttons aren't
   // read out of context. Optional so existing callers are unaffected.
   label?: string;
+  // Options carrying a dot: something waits behind that option. Decorative by
+  // construction — the dot is `aria-hidden` and the fact it hints at must be
+  // stated in words on the surface the option opens, because a mark is the one
+  // thing a screen reader cannot read out and a colour-blind reader may not
+  // see. It draws attention; it never carries the meaning alone.
+  marks?: Partial<Record<Option, boolean>>;
 }>) {
   return (
     <fieldset className="segmented" aria-label={label}>
@@ -1095,6 +1102,7 @@ export function SegmentedControl<Option extends string>({
           onClick={() => onChange(option)}
         >
           {labels[option]}
+          {marks?.[option] && <span className="segmented-mark" aria-hidden />}
         </button>
       ))}
     </fieldset>
@@ -1738,16 +1746,33 @@ const MENU_EDGE_GAP = 4;
 
 export function Disclosure({
   summary,
+  action,
   open,
   className,
   children,
 }: Readonly<{
   summary: ReactNode;
+  /**
+   * One verb belonging to this section, drawn on the summary's line and OUTSIDE
+   * the `<summary>` element.
+   *
+   * That is the whole point of the prop. A `<summary>` is itself the control
+   * that opens the section, so a button placed inside it is a control inside a
+   * control: axe fails it as `nested-interactive`, and a reader who presses the
+   * button also toggles the section under it. Two rail sections had done exactly
+   * that, and the verb they nested was the one that opens a form — so pressing
+   * "Add employment" collapsed the employments it was about to add to.
+   *
+   * It stays visible while the section is closed, which is what a section-level
+   * verb wants: "Add employment" is a thing to do whether or not the list is on
+   * screen.
+   */
+  action?: ReactNode;
   open?: boolean;
   className?: string;
   children: ReactNode;
 }>) {
-  return (
+  const details = (
     <details
       className={className ? `disclosure ${className}` : "disclosure"}
       open={open}
@@ -1758,5 +1783,14 @@ export function Disclosure({
       </summary>
       <div className="disclosure-body">{children}</div>
     </details>
+  );
+  if (!action) {
+    return details;
+  }
+  return (
+    <div className="disclosure-wrap">
+      {details}
+      <span className="disclosure-action">{action}</span>
+    </div>
   );
 }

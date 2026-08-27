@@ -14,7 +14,8 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditverb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // EntityType names the domain entities the provider serves.
@@ -196,6 +197,22 @@ type UpdateInput struct {
 	Source     string
 	CapturedBy string
 	IfVersion  *int64
+	// Trail names what the audit trail calls this write and what it records
+	// about it. The zero value is an ordinary update carrying no evidence, so
+	// a caller that does not care never names one. Only the reversal path sets
+	// it: a restore is an ordinary update in every respect except what the
+	// trail calls it, which is why it travels on this input rather than
+	// through a second write engine.
+	Trail auditverb.Trail
+	// Clear names the wire fields to set to NULL. It exists because a JSON
+	// null cannot say so: every field on every update request is an optional
+	// pointer, so a null decodes to nil and the module reads it as "the caller
+	// did not supply this" — the write succeeds and the field keeps its value.
+	//
+	// Only the reversal path sets it, and only for fields the record's own
+	// update path can actually clear. A caller that wants a field left alone
+	// simply omits it, exactly as before.
+	Clear []string
 }
 
 // AdvanceDealInput moves a deal to a stage; the provider appends

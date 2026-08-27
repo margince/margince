@@ -188,7 +188,7 @@ func TestComposeRecordSummary(t *testing.T) {
 
 // coreMigrationsDir is relative to this package directory
 // (backend/internal/modules/privacy), the same "walk up to the repo tree"
-// style as backend/license_test.go and backend/arch_test.go use from the
+// style as backend/gates/license_test.go and backend/gates/arch_test.go use from the
 // backend root.
 const coreMigrationsDir = "../../../migrations/core"
 

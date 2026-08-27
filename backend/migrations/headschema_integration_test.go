@@ -10,7 +10,7 @@ package migrations_test
 //
 // Most suites here rewind and replay: they drop everything, apply a prefix,
 // assert on what a repair or a rollback did. That is why this package is carved
-// out of backend/integrationmigrateonce_test.go's migrate-once rule, and it
+// out of backend/gates/integrationmigrateonce_test.go's migrate-once rule, and it
 // stays carved out. But roughly a quarter of its tests only read the head
 // catalog — is this column generated, is that view security_invoker, does every
 // row-scoped FK carry a visibility decision — and they were taking the carve-out
@@ -30,7 +30,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // headFingerprint is the catalog of the schema this process built at head,

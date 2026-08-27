@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/auth"
 )
 
 // LabeledCaptureCountSince counts the activity rows the classify worker has

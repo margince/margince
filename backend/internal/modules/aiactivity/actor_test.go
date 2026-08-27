@@ -10,8 +10,8 @@ package aiactivity
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A human envelope carries the uuid ONLY inside Actor.ID, as "human:<uuid>":

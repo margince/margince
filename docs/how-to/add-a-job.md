@@ -148,7 +148,7 @@ worker that does the work. Declare both.
      `nil` for the other two. Passing the wrong one panics rather than silently dropping a uniqueness
      window.
 
-7. **Verify** — `make check`. The census, the eleven root gates and the boot-time totality check all
+7. **Verify** — `make check`. The census, the eleven job gates and the boot-time totality check all
    run here. Add `make test-integration` if the pass touches tenant tables: the real-Postgres lane is
    what proves the RLS binding, and the timeout wiring suite reads the declared wall clock back off a
    live River client.

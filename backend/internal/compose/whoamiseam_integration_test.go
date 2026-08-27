@@ -16,7 +16,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
 func TestTheAgentIsAlwaysToldWhichLanguageToWriteStoredProseIn(t *testing.T) {

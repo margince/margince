@@ -25,8 +25,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/vectorkit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/vectorkit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // SweepCorpusDrift re-embeds every passage whose vector was computed under a

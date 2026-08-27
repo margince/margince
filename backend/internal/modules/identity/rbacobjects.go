@@ -3,7 +3,7 @@
 
 package identity
 
-import "github.com/gradionhq/margince/backend/internal/modules/identity/internal/policy"
+import "github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 
 // RbacObject is an RBAC object name an extension contributes to the
 // vocabulary. It is an ALIAS, not a wrapper: identity owns the vocabulary but

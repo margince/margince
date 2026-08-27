@@ -30,7 +30,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // mcpToolExtension is the operation-level annotation carrying the governance a
@@ -370,7 +370,7 @@ func yamlChild(node *yaml.Node, key string) *yaml.Node {
 // flow mapping in the fragment above it.
 //
 // The result is algorithm-prefixed, the one spelling every hash a manifest
-// publishes carries; backend/manifestdigest_test.go holds the whole tree to it.
+// publishes carries; backend/gates/manifestdigest_test.go holds the whole tree to it.
 func operationHash(node *yaml.Node) (string, error) {
 	var buf bytes.Buffer
 	enc := yaml.NewEncoder(&buf)

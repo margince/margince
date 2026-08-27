@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/websearch"
+	"github.com/margince/margince/backend/internal/shared/ports/websearch"
 )
 
 // A search response is external input on its way to a stored field, so what

@@ -16,7 +16,7 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // validRedirectURI admits https anywhere and plain http only on

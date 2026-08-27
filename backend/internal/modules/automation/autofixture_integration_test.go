@@ -8,7 +8,7 @@ package automation
 // The shared fixture for this package's integration suites, over the
 // already-migrated database (`make migrate` is the integration lane's
 // precondition). The compose-layer harness cannot be imported here
-// (modules never see compose, tests included — backend/arch_test.go),
+// (modules never see compose, tests included — backend/gates/arch_test.go),
 // so the seeding is spelled locally: an owner connection for RLS-free
 // seeding and assertions, and the workspace-bound app pool the code under
 // test runs on.
@@ -24,11 +24,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 type autoFixture struct {

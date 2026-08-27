@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // restCommandDeps is what a decoder needs to build its command's resolver.
@@ -186,25 +186,26 @@ var restCommands = map[string]func(pol agentPolicy, deps restCommandDeps, r *htt
 	// Four of the fourteen are 🟢 today and stage nothing, so their entries are
 	// unreached until a tier floor tightens them; agentcommandauto.go's own doc
 	// says why they are registered anyway.
-	"sendEmail":           sendEmailCommand,
-	"sendMessage":         sendMessageCommand,
-	"sendAccountEmail":    sendAccountEmailCommand,
-	"bookMeeting":         bookMeetingCommand,
-	"promoteLead":         promoteLeadCommand,
-	"disqualifyLead":      disqualifyLeadCommand,
-	"advanceProjectPhase": advanceProjectPhaseCommand,
-	"advanceDeal":         advanceDealCommand,
-	"mergePerson":         mergeCommand,
-	"mergeOrganization":   mergeCommand,
-	"scrapeCompany":       scrapeCompanyCommand,
-	"deepReadCompany":     deepReadCompanyCommand,
-	"logActivity":         logActivityCommand,
-	"createTask":          createTaskCommand,
-	"draftEmail":          draftEmailCommand,
-	"relinkActivity":      relinkActivityCommand,
-	"relinkThread":        relinkThreadCommand,
-	"relinkActivities":    relinkActivitiesCommand,
-	"runReport":           runReportCommand,
+	"sendEmail":            sendEmailCommand,
+	"sendMessage":          sendMessageCommand,
+	"sendAccountEmail":     sendAccountEmailCommand,
+	"bookMeeting":          bookMeetingCommand,
+	"promoteLead":          promoteLeadCommand,
+	"disqualifyLead":       disqualifyLeadCommand,
+	"advanceProjectPhase":  advanceProjectPhaseCommand,
+	"advanceDeal":          advanceDealCommand,
+	"mergePerson":          mergeCommand,
+	"mergeOrganization":    mergeCommand,
+	"scrapeCompany":        scrapeCompanyCommand,
+	"deepReadCompany":      deepReadCompanyCommand,
+	"annotateMorningBrief": annotateBriefCommand,
+	"logActivity":          logActivityCommand,
+	"createTask":           createTaskCommand,
+	"draftEmail":           draftEmailCommand,
+	"relinkActivity":       relinkActivityCommand,
+	"relinkThread":         relinkThreadCommand,
+	"relinkActivities":     relinkActivitiesCommand,
+	"runReport":            runReportCommand,
 
 	// The two decisions, over four routes. They are the only entries here whose
 	// command names no target record, and the resolver says why: the row a

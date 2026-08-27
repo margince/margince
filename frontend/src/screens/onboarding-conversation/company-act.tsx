@@ -4,7 +4,7 @@ import { useCallback, useMemo, useRef, useState } from "react";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { formatNumber, ordinalNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { useLocale, usePluralKey, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import {
   coldFieldLabel,
@@ -153,6 +153,7 @@ export function CompanyAct({
   adoptedRead = null,
 }: CompanyActProps) {
   const t = useT();
+  const keyFor = usePluralKey();
   const { locale } = useLocale();
   const queryClient = useQueryClient();
   // The gate greets by name, and uses the whole display_name rather than a
@@ -997,13 +998,14 @@ export function CompanyAct({
                   ? {
                       kind: "narration",
                       id: "guide:review-blocked",
-                      // German pluralises differently from English (and by a
-                      // different rule than "add an s"), so the count picks a
-                      // whole key, never a suffix glued onto one string.
-                      i18nKey:
-                        blockingCount === 1
-                          ? "ob.conv.guide.reviewBlocked.one"
-                          : "ob.conv.guide.reviewBlocked.other",
+                      // The count picks a whole key rather than a suffix glued
+                      // onto one string, and WHICH key comes from the reader's
+                      // own plural rule: German does not pluralise the way
+                      // English does, and neither does the next language.
+                      i18nKey: keyFor(
+                        "ob.conv.guide.reviewBlocked",
+                        blockingCount,
+                      ),
                       params: { count: formatNumber(blockingCount, locale) },
                       findingIds: blockingFindingIds,
                     }
@@ -1011,10 +1013,10 @@ export function CompanyAct({
                     ? {
                         kind: "narration",
                         id: "guide:review-advisory",
-                        i18nKey:
-                          advisoryCount === 1
-                            ? "ob.conv.guide.reviewAdvisory.one"
-                            : "ob.conv.guide.reviewAdvisory.other",
+                        i18nKey: keyFor(
+                          "ob.conv.guide.reviewAdvisory",
+                          advisoryCount,
+                        ),
                         params: { count: formatNumber(advisoryCount, locale) },
                         findingIds: advisoryFindingIds,
                       }

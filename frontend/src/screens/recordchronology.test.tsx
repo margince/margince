@@ -83,9 +83,12 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 /**
- * changeFeed answers the field-history endpoint and nothing else. A stub that
- * answered every URL with the same body would let a test pass while the page
- * asked for something entirely different.
+ * changeFeed answers the two reads this panel makes — the field-history feed
+ * the chronology assembles, and the record history the Changes view now IS —
+ * and nothing else. A stub that answered every URL with the same body would
+ * let a test pass while the page asked for something entirely different, and
+ * one that answered an endpoint with a shape it never returns would report a
+ * crash the product cannot have.
  */
 function changeFeed(status = 200) {
   const calls: string[] = [];
@@ -100,11 +103,16 @@ function changeFeed(status = 200) {
         status,
       );
     }
+    if (/\/records\/[^/]+\/[^/]+\/history/.test(url)) {
+      return jsonResponse({ data: [], page: { has_more: false } }, status);
+    }
     return jsonResponse({});
   });
   return {
     fetcher,
     changesRead: () => calls.some((url) => url.includes("/field-history")),
+    historyRead: () =>
+      calls.some((url) => /\/records\/[^/]+\/[^/]+\/history/.test(url)),
   };
 }
 
@@ -136,17 +144,20 @@ describe("the record's chronology", () => {
     expect(feed.changesRead()).toBe(false);
   });
 
-  it("fetches the changes only once the reader asks for them", async () => {
+  it("reads the record's history only once the reader asks for the changes", async () => {
     const user = userEvent.setup();
-    vi.stubGlobal("fetch", changeFeed().fetcher);
+    const feed = changeFeed();
+    vi.stubGlobal("fetch", feed.fetcher);
     withProviders(<PersonTimelineTab personId="p-1" view={viewWith(false)} />);
+
+    // The Changes view IS the record's history now, so the read it must not
+    // spend before being asked is that one.
+    expect(feed.historyRead()).toBe(false);
 
     await user.click(screen.getByRole("button", { name: "Changes" }));
 
-    await waitFor(() => expect(screen.getByText("owner id")).toBeTruthy());
-    expect(screen.getByText("Lena Fischer")).toBeTruthy();
-    // Changes is the CHANGES view: an activity showing here would mean the
-    // filter narrowed nothing.
+    await waitFor(() => expect(feed.historyRead()).toBe(true));
+    // An activity showing here would mean the filter narrowed nothing.
     expect(screen.queryByText("Fleet renewal")).toBeNull();
   });
 
@@ -174,7 +185,8 @@ describe("the record's chronology", () => {
     vi.stubGlobal("fetch", changeFeed(500).fetcher);
     withProviders(<PersonTimelineTab personId="p-1" view={viewWith(false)} />);
 
-    await user.click(screen.getByRole("button", { name: "Changes" }));
+    // Under All, where the chronology still assembles both feeds.
+    await user.click(screen.getByRole("button", { name: "All" }));
 
     await waitFor(() =>
       expect(screen.getByText("This section did not load.")).toBeTruthy(),

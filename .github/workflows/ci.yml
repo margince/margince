@@ -157,10 +157,10 @@ jobs:
               - '.github/actions/**'
               - 'sonar-project.properties'
             # The rulebooks and the catalog they point at. Go gates read all
-            # three: backend/rulebookdelegation_test.go asserts every CLAUDE.md
+            # three: backend/gates/rulebookdelegation_test.go asserts every CLAUDE.md
             # is nothing but its `@AGENTS.md` import,
-            # backend/rulebookdirection_test.go that nothing under docs/ links
-            # back up to a rulebook, and backend/rulebooktally_test.go that no
+            # backend/gates/rulebookdirection_test.go that nothing under docs/ links
+            # back up to a rulebook, and backend/gates/rulebooktally_test.go that no
             # rulebook spells out a tally the tree can be asked for — which it
             # reads out of docs/reference/modules.md too.
             #

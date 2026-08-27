@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // callerUserID is the member the fake invocations run as, canonical because

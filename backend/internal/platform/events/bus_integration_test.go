@@ -26,10 +26,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 type busEnv struct {
@@ -58,7 +58,7 @@ func setup(t *testing.T) *busEnv {
 		}
 	})
 	// Brought to head once per test process; every later test resets the data
-	// only — the discipline backend/integrationmigrateonce_test.go enforces
+	// only — the discipline backend/gates/integrationmigrateonce_test.go enforces
 	// module-wide. Either way the app pool below gets the GRANT USAGE ON SCHEMA
 	// public TO margince_app it depends on: EnsureSchema issues it when it
 	// rebuilds the schema, and a lane clone inherits it from the migration that

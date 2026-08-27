@@ -12,7 +12,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func routingPool(n int) ([]ids.UserID, map[ids.UserID]bool) {

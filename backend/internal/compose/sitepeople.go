@@ -20,8 +20,8 @@ import (
 	"encoding/hex"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // siteLeadProposalKind is the staged per-person proposal's wire identity —

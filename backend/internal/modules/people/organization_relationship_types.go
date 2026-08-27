@@ -25,9 +25,9 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // relationshipTypePartner is the one type bound to another row's existence.
@@ -36,6 +36,7 @@ const relationshipTypePartner = string(crmcontracts.OrganizationRelationshipType
 // validRelationshipTypes is the closed vocabulary, checked before the database
 // sees it so a bad value is a 422 naming the field rather than a CHECK
 // violation surfacing as a 500.
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 var validRelationshipTypes = map[string]bool{
 	string(crmcontracts.OrganizationRelationshipTypesCustomer):         true,
 	string(crmcontracts.OrganizationRelationshipTypesPartner):          true,
@@ -274,6 +275,7 @@ func lifecycleValue(l *crmcontracts.OrganizationLifecycle) string {
 
 // validLifecycles is the closed vocabulary, checked before the database sees
 // it so a bad value is a 422 naming the field rather than a CHECK violation.
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 var validLifecycles = map[string]bool{
 	string(crmcontracts.OrganizationLifecycleUnknown):        true,
 	string(crmcontracts.OrganizationLifecycleTarget):         true,
@@ -309,8 +311,13 @@ func checkSizeBand(value string) error {
 		fmt.Sprintf("%q is not a size band; %s", value, vocabularyOf(validSizeBands)))
 }
 
-// validSizeBands is the closed vocabulary, read off the generated contract so it
-// cannot drift from crm.yaml the way a hand-copied list would.
+// validSizeBands is the closed vocabulary, read off the generated contract so a
+// renamed band cannot drift from crm.yaml the way a hand-copied list would.
+//
+// Spelling the contract's constants carries the VALUES and not the SET: a band
+// crm.yaml gains reaches the generated Valid() and would not reach here, and
+// checkSizeBand would then refuse a band the contract publishes.
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 var validSizeBands = map[string]bool{
 	string(crmcontracts.OrganizationSizeBandN110):      true,
 	string(crmcontracts.OrganizationSizeBandN1150):     true,

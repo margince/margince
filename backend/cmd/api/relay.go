@@ -13,9 +13,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/platform/events"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/events"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // startInlineRelay boots the in-process outbox relay. The bus is not

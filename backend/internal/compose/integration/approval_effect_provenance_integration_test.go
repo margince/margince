@@ -24,8 +24,8 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAgentMintedStagingDoesNotInvokeAServerSideEffect(t *testing.T) {

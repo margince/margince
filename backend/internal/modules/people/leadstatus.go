@@ -3,7 +3,7 @@
 
 package people
 
-import "github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+import "github.com/margince/margince/backend/internal/shared/kernel/values"
 
 // LeadStatus is the lead lifecycle vocabulary — the Go spelling of the
 // lead_status CHECK, kept in sync by the enumsync fitness gate. Domain

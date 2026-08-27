@@ -21,7 +21,7 @@
 
 import type { components } from "../api/schema";
 import { formatMoney, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { CompanyOwnerControl } from "./companyheader";
 import "./companyfacts.css";
 
@@ -114,6 +114,7 @@ function pricedTotal(
  */
 function InFlight({ view }: Readonly<{ view?: Organization360 }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   if (!view) {
     return <span className="co-facts-quiet">{t("co.facts.reading")}</span>;
@@ -134,11 +135,11 @@ function InFlight({ view }: Readonly<{ view?: Organization360 }>) {
   // not, so one template cannot serve both.
   return (
     <span>
-      {t(deals === 1 ? "co.facts.dealsOne" : "co.facts.dealsMany", {
+      {plural("co.facts.deals", deals, {
         count: formatNumber(deals, locale),
       })}
       {" · "}
-      {t(projects === 1 ? "co.facts.projectsOne" : "co.facts.projectsMany", {
+      {plural("co.facts.projects", projects, {
         count: formatNumber(projects, locale),
       })}
       {(view.deals.page.has_more || view.projects_page?.has_more) &&

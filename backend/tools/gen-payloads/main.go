@@ -32,7 +32,7 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/oapi-codegen/oapi-codegen/v2/pkg/codegen"
 
-	"github.com/gradionhq/margince/backend/tools/internal/oas30"
+	"github.com/margince/margince/backend/tools/internal/oas30"
 )
 
 func main() {
@@ -199,9 +199,9 @@ func structifyEmptyEventPayloads(body string, spec *openapi3.T) (string, error) 
 // x-version extension (default 1 when absent). PublicEventVersions is the
 // single generated source of truth both the coverage gate (every
 // subscribable event type must be a key) and the version gate (the catalog's
-// VersionOf must agree with the value) read — see
-// backend/internal/modules/webhooks/payload_coverage_test.go and
-// payload_version_test.go.
+// VersionOf must agree with the value) read — both in
+// backend/gates/publicevents_test.go, as TestEverySubscribableEventHasAPayloadSchema
+// and TestPayloadVersionsMatchCatalog.
 func eventMethodsAndVersions(spec *openapi3.T, versionsVar string) (methods, versions string, err error) {
 	if spec.Components == nil {
 		return "", "", nil
@@ -339,7 +339,7 @@ func backendRoot() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	const want = "module github.com/gradionhq/margince/backend"
+	const want = "module github.com/margince/margince/backend"
 	isBackendModule := func(gomod string) bool {
 		data, err := os.ReadFile(gomod) // #nosec G304 -- walking to locate the module root
 		if err != nil {

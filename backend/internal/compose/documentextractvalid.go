@@ -16,7 +16,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // documentShapeValid is the §5.2 validator: the closed field set respected, and

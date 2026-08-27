@@ -22,9 +22,9 @@ import (
 	"github.com/getkin/kin-openapi/openapi3"
 	chi "github.com/go-chi/chi/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // singlePurposeTools are the fourteen verbs whose every contract operation

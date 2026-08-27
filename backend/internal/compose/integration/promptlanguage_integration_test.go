@@ -7,7 +7,7 @@ package integration
 
 // The base language reaches a real prompt.
 //
-// This is the half the static gate in backend/promptlanguage_test.go cannot
+// This is the half the static gate in backend/gates/promptlanguage_test.go cannot
 // prove. That gate reads syntax: it sees that a language rule is ATTACHED to a
 // request, never that the right language was resolved, and a prompt could
 // satisfy it while passing a variable that is always English. What decides the
@@ -25,11 +25,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
-	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // setBaseLanguage writes the setting through settings.SeedValue, which is the

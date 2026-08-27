@@ -34,7 +34,7 @@ import (
 	"encoding/json"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // TaskStatus is the lifecycle a client sees. These are the specification's own

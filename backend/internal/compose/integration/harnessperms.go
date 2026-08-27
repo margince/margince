@@ -22,7 +22,7 @@ package integration
 import (
 	"maps"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // The RBAC object keys the permission fixtures below repeat often enough to

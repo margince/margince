@@ -144,7 +144,7 @@ The allowlist — sixteen identifiers, exactly as configured:
 Two categories never reach the allowlist check:
 
 - **First-party packages** are ignored by coordinate (`ignore-packages`):
-  `github.com/gradionhq/margince/*` (our own Go modules) and
+  `github.com/margince/margince/*` (our own Go modules) and
   `example.margince.dev/*` (the committed extension stubs, ADR-0069). They carry
   no third-party license to gate.
 - **Local composite actions** under `.github/actions/` are ignored by coordinate

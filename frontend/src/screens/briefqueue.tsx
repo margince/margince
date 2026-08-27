@@ -1,16 +1,18 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import type { BriefItemLabels } from "../design-system/briefitem";
 import { BriefItemCard } from "../design-system/briefitem";
 import {
+  formatDate,
   formatDateTime,
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { translatePlural, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf } from "./common";
 import type { Deal, MorningBriefItem, useBriefItemMark } from "./home.queries";
@@ -45,6 +47,15 @@ export function briefLabels(
   t: (key: MessageKey, params?: Record<string, string>) => string,
   evidenceCount: number,
   locale: Parameters<typeof formatNumber>[1],
+  // The day the rep dismissed this deal, when it is one that came back. The
+  // CARD cannot compose this: it knows no language and no calendar, and the
+  // sentence names a day.
+  dismissedOn?: string,
+  // The zone that date is read in. The INSTALLATION's, not the reader's: a
+  // `format: date` wire value holds no instant to localize, and reading
+  // 2026-08-21 in a zone behind UTC prints the day before — so a rep in
+  // Vancouver would be told they dismissed it a day earlier than they did.
+  recordZone?: string,
 ): BriefItemLabels {
   return {
     rank: t("home.brief.rank"),
@@ -56,12 +67,9 @@ export function briefLabels(
       momentum: t("home.factorMomentum"),
       warmth: t("home.factorWarmth"),
     },
-    evidence:
-      evidenceCount === 1
-        ? t("home.evidenceOne")
-        : t("home.evidence", {
-            count: formatNumber(evidenceCount, locale),
-          }),
+    evidence: translatePlural(locale, "home.evidence", evidenceCount, {
+      count: formatNumber(evidenceCount, locale),
+    }),
     evidenceNone: t("home.evidenceNone"),
     openDeal: t("home.openDeal"),
     act: t("home.act"),
@@ -71,6 +79,13 @@ export function briefLabels(
     dismissed: t("home.dismissedState"),
     snoozed: t("home.snoozedState"),
     resurfaces: t("home.brief.resurfaces"),
+    previouslyDismissed:
+      dismissedOn === undefined || recordZone === undefined
+        ? ""
+        : t("home.brief.previouslyDismissed", {
+            day: formatDate(dismissedOn, locale, recordZone),
+          }),
+    returnedWith: t("home.brief.returnedWith"),
   };
 }
 
@@ -94,10 +109,17 @@ export function BriefQueueItem({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   return (
     <BriefItemCard
       item={item}
-      labels={briefLabels(t, item.evidence_ids.length, locale)}
+      labels={briefLabels(
+        t,
+        item.evidence_ids.length,
+        locale,
+        item.lineage?.dismissed_on,
+        recordZone,
+      )}
       // `revenueBasisNote` is deliberately not passed. The run carries
       // `revenue_norm_minor` but not the currency it is in, and the base
       // currency lives on a settings read neither screen makes — a bare figure

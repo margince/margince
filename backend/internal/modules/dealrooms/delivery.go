@@ -6,7 +6,7 @@ package dealrooms
 import (
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // deliveryFacts are the timestamps the standing invitation carries. Every one is

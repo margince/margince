@@ -16,16 +16,16 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/modules/search"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // NewRegistry wires the full 🟢/🟡 tool set over the composite provider.
@@ -198,6 +198,10 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// outermost guard the other native-only engines do: "not available here"
 	// rather than an empty queue that reads as a quiet morning.
 	agents.RegisterBriefTool(registry, nativeOnlyBriefReader(sorMode, briefReader(pool)))
+	// The write half: the overnight agent puts what it found onto the run it
+	// just read. Same guard, same engine, and the engine owns every refusal —
+	// whose run, which items, which citations.
+	agents.RegisterAnnotateBriefTool(registry, nativeOnlyBriefAnnotator(sorMode, briefAnnotator(pool)))
 	// The intent tools ground on the graph walk; search_context rides the same
 	// retriever's ranked half, which is what the embed lane is for.
 	// The comms tools ride the same store paths as the HTTP transport.

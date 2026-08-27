@@ -12,7 +12,7 @@ package draftcheck
 // call either happened or it did not, and a sentence was either written or it
 // was not — no amount of recent correspondence makes an invented one true.
 
-import "github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 
 // spokenExchange are the ways a draft asserts that a CONVERSATION happened —
 // a call, a meeting, a chat — as opposed to the messages the record holds.

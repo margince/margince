@@ -14,7 +14,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // agent_run.degrade_reason is read by the ordinary human the run acted for, so

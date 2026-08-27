@@ -1525,8 +1525,27 @@ describe("CompanyScreen — the record's history", () => {
 
   // Field changes are the account's own chronology, so they sit in the
   // timeline behind a filter — not on a screen of their own.
-  it("shows field changes in the timeline under the Changes filter", async () => {
+  it("shows the record's history under the Changes filter, with the control that puts one back", async () => {
     stubFetch(async (url) => {
+      if (/\/records\/[^/]+\/[^/]+\/history/.test(url)) {
+        return jsonResponse({
+          data: [
+            {
+              id: "a1",
+              actor_type: "human",
+              actor_id: "u1",
+              actor_name: "Demo Admin",
+              action: "update",
+              occurred_at: "2026-07-14T10:00:00Z",
+              summary: "Demo Admin updated the record",
+              before: { industry: "Automotive" },
+              after: { industry: "Manufacturing" },
+              undoable: { undoable: true },
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
+        });
+      }
       if (url.includes("/field-history")) {
         return jsonResponse({
           data: [
@@ -1563,6 +1582,11 @@ describe("CompanyScreen — the record's history", () => {
     );
     expect(within(timeline).getByText("Automotive")).toBeTruthy();
     expect(within(timeline).getByText("Industry")).toBeTruthy();
+    // The point of this view being the record's history: the change can be put
+    // back from where the reader is already looking at it.
+    expect(
+      within(timeline).getByRole("button", { name: "Put back" }),
+    ).toBeTruthy();
   });
 });
 

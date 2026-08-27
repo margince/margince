@@ -25,9 +25,9 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestTheFinanceSweepsPrincipalMayReadTheBaseCurrency(t *testing.T) {

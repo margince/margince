@@ -21,11 +21,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // passportTokenPrefix makes an agent bearer token visually and
@@ -122,6 +122,41 @@ func (s *Service) IssuePassport(ctx context.Context, id Identity, in IssuePasspo
 		return IssuedPassport{}, err
 	}
 	return out, nil
+}
+
+// IssuePassportTx mints inside the CALLER's transaction, for a caller that has
+// its own half of the same fact to commit.
+//
+// It exists for the standing overnight grant: what authorizes a nightly run is
+// a passport, and what records that the rep agreed is a row in another module's
+// table. A mint that committed beside a failed grant would be live authority
+// nothing points at; a grant beside a failed mint would claim an authority that
+// does not exist. Neither module may import the other, so compose joins them —
+// and this is the seam that lets it do so in ONE transaction rather than two
+// that can half-succeed.
+//
+// It goes through the same mintPassport as every other issuance, so the closed
+// scope vocabulary, the TTL ceiling and the audit row are not a second
+// spelling: on_behalf_of and granted_by are still both id.UserID, and there is
+// still no path that mints for anybody but the session user.
+func IssuePassportTx(ctx context.Context, tx pgx.Tx, id Identity, in IssuePassportInput) (IssuedPassport, error) {
+	return mintPassport(ctx, tx, id, in, nil)
+}
+
+// RevokePassportTx is the same kill switch as RevokePassport, inside the
+// caller's transaction — the withdrawing half of the grant above. Withdrawing
+// an answer while leaving the credential live would end the reference and not
+// the authority.
+//
+// The service receiver is required because the revoke cascades through the
+// OAuth grant when the passport belongs to one, which needs the service's own
+// pool-bound helpers. ctx must already carry the actor: the audit rows resolve
+// their principal from it and fail closed rather than writing an unattributed
+// revocation.
+func (s *Service) RevokePassportTx(
+	ctx context.Context, tx pgx.Tx, id Identity, passportID ids.PassportID,
+) error {
+	return s.revokePassportTx(actorCtx(ctx, id), tx, id, passportID)
 }
 
 // mintPassport is the ONE spelling of the passport-mint write: admission

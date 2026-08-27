@@ -1,7 +1,13 @@
 /** @vitest-environment jsdom */
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen, waitFor } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
@@ -549,7 +555,7 @@ describe("the IMAP dialog", () => {
     renderConnectAct();
     await userEvent.click(screen.getByRole("button", { name: /Any inbox/ }));
 
-    expect(await screen.findByRole("dialog")).toBeTruthy();
+    const dialog = await screen.findByRole("dialog");
     expect(screen.getByLabelText("IMAP host")).toBeTruthy();
     expect(screen.getByLabelText("Port")).toBeTruthy();
     expect(screen.getByLabelText("Email")).toBeTruthy();
@@ -559,8 +565,12 @@ describe("the IMAP dialog", () => {
     // TLS" checkbox; the real connector contract has neither, so this form
     // does not invent widgets that would submit nothing — it carries no
     // checkbox at all.
-    expect(screen.queryByLabelText(/smtp/i)).toBeNull();
-    expect(screen.queryAllByRole("checkbox")).toHaveLength(0);
+    //
+    // Scoped to the DIALOG, which is what the claim is about. The scene behind
+    // it carries the overnight question's own checkbox, and a document-wide
+    // count would read that as this form having grown a widget.
+    expect(within(dialog).queryByLabelText(/smtp/i)).toBeNull();
+    expect(within(dialog).queryAllByRole("checkbox")).toHaveLength(0);
   });
 
   it("closes on 'Not now' without touching the required-step skip", async () => {
@@ -795,4 +805,84 @@ it("says why every mail card is disabled when the roster read fails, and offers 
   expect(
     screen.queryByText("Could not check your mailboxes"),
   ).not.toBeInTheDocument();
+});
+
+// The overnight question rides with this step: it is preselected, and the
+// answer is written when the step COMPLETES rather than when the box is
+// ticked. Both halves matter and neither is visible from the component that
+// draws the checkbox, which owns no state of its own.
+
+it("asks the overnight question preselected, beside the mailboxes", async () => {
+  stubWithSession({ "GET /connectors": () => jsonResponse({ data: [] }) });
+  renderConnectAct();
+  const box = await screen.findByTestId("overnight-grant-choice");
+  // Preselected: the features it feeds are the ones the product opens on, so
+  // an unticked default ships an installation whose morning brief is
+  // permanently empty for reasons nobody is told.
+  expect(box).toHaveProperty("checked", true);
+  // And nothing is granted yet — ticking states an intent this step carries.
+  expect(screen.queryByText(en["overnightGrant.danger"])).toBeNull();
+});
+
+it("grants nothing when the reader skips connecting a mailbox", async () => {
+  const grants: unknown[] = [];
+  stubWithSession({
+    "GET /connectors": () => jsonResponse({ data: [] }),
+    "PUT /me/agent-grants/morning_brief": (body: unknown) => {
+      grants.push(body);
+      return jsonResponse({});
+    },
+  });
+  renderConnectAct();
+
+  await userEvent.click(screen.getByRole("button", { name: /skip/i }));
+  // The agent reads their mail to build the brief, so authority over a mailbox
+  // that was never connected is authority over nothing — recorded as though
+  // the rep had agreed to something real. The box stays ticked; the skip is
+  // what decides.
+  await waitFor(() => expect(grants).toEqual([]));
+});
+
+it("keeps an opt-out across the OAuth round trip", async () => {
+  const answers: unknown[] = [];
+  stubWithSession({
+    "GET /connectors": () => jsonResponse({ data: [] }),
+    "PUT /me/agent-grants/morning_brief": (body: unknown) => {
+      answers.push(body);
+      return jsonResponse({});
+    },
+  });
+
+  // The rep unticks the box, then leaves for the provider's consent screen.
+  const first = renderConnectAct();
+  await userEvent.click(screen.getByTestId("overnight-grant-choice"));
+  first.unmount();
+
+  // A real "allow" leaves the page entirely, so the component remounts on the
+  // way back. Without the remembered answer it would come back at its
+  // preselected default and grant against an explicit opt-out.
+  renderConnectAct();
+  const box = await screen.findByTestId("overnight-grant-choice");
+  expect(box).toHaveProperty("checked", false);
+});
+
+it("records a decline, rather than leaving it unanswered", async () => {
+  const answers: unknown[] = [];
+  stubWithSession({
+    "GET /connectors": () => jsonResponse({ data: [] }),
+    "PUT /me/agent-grants/morning_brief": (body: unknown) => {
+      answers.push(body);
+      return jsonResponse({});
+    },
+  });
+  renderConnectAct("ok", "skipped", "cn.done", "gmail");
+
+  await userEvent.click(screen.getByTestId("overnight-grant-choice"));
+  await userEvent.click(
+    screen.getByRole("button", { name: /enter margince/i }),
+  );
+
+  // Declined and never-asked are different states, and the product asks once:
+  // leaving an opt-out unanswered is what makes it ask again every night.
+  await waitFor(() => expect(answers).toEqual([{ granted: false }]));
 });

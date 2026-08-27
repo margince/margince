@@ -6,7 +6,7 @@ package consent
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // State is the per-purpose consent vocabulary — the Go spelling of the

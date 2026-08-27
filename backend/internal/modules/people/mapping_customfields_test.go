@@ -15,7 +15,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 //craft:ignore naked-any the decode target is whichever generated contract request struct the case exercises — the same seam shape as datasource.StrictDecode

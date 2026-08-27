@@ -10,7 +10,7 @@ import type { MessageKey } from "../i18n/en";
 // snake_case in the German UI is not a translation of anything.
 //
 // The set is the approvals module's grant maps, and this map is pinned against
-// them by backend/frontendapprovalkinds_test.go, which DERIVES the corpus
+// them by backend/gates/frontendapprovalkinds_test.go, which DERIVES the corpus
 // rather than restating it. The gate this replaced compared against a list
 // hand-copied into the frontend's own test, and a mirror of a mirror agrees
 // with itself: eleven stageable kinds had no label and two labels named kinds
@@ -179,8 +179,8 @@ export const EDITABLE_FIELDS: Readonly<
   // server refuses an edited anchor outright (it is an entity reference, and
   // edit scope pins those), so offering it would only invite a refusal.
   held_draft: [
-    { field: "subject", as: "text", label: "inbox.draftSubject" },
-    { field: "body", as: "textarea", label: "inbox.draftBody" },
+    { field: "subject", as: "text", label: "decision.draftSubject" },
+    { field: "body", as: "textarea", label: "decision.draftBody" },
   ],
   // The date is the entire question, and it is the only thing here a person may
   // change. Undeclared, the generic editor offered every string in the payload:

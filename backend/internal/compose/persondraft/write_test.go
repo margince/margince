@@ -8,7 +8,7 @@ package persondraft_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/compose/persondraft"
 )
 
 func recipientInput() persondraft.Input {

@@ -4,7 +4,7 @@
 package activities
 
 import (
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // activityColumnImage renders the columns a PATCH can move, for one side of an

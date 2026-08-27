@@ -6,7 +6,7 @@ package people
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The corroboration rule as a table (PO-F-2a): what one, two and

@@ -17,8 +17,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // bandRank orders the vocabulary (DOSS-PARAM-8) so a cap can be applied by
@@ -204,7 +204,7 @@ func freshFact(in Input, field crmcontracts.OrganizationFactField, now time.Time
 // 0194 adds `retrieved_at` and nothing in this tree writes it yet, so what is
 // actually measured is "when we last wrote this value", not "when we last read
 // its source". That is a weaker signal — the updated_at trigger fires on any
-// write — and it is the honest signal available. See gradionhq/margince#2.
+// write — and it is the honest signal available. See margince/margince#2.
 //
 // The `retrieved_at` arm is kept so that populating the column needs no change
 // here. It is exercised by tests on both sides of the boundary and by nothing

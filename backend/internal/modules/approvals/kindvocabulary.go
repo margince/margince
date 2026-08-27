@@ -36,7 +36,7 @@ func KindHasDecisionGrants(kind string) bool {
 // to either is in this list the moment it can be staged.
 //
 // Held by: TestEveryStageableKindHasAFrontendLabel
-// (backend/frontendapprovalkinds_test.go), which fails in both directions
+// (backend/gates/frontendapprovalkinds_test.go), which fails in both directions
 // against the frontend's label map — a kind this list gains with no label, and
 // a label naming a kind this list does not carry.
 func StageableKinds() []string {

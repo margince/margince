@@ -1,5 +1,15 @@
-import { Check, Filter, MoreVertical, Plus, Search } from "lucide-react";
+import {
+  ArrowDown,
+  ArrowDownUp,
+  ArrowUp,
+  Check,
+  Filter,
+  MoreVertical,
+  Plus,
+  Search,
+} from "lucide-react";
 import { type ReactNode, useEffect, useRef, useState } from "react";
+import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import "./listtable.css";
@@ -72,6 +82,53 @@ export type SortControl = {
   onChange: (next: string) => void;
 };
 
+/**
+ * One attribute a list can be ordered by, named as the reader sees it.
+ *
+ * `field` is the same server sort string the matching column header sends, so
+ * the menu and the header are two routes to ONE state rather than two states
+ * that can disagree about what the list is ordered by.
+ */
+export type SortOption = {
+  field: string;
+  label: string;
+  /** Biggest first on the opening press, as the numeric column header does. */
+  numeric?: boolean;
+};
+
+/** Which way `value` orders `field`, or null when it orders something else. */
+export function sortDirection(
+  field: string,
+  value: string,
+): "asc" | "desc" | null {
+  if (value === field) {
+    return "asc";
+  }
+  return value === `-${field}` ? "desc" : null;
+}
+
+/**
+ * The sort a press on `option` produces, given where it stands now.
+ *
+ * One function for the header and the menu both: a reader who flips a column
+ * from its header and then reopens the sort menu must find the direction they
+ * just chose, and two copies of this arithmetic are how the two ends up
+ * disagreeing about which press descends.
+ */
+export function nextSortValue(
+  option: Readonly<{ field: string; numeric?: boolean }>,
+  direction: "asc" | "desc" | null,
+): string {
+  if (direction === "asc") {
+    return `-${option.field}`;
+  }
+  if (direction === "desc") {
+    return option.field;
+  }
+  // Unsorted, a number almost always wants its biggest value first.
+  return option.numeric ? `-${option.field}` : option.field;
+}
+
 const EMPTY_FILTERS: Readonly<Record<string, string>> = {};
 
 export function ListSurface({
@@ -83,6 +140,8 @@ export function ListSurface({
   caption,
   note,
   search,
+  sort,
+  sortOptions = [],
   chips = [],
   chosen = EMPTY_FILTERS,
   onChipChange,
@@ -112,9 +171,16 @@ export function ListSurface({
   chosen?: Readonly<Record<string, string>>;
   /** Called with "" to clear. */
   onChipChange?: (key: string, value: string) => void;
-  /** Omit for a body with no server sort at all (the board, an overlay read). */
-  /** The attributes the "Sorted by" pill offers. A column header stays the
-   * other route to the same state — this is not its replacement. */
+  /** Omit for a body with no server sort at all (an overlay read). */
+  sort?: SortControl;
+  /**
+   * The attributes the sort menu offers. A column header stays the other route
+   * to the same state — this is not its replacement, and both go through
+   * `nextSortValue`, so the two cannot disagree about which press descends.
+   * Empty, or without `sort`, draws no menu: a dial over an order the server
+   * cannot change is a control that does nothing.
+   */
+  sortOptions?: readonly SortOption[];
   archived?: { checked: boolean; onChange: (next: boolean) => void };
   /**
    * Controls that change HOW the body is shown rather than what is in it, kept
@@ -164,6 +230,8 @@ export function ListSurface({
 
       <Toolbar
         search={search}
+        sort={sort}
+        sortOptions={sortOptions}
         chips={chips}
         chosen={chosen}
         onChipChange={onChipChange}
@@ -604,6 +672,95 @@ function FilterRow({
   );
 }
 
+/**
+ * The sort dial: every attribute the server can order this list by, in one menu.
+ *
+ * A column header is the other route to the same state, and it is not enough on
+ * its own. A header can only offer the columns currently SHOWN, at a width a
+ * phone does not have; and a sort restored by a saved view arrives with no
+ * header pressed at all, so there is nowhere for the reader to see what else
+ * they could have asked for. This is that one place.
+ *
+ * Pressing the active attribute flips its direction and pressing another takes
+ * its own opening direction, exactly as clicking a header does, because both
+ * ends read `nextSortValue`. "Default order" is offered because it is a state a
+ * reader can reach — a saved view that names no sort asks for the server's own
+ * order — and a state they can reach is one they must be able to ask for.
+ */
+function SortMenu({
+  sort,
+  options,
+  open,
+  onToggle,
+}: Readonly<{
+  sort: SortControl;
+  options: readonly SortOption[];
+  open: boolean;
+  onToggle: () => void;
+}>) {
+  const t = useT();
+  return (
+    <span className="lt-menu-wrap">
+      <button
+        type="button"
+        className={`lt-btn${sort.value ? " on" : ""}`}
+        aria-expanded={open}
+        onClick={onToggle}
+      >
+        <ArrowDownUp size={13} strokeWidth={1.5} aria-hidden="true" />
+        {t("table.sort")}
+      </button>
+      <Menu open={open} head={t("table.sortMenu")} align="right">
+        {options.map((option) => {
+          const direction = sortDirection(option.field, sort.value);
+          return (
+            <button
+              type="button"
+              key={option.field}
+              className={`lt-mi${direction ? " on" : ""}`}
+              aria-pressed={direction !== null}
+              onClick={() => sort.onChange(nextSortValue(option, direction))}
+            >
+              <span className="lt-cb">
+                <Check size={10} strokeWidth={3} aria-hidden="true" />
+              </span>
+              {option.label}
+              {direction && (
+                <span className="lt-mi-dir">
+                  {direction === "asc" ? (
+                    <ArrowUp size={12} strokeWidth={1.8} aria-hidden="true" />
+                  ) : (
+                    <ArrowDown size={12} strokeWidth={1.8} aria-hidden="true" />
+                  )}
+                  {/* The arrow is the sighted reader's half of this. The
+                      direction has to be said as well, or a pressed entry
+                      announces only that it is the sort and not which way. */}
+                  <span className="sr-only">
+                    {direction === "asc"
+                      ? t("table.sortAscending")
+                      : t("table.sortDescending")}
+                  </span>
+                </span>
+              )}
+            </button>
+          );
+        })}
+        <button
+          type="button"
+          className={`lt-mi${sort.value ? "" : " on"}`}
+          aria-pressed={!sort.value}
+          onClick={() => sort.onChange("")}
+        >
+          <span className="lt-cb">
+            <Check size={10} strokeWidth={3} aria-hidden="true" />
+          </span>
+          {t("table.sortDefault")}
+        </button>
+      </Menu>
+    </span>
+  );
+}
+
 export function Menu({
   open,
   head,
@@ -719,6 +876,7 @@ export function CountLine({
   last,
   total,
   more = false,
+  narrowed = false,
   sortedBy,
 }: Readonly<{
   unit: string;
@@ -732,6 +890,19 @@ export function CountLine({
    * report a total the client cannot know.
    */
   more?: boolean;
+  /**
+   * A dial is cutting the set down, so an empty list is empty BECAUSE of one.
+   *
+   * It only changes the zero, and it has to. "No companies yet" over a search
+   * that matched nothing is a claim about the workspace rather than about the
+   * search — and the table's own empty row says "no companies match these
+   * filters" directly underneath it, so the reader got both sentences at once
+   * and one of them was false. The narrowed zero belongs to the body, which is
+   * where the reader is looking and where the way back to everything is, so
+   * this line says nothing about the count and goes on saying what the order
+   * is.
+   */
+  narrowed?: boolean;
   sortedBy?: string;
 }>) {
   const t = useT();
@@ -744,13 +915,28 @@ export function CountLine({
     count: formatNumber(total, locale),
     unit,
   };
+  const counted =
+    total === 0
+      ? narrowed
+        ? // The narrowed zero belongs to the body, which is where the reader is
+          // looking and where the way back to everything is.
+          ""
+        : t("table.none", { unit })
+      : more
+        ? t("table.rangeLoaded", range)
+        : t("table.range", range);
+  const order = sortedBy
+    ? t("table.sortedBy", { column: sortedBy })
+    : undefined;
   // The surface owns the count's placement; this only says what it reads.
+  //
+  // The comma joins two clauses and is written only when there are two: with the
+  // count withheld it had nothing on its left, and the line opened on a piece of
+  // punctuation.
   return (
     <>
-      {total === 0 && t("table.none", { unit })}
-      {total > 0 &&
-        (more ? t("table.rangeLoaded", range) : t("table.range", range))}
-      {sortedBy && `, ${t("table.sortedBy", { column: sortedBy })}`}
+      {counted}
+      {order && (counted ? `, ${order}` : openingCase(order, locale))}
     </>
   );
 }
@@ -763,6 +949,8 @@ export function CountLine({
  */
 function Toolbar({
   search,
+  sort,
+  sortOptions,
   chips,
   chosen,
   onChipChange,
@@ -773,6 +961,8 @@ function Toolbar({
   setOpenMenu,
 }: Readonly<{
   search?: { value: string; onChange: (next: string) => void };
+  sort?: SortControl;
+  sortOptions: readonly SortOption[];
   chips: readonly ListChip[];
   chosen: Readonly<Record<string, string>>;
   onChipChange?: (key: string, value: string) => void;
@@ -851,6 +1041,15 @@ function Toolbar({
       {note && <span className="lt-note">{note}</span>}
 
       <span className="lt-spacer" />
+
+      {sort && sortOptions.length > 0 && (
+        <SortMenu
+          sort={sort}
+          options={sortOptions}
+          open={openMenu === "sort"}
+          onToggle={() => setOpenMenu(openMenu === "sort" ? null : "sort")}
+        />
+      )}
 
       {archived && (
         <label className="lt-toggle">

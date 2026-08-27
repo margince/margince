@@ -39,8 +39,8 @@ export const en = {
   "trust.resolvedValue": "resolved value",
   "trust.editValue": "Edit {description}",
   "trust.evidenceFrom": "Evidence from {source}",
-  "trust.evidenceLine": "line {lines}",
-  "trust.evidenceLines": "lines {lines}",
+  "trust.evidenceLine_one": "line {lines}",
+  "trust.evidenceLine_other": "lines {lines}",
 
   "history.created": "— created —",
   "history.oldValue": "Previous value",
@@ -56,8 +56,81 @@ export const en = {
   "history.actorAll": "All",
   "history.actorHuman": "Human",
   "history.actorAgent": "Agent",
-  "history.tabChanges": "Changes",
-  "history.tabFields": "Field history",
+  "history.tabChanges": "By change",
+  "history.tabFields": "By field",
+  "history.undo.action": "Put back",
+  "history.undo.busy": "Putting this change back…",
+  "history.undo.confirmTitle": "Put this change back?",
+  "history.undo.confirmBody":
+    "{count} fields go back to what they were before this change:",
+  "history.undo.versionSkew":
+    "The record moved while you were reading it. The history has been re-read — check the change again before putting it back.",
+  "history.undo.noBeforeImage":
+    "This change did not record what the record held before it, so there is nothing to put back.",
+  "history.undo.notReplayable":
+    "This kind of change is not replayed backwards.",
+  "history.undo.unsupportedRecordType":
+    "Changes to this kind of record cannot be put back.",
+  "history.undo.superseded":
+    "Somebody has changed these fields since. Putting this back would undo their decision as well.",
+  "history.undo.behindErasureBoundary":
+    "This change is behind an erasure, and what it held has been deleted for good.",
+  "history.undo.alreadyUndone": "This change has already been put back.",
+  "history.undo.notRestorableByThisPath":
+    "These fields are not written through the path a restore uses.",
+  "history.undo.recordArchived":
+    "The record is archived. Restore the record itself before putting a change back.",
+  "history.undo.nullUnwritable":
+    "Putting this back would have to clear a field this record cannot clear, so it cannot be put back.",
+  "history.undo.notWritableByCaller":
+    "You do not have permission to write these fields.",
+  "history.field.address": "Address",
+  "history.field.amount_minor": "Value",
+  "history.field.assignee_id": "Assignee",
+  "history.field.body": "Notes",
+  "history.field.candidate_org_key": "Matched company",
+  "history.field.company_name": "Company name",
+  "history.field.currency": "Currency",
+  "history.field.description": "Description",
+  "history.field.display_name": "Name",
+  "history.field.domains": "Domains",
+  "history.field.due_at": "Due",
+  "history.field.email": "Email",
+  "history.field.ended_at": "Ended",
+  "history.field.expected_close_date": "Expected close",
+  "history.field.first_name": "First name",
+  "history.field.forecast_category": "Forecast category",
+  "history.field.full_name": "Name",
+  "history.field.fx_rate_date": "FX rate date",
+  "history.field.fx_rate_to_base": "FX rate",
+  "history.field.industry": "Industry",
+  "history.field.is_done": "Done",
+  "history.field.last_name": "Last name",
+  "history.field.legal_name": "Legal name",
+  "history.field.lifecycle": "Lifecycle",
+  "history.field.linkedin_url": "LinkedIn URL",
+  "history.field.lost_reason": "Lost reason",
+  "history.field.name": "Name",
+  "history.field.occurred_at": "Occurred",
+  "history.field.organization_id": "Company",
+  "history.field.owner_id": "Owner",
+  "history.field.parent_org_id": "Parent company",
+  "history.field.partner_attribution": "Partner attribution",
+  "history.field.partner_org_id": "Partner",
+  "history.field.project_id": "Project",
+  "history.field.relationship_types": "Relationship types",
+  "history.field.remind_at": "Reminder",
+  "history.field.score": "Score",
+  "history.field.score_override_reason": "Score override reason",
+  "history.field.size_band": "Size",
+  "history.field.social": "Social profiles",
+  "history.field.source": "Source",
+  "history.field.started_at": "Started",
+  "history.field.status": "Status",
+  "history.field.subject": "Subject",
+  "history.field.target_end_date": "Target end",
+  "history.field.title": "Job title",
+  "history.field.wait_until": "Waiting until",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -284,9 +357,9 @@ export const en = {
   "share.expiry.day": "Expires in 24 hours",
   "share.expiry.week": "Expires in 7 days",
   "share.expiry.month": "Expires in 30 days",
-  "share.expiryConsequence.one":
+  "share.expiryConsequence_one":
     "Access auto-revokes in {days} day. You can revoke it sooner at any time.",
-  "share.expiryConsequence.other":
+  "share.expiryConsequence_other":
     "Access auto-revokes in {days} days. You can revoke it sooner at any time.",
   "share.expiryConsequenceNone":
     "Access lasts until you revoke it — it will not end on its own.",
@@ -307,9 +380,9 @@ export const en = {
   "share.revokeConfirm":
     "Revoke this grant? The subject loses this record's access at the next request — there is no undo control.",
   "share.approvalRequired":
-    "This share needs approval before it takes effect — it's been queued to the approval inbox, not applied yet.",
-  "share.teamMembers.one": "Team · {count} member",
-  "share.teamMembers.other": "Team · {count} members",
+    "This share needs approval before it takes effect — it's queued for a decision, not applied yet.",
+  "share.teamMembers_one": "Team · {count} member",
+  "share.teamMembers_other": "Team · {count} members",
   "share.rosterLoading": "Loading people and teams…",
   "share.rosterErrorUsers":
     "Couldn't load the people list — teams are shown below.",
@@ -518,7 +591,6 @@ export const en = {
   "list.search": "Search",
   "list.showArchived": "Show archived",
   "list.loadMore": "Load more",
-  "list.sortNewest": "Newest",
   "list.viewAll": "All",
   "list.viewAZ": "A–Z",
   "list.viewHot": "Hot",
@@ -539,6 +611,11 @@ export const en = {
   "table.columns": "Columns",
   "table.shownColumns": "Shown columns",
   "table.compact": "Compact",
+  "table.sort": "Sort",
+  "table.sortMenu": "Sort by",
+  "table.sortDefault": "Default order",
+  "table.sortAscending": "ascending",
+  "table.sortDescending": "descending",
   "table.sortBy": "Sort by {column}",
   "table.noMatches": "No {unit} match these filters.",
   "table.clearFilters": "Clear filters",
@@ -694,9 +771,9 @@ export const en = {
     "You will stop seeing every mirrored record until you are mapped again. This tab stays reachable, so you can undo it here.",
   "overlay.userMap.sharedSeat": "Shared seat — {count} users",
   "overlay.userMap.ownerEmpty": "Nobody is mapped to a {principal} user yet.",
-  "overlay.userMap.unmappedCountOne":
+  "overlay.userMap.unmappedCount_one":
     "1 user is not mapped and isn't shown here — switch to By user to fix that.",
-  "overlay.userMap.unmappedCount":
+  "overlay.userMap.unmappedCount_other":
     "{count} users are not mapped and aren't shown here — switch to By user to fix that.",
   "overlay.userMap.partialView":
     "This grouping and count cover the users loaded so far. Load more to see the rest.",
@@ -831,10 +908,10 @@ export const en = {
   "co.suggest.act.addTask": "Add the next step",
   // A conversation shown as one event says what it IS before what it
   // says: the reader is scanning for an event, not a sentence.
-  "timeline.group.thread": "{count} messages",
-  "timeline.group.threadOne": "1 message",
-  "timeline.group.bulk": "sent to {count} people",
-  "timeline.group.bulkOne": "sent to 1 person",
+  "timeline.group.thread_other": "{count} messages",
+  "timeline.group.thread_one": "{count} message",
+  "timeline.group.bulk_other": "sent to {count} people",
+  "timeline.group.bulk_one": "sent to {count} person",
   "timeline.group.expand": "Open",
   "timeline.group.collapse": "Close",
   "timeline.group.openThread": "View the whole thread",
@@ -859,7 +936,7 @@ export const en = {
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",
-  "tab.research": "Research",
+  "tab.research": "Data & tools",
   // The brief under the questions it answers, and what kind of claim each
   // sentence makes — a judgment must not read as a stored fact.
   "co.brief.nature.fact": "Fact",
@@ -881,10 +958,10 @@ export const en = {
   "co.health.payment.onTime": "Pays on time.",
   "co.health.sinceInbound": "They last wrote {days} days ago",
   "co.health.replyBalance": "{percent}% of the exchange came from them",
-  "co.health.activeContacts.one": "{count} person here has ever interacted",
-  "co.health.activeContacts.other": "{count} people here have ever interacted",
-  "co.health.openCommitments.one": "{count} open commitment",
-  "co.health.openCommitments.other": "{count} open commitments",
+  "co.health.activeContacts_one": "{count} person here has ever interacted",
+  "co.health.activeContacts_other": "{count} people here have ever interacted",
+  "co.health.openCommitments_one": "{count} open commitment",
+  "co.health.openCommitments_other": "{count} open commitments",
   "co.health.singleThreaded": "One contact carries this account",
   "org.partnerSetUp": "Set up partner programme",
   "signal.kind.stalled_deal": "Deal stalled",
@@ -1031,8 +1108,8 @@ export const en = {
   "co.pulse.neverTouched": "Never contacted",
   "co.pulse.owner": "Owner",
   "co.pulse.strongestLead": "Way in",
-  "co.pulse.strengthTail.one": "\u2014 the only contact here",
-  "co.pulse.strengthTail.other": "\u2014 of {count} contacts here",
+  "co.pulse.strengthTail_one": "\u2014 the only contact here",
+  "co.pulse.strengthTail_other": "\u2014 of {count} contacts here",
   "co.pulse.unowned": "Unassigned",
   "co.since.first": "You are opening this account for the first time.",
   "co.partial":
@@ -1062,10 +1139,10 @@ export const en = {
   "finance.col.dates": "Issued → due",
   "finance.recentInvoices": "Recent invoices",
   "finance.paidOn": "paid {when}",
-  "finance.paidDayLate": "Paid 1 day late",
-  "finance.paidDaysLate": "Paid {days} days late",
-  "finance.overdueDay": "{days} day overdue",
-  "finance.overdueDays": "{days} days overdue",
+  "finance.paidDaysLate_one": "Paid 1 day late",
+  "finance.paidDaysLate_other": "Paid {days} days late",
+  "finance.overdueDays_one": "{days} day overdue",
+  "finance.overdueDays_other": "{days} days overdue",
   "finance.col.amount": "Amount",
   "finance.col.status": "Status",
   "finance.unnumbered": "No number",
@@ -1151,10 +1228,12 @@ export const en = {
   "commercial.offer.rejected": "Rejected",
   "commercial.offer.expired": "Expired",
   "commercial.offer.superseded": "Superseded",
-  "co.coverage.contacts": "{count} contacts",
+  "co.coverage.contacts_one": "{count} contact",
+  "co.coverage.contacts_other": "{count} contacts",
   "co.coverage.contactsAtLeast": "{count}+ contacts",
   "co.coverage.untried": "{count} never written to",
-  "co.coverage.gaps": "{count} role gaps",
+  "co.coverage.gaps_one": "{count} role gap",
+  "co.coverage.gaps_other": "{count} role gaps",
   "co.section.restricted": "Hidden \u2014 your role cannot read this",
   "co.next.title": "Next steps",
   "co.next.empty": "No open task on this account.",
@@ -1174,10 +1253,10 @@ export const en = {
   "co.facts.noDeals": "No open deals",
   "co.facts.unpriced": "Not priced yet",
   "co.facts.nothing": "Nothing",
-  "co.facts.dealsOne": "1 deal",
-  "co.facts.dealsMany": "{count} deals",
-  "co.facts.projectsOne": "1 project",
-  "co.facts.projectsMany": "{count} projects",
+  "co.facts.deals_one": "1 deal",
+  "co.facts.deals_other": "{count} deals",
+  "co.facts.projects_one": "1 project",
+  "co.facts.projects_other": "{count} projects",
   "co.facts.atLeast": "or more",
   "co.work.title": "What is in flight",
   "co.work.count": "{count} in flight",
@@ -1515,8 +1594,11 @@ export const en = {
   "co.role.user": "end user",
   "co.people.missing":
     "No {roles} is named on the open deal yet — set one on the contact who is.",
-  "co.people.untriedHint": "{count} people here have never been approached.",
-  "co.people.untriedHintOne": "One person here has never been approached.",
+  "co.people.missingOnDeal":
+    "No {roles} is named on {deal} yet — set one on the contact who is.",
+  "co.people.untriedHint_other":
+    "{count} people here have never been approached.",
+  "co.people.untriedHint_one": "{count} person here has never been approached.",
   "co.evidence.extractedUnconfirmed": "AI extracted · not yet confirmed",
   "co.evidence.previous": "Previous claim",
   "co.evidence.next": "Next claim",
@@ -1525,8 +1607,8 @@ export const en = {
   "co.tools.title": "Data & tools",
   "co.prep.withheld":
     "Parts of this account are hidden from you, so this reading is incomplete.",
-  "co.read.newActivityOne": "One new item since your last visit.",
-  "co.read.newActivityMany": "{count} new items since your last visit.",
+  "co.read.newActivity_one": "One new item since your last visit.",
+  "co.read.newActivity_other": "{count} new items since your last visit.",
   "co.factField.founded_year": "Founded",
   "co.factField.employee_range": "Employees",
   "co.factField.phone": "Phone",
@@ -1668,6 +1750,7 @@ export const en = {
   "lead.bulkFailed": "{count} not applied —",
   "lead.bulkFailedRow": "could not be saved",
   "lead.bulkSelectRow": "Select {name}",
+  "lead.unnamed": "Unnamed lead",
   "lead.sla.breached": "Overdue",
   "lead.sla.atRisk": "Due soon",
   "lead.sla.withinTarget": "On time",
@@ -1813,8 +1896,8 @@ export const en = {
   "lead.segregation":
     "Leads are kept apart from Contacts. A lead becomes a contact only when you qualify it.",
   "lead.segregationDismiss": "Got it",
-  "lead.emptyMine": "You own no leads.",
-  "lead.showAll": "Show all",
+  "list.emptyMine": "You own no {unit}.",
+  "list.showAll": "Show all",
   "lead.assignedAway": "{names} assigned to {owner} — no longer in Mine.",
   "lead.viewNew": "New",
   "lead.viewNeedsFollowUp": "Needs follow-up",
@@ -1968,8 +2051,8 @@ export const en = {
   "deals.bulkStagePick": "Pick a stage",
   "deals.bulkMove": "Move",
   "deals.bulkArchive": "Archive",
-  "deals.bulkArchiveConfirmTitle.one": "Archive this deal?",
-  "deals.bulkArchiveConfirmTitle.other": "Archive {count} deals?",
+  "deals.bulkArchiveConfirmTitle_one": "Archive this deal?",
+  "deals.bulkArchiveConfirmTitle_other": "Archive {count} deals?",
   "deals.bulkArchiveConfirmBody":
     "They leave every list and report, and there is no way to bring one back from here yet.",
   "deals.bulkFailed": "{count} not applied —",
@@ -2030,31 +2113,37 @@ export const en = {
   "offer.viewPdf": "View PDF",
   "offer.pdfUnavailable": "PDF rendering not available on this deployment.",
 
-  "inbox.viaTool": "via {verb}",
-  "inbox.approveEdited": "Approve edited",
-  "inbox.reject": "Reject",
-  "inbox.rejectReason": "Reason",
-  "inbox.draftSubject": "Subject",
-  "inbox.draftBody": "Message",
-  "inbox.rejectReasonHint": "Shared with the person this was staged for.",
-  "inbox.dismiss": "Dismiss",
-  "inbox.versionSkew":
+  // The queue of staged actions a person has to decide. It is a DECISION here
+  // and an `approval` on the wire, and those two are the only names it has: it
+  // was also being called an inbox, a drafts queue and a staged list, and a
+  // reader told four names for one surface has been told none. Copy that has to
+  // point at it says what the reader does there ("waiting on you", "wait for
+  // your decision") rather than inventing a fifth noun for the place.
+  "decision.viaTool": "via {verb}",
+  "decision.approveEdited": "Approve edited",
+  "decision.reject": "Reject",
+  "decision.rejectReason": "Reason",
+  "decision.draftSubject": "Subject",
+  "decision.draftBody": "Message",
+  "decision.rejectReasonHint": "Shared with the person this was staged for.",
+  "decision.dismiss": "Dismiss",
+  "decision.versionSkew":
     "This record changed since it was staged — re-stage it before deciding.",
-  "inbox.reRead": "Re-read",
-  "inbox.alreadyDecided": "Already decided — nothing left to do here.",
-  "inbox.expired": "Expired",
-  "inbox.expiresIn": "expires in {countdown}",
-  "inbox.detail": "Approval detail",
-  "inbox.detailTechnical": "Technical details",
-  "inbox.detailAsked": "Asked",
-  "inbox.detailDecided": "Decided",
-  "inbox.status.approved": "Approved",
-  "inbox.status.rejected": "Rejected",
-  "inbox.status.expired": "Expired",
+  "decision.reRead": "Re-read",
+  "decision.alreadyDecided": "Already decided — nothing left to do here.",
+  "decision.expired": "Expired",
+  "decision.expiresIn": "expires in {countdown}",
+  "decision.detail": "Approval detail",
+  "decision.detailTechnical": "Technical details",
+  "decision.detailAsked": "Asked",
+  "decision.detailDecided": "Decided",
+  "decision.status.approved": "Approved",
+  "decision.status.rejected": "Rejected",
+  "decision.status.expired": "Expired",
 
   "home.pipelineWeighted": "{amount} weighted",
-  "home.pipelineCount.one": "{count} open deal",
-  "home.pipelineCount.other": "{count} open deals",
+  "home.pipelineCount_one": "{count} open deal",
+  "home.pipelineCount_other": "{count} open deals",
   "home.pipelinePartial":
     "{count} deals are not in these figures — your access does not cover them.",
   "home.pipelineUnavailable": "This figure could not be loaded.",
@@ -2068,14 +2157,19 @@ export const en = {
     "Only {count} deals cleared the bar — the queue is never padded.",
   "home.overflow":
     "{shown} of {count} qualifying deals — the honest-short top slice.",
+  // The morning brief's own narrative. The "no pass" line is the honest degrade:
+  // a run nobody annotated and a night with nothing in it read identically as
+  // silence, so the screen says which one this is.
+  "home.narrativeNoPass":
+    "No overnight summary today — Margince did not run a pass on this brief. The ranking below is still today's.",
   "home.quietRun":
     "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
   "home.dismiss": "Dismiss",
   "home.actedState": "acted",
   "home.dismissedState": "dismissed",
-  "home.evidence": "{count} evidence rows",
-  "home.evidenceOne": "1 evidence row",
+  "home.evidence_other": "{count} evidence rows",
+  "home.evidence_one": "{count} evidence row",
   "home.openDeal": "Open deal",
   "home.factorWinnability": "Winnability",
   "home.factorRevenue": "Revenue",
@@ -2107,19 +2201,19 @@ export const en = {
   "home.glance.nightAnon": "Still at it.",
   "home.glance.intro": "Here is your day.",
   "home.glance.decisionsClear": "Nothing is waiting on you.",
-  "home.glance.decisions.one": "decision is waiting on you.",
-  "home.glance.decisions.other": "decisions are waiting on you.",
-  "home.glance.expiring.one": "of them expires today.",
-  "home.glance.expiring.other": "of them expire today.",
-  "home.glance.ranked.one": "deal is ranked for today.",
-  "home.glance.ranked.other": "deals are ranked for today.",
+  "home.glance.decisions_one": "decision is waiting on you.",
+  "home.glance.decisions_other": "decisions are waiting on you.",
+  "home.glance.expiring_one": "of them expires today.",
+  "home.glance.expiring_other": "of them expire today.",
+  "home.glance.ranked_one": "deal is ranked for today.",
+  "home.glance.ranked_other": "deals are ranked for today.",
   "home.glance.leader": "{deal} leads at {amount}.",
-  "home.glance.captured.one": "message was captured overnight.",
-  "home.glance.captured.other": "messages were captured overnight.",
-  "home.glance.duplicates.one": "duplicate needs a look.",
-  "home.glance.duplicates.other": "duplicates need a look.",
-  "home.glance.quiet.one": "open deal has gone quiet.",
-  "home.glance.quiet.other": "open deals have gone quiet.",
+  "home.glance.captured_one": "message was captured overnight.",
+  "home.glance.captured_other": "messages were captured overnight.",
+  "home.glance.duplicates_one": "duplicate needs a look.",
+  "home.glance.duplicates_other": "duplicates need a look.",
+  "home.glance.quiet_one": "open deal has gone quiet.",
+  "home.glance.quiet_other": "open deals have gone quiet.",
   "home.glance.goDecisions": "Go to the decisions waiting on you",
   "home.glance.goToday": "Go to today's ranked deals",
   "home.glance.goDuplicates": "Go to the duplicates queue",
@@ -2132,12 +2226,12 @@ export const en = {
   "home.overnight.fixConnector": "Fix the connection",
   "home.watch.clear": "Nothing has gone quiet.",
   "home.readings.decisions": "Waiting on you",
-  "home.readings.expiring.one": "1 expires today",
-  "home.readings.expiring.other": "{count} expire today",
+  "home.readings.expiring_one": "1 expires today",
+  "home.readings.expiring_other": "{count} expire today",
   "home.readings.expiringNone": "none expire today",
   "home.readings.openDeals": "Open deals",
-  "home.readings.currencies.one": "in {count} currency",
-  "home.readings.currencies.other": "in {count} currencies",
+  "home.readings.currencies_one": "in {count} currency",
+  "home.readings.currencies_other": "in {count} currencies",
   "home.readings.ranked": "Ranked today",
   "home.readings.topScore": "top score {pct}%",
   "home.readings.noRun": "no run yet",
@@ -2153,21 +2247,26 @@ export const en = {
   "home.deck.viewList": "List",
   "home.deck.keys":
     "→ accept · ← reject · ↑ edit · ↓ later · U undo · Enter send",
-  "home.deck.behind.one": "1 more behind",
-  "home.deck.behind.other": "{count} more behind",
-  "home.deck.staged.one": "1 decision staged",
-  "home.deck.staged.other": "{count} decisions staged",
+  "home.deck.behind_one": "1 more behind",
+  "home.deck.behind_other": "{count} more behind",
+  "home.deck.staged_one": "1 decision staged",
+  "home.deck.staged_other": "{count} decisions staged",
   "home.deck.commit": "Send staged decisions",
   "home.deck.unstage": "Undo the last one",
   "home.deck.clearedTitle": "Deck clear",
-  "home.deck.cleared.one": "1 decision sent",
-  "home.deck.cleared.other": "{count} decisions sent",
+  "home.deck.cleared_one": "1 decision sent",
+  "home.deck.cleared_other": "{count} decisions sent",
   "home.deck.clearedTime": "at {at}",
   "home.deck.empty": "Nothing is waiting on you.",
   "home.deck.bundleSummary": "One decision · {count} items",
   "home.deck.bundleMembers": "Show the {count} items",
   "home.brief.rank": "Rank",
   "home.brief.composite": "Score",
+  // A deal the rep dismissed, come back. The suppression rule holds a dismissed
+  // deal out until a linked activity arrives after the mark, so the sentence
+  // states that rule rather than guessing: it can only ever name an activity.
+  "home.brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
+  "home.brief.returnedWith": "It came back with activity on",
   "home.brief.resurfaces": "Back",
   "home.evidenceNone": "no evidence recorded",
   "home.snooze": "Snooze",
@@ -2189,17 +2288,17 @@ export const en = {
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Cancelled",
   "deepread.resumesAt": "Resumes automatically {when}.",
-  "deepread.pagesSoFar.one": "{count} page read so far",
-  "deepread.pagesSoFar.other": "{count} pages read so far",
+  "deepread.pagesSoFar_one": "{count} page read so far",
+  "deepread.pagesSoFar_other": "{count} pages read so far",
   "deepread.stoppedEarly": "Stopped early: {reason}",
   "deepread.stopBudget": "model budget",
   "deepread.stopPageCap": "page cap",
   "deepread.stopByteCap": "byte cap",
   "deepread.stopDeadline": "deadline",
-  "deepread.factCount.one": "{count} evidenced fact staged",
-  "deepread.factCount.other": "{count} evidenced facts staged",
-  "deepread.proposals": "{count} proposals waiting for your review",
-  "deepread.proposalsOne": "1 proposal waiting for your review",
+  "deepread.factCount_one": "{count} evidenced fact staged",
+  "deepread.factCount_other": "{count} evidenced facts staged",
+  "deepread.proposals_other": "{count} proposals waiting for your review",
+  "deepread.proposals_one": "{count} proposal waiting for your review",
   "deepread.kindHome": "Home",
   "deepread.kindImpressum": "Impressum",
   "deepread.kindAbout": "About",
@@ -2220,10 +2319,11 @@ export const en = {
   "transcriptread.statusRunning": "Reading…",
   "transcriptread.statusDone": "Done",
   "transcriptread.statusFailed": "Failed",
-  "transcriptread.lineCount.one": "{count} line read",
-  "transcriptread.lineCount.other": "{count} lines read",
-  "transcriptread.proposals": "{count} next steps waiting for your review",
-  "transcriptread.proposalsOne": "1 next step waiting for your review",
+  "transcriptread.lineCount_one": "{count} line read",
+  "transcriptread.lineCount_other": "{count} lines read",
+  "transcriptread.proposals_other":
+    "{count} next steps waiting for your review",
+  "transcriptread.proposals_one": "{count} next step waiting for your review",
   "transcriptread.nothingStated":
     "Read in full. This conversation states no next steps.",
   "transcriptread.failedFallback":
@@ -2309,8 +2409,8 @@ export const en = {
   "co.spine.expectedClose": "Expected close",
   "co.spine.worth": "{amount} riding on it",
   "co.spine.unpriced": "{count} open, none priced yet",
-  "co.spine.earlier": "{count} earlier conversations",
-  "co.spine.earlierOne": "One earlier conversation",
+  "co.spine.earlier_other": "{count} earlier conversations",
+  "co.spine.earlier_one": "{count} earlier conversation",
   "co.spine.earlierMore": "More conversations before this",
   "co.spine.exchangeCount": "{count} messages",
   "co.spine.kind.email": "One email",
@@ -2376,10 +2476,11 @@ export const en = {
     "Only superseded documents are left here. Show them to read the history.",
   "docs.superseded.show": "Show superseded",
   "docs.superseded.hide": "Hide superseded",
-  "docs.superseded.hiddenOne": "1 superseded document is hidden.",
-  "docs.superseded.hiddenMany": "{count} superseded documents are hidden.",
-  "docs.superseded.shownOne": "1 superseded document is listed below.",
-  "docs.superseded.shownMany": "{count} superseded documents are listed below.",
+  "docs.superseded.hidden_one": "1 superseded document is hidden.",
+  "docs.superseded.hidden_other": "{count} superseded documents are hidden.",
+  "docs.superseded.shown_one": "1 superseded document is listed below.",
+  "docs.superseded.shown_other":
+    "{count} superseded documents are listed below.",
   "docs.reading.show": "Read this document",
   "docs.reading.hide": "Hide the reading",
 
@@ -2432,18 +2533,18 @@ export const en = {
   "extraction.failed": "This file could not be read.",
   "extraction.groundedNothing":
     "AI read this file and it states none of the deal fields.",
-  "extraction.heading.one":
+  "extraction.heading_one":
     "AI read this file — {count} field it can ground, staged for your record (accept to persist)",
-  "extraction.heading.other":
+  "extraction.heading_other":
     "AI read this file — {count} fields it can ground, staged for your record (accept to persist)",
-  "extraction.accept.one": "Accept {count} field",
-  "extraction.accept.other": "Accept {count} fields",
+  "extraction.accept_one": "Accept {count} field",
+  "extraction.accept_other": "Accept {count} fields",
   "extraction.dismiss": "Dismiss",
   "extraction.dismissed": "Nothing was written. The file stays attached.",
   "extraction.acceptedLabel": "Accepted fields",
-  "extraction.acceptedHeading.one":
+  "extraction.acceptedHeading_one":
     "{count} field accepted to the deal — original snippets retained",
-  "extraction.acceptedHeading.other":
+  "extraction.acceptedHeading_other":
     "{count} fields accepted to the deal — original snippets retained",
   "extraction.acceptFailed":
     "Those fields were not written. Nothing on the deal changed.",
@@ -2851,23 +2952,23 @@ export const en = {
   "import.issuesLead":
     "Some rows cannot be imported. They are listed with the line to open in your file.",
   "import.issueLine": "Line {line}:",
-  "import.commit.one": "Import 1 row",
-  "import.commit.other": "Import {rows} rows",
+  "import.commit_one": "Import 1 row",
+  "import.commit_other": "Import {rows} rows",
   "import.importing": "Importing…",
   "import.done": "The import finished.",
   "import.failed":
     "The import stopped after {checkpoint} rows. Resuming continues from there rather than starting again.",
   "import.resume": "Resume the import",
   "import.another": "Import another file",
-  "import.undo.one": "Undo this import (1 row)",
-  "import.undo.other": "Undo this import ({rows} rows)",
+  "import.undo_one": "Undo this import (1 row)",
+  "import.undo_other": "Undo this import ({rows} rows)",
   "import.undoing": "Undoing…",
   "import.undoInterrupted":
     "The undo was interrupted partway through. Continuing picks up where it stopped, not from the start.",
   "import.continueUndo": "Continue the undo",
   "import.undone": "The import was undone.",
-  "import.undoReversed.one": "1 row reversed.",
-  "import.undoReversed.other": "{rows} rows reversed.",
+  "import.undoReversed_one": "1 row reversed.",
+  "import.undoReversed_other": "{rows} rows reversed.",
   "import.undoKeptLead": "Kept — you edited these since the import:",
   "import.undoErroredLead":
     "Could not be reversed — left exactly as they stood:",
@@ -2908,14 +3009,14 @@ export const en = {
   "jobs.count.retrying": "{count} retrying",
   "jobs.count.dead": "{count} dead",
   "jobs.queue": "queue {queue}",
-  "jobs.waitedSeconds.one": "oldest has waited {count} second",
-  "jobs.waitedSeconds.other": "oldest has waited {count} seconds",
-  "jobs.waitedMinutes.one": "oldest has waited {count} minute",
-  "jobs.waitedMinutes.other": "oldest has waited {count} minutes",
-  "jobs.waitedHours.one": "oldest has waited {count} hour",
-  "jobs.waitedHours.other": "oldest has waited {count} hours",
-  "jobs.waitedDays.one": "oldest has waited {count} day",
-  "jobs.waitedDays.other": "oldest has waited {count} days",
+  "jobs.waitedSeconds_one": "oldest has waited {count} second",
+  "jobs.waitedSeconds_other": "oldest has waited {count} seconds",
+  "jobs.waitedMinutes_one": "oldest has waited {count} minute",
+  "jobs.waitedMinutes_other": "oldest has waited {count} minutes",
+  "jobs.waitedHours_one": "oldest has waited {count} hour",
+  "jobs.waitedHours_other": "oldest has waited {count} hours",
+  "jobs.waitedDays_one": "oldest has waited {count} day",
+  "jobs.waitedDays_other": "oldest has waited {count} days",
   "jobs.deadTitle": "Dead work needs a hand",
   "jobs.deadBody":
     "{count} jobs are discarded or cancelled: that work will not happen without intervention. A discarded job spent every attempt; a cancelled one was stopped deliberately. Read the failures below before re-queueing anything.",
@@ -3189,17 +3290,17 @@ export const en = {
   // The rail footer's plain-language line: the exact ids sit one click away
   // in the runtime chip's "Configured AI" row, so this says only what a
   // non-technical reader needs at a glance — how many models, and where.
-  "ob.ai.summary.cloud.one": "1 model, running in the cloud",
-  "ob.ai.summary.cloud.other": "{count} models, running in the cloud",
-  "ob.ai.summary.local.one": "1 model, running locally",
-  "ob.ai.summary.local.other": "{count} models, running locally",
-  "ob.ai.summary.hybrid.one": "1 model, split between cloud and local",
-  "ob.ai.summary.hybrid.other": "{count} models, split between cloud and local",
-  "ob.ai.summary.development.one": "1 model, development mode",
-  "ob.ai.summary.development.other": "{count} models, development mode",
+  "ob.ai.summary.cloud_one": "1 model, running in the cloud",
+  "ob.ai.summary.cloud_other": "{count} models, running in the cloud",
+  "ob.ai.summary.local_one": "1 model, running locally",
+  "ob.ai.summary.local_other": "{count} models, running locally",
+  "ob.ai.summary.hybrid_one": "1 model, split between cloud and local",
+  "ob.ai.summary.hybrid_other": "{count} models, split between cloud and local",
+  "ob.ai.summary.development_one": "1 model, development mode",
+  "ob.ai.summary.development_other": "{count} models, development mode",
   "ob.ai.summary.none": "No model configured yet",
-  "ob.ai.summaryProviders.one": "1 provider configured",
-  "ob.ai.summaryProviders.other": "{count} providers configured",
+  "ob.ai.summaryProviders_one": "1 provider configured",
+  "ob.ai.summaryProviders_other": "{count} providers configured",
   "ob.ai.readFirst": "Start company setup before asking about it.",
   "ob.ai.liveArtifact": "Live, reviewable artifact",
   "ob.ai.companyKnowledge": "What I understand about your company",
@@ -3219,8 +3320,8 @@ export const en = {
   "ob.ai.suggestedChanges": "Suggested changes to your draft",
   "ob.ai.applyChanges": "Apply to my draft",
   "ob.ai.applied": "Applied to draft",
-  "ob.ai.finding": "cited finding",
-  "ob.ai.findings": "cited findings",
+  "ob.ai.finding_one": "cited finding",
+  "ob.ai.finding_other": "cited findings",
   "ob.continueManual": "Tell me instead",
   "ob.readStatus.queued": "I'm getting ready",
   "ob.readStatus.deferred": "I'm waiting for AI budget",
@@ -3461,6 +3562,22 @@ export const en = {
   // Connected inboxes (Settings → Connections): the "manage in Settings"
   // surface the onboarding copy promises.
   "connectors.title": "Connected inboxes",
+  // The rep's standing overnight authority — one question, asked beside the
+  // mailbox connect in onboarding and again in Settings. The danger line names
+  // the features that go empty, because "some things stop working" is not
+  // something a rep can weigh.
+  "overnightGrant.title": "Overnight preparation",
+  "overnightGrant.sub":
+    "Margince works through your deals while you sleep and has your morning ready when you arrive. It acts as you, sees only what you can see, and you can stop it at any time.",
+  "overnightGrant.label": "Let Margince prepare my morning brief overnight",
+  "overnightGrant.help":
+    "It reads your deals and mail to rank what needs you today. It never sends anything on its own — anything that leaves the building waits for your approval.",
+  "overnightGrant.danger":
+    "Without this, your morning brief, your worklist lanes and your weekly review stay empty. These are the screens Margince opens on, so most of the product will look like it is not working.",
+  "overnightGrant.saveFailed":
+    "Your answer to the overnight question could not be saved. Everything else is connected — set it under Settings → Connections when you are in.",
+  "overnightGrant.renew":
+    "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
     "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes the pipeline shared.",
@@ -3680,7 +3797,7 @@ export const en = {
   "ob.s4.scope1Rest":
     "Your mail becomes contacts, companies and activities, captured automatically.",
   "ob.s4.scope2Lead": "We never send anything without your approval.",
-  "ob.s4.scope2Rest": "Drafts wait in your approval inbox.",
+  "ob.s4.scope2Rest": "Drafts wait for your decision.",
   "ob.s4.scope3Lead": "Your data stays in your organization.",
   "ob.s4.scope3Rest": "Own-your-data — export or delete everything anytime.",
   "ob.s4.scope4Lead": "Disconnect in one click.",
@@ -3812,9 +3929,9 @@ export const en = {
   "ob.conv.review.showLess": "Show less",
   "ob.conv.review.continue": "Continue",
   "ob.conv.review.progressLabel": "Required fields completed",
-  "ob.conv.review.requiredRemaining.one":
+  "ob.conv.review.requiredRemaining_one":
     "{count} field needed before you can continue",
-  "ob.conv.review.requiredRemaining.other":
+  "ob.conv.review.requiredRemaining_other":
     "{count} fields needed before you can continue",
   "ob.conv.review.requiredDone": "Nothing more needed — you can continue.",
   "ob.conv.review.confirmQuestionOpen":
@@ -3954,13 +4071,13 @@ export const en = {
   "ob.conv.scene.foundOn": "Found on",
   "ob.conv.guide.decision":
     "I need one decision from you: {question} It is on the right, with the evidence for each option.",
-  "ob.conv.guide.reviewBlocked.one":
+  "ob.conv.guide.reviewBlocked_one":
     "Your review is ready on the right. {count} field blocks confirm.",
-  "ob.conv.guide.reviewBlocked.other":
+  "ob.conv.guide.reviewBlocked_other":
     "Your review is ready on the right. {count} fields block confirm.",
-  "ob.conv.guide.reviewAdvisory.one":
+  "ob.conv.guide.reviewAdvisory_one":
     "Your review is ready on the right. Nothing blocks you; {count} thing is worth a look.",
-  "ob.conv.guide.reviewAdvisory.other":
+  "ob.conv.guide.reviewAdvisory_other":
     "Your review is ready on the right. Nothing blocks you; {count} things are worth a look.",
   "ob.conv.guide.reviewClean":
     "Your review is ready on the right. It looks clean, check what you want and confirm when ready.",
@@ -4534,8 +4651,8 @@ export const en = {
   "buyer.poweredByMargince": "Powered by Margince",
   "threads.roomTitle": "The room as a whole",
   "threads.roomSub": "Anything not about one document.",
-  "threads.aboutThis": "{count} threads about this document",
-  "threads.aboutThisOne": "1 thread about this document",
+  "threads.aboutThis_other": "{count} threads about this document",
+  "threads.aboutThis_one": "{count} thread about this document",
   "threads.askAbout": "Ask about this document",
   "threads.cancel": "Cancel",
   "threads.empty": "Nothing said yet.",
@@ -4982,6 +5099,13 @@ export const en = {
   "license.state.licensed": "Licensed",
   "license.state.uncapped": "Licensed, no seat limit",
   "license.state.unlicensed": "No license configured",
+  "license.state.refused": "License refused",
+  "license.absent.title": "This installation has no license",
+  "license.absent.body":
+    "Everything keeps working and nothing is capped. Configure a license token in the deployment when you want seats counted against a grant.",
+  "license.refused.title": "This installation's license was refused",
+  "license.refused.body":
+    "The token in the deployment was presented and rejected. Everything keeps working, uncapped, until it is replaced — check the token and the installation's clock.",
   "license.seats.title": "Seats",
   "license.seats.used": "Seats in use",
   "license.seats.granted": "Seats granted",
@@ -5242,8 +5366,8 @@ export const en = {
   "users.membersTitle": "Members",
   "users.membersSub":
     "Everyone who holds a seat here, deactivated accounts included.",
-  "users.memberCount.one": "{count} member",
-  "users.memberCount.other": "{count} members",
+  "users.memberCount_one": "{count} member",
+  "users.memberCount_other": "{count} members",
   "users.emailLabel": "New member's email",
   "users.nameLabel": "New member's full name",
   "users.emailPlaceholder": "name@company.com",
@@ -6000,8 +6124,8 @@ export const en = {
   "person.consent.unknownWord": "Unknown",
 
   "person.today.heading": "Today with {name}",
-  "person.today.source": "{count} source",
-  "person.today.sources": "{count} sources",
+  "person.today.source_one": "{count} source",
+  "person.today.source_other": "{count} sources",
   "person.today.updated": "Updated {when}",
   "person.today.freshToday": "today",
   "person.today.freshYesterday": "yesterday",
@@ -6068,8 +6192,8 @@ export const en = {
   "person.rail.oneSided": "One-sided",
   "person.rail.lastReply": "Last reply",
   "person.rail.coverage": "Coverage",
-  "person.rail.colleagueOne": "1 colleague",
-  "person.rail.colleagues": "{count} colleagues",
+  "person.rail.colleagues_one": "{count} colleague",
+  "person.rail.colleagues_other": "{count} colleagues",
   "person.rail.trend": "Trend",
   "person.rail.noInbound": "No inbound",
   "person.rail.cooling": "Cooling",
@@ -6270,6 +6394,10 @@ export const en = {
   "provider.profile.claimsUnwritten":
     "Paid for, but the details never reached this record. Nobody has to hunt for them — this is the gap.",
   "provider.profile.enrichNow": "Look this contact up",
+  "provider.profile.lookingUp": "Asking the provider. This takes a moment.",
+  "provider.profile.emptyTitle": "Nothing bought for this contact yet",
+  "provider.profile.emptyBody":
+    "A lookup asks {provider} about this contact, for whichever details this connection is set to buy. It spends {provider} credits, and what comes back sits here beside the record rather than overwriting anything a colleague typed.",
   "provider.profile.emails": "Email addresses",
   "provider.profile.emailType.provider": "{type}, as the provider labelled it",
   "provider.profile.emailType.requested":

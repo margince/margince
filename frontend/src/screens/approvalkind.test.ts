@@ -23,7 +23,7 @@ describe("what a staged proposal is called", () => {
   // i18n.test.ts only flags values EQUAL to English — an identifier-shaped
   // translation differs from English, so nothing else in the suite sees it.
   // WHICH kinds must be here is the server's to say, and
-  // backend/frontendapprovalkinds_test.go holds that both ways against the
+  // backend/gates/frontendapprovalkinds_test.go holds that both ways against the
   // grant maps themselves. What this covers is the half a Go test cannot
   // read: that every label actually says something, in every locale we ship.
   it("gives every labelled kind real words, in every shipped locale", () => {

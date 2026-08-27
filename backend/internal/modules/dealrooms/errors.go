@@ -6,7 +6,7 @@ package dealrooms
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // stateError refuses a lifecycle move the room's current state does not admit,

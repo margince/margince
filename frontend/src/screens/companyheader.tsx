@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Fragment, type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -10,10 +10,11 @@ import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { InlineChoice } from "../design-system/inlinechoice";
 import { ProvenanceTag } from "../design-system/trust";
 import { formatDateAbbrev, formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { ArchiveAction } from "./archive";
 import { provenanceOf, throwProblem, useSorMode, useViewerId } from "./common";
 import { DecisionsChip } from "./companyapprovals";
+import { RELATIONSHIP_TYPE_LABELS, relationshipBadges } from "./companylookups";
 import { ComposeModal } from "./compose";
 import { joinMultiselectValue } from "./create";
 import { useObjectCustomFields } from "./customfields.form";
@@ -32,7 +33,6 @@ import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
   mapOrgUpdate,
-  RELATIONSHIP_TYPE_LABELS,
   searchOrgTargets,
 } from "./organizations";
 import { ShareAction } from "./share";
@@ -203,23 +203,45 @@ async function patchCompanyField(
 // than keeping a second copy: one inline organization edit and another that
 // silently invalidates a different set of caches is the drift this file
 // already exists to prevent within its own component.
+// Through useMutation rather than a bare async call, so the write is a
+// MUTATION as far as the query client is concerned. The policy that refreshes a
+// record's open history after any successful write hangs off the mutation
+// cache, and an inline edit that bypassed it left the history on screen showing
+// the state before the edit.
 export function useCompanyFieldPatch(org: Organization) {
   const queryClient = useQueryClient();
-  return async (body: UpdateOrganizationRequest) => {
-    await patchCompanyField(org, body);
-    await queryClient.invalidateQueries({ queryKey: ["organizations"] });
-    await queryClient.invalidateQueries({
-      queryKey: ["organization360", org.id],
-    });
-    // The header renders from the SINGLE-record query, and its version is the
-    // If-Match the next inline edit sends. Leaving it stale shows the old value
-    // after a successful save and makes the following edit fail on a version
-    // the server has already moved past.
-    await queryClient.invalidateQueries({
-      queryKey: ["organization", org.id],
-    });
-  };
+  const save = useMutation({
+    // The record travels WITH the body, for the reason the invalidation below
+    // exists: `org.version` is the If-Match this write pins and it moves on
+    // every successful write. Read out of the closure, two edits from one
+    // render would both send the version that predates the first, and the
+    // second would fail a conflict check it should pass.
+    mutationFn: ({ org: target, body }: CompanyFieldPress) =>
+      patchCompanyField(target, body),
+    onSuccess: async (_result, { org: target }) => {
+      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["organization360", target.id],
+      });
+      // The header renders from the SINGLE-record query, and its version is the
+      // If-Match the next inline edit sends. Leaving it stale shows the old value
+      // after a successful save and makes the following edit fail on a version
+      // the server has already moved past.
+      await queryClient.invalidateQueries({
+        queryKey: ["organization", target.id],
+      });
+    },
+  });
+  return (body: UpdateOrganizationRequest) =>
+    save.mutateAsync({ org, body }).then(() => undefined);
 }
+
+// What one inline account edit carries: the record it is written against and
+// the field values, so neither is read out of the closure at click time.
+type CompanyFieldPress = Readonly<{
+  org: Organization;
+  body: UpdateOrganizationRequest;
+}>;
 
 // companyReadOnlyReason says why this record cannot be edited, when there is
 // something worth saying. Archived first: it is the one a reader can act on
@@ -592,8 +614,13 @@ export function CompanyActionBadges({
           and it now has a separate control — the editable lifecycle in the
           pulse line — so it is not repeated here as a read-only badge. The two
           were one field once, which is how an account whose contract had ended
-          still read as "Prospect". */}
-      {(org.relationship_types ?? []).map((relType) => (
+          still read as "Prospect".
+
+          The two vocabularies overlap, though, and relationshipBadges is what
+          keeps the header from printing one word twice: a customer account
+          carries `customer` in both fields, and "Customer · Customer" reads as
+          a second reading confirming the first. */}
+      {relationshipBadges(org, t).map((relType) => (
         <Badge key={relType} tone="accent">
           {t(RELATIONSHIP_TYPE_LABELS[relType])}
         </Badge>
@@ -802,6 +829,7 @@ export function CompanyIdentityLine({
   // never reads as an account nobody has ever written to.
   loading?: boolean;
 }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const viewerId = useViewerId();
@@ -890,12 +918,9 @@ export function CompanyIdentityLine({
             <span>
               {t("co.pulse.strongestLead")}{" "}
               <EntityRef kind="person" id={wayIn.contributor_person_id} />{" "}
-              {t(
-                wayIn.contact_count === 1
-                  ? "co.pulse.strengthTail.one"
-                  : "co.pulse.strengthTail.other",
-                { count: formatNumber(wayIn.contact_count, locale) },
-              )}
+              {plural("co.pulse.strengthTail", wayIn.contact_count, {
+                count: formatNumber(wayIn.contact_count, locale),
+              })}
             </span>
           </>
         )}

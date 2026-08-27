@@ -78,7 +78,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
 
 // nameGrammar is the one spelling of the unit-name rule; the grammar in

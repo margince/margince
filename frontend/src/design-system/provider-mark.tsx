@@ -47,6 +47,9 @@ export function providerBrandName(providerKey: string): string | null {
   if (providerKey === "microsoft") {
     return "Microsoft";
   }
+  if (providerKey === "surfe") {
+    return "Surfe";
+  }
   return null;
 }
 

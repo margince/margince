@@ -20,8 +20,15 @@ import type { MarginceCoreState } from "../design-system/margince-core";
 import { MarginceWorkbench } from "../design-system/margince-workbench";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, type Translator, useLocale, useT } from "../i18n";
-import type { MessageKey } from "../i18n/en";
+import {
+  type Locale,
+  type PluralBase,
+  type PluralTranslator,
+  type Translator,
+  useLocale,
+  usePlural,
+  useT,
+} from "../i18n";
 import { coldFieldLabel, problemMessageOf, throwProblem } from "./common";
 import { onboardingLocale } from "./onboarding-conversation/onboarding-locale";
 
@@ -176,23 +183,19 @@ export function configuredModelLabel(
 // Which locale key names each running mode, singular and plural: the map
 // itself is the honesty check — a mode the backend adds without a key here
 // fails to compile rather than silently rendering nothing.
-const SUMMARY_KEYS: Readonly<
-  Record<
-    AiProfile["inference_mode"],
-    Readonly<{ one: MessageKey; other: MessageKey }>
-  >
+// The plural BASE per inference mode, which is all a caller needs: the count
+// picks the form through the locale's own rule. `none` is null rather than a
+// base that ignores its count — "No model configured yet" has no plural, and a
+// pair of identical entries claiming otherwise is what invites the next author
+// to add a `_few` nobody will ever see.
+const SUMMARY_BASES: Readonly<
+  Record<AiProfile["inference_mode"], PluralBase | null>
 > = {
-  cloud: { one: "ob.ai.summary.cloud.one", other: "ob.ai.summary.cloud.other" },
-  local: { one: "ob.ai.summary.local.one", other: "ob.ai.summary.local.other" },
-  hybrid: {
-    one: "ob.ai.summary.hybrid.one",
-    other: "ob.ai.summary.hybrid.other",
-  },
-  development: {
-    one: "ob.ai.summary.development.one",
-    other: "ob.ai.summary.development.other",
-  },
-  none: { one: "ob.ai.summary.none", other: "ob.ai.summary.none" },
+  cloud: "ob.ai.summary.cloud",
+  local: "ob.ai.summary.local",
+  hybrid: "ob.ai.summary.hybrid",
+  development: "ob.ai.summary.development",
+  none: null,
 };
 
 function distinctModelIds(models: readonly AssistantConfiguredModel[]) {
@@ -212,24 +215,24 @@ export function configuredModelSummary(
   profile: AiProfile | undefined,
   unavailable: string,
   t: Translator,
+  plural: PluralTranslator,
   locale: Locale,
 ): string {
   if (!profile) return unavailable;
   const models = distinctModelIds(profile.configured_models ?? []);
-  if (models.length > 0 && profile.inference_mode) {
-    const keys = SUMMARY_KEYS[profile.inference_mode];
-    return t(models.length === 1 ? keys.one : keys.other, {
+  const base = profile.inference_mode
+    ? SUMMARY_BASES[profile.inference_mode]
+    : null;
+  if (models.length > 0 && base) {
+    return plural(base, models.length, {
       count: formatNumber(models.length, locale),
     });
   }
   const providerCount = profile.providers?.length ?? 0;
   if (providerCount > 0) {
-    return t(
-      providerCount === 1
-        ? "ob.ai.summaryProviders.one"
-        : "ob.ai.summaryProviders.other",
-      { count: formatNumber(providerCount, locale) },
-    );
+    return plural("ob.ai.summaryProviders", providerCount, {
+      count: formatNumber(providerCount, locale),
+    });
   }
   return t("ob.ai.summary.none");
 }
@@ -701,6 +704,7 @@ function ReadActivity({
   refreshing,
 }: Readonly<{ read: CompanySiteRead; refreshing: boolean }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const latestPage = latestFetchedPage(read);
   const legalCount = read.legal_entities?.length ?? 0;
@@ -724,7 +728,7 @@ function ReadActivity({
         </span>
         <span>
           <b>{formatNumber(findingCount, locale)}</b>{" "}
-          {t(findingCount === 1 ? "ob.ai.finding" : "ob.ai.findings")}
+          {plural("ob.ai.finding", findingCount)}
         </span>
       </div>
     </div>

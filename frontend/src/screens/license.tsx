@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { TriangleAlert } from "lucide-react";
+import { Info, TriangleAlert } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { StatCard } from "../design-system/atoms";
@@ -10,6 +10,7 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { StatStrip } from "../design-system/statstrip";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { QueryGate, throwProblem } from "./common";
 import { LicenseHolderCard } from "./licenseholder";
 
@@ -18,11 +19,13 @@ import { LicenseHolderCard } from "./licenseholder";
 // from the deployment file at boot, so an operator changes their entitlement by
 // changing the deployment, not by typing into a form.
 //
-// Three states the server distinguishes, and the reading has to as well:
+// Four states the server distinguishes, and the reading has to as well:
 //
 //   valid, with a seat count   the strip reads used beside granted, then a meter
 //   valid, with no seat count  a license that caps nothing: a count, no meter
 //   absent                     no license configured; nothing to measure against
+//   rejected                   asked and told no — a fault with a repair behind
+//                              it, which `absent` is not
 //
 // The middle case is why `seats_granted` is nullable rather than zero, and why
 // the granted slot says "no limit" instead of a number: a meter filled against a
@@ -85,6 +88,26 @@ export function LicenseCard() {
   );
 }
 
+// The one-line standing, which is four readings rather than three: a licence
+// that was REFUSED is not one that was never configured, and both used to print
+// "No license configured". The server keeps them apart (`state: rejected` vs
+// `absent`) and so does the chrome's own severity rule, so a card that merged
+// them told an operator with a repair to make that there was nothing to repair.
+function stateKey(
+  entitlement: LicenseEntitlement,
+  capped: boolean,
+): MessageKey {
+  if (capped) {
+    return "license.state.licensed";
+  }
+  if (entitlement.state === "valid") {
+    return "license.state.uncapped";
+  }
+  return entitlement.state === "rejected"
+    ? "license.state.refused"
+    : "license.state.unlicensed";
+}
+
 // Exported for its story: the states worth looking at are states of the READING,
 // and a story that had to stub a query to reach them would be testing the fetch.
 export function LicenseReading({
@@ -111,13 +134,33 @@ export function LicenseReading({
         {/* The state is said in words rather than as a coloured pill alone: "no
             license" and "licensed" are different facts about the installation,
             and a reader should not have to learn a colour to tell them apart. */}
-        <p className="settings-panel-sub">
-          {capped
-            ? t("license.state.licensed")
-            : entitlement.state === "valid"
-              ? t("license.state.uncapped")
-              : t("license.state.unlicensed")}
-        </p>
+        <p className="settings-panel-sub">{t(stateKey(entitlement, capped))}</p>
+        {/* This card is the ONE place the installation's licence gap is stated.
+            It used to be the orb as well: `license === "none"` mapped to amber,
+            so every demo and every fresh dev stack wore a permanent warning and
+            amber stopped meaning "a fault that can wait". Taking that away left
+            the fact stated nowhere an operator would meet it — a sub-line above
+            a seat meter that reads fine is not where somebody looks for it.
+
+            Not `live="alert"`: `over_limit` above owns the only interruption on
+            this screen, and neither of these is news that arrived while the
+            reader was here. The TONES differ because the two facts do — a
+            licence that was refused is a live fault with a repair behind it, and
+            one that was never configured is a standing condition. */}
+        {entitlement.state === "rejected" && (
+          <Callout
+            tone="warn"
+            icon={TriangleAlert}
+            title={t("license.refused.title")}
+          >
+            {t("license.refused.body")}
+          </Callout>
+        )}
+        {entitlement.state === "absent" && (
+          <Callout tone="info" icon={Info} title={t("license.absent.title")}>
+            {t("license.absent.body")}
+          </Callout>
+        )}
         {entitlement.over_limit && (
           // `alert` interrupts, which is right here and nowhere else on this
           // screen: the installation is past what it is entitled to, and that is a

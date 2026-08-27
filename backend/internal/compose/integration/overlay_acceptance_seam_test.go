@@ -24,8 +24,8 @@ import (
 
 // backendModulePath is this module's own import path — spelled once so
 // every import-path comparison below reads the same literal arch_test.go
-// (backend/arch_test.go) already pins at the repo root.
-const backendModulePath = "github.com/gradionhq/margince/backend"
+// (backend/gates/arch_test.go) already pins at the repo root.
+const backendModulePath = "github.com/margince/margince/backend"
 
 // backendModuleRoot resolves the backend Go module's root directory from
 // this test file's own location: `go test` always chdirs into the
@@ -50,11 +50,11 @@ func backendModuleRoot(t *testing.T) string {
 }
 
 // acceptancePackagesUnder/acceptanceDirectImports are the same
-// tree-derived, direct-import-only technique backend/arch_test.go's own
-// packagesUnder/projectImports use (that file lives in package
-// backendarch at the module root, which holds no importable production
-// code, so this suite — living in package integration — carries its own
-// copy rather than reach across an import boundary that does not exist).
+// tree-derived, direct-import-only technique backend/gates/arch_test.go's own
+// packagesUnder/projectImports use (that file lives in package gates,
+// which holds no importable production code, so this suite — living in
+// package integration — carries its own copy rather than reach across an
+// import boundary that does not exist).
 func acceptancePackagesUnder(t *testing.T, root string) []string {
 	t.Helper()
 	seen := map[string]bool{}

@@ -29,9 +29,9 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // LogActivityCommand is one logged activity, whichever door asked for it. The
@@ -375,4 +375,60 @@ func verdictWord(approve bool) string {
 		return "Approve"
 	}
 	return "Reject"
+}
+
+// AnnotateBriefCommand is the overnight pass's findings, staged.
+//
+// It carries the counts rather than the prose. What an approval of this would
+// bind to is "the findings this pass wrote onto your own brief for today" — the
+// run is the acting principal's own and is resolved server-side, so there is no
+// id to pin and nothing a decider could redirect. The prose itself would only
+// make a staging summary that quotes a model back at a human as though the
+// quote were the decision.
+type AnnotateBriefCommand struct {
+	Items     int
+	Narrative bool
+}
+
+// NewAnnotateBriefCall binds one annotation pass to the resolver that answers
+// for it. It holds no dependency: the command names no row, because the run it
+// writes to is the caller's own and the server resolves it.
+//
+//nolint:ireturn // the erased command-and-resolver pair is this constructor's whole product, as every New*Call beside it
+func NewAnnotateBriefCall(cmd AnnotateBriefCommand) GovernedCall {
+	return bind[AnnotateBriefCommand](annotateBriefResolver{}, cmd)
+}
+
+type annotateBriefResolver struct{}
+
+// Subject names the brief as a type with no id, the same shape every create
+// stages: the run is resolved from the acting principal and today's local day,
+// so there is no identifier for a decider to see or to change.
+func (annotateBriefResolver) Subject(_ context.Context, cmd AnnotateBriefCommand) (StageInfo, error) {
+	return StageInfo{
+		TargetType: "brief",
+		Summary:    describeAnnotation(cmd),
+	}, nil
+}
+
+// Guards stands down. Everything worth refusing about an annotation is refused
+// by the store — whose run, which items, which citations — and restating any of
+// it here would be a second answer to a question already answered where the row
+// is.
+func (annotateBriefResolver) Guards(_ context.Context, _ AnnotateBriefCommand) error {
+	return nil
+}
+
+// describeAnnotation says what the pass wrote, in counts.
+func describeAnnotation(cmd AnnotateBriefCommand) string {
+	switch {
+	case cmd.Items == 0 && !cmd.Narrative:
+		return "Record that tonight's pass ran and found nothing to say"
+	case cmd.Items == 0:
+		return "Write a summary of the night onto your morning brief"
+	case cmd.Narrative:
+		return fmt.Sprintf("Write a summary of the night and %d finding(s) onto your morning brief", cmd.Items)
+	default:
+		return fmt.Sprintf("Write %d finding(s) onto your morning brief", cmd.Items)
+	}
 }

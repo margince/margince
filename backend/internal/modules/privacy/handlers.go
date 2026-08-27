@@ -9,12 +9,12 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Handlers is privacy's transport surface: the audit-log governance
@@ -31,6 +31,13 @@ type Handlers struct {
 	// injected seam: release IS an erasure, and a second spelling of one is
 	// how the two paths would come to destroy different things.
 	eraser *Eraser
+	// restorer puts one audited change back. It is nil until compose wires the
+	// seam, and the route refuses rather than half-serving without it.
+	restorer ChangeRestorer
+	// undoability says whether each history entry could be put back. Nil until
+	// compose wires it, and a page then reads as unevaluated rather than as
+	// undoable.
+	undoability UndoabilityReader
 }
 
 // NewHandlers wires the transport over the installation-bound pool and the

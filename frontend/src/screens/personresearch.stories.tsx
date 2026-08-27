@@ -60,7 +60,7 @@ const populated: View = {
   as_of: "2026-08-13T09:00:00Z",
   person,
   sections_omitted: [],
-  provider_profile: providerCompletedProfile,
+  provider_profiles: [providerCompletedProfile],
   profile_fields: profileFields,
 };
 
@@ -86,6 +86,44 @@ export const Empty: Story = {
   render: () => (
     <StoryProviders>
       <PersonResearchTab view={empty} />
+    </StoryProviders>
+  ),
+};
+
+const neverBought: View = {
+  as_of: "2026-08-13T09:00:00Z",
+  person,
+  sections_omitted: [],
+  provider_profiles: [
+    {
+      ...providerCompletedProfile,
+      state: "never_run",
+      provider: "surfe",
+      retrieved_at: null,
+      emails: [],
+      mobile_phones: [],
+      linkedin_url: null,
+      current_employment: undefined,
+      job_history: [],
+      location: null,
+      departments: [],
+      seniorities: [],
+      latest_run: undefined,
+      contributing_runs: undefined,
+      categories_not_requested: [],
+    },
+  ],
+  profile_fields: profileFields,
+};
+
+/** A provider is connected and nobody has bought anything for this contact yet.
+ *  This is the tab a rep lands on when they want data and have none: the plate
+ *  naming the lookup carries the whole invitation, above evidence the app's own
+ *  capture already found for free. */
+export const NeverBought: Story = {
+  render: () => (
+    <StoryProviders>
+      <PersonResearchTab view={neverBought} />
     </StoryProviders>
   ),
 };

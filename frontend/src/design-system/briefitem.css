@@ -315,3 +315,40 @@
     transform: none;
   }
 }
+
+/* The overnight agent's finding, above the meters. It sits between the head and
+   the factor vector, so it takes the same interval the vector already pays
+   below it rather than adding a second one. */
+.brief-item-finding {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  margin-bottom: var(--space-3);
+}
+
+/* The prose reads as body text, not as a caption: it is the answer the card
+   exists to give, and shrinking it would rank it below the numbers it explains. */
+.brief-item-finding > p {
+  margin: 0;
+  color: var(--textContent);
+  line-height: 1.5;
+}
+
+/* Why a dismissed deal is back, above the finding. It reads as a caption
+   because it is context for the answer rather than the answer — and quieter
+   than the finding, which is the sentence the reader came for. */
+.brief-item-lineage {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-2);
+  color: var(--textMeta);
+}
+
+.brief-item-lineage > svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  align-self: center;
+}

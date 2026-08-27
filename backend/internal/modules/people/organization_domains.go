@@ -8,16 +8,15 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // DuplicateDomainError carries the org already owning a domain: a domain
@@ -67,7 +66,7 @@ func parseOrgDomains(domains []OrgDomainInput) error {
 // second copy of an existence-hiding rule is where a leak appears, because
 // nothing fails when one copy stops asking.
 //
-// Held by: TestEveryDomainClaimAnswersThroughOneProbe (backend/domainclaimprobe_test.go)
+// Held by: TestEveryDomainClaimAnswersThroughOneProbe (backend/gates/domainclaimprobe_test.go)
 // — it censuses every statement in the tree that reads organization_domain to
 // decide whether a domain is taken, and fails on a second one.
 // It returns the typed error itself rather than a (value, error) pair: `nil,

@@ -173,7 +173,7 @@ misleads in the other direction. Each of these is a property some gate would fai
   registry sits deliberately outside the generated tree so it cannot perturb the gate. This survived
   thirteen tasks of accretion **and** three new generated artifacts.
 - **Core is unreachable except through published interfaces.** The compiler's, not a convention: a unit
-  is its own Go module (`module github.com/gradionhq/margince/extensions/notes`) outside the backend
+  is its own Go module (`module github.com/margince/margince/extensions/notes`) outside the backend
   module, so `internal/**` cannot be imported. This is the one wall in the tier that holds against
   hostile code.
 
@@ -915,7 +915,7 @@ refusal and `refuseNonRootGoPackages`' walk exemption, so each lift was a one-li
 
 | Gate | Why it exists |
 |---|---|
-| `.gitignore` fitness test (`backend/extensionsignored_test.go`) | **Every gate was green while `extensions/notes/` was invisible to git.** `.gitignore` carries a per-unit un-ignore list; composition, migrate, the catalog gate and `check-q` all read the working tree. The how-to already warned about this in prose and it was still missed — which is exactly why it is now a test, using `--no-index` (without it a tracked file is never reported) |
+| `.gitignore` fitness test (`backend/gates/extensionsignored_test.go`) | **Every gate was green while `extensions/notes/` was invisible to git.** `.gitignore` carries a per-unit un-ignore list; composition, migrate, the catalog gate and `check-q` all read the working tree. The how-to already warned about this in prose and it was still missed — which is exactly why it is now a test, using `--no-index` (without it a tracked file is never reported) |
 | `check-ext-migrations` in the CI **`integration`** job | Not `deterministic-gates`. That job is hermetic and container-free; arming it would make the repo's fastest merge gate start a compose stack on every backend PR from the first migration-bearing unit onward. Gate locality costs once; the compose start costs forever. The gate also migrates its **own** throwaway database rather than assuming a clean clone, since a composed template now holds `ext.ext_<name>_*` |
 | core-lane migration-role fitness test | `make check` does not run the integration lane, so **a core migration needing a privilege the restricted role lacks passes every gate a task author runs.** The `ext` schema migration was the first that could hit it, and did — it broke four migration tests on `permission denied for database`, because `CREATE SCHEMA` needs database-level `CREATE`. Now a class guard, running the full lane as a restricted non-owner role with two vacuity guards |
 | `go vet -tags integration ./...` in the `vet` target | **`make check` never compiled the integration lane** — build, vet, lint and test all ran untagged, while `internal/compose` alone holds hundreds of `//go:build integration` files. Any new untagged test in such a package could collide with a tagged helper and the whole merge gate stayed green. DB-free type-check of the tagged lane |

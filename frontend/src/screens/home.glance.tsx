@@ -3,9 +3,10 @@
 
 import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
-import { formatNumber, hourInZone } from "../format/format";
+import { type CappedCount, cappedCountLabel } from "../format/cappedcount";
+import { hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 // The first thing a reader sees each morning: who they are, what hour it is for
@@ -89,7 +90,8 @@ export type GlanceFacts = Readonly<{
   brief: GlanceBrief | null;
   overnight: GlanceOvernight | null;
   /** Open deals that have gone quiet. */
-  stalled: number | null;
+  /** Open deals gone quiet, as a floor: Home reads one page of deals. */
+  stalled: CappedCount | null;
 }>;
 
 export type GlanceProps = GlanceFacts &
@@ -115,9 +117,17 @@ export type GlanceProps = GlanceFacts &
  */
 function CountMark({
   count,
+  more,
   onClick,
   label,
-}: Readonly<{ count: number; onClick?: () => void; label?: string }>) {
+}: Readonly<{
+  count: number;
+  /** Whether the figure is a floor rather than a total — the reading came off
+   *  one page and there was another behind it. */
+  more?: boolean;
+  onClick?: () => void;
+  label?: string;
+}>) {
   const { locale } = useLocale();
   // A figure with nowhere to go is a figure, not a control. The overnight
   // capture count is the case: Home has no destination that lists the messages
@@ -127,7 +137,7 @@ function CountMark({
   if (!onClick) {
     return (
       <span className="glance-count glance-count-flat t-mono">
-        {formatNumber(count, locale)}
+        {cappedCountLabel({ seen: count, more: more ?? false }, locale)}
       </span>
     );
   }
@@ -137,7 +147,7 @@ function CountMark({
   // at two places would announce the same name.
   return (
     <button type="button" className="glance-count t-mono" onClick={onClick}>
-      {formatNumber(count, locale)}
+      {cappedCountLabel({ seen: count, more: more ?? false }, locale)}
       {label ? <span className="sr-only"> {label}</span> : null}
       <ArrowRight size={13} aria-hidden="true" />
     </button>
@@ -147,12 +157,15 @@ function CountMark({
 /** One line of the briefing: a numeral that goes somewhere, then the clause. */
 function GlanceLine({
   count,
+  more,
   onClick,
   goLabel,
   children,
   testId,
 }: Readonly<{
   count: number;
+  /** Whether the figure is a floor — forwarded to `CountMark`. */
+  more?: boolean;
   /** Omitted where the figure has no destination — see `CountMark`. */
   onClick?: () => void;
   goLabel?: string;
@@ -161,7 +174,7 @@ function GlanceLine({
 }>) {
   return (
     <p className="glance-line" data-testid={testId}>
-      <CountMark count={count} onClick={onClick} label={goLabel} />
+      <CountMark count={count} more={more} onClick={onClick} label={goLabel} />
       <span className="glance-clause">{children}</span>
     </p>
   );
@@ -179,6 +192,7 @@ export function HomeGlance({
   onGoToDuplicates,
   onGoToWatch,
 }: GlanceProps) {
+  const plural = usePlural();
   const t = useT();
   const hour = hourInZone(now, viewerZone());
   // No name yet is not a reason to greet nobody: the hour is known either way,
@@ -204,11 +218,7 @@ export function HomeGlance({
             onClick={onGoToDecisions}
             goLabel={t("home.glance.goDecisions")}
           >
-            {t(
-              decisions.pending === 1
-                ? "home.glance.decisions.one"
-                : "home.glance.decisions.other",
-            )}
+            {plural("home.glance.decisions", decisions.pending)}
           </GlanceLine>
         )}
         {decisions !== null && decisions.expiringToday > 0 && (
@@ -218,11 +228,7 @@ export function HomeGlance({
             onClick={onGoToDecisions}
             goLabel={t("home.glance.goDecisions")}
           >
-            {t(
-              decisions.expiringToday === 1
-                ? "home.glance.expiring.one"
-                : "home.glance.expiring.other",
-            )}
+            {plural("home.glance.expiring", decisions.expiringToday)}
           </GlanceLine>
         )}
         {brief !== null && brief.ranked > 0 && (
@@ -232,11 +238,7 @@ export function HomeGlance({
             onClick={onGoToToday}
             goLabel={t("home.glance.goToday")}
           >
-            {t(
-              brief.ranked === 1
-                ? "home.glance.ranked.one"
-                : "home.glance.ranked.other",
-            )}{" "}
+            {plural("home.glance.ranked", brief.ranked)}{" "}
             {/* The leader is named only when both halves are known. A deal
                 named without its figure reads as one nobody priced, and a
                 figure without the name belongs to no deal at all. */}
@@ -252,11 +254,7 @@ export function HomeGlance({
         )}
         {overnight !== null && (
           <GlanceLine testId="glance-captured" count={overnight.captured}>
-            {t(
-              overnight.captured === 1
-                ? "home.glance.captured.one"
-                : "home.glance.captured.other",
-            )}
+            {plural("home.glance.captured", overnight.captured)}
           </GlanceLine>
         )}
         {overnight !== null && overnight.duplicates > 0 && (
@@ -266,25 +264,18 @@ export function HomeGlance({
             onClick={onGoToDuplicates}
             goLabel={t("home.glance.goDuplicates")}
           >
-            {t(
-              overnight.duplicates === 1
-                ? "home.glance.duplicates.one"
-                : "home.glance.duplicates.other",
-            )}
+            {plural("home.glance.duplicates", overnight.duplicates)}
           </GlanceLine>
         )}
-        {stalled !== null && stalled > 0 && (
+        {stalled !== null && stalled.seen > 0 && (
           <GlanceLine
             testId="glance-quiet"
-            count={stalled}
+            count={stalled.seen}
+            more={stalled.more}
             onClick={onGoToWatch}
             goLabel={t("home.glance.goWatch")}
           >
-            {t(
-              stalled === 1
-                ? "home.glance.quiet.one"
-                : "home.glance.quiet.other",
-            )}
+            {plural("home.glance.quiet", stalled.seen)}
           </GlanceLine>
         )}
       </div>

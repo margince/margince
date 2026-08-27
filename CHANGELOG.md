@@ -41,6 +41,19 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **The dev stack's Docker Compose project is named `margince`**, not
+  `margince-poc-v1`. The old name outlived the repository it was named after.
+  A project name namespaces the stack's volumes, so **the first `make db-up`
+  after this change starts on an empty database**: the `margince-poc-v1_*`
+  volumes are orphaned rather than migrated. They are not deleted — their data
+  survives until someone removes them, and a stack brought up with
+  `-p margince-poc-v1` still reads it — but the renamed stack will not pick it
+  up, so re-seed with `make seed-dev`. `margince-dev` was not an option: the
+  frozen poc-era stack left `margince-dev_*` volumes behind, Postgres skips
+  initdb on a non-empty volume, and the owner role would then silently never
+  be created. `MARGINCE_PG_CONTAINER` still overrides the container name that
+  `scripts/migration-baseline.sh` reaches for.
+
 - **The AI routing FILE is gone, format and all.** The binding moved to the
   database earlier; what stayed behind was a file format three DB-less lanes
   still read, and the example yamls that fed them. Those lanes are now TOLD

@@ -54,10 +54,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
-	"github.com/gradionhq/margince/backend/migrations"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/migrations"
 )
 
 // seededDefaults is the matrix identity seeds, as identity itself renders it.
@@ -304,7 +304,7 @@ func assertPreStateIsNotAlreadyTheAnswer(t *testing.T, before, after map[string]
 	t.Fatalf("%s already equals the matrix the replay must reach, so this arm proves nothing: "+
 		"every write below can no-op and the comparison still passes.\n"+
 		"The baseline-era pre-state has caught up with head. Repoint baselineEraCommit — it lives "+
-		"in backend/rbacbaselineerafixture_test.go, which also regenerates this file — at a later "+
+		"in backend/gates/rbacbaselineerafixture_test.go, which also regenerates this file — at a later "+
 		"consolidation floor if one has landed, or delete this arm; do NOT leave it green over "+
 		"a comparison with no distance in it.", baselineEraDefaults)
 }
@@ -828,7 +828,7 @@ func readBaselineEraDefaults(t *testing.T) map[string]json.RawMessage {
 	t.Helper()
 	raw, err := os.ReadFile(baselineEraDefaults)
 	if err != nil {
-		t.Fatalf("reading %s: %v — backend/rbacbaselineerafixture_test.go names the command that "+
+		t.Fatalf("reading %s: %v — backend/gates/rbacbaselineerafixture_test.go names the command that "+
 			"regenerates it from history", baselineEraDefaults, err)
 	}
 	// RawMessage, so the bytes that reach the database are the bytes the unit
@@ -852,7 +852,7 @@ func readBaselineEraDefaults(t *testing.T) map[string]json.RawMessage {
 // readMatrixAsValues decodes a matrix file into plain values, which is what the
 // distance check below compares.
 //
-// A DECLARED MIRROR of decodeMatrix in backend/rbacbaselineerafixture_test.go:
+// A DECLARED MIRROR of decodeMatrix in backend/gates/rbacbaselineerafixture_test.go:
 // the same question is asked in the unit lane, where it costs a second, and
 // again here, where the arm must not trust a file it merely reads. Both use
 // decoded values rather than the raw bytes so indentation is not distance, and

@@ -19,7 +19,7 @@ import (
 	"go/ast"
 	"sort"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // readChannels reads the Channels slice literal.

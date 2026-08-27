@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 )
 
 // The objects a delimited file may carry.

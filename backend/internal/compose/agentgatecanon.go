@@ -20,7 +20,7 @@ import (
 	"net/http"
 	"unicode/utf8"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // idempotencyKeyBinding says whether the caller's Idempotency-Key joins the

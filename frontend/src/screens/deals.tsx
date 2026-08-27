@@ -31,6 +31,7 @@ import {
   DataTable,
   EmptyState,
   Modal,
+  OverflowMenu,
   SegmentedControl,
   TextInput,
 } from "../design-system/atoms";
@@ -52,7 +53,6 @@ import { Select } from "../design-system/select";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { type Toast, ToastRegion, useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
-import { forReader, stable } from "../format/collate";
 import {
   formatDate,
   formatDuration,
@@ -66,6 +66,7 @@ import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { dealRecordKeys, dealWinKeys } from "./activitykeys";
 import { approvalKindLabel } from "./approvalkind";
+import { usePendingApprovals } from "./approvals.queries";
 import { ArchiveAction } from "./archive";
 import {
   LoadMoreButton,
@@ -108,19 +109,21 @@ import { DealStatusCardPanel, useDealStatusCard } from "./dealstatus";
 import { EditAction } from "./edit";
 import { EntityRef, useEntityName } from "./entityref";
 import { RecordHistoryTab } from "./history";
-import { usePendingApprovals } from "./inbox.queries";
 import {
   LIST_PAGE_SIZES,
   type ListQuery,
   type ListState,
   ListTable,
+  listPageOf,
   listQueryFromParams,
   mergeScreenDials,
   paramsFromListQuery,
+  withListPage,
   withoutScreenDials,
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import type { Project } from "./projects.form";
+import { invalidateRecord } from "./recordwritekeys";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
@@ -409,7 +412,7 @@ function OverlayDealsTable({
   }
   return (
     <>
-      <DealTable deals={deals} stages={[]} sortable={false} />
+      <DealTable deals={deals} />
       <LoadMoreButton query={query} />
     </>
   );
@@ -1721,7 +1724,12 @@ export function DealsScreen({
         : update;
     setParams(
       mergeScreenDials(
-        paramsFromListQuery(next, opening),
+        // The rendered page is carried across rather than dropped, exactly as
+        // useListQuery carries it: the codec does not compute it, so a write
+        // that rebuilt the address from the query alone would take the page out
+        // of an address a reader had been sent to. A write that really is a
+        // narrowing still resets it — the table's own reset fires next.
+        withListPage(paramsFromListQuery(next, opening), listPageOf(live)),
         live,
         DEAL_SCREEN_DIALS,
       ),
@@ -2119,114 +2127,102 @@ export function DealsScreen({
       </>
     ) : undefined;
 
+  // Overlay mode draws the flat, keyset-paginated mirror table — no pipeline
+  // board and no stage columns, because a stage-keyed board cannot place a deal
+  // whose pipeline and stage are null. It goes in the surface's own body slot,
+  // the way the board does: it had been rendered beside the surface instead,
+  // with a hand-rolled archived checkbox borrowing the list stylesheet's
+  // private class, and so lost the count, the note saying why the dials are
+  // missing, and every other piece of chrome a list on this product has.
+  const overlayBody = overlay ? (
+    <OverlayDealsTable includeArchived={query.includeArchived} />
+  ) : undefined;
+
   return (
     <div className="wrap">
-      {overlay ? (
-        // Overlay mode: the flat, keyset-paginated mirror table (its own
-        // infinite query) — no pipeline board, no stage columns. The mirror
-        // holds no archived rows, so this toggle is a harmless no-op there —
-        // kept anyway so overlay mode loses no control it had.
-        <>
-          <label className="lt-toggle">
-            <input
-              type="checkbox"
-              checked={query.includeArchived}
-              onChange={(event) =>
-                setQuery((q) => ({
-                  ...q,
-                  includeArchived: event.target.checked,
-                }))
-              }
-            />
-            {t("list.showArchived")}
-          </label>
-          <OverlayDealsTable includeArchived={query.includeArchived} />
-        </>
-      ) : (
-        <ListTable
-          state={dealsListState}
-          unit="deals.unit"
-          columns={dealColumns(t, locale, recordZone, stageName)}
-          rowKey={(deal) => deal.id}
-          rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
-          searchable={false}
-          action={createAction}
-          tools={view === "board" ? dealTools : tableTools}
-          body={boardBody}
-          bodyOwnsPaging={view === "board"}
-          // The pipeline picker is screen state, not a filter, so switching it
-          // changes every row without touching `filters`. Naming it here is
-          // what puts the reader back on page 1.
-          scopeKey={effectivePipeline?.id ?? ""}
-          dataChips={dealChips}
-          dataViews={savedViews}
-          selection={rowSelection}
-          chips={[
-            {
-              key: "stalled",
-              label: "deals.filterStalled",
-              allLabel: "deals.filterStalledAll",
-              options: [{ value: "true", label: "deals.filterStalled" }],
-            },
-            // Offered only once the viewer's own id is known. An option whose
-            // value is still "" reads as "clear this filter" to the table, so
-            // picking "Only mine" mid-load would quietly narrow nothing.
-            ...(meQuery.data
-              ? [
-                  {
-                    key: "owner_id",
-                    label: "deals.filterOwnerMe" as const,
-                    allLabel: "deals.filterOwnerAll" as const,
-                    options: [
-                      {
-                        value: meQuery.data.user.id,
-                        label: "deals.filterOwnerMe" as const,
-                      },
-                    ],
-                  },
-                ]
-              : []),
-            {
-              key: "partner_sourced",
-              label: "deals.filterPartnerSourced",
-              allLabel: "deals.filterPartnerAll",
-              options: [{ value: "true", label: "deals.filterPartnerSourced" }],
-            },
-            // Which partner, not just whether there is one. Absent entirely
-            // when the installation has made no company a partner: a picker
-            // with nothing in it asks a question that has no answers, the same
-            // rule the deal form's own partner fields follow.
-            //
-            // The options come from usePartnerOptions, so a partner whose
-            // company this reader cannot open is not offered — picking it
-            // would name a company the screen could not then show them.
-            // Present whenever there are partners to pick OR one is already
-            // applied. A saved view can restore a partner_org_id after the
-            // programme was wound down or while the options are still in
-            // flight, and hiding the chip then would leave the list narrowed
-            // by a filter with no dial to see or clear it.
-            ...(partnerOptions.length > 0 || query.filters.partner_org_id
-              ? [
-                  {
-                    key: "partner_org_id" as const,
-                    label: "deals.filterPartner" as const,
-                    allLabel: "deals.filterPartnerAnyOne" as const,
-                    // `text`, not `label`: a partner's name is the server's
-                    // data, not this screen's vocabulary, and FilterOption's
-                    // union exists for exactly that. Every other chip here
-                    // names a message key because its options are a fixed set
-                    // somebody wrote; a company name has nothing to translate.
-                    options: partnerOptions.map((option) => ({
-                      value: option.value,
-                      text: option.label,
-                    })),
-                  },
-                ]
-              : []),
-          ]}
-          views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
-        />
-      )}
+      <ListTable
+        state={dealsListState}
+        unit="deals.unit"
+        columns={dealColumns(t, locale, recordZone, stageName)}
+        rowKey={(deal) => deal.id}
+        rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
+        searchable={false}
+        action={createAction}
+        tools={view === "board" ? dealTools : tableTools}
+        body={overlayBody ?? boardBody}
+        bodyOwnsPaging={overlay || view === "board"}
+        // The pipeline picker is screen state, not a filter, so switching it
+        // changes every row without touching `filters`. Naming it here is
+        // what puts the reader back on page 1.
+        scopeKey={effectivePipeline?.id ?? ""}
+        dataChips={dealChips}
+        dataViews={savedViews}
+        selection={rowSelection}
+        chips={[
+          {
+            key: "stalled",
+            label: "deals.filterStalled",
+            allLabel: "deals.filterStalledAll",
+            options: [{ value: "true", label: "deals.filterStalled" }],
+          },
+          // Offered only once the viewer's own id is known. An option whose
+          // value is still "" reads as "clear this filter" to the table, so
+          // picking "Only mine" mid-load would quietly narrow nothing.
+          ...(meQuery.data
+            ? [
+                {
+                  key: "owner_id",
+                  label: "deals.filterOwnerMe" as const,
+                  allLabel: "deals.filterOwnerAll" as const,
+                  options: [
+                    {
+                      value: meQuery.data.user.id,
+                      label: "deals.filterOwnerMe" as const,
+                    },
+                  ],
+                },
+              ]
+            : []),
+          {
+            key: "partner_sourced",
+            label: "deals.filterPartnerSourced",
+            allLabel: "deals.filterPartnerAll",
+            options: [{ value: "true", label: "deals.filterPartnerSourced" }],
+          },
+          // Which partner, not just whether there is one. Absent entirely
+          // when the installation has made no company a partner: a picker
+          // with nothing in it asks a question that has no answers, the same
+          // rule the deal form's own partner fields follow.
+          //
+          // The options come from usePartnerOptions, so a partner whose
+          // company this reader cannot open is not offered — picking it
+          // would name a company the screen could not then show them.
+          // Present whenever there are partners to pick OR one is already
+          // applied. A saved view can restore a partner_org_id after the
+          // programme was wound down or while the options are still in
+          // flight, and hiding the chip then would leave the list narrowed
+          // by a filter with no dial to see or clear it.
+          ...(partnerOptions.length > 0 || query.filters.partner_org_id
+            ? [
+                {
+                  key: "partner_org_id" as const,
+                  label: "deals.filterPartner" as const,
+                  allLabel: "deals.filterPartnerAnyOne" as const,
+                  // `text`, not `label`: a partner's name is the server's
+                  // data, not this screen's vocabulary, and FilterOption's
+                  // union exists for exactly that. Every other chip here
+                  // names a message key because its options are a fixed set
+                  // somebody wrote; a company name has nothing to translate.
+                  options: partnerOptions.map((option) => ({
+                    value: option.value,
+                    text: option.label,
+                  })),
+                },
+              ]
+            : []),
+        ]}
+        views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
+      />
       {advance.isError && (
         <p
           className="t-caption"
@@ -2477,85 +2473,22 @@ function WonReasonFields({
   );
 }
 
-function DealTable({
-  deals,
-  stages,
-  sortable = true,
-}: Readonly<{ deals: Deal[]; stages: Stage[]; sortable?: boolean }>) {
+/**
+ * The flat deal table the overlay mirror is drawn as.
+ *
+ * No sort of its own. It holds the pages walked so far of a cursor keyed on
+ * `external_id`, so ordering that subset would present an order the rest of the
+ * set does not share — and the mirror answers 422 to every sort dial, so there
+ * is no server order to ask for either. This table therefore draws rows in
+ * cursor order and says nothing about sorting at all.
+ */
+function DealTable({ deals }: Readonly<{ deals: Deal[] }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
-  const [sortKey, setSortKey] = useState<"name" | "amount" | "close">("name");
-  const [descending, setDescending] = useState(false);
-  const stageName = useMemo(
-    () => new Map(stages.map((stage) => [stage.id, stage.name])),
-    [stages],
-  );
-
-  const sorted = useMemo(() => {
-    // When the table isn't sortable (the paginated overlay table), skip the
-    // copy+sort entirely — pagination grows this array every load-more, and
-    // the sorted result would only be discarded in favor of cursor order.
-    if (!sortable) {
-      return deals;
-    }
-    const compareDeals = (a: Deal, b: Deal): number => {
-      if (sortKey === "amount") {
-        return (a.amount_minor ?? 0) - (b.amount_minor ?? 0);
-      }
-      if (sortKey === "close") {
-        // ISO dates: `stable` sorts them chronologically and identically for
-        // everyone, which is what a date column is asked for.
-        return stable(a.expected_close_date ?? "", b.expected_close_date ?? "");
-      }
-      // A deal's name, in a column a person reads as an alphabet — theirs.
-      return forReader(a.name, b.name, locale);
-    };
-    const rows = [...deals];
-    rows.sort((a, b) => {
-      const compare = compareDeals(a, b);
-      return descending ? -compare : compare;
-    });
-    return rows;
-  }, [deals, sortKey, descending, sortable, locale]);
-
-  const sortBy = (key: typeof sortKey) => {
-    if (key === sortKey) {
-      setDescending((value) => !value);
-    } else {
-      setSortKey(key);
-      setDescending(false);
-    }
-  };
-
-  // Client-side sort is honest only over the WHOLE set. The paginated
-  // overlay table holds just the pages loaded so far (and the mirror walks
-  // an external_id cursor, not the sort key), so sorting a partial subset
-  // would present a misleading order — the caller passes sortable={false}
-  // there, and `sorted` returns the rows in cursor order untouched.
-  const rows = sorted;
 
   return (
     <div>
-      {sortable && (
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            marginBottom: "var(--space-2)",
-          }}
-        >
-          <Button small onClick={() => sortBy("name")}>
-            {t("people.name")}
-          </Button>
-          <Button small onClick={() => sortBy("amount")}>
-            {t("deals.amount")}
-          </Button>
-          <Button small onClick={() => sortBy("close")}>
-            {t("deals.close")}
-          </Button>
-        </div>
-      )}
       <DataTable
         label={t("nav.deals")}
         columns={[
@@ -2567,10 +2500,13 @@ function DealTable({
           {
             key: "stage",
             header: t("deals.stage"),
-            // stage_id is null for an overlay-mirror deal (OVA-MAP-6) — no
-            // native stage row to name; a native deal always has one.
-            render: (deal: Deal) =>
-              deal.stage_id ? (stageName.get(deal.stage_id) ?? "") : "",
+            // Always empty HERE, and named rather than looked up. This table
+            // draws the overlay mirror and nothing else, and a mirror deal
+            // carries no native pipeline or stage (OVA-MAP-6) — so the column
+            // keeps the shape the native table has while having nothing of its
+            // own to say. A stage map passed in to be read would only ever
+            // answer for a row this table cannot hold.
+            render: () => "",
           },
           {
             key: "amount",
@@ -2593,7 +2529,7 @@ function DealTable({
             ),
           },
         ]}
-        rows={rows}
+        rows={deals}
         rowKey={(deal) => deal.id}
         onRowClick={(deal) => navigate({ screen: "deals", id: deal.id })}
       />
@@ -2641,7 +2577,7 @@ export function FxLine({
 
 // Reopens a won/lost deal back to an open-semantic stage — the same advance
 // mutation shape the board drag uses, with status:"open" forced. Split out
-// of DealBadges for the same readability reason as the other header actions.
+// of DealActions for the same readability reason as the other header actions.
 function ReopenAction({
   dealId,
   dealVersion,
@@ -2762,7 +2698,7 @@ function ReopenAction({
 }
 
 // The edit form's project fields, in the two readings a stored project has.
-// Named rather than inlined so `DealBadges` stays under the complexity ceiling,
+// Named rather than inlined so `DealActions` stays under the complexity ceiling,
 // and so the masked case reads as one decision.
 function editProjectFields(
   t: (key: MessageKey) => string,
@@ -2799,14 +2735,20 @@ function editProjectFields(
   );
 }
 
-// The status badge plus the edit/archive affordances — split out of
-// DealScreen's render so the record-view callback stays readably small. An
-// archived deal is read-only (no edit/archive/advance path exists server-side
-// for a non-live row), so its verbs render REFUSED rather than missing: the
-// page's one sentence about the archive says why, and each of them points at
-// it (STATE-4a). A missing control says nothing about the deal, while a
-// refused one names the reason.
-function DealBadges({
+// This deal's VERBS — split out of DealScreen's render so the record-view
+// callback stays readably small. An archived deal is read-only (no
+// edit/archive/advance path exists server-side for a non-live row), so its
+// verbs render REFUSED rather than missing: the page's one sentence about the
+// archive says why, and each of them points at it (STATE-4a). A missing control
+// says nothing about the deal, while a refused one names the reason.
+//
+// They used to ride the record view's BADGES slot, which is where a record says
+// what it IS rather than what can be done to it — so the deal page passed
+// `actionsInline` with no `actions` to place, and four buttons sat in the row
+// meant for a status and a project chip. Edit leads because it is the verb a
+// reader reaches for; the three whose consequence has to be read before they
+// are pressed go behind the overflow.
+function DealActions({
   deal,
   orgs,
   meId,
@@ -2871,8 +2813,6 @@ function DealBadges({
     : undefined;
   return (
     <>
-      <Badge tone={dealStatusTone(deal.status)}>{deal.status}</Badge>
-      <DealProjectChip deal={deal} />
       <EditAction
         disabledReasonId={refusedByArchive}
         label={t("deal.edit")}
@@ -2930,41 +2870,47 @@ function DealBadges({
         invalidate="deals"
         recordKey="deal"
       />
-      <ArchiveAction
-        disabledReasonId={refusedByArchive}
-        label={t("deal.archive")}
-        confirmText={t("deal.archiveConfirm")}
-        archive={async () => {
-          const { data, error } = await api.DELETE("/deals/{id}", {
-            params: { path: { id: deal.id } },
-          });
-          if (error) {
-            throwProblem(error);
-          }
-          return data;
-        }}
-        invalidate="deals"
-        recordKey="deal"
-        onArchived={() => navigate({ screen: "deals" })}
-      />
-      {!overlay && (
-        <ShareAction
-          recordType="deal"
-          recordId={deal.id}
+      {/* Behind the overflow, all three: archiving a deal, handing a link to
+          somebody outside the workspace, and reopening a closed one are verbs
+          whose consequence a reader has to read before pressing, so each of
+          them wants a whole line rather than a place in a row. */}
+      <OverflowMenu label={t("record.moreActions")}>
+        <ArchiveAction
           disabledReasonId={refusedByArchive}
+          label={t("deal.archive")}
+          confirmText={t("deal.archiveConfirm")}
+          archive={async () => {
+            const { data, error } = await api.DELETE("/deals/{id}", {
+              params: { path: { id: deal.id } },
+            });
+            if (error) {
+              throwProblem(error);
+            }
+            return data;
+          }}
+          invalidate="deals"
+          recordKey="deal"
+          onArchived={() => navigate({ screen: "deals" })}
         />
-      )}
-      {/* Reopen answers a CLOSED deal, so an open one has no reason to be
-          told about it — absent, not refused. An archived closed deal keeps
-          it, refused: the reader came asking whether this can come back. */}
-      {!overlay && (deal.status === "won" || deal.status === "lost") && (
-        <ReopenAction
-          dealId={deal.id}
-          dealVersion={deal.version}
-          openStages={openStages}
-          disabledReasonId={refusedByArchive}
-        />
-      )}
+        {!overlay && (
+          <ShareAction
+            recordType="deal"
+            recordId={deal.id}
+            disabledReasonId={refusedByArchive}
+          />
+        )}
+        {/* Reopen answers a CLOSED deal, so an open one has no reason to be
+            told about it — absent, not refused. An archived closed deal keeps
+            it, refused: the reader came asking whether this can come back. */}
+        {!overlay && (deal.status === "won" || deal.status === "lost") && (
+          <ReopenAction
+            dealId={deal.id}
+            dealVersion={deal.version}
+            openStages={openStages}
+            disabledReasonId={refusedByArchive}
+          />
+        )}
+      </OverflowMenu>
     </>
   );
 }
@@ -2972,7 +2918,7 @@ function DealBadges({
 type Approval = components["schemas"]["Approval"];
 
 // The live 🟡 confirm-first staging queue for this deal — split out of
-// DealScreen's render for the same readability reason as DealBadges above.
+// DealScreen's render for the same readability reason as DealActions above.
 function DealApprovals({
   approvals,
   decide,
@@ -3560,7 +3506,15 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               }
               actionsInline
               badges={
-                <DealBadges
+                <>
+                  <Badge tone={dealStatusTone(deal.status)}>
+                    {deal.status}
+                  </Badge>
+                  <DealProjectChip deal={deal} />
+                </>
+              }
+              actions={
+                <DealActions
                   deal={deal}
                   orgs={orgs.data?.data ?? []}
                   meId={me.data?.user.id ?? ""}
@@ -3687,7 +3641,16 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
               {tab === "files" && overlay && <OverlayUnavailable />}
               {tab === "history" && !overlay && (
-                <RecordHistoryTab kind="deal" id={deal.id} />
+                <RecordHistoryTab
+                  kind="deal"
+                  id={deal.id}
+                  currency={deal.currency}
+                  restore={{
+                    version: deal.version,
+                    onRestored: () =>
+                      invalidateRecord(queryClient, "deal", deal.id),
+                  }}
+                />
               )}
               {tab === "history" && overlay && <OverlayUnavailable />}
               {advance.isError && (

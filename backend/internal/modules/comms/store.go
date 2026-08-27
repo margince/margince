@@ -12,11 +12,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // Delivery status. There is no in-flight status on purpose: a crash mid-send
@@ -56,7 +56,7 @@ var ErrNoAddressee = errors.New("comms: a delivery needs at least one recipient 
 
 // Store is the comms_outbound seam: staging, loading with attempt-counting,
 // and the four terminal/retry transitions. It carries no RBAC gate of its
-// own — see the internal/modules/comms waivers in backend/rbacgate_test.go
+// own — see the internal/modules/comms waivers in backend/gates/rbacgate_test.go
 // for why.
 type Store struct {
 	// db binds the workspace this store runs for (ADR-0091 §9 step 3).

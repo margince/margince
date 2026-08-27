@@ -19,12 +19,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/compose/integration/jobtest"
-	"github.com/gradionhq/margince/backend/internal/modules/privacy"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/jobtest"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // seedRetentionTenant plants the lead/unconverted anonymize policy and one
@@ -122,7 +121,7 @@ func TestRetentionReportsAPassThatCouldNotWrite(t *testing.T) {
 	seedRetentionPolicy(t, owner, e.WS)
 	firstLead := seedOverageLead(t, owner, e.WS)
 
-	svc := privacy.NewRetentionService(e.DB(), nil, slog.New(slog.DiscardHandler))
+	svc := compose.NewRetentionServiceFor(e.DB(), nil, slog.New(slog.DiscardHandler))
 
 	// A healthy pass first: without it the assertion below could not tell a
 	// held fault from a pass that never had anything to act on.

@@ -27,7 +27,7 @@ import (
 	"sort"
 	"time"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // pollInbox is the workspace tick: every connected member of this workspace,

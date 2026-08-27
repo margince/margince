@@ -37,10 +37,7 @@ package people
 // 1 (`exactOrgByDomain`), which returns before this tier is reached — a domain
 // is an exact key and needs no name evidence at all.
 
-import (
-	"strings"
-	"unicode"
-)
+import "strings"
 
 // orgNameStopwords are the words a company name shares with its whole market:
 // present in many names, evidence of identity in none.
@@ -53,14 +50,15 @@ import (
 // dedupe parameter in this package is an auditable constant (dedupe.go), and
 // this one is read the same way.
 //
-// English, German and Vietnamese, because those are the markets the estate
-// currently holds. A NEW market needs its own generics added here — the list is
-// a precision policy, not a language model, and a market whose generics are
-// missing simply keeps today's false positives rather than gaining new ones.
+// English and German, the markets whose names this list was measured against.
+// A NEW market needs its own generics added here — the list is a precision
+// policy, not a language model, and a market whose generics are missing simply
+// keeps today's false positives rather than gaining new ones.
 //
-// "phat" earns its place the same way "group" does: it is Vietnamese for
-// "prosper" and ends company names the way "Group" ends English ones. Measured
-// in the corpus, it appeared in three unrelated names.
+// A market only belongs here if its generic words are generic AS WORDS. Where a
+// name is built by stacking a legal form and trade vocabulary in front of the
+// brand, the phrase is what is generic and the words are not, and it is removed
+// in position instead — see orgnameforms.go for the Vietnamese case.
 var orgNameStopwords = map[string]bool{
 	// Corporate form that survives NormalizeOrgName's legal-suffix strip.
 	"group": true, "holding": true, "holdings": true, "company": true,
@@ -74,15 +72,18 @@ var orgNameStopwords = map[string]bool{
 	"hospital": true, "clinic": true,
 	"engineering": true, "industries": true, "manufacturing": true,
 	"media": true, "marketing": true, "communications": true, "logistics": true,
-	// Vietnamese generics.
-	"cong": true, "ty": true, "co": true, "phat": true,
+	// NO VIETNAMESE WORDS HERE, deliberately. A Vietnamese name carries its
+	// legal form and trade vocabulary as a multi-word PHRASE in front of the
+	// brand, and orgnameforms.go removes it in that position. This map deletes a
+	// token wherever it appears, which for Vietnamese takes the company with it:
+	// "phát" is the second syllable of Hòa Phát, the country's largest
+	// steelmaker, and "cổ" folds onto the "cỏ" of the rice company Cỏ May. The
+	// syllables are shared across brands, not generic within them.
 	// A brand written as its domain — "Capital.com", "Digital.ai" — splits into
 	// the name and the top-level domain. The TLD is the most generic token
 	// there is: every company that writes its name this way shares one. Without
 	// these, "Capital.com" reduces to the single token "com" and matches every
 	// other .com in the estate.
-	//
-	// "co" is already above, as a Vietnamese generic and an English legal form.
 	"com": true, "net": true, "org": true, "io": true, "ai": true,
 	"app": true, "dev": true, "inc": true, "gmbh": true,
 	// Country codes and the second level beneath them. "giba.or.kr" and
@@ -180,27 +181,6 @@ const orgFuzzyTokenSimilarity = 0.90
 // them apart.
 const orgFuzzyTokenLengthSlack = 1
 
-// orgTokenSeparators split a name into words for THIS gate's purposes.
-//
-// Anything that is not a letter or a digit separates two words. Company names
-// arrive punctuated every way a writer can punctuate them — "ACME-Group",
-// "Rich-Media/Solutions", "Hewlett.Packard", "Capital.com", an en dash where a
-// hyphen was meant — and a fused token loses a real duplicate: "Acme Ltd" and
-// "ACME-Group Ltd" share the word "acme", but as one token "acme-group" it
-// matches nothing.
-//
-// A CLASS rather than a list, deliberately. An earlier version named six ASCII
-// characters and missed the period and the en dash, which is the shape of bug
-// that keeps being rediscovered one punctuation mark at a time.
-//
-// Deliberately NOT done inside NormalizeOrgName, which also produces exact
-// grouping keys (orgMatchKeys in linkedinimport.go, the promotion sweep's
-// buckets). Splitting there would make two DIFFERENT names equal as keys.
-// Splitting here changes only which words this gate compares.
-func orgTokenSeparators(r rune) bool {
-	return !unicode.IsLetter(r) && !unicode.IsDigit(r)
-}
-
 // distinctiveOrgTokens are a name's words with the market's shared vocabulary
 // removed.
 //
@@ -208,9 +188,19 @@ func orgTokenSeparators(r rune) bool {
 // three runes was wrong: it threw away "3M", whose two characters ARE the
 // company. A word is dropped for being generic, never for being short.
 func distinctiveOrgTokens(name string) []string {
-	fields := strings.FieldsFunc(NormalizeOrgName(name), orgTokenSeparators)
+	fields := strings.FieldsFunc(orgNameForMatching(name), nameWordSeparators)
 	out := make([]string, 0, min(len(fields), orgGateTokenBudget))
-	for _, token := range fields {
+	for i, token := range fields {
+		// AN ARTICLE THAT WOULD LEAVE A ONE-WORD NAME IS NOT AN ARTICLE. English
+		// puts a real one beside other real words — "Bank of the West" keeps
+		// "bank" and "west" without it — so dropping it there costs nothing.
+		// A two-word name whose second word is "an" is a different thing: "Việt
+		// An", "Long An" and "Hòa An" are companies, and dropping the syllable
+		// left each of them a single word that matched half the market.
+		if i > 0 && orgNameArticles[token] && len(fields) == 2 {
+			out = append(out, token)
+			continue
+		}
 		if orgNameStopwords[token] {
 			continue
 		}
@@ -283,7 +273,7 @@ func sameOrgToken(a, b string) bool {
 // The same separators the token split uses, so "E-Commerce" and "E Commerce"
 // take one path rather than two.
 func squashedOrgName(name string) string {
-	return strings.Join(strings.FieldsFunc(NormalizeOrgName(name), orgTokenSeparators), "")
+	return strings.Join(strings.FieldsFunc(orgNameForMatching(name), nameWordSeparators), "")
 }
 
 // sharesADistinctiveWord is the gate itself: may these two names be scored?
@@ -309,12 +299,105 @@ func sharesADistinctiveWord(a, b string) bool {
 		return true
 	}
 	left, right := distinctiveOrgTokens(a), distinctiveOrgTokens(b)
-	for _, x := range left {
-		for _, y := range right {
-			if sameOrgToken(x, y) {
-				return true
+	_, leftMarket := matchingFormOf(a)
+	_, rightMarket := matchingFormOf(b)
+	// A name that reduced to NOTHING shares no word and stops here. Vietnamese
+	// names carry their legal form and trade vocabulary in front of the brand,
+	// so a name made only of those strips to empty (orgnameforms.go) — and two
+	// such names have said nothing about being one company, any more than two
+	// blank legal names have.
+	shared := sharedTokenCount(left, right)
+	if shared == 0 {
+		return false
+	}
+	// ONE SHARED WORD IS NOT ALWAYS ENOUGH, and how much it is worth depends on
+	// how much of the name it is.
+	//
+	// In English a distinctive word is nearly the whole of the evidence:
+	// "Arvato" appears in "Arvato Systems" and the two are one company. In
+	// Vietnamese it is not, because a brand is built from two or three syllables
+	// drawn from a small common pool. Measured on the corpus in
+	// orgnameforms_test.go: across 30 distinct brands, "nam" and "viet" each
+	// appear in 6 of them and "hoa" and "minh" in 3. So "Hòa Bình" and "Hòa
+	// Phát" share the word "hoa" — and they are Vietnam's largest construction
+	// firm and its largest steelmaker.
+	//
+	// ASKED ONLY OF A SYLLABIC MARKET, because only there is one shared word weak
+	// evidence. Vietnamese builds a brand from two or three syllables drawn from
+	// a small common pool, so "Hòa Bình" and "Hòa Phát" share "hoa" and are two
+	// different companies. English builds a brand from words that are themselves
+	// rare, so one is enough there, and demanding more loses real duplicates:
+	// "Amazon AWS" and "Amazon Web Services" share only "amazon" of two words.
+	//
+	// EITHER side declaring the market is enough. A company does not stop being
+	// Vietnamese when someone types its bare brand — "Tân Hiệp Phát" carries no
+	// legal form, and it still must not meet "Hòa Phát" on the shared syllable.
+	//
+	// Strictly more than half, not at least: at half the two names disagree
+	// about as much as they agree, and the disagreement is the part that names
+	// the company.
+	if isSyllabicMarket(leftMarket) || isSyllabicMarket(rightMarket) {
+		return 2*shared > min(len(left), len(right))
+	}
+	return true
+}
+
+// isSyllabicMarket answers whether a name's market builds its brands from a
+// small pool of shared syllables, where one word in common is a coincidence.
+func isSyllabicMarket(market *marketForms) bool {
+	return market != nil && market.syllabic
+}
+
+// sharedTokenCount is how many words of the shorter name appear in the longer.
+//
+// Counted against the SHORTER side so the answer does not change with argument
+// order, and each of its words is counted at most once: a name that repeats a
+// word must not accumulate evidence from the repetition.
+func sharedTokenCount(left, right []string) int {
+	shorter, longer := left, right
+	if len(longer) < len(shorter) {
+		shorter, longer = longer, shorter
+	}
+	// One word of the longer name answers for at most one word of the shorter.
+	// Without that, "Acme Acme" drew two matches from the single "acme" in
+	// "Acme Beta" and counted a repetition as a second piece of evidence.
+	// A name of nothing but common words is still a name, and must find itself.
+	// "Bank of Ireland" and "Bank of Ireland Group" are ordinary words end to
+	// end, so discounting all of them would leave the company matching nothing.
+	//
+	// The escape asks that the shorter name appear whole in the longer AND that
+	// what the longer adds be a word that names something. "Sun" and "Sun
+	// Microsystems" pass: the addition is a brand, so this is one company said
+	// twice. "Bank" and "Bank of the West" do not: the addition is "west", and
+	// two names built entirely from words every company shares have not said
+	// they are one company — a company called Bank must not meet every bank in
+	// the estate.
+	if agreeEntirely(shorter, longer) {
+		return len(shorter)
+	}
+	taken := make([]bool, len(longer))
+	shared := 0
+	for _, x := range shorter {
+		// A word that many companies share is not evidence that two of them are
+		// one company. Two kinds qualify: another market's legal form ("SIA Rimi
+		// Latvia" and "SIA Maxima Latvija" are two Latvian grocers, "AS Roma"
+		// and "AS Monaco" two football clubs), and the ordinary words that
+		// recur across unrelated names in a market ("Bank of the West" against
+		// "Bank of the East", "Union Pacific" against "Union Carbide").
+		//
+		// Discounted HERE rather than removed from the name, so the word still
+		// reaches the score. The case where such a word IS the evidence is
+		// answered above, before this loop runs.
+		if weakEvidenceWord(x) {
+			continue
+		}
+		for j, y := range longer {
+			if !taken[j] && sameOrgToken(x, y) {
+				taken[j] = true
+				shared++
+				break
 			}
 		}
 	}
-	return false
+	return shared
 }

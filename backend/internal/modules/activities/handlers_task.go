@@ -9,8 +9,8 @@ import (
 	"net/http"
 	"strings"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // CreateTask is the one door that knows a task is an activity of kind `task`.

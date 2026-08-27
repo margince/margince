@@ -3,7 +3,7 @@ package version
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/cli/craft/golden"
+	"github.com/margince/margince/cli/craft/golden"
 )
 
 // Promotion governs how the gate's version tuple changes: a candidate is adopted

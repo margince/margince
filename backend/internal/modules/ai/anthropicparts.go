@@ -16,7 +16,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The block types this wire spells. Deliberately not modalityText/modalityImage:

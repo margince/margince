@@ -30,7 +30,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // composed is this process's extension-kind table. Written once at boot, read

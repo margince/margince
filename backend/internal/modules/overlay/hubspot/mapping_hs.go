@@ -7,7 +7,7 @@
 // expressed in the overlay package's mapping IR.
 package hubspot
 
-import "github.com/gradionhq/margince/backend/internal/modules/overlay"
+import "github.com/margince/margince/backend/internal/modules/overlay"
 
 // The five HubSpot object classes design.md §9 maps — the one spelling
 // shared with adapter.go's per-object watermark-property switch (design.md

@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // TestCollectStringConstsHandlesRepeatedValues: Go repeats a grouped
@@ -91,10 +91,10 @@ func TestAddTreeHashesEveryRegularFile(t *testing.T) {
 // the binary never sees, or trip the multiple-New guard.
 func TestDeriveUnitManifestIgnoresGoIgnoredFiles(t *testing.T) {
 	root := t.TempDir()
-	bogus := "package u\n\nimport \"github.com/gradionhq/margince/backend/pkg/extension\"\n\nfunc New() extension.Extension { return extension.Extension{Name: \"WRONG\", Version: \"9\"} }\n"
+	bogus := "package u\n\nimport \"github.com/margince/margince/backend/pkg/extension\"\n\nfunc New() extension.Extension { return extension.Extension{Name: \"WRONG\", Version: \"9\"} }\n"
 	writeUnit(t, root, "u", map[string]string{
 		"go.mod": "module example.test/ext/u\n\ngo 1.26.5\n",
-		"u.go":   "package u\n\nimport \"github.com/gradionhq/margince/backend/pkg/extension\"\n\nfunc New() extension.Extension { return extension.Extension{Name: \"u\", Version: \"1.0.0\"} }\n",
+		"u.go":   "package u\n\nimport \"github.com/margince/margince/backend/pkg/extension\"\n\nfunc New() extension.Extension { return extension.Extension{Name: \"u\", Version: \"1.0.0\"} }\n",
 		// Both go/build name-ignored forms carry a bogus New(); neither may
 		// feed the scan (else the multiple-New guard would trip).
 		"_scratch.go": bogus,
@@ -258,8 +258,8 @@ func TestJurisdictionPackRequestsNoRiskTier(t *testing.T) {
 	const jurisdictionOnly = `package hello
 
 import (
-	"github.com/gradionhq/margince/backend/pkg/extension"
-	"github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
 
 func New() extension.Extension {
@@ -299,7 +299,7 @@ func TestMigrationsLayerRequestsNoRiskTier(t *testing.T) {
 import (
 	"embed"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 //go:embed migrations
@@ -349,7 +349,7 @@ func TestMigrationsMustEmbedTheLayerThatShipped(t *testing.T) {
 	}
 
 	unitSource := func(imports, vars, field string) string {
-		return "package hello\n\nimport (\n" + imports + "\n\t\"github.com/gradionhq/margince/backend/pkg/extension\"\n)\n\n" +
+		return "package hello\n\nimport (\n" + imports + "\n\t\"github.com/margince/margince/backend/pkg/extension\"\n)\n\n" +
 			vars + "\n\nfunc New() extension.Extension {\n\treturn extension.Extension{\n\t\tName:    \"hello\",\n\t\tVersion: \"0.1.0\",\n" + field + "\t}\n}\n"
 	}
 
@@ -418,7 +418,7 @@ func TestMigrationsMustEmbedTheLayerThatShipped(t *testing.T) {
 func toolUnitSource(toolFields string) string {
 	return `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func New() extension.Extension {
 	return extension.Extension{
@@ -564,8 +564,8 @@ func TestBehaviorForAVerbNoContractDeclaresIsRefused(t *testing.T) {
 		toolUnitSource("\t\t\tName: \"orphan\",\n\t\t\tHandle: run,"),
 		"func New()",
 		"func run(context.Context, extension.Runtime, json.RawMessage) (json.RawMessage, error) { return nil, nil }\n\nfunc New()", 1)
-	orphan = strings.Replace(orphan, `import "github.com/gradionhq/margince/backend/pkg/extension"`,
-		"import (\n\t\"context\"\n\t\"encoding/json\"\n\n\t\"github.com/gradionhq/margince/backend/pkg/extension\"\n)", 1)
+	orphan = strings.Replace(orphan, `import "github.com/margince/margince/backend/pkg/extension"`,
+		"import (\n\t\"context\"\n\t\"encoding/json\"\n\n\t\"github.com/margince/margince/backend/pkg/extension\"\n)", 1)
 	_, err := deriveSynthetic(t, "x", orphan,
 		syntheticVerb("x", "declared_elsewhere", "auto_execute", "read"))
 	if err == nil || !strings.Contains(err.Error(), "no operation in this unit's api/ fragments declares it") {
@@ -583,7 +583,7 @@ func TestBehaviorForAVerbNoContractDeclaresIsRefused(t *testing.T) {
 
 	noGoEntry := `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func New() extension.Extension {
 	return extension.Extension{Name: "x", Version: "0.1.0"}
@@ -602,8 +602,8 @@ func New() extension.Extension {
 const nonLiteralHeader = `package x
 
 import (
-	"github.com/gradionhq/margince/backend/pkg/extension"
-	"github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
 `
 
@@ -712,7 +712,7 @@ func TestDigestTreeExcludesTheUnitManifest(t *testing.T) {
 func TestFailureClassesRequestNoRiskTier(t *testing.T) {
 	const classesOnly = `package hello
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 var failureClasses = []extension.FailureClass{
 	{

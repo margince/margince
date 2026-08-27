@@ -8,8 +8,8 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // stubs answers every crmcontracts.ServerInterface operation with an explicit
@@ -297,6 +297,10 @@ func (stubs) GetMorningBrief(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) GenerateMorningBrief(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GenerateMorningBrief")
+}
+
+func (stubs) AnnotateMorningBrief(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AnnotateMorningBrief")
 }
 
 func (stubs) MarkBriefItemActed(w nethttp.ResponseWriter, r *nethttp.Request, itemId openapi_types.UUID) {
@@ -979,6 +983,14 @@ func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCurrentPrincipal")
 }
 
+func (stubs) ListMyAgentGrants(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListMyAgentGrants")
+}
+
+func (stubs) SetMyAgentGrant(w nethttp.ResponseWriter, r *nethttp.Request, spec crmcontracts.ScheduledAgentName) {
+	httperr.NotImplemented(w, r, "SetMyAgentGrant")
+}
+
 func (stubs) GetMyAiActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMyAiActivityParams) {
 	httperr.NotImplemented(w, r, "GetMyAiActivity")
 }
@@ -1625,6 +1637,10 @@ func (stubs) GetRecordContext(w nethttp.ResponseWriter, r *nethttp.Request, enti
 
 func (stubs) GetRecordHistory(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, id crmcontracts.Id, params crmcontracts.GetRecordHistoryParams) {
 	httperr.NotImplemented(w, r, "GetRecordHistory")
+}
+
+func (stubs) RestoreRecordChange(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, id crmcontracts.Id, auditId openapi_types.UUID, params crmcontracts.RestoreRecordChangeParams) {
+	httperr.NotImplemented(w, r, "RestoreRecordChange")
 }
 
 func (stubs) ClaimRecord(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.ClaimRecordParams) {

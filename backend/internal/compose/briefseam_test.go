@@ -10,9 +10,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/briefs"
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/briefs"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // withheldFromTheTool names each persisted brief field the agent surface does
@@ -26,6 +26,16 @@ var withheldFromTheTool = gatekit.Waive(map[string]string{
 
 	"RevenueNormMinor": "the workspace-wide base the revenue FACTOR was divided by; the factor is " +
 		"served already normalized, so the base explains nothing an agent can act on",
+
+	"Narrative": "the agent's OWN sentence about the night, withheld from the agent. It is the " +
+		"only field here the tool's caller wrote rather than read, and handing it back is how a " +
+		"loop reads its own output as new information — a second pass would summarize the " +
+		"summary. The person reads it on Home, which is who it was written for",
+	"AnnotatedAt": "the stamp on the agent's own write, withheld for the same reason as Narrative: " +
+		"it answers 'has a pass run', and the only caller asking is the pass",
+
+	"Finding": "the agent's own prose about this item, withheld on the same ground as Narrative — " +
+		"a pass that read back last night's finding would treat it as evidence for tonight's",
 })
 
 // Every persisted field of a brief run reaches the tool, or is named as
@@ -43,10 +53,13 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 	asOf := time.Date(2026, 8, 8, 5, 22, 0, 0, time.UTC)
 	stateAt := time.Date(2026, 8, 8, 7, 33, 0, 0, time.UTC)
 	snoozedUntil := time.Date(2026, 8, 9, 8, 44, 0, 0, time.UTC)
+	annotatedAt := time.Date(2026, 8, 8, 6, 12, 0, 0, time.UTC)
 	run := briefs.BriefRun{
 		ID: runID, UserID: userID, GeneratedAt: generated, AsOf: asOf,
 		LocalDay:       time.Date(2026, 8, 8, 0, 0, 0, 0, time.UTC),
 		CandidateCount: 17, RevenueNormMinor: 918_273,
+		Narrative:   "Two replies overnight, one deal went quiet.",
+		AnnotatedAt: &annotatedAt,
 		Items: []briefs.BriefRunItem{{
 			ID: itemID, DealID: dealID, Rank: 3, Composite: 0.815,
 			Features: briefs.BriefFeatureVector{
@@ -54,6 +67,11 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 			},
 			EvidenceIDs: []ids.UUID{evidence}, State: "snoozed",
 			StateAt: &stateAt, SnoozedUntil: &snoozedUntil,
+			Finding: "He asked about the delivery date yesterday.",
+			Lineage: &briefs.ItemLineage{
+				DismissedOn:  time.Date(2026, 8, 5, 0, 0, 0, 0, time.UTC),
+				ReturnedWith: time.Date(2026, 8, 7, 9, 15, 0, 0, time.UTC),
+			},
 		}},
 	}
 
@@ -72,6 +90,8 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"AsOf":           `"as_of":"2026-08-08T05:22:00Z"`,
 		"LocalDay":       `"local_day":"2026-08-08"`,
 		"CandidateCount": `"candidate_count":17`,
+		"Narrative":      "Two replies overnight, one deal went quiet.",
+		"AnnotatedAt":    "2026-08-08T06:12:00Z",
 		// Withheld — so the probe is what a LEAK would look like: the value
 		// itself, which must appear nowhere in what the tool served.
 		"RevenueNormMinor": "918273",
@@ -84,6 +104,8 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"Rank": `"rank":3`, "Composite": `"composite":0.815`, "Features": `"momentum":0.44`,
 		"EvidenceIDs": `"evidence_ids":["` + evidence.String(), "State": `"state":"snoozed"`,
 		"StateAt": `"state_at":"2026-08-08T07:33:00Z"`, "SnoozedUntil": `"snoozed_until":"2026-08-09T08:44:00Z"`,
+		"Finding": "He asked about the delivery date yesterday.",
+		"Lineage": `"dismissed_on":"2026-08-05"`,
 	}, string(served))
 	// An entry no field reached names something that is gone, which reads as a
 	// deliberate omission while certifying nothing.

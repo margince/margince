@@ -36,11 +36,15 @@
 # compose file via `make db-up`, so these are the only pins). Bump tag and
 # digest together. The check-image-pins gate fails a floating tag here.
 #
-# The project name is repo-specific: a generic name (margince-dev) collides
-# with stale volumes from the frozen poc-era stack on machines that ran it,
-# and Postgres skips initdb on a non-empty volume — the owner role would
-# silently never be created.
-name: margince-poc-v1
+# The project name namespaces this stack's volumes, so it may not collide with
+# a name any earlier stack used: Postgres skips initdb on a non-empty volume,
+# and the owner role would then silently never be created. `margince-dev` is
+# spent — the frozen poc-era stack left `margince-dev_*` volumes behind on
+# every machine that ran it. `margince` is clear of both that stack and the
+# `margince-poc-v1_*` volumes this one used before the repository was renamed;
+# those older volumes are now orphaned, so the first `make db-up` after this
+# change builds a fresh database.
+name: margince
 
 services:
   postgres:
@@ -103,7 +107,7 @@ services:
     # stays near its average is decided by how the bursts overlap, which is the
     # entire content of #1109.
     #
-    # TestTheLaneFitsInsideTheClusterItRunsAgainst (backend/laneconnbudget_test.go)
+    # TestTheLaneFitsInsideTheClusterItRunsAgainst (backend/gates/laneconnbudget_test.go)
     # reads INTEGRATION_JOBS from the workflow and this number from this file, and
     # asks the lane script's own declare_lane_budget for the sum rather than
     # re-implementing it. It fails `make check` when the two stop fitting. Raising INTEGRATION_JOBS without raising this is

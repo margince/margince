@@ -12,11 +12,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/diffhash"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // AlreadyDecidedError maps to 409.
@@ -275,6 +275,13 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		`UPDATE approval SET status = $2, decided_by = $3, decided_at = now(), decision_reason = $4
 		 WHERE id = $1`,
 		id, status, p.UserID, reason); err != nil {
+		return row{}, err
+	}
+	// The track record the autonomy ladder is earned on, counted in the same
+	// transaction as the decision it counts. A counter that could outlive a
+	// rolled-back approval would offer a rep autonomy on evidence of a decision
+	// they never made.
+	if err := countDecisionTx(ctx, tx, p.UserID, a.Kind, decisionOutcomeOf(approve, edited)); err != nil {
 		return row{}, err
 	}
 	auditID, err := s.audit(ctx, tx, p, action, id.UUID, auditEvidence)

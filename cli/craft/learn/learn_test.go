@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/gradionhq/margince/cli/craft/gate"
+	"github.com/margince/margince/cli/craft/gate"
 )
 
 func TestStore_capturesAllFourSignalTypesWithProvenance(t *testing.T) {

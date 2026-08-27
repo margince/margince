@@ -18,10 +18,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	trace "github.com/gradionhq/margince/backend/internal/shared/kernel/pipelinetrace"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	trace "github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 )
 
 func reg(t *testing.T, stage trace.Stage) trace.Registration {

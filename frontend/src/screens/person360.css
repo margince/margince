@@ -467,28 +467,24 @@
 .pe-rail .pe-sect > summary:hover {
   background: var(--bgHover);
 }
-/* `t-label` (design-system/atoms.tsx) is a plain span wrapping the whole
-   `summary` prop, so it has to grow to fill the row before .pe-sect-summary's
-   own flex has anywhere to push the trailing control into. */
+/* `t-label` (design-system/atoms.tsx) wraps the whole `summary` prop, and it
+   fills the row so the section name and the summary's own hover target are the
+   width of the line rather than the width of the words. The section verb is no
+   longer in here to be pushed anywhere: it is a sibling of the `<details>`, for
+   the reason `Disclosure.action` states. */
 .pe-rail .pe-sect > summary .t-label {
   flex: 1;
   min-width: 0;
 }
-.pe-rail .pe-sect > summary .btn {
-  margin-left: auto;
+/* The rail's own sections carry the padding their summaries do, so a section
+   verb lines up with the name beside it rather than with the panel's edge. */
+.pe-rail .disclosure-action {
+  top: var(--space-2);
+  right: var(--space-5);
 }
 .pe-rail .pe-sect .disclosure-body {
   margin-top: 0;
   padding: 0 var(--space-5) var(--space-5);
-}
-
-/* The pulse summary's own row: the section name, then its Explain button
-   pushed to the far end. */
-.pe-sect-summary {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  width: 100%;
 }
 
 /* A rail row is one action or one reading: label left, value right. */
@@ -862,4 +858,13 @@
    is a spacing decision hidden where no stylesheet can see it. */
 .thin-log-first {
   margin-top: var(--space-3);
+}
+
+/* The bought-data panel's heading: the vendor's mark beside its name. Aligned
+   on the text baseline rather than centred, so the logo sits with the word
+   instead of floating above a heading that wraps on a narrow column. */
+.pe-provider-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
 }

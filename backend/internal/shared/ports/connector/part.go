@@ -11,7 +11,7 @@ package connector
 // the same type, so the bounded/renamed/content-typed guarantee cannot be
 // re-decided per producer. Core call sites keep the names they had.
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 // Part is one file a captured record carried — the published extension.InboundFile.
 type Part = extension.InboundFile

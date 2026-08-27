@@ -19,7 +19,7 @@
 // sees it.
 package badunprefixedtable
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 // New returns the declaration. It is well-formed on purpose: the fixture must
 // fail on its SQL and on nothing else, or the test asserting the refusal would

@@ -6,7 +6,7 @@ package org360
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/relstrength"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // The producer's vocabulary and this contract's enum are different lists, and

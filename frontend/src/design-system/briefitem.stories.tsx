@@ -43,6 +43,8 @@ const LABELS: BriefItemLabels = {
   dismissed: "Dismissed",
   snoozed: "Snoozed",
   resurfaces: "Back",
+  previouslyDismissed: "Flagged 03.06.2026 — you dismissed it.",
+  returnedWith: "It came back with activity on",
 };
 
 // Fixed instants, formatted without touching a clock or a locale database, so
@@ -143,6 +145,22 @@ export const Dismissed: Story = {
 // A write in flight. The pressed button keeps its label, its ink and the
 // reader's focus and turns a mark; the other two are refused, because a queue
 // entry takes one decision at a time.
+/** A deal the rep dismissed, come back. The line above the meters says when
+ *  they waved it away and what brought it back — deterministic, from the row,
+ *  which is why it carries no agent provenance the way a finding does. */
+export const Returning: Story = {
+  args: {
+    ...base,
+    item: {
+      ...base.item,
+      lineage: {
+        dismissed_on: "2026-06-03",
+        returned_with_activity_at: "2026-06-04T10:00:00Z",
+      },
+    },
+  },
+};
+
 export const Acting: Story = { args: { ...base, pending: "act" } };
 
 // The server refused the write — the item was already settled in another tab.

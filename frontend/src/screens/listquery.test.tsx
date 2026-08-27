@@ -207,6 +207,194 @@ function ListTableHarness({
   );
 }
 
+/**
+ * Two lists on one route, each owning its own half of the address.
+ *
+ * The settings Data-model tab is the real case: the products table and the
+ * offer-template table are drawn together, and a flat parameter space described
+ * both at once.
+ */
+function TwoListHarness({
+  left,
+  right,
+}: Readonly<{
+  left: (query: ListQuery, cursor: string | null) => Promise<ListPage<Row>>;
+  right: (query: ListQuery, cursor: string | null) => Promise<ListPage<Row>>;
+}>) {
+  const one = useListQuery<Row>({
+    key: "left",
+    fetchPage: left,
+    initialSort: "name",
+    paramScope: "left",
+  });
+  const other = useListQuery<Row>({
+    key: "right",
+    fetchPage: right,
+    initialSort: "locale",
+    paramScope: "right",
+  });
+  const columns = [
+    {
+      key: "name",
+      header: "people.name",
+      cell: (row: Row) => row.name,
+      sort: "name",
+    },
+  ];
+  return (
+    <>
+      <ListTable
+        state={one}
+        unit="unit.products"
+        columns={columns}
+        rowKey={(row) => row.id}
+      />
+      <ListTable
+        state={other}
+        unit="unit.offerTemplates"
+        columns={columns}
+        rowKey={(row) => row.id}
+      />
+    </>
+  );
+}
+
+describe("the search box follows the address", () => {
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("shows the q an address arrives with, not the one the reader left", async () => {
+    const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    render(<ListTableHarness fetchPage={fetchPage} />);
+    const search = await screen.findByPlaceholderText("Search");
+
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(search, { target: { value: "stripe" } });
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+        await Promise.resolve();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+    await waitFor(() => expect(search).toHaveProperty("value", "stripe"));
+
+    // The address moves under a screen that stays mounted: Back, Forward, or a
+    // link to the same list narrowed differently. The box has to follow it, or
+    // it shows words the rows are not answering.
+    await act(async () => {
+      window.location.hash = "#/contacts?q=brandt";
+      window.dispatchEvent(new HashChangeEvent("hashchange"));
+    });
+    await waitFor(() => expect(search).toHaveProperty("value", "brandt"));
+    expect(fetchPage.mock.calls.at(-1)?.[0].q).toBe("brandt");
+  });
+
+  it("drops a word still settling when the reader leaves the list it was typed into", async () => {
+    const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    render(<ListTableHarness fetchPage={fetchPage} />);
+    const search = await screen.findByPlaceholderText("Search");
+
+    vi.useFakeTimers();
+    try {
+      // Typed, and NOT yet committed.
+      fireEvent.change(search, { target: { value: "acme" } });
+
+      // The reader leaves for an address that carries no `q` either — Back to a
+      // differently sorted view of the same list. `q` never moved, so following
+      // `q` alone would leave the timer with its appointment kept.
+      await act(async () => {
+        window.location.hash = "#/contacts?sort=full_name";
+        window.dispatchEvent(new HashChangeEvent("hashchange"));
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+        await Promise.resolve();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await waitFor(() => expect(search).toHaveProperty("value", ""));
+    // The word lands on no list at all, least of all the one the reader is on.
+    expect(fetchPage.mock.calls.every(([query]) => query.q !== "acme")).toBe(
+      true,
+    );
+  });
+});
+
+describe("two lists on one route", () => {
+  afterEach(() => {
+    window.location.hash = "";
+  });
+
+  it("keep separate dials, so neither narrows the other's read", async () => {
+    const left = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    const right = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    render(<TwoListHarness left={left} right={right} />);
+
+    // Each list seeds its OWN opening sort, under its own prefix, and neither
+    // seeding wipes the other's.
+    await waitFor(() => {
+      expect(window.location.hash).toContain("left.sort=name");
+      expect(window.location.hash).toContain("right.sort=locale");
+    });
+    expect(left.mock.calls.at(-1)?.[0].sort).toBe("name");
+    expect(right.mock.calls.at(-1)?.[0].sort).toBe("locale");
+
+    const searches = await screen.findAllByPlaceholderText("Search");
+    vi.useFakeTimers();
+    try {
+      fireEvent.change(searches[0], { target: { value: "acme" } });
+      await act(async () => {
+        vi.advanceTimersByTime(250);
+        await Promise.resolve();
+      });
+    } finally {
+      vi.useRealTimers();
+    }
+
+    await waitFor(() => {
+      expect(left.mock.calls.some(([query]) => query.q === "acme")).toBe(true);
+    });
+    // The other list never asked for it. Sharing one `q` is what made the
+    // product search narrow the template table too.
+    expect(right.mock.calls.every(([query]) => query.q === "")).toBe(true);
+    expect(window.location.hash).toContain("left.q=acme");
+    expect(window.location.hash).not.toContain("right.q=");
+  });
+
+  it("a sort one list cannot answer never reaches the other", async () => {
+    const left = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    const right = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    window.location.hash = "#/settings?left.sort=sku&right.sort=locale";
+    render(<TwoListHarness left={left} right={right} />);
+
+    await waitFor(() => {
+      expect(left.mock.calls.at(-1)?.[0].sort).toBe("sku");
+    });
+    // `sku` is not in the template list's sort vocabulary, and reaching it
+    // would be a 422 the reader never asked for.
+    expect(right.mock.calls.every(([query]) => query.sort !== "sku")).toBe(
+      true,
+    );
+  });
+});
+
 describe("ListTable: query vocabulary", () => {
   it("debounces search input before sending it to fetchPage", async () => {
     const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>

@@ -19,7 +19,7 @@ package overlay
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEverySweepScheduleWriteTakesTheDatabaseClock(t *testing.T) {

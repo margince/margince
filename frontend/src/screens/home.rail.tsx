@@ -14,7 +14,7 @@ import {
   formatMoneyOrAbsent,
   formatNumber,
 } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { QueryGate } from "./common";
 import { errorClassKey, isUnhealthy } from "./connector-status";
@@ -260,6 +260,7 @@ export function OvernightPanel() {
  * settled error keeps the panel and says the figure is unavailable.
  */
 export function PositionPanel() {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const query = usePipelineValue();
@@ -317,12 +318,9 @@ export function PositionPanel() {
               })}
             </span>
             <span className="t-caption">
-              {t(
-                row.deals === 1
-                  ? "home.pipelineCount.one"
-                  : "home.pipelineCount.other",
-                { count: formatNumber(row.deals, locale) },
-              )}
+              {plural("home.pipelineCount", row.deals, {
+                count: formatNumber(row.deals, locale),
+              })}
             </span>
           </span>
         </PanelRow>
@@ -342,8 +340,16 @@ export function PositionPanel() {
  */
 export function WatchPanel({
   deals,
+  more,
   state,
-}: Readonly<{ deals: readonly Deal[]; state: SectionState }>) {
+}: Readonly<{
+  deals: readonly Deal[];
+  /** Whether Home's one page of deals ended short of the list. A quiet deal
+   *  past that page is not on this panel, and `partial` is the state that says
+   *  so — "nothing has gone quiet" would be a claim this read cannot make. */
+  more: boolean;
+  state: SectionState;
+}>) {
   const t = useT();
   // No page of organizations to draw on here — this is a short list, and every
   // company it names is resolved by id and cached.
@@ -355,8 +361,17 @@ export function WatchPanel({
   // once they have been read. A failed read used to reach the same sentence,
   // which told a reader their pipeline was healthy on the strength of a request
   // that never answered.
-  const resolved: SectionState =
-    state === "ready" && deals.length === 0 ? "empty" : state;
+  // Only a settled read may say anything about the deals, and WHICH thing it
+  // says turns on whether the page ended the list: past it, an empty panel is
+  // not "nothing has gone quiet", it is "nothing on the page we read".
+  const settled = state === "ready";
+  const resolved: SectionState = !settled
+    ? state
+    : more
+      ? "partial"
+      : deals.length === 0
+        ? "empty"
+        : state;
   return (
     <Panel title={t("home.panel.watch")} className="rail-panel">
       <PanelBody className={deals.length > 0 ? "rail-watch-list" : undefined}>

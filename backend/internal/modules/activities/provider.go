@@ -13,11 +13,11 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // Provider answers the datasource verbs for activity.
@@ -71,8 +71,9 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 	if err := datasource.StrictDecode(raw, &req); err != nil {
 		return datasource.EntityRef{}, err
 	}
-	v, err := p.store.UpdateActivity(ctx, ids.From[ids.ActivityKind](in.Ref.ID),
-		activityUpdateInput(req, in.IfVersion))
+	update := activityUpdateInput(req, in.IfVersion)
+	update.Trail = in.Trail
+	v, err := p.store.UpdateActivity(ctx, ids.From[ids.ActivityKind](in.Ref.ID), update)
 	return ref(datasource.EntityActivity, v.Id), err
 }
 

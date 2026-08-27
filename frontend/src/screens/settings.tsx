@@ -131,6 +131,7 @@ import { MailSharingCard } from "./mail-sharing";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OverlayCard } from "./overlay";
 import { MirrorUserMapCard } from "./overlay-usermap";
+import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
@@ -254,7 +255,10 @@ export const SETTINGS_TABS = [
 // raw key and lets a test validate a label that does not exist.
 export type SettingsTabId = (typeof SETTINGS_TABS)[number]["id"];
 
-function tabContent(id: SettingsTabId): ReactNode {
+// Exported for the placement gate below the register: a settings card that
+// configures the INSTALLATION has to sit on an admin entry, and the only way to
+// check that without rendering every tab is to walk what each one returns.
+export function tabContent(id: SettingsTabId): ReactNode {
   switch (id) {
     case "account":
       return <AccountCard />;
@@ -278,15 +282,7 @@ function tabContent(id: SettingsTabId): ReactNode {
         </>
       );
     case "connections":
-      return (
-        <>
-          {/* Above the connections themselves: this is the app they are made
-              THROUGH, so a reader who cannot connect a mailbox finds the reason
-              before the empty list rather than after it. */}
-          <GoogleAppCard />
-          <ConnectionsTab />
-        </>
-      );
+      return <ConnectionsTab />;
     // Beside `connections` and after it on purpose: that tab says what you are
     // connected to, this one says what those connections did with your mail.
     case "capture-activity":
@@ -296,6 +292,13 @@ function tabContent(id: SettingsTabId): ReactNode {
     case "capture":
       return (
         <>
+          {/* First, because everything below presupposes it: the Google app
+              every mailbox on this installation is connected THROUGH. One app
+              per installation, supplied by whoever operates it, so it belongs
+              to the operator rather than to the rep whose mailbox rides it —
+              which is why it is here and not beside a person's own
+              connections. */}
+          <GoogleAppCard />
           {/* Which domains are OURS, then what to do with mail from the rest,
               then which of the rest are consumer mailboxes — the posture, then
               the two judgements that read it. Before this they sat on two
@@ -377,6 +380,12 @@ function ConnectionsTab() {
           connection below. */}
       <MailSharingCard />
       <ConnectorsCard />
+      {/* Directly under the mailboxes, because it is the same decision seen
+          from the other side: those cards say what Margince may READ, this one
+          says whether it may act on it overnight while nobody is watching. The
+          rep was asked this once beside the very same connectors during
+          onboarding — this is where that answer is found again. */}
+      <OvernightGrantCard />
       <LinkedInImportCard />
       {/* No review queue here: a match a human must judge is a proposal, and
           proposals live in the approvals inbox. This shows what the import

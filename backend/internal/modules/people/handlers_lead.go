@@ -7,10 +7,10 @@ import (
 	"net/http"
 	"strings"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLeadsParams) {
@@ -87,7 +87,9 @@ func (h Handlers) UpdateLead(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 
-	lead, err := h.store.UpdateLead(r.Context(), pathID[ids.LeadKind](id), leadUpdateInput(req, ifVersion))
+	update := leadUpdateInput(req, ifVersion)
+	update.Clear = httperr.ClearedFields(r)
+	lead, err := h.store.UpdateLead(r.Context(), pathID[ids.LeadKind](id), update)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

@@ -19,11 +19,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // DueOverlayConnection names one active overlay incumbent connection to
@@ -325,7 +325,7 @@ func ActiveConnection(ctx context.Context, pool *pgxpool.Pool) (DueOverlayConnec
 //
 // Spelled once because three callers asked the same question three ways.
 //
-// Held by: TestFleetEnumerationOnlyAtRatifiedSites (backend/jobfleetscan_test.go),
+// Held by: TestFleetEnumerationOnlyAtRatifiedSites (backend/gates/jobfleetscan_test.go),
 // which counts the workspace-collection reads each file makes and ratifies them
 // by name — a second spelling in this package raises the count and fails.
 func overlayModeWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {

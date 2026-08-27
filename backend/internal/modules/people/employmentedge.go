@@ -18,8 +18,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // attachToSettledVerdict handles a domain answered WHILE this ensure was
@@ -202,4 +202,5 @@ const relationshipOriginCapture = "capture"
 
 // employmentKind is the relationship kind this file plants, spelled once so the
 // SQL, the audit row and the event delta cannot drift apart.
+// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const employmentKind = "employment"

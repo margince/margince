@@ -1,7 +1,9 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { PenLine } from "lucide-react";
 import { useId, useState } from "react";
 import type { Route } from "../app/router";
-import { Button, Modal } from "../design-system/atoms";
+import { Modal } from "../design-system/atoms";
+import { IconAction } from "../design-system/iconaction";
 import { useT } from "../i18n";
 import { derivedRecordKeys } from "./activitykeys";
 import {
@@ -288,14 +290,20 @@ export function EditAction<Updated extends { id: string }>({
     isVersionSkew(mutation.error.problem);
   return (
     <>
-      <Button
+      {/* Square. A pencil is the one glyph every reader in this product's
+          market already knows, and "Edit" beside it spends a header's width
+          saying what the glyph said — on four record pages at once, which is
+          why this is the one place it is written. The caller's own wording
+          ("Edit deal", "Edit project") stays as the name, spoken and shown on
+          hover, so the tooltip still says WHAT is being edited. */}
+      <IconAction
         small
+        label={label}
+        icon={<PenLine size={15} aria-hidden="true" />}
         reasonId={disabledReasonId}
         onClick={() => setEditing(true)}
-        data-testid="edit-record"
-      >
-        {label}
-      </Button>
+        testId="edit-record"
+      />
       <EditRecordModal
         open={editing}
         onClose={() => setEditing(false)}

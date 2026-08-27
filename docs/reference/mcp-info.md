@@ -11,11 +11,11 @@ receives it. This page is rendered from that file.
 
 | | |
 |---|---:|
-| Tools | 58 |
+| Tools | 59 |
 | Resources | 9 |
-| Tool catalog | 160.4 KB |
+| Tool catalog | 163.5 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 41945 |
+| Approx. wire tokens | 42740 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,11 +29,11 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 75.1 KB | 46% | **No** — a result's shape, never listed to a model |
-| Descriptions (incl. governance clause) | 38.2 KB | 23% | Yes, every step |
-| Input schemas | 34.9 KB | 21% | Yes, every step |
-| _Names, annotations, punctuation_ | 12.3 KB | 7% | Partly |
-| **Description + input schema** | **73.1 KB** | **45%** | **the recurring cost** |
+| Output schemas | 76.1 KB | 46% | **No** — a result's shape, never listed to a model |
+| Descriptions (incl. governance clause) | 39.1 KB | 23% | Yes, every step |
+| Input schemas | 35.8 KB | 21% | Yes, every step |
+| _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
+| **Description + input schema** | **74.9 KB** | **45%** | **the recurring cost** |
 
 So the headline total is dominated by the part a model is never charged for, and
 descriptions are a minority of it. Trimming the copy to shrink the total trades a
@@ -57,13 +57,14 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 - [`ui://margince/pipeline-review.html`](#pipeline_review_view) — Pipeline review
 - [`ui://margince/geo-probe.html`](#geo_probe_view) — Location check
 
-### Tools (58)
+### Tools (59)
 
 | Tool | What it is for | Read-only | View | Size |
 |---|---|:-:|---|---:|
 | [`account_coverage`](#account_coverage) | Relationship coverage on a deal | yes |  | 3.2 KB |
 | [`advance_deal`](#advance_deal) | Advance a deal to a stage |  |  | 3.1 KB |
 | [`advance_project_phase`](#advance_project_phase) | Move a project to a phase |  |  | 2.2 KB |
+| [`annotate_brief`](#annotate_brief) | Write findings onto the morning brief |  |  | 2.9 KB |
 | [`apply_tag`](#apply_tag) | Apply a tag to a record |  |  | 2.0 KB |
 | [`archive_record`](#archive_record) | Archive a record |  |  | 2.2 KB |
 | [`at_risk_relationships`](#at_risk_relationships) | Relationships going cold | yes |  | 2.6 KB |
@@ -98,7 +99,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 2.8 KB |
+| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.0 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.2 KB |
@@ -802,6 +803,168 @@ Move a project to another phase — initiative, pursuing, delivering, closed. Th
       },
       "required": [
         "id"
+      ],
+      "type": "object"
+    },
+    "evidence": {
+      "items": {
+        "properties": {
+          "captured_by": {
+            "type": "string"
+          },
+          "record_id": {
+            "format": "uuid",
+            "type": "string"
+          },
+          "record_type": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "record_id",
+          "record_type"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "freshness": {
+      "properties": {
+        "authoritative": {
+          "type": "boolean"
+        },
+        "last_synced_at": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "authoritative"
+      ],
+      "type": "object"
+    },
+    "schema_version": {
+      "type": "string"
+    },
+    "trace_id": {
+      "type": "string"
+    },
+    "trust": {
+      "type": "string"
+    },
+    "warnings": {
+      "items": {
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "code",
+          "message"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    }
+  },
+  "required": [
+    "data",
+    "evidence",
+    "freshness",
+    "schema_version",
+    "trace_id",
+    "trust",
+    "warnings"
+  ],
+  "type": "object"
+}
+```
+
+</details>
+
+### annotate_brief
+
+**Write findings onto the morning brief**
+
+Write what you found onto the morning brief you just read: one sentence about the night as a whole, and for each deal you looked at, why it is on the list, what changed, and the one next move you would make. It writes onto that person's own brief for today and nothing else — it cannot be pointed at another person, another day, or a deal that is not already in their queue, and it cannot change the ranking. Every evidence id you cite must be one the brief already recorded for that item; citing anything else refuses the whole write, so cite from what read_brief gave you rather than from memory. Use log_activity to record something that happened on a deal, which belongs on the record itself and outlives today's brief. Calling it again replaces what you wrote before, so a second pass is a correction rather than an addition. (Governance: runs immediately; requires passport scope "write".)
+
+<details><summary>Input schema</summary>
+
+```json
+{
+  "additionalProperties": false,
+  "properties": {
+    "idempotency_key": {
+      "description": "Optional. Same key, same result; a key reused with other arguments is refused.",
+      "maxLength": 255,
+      "type": "string"
+    },
+    "items": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "cited_evidence": {
+            "description": "Evidence ids this item already carries, at least one. A finding citing nothing is refused: the whole point is that the claim is grounded in a record you read.",
+            "items": {
+              "format": "uuid",
+              "type": "string"
+            },
+            "minItems": 1,
+            "type": "array"
+          },
+          "finding": {
+            "description": "Why this is on the list, what changed, and the one next move.",
+            "type": "string"
+          },
+          "item_id": {
+            "description": "A brief item from the queue you just read.",
+            "format": "uuid",
+            "type": "string"
+          }
+        },
+        "required": [
+          "item_id",
+          "finding",
+          "cited_evidence"
+        ],
+        "type": "object"
+      },
+      "type": "array"
+    },
+    "narrative": {
+      "description": "One sentence about the night as a whole. Empty when there is nothing worth saying.",
+      "type": "string"
+    }
+  },
+  "type": "object"
+}
+```
+
+</details>
+
+<details><summary>Output schema</summary>
+
+```json
+{
+  "properties": {
+    "data": {
+      "properties": {
+        "items_annotated": {
+          "type": "integer"
+        },
+        "narrative_written": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "items_annotated",
+        "narrative_written"
       ],
       "type": "object"
     },
@@ -7243,6 +7406,21 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
               "item_id": {
                 "format": "uuid",
                 "type": "string"
+              },
+              "lineage": {
+                "properties": {
+                  "dismissed_on": {
+                    "type": "string"
+                  },
+                  "returned_with_activity_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "dismissed_on",
+                  "returned_with_activity_at"
+                ],
+                "type": "object"
               },
               "rank": {
                 "type": "integer"

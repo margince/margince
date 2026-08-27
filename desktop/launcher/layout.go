@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // layout is the installation directory — everything is relative to it, so the
@@ -97,6 +98,111 @@ func (l layout) adminPasswordPath() string { return filepath.Join(l.data(), "adm
 // copies data/ has the attachments a row points at rather than dangling keys.
 func (l layout) blobs() string { return filepath.Join(l.data(), "blobs") }
 
+// defaultAdminEmail is the bootstrap admin this launcher creates when it writes
+// margince.yaml itself, and the address the start message offers when the file
+// cannot answer. ONE constant because the two must agree: a start message naming
+// an account the configuration did not create hands a reader a credential that
+// cannot sign in, and nothing else in the folder would contradict it.
+const defaultAdminEmail = "owner@margince.local"
+
+// configuredAdminEmail is the address margince.yaml names as the bootstrap
+// admin, or defaultAdminEmail when the file cannot be read or does not say.
+//
+// A DELIBERATELY NARROW READER, not a YAML parser. This module is stdlib-only
+// and outside go.work by design (see go.mod), and a parser dependency bought for
+// one line of a start message would not pay for itself. It accepts `email:` as a
+// DIRECT child of `bootstrap_admin:` and nothing else, so a nested key of the
+// same name is not mistaken for the installation's own.
+//
+// Every failure answers with the default rather than an error. The address is
+// informational, so a shape this reader cannot follow must cost a reader the
+// precision and not the launch.
+func (l layout) configuredAdminEmail() string {
+	// Read whole rather than streamed: the file is small and write-once, and one
+	// read has one error to answer, where a scanner has a second that is easy to
+	// leave unasked.
+	//
+	// #nosec G304 -- the path is layout's own, derived from the installation directory
+	raw, err := os.ReadFile(l.configPath())
+	if err != nil {
+		return defaultAdminEmail
+	}
+
+	blockIndent, fieldIndent := -1, -1
+	for _, line := range strings.Split(string(raw), "\n") {
+		body := strings.TrimLeft(strings.TrimRight(line, "\r"), " \t")
+		if body == "" || strings.HasPrefix(body, "#") {
+			continue
+		}
+		key, rest, isKey := strings.Cut(body, ":")
+		if !isKey {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		indent := len(strings.TrimRight(line, "\r")) - len(body)
+
+		if blockIndent < 0 {
+			if key == "bootstrap_admin" {
+				blockIndent = indent
+			}
+			continue
+		}
+		// A key back at or outside the block's own column has ended it, and
+		// nothing after it can be the installation's admin.
+		if indent <= blockIndent {
+			return defaultAdminEmail
+		}
+		// The block's first field fixes the column its own keys sit in. Anything
+		// deeper belongs to a nested key — bootstrap_admin.contact.email is not
+		// bootstrap_admin.email.
+		if fieldIndent < 0 {
+			fieldIndent = indent
+		}
+		if indent != fieldIndent || key != "email" {
+			continue
+		}
+		if email := scalarValue(rest); email != "" {
+			return email
+		}
+		return defaultAdminEmail
+	}
+	return defaultAdminEmail
+}
+
+// scalarValue reads a YAML scalar written on one line: a quoted string up to its
+// closing quote, or a bare value up to an end-of-line comment.
+//
+// A '#' opens a comment only at the start of a line or after whitespace. It is
+// legal in the local part of an address, so cutting at every '#' would hand a
+// reader a truncated one — which is the failure the caller exists to prevent.
+func scalarValue(rest string) string {
+	rest = strings.TrimSpace(rest)
+	if rest == "" {
+		return ""
+	}
+	if quote := rest[0]; quote == '"' || quote == '\'' {
+		closing := strings.IndexByte(rest[1:], quote)
+		if closing < 0 {
+			return ""
+		}
+		value := rest[1 : 1+closing]
+		// A double-quoted scalar may carry escapes, and `"admin@demo.test"`
+		// is a legal spelling of an ordinary address. Decoding them is a YAML
+		// parser's job, so an escaped value is declined outright: the default is
+		// a reader's own address, where a half-decoded one is nobody's.
+		if quote == '"' && strings.ContainsRune(value, '\\') {
+			return ""
+		}
+		return value
+	}
+	for i := 1; i < len(rest); i++ {
+		if rest[i] == '#' && (rest[i-1] == ' ' || rest[i-1] == '\t') {
+			return strings.TrimRight(rest[:i], " \t")
+		}
+	}
+	return rest
+}
+
 // ensureConfig writes the deployment configuration on first run and leaves an
 // existing one alone, matching the create-if-missing / leave-if-exists rule
 // the api documents for margince.yaml (A107/ADR-0061). Overwriting it would
@@ -129,10 +235,10 @@ organization:
   timezone: %s
 
 bootstrap_admin:
-  email: owner@margince.local
+  email: %s
   display_name: Owner
   password_file: data/admin-password
-`, localTimezone())
+`, localTimezone(), defaultAdminEmail)
 
 	if err := writeFileAtomic(l.configPath(), []byte(config), 0o600); err != nil {
 		return "", err

@@ -10,7 +10,7 @@ package compose
 import (
 	"sort"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // corpusRank orders pages by fact density — same ranking the crawler's

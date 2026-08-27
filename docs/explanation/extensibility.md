@@ -195,8 +195,8 @@ disk under one import path**.
 
 | | Module path | `Extensions()` returns |
 |---|---|---|
-| `composition/` — committed vanilla stub | `github.com/gradionhq/margince/composition` | `nil` |
-| `build/composition/backend/` — generated, git-ignored | `github.com/gradionhq/margince/composition` | the enabled set |
+| `composition/` — committed vanilla stub | `github.com/margince/margince/composition` | `nil` |
+| `build/composition/backend/` — generated, git-ignored | `github.com/margince/margince/composition` | the enabled set |
 
 Core code carries one unconditional `composition.Extensions()` call — no build tags, no `if enabled`.
 **Which function body that call links to is decided by the active Go workspace**, through two
@@ -431,19 +431,19 @@ The tier is defended by fitness tests and scripts, so the guarantees can't rot i
 
 | Guarantee | Held by |
 |---|---|
-| A unit imports only the marker-allowlisted `pkg/**` surface — never `internal/**`, `cmd/**`, an unmarked `pkg` package, the composition module, or a sibling unit | `backend/extensions_arch_test.go` |
-| The surface marker exists only under `pkg/` — no silent allowlist widening elsewhere | `backend/extensions_arch_test.go` |
-| The composed set is wired only at the role `main.go`s, and each required role actually wires it | `backend/extensions_arch_test.go` |
+| A unit imports only the marker-allowlisted `pkg/**` surface — never `internal/**`, `cmd/**`, an unmarked `pkg` package, the composition module, or a sibling unit | `backend/gates/extensions_arch_test.go` |
+| The surface marker exists only under `pkg/` — no silent allowlist widening elsewhere | `backend/gates/extensions_arch_test.go` |
+| The composed set is wired only at the role `main.go`s, and each required role actually wires it | `backend/gates/extensions_arch_test.go` |
 | Vanilla composition reproduces the committed stub byte-for-byte | `make check-composition` |
 | The published surface doesn't break compatibility (advisory before the first release tag, enforcing after) | `scripts/check-pkg-freeze.sh` |
 | The core stays jurisdiction-neutral | `scripts/check-no-jurisdiction.sh` |
 | Every unit table carries FORCE RLS and a workspace-bound policy, and touches nothing in `public` | `make check-ext-migrations` (applies each unit's migrations as a minted restricted role) |
 | Every unit table grants the runtime role exactly `SELECT, INSERT, UPDATE, DELETE` — a table granting *nothing* satisfied the old one-sided allowlist and then answered `permission denied` at the first call | `make check-ext-migrations` |
-| A unit's SQL names only that unit's own `ext.ext_<name>_…` tables — the mistake-defence half of the shared-role reach described above, reading through the string constants a table name is spelled with | `backend/extensionsqlscope_test.go` |
+| A unit's SQL names only that unit's own `ext.ext_<name>_…` tables — the mistake-defence half of the shared-role reach described above, reading through the string constants a table name is spelled with | `backend/gates/extensionsqlscope_test.go` |
 | A unit's write to a CORE record goes through the product's own write path — the caller's live RBAC, the row-scope check on the subject, the audit row, the outbox event — and carries the unit's attribution under a core-stamped evidence member no caller may supply | `extension.Tx.Core()` (`internal/compose/extcore.go`), `storekit.withExtensionAttribution` |
 | A scheduled tick and a bus delivery write no core record at all: both run with no caller, and a core write is checked against the caller's own permissions | `internal/compose/extcore.go` (`refuseUnattended`), `extsubscribe_test.go`, `extledger_integration_test.go` |
 | A unit's ledger row names a table in that unit's own namespace, and its event a verb in that unit's own namespace — the namespace comes from the invocation, so neither is a string a unit can spell | `internal/compose/extledger.go`, `extledger_test.go` |
-| A unit's own write records BOTH its ledger row and its event, or neither — the same write shape the core holds itself to, in one call that cannot be half-made | `extension.Tx.Record`, `backend/writeshape_test.go`, `extledger_integration_test.go` |
+| A unit's own write records BOTH its ledger row and its event, or neither — the same write shape the core holds itself to, in one call that cannot be half-made | `extension.Tx.Record`, `backend/gates/writeshape_test.go`, `extledger_integration_test.go` |
 | A unit lands a record in the product only where an operator can see that it does: `source_system` is derived from a DECLARED ingress source, so a typo is a refusal rather than a second provenance namespace | `internal/compose/extingress.go` (`declaredIngress`), `internal/compose/extensions.go` (`preflightIngress`) |
 | An ingest runs on the named member's LIVE authority, and only for a member who currently holds one of that unit's user-scoped secrets — so a unit cannot act as a colleague who never asked it to | `internal/compose/extingressauthority.go`, `extingress_integration_test.go` |
 | An ingest is refused from an invocation that HAS a caller, and from inside a transaction the unit is holding — the second on a pool of one, where the alternative is a hang rather than a failure | `internal/compose/extingress.go`, `extingress_test.go`, `extingress_integration_test.go` |
@@ -504,7 +504,7 @@ the whole path).
 | The reference fixture | `fixtures/extensions/crm-hello/crmhello.go` |
 | The negative migration fixtures | `fixtures/extensions/bad-unprefixed-table/`, `bad-overbudget-table/` |
 | The secrets namespace-wall fixture | `fixtures/extensions/crm-nosy/crmnosy.go` |
-| The extension-tier fitness tests | `backend/extensions_arch_test.go` |
+| The extension-tier fitness tests | `backend/gates/extensions_arch_test.go` |
 
 ### Related docs
 

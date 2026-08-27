@@ -12,7 +12,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // approxTokensPerByte is the crude divisor the request line's estimate uses.

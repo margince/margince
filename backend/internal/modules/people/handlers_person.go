@@ -6,11 +6,10 @@ package people
 import (
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // MergePerson: POST /people/{id}/merge — merge this person (A, the path id)
@@ -96,7 +95,13 @@ func (h Handlers) UpdatePerson(w http.ResponseWriter, r *http.Request, id crmcon
 		return
 	}
 
-	person, err := h.store.UpdatePerson(r.Context(), pathID[ids.PersonKind](id), personUpdateInput(req, ifVersion))
+	update := personUpdateInput(req, ifVersion)
+	// An explicit null on a nullable field is "clear this", not "leave it": the
+	// decoded pointer cannot tell the two apart, and the contract declares these
+	// fields nullable, so accepting one and doing nothing is a success the caller
+	// cannot trust.
+	update.Clear = httperr.ClearedFields(r)
+	person, err := h.store.UpdatePerson(r.Context(), pathID[ids.PersonKind](id), update)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

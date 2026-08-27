@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/cli/craft/gate"
-	"github.com/gradionhq/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/gate"
+	"github.com/margince/margince/cli/craft/rubric"
 )
 
 // scriptedClient stands in for the model: it returns a canned result based on

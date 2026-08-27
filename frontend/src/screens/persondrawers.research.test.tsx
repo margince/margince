@@ -40,7 +40,7 @@ function mountWithBoughtData() {
       <PersonResearchDrawer
         personId="p-1"
         personName="Dana Buyer"
-        providerProfile={providerCompletedProfile}
+        providerProfiles={[providerCompletedProfile]}
         open
         onClose={() => undefined}
       />
@@ -52,8 +52,11 @@ describe("the research drawer with no research provider bound", () => {
   it("names the research provider as what is missing, not the data provider whose purchase is on screen", async () => {
     mountWithBoughtData();
 
-    // The purchase, above: what a licensed contact-data provider was paid for.
-    expect(await screen.findByText("Bought contact data")).toBeDefined();
+    // The purchase, above: what a licensed contact-data provider was paid for,
+    // under that provider's own name. The heading is the vendor rather than a
+    // generic title, which is what makes the contradiction below visible — the
+    // drawer denies a connection while showing Surfe's purchase.
+    expect(await screen.findByText("Surfe")).toBeDefined();
 
     const empty = await screen.findByText(/No research provider is connected/);
     // "data provider" belongs to the section above. Reusing it here is the

@@ -32,12 +32,12 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
-	"github.com/gradionhq/margince/backend/internal/modules/automation"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/diffhash"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // followUpDraftPurpose is the lawful basis a drafted reply is sent under.
@@ -57,7 +57,7 @@ const followUpDraftPurpose = "business_correspondence"
 // happens to spell the same word.
 //
 // Held by: TestEveryStagingNamesItsDealTargetThroughOneConstant
-// (backend/dealtargettype_test.go)
+// (backend/gates/dealtargettype_test.go)
 const approvalTargetDeal = "deal"
 
 // followUpReplySeam composes the reply and resolves who it answers.

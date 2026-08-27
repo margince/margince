@@ -9,7 +9,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // What this product will read, and what it says when it will not.

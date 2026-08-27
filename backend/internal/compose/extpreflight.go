@@ -15,7 +15,7 @@ package compose
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // preflightIngress validates one unit's declared ingress sources through the

@@ -15,7 +15,7 @@ package org360
 // enforced everywhere they would check, while the connections graph, the
 // contact roster and the per-contact deal roles quietly went on answering.
 //
-// The census in backend/edgereaders_test.go proves every read CALLS the gate.
+// The census in backend/gates/edgereaders_test.go proves every read CALLS the gate.
 // This proves the gate ANSWERS the way an operator would check — and that the
 // page says "withheld" through its own channel rather than rendering an account
 // with nobody at it, which is the difference between a withheld section and a
@@ -31,10 +31,10 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // repWithoutTheEdge holds everything the account page reads EXCEPT the edge —

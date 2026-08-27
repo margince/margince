@@ -6,7 +6,7 @@ package main
 import (
 	"go/ast"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // readSecrets reads a Secrets field's slice literal into the manifest's

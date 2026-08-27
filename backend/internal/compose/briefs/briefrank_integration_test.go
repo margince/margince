@@ -19,13 +19,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // briefClock is the fixed generation instant of the first run; marks and
@@ -414,4 +413,221 @@ func queueHasDeal(queue []BriefQueueItem, dealID ids.UUID) bool {
 		}
 	}
 	return false
+}
+
+// A deal that comes back says so, and says why.
+//
+// The suppression rule is what makes the sentence honest: a dismissed deal is
+// held out of every later queue until a linked activity occurs after the mark,
+// so a deal that reappears is ALWAYS one the rep waved away and that has since
+// moved. The lineage states that rule rather than guessing at it — which is
+// also why it can only ever name an activity: nothing else brings a dismissed
+// deal back, so a line naming an offer or a stage move would describe a reason
+// that cannot be why the deal is here.
+func TestADismissedDealComesBackCarryingWhyItReturned(t *testing.T) {
+	b := setupBrief(t)
+	owner := integration.OwnerConn(t)
+
+	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	markAt := briefClock.Add(2 * time.Hour)
+	dismissed := run.Items[1]
+	if _, err := b.engine.MarkDismissed(b.repCtx, dismissed.ID, markAt); err != nil {
+		t.Fatal(err)
+	}
+
+	returnedAt := "2026-06-04T10:00:00Z"
+	fresh := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'they came back', '`+returnedAt+`', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, fresh, "deal", dismissed.DealID)
+
+	nextClock := briefClock.Add(24 * time.Hour)
+	reranked, err := b.engine.Rank(b.repCtx, nextClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var back *BriefQueueItem
+	for i := range reranked.Queue {
+		if reranked.Queue[i].DealID == dismissed.DealID {
+			back = &reranked.Queue[i]
+		}
+	}
+	if back == nil {
+		t.Fatalf("the re-qualified deal is not in the queue: %v", queueDeals(reranked.Queue))
+	}
+	if back.Lineage == nil {
+		t.Fatal("the returning deal carries no lineage — the rep sees a deal they dismissed " +
+			"sitting in today's queue with no explanation, which reads as the product having forgotten")
+	}
+	// The DAY they dismissed it, in the installation's reporting zone — the
+	// same zone the run's own local_day is stamped in.
+	if got := back.Lineage.DismissedOn.Format(time.DateOnly); got != markAt.Format(time.DateOnly) {
+		t.Errorf("lineage says dismissed on %s, want %s", got, markAt.Format(time.DateOnly))
+	}
+	// And the activity that actually brought it back.
+	if got := back.Lineage.ReturnedWith.UTC().Format(time.RFC3339); got != returnedAt {
+		t.Errorf("lineage cites an activity at %s, want the one that re-qualified it (%s)", got, returnedAt)
+	}
+}
+
+// An item nobody dismissed carries no lineage. Without this the test above
+// passes against an engine that attaches the same sentence to everything.
+func TestAnItemNobodyDismissedCarriesNoLineage(t *testing.T) {
+	b := setupBrief(t)
+
+	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(run.Items) == 0 {
+		t.Fatal("the seeded run ranked nothing, so this test proves nothing")
+	}
+	for _, item := range run.Items {
+		if item.Lineage != nil {
+			t.Errorf("deal %s was never dismissed but carries lineage %+v — "+
+				"the rep is told they waved away something they never saw", item.DealID, item.Lineage)
+		}
+	}
+}
+
+// The lineage survives the round trip through the row, because that is where it
+// is read from every morning after the one it was computed on.
+func TestTheLineageIsPersistedNotRecomputedOnEveryRead(t *testing.T) {
+	b := setupBrief(t)
+	owner := integration.OwnerConn(t)
+
+	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dismissed := run.Items[1]
+	if _, err := b.engine.MarkDismissed(b.repCtx, dismissed.ID, briefClock.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	fresh := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'they came back', '2026-06-04T10:00:00Z', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, fresh, "deal", dismissed.DealID)
+
+	// A fresh run on a later day persists the returning item...
+	nextClock := briefClock.Add(24 * time.Hour)
+	if _, err := b.engine.SnapshotRun(b.repCtx, nextClock); err != nil {
+		t.Fatal(err)
+	}
+	// ...and the on-open read serves it back from the row.
+	read, err := b.engine.LatestRun(b.repCtx, nextClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var found bool
+	for _, item := range read.Items {
+		if item.DealID == dismissed.DealID {
+			found = true
+			if item.Lineage == nil {
+				t.Error("the persisted returning item read back with no lineage — " +
+					"the sentence would appear the morning it was computed and vanish the next")
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("the returning deal is not in the persisted run: %v", read.Items)
+	}
+}
+
+// The lineage names the day the rep DISMISSED it, not the day the brief was
+// for. A rep who opens Tuesday's brief on Wednesday and waves a deal away did
+// that on Wednesday, and a card telling them otherwise is describing an act
+// they did not perform on a day they did not perform it.
+func TestTheLineageIsDatedWhenTheRepActedNotWhenTheBriefWasFor(t *testing.T) {
+	b := setupBrief(t)
+	owner := integration.OwnerConn(t)
+
+	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	dismissed := run.Items[1]
+	// The brief is for briefClock's day; the rep gets to it the NEXT day.
+	dismissedNextDay := briefClock.Add(26 * time.Hour)
+	if _, err := b.engine.MarkDismissed(b.repCtx, dismissed.ID, dismissedNextDay); err != nil {
+		t.Fatal(err)
+	}
+	fresh := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'they came back', '2026-06-05T10:00:00Z', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, fresh, "deal", dismissed.DealID)
+
+	reranked, err := b.engine.Rank(b.repCtx, briefClock.Add(72*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range reranked.Queue {
+		if item.DealID != dismissed.DealID {
+			continue
+		}
+		if item.Lineage == nil {
+			t.Fatal("the returning deal carries no lineage")
+		}
+		want := dismissedNextDay.Format(time.DateOnly)
+		if got := item.Lineage.DismissedOn.Format(time.DateOnly); got != want {
+			t.Errorf("lineage says dismissed on %s, want %s — the day the rep acted, "+
+				"not the day the brief was assembled for", got, want)
+		}
+		return
+	}
+	t.Fatalf("the returning deal is not in the queue: %v", queueDeals(reranked.Queue))
+}
+
+// A deal dismissed, returned, and then ACTED on carries no lineage: the act is
+// the last thing the rep said about it, and reopening the dismissal would
+// reargue a point they have already closed.
+func TestALaterActRetiresTheDismissalLineage(t *testing.T) {
+	b := setupBrief(t)
+	owner := integration.OwnerConn(t)
+
+	run, err := b.engine.SnapshotRun(b.repCtx, briefClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	deal := run.Items[1]
+	if _, err := b.engine.MarkDismissed(b.repCtx, deal.ID, briefClock.Add(2*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	first := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'they came back', '2026-06-04T10:00:00Z', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, first, "deal", deal.DealID)
+
+	// It returns, and this time the rep acts on it.
+	second, err := b.engine.SnapshotRun(b.repCtx, briefClock.Add(24*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var returned ids.UUID
+	for _, item := range second.Items {
+		if item.DealID == deal.DealID {
+			returned = item.ID
+		}
+	}
+	if returned.IsZero() {
+		t.Fatalf("the deal did not return on day two: %v", second.Items)
+	}
+	if _, err := b.engine.MarkActed(b.repCtx, returned, briefClock.Add(26*time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	// A third activity brings it back again — but the last thing the rep said
+	// was "acted", not "dismissed".
+	third := integration.SeedIDRow(t, owner, `INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		VALUES ($1, 'email', 'and again', '2026-06-06T10:00:00Z', 'manual', 'human:x')`)
+	integration.LinkActivity(t, owner, third, "deal", deal.DealID)
+
+	final, err := b.engine.Rank(b.repCtx, briefClock.Add(72*time.Hour))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range final.Queue {
+		if item.DealID == deal.DealID && item.Lineage != nil {
+			t.Errorf("the deal carries a dismissal line after the rep ACTED on it (%+v) — "+
+				"the card reopens an argument they already closed", item.Lineage)
+		}
+	}
 }

@@ -10,7 +10,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gradionhq/margince/cli/craft/gate"
+	"github.com/margince/margince/cli/craft/gate"
 )
 
 //go:embed corpus.json

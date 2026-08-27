@@ -14,7 +14,7 @@ package mcp
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // Resource is one published document, as resources/list advertises it.

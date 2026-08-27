@@ -18,7 +18,7 @@ package customfields
 // refusal paths only. Mirrors automation's own
 // autofixture_integration_test.go: seeding is spelled locally because
 // the compose-layer harness cannot be imported here (modules never see
-// compose, tests included — backend/arch_test.go).
+// compose, tests included — backend/gates/arch_test.go).
 
 import (
 	"context"
@@ -29,9 +29,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // candidatesFixture is the real-Postgres rig this suite shares: an owner

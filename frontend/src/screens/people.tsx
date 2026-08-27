@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -61,9 +61,11 @@ import { PersonProjects } from "./personprojects";
 import {
   createdColumn,
   lastActivityColumn,
+  mineEmptyNote,
   ownerColumn,
   standardViews,
 } from "./recordlist";
+import { invalidateRecord } from "./recordwritekeys";
 import { RelationshipsTab } from "./relationships";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
@@ -343,6 +345,7 @@ export function ContactsScreen() {
       <ListTable
         state={state}
         unit="unit.contacts"
+        emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" })}
         action={
           <CreateAction
             label={t("create.contact")}
@@ -407,6 +410,7 @@ type PersonTab = (typeof PERSON_TABS)[number];
 
 export function PersonScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const cf = useObjectCustomFields("person");
   // ONE sentence about this contact being archived, minted here and pointed at
@@ -665,7 +669,15 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
               </div>
             )}
             {tab === "history" && (
-              <RecordHistoryTab kind="person" id={person.id} />
+              <RecordHistoryTab
+                kind="person"
+                id={person.id}
+                restore={{
+                  version: person.version,
+                  onRestored: () =>
+                    invalidateRecord(queryClient, "person", person.id),
+                }}
+              />
             )}
           </RecordView>
         )}

@@ -8,6 +8,7 @@ import {
   useMemo,
   useState,
 } from "react";
+import { pluralCategory } from "../format/plural";
 import { de } from "./de";
 import { en, type MessageKey } from "./en";
 import { vi } from "./vi";
@@ -27,18 +28,30 @@ import { vi } from "./vi";
 // here: it governs what AI writes for the whole team, not what any one person
 // reads the interface in.
 
-// The catalog registry is what we ship. `Locale` derives from it, so the type
-// needs no edit when a locale arrives. `LOCALES` below does NOT derive: it is
-// hand-ordered because it also fixes the order the switcher shows, and both
-// the switcher and browser detection read that written list. `satisfies
-// readonly Locale[]` proves each entry is a real locale — it does not prove
-// the list is COMPLETE. Completeness is enforced by i18n.test.ts.
-export const catalogs = { en, de, vi } satisfies Record<
-  string,
-  Record<MessageKey, string>
->;
+// The catalog registry is what we ship, and `Locale` is written above it
+// rather than derived from it. The derivation is what a reader would expect
+// and it is not available: `tsc -b` has to SERIALIZE the inferred type into a
+// declaration file, and three catalogs of every message key exceed the length
+// the compiler will emit (TS7056). The annotation is what keeps the type
+// short — it names the shape instead of restating it key by key.
+//
+// A locale therefore arrives in two places, and neither can be forgotten
+// quietly: added to `catalogs` alone it is an excess property the annotation
+// rejects, and added to `Locale` alone it leaves the record missing a key.
+// Both fail the build.
+//
+// `LOCALES` below does not derive either: it is hand-ordered because it also
+// fixes the order the switcher shows, and both the switcher and browser
+// detection read that written list. `satisfies readonly Locale[]` proves each
+// entry is a real locale — it does not prove the list is COMPLETE.
+// Completeness is enforced by i18n.test.ts.
+export type Locale = "en" | "de" | "vi";
 
-export type Locale = keyof typeof catalogs;
+export const catalogs: Record<Locale, Record<MessageKey, string>> = {
+  en,
+  de,
+  vi,
+};
 
 /**
  * A key an extension unit's own copy supplies, namespaced to the unit the way
@@ -160,6 +173,89 @@ export function translate(
   return message.replace(/\{(\w+)\}/g, (whole, name: string) =>
     name in params ? String(params[name]) : whole,
   );
+}
+
+/**
+ * A message key whose plural forms this catalogue carries.
+ *
+ * Derived from the `_one` arm rather than listed, so a key added with only an
+ * `_other` form is not a plural base this can be asked for — and adding the pair
+ * is all it takes to make it one.
+ */
+type BaseOfPluralKey<K> = K extends `${infer Base}_one` ? Base : never;
+type BaseOfOtherKey<K> = K extends `${infer Base}_other` ? Base : never;
+// The intersection, so a base is only a base when the catalogue carries BOTH
+// arms. Half a pair is a translation somebody started, and offering it here
+// would resolve to the key itself on screen.
+export type PluralBase = BaseOfPluralKey<MessageKey> &
+  BaseOfOtherKey<MessageKey>;
+
+function isMessageKey(value: string): value is MessageKey {
+  return value in en;
+}
+
+/**
+ * The plural KEY, for a caller that has to carry a key rather than a rendered
+ * string.
+ *
+ * The conversation's narration items are the reason this exists: they hold an
+ * `i18nKey` and their params, and are rendered later — so resolving the message
+ * at construction time would freeze the reader's language into a value that
+ * outlives the render that built it. The category still comes from the locale's
+ * own rule, which is the whole point; only WHEN the lookup happens differs.
+ *
+ * Falls back to the `_other` arm, and throws if that is gone too: a base is
+ * typed as carrying both arms, so losing one means the catalogue was edited out
+ * from under this call, and rendering the key itself on screen would be the
+ * quieter failure of the two.
+ */
+export function pluralKey(
+  locale: Locale,
+  base: PluralBase,
+  count: number,
+): MessageKey {
+  const category = pluralCategory(locale, count);
+  const candidate = `${base}_${category}`;
+  if (isMessageKey(candidate)) {
+    return candidate;
+  }
+  const fallback = `${base}_other`;
+  if (isMessageKey(fallback)) {
+    return fallback;
+  }
+  throw new Error(`plural base ${base} has no _other arm in the catalogue`);
+}
+
+/**
+ * One count, in the reader's language, through the locale's own plural rule.
+ *
+ * The suffix comes from `Intl.PluralRules` rather than from a comparison with 1,
+ * which is what fifteen call sites were each doing for themselves. A locale with
+ * a `few` or a `many` category therefore needs new catalogue entries and no code
+ * change; before this, it needed fifteen.
+ *
+ * `count` is passed BOTH ways on purpose: as the number the rule selects on, and
+ * as whatever string the caller wants rendered — a formatted "1,204" is not a
+ * number `Intl.PluralRules` can select from, and a raw `1204` is not what a
+ * reader should see. So the caller formats, and this selects.
+ *
+ * A category the catalogue has no entry for falls back to `_other`, which is a
+ * missing translation rather than a reason to render nothing — the same fallback
+ * `pluralKey` states, because this is that function plus a lookup.
+ */
+export function translatePlural(
+  locale: Locale,
+  base: PluralBase,
+  count: number,
+  params?: Record<string, string>,
+): string {
+  // `pluralKey` already narrows the composed `${base}_${category}` back to a
+  // real key through `isMessageKey`, so this is a lookup `translate` can do —
+  // and doing it there rather than again here is what keeps ONE catalogue
+  // order, one fallback and one interpolation in the file. The earlier version
+  // repeated all three behind an `as Record<string, string>`, which is a second
+  // implementation wearing an assertion to get at the same two catalogues.
+  return translate(locale, pluralKey(locale, base, count), params);
 }
 
 type LocaleContextValue = {
@@ -299,3 +395,24 @@ export function useT() {
  * restatement cannot go stale if there is nothing to restate.
  */
 export type Translator = ReturnType<typeof useT>;
+
+/**
+ * `useT` for a message whose wording depends on a count.
+ *
+ * Separate hook rather than an overload on `useT`, because the two take
+ * different key spaces: `useT` takes a whole key and this takes a plural BASE,
+ * and a base is not a key — `t("share.teamMembers")` names nothing.
+ */
+export function usePlural() {
+  const { locale } = useContext(LocaleContext);
+  return (base: PluralBase, count: number, params?: Record<string, string>) =>
+    translatePlural(locale, base, count, params);
+}
+
+export type PluralTranslator = ReturnType<typeof usePlural>;
+
+/** `pluralKey` bound to the reader's locale, for a caller that carries keys. */
+export function usePluralKey() {
+  const { locale } = useContext(LocaleContext);
+  return (base: PluralBase, count: number) => pluralKey(locale, base, count);
+}

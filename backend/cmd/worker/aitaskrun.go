@@ -16,13 +16,13 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/aicert"
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // probeCall is one model call the case made, kept whole.
@@ -408,7 +408,7 @@ func readJSONFile(path, what string) (json.RawMessage, error) {
 
 // probeCompleter binds the site's task to the model that will answer it.
 //
-// The router itself is built by compose, not here: backend/arch_test.go pins
+// The router itself is built by compose, not here: backend/gates/arch_test.go pins
 // the model-path assembly seam to exactly two files, and a cmd/ process role
 // constructing its own would be a third gate.
 func probeCompleter(cfg aiTaskFlags, task ai.Task) (compose.TaskProbeCompleter, string, error) {

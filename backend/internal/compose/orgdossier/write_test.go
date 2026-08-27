@@ -10,8 +10,8 @@ import (
 	"context"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // describing renders a reply whose one sentence cites a row of this input.

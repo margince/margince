@@ -19,14 +19,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // SiteReadDebugOptions configures one debug read. Brain is
@@ -389,7 +389,7 @@ type TaskProbeCompleter func(ctx context.Context, req model.Request) (model.Resp
 // uses: a routing file, a direct provider:model override, or the offline fake.
 //
 // It lives HERE, beside SiteReadDebugBrain, because this file is one of the two
-// files that ARE the model-path assembly seam (backend/arch_test.go's
+// files that ARE the model-path assembly seam (backend/gates/arch_test.go's
 // modelPathAssemblySeam). A probe that built its own router in cmd/ would be a
 // third gate, and the invariant is that there are exactly two.
 //

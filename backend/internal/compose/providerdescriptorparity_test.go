@@ -22,9 +22,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/integrations"
-	"github.com/gradionhq/margince/backend/internal/modules/integrations/surfe"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/provider"
+	"github.com/margince/margince/backend/internal/modules/integrations"
+	"github.com/margince/margince/backend/internal/modules/integrations/surfe"
+	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 func TestTheOfflineFakeDescribesTheSameProductAsTheLiveAdapter(t *testing.T) {

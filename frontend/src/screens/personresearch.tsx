@@ -36,12 +36,13 @@ export function PersonResearchTab({
     loading,
   );
   const providerWithheld = view ? omitted(view, "provider_profile") : false;
-  // PersonProviderSection itself renders nothing once a profile is absent
-  // (no grant issue — the caller HAS the grant, there is simply no provider
-  // behind it), so "nothing to show" for the provider half is exactly this:
-  // present, not withheld, and no profile.
+  // No provider is connected and none ever sold us anything here, so there is
+  // no section to draw. An EMPTY list is that fact; a withheld one is the
+  // grant, which the branch above names instead.
   const providerHasNothing =
-    view != null && !providerWithheld && !view.provider_profile;
+    view != null &&
+    !providerWithheld &&
+    (view.provider_profiles?.length ?? 0) === 0;
 
   // The tab-wide empty state: neither half has anything to say about this
   // person. Two stacked empty panels would say the same "nothing here" twice;
@@ -75,7 +76,7 @@ export function PersonResearchTab({
         ) : (
           <PersonProviderSection
             personId={view.person.id}
-            profile={view.provider_profile}
+            profiles={view.provider_profiles}
           />
         ))}
       <Panel title={t("person.research.fields")}>

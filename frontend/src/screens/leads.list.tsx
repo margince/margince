@@ -10,6 +10,7 @@ import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { ToastRegion, useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
+import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -48,7 +49,12 @@ import {
   useListQuery,
   useOwnerChips,
 } from "./listquery";
-import { lastActivityColumn, ownerColumn, standardViews } from "./recordlist";
+import {
+  lastActivityColumn,
+  mineEmptyNote,
+  ownerColumn,
+  standardViews,
+} from "./recordlist";
 import "./leads.css";
 
 type Lead = components["schemas"]["Lead"];
@@ -310,24 +316,7 @@ function LeadsWorkbench({
         </div>
       )}
       <ListTable
-        emptyNote={
-          showingMine ? (
-            <span>
-              {t("lead.emptyMine")}{" "}
-              <Button
-                small
-                onClick={() =>
-                  state.setQuery((q) => {
-                    const { owner_id: _mine, ...rest } = q.filters;
-                    return { ...q, filters: rest };
-                  })
-                }
-              >
-                {t("lead.showAll")}
-              </Button>
-            </span>
-          ) : undefined
-        }
+        emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })}
         // The board renders INSIDE the surface, so the search, the chips and
         // the saved views stay above it. A board that replaced the surface
         // took the filter bar with it, leaving the reader looking at a
@@ -382,7 +371,7 @@ function LeadsWorkbench({
               const terminal = terminalBadge(lead.status);
               return (
                 <span>
-                  <strong>{lead.full_name ?? lead.email ?? ""}</strong>
+                  <strong>{leadIdentityName(lead) || t("lead.unnamed")}</strong>
                   {lead.company_name && (
                     <span className="t-caption"> · {lead.company_name}</span>
                   )}
@@ -480,7 +469,9 @@ function LeadsWorkbench({
             }),
           label: (lead) =>
             t("lead.bulkSelectRow", {
-              name: lead.full_name ?? lead.email ?? lead.id,
+              // The id, not the word: this is an accessible NAME, and every
+              // unnamed row would otherwise announce as the same control.
+              name: leadIdentityName(lead) || lead.id,
             }),
           bar: (
             <LeadBulkBar
@@ -520,7 +511,7 @@ function LeadsWorkbench({
                           });
                         }}
                       >
-                        {t("lead.showAll")}
+                        {t("list.showAll")}
                       </Button>
                     </span>,
                     { sticky: true },

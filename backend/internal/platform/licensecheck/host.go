@@ -20,7 +20,7 @@ package licensecheck
 // THE ONE DIVERGENCE, and it is additive: a rejection is wrapped in ErrVerdict so
 // a caller can tell "the module judged this license" from "the module could not
 // run" without reading the message. The wording is unchanged; this repository
-// forbids classifying errors by message text (backend/errmatch_test.go), and it is
+// forbids classifying errors by message text (backend/gates/errmatch_test.go), and it is
 // right to — the two mean opposite things to a running installation, and a
 // reworded string upstream would silently turn every fault into a refusal. Worth
 // offering upstream so the divergence closes.

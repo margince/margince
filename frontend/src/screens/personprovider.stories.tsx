@@ -50,7 +50,7 @@ function section(value: Profile | undefined) {
     });
     return (
       <StoryProviders>
-        <PersonProviderSection personId="p-1" profile={value} />
+        <PersonProviderSection personId="p-1" profiles={value && [value]} />
       </StoryProviders>
     );
   };
@@ -70,7 +70,7 @@ export const CompletedGerman: Story = {
     });
     return (
       <StoryProviders locale="de">
-        <PersonProviderSection personId="p-1" profile={profile()} />
+        <PersonProviderSection personId="p-1" profiles={[profile()]} />
       </StoryProviders>
     );
   },
@@ -114,20 +114,67 @@ export const NoMatch: Story = {
   ),
 };
 
-/** Nothing has been bought yet. The values are absent because none was asked
- *  for, which is the one state where an empty card is the true report. */
+/**
+ * Nothing has been bought yet, which is the state a contact sits in until
+ * somebody asks. The card carries the plate that NAMES the lookup rather than
+ * an empty body with a quiet button in the header: a reader who came here to
+ * buy data should not have to find the verb.
+ *
+ * `provider` is absent on purpose. The server fills it from the newest run, so
+ * a contact nobody has looked up carries no provider name — a fixture that set
+ * one would prove the button works in a case that cannot happen.
+ */
 export const NeverRun: Story = {
   render: section(
     profile({
       state: "never_run",
+      provider: "surfe",
       retrieved_at: null,
       emails: [],
       mobile_phones: [],
       linkedin_url: null,
       current_employment: undefined,
       job_history: [],
+      location: null,
+      departments: [],
+      seniorities: [],
       latest_run: undefined,
+      contributing_runs: undefined,
+      categories_not_requested: [],
     }),
+  ),
+};
+
+/**
+ * The first lookup on a contact, in German. The plate carries the whole
+ * explanation of what a lookup spends and where the answer lands, so it is the
+ * copy most worth reading in a second language.
+ */
+export const NeverRunGerman: Story = {
+  render: () => (
+    <StoryProviders locale="de">
+      <PersonProviderSection
+        personId="p-1"
+        profiles={[
+          profile({
+            state: "never_run",
+            provider: "surfe",
+            retrieved_at: null,
+            emails: [],
+            mobile_phones: [],
+            linkedin_url: null,
+            current_employment: undefined,
+            job_history: [],
+            location: null,
+            departments: [],
+            seniorities: [],
+            latest_run: undefined,
+            contributing_runs: undefined,
+            categories_not_requested: [],
+          }),
+        ]}
+      />
+    </StoryProviders>
   ),
 };
 
@@ -179,4 +226,52 @@ export const Withheld: Story = { render: section(undefined) };
 export const Phone: Story = {
   tags: ["uat-phone"],
   render: section(profile()),
+};
+
+/**
+ * TWO providers connected — the state the whole per-provider split exists for.
+ *
+ * One has been paid and answered; the other has never been asked. Each section
+ * carries its own name, mark, state and button, so the reader can see who sold
+ * them the mobile number on screen and choose who to spend with next. Under a
+ * single unnamed card this page could not express either fact.
+ */
+export const TwoProviders: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /people/p-1/enrichment-runs/run-1": () =>
+        jsonResponse(completedProviderRun),
+    });
+    return (
+      <StoryProviders>
+        <div className="pe-overview-stack">
+          <PersonProviderSection
+            personId="p-1"
+            profiles={[
+              profile(),
+              profile({
+                // A provider this frontend has no logo or brand name for: the
+                // neutral mark and the contract key stand in, which is the
+                // honest answer for a name it has never heard of.
+                provider: "acmedata",
+                state: "never_run",
+                retrieved_at: null,
+                emails: [],
+                mobile_phones: [],
+                linkedin_url: null,
+                current_employment: undefined,
+                job_history: [],
+                location: null,
+                departments: [],
+                seniorities: [],
+                latest_run: undefined,
+                contributing_runs: undefined,
+                categories_not_requested: [],
+              }),
+            ]}
+          />
+        </div>
+      </StoryProviders>
+    );
+  },
 };

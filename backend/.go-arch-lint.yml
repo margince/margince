@@ -19,8 +19,8 @@ vendors:
   # The composed extension set (ADR-0069): an out-of-module import — the
   # committed vanilla stub in bare builds, the generated module under
   # build/composition/ in composed ones. Only cmd wires it (the fitness
-  # test in backend/extensions_arch_test.go holds the same rule).
-  composition: { in: github.com/gradionhq/margince/composition }
+  # test in backend/gates/extensions_arch_test.go holds the same rule).
+  composition: { in: github.com/margince/margince/composition }
   pgx:    { in: github.com/jackc/** }
   chi:    { in: github.com/go-chi/** }
   oapi:   { in: github.com/oapi-codegen/** }
@@ -106,7 +106,7 @@ components:
   compose:     { in: [internal/compose, internal/compose/**] }
   migrations:  { in: migrations }
   cmd:         { in: cmd/** }
-  root:        { in: . }
+  gates:       { in: gates }
 
 commonComponents:
   - shared
@@ -248,11 +248,11 @@ deps:
   migrations:
     mayDependOn: [platform, migrations]
     canUse: [pgx]
-  # The root fitness tests walk the authoritative contract document
+  # The fitness gates walk the authoritative contract document
   # (api/crm.yaml) directly — the RD-AC-7 negative-scope gate reads the
   # 3.1 source of truth, not the generated Go, so a contract-only change
   # cannot slip past it.
-  root:
+  gates:
     # publicevents_test.go reads crmcontracts.PublicEventVersions — the
     # authoritative catalog gate walks the generated contract directly.
     # aitaskcensus_test.go builds compose.NewTaskCensus: the AI
@@ -260,11 +260,11 @@ deps:
     # fitness function that holds it to the task contract has to construct
     # it. airoutingschema_test.go calls ai.ParseRouting and compiles the
     # generated routing schema, because "what the editor accepts" and "what
-    # boots" is one claim and only the root package may hold both halves —
+    # boots" is one claim and only the gates package may hold both halves —
     # the ai module itself must not gain a JSON Schema dependency for it.
     # corepicklistcontract_test.go asks collections' SegmentEngine what
     # values each core picklist offers and holds them to the enums in
-    # api/crm.yaml — the same "only root may hold both halves" shape, and
+    # api/crm.yaml — the same "only gates may hold both halves" shape, and
     # for the same reason: collections must not gain a YAML dependency to
     # check a document it does not own. It reads the engine through
     # storekit's own Field type rather than restating "picklist" as a bare
@@ -276,18 +276,18 @@ deps:
     # aitaskrunenum_test.go reads aiactivity.StateStalled and runneractivity-
     # parity_test.go reads runner.ProjectionStateFor: both hold a module's own
     # vocabulary to a set that lives OUTSIDE it — the contract's enum and a
-    # migration's CHECK — and only the root may see all three at once.
+    # migration's CHECK — and only gates may see all three at once.
     # frontendapprovalkinds_test.go reads approvals.StageableKinds and holds it
-    # to the frontend's KIND_LABEL map: the same "only root may hold both
+    # to the frontend's KIND_LABEL map: the same "only gates may hold both
     # halves" shape again, across the wire this time — approvals must not gain
     # a dependency on a TypeScript file to know its kinds have words.
     # dedupeevidencefields_test.go reads people.DedupeEvidenceFields and holds it
-    # to the contract's AttentionPairEvidence enum: once more the "only root may
+    # to the contract's AttentionPairEvidence enum: once more the "only gates may
     # hold both halves" shape. The dedupe evidence snapshot is stored as free
     # JSON, so a field name the detector writes and the contract omits reaches a
     # reader as a database column — people must not gain a dependency on the
     # contract document to know its own field names are sayable.
-    # Root carries test files only, so this grants no production edge.
+    # gates carries test files only, so this grants no production edge.
     mayDependOn: [contracts, compose, ai, collections, platform, activities, aiactivity, agents, approvals, people]
     canUse: [yaml, jsonschema]
   cmd:

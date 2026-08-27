@@ -20,7 +20,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // writeCompanyFields applies the submitted fields: the column-backed ones onto
@@ -94,7 +94,7 @@ func writeCompanyFields(ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID
 	// from the tree instead of asserted here.
 	//
 	// Held by: TestEveryOrganizationRenameReachesTheDuplicateRecheck
-	// (backend/orgrenamerecheck_test.go)
+	// (backend/gates/orgrenamerecheck_test.go)
 	if renamed {
 		if err := recheckOrgNameForDuplicates(ctx, tx, orgID, by); err != nil {
 			return nil, err

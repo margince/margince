@@ -6,7 +6,7 @@ package identity
 import (
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // passwordLink is the ONE spelling of an emailed set-password deep link, and the

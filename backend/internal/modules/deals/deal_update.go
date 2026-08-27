@@ -16,17 +16,23 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // UpdateDealInput is one deal partial update: every field is optional, and
 // CustomFields carries the request body's extra top-level keys.
 type UpdateDealInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
+	// Trail names what the audit trail calls this write; zero is an update.
+	Trail                 storekit.AuditTrail
 	Name                  *string
 	AmountMinor           *int64
 	Currency              *string

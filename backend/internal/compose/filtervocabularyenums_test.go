@@ -27,8 +27,8 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // vocabularyFieldEnum reads one inline enum off the FilterVocabularyField

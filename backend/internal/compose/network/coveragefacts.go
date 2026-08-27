@@ -17,10 +17,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	peoplemod "github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	peoplemod "github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // DealStatusOpen is the status the pipeline rules apply to. Named rather than

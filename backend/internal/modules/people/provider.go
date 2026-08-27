@@ -15,12 +15,12 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // Provider answers the datasource verbs for person|organization|lead|
@@ -262,21 +262,30 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		v, err := p.store.UpdatePerson(ctx, ids.From[ids.PersonKind](in.Ref.ID), personUpdateInput(req, in.IfVersion))
+		update := personUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdatePerson(ctx, ids.From[ids.PersonKind](in.Ref.ID), update)
 		return ref(datasource.EntityPerson, v.Id), err
 	case datasource.EntityOrganization:
 		var req crmcontracts.UpdateOrganizationRequest
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		v, err := p.store.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](in.Ref.ID), organizationUpdateInput(req, in.IfVersion))
+		update := organizationUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](in.Ref.ID), update)
 		return ref(datasource.EntityOrganization, v.Id), err
 	case datasource.EntityLead:
 		var req LeadUpdateRequest
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		v, err := p.store.UpdateLead(ctx, ids.From[ids.LeadKind](in.Ref.ID), leadUpdateInput(req, in.IfVersion))
+		update := leadUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdateLead(ctx, ids.From[ids.LeadKind](in.Ref.ID), update)
 		return ref(datasource.EntityLead, v.Id), err
 	case datasource.EntityRelationship:
 		var req crmcontracts.UpdateRelationshipRequest

@@ -16,7 +16,7 @@ package integration
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/privacy"
 )
 
 func TestErasureReachesTheCaptureTracePayloads(t *testing.T) {

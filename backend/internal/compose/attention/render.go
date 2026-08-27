@@ -11,10 +11,10 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/deadline"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/deadline"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // One item's shape, per producer.
@@ -132,7 +132,7 @@ func pairSide(id ids.UUID, face RecordFace) crmcontracts.AttentionPairSide {
 // map kept beside it. A map here would be a third copy of one vocabulary — the
 // detector writes it, the contract publishes it, and a hand-maintained list in
 // the middle can drift from both while every gate stays green.
-// backend/dedupeevidencefields_test.go holds the detector's list against the
+// backend/gates/dedupeevidencefields_test.go holds the detector's list against the
 // contract in both directions; this reads the contract directly, so the two
 // ends are all there is.
 func evidenceRows(rows []FieldComparison) []crmcontracts.AttentionPairEvidence {
@@ -182,7 +182,7 @@ func approvalItem(approval crmcontracts.Approval) crmcontracts.AttentionItem {
 // Overdue is resolved here rather than in the browser, through deadline.Passed
 // — the one place that decides whether a due moment is behind now.
 // Held by: TestOnlyOnePlaceDecidesWhetherSomethingIsLate
-// (backend/overdueboundary_test.go).
+// (backend/gates/overdueboundary_test.go).
 func taskItem(task Task, asOf time.Time) crmcontracts.AttentionItem {
 	subject := task.Subject
 	item := crmcontracts.AttentionItem{

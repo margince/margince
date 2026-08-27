@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity/internal/policy"
+	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
 )
 
 // rbacMatrixDoc is the published page. repoArtifact lands on the backend module

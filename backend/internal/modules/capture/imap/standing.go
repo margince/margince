@@ -28,8 +28,8 @@ import (
 	imapv2 "github.com/emersion/go-imap/v2"
 	"github.com/emersion/go-imap/v2/imapclient"
 
-	"github.com/gradionhq/margince/backend/internal/platform/netguard"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/platform/netguard"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // NewStanding returns the persisted-connection connector: Authenticate probes

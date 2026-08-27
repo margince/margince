@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func TestEveryDeclaredDependencySuppliedRefusesAConfigMissingARegistrationOrCadenceDependency(t *testing.T) {

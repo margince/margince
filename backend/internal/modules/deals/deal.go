@@ -9,16 +9,15 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // ensureOpenBirthStage guards create: deals are born open — AdvanceDeal
@@ -50,7 +49,7 @@ func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, p
 // the owner transition and deal.updated only for the other fields — both
 // on this request's correlation_id when they co-occur.
 func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch) error {
-	auditID, err := storekit.Audit(ctx, tx, "update", "deal", id.UUID, p.Before(), p.After())
+	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "deal", id.UUID, p.Before(), p.After())
 	if err != nil {
 		return fmt.Errorf("audit deal update: %w", err)
 	}
@@ -89,6 +88,9 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 // visible under the caller's row scope before it lands in the patch.
 func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal, in UpdateDealInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
+	if err := applyClears(p, in.Clear, clearableDealColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.Name != nil {
 		p.Set(dealNameColumn, current.Name, *in.Name)
 	}

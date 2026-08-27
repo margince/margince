@@ -20,8 +20,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // logActivityCommand decodes POST /v1/activities. The body IS the activity's
@@ -31,6 +31,27 @@ import (
 //nolint:ireturn,unparam // ireturn: a decoder's whole product is the erased command-and-resolver pair restCommands is typed by. unparam: the error is always nil TODAY (a create has no id to fail parsing), but every restCommands entry shares this signature
 func logActivityCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
 	return agents.NewLogActivityCall(agents.LogActivityCommand{Fields: json.RawMessage(body)}), nil
+}
+
+// annotateBriefCommand decodes PUT /v1/brief/annotations. The body's prose is
+// not staged — only its shape: the run is the caller's own and server-resolved,
+// so there is no id to bind and nothing a decider could redirect.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func annotateBriefCommand(_ agentPolicy, _ restCommandDeps, _ *http.Request, body []byte) (agents.GovernedCall, error) {
+	var req struct {
+		Narrative string `json:"narrative"`
+		Items     []struct {
+			ItemID string `json:"item_id"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(body, &req); err != nil {
+		return nil, err
+	}
+	return agents.NewAnnotateBriefCall(agents.AnnotateBriefCommand{
+		Items:     len(req.Items),
+		Narrative: req.Narrative != "",
+	}), nil
 }
 
 // createTaskCommand decodes POST /v1/tasks. A task is an activity of kind

@@ -5,6 +5,7 @@ import { RefreshCw } from "lucide-react";
 import { Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -127,10 +128,20 @@ function TodayBody({
     return <EmptyState>{t("home.noneBody")}</EmptyState>;
   }
   if (brief.items.length === 0) {
-    return <EmptyState>{t("home.quietRun")}</EmptyState>;
+    // The narrative still belongs here. A run that ranked nothing is exactly
+    // when the night's sentence carries the most — "nothing needs you today"
+    // and "nobody looked" are different mornings, and the empty state alone
+    // cannot tell them apart.
+    return (
+      <>
+        <TodayNarrative brief={brief} />
+        <EmptyState>{t("home.quietRun")}</EmptyState>
+      </>
+    );
   }
   return (
     <>
+      <TodayNarrative brief={brief} />
       {brief.items.map((item) => (
         <BriefQueueItem
           key={item.id}
@@ -141,6 +152,39 @@ function TodayBody({
         />
       ))}
     </>
+  );
+}
+
+/**
+ * The sentence about the night, above the queue.
+ *
+ * THREE STATES, not two, and the third is the one worth the code. A run with no
+ * narrative can mean the overnight pass ran and honestly had nothing to say, or
+ * that it never ran at all — no grant, no model, an exhausted budget. Those look
+ * identical on the row and read identically as silence, so `annotated_at` is
+ * what separates them and the screen says which.
+ *
+ * Saying nothing in the third case would be the dishonest option: the rep would
+ * read a queue with no explanation and conclude the product had nothing to
+ * explain, when in fact nobody looked.
+ */
+function TodayNarrative({ brief }: Readonly<{ brief: MorningBrief }>) {
+  const t = useT();
+  if (!brief.annotated_at) {
+    return (
+      <p className="home-narrative home-narrative-absent t-caption">
+        {t("home.narrativeNoPass")}
+      </p>
+    );
+  }
+  if (!brief.narrative) {
+    return null;
+  }
+  return (
+    <div className="home-narrative">
+      <ProvenanceTag provenance={{ kind: "agent" }} />
+      <p>{brief.narrative}</p>
+    </div>
   );
 }
 

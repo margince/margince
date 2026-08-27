@@ -196,7 +196,7 @@ func TestWinLossPeriodBucketsFollowTheInstallationZone(t *testing.T) {
 //
 // This test is the one that holds the fiscal arithmetic, and it is here rather
 // than in the deterministic lane because no deterministic test can do it. The
-// mirror gate in backend/frontendfiscalyear_test.go reads both spellings of the
+// mirror gate in backend/gates/frontendfiscalyear_test.go reads both spellings of the
 // label out of source and checks their SHAPE; it cannot execute SQL assembled
 // from bound tokens, so deleting the `- 1` from the month shift leaves every
 // assertion there green while an April-start installation labels its year one

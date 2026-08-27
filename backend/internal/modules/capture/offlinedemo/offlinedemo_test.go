@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // TestTheConnectorCannotSend is the guarantee the whole design rests on. The
@@ -151,7 +151,7 @@ func TestEveryThreadHasAnExternalParty(t *testing.T) {
 // attestation. WithOwnerAttestation is the T1 correspondence gate's only
 // evidence and may be minted solely by the mail mapper, which knows the
 // provider's own filing of the message; a generator asserting it from its own
-// content is the hole that rule closes. A fitness test in package backendarch
+// content is the hole that rule closes. A fitness test in package gates
 // enforces it.
 func TestOutboundNamesItsRecipient(t *testing.T) {
 	box := demoMailbox()

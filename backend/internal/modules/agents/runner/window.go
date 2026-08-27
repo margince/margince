@@ -9,10 +9,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // window is the bounded, grounded context (architecture/07 §3): seed
@@ -295,8 +295,10 @@ func ToolListing(specs []mcp.ToolSpec) string {
 // `record_type: activity` on offer can read the occurrence that woke the run as
 // a record it may prepare against. It is not one: nothing was read to obtain it.
 //
-// Today's scheduled specs mint `<spec>:<date>`, which no model would mistake for
-// an id. The confusable shape is the one an OCCURRENCE-driven trigger would
+// Today's scheduled specs mint `<spec>:<date>:<seat digest>` — a catalog name,
+// a fixed-format UTC date and hex bytes, none of which a model would mistake
+// for an id. The seat is a digest rather than the rep's uuid for exactly this
+// reason: the confusable shape is the one an OCCURRENCE-driven trigger would
 // carry — `calendar:<uuid>` — which the certification corpus already exercises
 // and no production writer mints yet. Whoever adds that writer should also give
 // TriggerRef the bounding groundingRef applies below, since it becomes a seam

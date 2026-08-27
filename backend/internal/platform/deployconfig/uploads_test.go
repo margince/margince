@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // The compiled-in ceilings, restated here on purpose: this is the test that

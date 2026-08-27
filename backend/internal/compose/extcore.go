@@ -22,14 +22,14 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/pkg/extension"
-	"github.com/gradionhq/margince/backend/pkg/extension/crm"
+	"github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/crm"
 )
 
 // extensionCore is one transaction's Core. It holds the transaction rather than
@@ -38,7 +38,7 @@ import (
 // so they commit together or not at all.
 type extensionCore struct {
 	// tx is the CALLER's transaction, held rather than taken as a parameter —
-	// which is also why this file is outside what backend/txseamacquire_test.go
+	// which is also why this file is outside what backend/gates/txseamacquire_test.go
 	// can see. That gate walks functions that TAKE a pgx.Tx; nothing here does,
 	// so a verb added below that reaches for a connection of its own would pass
 	// it green and deadlock under a saturated pool. It happened once already in

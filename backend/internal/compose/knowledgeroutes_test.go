@@ -25,7 +25,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestEveryKnowledgeRouteIsServed(t *testing.T) {

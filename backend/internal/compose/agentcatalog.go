@@ -8,8 +8,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // The scheduled agent catalog, assembled here because neither half owns both

@@ -26,8 +26,8 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // SeatNamer resolves user ids to display names. An owner is a SEAT rather than

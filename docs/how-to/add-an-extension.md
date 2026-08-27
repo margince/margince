@@ -34,9 +34,9 @@ tier owner's review.
    ≤32 chars (lower-case segments joined by single hyphens); the name keys SQL identifiers and URL
    paths, so anything else is refused at boot.
 
-2. **Add its `go.mod`** — its own module, path `github.com/gradionhq/margince/extensions/<name>`:
+2. **Add its `go.mod`** — its own module, path `github.com/margince/margince/extensions/<name>`:
    ```text
-   module github.com/gradionhq/margince/extensions/<name>
+   module github.com/margince/margince/extensions/<name>
 
    go 1.26.6
    ```
@@ -54,8 +54,8 @@ tier owner's review.
    package fr
 
    import (
-   	"github.com/gradionhq/margince/backend/pkg/extension"
-   	"github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+   	"github.com/margince/margince/backend/pkg/extension"
+   	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
    )
 
    func New() extension.Extension {
@@ -289,7 +289,7 @@ caller to hold your unit's object AND the core `activity` one, and nothing decla
 
 **And what your migrations may CREATE is what your SQL may NAME — in your tests too.** `rt.Tx()` runs
 on the shared `margince_app` role, so a statement naming `person` would work, which is why
-`TestExtensionSQLNamesOnlyTheUnitsOwnTables` (`backend/extensionsqlscope_test.go`) reads **every `.go`
+`TestExtensionSQLNamesOnlyTheUnitsOwnTables` (`backend/gates/extensionsqlscope_test.go`) reads **every `.go`
 file your unit ships**, folds the string constants a table name is usually spelled through, and refuses
 a table outside `ext.ext_<name>_…`. A unit test that seeds a core table fails it exactly as a handler
 would, and that is deliberate: a test is where the habit starts. Qualify the schema — `ext` is on no `search_path` the app connects with,

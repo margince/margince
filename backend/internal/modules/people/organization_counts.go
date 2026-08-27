@@ -14,10 +14,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // attachOrgCounts fills contact_count and open_deal_count for a page.
@@ -135,6 +135,7 @@ func fillContactCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUI
 // for the page — the ONE spelling of "open deal" this module reads, so the
 // list's count and the company page's open-pipeline tile derive from the
 // same rows and cannot disagree.
+// Held by: TestEveryOpenDealCountComesFromTheRollup (backend/internal/modules/people/opendealcount_test.go)
 func fillOpenDealCounts(ctx context.Context, tx pgx.Tx, idx map[openapi_types.UUID]*crmcontracts.Organization, orgIDs []ids.UUID) error {
 	return fillCount(ctx, tx, idx,
 		`SELECT organization_id, open_deal_count

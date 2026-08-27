@@ -12,13 +12,13 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // WithBlobstore returns handlers whose attachment endpoints are backed by
@@ -146,7 +146,7 @@ func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action
 	if err := requireParentOrHide(ctx, entityType, action); err != nil {
 		return "", err
 	}
-	// This branch is WAIVED in backend/writeauthority_test.go under
+	// This branch is WAIVED in backend/gates/writeauthority_test.go under
 	// readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible,
 	// because that gate walks the call graph and cannot see which arm a caller
 	// takes. The waiver excuses the FUNCTION, so it would keep passing if the

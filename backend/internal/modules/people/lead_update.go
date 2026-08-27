@@ -8,19 +8,24 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 type UpdateLeadInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
+	// Trail names what the audit trail calls this write; zero is an update.
+	Trail           storekit.AuditTrail
 	FullName        *string
 	Email           *string
 	Title           *string
@@ -266,7 +271,7 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 		}
 		return crmcontracts.Lead{}, err
 	}
-	auditID, err := storekit.Audit(ctx, tx, "update", "lead", id.UUID, p.Before(), p.After())
+	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "lead", id.UUID, p.Before(), p.After())
 	if err != nil {
 		return crmcontracts.Lead{}, err
 	}
@@ -323,6 +328,9 @@ func (s *Store) updateLeadTx(ctx context.Context, tx pgx.Tx, id ids.LeadID, in U
 // resumes recompute.
 func buildLeadPatch(current crmcontracts.Lead, in UpdateLeadInput) (*storekit.Patch, bool, error) {
 	p := storekit.NewPatch()
+	if err := applyClears(p, in.Clear, clearableLeadColumns(current)); err != nil {
+		return nil, false, err
+	}
 	if in.FullName != nil {
 		p.Set("full_name", current.FullName, *in.FullName)
 	}

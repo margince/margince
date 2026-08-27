@@ -5,7 +5,7 @@ package promptvoice_test
 
 // What the voice block must actually say.
 //
-// The gate in backend/promptvoice_test.go proves the block is ATTACHED to
+// The gate in backend/gates/promptvoice_test.go proves the block is ATTACHED to
 // every prose surface. It cannot prove the block says anything, and a Rule
 // silently emptied would satisfy it perfectly — four surfaces composing a
 // constant that instructs nothing, with every test still green.
@@ -20,7 +20,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
+	"github.com/margince/margince/backend/internal/compose/promptvoice"
 )
 
 func TestTheVoiceAnnouncesItselfToTheModel(t *testing.T) {

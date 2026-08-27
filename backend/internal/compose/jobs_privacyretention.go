@@ -13,17 +13,15 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/modules/privacy"
-	"github.com/gradionhq/margince/backend/internal/modules/search"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -83,19 +81,12 @@ type PrivacyRetentionConfig struct {
 // refuses a non-positive one at boot. The omission serves the callers that
 // wire a runner for a few named passes and never meant to run this one.
 func addPrivacyRetentionJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig, log *slog.Logger) []*river.PeriodicJob {
-	// Retention removes the interactions the relationship graph is folded
-	// from, so it carries the fold with it — in the same transaction, not on
-	// the bus. Without the blobstore its erase action leaves the attachment
-	// objects behind; without the invalidator the aggregates keep counting
-	// interactions that no longer exist.
 	// Built per job rather than once: this pass is fleet-wide, so the
 	// workspace is the one the job names, not the one an installation
-	// resolver would find.
+	// resolver would find. What the service owes its seams, and why one of
+	// them is not optional, is in retentionseam.go.
 	retention := func(db *database.DB) *privacy.RetentionService {
-		return privacy.NewRetentionService(db, cfg.Blobstore, log).
-			WithEdgeInvalidator(func(ctx context.Context, tx pgx.Tx, activityID ids.UUID) error {
-				return search.RecomputeEdgesForActivities(ctx, tx, []ids.UUID{activityID})
-			})
+		return NewRetentionServiceFor(db, cfg.Blobstore, log)
 	}
 	addDeclaredWorker[PrivacyRetentionArgs](reg, &privacyRetentionWorker{
 		pool: pool, retention: retention, identity: identity.NewService(pool),

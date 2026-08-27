@@ -24,28 +24,32 @@ feature is expected to argue with.
 
 | Agent | Tools | Tokens | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 3 | 992 | 4% | 16008 | 4 | 5 |
+| `morning_brief` | 5 | 1661 | 6% | 15339 | 6 | 5 |
 | `overnight_at_risk_sweep` | 7 | 2330 | 9% | 14670 | 15 | 8 |
-| _whole served catalog, for scale_ | 58 | 18227 | 75% | — | — | — |
+| _whole served catalog, for scale_ | 59 | 18683 | 77% | — | — | — |
 
 ### `morning_brief`
 
 > Assemble the Morning Brief for this workspace: enumerate open deals, read the ones with recent activity, and produce a ranked list (at most 7) of deals the team can win this week. For each: why it is on the list, what changed recently, and one recommended next move — every claim grounded in a record you actually read, citing its id. A quiet day yields a short list; never pad it.
 
-Attaches 3 tools for 992 tokens, leaving 16008 of its budget and 23008 tokens of the
+Attaches 5 tools for 1661 tokens, leaving 15339 of its budget and 22339 tokens of the
 window for the goal, the grounding and everything it reads.
 
+- `annotate_brief`
 - `catch_me_up_on`
 - `list_records`
+- `read_brief`
 - `read_record`
 
-**4 dangling cross-references** — this agent's own tool copy points at tools it
+**6 dangling cross-references** — this agent's own tool copy points at tools it
 cannot call, so a run may spend a step discovering the refusal:
 
+- annotate_brief → log_activity
 - catch_me_up_on → prep_for_meeting
 - catch_me_up_on → search_records
 - list_records → run_report
 - list_records → search_records
+- read_brief → whats_slipping_this_week
 
 ### `overnight_at_risk_sweep`
 
@@ -119,7 +123,7 @@ Every scenario in the corpus was read; none was skipped.
 
 ## What each tool costs, largest first
 
-Median 274 tokens, mean 313, across 58 served tools.
+Median 275 tokens, mean 316, across 59 served tools.
 
 **These do not sum to the catalog total.** Each row is one tool rendered alone and
 divided by four, so every row carries its own rounding; the catalog figure divides
@@ -138,6 +142,7 @@ a term in an addition.
 | `list_records` | 475 | — |
 | `advance_deal` | 474 | 1 scenario |
 | `send_email` | 471 | 1 scenario |
+| `annotate_brief` | 456 | — |
 | `progress_deal` | 435 | 3 scenarios |
 | `book_meeting` | 431 | — |
 | `create_record` | 429 | 1 scenario |

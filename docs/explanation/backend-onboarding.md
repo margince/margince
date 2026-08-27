@@ -63,7 +63,7 @@ Everything below is the detail behind those five steps:
 
 ## Find-it map — where things live, where to put things
 
-One Go module, `github.com/gradionhq/margince/backend`, rooted at `backend/`. When you're looking for
+One Go module, `github.com/margince/margince/backend`, rooted at `backend/`. When you're looking for
 something (or deciding where new code goes):
 
 | You want… | It lives in |
@@ -81,7 +81,7 @@ something (or deciding where new code goes):
 | SQL migrations | `backend/migrations/core/` (upstream) · `custom/` (fork) |
 | The three process binaries | `backend/cmd/{api,worker,migrate}/` |
 | Codegen tools | `backend/tools/` (its own Go module) |
-| The architecture gates (fitness tests) | `backend/*_test.go` (see below) |
+| The architecture gates (fitness tests) | `backend/gates/*_test.go` (see below) |
 
 **The rule you'll hit first:** a module in `internal/modules/` **never imports a sibling module**.
 If capability A needs capability B, the edge is injected in `internal/compose/`, never by importing B.
@@ -235,7 +235,7 @@ codegen, and the store shape above into one checklist:
 
 | | |
 |---|---|
-| Go module | `github.com/gradionhq/margince/backend` (root `backend/`) |
+| Go module | `github.com/margince/margince/backend` (root `backend/`) |
 | API port | `:18080` under `make dev`, behind the app on `:8080`, which proxies `/v1` to it (`:8080` when the api runs standalone) |
 | Postgres / Redis / MinIO | `localhost:15432` / `16379` / `29000` |
 | Owner DSN (migrate) | `postgres://margince_owner:dev@localhost:15432/margince` |

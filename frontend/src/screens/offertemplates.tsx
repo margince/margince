@@ -102,10 +102,13 @@ export function OfferTemplatesAdmin() {
   const canCreate = useCanWrite("offer_template", "create");
   const canUpdate = useCanWrite("offer_template", "update");
   const canArchive = useCanWrite("offer_template", "delete");
+  // Scoped for the same reason the products table beside it is: the two share
+  // the settings Data-model tab, and so shared one parameter space.
   const list = useListQuery<OfferTemplate>({
     key: "offer-templates",
     fetchPage: fetchTemplatesPage,
     initialSort: "name",
+    paramScope: "templates",
   });
 
   const createTemplate = async (values: Record<string, string>) => {

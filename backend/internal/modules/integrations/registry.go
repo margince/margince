@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/provider"
+	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 // ErrUnknownProvider reports a provider name this build does not carry. The

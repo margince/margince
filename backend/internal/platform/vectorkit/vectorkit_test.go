@@ -6,7 +6,7 @@ package vectorkit_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/vectorkit"
+	"github.com/margince/margince/backend/internal/platform/vectorkit"
 )
 
 // A zero vector must never reach storage or a query: cosine against it is

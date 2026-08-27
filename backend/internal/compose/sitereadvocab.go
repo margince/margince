@@ -9,7 +9,7 @@ package compose
 // embeds and the fact dedupe identity the gate and the merges share.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // The extraction envelope's JSON keys and the chat role — the same

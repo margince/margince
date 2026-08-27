@@ -18,8 +18,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // retentionExecutor applies one action to one record inside the pass's audited
@@ -194,6 +194,27 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 		`UPDATE activity SET body = NULL, raw = NULL, subject = $2, archived_at = coalesce(archived_at, now()) WHERE id = $1`,
 		id, erasedActivitySubject)
 	if err == nil {
+		// The verbatim provider payload the parsed copy was made from. It is
+		// keyed on (source_system, source_id) — the pair the statement above
+		// deliberately keeps — so the join that makes the record replayable is
+		// the same join that serves the original back through an Art. 15
+		// export. Clearing the parsed copy alone erases nothing.
+		//
+		// This reaches the captures written under the DOMAIN natural key, which
+		// is the mail lane. A channel poller stores its original under the
+		// provider's redelivery key instead, and no join from the activity
+		// finds it: #2802 carries that lane.
+		err = s.purgeRawCaptures(ctx, tx, []ids.UUID{id})
+	}
+	if err == nil {
+		// Provenance outlives the value it describes otherwise: the row names
+		// who captured the erased body and from where, and it is registered
+		// PII-bearing and SAR-exported. Both sibling erasers delete it
+		// (erasuretimeline.go, retentionrestricted.go).
+		_, err = tx.Exec(ctx,
+			`DELETE FROM field_provenance WHERE object_type = 'activity' AND object_id = $1`, id)
+	}
+	if err == nil {
 		_, err = tx.Exec(ctx,
 			`DELETE FROM embedding WHERE entity_type = 'activity' AND entity_id = $1`, id)
 	}
@@ -234,13 +255,13 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 // their lead rows and scores, their preference tokens, their deal-room seats.
 //
 // What survives is written down per table in
-// TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go),
+// TestErasingAndAnonymizingClearTheSameTables (backend/gates/personscrub_test.go),
 // which fails when the gap widens in either direction. That test compares which
 // TABLES each act writes and cannot see two acts clearing one table to
 // different depths, which is why the custom columns above are nulled here
 // deliberately rather than left for it to notice.
 //
-// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go)
+// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/gates/personscrub_test.go)
 func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// The subject's addresses, read BEFORE person_email is deleted
 	// below. The graph structures name them by raw address as well as

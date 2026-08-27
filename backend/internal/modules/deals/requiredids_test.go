@@ -25,7 +25,7 @@ package deals
 // on any OTHER contract body is not covered.
 //
 // That gap is real and it is enumerated rather than hidden:
-// backend/requiredbodyids_test.go walks internal/contracts for every request body
+// backend/gates/requiredbodyids_test.go walks internal/contracts for every request body
 // carrying a required non-pointer UUID and requires each to be either probed here
 // or named as a known gap with a reason. A new one fails, so the list only shrinks.
 
@@ -37,9 +37,9 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr/faulttest"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr/faulttest"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // requiredIDFields reports the wire names of every non-pointer UUID field on a

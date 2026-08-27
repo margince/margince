@@ -40,7 +40,7 @@ import { TimelineFilterBar } from "../design-system/timelinefilterbar";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, useT } from "../i18n";
+import { type Locale, useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
 import { AssistantPanel } from "./assistant";
@@ -87,6 +87,7 @@ import {
 import {
   LIFECYCLE_LABELS,
   LIFECYCLE_OPTIONS,
+  RELATIONSHIP_TYPE_LABELS,
   SIZE_BAND_OPTIONS,
 } from "./companylookups";
 import { CompanyProjects } from "./companyprojects";
@@ -141,6 +142,7 @@ import {
 import {
   createdColumn,
   lastActivityColumn,
+  mineEmptyNote,
   ownerColumn,
   standardViews,
 } from "./recordlist";
@@ -157,6 +159,7 @@ import { groupChronology } from "./timelinegroups";
 // it works today only because the company record page pulls that stylesheet in
 // for its own sake, so this file renders unstyled anywhere else.
 import "./company360.css";
+import { invalidateRecord } from "./recordwritekeys";
 
 // Companies list + company 360 (B-EP09.10a/b). Firmographics render
 // evidence-or-omit: a field with no stored value is absent, never guessed.
@@ -172,22 +175,13 @@ type Organization = components["schemas"]["Organization"];
 // import, so the two cannot drift onto two different label sets for the same
 // enum. Re-exported: every existing caller of `LIFECYCLE_LABELS` from this
 // module still resolves, and this file still reads it below as its own.
-export { LIFECYCLE_LABELS };
+// What it is TO US, multi-valued (ADR-0079/A124). Moved beside
+// LIFECYCLE_LABELS in companylookups.ts because the two vocabularies OVERLAP —
+// `customer` is a member of both — and only a module holding both can tell
+// that the header is about to print one word twice. Re-exported for the same
+// reason LIFECYCLE_LABELS is: every existing caller still resolves.
+export { LIFECYCLE_LABELS, RELATIONSHIP_TYPE_LABELS };
 
-// What it is TO US, multi-valued (ADR-0079/A124). Typed against the schema
-// union, so a value added upstream fails the build here rather than reaching
-// a reader as a raw enum.
-type RelationshipType = NonNullable<Organization["relationship_types"]>[number];
-
-export const RELATIONSHIP_TYPE_LABELS: Record<RelationshipType, MessageKey> = {
-  customer: "org.relType.customer",
-  partner: "org.relType.partner",
-  supplier: "org.relType.supplier",
-  investor: "org.relType.investor",
-  portfolio_company: "org.relType.portfolio_company",
-  competitor: "org.relType.competitor",
-  other: "org.relType.other",
-};
 type CreateOrganizationRequest =
   components["schemas"]["CreateOrganizationRequest"];
 type UpdateOrganizationRequest =
@@ -601,6 +595,12 @@ export function CompaniesScreen() {
       <ListTable
         state={state}
         unit="unit.companies"
+        emptyNote={mineEmptyNote({
+          t,
+          state,
+          viewerId,
+          unit: "unit.companies",
+        })}
         action={
           <>
             <Button small onClick={() => navigate({ screen: "partners" })}>
@@ -814,6 +814,7 @@ function SiteReadPanel({
   orgId,
   readId,
 }: Readonly<{ orgId: string; readId: string }>) {
+  const plural = usePlural();
   const t = useT();
   const { locale } = useLocale();
   const reportQuery = useQuery({
@@ -869,21 +870,15 @@ function SiteReadPanel({
           {t(SITE_READ_STATUS_LABELS[report.status])}
         </Badge>
         <span className="t-small">
-          {t(
-            report.pages.length === 1
-              ? "deepread.pagesSoFar.one"
-              : "deepread.pagesSoFar.other",
-            { count: formatNumber(report.pages.length, locale) },
-          )}
+          {plural("deepread.pagesSoFar", report.pages.length, {
+            count: formatNumber(report.pages.length, locale),
+          })}
         </span>
         {terminal && (
           <span className="t-small">
-            {t(
-              (report.fact_count ?? 0) === 1
-                ? "deepread.factCount.one"
-                : "deepread.factCount.other",
-              { count: formatNumber(report.fact_count ?? 0, locale) },
-            )}
+            {plural("deepread.factCount", report.fact_count ?? 0, {
+              count: formatNumber(report.fact_count ?? 0, locale),
+            })}
           </span>
         )}
       </p>
@@ -909,11 +904,9 @@ function SiteReadPanel({
         >
           <AutonomyDot tier="confirm" />
           <span className="t-small">
-            {report.proposal_ids.length === 1
-              ? t("deepread.proposalsOne")
-              : t("deepread.proposals", {
-                  count: formatNumber(report.proposal_ids.length, locale),
-                })}
+            {plural("deepread.proposals", report.proposal_ids.length, {
+              count: formatNumber(report.proposal_ids.length, locale),
+            })}
           </span>
           <Button small onClick={() => navigate({ screen: "today" })}>
             {t("enrich.toInbox")}
@@ -1676,6 +1669,7 @@ function useChronologySlots({
   showChanges: () => void;
 } {
   const t = useT();
+  const queryClient = useQueryClient();
   const [filter, setFilter] = useChronologyFilter(org.id);
   const [filters, setFilters] = useTimelineFilters(org.id);
   // The 360's own page seeds the list; older pages and every narrowed read
@@ -1734,33 +1728,42 @@ function useChronologySlots({
         </>
       ),
       timelineFooter: <ChronologyFooter filter={filter} chronology={history} />,
-      timelineNotice: chronologyNotice(
-        "co.timeline.empty",
-        {
-          // Per filter, because the two feeds fail independently. A 360 that
-          // omitted its activities section says nothing about the change
-          // feed, and reporting the Changes view as unavailable on that
-          // basis hid rows that had loaded perfectly well.
-          loading:
-            filter === "changes"
-              ? history.loading
-              : loading || history.loading || timeline.isPending,
-          failed:
-            filter === "changes"
-              ? history.failed
-              : failed || history.failed || timeline.isError,
-          // A narrowed read is the list's own and is assembled once it
-          // answers; the unfiltered one is the 360's section.
-          assembled:
-            filter === "changes" ||
-            (hasTimelineFilters(filters)
-              ? timeline.isSuccess
-              : Boolean(view?.activities)),
-          filter,
-        },
-        history.entries.length,
-        t,
-      ),
+      // The Changes view IS the record's history: one reading of what changed
+      // on this record, and the one that can put a change back. It replaces
+      // the list rather than sitting beside it, because two renderings of the
+      // same audit rows would be two answers to one question and only one of
+      // them would ever carry the control.
+      timelineNotice:
+        filter === "changes" ? (
+          <RecordHistoryTab
+            kind="organization"
+            id={org.id}
+            restore={{
+              version: org.version,
+              onRestored: () =>
+                invalidateRecord(queryClient, "organization", org.id),
+            }}
+          />
+        ) : (
+          chronologyNotice(
+            "co.timeline.empty",
+            {
+              // Only Activities and All reach here — the Changes view is the
+              // record's history above and reports its own state — so the two
+              // feeds are read together rather than per filter.
+              loading: loading || history.loading || timeline.isPending,
+              failed: failed || history.failed || timeline.isError,
+              // A narrowed read is the list's own and is assembled once it
+              // answers; the unfiltered one is the 360's section.
+              assembled: hasTimelineFilters(filters)
+                ? timeline.isSuccess
+                : Boolean(view?.activities),
+              filter,
+            },
+            history.entries.length,
+            t,
+          )
+        ),
     },
   };
 }
@@ -1882,6 +1885,7 @@ function CompanyPage({
   onTab: (next: CompanyTab) => void;
 }>) {
   const t = useT();
+  const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const archivedReasonId = useId();
   // ONE composer, opened two ways. Anchored on a timeline message it answers
@@ -2072,7 +2076,17 @@ function CompanyPage({
         {/* Mounted only while open: the two history reads behind it are the
             page's most expensive, and nobody who never opens the panel should
             pay for them. */}
-        {auditOpen && <RecordHistoryTab kind="organization" id={org.id} />}
+        {auditOpen && (
+          <RecordHistoryTab
+            kind="organization"
+            id={org.id}
+            restore={{
+              version: org.version,
+              onRestored: () =>
+                invalidateRecord(queryClient, "organization", org.id),
+            }}
+          />
+        )}
         <div className="form-actions">
           <Button onClick={() => setAuditOpen(false)}>
             {t("common.close")}

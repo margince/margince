@@ -29,12 +29,12 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // LinkedInImportResult reports what one import did, in the terms a human
@@ -48,8 +48,11 @@ type LinkedInImportResult struct {
 	Skipped  int
 }
 
-// The header fields this importer reads, named so the alias table and the
-// row reader cannot disagree about a key by a typo.
+// The header fields this importer reads. Naming them stops the alias table and
+// the row reader disagreeing by a typo — the compiler settles that — and leaves
+// the disagreement that stays silent: a key one side uses and the other never
+// produces, which drops a whole column while the import reports success.
+// Held by: TestEveryFieldTheAliasTableProducesIsReadFromTheRow (backend/internal/modules/people/linkedinheaderkeys_test.go)
 const (
 	csvFirst     = "first"
 	csvLast      = "last"
