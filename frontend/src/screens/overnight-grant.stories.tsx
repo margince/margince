@@ -14,7 +14,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // case, where the rep already said yes and the credential behind it has died.
 
 const meta: Meta<typeof OvernightGrantCard> = {
-  title: "Screens/Overnight grant",
+  title: "Shell/Overnight grant",
   component: OvernightGrantCard,
 };
 export default meta;

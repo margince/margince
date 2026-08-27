@@ -240,14 +240,6 @@
 }
 
 /* step 5 connect */
-.consent {
-  background: var(--bgElevated);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
-  box-shadow: var(--shadow-card);
-  padding: var(--space-6);
-  margin-top: var(--space-6);
-}
 
 .imap-form {
   display: grid;

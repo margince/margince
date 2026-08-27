@@ -35,7 +35,7 @@ type List = components["schemas"]["List"];
 const page = { has_more: false, next_cursor: null };
 
 const meta: Meta = {
-  title: "Screens/Company actions",
+  title: "Records/Company 360/Actions",
   parameters: { layout: "padded" },
 };
 export default meta;

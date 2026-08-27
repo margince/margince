@@ -21,7 +21,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // rather than "1 evidence rows".
 
 const meta: Meta = {
-  title: "Screens/Brief queue item",
+  title: "Records/Brief queue item",
   parameters: { layout: "padded" },
 };
 export default meta;

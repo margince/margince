@@ -364,11 +364,6 @@ export function useScheduledSends() {
   });
 }
 
-/** How many of the caller's messages are still waiting on something. */
-export function waitingCount(sends: readonly ScheduledSend[]): number {
-  return sends.filter((send) => STILL_MOVABLE.has(send.status)).length;
-}
-
 export function ScheduledSendsScreen() {
   const t = useT();
   const queryClient = useQueryClient();

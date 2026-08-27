@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { screen, userEvent, within } from "storybook/test";
 import { type GrantSpec, meFixture } from "../app/mefixture";
 import { RetentionCard } from "./retention";
 import {
@@ -96,7 +96,7 @@ function retention(
 }
 
 const meta: Meta<typeof RetentionCard> = {
-  title: "Settings/Admin settings/Privacy/Retention",
+  title: "Settings/Admin settings/Privacy & audit/Retention",
   component: RetentionCard,
 };
 export default meta;
@@ -174,14 +174,20 @@ export const DuplicateScope: Story = {
     await userEvent.click(
       await canvas.findByRole("button", { name: /add policy/i }),
     );
+    // The authoring form lives in a Modal, and Modal portals to the body — so
+    // it is NOT inside canvasElement, and the canvas-scoped lookups this used
+    // to run could never have found it. The verb that opens it is on the card
+    // and stays canvas-scoped; everything after the click is queried where the
+    // portal actually renders.
+    const dialog = within(await screen.findByRole("dialog"));
     await userEvent.type(
-      await canvas.findByLabelText(/window in days/i),
+      await dialog.findByLabelText(/window in days/i),
       "365",
     );
     await userEvent.click(
-      canvas.getByRole("button", { name: /create policy/i }),
+      dialog.getByRole("button", { name: /create policy/i }),
     );
-    await canvas.findByRole("alert");
+    await dialog.findByRole("alert");
   },
 };
 

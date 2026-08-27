@@ -19,7 +19,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // currency stand or fall together.
 
 const meta: Meta = {
-  title: "Screens/Document extraction",
+  title: "Patterns/Document extraction",
   parameters: { layout: "padded" },
 };
 export default meta;

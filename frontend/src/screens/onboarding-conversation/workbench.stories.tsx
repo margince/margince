@@ -96,7 +96,7 @@ function Shell({ session }: Readonly<{ session: RouteMap[string] }>) {
 }
 
 const meta: Meta<typeof Shell> = {
-  title: "Onboarding/Conversation workbench",
+  title: "Onboarding/Conversation/Workbench",
   component: Shell,
   parameters: { layout: "fullscreen" },
 };

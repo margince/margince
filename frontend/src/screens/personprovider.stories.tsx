@@ -31,7 +31,7 @@ function profile(overrides: Partial<Profile> = {}): Profile {
 }
 
 const meta: Meta<typeof PersonProviderSection> = {
-  title: "Records/Person/Bought data",
+  title: "Records/Person record/Bought data",
   component: PersonProviderSection,
   parameters: { layout: "padded" },
 };

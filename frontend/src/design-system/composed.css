@@ -434,10 +434,6 @@
 .lead-surface .table tbody td {
   background: var(--accentLight);
 }
-.lead-detail {
-  background: var(--accentLight);
-  border: 1px solid var(--accentMed);
-}
 
 .firmo {
   display: flex;

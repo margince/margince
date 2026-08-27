@@ -16,7 +16,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // from a saved view, and an export that was refused. A screenshot of the first is
 // what proves the others are not the only states the surface knows how to draw.
 const meta: Meta<typeof FiltersScreen> = {
-  title: "Screens/Filters and views",
+  title: "Patterns/Filters and views",
   component: FiltersScreen,
   parameters: { layout: "padded" },
   decorators: [

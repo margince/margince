@@ -107,7 +107,7 @@ function board(
 }
 
 const meta: Meta<typeof DocumentBoard> = {
-  title: "Screens/Deal Room/Documents and threads",
+  title: "Records/Deal room/Documents and threads",
   component: DocumentBoard,
   parameters: { layout: "padded" },
 };

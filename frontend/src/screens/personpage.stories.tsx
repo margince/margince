@@ -49,7 +49,7 @@ import {
 // withheld reading rendered — that state exists only here.
 
 const meta: Meta = {
-  title: "Records/Person record",
+  title: "Records/Person record/Page",
   parameters: { layout: "padded" },
 };
 export default meta;
