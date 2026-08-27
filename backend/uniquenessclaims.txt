@@ -323,7 +323,6 @@ internal/modules/agents/tools_tags.go#func decodeTagging
 internal/modules/agents/tools_tags.go#func taggingSchema
 internal/modules/ai/feedback.go#const fieldSubjectType
 internal/modules/ai/feedback.go#type RecordInput.ClaimPath
-internal/modules/ai/openaicompat.go#func DocumentMIMEs
 internal/modules/ai/railemit_test.go#func TestADegradedCallSaysWhyEvenWithNoSentinel
 internal/modules/ai/routing.go#method RoutingConfig.BoundModelIDsByProvider
 internal/modules/ai/selectbrain.go#var knownProviders

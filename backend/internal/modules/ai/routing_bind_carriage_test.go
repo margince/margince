@@ -57,3 +57,35 @@ func TestDeclaringInputOnOneRungOfATwoRungLadderCarriesNothing(t *testing.T) {
 		}
 	})
 }
+
+// A ladder whose rungs are bound to DIFFERENT vendors, which is the ordinary
+// cloud-frontier shape and the case a literal intersection lost in silence:
+// anthropic and gemini decode overlapping but unequal image sets, so the task
+// carries what both of them do — not nothing, and not either one's whole list.
+func TestAMixedVendorLadderCarriesWhatBothVendorsDecode(t *testing.T) {
+	const twoRung = TaskRateExtract
+	if len(TaskLadder(twoRung)) != 2 {
+		t.Fatalf("this test needs a two-rung ladder; %s has %v", twoRung, TaskLadder(twoRung))
+	}
+	router, err := NewRouter(RoutingConfig{
+		Profile: ProfileCloudFrontier,
+		Tiers: map[Tier]ProviderConfig{
+			TierPremium:    {Provider: providerAnthropic, Model: "m"},
+			TierCheapCloud: {Provider: providerGemini, Model: "c"},
+		},
+		Embeddings: EmbeddingsConfig{
+			ProviderConfig: ProviderConfig{Provider: providerGemini, Model: "e"},
+			Dimensions:     defaultEmbedDimensions,
+		},
+	}.WithKeys(allCloudKeys()), nil, nil, nil, false, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// jpeg, png and webp are on both vendors' lists; gif is anthropic's alone
+	// and heic gemini's alone, and a call this router serves can land on either
+	// rung, so neither may be advertised.
+	want := []string{"image/jpeg", "image/png", "image/webp", "application/pdf"}
+	if got := router.AttachmentMIMEs(twoRung); !slices.Equal(got, want) {
+		t.Fatalf("a mixed-vendor ladder carries %v, want %v", got, want)
+	}
+}

@@ -6,6 +6,8 @@ package ai
 import (
 	"context"
 	"sync"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // localOpts collects the LocalOption knobs NewLocalRouter assembles a
@@ -80,7 +82,7 @@ func WithPayloadCapture() LocalOption {
 func sharedFakeCarriage(inputs [][]string) []string {
 	carriage := narrowedCarriage(carriesImagesAndPDF, inputs[0])
 	for _, input := range inputs[1:] {
-		carriage = intersectMIMEs(carriage, narrowedCarriage(carriesImagesAndPDF, input))
+		carriage = model.IntersectMIMEs(carriage, narrowedCarriage(carriesImagesAndPDF, input))
 	}
 	return carriage
 }

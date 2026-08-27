@@ -127,7 +127,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			baseURL:         defaulted(cfg.BaseURL, defaultAnthropicBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,
-			attachmentMIMEs: narrowedCarriage(carriesImagesAndPDF, cfg.Input),
+			attachmentMIMEs: narrowedCarriage(anthropicCarries, cfg.Input),
 		}, nil
 	case providerOllama:
 		return &ollamaClient{
@@ -171,7 +171,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			baseURL:         defaulted(cfg.BaseURL, defaultOpenAIBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,
-			attachmentMIMEs: narrowedCarriage(carriesImagesAndPDF, cfg.Input),
+			attachmentMIMEs: narrowedCarriage(openAICarries, cfg.Input),
 		}, nil
 	case providerGemini:
 		key := cloudKey(providerGemini, keys)
@@ -183,7 +183,7 @@ func SelectBrain(cfg ProviderConfig, keys config.Lookup) (model.Client, error) {
 			baseURL:         defaulted(cfg.BaseURL, defaultGeminiBaseURL),
 			apiKey:          key,
 			defaultModel:    cfg.Model,
-			attachmentMIMEs: narrowedCarriage(carriesImagesAndPDF, cfg.Input),
+			attachmentMIMEs: narrowedCarriage(geminiCarries, cfg.Input),
 		}, nil
 	case "":
 		return nil, fmt.Errorf("ai: binding has no provider")

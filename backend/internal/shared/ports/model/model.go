@@ -13,6 +13,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"slices"
 	"strings"
 )
 
@@ -56,6 +57,89 @@ func CarriesMIME(declared []string, mime string) bool {
 		}
 	}
 	return false
+}
+
+// IntersectMIMEs is the other half of CarriesMIME: the carriage set two
+// declarations both admit, computed over the patterns rather than over their
+// spellings.
+//
+// The spellings are the whole point. Two declarations can describe overlapping
+// sets and share no literal — a wire that decodes {image/jpeg, image/png} and
+// an operator who wrote `image/*` agree completely, and a literal comparison
+// reads that agreement as a contradiction and carries nothing. That is what a
+// binding-side permission written as a wildcard has to compose with, so the
+// intersection has to understand what CarriesMIME understands.
+//
+// Never wider than either input: every pattern returned is the narrower of one
+// pattern from each side, so anything it admits both sides already admitted.
+// That is the safety property the literal comparison used to buy by being
+// blunt, and it is now bought by construction instead.
+//
+// Order follows a, then b within each element of a, so the answer is stable for
+// a caller that compares sets by equality.
+func IntersectMIMEs(a, b []string) []string {
+	kept := make([]string, 0, len(a))
+	for _, left := range a {
+		for _, right := range b {
+			narrow, overlap := narrower(left, right)
+			if !overlap || slices.Contains(kept, narrow) {
+				continue
+			}
+			kept = append(kept, narrow)
+		}
+	}
+	// A pattern already covered by a wider one that survived describes nothing
+	// the set does not already admit, and two spellings of one set would make
+	// equality comparisons depend on which order the inputs arrived in.
+	return dropCovered(kept)
+}
+
+// narrower reports the pattern admitting exactly what both a and b admit, and
+// whether they overlap at all. The four cases are the two pattern kinds
+// CarriesMIME reads, squared.
+func narrower(a, b string) (string, bool) {
+	aPrefix, aWild := strings.CutSuffix(a, "*")
+	bPrefix, bWild := strings.CutSuffix(b, "*")
+	switch {
+	case !aWild && !bWild:
+		return a, a == b
+	case aWild && !bWild:
+		// The exact type is the narrower one, when the wildcard admits it.
+		return b, strings.HasPrefix(b, aPrefix)
+	case !aWild && bWild:
+		return a, strings.HasPrefix(a, bPrefix)
+	}
+	// Both wildcards: one contains the other, or they are disjoint. "image/*"
+	// and "image/x-*" overlap in the second; "image/*" and "audio/*" in
+	// neither direction, and share nothing.
+	if strings.HasPrefix(bPrefix, aPrefix) {
+		return b, true
+	}
+	if strings.HasPrefix(aPrefix, bPrefix) {
+		return a, true
+	}
+	return "", false
+}
+
+// dropCovered removes every pattern another kept pattern already admits.
+func dropCovered(patterns []string) []string {
+	kept := make([]string, 0, len(patterns))
+	for i, pattern := range patterns {
+		covered := false
+		for j, other := range patterns {
+			if i == j || other == pattern {
+				continue
+			}
+			if CarriesMIME([]string{other}, pattern) {
+				covered = true
+				break
+			}
+		}
+		if !covered {
+			kept = append(kept, pattern)
+		}
+	}
+	return kept
 }
 
 // Client is the swappable model interface; selection is config.
