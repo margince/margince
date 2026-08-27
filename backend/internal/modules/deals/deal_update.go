@@ -128,7 +128,7 @@ func (s *Store) updateDealInTx(ctx context.Context, tx pgx.Tx,
 		return crmcontracts.Deal{}, err
 	}
 
-	if err := p.ApplyGuarded(ctx, tx, "deal", id.UUID, in.IfVersion); err != nil {
+	if err := applyDealPatchGuarded(ctx, tx, id, p, in.IfVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok && constraint == dealProjectSameOrgConstraint {
 			return crmcontracts.Deal{}, &DealProjectOrgMismatchError{}
 		}

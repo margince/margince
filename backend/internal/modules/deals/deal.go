@@ -64,9 +64,6 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 			return fmt.Errorf("emit deal.owner_changed: %w", err)
 		}
 	}
-	if err := recordForecastMovement(ctx, tx, id, current, in, after); err != nil {
-		return err
-	}
 	rest := make(map[string]any, len(after))
 	for field, v := range after {
 		if ownerChanged && field == "owner_id" {
@@ -82,6 +79,17 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 	return nil
 }
 
+// moved answers whether a supplied value differs from the one the row holds.
+// A request that did not supply the field moved nothing; one that supplied the
+// value already there moved nothing either, and the second is the reading a
+// sparse update makes it easy to lose.
+func moved[T comparable](current, supplied *T) bool {
+	if supplied == nil {
+		return false
+	}
+	return current == nil || *current != *supplied
+}
+
 // dealUpdatePatch folds the caller's sparse update onto the current row
 // as a field patch. Re-pointing the deal at an organization (or partner
 // organization) is a read of that record, so each link target must be
@@ -94,11 +102,16 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 	if in.Name != nil {
 		p.Set(dealNameColumn, current.Name, *in.Name)
 	}
-	if in.AmountMinor != nil {
-		p.Set("amount_minor", current.AmountMinor, *in.AmountMinor)
+	// The forecast fields are assigned only where the request actually moves
+	// them. Every other column may be re-set freely — the audit diff records a
+	// no-op edit and nothing reads it as an event — but these three are what
+	// deal_forecast_history is keyed on, and a row saying the forecast moved on a
+	// day it did not is a move a reconstruction has to explain.
+	if moved(current.AmountMinor, in.AmountMinor) {
+		p.Set(amountField, current.AmountMinor, *in.AmountMinor)
 	}
-	if in.Currency != nil {
-		p.Set("currency", current.Currency, *in.Currency)
+	if moved(current.Currency, in.Currency) {
+		p.Set(currencyField, current.Currency, *in.Currency)
 	}
 	if err := applyDealLinkPatches(ctx, tx, current, in, p,
 		s.installation.EnsurePartner, s.ensureProjectAttachable); err != nil {
@@ -112,9 +125,13 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 				return nil, err
 			}
 		}
-		p.Set("expected_close_date", current.ExpectedCloseDate, *in.ExpectedClose)
+		if current.ExpectedCloseDate == nil || !current.ExpectedCloseDate.Equal(*in.ExpectedClose) {
+			p.Set(closeDateField, current.ExpectedCloseDate, *in.ExpectedClose)
+		}
 		// A human setting the date IS the §11 confirmation — the machine's
-		// provisional guess stops excluding the deal from Commit.
+		// provisional guess stops excluding the deal from Commit. This one turns
+		// on the request, not on the date moving: re-sending the provisional date
+		// unchanged is exactly how a person confirms it.
 		if current.CloseDateProvisional != nil && *current.CloseDateProvisional {
 			p.Set("close_date_provisional", true, false)
 		}
@@ -256,12 +273,8 @@ func validPartnerAttribution(v string) error {
 // applyMoneyInvariants enforces the amount/currency rules on the
 // RESULTING row, not just the request. The pair comes together or not at
 // all: an amount stranded without a currency would skip the FX freeze at
-// close and then violate deal_closed_fx. And re-pricing a CLOSED deal
-// must re-freeze FX as of the original close date, or the frozen rate
-// goes stale against the new currency (silent base-currency corruption)
-// — a deal closed amountless has no frozen rate at all, so adding an
-// amount later would trip deal_closed_fx. Same-day rate lookup as at
-// close, so roll-ups stay reproducible.
+// close and then violate deal_closed_fx. Re-pricing a CLOSED deal carries
+// the freeze freezeBaseRate states.
 func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 	current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch,
 ) error {
@@ -284,19 +297,19 @@ func (s *Store) applyMoneyInvariants(ctx context.Context, tx pgx.Tx,
 		}
 	}
 
-	if string(current.Status) != "open" && resultingAmount != nil &&
-		(in.AmountMinor != nil || in.Currency != nil) {
+	// Keyed on what the PATCH carries for the MONEY, not on what the request
+	// supplied and not on the forecast fields at large: a request that re-sent
+	// the price the deal already has re-prices nothing, and a slipped close date
+	// is not a re-price at all. Either would otherwise re-freeze, and the frozen
+	// rate is supposed to answer for the close.
+	_, amountMoved := p.After()[amountField]
+	_, currencyMoved := p.After()[currencyField]
+	if string(current.Status) != "open" && resultingAmount != nil && (amountMoved || currencyMoved) {
 		// deal_closed_at guarantees ClosedAt on a non-open row.
-		base, err := s.installation.BaseCurrency(ctx, tx)
-		if err != nil {
-			return err
-		}
-		rate, rateDate, err := s.freezeFx(ctx, tx, base, *resultingCurrency, *current.ClosedAt)
-		if err != nil {
+		rateBefore, rateDateBefore := frozenBefore(current)
+		if err := s.freezeBaseRate(ctx, tx, p, string(*resultingCurrency), *current.ClosedAt, rateBefore, rateDateBefore); err != nil {
 			return fmt.Errorf("re-freeze fx for closed deal: %w", err)
 		}
-		p.Set("fx_rate_to_base", nil, rate)
-		p.Set("fx_rate_date", nil, rateDate)
 	}
 	return nil
 }
@@ -348,11 +361,22 @@ func (e *PastCloseDateError) Error() string {
 
 // FieldFault refuses an expected close date already in the past.
 func (e *PastCloseDateError) FieldFault() (field, code, message string) {
-	return "expected_close_date", "close_date_past", e.Error()
+	return closeDateField, "close_date_past", e.Error()
 }
 
 // AmountCurrencyPairError maps to 422: amount_minor and currency come
 // together or not at all (data-model §6 money rules).
+// The deal's money and forecast fields, whose wire name and column name are the
+// SAME word — deliberately, because the contract was written from the schema, and
+// a refusal that named a different field from the column it guards would send a
+// caller looking for an input they did not send. So these three do duty at both
+// layers: a FieldFault names them, every p.Set on the deal row spells them, and
+// forecastColumns is built from them.
+//
+// dealTable is the opposite case and says so: a table name and an RBAC object
+// that happen to share a word are two subjects, so the constant stands for the
+// table and the RBAC object stays a literal.
+//
 // currencyField names the wire field a money-pair refusal points at: amount and
 // currency are atomic, and the currency is the half a caller can supply.
 const currencyField = "currency"
@@ -362,6 +386,14 @@ const amountField = "amount_minor"
 
 // closeDateField names the column a slipped forecast moves.
 const closeDateField = "expected_close_date"
+
+// The frozen base-currency pair, which moves together or not at all: a rate
+// without the date it was taken on cannot be reproduced, and a date without a
+// rate converts nothing.
+const (
+	fxRateColumn     = "fx_rate_to_base"
+	fxRateDateColumn = "fx_rate_date"
+)
 
 // missingMoneyHalf names whichever half of the pair was left out.
 func missingMoneyHalf(amountMissing bool) string {

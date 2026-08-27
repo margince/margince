@@ -86,12 +86,20 @@ type closeDateWorkspaceWorker struct {
 	corrector *deals.CloseDateCorrector
 }
 
+// closeDateSweepActor is the principal the nightly close-date sweep runs as, and
+// therefore the one every row it writes is attributed to — the corrector's
+// audit entries and the deal_forecast_history rows its re-dates record. Declared
+// rather than typed at the call site because the suite that asserts that
+// attribution has to name the same principal the worker binds, and two hand-typed
+// copies of it would agree only until one of them moved.
+const closeDateSweepActor = "system:close-date"
+
 func (w *closeDateWorkspaceWorker) Work(ctx context.Context, job *river.Job[CloseDateWorkspaceArgs]) error {
 	wsCtx, err := workspaceJobCtx(ctx, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: "system:close-date"})
+	wsCtx = principal.WithActor(wsCtx, principal.Principal{Type: principal.PrincipalSystem, ID: closeDateSweepActor})
 	wsCtx = principal.WithCorrelationID(wsCtx, ids.NewV7())
 	return jobs.FaultContext(ctx, w.corrector.SweepWorkspace(wsCtx))
 }
