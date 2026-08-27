@@ -36,6 +36,7 @@ import {
 
 type Profile = components["schemas"]["PersonProviderProfile"];
 type Provider = components["schemas"]["Provider"];
+type ProviderConnection = components["schemas"]["ProviderConnection"];
 
 type EnrichRun = {
   personId: string;
@@ -118,6 +119,11 @@ function ProviderPanel({
 }: Readonly<{ personId: string; profile: Profile }>) {
   const t = useT();
   const enrich = useEnrichRun();
+  const connections = useProviderConnections();
+  // What costs nothing on this connection, as the server itself derives it: a
+  // button that guessed the free set could ask for a priced category and
+  // spend without saying so.
+  const free = freeCategories(connections.data?.connections, profile.provider);
   // Nobody has looked this contact up yet, so the panel has no values to show
   // and the small header button is the only way to change that. An empty plate
   // that names the action instead: the reader came here to buy data, and a
@@ -162,6 +168,7 @@ function ProviderPanel({
             personId={personId}
             profile={profile}
             enrich={enrich}
+            free={free}
             small
           />
         )
@@ -184,6 +191,7 @@ function ProviderPanel({
                 personId={personId}
                 profile={profile}
                 enrich={enrich}
+                free={free}
               />
             }
           >
@@ -547,8 +555,10 @@ function EnrichNow({
   personId,
   profile,
   enrich,
+  free,
   small = false,
 }: Readonly<{
+  free: string[];
   personId: string;
   profile: Profile;
   enrich: ReturnType<typeof useEnrichRun>;
@@ -566,8 +576,20 @@ function EnrichNow({
       busyLabel={t("provider.profile.lookingUp")}
       // A profile carries no provider name until a run exists, so the first
       // lookup on a contact names the one the contract has.
+      // The FREE categories, named. Sending none asks for the connection's
+      // whole selection, priced ones included — a button that spends without
+      // saying so, which is the thing the split exists to prevent. Every
+      // purchase now states its price, and this one states that there is none.
       onClick={() =>
-        enrich.mutate({ personId, provider: profile.provider ?? "surfe" })
+        enrich.mutate({
+          personId,
+          provider: profile.provider ?? "surfe",
+          // Omitted rather than empty while the catalog is still loading: an
+          // empty list asks for nothing at all, and the contract's minItems
+          // refuses it. Omitting falls back to the connection's own selection,
+          // which is what this button did before the free set existed.
+          categories: free.length > 0 ? free : undefined,
+        })
       }
     >
       <Search size={15} aria-hidden="true" /> {t("provider.profile.enrichNow")}
@@ -620,3 +642,16 @@ function useRunWatch(personId: string, profile: Profile) {
 const RUNNING_RUN_STATES = new Set<
   components["schemas"]["ProviderRun"]["state"]
 >(["queued", "submitting", "in_progress"]);
+
+/** The categories this connection buys for nothing, from the server's own
+ *  catalog. Empty while the connections are still loading, which keeps a
+ *  button from asking for a set nobody has confirmed. */
+function freeCategories(
+  connections: ProviderConnection[] | undefined,
+  name: string,
+): string[] {
+  const connection = connections?.find((c) => c.provider === name);
+  return (connection?.catalog ?? [])
+    .filter((entry) => entry.free)
+    .map((entry) => entry.category);
+}

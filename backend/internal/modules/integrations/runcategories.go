@@ -33,7 +33,16 @@ func runCategories(desc provider.Descriptor, conn admittedConnection, in provide
 		// provider gives away, so enrichment can run on every arrival without
 		// anybody deciding it was worth the money — a priced category is
 		// bought by a human pressing a button for one named person.
-		return intersect(permitted, desc.Free()), nil
+		free := intersect(permitted, desc.Free())
+		if len(free) == 0 {
+			// This connection buys nothing free, so an automatic run has
+			// nothing to ask for. Dispatching it anyway sends a request with
+			// no categories, which a provider answers with a refusal — and a
+			// refusal flips the connection's status, breaking automatic
+			// ingest for every later contact over a configuration choice.
+			return nil, ErrNothingFreeToBuy
+		}
+		return free, nil
 	}
 	requested := in.Categories
 	if len(requested) == 0 {
@@ -44,13 +53,40 @@ func runCategories(desc provider.Descriptor, conn admittedConnection, in provide
 		allowed[c] = true
 	}
 	out := make([]provider.Category, 0, len(requested))
+	asked := make(map[provider.Category]bool, len(requested))
 	for _, c := range requested {
 		if !allowed[c] {
 			return nil, fmt.Errorf("%w: %q is not one this connection buys", ErrCategoryNotPermitted, c)
 		}
+		asked[c] = true
 		out = append(out, c)
 	}
+	if err := requireCascadeTriggers(desc, asked); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// requireCascadeTriggers refuses a fallback asked for without the category it
+// follows.
+//
+// A cascade fires only when its trigger comes back empty, so a request naming
+// the fallback alone never issues it — and the platform prices it at nothing
+// for exactly that reason, reserving no credits. The provider is not bound by
+// our reasoning: Surfe's request still carries the email flag and charges for
+// whatever it finds, so the run spends money against a hold of zero.
+//
+// Refused rather than silently widened. Adding the trigger would buy a
+// category the caller did not ask for, and pricing the pair while sending one
+// is the mismatch this exists to prevent.
+func requireCascadeTriggers(desc provider.Descriptor, asked map[provider.Category]bool) error {
+	for _, cascade := range desc.Cascades {
+		if asked[cascade.Category] && !asked[cascade.After] {
+			return fmt.Errorf("%w: %q is a fallback for %q and cannot be bought without it",
+				ErrCategoryNotPermitted, cascade.Category, cascade.After)
+		}
+	}
+	return nil
 }
 
 // intersect keeps the order of the first argument, so what a run asks for
@@ -68,6 +104,11 @@ func intersect(permitted, allowed []provider.Category) []provider.Category {
 	}
 	return out
 }
+
+// ErrNothingFreeToBuy reports that an automatic trigger found no category it
+// may spend on. A configuration state, not a fault: the event consumer
+// swallows it exactly as it swallows a trigger the policy does not admit.
+var ErrNothingFreeToBuy = errors.New("integrations: this connection buys nothing an automatic run may take")
 
 // ErrCategoryNotPermitted reports that a run asked for a category the
 // connection does not carry. A caller's mistake, not a provider condition: the

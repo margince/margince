@@ -467,6 +467,27 @@ describe("the details that cost credits", () => {
     });
   });
 
+  it("names the free categories when the plain lookup button is pressed", async () => {
+    const user = userEvent.setup();
+    const posted = mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /Look this contact up/ }),
+    );
+
+    // The FREE set, named. Sending no categories asks for the connection's
+    // whole selection, priced ones included — a button that spends without
+    // saying so, which is what the split exists to prevent.
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({
+      provider: "surfe",
+      categories: ["linkedin_profile"],
+    });
+  });
+
   it("does not offer to buy what the section already shows", async () => {
     mountWithCatalog(providerCompletedProfile, queuedRun);
 

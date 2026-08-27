@@ -111,3 +111,51 @@ func TestAManualRunNamingNothingTakesTheWholeConnection(t *testing.T) {
 		t.Errorf("got %v, want the connection's full selection", got)
 	}
 }
+
+func TestAnAutomaticRunWithNothingFreeIsRefusedRatherThanDispatched(t *testing.T) {
+	// An admin enabled automatic enrichment on a connection that buys only
+	// priced categories.
+	conn := connectionBuying("professional_email", "mobile")
+
+	_, err := runCategories(pricedDescriptor(), conn, provider.QueueInput{
+		Trigger: provider.TriggerAutomaticCreate,
+	})
+
+	// Dispatching it would send a request naming no categories, which a
+	// provider answers with a refusal — and a refusal flips the connection's
+	// status, breaking automatic ingest for every later contact over one
+	// configuration choice.
+	if !errors.Is(err, ErrNothingFreeToBuy) {
+		t.Errorf("err = %v, want ErrNothingFreeToBuy", err)
+	}
+	// And the consumer swallows it: a policy that leaves nothing to buy is
+	// working as configured, not failing.
+	if !IsTriggerNotAdmitted(err) {
+		t.Error("the refusal is not swallowed as a configuration state, so every arrival logs an error")
+	}
+}
+
+func TestAFallbackCannotBeBoughtWithoutTheCategoryItFollows(t *testing.T) {
+	desc := pricedDescriptor()
+	desc.Cascades = []provider.Cascade{{
+		Category: "personal_email",
+		After:    "professional_email",
+		Cost:     map[provider.Pool]int{"email": 2},
+	}}
+	desc.CostTable["personal_email"] = map[provider.Pool]int{}
+	desc.Categories = append(desc.Categories, "personal_email")
+	conn := connectionBuying("professional_email", "personal_email")
+
+	_, err := runCategories(desc, conn, provider.QueueInput{
+		Trigger:    provider.TriggerManual,
+		Categories: []provider.Category{"personal_email"},
+	})
+
+	// The cascade never fires without its trigger, so the platform prices this
+	// at nothing and reserves nothing — while the provider still charges for
+	// whatever the email flag returns. A hold of zero against a real charge is
+	// the one outcome this must not allow.
+	if !errors.Is(err, ErrCategoryNotPermitted) {
+		t.Errorf("err = %v, want the fallback refused without its trigger", err)
+	}
+}

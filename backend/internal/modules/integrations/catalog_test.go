@@ -11,6 +11,7 @@ package integrations
 
 import (
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
@@ -99,5 +100,50 @@ func TestAFallbackIsPricedWithTheCategoryThatTriggersIt(t *testing.T) {
 	}
 	if fallback.Cost["email"] != 3 {
 		t.Errorf("personal_email costs %v, want the trigger's 1 plus the fallback's 2", fallback.Cost)
+	}
+}
+
+func TestAProviderThatGivesNothingAwayStillConnects(t *testing.T) {
+	desc := provider.Descriptor{
+		Categories:    []provider.Category{"premium_only"},
+		DefaultPreset: "full",
+		Presets: map[string][]provider.Category{
+			"full": {"premium_only"},
+		},
+		CostTable: map[provider.Category]map[provider.Pool]int{
+			"premium_only": {"credits": 5},
+		},
+	}
+
+	cfg, err := resolveConfig(desc, nil)
+	if err != nil {
+		t.Fatalf("resolving the default config: %v", err)
+	}
+
+	// The column requires at least one category. An empty selection would be
+	// refused by the database with a constraint error rather than a sentence
+	// anybody can act on, and a connection nobody can make is worse than one
+	// whose first run costs a credit.
+	if len(cfg.Categories) == 0 {
+		t.Error("a provider with no free categories resolved to an empty selection, which the connection column refuses")
+	}
+}
+
+func TestEveryRegisteredAdapterPricesWhatItDeclares(t *testing.T) {
+	// The real adapters this build can register, not a stand-in: a stub would
+	// prove the check runs, and this proves the shipped descriptors pass it.
+	for _, adapter := range []provider.Adapter{NewOfflineProvider(0, time.Now)} {
+		desc := adapter.Descriptor()
+		t.Run(desc.Name, func(t *testing.T) {
+			for _, category := range desc.Categories {
+				if _, priced := desc.CostTable[category]; !priced {
+					// A missing entry reads as free everywhere the platform
+					// asks what something costs, so it would be bought
+					// automatically and reserved at nothing. An empty map says
+					// "free" deliberately; an omission says nothing at all.
+					t.Errorf("category %q has no cost entry: price it, or declare it free with an empty one", category)
+				}
+			}
+		})
 	}
 }

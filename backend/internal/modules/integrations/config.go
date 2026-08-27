@@ -47,7 +47,15 @@ func resolveConfig(desc provider.Descriptor, in *ConfigInput) (resolvedConfig, e
 		AutomaticCreate: true,
 		AutomaticImport: false,
 	}
+	// A provider that gives nothing away falls back to its own default
+	// preset. The column requires at least one category, so an empty
+	// selection would be refused by the database with a constraint error
+	// rather than a sentence anybody can act on — and a connection nobody can
+	// make is worse than one whose first run costs a credit.
 	out.Categories = categoryStrings(desc.Free())
+	if len(out.Categories) == 0 {
+		out.Categories = categoryStrings(desc.ResolvePreset(desc.DefaultPreset, nil))
+	}
 
 	if in == nil {
 		return out, nil

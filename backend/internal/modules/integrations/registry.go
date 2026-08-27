@@ -44,6 +44,16 @@ func NewRegistry(adapters ...provider.Adapter) (*Registry, error) {
 		if _, err := d.WorstCase(d.Categories); err != nil {
 			return nil, fmt.Errorf("integrations: provider %q cannot be registered: %w", d.Name, err)
 		}
+		for _, category := range d.Categories {
+			if _, priced := d.CostTable[category]; !priced {
+				// A missing entry reads as free everywhere the platform asks
+				// what something costs, so an omission is a category bought
+				// automatically and reserved at nothing. An empty map is how
+				// an adapter says "this one really is free" — the difference
+				// between deciding and forgetting.
+				return nil, fmt.Errorf("integrations: provider %q declares category %q with no cost entry: price it, or declare it free with an empty one", d.Name, category)
+			}
+		}
 		if d.EgressHost == "" {
 			return nil, fmt.Errorf("integrations: provider %q declared no egress host", d.Name)
 		}
