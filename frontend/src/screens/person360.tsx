@@ -19,6 +19,7 @@ import { provenanceOf, throwProblem } from "./common";
 import { currentEmployer, formerEmployers } from "./employmentcurrency";
 import { EntityRef } from "./entityref";
 import { dealRoleLabel } from "./record360";
+import { changeSentence } from "./relationshipchange";
 
 export type Person360 = components["schemas"]["Person360"];
 type ProfileField = components["schemas"]["PersonProfileField"];
@@ -229,28 +230,6 @@ function RelationshipChanges({ view }: Readonly<{ view: Person360 }>) {
       ))}
     </ul>
   );
-}
-
-/**
- * changeSentence writes each derived change as a sentence. A band move names
- * BOTH bands: "the relationship moved" without saying from what to what is a
- * claim the reader has to take on trust.
- */
-function changeSentence(
-  c: components["schemas"]["PersonRelationshipChange"],
-  t: ReturnType<typeof useT>,
-): string {
-  const days = String(c.days ?? 0);
-  if (c.kind === "replied_after_gap") {
-    return t("person.change.repliedAfterGap", { days });
-  }
-  if (c.kind === "went_quiet") {
-    return t("person.change.wentQuiet", { days });
-  }
-  return t(`person.change.${c.kind}`, {
-    from: t(`person.band.${c.from_bucket ?? "none"}`),
-    to: t(`person.band.${c.to_bucket ?? "none"}`),
-  });
 }
 
 /**

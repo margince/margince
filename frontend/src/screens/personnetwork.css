@@ -16,12 +16,17 @@
   align-items: flex-start;
 }
 
+/* The ring is square, so its column is fixed rather than flexible: letting it
+   flex would stretch the circle into an ellipse on a wide viewport. It shrinks
+   with the card, which is what keeps a thin ego graph from sitting in a large
+   empty column. */
 .pn-ring {
   display: block;
-  flex: 0 0 260px;
-  max-width: 260px;
+  flex: 0 1 220px;
+  max-width: 220px;
   width: 100%;
   height: auto;
+  align-self: center;
 }
 
 .pn-groups {
@@ -80,9 +85,10 @@
 }
 
 /* Our side: a colleague is not a record at the account, and drawn in the
-   anchor's fill would read as a second centre. */
+   anchor's fill would read as a second centre. Teal, NOT the indigo family —
+   indigo says an agent decided something, and a colleague is a person. */
 .pn-node-colleague {
-  fill: var(--aiText);
+  fill: var(--tealText);
 }
 
 .pn-node-contact {
@@ -96,10 +102,27 @@
   stroke-width: 3;
 }
 
-.pn-empty {
+.pn-route {
   margin: var(--space-2) 0 0;
-  color: var(--textMeta);
-  font-size: var(--fs-sm);
+  line-height: 1.5;
+}
+
+/* The region the ring's selection writes into. */
+.pn-live {
+  margin-top: var(--space-3);
+}
+
+/* One edge's facts inside that region. Named apart from the region itself so
+   a two-edge selection does not nest one spacing rule inside another. */
+.pn-edge-facts {
+  margin-top: var(--space-3);
+}
+
+.pn-band {
+  margin: 0;
+  display: flex;
+  gap: var(--space-2);
+  align-items: center;
 }
 
 .pn-chips {
@@ -137,10 +160,6 @@
   font-size: var(--fs-meta);
 }
 
-.pn-detail {
-  margin-top: var(--space-2);
-}
-
 .pn-counts {
   margin: var(--space-1) 0 0;
   color: var(--textMeta);
@@ -157,4 +176,11 @@
   margin: var(--space-2) 0 0;
   color: var(--textMeta);
   font-size: var(--fs-sm);
+}
+
+/* A read that failed. Danger, because the reader is being told the answer on
+   screen is not the answer — not merely that there is none. */
+.pn-failed {
+  margin: 0;
+  color: var(--danger);
 }

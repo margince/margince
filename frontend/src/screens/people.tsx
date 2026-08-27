@@ -58,7 +58,7 @@ import {
 } from "./person360";
 import { EnrichedFields } from "./personcorrections";
 import { PersonDealRooms } from "./persondealrooms";
-import { PersonGraphPanel } from "./persongraph";
+import { PersonNetworkTab } from "./personnetwork";
 import { PersonProjects } from "./personprojects";
 import {
   createdColumn,
@@ -749,7 +749,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
             )}
             {tab === "relationships" && (
               <div style={{ display: "grid", gap: "var(--space-4)" }}>
-                <PersonGraphPanel personId={id} />
+                <PersonNetworkTab personId={id} />
                 <RelationshipsTab scope={{ person_id: person.id }} />
               </div>
             )}

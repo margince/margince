@@ -6,7 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { en } from "../i18n/en";
-import { PersonGraphPanel } from "./persongraph";
+import { PersonNetworkTab } from "./personnetwork";
 
 // The panel renders beside a sibling, because the failure this file exists to
 // prevent is the panel taking the REST of the page down with it. An empty
@@ -19,7 +19,7 @@ function renderPanel(personId = "p-1") {
   const tree = (id: string): ReactNode => (
     <QueryClientProvider client={client}>
       <div>
-        <PersonGraphPanel personId={id} />
+        <PersonNetworkTab personId={id} />
         <p>the rest of the record page</p>
       </div>
     </QueryClientProvider>
@@ -44,7 +44,7 @@ function stub(body: unknown, status = 200) {
   );
 }
 
-describe("PersonGraphPanel", () => {
+describe("PersonNetworkTab", () => {
   afterEach(() => {
     cleanup();
     vi.unstubAllGlobals();
@@ -140,13 +140,13 @@ describe("PersonGraphPanel", () => {
       groups_omitted: ["direct"],
     });
     renderPanel();
+    // The primitive's own withheld wording. What matters is that the arm says
+    // it is hidden and NEVER says the group is empty — the two together would
+    // state an absence the server never claimed.
     await waitFor(() =>
-      expect(
-        screen.getByText(
-          "Part of this is hidden because you do not have the grant for it.",
-        ),
-      ).toBeTruthy(),
+      expect(screen.getByText(en["state.withheld"])).toBeTruthy(),
     );
+    expect(screen.queryByText(en["person.graph.noDirect"])).toBeNull();
   });
 
   // A refusal reaches the reader as words, and it only does so because the
@@ -298,6 +298,7 @@ describe("PersonGraphPanel", () => {
     expect(
       await screen.findByText("The request failed. No cause reported."),
     ).toBeTruthy();
+    // The internal cause never reaches the reader, whatever the surface.
     expect(screen.queryByText(/ECONNREFUSED/)).toBeNull();
   });
 });

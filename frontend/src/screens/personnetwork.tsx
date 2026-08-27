@@ -1,19 +1,38 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+// The contact's network: who reaches them, how warmly, and what moved.
+//
+// This is the ONE person-graph surface. It reads `usePersonGraph`, leads with
+// the warmest route because that is the answer, draws the ring as decoration
+// over the node lists that are the content, and — where the caller hands it a
+// 360 — closes with what changed lately. The old contacts screen renders it
+// without that argument, so there is one component rather than two spellings
+// of one question.
+
 import { useState } from "react";
 
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, Card, SectionHeader } from "../design-system/atoms";
+import { Badge, Button, Card } from "../design-system/atoms";
+import { SurfaceState } from "../design-system/surfacestate";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf } from "./common";
 import { usePersonGraph } from "./persongraph";
+import { changeSentence } from "./relationshipchange";
 import "./personnetwork.css";
 
-type Person360 = components["schemas"]["Person360"];
+// What the moments card reads, and nothing more. Narrowed from Person360 so
+// the old contacts screen — which holds no 360 — can still render the tab, and
+// so a caller cannot be asked for fields this surface never touches.
+type RelationshipMoments = Pick<
+  components["schemas"]["Person360"],
+  "relationship_changes" | "sections_omitted"
+>;
 type Graph = components["schemas"]["PersonGraph"];
 type GraphNode = components["schemas"]["PersonGraphNode"];
 type GraphEdge = components["schemas"]["PersonGraphEdge"];
-type Change = components["schemas"]["PersonRelationshipChange"];
 
 // The ring's geometry, in the diagram's own coordinates. A square viewBox and
 // a fixed radius: the picture is deterministic, so the same contact draws the
@@ -32,6 +51,10 @@ const RADIUS_BY_BAND: Readonly<Record<string, number>> = {
   none: 6,
 };
 
+// Strongest first, so "the band of this node" has one answer when a node
+// carries several edges.
+const BAND_ORDER: readonly string[] = ["strong", "moderate", "weak", "none"];
+
 type Placed = Readonly<{ node: GraphNode; x: number; y: number }>;
 
 /**
@@ -41,10 +64,6 @@ type Placed = Readonly<{ node: GraphNode; x: number; y: number }>;
  * the payload order is deterministic, so a fixed ring makes the picture
  * deterministic too. A force simulation would move every node whenever one
  * arrived, and a rep would never learn the shape.
- *
- * Colleagues occupy the first half of the ring and account contacts the
- * second, so our side and their side are two arcs a reader can tell apart
- * without reading a single label.
  */
 export function ringLayout(nodes: readonly GraphNode[]): Placed[] {
   const anchor = nodes.find((node) => node.group === "anchor");
@@ -66,36 +85,61 @@ export function ringLayout(nodes: readonly GraphNode[]): Placed[] {
   return placed;
 }
 
-/** bandOf reports the server's band for a node, from the edge that carries it. */
+/**
+ * bandOf reports the STRONGEST band on any edge touching a node.
+ *
+ * Strongest rather than first: a node can carry several edges, and on the
+ * account arm an edge need not touch the anchor at all. Sizing by whichever
+ * edge the array happened to yield first would let a node's radius describe a
+ * relationship the reader is not looking at.
+ */
 function bandOf(graph: Graph, nodeId: string): string {
-  const edge = (graph.edges ?? []).find(
-    (e) => e.from === nodeId || e.to === nodeId,
+  const bands = (graph.edges ?? [])
+    .filter((edge) => edge.from === nodeId || edge.to === nodeId)
+    .map((edge) => edge.strength_bucket);
+  return (
+    BAND_ORDER.find((band) => bands.some((held) => held === band)) ?? "none"
   );
-  return edge?.strength_bucket ?? "none";
 }
 
 /**
  * PersonNetworkTab answers "who reaches this contact, how warmly, and what
  * changed lately".
  *
- * The warmest route leads because it is the answer. The ring is decoration
- * over the node lists, which are the content: the same nodes, in the same
- * order, as real buttons. Nothing in the picture is reachable only by
- * pointing at it.
+ * `view` is optional because the moments come from the 360 and the old
+ * contacts screen does not hold one. Without it the tab is everything else,
+ * one card shorter — never a card claiming nothing moved.
  */
 export function PersonNetworkTab({
   personId,
   view,
-}: Readonly<{ personId: string; view: Person360 }>) {
+}: Readonly<{ personId: string; view?: RelationshipMoments }>) {
   const t = useT();
   const graph = usePersonGraph(personId);
   const [selected, setSelected] = useState<string | undefined>();
 
   if (graph.isPending) {
-    return <p>{t("person.graph.loading")}</p>;
+    return (
+      <SurfaceState
+        state="loading"
+        emptyLabel={t("person.graph.noDirect")}
+        loadingLabel={t("person.graph.loading")}
+        loadingLines={3}
+      >
+        {null}
+      </SurfaceState>
+    );
   }
   if (graph.isError) {
-    return <p role="alert">{problemMessageOf(graph.error, t)}</p>;
+    // Not SurfaceState's `failed`: that state drops its children for one
+    // generic line, and WHICH failure this was is what a reader acts on — a
+    // refusal is answered by asking for the grant, a timeout by retrying.
+    // `problemMessageOf` is what keeps the internal cause off the screen.
+    return (
+      <p role="alert" className="pn-failed">
+        {problemMessageOf(graph.error, t)}
+      </p>
+    );
   }
   // The arrays are required by the contract, and this guard is still load
   // bearing: a proxy error page or a version-skewed server delivers an object
@@ -119,56 +163,84 @@ export function PersonNetworkTab({
     <div className="pn-stack">
       <RouteCard graph={data} />
 
-      <Card>
-        <div style={{ padding: "var(--space-4)" }}>
-          <SectionHeader
-            title={t("person.network.ringTitle")}
-            sub={t("person.network.ringSub")}
-          />
-          <div className="pn-split">
-            <EgoRing graph={data} selected={selectedNode} />
-            <div className="pn-groups">
-              <NodeGroup
-                title={t("person.graph.direct")}
-                nodes={direct}
-                selected={selectedNode}
-                onSelect={setSelected}
-                emptyLabel={t("person.graph.noDirect")}
-                omitted={isOmitted(data, "direct")}
-              />
-              <NodeGroup
-                title={t("person.graph.account")}
-                nodes={account}
-                selected={selectedNode}
-                onSelect={setSelected}
-                emptyLabel={t("person.graph.noAccount")}
-                omitted={isOmitted(data, "account")}
-              />
-            </div>
+      <Card
+        title={t("person.network.ringTitle")}
+        sub={t("person.network.ringSub")}
+      >
+        <div className="pn-split">
+          <EgoRing graph={data} selected={selectedNode} />
+          <div className="pn-groups">
+            <NodeGroup
+              title={t("person.graph.direct")}
+              nodes={direct}
+              selected={selectedNode}
+              onSelect={setSelected}
+              emptyLabel={t("person.graph.noDirect")}
+              omitted={isOmitted(data, "direct")}
+            />
+            <NodeGroup
+              title={t("person.graph.account")}
+              nodes={account}
+              selected={selectedNode}
+              onSelect={setSelected}
+              emptyLabel={t("person.graph.noAccount")}
+              omitted={isOmitted(data, "account")}
+            />
           </div>
-          {/* Selection changes this region without moving focus, so a reader
-              on a screen reader would otherwise press a node and be told
-              nothing happened. */}
-          <div aria-live="polite" className="pn-detail">
-            {selectedNode && anchor && (
-              <EdgeDetail
-                graph={data}
-                nodeId={selectedNode}
-                anchorId={anchor.id}
-              />
-            )}
-          </div>
-          <DroppedNote graph={data} />
         </div>
+        {/* Selection changes this region without moving focus, so a reader on
+            a screen reader would otherwise press a node and be told nothing
+            happened. */}
+        <div aria-live="polite" className="pn-live">
+          {selectedNode && anchor && (
+            <EdgeDetail
+              graph={data}
+              nodeId={selectedNode}
+              anchorId={anchor.id}
+            />
+          )}
+        </div>
+        <DroppedNote graph={data} />
       </Card>
 
-      <MomentsCard view={view} />
+      {view && <MomentsCard view={view} />}
     </div>
   );
 }
 
 function isOmitted(graph: Graph, group: string): boolean {
   return (graph.groups_omitted ?? []).some((g) => g === group);
+}
+
+/**
+ * RouteCard is the answer: the warmest way in and the evidence for it. It
+ * leads because a reader who reads nothing else should still leave knowing
+ * who to ask.
+ */
+function RouteCard({ graph }: Readonly<{ graph: Graph }>) {
+  const t = useT();
+  const route = graph.route;
+  return (
+    <Card title={t("person.graph.routeTitle")}>
+      {route ? (
+        <>
+          <p className="pn-route">
+            {route.through_display_name
+              ? t("person.graph.routeVia", {
+                  name: route.via_display_name,
+                  through: route.through_display_name,
+                })
+              : t("person.graph.routeDirect", {
+                  name: route.via_display_name,
+                })}
+          </p>
+          <p className="pn-counts">{route.why}</p>
+        </>
+      ) : (
+        <p className="pn-route">{t("person.graph.noRoute")}</p>
+      )}
+    </Card>
+  );
 }
 
 /**
@@ -184,6 +256,11 @@ function EgoRing({
 }: Readonly<{ graph: Graph; selected: string | undefined }>) {
   const placed = ringLayout(graph.nodes ?? []);
   const at = new Map(placed.map((p) => [p.node.id, p]));
+  // A ring with nobody on it is one dot, which draws as a smudge rather than a
+  // picture. The lists beside it already say nobody reaches this contact.
+  if (placed.length < 2) {
+    return null;
+  }
   return (
     <svg
       className="pn-ring"
@@ -246,44 +323,13 @@ function nodeClass(node: GraphNode, selected: boolean): string {
 }
 
 /**
- * RouteCard is the answer: the warmest way in and the evidence for it. It
- * leads because a reader who reads nothing else should still leave knowing
- * who to ask.
- */
-function RouteCard({ graph }: Readonly<{ graph: Graph }>) {
-  const t = useT();
-  const route = graph.route;
-  return (
-    <Card>
-      <div style={{ padding: "var(--space-4)" }}>
-        <SectionHeader title={t("person.graph.routeTitle")} />
-        {route ? (
-          <>
-            <p style={{ margin: "var(--space-2) 0 0", lineHeight: 1.5 }}>
-              {route.through_display_name
-                ? t("person.graph.routeVia", {
-                    name: route.via_display_name,
-                    through: route.through_display_name,
-                  })
-                : t("person.graph.routeDirect", {
-                    name: route.via_display_name,
-                  })}
-            </p>
-            <p className="pn-counts">{route.why}</p>
-          </>
-        ) : (
-          <p style={{ margin: "var(--space-2) 0 0", lineHeight: 1.5 }}>
-            {t("person.graph.noRoute")}
-          </p>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-/**
  * NodeGroup renders one arm of the ring as real buttons with aria-pressed.
  * The list is the content; the ring is the picture of it.
+ *
+ * SurfaceState owns the withheld-or-empty decision, because those two are the
+ * pair a reader must never see merged: a withheld arm arrives with no nodes,
+ * and saying "nobody here knows them" beside "you cannot see this" states an
+ * absence the server never claimed.
  */
 function NodeGroup({
   title,
@@ -300,32 +346,28 @@ function NodeGroup({
   emptyLabel: string;
   omitted: boolean;
 }>) {
-  const t = useT();
+  const state = omitted
+    ? ("withheld" as const)
+    : nodes.length === 0
+      ? ("empty" as const)
+      : ("ready" as const);
   return (
-    <div>
-      <SectionHeader title={title} />
-      {nodes.length === 0 ? (
-        <p className="pn-empty">{emptyLabel}</p>
-      ) : (
-        <ul className="pn-chips">
-          {nodes.map((node) => (
-            <li key={node.id}>
-              <Button
-                small
-                aria-pressed={selected === node.id}
-                onClick={() => onSelect(node.id)}
-              >
-                {node.label}
-                {node.sublabel ? ` · ${node.sublabel}` : ""}
-              </Button>
-            </li>
-          ))}
-        </ul>
-      )}
-      {/* Withheld is not empty. A group the reader may not see says so, rather
-          than rendering the sentence an absence would have produced. */}
-      {omitted && <p className="pn-empty">{t("person.graph.omitted")}</p>}
-    </div>
+    <SurfaceState label={title} state={state} emptyLabel={emptyLabel}>
+      <ul className="pn-chips">
+        {nodes.map((node) => (
+          <li key={node.id}>
+            <Button
+              small
+              aria-pressed={selected === node.id}
+              onClick={() => onSelect(node.id)}
+            >
+              {node.label}
+              {node.sublabel ? ` · ${node.sublabel}` : ""}
+            </Button>
+          </li>
+        ))}
+      </ul>
+    </SurfaceState>
   );
 }
 
@@ -349,14 +391,13 @@ function EdgeDetail({
   );
   if (!node || edges.length === 0) {
     return (
-      <p className="pn-empty">
+      <p className="pn-counts">
         {t("person.graph.noEdge", { name: node?.label ?? "" })}
       </p>
     );
   }
   return (
-    <div>
-      <SectionHeader title={node.label} />
+    <Card title={node.label} level={3}>
       {edges.map((edge) => {
         // Whom this edge joins the SELECTED node to. Both ends are read
         // because an account-arm edge need not touch the anchor at all.
@@ -370,15 +411,8 @@ function EdgeDetail({
               : undefined;
         const receipts = edge.receipts ?? [];
         return (
-          <div key={`${edge.from}->${edge.to}`} className="pn-detail">
-            <p
-              style={{
-                margin: 0,
-                display: "flex",
-                gap: "var(--space-2)",
-                alignItems: "center",
-              }}
-            >
+          <div key={`${edge.from}->${edge.to}`} className="pn-edge-facts">
+            <p className="pn-band">
               <Badge>{t(`person.band.${edge.strength_bucket}`)}</Badge>
               {withWhom && <span>{withWhom}</span>}
             </p>
@@ -406,7 +440,7 @@ function EdgeDetail({
           </div>
         );
       })}
-    </div>
+    </Card>
   );
 }
 
@@ -414,51 +448,42 @@ function EdgeDetail({
  * MomentsCard is what changed about this relationship lately.
  *
  * It is the difference between a picture of a network and a live one: a ring
- * says who is there, a moment says what moved. The changes are derived at
- * read from the same curve the bands come from, so this card needs no state
- * of its own.
+ * says who is there, a moment says what moved. The sentences are the 360's
+ * own, so one derived change does not get two sets of words.
  */
-function MomentsCard({ view }: Readonly<{ view: Person360 }>) {
-  const t = useT();
-  const changes = view.relationship_changes ?? [];
-  return (
-    <Card>
-      <div style={{ padding: "var(--space-4)" }}>
-        <SectionHeader
-          title={t("person.network.momentsTitle")}
-          sub={t("person.network.momentsSub")}
-        />
-        {changes.length === 0 ? (
-          <p className="pn-empty">{t("person.network.noMoments")}</p>
-        ) : (
-          <ul className="pn-moments">
-            {changes.map((change) => (
-              <Moment key={`${change.kind}-${change.at}`} change={change} />
-            ))}
-          </ul>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-function Moment({ change }: Readonly<{ change: Change }>) {
+function MomentsCard({ view }: Readonly<{ view: RelationshipMoments }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const changes = view.relationship_changes ?? [];
+  // The section is withholdable. A reader without the grant is served no
+  // changes, and "nothing has moved" would be a fact the page does not have.
+  const withheld = (view.sections_omitted ?? []).some(
+    (section) => section === "relationship_changes",
+  );
+  const state = withheld
+    ? ("withheld" as const)
+    : changes.length === 0
+      ? ("empty" as const)
+      : ("ready" as const);
   return (
-    <li className="pn-moment">
-      <span>
-        {change.days === undefined
-          ? t(`person.network.moment.${change.kind}`)
-          : t(`person.network.momentDays.${change.kind}`, {
-              days: formatNumber(change.days, locale),
-            })}
-      </span>
-      <span className="pn-moment-when">
-        {formatDate(change.at, locale, recordZone)}
-      </span>
-    </li>
+    <Card
+      title={t("person.network.momentsTitle")}
+      sub={t("person.network.momentsSub")}
+    >
+      <SurfaceState state={state} emptyLabel={t("person.network.noMoments")}>
+        <ul className="pn-moments">
+          {changes.map((change) => (
+            <li key={`${change.kind}-${change.at}`} className="pn-moment">
+              <span>{changeSentence(change, t)}</span>
+              <span className="pn-moment-when">
+                {formatDate(change.at, locale, recordZone)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      </SurfaceState>
+    </Card>
   );
 }
 

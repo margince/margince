@@ -15,7 +15,8 @@
 // only rendering of absence that a reader can count.
 
 import type { components } from "../../api/schema";
-import { Badge, Card, EmptyState, Skeleton } from "../../design-system/atoms";
+import { Badge, Card } from "../../design-system/atoms";
+import { SurfaceState, sectionState } from "../../design-system/surfacestate";
 import { formatNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { dealRoleLabel } from "../record360";
@@ -45,18 +46,6 @@ const GAP_KINDS: readonly DealCoverageRisk["kind"][] = [
   "coverage_gap",
   "single_threaded_theirs",
 ];
-
-// Every risk is a warning; only the two that mean somebody is gone are danger.
-// The same split the coverage card draws — a map where six chips all shout is
-// a map a rep stops reading.
-const RISK_TONE: Record<DealCoverageRisk["kind"], "danger" | "warn"> = {
-  champion_left: "danger",
-  stakeholder_left: "danger",
-  going_cold: "warn",
-  single_threaded_theirs: "warn",
-  single_threaded_ours: "warn",
-  coverage_gap: "warn",
-};
 
 /** ghostCount reports how many seats the coverage rules say are missing. */
 export function ghostCount(risks: readonly DealCoverageRisk[]): number {
@@ -95,21 +84,33 @@ export function DealCommitteeMap({
   const ours = coverage?.our_side ?? [];
   const risks = coverage?.risks ?? [];
   const ghosts = ghostCount(risks);
+  // Withheld, empty, still loading and FAILED are four different answers, and
+  // the primitive is what keeps them apart. A read that errored leaves
+  // `coverage` undefined, and a hand-rolled chain over `seats.length` would
+  // land on "nobody is on this deal" — a finding from a check that never ran,
+  // contradicting the rail two feet away. `sectionState` answers
+  // `unavailable` there instead.
+  const state = overlay
+    ? ("unsupported" as const)
+    : sectionState(
+        withheld
+          ? { sections_omitted: ["stakeholders"] }
+          : { sections_omitted: [] },
+        "stakeholders",
+        Boolean(coverage),
+        seats.length,
+        pending,
+      );
 
   return (
     <Card className="dc-card" title={t("deal.committee.title")}>
-      {overlay && <EmptyState>{t("overlay.unavailable")}</EmptyState>}
-      {!overlay && pending && <Skeleton width="80%" />}
-      {/* Withheld is not empty. A reader without the relationship grant is
-          served no seats at all, and drawing that as an uncovered deal would
-          report a finding from a check that never ran. */}
-      {!overlay && !pending && withheld && (
-        <EmptyState>{t("deal.committee.withheld")}</EmptyState>
-      )}
-      {!overlay && !pending && !withheld && seats.length === 0 && (
-        <EmptyState>{t("deal.committee.empty")}</EmptyState>
-      )}
-      {!overlay && !pending && !withheld && seats.length > 0 && (
+      <SurfaceState
+        state={state}
+        emptyLabel={t("deal.committee.empty")}
+        detail={
+          overlay ? { unsupportedReason: t("overlay.unavailable") } : undefined
+        }
+      >
         <>
           <CommitteeSvg seats={seats} ourCount={ours.length} ghosts={ghosts} />
           <ul className="dc-legend">
@@ -144,15 +145,11 @@ export function DealCommitteeMap({
               </li>
             ))}
           </ul>
-          {risks.length > 0 && (
-            <ul className="dc-risks">
-              {risks.map((risk) => (
-                <li key={risk.kind}>
-                  <Badge tone={RISK_TONE[risk.kind]}>{risk.summary}</Badge>
-                </li>
-              ))}
-            </ul>
-          )}
+          {/* The findings themselves are NOT repeated here. DealSignals
+              already renders the same `risks` as localized chips above this
+              card, and a second rendering would give one finding two
+              spellings — and this one would be the untranslated summary. What
+              the map adds is where the gap IS, which the ghosts carry. */}
           <p className="t-caption">
             {t("deal.committee.threads", {
               engaged: formatNumber(
@@ -163,7 +160,7 @@ export function DealCommitteeMap({
             })}
           </p>
         </>
-      )}
+      </SurfaceState>
     </Card>
   );
 }

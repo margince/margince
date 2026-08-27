@@ -2021,7 +2021,6 @@ export const en = {
   "deal.seats.ours": "{count} of ours carry it",
   "deal.committee.title": "The buying committee",
   "deal.committee.empty": "No stakeholder is recorded on this deal",
-  "deal.committee.withheld": "You cannot see who is on this deal",
   "deal.committee.engaged": "Talking",
   "deal.committee.quiet": "No reply",
   "deal.committee.unnamedSeat": "A stakeholder you cannot see",
@@ -6088,15 +6087,9 @@ export const en = {
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
   "person.graph.direct": "Who knows them",
-  "person.graph.directSub":
-    "Colleagues who have corresponded with this contact themselves.",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
   "person.graph.account": "At the same company",
-  "person.graph.accountSub":
-    "Their colleagues, and who here is warmest with each.",
   "person.graph.noAccount": "No other contacts on record at their company.",
-  "person.graph.omitted":
-    "Part of this is hidden because you do not have the grant for it.",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
   "person.graph.withContact": "with this contact",
@@ -6113,15 +6106,6 @@ export const en = {
   "person.network.momentsSub":
     "Movements in this relationship, from the messages themselves.",
   "person.network.noMoments": "Nothing has moved in this relationship lately.",
-  "person.network.moment.replied_after_gap": "Replied after a silence",
-  "person.network.moment.went_quiet": "Went quiet",
-  "person.network.moment.warmed": "Warmed up",
-  "person.network.moment.cooled": "Cooled off",
-  "person.network.momentDays.replied_after_gap":
-    "Replied after {days} days of silence",
-  "person.network.momentDays.went_quiet": "Quiet for {days} days",
-  "person.network.momentDays.warmed": "Warmed up over {days} days",
-  "person.network.momentDays.cooled": "Cooled off over {days} days",
   "person.change.repliedAfterGap": "They replied after {days} quiet days.",
   "person.change.wentQuiet": "Nothing has happened for {days} days.",
   "person.change.warmed": "The relationship moved from {from} to {to}.",

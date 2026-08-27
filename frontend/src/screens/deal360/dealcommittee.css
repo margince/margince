@@ -33,8 +33,10 @@
   stroke-width: 2;
 }
 
+/* Our side. Teal, NOT the indigo family — indigo marks what an agent decided,
+   and the colleagues carrying a deal are people. */
 .dc-seat-ours {
-  fill: var(--aiText);
+  fill: var(--tealText);
 }
 
 /* The ghost seat: a role the coverage rules say is MISSING. Dashed and empty,
@@ -81,15 +83,6 @@
 
 .dc-swatch-gap {
   border: 2px dashed var(--warn);
-}
-
-.dc-risks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-2);
-  margin: var(--space-3) 0 0;
-  padding: 0;
-  list-style: none;
 }
 
 .dc-seats {

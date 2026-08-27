@@ -1992,8 +1992,6 @@ export const de = {
   "deal.seats.ours": "{count} von uns tragen ihn",
   "deal.committee.title": "Das Buying Center",
   "deal.committee.empty": "Für diesen Deal ist niemand hinterlegt",
-  "deal.committee.withheld":
-    "Sie können nicht sehen, wer an diesem Deal beteiligt ist",
   "deal.committee.engaged": "Im Austausch",
   "deal.committee.quiet": "Keine Antwort",
   "deal.committee.unnamedSeat": "Beteiligte Person, für Sie nicht sichtbar",
@@ -6049,16 +6047,10 @@ export const de = {
   "person.graph.noRoute":
     "Bisher steht hier niemand im Austausch mit ihnen oder mit jemandem in ihrem Unternehmen.",
   "person.graph.direct": "Wer sie kennt",
-  "person.graph.directSub":
-    "Kolleginnen und Kollegen, die selbst mit diesem Kontakt korrespondiert haben.",
   "person.graph.noDirect": "Hier hat niemand mit ihnen korrespondiert.",
   "person.graph.account": "Im selben Unternehmen",
-  "person.graph.accountSub":
-    "Ihre Kolleginnen und Kollegen \u2014 und wer hier zu jedem den w\u00e4rmsten Draht hat.",
   "person.graph.noAccount":
     "Keine weiteren Kontakte in diesem Unternehmen erfasst.",
-  "person.graph.omitted":
-    "Ein Teil davon ist ausgeblendet, weil die Berechtigung daf\u00fcr fehlt.",
   "person.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "person.graph.withColleague": "mit {name}",
   "person.graph.withContact": "mit diesem Kontakt",
@@ -6076,15 +6068,6 @@ export const de = {
     "Bewegungen in dieser Beziehung, aus den Nachrichten selbst.",
   "person.network.noMoments":
     "In dieser Beziehung hat sich zuletzt nichts bewegt.",
-  "person.network.moment.replied_after_gap": "Antwort nach langer Stille",
-  "person.network.moment.went_quiet": "Ist verstummt",
-  "person.network.moment.warmed": "Ist wärmer geworden",
-  "person.network.moment.cooled": "Ist kühler geworden",
-  "person.network.momentDays.replied_after_gap":
-    "Antwort nach {days} Tagen Stille",
-  "person.network.momentDays.went_quiet": "Seit {days} Tagen still",
-  "person.network.momentDays.warmed": "In {days} Tagen wärmer geworden",
-  "person.network.momentDays.cooled": "In {days} Tagen kühler geworden",
   "person.change.repliedAfterGap": "Antwort nach {days} stillen Tagen.",
   "person.change.wentQuiet": "Seit {days} Tagen ist nichts passiert.",
   "person.change.warmed": "Die Beziehung ist von {from} auf {to} gestiegen.",

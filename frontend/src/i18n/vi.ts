@@ -1985,7 +1985,6 @@ export const vi = {
   "deal.seats.ours": "{count} người bên mình phụ trách",
   "deal.committee.title": "Nhóm ra quyết định mua",
   "deal.committee.empty": "Chưa có ai được ghi nhận cho giao dịch này",
-  "deal.committee.withheld": "Bạn không xem được ai tham gia giao dịch này",
   "deal.committee.engaged": "Đang trao đổi",
   "deal.committee.quiet": "Chưa hồi đáp",
   "deal.committee.unnamedSeat": "Một người tham gia bạn không xem được",
@@ -5996,15 +5995,10 @@ export const vi = {
   "person.graph.noRoute":
     "Chưa ai bên mình trao đổi với họ hay với ai ở công ty họ.",
   "person.graph.direct": "Ai quen họ",
-  "person.graph.directSub":
-    "Những đồng nghiệp đã tự mình trao đổi với contact này.",
   "person.graph.noDirect": "Chưa ai bên mình trao đổi với họ.",
   "person.graph.account": "Ở cùng công ty",
-  "person.graph.accountSub":
-    "Đồng nghiệp của họ, và ai bên mình thân nhất với từng người.",
   "person.graph.noAccount":
     "Không có contact nào khác được ghi nhận ở công ty họ.",
-  "person.graph.omitted": "Một phần bị ẩn vì bạn không có quyền xem.",
   "person.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "person.graph.withColleague": "với {name}",
   "person.graph.withContact": "với contact này",
@@ -6021,15 +6015,6 @@ export const vi = {
   "person.network.momentsSub":
     "Những chuyển động trong quan hệ này, lấy từ chính các tin nhắn.",
   "person.network.noMoments": "Gần đây quan hệ này không có chuyển động nào.",
-  "person.network.moment.replied_after_gap": "Đã trả lời sau thời gian im lặng",
-  "person.network.moment.went_quiet": "Đã im lặng",
-  "person.network.moment.warmed": "Đã ấm lên",
-  "person.network.moment.cooled": "Đã nguội đi",
-  "person.network.momentDays.replied_after_gap":
-    "Đã trả lời sau {days} ngày im lặng",
-  "person.network.momentDays.went_quiet": "Im lặng đã {days} ngày",
-  "person.network.momentDays.warmed": "Ấm lên trong {days} ngày",
-  "person.network.momentDays.cooled": "Nguội đi trong {days} ngày",
   "person.change.repliedAfterGap": "Họ hồi đáp sau {days} ngày im ắng.",
   "person.change.wentQuiet": "Không có gì xảy ra suốt {days} ngày.",
   "person.change.warmed": "Quan hệ đã chuyển từ {from} lên {to}.",
