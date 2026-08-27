@@ -2,14 +2,6 @@ import AxeBuilder from "@axe-core/playwright";
 import { expect, type Page, test } from "@playwright/test";
 import { mockApi } from "./seed";
 
-declare global {
-  interface Window {
-    // Set by PERF-1 inside the page, so the figure it reads is the browser's own
-    // work and not a round-trip to this process. Only that case reads it.
-    __recordOpenElapsed?: Promise<number>;
-  }
-}
-
 /**
  * Settle the page's motion before measuring the colours it paints.
  *
@@ -74,7 +66,7 @@ async function settleAnimations(page: Page) {
 // names the criterion it breaks. Includes the cross-cutting invariants
 // (rail + ⌘K present, 🟡 confirm-first, provenance rendered), the 390px
 // no-horizontal-scroll sweep (§3.8), the WCAG 2.2 AA axe gate (B-EP09.21)
-// and the PERF-1 perceived record-open budget.
+// and PERF-1's held-read claim for a record open.
 
 test.beforeEach(async ({ page }) => {
   await mockApi(page);
@@ -1668,29 +1660,33 @@ test.describe("ADR-0076: the unauthenticated surface", () => {
 });
 
 // What makes a record open feel instant is not a number on this runner, it is
-// that the identity is on screen before anything is fetched: the head renders
-// from the ROUTE, and the read fills the body underneath it. So that is what is
-// asserted here, by holding the record read open and requiring the heading
-// anyway — a claim that means the same thing on an idle laptop and on a CI box
-// with six other jobs on it.
+// how little the identity waits for. So a HELD read is what asserts it: the
+// request is made to hang, and the heading has to arrive anyway. That claim
+// means the same thing on an idle laptop and on a CI box running six other jobs,
+// which no reading of a clock does.
 //
-// The wall-clock budget this case used to assert measured the harness as much as
-// the product: `Date.now()` in the test process spans a `click()` round-trip and
-// a POLLING `toHaveText`, which was a quarter to a third of the figure when
-// measured against an in-page clock (66-80ms in the page against 87-116ms here,
-// idle). A shared runner then scales the whole thing until it crosses any fixed
-// line, which is what it did. The ceiling below is measured IN the page, and it
-// is deliberately far above the ~70ms this takes: it is a wall for a regression
-// that breaks the mechanism above, not a benchmark. The 300ms product budget
-// needs a lane that owns its hardware before a number can gate anything.
-test("PERF-1: a record opens on its route's identity, not on its read", async ({
+// This case bounds `GET /people/{id}`, and the title says so because that is the
+// read it holds. The heading itself comes from `/people/{id}/360` — a record
+// head that draws before ITS own read returns is the wider claim, and #2864
+// carries it, product half first.
+//
+// The perceived BUDGET is not asserted here at all. One wall-clock sample says
+// how busy the runner was, and this lane shares its machine with six integration
+// shards. `make bench-mobile` owns the 300ms figure as a p95 over 20 samples on
+// a throttled Fast-3G profile — the harder of the two conditions, so a budget
+// that holds there holds unthrottled by construction.
+test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
   page,
 }) => {
   // Held, not slowed: the read cannot have answered when the assertion below
-  // runs, so a head that waited on it could not pass by being lucky.
+  // runs, so a page that waited on it could not pass by being lucky. The hold
+  // stays under Playwright's 5s expect timeout on purpose — a page that DID wait
+  // still resolves its heading, so this case fails on `readAnswered`, which names
+  // the mechanism, rather than timing out with nothing to say.
+  const READ_HELD_MS = 3000;
   let readAnswered = false;
   await page.route("**/people/p-anna", async (route) => {
-    await new Promise((settle) => setTimeout(settle, 3000));
+    await new Promise((settle) => setTimeout(settle, READ_HELD_MS));
     readAnswered = true;
     await route.fallback();
   });
@@ -1709,42 +1705,6 @@ test("PERF-1: a record opens on its route's identity, not on its read", async ({
   const row = page.getByRole("row", { name: "Anna Weber" });
   await expect(row).toBeVisible();
 
-  // Measured from inside the page, so no CDP round-trip is inside the figure.
-  await page.evaluate(() => {
-    window.__recordOpenElapsed = new Promise<number>((resolve) => {
-      document.addEventListener(
-        "click",
-        () => {
-          const from = performance.now();
-          const named = () =>
-            document
-              .querySelector(".record-head h1")
-              ?.textContent?.includes("Anna Weber")
-              ? performance.now() - from
-              : null;
-          const already = named();
-          if (already !== null) {
-            resolve(already);
-            return;
-          }
-          const watch = new MutationObserver(() => {
-            const done = named();
-            if (done !== null) {
-              watch.disconnect();
-              resolve(done);
-            }
-          });
-          watch.observe(document.body, {
-            subtree: true,
-            childList: true,
-            characterData: true,
-          });
-        },
-        { once: true, capture: true },
-      );
-    });
-  });
-
   await row.click();
   // The record's own header, not the shell's — the head shows only the trail on
   // a record route, and it renders from the router before any record read
@@ -1754,7 +1714,4 @@ test("PERF-1: a record opens on its route's identity, not on its read", async ({
     page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
   ).toBeVisible();
   expect(readAnswered).toBe(false);
-
-  const elapsed = await page.evaluate(() => window.__recordOpenElapsed);
-  expect(elapsed).toBeLessThan(1000);
 });

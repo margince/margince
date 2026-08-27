@@ -141,9 +141,10 @@ default.
   itself, so two tests assert the absence of any workspace header).
 - `e2e/` — the Playwright harness: AC-named acceptance tests, the 390px
   no-horizontal-scroll sweep, axe WCAG 2.2 AA on every core screen, the
-  PERF-1 <300 ms perceived record-open budget. Runs over a network-edge
-  seed mock by default; `BASE_URL=…` points the same suite at a live
-  backend.
+  PERF-1's held-read claim for a record open (the <300 ms perceived BUDGET is
+  measured by `make bench-mobile`, which samples a p95 instead of gating one
+  wall-clock reading on a shared runner). Runs over a network-edge seed mock by
+  default; `BASE_URL=…` points the same suite at a live backend.
 
 ## The gates (all run by `pnpm check` / `pnpm e2e`)
 
@@ -155,7 +156,9 @@ default.
 5. No emoji glyphs in source strings — Lucide only; the 🟢/🟡 autonomy
    semantics render through the `.dot` token component.
 6. No service worker ships, and nothing registers one.
-7. WCAG 2.2 AA (axe) + the perceived-perf budget in the e2e lane.
+7. WCAG 2.2 AA (axe) in the e2e lane. The perceived-perf budget is not
+   here: `make bench-mobile` samples it, because one wall-clock reading on a
+   shared runner measures the runner.
 8. The unauthenticated surface at 390px / 320px / 200% zoom (ADR-0076): no
    horizontal scroll, the primary action reachable, the identity region whole
    wherever it is shown at all, the task region above it below 960px, one h1 and

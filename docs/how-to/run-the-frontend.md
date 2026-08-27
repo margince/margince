@@ -22,7 +22,8 @@ workspace selection exists. Stop the stack with `make dev-stop`.
 ```sh
 make frontend-check   # Biome + unit tests + tsc + build (the frontend gate)
 make frontend-e2e     # the screen-acceptance harness: AC-named tests,
-                      # 390px sweep, axe WCAG 2.2 AA, perceived-perf budget
+                      # 390px sweep, axe WCAG 2.2 AA
+make bench-mobile     # the perceived-perf budget, sampled on Fast-3G
 ```
 
 The e2e harness runs hermetically over a seed mock by default. To run the
