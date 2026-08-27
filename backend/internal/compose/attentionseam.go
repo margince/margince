@@ -163,42 +163,30 @@ func (d attentionDuplicates) CountOpen(ctx context.Context) (int, error) {
 	return d.store.CountOpenDedupeCandidates(ctx)
 }
 
-// taskScanFactor is how much wider than the lane the task read goes.
-//
-// The store returns tasks by recency regardless of whether they are done or
-// due, and this seam filters afterwards, so the scan has to carry enough rows
-// for the filter to still find today's work under a pile of finished ones. Ten
-// times the lane is a guess with a floor rather than a measurement: what it
-// must not be is EQUAL to the lane, which is what silently dropped overdue
-// work.
-const taskScanFactor = 10
-
 // attentionTasks reads open tasks through the activities store. A task is an
 // activity of kind `task`, so this is the same read the task queue makes.
 type attentionTasks struct{ store *activities.Store }
 
 func (t attentionTasks) OpenForViewer(ctx context.Context, until time.Time, limit int) ([]attention.Task, error) {
-	kind := activityKindTask
-	// Read WIDER than the lane shows, because the store cannot filter on
-	// "open and due by now" and this does the filtering afterwards. Asking for
-	// exactly the lane's size let a dozen completed or future-dated tasks fill
-	// the page and push a genuinely overdue one off it — the day would read
-	// clear while the task queue still showed the promise it had missed.
-	scan := limit * taskScanFactor
-	rows, _, err := t.store.ListActivities(ctx, activities.ListActivitiesInput{Kind: &kind, Limit: &scan})
+	// The store answers "open and due by then" itself, so the limit bounds the
+	// rows that QUALIFY. This used to read ten times the lane and narrow
+	// afterwards, which put the bound on the wrong set: a pile of completed
+	// tasks filled the scan, the overdue promise underneath never reached the
+	// reader, and the day rendered clear while the work was still there.
+	rows, _, err := t.store.ListActivities(ctx, activities.ListActivitiesInput{
+		OpenAndDueBy: &until, Limit: &limit,
+	})
 	if err != nil {
 		return nil, err
 	}
 	open := make([]attention.Task, 0, len(rows))
 	for _, row := range rows {
-		if row.IsDone != nil && *row.IsDone {
-			continue
-		}
-		// A task with no due date is still work somebody agreed to, but it is
-		// not work for TODAY, and a queue that promised today's list would be
-		// lying if it carried the undated backlog too. `until` is the end of
-		// the day, so anything not yet past it is still ahead of the reader.
-		if row.DueAt == nil || !deadline.Passed(row.DueAt, until) {
+		// The filter above answers only dated rows, so this skip is unreachable
+		// today. It is here because the alternative to a skip is a nil deref
+		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
+		// clause one package away — too far for the next reader of this loop to
+		// see it.
+		if row.DueAt == nil {
 			continue
 		}
 		due := *row.DueAt
@@ -228,57 +216,54 @@ const approvalStatusApproved = "approved"
 
 // attentionReceipts reads what ran without asking.
 //
-// The test is decided_by IS NULL, which is the convention the expiry sweep
-// states in its own words: "decided_by stays NULL and the actor is the system:
-// nobody decided". Filtering on status alone would put the reader's OWN
-// approvals in a lane headed "Done for you" — telling somebody the system
-// handled a thing they handled themselves, which is the one claim this lane
-// exists to make and the easiest one to get wrong.
+// The test is the decision's own decided_by_system marker. It used to be
+// decided_by IS NULL, inferring "nobody decided" from an empty column, and that
+// read the wrong thing twice over: no writer produces approved-with-no-decider,
+// and deleting an app_user empties decided_by on every approval that person
+// decided — which would move their decisions into a lane headed "Done for you".
+// Filtering on status alone would do the same thing to every reader's own
+// approvals, which is the one claim this lane exists to make.
 type attentionReceipts struct{ svc *approvals.Service }
 
 func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit int) ([]attention.Receipt, error) {
 	return recentReceipts(since, limit, func(scan int) ([]crmcontracts.Approval, error) {
 		status := approvalStatusApproved
-		rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{Status: &status, Limit: scan})
+		bySystem := true
+		rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{
+			Status: &status, DecidedBySystem: &bySystem, DecidedAfter: &since, Limit: scan,
+		})
 		return rows, err
 	})
 }
 
-// recentReceipts pages the approved queue and keeps what ran without asking.
+// recentReceipts turns the store's rows into the lane's cards.
 //
-// The read is WIDER than the lane shows, and that is the whole of this
-// function's reason to exist: the engine can only page approvals by status,
-// while `decided_by IS NULL` — the test for "nobody was asked" — is applied
-// afterwards. A read the size of the lane is filled by the reader's OWN recent
-// approvals and filters to nothing, so the lane reports a quiet night while
-// dozens of things ran. The same shape as the task lane's scan factor, and for
-// the same reason.
+// The read is bounded by the lane rather than widened past it: the store answers
+// "approved, decided by the system, decided since" itself, so the limit applies
+// to rows that qualify. The window belongs in SQL with the rest — the page is
+// ordered by created_at while the window is about decided_at, so a window
+// applied afterwards can discard a whole page and hide a decision made minutes
+// ago beneath approvals staged more recently.
+//
+// The re-check below is not a second filter. It is what makes the deref of
+// DecidedAt safe in this package, where the SQL guaranteeing it is elsewhere.
 //
 // The page reader is a parameter so a test can answer exactly the width it was
 // asked for; nothing else varies it.
 func recentReceipts(
 	since time.Time, limit int, page func(scan int) ([]crmcontracts.Approval, error),
 ) ([]attention.Receipt, error) {
-	rows, err := page(approvals.PendingScanCap)
+	rows, err := page(limit)
 	if err != nil {
 		return nil, err
 	}
-	receipts := receiptsWithin(rows, since)
-	if len(receipts) > limit {
-		receipts = receipts[:limit]
-	}
-	return receipts, nil
+	return receiptsWithin(rows, since), nil
 }
 
-// receiptsWithin keeps the decided rows this lane may claim: inside the window,
-// and decided by nobody.
+// receiptsWithin keeps the decided rows inside the lane's window.
 func receiptsWithin(rows []crmcontracts.Approval, since time.Time) []attention.Receipt {
 	out := make([]attention.Receipt, 0, len(rows))
 	for _, row := range rows {
-		// A human's own decision is not something that ran for them.
-		if row.DecidedBy != nil {
-			continue
-		}
 		// Inside the window, not before it: `since` is the receipt lane's own
 		// horizon, and the same authority answers "is this behind that" here as
 		// answers it for a task's due date.
@@ -340,9 +325,19 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, e
 
 // newAttentionHandlers assembles the surface for the API role.
 func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
+	return attention.NewHandlers(newAttentionService(pool, svc, func() time.Time { return time.Now().UTC() }))
+}
+
+// newAttentionService binds every lane to the module that owns what it shows.
+//
+// Separate from the handler above so a test can assemble the day through the
+// SAME wiring the route serves. A test that arranged these seams itself would
+// keep passing while the shipped feed lost one — which is the failure the feed's
+// stub-driven unit tests already have, and the reason its producers went so long
+// without a test that reads them end to end.
+func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attention.Clock) *attention.Service {
 	db := InstallationDB(pool)
-	now := func() time.Time { return time.Now().UTC() }
-	return attention.NewHandlers(attention.NewService(
+	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: people.NewStore(db)},
 		attentionTasks{store: activities.NewStore(db)},
@@ -352,7 +347,7 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.
 		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
 		attentionMeetings{store: activities.NewStore(db)},
 		now,
-	))
+	)
 }
 
 // The three faces a merge decision compares.

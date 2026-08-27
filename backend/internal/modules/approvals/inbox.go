@@ -114,7 +114,29 @@ type ListInput struct {
 	// not relax the per-row decidability probe: a member the caller could not
 	// decide is as absent here as it is from the unfiltered inbox.
 	BundleID *ids.UUID
-	Limit    int
+	// DecidedBySystem narrows to what ran with nobody asked — the receipts a
+	// "done for you" surface may claim.
+	//
+	// It reads the decision's own marker rather than inferring the answer from
+	// an empty decided_by. Two reasons the inference was wrong: no writer
+	// produces approved-with-no-decider, so the test matched nothing; and
+	// decided_by is emptied by ON DELETE SET NULL when an app_user is deleted,
+	// which would relabel that person's decisions as the system's own.
+	//
+	// Asked in SQL because the caller bounds its read: filtering after a page
+	// puts the limit on the wrong set, and a page full of ordinary decisions
+	// narrows to nothing while real receipts sit behind it.
+	DecidedBySystem *bool
+	// DecidedAfter keeps decisions made since an instant.
+	//
+	// It travels with DecidedBySystem for one reason: the page is ordered by
+	// created_at, and a receipt's window is about decided_at. Those disagree —
+	// an approval staged last week and decided this morning sorts BELOW one
+	// staged this morning and decided days ago — so a window applied after the
+	// page can discard everything the page held and hide the recent decision
+	// underneath. In SQL, the limit only ever counts rows inside the window.
+	DecidedAfter *time.Time
+	Limit        int
 	// Cursor continues a previous page: the opaque keyset token that page
 	// reported as next_cursor. Empty starts at the newest row.
 	Cursor string
@@ -264,6 +286,12 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	}
 	if in.BundleID != nil {
 		terms = append(terms, fmt.Sprintf("bundle_id = $%d", arg(*in.BundleID)))
+	}
+	if in.DecidedBySystem != nil {
+		terms = append(terms, fmt.Sprintf("decided_by_system = $%d", arg(*in.DecidedBySystem)))
+	}
+	if in.DecidedAfter != nil {
+		terms = append(terms, fmt.Sprintf("decided_at > $%d", arg(*in.DecidedAfter)))
 	}
 	if from != nil {
 		terms = append(terms, fmt.Sprintf("(created_at, id) < ($%d, $%d)", arg(from.createdAt), arg(from.id)))

@@ -88,6 +88,20 @@ type ListActivitiesInput struct {
 	// [day 00:00, next day 00:00) with no double-counting at midnight.
 	OccurredAfter  *time.Time
 	OccurredBefore *time.Time
+	// OpenAndDueBy narrows to tasks still open and already due at an instant:
+	// the day's work, asked as one question.
+	//
+	// It exists because the caller that wants this cannot express it any other
+	// way. Reading a page by recency and dropping the finished rows afterwards
+	// puts the bound on the WRONG set — a pile of completed tasks fills the
+	// page, the one overdue promise never reaches the reader, and the day
+	// renders clear while the work is still there. A limit is only honest over
+	// the rows that qualify, which means the test belongs here.
+	//
+	// A task with no due date is excluded: it is agreed work, but it is not
+	// work for a given instant, and a queue that promised today's list would be
+	// lying if it carried the undated backlog too.
+	OpenAndDueBy *time.Time
 }
 
 // ListActivities is the timeline read: newest first, optionally scoped to

@@ -542,6 +542,7 @@ public.approval.consumed_at timestamp with time zone gen=- def=-
 public.approval.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.approval.decided_at timestamp with time zone gen=- def=-
 public.approval.decided_by uuid gen=- def=-
+public.approval.decided_by_system boolean NOT NULL gen=- def=false
 public.approval.decision_reason text gen=- def=-
 public.approval.diff_hash text NOT NULL gen=- def=-
 public.approval.evidence jsonb gen=- def=-
