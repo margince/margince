@@ -72,14 +72,6 @@ func ObserveExtensionInventory(ctx context.Context, pool *pgxpool.Pool, log *slo
 		if _, err := tx.Exec(ctx, bootLedgerLock, extensionLedgerFact); err != nil {
 			return fmt.Errorf("compose: serializing the inventory observation: %w", err)
 		}
-
-		// Plus the legacy workspace-qualified key, for the rolling-deploy
-		// window storekit.LockWriteIdentity explains. bootLedgerLockLegacy
-		// carries why that statement coalesces the GUC — a NULL argument
-		// takes no lock at all and says nothing.
-		if _, err := tx.Exec(ctx, bootLedgerLockLegacy, extensionLedgerFact); err != nil {
-			return fmt.Errorf("compose: serializing the inventory observation (legacy key): %w", err)
-		}
 		last, err := lastObservedExtensions(ctx, tx)
 		if err != nil {
 			return err

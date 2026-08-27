@@ -338,52 +338,13 @@ func MustWorkspace(ctx context.Context) ids.UUID {
 // transaction, so a caller that locked at its precondition read may write
 // through the same store path without deadlock.
 //
-// # Why the migrated workspace-qualified locks currently take TWO keys
-//
-// This applies to the eight sites whose key USED to carry the workspace, not to
-// advisory locks in general — a lock that never had a workspace in it needs
-// nothing here. Those eight point at this doc, and the gate named below
-// enumerates them.
-//
-// ADR-0091 §5 removed the workspace from these lock identities: with one
-// organization per installation (ADR-0061) it distinguished nothing. But a
-// lock identity is not a private detail — it is a rendezvous between
-// PROCESSES, and a rolling deploy runs two builds at once. A process on the
-// old build takes the workspace-qualified key while one on the new build
-// takes the bare key, and the two do not contend. For the last-admin guard
-// that means two concurrent removals can leave an installation with no active
-// human administrator.
-//
-// So each site takes the new key AND the legacy one for one release, in that
-// order everywhere, which is what keeps the pair from introducing a deadlock
-// order of its own. Both are transaction-scoped. The cost is one extra lock
-// per key taken — for LockSubjectKeys, which locks per identifier, that is
-// double the lock-table slots for the length of the transaction, not one
-// extra.
-//
-// Each legacy statement is the previous release's, BYTE FOR BYTE — including
-// where that release read the GUC without missing_ok, or without coalescing a
-// NULL. Those are not defects to tidy on the way past: the key has to hash to
-// what the old build hashes, and the bare key taken first is what serializes
-// this build regardless. TestLegacyAdvisoryLockKeysStillMatchThePreviousRelease
-// pins every one of them, because an innocuous edit to one of those SQL
-// literals would break the rendezvous with nothing failing.
-//
-// The legacy half comes out one release after this ships, when no old build
-// can still be running. Tracked as #2528 rather than left to be noticed.
+// The key carries no workspace. One installation serves one organization
+// (ADR-0061), so a workspace in the key distinguishes nothing (ADR-0091 §5).
 func LockWriteIdentity(ctx context.Context, tx pgx.Tx, entityType, identity string) error {
 	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(
 		$1 || ':' || $2, 0))`,
 		entityType+"_write", identity); err != nil {
 		return fmt.Errorf("lock %s write identity: %w", entityType, err)
-	}
-	// The legacy workspace-qualified key. coalesce because
-	// pg_advisory_xact_lock is STRICT: an unset GUC would make the argument
-	// NULL, take NO lock, and report nothing.
-	if _, err := tx.Exec(ctx, `SELECT pg_advisory_xact_lock(hashtextextended(
-		$1 || ':' || coalesce(current_setting('app.workspace_id', true), '') || ':' || $2, 0))`,
-		entityType+"_write", identity); err != nil {
-		return fmt.Errorf("lock %s write identity (legacy key): %w", entityType, err)
 	}
 	return nil
 }
