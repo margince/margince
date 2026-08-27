@@ -35,6 +35,11 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // role. Read alone, because no spec exercises a person write from here and a
   // grant this fixture does not need is a grant it should not claim.
   person: ["read"],
+  // Filters & views reads the vocabulary and previews a tree under `list:read`
+  // (collections/handlers.go), and saving a filter as a dynamic list is a
+  // `list:create`. Without them the sweep would measure a screen whose picker
+  // never loaded — a page that renders and says nothing, which both sweeps pass.
+  list: ["create", "read", "update", "delete"],
 };
 
 // The coherent seed (mirrors design/seed-fixtures.md entities: Anna Weber,
@@ -1284,6 +1289,87 @@ export async function mockApi(
           },
         ]),
       );
+    }
+    if (path === "/filters/vocabulary" && method === "GET") {
+      // What a record type may be filtered on, as the server would answer it.
+      //
+      // The operator sets are NOT invented here: each is what
+      // storekit.operatorsByType admits for that type, narrowed by
+      // linkOperators where the field is reached through a join. A fixture that
+      // offered an operator the engine refuses would let a spec build a tree
+      // the product cannot, and the screen would look correct while doing
+      // something the server would 422.
+      const resource = url.searchParams.get("resource") ?? "person";
+      const owner = {
+        name: "owner_id",
+        type: "id",
+        operators: ["eq", "neq", "in", "exists"],
+        custom: false,
+        references: "app_user",
+      };
+      // A linked field: `contains` is gone, which is the narrowing a picker has
+      // to honour and the reason the fixture carries one.
+      const tag = {
+        name: "tag",
+        type: "id",
+        operators: ["eq", "neq", "in", "exists"],
+        custom: false,
+        references: "tag",
+      };
+      const byResource: Record<string, unknown[]> = {
+        person: [owner, tag],
+        organization: [
+          owner,
+          {
+            name: "industry",
+            type: "text",
+            operators: ["eq", "neq", "in", "contains", "exists"],
+            custom: false,
+          },
+          {
+            name: "lifecycle",
+            type: "picklist",
+            operators: ["eq", "neq", "in", "exists"],
+            custom: false,
+            options: ["prospect", "customer", "churned"],
+          },
+          tag,
+        ],
+        deal: [
+          owner,
+          {
+            name: "status",
+            type: "picklist",
+            operators: ["eq", "neq", "in", "exists"],
+            custom: false,
+            options: ["open", "won", "lost"],
+          },
+          tag,
+        ],
+      };
+      return json({
+        resource,
+        fields: byResource[resource] ?? [owner],
+      });
+    }
+    if (path === "/filters/preview" && method === "POST") {
+      // A count and the export's own projection. Two rows against a count of 812
+      // so `truncated` is the true answer rather than a flag nothing reads: the
+      // screen says "showing N of 812", and a fixture whose count equalled its
+      // page would let that sentence be wrong and still pass.
+      return json({
+        resource: "organization",
+        match_count: 812,
+        columns: ["id", "name", "industry"],
+        rows: [
+          { id: "o1", name: "Brandt Automotive", industry: "automotive" },
+          { id: "o2", name: "Kessler Logistik", industry: "logistics" },
+        ],
+        truncated: true,
+      });
+    }
+    if (path === "/lists" && method === "GET") {
+      return json(page([]));
     }
     if (path === "/views" && method === "GET") {
       // One saved deals view, and it names the NON-default pipeline. A view is
