@@ -55,6 +55,7 @@ import (
 	"io/fs"
 	"maps"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -177,9 +178,29 @@ func mergeGatePasses(t *testing.T) []compilingPass {
 	return passes
 }
 
-// unreadFiles ratifies a file whose constraint no pass satisfies and which is
-// nonetheless not a defect, with what leaving it unread costs.
-var unreadFiles = gatekit.Waive(map[string]string{})
+// unreadFiles ratifies a file the merge gate does not read, with what that
+// costs. Every entry here is platform-constrained, and that is not a
+// coincidence: golangci runs at ONE GOOS, so a file selected by a different one
+// cannot be linted by it at any tag setting. These are the files this
+// repository builds for a platform its gate does not run on.
+//
+// The list is worth reading as a whole rather than entry by entry. It is the
+// standing cost of shipping a desktop bundle from a Linux merge gate, it was
+// invisible until the census learned to read filename constraints, and every
+// line of it is code no linter has ever opened.
+var unreadFiles = gatekit.Waive(map[string]string{
+	// Backend, compiled for windows by `make build` and linted by nothing.
+	"../backend/internal/platform/blobstore/fs_sync_windows.go": "the windows half of a file-sync primitive: `make build` cross-compiles it so a type error is caught, but golangci runs at the host GOOS and never opens it — so gosec, depguard and revive have never read this syscall-adjacent code, and its unix sibling is the only half they judge",
+	"../backend/internal/platform/ownedfile/owned_windows.go":   "the windows half of the owned-file primitive, cross-compiled and unlinted for the reason its blobstore sibling above states — the cost is that a permissions or error-handling defect here is caught only by review",
+
+	// The desktop launcher is its own module, released by its own lanes.
+	"../desktop/launcher/platform_windows.go":  "desktop launcher platform layer: built by the windows release lane (desktop-windows.yml), not by the merge gate, which neither cross-compiles this module nor lints at a foreign GOOS. A break here surfaces at release rather than at merge",
+	"../desktop/launcher/process_windows.go":   "desktop launcher process control, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
+	"../desktop/launcher/postgres_windows.go":  "desktop launcher Postgres supervision, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
+	"../desktop/launcher/runerror_windows.go":  "desktop launcher error rendering, built by the windows release lane alone — see platform_windows.go above for why no merge-gate pass reaches it",
+	"../desktop/launcher/browser_darwin.go":    "desktop launcher browser handoff for macOS: compiled by the macOS release lane (desktop-macos.yml) and by a maintainer's own machine, and by nothing at all in the merge gate — GOOS is not a tag, so no config entry could change that",
+	"../desktop/launcher/quarantine_darwin.go": "desktop launcher quarantine-attribute handling, macOS-only and reached only by the macOS release lane. This one carries the most risk of the set: it is the code that decides what a downloaded bundle is allowed to do, and no linter in this repository has read it",
+})
 
 func TestEveryBuildConstraintIsCompiledBySomePass(t *testing.T) {
 	t.Parallel()
@@ -345,6 +366,69 @@ func TestBothLintConfigsRunGovet(t *testing.T) {
 	}
 }
 
+// andConstraints joins two constraints the way Go does when a file carries both
+// a header and a filename suffix. Either side may be absent.
+func andConstraints(a, b constraint.Expr) constraint.Expr {
+	switch {
+	case a == nil:
+		return b
+	case b == nil:
+		return a
+	default:
+		return &constraint.AndExpr{X: a, Y: b}
+	}
+}
+
+// knownPlatforms is the set of GOOS and GOARCH names Go recognises as filename
+// suffixes, asked of the TOOLCHAIN rather than written down here.
+//
+// A literal list would be a second copy of something the Go release owns and
+// revises, and it would go stale in the silent direction: a suffix this gate did
+// not recognise is a file it reads as unconstrained, which is the census going
+// short again in exactly the place this function exists to fix.
+func knownPlatforms(t *testing.T) map[string]bool {
+	t.Helper()
+	out, err := exec.Command("go", "tool", "dist", "list").Output()
+	if err != nil {
+		t.Fatalf("asking the toolchain for its GOOS/GOARCH names: %v", err)
+	}
+	known := map[string]bool{}
+	for _, pair := range strings.Fields(string(out)) {
+		goos, goarch, found := strings.Cut(pair, "/")
+		if !found {
+			t.Fatalf("`go tool dist list` printed %q, which is not a GOOS/GOARCH pair", pair)
+		}
+		known[goos] = true
+		known[goarch] = true
+	}
+	if len(known) == 0 {
+		t.Fatal("the toolchain named no platform at all, so every filename suffix below reads as unconstrained")
+	}
+	return known
+}
+
+// filenameConstraint returns the constraint Go applies to a file for its NAME
+// alone — `x_windows.go`, `x_amd64.go`, `x_windows_amd64.go` — or nil.
+//
+// The suffixes are read from the end, at most two, because that is the shape Go
+// defines: an optional GOARCH preceded by an optional GOOS. `_test` is stripped
+// first, so `x_windows_test.go` is constrained exactly as `x_windows.go` is.
+func filenameConstraint(name string, platforms map[string]bool) constraint.Expr {
+	base := strings.TrimSuffix(name, ".go")
+	base = strings.TrimSuffix(base, "_test")
+	parts := strings.Split(base, "_")
+	// The first segment is the file's own name and is never a platform, which
+	// is what stops a file called `windows.go` reading as constrained.
+	var expr constraint.Expr
+	for i := len(parts) - 1; i >= 1 && len(parts)-i <= 2; i-- {
+		if !platforms[parts[i]] {
+			break
+		}
+		expr = andConstraints(expr, &constraint.TagExpr{Tag: parts[i]})
+	}
+	return expr
+}
+
 // constrainedFile is one file that carries a build constraint, and the
 // constraint it carries.
 type constrainedFile struct {
@@ -352,12 +436,21 @@ type constrainedFile struct {
 	expr constraint.Expr
 }
 
-// constrainedFiles returns every file under repoRoot whose header carries a
-// build constraint, paired with the PARSED constraint — the constraint is what
-// this gate judges, and reducing it to the tags it names loses the negation and
-// the operators that decide which passes admit the file.
+// constrainedFiles returns every file under repoRoot that Go constrains at all,
+// paired with the PARSED constraint — the constraint is what this gate judges,
+// and reducing it to the tags it names loses the negation and the operators that
+// decide which passes admit the file.
+//
+// BOTH sources of constraint, because Go honours both and a census that reads
+// one is short by exactly the files that use the other. A `//go:build` header is
+// the visible spelling; `_windows.go`, `_amd64.go` and `_windows_amd64.go`
+// constrain by NAME with nothing in the file to see. This tree has eight such
+// files carrying no header at all, and the first version of this gate did not
+// know they existed. Where a file has both, the two are ANDed, which is what Go
+// does.
 func constrainedFiles(t *testing.T) []constrainedFile {
 	t.Helper()
+	platforms := knownPlatforms(t)
 	var found []constrainedFile
 	err := filepath.WalkDir(repoRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -392,6 +485,7 @@ func constrainedFiles(t *testing.T) []constrainedFile {
 		// Constraints live above the package clause; both spellings are read
 		// because Go still honours the legacy one, and a file carrying only
 		// that would otherwise pass unseen.
+		var expr constraint.Expr
 		for _, line := range strings.Split(string(b), "\n") {
 			if strings.HasPrefix(strings.TrimSpace(line), "package ") {
 				break
@@ -399,7 +493,7 @@ func constrainedFiles(t *testing.T) []constrainedFile {
 			if !constraint.IsGoBuild(line) && !constraint.IsPlusBuild(line) {
 				continue
 			}
-			expr, err := constraint.Parse(line)
+			parsed, err := constraint.Parse(line)
 			if err != nil {
 				// An unparseable constraint is not one this gate can judge, but
 				// it is also not something Go will build — reporting it here
@@ -407,6 +501,10 @@ func constrainedFiles(t *testing.T) []constrainedFile {
 				t.Errorf("%s: parsing build constraint %q: %v", filepath.ToSlash(path), line, err)
 				continue
 			}
+			expr = andConstraints(expr, parsed)
+		}
+		expr = andConstraints(expr, filenameConstraint(filepath.Base(path), platforms))
+		if expr != nil {
 			found = append(found, constrainedFile{path: filepath.ToSlash(path), expr: expr})
 		}
 		return nil
