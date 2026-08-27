@@ -270,6 +270,13 @@ func orgNameForMatching(s string) string {
 // are companies whose first word this table would otherwise eat. A legal form is
 // a strong enough signal to act on; a bare two-letter word is not.
 func matchingFormOf(s string) (string, *marketForms) {
+	// The scripts with no word boundaries are answered first, by substring
+	// (orgnamecjk.go). Splitting them into words yields the whole name as one
+	// token, so every path below would find nothing to strip and nothing to
+	// compare.
+	if name, isCJK := cjkNameForMatching(s); isCJK {
+		return name, &cjkMarket
+	}
 	fields := strings.FieldsFunc(NormalizeOrgName(foldDStroke(s)), nameWordSeparators)
 	for i := range prefixMarkets {
 		market := &prefixMarkets[i]
