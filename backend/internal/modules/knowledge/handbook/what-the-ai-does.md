@@ -116,6 +116,13 @@ mind is allowed to take its own request off your desk.
 withdrawing consent, and fulfilling or rejecting a privacy request, are for
 people only.
 
+**An agent may never ask a document set.** Asking a set, and defining or
+changing one, are people's work. A grounded answer is only as good as the
+reader's ability to open the passage under each sentence and disagree with it,
+and an agent acting on that answer unattended is precisely the reader who
+cannot. This is why the question box exists for a NAMED set of documents and
+not over everything.
+
 **An agent may never change pipeline or stage configuration.** The stage ladder
 is the ground truth that the "advance a deal" approval is judged against. An
 agent that could edit the ladder could change the meaning of the approval it
@@ -200,6 +207,13 @@ rather than writing straight to the record.
 [Documents and files](documents-and-files.md). The important property is that
 it answers only from the set of documents you filed, and a question that set
 does not cover is refused rather than guessed at.
+
+This one is **yours to ask, not an agent's.** Asking a document set is refused
+outright to an agent, however wide its passport — see "Things the AI is refused
+outright" below. The reason is the same one that earns the text box in the first
+place: a person reading a grounded answer can see which passage each sentence
+rests on and go and check it, and an agent acting on that answer unattended
+cannot.
 
 **The overnight brief.** The product looks at your accounts overnight and
 ranks what deserves your first hour. If it found nothing, it says so plainly:

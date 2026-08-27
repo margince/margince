@@ -248,6 +248,38 @@ describe("KnowledgeCard", () => {
     await waitFor(() => expect(backend.deletes.length).toBeGreaterThan(0));
   });
 
+  it("keeps two files that share a name, because the server dedupes on content", async () => {
+    // The client used to drop the second file whose NAME matched an earlier
+    // one. The server refuses a duplicate by CHECKSUM and names the document
+    // already holding those bytes, so two notes.md from different folders are
+    // two documents this product accepts. A client stricter than the thing it
+    // is a client of — and silent about it — loses a reader's file with nothing
+    // on screen to say so.
+    vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
+    render(<KnowledgeCard />);
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: /show documents/i }),
+    );
+    const input = await screen.findByLabelText(/add a document/i);
+    await userEvent.upload(
+      input,
+      new File(["first folder"], "notes.md", { type: "text/markdown" }),
+    );
+    await userEvent.upload(
+      input,
+      new File(["second folder, different bytes"], "notes.md", {
+        type: "text/markdown",
+      }),
+    );
+
+    // The button's own count is what the reader checks before pressing it, so
+    // it is what this asserts: two held, not one.
+    expect(
+      await screen.findByRole("button", { name: /add 2 documents/i }),
+    ).toBeTruthy();
+  });
+
   it("says what a document may be before one is chosen", async () => {
     vi.stubGlobal("fetch", backendFor(ADMIN).fetchMock);
     render(<KnowledgeCard />);

@@ -500,7 +500,12 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
     }
     // Only what was refused stays in the zone, so the button retries exactly
     // the files that still need it rather than re-sending the whole drop.
-    setFiles(files.filter((one) => !accepted.includes(one)));
+    //
+    // Computed from the LATEST held list rather than the one this send closed
+    // over: the dropzone stays live while an upload runs, so a reader who adds
+    // a file mid-send would otherwise have it discarded by this line — the
+    // silent loss the pick handler above refuses to make.
+    setFiles((held) => held.filter((one) => !accepted.includes(one)));
     setRefusals(refused);
     setSending(false);
   };
@@ -514,14 +519,17 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         multiple
         files={files}
         onPick={(picked) =>
-          setFiles((held) =>
-            // A second drop ADDS. Replacing would silently discard the first
-            // drop, and a reader gathering files from two folders has no way
-            // to tell that happened until the counts are wrong.
-            held.some((one) => one.name === picked.name)
-              ? held
-              : [...held, picked],
-          )
+          // A second drop ADDS, and adds EVERY file. Replacing would silently
+          // discard the first drop, and a reader gathering files from two
+          // folders has no way to tell that happened until the counts are
+          // wrong — which is exactly what a filename filter here reintroduced.
+          //
+          // No name check, deliberately: the server refuses a duplicate by
+          // CHECKSUM and names the document already holding those bytes. Two
+          // files called notes.md from different folders are two documents this
+          // product accepts, so a client that dropped the second would be
+          // stricter than the thing it is a client of, and silent about it.
+          setFiles((held) => [...held, picked])
         }
       />
       <div className="form-actions">
@@ -535,8 +543,11 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
           })}
         </Button>
       </div>
-      {refusals.map((refusal) => (
-        <Callout key={refusal.filename} tone="danger">
+      {/* Keyed by position, not by filename: two refused files may share a
+          name now that the pick handler keeps both, and a duplicate React key
+          would drop one of the two messages a reader needs. */}
+      {refusals.map((refusal, at) => (
+        <Callout key={`${at}-${refusal.filename}`} tone="danger">
           {t("knowledge.upload.refused", {
             filename: refusal.filename,
             message: refusal.message,

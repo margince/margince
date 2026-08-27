@@ -2138,6 +2138,7 @@ public.knowledge_chunk.id uuid NOT NULL gen=- def=uuidv7()
 public.knowledge_chunk.knowledge_chunk_document_fk FOREIGN KEY (document_id) REFERENCES knowledge_document(id) ON DELETE CASCADE
 public.knowledge_chunk.knowledge_chunk_embed_pairing CHECK (((embed_identity IS NULL) = (embedding IS NULL)))
 public.knowledge_chunk.knowledge_chunk_pkey PRIMARY KEY (id)
+public.knowledge_chunk.knowledge_chunk_start_line_positive CHECK (((start_line IS NULL) OR (start_line > 0)))
 public.knowledge_chunk.start_line integer gen=- def=-
 public.knowledge_chunk.text text NOT NULL gen=- def=-
 public.knowledge_chunk_one_per_span CREATE UNIQUE INDEX knowledge_chunk_one_per_span ON public.knowledge_chunk USING btree (document_id, chunk_ix)

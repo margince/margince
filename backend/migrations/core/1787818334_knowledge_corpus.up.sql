@@ -133,6 +133,13 @@ CREATE TABLE knowledge_chunk (
     -- Nullable for the rows written before this column existed: a passage with
     -- no start line yields a claim with no line, which is the honest answer.
     -- A line number that points at the wrong line is worse than none.
+    -- The 1-based line a passage begins on, NULL when the ingest that wrote it
+    -- did not record one. Constrained positive because the read path treats
+    -- only ZERO as "unknown" (ask.go coalesces NULL to 0), so a negative would
+    -- pass straight through as a real line and reach a reader as a citation
+    -- pointing at a place no file has. Nothing writes one today — the chunker
+    -- counts newlines and adds one — which is what makes this cheap to hold
+    -- here rather than a rule the next writer has to remember.
     start_line integer,
     embed_identity text,
     embedding vector,
@@ -142,7 +149,9 @@ CREATE TABLE knowledge_chunk (
     -- at all: a row carrying an identity and no vector is retrievable and
     -- unrankable, which is worse than an unembedded row.
     CONSTRAINT knowledge_chunk_embed_pairing
-        CHECK ((embed_identity IS NULL) = (embedding IS NULL))
+        CHECK ((embed_identity IS NULL) = (embedding IS NULL)),
+    CONSTRAINT knowledge_chunk_start_line_positive
+        CHECK (start_line IS NULL OR start_line > 0)
 );
 
 ALTER TABLE knowledge_chunk ADD CONSTRAINT knowledge_chunk_pkey PRIMARY KEY (id);
