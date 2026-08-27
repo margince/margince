@@ -16,6 +16,19 @@
   font-size: var(--fs-sm);
   color: var(--textMeta);
 }
+/* What would be here, under the line saying there is none. Not italic: it is a
+   fact about the RECORD — what puts a row here — where the italic voice below
+   is the surface talking about itself.
+
+   --textMeta, the AA small-text role. It is set small already, and small plus
+   muted is a sentence a reader has to lean in for. */
+.surfacestate-empty-detail {
+  margin-top: var(--space-1);
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  color: var(--textMeta);
+  text-wrap: pretty;
+}
 /* Reads --textMeta, the canonical AA small-text role: this text says a
    permission boundary or a failed read, which is exactly the text a reader
    must not have to squint at. Italic carries the "this is about the page,

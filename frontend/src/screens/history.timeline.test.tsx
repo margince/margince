@@ -11,7 +11,7 @@ afterEach(cleanup);
 // No record type reached by this list holds money today, so the context these
 // rows are rendered in is "no currency" — which is itself the case worth
 // pinning: a minor-unit value must never fall back to the bare integer.
-const MONEY = { currency: null, locale: "en" as const };
+const MONEY = { currency: null, locale: "en" as const, zone: "UTC" };
 
 type FieldHistoryEntry = components["schemas"]["FieldHistoryEntry"];
 
@@ -36,25 +36,47 @@ const oneWriteThreeFields: FieldHistoryEntry[] = [
 
 describe("changeTimeline", () => {
   it("gives each field its own row identity within one audit write", () => {
-    const rows = changeTimeline(oneWriteThreeFields, (field) => field, MONEY);
+    const rows = changeTimeline(
+      oneWriteThreeFields,
+      (field) => field,
+      MONEY,
+      "field updated",
+    );
     expect(new Set(rows.map((row) => row.id)).size).toBe(3);
   });
 
   it("labels the field and keeps the change time", () => {
-    const [row] = changeTimeline(oneWriteThreeFields, () => "Industry", MONEY);
+    const [row] = changeTimeline(
+      oneWriteThreeFields,
+      () => "Industry",
+      MONEY,
+      "field updated",
+    );
     expect(row.title).toBe("Industry");
     expect(row.atIso).toBe("2026-07-14T10:00:00Z");
     expect(row.kind).toBe("change");
   });
 
   it("matches the reader through the principal prefix the spine stores", () => {
-    const mine = changeTimeline(oneWriteThreeFields, (f) => f, MONEY, "u-1");
+    const mine = changeTimeline(
+      oneWriteThreeFields,
+      (f) => f,
+      MONEY,
+      "field updated",
+      "u-1",
+    );
     expect(mine[0].provenance).toEqual({
       kind: "human",
       self: true,
       userId: "u-1",
     });
-    const theirs = changeTimeline(oneWriteThreeFields, (f) => f, MONEY, "u-2");
+    const theirs = changeTimeline(
+      oneWriteThreeFields,
+      (f) => f,
+      MONEY,
+      "field updated",
+      "u-2",
+    );
     expect(theirs[0].provenance).toEqual({
       kind: "human",
       self: false,
@@ -83,10 +105,12 @@ describe("a money field in the changes list", () => {
   // asserting over the tree would pass on a row that displays the raw figure.
   // What the reader sees is the only thing worth pinning here.
   it("renders the amount scaled by its currency, never the stored integer", () => {
-    const [row] = changeTimeline(amountChange, (f) => f, {
-      currency: "EUR",
-      locale: "en",
-    });
+    const [row] = changeTimeline(
+      amountChange,
+      (f) => f,
+      { currency: "EUR", locale: "en", zone: "UTC" },
+      "field updated",
+    );
     render(<LocaleProvider initial="en">{row.detail}</LocaleProvider>);
     expect(screen.queryByText("150000")).toBeNull();
     expect(screen.queryByText("225000")).toBeNull();

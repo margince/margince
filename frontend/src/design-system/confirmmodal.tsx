@@ -22,6 +22,8 @@ export function ConfirmModal({
   confirmLabel,
   confirmVariant = "primary",
   confirmDisabled = false,
+  actionsLead,
+  confirmMenu,
   confirmReason,
   onConfirm,
   pending,
@@ -56,6 +58,16 @@ export function ConfirmModal({
   // native `disabled` and a busy announcement — a control that has lost focus
   // telling a reader who is no longer on it that their write is going.
   confirmDisabled?: boolean;
+  // A verb that belongs to the dialog but is not its confirm and not its
+  // cancel — discarding a draft the machine wrote, where cancel closes the
+  // dialog and this throws the words away. It sits at the START of the action
+  // row, away from the two controls on the right, because it is neither of
+  // them and a third button beside them would be pressed as one.
+  actionsLead?: ReactNode;
+  // A control seated against the confirm button's trailing edge, sharing its
+  // fill — the caret half of a split button. What it opens is the caller's:
+  // this dialog only promises the seam is drawn as one control.
+  confirmMenu?: ReactNode;
   // Why the confirm is refused, when the reason is a sentence rather than a
   // state. `Button`'s own `reason` does the work — it disables the control,
   // prints the sentence beside it and points `aria-describedby` at it — which
@@ -105,6 +117,7 @@ export function ConfirmModal({
         </p>
       )}
       <div className="actions">
+        {actionsLead && <span className="actions-lead">{actionsLead}</span>}
         {/* Cancel is `disabled`, not `pending`, and the difference is real: it
             is not the control that started the write, so it is genuinely
             unavailable rather than busy. Backing out of an act that is already
@@ -118,15 +131,30 @@ export function ConfirmModal({
             and a precondition the caller has not met. Split, each is drawn as
             what it is, and the twenty-eight surfaces built on this dialog get
             it without changing a line. */}
-        <Button
-          variant={confirmVariant}
-          onClick={onConfirm}
-          pending={pending}
-          disabled={confirmDisabled}
-          reason={confirmReason}
-        >
-          {confirmLabel}
-        </Button>
+        {confirmMenu ? (
+          <span className="actions-split">
+            <Button
+              variant={confirmVariant}
+              onClick={onConfirm}
+              pending={pending}
+              disabled={confirmDisabled}
+              reason={confirmReason}
+            >
+              {confirmLabel}
+            </Button>
+            {confirmMenu}
+          </span>
+        ) : (
+          <Button
+            variant={confirmVariant}
+            onClick={onConfirm}
+            pending={pending}
+            disabled={confirmDisabled}
+            reason={confirmReason}
+          >
+            {confirmLabel}
+          </Button>
+        )}
       </div>
     </Modal>
   );

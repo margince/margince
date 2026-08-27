@@ -152,6 +152,45 @@ export function monthName(month: number, locale: Locale): string {
   }).format(new Date(Date.UTC(2026, month - 1, 1)));
 }
 
+/**
+ * The month a calendar grid is showing — "August 2026".
+ *
+ * A month a reader is LOOKING AT rather than a moment: the grid is built from
+ * local dates, so this reads the same local date back rather than pinning a
+ * zone the caller never chose.
+ */
+export function monthAndYear(month: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    month: "long",
+    year: "numeric",
+  }).format(month);
+}
+
+/**
+ * A weekday as the one or two letters a calendar's legend uses.
+ *
+ * From Intl rather than a list of our own: "S M T W T F S" is English, and a
+ * hand-written row would sit unchanged over a German or Vietnamese month.
+ */
+export function weekdayInitial(day: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    weekday: "narrow",
+  }).format(day);
+}
+
+/**
+ * A calendar day written out in full — "Tuesday, 25 August 2026".
+ *
+ * The accessible name of a day in a grid: "25" alone says nothing about which
+ * month it belongs to, and the grid's own heading is several stops away by the
+ * time a screen reader arrives at it.
+ */
+export function fullDayName(day: Date, locale: Locale): string {
+  return new Intl.DateTimeFormat(INTL_LOCALE[locale], {
+    dateStyle: "full",
+  }).format(day);
+}
+
 export function formatNumber(value: number, locale: Locale): string {
   return new Intl.NumberFormat(INTL_LOCALE[locale]).format(value);
 }

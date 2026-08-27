@@ -36,9 +36,10 @@ import (
 type activityScan struct {
 	a  crmcontracts.Activity
 	id ids.UUID
-	// assigneeID is a typed id in the row and an openapi UUID on the record.
-	assigneeID *ids.UUID
-	kind       string
+	// assigneeID and hostUserID are typed ids in the row and openapi UUIDs on
+	// the record.
+	assigneeID, hostUserID *ids.UUID
+	kind                   string
 	// The nullable strings that become typed contract enums.
 	channelProvider, direction, meetingStatus, threadKey, captureLabel *string
 	bulkMailAttested                                                   bool
@@ -79,6 +80,7 @@ var activityProjection = []activityColumn{
 	{"a.done_at", func(s *activityScan) any { return &s.a.DoneAt }},
 	{"a.duration_seconds", func(s *activityScan) any { return &s.a.DurationSeconds }},
 	{"a.meeting_status", func(s *activityScan) any { return &s.meetingStatus }},
+	{"a.host_user_id", func(s *activityScan) any { return &s.hostUserID }},
 	{"a.source_system", func(s *activityScan) any { return &s.a.SourceSystem }},
 	{"a.source_id", func(s *activityScan) any { return &s.a.SourceId }},
 	{"a.source", func(s *activityScan) any { return &s.a.Source }},
@@ -135,6 +137,10 @@ func (s *activityScan) record() crmcontracts.Activity {
 
 	a.Id = openapi_types.UUID(s.id)
 	a.AssigneeId = uuidPtr(s.assigneeID)
+	// Our own side of a meeting. Not gated by the content audience: who held a
+	// meeting is a marker like its date and its direction, and a caller who may
+	// discover the row may know whose meeting it was.
+	a.HostUserId = uuidPtr(s.hostUserID)
 	a.Kind = crmcontracts.ActivityKind(s.kind)
 	a.ChannelProvider = s.channelProvider
 	if s.direction != nil {

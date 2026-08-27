@@ -7,6 +7,7 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import { CreateAction, type CreateField } from "./create";
+import { mapProjectCreate } from "./projects.form";
 
 // What a rep can START from the company page.
 //
@@ -134,6 +135,53 @@ export function NewDealAction({
       invalidate={projectId ? "project" : "organization360"}
       screen="deals"
       create={createDeal}
+      fields={fields}
+      aboutId={orgId}
+    />
+  );
+}
+
+/**
+ * NewProjectAction opens a project on THIS company.
+ *
+ * The company is not a field, for the same reason the deal's is not: the rep is
+ * standing on the record, and the one value they could get wrong is the one
+ * they do not have to give.
+ *
+ * The owner is not a field either. The server stamps the creator, and the only
+ * choices a create form could offer resolve to the creator anyway; reassigning
+ * is an edit, on the project's own page.
+ */
+export function NewProjectAction({
+  orgId,
+  orgName,
+}: Readonly<{ orgId: string; orgName: string }>) {
+  const t = useT();
+  const fields: CreateField[] = [
+    { key: "name", label: "project.name", required: true },
+    { key: "description", label: "project.description", type: "textarea" },
+    { key: "target_end_date", label: "project.targetEnd", type: "date" },
+  ];
+  const createProject = async (values: Record<string, string>) => {
+    const { data, error } = await api.POST("/projects", {
+      // Through the shared mapper, never a body written here: the projects
+      // screen creates the same record, and two spellings of one request are
+      // how the two come to disagree about an empty date.
+      body: mapProjectCreate({ ...values, organization_id: orgId }),
+    });
+    if (error) {
+      throwProblem(error, t);
+    }
+    return data;
+  };
+  return (
+    <CreateAction
+      label={t("co.project.new", { name: orgName })}
+      // The record that offered the verb is the record that has to show the
+      // project.
+      invalidate="organization360"
+      screen="projects"
+      create={createProject}
       fields={fields}
       aboutId={orgId}
     />

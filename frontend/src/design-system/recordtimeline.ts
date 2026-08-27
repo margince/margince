@@ -186,7 +186,12 @@ export function useRecordTimeline(
     queryKey: [
       ...entityTimelineKeys(entityType, id)[0],
       filters,
-      { continuesFrom: seedCursor ?? null },
+      // `seeded` as well as the edge, and NOT because the edge is usually
+      // enough. A seed whose page is the whole history has no next cursor, so
+      // its edge is null — the same key the seedless read fetched page one
+      // under. The seeded mount then finds that page in the cache and shows it
+      // BENEATH its own seed: every row of a short history twice.
+      { continuesFrom: seedCursor ?? null, seeded: Boolean(seed) },
       { zone },
     ],
     // With a seed the first page is already on screen: nothing is fetched

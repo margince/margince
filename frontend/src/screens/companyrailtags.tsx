@@ -2,13 +2,14 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../api/schema";
-import { Badge, Disclosure } from "../design-system/atoms";
-import { PanelBody } from "../design-system/panel";
+import { Badge } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
-import { useT } from "../i18n";
+import { formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
 import { ListAction, TagAction } from "./companyactions";
 import { useCompanyReadOnlyReason } from "./companyheader";
-import { SectionSummary, sectionAnswered } from "./companyrailshared";
+import { sectionAnswered } from "./companyrailshared";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
 // it works today only because the company record page pulls that stylesheet in
@@ -42,6 +43,7 @@ export function TagsSection({
   loading,
 }: Readonly<{ view?: Organization360; orgId: string; loading: boolean }>) {
   const t = useT();
+  const { locale } = useLocale();
   const tags = view?.tags ?? [];
   const lists = view?.list_memberships ?? [];
   const listState = sectionState(
@@ -74,9 +76,11 @@ export function TagsSection({
   // fabricating a stand-in record just to satisfy its signature while the
   // 360 read is still in flight.
   return (
-    <Disclosure
-      className="co-sect"
-      summary={<SectionSummary title={t("co.tags.title")} count={count} />}
+    <Panel
+      title={t("co.tags.title")}
+      titleAction={
+        count != null ? <Badge>{formatNumber(count, locale)}</Badge> : undefined
+      }
     >
       <PanelBody>
         <SurfaceState
@@ -118,7 +122,7 @@ export function TagsSection({
           />
         )}
       </PanelBody>
-    </Disclosure>
+    </Panel>
   );
 }
 

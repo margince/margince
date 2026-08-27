@@ -18,6 +18,7 @@ import {
   formatNumber,
 } from "../format/format";
 import { type Locale, translatePlural, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { Avatar, Badge, Button } from "./atoms";
 import { PageZones, type PageZonesShape } from "./pagezones";
 import { FieldGuard } from "./rbac";
@@ -162,7 +163,7 @@ function DealCardCompany({ deal }: Readonly<{ deal: BoardDeal }>) {
   }
   return (
     <span className="deal-org">
-      <Avatar name={deal.org} src={deal.orgLogoUrl} />
+      <Avatar name={deal.org} src={deal.orgLogoUrl} shape="organization" />
       {/* The name needs a box of its own to be truncated in: a bare text node
           has nothing for the ellipsis to apply to, and wraps under its own
           mark instead. */}
@@ -429,6 +430,21 @@ export type TimelineEntry = {
    */
   direction?: "inbound" | "outbound" | null;
   /**
+   * Who was on the other end, already resolved to names by the caller.
+   *
+   * "We sent" answers half a question. The half a reader came for is WHO it
+   * went to: an account with four contacts has four different meanings of "we
+   * sent", and the row that does not say which one is a row they have to open.
+   */
+  counterparts?: string;
+  /**
+   * What KIND of thing happened to the record, in the words a reader uses:
+   * "field updated", "completed". It sits where an exchange's direction sits,
+   * because it answers the same question — the badge says what sort of entry
+   * this is, and this says what it did.
+   */
+  qualifier?: string;
+  /**
    * The provider's own conversation id, when capture stamped one. It is what
    * makes a thread a thread — a subject match would merge two unrelated
    * "Re: Update" exchanges and split one renamed mid-conversation.
@@ -480,6 +496,31 @@ export type TimelineEntry = {
 // by its kind, so a per-transport icon here would be a map this file cannot
 // keep — an extension unit's transport has no entry and never will. The row
 // names its transport in the label instead.
+// The kind in a word, beside the row rather than as an icon alone: a glyph is
+// a thing to recognise and a word is a thing to read, and a chronology mixing
+// mail, meetings and field edits is scanned by the second.
+const TIMELINE_KIND_LABEL = {
+  email: "timeline.kind.email",
+  meeting: "timeline.kind.meeting",
+  note: "timeline.kind.note",
+  call: "timeline.kind.call",
+  task: "timeline.kind.task",
+  message: "timeline.kind.message",
+  change: "timeline.kind.change",
+} as const satisfies Record<TimelineEntry["kind"], MessageKey>;
+
+/**
+ * The mark on the axis: solid for something that was SAID, hollow for
+ * something that merely changed.
+ *
+ * A reader following a conversation can then track the solid dots straight
+ * past the field edits between them without reading either — which is the
+ * whole reason the two kinds share one column instead of two tabs.
+ */
+function dotClass(entry: TimelineEntry): string {
+  return entry.kind === "change" ? "tl-dot tl-dot-quiet" : "tl-dot";
+}
+
 const TIMELINE_ICON = {
   email: Mail,
   meeting: CalendarClock,
@@ -524,6 +565,7 @@ function RecordHead({
   actions,
   actionsAt,
   wide,
+  markShape,
 }: Readonly<{
   name: string;
   avatarSrc?: string | null;
@@ -535,6 +577,7 @@ function RecordHead({
   actions?: ReactNode;
   actionsAt: "none" | "inline" | "controls" | "below";
   wide: boolean;
+  markShape: "person" | "organization";
 }>) {
   const nameTip = useTruncationTooltip<HTMLHeadingElement>(name);
   return (
@@ -544,7 +587,12 @@ function RecordHead({
           `.record-head-wide .avatar` override in composed.css, which meant the
           chip's size was decided by a class on its parent and the `size` prop
           said something that was not true. */}
-      <Avatar name={name} src={avatarSrc} size={wide ? "lg" : "md"} />
+      <Avatar
+        name={name}
+        src={avatarSrc}
+        size={wide ? "lg" : "md"}
+        shape={markShape}
+      />
       <div className="record-id">
         {/* The record page's name, and the one badge that belongs on ITS
             OWN line — a record's standing, read immediately after what it
@@ -603,6 +651,7 @@ export function RecordView({
   actions,
   controls,
   wide,
+  markShape = "person",
   actionsInline,
   band,
   rail,
@@ -644,8 +693,12 @@ export function RecordView({
   // which is the company page's layout; a record that passes none keeps the
   // action row under the header.
   controls?: ReactNode;
-  // Forces the record-head-wide sizing (34px h1, 76px avatar, wrapping
-  // identity block) independent of `controls`. For a record whose standing
+  // What KIND of record this is, which decides whether its mark is drawn round
+  // like a face or as a rounded square like a logo. Defaults to `person`,
+  // which is what every record but an organization is.
+  markShape?: "person" | "organization";
+  // Forces the record-head-wide sizing (display-size name, the page's own
+  // mark, wrapping identity block) independent of `controls`. For a record whose standing
   // lives inside `pulse` itself rather than in a stacked controls column —
   // the company page's shape — and still wants the same scale.
   wide?: boolean;
@@ -732,6 +785,7 @@ export function RecordView({
         actions={actions}
         actionsAt={actionsAt}
         wide={Boolean(headerWide)}
+        markShape={markShape}
       />
       {actionsAt === "below" && <div className="record-actions">{actions}</div>}
       {/* The band runs the full width of the record, between the identity and
@@ -759,17 +813,33 @@ export function RecordView({
             {timeline && (
               <section aria-label={t("record.timeline")}>
                 <h2 className="t-sub">{t("record.timeline")}</h2>
-                {timelineHeader}
-                {timelineNotice ??
-                  (timelineGroups ? (
-                    <GroupedTimelineList
-                      groups={timelineGroups}
-                      zone={zone}
-                      onOpenThread={onOpenThread}
-                    />
-                  ) : (
-                    <TimelineList entries={timeline} zone={zone} />
-                  ))}
+                {/* The dials above the list are one block with one rhythm: the
+                    cuts through the chronology, then the narrowing of whichever
+                    cut is open. Rendered as bare siblings they touched, and two
+                    rows of controls with no interval between them read as one
+                    control that has wrapped. */}
+                {timelineHeader && (
+                  <div className="timeline-header">{timelineHeader}</div>
+                )}
+                {/* The chronology sits on a card of its own, like every other
+                    body on the page. Loose on the page ground it read as the
+                    page's own text rather than as one of the record's
+                    sections, and the rail down its left had nothing to run
+                    inside. The notice takes no card: a sentence about why
+                    there are no rows is not a list of them. */}
+                {timelineNotice ?? (
+                  <div className="timeline-card">
+                    {timelineGroups ? (
+                      <GroupedTimelineList
+                        groups={timelineGroups}
+                        zone={zone}
+                        onOpenThread={onOpenThread}
+                      />
+                    ) : (
+                      <TimelineList entries={timeline} zone={zone} />
+                    )}
+                  </div>
+                )}
                 {timelineFooter}
               </section>
             )}
@@ -1048,8 +1118,18 @@ function TimelineGroupRow({
   const threadKey = newest.threadKey;
   return (
     <li className={directionClass(newest.direction)}>
-      <span className="tl-icon">
-        <Icon aria-hidden />
+      {/* A group sits on the SAME three columns a single row does — date,
+          rail, what happened — because it IS a row of the chronology, and one
+          that stepped out of the axis read as a different list wedged into
+          this one. Its mark is the kind's own icon: the whole conversation is
+          one thing that happened, and a dot would say it was one message. */}
+      <span className="tl-when t-mono">
+        {formatDate(newest.atIso, locale, zone)}
+      </span>
+      <span className="tl-rail" aria-hidden="true">
+        <span className="tl-icon">
+          <Icon aria-hidden />
+        </span>
       </span>
       <div className="tl-body">
         <span className="tl-title">{newest.title}</span>
@@ -1057,7 +1137,6 @@ function TimelineGroupRow({
           <span className="tl-group-count">
             {groupCountLabel(group, locale)}
           </span>
-          <span>{formatDate(newest.atIso, locale, zone)}</span>
           <ProvenanceTag provenance={newest.provenance} />
           <Button small aria-expanded={open} onClick={() => setOpen(!open)}>
             {open ? t("timeline.group.collapse") : t("timeline.group.expand")}
@@ -1094,6 +1173,32 @@ function TimelineGroupRow({
   );
 }
 
+// Which way it went, and with whom.
+//
+// The name is dropped rather than guessed at when nothing resolved it: a row
+// that says "Sent to" and stops has lost the reader's trust more thoroughly
+// than one that only says "Sent".
+function directionPhrase(
+  entry: TimelineEntry,
+  t: ReturnType<typeof useT>,
+): string {
+  const who = entry.counterparts;
+  if (!who) {
+    return entry.direction === "outbound"
+      ? t("timeline.sent")
+      : t("timeline.received");
+  }
+  if (entry.direction === "outbound") {
+    return t("timeline.sentTo", { who });
+  }
+  if (entry.direction === "inbound") {
+    return t("timeline.receivedFrom", { who });
+  }
+  // A meeting or a note has no side. It still has people in it, and naming
+  // them is the whole reason this line exists.
+  return t("timeline.withWhom", { who });
+}
+
 /**
  * TimelineRow is one entry. Split out of the list so a grouped view can render
  * the SAME row inside an expanded conversation — a second rendering of a
@@ -1105,17 +1210,47 @@ export function TimelineRow({
 }: Readonly<{ entry: TimelineEntry; zone: string }>) {
   const { locale } = useLocale();
   const t = useT();
-  const Icon = TIMELINE_ICON[entry.kind];
   return (
     <li className={directionClass(entry.direction)}>
-      <span className="tl-icon">
-        <Icon aria-hidden />
+      {/* The date leads the row, in its own gutter. A chronology is read down
+          the dates — a reader looking for "what happened in August" scans one
+          column rather than the end of every line — and the mono face keeps
+          that column straight whatever each date's digits are. */}
+      <span className="tl-when t-mono">
+        {formatDate(entry.atIso, locale, zone)}
+      </span>
+      {/* The axis, and this row's place on it. The rail runs THROUGH the row
+          rather than a rule sitting under it: a chronology is one thread, and a
+          border per entry drew it as a stack of unrelated cards. Filled for
+          something that was SAID, hollow for something that merely changed, so
+          a reader tracking a conversation follows the solid dots straight past
+          the field edits between them. */}
+      <span className="tl-rail" aria-hidden="true">
+        <span className={dotClass(entry)} />
       </span>
       {/* A div, not a span: a change row's detail is a field diff whose
                 long-value side is a focusable region — flow content, invalid
                 inside phrasing content. The row lays out identically, because
                 .tl-body is a flex column either way. */}
       <div className="tl-body">
+        {/* What KIND of thing this was, and which way it went — one line above
+            the headline, because both qualify it and set inline they read as
+            the first words of the subject. */}
+        <span className="tl-head">
+          <Badge>{t(TIMELINE_KIND_LABEL[entry.kind])}</Badge>
+          {/* What the record DID, for a row that is not an exchange: the badge
+              says this is a record entry, and this says what happened to it. */}
+          {entry.qualifier && (
+            <span className="tl-direction">{entry.qualifier}</span>
+          )}
+          {/* Which way it went and who was at the other end, as one phrase.
+              The direction alone is a fact about us; with the name it is a
+              fact about the relationship, which is what the row is for. */}
+          {(entry.direction || entry.counterparts) && (
+            <span className="tl-direction">{directionPhrase(entry, t)}</span>
+          )}
+          {entry.via}
+        </span>
         {entry.withheld ? (
           <span className="tl-title tl-withheld">
             <Lock aria-hidden />
@@ -1129,18 +1264,7 @@ export function TimelineRow({
         )}
         {entry.detail}
         <span className="tl-meta">
-          {/* The direction is said in words as well as drawn, so it does
-                    not depend on telling two accent colours apart. */}
-          {entry.direction && (
-            <span className="tl-direction">
-              {entry.direction === "outbound"
-                ? t("timeline.sent")
-                : t("timeline.received")}
-            </span>
-          )}
-          <span>{formatDate(entry.atIso, locale, zone)}</span>
           <ProvenanceTag provenance={entry.provenance} />
-          {entry.via}
         </span>
       </div>
       {entry.actions && <span className="tl-actions">{entry.actions}</span>}

@@ -154,11 +154,28 @@ export type SectionDetail = {
  * `emptyLabel` is a required prop rather than a ninth key: only the caller
  * knows what there is none OF.
  */
+// The empty arm: what there is none of, and what would put one there. Its own
+// component because the second line is optional, and the state switch below
+// reads as a list of states rather than as a list of states with one of them
+// carrying a branch of its own.
+function Nothing({
+  label,
+  detail,
+}: Readonly<{ label: string; detail?: string }>) {
+  return (
+    <>
+      <p className="surfacestate-empty">{label}</p>
+      {detail && <p className="surfacestate-empty-detail">{detail}</p>}
+    </>
+  );
+}
+
 export function SurfaceState({
   label,
   labelLevel = "h3",
   state,
   emptyLabel,
+  emptyDetail,
   loadingLabel,
   loadingLines,
   detail,
@@ -171,6 +188,12 @@ export function SurfaceState({
   labelLevel?: Extract<EyebrowElement, "h3" | "h4">;
   state: SectionState;
   emptyLabel: string;
+  // What WOULD be here, and how it gets here. The label says there is none of
+  // something; this says what puts one there — which is the difference between
+  // a reader who thinks the section is broken and one who knows it is waiting
+  // on them. Optional: a section whose emptiness needs no explaining (a
+  // filtered list) says one line and stops.
+  emptyDetail?: string;
   // What this section is waiting for, and how tall it will be when it arrives.
   // `loadingLabel` is the caller's because only the caller knows: the loading
   // arm used to be a mute bar, and three screens had bolted their own spoken
@@ -188,7 +211,7 @@ export function SurfaceState({
   const body = (
     <>
       {state === "ready" && children}
-      {state === "empty" && <p className="surfacestate-empty">{emptyLabel}</p>}
+      {state === "empty" && <Nothing label={emptyLabel} detail={emptyDetail} />}
       {state === "withheld" && (
         <p className="surfacestate-withheld">{t("state.withheld")}</p>
       )}

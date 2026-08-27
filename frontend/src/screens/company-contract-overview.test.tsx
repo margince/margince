@@ -178,7 +178,7 @@ describe("the overview commercial card reports the contract standing", () => {
     const onOverview = await waitFor(
       () => contractBlock("Under contract · 2 active").textContent,
     );
-    await user.click(await screen.findByRole("button", { name: "Deals" }));
+    await user.click(await screen.findByRole("button", { name: /^Deals/ }));
 
     const onDealsTab = await waitFor(
       () => contractBlock("Under contract · 2 active").textContent,

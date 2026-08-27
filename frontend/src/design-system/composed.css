@@ -136,6 +136,12 @@
   align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-1);
+  /* The verbs drop to their own row rather than squeezing the identity out of
+     the header. The controls column does not shrink, so on a narrow work
+     column every verb it gains takes its width from the name beside it — far
+     enough and the record's own name is nothing at all, which is a header that
+     has stopped naming its record. */
+  flex-wrap: wrap;
 }
 /* The company header carries a description, a chip row and a pulse line under
  * the name, which makes the identity block several times taller than the mark
@@ -161,7 +167,10 @@
    floor is otherwise its min-content width, so the name would set the
    identity block's width and push the controls column off the row. */
 .record-head .record-id {
-  flex: 1;
+  /* A floor, not just a share: `min-width: 0` alone lets the identity collapse
+     to zero beside a column that refuses to shrink. Below this it takes a row
+     of its own instead, which is the wrap above. */
+  flex: 1 1 16rem;
   min-width: 0;
 }
 /* The name and its one standing badge, on the SAME baseline — the badge
@@ -207,17 +216,21 @@
    than the list-row avatar it shares a component with. The list keeps its own
    compact sizes — this applies only where the header runs wide. */
 .record-head-wide h1 {
-  font-size: 34px;
-  line-height: 1.15;
-  letter-spacing: -0.01em;
+  font-size: var(--fs-display);
+  line-height: 1.1;
+  letter-spacing: -0.025em;
 }
 .record-head .record-sub {
   font-size: 13px;
   color: var(--textMeta);
 }
+/* One quiet line under the name, at the same size as the facts beside it. Set
+   larger it competed with the name above and read as a second title; the facts
+   row under it carries what a reader actually scans for. */
 .record-head-wide .record-sub {
-  font-size: 14.5px;
+  font-size: var(--fs-sm);
   line-height: 1.45;
+  color: var(--textMeta);
   max-width: 62ch;
 }
 .record-badges {
@@ -233,6 +246,16 @@
   margin-top: 4px;
   font-size: 12.5px;
   color: var(--textMeta);
+}
+/* A wide header's pulse is a STACK, not a row: the record page puts two blocks
+   here — what the account is, then the figures it stands on — and side by side
+   they read as one run-on line that wraps at a width nobody chose. Down the
+   page they read as what they are, two lines under a name. */
+.record-head-wide .record-pulse {
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
 }
 .record-actions {
   display: flex;
@@ -388,33 +411,166 @@
    clearance in the 720px block above, so the sticky action bar cannot cover the
    last row of the timeline. */
 
+/* The dials above the chronology: the cuts, then the narrowing. Its own
+   interval, and the one that separates the block from the heading over it and
+   the card under it. */
+.timeline-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-block: var(--space-3) var(--space-4);
+}
+
+/* The narrowing row already carried a bottom margin from the days it stood
+   alone under the heading. Inside the block above, that margin is a second
+   interval doing the same job as the block's own gap. */
+.timeline-header .timeline-filters {
+  margin-bottom: 0;
+}
+
+/* The card the chronology sits on. The same white ground, hairline and radius
+   every other body of the record uses — a list this long loose on the page
+   ground stopped reading as one of the record's sections. */
+.timeline-card {
+  margin-top: var(--space-2);
+  /* Air on all four sides. With none at the top the first row's date and badge
+     sat on the card's own border, which reads as content clipped by the edge
+     rather than as the start of a list. */
+  padding: var(--space-2) var(--space-5);
+  background: var(--bgElevated);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  box-shadow: var(--shadow-card);
+}
+
 .timeline {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-top: 8px;
+  margin-top: 0;
 }
+
+/* An expanded conversation's members are a list INSIDE a row, not a second
+   card: the card is around the chronology, and one nested in it would draw a
+   box around three messages of a thread that is already boxed. */
+.timeline-card .tl-group-members {
+  padding-inline: 0;
+}
+/* Date, axis, what happened, and the row's own verbs. A grid rather than a
+   flex row: the dates line up in a column of their own, which is how a
+   chronology is actually read — down the left edge for "what happened in
+   August" rather than along every line to its end. */
 .timeline li {
+  display: grid;
+  /* A fixed date gutter, the rail, then everything else. Fixed rather than
+     `auto`, so the dates and the rail hold one line down the whole list
+     however wide a single date renders — an axis that stepped left and right
+     row by row is not an axis. */
+  grid-template-columns: 4.5rem 1rem minmax(0, 1fr) auto;
+  align-items: stretch;
+  column-gap: var(--space-3);
+  padding: 0;
+}
+
+/* Set on the first line's own baseline, so the date reads level with the kind
+   beside it rather than floating at the top of a three-line row. */
+.timeline .tl-when {
+  padding-top: var(--space-3);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+  /* Right against the rail. The eye reads the date and the mark it belongs to
+     as one thing; ranged left, a short date and a long one pointed at
+     different places on the axis. */
+  text-align: right;
+}
+
+/* The mark on the axis. Solid for something that was SAID, hollow for
+   something that merely changed — a reader following a conversation tracks the
+   solid dots straight past the field edits between them. */
+/* The rail: one line down the whole chronology, with this row's mark on it.
+   It runs the full height of the row so consecutive rows join, and it is the
+   only thing dividing them — the rule that used to sit under each entry made
+   a thread read as a stack. */
+.timeline .tl-rail {
+  position: relative;
+  display: block;
+}
+.timeline .tl-rail::before {
+  content: "";
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 50%;
+  inline-size: 1px;
+  background: var(--borderSubtle);
+}
+/* The first and last rows are open-ended: the thread starts and stops at a
+   mark rather than at a line running off into the padding. */
+.timeline li:first-child .tl-rail::before {
+  inset-block-start: 0.85rem;
+}
+.timeline li:last-child .tl-rail::before {
+  inset-block-end: calc(100% - 1.35rem);
+}
+.timeline .tl-dot {
+  position: absolute;
+  inset-block-start: 0.85rem;
+  inset-inline-start: 50%;
+  margin-inline-start: -0.25rem;
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: var(--r-full);
+  background: var(--textMeta);
+  border: 1px solid var(--textMeta);
+}
+
+.timeline .tl-dot-quiet {
+  background: var(--bgElevated);
+  border-color: var(--borderStrong);
+}
+
+/* The kind, set as a label rather than as a word: a chronology is scanned down
+   this column, and small caps at a fixed size give the eye one shape per kind
+   to find. */
+.timeline .tl-head .badge {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: var(--fs-eyebrow);
+}
+
+/* What kind of thing it was and which way it went, over the headline. */
+.tl-head {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--borderSubtle);
+  flex-wrap: wrap;
+  gap: var(--space-2);
 }
 .timeline .tl-actions {
   margin-left: auto;
   display: flex;
-  gap: 6px;
+  /* Held at the row's head. The row's tracks stretch so the rail can run its
+     full height, and a verb that stretched with them became a button the
+     height of a three-line entry. */
+  align-items: flex-start;
+  gap: var(--space-2);
+  padding-top: var(--space-3);
 }
-.timeline li:last-child {
-  border-bottom: 0;
-}
+
+/* A conversation's mark on the rail: the kind's icon rather than a dot,
+    because the group stands for several messages and a dot says one. Centred
+    on the rail and drawn on the card's own ground so the line does not run
+    through it. */
 .timeline .tl-icon {
+  position: absolute;
+  inset-block-start: 0.4rem;
+  inset-inline-start: 50%;
+  margin-inline-start: -0.8125rem;
   width: 26px;
   height: 26px;
   border-radius: var(--r-full);
   background: var(--bgCard);
+  border: 2px solid var(--bgElevated);
   display: grid;
   place-items: center;
   color: var(--textMeta);
@@ -428,11 +584,19 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
+  padding-block: var(--space-3) var(--space-4);
+  min-inline-size: 0;
 }
+/* The headline carries the row. Everything else on it — the kind, who it was
+   with, what changed — qualifies this line, and set at the same weight as its
+   qualifiers the reader had to read all four to find out what happened. */
 .timeline .tl-title {
-  font-size: 13.5px;
-  color: var(--textContent);
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  line-height: 1.35;
+  color: var(--textPrimary);
+  text-wrap: pretty;
 }
 /* A withheld row says so where its title would be: the reader's own seat is
    what is being answered, so it reads as a statement, not as a missing one. */
@@ -617,22 +781,11 @@
   overflow-wrap: anywhere;
 }
 
-/* Two tracks on one spine: what we sent, and what came back. The rail colour
-   is the fast read; .tl-direction says the same thing in words, so the
-   distinction never rests on telling two hues apart. */
-.timeline > li.tl-out,
-.timeline > li.tl-in {
-  border-inline-start: 2px solid transparent;
-  padding-inline-start: var(--space-3);
-}
-
-.timeline > li.tl-out {
-  border-inline-start-color: var(--accentMed);
-}
-
-.timeline > li.tl-in {
-  border-inline-start-color: var(--borderStrong);
-}
+/* Which way it went is carried by `.tl-direction`'s own words beside the kind.
+   The coloured edge these classes used to draw fought the date column for the
+   row's left margin, and two hues on a spine is a distinction a reader has to
+   learn where a phrase is one they already know. The classes stay because the
+   row still declares its direction for anything else reading it. */
 
 .tl-direction {
   font-size: 11px;
@@ -666,4 +819,17 @@
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-sm);
+}
+
+/* What a row is ABOUT — the deal it is filed against. An outline rather than a
+   filled chip: the kind beside it is the row's label and a second solid mark
+   would compete with it, where this only has to be findable when a reader is
+   scanning for one deal among several. */
+.timeline .tl-about {
+  font-size: var(--fs-eyebrow);
+  color: var(--textMeta);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  padding: 0 var(--space-2);
+  white-space: nowrap;
 }

@@ -5,21 +5,21 @@
    three things shout has no emphasis at all. */
 .r360-verdict {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  gap: var(--space-4);
 }
 
 /* The call, as a WORD and not a colour alone: a reader who cannot tell the
    tints apart still reads "blocked". Same reasoning the deal card's own
    standing pill carries, and deliberately the same shape. */
 .r360-standing {
-  padding: var(--space-1) var(--space-3);
+  padding: var(--space-1) var(--space-2);
   border-radius: var(--r-sm);
-  font-size: var(--fs-body);
+  font-size: var(--fs-meta);
   font-weight: var(--fw-semibold);
   text-transform: uppercase;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.05em;
   white-space: nowrap;
 }
 
@@ -51,9 +51,97 @@
   color: var(--danger);
 }
 
+/* The call in words, and the loudest type on the record. It is the sentence
+   the whole card exists to produce, so it is set as a headline rather than as
+   a caption beside the pill — drawn quiet, a reader scanned past the one thing
+   they came for.
+
+   Flexes rather than taking a fixed measure: the pill and the disclosure
+   either side of it are both fixed, so anything the head cannot fit comes out
+   of the sentence, and a sentence that wraps still reads. */
 .r360-because {
-  color: var(--textMuted);
+  flex: 1 1 26rem;
   min-width: 0;
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: var(--fs-display);
+  font-weight: var(--fw-medium);
+  line-height: 1.22;
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+
+/* The disclosure sits at the far end of the head, so the call and the
+   sentence stay one uninterrupted line to read left to right. */
+.r360-rests-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-left: auto;
+  flex-shrink: 0;
+  padding: var(--space-2) var(--space-3);
+  /* A bordered control, not a link: it is the one thing in the head a reader
+     can operate, and a link set among a pill and a headline reads as part of
+     the sentence rather than as something to press. */
+  border: 1px solid var(--aiMed);
+  border-radius: var(--r-sm);
+  background: var(--bgElevated);
+  color: var(--aiText);
+  font-family: var(--f-body);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.r360-rests-toggle:hover {
+  background: var(--aiLight);
+}
+
+.r360-rests-toggle svg {
+  width: 0.875rem;
+  height: 0.875rem;
+}
+
+/* The count belongs to the shut state: a block a reader cannot see into needs
+   to say how much is behind it before they decide to open it. */
+.r360-rests-count {
+  font-size: var(--fs-eyebrow);
+  color: var(--textMeta);
+}
+
+/* Opened, the readings lay out in columns rather than a stack. Four one-line
+   quotes down a full-width card is mostly empty page, and the reader is
+   comparing them against each other rather than reading them in order. */
+.r360-rests {
+  flex-basis: 100%;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-3) var(--space-6);
+}
+
+/* Indigo, and a rule rather than a box: the quote is the machine's own
+   wording, and a bordered card here would be a card inside a card. */
+.r360-rests-item {
+  border-left: 2px solid var(--aiMed);
+  border-radius: 1px;
+  padding-left: var(--space-2);
+  min-width: 0;
+}
+
+.r360-rests-quote {
+  margin: 0;
+  color: var(--textPrimary);
+  font-size: var(--fs-sm);
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+.r360-rests-from {
+  margin: 0;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
 }
 
 /* The findings, as a strip to scan rather than a list to read. Wrapping

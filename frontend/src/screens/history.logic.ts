@@ -99,7 +99,31 @@ export function mergeChronology<Row>(
   if (floor === undefined) {
     return { rows: all, truncated: false };
   }
-  const rows = all.filter((row) => instant(row) > floor);
+  // A row is cut by every OTHER truncated feed's floor, never by its own.
+  //
+  // The gap this guards against is a row from feed B landing between two rows
+  // feed A returned. A feed's own paging cannot do that: it hides rows OLDER
+  // than its oldest, and its oldest is a row we have. Cutting a feed at its
+  // own floor dropped that row for nothing — and where a feed was the only one
+  // with rows at all, it dropped every row it had and the chronology rendered
+  // empty over a list it was holding.
+  //
+  // Ties across feeds still go: a row at another feed's floor may have an
+  // unloaded sibling above it, which is the (time, id) page break the floor
+  // exists to respect.
+  const rows = all.filter((row) =>
+    feeds.every(
+      (feed) =>
+        feed.rows.includes(row) ||
+        !feed.hasMore ||
+        feed.rows.length === 0 ||
+        instant(row) >
+          feed.rows.reduce(
+            (oldest, other) => Math.min(oldest, instant(other)),
+            Number.POSITIVE_INFINITY,
+          ),
+    ),
+  );
   // A floor exists only because some feed reported more, so the merged view is
   // short of the account's history by construction — whether or not this cut
   // dropped any loaded row.

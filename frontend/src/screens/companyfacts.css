@@ -3,26 +3,37 @@
    records read the same way rather than each inventing a layout. */
 
 .co-facts {
-  display: grid;
-  /* max-content, not auto: `auto` lets the columns absorb whatever width the
-     header gives them, and the label/value pair reads as one fact only while
-     it sits together. */
-  grid-template-columns: max-content max-content;
-  gap: var(--space-1) var(--space-4);
+  /* One ROW of facts under the identity, not a stacked column beside it: these
+     three are read across as the account's standing at a glance, and stacked
+     they became a second block competing with the meta line above them. They
+     wrap as a group when the header narrows rather than each finding its own
+     line, so a fact never ends up alone under the two it belongs with. */
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-1) var(--space-5);
   margin: 0;
-  align-content: start;
 }
 
-/* Each fact is its own grid row, so the labels form one column and the values
-   another however long either runs. `display: contents` because the <div> is
-   only here for valid <dl> markup and must not become a cell of its own. */
+/* Label and value read as ONE fact, so they sit together on the baseline and
+   the gap INSIDE a pair is smaller than the gap between pairs — without that
+   the row reads as six loose words rather than three facts. */
 .co-facts-item {
-  display: contents;
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  min-inline-size: 0;
 }
 
+/* The label reads quieter than the value it names: a reader scanning the row
+   is after the figures, and a label at the value's own weight makes them hunt
+   through six words to find three. Quieter by SIZE and weight rather than by a
+   paler ink — 12px meta is already the smallest text this product may set
+   against the page and still be read (design §2 contrast law), and the tone
+   below it is a disabled state rather than a quiet one. */
 .co-facts dt {
   color: var(--textMeta);
-  font-size: var(--fs-sm);
+  font-size: var(--fs-meta);
   white-space: nowrap;
 }
 

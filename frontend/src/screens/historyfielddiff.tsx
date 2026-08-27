@@ -1,6 +1,5 @@
 import { FieldDiff } from "../design-system/trust";
-import type { Locale } from "../i18n";
-import { historyValue } from "./historyvalues";
+import { type HistoryValueCtx, historyValue } from "./historyvalues";
 
 // One field's before and after, read the way the rest of the record page reads
 // them.
@@ -15,21 +14,21 @@ export function HistoryFieldDiff({
   field,
   oldValue,
   newValue,
-  currency,
-  locale,
+  values,
 }: Readonly<{
   field: string;
   oldValue: string | null | undefined;
   newValue: string | null | undefined;
-  // The record's ISO currency, which is what gives a minor-unit column its
-  // scale. Absent on a record type that holds no money.
-  currency: string | null | undefined;
-  locale: Locale;
+  // Everything a stored value needs to be read as what it MEANS: the record's
+  // currency for a minor-unit column, its zone for a timestamp, and a resolver
+  // for the ids a change row holds. One object because they travel together —
+  // a row that scaled its money and still printed a uuid would be half-read.
+  values: HistoryValueCtx;
 }>) {
   return (
     <FieldDiff
-      oldValue={historyValue(field, oldValue, currency, locale)}
-      newValue={historyValue(field, newValue, currency, locale)}
+      oldValue={historyValue(field, oldValue, values)}
+      newValue={historyValue(field, newValue, values)}
     />
   );
 }

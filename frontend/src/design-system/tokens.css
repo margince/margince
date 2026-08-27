@@ -174,9 +174,23 @@
    * ADR-0040 amendment) — all 11–13px meta/caption text reads it. */
   --textMeta: #5e6c65;
 
+  /* The one hue that means a MACHINE did this — wrote the draft, read the
+   * record, found the thing, or holds the evidence behind a claim. It marks
+   * authorship and reasoning, never status: nothing good, bad or urgent is
+   * indigo, which is what lets a reader tell "Margince did this" apart from
+   * "this needs you" at a glance.
+   *
+   * Five steps, because the mark has to work as a band, a chip, a rule, a
+   * fill and an underline without any of them being mixed by hand at a call
+   * site. --aiChip is the filled chip and the hover of an indigo control;
+   * --aiRule is the underline under text that opens its own evidence, strong
+   * enough to read as an affordance and weak enough not to become a second
+   * body colour. */
   --ai: #5b61d6;
   --aiLight: rgba(91, 97, 214, 0.08);
+  --aiChip: rgba(91, 97, 214, 0.14);
   --aiMed: rgba(91, 97, 214, 0.3);
+  --aiRule: rgba(91, 97, 214, 0.55);
   --aiText: #3f45b0;
 
   /* The Core's palette: the states of the agent orb, and nothing else in the

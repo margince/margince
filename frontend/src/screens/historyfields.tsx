@@ -22,7 +22,7 @@ import {
   toEvidence,
 } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import {
   LoadMoreButton,
   QueryStates,
@@ -38,6 +38,7 @@ import {
 } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
+import type { HistoryValueCtx } from "./historyvalues";
 import "./history.css";
 
 // The per-field old→new diff view (B-EP09.x): every field-change row the
@@ -128,6 +129,7 @@ function FieldGroupSection({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const valueCtx: HistoryValueCtx = { currency, locale, zone: recordZone };
   return (
     <div className="fgroup">
       <div className="fgroup-head">{historyFieldLabel(group.field, t)}</div>
@@ -138,8 +140,7 @@ function FieldGroupSection({
               field={group.field}
               oldValue={change.old_value}
               newValue={change.new_value}
-              currency={currency}
-              locale={locale}
+              values={valueCtx}
             />
             <span className="tl-meta">
               {formatDateTime(change.changed_at, locale, recordZone)}
@@ -323,11 +324,16 @@ export function FieldHistoryTimeline({
 export function changeTimeline(
   changes: FieldHistoryEntry[],
   label: (field: string) => string,
-  // The record's own money context, handed to every row whether or not this
-  // record type holds money today. A minor-unit column is an integer count of
-  // the units its currency defines, so a row that reaches the diff without it
-  // shows a figure a hundred times the price on most currencies.
-  money: Readonly<{ currency: string | null | undefined; locale: Locale }>,
+  // The record's own value context. A minor-unit column is an integer count of
+  // units its currency defines, a timestamp is only readable at the record's
+  // zone, and a bare id is only readable through the resolver — the reason
+  // every diff goes through HistoryFieldDiff rather than to FieldDiff itself,
+  // on every field, whether or not the record type holds each shape today.
+  valueCtx: HistoryValueCtx,
+  // What the record DID, in the reader's words. Handed in rather than read
+  // from the catalog here, because this adapter takes every other word it
+  // renders from its caller too.
+  qualifier: string,
   viewerUserId?: string,
 ): TimelineEntry[] {
   return changes.map((change) => ({
@@ -338,6 +344,9 @@ export function changeTimeline(
     id: `change:${change.id}:${change.field}`,
     kind: "change",
     title: label(change.field),
+    // The badge says this is a record entry; without this the row does not say
+    // what the record did.
+    qualifier,
     atIso: change.changed_at,
     provenance: provenanceOfEntry(change, viewerUserId),
     // The grounding travels with the row. An agent's change is only checkable
@@ -350,8 +359,7 @@ export function changeTimeline(
         field={change.field}
         oldValue={change.old_value}
         newValue={change.new_value}
-        currency={money.currency}
-        locale={money.locale}
+        values={valueCtx}
       />
     ),
   }));

@@ -22,6 +22,8 @@ import {
 import { createPortal } from "react-dom";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
+import { useAnchoredToTrigger } from "./anchored";
+import { Popover } from "./popover";
 import "./atoms.css";
 
 // The Margince atom library (B-EP09.2, re-scoped to our own
@@ -35,7 +37,23 @@ import "./atoms.css";
 // hand-rolled a button with its own border, fill, radius, weight, padding,
 // hover, focus and two dim states, and a control that redeclares every one of a
 // variant's properties has left the design system rather than reused it.
-type ButtonVariant = "primary" | "ghost" | "danger" | "federated";
+/**
+ * How loud a control is, and on whose behalf it acts.
+ *
+ * `ai` is the one that is not a volume: it says a MACHINE does the work behind
+ * the click — drafts the mail, reads the site, writes the summary. It is
+ * indigo everywhere for the same reason the bands and the citation rules are,
+ * so a reader learns one colour for "Margince did this" rather than one per
+ * surface, and it never marks importance: a destructive verb an agent performs
+ * is still danger.
+ */
+export type ButtonVariant =
+  | "primary"
+  | "ghost"
+  | "danger"
+  | "federated"
+  | "ai"
+  | "aiQuiet";
 
 /**
  * The turning mark a control shows while a write it started is in flight.
@@ -392,6 +410,7 @@ export function Avatar({
   identity,
   src,
   size = "sm",
+  shape = "person",
 }: Readonly<{
   name: string;
   /**
@@ -414,6 +433,15 @@ export function Avatar({
    * header, `lg` on a wide one.
    */
   size?: "xs" | "sm" | "md" | "lg";
+  /**
+   * What KIND of thing this chip stands for, which decides its shape.
+   *
+   * A person is round, the way a face is drawn everywhere; an organization is
+   * a rounded square, the way a logo is. The distinction is not decoration —
+   * on a page carrying both, the shape is what tells a reader whether a chip
+   * is a company or somebody at it before they have read a word of it.
+   */
+  shape?: "person" | "organization";
 }>) {
   // An image that fails to load falls back to the monogram for the rest of
   // this mount. Keyed by src so a record whose logo changes gets a fresh try
@@ -446,6 +474,7 @@ export function Avatar({
     tone = (tone + (char.codePointAt(0) ?? 0)) % AVATAR_TONES;
   }
   const classes = ["avatar", `avatar-t${tone}`, `avatar-${size}`];
+  if (shape === "organization") classes.push("avatar-org");
   if (src && !broken) classes.push("avatar-has-logo");
   if (painted) classes.push("avatar-painted");
   return (
@@ -750,20 +779,110 @@ export function Field({
  * colour that says the same thing on its own. Wire it only there; a reading
  * that could be read either way stays plain and lets its own words carry the
  * judgement.
+ *
+ * `basis` is the reading's receipt: the rows it was computed from, folded away
+ * until a reader asks for them. It is a `Popover` that opens to a settled
+ * pointer AND to a click or Enter — a row of readings is compared by moving
+ * across it, and asking for a click at every stop makes the comparison cost
+ * five presses, while a receipt only a pointer could open would be a reading
+ * half the readers do not have. It sits OVER the card rather than expanding
+ * it, so opening one does not move the readings beside it.
+ *
+ * `detail` still carries the one-line basis either way: a reader who never
+ * opens this must not meet a number with nothing behind it.
  */
+
+// The bar under a reading: segments a reader would count, or one track they
+// would not.
+//
+// Six is the line, and it is about counting rather than about width: "one of
+// three signals" is a set a reader checks off, and "two of ten people" is a
+// share they read as a length. Drawn the other way round, three segments of a
+// hundred are invisible and a tenth of one track says nothing about which
+// signal is out.
+const COUNTABLE = 6;
+
+// The segments' own names. A position in a bar has no identity of its own —
+// nothing distinguishes the second segment from the third except where it
+// sits — so they are named here rather than keyed on the loop index, which is
+// the same claim in the spelling a linter cannot tell apart from a keyed list
+// of records.
+const SEGMENTS = ["first", "second", "third", "fourth", "fifth", "sixth"];
+
+function Meter({ filled, total }: Readonly<{ filled: number; total: number }>) {
+  const held = Math.min(Math.max(filled, 0), total);
+  if (total <= COUNTABLE) {
+    return (
+      <span
+        className="stat-card-meter stat-card-meter-segments"
+        aria-hidden="true"
+      >
+        {SEGMENTS.slice(0, total).map((segment, index) => (
+          <span
+            key={segment}
+            className={
+              index < held
+                ? "stat-card-meter-fill"
+                : "stat-card-meter-fill stat-card-meter-empty"
+            }
+          />
+        ))}
+      </span>
+    );
+  }
+  return (
+    <span className="stat-card-meter" aria-hidden="true">
+      <span
+        className="stat-card-meter-fill"
+        style={{ inlineSize: `${Math.round((held / total) * 100)}%` }}
+      />
+    </span>
+  );
+}
+
 export function StatCard({
   label,
   value,
   detail,
+  basis,
+  basisLabel,
   tone,
   source,
   alert,
   dot,
   numeric,
+  openLabel,
+  onOpen,
+  meter,
 }: Readonly<{
   label: string;
   value: string;
-  detail?: string;
+  // The line under the figure: what it rests on, in the reader's words. A node
+  // rather than a string, because a reading whose detail is two facts — how
+  // much is failing, and why — says them on two lines rather than in one
+  // sentence a reader has to parse.
+  detail?: ReactNode;
+  // The way OUT of the reading: the tab that holds what it was read from.
+  // Both or neither, like `basis` — a labelled door with nothing behind it is
+  // worse than no door. A LINK at the card's foot rather than a pressable
+  // card, because the card already holds a control (the basis) and a control
+  // inside a control is a press whose target the reader has to guess at.
+  openLabel?: string;
+  onOpen?: () => void;
+  // How far along this reading is, as the two numbers it is made of. Drawn as
+  // separate segments when there are few enough to count (a verdict made of
+  // three signals) and as one filled track when there are not (two of ten
+  // people replying) — the difference is whether a reader would count them.
+  //
+  // Only for a reading that HAS a denominator. A figure with nothing to be out
+  // of gets no bar rather than a bar with an invented one.
+  meter?: { filled: number; total: number };
+  // What the reading rests on, and the words that name it. Both or neither —
+  // an unlabelled disclosure asks a reader to open it to find out whether they
+  // wanted it. The copy belongs to the caller, because no copy lives in a
+  // primitive.
+  basis?: ReactNode;
+  basisLabel?: string;
   // `good` is not "no tone": a slot whose reading is a VERDICT says so in both
   // directions, and a verdict that is fine reads as fine rather than as one
   // nobody has judged yet.
@@ -793,9 +912,12 @@ export function StatCard({
   // colour gates read as a string.
   numeric?: boolean;
 }>) {
+  // No `t-h3`: the card owns the figure's face and size (atoms.css), because
+  // a reading is compared across a row and the row is the thing that has to
+  // agree. Sharing the page's heading class made the figure change size with a
+  // scale that answers a different question.
   const valueClass = [
     "stat-card-value",
-    "t-h3",
     numeric ? "t-mono" : "",
     tone ? `stat-card-${tone}` : "",
   ]
@@ -817,6 +939,55 @@ export function StatCard({
         {value}
       </span>
       {detail && <span className="stat-card-detail t-caption">{detail}</span>}
+      {/* The proportion under the words that state it. A bar rather than a
+          second figure: the reader has the number above it, and what a bar
+          adds is the SHARE at a glance, which is what a row of readings is
+          compared on. Hidden from a screen reader — the figure and its detail
+          line already say it in words, and a bar announced as well is the
+          same fact twice. */}
+      {meter && meter.total > 0 && <Meter {...meter} />}
+      {/* THE CARD'S FOOT: the receipt on the left, the way out on the right.
+          Both are places to GO rather than parts of the reading, which is why
+          they share a row under it — and why the door is at the end of the
+          card a reader finishes on rather than up beside the reading's name,
+          where it competed with the label for the first glance. */}
+      <span className="stat-card-foot">
+        {basis && basisLabel && (
+          <Popover
+            className="stat-card-basis"
+            onHover
+            label={
+              <>
+                <ChevronRight aria-hidden="true" size={14} />
+                {basisLabel}
+              </>
+            }
+          >
+            {/* The receipt names itself inside the panel, because the trigger is
+              gone from under the reader's eye the moment the panel is over it
+              — and an unnamed list of facts beside a figure is a reader
+              guessing which question it answers. */}
+            <span className="stat-card-basis-head t-eyebrow">{basisLabel}</span>
+            {basis}
+            {/* The same door as the reading's own, repeated where the reader has
+              just finished reading the working. Going to the tab is what most
+              readers do next, and sending them back up to the card's name line
+              to find it is a trip the panel can save. */}
+            {onOpen && openLabel && (
+              <button type="button" className="stat-card-open" onClick={onOpen}>
+                {openLabel}
+                <span aria-hidden="true">{" \u2192"}</span>
+              </button>
+            )}
+          </Popover>
+        )}
+        {onOpen && openLabel && (
+          <button type="button" className="stat-card-open" onClick={onOpen}>
+            {openLabel}
+            <span aria-hidden="true">{" \u2192"}</span>
+          </button>
+        )}
+      </span>
     </section>
   );
 }
@@ -1074,6 +1245,7 @@ export function SegmentedControl<Option extends string>({
   value,
   onChange,
   labels,
+  counts,
   label,
   marks,
 }: Readonly<{
@@ -1081,6 +1253,17 @@ export function SegmentedControl<Option extends string>({
   value: Option;
   onChange: (next: Option) => void;
   labels: Record<Option, string>;
+  // How much is behind each option, for a strip that chooses between bodies of
+  // a record rather than between settings. Partial and per-option on purpose:
+  // an option whose count is absent draws none, which is what a section that
+  // is not a list of things (an overview, a form) needs — and it is NOT the
+  // same as a zero. A zero is a fact about the account and prints; a missing
+  // count is a fact about the section and does not.
+  //
+  // Inside the button, so the count joins the option's accessible name and a
+  // screen reader announces "People 6" rather than leaving the figure to a
+  // sighted reader alone.
+  counts?: Partial<Record<Option, number>>;
   // Accessible name for the control as a whole (the `fieldset` group); a
   // screen reader announces it alongside each option so the buttons aren't
   // read out of context. Optional so existing callers are unaffected.
@@ -1092,25 +1275,69 @@ export function SegmentedControl<Option extends string>({
   // see. It draws attention; it never carries the meaning alone.
   marks?: Partial<Record<Option, boolean>>;
 }>) {
+  const { locale } = useLocale();
   return (
     <fieldset className="segmented" aria-label={label}>
-      {options.map((option) => (
-        <button
-          key={option}
-          type="button"
-          aria-pressed={option === value}
-          onClick={() => onChange(option)}
-        >
-          {labels[option]}
-          {marks?.[option] && <span className="segmented-mark" aria-hidden />}
-        </button>
-      ))}
+      {options.map((option) => {
+        const count = counts?.[option];
+        return (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={option === value}
+            onClick={() => onChange(option)}
+          >
+            {labels[option]}
+            {count !== undefined && (
+              <span className="segmented-count t-mono">
+                {formatNumber(count, locale)}
+              </span>
+            )}
+            {marks?.[option] && <span className="segmented-mark" aria-hidden />}
+          </button>
+        );
+      })}
     </fieldset>
   );
 }
 
 export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
+}
+
+// The popover panel THIS dialog opened that Tab belongs to, or nothing.
+//
+// Found through the trigger rather than by looking for a panel: a panel is
+// portalled to the body, so it is not inside the dialog to be found there, and
+// a document-wide search would just as happily return one opened from the page
+// BEHIND the dialog — handing Tab to a layer the reader cannot see. The trigger
+// names its own panel through `aria-controls`, and the trigger IS in the
+// dialog, which is the only link between the two that survives the portal.
+//
+// Two can be open at once, so DOM order is not the answer. A popover shuts on
+// a mousedown outside itself, but a hover-opened receipt is opened by a
+// settling pointer and fires no such press — it can rise beside a panel a
+// click already opened. The one holding focus is the one the reader is in;
+// the other is a panel they are merely near.
+//
+// A panel with no tab stops is not one: a `StatCard` receipt is frequently
+// prose, and a trap holding a container it cannot move focus within answers
+// every Tab by swallowing it. Falling back to the dialog leaves the panel on
+// screen and the reader still able to walk what is behind it.
+function openPanelIn(dialog: HTMLElement | null): HTMLElement | null {
+  const panels = [
+    ...(dialog?.querySelectorAll<HTMLElement>(
+      '[aria-expanded="true"][aria-controls]',
+    ) ?? []),
+  ]
+    .map((trigger) =>
+      document.getElementById(trigger.getAttribute("aria-controls") ?? ""),
+    )
+    .filter((panel): panel is HTMLElement => panel !== null);
+  const active = document.activeElement;
+  const held = panels.find((panel) => panel.contains(active));
+  const panel = held ?? panels[0];
+  return panel && focusableWithin(panel).length > 0 ? panel : null;
 }
 
 export function Modal({
@@ -1176,7 +1403,12 @@ export function Modal({
         return;
       }
       if (event.key === "Tab" && dialog.current) {
-        keepTabInside(event, dialog.current);
+        // A popover opened from inside this dialog sits ABOVE it (popover.css),
+        // and it is portalled to the body, so it is not a descendant of the
+        // dialog the trap holds. While one is up it owns Tab: a trap that
+        // pulled focus back into the dialog would make the panel's own
+        // controls unreachable by keyboard, which is the whole panel.
+        keepTabInside(event, openPanelIn(dialog.current) ?? dialog.current);
       }
     };
     globalThis.addEventListener("keydown", onKey);
@@ -1670,79 +1902,6 @@ export function OverflowMenu({
     </div>
   );
 }
-
-// Where the portalled panel sits: beside the trigger, right edge to right edge,
-// and INSIDE the viewport on both axes.
-//
-// The panel is fixed, so the viewport is all the room there is — a panel placed
-// below a trigger near the bottom edge puts its actions where no amount of page
-// scrolling reaches them. So it opens upward when the space below cannot hold
-// it, takes whichever side has more room when neither can, and is capped to
-// that space so a panel with many items scrolls inside itself.
-//
-// Measured on OPEN and again whenever anything moves it. Scroll is listened to
-// in the CAPTURE phase because a scroll event does not bubble — the trigger may
-// sit inside a scrolling region, and a panel that stayed at the coordinates it
-// was opened at would drift away from the button it belongs to.
-function useAnchoredToTrigger(
-  open: boolean,
-  trigger: RefObject<HTMLButtonElement | null>,
-  panel: RefObject<HTMLDivElement | null>,
-): { top: number; left: number; maxHeight: number } {
-  const [at, setAt] = useState({ top: 0, left: 0, maxHeight: 0 });
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-    const place = () => {
-      const anchor = trigger.current?.getBoundingClientRect();
-      if (!anchor) {
-        return;
-      }
-      const width = panel.current?.offsetWidth ?? 0;
-      const room = globalThis.innerWidth - width - MENU_EDGE_GAP;
-      setAt({
-        ...verticalPlacement(anchor, panel.current?.offsetHeight ?? 0),
-        left: Math.max(MENU_EDGE_GAP, Math.min(anchor.right - width, room)),
-      });
-    };
-    place();
-    globalThis.addEventListener("resize", place);
-    globalThis.addEventListener("scroll", place, true);
-    return () => {
-      globalThis.removeEventListener("resize", place);
-      globalThis.removeEventListener("scroll", place, true);
-    };
-  }, [open, trigger, panel]);
-  return at;
-}
-
-// Below the trigger while the panel fits there, above it when it does not, and
-// on the roomier side when neither fits — capped to that side either way.
-//
-// Exported for its own test: jsdom gives every element a zero-sized rectangle,
-// so the only way to state this rule as a test is to state it over the
-// measurements themselves.
-export function verticalPlacement(
-  anchor: DOMRect,
-  height: number,
-): { top: number; maxHeight: number } {
-  const below = globalThis.innerHeight - anchor.bottom - MENU_EDGE_GAP * 2;
-  const above = anchor.top - MENU_EDGE_GAP * 2;
-  const opensDown = height <= below || below >= above;
-  if (opensDown) {
-    return { top: anchor.bottom + MENU_EDGE_GAP, maxHeight: below };
-  }
-  return {
-    top: Math.max(MENU_EDGE_GAP, anchor.top - MENU_EDGE_GAP - height),
-    maxHeight: above,
-  };
-}
-
-// The breathing room between the panel and both the trigger above it and the
-// viewport edge beside it, in px because it is arithmetic rather than a
-// stylesheet value: --space-1.
-const MENU_EDGE_GAP = 4;
 
 export function Disclosure({
   summary,

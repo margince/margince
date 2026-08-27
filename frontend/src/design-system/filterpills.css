@@ -1,0 +1,65 @@
+/* The row of cuts through a list. Tokens only (make ds-purity). */
+
+.filterpills {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-inline-size: 0;
+}
+
+/* Each pill is its own object with its own outline, because each is a separate
+   question about the list. Joined into one bar they read as a single control
+   whose parts happen to carry numbers. */
+.filterpill {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  block-size: 1.75rem;
+  padding-inline: var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  background: var(--bgElevated);
+  font-family: var(--f-body);
+  font-size: var(--fs-meta);
+  font-weight: var(--fw-medium);
+  color: var(--textContent);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.filterpill:hover {
+  background: var(--bgHover);
+  color: var(--textPrimary);
+}
+
+.filterpill:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+
+/* The cut in view. A filled ground and a stronger edge rather than an accent:
+   the pill says WHERE THE READER IS, and a coloured one among six neutrals
+   reads as the one worth pressing instead. */
+.filterpill[aria-pressed="true"] {
+  border-color: var(--borderStrong);
+  background: var(--bgCard);
+  font-weight: var(--fw-semibold);
+  color: var(--textPrimary);
+}
+
+/* The figure in the mono face, where digits share one width — a row of counts
+   keeps its rhythm instead of shifting pill to pill. Quieter than the word it
+   follows: the reader is looking for the cut and checks the number after. */
+.filterpill-count {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-regular);
+  color: var(--textMeta);
+}
+
+.filterpill[aria-pressed="true"] .filterpill-count {
+  color: var(--textContent);
+}

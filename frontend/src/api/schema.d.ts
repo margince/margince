@@ -16594,6 +16594,11 @@ export interface components {
             /** @description Meeting/call only. */
             duration_seconds?: number | null;
             /**
+             * Format: uuid
+             * @description Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
+             */
+            readonly host_user_id?: string | null;
+            /**
              * @description inbound/outbound for email/call; null for note/task.
              * @enum {string|null}
              */

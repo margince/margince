@@ -139,6 +139,13 @@
   flex: none;
 }
 
+/* An organization's mark is a rounded square, not a circle. A logo is drawn on
+   a square and a face is not, and on a page carrying a company and its people
+   the shape is what tells the two apart before a reader has read either. */
+.avatar-org {
+  border-radius: var(--r-sm);
+}
+
 /* The dense rung: a list table that has chosen to pack its rows. */
 .avatar-xs {
   width: 20px;
@@ -159,11 +166,13 @@
   font-size: 16px;
 }
 /* A WIDE record header, where the chip is the page's own mark rather than a
-   marker beside a name. */
+   marker beside a name. Sized to sit beside the name rather than to tower over
+   it: the record's name is the largest thing on the page, and a mark that
+   outweighs it makes the page look like a profile picture with a caption. */
 .avatar-lg {
-  width: 76px;
-  height: 76px;
-  font-size: 26px;
+  width: 46px;
+  height: 46px;
+  font-size: var(--fs-h2);
 }
 
 /* An avatar beside its label on one line — a list cell, a search hit, a node
@@ -229,6 +238,15 @@
   height: calc(100% - 4px);
   object-fit: contain;
   border-radius: var(--r-full);
+}
+
+/* A company's mark clips to the chip's OWN corner, not to a circle. The
+   rounding lives on the image as well as on the chip because the image is
+   positioned over it — an organization whose logo actually resolved came out
+   round while the one still showing its monogram was square, so the shape
+   said "company" only for the companies with no logo. */
+.avatar-org .avatar-img {
+  border-radius: calc(var(--r-sm) - 2px);
 }
 
 .skeleton {
@@ -386,6 +404,13 @@
   flex-direction: column;
   padding: 0;
 }
+/* The zero padding above belongs to the head/body/foot split: those three
+   bands pay their own, so the drawer must not pay it twice. A wide drawer
+   that does NOT split — the composer, which is one scrolling form — has
+   nothing to pay it, and its content sat flush against the drawer's edge. */
+.modal-drawer-wide:not(:has(> .drawer-head)) {
+  padding: var(--space-5);
+}
 .modal-drawer-wide > .drawer-head {
   position: sticky;
   top: 0;
@@ -440,9 +465,35 @@
 
 .modal .actions {
   display: flex;
+  align-items: center;
   justify-content: flex-end;
-  gap: 8px;
+  gap: var(--space-2);
   margin-top: 18px;
+}
+
+/* A verb that is neither the confirm nor the cancel goes to the far end of the
+   row, so the two controls that close the dialog stay a pair. */
+.modal .actions > .actions-lead {
+  margin-inline-end: auto;
+}
+
+/* One control in two halves: the confirm, and the caret that opens the other
+   way of confirming. The seam between them is a single hairline rather than a
+   gap, because a gap makes them two buttons and the caret then reads as a
+   verb of its own. */
+.actions-split {
+  display: inline-flex;
+  align-items: stretch;
+}
+.actions-split > .btn:first-child {
+  border-start-end-radius: 0;
+  border-end-end-radius: 0;
+}
+.actions-split > .btn:last-child {
+  border-start-start-radius: 0;
+  border-end-start-radius: 0;
+  border-inline-start: 1px solid var(--bgElevated);
+  padding-inline: var(--space-2);
 }
 
 /* A refused confirm explains itself in the column `Button` renders for it, and
@@ -509,6 +560,17 @@
   color: var(--textPrimary);
   box-shadow: var(--shadow-card);
 }
+/* How much is behind an option, beside its name. It stays --textMeta on the
+   pressed option too: the label says where you are, and a count that lit up
+   with it would read as the selection's own figure rather than as the size of
+   what is under it. Lighter weight for the same reason — it qualifies the
+   label, it does not compete with it. */
+.segmented button > .segmented-count {
+  margin-left: 6px;
+  font-weight: 400;
+  color: var(--textMeta);
+}
+
 /* Something waits behind this option. An accent dot rather than an indigo one:
  * indigo claims an agent proposed something, and what this marks is only that
  * a surface has an action nobody has taken yet. */
@@ -1312,12 +1374,22 @@
 .stat-card {
   display: flex;
   flex-direction: column;
-  gap: 0.15rem;
-  padding: 0.75rem 0.9rem;
+  gap: var(--space-1);
+  /* Tight on purpose. A reading is four short lines — what it is, the figure,
+     what the figure is drawn from, and a bar — and generous padding around
+     that much text turns a row a reader takes in at a glance into four boxes
+     they have to travel down. */
+  padding: 0.7rem 0.9rem;
   border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-md);
+  border-radius: var(--r-sm);
   background: var(--bgElevated);
+  box-shadow: var(--shadow-card);
   min-width: 0;
+  /* A floor under the shortest card, so a reading carrying only a number still
+     keeps the row's line. The row itself stretches every card to the tallest
+     (see .co-readings-grid), which is what makes them equal; this only stops
+     a lone card from collapsing to its text. */
+  min-block-size: 5rem;
 }
 
 /* Nothing left to declare between two adjacent StatCards. A free-standing card
@@ -1332,7 +1404,12 @@
  * --textMeta is the token tuned to hold AA contrast at that size. */
 .stat-card-label,
 .stat-card-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  font-size: var(--fs-meta);
   color: var(--textMeta);
+  text-wrap: pretty;
 }
 
 /* The label owns the row, and the source badge sits at its far end — beside
@@ -1340,16 +1417,137 @@
  * label without competing with the number. */
 .stat-card-label {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
-  gap: 0.4rem;
+  gap: var(--space-2);
 }
 .stat-card-source {
   flex-shrink: 0;
 }
 
+/* The figure, in the display face: it is the one thing on the card a reader
+   compares across the row, and comparing means finding it in the same place at
+   the same weight every time. */
 .stat-card-value {
+  font-family: var(--f-display);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-display);
+  line-height: 1.2;
   overflow-wrap: anywhere;
+}
+
+/* The receipt under a reading. Not a fourth line of it — it is what the
+   reading RESTS ON, so it sits apart from the figure whether it is open or
+   closed, and it sits at the card's foot rather than under the last line of
+   text. The row stretches every card to the tallest, and receipts left to
+   follow their own text landed at four different heights across it: the reader
+   compares readings across the row, and a line that moves card to card is one
+   they have to find again each time. */
+/* The door out, on the reading's own name line opposite the name: the label
+   says what this is and the door says where to go and work on it. */
+.stat-card-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: var(--accent);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.stat-card-open:hover {
+  text-decoration: underline;
+}
+.stat-card-open:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* The card's foot: the receipt at one end, the way out at the other. Pushed to
+   the BOTTOM of the card (margin-top: auto) so a row of readings of different
+   heights lines its feet up — the alternative was each card's last line
+   floating wherever its own content ended. */
+.stat-card-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  margin-top: auto;
+  padding-top: var(--space-2);
+}
+/* Only the door: with no receipt beside it, it still sits at the card's end
+   rather than under the figure. */
+.stat-card-foot:has(> .stat-card-open:only-child) {
+  justify-content: flex-end;
+}
+
+/* The receipt reads as the quiet line it is: meta-sized, in the meta colour,
+   and marked pressable only by its caret and its hover — the card's figure is
+   what a reader compares across the row, and a receipt set to compete with it
+   is the wrong thing catching the eye. */
+.popover-trigger.stat-card-basis {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+.popover-trigger.stat-card-basis:hover {
+  color: var(--textPrimary);
+}
+
+/* Inside the panel: the reading's own name over the working, then the door
+   under it. A column, because the three are three things and not one line. */
+.popover-panel:has(.stat-card-basis-head) {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+.stat-card-basis-head {
+  color: var(--textMeta);
+}
+
+/* The proportion, under the words that state it. Its own quiet track so an
+   empty bar still reads as a bar rather than as a missing one. */
+.stat-card-meter {
+  display: block;
+  block-size: 4px;
+  border-radius: var(--r-full);
+  background: var(--bgHover);
+  overflow: hidden;
+}
+/* Countable: separate segments with a gap, so a reader sees WHICH is out
+   rather than only how much. No track behind them — the empty segments are
+   the track. */
+.stat-card-meter-segments {
+  display: flex;
+  gap: var(--space-1);
+  background: none;
+}
+.stat-card-meter-segments .stat-card-meter-fill {
+  flex: 1;
+}
+.stat-card-meter-empty {
+  background: var(--bgHover);
+}
+.stat-card-meter-fill {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: var(--accent);
+}
+/* A reading whose figure carries a tone carries it into the bar too: the bar
+   is the same claim at a glance, and a green one under a red figure would be
+   the card disagreeing with itself. A reading with no tone is not a neutral
+   reading, it is one that is fine, so the untoned bar is the accent above —
+   a row of identical grey tracks made the reader compare lengths to find the
+   one that is wrong, when the colour already knows. */
+.stat-card-warn ~ .stat-card-meter .stat-card-meter-fill {
+  background: var(--warn);
+}
+.stat-card-danger ~ .stat-card-meter .stat-card-meter-fill {
+  background: var(--danger);
+}
+.stat-card-good ~ .stat-card-meter .stat-card-meter-fill {
+  background: var(--accent);
 }
 
 .stat-card-good {

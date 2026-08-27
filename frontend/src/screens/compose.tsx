@@ -1,9 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { X } from "lucide-react";
+import { CalendarDays, ChevronUp, Clock, Sparkles, X } from "lucide-react";
 import {
   type ReactNode,
   useCallback,
   useEffect,
+  useId,
   useRef,
   useState,
 } from "react";
@@ -14,13 +15,16 @@ import { navigate } from "../app/router";
 import {
   Badge,
   Button,
-  Card,
   Checkbox,
+  Modal,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Calendar, type ISODay, isoDay } from "../design-system/calendar";
 import { ChoiceList } from "../design-system/choicelist";
 import { ConfirmModal } from "../design-system/confirmmodal";
+import { Eyebrow } from "../design-system/eyebrow";
+import { Popover } from "../design-system/popover";
 import {
   liveProjects,
   type PickableProject,
@@ -33,9 +37,15 @@ import {
   type RecordPickerCandidate,
 } from "../design-system/recordpicker";
 import { Select, type SelectOption } from "../design-system/select";
-import { identifierNumber } from "../format/format";
-import { viewerZone } from "../format/timezone";
-import { useT } from "../i18n";
+import {
+  formatDateAbbrev,
+  formatDateTime,
+  INTL_LOCALE,
+  identifierNumber,
+} from "../format/format";
+import { viewerZone, zoneNameAndOffset } from "../format/timezone";
+import { type Locale, useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { entityTimelineKeys } from "./activitykeys";
 import {
   isConsentNotGranted,
@@ -251,6 +261,17 @@ function fillFromDraft(
     toEmpty: boolean;
     setSubject: (next: string) => void;
     setBody: (next: string) => void;
+    // The words as the model served them, kept beside the words on screen so
+    // the composer can tell the two apart. It is what decides whether a
+    // REWRITE is offered: rewriting is an instruction to the machine about its
+    // own draft, and once a rep has edited the text there is no longer a
+    // machine draft to rewrite — only the rep's work to overwrite.
+    setServedBody: (next: string) => void;
+    // A rewrite replaces the body it was asked about. Every other draft fills
+    // an EMPTY field and never clobbers, because the rep may have written
+    // something; a rewrite is only ever offered over the model's own untouched
+    // words, and replacing them is the whole ask.
+    rewrite?: boolean;
     setTo: (next: string[]) => void;
     setDraftRef: (next: string | null) => void;
     setProvenance: (next: DraftProvenance) => void;
@@ -270,8 +291,9 @@ function fillFromDraft(
         : drafted.subject,
     );
   }
-  if (!form.body) {
+  if (!form.body || form.rewrite) {
     form.setBody(drafted.body);
+    form.setServedBody(drafted.body);
     form.setDraftRef(drafted.draft_ref ?? null);
     form.setProvenance({
       // Absent reads as false, which the contract says outright: a missing
@@ -659,7 +681,10 @@ function RecipientField({
   };
   return (
     <div className="recipient-field">
-      <span className="t-caption">{label}</span>
+      {/* No visible label of its own: the row it sits in already names it
+          (MailRow), and the field printed a second "To" beside the first. The
+          `label` is still the input's accessible name, which is the half a
+          screen reader needs and a sighted reader gets from the row. */}
       <ul className="chips">
         {values.map((value) => (
           <li key={value}>
@@ -841,61 +866,6 @@ function DraftReasons({
   );
 }
 
-// The Art. 50 disclosure for a model-produced draft, in the card treatment the
-// offer surface's banner already uses. The server's disclosure line is a
-// compliance string rendered verbatim, never reworded; a response that omits it
-// still discloses, because a missing line may not silently become a missing
-// disclosure.
-//
-// The voice tag names the PROFILE version that styled the draft, and the
-// provisional label reports what that profile is today. Neither implies a
-// weaker draft: nothing gates drafting on maturity, so a provisional profile
-// styles this text exactly as a fuller one would.
-//
-// Both hang off the served version, because maturity is a corpus-word band
-// that reaches `provisional` while the profile is still only collecting — and
-// a profile with nothing built yet leaves the version null and styles nothing.
-// Reporting a voice's maturity over a draft no voice touched would overstate
-// this surface's own provenance, which Art. 50 does not permit.
-function DraftDisclosure({
-  provenance,
-  maturity,
-}: Readonly<{
-  provenance: DraftProvenance;
-  maturity: VoiceProfile["maturity"] | undefined;
-}>) {
-  const t = useT();
-  if (!provenance.ai_generated) {
-    return null;
-  }
-  return (
-    <Card
-      className="compose-disclosure"
-      testId="ai-disclosure-banner"
-      title={t("compose.aiDisclosureTitle")}
-    >
-      <p className="t-body">
-        {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
-      </p>
-      {provenance.voice_profile_version != null && (
-        <>
-          <p className="t-caption">
-            {t("compose.voiceVersion", {
-              n: identifierNumber(provenance.voice_profile_version),
-            })}
-          </p>
-          {maturity === "provisional" && (
-            <>
-              <Badge>{t("compose.provisional")}</Badge>
-              <p className="t-caption">{t("compose.provisionalHint")}</p>
-            </>
-          )}
-        </>
-      )}
-    </Card>
-  );
-}
-
 // One control's worth of mutation state, flattened so a presentational child
 // renders a pending/failed action without speaking react-query. `disabled` is
 // wider than `pending`: a control is also barred while a sibling action that
@@ -907,49 +877,57 @@ type PendingAction = Readonly<{
   error: string | null;
 }>;
 
-// The drafting controls: steer the model, draft, and — only once a served voice
-// draft is on screen — reject it. `discard` is null when there is nothing a
-// rejection could name, which is what keeps the judgment from being offered
-// where it would have no subject.
-function DraftBar({
+// The drawer BEFORE a machine has written anything: what the rep wants said,
+// and the one control that asks for it. It is the pre-draft face of the same
+// block the disclosure band takes over once a draft exists — the two never
+// show together, because the band's whole claim is about words that are on
+// screen.
+//
+// Rejecting a draft is not here. It is a verdict on the finished words and it
+// sits in the action row with the other verdicts (send, cancel), where a rep
+// decides what happens to the message rather than how it gets written.
+function DraftOffer({
   intent,
   onIntentChange,
   draft,
-  discard,
   unavailable,
 }: Readonly<{
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
-  discard: PendingAction | null;
   unavailable: boolean;
 }>) {
   const t = useT();
   return (
-    <>
+    <div className="compose-offer">
       <div className="compose-draftbar">
         <TextInput
           placeholder={t("compose.intent")}
           value={intent}
           onChange={(event) => onIntentChange(event.target.value)}
         />
-        <Button small onClick={draft.run} disabled={draft.disabled}>
+        {/* The agent's own verb, so it carries the agent's own colour and its
+            mark. Drawn as an ordinary ghost button it read as the quietest
+            control in the drawer when it is the one thing in here a machine
+            does. Indigo means "Margince does this" everywhere else on the
+            record; a composer that said it in grey is the one surface where
+            the reader has to guess. */}
+        <Button
+          small
+          variant="ai"
+          onClick={draft.run}
+          disabled={draft.disabled}
+        >
+          <Sparkles aria-hidden="true" />
           {draft.pending ? t("compose.drafting") : t("compose.draftWithAi")}
         </Button>
-        {discard && (
-          <Button small onClick={discard.run} disabled={discard.disabled}>
-            {t("compose.discardDraft")}
-          </Button>
-        )}
       </div>
-      {discard && <p className="t-caption">{t("compose.discardDraftHint")}</p>}
       {unavailable && (
         <p className="t-caption">{t("compose.draftUnavailable")}</p>
       )}
-      {/* Both failures appear without any navigation, so they are announced
-          rather than merely coloured: a rep who cannot see the line has to be
-          told the draft or the rejection did not land, on the same terms the
-          send refusals are announced. */}
+      {/* The failure appears without any navigation, so it is announced rather
+          than merely coloured: a rep who cannot see the line has to be told
+          the draft did not land, on the same terms the send refusals are. */}
       {!unavailable && draft.error && (
         <p
           className="t-caption"
@@ -959,16 +937,7 @@ function DraftBar({
           {draft.error}
         </p>
       )}
-      {discard?.error && (
-        <p
-          className="t-caption"
-          role="alert"
-          style={{ color: "var(--danger)" }}
-        >
-          {discard.error}
-        </p>
-      )}
-    </>
+    </div>
   );
 }
 
@@ -1194,14 +1163,168 @@ function canSendCompose(
 // endpoint for a channel) plus the recipient/subject inputs a channel reply's
 // request shape has no room for. Kept as its own component so a channel
 // reply — which renders none of this — doesn't inherit its branching.
+// One row of the mail's own head: what it is, then what it says.
+//
+// Label BESIDE the value, in a column of its own width, because these five
+// answers are read as a block — who it is to, what it is about, what it is
+// filed under — and a stack of label-above-field turned that block into ten
+// lines a reader travels rather than five they scan. The column is fixed, so
+// nothing in it wraps into a two-word paragraph the way it did when the label
+// was one flex item against a full-width control.
+function MailRow({
+  label,
+  children,
+}: Readonly<{ label: string; children: ReactNode }>) {
+  return (
+    <div className="mailrow">
+      <span className="mailrow-label t-caption">{label}</span>
+      <div className="mailrow-value">{children}</div>
+    </div>
+  );
+}
+
+// The band that says a MACHINE wrote the words below, and what it wrote them
+// from. It is the Art. 50 disclosure and the draft's reasoning in one block,
+// because to a reader they are one statement: this is not your colleague's
+// message, and here is what it stands on.
+//
+// Indigo, like every other place a machine did the work. It is the loudest
+// thing in the drawer on purpose — a rep who misses it sends a model's words
+// under their own name.
+//
+// The server's disclosure line is a compliance string rendered verbatim, never
+// reworded; a response that omits it still discloses, because a missing line
+// may not silently become a missing disclosure.
+//
+// The voice tag names the PROFILE version that styled the draft, and the
+// provisional label reports what that profile is today. Neither implies a
+// weaker draft: nothing gates drafting on maturity, so a provisional profile
+// styles this text exactly as a fuller one would. Both hang off the served
+// version, because maturity is a corpus-word band that reaches `provisional`
+// while the profile is still only collecting — and reporting a voice's
+// maturity over a draft no voice touched would overstate this surface's own
+// provenance, which Art. 50 does not permit.
+function DraftBand({
+  provenance,
+  maturity,
+  reasons,
+  children,
+}: Readonly<{
+  provenance: DraftProvenance;
+  maturity: VoiceProfile["maturity"] | undefined;
+  reasons: components["schemas"]["AccountDraftReason"][];
+  // The steer and the verb that asks for another draft. They belong INSIDE
+  // the band once one exists: the band is the machine's own block, and asking
+  // it to write again is the same conversation rather than a control that
+  // happens to sit nearby.
+  children: ReactNode;
+}>) {
+  const t = useT();
+  if (!provenance.ai_generated) {
+    return null;
+  }
+  return (
+    <section className="compose-band" data-testid="ai-disclosure-banner">
+      <Eyebrow>{t("compose.aiDisclosureTitle")}</Eyebrow>
+      <p className="t-body">
+        {provenance.ai_disclosure || t("compose.aiDisclosureFallback")}
+      </p>
+      <DraftReasons reasons={reasons} onOpenRecord={openCited} />
+      {provenance.voice_profile_version != null && (
+        <>
+          <p className="t-caption">
+            {/* A profile VERSION, never grouped: version 1234 is one
+                identifier, and "1.234" reads as a different one. */}
+            {t("compose.voiceVersion", {
+              n: identifierNumber(provenance.voice_profile_version),
+            })}
+          </p>
+          {maturity === "provisional" && (
+            <p className="t-caption">
+              <Badge>{t("compose.provisional")}</Badge>{" "}
+              {t("compose.provisionalHint")}
+            </p>
+          )}
+        </>
+      )}
+      {children}
+    </section>
+  );
+}
+
+// The four things a rep asks the machine to do to its own draft, as one press
+// each. Each is an instruction for ONE call — it never becomes the standing
+// steer in the intent field.
+// The label a rep reads and the instruction the model is given are two
+// different strings and both are translated: the button says "Shorter" and the
+// model is asked for it in a sentence, because an instruction of one word is
+// one the model has to guess the scope of.
+const REWRITES = [
+  {
+    key: "shorter",
+    label: "compose.rewriteShorter",
+    instruction: "compose.rewriteShorterAsk",
+  },
+  {
+    key: "warmer",
+    label: "compose.rewriteWarmer",
+    instruction: "compose.rewriteWarmerAsk",
+  },
+  {
+    key: "formal",
+    label: "compose.rewriteFormal",
+    instruction: "compose.rewriteFormalAsk",
+  },
+  {
+    key: "deadline",
+    label: "compose.rewriteDeadline",
+    instruction: "compose.rewriteDeadlineAsk",
+  },
+] as const satisfies readonly {
+  key: string;
+  label: MessageKey;
+  instruction: MessageKey;
+}[];
+
+// Offered only over the machine's OWN untouched words. Once the rep has
+// edited the body, a rewrite would throw their work away to answer a question
+// about text that is no longer there — so the row withdraws rather than
+// growing a confirm nobody would read.
+function RewriteRow({
+  onRewrite,
+  pending,
+}: Readonly<{
+  onRewrite: (instruction: string) => void;
+  pending: boolean;
+}>) {
+  const t = useT();
+  return (
+    <div className="compose-rewrite">
+      <Eyebrow>{t("compose.rewrite")}</Eyebrow>
+      {REWRITES.map((rewrite) => (
+        <Button
+          key={rewrite.key}
+          small
+          variant="aiQuiet"
+          disabled={pending}
+          onClick={() => onRewrite(t(rewrite.instruction))}
+        >
+          <Sparkles aria-hidden="true" />
+          {t(rewrite.label)}
+        </Button>
+      ))}
+    </div>
+  );
+}
+
 function MailOnlyFields({
   intent,
   onIntentChange,
   draft,
-  discard,
   draftUnavailable,
   provenance,
   voiceMaturity,
+  reasons,
   to,
   onToChange,
   cc,
@@ -1213,10 +1336,10 @@ function MailOnlyFields({
   intent: string;
   onIntentChange: (next: string) => void;
   draft: PendingAction;
-  discard: PendingAction | null;
   draftUnavailable: boolean;
   provenance: DraftProvenance | null;
   voiceMaturity: VoiceProfile["maturity"] | undefined;
+  reasons: components["schemas"]["AccountDraftReason"][];
   to: string[];
   onToChange: (next: string[]) => void;
   cc: string[];
@@ -1226,34 +1349,50 @@ function MailOnlyFields({
   rejectionInFlight: boolean;
 }>) {
   const t = useT();
+  const offer = (
+    <DraftOffer
+      intent={intent}
+      onIntentChange={onIntentChange}
+      draft={draft}
+      unavailable={draftUnavailable}
+    />
+  );
   return (
     <>
-      <DraftBar
-        intent={intent}
-        onIntentChange={onIntentChange}
-        draft={draft}
-        discard={discard}
-        unavailable={draftUnavailable}
-      />
-      {provenance && (
-        <DraftDisclosure provenance={provenance} maturity={voiceMaturity} />
+      {provenance ? (
+        <DraftBand
+          provenance={provenance}
+          maturity={voiceMaturity}
+          reasons={reasons}
+        >
+          {offer}
+        </DraftBand>
+      ) : (
+        offer
       )}
-      <RecipientField
-        label={t("compose.to")}
-        values={to}
-        onChange={onToChange}
-      />
-      <RecipientField
-        label={t("compose.cc")}
-        values={cc}
-        onChange={onCcChange}
-      />
-      <TextInput
-        placeholder={t("compose.subject")}
-        value={subject}
-        disabled={rejectionInFlight}
-        onChange={(event) => onSubjectChange(event.target.value)}
-      />
+      <MailRow label={t("compose.to")}>
+        <RecipientField
+          label={t("compose.to")}
+          values={to}
+          onChange={onToChange}
+        />
+      </MailRow>
+      <MailRow label={t("compose.cc")}>
+        <RecipientField
+          label={t("compose.cc")}
+          values={cc}
+          onChange={onCcChange}
+        />
+      </MailRow>
+      <MailRow label={t("compose.subject")}>
+        <TextInput
+          aria-label={t("compose.subject")}
+          placeholder={t("compose.subject")}
+          value={subject}
+          disabled={rejectionInFlight}
+          onChange={(event) => onSubjectChange(event.target.value)}
+        />
+      </MailRow>
     </>
   );
 }
@@ -1301,6 +1440,16 @@ function MailSendNotices({
 //
 // The two paths answer the same shape on purpose, so the fill below cannot
 // tell them apart and the origins cannot drift into different clobber rules.
+// What one drafting call is asked under: where it is grounded, and — for a
+// rewrite — the instruction that replaces the rep's own steering for that call
+// alone. A rewrite may not overwrite what the rep typed in the steer field:
+// they would come back to a box holding "make it shorter" as their standing
+// instruction for every draft after.
+type DraftAsk = Readonly<{
+  grounding: Grounding;
+  instruction?: string;
+}>;
+
 function useDraftMutation({
   activityId,
   entityType,
@@ -1316,34 +1465,39 @@ function useDraftMutation({
   entityId: string;
   intent: string;
   onUnavailable: () => void;
-  onDrafted: (result: Extract<DraftResult, { available: true }>) => void;
+  onDrafted: (
+    result: Extract<DraftResult, { available: true }>,
+    ask: DraftAsk,
+  ) => void;
   resetUnavailable: () => void;
   t: ReturnType<typeof useT>;
 }>) {
   return useMutation({
     mutationKey: ["email-draft", entityId],
-    mutationFn: async (grounding: Grounding): Promise<DraftResult> => {
+    mutationFn: async (ask: DraftAsk): Promise<DraftResult> => {
       resetUnavailable();
+      const { grounding } = ask;
+      const intentOf = ask.instruction ?? intent;
       // A reply answers the message it is anchored to; an account-started
       // message has none, so it is grounded in the account itself and needs
       // the recipient named first.
       if (activityId) {
-        return draftFromActivity({ activityId, intent, t });
+        return draftFromActivity({ activityId, intent: intentOf, t });
       }
       return draftFromAccount({
         entityType,
         entityId,
         ...grounding,
-        intent,
+        intent: intentOf,
         t,
       });
     },
-    onSuccess: (result) => {
+    onSuccess: (result, ask) => {
       if (!result.available) {
         onUnavailable();
         return;
       }
-      onDrafted(result);
+      onDrafted(result, ask);
     },
   });
 }
@@ -1478,6 +1632,230 @@ function useProjectFiling(input: {
   return { projectId, setProjectId: setPicked };
 }
 
+// The three moments a rep actually picks when they choose not to send now.
+//
+// Built from a `Date` the caller passes rather than read off the clock in
+// here, so the presets a test sees are the presets it set up.
+function schedulePresets(now: Date): readonly {
+  key: MessageKey;
+  at: Date;
+}[] {
+  const at = (days: number, hour: number) => {
+    const day = new Date(now);
+    day.setDate(day.getDate() + days);
+    day.setHours(hour, 0, 0, 0);
+    return day;
+  };
+  // Monday from a Monday is NEXT Monday: a rep picking "Monday morning" on a
+  // Monday afternoon means the one that has not happened yet.
+  const untilMonday = (8 - now.getDay()) % 7 || 7;
+  return [
+    { key: "compose.scheduleTomorrow", at: at(1, 8) },
+    { key: "compose.scheduleAfternoon", at: at(1, 13) },
+    { key: "compose.scheduleMonday", at: at(untilMonday, 8) },
+  ];
+}
+
+// The hours a business message is actually scheduled for. Four, not a clock:
+// the choice is "start of the day, mid-morning, after lunch, end of the day",
+// and a rep who wants 11:47 is not a rep this control is for.
+const SCHEDULE_HOURS = [8, 9, 13, 17] as const;
+
+// A moment as `datetime-local` spells it: the wall clock, no offset. Built
+// field by field rather than sliced out of an ISO string, because
+// `toISOString` is UTC and would move every preset by the reader's own offset.
+function localMoment(at: Date): string {
+  const pad = (value: number) => String(value).padStart(2, "0");
+  return `${isoDay(at)}T${pad(at.getHours())}:${pad(at.getMinutes())}`;
+}
+
+/** A `datetime-local` value back as a `Date`, or nothing if the field is empty. */
+function momentOf(local: string): Date | null {
+  if (!local) {
+    return null;
+  }
+  const at = new Date(local);
+  return Number.isNaN(at.getTime()) ? null : at;
+}
+
+/** A scheduled moment, spelled the way every line in this drawer spells one. */
+function momentLabel(at: Date, locale: Locale, zone: string): string {
+  return `${formatDateTime(at.toISOString(), locale, zone)} · ${zoneNameAndOffset(INTL_LOCALE[locale], at)}`;
+}
+
+// The other way to send, behind the confirm button's own caret.
+//
+// A moment is a choice ABOUT the send rather than a field of the message, so
+// it belongs with the send control and not in the form above it — it was a
+// datetime field between the consent purpose and the recipient warnings, which
+// is where a rep reads the message rather than where they decide to release
+// it.
+function ScheduleMenu({ onOpen }: Readonly<{ onOpen: () => void }>) {
+  const t = useT();
+  return (
+    <Popover
+      variant="primary"
+      className="compose-sendmenu"
+      label={
+        <>
+          <ChevronUp aria-hidden="true" size={16} />
+          <span className="sr-only">{t("compose.sendOptions")}</span>
+        </>
+      }
+    >
+      <Button variant="ghost" onClick={onOpen}>
+        <Clock aria-hidden="true" size={16} />
+        {t("compose.scheduleSend")}
+      </Button>
+    </Popover>
+  );
+}
+
+// Choosing when the message goes out: the three moments most sends take, and
+// the calendar for the ones that do not.
+//
+// Two steps in one dialog rather than two dialogs. The presets ARE the answer
+// most of the time, and a rep who wants one of them should not have to walk a
+// calendar to reach it; a rep who wants a different Thursday needs the month
+// in front of them. One dialog keeps that as one decision.
+function ScheduleDialog({
+  open,
+  onClose,
+  sendAt,
+  onChoose,
+  now,
+}: Readonly<{
+  open: boolean;
+  onClose: () => void;
+  sendAt: string;
+  onChoose: (next: string) => void;
+  // The clock, passed in: a component that read it itself could not be tested
+  // against a fixed set of presets.
+  now: Date;
+}>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const zone = viewerZone();
+  const headingId = useId();
+  const [picking, setPicking] = useState(false);
+  const chosen = momentOf(sendAt) ?? now;
+  const [day, setDay] = useState<ISODay>(isoDay(chosen));
+  const [hour, setHour] = useState(chosen.getHours());
+  const [month, setMonth] = useState(
+    () => new Date(chosen.getFullYear(), chosen.getMonth(), 1),
+  );
+  // Each opening starts from the current moment, not wherever the last
+  // opening left the calendar — a rep who paged to December and closed
+  // without choosing should not find December still showing next time.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep — this re-seeds the picker on open, not on every change to sendAt/now while it's already open.
+  useEffect(() => {
+    if (!open) return;
+    const start = momentOf(sendAt) ?? now;
+    setPicking(false);
+    setDay(isoDay(start));
+    setHour(start.getHours());
+    setMonth(new Date(start.getFullYear(), start.getMonth(), 1));
+  }, [open]);
+  const picked = new Date(`${day}T${String(hour).padStart(2, "0")}:00`);
+  return (
+    <Modal open={open} onClose={onClose} labelledBy={headingId} size="wide">
+      <h2 id={headingId} className="t-h2">
+        {picking ? t("compose.schedulePick") : t("compose.scheduleSend")}
+      </h2>
+      {picking ? (
+        <>
+          <div className="schedule-pick">
+            <Calendar
+              month={month}
+              onMonthChange={setMonth}
+              selected={day}
+              onSelect={setDay}
+              today={now}
+              locale={locale}
+            />
+            <div className="schedule-when">
+              <Eyebrow>{t("compose.scheduleDate")}</Eyebrow>
+              <p className="schedule-date t-body">
+                {formatDateAbbrev(picked.toISOString(), locale, zone)}
+              </p>
+              <Eyebrow>{t("compose.scheduleTime")}</Eyebrow>
+              <div className="schedule-hours">
+                {SCHEDULE_HOURS.map((option) => (
+                  <button
+                    key={option}
+                    type="button"
+                    className="schedule-hour t-mono"
+                    aria-pressed={option === hour}
+                    onClick={() => setHour(option)}
+                  >
+                    {`${String(option).padStart(2, "0")}:00`}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+          <p className="t-caption schedule-foot">
+            {t("compose.scheduleGoesOut", {
+              when: momentLabel(picked, locale, zone),
+            })}
+          </p>
+          <div className="actions">
+            <Button onClick={onClose}>{t("create.cancel")}</Button>
+            <Button
+              variant="primary"
+              onClick={() => {
+                onChoose(localMoment(picked));
+                onClose();
+              }}
+            >
+              {t("compose.scheduleSend")}
+            </Button>
+          </div>
+        </>
+      ) : (
+        <div className="schedule-presets">
+          <p className="t-caption">
+            {zoneNameAndOffset(INTL_LOCALE[locale], now)}
+          </p>
+          {schedulePresets(now).map((preset) => (
+            <button
+              key={preset.key}
+              type="button"
+              className="schedule-preset"
+              onClick={() => {
+                onChoose(localMoment(preset.at));
+                onClose();
+              }}
+            >
+              <span className="t-body">{t(preset.key)}</span>
+              <span className="t-caption">
+                {formatDateTime(preset.at.toISOString(), locale, zone)}
+              </span>
+            </button>
+          ))}
+          <Button variant="ghost" onClick={() => setPicking(true)}>
+            <CalendarDays aria-hidden="true" size={16} />
+            {t("compose.schedulePick")}
+          </Button>
+          {/* Only once a moment is set. Offered over an unscheduled send it
+              would be a control that undoes nothing. */}
+          {sendAt !== "" && (
+            <Button
+              variant="ghost"
+              onClick={() => {
+                onChoose("");
+                onClose();
+              }}
+            >
+              {t("compose.scheduleNow")}
+            </Button>
+          )}
+        </div>
+      )}
+    </Modal>
+  );
+}
+
 // biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this modal was already at the ceiling; the account-started origin (ADR-0087/A132) adds three necessary branches — the recipient/deal pickers, the grounded-draft gate and the drawer placement. The drafting call, the form fill, the body edit and both draft controls are already extracted; what is left is one dialog's own wiring, and splitting the send/consent/refusal/voice flow apart from the fields it gates would scatter it.
 export function ComposeModal({
   activityId,
@@ -1524,11 +1902,21 @@ export function ComposeModal({
   // it: wall-clock text in THEIR zone, with no offset. It becomes an absolute
   // instant at submit — see scheduleFields.
   const [sendAt, setSendAt] = useState("");
+  // Whether the moment picker is up. Separate from `scheduling` below, which
+  // says a moment has been CHOSEN: the dialog is open while the rep is still
+  // deciding, and closing it without picking leaves the send where it was.
+  const [pickingMoment, setPickingMoment] = useState(false);
+  const { locale } = useLocale();
+  const zone = viewerZone();
   const [provenance, setProvenance] = useState<DraftProvenance | null>(null);
   // The served voice draft the body in this form came from. It is what lets the
   // server say whether the rep sent the draft or rewrote it, so it may only ever
   // name the text actually on screen.
   const [draftRef, setDraftRef] = useState<string | null>(null);
+  // The words as the model last served them. Compared against `body`, it is
+  // what says whether the text on screen is still the machine's — which is the
+  // only text a rewrite may replace.
+  const [servedBody, setServedBody] = useState("");
   // Two honest non-error outcomes, kept OUT of react-query's error channel so
   // the form stays usable: the model / mailer simply isn't configured (501).
   const [draftUnavailable, setDraftUnavailable] = useState(false);
@@ -1602,13 +1990,15 @@ export function ComposeModal({
     entityId,
     intent,
     onUnavailable: () => setDraftUnavailable(true),
-    onDrafted: (result) =>
+    onDrafted: (result, ask) =>
       fillFromDraft(result, {
         subject,
         body,
         toEmpty: to.length === 0,
+        rewrite: ask.instruction !== undefined,
         setSubject,
         setBody,
+        setServedBody,
         setTo,
         setDraftRef,
         setProvenance,
@@ -1758,8 +2148,10 @@ export function ComposeModal({
     // project the reader can see chosen.
     run: () =>
       draft.mutate({
-        ...account.grounding,
-        projectId: projectFiling.projectId,
+        grounding: {
+          ...account.grounding,
+          projectId: projectFiling.projectId,
+        },
       }),
     pending: draft.isPending,
     disabled:
@@ -1768,15 +2160,10 @@ export function ComposeModal({
       (groundable && !account.recipientId),
     error: draft.isError ? problemMessageOf(draft.error, t) : null,
   };
-  // The mirror of the send gate: a rejection may not be started against a
-  // draft already on its way out.
-  // The account-started path's two additions to the form, built here so the
-  // JSX below reads as a layout rather than as a list of conditions.
-  //
-  // The pickers come FIRST because a grounded draft with no recipient has no
-  // relationship to stand on; the reasons come above the body because they are
-  // what the body is standing on, and a reader checks the inputs before the
-  // prose rather than after it.
+  // The account-started path's two additions to the mail's head — who this is
+  // to, and which deal it is about — built here so the JSX below reads as a
+  // layout rather than as a list of conditions. They sit with the other rows
+  // that say what the message IS, above the words themselves.
   const accountContext = groundable ? (
     <AccountDraftContext
       orgId={entityId}
@@ -1786,9 +2173,6 @@ export function ComposeModal({
       onDealChange={account.setDealId}
     />
   ) : null;
-  const accountReasons = (
-    <DraftReasons reasons={account.reasoning} onOpenRecord={openCited} />
-  );
   const discardControl = rejectable
     ? {
         run: () => discard.mutate(rejectable),
@@ -1805,126 +2189,185 @@ export function ComposeModal({
   // Mail-only, because the send-later control is (a channel reply answers a live
   // conversation and has no field to pick a moment in).
   const scheduling = !isChannelReply && sendAt !== "";
+  const scheduled = momentOf(sendAt);
   return (
-    <ConfirmModal
-      open={open}
-      onClose={onClose}
-      title={t(
-        isChannelReply
-          ? "compose.sendMessageConfirmTitle"
-          : scheduling
-            ? "compose.scheduleConfirmTitle"
-            : "compose.sendConfirmTitle",
-      )}
-      tier="confirm"
-      // The rep is about to send irreversibly, so the body they are
-      // confirming has to be readable at a glance rather than through a
-      // five-line porthole — and the Send button has to sit above the fold,
-      // not below a scroll.
-      size="wide"
-      // A DRAWER for the account-started message, so the account it is about
-      // stays on screen beside it (mockup State D). A reply keeps the centred
-      // box: its context is the thread in the dialog, not the page behind.
-      placement={groundable ? "right" : "center"}
-      confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
-      confirmDisabled={!canSend || rejectionInFlight}
-      onConfirm={() =>
-        send.mutate(
-          groundable
-            ? { ...account.grounding, projectId: projectFiling.projectId }
-            : null,
-        )
-      }
-      pending={send.isPending}
-      error={sendError}
-    >
-      <div className="compose-fields">
-        {accountContext}
-        {/* Every message says where it files. Mail ASKS — its answer travels
+    <>
+      <ScheduleDialog
+        open={pickingMoment}
+        onClose={() => setPickingMoment(false)}
+        sendAt={sendAt}
+        onChoose={setSendAt}
+        now={new Date()}
+      />
+      <ConfirmModal
+        open={open}
+        onClose={onClose}
+        title={t(
+          isChannelReply
+            ? "compose.sendMessageConfirmTitle"
+            : scheduling
+              ? "compose.scheduleConfirmTitle"
+              : "compose.sendConfirmTitle",
+        )}
+        tier="confirm"
+        // The rep is about to send irreversibly, so the body they are
+        // confirming has to be readable at a glance rather than through a
+        // five-line porthole — and the Send button has to sit above the fold,
+        // not below a scroll.
+        size="wide"
+        // A DRAWER for the account-started message, so the account it is about
+        // stays on screen beside it (mockup State D). A reply keeps the centred
+        // box: its context is the thread in the dialog, not the page behind.
+        placement={groundable ? "right" : "center"}
+        confirmLabel={t(scheduling ? "compose.schedule" : "compose.send")}
+        confirmDisabled={!canSend || rejectionInFlight}
+        onConfirm={() =>
+          send.mutate(
+            groundable
+              ? { ...account.grounding, projectId: projectFiling.projectId }
+              : null,
+          )
+        }
+        pending={send.isPending}
+        error={sendError}
+        actionsLead={
+          discardControl && (
+            <Button
+              onClick={discardControl.run}
+              disabled={discardControl.disabled}
+              // What discarding DOES, on the control itself: it is not an undo,
+              // it tells the voice profile this draft missed. A rep who reads it
+              // as "clear the box" would train the model on every draft they
+              // merely changed their mind about.
+              title={t("compose.discardDraftHint")}
+            >
+              {t("compose.discardDraft")}
+            </Button>
+          )
+        }
+        confirmMenu={
+          isChannelReply ? undefined : (
+            <ScheduleMenu onOpen={() => setPickingMoment(true)} />
+          )
+        }
+      >
+        <div className="compose-fields">
+          {/* Every message says where it files. Mail ASKS — its answer travels
             in the subject tag. A channel reply is TOLD: its send carries no
             filing field, so the conversation's own links are inherited
             whatever a control here collected. The condition is the
             transport's own, not the mail-only branch below. */}
-        {isChannelReply ? (
-          <ChannelReplyFiling activityId={activityId} />
-        ) : (
-          <ProjectFiling
-            projects={reachableProjects}
-            projectId={projectFiling.projectId}
-            onChange={projectFiling.setProjectId}
-          />
-        )}
-        {/* AI drafting is mail-only — there is no draft-message endpoint, and
+          {isChannelReply ? (
+            <ChannelReplyFiling activityId={activityId} />
+          ) : (
+            <ProjectFiling
+              projects={reachableProjects}
+              projectId={projectFiling.projectId}
+              onChange={projectFiling.setProjectId}
+            />
+          )}
+          {accountContext}
+          {/* AI drafting is mail-only — there is no draft-message endpoint, and
             a channel reply's recipient is resolved server-side, so neither
             the draft controls nor the To/Cc/Subject fields apply to it. */}
-        {!isChannelReply && (
-          <MailOnlyFields
-            intent={intent}
-            onIntentChange={setIntent}
-            draft={draftControl}
-            discard={discardControl}
-            draftUnavailable={draftUnavailable}
-            provenance={provenance}
-            voiceMaturity={voiceProfile.data?.maturity}
-            to={to}
-            onToChange={setTo}
-            cc={cc}
-            onCcChange={setCc}
-            subject={subject}
-            onSubjectChange={setSubject}
-            rejectionInFlight={rejectionInFlight}
-          />
-        )}
-        {accountReasons}
-        <Textarea
-          className="compose-body"
-          aria-label={t("compose.body")}
-          placeholder={t("compose.body")}
-          value={body}
-          disabled={rejectionInFlight}
-          onChange={(event) => editBody(event.target.value)}
-        />
-
-        <label className="t-body compose-check">
-          {t("compose.purpose")}
-          <Select
-            aria-label={t("compose.purpose")}
-            options={purposeOptions(purposes.data?.data)}
-            value={purpose}
-            onChange={setPurpose}
-          />
-        </label>
-        <p className="t-caption">{t("compose.purposeHint")}</p>
-
-        {!isChannelReply && (
-          <label className="field">
-            <span className="t-label">{t("compose.sendLaterLabel")}</span>
-            <TextInput
-              type="datetime-local"
-              value={sendAt}
-              onChange={(e) => setSendAt(e.target.value)}
+          {!isChannelReply && (
+            <MailOnlyFields
+              intent={intent}
+              onIntentChange={setIntent}
+              draft={draftControl}
+              draftUnavailable={draftUnavailable}
+              provenance={provenance}
+              voiceMaturity={voiceProfile.data?.maturity}
+              reasons={account.reasoning}
+              to={to}
+              onToChange={setTo}
+              cc={cc}
+              onCcChange={setCc}
+              subject={subject}
+              onSubjectChange={setSubject}
+              rejectionInFlight={rejectionInFlight}
             />
-            <span className="t-caption">{t("compose.sendLaterHint")}</span>
-          </label>
-        )}
-        {!isChannelReply && (
-          <MailSendNotices to={to} cc={cc} purpose={purpose} />
-        )}
-        {sendUnavailable && (
-          <p className="t-caption">{t("compose.sendUnavailable")}</p>
-        )}
-        <SendRefusal refusal={refusal} personId={personId} />
-        <p className="t-caption">
-          {t(
-            isChannelReply
-              ? "compose.sendMessageBody"
-              : scheduling
-                ? "compose.scheduleBody"
-                : "compose.sendBody",
           )}
-        </p>
-      </div>
-    </ConfirmModal>
+          <Textarea
+            className="compose-body"
+            aria-label={t("compose.body")}
+            placeholder={t("compose.body")}
+            value={body}
+            disabled={rejectionInFlight}
+            onChange={(event) => editBody(event.target.value)}
+          />
+          <p className="t-caption">{t("compose.bodyHint")}</p>
+          {/* Only over the machine's OWN untouched words: a rewrite replaces the
+            body, and once the rep has edited it there is no model draft left
+            to rewrite — only their work to throw away. */}
+          {body !== "" && body === servedBody && (
+            <RewriteRow
+              pending={draftControl.disabled}
+              onRewrite={(instruction) =>
+                draft.mutate({
+                  grounding: {
+                    ...account.grounding,
+                    projectId: projectFiling.projectId,
+                  },
+                  instruction,
+                })
+              }
+            />
+          )}
+
+          <label className="t-body compose-check">
+            {t("compose.purpose")}
+            <Select
+              aria-label={t("compose.purpose")}
+              options={purposeOptions(purposes.data?.data)}
+              value={purpose}
+              onChange={setPurpose}
+            />
+          </label>
+          <p className="t-caption">{t("compose.purposeHint")}</p>
+
+          {!isChannelReply && (
+            <MailSendNotices to={to} cc={cc} purpose={purpose} />
+          )}
+          {sendUnavailable && (
+            <p className="t-caption">{t("compose.sendUnavailable")}</p>
+          )}
+          {/* The rejection failed, and the rep has to be told: the judgment is
+            still open and the words on screen are still the ones it names.
+            Announced rather than merely coloured, on the same terms as every
+            other failure in this drawer. */}
+          {discardControl?.error && (
+            <p
+              className="t-caption"
+              role="alert"
+              style={{ color: "var(--danger)" }}
+            >
+              {discardControl.error}
+            </p>
+          )}
+          <SendRefusal refusal={refusal} personId={personId} />
+          <p className="t-caption">
+            {t(
+              isChannelReply
+                ? "compose.sendMessageBody"
+                : scheduling
+                  ? "compose.scheduleBody"
+                  : "compose.sendBody",
+            )}
+          </p>
+          {/* The moment in words, under the control that carries it: a rep who
+            picked one three clicks ago has to be able to read it back without
+            reopening the picker to find out what they chose. */}
+          {scheduled && (
+            <p className="t-caption">
+              {t("compose.willGoOut", {
+                when: momentLabel(scheduled, locale, zone),
+              })}
+            </p>
+          )}
+        </div>
+      </ConfirmModal>
+    </>
   );
 }
 

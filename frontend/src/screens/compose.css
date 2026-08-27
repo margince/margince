@@ -8,16 +8,176 @@
   margin-bottom: 12px;
 }
 
+/* A labelled control in the composer: the name ABOVE the field, not beside it.
+
+   Beside it, the label was one flex item against a select that took the rest
+   of the drawer, so "Draft to" broke across two lines into a two-word column
+   while the field beside it ran full width. Stacked, it also reads the same way
+   as every other field in the drawer — To, Cc, Subject, Body all name
+   themselves above the box — and a form with two label positions makes a
+   reader look for the name of each field twice. */
 .compose-check {
   display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+
+/* One line of the mail's head: what it is, then what it says. A fixed label
+   column so five short names cannot each wrap into a two-word paragraph, and
+   the values line up in one margin the reader sweeps down. */
+.mailrow {
+  display: grid;
+  grid-template-columns: minmax(0, 4.5rem) minmax(0, 1fr);
+  align-items: baseline;
+  gap: var(--space-3);
+  padding-block: var(--space-2);
+  border-block-end: 1px solid var(--borderSubtle);
+}
+.mailrow-label {
+  color: var(--textMeta);
+}
+.mailrow-value {
+  min-inline-size: 0;
+}
+
+/* The band that says a machine wrote what is below it. Indigo ground, indigo
+   rule under it: the same colour that marks machine authorship everywhere else
+   on the record, at the one moment it matters most. */
+.compose-band {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  margin-inline: calc(-1 * var(--space-4));
+  padding: var(--space-3) var(--space-4);
+  background: var(--aiLight);
+  border-block-end: 1px solid var(--aiMed);
+  color: var(--aiText);
+}
+.compose-band .t-body {
+  color: var(--aiText);
+}
+
+/* Before a draft exists: the steer and the verb that asks for one. */
+.compose-offer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+/* The four asks a rep can make of the machine's own words, under the body they
+   are about. A row, wrapping, with its name in front of it. */
+.compose-rewrite {
+  display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 4px;
+  gap: var(--space-2);
+}
+
+/* The caret half of the send control. It carries the confirm's own fill, so
+   the two read as one button divided rather than as a green button beside a
+   green square. */
+.compose-sendmenu {
+  min-inline-size: 0;
+}
+
+/* The three moments, each a row: what it is on the left, the moment it lands
+   on at the right. The absolute date is the half a rep checks — "Monday
+   morning" is the name of a decision and "Mon 31 Aug, 08:00" is the decision —
+   so the two sit at opposite ends and the moments line up in one margin. */
+.schedule-presets {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-1);
+}
+.schedule-preset {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-2) var(--space-3);
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--textPrimary);
+  text-align: left;
+  cursor: pointer;
+}
+.schedule-preset:hover {
+  background: var(--bgHover);
+}
+.schedule-preset:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.schedule-preset .t-caption {
+  color: var(--textMeta);
+}
+
+/* The calendar beside the readout it fills in, because the month is the thing
+   being read and the date and hour are what it produces. Stacked on a narrow
+   screen, where two columns would each be too tight to hold a week. */
+.schedule-pick {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  margin-block: var(--space-4);
+}
+@media (min-width: 40rem) {
+  .schedule-pick {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+.schedule-when {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+.schedule-date {
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+}
+.schedule-hours {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+.schedule-hour {
+  padding: var(--space-2) var(--space-3);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-full);
+  background: var(--bgElevated);
+  font-size: var(--fs-sm);
+  color: var(--textPrimary);
+  cursor: pointer;
+}
+.schedule-hour:hover {
+  background: var(--bgHover);
+}
+.schedule-hour:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+.schedule-hour[aria-pressed="true"] {
+  border-color: var(--borderStrong);
+  background: var(--bgCard);
+  font-weight: var(--fw-semibold);
+}
+
+/* The sentence the whole dialog produces, above the control that commits it. */
+.schedule-foot {
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--borderSubtle);
 }
 
 .compose-draftbar {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--space-2);
 }
 .compose-draftbar .input {
   flex: 1;

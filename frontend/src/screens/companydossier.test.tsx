@@ -97,7 +97,13 @@ describe("what this company is", () => {
     serving(DESCRIBED);
     show();
 
-    await screen.findByText(/What they offer: load-shifting software/);
+    // The block's leading claim is pulled out of the list and set as the
+    // block's own opening line; the rest follow underneath in written order.
+    // Both are still rendered — the lead is a promotion, never a drop.
+    const lead = await screen.findByText(
+      /What they offer: load-shifting software/,
+    );
+    expect(lead.className).toContain("co-brief-lead");
     // The sentences, not every row: the card renders one collected sources row
     // underneath them, which is a receipt rather than a claim.
     const sentences = screen
@@ -105,7 +111,6 @@ describe("what this company is", () => {
       .filter((item) => !item.classList.contains("co-brief-sources"))
       .map((item) => item.textContent?.trim());
     expect(sentences).toEqual([
-      expect.stringContaining("What they offer: load-shifting software."),
       expect.stringContaining(
         "Ideal customer: energy-intensive manufacturers.",
       ),

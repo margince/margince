@@ -273,3 +273,43 @@
 .panel-warn > .panel-foot {
   border-top-color: var(--warnBorder);
 }
+
+/* tone="ai": the panel a MACHINE wrote or read. Indigo is the product's one
+ * mark of machine authorship (tokens.css --ai), so this is a claim about who
+ * produced the panel rather than about how the account is doing — which is why
+ * it sits beside "accent" and "warn" rather than replacing either. A reader
+ * seeing indigo anywhere knows the same thing: Margince did this. */
+.panel-ai > .panel-head,
+.panel-ai > .panel-head h2 {
+  gap: var(--space-2);
+}
+/* The band hugs its two lines instead of centring them in a row sized for one.
+   This head carries who read the record OVER what they read, and a 48px row
+   built for a single title left the pair floating with more air under them
+   than the band is tall. Its verb rides the first line rather than the middle
+   of the stack. */
+.panel-ai > .panel-head {
+  align-items: flex-start;
+  min-height: 0;
+  padding-block: var(--space-3);
+}
+.panel-ai > .panel-head h2 {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-body);
+  font-weight: var(--fw-semibold);
+}
+.panel-ai {
+  border-color: var(--aiMed);
+}
+.panel-ai > .panel-head {
+  background: var(--aiLight);
+  border-bottom: 1px solid var(--aiMed);
+}
+.panel-ai > .panel-head h2 {
+  color: var(--aiText);
+}
+.panel-ai > .panel-foot {
+  border-top-color: var(--aiMed);
+}

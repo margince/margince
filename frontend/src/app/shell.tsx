@@ -39,6 +39,7 @@ import {
   useNavLevel,
   useNavWalk,
 } from "./navlevel";
+import { PageAsideProvider, PageAsideRegion } from "./pageaside";
 import { PAGE_SUB_KEYS, resolveTitle, sectionHead } from "./pagemeta";
 import { usePopoverDismiss } from "./popover";
 import { type Route, routeHash, useRoute } from "./router";
@@ -637,6 +638,17 @@ export function PageTitle({
   );
 }
 
+// The work column's own classes. A RECORD reads wider than a settings page or
+// the home screen: it carries a header, a tab strip and two columns under them,
+// where the others are one column of prose-width cards. Two widths, and the
+// class is what says which — see --pageColumn / --recordColumn.
+function mainClasses(gridded: boolean, griddedRecord: boolean): string {
+  if (!gridded) {
+    return "main";
+  }
+  return griddedRecord ? "main main-gridded main-record" : "main main-gridded";
+}
+
 export function Shell({
   children,
   counts,
@@ -777,59 +789,69 @@ export function Shell({
   };
 
   return (
-    <div className={collapsed ? "app" : "app railexpanded"}>
-      <SkipToContent target={scroller} />
-      {/* One rail, two suppliers of what it shows: a screen owning a level wires
+    // The provider spans the whole chrome, because the column and the screen
+    // that fills it are on opposite sides of the tree: the region is a sibling
+    // of <main>, the content comes from a screen inside it.
+    <PageAsideProvider>
+      <div className={collapsed ? "app" : "app railexpanded"}>
+        <SkipToContent target={scroller} />
+        {/* One rail, two suppliers of what it shows: a screen owning a level wires
           its own data in, everything else renders the destinations alone. The
           provider spans both, because the way out of a level is asked for on the
           rail that has one and answered with what the other one saw. */}
-      <NavWalkProvider value={walk}>
-        {leveled ? (
-          <SettingsRail {...railProps} />
-        ) : (
-          <WorkspaceRail {...railProps} />
-        )}
-      </NavWalkProvider>
-      <main className={gridded ? "main main-gridded" : "main"}>
-        {leveled ? (
-          <SettingsTopBar
-            route={route}
-            collapsed={collapsed}
-            onToggle={toggle}
-            onOpenSearch={onOpenSearch}
-          />
-        ) : (
-          <TopBar
-            route={route}
-            collapsed={collapsed}
-            onToggle={toggle}
-            onOpenSearch={onOpenSearch}
-          />
-        )}
-        {/* Public, onboarding, and preference routes are intentionally
+        <NavWalkProvider value={walk}>
+          {leveled ? (
+            <SettingsRail {...railProps} />
+          ) : (
+            <WorkspaceRail {...railProps} />
+          )}
+        </NavWalkProvider>
+        <main className={mainClasses(gridded, griddedRecord)}>
+          {leveled ? (
+            <SettingsTopBar
+              route={route}
+              collapsed={collapsed}
+              onToggle={toggle}
+              onOpenSearch={onOpenSearch}
+            />
+          ) : (
+            <TopBar
+              route={route}
+              collapsed={collapsed}
+              onToggle={toggle}
+              onOpenSearch={onOpenSearch}
+            />
+          )}
+          {/* Public, onboarding, and preference routes are intentionally
             railless; these advisories belong only here. */}
-        <EconomyBanner />
-        <EmbedReindexBanner />
-        {/* Focusable only as the skip link's destination — never a tab stop of
+          <EconomyBanner />
+          <EmbedReindexBanner />
+          {/* Focusable only as the skip link's destination — never a tab stop of
             its own, which is what tabIndex -1 buys. A reader who takes the skip
             lands here, PAST the strip, and the next Tab continues into the page's
             own controls. */}
-        <div className="scroll" ref={scroller} tabIndex={-1}>
-          {leveled ? (
-            <SettingsPageTitle route={route} />
-          ) : (
-            <PageTitle route={route} />
-          )}
-          {children}
-        </div>
-      </main>
-      {/* The agent's own periphery, drawn around the WHOLE workspace rather than
+          <div className="scroll" ref={scroller} tabIndex={-1}>
+            {leveled ? (
+              <SettingsPageTitle route={route} />
+            ) : (
+              <PageTitle route={route} />
+            )}
+            {children}
+          </div>
+        </main>
+        {/* The page's context column — a column of the WINDOW, beside the work
+          rather than inside it, so it runs the full height past the page's own
+          header and does not move when a tab changes. A screen that fills none
+          leaves nothing here. */}
+        <PageAsideRegion />
+        {/* The agent's own periphery, drawn around the WHOLE workspace rather than
           around the content column: what it reports is true of the window a
           person is working in, and a contour that stopped at the sidebar would
           read as a panel border. Last in the tree, because it is an overlay and
           not a column. */}
-      <AgentEdge />
-    </div>
+        <AgentEdge />
+      </div>
+    </PageAsideProvider>
   );
 }
 

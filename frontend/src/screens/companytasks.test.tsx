@@ -121,8 +121,11 @@ const org360WithheldTasks = {
 
 // Driven through the reader's own instance: a second implicit one forgets
 // which keys and buttons the first left held.
+// The tab button's accessible name carries a live count ("Tasks 3"), so a
+// prefix match is the only one that survives the account having any tasks at
+// all.
 async function openTasksTab(user: UserEvent) {
-  await user.click(await screen.findByRole("button", { name: "Tasks" }));
+  await user.click(await screen.findByRole("button", { name: /^Tasks/ }));
 }
 
 describe("CompanyScreen — the Tasks tab", () => {
@@ -273,13 +276,13 @@ describe("CompanyScreen — the Tasks tab", () => {
       ).toBeTruthy(),
     );
 
-    await user.click(screen.getByRole("button", { name: "Deals" }));
+    await user.click(screen.getByRole("button", { name: /^Deals/ }));
     await waitFor(() =>
       expect(
         screen.queryByRole("dialog", { name: openTask.subject }),
       ).toBeNull(),
     );
-    await user.click(screen.getByRole("button", { name: "Tasks" }));
+    await user.click(screen.getByRole("button", { name: /^Tasks/ }));
 
     await waitFor(() =>
       expect(screen.getByText(openTask.subject)).toBeTruthy(),

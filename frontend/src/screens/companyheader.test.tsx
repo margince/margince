@@ -8,7 +8,11 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { CompanyFacts } from "./companyfacts";
-import { CompanyActionBadges, CompanyIdentityLine } from "./companyheader";
+import {
+  CompanyActionBadges,
+  CompanyIdentityLine,
+  CompanyRelationshipBadges,
+} from "./companyheader";
 
 // Who wrote the record, beside when it was written. The tag has always been able
 // to name the author — `ProvenanceTag` takes a `renderUser` — and the header has
@@ -318,20 +322,19 @@ describe("an archived account's verbs", () => {
 //
 // The readings row that used to guard this compared the two itself and has since
 // been removed; the guard was local to it and never covered the header. So it is
-// pinned here, on the badges themselves.
+// pinned here, on the badges themselves — the ones beside the record's NAME,
+// which is where a tag on the record belongs and the only place they are drawn.
 describe("an account whose lifecycle and relationship agree", () => {
   it("says the word once, and keeps every relationship the lifecycle is not already saying", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
-      <CompanyActionBadges
+      <CompanyRelationshipBadges
         org={{ ...ORG, relationship_types: ["customer", "partner"] }}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
       />,
     );
 
-    // The strip is what this component draws; the lifecycle badge is the other
-    // mount, so a duplicate here is one "Customer" too many on its own.
+    // These badges are what this component draws; the lifecycle badge is the
+    // other mount, so a duplicate here is one "Customer" too many on its own.
     expect(await screen.findByText(en["org.relType.partner"])).toBeTruthy();
     expect(screen.queryByText(en["org.relType.customer"])).toBeNull();
   });
@@ -339,14 +342,12 @@ describe("an account whose lifecycle and relationship agree", () => {
   it("still draws a relationship the lifecycle disagrees with", async () => {
     stub([{ id: "u-owner", display_name: "Mira Voss" }]);
     renderInApp(
-      <CompanyActionBadges
+      <CompanyRelationshipBadges
         org={{
           ...ORG,
           lifecycle: "prospect",
           relationship_types: ["customer"],
         }}
-        onOpenHistory={() => undefined}
-        onSetUpPartner={() => undefined}
       />,
     );
 

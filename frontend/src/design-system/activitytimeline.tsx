@@ -4,12 +4,14 @@
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { emailSummaryText } from "../format/emailtext";
+import type { Locale, useT } from "../i18n";
 import { provenanceOf } from "../screens/common";
 import {
   isTranscriptActivity,
   TranscriptReadCard,
 } from "../screens/transcriptread";
 import type { TimelineEntry } from "./composed";
+import { type NameOf, peopleOn, withWhom } from "./participants";
 
 type Activity = components["schemas"]["Activity"];
 
@@ -70,6 +72,15 @@ function timelineTitle(activity: Activity): string {
     : body;
 }
 
+// The deal a row is filed against, as a chip. Absent when the row names none,
+// and absent when the resolver cannot name the one it does: a chip reading as
+// an id places nothing.
+function dealChip(activity: Activity, nameOf: NameOf): ReactNode {
+  const deal = activity.links?.find((link) => link.entity_type === "deal");
+  const name = deal && nameOf("deal", deal.entity_id);
+  return name ? <span className="tl-about">{name}</span> : undefined;
+}
+
 export function activityTimeline(
   // Optional because a 200 with no body is a shape the contract permits and
   // the mirror actually returns: `isSuccess` is true while `data.data` is
@@ -80,6 +91,15 @@ export function activityTimeline(
   // colleague's does not. Absent while the session is still resolving.
   viewerUserId?: string,
   renderActions?: (activity: Activity) => ReactNode,
+  // What the row's links are CALLED. Handed in, because the names live in the
+  // sections around the timeline and this adapter holds no read of its own.
+  // Absent leaves a row saying which way it went and nothing about whom, which
+  // is what it said before anybody could resolve a name at all.
+  who?: Readonly<{
+    nameOf: NameOf;
+    t: ReturnType<typeof useT>;
+    locale: Locale;
+  }>,
 ): TimelineEntry[] {
   return (activities ?? []).map((activity) => ({
     id: activity.id,
@@ -94,6 +114,13 @@ export function activityTimeline(
     // limit of what the page knew.
     body: activity.body,
     direction: activity.direction,
+    counterparts: who
+      ? withWhom(peopleOn(activity.links, who.nameOf), who.t, who.locale)
+      : undefined,
+    // What this exchange was ABOUT, when it is filed against a deal. A
+    // chronology of an account runs several deals through one list, and the
+    // row that does not say which one is a row a reader has to open to place.
+    via: who ? dealChip(activity, who.nameOf) : undefined,
     withheld: activity.content_state === "withheld",
     threadKey: activity.thread_key,
     bulkAttested: activity.bulk_mail_attested,

@@ -6,14 +6,13 @@ import type { SectionState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
 import { useLocale } from "../i18n";
 
-// Small pieces companyrail.tsx and companyrailtags.tsx both draw a section
-// summary off — a leaf so neither file imports the other, the same no-cycle
-// shape companylookups.ts already keeps for organizations.tsx/company360.tsx.
+// Small pieces the rail's own sections draw off — a leaf so companyrail.tsx
+// and companyrailtags.tsx do not import each other, the same no-cycle shape
+// companylookups.ts already keeps for organizations.tsx/company360.tsx.
 
-// A section's collapsible summary: the name, plus how many rows it carries.
-// Common to every section but Health, which shows its verdict there instead
-// (a count would say how many dimensions when the number a reader wants is
-// how good they are).
+// A collapsible section's summary: the name, plus how many rows it carries.
+// Still drawn by the signals disclosure, the one section left inside a
+// `Disclosure` rather than its own `Panel`.
 //
 // `count` is absent, not zero, while the section is withheld, unavailable or
 // still loading: a "0" badge above the restricted notice below it reads as an

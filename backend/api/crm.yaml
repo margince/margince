@@ -23348,6 +23348,15 @@ components:
         is_done: { type: boolean, default: false, description: Task only. }
         done_at: { type: [string, 'null'], format: date-time }
         duration_seconds: { type: [integer, 'null'], description: Meeting/call only. }
+        host_user_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            Meeting only: the member of this organization who held it. It is the one place an
+            activity names OUR side of an exchange — a mail says only which contact it was with,
+            and the mailbox behind it is not on the row. Null on every other kind, and on a
+            meeting nobody was recorded as hosting.
         direction: { type: [string, 'null'], enum: [null, inbound, outbound], description: 'inbound/outbound for email/call; null for note/task.' }
         thread_key:
           type: [string, 'null']

@@ -60,6 +60,8 @@ function SettledFace({
 }: Readonly<{ row: PairRow; currency: string | null | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useRecordZone();
+  const values = { currency, locale, zone };
   return (
     <>
       <ul className="entry-fields">
@@ -69,7 +71,7 @@ function SettledFace({
               {historyFieldLabel(change.field, t)}
             </span>
             <span>
-              {historyValue(change.field, change.newValue, currency, locale) ??
+              {historyValue(change.field, change.newValue, values) ??
                 t("history.cleared")}
             </span>
           </li>
@@ -91,6 +93,8 @@ function ResidualFace({
 }: Readonly<{ row: PairRow; currency: string | null | undefined }>) {
   const t = useT();
   const { locale } = useLocale();
+  const zone = useRecordZone();
+  const values = { currency, locale, zone };
   return (
     <>
       <span className="reversal-net">{t("history.reversal.stillChanged")}</span>
@@ -104,8 +108,7 @@ function ResidualFace({
               field={change.field}
               oldValue={change.oldValue}
               newValue={change.newValue}
-              currency={currency}
-              locale={locale}
+              values={values}
             />
           </li>
         ))}

@@ -313,15 +313,18 @@ func rateHealthDimensions(
 
 	// Commercial: is work moving? Null commercial means the caller has no deal
 	// grant, which is a fact about the reader rather than about the account.
-	if strip != nil && strip.Commercial != nil {
+	//
+	// An account with NOTHING open is not rated at all. "No open deal" is not a
+	// risk — a customer under contract who is not being sold to right now is in
+	// the ordinary state of a customer — and rating it at risk put every such
+	// account under a red verdict it had done nothing to earn, then dragged the
+	// overall standing down with it through the worst-of rule. There is no
+	// commercial verdict to give on a pipeline that does not exist, and an
+	// absent dimension is exactly how this reading says so.
+	if strip != nil && strip.Commercial != nil && strip.Commercial.OpenCount > 0 {
 		open := strip.Commercial.OpenCount
 		stalled := strip.Commercial.StalledCount
 		switch {
-		case open == 0:
-			health.Commercial = &crmcontracts.HealthDimension{
-				Rating: crmcontracts.HealthDimensionRatingAtRisk,
-				Reason: "Nothing open with them.",
-			}
 		case stalled >= open:
 			health.Commercial = &crmcontracts.HealthDimension{
 				Rating: crmcontracts.HealthDimensionRatingAtRisk,

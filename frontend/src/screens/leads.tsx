@@ -10,7 +10,6 @@ import {
   Button,
   Disclosure,
   Field,
-  SegmentedControl,
   StatCard,
   Textarea,
   TextInput,
@@ -22,6 +21,7 @@ import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
 import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
+import { RecordTabs } from "../design-system/recordtabs";
 import {
   useRecordTimeline,
   useTimelineFilters,
@@ -1703,8 +1703,11 @@ function LeadRecord({
           terminalReasonId={terminalReasonId}
         />
       }
+      // The same strip every record in the product carries: a place a reader
+      // navigates, drawn as a rule with the open body underlined, rather than
+      // a pill that offers a setting.
       tabs={
-        <SegmentedControl
+        <RecordTabs
           options={LEAD_TABS}
           value={tab}
           onChange={setTab}

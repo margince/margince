@@ -109,10 +109,16 @@ function Harness({ firstPage }: Readonly<{ firstPage?: ActivityPage }>) {
   );
 }
 
-function mount(firstPage?: ActivityPage) {
-  const client = new QueryClient({
+function newQueryClient() {
+  return new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
+}
+
+// `client` is a parameter, not always a fresh `newQueryClient()`, so a test
+// can mount the same record twice against ONE cache — the only way to prove
+// a second mount's query key doesn't collide with what the first left behind.
+function mount(firstPage?: ActivityPage, client = newQueryClient()) {
   render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
@@ -122,6 +128,44 @@ function mount(firstPage?: ActivityPage) {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return client;
+}
+
+/**
+ * IdsHarness mounts the hook alone, each returned activity as its own
+ * element in id order — so a test can read back exactly which activities
+ * came out, by id, rather than trusting a count or a subject line that two
+ * different rows could happen to share.
+ */
+function IdsHarness({ firstPage }: Readonly<{ firstPage?: ActivityPage }>) {
+  const [filters] = useTimelineFilters("p-1");
+  const timeline = useRecordTimeline("person", "p-1", { filters, firstPage });
+  return (
+    <>
+      {timeline.activities.map((row, index) => (
+        // biome-ignore lint/suspicious/noArrayIndexKey: the index is the point — a duplicated id must render twice, not collapse to once.
+        <span key={index} data-testid="activity-id">
+          {row.id}
+        </span>
+      ))}
+    </>
+  );
+}
+
+function mountIds(client: QueryClient, firstPage?: ActivityPage) {
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <RecordZoneProvider zone={INSTALLATION_ZONE}>
+          <IdsHarness firstPage={firstPage} />
+        </RecordZoneProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+}
+
+function renderedActivityIds(): string[] {
+  return screen.getAllByTestId("activity-id").map((el) => el.textContent);
 }
 
 afterEach(() => {
@@ -186,6 +230,29 @@ describe("a record timeline you can work in", () => {
     expect(await screen.findByText("Invoice question")).toBeTruthy();
     expect(feed.calls).toHaveLength(1);
     expect(feed.last().searchParams.get("cursor")).toBe("c-360");
+  });
+
+  it("a seed that is the whole history still gets its own cache key, so a later seedless read for the same record doesn't bleed into it", async () => {
+    const feed = activityFeed({
+      first: { data: [NEWEST], page: { has_more: false } },
+    });
+    vi.stubGlobal("fetch", feed.fetcher);
+
+    // A seedless mount for this record fetches page one and leaves it in the
+    // cache — the same cache the next mount below reads from.
+    const client = mount();
+    await screen.findByText("Fleet renewal");
+    cleanup();
+
+    // A record whose 360 seed holds the WHOLE history has `has_more: false`
+    // and so no next cursor — the seed alone can't tell this key apart from
+    // the seedless read above, and the query must be told some other way.
+    mountIds(client, {
+      data: [NEWEST, OLDER],
+      page: { has_more: false },
+    });
+
+    expect(renderedActivityIds().sort()).toEqual([NEWEST.id, OLDER.id].sort());
   });
 
   it("sends the kind to the server rather than filtering the page it holds", async () => {

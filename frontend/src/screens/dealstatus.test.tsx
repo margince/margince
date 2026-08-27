@@ -142,7 +142,7 @@ function renderCard() {
       }
     >
       <LocaleProvider initial="en">
-        <DealStatusCardPanel dealId={DEAL} />
+        <DealStatusCardPanel dealId={DEAL} dealName="PIM rollout Phase 2" />
       </LocaleProvider>
     </QueryClientProvider>,
   );

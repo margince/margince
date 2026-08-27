@@ -76,6 +76,28 @@ export const FALLBACK_RECORD_ZONE = "Europe/Berlin";
  * is not a zone Intl accepts — it throws. `UTC` is the honest fallback: it
  * names a real zone, and it is the one every wire instant is already stored in.
  */
+/**
+ * The reader's own zone, named and offset — "Indochina Time · UTC+7".
+ *
+ * Every line about a moment a message will be RELEASED at carries it. A send
+ * scheduled from Ho Chi Minh City for an account in Munich is a moment in ONE
+ * of those places, and "Tuesday, 08:00" with no zone is the sentence that gets
+ * that wrong.
+ *
+ * Both halves come from Intl's own names, so the zone reads in the reader's
+ * language; the offset is spelled UTC rather than Intl's GMT, because that is
+ * what the rest of the product says.
+ */
+export function zoneNameAndOffset(locale: string, at: Date): string {
+  const named = (style: "long" | "shortOffset") =>
+    new Intl.DateTimeFormat(locale, { timeZoneName: style })
+      .formatToParts(at)
+      .find((piece) => piece.type === "timeZoneName")?.value ?? "";
+  return [named("long"), named("shortOffset").replace("GMT", "UTC")]
+    .filter(Boolean)
+    .join(" · ");
+}
+
 export function viewerZone(): string {
   return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
 }

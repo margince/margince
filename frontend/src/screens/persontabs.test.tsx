@@ -121,12 +121,15 @@ describe("the timeline tab", () => {
     expect(screen.getByText("Fleet renewal")).toBeTruthy();
   });
 
-  it("opens on the activities the record already holds, not on its changes", () => {
-    // The changes feed is a second read, and a tab that fired it on open
-    // would spend it on every reader who never asked for changes.
+  it("opens on the whole chronology rather than on one cut of it", () => {
+    // What was said and what changed are one order of events, and a reader who
+    // wanted them together had to know a cut existed and choose it. The two
+    // narrower cuts stay for a reader who wants only one of them.
     withProviders(<PersonTimelineTab personId="p-1" view={view} />);
-    const activities = screen.getByRole("button", { name: "Activities" });
-    expect(activities.getAttribute("aria-pressed")).toBe("true");
+    const pressed = (name: string) =>
+      screen.getByRole("button", { name }).getAttribute("aria-pressed");
+    expect(pressed("All")).toBe("true");
+    expect(pressed("Activities")).toBe("false");
   });
 
   it("says the section is withheld rather than drawing it empty", () => {

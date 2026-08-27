@@ -72,6 +72,18 @@ const NEVER_INVOICED: ReadonlySet<string> = new Set([
   "opportunity",
 ]);
 
+/**
+ * FIN-AC-3: whether we have ever billed this account at all.
+ *
+ * The tab that holds the card and the card itself have to agree, so both ask
+ * here. A tab present over a card that returns null is an empty page a reader
+ * clicked for; a tab absent over a card that would have drawn hides money the
+ * account owes.
+ */
+export function hasFinance(lifecycle?: string): boolean {
+  return lifecycle == null || !NEVER_INVOICED.has(lifecycle);
+}
+
 export function CompanyFinanceCard({
   orgId,
   lifecycle,
@@ -88,7 +100,7 @@ export function CompanyFinanceCard({
   const recordZone = useRecordZone();
   const query = useFinanceSummary(orgId);
 
-  if (lifecycle && NEVER_INVOICED.has(lifecycle)) {
+  if (!hasFinance(lifecycle)) {
     return null;
   }
   // Resolved ONCE, above the branches. A former customer's money is history in

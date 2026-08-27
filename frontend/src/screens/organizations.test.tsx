@@ -12,6 +12,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { PageAsideProvider, PageAsideRegion } from "../app/pageaside";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
 import { AssistantPanel } from "./assistant";
@@ -43,13 +44,23 @@ afterEach(() => {
   window.location.hash = "";
 });
 
+// The page's context column is the SHELL's, not the record's: the record fills
+// it through a portal. So these renders carry the real region rather than a
+// stand-in — a test that supplied its own column would prove nothing about the
+// one the product draws, and the record's context cards would have nowhere to
+// land.
 function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <PageAsideProvider>
+          {ui}
+          <PageAsideRegion />
+        </PageAsideProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -136,8 +147,13 @@ async function startDeepRead(calls: string[]) {
   await waitFor(() =>
     expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
   );
-  await openProfile();
-  await userEvent.click(screen.getByRole("button", { name: "Read full site" }));
+  // No navigation: this fixture's account has nothing on file, so the 360
+  // leads with the research offer rather than filing it under the record's
+  // tools. An account that HAS something meets it on Profile instead, and the
+  // offer renders in exactly one of the two.
+  await userEvent.click(
+    screen.getByRole("button", { name: "Start company research" }),
+  );
   await waitFor(() =>
     expect(
       calls.some(
@@ -169,9 +185,12 @@ describe("company-360 deep read", () => {
       render(<CompanyScreen id="o-1" />);
       await flush();
       await flush();
-      fireEvent.click(screen.getByRole("button", { name: "Profile" }));
-      await flush();
-      fireEvent.click(screen.getByRole("button", { name: "Read full site" }));
+      // No navigation: this fixture's account has nothing on file, so the 360
+      // itself leads with the research offer rather than filing it under the
+      // record's tools.
+      fireEvent.click(
+        screen.getByRole("button", { name: "Start company research" }),
+      );
       await flush();
       await flush();
       expect(
@@ -289,9 +308,8 @@ describe("company-360 deep read", () => {
     await waitFor(() =>
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
-    await openProfile();
     await userEvent.click(
-      screen.getByRole("button", { name: "Read full site" }),
+      screen.getByRole("button", { name: "Start company research" }),
     );
     await waitFor(() =>
       expect(screen.getByText("no website on file")).toBeTruthy(),
@@ -306,9 +324,8 @@ describe("company-360 deep read", () => {
     await waitFor(() =>
       expect(screen.getByText("Brandt Automotive GmbH")).toBeTruthy(),
     );
-    await openProfile();
     await userEvent.click(
-      screen.getByRole("button", { name: "Read full site" }),
+      screen.getByRole("button", { name: "Start company research" }),
     );
     await waitFor(() =>
       expect(
@@ -1627,7 +1644,10 @@ describe("CompanyScreen — next-step suggestions", () => {
       expect(screen.getByText(stalledSuggestion.reason)).toBeTruthy(),
     );
     expect(screen.getByText("Stalled deal")).toBeTruthy();
-    // The evidence is reachable: a suggestion the rep cannot check is a verdict.
+    // The evidence is reachable: a suggestion the rep cannot check is a
+    // verdict. It sits behind the reason rather than beside it, so checking
+    // costs one gesture and reading the advice costs none.
+    await userEvent.click(screen.getByText(stalledSuggestion.reason));
     expect(screen.getByRole("button", { name: "deal" })).toBeTruthy();
   });
 
@@ -1854,13 +1874,14 @@ describe("CompanyScreen — Ask Margince", () => {
 
 // ONE column beside the left rail (mockup State D). The page had a work
 // column and a context column beside it; the context column moved to the
-// LEFT rail so the story keeps the wider share, and the composer opens as its
-// own overlay drawer rather than into a column. Tags and lists moved into the
-// rail's own panel too — the business grid that used to hold them is gone,
+// RIGHT aside so the story leads in reading order and keeps the wider share,
+// and the composer opens as its own overlay drawer rather than into a column.
+// Tags and lists live in that column's own panel too — the business grid that
+// used to hold them is gone,
 // which is the obligation these cases keep: a layout change must not become
 // an availability change.
 describe("CompanyScreen — State D's one column and its card grid", () => {
-  it("puts the account's context on the left, beside the work", async () => {
+  it("puts the account's context on the right, beside the work", async () => {
     stubFetch(companyBackstop, { org360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
@@ -1868,53 +1889,73 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
     await waitFor(() =>
       expect(container.querySelector(".co-panel-stack")).toBeTruthy(),
     );
-    // Two columns, not three: the context beside the work. A right-hand
-    // aside would be a third place to look, and the mockups draw none.
-    expect(container.querySelector(".record-rail")).toBeTruthy();
-    expect(container.querySelector(".co-rail")).toBeTruthy();
+    // The context is the PAGE's column, not one of the record's own: it sits
+    // beside the work rather than inside it, which is what lets it run past
+    // the header and stay put when a tab changes. The record itself keeps no
+    // rail of its own — a second column inside one would be a third place to
+    // look.
+    expect(document.querySelector(".pageaside")).toBeTruthy();
+    expect(document.querySelector(".co-rail")).toBeTruthy();
+    expect(container.querySelector(".record-rail")).toBeNull();
     expect(container.querySelector(".record-aside")).toBeNull();
   });
 
   // Every card is still ON the page, wherever it sits. Named individually
   // rather than counted: a count passes on a layout that lost one card and
   // grew another, and moving a card between columns must never be the way one
-  // disappears. The pipeline moved off the grid onto its own Deals tab, and
-  // tags/lists moved into the rail, so both are asserted there rather than in
-  // an Overview grid that no longer exists.
-  it("carries every panel of the overview stack, and files what is left in the rail", async () => {
+  // disappears. The pipeline reads on its own Deals tab and the money on its
+  // own Finance tab, and tags/lists sit in the context column, so each is
+  // asserted where it lives rather than in an Overview grid that no longer
+  // exists.
+  it("carries every panel of the overview stack, and files what is left in the context column", async () => {
     stubFetch(companyBackstop, { org360 });
     const { container } = render(<CompanyScreen id="o-1" />);
     await screen.findByText("Brandt Automotive GmbH");
 
-    // The overview stack: what is worth doing, the pipeline's own figures, and
-    // the money. "Worth doing next" is not asserted here — it is advice, and
-    // this fixture's account has none to give; the suggestions suite above
+    // The overview stack: what is worth doing and the pipeline's own figures.
+    // "Worth doing next" is not asserted here — it is advice, and this
+    // fixture's account has none to give; the suggestions suite above
     // exercises its own presence.
     const stack = container.querySelector(".co-panel-stack");
     expect(stack).toBeTruthy();
-    for (const panel of ["Commercial", "Finance"]) {
-      expect(stack?.textContent).toContain(panel);
-    }
+    expect(stack?.textContent).toContain("Commercial");
+    // The money is a TAB, so the overview column must not also carry it: a
+    // figure in two places is one the reader has to reconcile.
+    expect(stack?.textContent).not.toContain("Finance");
     expect(stack?.textContent).not.toContain("Lists & tags");
 
-    // The lead slot holds ONE card, decided by whether the account has work in
-    // flight. This fixture's account has no deals and no live projects, so the
-    // question it is actually asking is whether to sell to them at all — and
-    // a work card over nothing would answer a question nobody asked.
+    // What is in flight is drawn on EVERY account, this one included: "no open
+    // deals" is a fact about the account, and a section that vanished left the
+    // reader to work it out from a hole where a card had been on the last
+    // record they opened. The growth-fit card stands beside it rather than in
+    // its place — whether to sell here at all is a different question from
+    // what is running today.
     expect(stack?.textContent).toContain("What they are worth to you");
-    expect(stack?.textContent).not.toContain("What is in flight");
+    expect(stack?.textContent).toContain("What is in flight");
 
-    // The pipeline and the commercial picture have their own tab too.
-    await userEvent.click(screen.getByRole("button", { name: "Deals" }));
+    // What Margince spotted reads in the WORK column, beside the rest of what
+    // wants a decision, rather than in the context column.
+    expect(stack?.textContent).toContain("Margince also spotted");
+
+    // The pipeline and the commercial picture have their own tab too. Named by
+    // prefix: a tab carries the count of what is behind it, so its accessible
+    // name is the label AND the figure.
+    await userEvent.click(screen.getByRole("button", { name: /^Deals/ }));
     await waitFor(() =>
       expect(screen.getByRole("heading", { name: "Deals" })).toBeTruthy(),
     );
 
-    // The relationship around it, and how the account is filed, both live in
-    // the rail rather than off the page.
-    const rail = container.querySelector(".co-rail");
+    // The relationship around it, and how the account is filed, live in the
+    // PAGE's context column — queried off the document, because that column is
+    // the shell's and is portalled out of this record's own tree.
+    const rail = document.querySelector(".co-rail");
     expect(rail).toBeTruthy();
-    for (const card of ["People", "Signals", "Lists & tags"]) {
+    for (const card of [
+      "Active deals",
+      "Their key people",
+      "Details",
+      "Lists & tags",
+    ]) {
       expect(rail?.textContent).toContain(card);
     }
   });
@@ -1965,7 +2006,7 @@ describe("CompanyScreen — State D's one column and its card grid", () => {
 
     const stack = container.querySelector(".co-panel-stack");
     await waitFor(() =>
-      expect(stack?.textContent).toContain("Recent activity"),
+      expect(stack?.textContent).toContain("What happened lately"),
     );
     expect(stack?.textContent).not.toContain("Nothing logged with them yet");
   });
@@ -2033,9 +2074,12 @@ describe("CompanyScreen — the timeline says where it stops", () => {
     await waitFor(() =>
       expect(screen.getAllByText("Re: Lead Gen").length).toBeGreaterThan(0),
     );
+    // The tab opens on ALL, which merges the exchanges with the record's own
+    // changes — so the sentence is the merged view's, naming both kinds and
+    // the cuts that read further back.
     expect(
       screen.getByText(
-        "There are more activities here than fit. Only the most recent ones are listed.",
+        "Older entries are not shown here — there are more of both kinds than this view can put in order. Pick Activities or Changes to read further back.",
       ),
     ).toBeTruthy();
   });
@@ -2095,10 +2139,10 @@ describe("companyEditFields — the owner select never offers what it cannot sav
 });
 
 // The filter belongs to the account being read, not to the session: the route
-// swaps one company for another without unmounting, so a reader who checked
-// Changes once met Changes on every account afterwards.
+// swaps one company for another without unmounting, so a reader who narrowed
+// to Changes once met Changes on every account afterwards.
 describe("CompanyScreen — the timeline filter does not follow you", () => {
-  it("returns to Activities when another company is opened", async () => {
+  it("returns to All when another company is opened", async () => {
     stubFetch(async (url) =>
       /\/organizations\/o-\d$/.test(new URL(url).pathname)
         ? jsonResponse(org)
@@ -2134,7 +2178,9 @@ describe("CompanyScreen — the timeline filter does not follow you", () => {
     rerender(page("o-2"));
     await openHistory();
 
-    await waitFor(() => expect(pressed("Activities")).toBe("true"));
+    // Back to the whole history, which is where a reader starts on a record
+    // they have not looked at yet.
+    await waitFor(() => expect(pressed("All")).toBe("true"));
   });
 });
 

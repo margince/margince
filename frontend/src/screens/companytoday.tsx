@@ -1,9 +1,16 @@
+import { Sparkles } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, EmptyState, Skeleton } from "../design-system/atoms";
+import {
+  Avatar,
+  Badge,
+  Button,
+  EmptyState,
+  Skeleton,
+} from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody, PanelPlate, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { stable } from "../format/collate";
 import { formatDateTime, formatNumber } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
@@ -15,8 +22,13 @@ import {
   type SuggestionAction,
   useSuggestionsBody,
 } from "./company360";
+import {
+  HEALTH_RATING_LABEL,
+  HEALTH_STANDING_TONE,
+  useAccountStanding,
+} from "./companylookups";
 import { EntityRef } from "./entityref";
-import { signalKindLabel } from "./record360";
+import { BriefTitle, VerdictHead } from "./record360";
 
 // "Today on this account" — the record's daily brief, and the only part of
 // the page that answers *what do I do now*. It replaces two earlier cards
@@ -69,24 +81,6 @@ import { signalKindLabel } from "./record360";
 
 type Organization360 = components["schemas"]["Organization360"];
 
-// One reading under the lead: its name on the left, its answer on the right.
-// Every one carries a label, because in a column of answers an unlabelled one
-// is a sentence with nothing to hold it — "Demo Admin → Hill Pruksananont" is
-// two names and an arrow until "Best route" stands in front of it.
-type TodayItem = {
-  key: string;
-  label: string;
-  // A NODE, not a string, because a reading that names a record links to it:
-  // the route reading names a contact, and a name a reader cannot open is a
-  // name they have to go and search for. Every other reading still hands a
-  // plain string, which is a node.
-  headline: ReactNode;
-  // What the reading could not see before making its claim, drawn quieter
-  // than the claim itself. Only a reading whose honesty depends on it carries
-  // one; it is not a slot for a second sentence.
-  qualifier?: string;
-};
-
 // The lead reading: whose move it is, at the top of the context block and in
 // its own weight. It is the one thing on the panel a reader must know before
 // the moves under it mean anything, which is why it is not one row of the
@@ -112,8 +106,6 @@ export function TodayOnThisAccount({
   onOpenRecord,
   onPerform,
   onOpenTasks,
-  sections,
-  foot,
   spine,
 }: Readonly<{
   orgId: string;
@@ -135,26 +127,10 @@ export function TodayOnThisAccount({
   // Where the footer's commitment reading leads. Absent for a caller with no
   // Tasks tab of its own.
   onOpenTasks?: () => void;
-  // The account's story as a thread, above everything else in the card: where
-  // it stands is the question a reader opens the record with, and four
-  // labelled sections answered it only after they had read all four.
+  // The account's story as a thread, under the call it was read from. The two
+  // are one statement about the account, which is why they share a card: the
+  // verdict is the sentence and the thread is the evidence for it.
   spine?: ReactNode;
-  // What the card's footer carries BESIDE the day's own countdown: what moved
-  // on the account since the reader was last here. It belongs to the account
-  // rather than to any one section, so it rides in the card's footer band
-  // rather than inside a section that would then be claiming it.
-  foot?: ReactNode;
-  // The rest of the Company 360 — what is in flight, the commercial figures,
-  // what happened lately — under this card's own chrome.
-  //
-  // They hang here rather than as four cards down the column because a reader
-  // asked for ONE reading of the account, and because this is the page's
-  // accent card: four accent cards is no accent at all, and four plain ones
-  // beside it made the move-to-make look like one section of five.
-  //
-  // A slot rather than an import, so this file keeps knowing only about the
-  // day's brief. The page decides what the account's whole reading contains.
-  sections?: ReactNode;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -162,6 +138,9 @@ export function TodayOnThisAccount({
   // Called unconditionally regardless of the loading/failed branches below,
   // same as every other hook here — React requires it, and the hook itself
   // already answers "nothing to show" by returning `ready: false`.
+  // Called before the loading/failed branches below, like every other hook
+  // here: React requires it, and it answers "nothing rated" on its own.
+  const verdict = useAccountStanding(orgId, view?.health);
   const suggestions = useSuggestionsBody({
     orgId,
     view,
@@ -176,42 +155,39 @@ export function TodayOnThisAccount({
   //
   // The subhead rides with all three, because a skeleton or an error under no
   // name is a reader unable to tell WHICH of the four readings is missing.
+  // The way out of this section rides in the section's own head, opposite its
+  // label — the same place every other section of the card puts one. On the
+  // CARD's header it stood over four sections and named only one of them.
   const subhead = (
     <PanelBody className="co-360-head">
       <Eyebrow as="h3">{t("today.title")}</Eyebrow>
+      {onOpenTasks && (
+        <Button small variant="ghost" onClick={onOpenTasks}>
+          {t("co.suggest.viewTasks")}
+        </Button>
+      )}
     </PanelBody>
   );
+  // Neither the pending read nor the failed one draws the call card above.
+  // That card exists to state a verdict, and a card holding a spinner where
+  // the verdict goes is the reading claiming to have reached one.
   if (loading) {
     return (
-      <Panel
-        title={t("co.360.title")}
-        tone="accent"
-        className="co-lead"
-        footer={foot}
-      >
-        {spine}
+      <Panel className="co-reading-today">
         {subhead}
         <PanelBody>
           <Skeleton width="100%" height={64} />
         </PanelBody>
-        {sections}
       </Panel>
     );
   }
   if (failed || !view) {
     return (
-      <Panel
-        title={t("co.360.title")}
-        tone="accent"
-        className="co-lead"
-        footer={foot}
-      >
-        {spine}
+      <Panel className="co-reading-today">
         {subhead}
         <PanelBody>
           <EmptyState>{t("today.failed")}</EmptyState>
         </PanelBody>
-        {sections}
       </Panel>
     );
   }
@@ -223,55 +199,69 @@ export function TodayOnThisAccount({
     locale,
   };
   const lead = whoseMove(ctx);
-  const items = todayContextItems(ctx);
   const manualMoves = manualMoveRows({ view, t, onPrepareMeeting, onDraftTo });
   const commitment = nextCommitmentLine(view, locale, t);
-  const hasContext = lead !== null || items.length > 0;
+  // The same verdict the readings row's health card states, off the one hook
+  // that owns it — two computations of "how is this account" would agree until
+  // one of them learned about payment and the other did not.
+  // Nothing rated is itself a standing, and it says so: an account too new to
+  // score reads "not assessed" rather than dropping the call and leaving the
+  // sentence under it with nothing to belong to. The words are the readings
+  // row's own for the same state, so the two cannot disagree.
+  const standing = verdict.overall
+    ? {
+        label: t(HEALTH_RATING_LABEL[verdict.overall]),
+        tone: HEALTH_STANDING_TONE[verdict.overall],
+      }
+    : { label: t("co.strip.notAssessed"), tone: "unknown" as const };
+  const hasContext = lead !== null;
   const hasMoves = suggestions.ready || manualMoves.length > 0;
   const footer = briefFooter(commitment, suggestions.footer);
 
   return (
-    <Panel
-      title={<TodayTitle moves={suggestions.count + manualMoves.length} />}
-      tone="accent"
-      className="co-lead"
-      titleAction={
-        onOpenTasks && (
-          <Button small variant="ghost" onClick={onOpenTasks}>
-            {t("co.suggest.viewTasks")}
-          </Button>
-        )
-      }
-      footer={
-        (footer || foot) && (
+    <>
+      {/* THE CALL, and the thread it was read from. Its own card, because a
+          verdict and a to-do list are two different things to a reader who is
+          scanning: one is the account's state and the other is a queue, and
+          sharing a box they read as one continuous section where the state
+          happens to come first. */}
+      <Panel
+        tone="ai"
+        className="co-reading-call"
+        title={<BriefTitle name={view.organization?.display_name} />}
+      >
+        {/* The call, then the thread it was read from. A reader who scans and
+            leaves has the verdict and the sentence behind it; a reader who
+            stays gets the account's shape under it. The other order made them
+            walk the whole thread to find out whether anything was wrong. */}
+        <VerdictHead
+          label={standing.label}
+          tone={standing.tone}
+          because={lead ? leadSentence(lead) : undefined}
+          restsOn={verdict.restsOn}
+        />
+        {spine}
+      </Panel>
+      <Panel className="co-reading-today" footer={footer}>
+        {subhead}
+        {!hasContext && !hasMoves ? (
+          // Not "nothing to do": the brief read everything it can read and
+          // found nothing that needs a person today. That is a real answer
+          // and it is different from the account being empty.
+          <PanelBody>
+            <EmptyState>{t("today.quiet")}</EmptyState>
+          </PanelBody>
+        ) : (
           <>
-            {footer}
-            {foot}
+            {suggestions.rows}
+            {manualMoves}
           </>
-        )
-      }
-    >
-      {spine}
-      {subhead}
-      {!hasContext && !hasMoves ? (
-        // Not "nothing to do": the brief read everything it can read and
-        // found nothing that needs a person today. That is a real answer
-        // and it is different from the account being empty.
-        <PanelBody>
-          <EmptyState>{t("today.quiet")}</EmptyState>
-        </PanelBody>
-      ) : (
-        <>
-          {hasContext && <TodayContextBlock lead={lead} items={items} />}
-          {suggestions.rows}
-          {manualMoves}
-        </>
-      )}
-      {(view.sections_omitted?.length ?? 0) > 0 && (
-        <TodayWithheld view={view} />
-      )}
-      {sections}
-    </Panel>
+        )}
+        {(view.sections_omitted?.length ?? 0) > 0 && (
+          <TodayWithheld view={view} />
+        )}
+      </Panel>
+    </>
   );
 }
 
@@ -301,83 +291,23 @@ function briefFooter(
   );
 }
 
-// The card's name, and how many moves are waiting behind it. The count
-// answers "how much is on me here" before the reader has read a single row,
-// and it counts what is DRAWN — a count that included advice the card
-// withheld would send a reader looking for rows that are not there.
+// The verdict head's one line: whose move it is, and how long it has been that
+// way. Both come from the same `whoseMove` reading the plate below used to
+// lead with — the sentence moved up to sit beside the call, it was not
+// rewritten.
 //
-// The name is the RECORD's, not this section's: everything the page reads
-// about the account now hangs under it, and the day's brief says so under its
-// own subhead below.
-function TodayTitle({ moves }: Readonly<{ moves: number }>) {
-  const t = useT();
-  const { locale } = useLocale();
+// Two spans rather than one joined string, because they are two facts: a state
+// with no duration is a status, and a rep cannot act on a status. Joined, the
+// duration also stops being separately readable.
+function leadSentence(lead: TodayLead): ReactNode {
   return (
     <>
-      {t("co.360.title")}
-      {moves > 0 && <Badge tone="accent">{formatNumber(moves, locale)}</Badge>}
+      <span className="today-lead-state">{lead.headline}</span>
+      {lead.note && <span className="today-lead-note">{lead.note}</span>}
     </>
   );
 }
 
-// The context block: the state of the account at the top of the panel, and
-// the readings behind it under a rule. It is drawn on its own plate so a
-// reader can tell at a glance which part of the panel is what IS and which
-// part is what to DO — the moves below run full-bleed on the panel's own
-// ground, and nothing here looks pressable.
-function TodayContextBlock({
-  lead,
-  items,
-}: Readonly<{ lead: TodayLead | null; items: TodayItem[] }>) {
-  return (
-    <PanelPlate>
-      {lead && (
-        <p
-          className={
-            lead.tone ? `today-lead today-lead-${lead.tone}` : "today-lead"
-          }
-          data-tile="move"
-        >
-          {/* A mark, not a word: it colours with the state and says nothing a
-              screen reader would have to hear twice. */}
-          <span className="today-lead-mark" aria-hidden="true" />
-          <span className="today-lead-state">{lead.headline}</span>
-          {lead.note && <span className="today-lead-note">{lead.note}</span>}
-        </p>
-      )}
-      {items.length > 0 && (
-        <dl className="today-readings">
-          {items.map((item) => (
-            // The key's prefix names WHICH reading this is ("route",
-            // "interaction", …). Exposed so a layout test can anchor on the
-            // reading it means without matching drawn copy, which would make
-            // a translation edit fail a layout suite.
-            <div
-              key={item.key}
-              className="today-reading"
-              data-tile={item.key.split(":")[0]}
-            >
-              <dt>{item.label}</dt>
-              <dd>
-                {item.headline}
-                {item.qualifier && (
-                  <span className="today-reading-note">{item.qualifier}</span>
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </PanelPlate>
-  );
-}
-
-// manualMoveRows are the two verbs the context band used to lead to as a
-// sidebar: drafting a follow-up to the strongest reachable contact, and
-// preparing for a booked meeting. Rendered as full-bleed "move" rows now,
-// the same anatomy the advice rows use, so a reader meets one shape for
-// every action on this panel rather than a sidebar of buttons beside a grid
-// of tiles.
 function manualMoveRows({
   view,
   t,
@@ -393,33 +323,23 @@ function manualMoveRows({
   const meeting = view.next_meeting;
   const rows: ReactNode[] = [];
   // "Draft follow-up to <name>" names the strongest reachable contact,
-  // because a button that says who it will write to is a decision the
-  // reader can check before pressing it. It opens the composer grounded on
-  // the ACCOUNT rather than on a message, which is why it passes the
-  // recipient rather than an activity.
+  // because a row that says who it will write to is a decision the reader can
+  // check before pressing it. It opens the composer grounded on the ACCOUNT
+  // rather than on a message, which is why it passes the recipient.
   if (recipient && onDraftTo) {
     rows.push(
-      <PanelRow key="move:draft" className="co-move">
-        <span className="co-move-body">
-          <span className="co-move-ask">
-            {t("today.draft.to", { name: firstName(recipient.full_name) })}
-          </span>
-          <span className="co-move-do">
-            <span className="co-move-actions">
-              <Button
-                variant="primary"
-                small
-                onClick={() => onDraftTo(recipient.person_id)}
-              >
-                {/* The verb alone. The ask beside it already names who is
-                    being written to, and a button that repeats the whole
-                    sentence makes the row read as two moves. */}
-                {t("today.draft.act")}
-              </Button>
-            </span>
-          </span>
-        </span>
-      </PanelRow>,
+      <TodoRow
+        key="move:draft"
+        who={recipient.full_name}
+        title={t("today.draft.to", { name: firstName(recipient.full_name) })}
+        // Who the row would actually write to, under the ask. The title names
+        // a first name because that is how the ask reads; a row a reader is
+        // deciding whether to press has to say WHICH person that is, and two
+        // Phans on one account is the ordinary case rather than the odd one.
+        meta={recipient.full_name}
+        verb={t("today.draft.act")}
+        onAct={() => onDraftTo(recipient.person_id)}
+      />,
     );
   }
   if (meeting && onPrepareMeeting) {
@@ -427,42 +347,70 @@ function manualMoveRows({
     // reads the guest list to decide who to look up, and a name they have to
     // retype into search is the one step this row exists to save.
     const who =
-      meeting.participants.length > 0 &&
-      meeting.participants.map((participant, at) => (
-        <span key={participant.person_id}>
-          {at > 0 && ", "}
-          <EntityRef
-            kind="person"
-            id={participant.person_id}
-            name={participant.display_name}
-          />
-        </span>
-      ));
-    rows.push(
-      <PanelRow key="move:meeting" className="co-move">
-        <span className="co-move-body">
-          <span className="co-move-ask">{meeting.subject}</span>
-          {who && <span className="co-move-why">{who}</span>}
-          <span className="co-move-do">
-            <span className="co-move-actions">
-              <Button
-                small
-                onClick={() => onPrepareMeeting(meeting.activity_id)}
-              >
-                {t("today.meeting.prepare")}
-              </Button>
+      meeting.participants.length > 0
+        ? meeting.participants.map((participant, at) => (
+            <span key={participant.person_id}>
+              {at > 0 && ", "}
+              <EntityRef
+                kind="person"
+                id={participant.person_id}
+                name={participant.display_name}
+              />
             </span>
-          </span>
-        </span>
-      </PanelRow>,
+          ))
+        : undefined;
+    rows.push(
+      <TodoRow
+        key="move:meeting"
+        who={meeting.participants[0]?.display_name ?? meeting.subject}
+        title={meeting.subject}
+        meta={who}
+        verb={t("today.meeting.prepare")}
+        onAct={() => onPrepareMeeting(meeting.activity_id)}
+      />,
     );
   }
   return rows;
 }
 
-// The button names a person, and "Draft follow-up to Sarah Cole-Hagemeyer"
-// wraps to two lines in the column it sits in. A first name is how a rep
-// refers to a contact they are about to write to anyway.
+/**
+ * One thing already on somebody's list: who it sits with, what it is, and the
+ * one verb that advances it.
+ *
+ * The mark is the row's anchor. These rows are scanned rather than read, and a
+ * column of initials is what lets a reader find their own before they have
+ * read a word — which is also why the verb is an outlined chip rather than a
+ * filled button: filled, three of them outshout the single move above that the
+ * card is actually recommending.
+ */
+function TodoRow({
+  who,
+  title,
+  meta,
+  verb,
+  onAct,
+}: Readonly<{
+  who: string;
+  title: string;
+  meta?: ReactNode;
+  verb: string;
+  onAct: () => void;
+}>) {
+  return (
+    <PanelRow className="co-todo">
+      <Avatar name={who} size="xs" />
+      <span className="co-todo-body">
+        <span className="co-todo-title">{title}</span>
+        {meta && <span className="co-todo-meta">{meta}</span>}
+      </span>
+      <Button small variant="ghost" className="co-todo-verb" onClick={onAct}>
+        <Sparkles aria-hidden="true" />
+        {verb}
+      </Button>
+    </PanelRow>
+  );
+}
+
 function firstName(fullName: string): string {
   return fullName.split(" ")[0] || fullName;
 }
@@ -520,25 +468,6 @@ function TodayWithheld({ view }: Readonly<{ view: Organization360 }>) {
   );
 }
 
-// todayContextItems is the ordering decision, in one place and in priority
-// order — the context band's own reading order, before the moves under it.
-//
-// Whose move it is outranks the way in, which outranks what was last said,
-// which outranks what is wrong. Nothing here is scored — the order is fixed,
-// because a ranking a reader cannot predict is one they stop trusting. What
-// is OWED moved to the footer as the commitment reading (how much, how
-// soon), and the active-opportunity reading moved to the Commercial panel
-// (organizations.tsx) — both answer questions this band no longer needs to.
-//
-// One builder per rule, each free to answer "nothing to say" by returning
-// null. The alternative — one function branching over every source — was
-// the shape that made the ordering invisible inside the conditions.
-function todayContextItems(ctx: TodayContext): TodayItem[] {
-  return [bookedMeeting(ctx), bestRoute(ctx), openRisk(ctx)].filter(
-    (item): item is TodayItem => item !== null,
-  );
-}
-
 // Whose move it is, and how long it has been. Lifted from the state strip's
 // own engagement tile rather than re-derived: the strip no longer draws it
 // (it is a DATED reading, not the account's standing state), and the brief
@@ -586,83 +515,6 @@ function silenceNote(
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 
-// Who on our side can actually reach the account, and through whom.
-//
-// The rule, written down because it is a choice and not a derivation: of the
-// contacts who HAVE a route, the strongest by their own relationship score,
-// then that contact's strongest route — which the server already sorts, so
-// `top[0]` is it. Filtering first is deliberate: the strongest contact overall
-// may be someone nobody has ever written to, and naming them with no way in
-// answers a different question than the one the tile asks.
-//
-// The people section is a page of 25, so on a large account this is the best
-// route among the contacts the page carries rather than provably the best on
-// the account. The tile says so when the section is truncated — a "best" that
-// is really "best of the first 25" is the kind of quiet qualifier that costs
-// a reader trust in every other figure.
-function bestRoute({ view, t }: TodayContext): TodayItem | null {
-  const contacts = view.people?.data ?? [];
-  const best = contacts
-    .filter((contact) => (contact.routes?.top?.length ?? 0) > 0)
-    .sort(byStrengthThenId)[0];
-  const route = best?.routes?.top?.[0];
-  if (!best || !route) {
-    return null;
-  }
-  return {
-    key: `route:${best.person_id}`,
-    label: t("today.tile.route"),
-    // Built as markup rather than through the template, because the contact
-    // half is a link: `useT` returns a string and cannot carry an element.
-    // The arrow stays the template's, so the one place that decides how a
-    // route reads is still the catalog.
-    headline: (
-      <span className="today-route">
-        <EntityRef kind="user" id={route.user_id} name={route.display_name} />
-        {/* The separator the catalog spells, read out of the template rather
-            than typed here — a locale that writes the route another way round
-            still owns how it reads. */}
-        <span aria-hidden="true">{routeSeparator(t)}</span>
-        <EntityRef kind="person" id={best.person_id} name={best.full_name} />
-      </span>
-    ),
-    qualifier: routeQualifier(view, t),
-  };
-}
-
-/**
- * What sits between the two names in a route reading.
- *
- * The catalog's own template is the authority ("{colleague} → {contact}"),
- * so this renders it with both placeholders empty and keeps what is left. The
- * alternative was a glyph typed into this file, which is a second place
- * deciding how a route reads and the one a translator cannot reach.
- *
- * A template a locale rewrote without a middle falls back to an arrow: the two
- * names run together otherwise, and a reading with no separator says the
- * colleague IS the contact.
- */
-function routeSeparator(t: TodayContext["t"]): string {
-  const between = t("today.route.headline", { colleague: "", contact: "" });
-  // Kept verbatim, spaces included: the template's own spacing is what sets
-  // the two names apart, and trimming it would butt them together.
-  return between.trim() ? between : " \u2192 ";
-}
-
-// What this reading did NOT see before calling something best. The contact
-// section is one page, so on a large account this is the best route among the
-// contacts the page carries — a "best" that is really "best of the first 25"
-// is the kind of quiet omission that costs a reader trust in every other
-// reading beside it.
-function routeQualifier(
-  view: Organization360,
-  t: TodayContext["t"],
-): string | undefined {
-  return view.people?.page?.has_more
-    ? t("today.route.ofThoseShown")
-    : undefined;
-}
-
 // Strongest first, with the id as the tiebreak so two contacts on the same
 // score do not swap places between renders of the same data.
 function byStrengthThenId(
@@ -679,32 +531,6 @@ function byStrengthThenId(
 // so a "largest deal" reading beside it was the weaker of the two renderings
 // this file's own rule forbids.
 
-// What is wrong, if anything is. The state strip's signal is the worst thing
-// standing open on the account — already chosen by the server, so this tile
-// repeats its verdict rather than forming a second one that could disagree.
-function openRisk({ view, t }: TodayContext): TodayItem | null {
-  const signal = view.state_strip?.signal;
-  if (!signal) {
-    return null;
-  }
-  // An `info` signal is not a risk. "New opportunity" filed under Risk tells a
-  // rep something is wrong when the page meant the opposite, so the name of
-  // the reading follows the severity.
-  const worrying = signal.severity !== "info";
-  return {
-    key: `signal:${signal.kind}`,
-    // The label is what says this is a judgement: a signal is a threshold
-    // someone chose, fired on records rather than seen, and a summary standing
-    // on its own in a column of facts would read as one more of them.
-    label: t(worrying ? "today.tile.risk" : "today.tile.signal"),
-    // The server's own summary when it wrote one: "We wrote 19 days ago and
-    // nobody has answered" says what fired AND on what evidence, where the
-    // kind alone leaves a reader to guess. The kind is the fallback for a rule
-    // that summarised nothing.
-    headline: signal.summary ?? signalKindLabel(signal.kind, t),
-  };
-}
-
 type TodayContext = {
   view: Organization360;
   t: ReturnType<typeof useT>;
@@ -720,30 +546,3 @@ type TodayContext = {
 type Organization360Contact = NonNullable<
   Organization360["people"]
 >["data"][number];
-
-// The meeting.
-//
-// ABSENT MEANS TWO THINGS and only `sections_omitted` separates them: named
-// there, the reader has no calendar access; not named, the grant is held and
-// nothing is scheduled. This builder writes a line for neither — a booked
-// meeting is the only thing it has to say — and the withheld footer below is
-// what tells a reader they are missing the calendar. Advising "book one"
-// belongs to the suggestion engine, the only thing that can name whom.
-function bookedMeeting({ view, t, when }: TodayContext): TodayItem | null {
-  const meeting = view.next_meeting;
-  if (!meeting) {
-    return null;
-  }
-  return {
-    key: `meeting:${meeting.activity_id}`,
-    label: t("today.tile.meeting"),
-    // What it is and when, in that order — the same shape the last exchange
-    // reads in, because both answer "what happened, and when". Who is in it
-    // belongs to the move row that prepares for it, beside the button: a
-    // reading nobody can act on from here does not need the guest list.
-    headline: t("today.exchange.subjectWhen", {
-      subject: meeting.subject,
-      when: when(meeting.starts_at),
-    }),
-  };
-}

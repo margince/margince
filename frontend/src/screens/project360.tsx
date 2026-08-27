@@ -329,6 +329,8 @@ function useProjectChronology(
   overlay: boolean,
 ): ChronologySlots {
   const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const [filter, setFilter] = useChronologyFilter(view.project.id);
   const activities = view.activities;
   const activitiesState = sectionState(
@@ -348,9 +350,16 @@ function useProjectChronology(
     kind: "project",
     recordId: view.project.id,
     filter,
+    // A narrowed read is a question about what was said, so the record's own
+    // edits stand down: they are not meetings, and not what the reader asked.
+    narrowed: hasTimelineFilters(filters),
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
+    // What a stored value needs to be read as what it MEANS: this record holds
+    // no money of its own, so the currency is absent and a minor-unit column
+    // says so rather than printing a bare integer.
+    values: { currency: null, locale, zone: recordZone },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}

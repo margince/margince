@@ -12378,8 +12378,11 @@ type Activity struct {
 	DueAt *time.Time `json:"due_at,omitempty"`
 
 	// DurationSeconds Meeting/call only.
-	DurationSeconds *int               `json:"duration_seconds,omitempty"`
-	Id              openapi_types.UUID `json:"id"`
+	DurationSeconds *int `json:"duration_seconds,omitempty"`
+
+	// HostUserId Meeting only: the member of this organization who held it. It is the one place an activity names OUR side of an exchange — a mail says only which contact it was with, and the mailbox behind it is not on the row. Null on every other kind, and on a meeting nobody was recorded as hosting.
+	HostUserId *openapi_types.UUID `json:"host_user_id,omitempty"`
+	Id         openapi_types.UUID  `json:"id"`
 
 	// IsDone Task only.
 	IsDone *bool        `json:"is_done,omitempty"`

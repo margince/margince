@@ -4,6 +4,7 @@
 package org360
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -107,5 +108,56 @@ func TestEachSuggestionNamesWhatPerformingItMeans(t *testing.T) {
 	// Several deals are open, so naming one would be a guess dressed as advice.
 	if next.Action.DealId != nil {
 		t.Errorf("add_task picked deal %v for an account with several open", next.Action.DealId)
+	}
+}
+
+// The advice has to be checkable: it says there is no next step, and the only
+// way a reader can weigh that is against the deals it was read from.
+func TestNoNextStepNamesTheDealsItWasReadFrom(t *testing.T) {
+	t.Parallel()
+	org := ids.OrganizationID{UUID: ids.NewV7()}
+	first, second := ids.NewV7(), ids.NewV7()
+
+	one := noNextStepSuggestion(org, suggestionInputs{open: pipeline{
+		OpenCount: 1, OpenDigest: "d",
+		Open: []openDeal{{ID: first, Name: "PIM rollout Phase 2"}},
+	}})
+	if one == nil {
+		t.Fatal("the no-next-step rule stayed silent on an account with an open deal")
+	}
+	if !strings.Contains(one.Reason, "PIM rollout Phase 2") {
+		t.Errorf("reason = %q, want the deal's own name in it", one.Reason)
+	}
+	if len(one.Evidence) != 1 || one.Evidence[0].EntityType != "deal" ||
+		ids.UUID(one.Evidence[0].EntityId) != first {
+		t.Errorf("evidence = %+v, want the open deal itself", one.Evidence)
+	}
+
+	// Two deals, and both are cited: a receipt that named one of them would
+	// send the reader to check half the claim.
+	two := noNextStepSuggestion(org, suggestionInputs{open: pipeline{
+		OpenCount: 2, OpenDigest: "d",
+		Open: []openDeal{
+			{ID: first, Name: "PIM rollout Phase 2"},
+			{ID: second, Name: "Data quality add-on"},
+		},
+	}})
+	if two == nil || len(two.Evidence) != 2 {
+		t.Fatalf("evidence = %+v, want both open deals", two)
+	}
+	if !strings.Contains(two.Reason, "Data quality add-on") {
+		t.Errorf("reason = %q, want both deals named", two.Reason)
+	}
+
+	// A count with no names still states the finding rather than dropping it,
+	// and its receipt falls back to the account so the dismissal stays keyed to
+	// this record rather than to an empty list.
+	bare := noNextStepSuggestion(org, suggestionInputs{open: pipeline{OpenCount: 4, OpenDigest: "d"}})
+	if bare == nil || len(bare.Evidence) != 1 ||
+		bare.Evidence[0].EntityType != "organization" {
+		t.Fatalf("evidence = %+v, want the account itself when no deal survived the read", bare)
+	}
+	if !strings.Contains(bare.Reason, "4 deals are open") {
+		t.Errorf("reason = %q, want the count when there are no names", bare.Reason)
 	}
 }

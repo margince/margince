@@ -17,6 +17,13 @@ import (
 )
 
 // openRow is one open deal as the pipeline read scans it.
+// openDeal is one open deal as the advice cites it: what it is called, and the
+// record a reader opens to check.
+type openDeal struct {
+	ID   ids.UUID
+	Name string
+}
+
 type openRow struct {
 	id         ids.UUID
 	name       string
@@ -88,10 +95,15 @@ func wouldWrap(running, value int64) bool {
 // which deals enter the total, what the total means when some cannot, and what
 // provenance a converted figure has to carry (plan §4.2).
 func foldPipeline(open []openRow) pipeline {
-	out := pipeline{OpenCount: len(open), Stalled: make([]stalledDeal, 0, len(open))}
+	out := pipeline{
+		OpenCount: len(open),
+		Stalled:   make([]stalledDeal, 0, len(open)),
+		Open:      make([]openDeal, 0, len(open)),
+	}
 	sorted := make([]string, 0, len(open))
 	for _, deal := range open {
 		sorted = append(sorted, deal.id.String())
+		out.Open = append(out.Open, openDeal{ID: deal.id, Name: deal.name})
 		// A total that wraps past int64 is a plausible-looking wrong number,
 		// which is worse than no number. Such a deal stays counted in
 		// open_count and out of the sum, exactly as an unconvertible one does,

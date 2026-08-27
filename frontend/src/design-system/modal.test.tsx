@@ -1,9 +1,16 @@
 /** @vitest-environment jsdom */
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  act,
+  cleanup,
+  fireEvent,
+  render,
+  screen,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { Button, Modal } from "./atoms";
+import { Popover } from "./popover";
 
 // A dialog covers the page. `aria-modal` says so to a screen reader and does
 // nothing for the Tab key, so these are the two keyboard obligations the
@@ -24,6 +31,68 @@ function Harness() {
       </Modal>
     </>
   );
+}
+
+// A dialog whose only popover carries prose — the StatCard receipt shape.
+function ProseReceipt() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open</Button>
+      <Modal open={open} onClose={() => setOpen(false)} labelledBy="p">
+        <h2 id="p">Won this quarter</h2>
+        <Popover label="Basis">
+          <p>Six of nine, since April.</p>
+        </Popover>
+        <Button onClick={() => setOpen(false)}>Close</Button>
+      </Modal>
+    </>
+  );
+}
+
+// Two receipts open at once. A popover shuts on a press outside itself, so a
+// second CLICK never leaves the first standing — but a hover-opened one is
+// raised by a settling pointer and presses nothing. The prose one is FIRST in
+// the dialog and opens on hover, so DOM order and focus disagree.
+function TwoReceipts() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open</Button>
+      <Modal open={open} onClose={() => setOpen(false)} labelledBy="w">
+        <h2 id="w">Won this quarter</h2>
+        <Popover label="Basis" onHover>
+          <p>Six of nine, since April.</p>
+        </Popover>
+        <Popover label="Rows">
+          <button type="button">Only row</button>
+        </Popover>
+        <Button onClick={() => setOpen(false)}>Close</Button>
+      </Modal>
+    </>
+  );
+}
+
+// A pointer that arrives and stops. The hook reads `timeStamp` off the event,
+// which jsdom does not fill in from fake timers, and it treats silence as the
+// answer — so the settle is two moves at one place and then a wait.
+function settleOn(trigger: HTMLElement) {
+  fireEvent.pointerEnter(trigger);
+  for (const _ of [0, 1]) {
+    const move = new Event("pointermove") as PointerEvent & {
+      clientX: number;
+      clientY: number;
+    };
+    Object.defineProperties(move, {
+      clientX: { value: 10 },
+      clientY: { value: 10 },
+      timeStamp: { value: performance.now() },
+    });
+    document.dispatchEvent(move);
+  }
+  act(() => {
+    vi.advanceTimersByTime(400);
+  });
 }
 
 describe("a dialog holds the keyboard", () => {
@@ -79,6 +148,47 @@ describe("a dialog holds the keyboard", () => {
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Last" }),
     );
+  });
+
+  it("keeps Tab working when a popover in the dialog is prose", async () => {
+    // A receipt under a reading is frequently a sentence and nothing else. The
+    // trap hands Tab to the panel a dialog has opened, and a panel with no
+    // stops in it can only answer by swallowing the key — the dialog is then
+    // as unwalkable as if it had no controls at all.
+    render(<ProseReceipt />);
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("button", { name: "Basis" }));
+    expect(screen.getByText("Six of nine, since April.")).toBeTruthy();
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Close" }),
+    );
+  });
+
+  it("holds Tab in the open panel the reader is in, not the first one", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+    try {
+      render(<TwoReceipts />);
+      await user.click(screen.getByRole("button", { name: "Open" }));
+      await user.click(screen.getByRole("button", { name: "Rows" }));
+      const row = screen.getByRole("button", { name: "Only row" });
+      expect(document.activeElement).toBe(row);
+
+      // The prose receipt rises beside it under a settling pointer, pressing
+      // nothing, so both are open at once.
+      settleOn(screen.getByRole("button", { name: "Basis" }));
+      expect(screen.getByText("Six of nine, since April.")).toBeTruthy();
+
+      // Picked by DOM order, the trap would find the prose panel first, have
+      // nothing to focus in it, and hand Tab back to the dialog — taking the
+      // reader out of the panel they are standing in.
+      await user.tab();
+      expect(document.activeElement).toBe(row);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("gives focus back to whatever opened it, so the reader keeps their place", async () => {

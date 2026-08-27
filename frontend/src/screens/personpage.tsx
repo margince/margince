@@ -14,10 +14,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
-import { Button, OverflowMenu, SegmentedControl } from "../design-system/atoms";
+import { Button, OverflowMenu } from "../design-system/atoms";
 import { RecordView } from "../design-system/composed";
 import { IconAction } from "../design-system/iconaction";
 import { liveProjects } from "../design-system/projectpicker";
+import { RecordTabs } from "../design-system/recordtabs";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { throwProblem } from "./common";
@@ -310,11 +311,6 @@ export function PersonPageV2({
         }
         actionsInline
         zone={recordZone}
-        // The readings ride the band, above the columns and across the full
-        // width: they describe the RELATIONSHIP, not one view of it, and a
-        // strip that vanished on the Deals tab would move the tab bar and
-        // re-flow the page under the reader.
-        band={<PersonStrip view={view.data} consentVerdict={consentVerdict} />}
         railLabel={t("person.page.asideLabel")}
         rail={
           <PersonRail
@@ -325,7 +321,7 @@ export function PersonPageV2({
           />
         }
         tabs={
-          <SegmentedControl
+          <RecordTabs
             options={PERSON_TABS}
             value={tab}
             onChange={(next) => navigate(personTabRoute(id, next))}
@@ -353,6 +349,13 @@ export function PersonPageV2({
       >
         {tab === "overview" && (
           <div className="record-stack">
+            {/* The readings lead the overview, under the strip that chose it —
+                the same place the account page puts its own. They belong to
+                THIS body rather than to the record: the Deals tab is a list of
+                deals and the Documents tab a filing cabinet, and a row of
+                relationship readings over either is a header for a page it is
+                not describing. */}
+            <PersonStrip view={view.data} consentVerdict={consentVerdict} />
             {view.data.moment && (
               <PersonToday
                 moment={view.data.moment}

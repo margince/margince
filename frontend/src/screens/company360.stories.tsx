@@ -3,7 +3,6 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { components } from "../api/schema";
-import { useT } from "../i18n";
 import {
   CommercialPanel,
   DealsCard,
@@ -13,9 +12,7 @@ import {
   StateStrip,
 } from "./company360";
 import { CompanyContractState } from "./companycommercial";
-import { LIFECYCLE_LABELS } from "./companylookups";
 import { CompanyWorkCard } from "./companywork";
-import { RELATIONSHIP_TYPE_LABELS } from "./organizations";
 import {
   installFetchStub,
   jsonResponse,
@@ -412,24 +409,6 @@ const connectedFinance: FinanceSummary = {
 
 // The two lookups below are keyed on the real wire enums (Lifecycle,
 // RelationshipType), but StateStrip's own label props take a bare `string` —
-// it draws whatever the account's enum happens to be without knowing the
-// lookup's key type. A type guard narrows the string to the lookup's key
-// rather than casting it, which is what the real caller
-// (organizations.tsx's CompanyBand) reaches for with `as` because it already
-// knows the value came off `Organization["lifecycle"]`; the strip here has
-// no such upstream guarantee to lean on.
-function isLifecycleLabelKey(
-  value: string,
-): value is keyof typeof LIFECYCLE_LABELS {
-  return value in LIFECYCLE_LABELS;
-}
-
-function isRelationshipTypeLabelKey(
-  value: string,
-): value is keyof typeof RELATIONSHIP_TYPE_LABELS {
-  return value in RELATIONSHIP_TYPE_LABELS;
-}
-
 // StateStrip: the record's own readings row, above the tabs — FIVE slots on
 // every account, drawn by the shared StatStrip the person record uses.
 //
@@ -448,25 +427,7 @@ function isRelationshipTypeLabelKey(
 // the identity functions that used to stand in for it and rendered the raw
 // wire enum instead of its copy.
 function StripBody({ view }: Readonly<{ view?: View }>) {
-  const t = useT();
-  return (
-    <StateStrip
-      orgId="o-1"
-      view={view}
-      lifecycleLabel={(value) =>
-        isLifecycleLabelKey(value) ? t(LIFECYCLE_LABELS[value]) : value
-      }
-      relationshipLabels={(values) =>
-        values
-          .map((value) =>
-            isRelationshipTypeLabelKey(value)
-              ? t(RELATIONSHIP_TYPE_LABELS[value])
-              : value,
-          )
-          .join(" · ")
-      }
-    />
-  );
+  return <StateStrip orgId="o-1" view={view} />;
 }
 
 function Strip({

@@ -98,6 +98,11 @@ type pipeline struct {
 	// OpenDigest identifies WHICH ones, so a dismissal keyed on it re-arms the
 	// moment the set changes — including a change to a deal no card listed.
 	OpenDigest string
+	// Open is the deals themselves, id and name, in the read's own order. The
+	// advice cites them: "there is no next step here" is a claim a reader can
+	// only check against the deals it was read from, and a count alone leaves
+	// them to go and find out which ones those are.
+	Open []openDeal
 	// Stalled is every stalled one, longest idle first. The display cap is
 	// applied by the rule that lists them, AFTER dismissals are filtered out, so
 	// dismissing one suggestion reveals the next rather than shrinking the card.

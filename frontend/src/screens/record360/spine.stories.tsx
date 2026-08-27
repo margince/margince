@@ -2,10 +2,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import type { components } from "../api/schema";
-import { Panel } from "../design-system/panel";
-import { CompanySpine } from "./companyspine";
-import { StoryProviders } from "./story-utils";
+import type { components } from "../../api/schema";
+import { Panel } from "../../design-system/panel";
+import { StoryProviders } from "../story-utils";
+import { RecordSpine } from "./spine";
 
 // The account's story as a thread. The stories are the shapes a real account
 // takes: one that has gone quiet, one in live conversation, one nobody has
@@ -51,7 +51,10 @@ function Card({ view }: Readonly<{ view: View }>) {
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
         <Panel title="Company 360" tone="accent">
-          <CompanySpine view={view} />
+          <RecordSpine
+            source={view}
+            commercial={view?.state_strip?.commercial}
+          />
         </Panel>
       </div>
     </StoryProviders>
@@ -200,9 +203,9 @@ const withHistory = {
 
 export const WithHistory: Story = { render: () => <Card view={withHistory} /> };
 
-const meta: Meta<typeof CompanySpine> = {
+const meta: Meta<typeof RecordSpine> = {
   title: "Records/Company 360/Spine",
-  component: CompanySpine,
+  component: RecordSpine,
 };
 export default meta;
-type Story = StoryObj<typeof CompanySpine>;
+type Story = StoryObj<typeof RecordSpine>;

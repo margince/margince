@@ -88,6 +88,10 @@
      The page head is never capped: full width on every screen, and a capped
      column is centred under it. */
   --pageColumn: 1280px;
+  /* A record's own cap. Wider than --pageColumn because a record page is a
+     header, a tab strip and two columns under them, where a settings page is
+     one column of cards — see .main-record. */
+  --recordColumn: 1400px;
 
   --railW: 64px;
   display: grid;
@@ -1567,4 +1571,144 @@
  * above the screen it interrupts, so it keeps its radius and earns a gap. */
 .resumebanner {
   margin-bottom: var(--space-4);
+}
+
+/* ── The page's context column ────────────────────────────────────────────
+   A column of the WINDOW, beside the nav rail and the work column rather than
+   inside the page — so it runs the full height past the page's own header and
+   does not move when a tab changes. The grid grows a third track only when a
+   screen actually fills it: `:has()` reads the column's own presence, so no
+   screen has to tell the shell it has one, and nothing reserves a track that
+   would otherwise sit empty. */
+.app {
+  --asideW: 320px;
+  --asideStubW: 34px;
+}
+.app:has(> .pageaside:not([hidden])) {
+  grid-template-columns: var(--railW) minmax(0, 1fr) var(--asideW);
+}
+.app:has(> .pageaside-stub) {
+  grid-template-columns: var(--railW) minmax(0, 1fr) var(--asideStubW);
+}
+.pageaside {
+  min-width: 0;
+  height: 100vh;
+  overflow-y: auto;
+  border-left: 1px solid var(--borderSubtle);
+  background: var(--bgElevated);
+  padding: var(--space-3) var(--space-4) var(--space-6);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+/* The column's own head: what this column IS, and the control that folds it.
+   Sticky to the column rather than the page, so a reader who has scrolled deep
+   into the context can still put it away without scrolling back. */
+.pageaside-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-bottom: var(--space-1);
+  background: var(--bgElevated);
+  color: var(--textTertiary);
+}
+.pageaside-hide {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  height: var(--control-h-sm);
+  padding: 0 var(--space-2);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+  font-family: var(--f-body);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--textMeta);
+  cursor: pointer;
+}
+.pageaside-hide:hover {
+  background: var(--bgHover);
+}
+.pageaside-hide svg {
+  width: 13px;
+  height: 13px;
+}
+/* Folded, the column is a strip rather than nothing: a reader can still see
+   that something is there and how to get it back. */
+.pageaside-stub {
+  min-width: 0;
+  height: 100vh;
+  border: 0;
+  border-left: 1px solid var(--borderSubtle);
+  background: var(--bgElevated);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: var(--space-4);
+  color: var(--textMeta);
+  cursor: pointer;
+}
+.pageaside-stub:hover {
+  background: var(--bgHover);
+}
+.pageaside-stub svg {
+  width: 15px;
+  height: 15px;
+}
+.pageaside-hide:focus-visible,
+.pageaside-stub:focus-visible {
+  outline: var(--focus-ring-forced);
+  outline-offset: -2px;
+}
+/* A record reads wider than a settings page or the home screen: it carries a
+   header, a tab strip and two columns under them, where the others are one
+   column of prose-width cards. */
+.main-record .wrap {
+  max-width: var(--recordColumn);
+}
+/* A named container, so a block inside the reading column can measure the WORK
+   column it sits in. The record's tab strip needs it: its rules divide the
+   page's chrome from its document and run the full width of the column, while
+   the column itself caps the record at a readable measure. Nothing else about
+   the layout changes — inline-size containment only lets a child ask how wide
+   this is. */
+.main-record {
+  container-type: inline-size;
+  container-name: work;
+}
+/* Under the fold the context column becomes a block at the end of the page
+   rather than a track: at this width the work column is already the whole
+   screen, and a 320px column beside it leaves neither readable. */
+@media (max-width: 1100px) {
+  .app:has(> .pageaside:not([hidden])),
+  .app:has(> .pageaside-stub) {
+    grid-template-columns: var(--railW) minmax(0, 1fr);
+  }
+  /* It lands under the work column rather than beside it, and it keeps its
+     content: hidden outright, the readings filed here would be gone on a
+     laptop with no way to ask for them — and the control that folds the column
+     would still be in the record's header, doing nothing a reader could see. */
+  .pageaside {
+    grid-column: 2 / -1;
+    block-size: auto;
+    max-block-size: none;
+    overflow-y: visible;
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--borderSubtle);
+  }
+  /* The stub is the folded column's own edge, and there is no column beside
+     the work to fold at this width. */
+  .pageaside-stub {
+    display: none;
+  }
+  /* Sticky belongs to a column that scrolls on its own. Here the page scrolls,
+     and a head pinned to the viewport would sit over the rows below it. */
+  .pageaside-head {
+    position: static;
+  }
 }

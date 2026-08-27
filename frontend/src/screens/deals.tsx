@@ -45,6 +45,7 @@ import {
 import type { ListChip } from "../design-system/listsurface";
 import type { ListColumn, ListSelection } from "../design-system/listtable";
 import { FieldGuard } from "../design-system/rbac";
+import { RecordTabs } from "../design-system/recordtabs";
 import {
   useRecordTimeline,
   useTimelineFilters,
@@ -3169,14 +3170,15 @@ function DealSubtitle({ deal }: Readonly<{ deal: Deal }>) {
 // timeline is the incumbent's rather than ours.
 function DealLead({
   dealId,
+  dealName,
   overlay,
-}: Readonly<{ dealId: string; overlay: boolean }>) {
+}: Readonly<{ dealId: string; dealName: string; overlay: boolean }>) {
   if (overlay) {
     return null;
   }
   return (
     <div className="deal360-lead">
-      <DealStatusCardPanel dealId={dealId} />
+      <DealStatusCardPanel dealId={dealId} dealName={dealName} />
     </div>
   );
 }
@@ -3265,7 +3267,7 @@ function DealOverviewPane({
           before they read the account of how it got there, and the briefing is
           long enough that putting it first pushed the stages off the first
           screen. */}
-      <DealLead dealId={deal.id} overlay={overlay} />
+      <DealLead dealId={deal.id} dealName={deal.name} overlay={overlay} />
       <DealApprovals approvals={dealApprovals} decide={onDecide} />
       {/* The coverage card is NOT here any more, and its absence is the point.
           Its two halves went to the two places that answer their questions: the
@@ -3578,18 +3580,18 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 </>
               }
             >
-              <div style={{ marginBottom: 16 }}>
-                <SegmentedControl
-                  options={DEAL_TABS}
-                  value={tab}
-                  onChange={setTab}
-                  labels={{
-                    overview: t("tab.overview"),
-                    files: t("tab.documents"),
-                    history: t("tab.history"),
-                  }}
-                />
-              </div>
+              {/* The same strip every record carries: a place a reader
+                  navigates, drawn as a rule with the open body underlined. */}
+              <RecordTabs
+                options={DEAL_TABS}
+                value={tab}
+                onChange={setTab}
+                labels={{
+                  overview: t("tab.overview"),
+                  files: t("tab.documents"),
+                  history: t("tab.history"),
+                }}
+              />
               {tab === "overview" && (
                 <DealOverviewPane
                   deal={deal}

@@ -130,6 +130,33 @@
   filter: brightness(1.05);
   transform: translateY(-1px);
 }
+/* The agent's own verb. Filled indigo rather than outlined, because it is the
+   move the card is recommending and an outlined control beside a bordered
+   "not now" offers a reader two equal choices when only one advances the
+   account. */
+.btn-ai {
+  background: var(--ai);
+  color: var(--textOnAccentControl);
+  box-shadow: 0 2px 8px var(--aiMed);
+}
+.btn-ai:hover {
+  filter: brightness(1.05);
+  transform: translateY(-1px);
+}
+/* The agent's own verb where it is ONE of several equal offers — the four
+   rewrites of a draft, where no single one is the move. Tinted and outlined
+   rather than filled: four filled indigo buttons in a row read as four
+   recommendations, and the colour stops meaning "the machine does this" and
+   starts meaning "press me". */
+.btn-aiQuiet {
+  background: var(--aiLight);
+  color: var(--aiText);
+  border-color: var(--aiMed);
+}
+.btn-aiQuiet:hover {
+  background: var(--aiChip);
+}
+
 .btn-ghost {
   background: transparent;
   color: var(--textMeta);

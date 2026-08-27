@@ -6,7 +6,6 @@ import { screen, userEvent } from "storybook/test";
 import type { components } from "../api/schema";
 import {
   CompanyActionBadges,
-  CompanyDescription,
   CompanyIdentityLine,
   CompanyLifecycleControl,
   CompanyPrimaryActions,
@@ -115,7 +114,6 @@ function Header({
     <StoryProviders>
       <div style={{ maxWidth: 640 }}>
         <CompanyLifecycleControl org={record} />
-        <CompanyDescription org={record} />
         <CompanyIdentityLine org={record} view={view} loading={loading} />
         <div
           style={{

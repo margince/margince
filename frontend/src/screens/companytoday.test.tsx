@@ -58,25 +58,6 @@ function show(
 }
 
 describe("what needs a person on this account today", () => {
-  it("names the booked meeting and when it is", () => {
-    show({
-      ...BASE,
-      next_meeting: {
-        activity_id: "a-1",
-        starts_at: "2026-08-12T09:00:00Z",
-        subject: "Renewal review",
-        participants: [{ person_id: "p-1", display_name: "Dana Buyer" }],
-      },
-    });
-
-    expect(screen.getByText(/Renewal review/)).toBeTruthy();
-    // Who is in it belongs to the move row that prepares for the meeting,
-    // beside the button — this caller passed no prepare handler, so there is
-    // no such row and the guest list has nowhere to be acted on.
-    expect(screen.queryByText(/Dana Buyer/)).toBeNull();
-    expect(screen.getByText("Next meeting")).toBeTruthy();
-  });
-
   it("says nothing about a meeting when none is booked", () => {
     // Absent AND not named in sections_omitted means "none scheduled". Writing
     // a line about it would be missing data dressed as a recommendation — only
@@ -188,7 +169,7 @@ describe("what needs a person on this account today", () => {
 // The rules are choices rather than derivations, so each is pinned here: a
 // selection nobody wrote down is one the next reader has to reverse-engineer
 // from the sort call.
-describe("the context line, and which record each reading picks", () => {
+describe("the day's call, and which record it is read from", () => {
   // The contract requires the full factor breakdown on every strength; the
   // tiles read only the score, but a fixture that omits them is not the shape
   // the wire sends.
@@ -239,78 +220,10 @@ describe("the context line, and which record each reading picks", () => {
   });
 
   // The route rule: strongest CONTACT, then that contact's strongest ROUTE.
-  it("routes through the strongest contact who has a route at all", () => {
-    show({
-      ...BASE,
-      people: {
-        data: [
-          // Stronger, but nobody has ever written to them: no way in to name.
-          {
-            ...CONTACT,
-            person_id: "p-2",
-            full_name: "Mark Hughes",
-            strength: {
-              score: 90,
-              bucket: "strong" as const,
-              factors: FACTORS,
-            },
-            routes: { top: [], remainder: 0, untried: true },
-          },
-          {
-            ...CONTACT,
-            routes: {
-              top: [
-                {
-                  user_id: "u-1",
-                  display_name: "Lars",
-                  strength_bucket: "strong" as const,
-                },
-              ],
-              remainder: 2,
-              untried: false,
-            },
-          },
-        ],
-        page: { has_more: false, next_cursor: null },
-      },
-    });
-    // Both names, and the CONTACT as a way through to their record: the
-    // reading names somebody a rep then has to go and read, and a name they
-    // must retype into search is the one step this row exists to save. The
-    // colleague stays plain text — a workspace user has no 360 to open.
-    expect(screen.getByText("Lars")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Sarah Cole" })).toBeTruthy();
-    // The reading is the way IN, and nothing else. How many other colleagues
-    // have written to the same contact is a fact about the CONTACT, and the
-    // People tab is where a reader acts on it.
-    expect(screen.queryByText(/other colleagues/)).toBeNull();
-  });
 
   // The largest-open-deal reading moved to the Commercial panel
   // (organizations.tsx) alongside the full open-deals list, so this file no
   // longer picks or ranks a deal of its own.
-
-  it("repeats the strip's signal rather than forming a second verdict", () => {
-    show({
-      ...BASE,
-      state_strip: {
-        account: { lifecycle: "customer", relationship_types: [] },
-        signal: {
-          kind: "contract_ending",
-          severity: "urgent",
-          summary: "They wrote that the contract ends on 31 July.",
-        },
-      },
-    });
-    // The server's own summary, which says on what evidence the rule fired.
-    // The kind alone ("Contract ending") leaves the reader to guess since when.
-    expect(
-      screen.getByText("They wrote that the contract ends on 31 July."),
-    ).toBeTruthy();
-    // A threshold someone chose is not something anybody observed, so the
-    // reading is named as a risk rather than left to read as a fact.
-    expect(screen.getByText("Risk")).toBeTruthy();
-  });
 
   // Whose move it is used to be the strip's own tile ("Whose move"); it moved
   // here because it is a DATED reading, and the strip now carries only the
@@ -434,12 +347,10 @@ describe("the context line, and which record each reading picks", () => {
   });
 });
 
-// Every 360 collection is a page of 25 with `has_more` beside it. A tile that
-// counts or ranks off that page states a fact about the PAGE, and the reader
-// has no way to tell. These are the three places it would have.
+// Every 360 collection is a page of 25 with `has_more` beside it. A reading
+// that counts off that page states a fact about the PAGE, and the reader has
+// no way to tell.
 describe("a page is not the account", () => {
-  const FACTORS = { recency: 0, frequency: 0, reciprocity: 0, direction: 0 };
-
   it("says 25+ overdue rather than a count it cannot stand behind", () => {
     show({
       ...BASE,
@@ -457,35 +368,5 @@ describe("a page is not the account", () => {
     });
     expect(screen.getByText("1+ overdue")).toBeTruthy();
     expect(screen.queryByText("1 overdue")).toBeNull();
-  });
-
-  it("says the best route is the best of the contacts it could see", () => {
-    show({
-      ...BASE,
-      people: {
-        data: [
-          {
-            person_id: "p-1",
-            full_name: "Sarah Cole",
-            strength: { score: 40, bucket: "warm" as const, factors: FACTORS },
-            deal_roles: [],
-            consent: {},
-            routes: {
-              top: [
-                {
-                  user_id: "u-1",
-                  display_name: "Lars",
-                  strength_bucket: "strong" as const,
-                },
-              ],
-              remainder: 0,
-              untried: false,
-            },
-          },
-        ],
-        page: { has_more: true, next_cursor: "c" },
-      },
-    });
-    expect(screen.getByText(/of the contacts shown/)).toBeTruthy();
   });
 });

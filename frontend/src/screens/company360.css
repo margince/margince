@@ -34,6 +34,46 @@
   gap: var(--space-4);
   margin-bottom: var(--space-4);
 }
+
+/* ONE READING, IN PARTS. The same reading in the same order as the single
+   card it replaces, arranged: the call with its thread and the day's work keep
+   the full measure, and the reference sections pair beside each other because
+   they are consulted rather than read.
+
+   No box around the group. A bordered container holding bordered cards is a
+   card inside a card; what binds these is the header that names them and the
+   interval, which is deliberately tighter than the gap between the stack's own
+   panels. A reader reads the spacing before they read a border. */
+.co-reading {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+/* The header of the group, unboxed and outside the first card. It names the
+   whole reading, and a card's own title band can only name that card. */
+.co-reading-head {
+  padding: var(--space-1) var(--space-1) 0;
+}
+
+/* THE CALL, on the wash that says a machine reached it. The tint fades down
+   the card, strongest at the verdict and gone by the thread's last stop: it
+   marks the authorship of the sentence without tinting the evidence under it.
+   background-image rather than background, so the card keeps its own ground
+   under the gradient's transparent end. */
+.co-reading-call {
+  background-image: linear-gradient(180deg, var(--aiLight), transparent);
+}
+
+/* The reference sections, side by side. Half the measure each, because a
+   reader consults them rather than reads them through; one column as soon as
+   two would not fit, since a list squeezed to nothing is worse than a fold. */
+.co-reading-pair {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 27rem), 1fr));
+  gap: var(--space-2);
+  align-items: start;
+}
 /* What this account is worth to us. The panel is one reading in five parts —
    the verdict, the dimensions under it, the two sides of the argument, the
    labelled answers, the attribution — and a hairline between consecutive
@@ -53,13 +93,6 @@
   color: var(--textMeta);
 }
 
-/* The header's description line. */
-.co-description {
-  margin: 0 0 var(--space-2);
-  color: var(--textMeta);
-  font-size: 13.5px;
-}
-
 /* CompanyIdentityLine's two meta lines: what the account is and who owns it,
    then when it was created and last exchanged with — stacked, not run into
    one row, so the two questions read as two answers rather than one long
@@ -76,7 +109,7 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-1) var(--space-2);
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textMeta);
 }
 /* The second line: when, not who — quieter than the first so the eye lands
@@ -108,7 +141,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
 
@@ -124,7 +157,7 @@
   align-items: center;
   gap: 6px;
   flex-wrap: wrap;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 
@@ -182,7 +215,7 @@
   font-weight: var(--fw-semibold);
 }
 .co-person-sub {
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
 }
 /* Above the row's link cover: these are verbs about the person, and clicking
@@ -257,13 +290,29 @@
   justify-content: space-between;
   width: 100%;
 }
+/* The block's leading claim: the one sentence a reader takes away, set as a
+   claim rather than as the first item of a list. The hairline under it is the
+   card-to-content seam this block owns — it divides the read from the working,
+   which is two pieces of CONTENT, so it stops at the body's own padding. */
+.co-brief-lead {
+  margin: 0 0 var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--borderSubtle);
+  font-family: var(--f-display);
+  font-size: var(--fs-h2);
+  font-weight: var(--fw-medium);
+  line-height: 1.35;
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+}
+
 .co-brief-lines {
   list-style: none;
   display: flex;
   flex-direction: column;
   gap: 6px;
   margin: 0;
-  font-size: 13px;
+  font-size: var(--fs-sm);
   line-height: 1.55;
   color: var(--textContent);
 }
@@ -283,14 +332,16 @@
   border: 0;
   padding: 0;
   font: inherit;
-  font-size: 11.5px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
   cursor: pointer;
-  text-decoration: underline dotted var(--borderStrong);
+  /* Indigo, because the sentence above it was written by the agent and this
+     is where its working is. Green here would say a person cited it. */
+  text-decoration: underline dotted var(--aiMed);
   text-underline-offset: 3px;
 }
 .co-brief-cite:hover {
-  text-decoration-color: var(--accent);
+  text-decoration-color: var(--ai);
 }
 .co-brief-cite:focus-visible {
   outline: var(--focus-ring);
@@ -298,15 +349,21 @@
   border-radius: var(--r-sm);
 }
 
-/* A citation with nowhere to go: the same size and colour as a linked one,
-   without the affordance, so it reads as a label rather than a dead link.
-   It carries a border because it has no underline to mark where it ends. */
+/* A citation with nowhere to go: the same size, colour and mark as a linked
+   one, without the affordance, so it reads as a label rather than a dead link.
+
+   The mark is the UNDERLINE, not a border. A border draws around the BOX, so a
+   lone unopenable citation under a reason came out as a small grey pill —
+   which reads as a status somebody applied to the row rather than as the
+   working behind the sentence above it. Provenance is an underline everywhere
+   in this product; the underline also marks where the citation ends, which is
+   what the border was there for. Neutral rather than indigo: the ink says
+   whether a reader can follow it. */
 .co-brief-cite-flat {
-  padding: 0 var(--space-1);
-  border: 1px solid var(--borderSubtle);
-  border-radius: var(--r-sm);
-  font-size: 11.5px;
+  font-size: var(--fs-eyebrow);
   color: var(--textMeta);
+  text-decoration: underline dotted var(--borderStrong);
+  text-underline-offset: 3px;
 }
 
 /* Collected citations START their own row under the prose instead of trailing a
@@ -330,12 +387,45 @@
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
-  border-top-color: var(--accentMed);
+  /* Indigo, because the agent wrote this row. The rule under it is the same
+     hue as the card's band above it, so a reader tracks one colour through
+     everything Margince produced rather than learning two. */
+  border-top-color: var(--aiMed);
   /* .panel-row already sets the padding and the hairline border (none on
      the first row); this only lays the row's own content out. */
 }
 .co-move:hover {
-  background: var(--accentLight);
+  background: var(--aiLight);
+}
+
+/* Who wrote the row, over what it says. An eyebrow rather than a badge beside
+   the ask: authorship qualifies the whole row, and set inline it would read as
+   the first words of the suggestion itself. */
+.co-move-by {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-semibold);
+  letter-spacing: var(--tracking-eyebrow);
+  text-transform: uppercase;
+  color: var(--aiText);
+}
+
+.co-move-spark {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+/* When the reading behind the row is dated — the day the thread went quiet,
+   the day the deal last moved. Never a deadline the system chose, and never
+   in the eyebrow's own voice, which is why it drops the tracking and the
+   case. */
+.co-move-when {
+  font-weight: var(--fw-regular);
+  letter-spacing: var(--tracking-normal);
+  text-transform: none;
+  color: var(--textMeta);
 }
 .co-move-body {
   display: flex;
@@ -346,12 +436,34 @@
 }
 .co-move-ask {
   font-size: var(--fs-h3);
-  font-weight: var(--fw-semibold);
-  color: var(--textContent);
+  font-weight: var(--fw-medium);
+  line-height: 1.35;
+  max-width: 62ch;
+  color: var(--textPrimary);
+  text-wrap: pretty;
 }
 .co-move-why {
+  display: inline;
   font-size: var(--fs-sm);
-  line-height: 1.5;
+  line-height: 1.55;
+  max-width: 78ch;
+  color: var(--textMeta);
+  text-wrap: pretty;
+  /* It carries the working behind the advice, so it is marked as text that
+     opens something: a dotted rule rather than a link's solid one, because it
+     goes nowhere — it says what it already said, with the records under it. */
+  text-decoration: underline dotted var(--borderStrong);
+  text-underline-offset: 3px;
+}
+.co-move-why:hover {
+  color: var(--textPrimary);
+}
+
+/* The panel over that reason names itself: the reason is behind it by then,
+   and a list of records with nothing over it is a reader guessing which
+   question it answers. */
+.co-move-basis-head {
+  display: block;
   color: var(--textMeta);
 }
 .co-move-do {
@@ -361,12 +473,6 @@
   justify-content: space-between;
   gap: var(--space-2);
   margin-top: var(--space-1);
-}
-.co-move-cites {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: var(--space-2);
 }
 .co-move-actions {
   display: flex;
@@ -422,7 +528,7 @@
 }
 .co-ask-asked {
   margin: 10px 0 0;
-  font-size: 12px;
+  font-size: var(--fs-meta);
   font-weight: 600;
   color: var(--textMeta);
 }
@@ -485,14 +591,33 @@
   margin-inline-start: 0.4rem;
 }
 
-/* The readings row's PLACE on the page, and nothing about how it draws: the
-   plate, its slot count, its fold and its one type scale are StatStrip's
-   (design-system/statstrip.css), which is also what the person record's row
-   draws from. A screen sheet that restated any of that would be the second
-   author of a shape one click away already owns — which is exactly how this
-   page came to carry a verbatim copy of the primitive. */
+/* The readings row's PLACE on the page. The tiles themselves are `StatCard`'s
+   — this sheet owns where the row sits and how its cards divide the width, and
+   nothing about how a card draws. */
 .co-readings {
   margin-block-end: var(--space-4);
+}
+
+/* Four free-standing cards across, folding as the column narrows rather than
+   at a breakpoint: `auto-fit` lets the row decide how many fit, and the
+   `min(100%, …)` floor is what stops a single card overflowing a column
+   narrower than the floor itself. Cards, not a plate — these read one at a
+   time, each a door into the tab that holds its detail.
+
+   The floor is 10.5rem because four readings have to fit ACROSS the record
+   column with the context panel open, which is the width the page is read at.
+   At 13rem the fourth card wrapped to a row of its own and the rest of that
+   row was empty — which reads as a reading that failed to load rather than as
+   a row that ended. */
+.co-readings-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 10.5rem), 1fr));
+  gap: var(--space-3);
+  /* Every card in a row is the height of the tallest. They differ in what they
+     carry — one states a basis, one a source, one only a number — and sized to
+     their own contents they came out ragged, which reads as four cards of
+     different importance rather than four readings of one account. */
+  align-items: stretch;
 }
 
 /* The strip itself withheld, rather than absent: one line where the readings
@@ -826,7 +951,7 @@
    padding, so the table reads as part of the panel rather than as a block
    inset inside it. */
 .fin-table {
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 .fin-table th:first-child,
 .fin-table td:first-child {
@@ -959,7 +1084,7 @@
   justify-content: space-between;
   align-items: baseline;
   gap: var(--space-2);
-  font-size: 13px;
+  font-size: var(--fs-sm);
 }
 
 /* The bar carries the same weight as the health meters in the rail — one
@@ -1243,56 +1368,22 @@
   color: var(--textContent);
 }
 /* How long it has stood that way — quieter than the state, and never so long
-   that it becomes the sentence. */
+   that it becomes the sentence.
+
+   Its OWN line under the call rather than the tail of it. Inline, it butted
+   straight against the headline's last letter at a third of its size, which
+   read as one broken word rather than as a state and its duration: the two are
+   different claims, and the call is a display-size sentence that ends. */
 .today-lead-note {
+  display: block;
+  margin-block-start: var(--space-2);
+  font-family: var(--f-body);
   font-weight: var(--fw-regular);
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-}
-/* The readings behind the lead: names in one column, answers in the other,
-   so a reader sweeps the answers down a single margin. A rule above them
-   separates the account's STATE from the evidence for it. */
-.today-readings {
-  display: grid;
-  grid-template-columns: minmax(0, auto) minmax(0, 1fr);
-  gap: var(--space-2) var(--space-4);
-  margin: var(--space-3) 0 0;
-  padding: var(--space-3) 0 0;
-  border-top: 1px solid var(--borderSubtle);
   font-size: var(--fs-sm);
-}
-/* Each reading is one grid row, its two halves landing in the two columns:
-   the wrapper exists so the pair carries one key and one anchor, not so it
-   draws a box of its own. */
-.today-reading {
-  display: contents;
-}
-.today-reading dt {
-  color: var(--textMeta);
-  font-size: var(--fs-meta);
-}
-.today-reading dd {
-  margin: 0;
-  color: var(--textContent);
-  overflow-wrap: anywhere;
-}
-/* The route reading is two NAMES and the separator between them, so it wraps as
-   one run rather than breaking a name off its link. `inline` (not flex) because
-   the pair sits inside a `<dd>` that already wraps its text, and a flex box
-   there would stop the arrow ever falling to the second line with the name it
-   points at. */
-.today-route {
-  display: inline;
-}
-
-/* What the reading could not see before making its claim, trailing the answer
-   it qualifies. */
-.today-reading-note {
-  margin-left: var(--space-2);
-  font-size: var(--fs-meta);
+  line-height: 1.45;
+  letter-spacing: normal;
   color: var(--textMeta);
 }
-
 /* A move is the row's own paragraph: the ask, its reason under it, and the
    verbs at the row's end. Ask and reason ran inline as one wrapping line,
    which held four moves in less height and cost the reader the thing that
@@ -1333,9 +1424,6 @@
 .co-lead .co-move-body:has(.co-move-why) {
   grid-template-rows: auto auto;
 }
-.co-lead .co-move-body:has(.co-move-why):has(.co-move-cites) {
-  grid-template-rows: auto auto auto;
-}
 /* An equal `gap` does NOT draw equal gutters: half-leading lives inside each
    line's own box, so three lines at three sizes push their neighbours apart by
    three different amounts and the column reads as unevenly spaced however the
@@ -1347,27 +1435,8 @@
   text-box: trim-both cap alphabetic;
 }
 .co-lead .co-move-ask,
-.co-lead .co-move-why,
-.co-lead .co-move-cites {
+.co-lead .co-move-why {
   grid-column: 1;
-}
-/* The provenance line, under the reason and quieter than it: which record the
-   advice read, and when that record is dated. It answers "where did this come
-   from" for a reader who doubts the row, and stays out of the way of one who
-   does not. */
-.co-lead .co-move-cites {
-  font-size: var(--fs-meta);
-  color: var(--textMeta);
-  /* Pulled up against the reason it belongs to: the chip is a bordered box and
-     an equal gap reads as a wider one, so the correction is optical. */
-  margin-top: -2px;
-}
-/* Citations START this line here rather than trailing a sentence, so they drop
-   the inline gap that separates them from prose everywhere else. Kept, it
-   indents the first citation against the ask and the reason above it, and
-   three left edges that nearly agree read as a mistake, not as a hierarchy. */
-.co-lead .co-move-cites > .co-brief-cites {
-  margin-inline-start: 0;
 }
 /* The wrapper stops being a box of its own so its two halves can land in the
    row's own two columns: the evidence belongs under the reason it supports,
@@ -1450,7 +1519,7 @@
   align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2);
-  font-size: 12px;
+  font-size: var(--fs-meta);
   color: var(--textMeta);
   overflow-wrap: anywhere;
 }
@@ -1495,13 +1564,6 @@
   gap: var(--space-2);
   min-width: 0;
 }
-/* A count on a filter chip: the same word, one shade back, so the chip reads
-   as "Legal, of which there are two" rather than as two labels. */
-.rec-chip-count {
-  margin-left: var(--space-2);
-  color: var(--textMeta);
-  font-variant-numeric: tabular-nums;
-}
 .rec-foot-action {
   margin-left: auto;
 }
@@ -1513,19 +1575,306 @@
 /* A section subhead inside the Company 360 card: the label on the left, and
    whatever the section counts on the right. It is what lets a reader tell
    four readings apart inside one card. */
+/* A section's label, and the interval that separates one reading from the next.
+   The space belongs ABOVE the label rather than below the section before it:
+   four readings inside one card are told apart by where each one starts, and
+   an even rhythm down the card made the whole thing a wall. Tight underneath,
+   because the label and the rows under it are one block. */
+/* A NEW THEMATIC SECTION starts at the card's edges.
+   The card's default seam is inset to the body's padding, which is the rule
+   for two blocks of one reading (panel.css). A section head begins a different
+   reading of the account, and the card holds five of them: drawn at the same
+   inset as the rules inside a section, every boundary carried the same weight
+   and the card read as one long ladder of hairlines. Full-bleed the reader
+   sees the card's divisions first and its blocks second. */
+.panel-body + .panel-body.co-360-head::before,
+.panel-row + .panel-body.co-360-head::before {
+  inset-inline: 0;
+}
+
 .co-360-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--space-2);
-  padding-bottom: 0;
+  padding-top: var(--space-6);
+  padding-bottom: var(--space-2);
 }
 
-/* A section's own verbs, on their own row under it — they belong to the
-   section rather than to the card, whose header band names the record. */
-.co-360-verbs {
+/* Except the first, which follows the card's own band and would otherwise open
+   the reading with an interval nothing sits in. */
+.co-lead > .panel-body:first-of-type.co-360-head {
+  padding-top: var(--space-5);
+}
+
+/* A section's own verbs, opposite its label in the section head — they belong
+   to the section rather than to the card, whose header band names the record,
+   and a reader decides whether to open the whole list before reading it
+   rather than after. */
+.co-360-headverbs {
+  display: inline-flex;
+  flex-wrap: wrap;
+  /* Centred, not baselined. One of these verbs carries an icon and one does
+     not, and two buttons whose insides differ have no baseline in common —
+     aligning on it stepped the pair up and down against each other. What a
+     reader sees is two boxes in a row, so the boxes are what line up. */
+  align-items: center;
+  gap: var(--space-2);
+}
+
+/* The 360 card's head: who produced this reading over what it is a reading of.
+   A column, because the two are different claims and the eyebrow must not read
+   as the first words of the record's name. */
+/* Who read the record, over what they read. A column, because the two are
+   different claims and the eyebrow must not read as the first words of the
+   record's name — and a hairline gap between them, because they are one
+   block and a full interval made them two. */
+/* THE CARD'S CLAIM OF AUTHORSHIP. It heads the reading a machine produced,
+   which is the one thing on this page no other CRM does — so it is set as a
+   statement rather than as a caption: the mark on its own indigo tile, the
+   claim above the subject, and the record's name at reading size. */
+.co-360-title {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  column-gap: var(--space-3);
+  row-gap: 0;
+  min-inline-size: 0;
+}
+.co-360-subject {
   display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  min-inline-size: 0;
+}
+
+/* The eyebrow is a ROW: the mark and the words it marks are one line, and left
+   to the default the icon took a line of its own above them. Indigo, because
+   `.t-eyebrow` sets the neutral meta tone for every other eyebrow in the
+   product and this one names the machine that wrote the card under it. */
+.co-360-title .t-eyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--aiText);
+  grid-column: 2;
+}
+
+/* The mark, on a tile of its own. It spans both lines of the claim, so the
+   eyebrow and the name read as one block that the mark introduces rather than
+   as two rows with an icon stuck to the first. */
+.co-360-title .co-360-mark {
+  grid-row: span 2;
+  display: grid;
+  place-items: center;
+  inline-size: 2rem;
+  block-size: 2rem;
+  border-radius: var(--r-md);
+  color: var(--aiText);
+  background: var(--aiChip);
+  border: 1px solid var(--aiMed);
+}
+.co-360-title .co-360-mark svg {
+  inline-size: 1rem;
+  block-size: 1rem;
+}
+
+/* The record's own name, at reading size. It was set at caption size beside a
+   louder eyebrow, which said the authorship mattered more than the record it
+   was claiming to have read. */
+.co-360-title .co-360-subject {
+  grid-column: 2;
+  font-family: var(--f-display);
+  font-size: var(--fs-lead);
+  font-weight: var(--fw-medium);
+  letter-spacing: -0.01em;
+  color: var(--textPrimary);
+}
+
+/* The authorship mark on the card's own band. Sized to the eyebrow rather than
+   to the icon set's default: it reads as part of the word, not as a control
+   sitting next to one. */
+.co-360-spark {
+  width: 0.75rem;
+  height: 0.75rem;
+  flex: none;
+}
+
+/* The stages of a site read in flight. A ladder rather than a bar: a bar
+   claims a fraction nobody measured, and these two stages are the only
+   positions the engine actually reports. */
+.deepread-steps {
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.deepread-step {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+  color: var(--textMeta);
+}
+
+/* The stage under way is the one a reader is watching, so it is the one drawn
+   at full weight. The rest are context for it. */
+.deepread-step.is-running {
+  color: var(--textPrimary);
+  font-weight: var(--fw-medium);
+}
+
+.deepread-step-mark {
+  inline-size: 0.5rem;
+  block-size: 0.5rem;
+  border-radius: 50%;
+  border: 2px solid var(--borderStrong);
+  flex: none;
+}
+
+.deepread-step.is-done .deepread-step-mark {
+  background: var(--ai);
+  border-color: var(--ai);
+}
+
+.deepread-step.is-running .deepread-step-mark {
+  border-color: var(--ai);
+}
+
+/* The state in words beside the mark, because three tinted circles are three
+   tinted circles to a reader who cannot tell the tints apart. */
+.deepread-step-state {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  font-weight: var(--fw-regular);
+}
+
+/* A to-do already on somebody's list, under the move Margince found.
+   Deliberately quieter than that move: the found move is ONE thing the agent
+   is asking for, argued in a sentence; these are commitments the account
+   already has, and a reader scans them. At one weight the two blocks read as
+   five equal asks and the one worth doing first stops leading. */
+.co-todo {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.co-todo-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.co-todo-title {
+  font-size: var(--fs-sm);
+  color: var(--textPrimary);
+}
+
+.co-todo-meta {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+
+/* Tinted, not filled. Three filled buttons down a column outshout the single
+   move above them that the card is actually recommending; a tint says the same
+   thing about who does the work at a volume a list can carry.
+
+   Written against `.btn` as well as its own class, because `.btn-ghost` sets
+   the neutral border and text on the same weight and lands after this sheet —
+   at equal specificity the chip came out grey and the hue said nothing. */
+.btn.co-todo-verb {
+  flex: none;
+  border-color: var(--aiMed);
+  background: var(--aiLight);
+  color: var(--aiText);
+}
+
+.btn.co-todo-verb:hover {
+  background: var(--aiChip);
+  color: var(--aiText);
+}
+
+/* What happened lately, as a list to scan. One row per exchange: the mark, the
+   kind and direction over the subject, and the date at the far end where a
+   reader's eye already goes for it. */
+.co-recent {
+  padding-top: 0;
+}
+
+.co-recent-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.co-recent-row {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-3);
+  padding: var(--space-3) 0;
+}
+
+/* Between rows only. The last row's rule would double the section's own
+   boundary, and the first row's would sit against the label above it. */
+.co-recent-row + .co-recent-row {
+  border-top: 1px solid var(--borderSubtle);
+}
+
+.co-recent-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.1rem;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.co-recent-head {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+/* Which way it went, beside the kind rather than under it: the two are one
+   claim about the exchange, and stacked they read as two facts. */
+.co-recent-dir {
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+
+.co-recent-title {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--textPrimary);
+  overflow-wrap: anywhere;
+}
+
+.co-recent-meta {
+  display: flex;
+  align-items: baseline;
   flex-wrap: wrap;
   gap: var(--space-2);
-  padding-top: var(--space-2);
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+}
+
+/* The date at the row's far end, in the mono face where digits share a width —
+   a column of dates lines up instead of shifting row to row. */
+.co-recent-when {
+  flex: none;
+  font-size: var(--fs-meta);
+  color: var(--textMeta);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.co-recent-empty {
+  margin: 0;
+  color: var(--textMeta);
 }

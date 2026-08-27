@@ -25,6 +25,17 @@
   flex: 1 1 12rem;
 }
 
+/* The kind dial is sized to its own words. `.input` is a full-width field by
+ * default — correct in a form, wrong in a toolbar: at 100% it claimed the whole
+ * first line and pushed the search and the dates onto lines of their own, so
+ * the ONE row this bar exists to be came out as three stacked rows of chrome
+ * above the list they narrow. */
+.timeline-filters-row .select-control {
+  flex: 0 0 auto;
+  inline-size: auto;
+  min-inline-size: 9rem;
+}
+
 .timeline-filters-range {
   display: inline-flex;
   align-items: center;

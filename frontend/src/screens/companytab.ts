@@ -14,17 +14,23 @@ import type { Route } from "../app/router";
  * tab survives a reload and can be linked to — the same promise the contact
  * page has had, on the record a rep opens most.
  *
- * Partner is in the list but not always on the strip: it renders a commercial
- * arrangement most accounts do not have, and `companyTabsFor` decides. An
- * address naming it is still honoured, which is what keeps the overflow menu's
+ * The order is the order a rep reads an account in: what is true of it now,
+ * what has happened, who is on it, what is open commercially, what is owed,
+ * and the reference material last.
+ *
+ * Partner and Finance are in the list but not always on the strip: one renders
+ * a commercial arrangement most accounts do not have, the other money on an
+ * account nobody has ever invoiced, and `companyTabsFor` decides. An address
+ * naming either is still honoured, which is what keeps the overflow menu's
  * route to a first partner row open.
  */
 export const COMPANY_TABS = [
   "overview",
+  "timeline",
   "people",
   "deals",
   "tasks",
-  "timeline",
+  "finance",
   "documents",
   "profile",
   "partner",

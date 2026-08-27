@@ -228,8 +228,19 @@ function chipLabel(chip: CitationChip, t: Translator, locale: Locale): string {
 export function Citations({
   evidence,
   onOpenRecord,
+  nameOf,
 }: Readonly<{
   evidence: readonly Cited[];
+  // The record's own name, from a page that already holds it.
+  //
+  // The server names a citation when the writer had the name at hand and
+  // leaves it out otherwise, and this file invents nothing — but a page
+  // showing an account's own 360 is HOLDING the names of that account's people
+  // and deals, and printing "contact" beside a reason while the roster three
+  // sections down says "Frédéric de Gombert" is the page failing to read
+  // itself. Answers undefined for a record it does not know, which falls back
+  // to the kind exactly as before.
+  nameOf?: (entityType: CitedKind, entityId: string) => string | undefined;
   onOpenRecord?: (
     entityType: string,
     entityId: string,
@@ -239,7 +250,11 @@ export function Citations({
   const t = useT();
   const { locale } = useLocale();
   const chips = citationChips(
-    evidence,
+    evidence.map((cited) =>
+      cited.name || !nameOf
+        ? cited
+        : { ...cited, name: nameOf(cited.entity_type, cited.entity_id) },
+    ),
     (entityType) => Boolean(onOpenRecord) && ROUTABLE_CITATIONS.has(entityType),
     (entityType) => RECEIPT_CITATIONS.has(entityType),
   );
@@ -297,10 +312,16 @@ const NATURE_LABELS: Record<
 export function SentenceList({
   sentences,
   onOpenRecord,
+  nameOf,
   citations = "per-sentence",
+  leadWithJudgement = false,
 }: Readonly<{
   sentences: BriefSentence[];
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // The record's own name for a citation the writer could not name — see
+  // `Citations`. Passed through rather than resolved here: the names belong to
+  // the page holding the record, not to the prose.
+  nameOf?: (entityType: CitedKind, entityId: string) => string | undefined;
   // WHERE the receipts go, which is a reading decision rather than a styling
   // one.
   //
@@ -312,44 +333,105 @@ export function SentenceList({
   // of "fact fact fact". The sources are the same, gathered once underneath —
   // every claim stays checkable, and the prose stays readable.
   citations?: "per-sentence" | "collected";
+  // Whether the block's own judgement is pulled out and set as its opening
+  // claim. The facts under it are already on the cards above, so what the
+  // block ADDS is what the agent makes of them — and four sentences at one
+  // volume have no shape to scan.
+  leadWithJudgement?: boolean;
 }>) {
-  const t = useT();
+  const [lead, ...rest] = leadWithJudgement
+    ? judgementFirst(sentences)
+    : [undefined, ...sentences];
   return (
-    <ul className="co-brief-lines">
-      {sentences.map((sentence, index) => (
-        // Indexed because two sentences may legitimately read the same;
-        // keying on the text collapses them into one row.
-        // biome-ignore lint/suspicious/noArrayIndexKey: the list is replaced wholesale on every read, never reordered in place
-        <li key={index}>
-          {/* What KIND of claim this is, marked where it is made. A judgment
-              that looked like a stored fact would be the one thing a reader
-              could not check — and the prose is allowed to judge now. */}
-          {sentence.nature && sentence.nature !== "fact" && (
-            <Badge
-              tone={sentence.nature === "recommendation" ? "accent" : undefined}
-            >
-              {t(NATURE_LABELS[sentence.nature])}
-            </Badge>
-          )}{" "}
-          {sentence.text}
+    <>
+      {lead ? (
+        <p className="co-brief-lead">
+          <NatureBadge sentence={lead} />
+          {lead.text}
           {citations === "per-sentence" && (
             <Citations
-              evidence={sentence.evidence}
+              evidence={lead.evidence}
+              nameOf={nameOf}
               onOpenRecord={onOpenRecord}
             />
           )}
-        </li>
-      ))}
-      {citations === "collected" && (
-        <li className="co-brief-sources">
-          <Citations
-            evidence={sentences.flatMap((sentence) => sentence.evidence)}
-            onOpenRecord={onOpenRecord}
-          />
-        </li>
-      )}
-    </ul>
+        </p>
+      ) : null}
+      <ul className="co-brief-lines">
+        {(lead ? rest : sentences).map((sentence, index) => (
+          // Indexed because two sentences may legitimately read the same;
+          // keying on the text collapses them into one row.
+          // biome-ignore lint/suspicious/noArrayIndexKey: the list is replaced wholesale on every read, never reordered in place
+          <li key={index}>
+            <NatureBadge sentence={sentence} />
+            {sentence.text}
+            {citations === "per-sentence" && (
+              <Citations
+                evidence={sentence.evidence}
+                nameOf={nameOf}
+                onOpenRecord={onOpenRecord}
+              />
+            )}
+          </li>
+        ))}
+        {citations === "collected" && (
+          <li className="co-brief-sources">
+            <Citations
+              evidence={sentences.flatMap((sentence) => sentence.evidence)}
+              nameOf={nameOf}
+              onOpenRecord={onOpenRecord}
+            />
+          </li>
+        )}
+      </ul>
+    </>
   );
+}
+
+/**
+ * What KIND of claim a sentence is, marked where it is made. A judgement that
+ * looked like a stored fact would be the one thing a reader could not check —
+ * and the prose is allowed to judge now.
+ *
+ * It rides the leading sentence too, so a promoted judgement keeps its mark
+ * rather than losing it to the promotion. A fact leading a block carries no
+ * badge and is meant to — that is a block with nothing to judge, and the
+ * absence of the mark is what says so.
+ */
+function NatureBadge({ sentence }: Readonly<{ sentence: BriefSentence }>) {
+  const t = useT();
+  if (!sentence.nature || sentence.nature === "fact") {
+    return null;
+  }
+  return (
+    <>
+      <Badge tone={sentence.nature === "recommendation" ? "accent" : undefined}>
+        {t(NATURE_LABELS[sentence.nature])}
+      </Badge>{" "}
+    </>
+  );
+}
+
+/**
+ * The block reordered so its judgement opens it, and the rest follow in the
+ * order they were written.
+ *
+ * Which sentence leads is not arbitrary. A brief that judges leads with the
+ * judgement; a brief with none — the deterministic fallback writes no
+ * assessments — leads with its first line, because it has nothing to judge and
+ * an empty lead slot would read as a sentence that failed to load.
+ */
+function judgementFirst(
+  sentences: BriefSentence[],
+): [BriefSentence | undefined, ...BriefSentence[]] {
+  if (sentences.length === 0) {
+    return [undefined];
+  }
+  const at = sentences.findIndex(
+    (sentence) => sentence.nature === "assessment",
+  );
+  const index = at === -1 ? 0 : at;
+  return [sentences[index], ...sentences.filter((_, each) => each !== index)];
 }
 
 /**

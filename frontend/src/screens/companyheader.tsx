@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { Mail } from "lucide-react";
 import { Fragment, type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -147,11 +148,13 @@ function WriteEmailAction({
   const t = useT();
   return (
     <>
-      <Button
-        variant="primary"
-        reasonId={disabledReasonId}
-        onClick={() => onOpen(true)}
-      >
+      {/* One of three equal verbs, not the record's primary action. A filled
+          button among two outlined ones says writing is what a reader came to
+          do, and on an account it is one of several things they might — the
+          move worth doing is the one the Brief names, and that one carries the
+          fill. The icon is what makes this one findable instead. */}
+      <Button reasonId={disabledReasonId} onClick={() => onOpen(true)}>
+        <Mail aria-hidden="true" />
         {t("co.writeEmail")}
       </Button>
       {open && (
@@ -578,6 +581,45 @@ function CompanyEditAction({
   );
 }
 
+// Which relationship types the LIFECYCLE already speaks for.
+//
+// The two fields answer different questions — what a company IS to us, and
+// where it STANDS with us — but they overlap on one word. An account whose
+// lifecycle is `former_customer` still carries the `customer` relationship
+// type, because that is what it was; printing both put "Former customer" and
+// "Customer" side by side on one header, which is not two facts but one fact
+// and its own contradiction.
+//
+// A map rather than a string comparison: `customer` and `former_customer`
+// render different words, so matching on the rendered label caught the
+// duplicate and missed the contradiction — which is the worse of the two,
+// because a reader can see a repeat for what it is.
+/**
+ * What the company IS to us, beside its name.
+ *
+ * A tag ON the record, so it belongs with the record's name rather than among
+ * the verbs — set among the buttons it read as a control that does nothing,
+ * and it was the one thing in that row a reader could not press.
+ *
+ * A type the lifecycle beside it already speaks for is dropped by
+ * `relationshipBadges`, so the header states a relationship once and in its
+ * current tense.
+ */
+export function CompanyRelationshipBadges({
+  org,
+}: Readonly<{ org: Organization }>) {
+  const t = useT();
+  return (
+    <>
+      {relationshipBadges(org, t).map((relType) => (
+        <Badge key={relType} tone="accent">
+          {t(RELATIONSHIP_TYPE_LABELS[relType])}
+        </Badge>
+      ))}
+    </>
+  );
+}
+
 export function CompanyActionBadges({
   org,
   view,
@@ -613,21 +655,11 @@ export function CompanyActionBadges({
   const refusedByState = refusedReason ? menuReasonId : undefined;
   return (
     <>
-      {/* What the company IS to us. Where it STANDS is a separate question,
-          and it now has a separate control — the editable lifecycle in the
-          pulse line — so it is not repeated here as a read-only badge. The two
-          were one field once, which is how an account whose contract had ended
-          still read as "Prospect".
-
-          The two vocabularies overlap, though, and relationshipBadges is what
-          keeps the header from printing one word twice: a customer account
-          carries `customer` in both fields, and "Customer · Customer" reads as
-          a second reading confirming the first. */}
-      {relationshipBadges(org, t).map((relType) => (
-        <Badge key={relType} tone="accent">
-          {t(RELATIONSHIP_TYPE_LABELS[relType])}
-        </Badge>
-      ))}
+      {/* What the company IS to us is drawn beside its NAME, by
+          CompanyRelationshipBadges — a tag on the record belongs with the
+          record. Drawn here as well it was the same badge in two places on one
+          screen, and a reader who found both had to satisfy themselves the two
+          agreed. */}
       {org.archived_at && <Badge tone="warn">{t("record.archived")}</Badge>}
       {/* The trigger is unconditional because the menu always holds something
           to say: an archived account's verbs are refused rather than dropped,
@@ -752,21 +784,6 @@ export function CompanyActionBadges({
 // entirely rather than shown empty: an unwritten description with no
 // pressable to start it here would be a dead end pointing nowhere at the
 // field that actually writes it.
-export function CompanyDescription({ org }: Readonly<{ org: Organization }>) {
-  const value = org.description ?? "";
-  // The line is drawn only when it says something the chips below it do not.
-  // Nothing written earns no line: the details grid is where that gets
-  // filled in now. A description that merely repeats the industry earns no
-  // line either — a reader who sees the same words twice reads the second
-  // copy as a different fact and looks for the difference. Enrichment writes
-  // this field from the same source the industry comes from, so the two
-  // matching is the common case, not a freak one.
-  const industry = org.industry?.trim().toLowerCase() ?? "";
-  if (!value || value.trim().toLowerCase() === industry) {
-    return null;
-  }
-  return <p className="co-description">{value}</p>;
-}
 
 // The scheme is noise in a chip: every one of these is https, and "https://"
 // costs eight characters of a row that has little space to fit it in. A URL
@@ -891,6 +908,22 @@ export function CompanyIdentityLine({
   if (org.industry) {
     facts.push(<span key="industry">{org.industry}</span>);
   }
+  // The way in joins the site and the industry: all three say what the account
+  // IS. The DATES — the last word exchanged, and when the row was written —
+  // read together on the quiet line under them, because a date is a different
+  // kind of fact from a name and mixing the two made one long run-on line that
+  // wrapped wherever the window happened to end.
+  if (wayIn?.contributor_person_id) {
+    facts.push(
+      <span key="wayin">
+        {t("co.pulse.strongestLead")}{" "}
+        <EntityRef kind="person" id={wayIn.contributor_person_id} />{" "}
+        {plural("co.pulse.strengthTail", wayIn.contact_count, {
+          count: formatNumber(wayIn.contact_count, locale),
+        })}
+      </span>,
+    );
+  }
   return (
     <div className="co-identity-meta">
       <div className="co-meta-line">
@@ -901,7 +934,24 @@ export function CompanyIdentityLine({
           </Fragment>
         ))}
       </div>
+      {/* When the ROW was written and by whom, which is a fact about the
+          record rather than about the account. It reads quieter and last,
+          under the account's own facts, because a reader chasing the account
+          is not chasing its audit trail. */}
       <div className="co-meta-line co-meta-quiet">
+        {/* WHEN, on one line: the last word exchanged and the day the row was
+            written are both dates, and split across two lines they read as two
+            separate claims about the account rather than as its timeline. */}
+        {touchKnown && (
+          <>
+            <span>
+              {lastExchange
+                ? t("co.pulse.lastExchange", { when: when(lastExchange) })
+                : t("co.pulse.neverTouched")}
+            </span>
+            <span className="co-sep">·</span>
+          </>
+        )}
         <span>{t("co.pulse.created", { when: when(org.created_at) })}</span>
         {/* WHO wrote the record, beside WHEN it was written: a mark about the
             row itself rather than about any field on it, so it belongs with
@@ -911,33 +961,6 @@ export function CompanyIdentityLine({
           provenance={provenanceOf(org.captured_by, viewerId)}
           renderUser={authorName}
         />
-        {/* The contact the relationship actually runs through, on the line of
-            the record's own facts. The NAME is a live lookup, so the sentence
-            is built from two translated halves around it rather than
-            interpolating a placeholder and appending the name after the full
-            stop — which breaks word order in English and worse in German. */}
-        {wayIn?.contributor_person_id && (
-          <>
-            <span className="co-sep">·</span>
-            <span>
-              {t("co.pulse.strongestLead")}{" "}
-              <EntityRef kind="person" id={wayIn.contributor_person_id} />{" "}
-              {plural("co.pulse.strengthTail", wayIn.contact_count, {
-                count: formatNumber(wayIn.contact_count, locale),
-              })}
-            </span>
-          </>
-        )}
-        {touchKnown && (
-          <>
-            <span className="co-sep">·</span>
-            <span>
-              {lastExchange
-                ? t("co.pulse.lastExchange", { when: when(lastExchange) })
-                : t("co.pulse.neverTouched")}
-            </span>
-          </>
-        )}
       </div>
     </div>
   );

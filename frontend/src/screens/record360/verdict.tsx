@@ -20,9 +20,12 @@
 // question about a different record, and the day they grow a verdict they take
 // this one rather than a second shaped like it.
 
-import type { ReactNode } from "react";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import { type ReactNode, useId, useState } from "react";
 import { Badge } from "../../design-system/atoms";
 import { PanelBody } from "../../design-system/panel";
+import { formatNumber } from "../../format/format";
+import { useLocale, usePlural, useT } from "../../i18n";
 import "./record360.css";
 
 /**
@@ -41,31 +44,142 @@ import "./record360.css";
 export type StandingTone = "danger" | "warn" | "accent" | "calm" | "unknown";
 
 /**
- * VerdictHead is the call and the one line under it.
+ * One reading the call was made from: what it said, and which reading said it.
+ *
+ * A quote with no source is a claim, and a source with no quote is a citation
+ * nobody can check. The pair is the unit, which is why this is one type rather
+ * than two parallel lists.
+ */
+export type Grounding = {
+  // Stable within the list: two readings can legitimately reach the same
+  // words about an account.
+  key: string;
+  // The reading in its own words, as the rule that produced it phrased it.
+  quote: string;
+  // Which reading it came from — the dimension, the document, the thread.
+  from: string;
+};
+
+/**
+ * VerdictHead is the call, the one line under it, and what it rests on.
  *
  * `standing` is an open wire string, like every other enum this product reads
  * back: a word this build does not know renders its own text rather than
  * vanishing. A missing verdict renders nothing at all — a head that said
  * "unknown" would be the card inventing a call it was not given.
+ *
+ * The grounding is SHUT by default and its count sits on the trigger. A reader
+ * scanning thirty records wants the call, not the working; a reader who
+ * doubts one wants the working immediately. A closed block with no count would
+ * be neither — it would be a box nobody can judge whether to open.
  */
 export function VerdictHead({
   label,
   tone,
   because,
+  restsOn,
 }: Readonly<{
   label: string;
   tone: StandingTone;
   // One line saying what the call rests on. The prose underneath says the
   // rest; this is the half a scanner reads.
   because?: ReactNode;
+  // The readings behind the call. Absent when the call was not read from
+  // anything a reader could be shown — which is a real state, and different
+  // from a call resting on nothing.
+  restsOn?: readonly Grounding[];
 }>) {
   return (
     <PanelBody>
       <div className="r360-verdict">
         <span className={`r360-standing r360-standing-${tone}`}>{label}</span>
         {because ? <span className="r360-because">{because}</span> : null}
+        {restsOn && restsOn.length > 0 ? <RestsOn items={restsOn} /> : null}
       </div>
     </PanelBody>
+  );
+}
+
+/**
+ * The grounding disclosure: shut, counted, and opened by a click.
+ *
+ * Opened on click rather than on hover on purpose. A pointer crossing the head
+ * on its way to the tab strip is not a request to read the working, and a
+ * block that unfolds under a passing cursor pushes the card's own content
+ * down while the reader is looking at it.
+ */
+function RestsOn({ items }: Readonly<{ items: readonly Grounding[] }>) {
+  const t = useT();
+  return <Proof label={t("record.restsOn")} items={items} count />;
+}
+
+/**
+ * The working behind one claim: what was read, and where each piece came from.
+ *
+ * The same disclosure wherever a claim is made — the call at the head of the
+ * card, the move the agent found, the finding it volunteered, the task it put
+ * on somebody's list. One component because they are one promise: nothing this
+ * product asserts about a record is unreachable from the assertion itself.
+ *
+ * Shut by default. A reader scanning thirty records wants the claim; a reader
+ * who doubts one wants the working immediately, and the disclosure is how both
+ * get what they came for out of the same card.
+ */
+export function Proof({
+  label,
+  items,
+  count = false,
+}: Readonly<{
+  // What the working IS, in the claim's own terms — "what this rests on",
+  // "why Margince put this here". Named by the caller, because the honest
+  // label differs with the claim and a shared one would flatten them.
+  label: string;
+  items: readonly Grounding[];
+  // Whether the trigger states how many readings are behind it. Worth saying
+  // where a reader is judging whether to open at all, noise on a row whose
+  // proof is one quote.
+  count?: boolean;
+}>) {
+  const plural = usePlural();
+  const { locale } = useLocale();
+  const [open, setOpen] = useState(false);
+  const panelId = useId();
+  const Caret = open ? ChevronDown : ChevronRight;
+  if (items.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <button
+        type="button"
+        className="r360-rests-toggle"
+        onClick={() => setOpen((shown) => !shown)}
+        aria-expanded={open}
+        aria-controls={panelId}
+      >
+        <Caret aria-hidden="true" />
+        {label}
+        {count ? (
+          <span className="r360-rests-count">
+            <span className="t-mono">{formatNumber(items.length, locale)}</span>{" "}
+            {/* The unit as a word, not a bare figure. "What this rests on 2"
+                asks the reader to guess what was counted; the count is only
+                worth putting on a shut block if it says what it counts. */}
+            {plural("record.restsOn.source", items.length)}
+          </span>
+        ) : null}
+      </button>
+      {open ? (
+        <div className="r360-rests" id={panelId}>
+          {items.map((item) => (
+            <div className="r360-rests-item" key={item.key}>
+              <p className="r360-rests-quote">{item.quote}</p>
+              <p className="r360-rests-from">{item.from}</p>
+            </div>
+          ))}
+        </div>
+      ) : null}
+    </>
   );
 }
 
