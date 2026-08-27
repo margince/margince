@@ -30,6 +30,7 @@ const SIGNAL_KIND_LABELS: Record<string, MessageKey> = {
   commitment_made: "signal.kind.commitment_made",
   ghosted_thread: "signal.kind.ghosted_thread",
   project_gone_quiet: "signal.kind.project_gone_quiet",
+  technical_change: "signal.kind.technical_change",
 };
 
 /** signalKindLabel names a signal, degrading to its own words when unmapped. */

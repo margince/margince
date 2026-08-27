@@ -60,6 +60,10 @@ export const FACT_FIELD_LABELS: Record<FactField, MessageKey> = {
   named_customer: "co.factField.named_customer",
   technology: "co.factField.technology",
   quantified_outcome: "co.factField.quantified_outcome",
+  mail_provider: "co.factField.mail_provider",
+  email_security: "co.factField.email_security",
+  hosting_provider: "co.factField.hosting_provider",
+  operated_service: "co.factField.operated_service",
 };
 
 export function factFieldLabelKey(field: FactField): MessageKey {

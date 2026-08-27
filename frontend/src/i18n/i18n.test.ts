@@ -30,6 +30,9 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // no word in it to translate — a locale that changed it would be changing
   // the account's name.
   "co.360.subject",
+  // An acronym, not a word: DNS is DNS in every language this product speaks,
+  // and a "translation" of it would be a different protocol.
+  "co.tech.lane.dns",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",

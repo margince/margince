@@ -22,10 +22,7 @@ import {
   type TimelineEntry,
   type TimelineGroup,
 } from "../design-system/composed";
-import {
-  EvidenceMark,
-  type EvidenceMarkSource,
-} from "../design-system/evidencemark";
+import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import type { ListChip } from "../design-system/listsurface";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -38,17 +35,16 @@ import {
 } from "../design-system/recordtimeline";
 import { SurfaceState, sectionState } from "../design-system/surfacestate";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { AutonomyDot, confidenceLevel } from "../design-system/trust";
+import { AutonomyDot } from "../design-system/trust";
 import { formatDateTime, formatMoney, formatNumber } from "../format/format";
 import { viewerZone } from "../format/timezone";
-import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { taskWriteKeys } from "./activitykeys";
 import { AssistantPanel } from "./assistant";
 import {
   coldFieldLabel,
   problemMessageOf,
-  provenanceOf,
   QueryGate,
   QueryStates,
   throwProblem,
@@ -100,6 +96,7 @@ import {
   companyTabRoute,
   isCompanyTab,
 } from "./companytab";
+import { isTechnicalFact, TechnicalProfileCard } from "./companytechnical";
 import { TodayOnThisAccount } from "./companytoday";
 import {
   CompanyWorkCard,
@@ -116,6 +113,7 @@ import {
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
 import { useRoster } from "./entityref";
+import { derivedSource } from "./evidencesource";
 import {
   EvidenceVerdict,
   factClaim,
@@ -1184,40 +1182,6 @@ function HierarchyRollupCard({ orgId }: Readonly<{ orgId: string }>) {
 // a footer that names where it came from — provenance, confidence when the
 // read carried one, and the grounding evidence snippet. These are values that
 // LANDED on the record, whatever lane wrote them.
-// The shared trust-signal footer for an evidence-backed row: provenance
-// always, confidence whenever graded, and the evidence snippet when present.
-// One spelling for profile fields and facts so the "confidence is never
-// hidden" convention can't drift between them.
-// derivedSource builds the evidence mark's payload for a value the system
-// read rather than a person typed. A value a HUMAN entered gets no mark: the
-// record is full of human-entered values, and marking them all would make
-// the underline mean nothing.
-function derivedSource(
-  row: Readonly<{
-    captured_by?: string;
-    confidence?: number | null;
-    evidence_snippet?: string | null;
-    source_url?: string | null;
-    updated_at?: string;
-  }>,
-  locale: Locale,
-  recordZone: string,
-): EvidenceMarkSource | undefined {
-  const provenance = provenanceOf(row.captured_by);
-  if (provenance.kind === "human") {
-    return undefined;
-  }
-  return {
-    provenance,
-    confidence: confidenceLevel(row.confidence) ?? undefined,
-    snippet: row.evidence_snippet,
-    sourceUrl: row.source_url,
-    at: row.updated_at
-      ? formatDateTime(row.updated_at, locale, recordZone)
-      : undefined,
-  };
-}
-
 // PROFILE_FIELD_LABELS names the profile fields as statements ABOUT a company.
 //
 // The same fields are asked of the reader during onboarding, where the second
@@ -1490,7 +1454,12 @@ function FactsCard({
   // Otherwise facts are supplementary: while the read is in flight, or if it
   // has nothing to show, the card stays absent rather than flashing a skeleton
   // or an empty shell next to the profile card that owns the region's states.
-  const facts = factsQuery.data;
+  //
+  // The technical fields are excluded because the technical card claims them.
+  // Both cards read the same endpoint, so without this every mail provider and
+  // operated service would render twice on one tab, and a reader correcting
+  // one copy would watch the other disagree.
+  const facts = factsQuery.data?.filter((fact) => !isTechnicalFact(fact));
   if (!facts || facts.length === 0) {
     return null;
   }
@@ -3207,6 +3176,14 @@ function ReferenceDisclosures({
           reconcile. */}
       <Disclosure summary={t("co.evidence.title")}>
         <FactsCard orgId={org.id} onOpenHistory={onOpenHistory} />
+      </Disclosure>
+      {/* What the company RUNS, beside what it SAYS. Its own disclosure rather
+          than rows inside the evidence card above, because these are read from
+          public records the company never wrote for us — DNS, certificates,
+          the markup of their own homepage — and a reader deciding how far to
+          trust a claim is helped by knowing which of the two it is. */}
+      <Disclosure summary={t("co.tech.title")}>
+        <TechnicalProfileCard orgId={org.id} />
       </Disclosure>
       {/* Who this account is connected to, and the account's own tools and
           configuration. Neither reads like an "overview" or a "deal" or a
