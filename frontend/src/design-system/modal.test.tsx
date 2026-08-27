@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { useRef, useState } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { Button, Modal } from "./atoms";
+import { Popover } from "./popover";
 
 // A dialog covers the page. `aria-modal` says so to a screen reader and does
 // nothing for the Tab key, so these are the two keyboard obligations the
@@ -21,6 +22,23 @@ function Harness() {
         <h2 id="t">Log activity</h2>
         <button type="button">First</button>
         <button type="button">Last</button>
+      </Modal>
+    </>
+  );
+}
+
+// A dialog whose only popover carries prose — the StatCard receipt shape.
+function ProseReceipt() {
+  const [open, setOpen] = useState(false);
+  return (
+    <>
+      <Button onClick={() => setOpen(true)}>Open</Button>
+      <Modal open={open} onClose={() => setOpen(false)} labelledBy="p">
+        <h2 id="p">Won this quarter</h2>
+        <Popover label="Basis">
+          <p>Six of nine, since April.</p>
+        </Popover>
+        <Button onClick={() => setOpen(false)}>Close</Button>
       </Modal>
     </>
   );
@@ -78,6 +96,22 @@ describe("a dialog holds the keyboard", () => {
     await userEvent.tab({ shift: true });
     expect(document.activeElement).toBe(
       screen.getByRole("button", { name: "Last" }),
+    );
+  });
+
+  it("keeps Tab working when a popover in the dialog is prose", async () => {
+    // A receipt under a reading is frequently a sentence and nothing else. The
+    // trap hands Tab to the panel a dialog has opened, and a panel with no
+    // stops in it can only answer by swallowing the key — the dialog is then
+    // as unwalkable as if it had no controls at all.
+    render(<ProseReceipt />);
+    await userEvent.click(screen.getByRole("button", { name: "Open" }));
+    await userEvent.click(screen.getByRole("button", { name: "Basis" }));
+    expect(screen.getByText("Six of nine, since April.")).toBeTruthy();
+
+    await userEvent.tab();
+    expect(document.activeElement).toBe(
+      screen.getByRole("button", { name: "Close" }),
     );
   });
 

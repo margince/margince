@@ -1305,7 +1305,7 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-// The popover panel THIS dialog opened, or nothing.
+// The popover panel THIS dialog opened, if Tab has anywhere to go in it.
 //
 // Found through the trigger rather than by looking for a panel: a panel is
 // portalled to the body, so it is not inside the dialog to be found there, and
@@ -1313,12 +1313,18 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
 // BEHIND the dialog — handing Tab to a layer the reader cannot see. The trigger
 // names its own panel through `aria-controls`, and the trigger IS in the
 // dialog, which is the only link between the two that survives the portal.
+//
+// A panel with no tab stops is not one: a `StatCard` receipt is frequently
+// prose, and a trap holding a container it cannot move focus within answers
+// every Tab by swallowing it. Falling back to the dialog leaves the panel on
+// screen and the reader still able to walk what is behind it.
 function openPanelIn(dialog: HTMLElement | null): HTMLElement | null {
   const trigger = dialog?.querySelector<HTMLElement>(
     '[aria-expanded="true"][aria-controls]',
   );
   const panelId = trigger?.getAttribute("aria-controls");
-  return panelId ? document.getElementById(panelId) : null;
+  const panel = panelId ? document.getElementById(panelId) : null;
+  return panel && focusableWithin(panel).length > 0 ? panel : null;
 }
 
 export function Modal({
