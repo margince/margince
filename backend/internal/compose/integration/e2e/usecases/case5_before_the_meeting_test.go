@@ -107,7 +107,7 @@ func (s *scenario) seedPerson(t *testing.T, name string, org ids.UUID) ids.UUID 
 //
 // The date is the fixture's reason for existing. Criterion 3 is that every
 // event carries the date it happened, and a briefing that quotes a date from
-// somebody's prose instead of the record is the defect todo 33 was about.
+// somebody's prose instead of the record is the defect #2059 was merged for.
 func (s *scenario) seedDatedActivity(
 	t *testing.T, kind, direction string, person, org ids.UUID, occurredAt time.Time, body string,
 ) {

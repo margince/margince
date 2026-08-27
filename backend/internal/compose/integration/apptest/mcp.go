@@ -69,6 +69,8 @@ type MCPResult struct {
 // A scenario asserting on what a tool SAID wants the payload, so this unwraps.
 // Envelope reads the whole thing for the rare assertion that is about the
 // envelope itself.
+//
+//craft:ignore naked-any the decode target is the caller's own result type — json.Unmarshal's own signature
 func (r MCPResult) JSON(t *testing.T, out any) {
 	t.Helper()
 	envelope := r.Envelope(t)
