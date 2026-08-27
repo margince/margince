@@ -16,6 +16,7 @@ package activities
 // for. A value that could be any column's is a value this test cannot judge.
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -309,18 +310,53 @@ func stringOf[T ~string](v *T) *string {
 	return &s
 }
 
-// The select list and the destinations come from one declaration, so their
-// lengths agree by construction. Asserted anyway, because that is the property
-// the declaration exists to hold, and a refactor that reintroduced a second
-// list would land here first.
+// The select list and the destinations come from one declaration, so they agree
+// by construction. Asserted anyway, because that is the property the
+// declaration exists to hold, and a refactor that reintroduced a second list
+// would land here first.
+//
+// The RENDERED list is what is checked, not just the count of destinations. A
+// count on its own cannot tell a projection that declares a column from one
+// that renders it: drop a column's SQL and the destinations still match the
+// declaration, while the row pgx scans is one short — which fails as a scan
+// arity error somewhere else, at a call site that has nothing to do with the
+// omission.
 func TestTheSelectListAndTheScanAgreeOnLength(t *testing.T) {
+	// A contentArm with no comma in it, so the count below is the projection's
+	// commas and not the predicate's.
 	columns := activityColumns("true")
 	dests := activityScanTargets(&activityScan{})
 	if len(dests) != len(activityProjection) {
 		t.Fatalf("the scan asks for %d destinations and the projection declares %d columns",
 			len(dests), len(activityProjection))
 	}
-	if columns == "" {
-		t.Fatal("the select list rendered empty")
+	rendered := strings.Split(columns, ", ")
+	if len(rendered) != len(activityProjection) {
+		t.Errorf("the select list renders %d columns and the projection declares %d — pgx scans "+
+			"the row the LIST asked for, so a column declared and not rendered is a scan that "+
+			"fails somewhere with nothing to do with the omission",
+			len(rendered), len(activityProjection))
+	}
+	// And none of them is blank. A declared column whose SQL went missing still
+	// renders a position — `a.due_at, , a.assignee_id` — so the count survives
+	// while the row is one column short of what the destinations expect.
+	for i, column := range rendered {
+		if strings.TrimSpace(column) == "" {
+			t.Errorf("the select list renders nothing at position %d; the projection declares a "+
+				"column there", i)
+		}
+	}
+	// And each declared column is actually in it, so a rename cannot keep the
+	// count while selecting something else.
+	for _, c := range activityProjection {
+		if c.sql == "" {
+			continue
+		}
+		if !strings.Contains(columns, c.sql) {
+			t.Errorf("the projection declares %s and the select list does not name it", c.sql)
+		}
+	}
+	if !strings.HasSuffix(columns, "AS content_available") {
+		t.Errorf("the select list does not end with the audience arm: %q", columns)
 	}
 }
