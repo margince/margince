@@ -223,12 +223,17 @@ func TestABrandIsNotDeletedBecauseItLooksLikeBoilerplate(t *testing.T) {
 		{"Hòa An", "hoa an"},
 		{"Việt An", "viet an"},
 		{"CÔNG TY CỔ PHẦN SỮA VIỆT NAM", "sua viet nam"},
-		// The brand is what is LEFT, and trade words in front of it are not part
-		// of it however the company writes them: "Đầu Tư Xanh" is the green
-		// investment company, and the company is "Xanh". This is the same answer
-		// the English side gives "Digital Solutions GmbH".
-		{"Đầu Tư Xanh", "xanh"},
+		// Trade words are only boilerplate in a name that DECLARED its market by
+		// carrying a legal form. "Tập Đoàn Xanh" says it is a Vietnamese group,
+		// so "tập đoàn" is its form and "Xanh" is the company. "Đầu Tư Xanh"
+		// says nothing of the kind, and its two-letter abbreviations are words
+		// in other markets — "VA Software" and "DT Systems" are companies whose
+		// first word this table would otherwise eat.
 		{"Tập Đoàn Xanh", "xanh"},
+		{"Đầu Tư Xanh", "dau tu xanh"},
+		{"CÔNG TY CỔ PHẦN ĐẦU TƯ XANH", "xanh"},
+		{"VA Trading", "va trading"},
+		{"DT Robotics", "dt robotics"},
 	}
 	for _, k := range kept {
 		if got := orgNameForMatching(k.name); got != k.brand {
@@ -245,6 +250,61 @@ func TestABrandIsNotDeletedBecauseItLooksLikeBoilerplate(t *testing.T) {
 				"of the company is being dropped as market vocabulary",
 				k.name, got, want)
 		}
+	}
+}
+
+// THE VIETNAMESE RULES REACH ONLY VIETNAMESE NAMES.
+//
+// Three of them would each be a regression somewhere else if they applied to
+// every name, and each pair below is the case that catches it. They are English
+// names, and they belong in this file because it is the Vietnamese support that
+// endangers them.
+func TestTheVietnameseRulesDoNotReachOtherMarkets(t *testing.T) {
+	// A two-letter trade abbreviation is a word in another market. Stripping
+	// "va" and "dt" as Vietnamese fillers made these equal to the bare sector
+	// word, which every company in that sector shares.
+	for _, k := range []struct{ name, want string }{
+		{"VA Trading", "va trading"},
+		{"DT Robotics", "dt robotics"},
+		{"TM Forum", "tm forum"},
+	} {
+		if got := orgNameForMatching(k.name); got != k.want {
+			t.Errorf("%q reduces to %q, want %q — a Vietnamese trade abbreviation "+
+				"was read out of a name that never claimed the market",
+				k.name, got, k.want)
+		}
+	}
+	// One distinctive word is enough in English, where brands are built from
+	// rare words. Demanding a majority here loses a real duplicate.
+	for _, p := range [][2]string{
+		{"Amazon AWS", "Amazon Web Services"},
+		{"Arvato", "Arvato Systems"},
+	} {
+		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got < dedupeReviewThreshold {
+			t.Errorf("%q vs %q scores %.4f, below the %.2f threshold — one shared "+
+				"distinctive word is the English rule and this is one company",
+				p[0], p[1], got, dedupeReviewThreshold)
+		}
+	}
+	// An English article is an article wherever it sits. "Bank of the West" and
+	// "Bank of the East" must reduce to two words each, not four: a pair that
+	// kept "of" and "the" would agree on three words of four and look like one
+	// company on its function words.
+	//
+	// The pair still scores above the threshold on the shared "bank" alone —
+	// that is the English one-distinctive-word rule, it predates this change and
+	// is unchanged by it. What is asserted here is the token reduction this
+	// change is responsible for.
+	for _, name := range []string{"Bank of the West", "Bank of the East"} {
+		if got := distinctiveOrgTokens(name); len(got) != 2 {
+			t.Errorf("the gate reads %q as %v, want two words — an English "+
+				"article is not evidence wherever it sits", name, got)
+		}
+	}
+	// A repeated word is one piece of evidence, not two.
+	if sharedTokenCount([]string{"acme", "acme"}, []string{"acme", "beta"}) != 1 {
+		t.Error("a word repeated on one side drew two matches from one word on " +
+			"the other — repetition is not evidence")
 	}
 }
 

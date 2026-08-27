@@ -203,10 +203,26 @@ func matchesAt(fields, phrase []string) bool {
 // with every other empty key. A comparison has no such obligation: it is
 // allowed to say "I cannot tell these apart on their names".
 func orgNameForMatching(s string) string {
+	name, _ := matchingFormOf(s)
+	return name
+}
+
+// matchingFormOf is orgNameForMatching plus the fact the caller sometimes needs:
+// whether this name declared itself Vietnamese by carrying a legal form.
+//
+// THE TRADE VOCABULARY IS ONLY STRIPPED FROM A NAME THAT DID. Its abbreviations
+// are two letters — "tm", "dv", "dt", "va" — and two letters mean something else
+// in every other market: "VA Software" and "DT Systems" are companies whose
+// first word this table would otherwise eat, leaving them equal to "Software"
+// and "Systems". A legal form is a strong enough signal to act on; a bare
+// two-letter word at the front of a name is not.
+func matchingFormOf(s string) (string, bool) {
 	fields := strings.Fields(NormalizeOrgName(foldDStroke(s)))
 	stripped := stripLeadingPhrases(fields, vietnameseLegalFormPrefixes)
-	if len(stripped) < len(fields) {
-		stripped = stripLeadingPhrases(stripped, vietnameseLegalFormContinuations)
+	vietnamese := len(stripped) < len(fields)
+	if !vietnamese {
+		return strings.Join(stripped, " "), false
 	}
-	return strings.Join(stripLeadingPhrases(stripped, vietnameseSectorFillers), " ")
+	stripped = stripLeadingPhrases(stripped, vietnameseLegalFormContinuations)
+	return strings.Join(stripLeadingPhrases(stripped, vietnameseSectorFillers), " "), true
 }

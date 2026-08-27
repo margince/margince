@@ -215,13 +215,13 @@ func distinctiveOrgTokens(name string) []string {
 	fields := strings.FieldsFunc(orgNameForMatching(name), orgTokenSeparators)
 	out := make([]string, 0, min(len(fields), orgGateTokenBudget))
 	for i, token := range fields {
-		// AN ARTICLE IS ONLY AN ARTICLE AT THE FRONT. English puts one there and
-		// nowhere else — "The Group", "Bank of the West" — so dropping it costs
-		// that market nothing. Elsewhere the same letters are a word: Vietnamese
-		// names end in the syllable "an" ("Việt An", "Long An", the province),
-		// and dropping it left those companies as a single syllable that matched
-		// half the market.
-		if i > 0 && orgNameArticles[token] {
+		// AN ARTICLE THAT WOULD LEAVE A ONE-WORD NAME IS NOT AN ARTICLE. English
+		// puts a real one beside other real words — "Bank of the West" keeps
+		// "bank" and "west" without it — so dropping it there costs nothing.
+		// A two-word name whose second word is "an" is a different thing: "Việt
+		// An", "Long An" and "Hòa An" are companies, and dropping the syllable
+		// left each of them a single word that matched half the market.
+		if i > 0 && orgNameArticles[token] && len(fields) == 2 {
 			out = append(out, token)
 			continue
 		}
@@ -323,6 +323,8 @@ func sharesADistinctiveWord(a, b string) bool {
 		return true
 	}
 	left, right := distinctiveOrgTokens(a), distinctiveOrgTokens(b)
+	_, leftVN := matchingFormOf(a)
+	_, rightVN := matchingFormOf(b)
 	// A name that reduced to NOTHING shares no word and stops here. Vietnamese
 	// names carry their legal form and trade vocabulary in front of the brand,
 	// so a name made only of those strips to empty (orgnameforms.go) — and two
@@ -344,16 +346,22 @@ func sharesADistinctiveWord(a, b string) bool {
 	// Phát" share the word "hoa" — and they are Vietnam's largest construction
 	// firm and its largest steelmaker.
 	//
-	// The rule that separates the two cases without knowing the language: MORE
-	// than half of the shorter name must be accounted for. "Arvato" is one word
-	// of one — all of it — so "Arvato Systems" passes. "hoa binh" against "hoa
-	// phat" shares one word of two, which is exactly half, and half of a
-	// two-word name is the coincidence this exists to reject.
+	// ASKED ONLY OF A VIETNAMESE COMPARISON, because only there is a shared word
+	// weak evidence. English builds a brand from words that are themselves rare,
+	// so one is enough, and demanding more loses real duplicates: "Amazon AWS"
+	// and "Amazon Web Services" share only "amazon" of two distinctive words.
 	//
-	// Strictly more than half, not at least: at half, the two names disagree
+	// EITHER side declaring the market is enough. A company does not stop being
+	// Vietnamese when someone types its bare brand — "Tân Hiệp Phát" carries no
+	// legal form, and it still must not meet "Hòa Phát" on the shared syllable.
+	//
+	// Strictly more than half, not at least: at half the two names disagree
 	// about as much as they agree, and the disagreement is the part that names
 	// the company.
-	return 2*shared > min(len(left), len(right))
+	if leftVN || rightVN {
+		return 2*shared > min(len(left), len(right))
+	}
+	return true
 }
 
 // sharedTokenCount is how many words of the shorter name appear in the longer.
@@ -366,10 +374,15 @@ func sharedTokenCount(left, right []string) int {
 	if len(longer) < len(shorter) {
 		shorter, longer = longer, shorter
 	}
+	// One word of the longer name answers for at most one word of the shorter.
+	// Without that, "Acme Acme" drew two matches from the single "acme" in
+	// "Acme Beta" and counted a repetition as a second piece of evidence.
+	taken := make([]bool, len(longer))
 	shared := 0
 	for _, x := range shorter {
-		for _, y := range longer {
-			if sameOrgToken(x, y) {
+		for j, y := range longer {
+			if !taken[j] && sameOrgToken(x, y) {
+				taken[j] = true
 				shared++
 				break
 			}
