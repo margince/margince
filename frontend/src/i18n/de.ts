@@ -4820,6 +4820,32 @@ export const de = {
   "prefs.notSubscribed":
     "Nicht abonniert — du bekommst für diesen Zweck nichts",
   "prefs.alwaysOn": "immer an",
+  "confirm.title": "Ihre Daten",
+  "confirm.intro":
+    "Ich bin Margince, die KI hinter diesem CRM. Hier steht alles, was wir über Sie gespeichert haben. Sie können es ändern oder uns bitten, es zu löschen.",
+  "confirm.card.title": "Was wir gespeichert haben",
+  "confirm.field.fullName": "Name",
+  "confirm.field.title": "Position",
+  "confirm.field.email": "E-Mail",
+  "confirm.field.phone": "Telefon",
+  "confirm.field.company": "Unternehmen",
+  "confirm.field.none": "Nicht erfasst",
+  "confirm.marketing.title": "Dürfen wir in Kontakt bleiben?",
+  "confirm.marketing.ask":
+    "Neuigkeiten ab und zu, etwa einmal im Monat. Sie entscheiden, ich halte mich daran.",
+  "confirm.marketing.yes": "Ja, halten Sie mich auf dem Laufenden",
+  "confirm.marketing.no": "Nein danke, nur meine Daten korrekt halten",
+  "confirm.provenance.title": "Woher wir Ihre Daten haben",
+  "confirm.provenance.empty": "Zur Herkunft ist nichts erfasst.",
+  "confirm.provenance.line": "{field}: aus {source}, erfasst am {date}",
+  "confirm.erasure.ask": "Meine Daten löschen",
+  "confirm.erasure.staged": "Löschung angefragt. Zum Senden unten bestätigen.",
+  "confirm.submit": "Bestätigen",
+  "confirm.done.title": "Danke",
+  "confirm.done.body":
+    "Ich habe Ihre Antwort erfasst. Änderungen gehen an eine Person hier zur Übernahme, und dieser Link ist jetzt verbraucht.",
+  "confirm.invalidLink":
+    "Dieser Link ist nicht mehr gültig. Er wurde möglicherweise schon benutzt oder ist abgelaufen.",
   "prefs.lockedWhy": "Transaktional — von der Abmeldung ausgenommen.",
   "prefs.confirmationNeededWhy":
     "Um dies zu erhalten, nutzen Sie den Bestätigungslink aus unserer E-Mail. Abbestellen können Sie hier jederzeit.",

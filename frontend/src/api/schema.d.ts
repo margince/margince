@@ -3421,6 +3421,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/public/confirm/{token}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The single-use confirm-details token carried in the emailed link. Not a session credential. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        /**
+         * What the workspace holds about this contact (anonymous, token-authed).
+         * @description The no-login confirm-your-details page. The token resolves to one person before any session
+         *     exists; the page shows that person their own record, where each field came from (Art. 14), and
+         *     their current marketing answer. Unknown, expired and already-spent tokens all read as absent
+         *     (404) — the surface is never an oracle for which it was. Opening the page records that the link
+         *     was opened and changes nothing else.
+         */
+        get: operations["getConfirmDetails"];
+        put?: never;
+        /**
+         * Submit corrections and a marketing answer (anonymous, token-authed).
+         * @description Spends the link and records what it carried, in one transaction. Corrections land as PROPOSALS a
+         *     person at the workspace accepts — the subject holds a bearer token and no principal, so a leaked
+         *     link must never rewrite CRM data. A removal request is filed the same way rather than erasing on
+         *     the spot. The marketing answer rides the ordinary consent engine; because the link is single-use
+         *     and was delivered to this subject's own mailbox, an explicit grant completes without a further
+         *     confirmation mail, and the proof row records what stood in for one. Omitting the answer records
+         *     no consent at all: opening a page grants nothing. A replayed submit finds the link spent (404).
+         */
+        post: operations["submitConfirmDetails"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/public/preferences/{token}/unsubscribe": {
         parameters: {
             query?: never;
@@ -20764,6 +20801,31 @@ export interface components {
                 grant_needs_confirmation: boolean;
             }[];
         };
+        /**
+         * @description One contact's own view of what the workspace holds about them, for the no-login confirm page.
+         *     A purpose-built projection and never the Person360 read model, which carries this workspace's
+         *     working notes — owner, lifecycle, scores — rather than the subject's own data.
+         */
+        ConfirmDetails: {
+            full_name: string;
+            title: string;
+            /** @description The current employer, read through the live employment relationship. Not correctable here. */
+            company: string;
+            email: string;
+            phone: string;
+            /**
+             * @description Their answer today, so somebody who already said yes is not asked as though they had not.
+             * @enum {string}
+             */
+            marketing_state: "unknown" | "granted" | "withdrawn";
+            /** @description Where each held value came from and when (Art. 14). Empty for a field nothing has stamped. */
+            provenance: {
+                field: string;
+                source: string;
+                /** @description The date the value was recorded, as YYYY-MM-DD. */
+                recorded_at: string;
+            }[];
+        };
         /** @description An automation *type* in the closed starter library (E15/ADR-0035, feedback/14). */
         AutomationCatalogEntry: {
             /** @description Stable type key, e.g. stalled_deal_nudge. */
@@ -28997,6 +29059,73 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["PreferenceCenter"];
                 };
+            };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getConfirmDetails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The single-use confirm-details token carried in the emailed link. Not a session credential. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The contact's own view of their record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConfirmDetails"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+        };
+    };
+    submitConfirmDetails: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The single-use confirm-details token carried in the emailed link. Not a session credential. */
+                token: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @description Proposed values, at most one per field. An empty list is the ordinary case. */
+                    corrections?: {
+                        /** @enum {string} */
+                        field: "full_name" | "title" | "email" | "phone";
+                        value: string;
+                    }[];
+                    /** @description The subject asked to be removed. Files a request for a human; never erases directly. */
+                    request_erasure?: boolean;
+                    /**
+                     * @description Their answer. Omit entirely for no answer — a page view grants nothing.
+                     * @enum {string}
+                     */
+                    marketing_choice?: "granted" | "withdrawn";
+                    /** @description The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant. */
+                    marketing_wording?: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Recorded. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];

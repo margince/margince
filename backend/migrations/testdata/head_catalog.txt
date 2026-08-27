@@ -1065,6 +1065,20 @@ public.comms_outbound_attachments_well_formed(files jsonb) secdef=false cfg=- ac
 public.comms_outbound_message_unique CREATE UNIQUE INDEX comms_outbound_message_unique ON public.comms_outbound USING btree (message_id)
 public.comms_outbound_pkey CREATE UNIQUE INDEX comms_outbound_pkey ON public.comms_outbound USING btree (id)
 public.comms_outbound_workspace_activity_ix CREATE INDEX comms_outbound_workspace_activity_ix ON public.comms_outbound USING btree (activity_id)
+public.confirm_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.confirm_token.confirm_token_hash_key UNIQUE (token_hash)
+public.confirm_token.confirm_token_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.confirm_token.confirm_token_pkey PRIMARY KEY (id)
+public.confirm_token.consumed_at timestamp with time zone gen=- def=-
+public.confirm_token.delivered_to text NOT NULL gen=- def=-
+public.confirm_token.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.confirm_token.id uuid NOT NULL gen=- def=uuidv7()
+public.confirm_token.issued_at timestamp with time zone NOT NULL gen=- def=now()
+public.confirm_token.opened_at timestamp with time zone gen=- def=-
+public.confirm_token.person_id uuid NOT NULL gen=- def=-
+public.confirm_token.token_hash text NOT NULL gen=- def=-
+public.confirm_token_hash_key CREATE UNIQUE INDEX confirm_token_hash_key ON public.confirm_token USING btree (token_hash)
+public.confirm_token_pkey CREATE UNIQUE INDEX confirm_token_pkey ON public.confirm_token USING btree (id)
 public.connector_connection_pkey CREATE UNIQUE INDEX connector_connection_pkey ON public.capture_connection USING btree (id)
 public.consent_doi_token acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_doi_token.consent_doi_token_hash_unique UNIQUE (token_hash)
@@ -2132,8 +2146,11 @@ public.incumbent_connection.scopes text[] NOT NULL gen=- def='{}'::text[]
 public.incumbent_connection.status text NOT NULL gen=- def='active'::text
 public.incumbent_connection_pkey CREATE UNIQUE INDEX incumbent_connection_pkey ON public.incumbent_connection USING btree (id)
 public.incumbent_connection_singleton CREATE UNIQUE INDEX incumbent_connection_singleton ON public.incumbent_connection USING btree ((true))
+public.ix_confirm_token_person CREATE INDEX ix_confirm_token_person ON public.confirm_token USING btree (person_id)
 public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
+public.ix_person_confirm_submission_open CREATE INDEX ix_person_confirm_submission_open ON public.person_confirm_submission USING btree (submitted_at) WHERE (resolved_at IS NULL)
+public.ix_person_confirm_submission_person CREATE INDEX ix_person_confirm_submission_person ON public.person_confirm_submission USING btree (person_id)
 public.knowledge_chunk acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.knowledge_chunk.archived_at timestamp with time zone gen=- def=-
 public.knowledge_chunk.chunk_hash text NOT NULL gen=- def=-
@@ -3207,6 +3224,25 @@ public.person_channel_identity.updated_at timestamp with time zone NOT NULL gen=
 public.person_channel_identity.username text gen=- def=-
 public.person_channel_identity.version bigint NOT NULL gen=- def=1
 public.person_channel_identity_pkey CREATE UNIQUE INDEX person_channel_identity_pkey ON public.person_channel_identity USING btree (id)
+public.person_confirm_submission acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.person_confirm_submission.field text gen=- def=-
+public.person_confirm_submission.id uuid NOT NULL gen=- def=uuidv7()
+public.person_confirm_submission.kind text NOT NULL gen=- def=-
+public.person_confirm_submission.person_confirm_submission_field_matches_kind CHECK ((((kind = 'correction'::text) AND (field IS NOT NULL)) OR ((kind = 'erasure_request'::text) AND (field IS NULL))))
+public.person_confirm_submission.person_confirm_submission_kind_check CHECK ((kind = ANY (ARRAY['correction'::text, 'erasure_request'::text])))
+public.person_confirm_submission.person_confirm_submission_person_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
+public.person_confirm_submission.person_confirm_submission_pkey PRIMARY KEY (id)
+public.person_confirm_submission.person_confirm_submission_resolution_check CHECK (((resolution IS NULL) OR (resolution = ANY (ARRAY['accepted'::text, 'rejected'::text]))))
+public.person_confirm_submission.person_confirm_submission_resolved_together CHECK ((num_nonnulls(resolved_at, resolved_by, resolution) = ANY (ARRAY[0, 3])))
+public.person_confirm_submission.person_confirm_submission_token_fkey FOREIGN KEY (token_id) REFERENCES confirm_token(id) ON DELETE CASCADE
+public.person_confirm_submission.person_id uuid NOT NULL gen=- def=-
+public.person_confirm_submission.proposed_value text gen=- def=-
+public.person_confirm_submission.resolution text gen=- def=-
+public.person_confirm_submission.resolved_at timestamp with time zone gen=- def=-
+public.person_confirm_submission.resolved_by text gen=- def=-
+public.person_confirm_submission.submitted_at timestamp with time zone NOT NULL gen=- def=now()
+public.person_confirm_submission.token_id uuid NOT NULL gen=- def=-
+public.person_confirm_submission_pkey CREATE UNIQUE INDEX person_confirm_submission_pkey ON public.person_confirm_submission USING btree (id)
 public.person_consent acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.person_consent.captured_at timestamp with time zone gen=- def=-
 public.person_consent.id uuid NOT NULL gen=- def=uuidv7()

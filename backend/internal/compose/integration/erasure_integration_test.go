@@ -93,6 +93,22 @@ func seedSubject(t *testing.T, e *Env) ids.UUID {
 			personID, purposeID, "doi-hash-"+personID.String()); err != nil {
 			return err
 		}
+		// The confirm link and what came back through it: a live capability that
+		// DISPLAYS the record, and the subject's own words in plaintext.
+		var confirmTokenID string
+		if err := tx.QueryRow(ctx,
+			`INSERT INTO confirm_token (person_id, token_hash, delivered_to, expires_at)
+			 VALUES ($1, $2, 'selma@example.test', now() + interval '14 days')
+			 RETURNING id`,
+			personID, "confirm-hash-"+personID.String()).Scan(&confirmTokenID); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx,
+			`INSERT INTO person_confirm_submission (person_id, token_id, kind, field, proposed_value)
+			 VALUES ($1, $2, 'correction', 'full_name', 'Selma Corrected')`,
+			personID, confirmTokenID); err != nil {
+			return err
+		}
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO raw_capture (source_system, source_id, payload)
 			 VALUES ('gmail', 'msg-1', jsonb_build_object('from', $1::text, 'body', 'quarterly numbers'))`,
@@ -132,6 +148,8 @@ func assertSubjectErased(t *testing.T, e *Env, personID ids.UUID) {
 			{"search hits for the name", `SELECT count(*) FROM person WHERE id = $1 AND search_tsv @@ plainto_tsquery('simple', 'Selma')`, 0},
 			{"preference-center tokens", `SELECT count(*) FROM preference_token WHERE person_id = $1`, 0},
 			{"double-opt-in tokens", `SELECT count(*) FROM consent_doi_token WHERE person_id = $1`, 0},
+			{"confirm-details links", `SELECT count(*) FROM confirm_token WHERE person_id = $1`, 0},
+			{"confirm-page submissions", `SELECT count(*) FROM person_confirm_submission WHERE person_id = $1`, 0},
 			{"suppression entries", `SELECT count(*) FROM erasure_suppression WHERE kind = 'email'`, 1},
 			{"erase tombstones", `SELECT count(*) FROM audit_log WHERE action = 'erase' AND entity_id = $1`, 1},
 		}

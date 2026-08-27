@@ -1,0 +1,85 @@
+/* The confirm-your-details page. It shares .pref-page with the preference
+   centre — same rail-less public shell, same width — and adds only what the
+   card and the ask need. */
+
+.confirm-intro {
+  margin: var(--space-2) 0 var(--space-6);
+  color: var(--textSecondary);
+}
+
+.confirm-fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  list-style: none;
+  margin: var(--space-3) 0 0;
+  padding: 0;
+}
+
+.confirm-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.confirm-input {
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-md);
+  background: var(--bgElevated);
+  color: var(--textPrimary);
+  padding: var(--space-2) var(--space-3);
+  font: inherit;
+}
+
+.confirm-readonly {
+  color: var(--textSecondary);
+  padding: var(--space-2) 0;
+}
+
+/* Yes is the filled primary and no is a quiet link. Unequal weight is legal
+   and deliberate; a pre-selected default is not, so neither carries one. */
+.confirm-choices {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  margin-top: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.confirm-decline,
+.confirm-erasure {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--textTertiary);
+  text-decoration: underline;
+  cursor: pointer;
+  font: inherit;
+}
+
+.confirm-decline[aria-pressed="true"],
+.confirm-erasure[aria-pressed="true"] {
+  color: var(--textPrimary);
+}
+
+.confirm-provenance {
+  margin: var(--space-6) 0;
+  color: var(--textSecondary);
+}
+
+.confirm-provenance ul {
+  margin: var(--space-2) 0 0;
+  padding-left: var(--space-5);
+}
+
+.confirm-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-5);
+  margin-top: var(--space-6);
+  flex-wrap: wrap;
+}
+
+.confirm-error {
+  color: var(--danger);
+}

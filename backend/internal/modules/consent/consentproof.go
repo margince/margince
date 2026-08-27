@@ -55,6 +55,13 @@ func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in Record
 			Reason: "a double opt-in purpose needs a person subject; promote the lead before granting it",
 		}
 	}
+	// A mailbox already proven by the single-use link that carried the subject
+	// here answers what the round trip would ask, so the grant confirms on the
+	// spot. The confirmation time is this moment: the click IS the confirmation.
+	if in.MailboxProof.proves() {
+		confirmed := s.now().UTC()
+		return &confirmed, nil
+	}
 	if in.DoubleOptInToken == nil || *in.DoubleOptInToken == "" {
 		return nil, &ValidationError{Field: "double_opt_in_token", Reason: "purpose requires a confirmed double opt-in"}
 	}
@@ -80,11 +87,23 @@ func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub 
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, capturedAt, in.Source); err != nil {
 		return err
 	}
+	// issuance_trigger names what made this grant confirmable without a round
+	// trip, so the chain is readable from the proof row alone. Set only where a
+	// mailbox proof actually STOOD IN for one: an ordinary purpose needed no
+	// confirmation, so claiming the link substituted for one would overstate
+	// what happened. NULL where a real token was redeemed — there the consumed
+	// token is itself the record.
+	var trigger *string
+	if doiConfirmedAt != nil && in.MailboxProof.proves() {
+		named := string(in.MailboxProof)
+		trigger = &named
+	}
 	_, err := tx.Exec(ctx, `
 		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
-		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), coalesce($6, 'recorded via API'), coalesce($7, 'v1'), $8, $9, $10)`,
+		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by,
+		                           issuance_trigger)
+		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), coalesce($6, 'recorded via API'), coalesce($7, 'v1'), $8, $9, $10, $11)`,
 		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
-		in.PolicyText, in.PolicyVersion, doiConfirmedAt, capturedAt, actorID)
+		in.PolicyText, in.PolicyVersion, doiConfirmedAt, capturedAt, actorID, trigger)
 	return err
 }

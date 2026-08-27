@@ -19,9 +19,11 @@ import (
 )
 
 // deleteConsentCapabilities destroys every live capability over the subject's
-// consent record: preference_token, the emailed List-Unsubscribe URL, and
+// consent record: preference_token, the emailed List-Unsubscribe URL;
 // consent_doi_token, the 72-hour double-opt-in secret in the same mailbox
-// whose only function is to authorise a GRANT. Each is a bearer secret rather
+// whose only function is to authorise a GRANT; and confirm_token, the link that
+// DISPLAYS the record and carries a marketing answer back. Each is a bearer
+// secret rather
 // than a stored attribute, acting on an edge that binds a system principal, so
 // every RBAC gate downstream passes.
 //
@@ -47,6 +49,17 @@ func deleteConsentCapabilities(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	}
 	if _, err := tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE person_id = $1`, personID); err != nil {
 		return fmt.Errorf("privacy: destroying the subject's double-opt-in token: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `DELETE FROM confirm_token WHERE person_id = $1`, personID); err != nil {
+		return fmt.Errorf("privacy: destroying the subject's confirm-details link: %w", err)
+	}
+
+	// Not a capability but the subject's own words: what they proposed as a
+	// correction, in their own name and address. Deleted rather than kept as
+	// evidence, because an unaccepted proposal is data the workspace was asked
+	// to hold and never agreed anything about.
+	if _, err := tx.Exec(ctx, `DELETE FROM person_confirm_submission WHERE person_id = $1`, personID); err != nil {
+		return fmt.Errorf("privacy: destroying the subject's confirm-page submissions: %w", err)
 	}
 	return nil
 }

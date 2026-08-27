@@ -217,6 +217,21 @@ type RecordInput struct {
 	LawfulBasis      *string
 	Source           *string
 	DoubleOptInToken *string
+	// MailboxProof names how the caller established that the subject controls
+	// the address, for a grant made on a surface the subject reached through a
+	// single-use link delivered to it. It satisfies a double-opt-in purpose in
+	// place of a DoubleOptInToken, and lands on the proof row's
+	// issuance_trigger so the chain stays demonstrable.
+	//
+	// No transport sets this: it is not on the wire, and every handler building
+	// a RecordInput from a request body leaves it zero. The one writer is the
+	// confirm submit, which sets it only after spending the token that earns it.
+	//
+	// Held by: TestOnlyTheConfirmSubmitClaimsAProvenMailbox
+	// (backend/gates/mailboxproofwriters_test.go) — which fails if any other
+	// file sets the field, and fails again if the submit stops spending the
+	// token that makes the claim true.
+	MailboxProof MailboxProof
 	// PolicyText/PolicyVersion carry the CaptureConsent passthrough of a
 	// capture surface (feedback/14): the EXACT wording and version shown
 	// to the subject, stored verbatim on the proof row (Art 7(1)
@@ -306,8 +321,7 @@ func admitRecord(ctx context.Context, in RecordInput) (subject, ConsentState, er
 func (s *Store) Record(ctx context.Context, in RecordInput) (State, error) {
 	// Admitted before a connection is taken: a malformed subject or a caller
 	// without authority is refused without opening a transaction, which is what
-	// keeps a bad request off the pool. RecordTx does not repeat it — this is
-	// the one admission, and RecordTx documents that its callers have passed it.
+	// keeps a bad request off the pool. The write below does not repeat it.
 	sub, state, err := admitRecord(ctx, in)
 	if err != nil {
 		return State{}, err

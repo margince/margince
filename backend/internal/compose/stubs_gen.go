@@ -1559,6 +1559,14 @@ func (stubs) GetPublicAvailability(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "GetPublicAvailability")
 }
 
+func (stubs) GetConfirmDetails(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "GetConfirmDetails")
+}
+
+func (stubs) SubmitConfirmDetails(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
+	httperr.NotImplemented(w, r, "SubmitConfirmDetails")
+}
+
 func (stubs) GetPreferenceCenter(w nethttp.ResponseWriter, r *nethttp.Request, token string) {
 	httperr.NotImplemented(w, r, "GetPreferenceCenter")
 }

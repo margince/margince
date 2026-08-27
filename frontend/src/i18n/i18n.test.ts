@@ -40,6 +40,8 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // And on the thread across the top of a record, third spelling of the same
   // noun.
   "co.spine.kind.email",
+  // Same word again, this time the confirm page's own field label.
+  "confirm.field.email",
   // Google's own field names. An admin reads these off the Google Cloud
   // console, which shows them in English whatever the reader's locale, so
   // translating them here would have the form ask for something the page they

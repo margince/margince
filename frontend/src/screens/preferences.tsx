@@ -48,10 +48,10 @@ export function PreferenceCenterScreen({
 // Marks a 404 so the render branch can show the "link is no longer valid"
 // copy without distinguishing an unknown token from a revoked one — either
 // way the honest response is identical (never a consent-state oracle).
-class LinkInvalidError extends Error {}
+export class LinkInvalidError extends Error {}
 // Marks a 429 (the public edge rate-limits per-IP and per-token) so the
 // render branch gives an honest retry message instead of a raw failure.
-class RateLimitedError extends Error {}
+export class RateLimitedError extends Error {}
 
 // Every mutation against this public edge classifies its failure the same
 // way: 404 means the token no longer resolves, 429 means the rate limit
@@ -59,7 +59,7 @@ class RateLimitedError extends Error {}
 // the load GET and the one-click unsubscribe POST (both reachable by an
 // unauthenticated caller hammering the same per-token limit) read identically
 // instead of one going silent.
-function explainPublicError(
+export function explainPublicError(
   error: unknown,
   t: ReturnType<typeof useT>,
 ): string {
