@@ -5,8 +5,8 @@ package privacy
 
 import (
 	"context"
+	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -110,6 +110,9 @@ type recordAuditRow struct {
 	// undidAuditLogID names the row this one reversed; nil on every row that was
 	// not written by a restore.
 	undidAuditLogID *ids.UUID
+	// edge is the LINK this row changed, with the other end named — nil on every
+	// row that changed a field of the record itself.
+	edge *edgeSubject
 }
 
 // recordHistoryEntry renders one audit row as a history entry: mask both
@@ -124,6 +127,16 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 	if row.actorDisplayName != nil && *row.actorDisplayName != "" {
 		display = *row.actorDisplayName
 	}
+	before, after := applyFieldMask(row.before, mask), applyFieldMask(row.after, mask)
+	summary := composeRecordSummary(row.actorType, display, row.onBehalfOfName,
+		row.action, row.passportID != nil, row.agentClientName)
+	if row.edge != nil {
+		subject := recordSummarySubject(row.actorType, display, row.onBehalfOfName,
+			row.passportID != nil, row.agentClientName)
+		if line, phrased := edgeSummary(subject, row.action, *row.edge, after); phrased {
+			summary = line
+		}
+	}
 	return RecordHistoryEntry{
 		AgentClient:       row.agentClientName,
 		ID:                row.id,
@@ -136,10 +149,9 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 		OccurredAt:        row.occurredAt,
 		AuthorizationRule: row.authorizationRule,
 		UndidAuditLogID:   row.undidAuditLogID,
-		Before:            applyFieldMask(row.before, mask),
-		After:             applyFieldMask(row.after, mask),
-		Summary: composeRecordSummary(row.actorType, display, row.onBehalfOfName,
-			row.action, row.passportID != nil, row.agentClientName),
+		Before:            before,
+		After:             after,
+		Summary:           summary,
 	}
 }
 
@@ -230,7 +242,8 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 
 // queryRecordHistoryWindow fetches one keyset window of the record's audit
 // spine, newest first, with both display names resolved in SQL by the shared
-// auditActorNameJoins.
+// auditActorNameJoins — and, unioned into the same window, the rows of the LINKS
+// the record is an end of (edgehistory.go).
 //
 // Neither join carries a workspace predicate, and does not need one: both
 // match app_user.id, a global primary key, so a uuid can only ever resolve
@@ -240,8 +253,11 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFilter,
 	boundary scrubBoundary, cursor storekit.Cursor, useCursor bool, fetch int,
 ) ([]recordAuditRow, error) {
-	conds := []string{"a.entity_type = $1", "a.entity_id = $2"}
-	args := []any{f.EntityType, f.EntityID}
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	typePos, idPos := arg(f.EntityType), arg(f.EntityID)
+
+	var conds []string
 	if boundary.exists() {
 		// Tombstone-INCLUSIVE (>=), where field-history cuts strictly
 		// after (>): projecting a tombstone's payload as field diffs would
@@ -249,7 +265,8 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 		// tombstone renders as its own honest line ("… erased the
 		// record"), and its images are empty since the scrub meta rides
 		// evidence. Everything strictly older is still the PII the scrub
-		// certified gone, and stays withheld.
+		// certified gone and stays withheld, an edge row included: an employment
+		// image holds the role and the dates the scrub covered.
 		conds = append(conds, fmt.Sprintf("(a.occurred_at, a.id) >= ($%d, $%d)", len(args)+1, len(args)+2))
 		args = append(args, boundary.occurredAt, boundary.id)
 	}
@@ -259,13 +276,17 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 		conds = append(conds, fmt.Sprintf("(a.occurred_at, a.id) < ($%d, $%d)", len(args)+1, len(args)+2))
 		args = append(args, cursor.CreatedAt, cursor.ID)
 	}
-	args = append(args, fetch)
-	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT`+recordAuditColumns+`
-		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
-		WHERE %s
-		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT $%d`, strings.Join(conds, " AND "), len(args)), args...)
+	edgeCTE, err := edgeSubjectCTE(ctx, f.EntityType, idPos, arg)
+	// No grant on the edge object: the links are ABSENT, never refused — a
+	// refusal would tell the caller the record holds links. The denial lands
+	// before edgeSubjectCTE registers an argument (held by
+	// TestAnEdgelessCallerRegistersNoEdgeArguments), so no placeholder is unbound.
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		edgeCTE = ""
+	} else if err != nil {
+		return nil, err
+	}
+	rows, err := tx.Query(ctx, recordHistoryWindowSQL(typePos, idPos, arg(fetch), conds, edgeCTE), args...)
 	if err != nil {
 		return nil, err
 	}
@@ -274,91 +295,10 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 	var out []recordAuditRow
 	for rows.Next() {
 		var r recordAuditRow
-		if err := scanRecordAuditRow(rows, &r); err != nil {
+		if err := scanEdgeAuditRow(rows, &r); err != nil {
 			return nil, err
 		}
 		out = append(out, r)
 	}
 	return out, rows.Err()
-}
-
-// machineQualifier names the tool a delegated change was typed through, as
-// the phrase that qualifies the PERSON who authorized it — "via an agent",
-// not "an agent".
-//
-// It is the FALLBACK now. When the passport came from an OAuth grant the line
-// names the client instead — "Demo Admin, via Claude, created the record" —
-// because "via an agent" on every row of a company's history tells a rep
-// nothing they did not already know, and the question they actually have is
-// which tool did it.
-//
-// The name comes from oauth_client.client_name, not from passport.label. The
-// concern the generic word was protecting against — a revoked passport's label
-// outliving the grant on every row it ever wrote — does not apply: client_name
-// is the registered identity of the tool, it does not change when a grant is
-// revoked, and a client row that is gone falls back to this map.
-var machineQualifier = map[string]string{
-	actorTypeAgent:     "via an agent",
-	actorTypeConnector: "via a connector",
-}
-
-// composeRecordSummary renders one audit row as a plain-language sentence,
-// the record-history read's `summary` field. It is pure: callers resolve
-// actorDisplayName/onBehalfOfName (app_user lookups) before calling in, so
-// this stays testable without a database. onBehalfOfName is set only for a
-// machine acting under a human's delegated authority (D2's authority
-// weaving); an empty string is treated the same as nil — a resolved-but-
-// blank name is not authority to report.
-//
-// The sentence NAMES THE PERSON FIRST and says a machine did the typing
-// second (PD-002). A rep working through a passport is the rep: the line
-// reads "Devin, via an agent, archived the record", never "an agent archived
-// the record" with the person demoted to a trailing phrase. Attribution
-// exists so somebody can be asked about a change, and a machine is not a
-// party to anything — a line whose subject is the tool lets every human in
-// the chain disclaim it.
-func composeRecordSummary(actorType, actorDisplayName string, onBehalfOfName *string,
-	action string, passportBacked bool, agentClientName *string,
-) string {
-	verb := recordHistoryVerbs[action]
-	if verb == "" {
-		verb = action
-	}
-	if qualifier, delegated := machineQualifier[actorType]; delegated && onBehalfOfName != nil && *onBehalfOfName != "" {
-		if agentClientName != nil && *agentClientName != "" {
-			qualifier = "via " + *agentClientName
-		}
-		return fmt.Sprintf("%s, %s, %s the record", *onBehalfOfName, qualifier, verb)
-	}
-	switch {
-	case actorType == actorTypeHuman:
-		return fmt.Sprintf("%s %s the record", actorDisplayName, verb)
-	case passportBacked:
-		// A PASSPORT was presented and yet no human resolved behind it. That
-		// is a gap: passport.on_behalf_of is NOT NULL, so the authority
-		// existed when the grant was made and the row failed to carry it (the
-		// pre-0260 scheduled sends in compose/commsscheduled.go are the live
-		// example). The line says so rather than falling back to "System",
-		// which is reserved for a change that genuinely has nobody behind it —
-		// letting system absorb a failed attribution would hide the gap on the
-		// one surface that exists to expose it.
-		return fmt.Sprintf("A machine with no recorded human authority %s the record", verb)
-	case actorType == actorTypeSystem:
-		return fmt.Sprintf("System %s the record", verb)
-	case actorType == actorTypeAgent:
-		// A background writer with no passport: an installation-wide pass that
-		// nobody's context ran, so there is no human to name and no gap to
-		// report. compose/extjobsrun.go writes one per extension job tick.
-		// Calling this a missing authority would report a defect where there
-		// is none — the distinction that matters is whether a grant was
-		// presented, not which machine word the actor_type happens to carry.
-		return fmt.Sprintf("Agent %s the record", verb)
-	case actorType == actorTypeConnector:
-		// Same reasoning as the bare agent above: some connectors have no
-		// connect flow and therefore no granting human by design
-		// (compose/jobs_finance.go writes one).
-		return fmt.Sprintf("Connector %s the record", verb)
-	default:
-		return fmt.Sprintf("%s %s the record", actorType, verb)
-	}
 }
