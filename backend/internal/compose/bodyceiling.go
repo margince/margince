@@ -32,9 +32,13 @@ import (
 // the contract, so a new upload route cannot be added without appearing here.
 func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 	return map[string]int64{
-		"/v1/attachments":                      limits.Attachment,        // uploadAttachment
-		"/v1/imports/sources":                  limits.CSVImport,         // uploadImportSource
-		"/v1/me/linkedin-connections":          limits.LinkedInImport,    // importLinkedInConnections
+		"/v1/attachments":             limits.Attachment,     // uploadAttachment
+		"/v1/imports/sources":         limits.CSVImport,      // uploadImportSource
+		"/v1/me/linkedin-connections": limits.LinkedInImport, // importLinkedInConnections
+		// A .vcf is a text file of a few hundred bytes per card, so it rides
+		// the CSV import's ceiling rather than earning an operator dial of its
+		// own — the two are the same kind of upload, a delimited address book.
+		"/v1/people/vcard-import":              limits.CSVImport,         // importVCards
 		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument, // uploadCorpusDocument
 	}
 }

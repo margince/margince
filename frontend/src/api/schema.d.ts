@@ -372,6 +372,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/vcard-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import a .vcf address-card file.
+         * @description A handed-over card is first-party data: the person gave it, which is what justifies
+         *     storing their contact details. A human presses this button, so the import WRITES
+         *     rather than staging — the same rule the site read applies from the other side, where
+         *     an automatic read proposes and a human click writes.
+         *
+         *     Three outcomes per card, reported in the order the file listed them. An exact email
+         *     match fills only the fields the record leaves empty, so a value a human typed is never
+         *     replaced by a card. No match creates the person, the company the card names, and the
+         *     employment edge between them. A card that merely RESEMBLES somebody is written nowhere
+         *     and returned as `needs_review` with the candidate it resembles: guessing there is how
+         *     one person becomes two records, and neither direction is recoverable by the reader who
+         *     imported the file.
+         *
+         *     A card the parser cannot read fails the whole request rather than being skipped —
+         *     an import that quietly drops a person is worse than one that refuses, because nobody
+         *     can notice who is missing.
+         *
+         *     The card does not prove marketing consent. It begins a business relationship; consent
+         *     is a separate, recorded act.
+         */
+        post: operations["importVCards"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}": {
         parameters: {
             query?: never;
@@ -12917,6 +12955,31 @@ export interface components {
              */
             organization_created: boolean;
         };
+        /** @description One entry per card in the file, in the order the file listed them. */
+        VCardImportReport: {
+            results: components["schemas"]["VCardImportResult"][];
+        };
+        VCardImportResult: {
+            /** @description The card's position in the file, from 0. */
+            index: number;
+            /** @description The name the card stated, so a reader can find the row it came from. */
+            full_name: string;
+            /**
+             * @description `created` — nobody matched, so the card became a person, their company and the edge
+             *     between them. `updated` — an exact match, filled only where the record was empty.
+             *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+             *     `skipped` — the card states no name, so there is no person in it.
+             * @enum {string}
+             */
+            outcome: "created" | "updated" | "needs_review" | "skipped";
+            /**
+             * Format: uuid
+             * @description The person created or updated, or — for `needs_review` — the candidate the card resembles.
+             */
+            person_id?: string | null;
+            /** @description Why a card was skipped, in words a reader can act on. */
+            reason?: string | null;
+        };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdatePersonRequest: {
             full_name?: string;
@@ -23624,6 +23687,39 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    importVCards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The .vcf file. RFC 6350, tolerating the 3.0 and 2.1 spellings real exporters emit.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What became of each card in the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VCardImportReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };

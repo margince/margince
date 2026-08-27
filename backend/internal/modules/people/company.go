@@ -66,7 +66,10 @@ const (
 	auditKeySource     = "source"
 	auditKeyCapturedBy = "captured_by"
 	auditKeySourceURL  = "source_url"
-	eventKeyDelta      = "delta"
+	// auditKeySourceRef names WHICH source: the activity a signature came
+	// from, the page a site read quoted, the file a card arrived in.
+	auditKeySourceRef = "source_ref"
+	eventKeyDelta     = "delta"
 )
 
 // companyField is one field of the company form: its name, and — when the

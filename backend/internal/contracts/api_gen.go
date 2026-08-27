@@ -10159,6 +10159,30 @@ func (e UserStatus) Valid() bool {
 	}
 }
 
+// Defines values for VCardImportResultOutcome.
+const (
+	VCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
+	VCardImportResultOutcomeNeedsReview VCardImportResultOutcome = "needs_review"
+	VCardImportResultOutcomeSkipped     VCardImportResultOutcome = "skipped"
+	VCardImportResultOutcomeUpdated     VCardImportResultOutcome = "updated"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportResultOutcome enum.
+func (e VCardImportResultOutcome) Valid() bool {
+	switch e {
+	case VCardImportResultOutcomeCreated:
+		return true
+	case VCardImportResultOutcomeNeedsReview:
+		return true
+	case VCardImportResultOutcomeSkipped:
+		return true
+	case VCardImportResultOutcomeUpdated:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for VoiceBuildCandidateAction.
 const (
 	VoiceBuildCandidateActionAutoActivated  VoiceBuildCandidateAction = "auto_activated"
@@ -11043,25 +11067,25 @@ func (e UploadAttachmentMultipartBodyEntityType) Valid() bool {
 
 // Defines values for ListAutomationRunsParamsOutcome.
 const (
-	Blocked           ListAutomationRunsParamsOutcome = "blocked"
-	Failed            ListAutomationRunsParamsOutcome = "failed"
-	Fired             ListAutomationRunsParamsOutcome = "fired"
-	QueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
-	Skipped           ListAutomationRunsParamsOutcome = "skipped"
+	ListAutomationRunsParamsOutcomeBlocked           ListAutomationRunsParamsOutcome = "blocked"
+	ListAutomationRunsParamsOutcomeFailed            ListAutomationRunsParamsOutcome = "failed"
+	ListAutomationRunsParamsOutcomeFired             ListAutomationRunsParamsOutcome = "fired"
+	ListAutomationRunsParamsOutcomeQueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
+	ListAutomationRunsParamsOutcomeSkipped           ListAutomationRunsParamsOutcome = "skipped"
 )
 
 // Valid indicates whether the value is a known member of the ListAutomationRunsParamsOutcome enum.
 func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	switch e {
-	case Blocked:
+	case ListAutomationRunsParamsOutcomeBlocked:
 		return true
-	case Failed:
+	case ListAutomationRunsParamsOutcomeFailed:
 		return true
-	case Fired:
+	case ListAutomationRunsParamsOutcomeFired:
 		return true
-	case QueuedForApproval:
+	case ListAutomationRunsParamsOutcomeQueuedForApproval:
 		return true
-	case Skipped:
+	case ListAutomationRunsParamsOutcomeSkipped:
 		return true
 	default:
 		return false
@@ -24793,6 +24817,38 @@ type UserListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
+// VCardImportReport One entry per card in the file, in the order the file listed them.
+type VCardImportReport struct {
+	Results []VCardImportResult `json:"results"`
+}
+
+// VCardImportResult defines model for VCardImportResult.
+type VCardImportResult struct {
+	// FullName The name the card stated, so a reader can find the row it came from.
+	FullName string `json:"full_name"`
+
+	// Index The card's position in the file, from 0.
+	Index int `json:"index"`
+
+	// Outcome `created` — nobody matched, so the card became a person, their company and the edge
+	// between them. `updated` — an exact match, filled only where the record was empty.
+	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+	// `skipped` — the card states no name, so there is no person in it.
+	Outcome VCardImportResultOutcome `json:"outcome"`
+
+	// PersonId The person created or updated, or — for `needs_review` — the candidate the card resembles.
+	PersonId *openapi_types.UUID `json:"person_id,omitempty"`
+
+	// Reason Why a card was skipped, in words a reader can act on.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// VCardImportResultOutcome `created` — nobody matched, so the card became a person, their company and the edge
+// between them. `updated` — an exact match, filled only where the record was empty.
+// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+// `skipped` — the card states no name, so there is no person in it.
+type VCardImportResultOutcome string
+
 // VoiceBuild defines model for VoiceBuild.
 type VoiceBuild struct {
 	ArchivedAt      *time.Time                `json:"archived_at"`
@@ -28042,6 +28098,12 @@ type QuickCapturePersonParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ImportVCardsMultipartBody defines parameters for ImportVCards.
+type ImportVCardsMultipartBody struct {
+	// File The .vcf file. RFC 6350, tolerating the 3.0 and 2.1 spellings real exporters emit.
+	File openapi_types.File `json:"file"`
+}
+
 // ArchivePersonParams defines parameters for ArchivePerson.
 type ArchivePersonParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -29893,6 +29955,9 @@ type CreatePersonJSONRequestBody = CreatePersonRequest
 
 // QuickCapturePersonJSONRequestBody defines body for QuickCapturePerson for application/json ContentType.
 type QuickCapturePersonJSONRequestBody = QuickCapturePersonRequest
+
+// ImportVCardsMultipartRequestBody defines body for ImportVCards for multipart/form-data ContentType.
+type ImportVCardsMultipartRequestBody ImportVCardsMultipartBody
 
 // UpdatePersonJSONRequestBody defines body for UpdatePerson for application/json ContentType.
 type UpdatePersonJSONRequestBody = UpdatePersonRequest
@@ -38752,6 +38817,9 @@ type ServerInterface interface {
 	// Create a person, their employer and the employment edge in one write.
 	// (POST /people/quick-capture)
 	QuickCapturePerson(w http.ResponseWriter, r *http.Request, params QuickCapturePersonParams)
+	// Import a .vcf address-card file.
+	// (POST /people/vcard-import)
+	ImportVCards(w http.ResponseWriter, r *http.Request)
 	// Archive (soft-delete) a person.
 	// (DELETE /people/{id})
 	ArchivePerson(w http.ResponseWriter, r *http.Request, id Id, params ArchivePersonParams)
@@ -41236,6 +41304,12 @@ func (_ Unimplemented) CreatePerson(w http.ResponseWriter, r *http.Request, para
 // Create a person, their employer and the employment edge in one write.
 // (POST /people/quick-capture)
 func (_ Unimplemented) QuickCapturePerson(w http.ResponseWriter, r *http.Request, params QuickCapturePersonParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Import a .vcf address-card file.
+// (POST /people/vcard-import)
+func (_ Unimplemented) ImportVCards(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56486,6 +56560,28 @@ func (siw *ServerInterfaceWrapper) QuickCapturePerson(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ImportVCards operation middleware
+func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportVCards(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchivePerson operation middleware
 func (siw *ServerInterfaceWrapper) ArchivePerson(w http.ResponseWriter, r *http.Request) {
 
@@ -65433,6 +65529,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/quick-capture", wrapper.QuickCapturePerson)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/vcard-import", wrapper.ImportVCards)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/people/{id}", wrapper.ArchivePerson)
