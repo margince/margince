@@ -52,6 +52,10 @@ var parallelExempt = gatekit.Waive(map[string]string{
 	// process-wide, so Go refuses the combination rather than letting one
 	// test's variable leak into another's.
 	"TestTheSchemaAndTheParserAgreeOnEveryInputDeclaration": "calls t.Setenv, which Go forbids in a parallel test",
+	// Under -update-citations another gate REWRITES the file this one reads.
+	// Go resumes parallel tests only once every sequential one has finished, so
+	// staying sequential is what orders the read before the rewrite.
+	"TestTheCitationRegisterIsSortedAndUnique": "reads danglingcitations.txt, which -update-citations rewrites from another gate",
 })
 
 func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
