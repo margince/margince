@@ -104,7 +104,21 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// release assertion above, which exists to stop a role that must not run
 	// from writing. AssertRuntimeRole comes earlier still, so a pool connecting
 	// as the wrong role fails as that rather than as a license nobody can read.
-	if err := ensureLicense(ctx, logger, pool, deployCfg, cfg.posture); err != nil {
+	// THE key vault for this process, resolved once and handed to every lane
+	// that needs one. Three lanes used to resolve their own and each read the
+	// answer in its own way; one value cannot drift from itself.
+	//
+	// Here because this is the first thing that needs it, and no earlier: the
+	// question it may have to answer — does this installation hold sealed
+	// secrets it can no longer open — is asked of a table, so it belongs after
+	// the pool and after the release assertion, for the same reasons the license
+	// does. A nil vault IS an unconfigured deployment; keyvault.ForRole carries
+	// why nothing downstream is handed a flag beside it.
+	vault, err := keyvault.ForRole(ctx, "worker", pool, config.FromOS)
+	if err != nil {
+		return err
+	}
+	if err := ensureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture); err != nil {
 		return err
 	}
 
@@ -152,7 +166,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// Deferred BEFORE the error is checked: a failure here still leaves earlier
 	// lanes running on the bus and the pool whose closes are deferred above, and
 	// LIFO is what puts this join ahead of them.
-	lanes, err := startEventLanes(ctx, cfg, pool, rdb, modelPath, logger, stdout)
+	lanes, err := startEventLanes(ctx, cfg, pool, rdb, vault, modelPath, logger, stdout)
 	defer lanes.join()
 	if err != nil {
 		return err
@@ -160,10 +174,10 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 
 	// The operator relay, resolved in THIS role. Unattended work runs here, so
 	// the weekly retrospective's mail has no request to arrive on.
-	weeklyMail := weeklyMailConfig(ctx, cfg, deployCfg, pool, logger)
+	weeklyMail := weeklyMailConfig(ctx, cfg, deployCfg, pool, vault, logger)
 	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
 
-	stopJobs, err := startJobRunner(ctx, pool, rdb, compose.OverlayBudgetConfig(deployCfg.EffectiveOverlayBudget()),
+	stopJobs, err := startJobRunner(ctx, pool, rdb, vault, compose.OverlayBudgetConfig(deployCfg.EffectiveOverlayBudget()),
 		logger, cfg, modelPath, boundModels, lanes, weeklyMail, stdout)
 	if err != nil {
 		return err
@@ -307,18 +321,14 @@ func runGroupSubscriber(ctx context.Context, rdb *redis.Client, group kevents.Gr
 	}
 }
 
-// ensureLicense resolves this worker's entitlement, building the key vault it
-// may have to read the token out of.
+// ensureLicense resolves this worker's entitlement, reading the token out of
+// the boot's key vault when the installation has sealed it there.
 //
-// A vault that is configured but malformed is a boot error here rather than a
-// silent fallback, the same posture every other keyvault.FromEnv site takes: an
-// installation whose root key no longer opens its own secrets has a problem
-// that outlives the license question.
-func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, deployCfg deployconfig.Config, posture runtimeenv.Environment) error {
-	vault, _, err := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if err != nil {
-		return fmt.Errorf("worker: keyvault: %w", err)
-	}
-	_, err = compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, posture, config.FromOS)
+// A vault that is configured but malformed already failed the boot before this
+// is reached, which is the posture every role takes: an installation whose root
+// key no longer opens its own secrets has a problem that outlives the license
+// question.
+func ensureLicense(ctx context.Context, logger *slog.Logger, pool *pgxpool.Pool, vault keyvault.Vault, deployCfg deployconfig.Config, posture runtimeenv.Environment) error {
+	_, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, posture, config.FromOS)
 	return err
 }

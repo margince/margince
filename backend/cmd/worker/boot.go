@@ -151,11 +151,11 @@ func (l workerLanes) join() {
 // lanes started are already reading the bus and the pool, and a zero value would
 // make join() a nil dereference in a deferred call during a failing boot — a
 // stack trace where the boot error belongs.
-func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, modelPath compose.ModelPath, logger *slog.Logger, stdout io.Writer) (workerLanes, error) {
+func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, modelPath compose.ModelPath, logger *slog.Logger, stdout io.Writer) (workerLanes, error) {
 	laneCtx, stopLanes := context.WithCancel(ctx)
 	lanes := workerLanes{background: &sync.WaitGroup{}, stop: stopLanes, ctx: laneCtx}
 
-	if err := startRunnerLane(laneCtx, cfg, pool, rdb, modelPath, &lanes, logger, stdout); err != nil {
+	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err
 	}
 	startProjectionLanes(laneCtx, pool, rdb, modelPath, lanes.background, logger, stdout)
@@ -184,21 +184,10 @@ func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 		_, _ = fmt.Fprintf(stdout, "worker executing provider enrichment runs (%s)\n", strings.Join(providers.Names(), ", "))
 	}
 	lanes.providers = providers
-	if err := backfillConnectorCredentials(ctx, pool, stdout, logger); err != nil {
-		return lanes, err
-	}
+	backfillConnectorCredentials(ctx, pool, vault, stdout, logger)
 	// Automatic enrichment on create, which needs BOTH halves the run lanes
 	// need: an adapter to call and the vault that unseals its credential.
-	// keyvault.FromEnv is resolved here rather than passed down because this
-	// is the first lane in this role that needs it.
-	providerVault, vaultConfigured, err := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if err != nil {
-		return lanes, fmt.Errorf("worker: keyvault: %w", err)
-	}
-	if !vaultConfigured {
-		providerVault = nil
-	}
-	if err := startPersonDataEnrich(laneCtx, pool, rdb, providers, providerVault, lanes.background, logger, stdout); err != nil {
+	if err := startPersonDataEnrich(laneCtx, pool, rdb, providers, vault, lanes.background, logger, stdout); err != nil {
 		return lanes, err
 	}
 
@@ -341,7 +330,7 @@ func startResetLane(ctx context.Context, allowed bool, rdb *redis.Client, modelP
 // startRunnerLane builds the Surface-B runner and starts the subscriber that
 // resumes its approved runs. Without a declared brain there is no runner and
 // lanes.runner stays nil, which is what leaves the scheduler unregistered.
-func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, modelPath compose.ModelPath, lanes *workerLanes, logger *slog.Logger, stdout io.Writer) error {
+func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, modelPath compose.ModelPath, lanes *workerLanes, logger *slog.Logger, stdout io.Writer) error {
 	// The Surface-B runner is this role's sending lane, and it stages through
 	// the SAME delivery machinery the api does — built before the lane so it
 	// cannot be composed without one. Insert-only, like the api's: the staged
@@ -357,14 +346,12 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 		return nil
 	}
 	grounding := search.NewRetriever(search.NewStore(compose.InstallationDB(pool)), modelPath.Embedder)
-	// The Surface-B runner's agent tools reach overlay write-back through
-	// the workspace's own vaulted incumbent token; wire the FromEnv
-	// vault-backed resolver so an autonomous run can write back (nil vault
-	// → clean errNoWriteIncumbent, never a crash).
-	runnerVault, _, rverr := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if rverr != nil {
-		return rverr
-	}
+	// The Surface-B runner's agent tools reach overlay write-back through the
+	// workspace's own vaulted incumbent token; wire the vault-backed resolver so
+	// an autonomous run can write back. A deployment with none configured has a
+	// nil vault here, and the resolver answers "no incumbent" from it — the same
+	// unsupported that the job lane's equivalent surface reports, because it is
+	// now the same value rather than a second reading of one.
 	// The same pool and custodian back the extension tier's per-call Runtime:
 	// a Surface-B run invokes governed extension tools through the runner's
 	// registry, so this role serves them and must bind what they reach the
@@ -379,10 +366,10 @@ func startRunnerLane(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, 
 	// window for a Surface-B run that arrives before the runner is wired.
 	//
 	// Both pass the SAME two values, so the calls are idempotent whichever
-	// order the boot reaches them in: one pool, and keyvault.FromEnv's vault,
+	// order the boot reaches them in: one pool, and the boot's one vault,
 	// which is already nil on a deployment that configured none.
-	compose.BindExtensionRuntime(pool, runnerVault)
-	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, compose.OverlayIncumbentResolver(pool, runnerVault), send)
+	compose.BindExtensionRuntime(pool, vault)
+	runnerSvc := compose.NewRunnerService(pool, modelPath.AgentLoop, modelPath.DraftReply, grounding, logger, compose.OverlayIncumbentResolver(pool, vault), send)
 	_, _ = fmt.Fprintln(stdout, "worker resuming approved Surface-B runs (cg:overnight-agent)")
 	lanes.runner = runnerSvc
 	lanes.background.Go(func() { runResumeSubscriber(ctx, rdb, runnerSvc, logger) })
@@ -478,22 +465,21 @@ func relayUntilSignal(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool,
 // idempotent — a row already carrying a credential_ref is skipped — so
 // re-running every boot is safe and a no-op once every row is migrated.
 // Without a vault it is skipped: the legacy auth column still resolves
-// credentials until one is provisioned. A malformed root key fails the boot
-// (keyvault.FromEnv); a mid-backfill failure is logged and non-fatal — capture
-// keeps resolving from the auth column and the next boot retries.
-func backfillConnectorCredentials(ctx context.Context, pool *pgxpool.Pool, stdout io.Writer, logger *slog.Logger) error {
-	vault, configured, err := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if err != nil {
-		return fmt.Errorf("worker: keyvault: %w", err)
-	}
-	if !configured {
-		return nil
+// credentials until one is provisioned.
+//
+// It cannot fail the boot, and now says so by returning nothing. A malformed
+// root key was the only failure it ever passed up, and that is the boot's own
+// vault resolution to refuse, before any lane starts. What is left is a
+// mid-backfill failure, which is logged and non-fatal — capture keeps resolving
+// from the auth column and the next boot retries.
+func backfillConnectorCredentials(ctx context.Context, pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer, logger *slog.Logger) {
+	if vault == nil {
+		return
 	}
 	migrated, err := compose.NewCaptureRegistry(pool, vault, compose.CaptureConfig{}).BackfillCredentials(ctx)
 	if err != nil {
 		logger.Error("connector-credential backfill did not complete; capture continues from the legacy column and the next boot retries", "err", err)
-		return nil
+		return
 	}
 	_, _ = fmt.Fprintf(stdout, "worker keyvault configured; migrated %d legacy connector credential(s) onto the vault\n", migrated)
-	return nil
 }

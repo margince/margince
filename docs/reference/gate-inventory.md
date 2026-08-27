@@ -163,7 +163,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 
-## Prohibition (21)
+## Prohibition (22)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -178,6 +178,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobfleetscan_test.go` | H2 | The fleet enumeration lives at ratified sites only. |
 | `jobregistrationban_test.go` | H2 | The forbidigo rule that bans a direct River registration, held to River's own API rather than to a remembered list of its spellings. |
 | `jobtestonly_test.go` | H2 | jobs.Config.TestOnly and compose.JobRunnerConfig.TestOnly carry River's flag of the same name, which disables machinery that is "useful in production, but which may be harmful to tests" — in the pinned river@v0.43.0, the maintenance services' staggered startup. |
+| `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault ONCE. |
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
 | `modulepoolsharing_test.go` | H2 | Pool-sharing discipline for the module suites, as a fitness function. |
 | `promptfence_test.go` | H1 | Prompt-boundary fitness functions: no prompt may declare a data boundary the writer of that data can spell. |
