@@ -244,6 +244,14 @@ func insertClaim(ctx context.Context, tx pgx.Tx, principalID, key, endpoint, dig
 // re-claim in place. The row is read FOR UPDATE inside the caller's
 // transaction, so two concurrent attempts under one key cannot both execute.
 func resolveExistingClaim(ctx context.Context, tx pgx.Tx, principalID, key, endpoint, digest string) (claimOutcome, storedResponse, error) {
+	return resolveClaimRow(ctx, tx, principalID, key, endpoint, digest, true)
+}
+
+// resolveClaimRow is resolveExistingClaim's body. mayReclaim is false on the
+// second pass — the one that reads back what a rival left after this attempt
+// lost the re-claim — so a row that vanishes twice inside one transaction
+// cannot loop.
+func resolveClaimRow(ctx context.Context, tx pgx.Tx, principalID, key, endpoint, digest string, mayReclaim bool) (claimOutcome, storedResponse, error) {
 	var storedDigest, contentType string
 	var status *int
 	var respBody *string
@@ -262,6 +270,12 @@ func resolveExistingClaim(ctx context.Context, tx pgx.Tx, principalID, key, endp
 		// nothing — but simply erroring here would degrade to executing
 		// with NO claim recorded, and two concurrent retries of one key
 		// would then both execute. Claim it again instead.
+		if !mayReclaim {
+			// The row went twice inside one transaction. Nothing is left to
+			// read, and in-flight is the answer that costs least if wrong:
+			// it tells the caller to retry rather than inventing a result.
+			return claimInProgress, storedResponse{}, nil
+		}
 		claimed, err := insertClaim(ctx, tx, principalID, key, endpoint, digest)
 		if err != nil {
 			return claimFresh, storedResponse{}, err
@@ -269,9 +283,17 @@ func resolveExistingClaim(ctx context.Context, tx pgx.Tx, principalID, key, endp
 		if claimed {
 			return claimFresh, storedResponse{}, nil
 		}
-		// Someone re-created it in the same instant; the honest answer is
-		// that this attempt is still in flight elsewhere.
-		return claimInProgress, storedResponse{}, nil
+		// A rival re-created it in the same instant. What they left is not
+		// necessarily in flight — it may already carry a stored response, or a
+		// different request digest — and the four verdicts below are what
+		// decide which. Reading it is the difference between answering
+		// "already used with a different request body" and telling that caller
+		// their own retry is still running.
+		//
+		// The read blocks rather than racing: the losing INSERT waited on the
+		// rival's uncommitted row, so by the time it answered the winner had
+		// committed and FOR UPDATE sees it.
+		return resolveClaimRow(ctx, tx, principalID, key, endpoint, digest, false)
 	}
 	if err != nil {
 		return claimFresh, storedResponse{}, err
