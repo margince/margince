@@ -19,68 +19,72 @@ import (
 // themselves is not a cosmetic error — it misreports their own work back to
 // them, and it inflates what the product looks like it is doing.
 //
-// The test is decided_by IS NULL, the convention the expiry sweep states in its
-// own words ("decided_by stays NULL and the actor is the system: nobody
-// decided"). Status alone cannot tell the two apart: a human approval and a
-// system one are both `approved`.
-func TestAReceiptIsSomethingNobodyWasAskedAbout(t *testing.T) {
-	decidedAt := time.Date(2026, 8, 25, 8, 0, 0, 0, time.UTC)
-	since := decidedAt.Add(-time.Hour)
-	human := openapi_types.UUID(ids.NewV7())
+// WHICH rows are the system's is now answered in SQL, by the decision's own
+// decided_by_system marker, so what is left here is the lane's own horizon: a
+// receipt older than the window belongs to a morning the reader has already
+// seen. The window is the reason this function still exists.
+func TestAReceiptOlderThanTheWindowIsNotTodaysNews(t *testing.T) {
+	since := time.Date(2026, 8, 25, 7, 0, 0, 0, time.UTC)
+	thisMorning := approvalRow("Moved the Acme close date to 27 Sep", since.Add(time.Hour))
+	lastWeek := approvalRow("Filed a message under Riverty", since.AddDate(0, 0, -7))
 
-	byTheSystem := approvalRow("Moved the Acme close date to 27 Sep", decidedAt, nil)
-	byTheReader := approvalRow("Sent the Weber follow-up", decidedAt, &human)
-
-	receipts := receiptsWithin([]crmcontracts.Approval{byTheSystem, byTheReader}, since)
+	receipts := receiptsWithin([]crmcontracts.Approval{thisMorning, lastWeek}, since)
 
 	if len(receipts) != 1 {
-		t.Fatalf("the lane carries %d receipts, want only the system's one", len(receipts))
+		t.Fatalf("the lane carries %d receipts, want only the one inside the window", len(receipts))
 	}
 	if receipts[0].Summary != "Moved the Acme close date to 27 Sep" {
-		t.Errorf("the lane kept %q — a reader's own decision is not something that ran for them", receipts[0].Summary)
+		t.Errorf("the lane kept %q, want this morning's act", receipts[0].Summary)
 	}
 }
 
-func approvalRow(summary string, decidedAt time.Time, decidedBy *openapi_types.UUID) crmcontracts.Approval {
+// A row the store answered with no decision time cannot be placed against the
+// window, and a receipt the reader cannot date is not a receipt.
+func TestAnUndatedDecisionIsNotAReceipt(t *testing.T) {
+	since := time.Date(2026, 8, 25, 7, 0, 0, 0, time.UTC)
+	undated := crmcontracts.Approval{
+		Id: openapi_types.UUID(ids.NewV7()), Kind: "close_date_correction",
+	}
+
+	if receipts := receiptsWithin([]crmcontracts.Approval{undated}, since); len(receipts) != 0 {
+		t.Fatalf("the lane carries %d receipts, want none: nothing dates this row", len(receipts))
+	}
+}
+
+func approvalRow(summary string, decidedAt time.Time) crmcontracts.Approval {
 	return crmcontracts.Approval{
 		Id:        openapi_types.UUID(ids.NewV7()),
 		Kind:      "close_date_correction",
 		Summary:   &summary,
 		DecidedAt: &decidedAt,
-		DecidedBy: decidedBy,
 	}
 }
 
-// The receipts read reaches past the reader's own approvals.
+// The receipts read is bounded by the lane it fills.
 //
-// The filter that decides a receipt — decided_by IS NULL — runs AFTER the page
-// is read, because the engine can only page by status. So the SIZE of that read
-// decides whether an autonomous act is visible at all: a read the size of the
-// lane is filled by the reader's own recent decisions, filters down to nothing,
-// and the lane reports a quiet night while dozens of things ran.
-//
-// The bug was invisible while nothing was auto-applied: there was never an
-// autonomous act to crowd out. The stub answers a page of the reader's own
-// decisions with ONE autonomous act behind them, so a read that stops at the
-// lane's width finds nothing.
-func TestTheReceiptsReadIsWiderThanTheLaneItFills(t *testing.T) {
+// It used to read far wider and narrow afterwards, because "nobody was asked"
+// could only be tested in Go. That put the bound on the wrong set: a page of the
+// reader's own decisions filtered to nothing while real receipts sat behind it.
+// The store now answers the question itself, so asking for the lane's width is
+// the honest read — and this pins that the seam does not quietly go back to
+// over-reading.
+func TestTheReceiptsReadAsksForTheLaneItFills(t *testing.T) {
 	decidedAt := time.Date(2026, 8, 25, 8, 0, 0, 0, time.UTC)
-	human := openapi_types.UUID(ids.NewV7())
-
-	page := make([]crmcontracts.Approval, 0, doneLaneWidth+2)
-	for i := 0; i < doneLaneWidth+1; i++ {
-		page = append(page, approvalRow("A decision the reader made", decidedAt, &human))
+	page := make([]crmcontracts.Approval, 0, doneLaneWidth)
+	for i := 0; i < doneLaneWidth; i++ {
+		page = append(page, approvalRow("Filed a message under Riverty", decidedAt))
 	}
-	page = append(page, approvalRow("Filed a message under Riverty", decidedAt, nil))
 
 	engine := &stubApprovalPage{rows: page}
 	receipts, err := recentReceipts(decidedAt.Add(-time.Hour), doneLaneWidth, engine.list)
 	if err != nil {
 		t.Fatalf("reading the receipts: %v", err)
 	}
-	if len(receipts) != 1 {
-		t.Fatalf("the lane carries %d receipts; the read stopped at %d rows and never reached the autonomous act",
-			len(receipts), engine.asked)
+	if engine.asked != doneLaneWidth {
+		t.Errorf("the seam asked for %d rows to fill a lane of %d", engine.asked, doneLaneWidth)
+	}
+	if len(receipts) != doneLaneWidth {
+		t.Fatalf("the lane carries %d receipts, want the %d the store answered", len(receipts), doneLaneWidth)
 	}
 }
 
@@ -88,8 +92,7 @@ func TestTheReceiptsReadIsWiderThanTheLaneItFills(t *testing.T) {
 const doneLaneWidth = 8
 
 // stubApprovalPage answers exactly the number of rows it is asked for, which is
-// the whole subject: a seam that asks for the lane's width gets a page of human
-// decisions and filters it to nothing.
+// what lets a test see the width the seam requested.
 type stubApprovalPage struct {
 	rows  []crmcontracts.Approval
 	asked int

@@ -255,6 +255,11 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 	if clause := openTaskAssigneeClause(in.AssigneeID, arg); clause != "" {
 		where = append(where, clause)
 	}
+	if in.OpenAndDueBy != nil {
+		where = append(where,
+			sprintf("a.kind = 'task' AND NOT a.is_done AND a.due_at IS NOT NULL AND a.due_at <= $%d",
+				arg(*in.OpenAndDueBy)))
+	}
 	if in.EntityType != nil && in.EntityID != nil {
 		// The SAME vocabulary the write uses. A second list here drifted from
 		// linkTargets and silently dropped two kinds: an activity could be
