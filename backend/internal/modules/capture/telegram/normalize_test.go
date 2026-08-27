@@ -100,6 +100,16 @@ func TestNormalizeBuildsTheChatScopedNaturalKey(t *testing.T) {
 	if rec.NaturalKey.SourceSystem != Provider {
 		t.Errorf("NaturalKey.SourceSystem = %q, want %q", rec.NaturalKey.SourceSystem, Provider)
 	}
+	// The chat id in the middle of that key IS the sender's own Telegram
+	// account id for a private chat, so the pipeline trace stores a hash of the
+	// key rather than the key. Pinned rather than left to the field's default,
+	// because the default is right for the message id a natural key usually is
+	// and wrong here — and a producer that quietly stopped declaring would put
+	// an account id in a diagnostic table with nothing failing.
+	if !rec.NaturalKey.SourceIDNamesAPerson {
+		t.Errorf("the key %q does not declare that it names a person, so the trace would store "+
+			"the account id in it verbatim", rec.NaturalKey.SourceID)
+	}
 }
 
 // The conversation IS the chat for a channel (connector.go's amended
