@@ -148,6 +148,14 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 		// The digest's projects section is answered here because its reads
 		// span the deals module's tables (digestprojects.go).
 		WithDigestProjects(digestProjectsSource)
+	// What is waiting for the reader, counted through the same seams the Today
+	// surface counts it with (digestreview.go). Skipped without a pool, which
+	// is the enumerate-only construction CoreChannelProviders makes: it builds
+	// no digest, so a source reading a database it does not have would fail on
+	// a path that never counts anything.
+	if pool != nil {
+		r = r.WithDigestReview(newDigestReviewSource(pool, approvals.NewService(db)))
+	}
 	// The standing IMAP connector needs no deployment config — credentials
 	// are per-connection, vault-sealed — so every capture-capable role
 	// carries it.

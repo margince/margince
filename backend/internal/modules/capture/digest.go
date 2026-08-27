@@ -45,8 +45,14 @@ type DigestCapture struct {
 
 // DigestReview is what awaits the human.
 type DigestReview struct {
-	DedupeOpen       int            `json:"dedupe_open"`
-	ApprovalsPending int            `json:"approvals_pending"`
+	// Both are per-reader counts and both are OPTIONAL, which the wire has
+	// always allowed. Absent means the build could not count for this reader —
+	// the review seam is unwired — and that is a different statement from zero.
+	// Zero says "nothing is waiting for you"; absent says "we did not count",
+	// and a build that reported the first when it meant the second would be the
+	// same dishonest number this section replaced, pointing the other way.
+	DedupeOpen       *int           `json:"dedupe_open,omitempty"`
+	ApprovalsPending *int           `json:"approvals_pending,omitempty"`
 	Classify         DigestClassify `json:"classify"`
 }
 
@@ -121,9 +127,14 @@ func connectedUsers(ctx context.Context, tx pgx.Tx) ([]ids.UUID, error) {
 
 func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids.UUID, day string, since time.Time) (DigestPayload, error) {
 	p := DigestPayload{Date: day, GeneratedAt: r.now().UTC()}
-	// Workspace-level truths: what the pipeline did and what awaits review
-	// is shared work, not per-owner arithmetic — the same numbers for every
-	// digest reader in the workspace.
+	// Workspace-level truths: what the PIPELINE did overnight is shared work,
+	// and the same number for every reader is the honest report of it.
+	//
+	// What awaits REVIEW is not, and is counted per reader below. A duplicate
+	// pair is visible only to someone who can open both sides, and a staged
+	// proposal only to someone who could decide it, so a workspace-wide count
+	// of either tells every reader how many records exist that they may not be
+	// able to see.
 	err := tx.QueryRow(ctx, `
 		SELECT
 		  (SELECT count(*) FROM activity WHERE captured_by LIKE 'connector:%' AND kind = 'email' AND created_at >= $1),
@@ -136,14 +147,11 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 		  (SELECT count(*) FROM organization
 		    WHERE (captured_by LIKE 'connector:%' OR source LIKE 'domain\_triage:%')
 		      AND created_at >= $1),
-		  (SELECT count(*) FROM dedupe_candidate WHERE disposition = 'open' AND archived_at IS NULL),
-		  (SELECT count(*) FROM approval WHERE status = 'pending'),
 		  (SELECT count(*) FROM activity WHERE capture_label = 'commitment' AND capture_labeled_at >= $1),
 		  (SELECT count(*) FROM activity WHERE capture_label = 'meeting' AND capture_labeled_at >= $1),
 		  (SELECT count(*) FROM activity WHERE capture_label = 'noise' AND capture_labeled_at >= $1)`,
 		since).Scan(
 		&p.Capture.ActivitiesCreated, &p.Capture.PeopleCreated, &p.Capture.OrganizationsCreated,
-		&p.Review.DedupeOpen, &p.Review.ApprovalsPending,
 		&p.Review.Classify.Commitments, &p.Review.Classify.Meetings, &p.Review.Classify.Noise,
 	)
 	if err != nil {
@@ -176,14 +184,27 @@ func (r *Registry) buildDigestPayload(ctx context.Context, tx pgx.Tx, userID ids
 	if err := rows.Err(); err != nil {
 		return DigestPayload{}, err
 	}
-	if r.digestProjects != nil {
-		// Per READER, unlike the counts above: the section names projects and
-		// the work on them, so it is built under this user's own live grants
-		// and row scope, and a user with no project grant gets none.
-		readerCtx, err := r.digestReaderContext(ctx, userID)
+	// Everything below is per READER rather than per workspace: it names
+	// records, and which records a person can see is theirs. One context binds
+	// that reader once, with the live authority the resolver answers.
+	if r.digestProjects == nil && r.digestReview == nil {
+		return p, nil
+	}
+	readerCtx, err := r.digestReaderContext(ctx, userID)
+	if err != nil {
+		return DigestPayload{}, err
+	}
+	if r.digestReview != nil {
+		review, err := r.digestReview(readerCtx)
 		if err != nil {
-			return DigestPayload{}, err
+			return DigestPayload{}, fmt.Errorf("capture: digest review counts: %w", err)
 		}
+		p.Review.DedupeOpen = &review.DedupeOpen
+		p.Review.ApprovalsPending = &review.ApprovalsPending
+	}
+	if r.digestProjects != nil {
+		// The section names projects and the work on them, so a user with no
+		// project grant gets none rather than an empty one.
 		projects, err := r.digestProjects(readerCtx, tx, since, p.GeneratedAt)
 		if err != nil {
 			return DigestPayload{}, fmt.Errorf("capture: digest projects section: %w", err)
