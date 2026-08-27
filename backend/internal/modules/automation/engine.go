@@ -255,7 +255,7 @@ const systemSource = "system"
 func ApplyActions(ctx context.Context, ex Executors, effect workflow.Effect) ([]workflow.Action, error) {
 	var applied []workflow.Action
 	for _, action := range effect.Actions {
-		recorded, staged, err := applyOne(ctx, ex, action)
+		recorded, staged, err := applyOne(ctx, ex, effect, action)
 		if err != nil {
 			return applied, err
 		}
@@ -287,10 +287,10 @@ func ApplyActions(ctx context.Context, ex Executors, effect workflow.Effect) ([]
 // returns it unchanged). The closed switch IS the anti-builder guard: a
 // kind the seams do not know is a programming error, not a plugin point. A
 // non-nil middle return is a 🟡 staging that short-circuits the batch.
-func applyOne(ctx context.Context, ex Executors, action workflow.Action) (workflow.Action, *workflow.StagedApprovalError, error) {
+func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action workflow.Action) (workflow.Action, *workflow.StagedApprovalError, error) {
 	switch action.Kind {
 	case workflow.ActionCreateTask, workflow.ActionCreateRecord:
-		return action, nil, applyCreate(ctx, ex.Provider, action)
+		return applyCreate(ctx, ex, eff, action)
 	case workflow.ActionUpdateRecord:
 		return action, nil, applyUpdate(ctx, ex.Provider, action)
 	case workflow.ActionAssignOwner:
@@ -348,19 +348,6 @@ func applyOne(ctx context.Context, ex Executors, action workflow.Action) (workfl
 	default:
 		return action, nil, fmt.Errorf("crmagents: unknown action kind %q", action.Kind)
 	}
-}
-
-func applyCreate(ctx context.Context, provider datasource.SystemOfRecordProvider, action workflow.Action) error {
-	entity := action.Target.Type
-	if action.Kind == workflow.ActionCreateTask {
-		entity = datasource.EntityActivity
-	}
-	_, err := provider.Create(ctx, datasource.CreateInput{
-		EntityType: entity,
-		Fields:     action.Args,
-		Source:     systemSource,
-	})
-	return err
 }
 
 func applyUpdate(ctx context.Context, provider datasource.SystemOfRecordProvider, action workflow.Action) error {

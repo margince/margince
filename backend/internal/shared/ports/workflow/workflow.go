@@ -94,6 +94,17 @@ type Event struct {
 // audit, and the 🟡 gate can reason about it.
 type Effect struct {
 	Actions []Action
+
+	// Handler and TriggerEventID scope the effect-level idempotency claim
+	// the create executor takes before writing (automation's applyCreate):
+	// N enabled instances of one handler each dispatch off the same event,
+	// and an IDENTICAL planned create must apply once across all of them —
+	// the per-instance run claim cannot see that, because its key carries
+	// the automation id. The engine stamps both just before Apply; a caller
+	// applying an effect outside the engine leaves Handler empty and
+	// applies unclaimed, which is the pre-existing single-caller contract.
+	Handler        string
+	TriggerEventID ids.UUID
 }
 
 // ActionKind enumerates the closed action set (features/03 §5.1); the

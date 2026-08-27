@@ -118,6 +118,12 @@ func (e *WorkflowEngine) runOne(ctx context.Context, h workflow.Handler, ev work
 		return err
 	}
 
+	// Stamped after the claim rather than in Plan: the effect-level dedupe
+	// (applyCreate) is the ENGINE's obligation, and a handler cannot be
+	// trusted to remember it — every Plan that forgot would silently
+	// reopen the N-instances-N-copies bug this closes.
+	effect.Handler = h.Spec().Name
+	effect.TriggerEventID = ev.ID
 	result, applyErr := h.Apply(ctx, ev, effect, nil)
 	// The outcome record commits in its OWN transaction before the apply
 	// error surfaces — returning applyErr from inside the tx closure would

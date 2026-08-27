@@ -133,6 +133,29 @@ var ErrNoNotificationTransport = errors.New("automation: no notification transpo
 // calling the run healthy is the one outcome that must not happen.
 var ErrNoApprovalStaging = errors.New("automation: no approval staging configured, so a drafted message cannot be held for review")
 
+// EffectClaims is the effect-level idempotency claim the create executor
+// takes before writing (applyCreate): the engine fires a handler once per
+// enabled instance, the per-instance run claim keys on the automation id,
+// and so two instances of one starter with identical params both apply the
+// same create against one event. This claim keys on (handler, trigger
+// event, effect fingerprint) instead — the identical effect applies once,
+// while genuinely different params (a different due date) fingerprint
+// apart and each still apply. Claim answers false when another firing
+// already holds the row. Backed by the module's own automation_effect_claim
+// table (NewEffectClaims); a seam so ApplyActions stays drivable without a
+// database in unit tests.
+type EffectClaims interface {
+	Claim(ctx context.Context, handler string, triggerEvent ids.UUID, fingerprint string) (bool, error)
+}
+
+// ErrNoEffectClaims refuses an engine-driven create in a composition that
+// wired no claim store. Like ErrNoApprovalStaging this is a WIRING defect,
+// not an out-of-scope environment: without the claim, N enabled instances
+// mint N copies of one record, which is exactly the corruption the claim
+// exists to stop — so the firing fails loudly rather than applying
+// unguarded.
+var ErrNoEffectClaims = errors.New("automation: no effect claim store configured, so a create cannot be deduplicated across instances")
+
 // Executors bundles every seam ApplyActions may drive a typed action
 // through. One struct rather than a five-parameter signature: adding a
 // seam is one field here, not a break at every existing call site.
@@ -142,6 +165,7 @@ type Executors struct {
 	Lists     Lists
 	Comms     Comms
 	Notifier  Notifier // nil in this repo today — see Notifier's doc
+	Claims    EffectClaims
 }
 
 // EntityAnchor is one ActivityScan candidate: an entity whose most recent

@@ -1,0 +1,3 @@
+-- Data repair only: the archived duplicates and retired reminders cannot be
+-- told apart from rows an operator archived by hand, so this down migrates
+-- nothing back.
