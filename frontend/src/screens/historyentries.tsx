@@ -32,6 +32,8 @@ import {
 } from "./history.logic";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
+import { historyRows } from "./historyreversal";
+import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
 import { historyValue } from "./historyvalues";
 import "./history.css";
@@ -167,6 +169,11 @@ function UndoButton({
   changes,
   currency,
   restore,
+  // The verb this press means. One engine, two intents: putting a change back
+  // and putting a REVERSAL back are the same write, and the second one redoes
+  // what the first undid — so the label is the caller's to name, and the two
+  // must never read the same on adjacent rows.
+  label = "history.undo.action",
 }: Readonly<{
   entry: AuditHistoryEntry;
   kind: EntityKind;
@@ -174,6 +181,7 @@ function UndoButton({
   changes: readonly EntryFieldChange[];
   currency: string | null | undefined;
   restore: RecordRestore;
+  label?: MessageKey;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -265,14 +273,14 @@ function UndoButton({
         busyLabel={t("history.undo.busy")}
         onClick={press}
       >
-        {t("history.undo.action")}
+        {t(label)}
       </Button>
       {refused && <span className="entry-undo-refusal">{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
         title={t("history.undo.confirmTitle")}
-        confirmLabel={t("history.undo.action")}
+        confirmLabel={t(label)}
         pending={putBack.isPending}
         onConfirm={() =>
           putBack.mutate({ kind, id, auditId: entry.id, version })
@@ -312,6 +320,8 @@ function HistoryEntryRow({
   locale,
   currency,
   restore,
+  note,
+  undoLabel,
 }: Readonly<{
   entry: AuditHistoryEntry;
   kind: EntityKind;
@@ -319,6 +329,11 @@ function HistoryEntryRow({
   locale: ReturnType<typeof useLocale>["locale"];
   currency: string | null | undefined;
   restore: RecordRestore | undefined;
+  // What this row is to the rows around it, when the sentence the server wrote
+  // cannot say it: that a reversal undid something older than this page, or
+  // that the change on this row has since been undone by the row above it.
+  note?: string;
+  undoLabel?: MessageKey;
 }>) {
   const viewerId = useViewerId();
   const recordZone = useRecordZone();
@@ -342,6 +357,7 @@ function HistoryEntryRow({
             // sentence above was fixed to avoid.
             renderUser={() => entry.actor_name}
           />
+          {note && <span className="entry-note">{note}</span>}
         </span>
         <EntryFieldDetail changes={changes} currency={currency} />
         {restore && (
@@ -352,6 +368,7 @@ function HistoryEntryRow({
             changes={changes}
             currency={currency}
             restore={restore}
+            label={undoLabel}
           />
         )}
       </span>
@@ -390,17 +407,56 @@ export function RecordHistory({
     body = (
       <>
         <ul className="timeline">
-          {entries.map((entry) => (
-            <HistoryEntryRow
-              key={entry.id}
-              entry={entry}
-              kind={kind}
-              id={id}
-              locale={locale}
-              currency={currency}
-              restore={restore}
-            />
-          ))}
+          {historyRows(entries).map((row) =>
+            row.kind === "pair" ? (
+              <ReversalPairRow
+                key={row.reversal.id}
+                row={row}
+                currency={currency}
+              >
+                <HistoryEntryRow
+                  entry={row.reversal}
+                  kind={kind}
+                  id={id}
+                  locale={locale}
+                  currency={currency}
+                  restore={restore}
+                  undoLabel="history.undo.redo"
+                />
+                <HistoryEntryRow
+                  entry={row.reversed}
+                  kind={kind}
+                  id={id}
+                  locale={locale}
+                  currency={currency}
+                  restore={restore}
+                  note={t("history.reversal.undoneBy", {
+                    undoer: actorName(row.reversal.actor_name, t),
+                  })}
+                />
+              </ReversalPairRow>
+            ) : (
+              <HistoryEntryRow
+                key={row.entry.id}
+                entry={row.entry}
+                kind={kind}
+                id={id}
+                locale={locale}
+                currency={currency}
+                restore={restore}
+                note={
+                  row.kind === "unpairedReversal"
+                    ? t("history.reversal.unpaired")
+                    : undefined
+                }
+                undoLabel={
+                  row.kind === "unpairedReversal"
+                    ? "history.undo.redo"
+                    : undefined
+                }
+              />
+            ),
+          )}
         </ul>
         <LoadMoreButton query={query} />
       </>

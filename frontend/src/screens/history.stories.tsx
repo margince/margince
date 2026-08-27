@@ -269,3 +269,97 @@ export const RefusedWithItsReason: Story = {
     );
   },
 };
+
+// A reversal and the change it reversed, as ONE line the reader opens.
+//
+// The complaint this answers was the COUNT: an undo writes an ordinary update,
+// so three changes rendered as four, the fourth saying "restored the record"
+// without naming what it restored. Collapsed by default, and a disclosure
+// rather than a deletion — both audit rows are one press away.
+const titleMoved = {
+  id: "h9",
+  actor_type: "human",
+  actor_id: "human:u-sam",
+  actor_name: "Sam Okafor",
+  action: "update",
+  occurred_at: "2026-07-14T12:00:00Z",
+  summary: "Sam Okafor updated the record",
+  before: { name: "Globex" },
+  after: { name: "Globex Renewal" },
+  undoable: { undoable: false, reason: "already_undone" },
+};
+const putBackAgain = {
+  id: "h10",
+  actor_type: "human",
+  actor_id: "human:u-tin",
+  actor_name: "Tin Nguyen",
+  action: "restore",
+  occurred_at: "2026-07-14T12:04:00Z",
+  summary: "Tin Nguyen restored the record",
+  undid_audit_log_id: "h9",
+  before: { name: "Globex Renewal" },
+  after: { name: "Globex" },
+  undoable: { undoable: true },
+};
+
+export const AReversalCollapsedWithWhatItUndid: Story = {
+  render: () => {
+    seedWorkspace();
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /records/deal/d1/history": () =>
+        jsonResponse({
+          data: [putBackAgain, titleMoved, created],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /field-history": () => jsonResponse(emptyPage),
+    });
+    return (
+      <StoryProviders>
+        <RecordHistoryTab
+          kind="deal"
+          id="d1"
+          currency="EUR"
+          restore={RESTORE}
+        />
+      </StoryProviders>
+    );
+  },
+};
+
+// The state one word separates from a lie: a restore that put back only SOME
+// of what moved. The headline says "partly", and the residual is on the face —
+// a row claiming nothing changed while a field still holds a new value is the
+// worst outcome this shape can produce.
+export const AReversalThatOnlyPartlyWentBack: Story = {
+  render: () => {
+    seedWorkspace();
+    installFetchStub({
+      "GET /me": meRoute({}),
+      "GET /records/deal/d1/history": () =>
+        jsonResponse({
+          data: [
+            putBackAgain,
+            {
+              ...titleMoved,
+              before: { name: "Globex", amount_minor: 2500000 },
+              after: { name: "Globex Renewal", amount_minor: 4150000 },
+            },
+            created,
+          ],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /field-history": () => jsonResponse(emptyPage),
+    });
+    return (
+      <StoryProviders>
+        <RecordHistoryTab
+          kind="deal"
+          id="d1"
+          currency="EUR"
+          restore={RESTORE}
+        />
+      </StoryProviders>
+    );
+  },
+};

@@ -55,6 +55,7 @@ export const de = {
   "history.tabChanges": "Nach Änderung",
   "history.tabFields": "Nach Feld",
   "history.undo.action": "Zurücksetzen",
+  "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird zurückgesetzt…",
   "history.undo.confirmTitle": "Diese Änderung zurücksetzen?",
   "history.undo.confirmBody":
@@ -80,6 +81,20 @@ export const de = {
     "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann, und ist daher nicht möglich.",
   "history.undo.notWritableByCaller":
     "Sie haben keine Berechtigung, diese Felder zu schreiben.",
+  "history.reversal.collapsed":
+    "Änderung von {actor}, zurückgesetzt von {undoer}",
+  "history.reversal.collapsedSelf":
+    "{actor} hat die eigene Änderung zurückgesetzt",
+  "history.reversal.partly":
+    "Änderung von {actor}, teilweise zurückgesetzt von {undoer}",
+  "history.reversal.partlySelf":
+    "{actor} hat die eigene Änderung teilweise zurückgesetzt",
+  "history.reversal.net": "Ergebnis: unverändert",
+  "history.reversal.stillChanged": "weiterhin geändert",
+  "history.reversal.expand": "Beide Änderungen anzeigen",
+  "history.reversal.collapse": "Ausblenden",
+  "history.reversal.undoneBy": "zurückgesetzt von {undoer}",
+  "history.reversal.unpaired": "setzt eine frühere Änderung zurück",
   "history.field.address": "Adresse",
   "history.field.amount_minor": "Wert",
   "history.field.assignee_id": "Zuständig",
