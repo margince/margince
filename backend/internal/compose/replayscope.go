@@ -144,6 +144,7 @@ var replayableOperations = map[string]replayTarget{
 	// Row-scoped records: both gates apply, and the object and the table are
 	// the same word by construction (policy.coreObjects mirrors the table).
 	"POST /v1/people":                   {object: tablePerson, table: tablePerson, idPath: "id"},
+	"POST /v1/people/quick-capture":     {object: tablePerson, table: tablePerson, idPath: "person.id"},
 	"PATCH /v1/people/{id}":             {object: tablePerson, table: tablePerson, idPath: "id"},
 	"POST /v1/people/{id}/merge":        {object: tablePerson, table: tablePerson, idPath: "id"},
 	"POST /v1/leads/{id}/promote":       {object: tablePerson, table: tablePerson, idPath: "person.id"},

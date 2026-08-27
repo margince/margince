@@ -2330,6 +2330,8 @@ export const de = {
   "create.save": "Anlegen",
   "create.saving": "Wird angelegt…",
   "create.contact": "Neuer Kontakt",
+  "create.quickCapture": "Schnellerfassung",
+  "create.quickCaptureSaved": "{name} gespeichert",
   "create.company": "Neue Firma",
   "create.lead": "Neuer Lead",
   "create.deal": "Neuer Deal",
@@ -6042,6 +6044,7 @@ export const de = {
   "person.page.ownerAssigned": "Zugewiesen",
   "person.page.ownerUnassigned": "Nicht zugewiesen",
   "person.page.linkedin": "LinkedIn",
+  "person.page.openProfile": "Profil öffnen",
   "person.rail.detailsTitle": "Details",
   "person.rail.contactMethodImmutable":
     "Beim Anlegen dieses Kontakts festgelegt. E-Mail und Telefon können hier nicht geändert werden.",

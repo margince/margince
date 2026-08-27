@@ -22648,6 +22648,41 @@ type QualifyDealRequest struct {
 	StageId    *openapi_types.UUID `json:"stage_id,omitempty"`
 }
 
+// QuickCapturePersonRequest One person as a reader of their public profile can state them. Deliberately
+// flatter than CreatePersonRequest: one email and one phone rather than the
+// arrays, because a form optimized for typing has one box each.
+type QuickCapturePersonRequest struct {
+	Email    *openapi_types.Email `json:"email,omitempty"`
+	FullName string               `json:"full_name"`
+
+	// OrganizationId An existing employer. Wins over `organization_name` when both arrive.
+	OrganizationId *openapi_types.UUID `json:"organization_id,omitempty"`
+
+	// OrganizationName A new employer to create, when no existing record was picked.
+	OrganizationName *string `json:"organization_name,omitempty"`
+	Phone            *string `json:"phone,omitempty"`
+
+	// ProfileUrl The public profile this was read from. Stored, never fetched.
+	ProfileUrl *string `json:"profile_url,omitempty"`
+
+	// Role What they do at that employer, when it differs from `title`.
+	Role  *string `json:"role,omitempty"`
+	Title *string `json:"title,omitempty"`
+}
+
+// QuickCapturePersonResult The person as created, plus the employer when one was attached.
+type QuickCapturePersonResult struct {
+	// OrganizationCreated True when the employer is a record this call created. The surface says so
+	// rather than letting a typo silently become a second company.
+	OrganizationCreated *bool `json:"organization_created,omitempty"`
+
+	// OrganizationId The employer this person was attached to, when one was named.
+	OrganizationId *openapi_types.UUID `json:"organization_id,omitempty"`
+
+	// Person A contact. Mirrors the `person` table.
+	Person Person `json:"person"`
+}
+
 // Quota A per-owner or per-team revenue target for one period (RD-DDL-2). Exactly one of
 // owner_id/team_id is non-null (CHECK constraint) — never both, never neither;
 // createQuota/updateQuota document and enforce this (422 owner_xor_team_required).
@@ -27941,6 +27976,25 @@ type CreatePersonParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// QuickCapturePersonParams defines parameters for QuickCapturePerson.
+type QuickCapturePersonParams struct {
+	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
+	// create (API-CC-6). **Scope:** the key is unique within
+	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+	// returns the original status + body. Reusing the same key with a *different* request body
+	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+	// answer lost": without it the blind retry answers `409 version_skew`, because the first
+	// attempt already bumped the version.
+	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
+	// than half-honouring it, so read this contract, not the client, to know which calls are safe
+	// to retry blind.
+	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
 // ArchivePersonParams defines parameters for ArchivePerson.
 type ArchivePersonParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -29786,6 +29840,9 @@ type IssuePassportJSONRequestBody = IssuePassportRequest
 
 // CreatePersonJSONRequestBody defines body for CreatePerson for application/json ContentType.
 type CreatePersonJSONRequestBody = CreatePersonRequest
+
+// QuickCapturePersonJSONRequestBody defines body for QuickCapturePerson for application/json ContentType.
+type QuickCapturePersonJSONRequestBody = QuickCapturePersonRequest
 
 // UpdatePersonJSONRequestBody defines body for UpdatePerson for application/json ContentType.
 type UpdatePersonJSONRequestBody = UpdatePersonRequest
@@ -38639,6 +38696,9 @@ type ServerInterface interface {
 	// Create a person.
 	// (POST /people)
 	CreatePerson(w http.ResponseWriter, r *http.Request, params CreatePersonParams)
+	// Create a person, their employer and the employment edge in one write.
+	// (POST /people/quick-capture)
+	QuickCapturePerson(w http.ResponseWriter, r *http.Request, params QuickCapturePersonParams)
 	// Archive (soft-delete) a person.
 	// (DELETE /people/{id})
 	ArchivePerson(w http.ResponseWriter, r *http.Request, id Id, params ArchivePersonParams)
@@ -41111,6 +41171,12 @@ func (_ Unimplemented) ListPeople(w http.ResponseWriter, r *http.Request, params
 // Create a person.
 // (POST /people)
 func (_ Unimplemented) CreatePerson(w http.ResponseWriter, r *http.Request, params CreatePersonParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Create a person, their employer and the employment edge in one write.
+// (POST /people/quick-capture)
+func (_ Unimplemented) QuickCapturePerson(w http.ResponseWriter, r *http.Request, params QuickCapturePersonParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56280,6 +56346,55 @@ func (siw *ServerInterfaceWrapper) CreatePerson(w http.ResponseWriter, r *http.R
 	handler.ServeHTTP(w, r)
 }
 
+// QuickCapturePerson operation middleware
+func (siw *ServerInterfaceWrapper) QuickCapturePerson(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params QuickCapturePersonParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Idempotency-Key" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
+		var IdempotencyKey IdempotencyKey
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
+			return
+		}
+
+		params.IdempotencyKey = &IdempotencyKey
+
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.QuickCapturePerson(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchivePerson operation middleware
 func (siw *ServerInterfaceWrapper) ArchivePerson(w http.ResponseWriter, r *http.Request) {
 
@@ -65221,6 +65336,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people", wrapper.CreatePerson)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/quick-capture", wrapper.QuickCapturePerson)
 	})
 	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/people/{id}", wrapper.ArchivePerson)

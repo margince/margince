@@ -179,6 +179,28 @@ export function submittedValues(
   return out;
 }
 
+// What survives a save on a form that stays open: a field whose value is still
+// exactly what was sent is cleared to its default, and a field the reader has
+// since changed keeps what they typed.
+//
+// The comparison is against the SUBMITTED value rather than a timestamp or a
+// dirty flag, because that is the question being asked — "is this still the
+// saved record's word, or the next one's?" — and it answers correctly however
+// slow the round trip was.
+export function keepUnsubmitted(
+  current: Record<string, string>,
+  submitted: Record<string, string>,
+  defaults: Record<string, string>,
+): Record<string, string> {
+  const next = { ...defaults };
+  for (const [key, value] of Object.entries(current)) {
+    if (value !== "" && value !== submitted[key]) {
+      next[key] = value;
+    }
+  }
+  return next;
+}
+
 // The label a top-level field shows: the literal labelText wins; otherwise the
 // i18n key. (Subfields are always core, so they keep using t(label) directly.)
 export function fieldLabel(
@@ -245,11 +267,16 @@ export function useCreateRecord<Created extends { id: string }>({
   onDone,
   stay = false,
   aboutId,
+  onCreated,
 }: Readonly<{
   create: (values: Record<string, string>, rows?: FormRows) => Promise<Created>;
   invalidate: string;
   screen: Screen;
   onDone: () => void;
+  // The created record, for a caller that reports what landed. Runs before
+  // onDone, so a caller can name the record in a toast while the form it came
+  // from is still the thing on screen.
+  onCreated?: (created: Created) => void;
   // `stay` keeps the reader where they are instead of opening what was just
   // created. It is for creates whose result is a PROPERTY of the record on
   // screen — a tag on this company, a list this company now belongs to —
@@ -277,6 +304,7 @@ export function useCreateRecord<Created extends { id: string }>({
     }) => create(values, rows),
     onSuccess: (created) => {
       queryClient.invalidateQueries({ queryKey: [invalidate] });
+      onCreated?.(created);
       onDone();
       if (!stay) {
         navigate({ screen, id: created.id });
@@ -298,6 +326,9 @@ export function CreateAction<Created extends { id: string }>({
   resolveExisting,
   stay = false,
   aboutId,
+  keepOpen = false,
+  onCreated,
+  testId,
 }: Readonly<{
   label: string;
   fields: CreateField[];
@@ -305,6 +336,18 @@ export function CreateAction<Created extends { id: string }>({
   invalidate: string;
   screen: Screen;
   startOpen?: boolean;
+  // `keepOpen` turns one save into "saved, next": the modal stays open and
+  // empties itself instead of closing. It is for capture done in a run —
+  // somebody reading a list of profiles in another window types six people
+  // without reopening the form six times. It implies `stay`, because opening
+  // the record just created would be the opposite of staying to type the next
+  // one.
+  keepOpen?: boolean;
+  // What was created, for a caller that reports it — the toast naming each
+  // saved record is the only feedback a form that never closes gives.
+  onCreated?: (created: Created) => void;
+  // Names this button when a screen carries two of them. See NewRecordButton.
+  testId?: string;
   // See useCreateRecord: keep the reader on this record when what was created
   // belongs TO it rather than being somewhere to go.
   stay?: boolean;
@@ -318,13 +361,25 @@ export function CreateAction<Created extends { id: string }>({
 }>) {
   const t = useT();
   const [creating, setCreating] = useState(startOpen);
+  // Counts the saves this open session has taken, and is what empties the form
+  // between them. A counter rather than a boolean: two saves in a row have to
+  // read as two distinct clears, and a flag toggled back would leave the
+  // second one looking like the state the first already settled.
+  const [saved, setSaved] = useState(0);
   const mutation = useCreateRecord({
     create,
     invalidate,
     screen,
-    stay,
+    stay: stay || keepOpen,
     aboutId,
-    onDone: () => setCreating(false),
+    onDone: () => {
+      if (keepOpen) {
+        setSaved((n) => n + 1);
+        return;
+      }
+      setCreating(false);
+    },
+    onCreated,
   });
   const existing =
     mutation.error instanceof ProblemError
@@ -336,7 +391,11 @@ export function CreateAction<Created extends { id: string }>({
   }
   return (
     <>
-      <NewRecordButton label={label} onClick={() => setCreating(true)} />
+      <NewRecordButton
+        label={label}
+        onClick={() => setCreating(true)}
+        testId={testId}
+      />
       <CreateRecordModal
         open={creating}
         onClose={() => setCreating(false)}
@@ -346,6 +405,7 @@ export function CreateAction<Created extends { id: string }>({
         error={mutation.isError ? problemMessageOf(mutation.error, t) : null}
         existing={existing}
         resolveExisting={resolveExisting}
+        resetToken={saved}
         onSubmit={(values, rows) =>
           mutation.mutate({ values, rows: rows ?? {} })
         }
@@ -357,9 +417,18 @@ export function CreateAction<Created extends { id: string }>({
 export function NewRecordButton({
   label,
   onClick,
-}: Readonly<{ label: string; onClick: () => void }>) {
+  testId = "new-record",
+}: Readonly<{
+  label: string;
+  onClick: () => void;
+  // Two create buttons can sit in one list header — the full form and a
+  // quick-capture beside it — and a shared id makes both unaddressable to a
+  // test and to anything else querying by it. The default keeps every existing
+  // single-button screen exactly as it was.
+  testId?: string;
+}>) {
   return (
-    <Button small onClick={onClick} data-testid="new-record">
+    <Button small onClick={onClick} data-testid={testId}>
       <Plus aria-hidden style={{ width: 14, height: 14 }} /> {label}
     </Button>
   );
@@ -778,6 +847,7 @@ export function CreateRecordModal({
   existing,
   resolveExisting,
   onSubmit,
+  resetToken = 0,
 }: Readonly<{
   open: boolean;
   onClose: () => void;
@@ -788,10 +858,20 @@ export function CreateRecordModal({
   existing?: { id: string; code: string } | null;
   resolveExisting?: (code: string, id: string) => Route;
   onSubmit: (values: Record<string, string>, rows?: FormRows) => void;
+  // Emptying the form WITHOUT closing it, for a modal that stays open to take
+  // the next record. The caller bumps this after a save it kept open, and the
+  // seeding below treats it exactly like a fresh open. A number rather than a
+  // callback because the reset has to happen during render for the same reason
+  // the open-transition one does — a caller reaching in to clear the values
+  // would be the effect this shape exists to avoid.
+  resetToken?: number;
 }>) {
   const headingId = useId();
   const [values, setValues] = useState<Record<string, string>>({});
   const [rows, setRows] = useState<FormRows>({});
+  // What the last submit carried, so a reset can tell the saved record's words
+  // apart from words typed after it while the save was still in flight.
+  const [submitted, setSubmitted] = useState<Record<string, string>>({});
   // Seeding happens DURING RENDER on the closed→open transition, not in an
   // effect — see EditRecordModal (edit.tsx) for the race an effect opens and
   // why this shape closes it. Keying off the transition (rather than `fields`,
@@ -799,8 +879,12 @@ export function CreateRecordModal({
   // at any moment) is what keeps a re-render from wiping live input.
   // Starts false, not `open`: a modal mounted already open still has to seed.
   const [seededOpen, setSeededOpen] = useState(false);
-  if (open !== seededOpen) {
+  const [seededReset, setSeededReset] = useState(resetToken);
+  const reopened = open !== seededOpen;
+  const cleared = open && resetToken !== seededReset;
+  if (reopened || cleared) {
     setSeededOpen(open);
+    setSeededReset(resetToken);
     if (open) {
       // A fresh open starts from the fields' defaults (first select option
       // for required selects), never from a previous attempt's leftovers.
@@ -810,7 +894,15 @@ export function CreateRecordModal({
           defaults[field.key] = field.options?.[0]?.value ?? "";
         }
       }
-      setValues(defaults);
+      // A form that stays open to take the next record clears only what the
+      // save it just made carried. Nothing disables the fields during the
+      // round trip, so a reader who kept typing while it was in flight has
+      // words on screen that belong to the NEXT person — and blanking the
+      // whole form would take them with it. `submitted` is what went; anything
+      // typed after it stays exactly where the reader put it.
+      setValues((current) =>
+        reopened ? defaults : keepUnsubmitted(current, submitted, defaults),
+      );
       setRows({});
     }
   }
@@ -830,7 +922,10 @@ export function CreateRecordModal({
         error={error}
         existing={existing}
         resolveExisting={resolveExisting}
-        onSubmit={onSubmit}
+        onSubmit={(sent, sentRows) => {
+          setSubmitted(sent);
+          onSubmit(sent, sentRows);
+        }}
         onClose={onClose}
         submitLabelKey="create.save"
       />

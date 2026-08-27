@@ -2368,6 +2368,11 @@ export const en = {
   "create.save": "Create",
   "create.saving": "Creating…",
   "create.contact": "New contact",
+  // The fast path beside it: reading a profile in another window and typing
+  // what it says. The label names the ACT, not the source, because the same
+  // form takes a conference badge and a business card.
+  "create.quickCapture": "Quick capture",
+  "create.quickCaptureSaved": "Saved {name}",
   "create.company": "New company",
   "create.lead": "New lead",
   "create.deal": "New deal",
@@ -6087,6 +6092,10 @@ export const en = {
   "person.page.ownerAssigned": "Assigned",
   "person.page.ownerUnassigned": "Unassigned",
   "person.page.linkedin": "LinkedIn",
+  // Beside the editable address, not instead of it: the row holds a value to
+  // correct AND a place to go, and the verb names the second so neither reads
+  // as the other.
+  "person.page.openProfile": "Open profile",
   // The rail's own details grid: the contact's own fields, at a glance above
   // the six relationship sections below it.
   "person.rail.detailsTitle": "Details",
