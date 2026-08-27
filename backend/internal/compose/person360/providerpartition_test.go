@@ -20,6 +20,7 @@ import (
 	"testing"
 	"time"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -47,10 +48,13 @@ func TestEachProviderSectionCarriesOnlyItsOwnPurchases(t *testing.T) {
 		locationClaim(t, "surfe", "Munich, Germany", earlier),
 		locationClaim(t, "otherco", "Berlin, Germany", later),
 	}
-	connected := map[string]bool{"surfe": true, "otherco": true}
+	connected := map[string]string{"surfe": "connected", "otherco": "connected"}
 
 	svc := &Service{}
-	profiles := svc.profilesFor(namesToShow(connected, nil, claims), connected, nil, claims)
+	profiles, err := svc.profilesFor(namesToShow(connected, nil, claims), connected, nil, claims)
+	if err != nil {
+		t.Fatalf("folding the sections: %v", err)
+	}
 
 	if len(profiles) != 2 {
 		t.Fatalf("got %d sections, want one per connected provider", len(profiles))
@@ -71,10 +75,13 @@ func TestEachProviderSectionCarriesOnlyItsOwnPurchases(t *testing.T) {
 }
 
 func TestSectionsKeepAStableOrderBetweenReads(t *testing.T) {
-	connected := map[string]bool{"zeta": true, "alpha": true, "surfe": true}
+	connected := map[string]string{"zeta": "connected", "alpha": "connected", "surfe": "connected"}
 
 	svc := &Service{}
-	profiles := svc.profilesFor(namesToShow(connected, nil, nil), connected, nil, nil)
+	profiles, err := svc.profilesFor(namesToShow(connected, nil, nil), connected, nil, nil)
+	if err != nil {
+		t.Fatalf("folding the sections: %v", err)
+	}
 
 	// Sorted by name: a map iteration order would reshuffle the sections
 	// between two reads of the same page, moving a button under the reader's
@@ -91,10 +98,13 @@ func TestSectionsKeepAStableOrderBetweenReads(t *testing.T) {
 }
 
 func TestAProviderNobodyRunsYetStillGetsItsSection(t *testing.T) {
-	connected := map[string]bool{"surfe": true}
+	connected := map[string]string{"surfe": "connected"}
 
 	svc := &Service{}
-	profiles := svc.profilesFor(namesToShow(connected, nil, nil), connected, nil, nil)
+	profiles, err := svc.profilesFor(namesToShow(connected, nil, nil), connected, nil, nil)
+	if err != nil {
+		t.Fatalf("folding the sections: %v", err)
+	}
 
 	// never_run, present rather than absent: the reader reaches the lookup
 	// through this section, so a page that omitted it would leave them with a
@@ -111,10 +121,13 @@ func TestAPurchaseSurvivesItsProviderBeingDisconnected(t *testing.T) {
 	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
 	claims := []storedClaim{locationClaim(t, "otherco", "Berlin, Germany", at)}
 	// Nobody is connected to otherco any more, but it sold us something.
-	connected := map[string]bool{"surfe": true}
+	connected := map[string]string{"surfe": "connected"}
 
 	svc := &Service{}
-	profiles := svc.profilesFor(namesToShow(connected, nil, claims), connected, nil, claims)
+	profiles, err := svc.profilesFor(namesToShow(connected, nil, claims), connected, nil, claims)
+	if err != nil {
+		t.Fatalf("folding the sections: %v", err)
+	}
 
 	// Disconnecting stops new egress; it does not delete what was bought. A
 	// page that dropped the section would hide a purchase the customer paid
@@ -130,5 +143,41 @@ func TestAPurchaseSurvivesItsProviderBeingDisconnected(t *testing.T) {
 	}
 	if *otherco != "Berlin, Germany" {
 		t.Errorf("the retained purchase reads %q, want what was bought", *otherco)
+	}
+}
+
+func TestAnImpairedConnectionSaysWhatIsWrongRatherThanReadingAsStale(t *testing.T) {
+	at := time.Date(2026, 3, 1, 9, 0, 0, 0, time.UTC)
+	claims := []storedClaim{locationClaim(t, "surfe", "Munich, Germany", at)}
+
+	for _, tc := range []struct {
+		status string
+		want   crmcontracts.PersonProviderProfileState
+	}{
+		{"invalid_credentials", crmcontracts.PersonProviderProfileStateInvalidCredentials},
+		{"insufficient_credits", crmcontracts.PersonProviderProfileStateInsufficientCredits},
+		{"rate_limited", crmcontracts.PersonProviderProfileStateRateLimited},
+		{"provider_error", crmcontracts.PersonProviderProfileStateProviderError},
+	} {
+		t.Run(tc.status, func(t *testing.T) {
+			statuses := map[string]string{"surfe": tc.status}
+
+			svc := &Service{}
+			profiles, err := svc.profilesFor(namesToShow(statuses, nil, claims), statuses, nil, claims)
+			if err != nil {
+				t.Fatalf("folding the sections: %v", err)
+			}
+
+			// The connection's own condition, not `stale`. Stale says nobody is
+			// connected any more, which sends an operator looking at the contact
+			// for a problem that is in the settings — and the four conditions
+			// here are the ones they can actually fix.
+			if len(profiles) != 1 {
+				t.Fatalf("got %d sections, want one", len(profiles))
+			}
+			if profiles[0].State != tc.want {
+				t.Errorf("a %s connection reads as %q, want %q", tc.status, profiles[0].State, tc.want)
+			}
+		})
 	}
 }

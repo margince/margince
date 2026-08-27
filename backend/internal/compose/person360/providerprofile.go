@@ -44,7 +44,7 @@ func (s *Service) providerProfileSection(ctx context.Context, tx pgx.Tx, personI
 	if err := requireRead(ctx, "person"); err != nil {
 		return err
 	}
-	connected, err := s.connectedProviders(ctx, tx)
+	statuses, err := s.connectionStatuses(ctx, tx)
 	if err != nil {
 		return err
 	}
@@ -64,35 +64,54 @@ func (s *Service) providerProfileSection(ctx context.Context, tx pgx.Tx, personI
 	// Set even when empty — a pointer to no sections says "nobody is
 	// connected", which is a different fact from the nil the grant check
 	// leaves behind, and `sections_omitted` is what names the second.
-	profiles := s.profilesFor(namesToShow(connected, runs, claims), connected, runs, claims)
+	profiles, err := s.profilesFor(namesToShow(statuses, runs, claims), statuses, runs, claims)
+	if err != nil {
+		return err
+	}
 	out.ProviderProfiles = &profiles
 	return nil
 }
 
-// connectedProviders names every provider with a live connection, read from
-// the same rows the settings card reads: a page that said "never run" while the
-// card said "not connected" would have the reader looking for a button that is
-// not there. No registry is consulted — a connection row exists only where an
+// connectionStatuses is each provider's connection status, read from the same
+// rows the settings card reads: a page that said "never run" while the card
+// said "not connected" would have the reader looking for a button that is not
+// there. No registry is consulted — a connection row exists only where an
 // adapter registered one.
-func (s *Service) connectedProviders(ctx context.Context, tx pgx.Tx) (map[string]bool, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT provider FROM provider_connection WHERE status = 'connected'`)
+//
+// The STATUS, not merely whether one is connected. A connection can be present
+// and impaired — the key was refused, the credits ran out, the vendor asked us
+// to slow down — and each of those is something an operator can act on. Read as
+// a boolean they all collapsed into "not connected", which the page then
+// reported as `stale`: "bought earlier, nobody is connected any more". That
+// sends somebody looking at the contact for a problem that is in the settings.
+func (s *Service) connectionStatuses(ctx context.Context, tx pgx.Tx) (map[string]string, error) {
+	rows, err := tx.Query(ctx, `SELECT provider, status FROM provider_connection`)
 	if err != nil {
 		return nil, fmt.Errorf("person360: reading the provider connection state: %w", err)
 	}
 	defer rows.Close()
-	connected := map[string]bool{}
+	statuses := map[string]string{}
 	for rows.Next() {
-		var name string
-		if err := rows.Scan(&name); err != nil {
+		var name, status string
+		if err := rows.Scan(&name, &status); err != nil {
 			return nil, fmt.Errorf("person360: scanning a connected provider: %w", err)
 		}
-		connected[name] = true
+		statuses[name] = status
 	}
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("person360: reading the provider connection state: %w", err)
 	}
-	return connected, nil
+	return statuses, nil
+}
+
+// impairedStates maps a connection that EXISTS but cannot buy onto the sentence
+// the page shows. Each names the installation's own condition, because that is
+// where the fix is — none of them is a fact about the contact.
+var impairedStates = map[string]crmcontracts.PersonProviderProfileState{
+	"invalid_credentials":  crmcontracts.PersonProviderProfileStateInvalidCredentials,
+	"insufficient_credits": crmcontracts.PersonProviderProfileStateInsufficientCredits,
+	"rate_limited":         crmcontracts.PersonProviderProfileStateRateLimited,
+	"provider_error":       crmcontracts.PersonProviderProfileStateProviderError,
 }
 
 // namesToShow collects the providers the page owes the reader a section for:
@@ -105,9 +124,9 @@ func (s *Service) connectedProviders(ctx context.Context, tx pgx.Tx) (map[string
 // (internal/compose/person360/providerpartition_test.go) — the first pins that
 // a provider with history but no connection is still named, the second the
 // order.
-func namesToShow(connected map[string]bool, runs []providerRunRow, claims []storedClaim) []string {
+func namesToShow(statuses map[string]string, runs []providerRunRow, claims []storedClaim) []string {
 	seen := map[string]bool{}
-	for name := range connected {
+	for name := range statuses {
 		seen[name] = true
 	}
 	for _, r := range runs {
@@ -127,20 +146,24 @@ func namesToShow(connected map[string]bool, runs []providerRunRow, claims []stor
 // profilesFor builds one snapshot per named provider, each seeing only its own
 // runs and its own claims. The partition is the whole point: a value bought
 // from one vendor must never appear under another's name.
-func (s *Service) profilesFor(names []string, connected map[string]bool, runs []providerRunRow, claims []storedClaim) []crmcontracts.PersonProviderProfile {
+func (s *Service) profilesFor(names []string, statuses map[string]string, runs []providerRunRow, claims []storedClaim) ([]crmcontracts.PersonProviderProfile, error) {
 	profiles := make([]crmcontracts.PersonProviderProfile, 0, len(names))
 	for _, name := range names {
-		profiles = append(profiles, s.profileFor(name, connected[name], runsOf(name, runs), claimsOf(name, claims)))
+		profile, err := s.profileFor(name, statuses[name], runsOf(name, runs), claimsOf(name, claims))
+		if err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, profile)
 	}
-	return profiles
+	return profiles, nil
 }
 
 // profileFor is one provider's section: what it was asked, what it answered,
 // and what it sold us.
-func (s *Service) profileFor(name string, connected bool, runs []providerRunRow, claims []storedClaim) crmcontracts.PersonProviderProfile {
+func (s *Service) profileFor(name string, status string, runs []providerRunRow, claims []storedClaim) (crmcontracts.PersonProviderProfile, error) {
 	profile := crmcontracts.PersonProviderProfile{
 		Provider:               crmcontracts.Provider(name),
-		State:                  resolveProviderState(runs, connected),
+		State:                  resolveProviderState(runs, status),
 		CategoriesNotRequested: []string{},
 		Emails:                 []crmcontracts.PersonProviderEmail{},
 		MobilePhones:           []crmcontracts.PersonProviderPhone{},
@@ -162,8 +185,10 @@ func (s *Service) profileFor(name string, connected bool, runs []providerRunRow,
 			}
 		}
 	}
-	foldClaims(claims, &profile)
-	return profile
+	if err := foldClaims(claims, &profile); err != nil {
+		return crmcontracts.PersonProviderProfile{}, err
+	}
+	return profile, nil
 }
 
 // runsOf and claimsOf narrow the person's history to one provider, preserving
@@ -300,8 +325,15 @@ func categoriesNotRequested(desc provider.Descriptor, requested []string) []stri
 // person is not eligible for one, and nobody has asked yet are different
 // answers to "why is this empty", and only the reader can act on the right
 // one.
-func resolveProviderState(runs []providerRunRow, configured bool) crmcontracts.PersonProviderProfileState {
-	if !configured {
+func resolveProviderState(runs []providerRunRow, status string) crmcontracts.PersonProviderProfileState {
+	// A connection that exists but cannot buy says WHY, before anything about
+	// this person's runs. The condition is the installation's — a refused key,
+	// an exhausted wallet — and it outranks the run history because it is what
+	// the next lookup will hit, and the only thing anybody can act on.
+	if impaired, ok := impairedStates[status]; ok {
+		return impaired
+	}
+	if status != "connected" {
 		// Disconnected, and the data this installation already PAID for is
 		// still on the page below — disconnecting stops new egress, it does
 		// not delete what was bought. So the honest word is stale, not

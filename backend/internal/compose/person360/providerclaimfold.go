@@ -69,16 +69,18 @@ func (s *Service) storedClaims(ctx context.Context, tx pgx.Tx, personID ids.Pers
 
 // foldClaims folds one provider's claims into that provider's snapshot.
 //
-// A claim whose value_json this build cannot decode is SKIPPED rather than
-// failing the page: the row is a vendor payload, and one unreadable purchase
-// must not take the record down with it. What is decodable still renders,
-// which is the honest half-answer.
-func foldClaims(claims []storedClaim, out *crmcontracts.PersonProviderProfile) {
+// A claim this build cannot decode fails the section rather than being
+// skipped. The decode structs are hand-written against a shape another module
+// produces, so a failure here means the writer and the reader have drifted —
+// and a page that quietly dropped the claim would render a purchase as an
+// absence, which is the one thing this section must never do.
+func foldClaims(claims []storedClaim, out *crmcontracts.PersonProviderProfile) error {
 	for _, c := range claims {
 		if err := foldOne(c, out); err != nil {
-			continue
+			return err
 		}
 	}
+	return nil
 }
 
 // statableConfidence reports whether a score is one this contract can carry: a
