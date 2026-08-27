@@ -57,7 +57,7 @@ const (
 	// objInstallSettings gates the read of the installation's own values —
 	// name, base currency, timezone. Every fixture that reads deals or
 	// accounts carries it, because those reads resolve the basis they are
-	// reported in (issue #521), and 0191 grants it to all five seeded roles.
+	// reported in, and 0191 grants it to all five seeded roles.
 	objInstallSettings = "installation_settings"
 )
 
