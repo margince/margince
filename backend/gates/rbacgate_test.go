@@ -248,26 +248,14 @@ var ungatedEntryPoints = gatekit.Waive(map[string]string{ // #nosec G101 -- waiv
 	"internal/modules/activities:ResolveBookingPage":  "public booking page (A16): resolved by slug for the anonymous visitor; writes nothing",
 	"internal/modules/consent:ResolvePreferenceToken": "public preference-center resolve: possession of the emailed capability token IS the authority (no session exists). It is NOT signed and NOT single-use — the preference centre is revisitable by design, and one message's link must keep working after the next goes out — so the bounds that stand in for those properties are named here: 256-bit crypto/rand, expiry plus an age ceiling the send path rotates at (0144), and deletion by Art. 17 erasure",
 	"internal/modules/approvals:LockPendingGroupInTx": "takes row locks on the CALLER's transaction and answers nothing but an error — no record, no count, not even whether the group it locked is empty — so there is nothing an ungated caller could learn from it. The batch stagers that call it hold their grant before the transaction opens, and each proposal they go on to stage is gated on its own way in; a gate here would re-ask that question against a coarser object",
-	// The autonomy ladder. Bounded by SUBJECT rather than by an object grant,
-	// and the three share one argument: the row read and the row written are
-	// keyed on the acting principal's own user_id, which the call takes from
-	// the context and never from an argument. There is no parameter naming
-	// another rep, so no object grant could widen or narrow what these reach —
-	// what they reach is the caller. actingForAHuman still refuses a principal
-	// with nobody behind it, so a system or unattributed agent call cannot
-	// build or read a track record (TestAPrincipalWithNoHumanBehindItCannotSetAPolicy),
-	// and TestAPolicyReadAnswersForTheActingRepOnly holds the subject bound.
-	"internal/modules/approvals:ReadAutonomy":        "reads the ACTING rep's own policy for one kind: the user_id in the WHERE clause comes from the principal, and the call takes no parameter that could name another rep",
-	"internal/modules/approvals:ListAutonomy":        "reads the ACTING rep's own policies, same subject bound as ReadAutonomy; the kinds it fills in around them are server vocabulary, not records",
-	"internal/modules/approvals:SetAutonomy":         "writes the ACTING rep's own policy: a rep's standing answer about being asked is theirs to give, and no argument names a rep, so there is no cross-subject write for an object grant to bound",
-	"internal/modules/approvals:MintApprovalToken":   "signs the approval JWS for a decision already admitted by Decide; crypto, not admission",
-	"internal/modules/approvals:VerifyApprovalToken": "verifies the approval JWS presented back; the token is the authority being checked",
-	"internal/modules/approvals:Redeem":              "redeems a verified approval token: the token (minted for an admitted decision) is the authority",
-	"internal/modules/approvals:RedeemInTx":          "transactional form of Redeem: the already-admitted approval token is the authority; the caller supplies only the commit boundary",
-	"internal/modules/approvals:RedeemAndApply":      "atomic approval-effect boundary: Redeem performs the authority checks and the callback runs only inside that same transaction",
-	"internal/modules/approvals:TaskState":           "gated by the STAGING PASSPORT rather than by object RBAC, and that is the right gate: an MCP task polls the agent's own proposal, of which it has exactly one, so ownProposal answers ErrNotFound for any approval this passport did not stage. It returns a status and a window, never a record",
-	"internal/modules/approvals:ProposedChange":      "same passport binding as TaskState, over the payload the agent itself staged — read live because a human edit rewrites it, and answered only to the passport that proposed it",
-	"internal/modules/approvals:Withdraw":            "same passport binding, over the agent's own live proposal: it retracts what this passport staged and nothing else, and a human's decision is never the caller's to take back (WithdrawInTx refuses a decided row)",
+	"internal/modules/approvals:MintApprovalToken":    "signs the approval JWS for a decision already admitted by Decide; crypto, not admission",
+	"internal/modules/approvals:VerifyApprovalToken":  "verifies the approval JWS presented back; the token is the authority being checked",
+	"internal/modules/approvals:Redeem":               "redeems a verified approval token: the token (minted for an admitted decision) is the authority",
+	"internal/modules/approvals:RedeemInTx":           "transactional form of Redeem: the already-admitted approval token is the authority; the caller supplies only the commit boundary",
+	"internal/modules/approvals:RedeemAndApply":       "atomic approval-effect boundary: Redeem performs the authority checks and the callback runs only inside that same transaction",
+	"internal/modules/approvals:TaskState":            "gated by the STAGING PASSPORT rather than by object RBAC, and that is the right gate: an MCP task polls the agent's own proposal, of which it has exactly one, so ownProposal answers ErrNotFound for any approval this passport did not stage. It returns a status and a window, never a record",
+	"internal/modules/approvals:ProposedChange":       "same passport binding as TaskState, over the payload the agent itself staged — read live because a human edit rewrites it, and answered only to the passport that proposed it",
+	"internal/modules/approvals:Withdraw":             "same passport binding, over the agent's own live proposal: it retracts what this passport staged and nothing else, and a human's decision is never the caller's to take back (WithdrawInTx refuses a decided row)",
 
 	// Engine/system seams that never carry a human principal: the
 	// worker loop and cross-module effects run as the system actor, and

@@ -36,10 +36,6 @@ type stagingEnv struct {
 	owner *pgx.Conn
 	ws    ids.UUID
 	rep   ids.UUID
-	// The pipeline and stage a seeded deal needs, filled on first use by the
-	// suites that seed deals and left zero by the ones that do not.
-	pipeline ids.UUID
-	stage    ids.UUID
 }
 
 func setupStaging(t *testing.T) *stagingEnv {

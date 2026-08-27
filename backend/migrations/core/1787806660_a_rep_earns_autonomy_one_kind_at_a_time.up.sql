@@ -21,14 +21,17 @@
 --
 -- WHAT THIS TABLE DOES NOT DO.
 --
--- It does not execute anything. `mode` records what a rep has chosen and the
--- counters record what they have done; no writer in this migration's product
--- reads `mode` to skip asking. Auto-apply needs an execution route that does
--- not exist yet — approvals are decided by people (decidingactor.go refuses a
--- system principal outright), and until that is answered a stored 'auto' would
--- be a claim the product cannot honour. The value is in the CHECK because the
--- ladder's rungs are one vocabulary and splitting them across two migrations
--- would let the second disagree with the first.
+-- Only the counters are written today. `mode` is declared and no code sets or
+-- reads it: auto-apply needs an execution route that does not exist yet —
+-- approvals are decided by people, and decidingactor.go refuses a system
+-- principal outright — so a surface for choosing a mode would be the way to
+-- record a preference the product cannot act on.
+--
+-- It is declared here anyway, with its CHECK, because the ladder's rungs are
+-- one vocabulary. Adding the column later beside a second migration's CHECK is
+-- how the two come to disagree about what a rung is called. A column nothing
+-- writes costs a default and nothing else; every row reads 'manual', which is
+-- what every rep's answer is until they are asked.
 CREATE TABLE approval_autonomy_policy (
     id uuid DEFAULT uuidv7() NOT NULL,
     user_id uuid NOT NULL,
