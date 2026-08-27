@@ -1684,8 +1684,15 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
   // still resolves its heading, so this case fails on `readAnswered`, which names
   // the mechanism, rather than timing out with nothing to say.
   const READ_HELD_MS = 3000;
+  // Both flags, because `readAnswered` alone is false in two different worlds:
+  // the read was held, and the read was never sent. A renamed route or a page
+  // that stops issuing this request would leave the assertion below green having
+  // exercised nothing, which is the failure a held-read case cannot notice about
+  // itself. `readStarted` is what tells the two apart.
+  let readStarted = false;
   let readAnswered = false;
   await page.route("**/people/p-anna", async (route) => {
+    readStarted = true;
     await new Promise((settle) => setTimeout(settle, READ_HELD_MS));
     readAnswered = true;
     await route.fallback();
@@ -1713,5 +1720,6 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
   await expect(
     page.getByRole("heading", { level: 1, name: "Anna Weber", exact: true }),
   ).toBeVisible();
+  expect(readStarted).toBe(true);
   expect(readAnswered).toBe(false);
 });
