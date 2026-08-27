@@ -16,6 +16,7 @@ package jobs_test
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
@@ -86,4 +87,50 @@ func TestStopAndCancelEndsAJobThatOutlastsTheDrain(t *testing.T) {
 		t.Fatal("StopAndCancel returned with the job goroutine still running — a role that then " +
 			"closes its bus and its pool leaves that job writing into both")
 	}
+}
+
+// The wrapped failure, which is the only thing a caller can act on: shutdown
+// escalates to StopAndCancel BECAUSE the soft drain overran, so an escalation
+// that fails in turn is what tells a role it is about to close the bus and the
+// pool underneath running jobs. A bare context error would not name the step.
+func TestStopAndCancelWrapsItsOwnFailure(t *testing.T) {
+	stuck := &stuckWorker{started: make(chan struct{}), returned: make(chan struct{})}
+	r, _ := migratedAppPool(t, func(w *river.Workers) { river.AddWorker(w, stuck) })
+	ctx := t.Context()
+
+	if err := r.Start(ctx); err != nil {
+		t.Fatalf("Start: %v", err)
+	}
+	if err := r.Enqueue(ctx, stuckArgs{}, nil); err != nil {
+		t.Fatalf("Enqueue: %v", err)
+	}
+	select {
+	case <-stuck.started:
+	case <-time.After(riverLifecycleBudget):
+		t.Fatal("the stuck job was never claimed")
+	}
+
+	// A window already spent, which is the state a shutdown that has burned
+	// its whole budget on the soft drain arrives in.
+	spent, cancel := context.WithCancel(ctx)
+	cancel()
+	err := r.StopAndCancel(spent)
+	if err == nil {
+		t.Fatal("StopAndCancel reported success against a context that was already done")
+	}
+	if !strings.Contains(err.Error(), "stop and cancel") {
+		t.Errorf("the failure reads %q and does not name the step it happened in", err)
+	}
+
+	// Left in a stoppable state for the harness rather than abandoned mid-drain.
+	// The second stop's own outcome is not this case's subject — the case above
+	// is what asserts a clean escalation — but a failure here would leave a
+	// client running against a pool the harness is about to close, so it is
+	// reported rather than dropped.
+	done, release := context.WithTimeout(ctx, riverLifecycleBudget)
+	defer release()
+	if err := r.StopAndCancel(done); err != nil {
+		t.Fatalf("the client would not stop after the refused escalation: %v", err)
+	}
+	<-stuck.returned
 }
