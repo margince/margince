@@ -368,21 +368,58 @@ func repointDisplacedParticipants(ctx context.Context, tx pgx.Tx, id ids.Activit
 		// An unbounded caller narrows nothing.
 		visible = "true"
 	}
+	// One merge, not a conditional rewrite. The repoint used to UPDATE each
+	// displaced row to the target and skip when the target was already a
+	// participant, which was wrong in both directions:
+	//
+	//   - the skip left the displaced row naming the OLD contact, so the
+	//     activity's links said one thing and its participants another —
+	//     exactly what the repoint exists to prevent — and that row kept
+	//     feeding a relationship-strength signal for somebody the human had
+	//     just said the conversation was not with;
+	//   - with several displaced participants and no target row, every one of
+	//     them qualified and each was rewritten to the target, colliding on
+	//     uq_activity_participant.
+	//
+	// The uniqueness is per (activity, role, user, person, address), not per
+	// person, so both the skip test and the collision are decided by the whole
+	// tuple. Within each such group exactly one displaced row is promoted to
+	// the target — and only when the target holds no row of that shape
+	// already — and the rest are deleted. Either way the target is named once
+	// and no displaced row survives.
+	const nilUUID = `'00000000-0000-0000-0000-000000000000'::uuid`
 	if _, err := tx.Exec(ctx, storekit.SQLf(`
-		UPDATE activity_participant ap
-		   SET person_id = $%d
-		 WHERE ap.activity_id = $%d
-		   -- Exactly the people the link delete removed, and no
-		   -- others. A participant can name somebody who was never
-		   -- linked at all, and inferring the displaced set from "no
-		   -- longer linked" would rewrite them too.
-		   AND ap.person_id = ANY($%d::uuid[])
-		   AND ap.person_id <> $%d
-		   AND EXISTS (SELECT 1 FROM person op WHERE op.id = ap.person_id AND (`+visible+`))
-		   AND NOT EXISTS (
-		       SELECT 1 FROM activity_participant other
-		        WHERE other.activity_id = ap.activity_id AND other.person_id = $%d)`,
-		targetPos, idPos, displacedPos, targetPos, targetPos), pargs...); err != nil {
+		WITH scoped AS (
+			SELECT ap.id, ap.role, ap.user_id, ap.address,
+			       row_number() OVER (
+			           PARTITION BY ap.role, coalesce(ap.user_id, `+nilUUID+`), coalesce(ap.address, '')
+			           ORDER BY ap.id) AS rank
+			  FROM activity_participant ap
+			 WHERE ap.activity_id = $%d
+			   -- Exactly the people the link delete removed, and no
+			   -- others. A participant can name somebody who was never
+			   -- linked at all, and inferring the displaced set from "no
+			   -- longer linked" would rewrite them too.
+			   AND ap.person_id = ANY($%d::uuid[])
+			   AND ap.person_id <> $%d
+			   AND EXISTS (SELECT 1 FROM person op WHERE op.id = ap.person_id AND (`+visible+`))
+		), promoted AS (
+			UPDATE activity_participant ap SET person_id = $%d
+			  FROM scoped s
+			 WHERE ap.id = s.id AND s.rank = 1
+			   AND NOT EXISTS (
+			       SELECT 1 FROM activity_participant other
+			        WHERE other.activity_id = ap.activity_id
+			          AND other.role = s.role
+			          AND other.person_id = $%d
+			          AND coalesce(other.user_id, `+nilUUID+`) = coalesce(s.user_id, `+nilUUID+`)
+			          AND coalesce(other.address, '') = coalesce(s.address, ''))
+			RETURNING ap.id
+		)
+		DELETE FROM activity_participant
+		 WHERE id IN (SELECT id FROM scoped)
+		   AND id NOT IN (SELECT id FROM promoted)`,
+		idPos, displacedPos, targetPos, targetPos, targetPos), pargs...); err != nil {
 		return err
 	}
 	return nil
