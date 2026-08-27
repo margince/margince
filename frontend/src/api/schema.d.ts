@@ -12490,6 +12490,8 @@ export interface components {
             retrieved_at?: string | null;
             safe_status_code?: string | null;
             categories_not_requested: string[];
+            /** @description What the latest run ASKED FOR and the provider returned nothing for. The counterpart to `categories_not_requested`, and a different fact: that list is "nobody bought it", this one is "we paid to ask and they had none". Without it a run that answered one category out of six renders as a success with five silently blank fields, and the reader cannot tell an empty purchase from a full one. Empty when every requested category came back with something. */
+            categories_without_answer?: string[];
             emails: components["schemas"]["PersonProviderEmail"][];
             mobile_phones: components["schemas"]["PersonProviderPhone"][];
             /** Format: uri */

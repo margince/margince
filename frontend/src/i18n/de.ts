@@ -6328,6 +6328,16 @@ export const de = {
   "provider.profile.seniorities": "Ebene",
   "provider.profile.notRequested":
     "Nicht angefragt: {categories}. Eine Lücke heißt hier, dass niemand danach gekauft hat — nicht, dass der Anbieter nichts hatte.",
+  "provider.profile.receipt":
+    "Abgefragt am {at} · {asked} Angaben angefragt, {answered} zurückbekommen.",
+  "provider.profile.noAnswer":
+    "Angefragt und nicht gefunden: {categories}. Der Anbieter wurde fürs Nachsehen bezahlt und hatte zu diesem Kontakt nichts.",
+  "provider.category.professionalEmail": "geschäftliche E-Mail",
+  "provider.category.personalEmail": "private E-Mail",
+  "provider.category.mobile": "Mobilnummer",
+  "provider.category.linkedin": "LinkedIn-Profil",
+  "provider.category.currentEmployment": "aktuelle Rolle",
+  "provider.category.jobHistory": "frühere Rollen",
 
   // Der Filter-Baukasten (AC-filters-and-views-3/4).
   "filters.joinAll": "ALLE \u00b7 UND",

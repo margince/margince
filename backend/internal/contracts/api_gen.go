@@ -21595,7 +21595,10 @@ type PersonProviderPhone struct {
 // on the page says who was paid for it.
 type PersonProviderProfile struct {
 	CategoriesNotRequested []string `json:"categories_not_requested"`
-	City                   *string  `json:"city,omitempty"`
+
+	// CategoriesWithoutAnswer What the latest run ASKED FOR and the provider returned nothing for. The counterpart to `categories_not_requested`, and a different fact: that list is "nobody bought it", this one is "we paid to ask and they had none". Without it a run that answered one category out of six renders as a success with five silently blank fields, and the reader cannot tell an empty purchase from a full one. Empty when every requested category came back with something.
+	CategoriesWithoutAnswer *[]string `json:"categories_without_answer,omitempty"`
+	City                    *string   `json:"city,omitempty"`
 
 	// ContributingRuns Every retained completed run whose claims contribute to this snapshot. Normally the
 	// single latest run; after a merge it spans both sides so purchased values stay visible

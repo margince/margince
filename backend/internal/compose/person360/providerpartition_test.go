@@ -21,6 +21,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -179,5 +180,73 @@ func TestAnImpairedConnectionSaysWhatIsWrongRatherThanReadingAsStale(t *testing.
 				t.Errorf("a %s connection reads as %q, want %q", tc.status, profiles[0].State, tc.want)
 			}
 		})
+	}
+}
+
+// A run that answered ONE category out of six is the case this reports. It
+// rendered as a plain success with five blank fields, and the reader could not
+// tell an empty purchase from a full one — the defect that prompted this.
+func TestASectionNamesTheCategoriesTheProviderHadNothingFor(t *testing.T) {
+	runID := ids.NewV7()
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "mobile", "current_employment"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"mobile":             {provider.ClaimMobilePhones},
+			"current_employment": {provider.ClaimCurrentEmployment},
+		},
+	}
+	// The provider answered the employment and nothing else.
+	claims := []storedClaim{{
+		key:   string(provider.ClaimCurrentEmployment),
+		runID: runID,
+	}}
+	requested := []string{"professional_email", "mobile", "current_employment"}
+
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, claims))
+
+	want := []string{"mobile", "professional_email"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want the two categories that came back empty (%v)", got, want)
+	}
+	for i, name := range want {
+		if got[i] != name {
+			t.Errorf("position %d is %q, want %q", i, got[i], name)
+		}
+	}
+}
+
+func TestACategoryAnsweredByAnOlderRunIsStillReportedSilentForTheLatest(t *testing.T) {
+	older, latest := ids.NewV7(), ids.NewV7()
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"mobile"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"mobile": {provider.ClaimMobilePhones},
+		},
+	}
+	// An earlier run bought a number; the latest run asked again and got none.
+	claims := []storedClaim{{key: string(provider.ClaimMobilePhones), runID: older}}
+
+	got := categoriesWithoutAnswer(desc, []string{"mobile"}, deliveredKeys(latest, claims))
+
+	// The reader is deciding whether the run they just paid for was worth it.
+	// Reading the union would call it answered on the strength of a purchase
+	// made before it, and hide that this run returned nothing.
+	if len(got) != 1 || got[0] != "mobile" {
+		t.Errorf("got %v, want mobile reported silent for the latest run", got)
+	}
+}
+
+func TestACategoryTheAdapterNeverMappedIsNotAccusedOfSilence(t *testing.T) {
+	runID := ids.NewV7()
+	// The adapter declared no correspondence for this category.
+	desc := provider.Descriptor{Categories: []provider.Category{"exotic"}}
+
+	got := categoriesWithoutAnswer(desc, []string{"exotic"}, deliveredKeys(runID, nil))
+
+	// Silence about the mapping is not evidence the provider withheld
+	// anything, and reporting it would blame a vendor for the adapter's gap.
+	if len(got) != 0 {
+		t.Errorf("got %v, want nothing reported for an undeclared category", got)
 	}
 }

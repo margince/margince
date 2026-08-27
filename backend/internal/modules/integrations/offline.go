@@ -102,6 +102,17 @@ func (p *OfflineProvider) Descriptor() provider.Descriptor {
 				"current_employment", "job_history"},
 		},
 		DefaultPreset: "full",
+		// Mirrors Surfe's correspondence, like the rest of this descriptor: a
+		// fake that answered a category the real adapter does not would let a
+		// bug in the unanswered-category report pass every test.
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"personal_email":     {provider.ClaimPersonalEmails},
+			"mobile":             {provider.ClaimMobilePhones},
+			"linkedin_profile":   {provider.ClaimLinkedInProfile},
+			"current_employment": {provider.ClaimCurrentEmployment},
+			"job_history":        {provider.ClaimJobHistory},
+		},
 	}
 }
 

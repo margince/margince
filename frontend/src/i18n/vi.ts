@@ -6267,6 +6267,16 @@ export const vi = {
   "provider.profile.seniorities": "Cấp bậc",
   "provider.profile.notRequested":
     "Không hỏi tới: {categories}. Chỗ trống ở đây nghĩa là không ai mua, chứ không phải nhà cung cấp không có.",
+  "provider.profile.receipt":
+    "Tra cứu ngày {at} · đã hỏi {asked} thông tin, nhận về {answered}.",
+  "provider.profile.noAnswer":
+    "Đã hỏi nhưng không tìm thấy: {categories}. Nhà cung cấp được trả tiền để tra và không có gì về liên hệ này.",
+  "provider.category.professionalEmail": "email công việc",
+  "provider.category.personalEmail": "email cá nhân",
+  "provider.category.mobile": "số di động",
+  "provider.category.linkedin": "hồ sơ LinkedIn",
+  "provider.category.currentEmployment": "vai trò hiện tại",
+  "provider.category.jobHistory": "vai trò trước đây",
 
   // Tr\u00ecnh d\u1ee5ng b\u1ed9 l\u1ecdc (AC-filters-and-views-3/4).
   "filters.joinAll": "T\u1ea4T C\u1ea2 \u00b7 AND",

@@ -214,6 +214,38 @@ export const CategoryNotRequested: Story = {
 };
 
 /**
+ * A purchase that came back nearly empty: six categories asked for, one
+ * returned, and that one an employment the record already knew.
+ *
+ * This is what a bad lookup actually looks like, and it used to be
+ * indistinguishable from a good one — a green "Found" over a single field, with
+ * nothing saying when it happened or how much of it was missing. The receipt
+ * and the not-found line are what tell the two apart.
+ */
+export const MostlyEmptyPurchase: Story = {
+  render: section(
+    profile({
+      state: "completed",
+      emails: [],
+      mobile_phones: [],
+      linkedin_url: null,
+      job_history: [],
+      departments: [],
+      seniorities: [],
+      current_employment: { company_name: "e-Kugellager" },
+      categories_not_requested: [],
+      categories_without_answer: [
+        "professional_email",
+        "mobile",
+        "linkedin_profile",
+        "job_history",
+        "personal_email",
+      ],
+    }),
+  ),
+};
+
+/**
  * The section WITHHELD. `person360` names it in `sections_omitted` and hands
  * down no profile, and the card is then absent rather than empty — the one
  * place that is right, because a card holding no fact cannot be misread as

@@ -293,3 +293,71 @@ describe("which contact a lookup is charged to", () => {
     await expect.poll(() => paths).toEqual(["p-2"]);
   });
 });
+
+describe("a lookup that came back mostly empty", () => {
+  // The case that prompted this: Surfe was asked for six categories and
+  // returned one — an employment whose job title was blank, leaving only a
+  // company the record already knew. The section showed a green "Found" badge
+  // over a single field, and the reader could not tell whether their lookup
+  // had done anything at all.
+  function mostlyEmpty(): Profile {
+    return {
+      ...neverRun(),
+      provider: "surfe" as const,
+      state: "completed",
+      retrieved_at: "2026-08-27T08:36:52Z",
+      current_employment: { company_name: "e-Kugellager" },
+      categories_without_answer: [
+        "professional_email",
+        "mobile",
+        "linkedin_profile",
+        "job_history",
+        "personal_email",
+      ],
+      latest_run: {
+        ...completedProviderRun,
+        requested_categories: [
+          "professional_email",
+          "mobile",
+          "linkedin_profile",
+          "current_employment",
+          "job_history",
+          "personal_email",
+        ],
+      },
+    };
+  }
+
+  it("says how much of what was asked for actually came back", async () => {
+    mount(mostlyEmpty(), queuedRun);
+
+    // The count is the answer to "did my lookup do anything": six asked, one
+    // returned. Without it a green badge over one field reads as a success.
+    expect(
+      await screen.findByText(/asked for 6 details, got 1 back/),
+    ).toBeDefined();
+  });
+
+  it("names the categories the provider had nothing for, in words a rep knows", async () => {
+    mount(mostlyEmpty(), queuedRun);
+
+    const line = await screen.findByText(/Asked for and not found/);
+    // The provider's vocabulary is a set of keys — `professional_email`,
+    // `linkedin_profile`. Printed raw they are not words anybody uses.
+    expect(line.textContent).toContain("work email");
+    expect(line.textContent).toContain("mobile number");
+    expect(line.textContent).toContain("LinkedIn profile");
+    expect(line.textContent).not.toContain("professional_email");
+
+    // And NOT the one that was answered.
+    expect(line.textContent).not.toContain("current role");
+  });
+
+  it("keeps the receipt off a section nobody has run", async () => {
+    mount(neverRun(), queuedRun);
+
+    // A receipt for a purchase nobody made would be an invention, and the
+    // first-run plate already says what the state is.
+    expect(screen.queryByText(/asked for/)).toBeNull();
+  });
+});
