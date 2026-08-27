@@ -234,6 +234,12 @@ var tableOwners = map[string]string{
 	"consent_existing_customer_flag": "internal/modules/consent",
 	"data_subject_request":           "internal/modules/consent",
 	"preference_token":               "internal/modules/consent",
+	// The emailed link that shows a contact their own record and carries their
+	// marketing answer back, and what comes back through it. Consent's, because
+	// what the token authorises is a consent decision and the address it was
+	// delivered to is the evidence that decision rests on.
+	"confirm_token":             "internal/modules/consent",
+	"person_confirm_submission": "internal/modules/consent",
 	// retention_policy sits in consent's DDL block (DM-DDL-10) but is OWNED by
 	// privacy, because ownership here names the module whose store owns the
 	// writes: privacy runs the nightly evaluator that reads it and, since the

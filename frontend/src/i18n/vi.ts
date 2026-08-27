@@ -4807,6 +4807,32 @@ export const vi = {
   "prefs.subscribed": "Đã đăng ký",
   "prefs.notSubscribed": "Chưa đăng ký — bạn không nhận gì cho mục đích này",
   "prefs.alwaysOn": "luôn bật",
+  "confirm.title": "Thông tin của bạn",
+  "confirm.intro":
+    "Tôi là Margince, AI vận hành CRM này. Đây là toàn bộ những gì chúng tôi lưu về bạn. Bạn có thể sửa bất kỳ mục nào, hoặc yêu cầu chúng tôi xóa.",
+  "confirm.card.title": "Những gì chúng tôi lưu",
+  "confirm.field.fullName": "Họ tên",
+  "confirm.field.title": "Chức danh",
+  "confirm.field.email": "Email",
+  "confirm.field.phone": "Điện thoại",
+  "confirm.field.company": "Công ty",
+  "confirm.field.none": "Chưa ghi nhận",
+  "confirm.marketing.title": "Chúng tôi có thể giữ liên lạc không?",
+  "confirm.marketing.ask":
+    "Tin tức thỉnh thoảng, khoảng mỗi tháng một lần. Bạn quyết định, và tôi sẽ tuân theo.",
+  "confirm.marketing.yes": "Có, hãy gửi tin cho tôi",
+  "confirm.marketing.no": "Không, chỉ cần giữ thông tin của tôi chính xác",
+  "confirm.provenance.title": "Chúng tôi có thông tin của bạn từ đâu",
+  "confirm.provenance.empty": "Không có ghi nhận về nguồn gốc.",
+  "confirm.provenance.line": "{field}: từ {source}, ghi nhận ngày {date}",
+  "confirm.erasure.ask": "Xóa thông tin của tôi",
+  "confirm.erasure.staged": "Đã yêu cầu xóa. Xác nhận bên dưới để gửi.",
+  "confirm.submit": "Xác nhận",
+  "confirm.done.title": "Cảm ơn bạn",
+  "confirm.done.body":
+    "Tôi đã ghi nhận câu trả lời của bạn. Những thay đổi sẽ được một người ở đây áp dụng, và liên kết này đã được dùng.",
+  "confirm.invalidLink":
+    "Liên kết này không còn hiệu lực. Có thể nó đã được dùng hoặc đã hết hạn.",
   "prefs.lockedWhy": "Thư giao dịch — không thuộc diện từ chối nhận.",
   "prefs.confirmationNeededWhy":
     "Để bắt đầu nhận, hãy dùng liên kết xác nhận trong email của chúng tôi. Bạn có thể dừng nhận tại đây bất cứ lúc nào.",

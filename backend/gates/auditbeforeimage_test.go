@@ -95,6 +95,8 @@ var eventShapedUpdates = gatekit.Waive(map[string]string{
 
 	"internal/modules/consent/qualifyingevent.go:RecordQualifyingEvent": "a human writing down an exchange that happened away from every system — a card handed over at a trade fair. It is an OCCURRENCE and not a replacement: nothing about the person changed state, a row saying what happened was added, and there is no prior version of a meeting for the image to name. The verb is `update` on `person` because that is the row the caller was authorized against and the row whose sendability this changes; the alternative, a create on the qualifying-event row, would put a rule in the trail that authorized nothing here",
 
+	"internal/modules/consent/confirmsubmit.go:stageSubmission": "a data subject proposing a correction to their own record through the confirm link, or asking to be removed. An OCCURRENCE and not a replacement: nothing about the person changed state, and the field a correction names still holds its old value — deliberately, because a bearer-token caller may not write the CRM, so there is no prior version for an image to record. The verb is `update` on `person` because that is the row a later reader asks about. The proposed value stays OFF the audit payload, where a second copy of the subject's own data would outlive the erasure that clears the first",
+
 	// Three writes whose FIRST occurrence has no prior state and whose later
 	// ones do. Each routes on that, so the branch that replaced something says
 	// what, and the branch that replaced nothing says so rather than inventing

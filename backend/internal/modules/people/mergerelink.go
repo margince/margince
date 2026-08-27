@@ -109,6 +109,17 @@ func relinkPersonReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 		sourceID, targetID); err != nil {
 		return counts, fmt.Errorf("repoint lead promotions: %w", err)
 	}
+	// What the merged-away contact sent back through their own confirm link —
+	// a correction they typed, or a request to be removed. It moves onto the
+	// survivor because it is a request the workspace still owes an answer to,
+	// and a rep reading the survivor's queue is the only reader there now is.
+	// Left behind it hangs off a record no read returns, which is a data
+	// subject's request quietly dropped.
+	if _, err := tx.Exec(ctx,
+		`UPDATE person_confirm_submission SET person_id = $2 WHERE person_id = $1`,
+		sourceID, targetID); err != nil {
+		return counts, fmt.Errorf("relink confirm-page submissions: %w", err)
+	}
 	// Earlier merged-away rows repoint too: the redirect chain stays
 	// one hop deep, so following merged_into_id always lands live.
 	if _, err := tx.Exec(ctx,

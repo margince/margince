@@ -4915,6 +4915,35 @@ export const en = {
   "prefs.notSubscribed":
     "Not subscribed — you receive nothing for this purpose",
   "prefs.alwaysOn": "always on",
+  // The public confirm-your-details page. Margince speaks in first person here,
+  // as it does in onboarding: short flat sentences, says what it will and will
+  // not do, no em dashes.
+  "confirm.title": "Your details",
+  "confirm.intro":
+    "I am Margince, the AI that runs this CRM. Here is everything we have recorded about you. You can correct any of it, or ask us to remove it.",
+  "confirm.card.title": "What we have",
+  "confirm.field.fullName": "Name",
+  "confirm.field.title": "Job title",
+  "confirm.field.email": "Email",
+  "confirm.field.phone": "Phone",
+  "confirm.field.company": "Company",
+  "confirm.field.none": "Not recorded",
+  "confirm.marketing.title": "May we stay in touch?",
+  "confirm.marketing.ask":
+    "News from time to time, roughly once a month. You decide, and I will hold to it.",
+  "confirm.marketing.yes": "Yes, keep me posted",
+  "confirm.marketing.no": "No thanks, just keep my details correct",
+  "confirm.provenance.title": "Where we got your details",
+  "confirm.provenance.empty": "Nothing recorded about where these came from.",
+  "confirm.provenance.line": "{field}: from {source}, recorded {date}",
+  "confirm.erasure.ask": "Remove my details",
+  "confirm.erasure.staged": "Removal requested. Confirm below to send it.",
+  "confirm.submit": "Confirm",
+  "confirm.done.title": "Thank you",
+  "confirm.done.body":
+    "I have recorded your answer. Anything you changed goes to a person here to apply, and this link is now used up.",
+  "confirm.invalidLink":
+    "This link is no longer valid. It may have been used already, or it may have expired.",
   "prefs.lockedWhy": "Transactional — exempt from opt-out.",
   "prefs.confirmationNeededWhy":
     "To start receiving this, use the confirmation link we email you. You can stop it here at any time.",

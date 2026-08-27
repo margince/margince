@@ -3031,6 +3031,27 @@ func (e ComputedFieldKind) Valid() bool {
 	}
 }
 
+// Defines values for ConfirmDetailsMarketingState.
+const (
+	ConfirmDetailsMarketingStateGranted   ConfirmDetailsMarketingState = "granted"
+	ConfirmDetailsMarketingStateUnknown   ConfirmDetailsMarketingState = "unknown"
+	ConfirmDetailsMarketingStateWithdrawn ConfirmDetailsMarketingState = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the ConfirmDetailsMarketingState enum.
+func (e ConfirmDetailsMarketingState) Valid() bool {
+	switch e {
+	case ConfirmDetailsMarketingStateGranted:
+		return true
+	case ConfirmDetailsMarketingStateUnknown:
+		return true
+	case ConfirmDetailsMarketingStateWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ConnectChannelRequestProvider.
 const (
 	ConnectChannelRequestProviderTelegram ConnectChannelRequestProvider = "telegram"
@@ -10860,22 +10881,22 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
-	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
-	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
-	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
+	DeadLettered WebhookDeliveryStatus = "dead_lettered"
+	Delivered    WebhookDeliveryStatus = "delivered"
+	Pending      WebhookDeliveryStatus = "pending"
+	Retrying     WebhookDeliveryStatus = "retrying"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
 func (e WebhookDeliveryStatus) Valid() bool {
 	switch e {
-	case WebhookDeliveryStatusDeadLettered:
+	case DeadLettered:
 		return true
-	case WebhookDeliveryStatusDelivered:
+	case Delivered:
 		return true
-	case WebhookDeliveryStatusPending:
+	case Pending:
 		return true
-	case WebhookDeliveryStatusRetrying:
+	case Retrying:
 		return true
 	default:
 		return false
@@ -11067,28 +11088,28 @@ func (e ProfileFieldKey) Valid() bool {
 
 // Defines values for ListActivitiesParamsKind.
 const (
-	Call    ListActivitiesParamsKind = "call"
-	Email   ListActivitiesParamsKind = "email"
-	Meeting ListActivitiesParamsKind = "meeting"
-	Message ListActivitiesParamsKind = "message"
-	Note    ListActivitiesParamsKind = "note"
-	Task    ListActivitiesParamsKind = "task"
+	ListActivitiesParamsKindCall    ListActivitiesParamsKind = "call"
+	ListActivitiesParamsKindEmail   ListActivitiesParamsKind = "email"
+	ListActivitiesParamsKindMeeting ListActivitiesParamsKind = "meeting"
+	ListActivitiesParamsKindMessage ListActivitiesParamsKind = "message"
+	ListActivitiesParamsKindNote    ListActivitiesParamsKind = "note"
+	ListActivitiesParamsKindTask    ListActivitiesParamsKind = "task"
 )
 
 // Valid indicates whether the value is a known member of the ListActivitiesParamsKind enum.
 func (e ListActivitiesParamsKind) Valid() bool {
 	switch e {
-	case Call:
+	case ListActivitiesParamsKindCall:
 		return true
-	case Email:
+	case ListActivitiesParamsKindEmail:
 		return true
-	case Meeting:
+	case ListActivitiesParamsKindMeeting:
 		return true
-	case Message:
+	case ListActivitiesParamsKindMessage:
 		return true
-	case Note:
+	case ListActivitiesParamsKindNote:
 		return true
-	case Task:
+	case ListActivitiesParamsKindTask:
 		return true
 	default:
 		return false
@@ -12010,18 +12031,60 @@ func (e ListProjectsParamsPhase) Valid() bool {
 	}
 }
 
+// Defines values for SubmitConfirmDetailsJSONBodyCorrectionsField.
+const (
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail    SubmitConfirmDetailsJSONBodyCorrectionsField = "email"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName SubmitConfirmDetailsJSONBodyCorrectionsField = "full_name"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone    SubmitConfirmDetailsJSONBodyCorrectionsField = "phone"
+	SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle    SubmitConfirmDetailsJSONBodyCorrectionsField = "title"
+)
+
+// Valid indicates whether the value is a known member of the SubmitConfirmDetailsJSONBodyCorrectionsField enum.
+func (e SubmitConfirmDetailsJSONBodyCorrectionsField) Valid() bool {
+	switch e {
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldEmail:
+		return true
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldFullName:
+		return true
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldPhone:
+		return true
+	case SubmitConfirmDetailsJSONBodyCorrectionsFieldTitle:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SubmitConfirmDetailsJSONBodyMarketingChoice.
+const (
+	SubmitConfirmDetailsJSONBodyMarketingChoiceGranted   SubmitConfirmDetailsJSONBodyMarketingChoice = "granted"
+	SubmitConfirmDetailsJSONBodyMarketingChoiceWithdrawn SubmitConfirmDetailsJSONBodyMarketingChoice = "withdrawn"
+)
+
+// Valid indicates whether the value is a known member of the SubmitConfirmDetailsJSONBodyMarketingChoice enum.
+func (e SubmitConfirmDetailsJSONBodyMarketingChoice) Valid() bool {
+	switch e {
+	case SubmitConfirmDetailsJSONBodyMarketingChoiceGranted:
+		return true
+	case SubmitConfirmDetailsJSONBodyMarketingChoiceWithdrawn:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for UpdatePreferencesJSONBodyChoicesState.
 const (
-	UpdatePreferencesJSONBodyChoicesStateGranted   UpdatePreferencesJSONBodyChoicesState = "granted"
-	UpdatePreferencesJSONBodyChoicesStateWithdrawn UpdatePreferencesJSONBodyChoicesState = "withdrawn"
+	Granted   UpdatePreferencesJSONBodyChoicesState = "granted"
+	Withdrawn UpdatePreferencesJSONBodyChoicesState = "withdrawn"
 )
 
 // Valid indicates whether the value is a known member of the UpdatePreferencesJSONBodyChoicesState enum.
 func (e UpdatePreferencesJSONBodyChoicesState) Valid() bool {
 	switch e {
-	case UpdatePreferencesJSONBodyChoicesStateGranted:
+	case Granted:
 		return true
-	case UpdatePreferencesJSONBodyChoicesStateWithdrawn:
+	case Withdrawn:
 		return true
 	default:
 		return false
@@ -15177,6 +15240,36 @@ type ConfirmCompanySiteReadRequest struct {
 
 	// SelectedFactKeys The proposed facts to keep, exactly as the read stated them. A fact the reader wants to correct is left out of this list and sent as a use_value resolution instead.
 	SelectedFactKeys []string `json:"selected_fact_keys"`
+}
+
+// ConfirmDetails One contact's own view of what the workspace holds about them, for the no-login confirm page.
+// A purpose-built projection and never the Person360 read model, which carries this workspace's
+// working notes — owner, lifecycle, scores — rather than the subject's own data.
+type ConfirmDetails struct {
+	// Company The current employer, read through the live employment relationship. Not correctable here.
+	Company  string `json:"company"`
+	Email    string `json:"email"`
+	FullName string `json:"full_name"`
+
+	// MarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
+	MarketingState ConfirmDetailsMarketingState `json:"marketing_state"`
+	Phone          string                       `json:"phone"`
+
+	// Provenance Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.
+	Provenance []ConfirmFieldOrigin `json:"provenance"`
+	Title      string               `json:"title"`
+}
+
+// ConfirmDetailsMarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
+type ConfirmDetailsMarketingState string
+
+// ConfirmFieldOrigin One line of where a held value came from, for the Art. 14 disclosure on the confirm page.
+type ConfirmFieldOrigin struct {
+	Field string `json:"field"`
+
+	// RecordedAt The date the value was recorded, as YYYY-MM-DD.
+	RecordedAt string `json:"recorded_at"`
+	Source     string `json:"source"`
 }
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
@@ -29011,6 +29104,30 @@ type GetPublicAvailabilityParams struct {
 	DurationMinutes *int      `form:"duration_minutes,omitempty" json:"duration_minutes,omitempty"`
 }
 
+// SubmitConfirmDetailsJSONBody defines parameters for SubmitConfirmDetails.
+type SubmitConfirmDetailsJSONBody struct {
+	// Corrections Proposed values, at most one per field. An empty list is the ordinary case.
+	Corrections *[]struct {
+		Field SubmitConfirmDetailsJSONBodyCorrectionsField `json:"field"`
+		Value string                                       `json:"value"`
+	} `json:"corrections,omitempty"`
+
+	// MarketingChoice Their answer. Omit entirely for no answer — a page view grants nothing.
+	MarketingChoice *SubmitConfirmDetailsJSONBodyMarketingChoice `json:"marketing_choice,omitempty"`
+
+	// MarketingWording The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant.
+	MarketingWording *string `json:"marketing_wording,omitempty"`
+
+	// RequestErasure The subject asked to be removed. Files a request for a human; never erases directly.
+	RequestErasure *bool `json:"request_erasure,omitempty"`
+}
+
+// SubmitConfirmDetailsJSONBodyCorrectionsField defines parameters for SubmitConfirmDetails.
+type SubmitConfirmDetailsJSONBodyCorrectionsField string
+
+// SubmitConfirmDetailsJSONBodyMarketingChoice defines parameters for SubmitConfirmDetails.
+type SubmitConfirmDetailsJSONBodyMarketingChoice string
+
 // UpdatePreferencesJSONBody defines parameters for UpdatePreferences.
 type UpdatePreferencesJSONBody struct {
 	Choices []struct {
@@ -30384,6 +30501,9 @@ type ConnectProviderJSONRequestBody = ConnectProviderRequest
 
 // BookPublicMeetingJSONRequestBody defines body for BookPublicMeeting for application/json ContentType.
 type BookPublicMeetingJSONRequestBody BookPublicMeetingJSONBody
+
+// SubmitConfirmDetailsJSONRequestBody defines body for SubmitConfirmDetails for application/json ContentType.
+type SubmitConfirmDetailsJSONRequestBody SubmitConfirmDetailsJSONBody
 
 // UpdatePreferencesJSONRequestBody defines body for UpdatePreferences for application/json ContentType.
 type UpdatePreferencesJSONRequestBody UpdatePreferencesJSONBody
@@ -39345,6 +39465,12 @@ type ServerInterface interface {
 	// Free/busy slots for a public booking page (anonymous).
 	// (GET /public/booking/{host_slug}/availability)
 	GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams)
+	// What the workspace holds about this contact (anonymous, token-authed).
+	// (GET /public/confirm/{token})
+	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
+	// Submit corrections and a marketing answer (anonymous, token-authed).
+	// (POST /public/confirm/{token})
+	SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
 	// The recipient's per-purpose consent state (anonymous, token-authed).
 	// (GET /public/preferences/{token})
 	GetPreferenceCenter(w http.ResponseWriter, r *http.Request, token string)
@@ -42009,6 +42135,18 @@ func (_ Unimplemented) BookPublicMeeting(w http.ResponseWriter, r *http.Request,
 // Free/busy slots for a public booking page (anonymous).
 // (GET /public/booking/{host_slug}/availability)
 func (_ Unimplemented) GetPublicAvailability(w http.ResponseWriter, r *http.Request, hostSlug string, params GetPublicAvailabilityParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the workspace holds about this contact (anonymous, token-authed).
+// (GET /public/confirm/{token})
+func (_ Unimplemented) GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Submit corrections and a marketing answer (anonymous, token-authed).
+// (POST /public/confirm/{token})
+func (_ Unimplemented) SubmitConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -59679,6 +59817,58 @@ func (siw *ServerInterfaceWrapper) GetPublicAvailability(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// GetConfirmDetails operation middleware
+func (siw *ServerInterfaceWrapper) GetConfirmDetails(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetConfirmDetails(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SubmitConfirmDetails operation middleware
+func (siw *ServerInterfaceWrapper) SubmitConfirmDetails(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "token" -------------
+	var token string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "token", chi.URLParam(r, "token"), &token, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "token", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SubmitConfirmDetails(w, r, token)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // GetPreferenceCenter operation middleware
 func (siw *ServerInterfaceWrapper) GetPreferenceCenter(w http.ResponseWriter, r *http.Request) {
 
@@ -66184,6 +66374,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/booking/{host_slug}/availability", wrapper.GetPublicAvailability)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/public/confirm/{token}", wrapper.GetConfirmDetails)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/public/confirm/{token}", wrapper.SubmitConfirmDetails)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/public/preferences/{token}", wrapper.GetPreferenceCenter)

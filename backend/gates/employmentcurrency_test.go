@@ -63,6 +63,7 @@ var blockedByTheModuleDAG = gatekit.Waive(map[string]string{
 	"internal/modules/projects/surface.go":    "projects cannot import people (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/signals/resolver.go":    "signals cannot import people (ADR-0054 §3); the predicate must move tier first",
 	"internal/modules/signals/warmroom.go":    "signals cannot import people (ADR-0054 §3); the predicate must move tier first",
+	"internal/modules/consent/confirmcard.go": "consent cannot import people (ADR-0054 §3); the predicate must move tier first. The copy is the helper's own date comparison rather than a null check, so a person serving notice still sees their employer on their own confirm card",
 })
 
 const (

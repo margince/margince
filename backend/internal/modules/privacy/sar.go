@@ -51,8 +51,13 @@ type SARPackage struct {
 	Attachments         []map[string]any `json:"attachments"`
 	Consent             []map[string]any `json:"consent"`
 	ConsentEvents       []map[string]any `json:"consent_events"`
-	RawCapture          []map[string]any `json:"raw_capture"`
-	FieldOrigins        []map[string]any `json:"field_origins"`
+	// What the subject themselves sent through their confirm link — a
+	// correction they typed, or a request to be removed. The one part of this
+	// package the subject authored rather than the workspace, which is exactly
+	// why an export that omitted it would be answering the wrong question.
+	ConfirmSubmissions []map[string]any `json:"confirm_submissions"`
+	RawCapture         []map[string]any `json:"raw_capture"`
+	FieldOrigins       []map[string]any `json:"field_origins"`
 	// EnrichedFields is what the system read about the subject from a public
 	// page or a mail signature, each with the verbatim text it came from.
 	// Art. 15(1)(g) makes the source itself disclosable, and the snippet IS
@@ -316,6 +321,13 @@ func sarConsentSections(pkg *SARPackage) []sarSection {
 		{&pkg.ConsentEvents, `SELECT cp.key AS purpose, ce.new_state, ce.source, ce.captured_at
 		   FROM consent_event ce JOIN consent_purpose cp ON cp.id = ce.purpose_id
 		   WHERE ce.person_id = $1`, nil},
+		// The token row itself is deliberately NOT read: it is a live
+		// credential, and the subject already holds their own copy in the mail
+		// that delivered it. Registered sarForbidden so a future section over
+		// it fails the coverage gate rather than shipping.
+		{&pkg.ConfirmSubmissions, `SELECT kind, field, proposed_value, submitted_at, resolution, resolved_at
+		   FROM person_confirm_submission
+		   WHERE person_id = $1`, nil},
 	}
 }
 

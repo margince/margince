@@ -307,6 +307,19 @@ func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 		// again, not by an old token in an old mailbox still working.
 		_, err = tx.Exec(ctx, `DELETE FROM consent_doi_token WHERE person_id = $1`, id)
 	}
+	if err == nil {
+		// The confirm-details link goes for the same reason, and a stronger
+		// one: it does not merely authorise a grant, it DISPLAYS the record. A
+		// link left live would show an old mailbox the fields this statement
+		// has just emptied.
+		_, err = tx.Exec(ctx, `DELETE FROM confirm_token WHERE person_id = $1`, id)
+	}
+	if err == nil {
+		// And what came back through it, which is the subject's own name and
+		// address in plaintext — exactly the content the anonymization above
+		// just cleared from the person row.
+		_, err = tx.Exec(ctx, `DELETE FROM person_confirm_submission WHERE person_id = $1`, id)
+	}
 	// Read BEFORE the delete below, for the reason the eraser gives at its own
 	// copy of this: the LinkedIn ghost sweep identifies rows by this address,
 	// and person_social is about to stop holding it.

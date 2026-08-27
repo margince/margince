@@ -171,10 +171,12 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// workspace-scoped call like any other /v1 route, and mounting it on the
 	// operational mux instead would win the longest-pattern match against
 	// "/v1/" and serve without a session. See extensionEdge.
-	publicEdge := publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
-		publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters())(
-			publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
-				extensionEdge(srv, log)(api),
+	publicEdge := publicConfirm(newPublicConfirmLimiters())(
+		publicPreferences(consent.NewStore(InstallationDB(pool)), newPublicPreferenceLimiters())(
+			publicBooking(activities.NewStore(InstallationDB(pool)), identity.NewService(pool), newPublicBookingLimiters())(
+				publicDealRoom(dealrooms.NewStore(InstallationDB(pool)), newPublicDealRoomLimiters())(
+					extensionEdge(srv, log)(api),
+				),
 			),
 		),
 	)
@@ -188,8 +190,12 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// states the posture outright ("a public identifier, not a credential:
 	// stored plaintext"). Redacting it would cost the access log the one
 	// thing that identifies which booking page was hit, and buy nothing.
+	//
+	// publicConfirmPrefix is redacted for the same reason and more urgently:
+	// its token opens the subject's own record, so a token in a log line is a
+	// readable copy of somebody's personal data sitting in operations.
 	mux.Handle("/v1/", httpserver.Correlate(
-		httpserver.AccessLog(log, authH.Middleware(publicEdge), publicPreferencesPrefix)))
+		httpserver.AccessLog(log, authH.Middleware(publicEdge), publicPreferencesPrefix, publicConfirmPrefix)))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728

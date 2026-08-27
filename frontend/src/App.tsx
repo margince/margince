@@ -206,6 +206,13 @@ const PreferenceCenterScreen = lazy(
     })),
   ),
 );
+const ConfirmDetailsScreen = lazy(
+  routed(() =>
+    import("./screens/confirm").then((m) => ({
+      default: m.ConfirmDetailsScreen,
+    })),
+  ),
+);
 const ReportsScreen = lazy(
   routed(() =>
     import("./screens/reports").then((m) => ({ default: m.ReportsScreen })),
@@ -479,6 +486,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // #/preferences/<token> — anonymous; the token in the path is the
     // whole capability (security: [] in the contract).
     preferences: ({ id }) => <PreferenceCenterScreen token={id} />,
+    // #/confirm/<token> — anonymous, the sibling of the preference centre. The
+    // token is single-use and shows the subject their own record, which is why
+    // it is a different credential from the reusable preference link.
+    confirm: ({ id }) => <ConfirmDetailsScreen token={id} />,
     // #/room?c=<credential> — the Deal Room's buyer, anonymous. The credential
     // is already out of the address by the time this table is reached: the
     // router takes it as it reads the hash (app/router.tsx), because a gate
@@ -610,6 +621,7 @@ function ScreenView({
 // path is the whole address (security: [] in the contract).
 const PUBLIC_SCREENS: ReadonlySet<Screen> = new Set([
   "book",
+  "confirm",
   "preferences",
   "room",
 ]);

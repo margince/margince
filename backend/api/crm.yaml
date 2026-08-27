@@ -5276,6 +5276,72 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /public/confirm/{token}:
+    parameters:
+      - { name: token, in: path, required: true, schema: { type: string }, description: 'The single-use confirm-details token carried in the emailed link. Not a session credential.' }
+    get:
+      tags: [Public]
+      operationId: getConfirmDetails
+      security: []   # anonymous public page — the token is the capability
+      summary: What the workspace holds about this contact (anonymous, token-authed).
+      description: |
+        The no-login confirm-your-details page. The token resolves to one person before any session
+        exists; the page shows that person their own record, where each field came from (Art. 14), and
+        their current marketing answer. Unknown, expired and already-spent tokens all read as absent
+        (404) — the surface is never an oracle for which it was. Opening the page records that the link
+        was opened and changes nothing else.
+      responses:
+        '200':
+          description: The contact's own view of their record.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConfirmDetails' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    post:
+      tags: [Public]
+      operationId: submitConfirmDetails
+      security: []   # anonymous public page — the token is the capability
+      x-agent-access: human-only
+      summary: Submit corrections and a marketing answer (anonymous, token-authed).
+      description: |
+        Spends the link and records what it carried, in one transaction. Corrections land as PROPOSALS a
+        person at the workspace accepts — the subject holds a bearer token and no principal, so a leaked
+        link must never rewrite CRM data. A removal request is filed the same way rather than erasing on
+        the spot. The marketing answer rides the ordinary consent engine; because the link is single-use
+        and was delivered to this subject's own mailbox, an explicit grant completes without a further
+        confirmation mail, and the proof row records what stood in for one. Omitting the answer records
+        no consent at all: opening a page grants nothing. A replayed submit finds the link spent (404).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                corrections:
+                  type: array
+                  description: 'Proposed values, at most one per field. An empty list is the ordinary case.'
+                  items:
+                    type: object
+                    required: [field, value]
+                    properties:
+                      field: { type: string, enum: [full_name, title, email, phone] }
+                      value: { type: string, maxLength: 500 }
+                request_erasure:
+                  type: boolean
+                  description: 'The subject asked to be removed. Files a request for a human; never erases directly.'
+                marketing_choice:
+                  type: string
+                  enum: [granted, withdrawn]
+                  description: 'Their answer. Omit entirely for no answer — a page view grants nothing.'
+                marketing_wording:
+                  type: string
+                  description: 'The exact sentence shown beside the choice, stored verbatim as proof. Required with a grant.'
+      responses:
+        '204': { description: Recorded. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /public/preferences/{token}/unsubscribe:
     parameters:
       - { name: token, in: path, required: true, schema: { type: string } }
@@ -28306,6 +28372,37 @@ components:
                   this surface's token is reusable and long-lived, so it cannot evidence one deliberate choice
                   the way a confirmation round-trip does. A client must not offer the grant — the write refuses
                   it with 422, and an offered switch that always fails is worse than an absent one.
+
+    ConfirmDetails:
+      type: object
+      description: |
+        One contact's own view of what the workspace holds about them, for the no-login confirm page.
+        A purpose-built projection and never the Person360 read model, which carries this workspace's
+        working notes — owner, lifecycle, scores — rather than the subject's own data.
+      required: [full_name, title, company, email, phone, marketing_state, provenance]
+      properties:
+        full_name: { type: string }
+        title:     { type: string }
+        company:   { type: string, description: 'The current employer, read through the live employment relationship. Not correctable here.' }
+        email:     { type: string }
+        phone:     { type: string }
+        marketing_state:
+          type: string
+          enum: [unknown, granted, withdrawn]
+          description: 'Their answer today, so somebody who already said yes is not asked as though they had not.'
+        provenance:
+          type: array
+          description: 'Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.'
+          items: { $ref: '#/components/schemas/ConfirmFieldOrigin' }
+
+    ConfirmFieldOrigin:
+      type: object
+      description: One line of where a held value came from, for the Art. 14 disclosure on the confirm page.
+      required: [field, source, recorded_at]
+      properties:
+        field:       { type: string }
+        source:      { type: string }
+        recorded_at: { type: string, description: 'The date the value was recorded, as YYYY-MM-DD.' }
 
     # ---- Automations (E15/ADR-0035, feedback/14) ----
     AutomationCatalogEntry:

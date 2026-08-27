@@ -37,6 +37,11 @@ import (
 // preference center refuses to change it.
 const PurposeTransactional = "transactional"
 
+// PurposeMarketingEmail is the seeded marketing lane (seed.go), and the one the
+// confirm page asks about. Named because two surfaces resolve it by key and a
+// literal in either would drift from the seed without anything failing.
+const PurposeMarketingEmail = "marketing_email"
+
 // LockedPurpose reports whether a purpose may not be changed from the
 // public preference surface. Locked purposes also carry no unsubscribe
 // header — there is nothing to unsubscribe from.
@@ -342,12 +347,22 @@ func (s *Store) PublicSetConsent(ctx context.Context, personID ids.PersonID, pur
 func (s *Store) purposeByKey(ctx context.Context, key string) (ids.PurposeID, error) {
 	var id ids.PurposeID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		err := tx.QueryRow(ctx,
-			`SELECT id FROM consent_purpose WHERE key = $1 AND archived_at IS NULL`, key).Scan(&id)
-		if errors.Is(err, pgx.ErrNoRows) {
-			return &ValidationError{Field: "purpose_key", Reason: "not a tracked consent purpose"}
-		}
+		var err error
+		id, err = purposeByKeyTx(ctx, tx, key)
 		return err
 	})
+	return id, err
+}
+
+// purposeByKeyTx is the same resolution for a caller that already holds the
+// transaction — the confirm submit, which resolves the marketing purpose in the
+// same commit that spends the link.
+func purposeByKeyTx(ctx context.Context, tx pgx.Tx, key string) (ids.PurposeID, error) {
+	var id ids.PurposeID
+	err := tx.QueryRow(ctx,
+		`SELECT id FROM consent_purpose WHERE key = $1 AND archived_at IS NULL`, key).Scan(&id)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.PurposeID{}, &ValidationError{Field: "purpose_key", Reason: "not a tracked consent purpose"}
+	}
 	return id, err
 }

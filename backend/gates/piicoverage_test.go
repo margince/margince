@@ -273,6 +273,21 @@ var piiTables = map[string]piiHandling{
 	// their own copy, in the mail that delivered it. Declared so a future SAR
 	// section over this table fails the gate instead of shipping.
 	"preference_token": {erasureWrite: true, sarForbidden: true},
+
+	// The confirm-details link: a live bearer credential that opens the
+	// subject's own record. Registered for the same two reasons preference_token
+	// is. Erasure must retire it explicitly, because anonymize-in-place leaves
+	// the person row standing so the schema's ON DELETE CASCADE never fires. The
+	// export side is sarFORBIDDEN because the row holds a working credential and
+	// the address it went to, and an Art. 15 package assembled by an admin must
+	// carry neither — the subject already has their own copy, in the mail.
+	"confirm_token": {erasureWrite: true, sarForbidden: true},
+	// And what came back through it: a correction the subject typed, or their
+	// request to be removed. sarREAD rather than forbidden, and it is the one
+	// part of the package the subject authored — an export that handed back
+	// their archived addresses and their whole timeline while omitting the
+	// correction they themselves sent would be answering the wrong question.
+	"person_confirm_submission": {erasureWrite: true, sarRead: true},
 }
 
 // sarAssemblyFiles are the files whose SQL literals make up the Art. 15
