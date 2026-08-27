@@ -37,6 +37,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/parser"
 	"go/token"
 	"strings"
 	"testing"
@@ -44,10 +45,38 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
+const storekitPkg = "github.com/margince/margince/backend/internal/platform/database/storekit"
+
 // The two storekit doors that hand back a constraint name.
+//
+// Matched through the file's own import of storekit, never by the selector name
+// alone. `CheckViolation` is an ordinary method name — an unrelated receiver
+// carrying one would enter this sweep, produce findings about a value that is
+// not a constraint name, and, worse, keep the empty-sweep guard below satisfied
+// after every real storekit call had gone.
 var constraintDoors = map[string]bool{
 	"CheckViolation":  true,
 	"UniqueViolation": true,
+}
+
+// storekitDoor reports a call to one of those doors THROUGH this file's storekit
+// import, under whatever name the file gave it.
+func storekitDoor(file *ast.File, expr ast.Expr) bool {
+	sel, ok := expr.(*ast.SelectorExpr)
+	if !ok || !constraintDoors[sel.Sel.Name] {
+		return false
+	}
+	qualifier, dotImported := gatekit.ImportedAs(file, storekitPkg)
+	receiver, ok := sel.X.(*ast.Ident)
+	if !ok {
+		return false
+	}
+	// A dot-import puts the door in scope bare, and there is no receiver to
+	// check — the selector itself is then the whole reference.
+	if dotImported {
+		return true
+	}
+	return qualifier != "" && receiver.Name == qualifier
 }
 
 // The formatters a leak would travel through. A name reaching one of these is
@@ -68,13 +97,14 @@ func TestNoConstraintNameIsBuiltIntoAMessage(t *testing.T) {
 		// holds one of these names to leak.
 	}.Files(t)
 
-	sites := 0
+	sites, judged := 0, 0
 	for _, parsed := range files {
 		// storekit itself is where the name is produced and named; its own
 		// error text is the operator's, not a caller's.
 		if strings.Contains(parsed.Path, "/platform/database/storekit/") {
 			continue
 		}
+		judged++
 		for _, leak := range constraintNameLeaksIn(parsed) {
 			sites++
 			t.Errorf("%s: %s\n"+
@@ -86,23 +116,26 @@ func TestNoConstraintNameIsBuiltIntoAMessage(t *testing.T) {
 				"needs it.", parsed.Path, leak)
 		}
 	}
-	// The gate has to have swept the sites it judges. Every module that answers
-	// a schema refusal reads one of these doors, so nothing found means the
-	// walk broke or the doors were renamed.
-	if len(files) == 0 {
-		t.Fatal("no file reads a constraint name at all, so this prohibition judged nothing — " +
-			"the walk is broken, or storekit's doors were renamed and this rule now binds names " +
-			"nobody calls")
+	// The gate has to have JUDGED something, and the count is taken after the
+	// exclusion rather than before it. `len(files)` includes storekit's own
+	// files, so a tree where every remaining caller had gone — or a walk that
+	// found only storekit — would report a swept, successful, empty run. Every
+	// module that answers a schema refusal reads one of these doors, so nothing
+	// judged means the walk broke or the doors were renamed.
+	if judged == 0 {
+		t.Fatal("no file OUTSIDE storekit reads a constraint name, so this prohibition judged " +
+			"nothing — the walk is broken, or storekit's doors were renamed and this rule now " +
+			"binds names nobody calls")
 	}
 	if sites == 0 {
-		t.Logf("swept %d file(s) that read a constraint name; none builds it into a message", len(files))
+		t.Logf("judged %d file(s) that read a constraint name; none builds it into a message", judged)
 	}
 }
 
 func fileReadsAConstraintName(_ string, file *ast.File) bool {
 	found := false
 	ast.Inspect(file, func(n ast.Node) bool {
-		if sel, ok := n.(*ast.SelectorExpr); ok && constraintDoors[sel.Sel.Name] {
+		if call, ok := n.(*ast.CallExpr); ok && storekitDoor(file, call.Fun) {
 			found = true
 		}
 		return true
@@ -146,21 +179,33 @@ func constraintNameLeaksIn(parsed gatekit.ParsedFile) []string {
 // Held by: TestNoConstraintNameIsBuiltIntoAMessage
 func constraintBindings(file *ast.File) []string {
 	var names []string
-	ast.Inspect(file, func(n ast.Node) bool {
-		assign, ok := n.(*ast.AssignStmt)
-		if !ok || len(assign.Rhs) != 1 || len(assign.Lhs) == 0 {
-			return true
+	// Both spellings of one binding. `constraint, ok := storekit.CheckViolation(err)`
+	// is an assignment; `var constraint, ok = storekit.CheckViolation(err)` is a
+	// declaration, and Go gives it a different node. A walk that knew only the
+	// first would sweep such a file — it calls a door — and then track no name
+	// in it, so every leak there would pass.
+	bind := func(lhs []ast.Expr, rhs []ast.Expr) {
+		if len(rhs) != 1 || len(lhs) == 0 {
+			return
 		}
-		call, ok := assign.Rhs[0].(*ast.CallExpr)
-		if !ok {
-			return true
+		call, ok := rhs[0].(*ast.CallExpr)
+		if !ok || !storekitDoor(file, call.Fun) {
+			return
 		}
-		sel, ok := call.Fun.(*ast.SelectorExpr)
-		if !ok || !constraintDoors[sel.Sel.Name] {
-			return true
-		}
-		if ident, ok := assign.Lhs[0].(*ast.Ident); ok && ident.Name != "_" {
+		if ident, ok := lhs[0].(*ast.Ident); ok && ident.Name != "_" {
 			names = append(names, ident.Name)
+		}
+	}
+	ast.Inspect(file, func(n ast.Node) bool {
+		switch node := n.(type) {
+		case *ast.AssignStmt:
+			bind(node.Lhs, node.Rhs)
+		case *ast.ValueSpec:
+			lhs := make([]ast.Expr, 0, len(node.Names))
+			for _, name := range node.Names {
+				lhs = append(lhs, name)
+			}
+			bind(lhs, node.Values)
 		}
 		return true
 	})
@@ -182,4 +227,127 @@ func dedupeLeaks(items []string) []string {
 		}
 	}
 	return kept
+}
+
+// The falsification half: what the rule must NOT catch, and what it must.
+//
+// Every case above runs over a clean tree, so all of them pass whether the
+// qualifier is checked or not — there is no unrelated `CheckViolation` in this
+// repository to be confused by. That is exactly why the check is easy to write
+// wrongly and impossible to notice: `CheckViolation` is an ordinary method name,
+// and a receiver that grew one would enter the sweep, produce findings about a
+// value that is not a constraint name, and keep the empty-sweep guard satisfied
+// long after every real storekit call had gone.
+//
+// So the decoy is written here rather than committed to the tree.
+func TestOnlyStorekitsOwnDoorsCount(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		source string
+		reads  bool
+		leaks  int
+	}{
+		"storekit's door, leaked": {
+			source: `package p
+import (
+	"fmt"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
+func f(err error) error {
+	if constraint, ok := storekit.CheckViolation(err); ok {
+		return fmt.Errorf("violates %s", constraint)
+	}
+	return err
+}`,
+			reads: true,
+			leaks: 1,
+		},
+		"storekit's door under an alias": {
+			source: `package p
+import (
+	"fmt"
+	sk "github.com/margince/margince/backend/internal/platform/database/storekit"
+)
+func f(err error) error {
+	if constraint, ok := sk.UniqueViolation(err); ok {
+		return fmt.Errorf("violates %s", constraint)
+	}
+	return err
+}`,
+			reads: true,
+			leaks: 1,
+		},
+		// The decoy. Same method name, a receiver that is not storekit — an
+		// audit log, a policy engine, anything. Neither its value nor its
+		// message is this rule's business, and a gate that swept it would
+		// report a leak about a string that is not a constraint name.
+		"an unrelated receiver of the same name": {
+			source: `package p
+import "fmt"
+type checker struct{}
+func (checker) CheckViolation(err error) (string, bool) { return "", false }
+func f(c checker, err error) error {
+	if reason, ok := c.CheckViolation(err); ok {
+		return fmt.Errorf("violates %s", reason)
+	}
+	return err
+}`,
+			reads: false,
+			leaks: 0,
+		},
+		// The declaration form, which Go gives a different node from the
+		// assignment above. A walk that knew only `:=` would SWEEP this file —
+		// it calls a door — and then track no name in it, so the leak passes.
+		"a var declaration binding, leaked": {
+			source: `package p
+import (
+	"fmt"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
+func f(err error) error {
+	var constraint, ok = storekit.CheckViolation(err)
+	if ok {
+		return fmt.Errorf("violates %s", constraint)
+	}
+	return err
+}`,
+			reads: true,
+			leaks: 1,
+		},
+		"the sanctioned use — switched on, never printed": {
+			source: `package p
+import (
+	"errors"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+)
+func f(err error) error {
+	if constraint, ok := storekit.CheckViolation(err); ok {
+		switch constraint {
+		case "contract_term_order":
+			return errors.New("a term cannot end before it starts")
+		}
+	}
+	return err
+}`,
+			reads: true,
+			leaks: 0,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the probe: %v", err)
+			}
+			if got := fileReadsAConstraintName("probe.go", file); got != tc.reads {
+				t.Errorf("fileReadsAConstraintName = %v, want %v — the sweep %s this file",
+					got, tc.reads,
+					map[bool]string{true: "must not enter", false: "must enter"}[got])
+			}
+			leaks := constraintNameLeaksIn(gatekit.ParsedFile{Path: "probe.go", File: file})
+			if len(leaks) != tc.leaks {
+				t.Errorf("found %d leak(s) %v, want %d", len(leaks), leaks, tc.leaks)
+			}
+		})
+	}
 }
