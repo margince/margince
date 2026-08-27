@@ -2147,6 +2147,8 @@ export const de = {
   "home.weekly.dealsMoved": "Bewegt",
   "home.weekly.decided": "Von dir entschieden",
   "home.weekly.acceptedRejected": "{accepted} ja · {rejected} nein",
+  "home.weekly.noNarrative":
+    "Keine Zusammenfassung dieser Woche — Margince hat keinen Durchgang gemacht. Die Zahlen unten sind trotzdem die der Woche.",
   "home.weekly.queueWorked": "Morgen-Liste",
   "home.weekly.actedDismissed": "{acted} bearbeitet · {dismissed} weggeklickt",
   "home.weekly.carriedOver": "Übernommen",
@@ -2779,6 +2781,16 @@ export const de = {
   // Was der geplante Agent gerade für diese Leserin tut. "Morgenbriefing" ist
   // dasselbe Wort wie auf der Startseite; ein abgebrochener Lauf darf nie
   // klingen, als wäre er fertig.
+  "agent.activity.weeklyReview.queued":
+    "Deine Woche wartet auf eine Zusammenfassung.",
+  "agent.activity.weeklyReview.running": "Deine Woche wird zusammengefasst…",
+  "agent.activity.weeklyReview.stalled":
+    "Die Zusammenfassung deiner Woche dauert länger als erwartet.",
+  "agent.activity.weeklyReview.done": "Deine Woche hat eine Zusammenfassung.",
+  "agent.activity.weeklyReview.degraded":
+    "Deine Woche ist ausgewertet, ohne Zusammenfassung — die Zahlen sind vollständig.",
+  "agent.activity.weeklyReview.failed":
+    "Diesmal keine Zusammenfassung deiner Woche. Die Zahlen sind trotzdem die der Woche.",
   "agent.activity.morningBrief.queued": "Dein Morgenbriefing ist eingereiht.",
   "agent.activity.morningBrief.running":
     "Ich stelle dein Morgenbriefing zusammen.",

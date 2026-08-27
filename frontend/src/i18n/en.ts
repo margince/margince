@@ -2183,6 +2183,8 @@ export const en = {
   "home.weekly.dealsMoved": "Moved",
   "home.weekly.decided": "You decided",
   "home.weekly.acceptedRejected": "{accepted} yes · {rejected} no",
+  "home.weekly.noNarrative":
+    "No summary of this week — Margince did not run a pass over it. The numbers below are still the week's own.",
   "home.weekly.queueWorked": "Morning queue",
   "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
   "home.weekly.carriedOver": "Carried over",
@@ -2817,6 +2819,15 @@ export const en = {
   // What the scheduled agent is doing for this reader, one line per (kind,
   // state). First person for what Margince did, result first, and never a word
   // that reads as finished on a run that stopped part-way.
+  "agent.activity.weeklyReview.queued": "Your week is queued for a summary.",
+  "agent.activity.weeklyReview.running": "Summarising your week…",
+  "agent.activity.weeklyReview.stalled":
+    "The summary of your week is taking longer than expected.",
+  "agent.activity.weeklyReview.done": "Your week has a summary.",
+  "agent.activity.weeklyReview.degraded":
+    "Your week is measured, without a summary — the numbers are all there.",
+  "agent.activity.weeklyReview.failed":
+    "No summary of your week this time. The numbers are still the week's own.",
   "agent.activity.morningBrief.queued": "Your morning brief is queued.",
   "agent.activity.morningBrief.running":
     "I'm putting your morning brief together.",

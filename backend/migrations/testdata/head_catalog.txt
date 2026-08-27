@@ -4390,6 +4390,8 @@ public.weekly_review.deals_won integer NOT NULL gen=- def=0
 public.weekly_review.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.weekly_review.id uuid NOT NULL gen=- def=uuidv7()
 public.weekly_review.local_week_start date NOT NULL gen=- def=-
+public.weekly_review.narrated_at timestamp with time zone gen=- def=-
+public.weekly_review.narrative text gen=- def=-
 public.weekly_review.proposals_accepted integer NOT NULL gen=- def=0
 public.weekly_review.proposals_rejected integer NOT NULL gen=- def=0
 public.weekly_review.tasks_carried_over integer NOT NULL gen=- def=0
@@ -4398,6 +4400,8 @@ public.weekly_review.tasks_due integer NOT NULL gen=- def=0
 public.weekly_review.uq_weekly_review_user_week UNIQUE (user_id, local_week_start)
 public.weekly_review.user_id uuid NOT NULL gen=- def=-
 public.weekly_review.weekly_review_counts_are_tallies CHECK (((tasks_due >= 0) AND (tasks_done >= 0) AND (tasks_carried_over >= 0) AND (deals_moved >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (proposals_accepted >= 0) AND (proposals_rejected >= 0) AND (brief_items_acted >= 0) AND (brief_items_dismissed >= 0)))
+public.weekly_review.weekly_review_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))
+public.weekly_review.weekly_review_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (narrated_at IS NOT NULL)))
 public.weekly_review.weekly_review_pkey PRIMARY KEY (id)
 public.weekly_review.weekly_review_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
 public.weekly_review_deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

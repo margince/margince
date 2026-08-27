@@ -13,10 +13,12 @@ package weekly
 
 import (
 	"context"
+	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -308,5 +310,106 @@ func TestDeliveredNeverExceedsPromised(t *testing.T) {
 	if review.Counts.TasksDone > review.Counts.TasksDue {
 		t.Errorf("the week reports %d done of %d due — a ratio over one is not a reading",
 			review.Counts.TasksDone, review.Counts.TasksDue)
+	}
+}
+
+// The sentence is a SECOND write onto a committed review, and it is
+// idempotent by replacement: a later pass is a correction, not an addition.
+func TestTheWeeksSentenceIsWrittenAndReplaced(t *testing.T) {
+	e := setupWeekly(t)
+
+	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Before any pass: no sentence and no stamp, which is what tells the
+	// screen nobody looked.
+	if review.Narrative != "" || review.NarratedAt != nil {
+		t.Fatalf("a freshly measured week already carries a sentence: %+v", review)
+	}
+
+	for _, sentence := range []string{"First reading.", "Corrected reading."} {
+		if err := e.engine.Narrate(e.repCtx, review.ID, sentence, weekClock); err != nil {
+			t.Fatalf("narrating %q: %v", sentence, err)
+		}
+	}
+	after, err := e.engine.LatestReview(e.repCtx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Narrative != "Corrected reading." {
+		t.Errorf("the week reads %q, want only the corrected sentence", after.Narrative)
+	}
+	if after.NarratedAt == nil {
+		t.Error("the narrated review carries no stamp")
+	}
+}
+
+// A pass that ran and found the week unremarkable writes the STAMP with no
+// sentence. Collapsing that into "no sentence" would make an honest quiet week
+// indistinguishable from a week nobody looked at.
+func TestAPassThatFoundNothingStillStampsTheWeek(t *testing.T) {
+	e := setupWeekly(t)
+
+	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := e.engine.Narrate(e.repCtx, review.ID, "", weekClock); err != nil {
+		t.Fatalf("narrating an empty sentence: %v", err)
+	}
+	after, err := e.engine.LatestReview(e.repCtx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Narrative != "" {
+		t.Errorf("an empty sentence was stored as %q, want none", after.Narrative)
+	}
+	if after.NarratedAt == nil {
+		t.Error("a pass that ran and found nothing left no stamp — indistinguishable from one that never ran")
+	}
+}
+
+// Another rep's review is never narratable, even with its id in hand.
+func TestAnotherRepsWeekCannotBeNarrated(t *testing.T) {
+	e := setupWeekly(t)
+
+	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep2 := e.As(e.Rep2, []ids.UUID{e.Team1}, integration.AdminPerms)
+	if err := e.engine.Narrate(rep2, review.ID, "not yours to say", weekClock); err == nil {
+		t.Error("rep2 wrote a sentence onto rep1's week")
+	}
+	// And rep1's week is untouched.
+	after, err := e.engine.LatestReview(e.repCtx, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if after.Narrative != "" || after.NarratedAt != nil {
+		t.Errorf("the refused write still landed: %+v", after)
+	}
+}
+
+// The writer refuses prose the column cannot hold, in characters rather than
+// bytes — a caller that reaches Narrate without going through the parser would
+// otherwise learn the ceiling from a driver error at 06:00 on a Monday.
+func TestTheWriterRefusesProseTheColumnCannotHold(t *testing.T) {
+	e := setupWeekly(t)
+
+	review, _, err := e.engine.AssembleFor(e.repCtx, weekClock)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Umlauts: at the ceiling in characters, well over it in bytes. A
+	// byte-counted check would refuse this, and the column would not.
+	atCeiling := strings.Repeat("ü", narrative.MaxNarrativeRunes)
+	if err := e.engine.Narrate(e.repCtx, review.ID, atCeiling, weekClock); err != nil {
+		t.Errorf("the writer refused %d characters the column holds: %v",
+			narrative.MaxNarrativeRunes, err)
+	}
+	if err := e.engine.Narrate(e.repCtx, review.ID, atCeiling+"ü", weekClock); err == nil {
+		t.Error("the writer accepted prose past the column's ceiling")
 	}
 }
