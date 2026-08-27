@@ -348,6 +348,14 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	// LatestTranscriptRead, ReadTranscript) re-probes the same way rather than
 	// trusting the stored pointer.
 	"transcript_read.activity_id": "client-supplied and gated: every path resolves the activity through readActivity's ActivityContentClause walk, so an unseeable transcript is ErrNotFound rather than a readable run record",
+	// The technical lookup's per-lane ledger. The company is client-supplied —
+	// it is the record the reader pressed "Nachschauen" on — and every entry
+	// point puts it through the gate first: RecordTechnicalLane calls
+	// auth.EnsureWritableLive before it writes a lane row, and both readers
+	// (TechnicalDomain, TechnicalLaneState) call auth.EnsureVisible before they
+	// return one. A company the caller cannot see answers ErrNotFound rather
+	// than disclosing that a lookup ever ran on it.
+	"organization_technical_state.organization_id": "client-supplied and gated: the write goes through auth.EnsureWritableLive and both reads through auth.EnsureVisible, so a company the caller cannot see is ErrNotFound rather than a readable lane ledger",
 	// The retention floor's evidence (A165). Both columns are
 	// SERVER-DERIVED and neither has a writer yet — the table shipped ahead of
 	// the pass that fills it (#1557). activity_id is the record being held, and
