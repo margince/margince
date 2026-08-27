@@ -146,6 +146,22 @@ func RequireHuman(ctx context.Context) error {
 // corpus is gated as an update. A verb missing here renders a BLANK
 // authorization_rule, which reads as "no rule applied" years later —
 // TestEveryAuditVerbRendersItsAuthorizationRule keeps the set closed.
+// IsAuditAction reports whether a verb is one audit_log records.
+//
+// Derived from the grant map below rather than from a list of its own: that map
+// must already name every verb — a missing entry renders a blank
+// authorization_rule, and TestEveryAuditVerbRendersItsAuthorizationRule keeps
+// the set closed — so it is the vocabulary, and a second copy could only ever
+// disagree with it.
+//
+// A reader of the record-history filter asks this so an unknown verb answers
+// 422 rather than an empty page: "no such verb" and "that never happened to
+// this record" are different answers, and only one of them is worth acting on.
+func IsAuditAction(verb string) bool {
+	_, known := auditActionGrant[verb]
+	return known
+}
+
 var auditActionGrant = map[string]principal.Action{
 	"create":        principal.ActionCreate,
 	"update":        principal.ActionUpdate,

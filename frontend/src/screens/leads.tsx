@@ -1058,48 +1058,25 @@ type PromotionRecord = {
  * every other one rather than fetching a history nothing renders.
  */
 function usePromotionRecord(id: string, promoted: boolean): PromotionRecord {
-  const history = useRecordHistory("lead", id, promoted);
+  // ONE row, asked for by verb. The history endpoint takes an `action` filter
+  // now (#1611), so the promotion is the answer to the read rather than
+  // something found by walking towards it.
+  //
+  // What that replaced is worth remembering, because it was a real wrong
+  // answer and not merely a slow one: the trail is 20 rows to a page, so a lead
+  // worked long enough to collect other audit rows carried its promotion on a
+  // later page, and a reader that took the first page reported the outcome as
+  // unknowable on exactly the leads somebody had worked hardest. Paging on
+  // until it turned up fixed the answer and cost a round trip per page.
+  //
+  // A filtered read has at most one promote row — a lead is promoted once —
+  // so there is no page after the first and nothing to walk.
+  const history = useRecordHistory("lead", id, promoted, "promote");
   // `page?.data` for the same reason getNextPageParam needs it: a 200 with no
   // body is a shape the contract permits, and this read runs on every promoted
   // lead page.
   const entries = history.data?.pages.flatMap((page) => page?.data ?? []) ?? [];
-  const row = entries.find((entry) => entry.action === "promote");
-
-  // The history is served OLDEST FIRST, 20 to a page, and `promote` is the
-  // LAST thing that ever happens to a lead — it retires the record. So a lead
-  // worked long enough to collect 20 earlier audit rows carries its promotion
-  // on a later page, and reading only the first one found nothing and reported
-  // the outcome as unknowable on exactly the leads someone worked hardest.
-  //
-  // Paging on until it turns up is the client half of the fix. The server half
-  // — an `action` filter on the history endpoint, so this is one row rather
-  // than a walk — needs a contract change, filed as issue 1611.
-  const { fetchNextPage, hasNextPage, isFetchingNextPage } = history;
-  const pagesRead = history.data?.pages.length ?? 0;
-  // Two things end the walk besides finding the row, and each is a way it
-  // would otherwise never end:
-  //
-  //   - a later page FAILING. The pages already read stay cached, so
-  //     `hasNextPage` stays true and `isFetchingNextPage` falls back to false
-  //     the moment the failure settles — which re-arms the effect and retries
-  //     forever, while `pending` masks the error the panel should be showing.
-  //   - a history long enough that the walk is itself the problem, or a server
-  //     bug handing back a cursor that never advances. The cap is generous
-  //     against a real lead and finite against a pathological one; stopping
-  //     early reports the outcome as unavailable, which is true.
-  const WALK_PAGE_CAP = 25;
-  const seeking =
-    promoted &&
-    !row &&
-    hasNextPage &&
-    !isFetchingNextPage &&
-    !history.isError &&
-    pagesRead < WALK_PAGE_CAP;
-  useEffect(() => {
-    if (seeking) {
-      fetchNextPage();
-    }
-  }, [seeking, fetchNextPage]);
+  const row = entries[0];
 
   const after = (row?.after ?? {}) as Record<string, unknown>;
   const str = (key: string) =>
@@ -1110,14 +1087,11 @@ function usePromotionRecord(id: string, promoted: boolean): PromotionRecord {
       recorded === "merged" || recorded === "created" ? recorded : "unknown",
     trigger: str("trigger"),
     evidenceNote: str("evidence_note"),
-    // Still walking is still pending: reporting "we cannot tell" while pages
-    // are in flight is the same false certainty as reporting "created".
-    // A FAILED read is never pending — the panel checks pending first, so
-    // leaving both true renders a waiting line over an error nobody ever sees.
-    pending:
-      promoted &&
-      !history.isError &&
-      (history.isPending || Boolean(seeking) || isFetchingNextPage),
+    // A read in flight is pending: reporting "we cannot tell" before the answer
+    // arrives is the same false certainty as reporting "created". A FAILED read
+    // is never pending — the panel checks pending first, so leaving both true
+    // renders a waiting line over an error nobody ever sees.
+    pending: promoted && !history.isError && history.isPending,
     failed: promoted && history.isError,
   };
 }

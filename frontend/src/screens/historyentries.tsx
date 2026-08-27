@@ -57,9 +57,18 @@ export function useRecordHistory(
   // says so rather than paying for a page nothing renders. Defaults to on, so
   // the History tab is unchanged.
   enabled = true,
+  // One verb, for a caller describing a single recorded event. Without it that
+  // caller pages the whole trail looking for its row — and one that read only
+  // the first page got a confident wrong answer on exactly the records somebody
+  // worked hardest, because those are the ones with enough other rows to push
+  // it off. Absent means the whole history, which is what the History tab wants.
+  action?: string,
 ): UseInfiniteQueryResult<InfiniteData<AuditHistoryListResponse>> {
   return useInfiniteQuery({
-    queryKey: ["record-history", kind, id],
+    // The verb is part of the key: a filtered read and the whole trail are
+    // different answers, and sharing a cache entry would serve one for the
+    // other depending on which mounted first.
+    queryKey: ["record-history", kind, id, action ?? null],
     enabled,
     initialPageParam: FIRST_PAGE,
     queryFn: async ({ pageParam }) => {
@@ -68,7 +77,11 @@ export function useRecordHistory(
         {
           params: {
             path: { entity_type: kind, id },
-            query: { limit: 20, ...(pageParam ? { cursor: pageParam } : {}) },
+            query: {
+              limit: 20,
+              ...(pageParam ? { cursor: pageParam } : {}),
+              ...(action ? { action } : {}),
+            },
           },
         },
       );

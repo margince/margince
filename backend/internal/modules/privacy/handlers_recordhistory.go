@@ -9,6 +9,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -26,11 +27,22 @@ func (h Handlers) GetRecordHistory(w http.ResponseWriter, r *http.Request,
 			"entity_type must be one of "+fieldHistoryEntityTypeList))
 		return
 	}
+	// An unknown verb is refused rather than answered with an empty page: a
+	// caller who mistyped `promoted` for `promote` would otherwise read "that
+	// never happened to this record", which is a confident answer to a question
+	// they did not ask. The vocabulary is auth's own grant map, which must
+	// already name every verb the tree records.
+	if params.Action != nil && !auth.IsAuditAction(*params.Action) {
+		httperr.Write(w, r, httperr.Validation("action", "unknown_action",
+			"action must be an audit verb this installation records"))
+		return
+	}
 	f := RecordHistoryFilter{
 		EntityType: entityType,
 		EntityID:   ids.UUID(id),
 		Cursor:     params.Cursor,
 		Limit:      params.Limit,
+		Action:     params.Action,
 	}
 
 	page, err := ListRecordHistory(r.Context(), h.db, f)
