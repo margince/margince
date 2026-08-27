@@ -32,6 +32,7 @@ import {
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { TodaySection } from "./home.today";
+import { WeeklySection } from "./home.weekly";
 import "./home.css";
 
 // Home — the morning handover.
@@ -218,7 +219,13 @@ function HomeWork({
   // the reader's Deck/List choice, and the tally behind the cleared plate. Which
   // meant the one state the flip exists to reveal, "deck clear, N sent", could
   // never be reached by clearing the deck. Keys make React reorder instead.
-  return items.length > 0 ? [decisions, today] : [today, decisions];
+  // Last, always. The weekly is a retrospective — what a rep reads once, on
+  // Monday, after the work that is waiting on them today. Ordering it above
+  // either of those would put last week ahead of this morning.
+  const lastWeek = <WeeklySection key="weekly" />;
+  return items.length > 0
+    ? [decisions, today, lastWeek]
+    : [today, decisions, lastWeek];
 }
 
 /**

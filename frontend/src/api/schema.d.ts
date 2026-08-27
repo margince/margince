@@ -8713,6 +8713,55 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/weekly-reviews": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The weeks the acting rep has a review for, newest first.
+         * @description The archive's index — a list of doors, not the reviews themselves. Reachable without a
+         *     nav entry of its own: the weekly is a view of the work Today already collects.
+         */
+        get: operations["listWeeklyReviews"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/weekly-reviews/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The acting rep's most recent weekly review, or a named week's.
+         * @description Serves a review that was WRITTEN when its week closed; it never assembles one. A read
+         *     that could re-derive the week would answer differently depending on when it was asked —
+         *     the deal you closed on Friday reclassified in March because somebody edited its stage —
+         *     and a record of a past week that does that is not a record.
+         *
+         *     The deal lines are frozen: the label is what the deal was called that week, stored beside
+         *     its id rather than joined, so a rename does not rewrite history and a deletion does not
+         *     erase it. That is also why the weekly is its own aggregate rather than living on
+         *     `brief_item`, whose rows cascade away with their deal.
+         */
+        get: operations["getLatestWeeklyReview"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/brief/annotations": {
         parameters: {
             query?: never;
@@ -21695,6 +21744,89 @@ export interface components {
              */
             returned_with_activity_at: string;
         } | null;
+        WeeklyReviewIndex: {
+            /** @description The Monday of each week with a review, newest first. */
+            weeks: string[];
+        };
+        /**
+         * @description One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
+         *     which is why they are stored rather than recomputed.
+         */
+        WeeklyReview: {
+            /** Format: uuid */
+            id: string;
+            /**
+             * Format: date
+             * @description The Monday of the week under review, in the installation reporting timezone.
+             */
+            local_week_start: string;
+            /**
+             * Format: date-time
+             * @description When the review was written.
+             */
+            generated_at: string;
+            /**
+             * Format: date-time
+             * @description The instant the week was measured to.
+             */
+            as_of: string;
+            counts: components["schemas"]["WeeklyReviewCounts"];
+            /**
+             * @description The deals the week is about, won and lost first. Capped for reading — the counts stay
+             *     complete, so a busy week reads "12 moved" beside the most recent of them rather than
+             *     a truncated number.
+             */
+            deals: components["schemas"]["WeeklyReviewDeal"][];
+        };
+        WeeklyReviewCounts: {
+            /** @description Tasks assigned to this rep that fell due in the week. */
+            tasks_due: number;
+            /** @description And were finished inside it. */
+            tasks_done: number;
+            /** @description Still open now and older than the week: work postponed at least twice. */
+            tasks_carried_over: number;
+            /** @description Deals that changed stage, excluding those that closed. */
+            deals_moved: number;
+            deals_won: number;
+            deals_lost: number;
+            /**
+             * @description Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
+             *     `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
+             *     decisions nobody made.
+             */
+            proposals_accepted: number;
+            /** @description The same, rejected. */
+            proposals_rejected: number;
+            /** @description Morning-brief items this rep acted on in the week. */
+            brief_items_acted: number;
+            /** @description And dismissed. */
+            brief_items_dismissed: number;
+        };
+        /**
+         * @description One deal the week is about, FROZEN. Every word was written when the review was, so a deal
+         *     renamed, archived or deleted since leaves the line exactly as the week recorded it.
+         */
+        WeeklyReviewDeal: {
+            /**
+             * Format: uuid
+             * @description The deal, for a link. It may no longer exist; the line stands either way.
+             */
+            deal_id: string;
+            /** @description What the deal was called that week. */
+            label: string;
+            /** @enum {string} */
+            outcome: "moved" | "won" | "lost";
+            /** @description Where it moved to, as words: a renamed or deleted stage must not make an old review unreadable. */
+            to_stage_label?: string | null;
+            /** Format: int64 */
+            amount_minor_at_close?: number | null;
+            currency_at_close?: string | null;
+            /**
+             * Format: date-time
+             * @description When it closed or moved.
+             */
+            occurred_at: string;
+        };
         /**
          * @description One overnight pass's findings for the acting rep's own current run.
          *
@@ -37542,6 +37674,62 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listWeeklyReviews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The weeks with a review, newest first. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReviewIndex"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    getLatestWeeklyReview: {
+        parameters: {
+            query?: {
+                /** @description The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent. */
+                week?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The weekly review. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WeeklyReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The rep has no review for that week. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     annotateMorningBrief: {

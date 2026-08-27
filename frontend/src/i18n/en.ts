@@ -2162,6 +2162,26 @@ export const en = {
   // silence, so the screen says which one this is.
   "home.narrativeNoPass":
     "No overnight summary today — Margince did not run a pass on this brief. The ranking below is still today's.",
+  // The week just gone. No nav entry of its own: Today is the single door to
+  // the work that waits on a person, and this is a view of that same work.
+  "home.panel.weekly": "Last week",
+  "home.weekly.weekOf": "Week of {day}",
+  "home.weekly.pickWeek": "Open another week",
+  "home.weekly.none":
+    "No weekly review yet — the first one is written on the Monday after your first full week.",
+  "home.weekly.promised": "Promised, delivered",
+  "home.weekly.ofDue": "{done} of {due}",
+  "home.weekly.dealsWon": "Won",
+  "home.weekly.dealsLost": "Lost",
+  "home.weekly.dealsMoved": "Moved",
+  "home.weekly.decided": "You decided",
+  "home.weekly.acceptedRejected": "{accepted} yes · {rejected} no",
+  "home.weekly.queueWorked": "Morning queue",
+  "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
+  "home.weekly.carriedOver": "Carried over",
+  "home.weekly.outcome.moved": "moved",
+  "home.weekly.outcome.won": "won",
+  "home.weekly.outcome.lost": "lost",
   "home.quietRun":
     "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
