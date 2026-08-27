@@ -21,7 +21,7 @@ import {
   type DecisionStatusLabels,
   DecisionToolChip,
 } from "../design-system/decisioncard";
-import { useToast } from "../design-system/toast";
+import { ToastRegion, useToast } from "../design-system/toast";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
@@ -403,6 +403,10 @@ export function ApprovalRow({
         />
       }
     >
+      {/* The row owns the region as well as the toast: useToast is local state,
+          so a caller that shows one without rendering a region shows nothing.
+          Every other consumer in the tree pairs the two the same way. */}
+      <ToastRegion toast={toast} />
       <ConfirmModal
         open={rejecting}
         onClose={() => setRejecting(false)}
