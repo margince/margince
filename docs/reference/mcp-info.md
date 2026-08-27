@@ -13,9 +13,9 @@ receives it. This page is rendered from that file.
 |---|---:|
 | Tools | 59 |
 | Resources | 9 |
-| Tool catalog | 163.3 KB |
+| Tool catalog | 163.5 KB |
 | Resource catalog | 3.4 KB |
-| Approx. wire tokens | 42695 |
+| Approx. wire tokens | 42740 |
 | Largest tool | `read_project_360` (6.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -29,7 +29,7 @@ agent, agent by agent, is [agent-tool-budget.md](agent-tool-budget.md).
 
 | Part | Bytes | Share | In a run's prompt? |
 |---|---:|---:|---|
-| Output schemas | 76.0 KB | 46% | **No** — a result's shape, never listed to a model |
+| Output schemas | 76.1 KB | 46% | **No** — a result's shape, never listed to a model |
 | Descriptions (incl. governance clause) | 39.1 KB | 23% | Yes, every step |
 | Input schemas | 35.8 KB | 21% | Yes, every step |
 | _Names, annotations, punctuation_ | 12.5 KB | 7% | Partly |
@@ -99,7 +99,7 @@ resource, the way `margince://schema/record-fields` did, not by writing less.
 | [`qualify_lead`](#qualify_lead) | Qualify a lead |  |  | 2.4 KB |
 | [`query_workspace`](#query_workspace) | Query the workspace | yes |  | 4.0 KB |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes |  | 2.4 KB |
-| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 2.8 KB |
+| [`read_brief`](#read_brief) | Read the morning brief | yes | [`ui://margince/account-brief.html`](#account_brief_view) | 3.0 KB |
 | [`read_import_report`](#read_import_report) | Read an import report | yes |  | 2.9 KB |
 | [`read_import_run`](#read_import_run) | Read an import run | yes |  | 1.4 KB |
 | [`read_project_360`](#read_project_360) | Read a project's page | yes |  | 6.2 KB |
@@ -7406,6 +7406,21 @@ Renders its result in [`ui://margince/account-brief.html`](#account_brief_view),
               "item_id": {
                 "format": "uuid",
                 "type": "string"
+              },
+              "lineage": {
+                "properties": {
+                  "dismissed_on": {
+                    "type": "string"
+                  },
+                  "returned_with_activity_at": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "dismissed_on",
+                  "returned_with_activity_at"
+                ],
+                "type": "object"
               },
               "rank": {
                 "type": "integer"

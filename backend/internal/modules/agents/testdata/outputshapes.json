@@ -5176,6 +5176,21 @@
                   "type": "string",
                   "format": "uuid"
                 },
+                "lineage": {
+                  "type": "object",
+                  "properties": {
+                    "dismissed_on": {
+                      "type": "string"
+                    },
+                    "returned_with_activity_at": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "dismissed_on",
+                    "returned_with_activity_at"
+                  ]
+                },
                 "rank": {
                   "type": "integer"
                 },

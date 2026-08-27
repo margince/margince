@@ -71,6 +71,7 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 	for _, item := range run.Items {
 		items = append(items, agents.BriefItem{
 			ItemID: item.ID, DealID: item.DealID, Rank: item.Rank,
+			Lineage:   lineageForTool(item.Lineage),
 			Composite: item.Composite, Factors: agents.BriefFactors{
 				Winnability: item.Features.Winnability, Revenue: item.Features.Revenue,
 				Timing: item.Features.Timing, Momentum: item.Features.Momentum,
@@ -89,5 +90,17 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 		BriefID: run.ID, GeneratedAt: run.GeneratedAt, AsOf: run.AsOf,
 		LocalDay:       run.LocalDay.Format(time.DateOnly),
 		CandidateCount: run.CandidateCount, Items: items,
+	}
+}
+
+// lineageForTool serves why a dismissed deal came back, absent when it never
+// was dismissed.
+func lineageForTool(lineage *briefs.ItemLineage) *agents.BriefItemLineage {
+	if lineage == nil {
+		return nil
+	}
+	return &agents.BriefItemLineage{
+		DismissedOn:  lineage.DismissedOn.Format(time.DateOnly),
+		ReturnedWith: lineage.ReturnedWith,
 	}
 }

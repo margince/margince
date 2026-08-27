@@ -178,6 +178,18 @@ func nullableText(text string) *string {
 	return &text
 }
 
+// lineageToWire renders why a dismissed deal came back, absent when it never
+// was dismissed.
+func lineageToWire(lineage *ItemLineage) *crmcontracts.MorningBriefItemLineage {
+	if lineage == nil {
+		return nil
+	}
+	return &crmcontracts.MorningBriefItemLineage{
+		DismissedOn:            openapi_types.Date{Time: lineage.DismissedOn},
+		ReturnedWithActivityAt: lineage.ReturnedWith,
+	}
+}
+
 func briefItemToWire(item BriefRunItem) crmcontracts.MorningBriefItem {
 	evidence := make([]openapi_types.UUID, 0, len(item.EvidenceIDs))
 	for _, id := range item.EvidenceIDs {
@@ -200,5 +212,6 @@ func briefItemToWire(item BriefRunItem) crmcontracts.MorningBriefItem {
 		StateAt:      item.StateAt,
 		SnoozedUntil: item.SnoozedUntil,
 		Finding:      nullableText(item.Finding),
+		Lineage:      lineageToWire(item.Lineage),
 	}
 }

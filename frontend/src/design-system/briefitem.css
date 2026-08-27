@@ -333,3 +333,22 @@
   color: var(--textContent);
   line-height: 1.5;
 }
+
+/* Why a dismissed deal is back, above the finding. It reads as a caption
+   because it is context for the answer rather than the answer — and quieter
+   than the finding, which is the sentence the reader came for. */
+.brief-item-lineage {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: var(--space-1);
+  margin: 0 0 var(--space-2);
+  color: var(--textMeta);
+}
+
+.brief-item-lineage > svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+  align-self: center;
+}
