@@ -32,7 +32,7 @@ import {
 } from "./history.logic";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
-import { historyValue } from "./historyvalues";
+import { type HistoryValueCtx, historyValue } from "./historyvalues";
 import "./history.css";
 
 // The per-record plain-language change list (B-EP09.x): every audit_log row
@@ -91,9 +91,11 @@ function EntryFieldDetail({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   if (changes.length === 0) {
     return null;
   }
+  const valueCtx: HistoryValueCtx = { currency, locale, zone: recordZone };
   return (
     <ul className="entry-fields">
       {changes.map((change) => (
@@ -102,18 +104,8 @@ function EntryFieldDetail({
             {historyFieldLabel(change.field, t)}
           </span>
           <FieldDiff
-            oldValue={historyValue(
-              change.field,
-              change.oldValue,
-              currency,
-              locale,
-            )}
-            newValue={historyValue(
-              change.field,
-              change.newValue,
-              currency,
-              locale,
-            )}
+            oldValue={historyValue(change.field, change.oldValue, valueCtx)}
+            newValue={historyValue(change.field, change.newValue, valueCtx)}
           />
         </li>
       ))}
@@ -183,6 +175,7 @@ function UndoButton({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const recordZone = useRecordZone();
   const client = useQueryClient();
   const [confirming, setConfirming] = useState(false);
   // What the server said when it refused the press. Held apart from the
@@ -296,12 +289,11 @@ function UndoButton({
                 {historyFieldLabel(change.field, t)}
               </span>
               <span>
-                {historyValue(
-                  change.field,
-                  change.oldValue,
+                {historyValue(change.field, change.oldValue, {
                   currency,
                   locale,
-                ) ?? t("history.cleared")}
+                  zone: recordZone,
+                }) ?? t("history.cleared")}
               </span>
             </li>
           ))}

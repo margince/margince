@@ -23,7 +23,7 @@ import {
   toEvidence,
 } from "../design-system/trust";
 import { formatDateTime } from "../format/format";
-import { type Locale, useLocale, useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import {
   LoadMoreButton,
   QueryStates,
@@ -38,7 +38,7 @@ import {
   provenanceOfEntry,
 } from "./history.logic";
 import { historyFieldLabel } from "./historyfieldlabels";
-import { historyValue } from "./historyvalues";
+import { type HistoryValueCtx, historyValue } from "./historyvalues";
 import "./history.css";
 
 // The per-field old→new diff view (B-EP09.x): every field-change row the
@@ -129,6 +129,7 @@ function FieldGroupSection({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const valueCtx: HistoryValueCtx = { currency, locale, zone: recordZone };
   return (
     <div className="fgroup">
       <div className="fgroup-head">{historyFieldLabel(group.field, t)}</div>
@@ -136,18 +137,8 @@ function FieldGroupSection({
         {group.changes.map((change) => (
           <li key={change.id} className="change">
             <FieldDiff
-              oldValue={historyValue(
-                group.field,
-                change.old_value,
-                currency,
-                locale,
-              )}
-              newValue={historyValue(
-                group.field,
-                change.new_value,
-                currency,
-                locale,
-              )}
+              oldValue={historyValue(group.field, change.old_value, valueCtx)}
+              newValue={historyValue(group.field, change.new_value, valueCtx)}
             />
             <span className="tl-meta">
               {formatDateTime(change.changed_at, locale, recordZone)}
@@ -331,12 +322,16 @@ export function FieldHistoryTimeline({
 export function changeTimeline(
   changes: FieldHistoryEntry[],
   label: (field: string) => string,
-  // The record's own money context. A minor-unit column is an integer count of
-  // units its currency defines, so rendering one raw shows a figure a hundred
-  // times the price on most currencies — the reason this goes through
-  // historyValue rather than to the diff directly, on every field, whether or
-  // not the record type happens to hold money today.
-  money: Readonly<{ currency: string | null | undefined; locale: Locale }>,
+  // The record's own value context. A minor-unit column is an integer count of
+  // units its currency defines, a timestamp is only readable at the record's
+  // zone, and a bare id is only readable through the resolver — the reason
+  // this goes through historyValue rather than to the diff directly, on every
+  // field, whether or not the record type happens to hold each shape today.
+  valueCtx: HistoryValueCtx,
+  // What the record DID, in the reader's words. Handed in rather than read
+  // from the catalog here, because this adapter takes every other word it
+  // renders from its caller too.
+  qualifier: string,
   viewerUserId?: string,
 ): TimelineEntry[] {
   return changes.map((change) => ({
@@ -347,6 +342,9 @@ export function changeTimeline(
     id: `change:${change.id}:${change.field}`,
     kind: "change",
     title: label(change.field),
+    // The badge says this is a record entry; without this the row does not say
+    // what the record did.
+    qualifier,
     atIso: change.changed_at,
     provenance: provenanceOfEntry(change, viewerUserId),
     // The grounding travels with the row. An agent's change is only checkable
@@ -356,18 +354,8 @@ export function changeTimeline(
     via: <ChangeGrounding change={change} />,
     detail: (
       <FieldDiff
-        oldValue={historyValue(
-          change.field,
-          change.old_value,
-          money.currency,
-          money.locale,
-        )}
-        newValue={historyValue(
-          change.field,
-          change.new_value,
-          money.currency,
-          money.locale,
-        )}
+        oldValue={historyValue(change.field, change.old_value, valueCtx)}
+        newValue={historyValue(change.field, change.new_value, valueCtx)}
       />
     ),
   }));

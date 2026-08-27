@@ -3,14 +3,16 @@ import { useState } from "react";
 import type { components } from "../api/schema";
 import type { EntityKind } from "../app/entity";
 import { activityTimeline } from "../design-system/activitytimeline";
-import { EmptyState, SegmentedControl, Skeleton } from "../design-system/atoms";
+import { EmptyState, Skeleton } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
+import { FilterPills } from "../design-system/filterpills";
 import type { RecordTimeline } from "../design-system/recordtimeline";
-import { useLocale, useT } from "../i18n";
+import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { coldFieldLabel, LoadMoreButton, useViewerId } from "./common";
 import { changeTimeline, useFieldHistory } from "./history";
 import { mergeChronology } from "./history.logic";
+import type { HistoryValueCtx } from "./historyvalues";
 
 // A record has ONE chronology, and this is where it is assembled — for any
 // record, not for the account page alone. What was said to a record and what
@@ -25,7 +27,9 @@ import { mergeChronology } from "./history.logic";
 type Activity = components["schemas"]["Activity"];
 type ChangesQuery = ReturnType<typeof useFieldHistory>;
 
-export const TIMELINE_FILTERS = ["activities", "changes", "all"] as const;
+// All first: it is where a reader starts, and a row of cuts reads left to
+// right from the whole to its parts.
+export const TIMELINE_FILTERS = ["all", "activities", "changes"] as const;
 export type TimelineFilter = (typeof TIMELINE_FILTERS)[number];
 
 /**
@@ -37,11 +41,15 @@ export type TimelineFilter = (typeof TIMELINE_FILTERS)[number];
 export function useChronologyFilter(
   recordId: string,
 ): [TimelineFilter, (next: TimelineFilter) => void] {
-  const [filter, setFilter] = useState<TimelineFilter>("activities");
+  // ALL by default. The record's history is read to find out what happened,
+  // and a default that hid every field change answered a narrower question
+  // than the one the reader opened the tab with — they had to know a cut
+  // existed before they could see the whole.
+  const [filter, setFilter] = useState<TimelineFilter>("all");
   const [filterFor, setFilterFor] = useState(recordId);
   if (filterFor !== recordId) {
     setFilterFor(recordId);
-    setFilter("activities");
+    setFilter("all");
   }
   return [filter, setFilter];
 }
@@ -56,20 +64,36 @@ export function ChronologyFilter({
   onFilter,
 }: Readonly<{
   filter: TimelineFilter;
+  // Whether the caller has narrowed the exchanges — by kind, by words, by a
+  // date range. A narrowed read is a question about what was SAID, and a field
+  // edit is not a meeting: leaving the changes in answered a question nobody
+  // asked, and the reader who picked Meetings got a list of record edits with
+  // two meetings in it.
+  //
+  // It also stops the change read from being made at all, which is the honest
+  // consequence: a feed whose rows cannot appear should not be fetched.
+  narrowed?: boolean;
   onFilter: (next: TimelineFilter) => void;
 }>) {
   const t = useT();
+  const labels: Record<TimelineFilter, string> = {
+    all: t("chronology.all"),
+    activities: t("chronology.activities"),
+    changes: t("chronology.changes"),
+  };
   return (
-    <SegmentedControl
-      options={TIMELINE_FILTERS}
+    <FilterPills
+      pills={TIMELINE_FILTERS.map((value) => ({
+        value,
+        label: labels[value],
+        // No counts. Each cut is its own paged read, so this page knows a
+        // floor rather than a total — and a floor printed as a count is a
+        // wrong number where a missing one is merely a missing one.
+        count: undefined,
+      }))}
       value={filter}
       onChange={onFilter}
       label={t("chronology.label")}
-      labels={{
-        activities: t("chronology.activities"),
-        changes: t("chronology.changes"),
-        all: t("chronology.all"),
-      }}
     />
   );
 }
@@ -84,6 +108,12 @@ export type RecordChronology = {
   // Activities view into a skeleton that never became a timeline.
   loading: boolean;
   failed: boolean;
+  // The CHANGE read errored, whether or not the section as a whole is drawn as
+  // failed. On the combined cut the exchanges that DID load stay on screen —
+  // taking them away because a second feed fell over serves nobody — but the
+  // reader still has to be told that half the chronology is missing, or they
+  // read a partial record as a complete one.
+  changesUnread: boolean;
   // Whether fetching more CHANGES would lengthen the merged view. When the
   // activity feed is the shorter of the two, it is not: the merge cuts at its
   // oldest row and every extra change page falls below that line.
@@ -106,15 +136,24 @@ export function useRecordChronology({
   kind,
   recordId,
   filter,
+  narrowed = false,
   activities,
   activitiesHaveMore,
   loadMore,
   renderActions,
-  currency,
+  values,
 }: Readonly<{
   kind: EntityKind;
   recordId: string;
   filter: TimelineFilter;
+  // Whether the caller has narrowed the exchanges — by kind, by words, by a
+  // date range. A narrowed read is a question about what was SAID, and a field
+  // edit is not a meeting: left in, the reader who picked Meetings got a list
+  // of record edits with two meetings in it.
+  //
+  // It also stops the change feed from being READ, which is the honest
+  // consequence: rows that cannot appear should not be fetched.
+  narrowed?: boolean;
   activities: Activity[];
   activitiesHaveMore: boolean;
   // The paged read behind `activities`, for the footer's Load more. Absent on
@@ -122,26 +161,71 @@ export function useRecordChronology({
   loadMore?: RecordTimeline;
   // The per-row verbs (Reply, Relink). Absent on a surface that offers none.
   renderActions?: (activity: Activity) => ReactNode;
-  // The record's currency, for a minor-unit field in the changes list. Absent
-  // on a record type that holds no money — the formatter says so rather than
-  // printing a bare integer under a currency it was never denominated in.
-  currency?: string | null;
+  // Everything a stored value needs to be read as what it MEANS rather than as
+  // the shape it is kept in: the record's currency for a minor-unit column, the
+  // record's zone for a timestamp, and a resolver for the ids a change row
+  // holds. One object because they travel together — a row that scaled its
+  // money and still printed a uuid would be half-read.
+  values: HistoryValueCtx;
 }>): RecordChronology {
   const t = useT();
-  const { locale } = useLocale();
   const viewerId = useViewerId();
-  const wantsChanges = filter !== "activities";
+  const wantsChanges = filter !== "activities" && !narrowed;
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
-  const changeRows = changes.data?.pages.flatMap((page) => page.data) ?? [];
-  const activityEntries = activityTimeline(activities, viewerId, renderActions);
+  // `page.data ?? []`, not `page.data`: a 200 with no body is a shape the
+  // contract permits and the overlay mirror actually returns, and flattening
+  // it yielded an `undefined` row that the mapper below dereferenced. The
+  // activity timeline has guarded this since the same payload crashed it; the
+  // change list only started meeting it now that ALL is the default filter and
+  // every record page reads changes on open.
+  const changeRows =
+    changes.data?.pages.flatMap((page) => page.data ?? []) ?? [];
+  // The people on each exchange, named through the same resolver the change
+  // rows use for their stored ids. One resolver for both feeds, because a
+  // chronology that named a person on a mail and not on the field edit beside
+  // it would look like two different lists.
+  const activityEntries = activityTimeline(
+    activities,
+    viewerId,
+    renderActions,
+    values.nameOf
+      ? {
+          nameOf: (entityType, entityId) =>
+            entityType === "person" ? values.nameOf?.(entityId) : undefined,
+          t,
+          locale: values.locale,
+        }
+      : undefined,
+  );
   const changeEntries = changeTimeline(
     changeRows,
     (field) => coldFieldLabel(field, t),
-    { currency, locale },
+    values,
+    t("timeline.fieldUpdated"),
     viewerId,
   );
-  const loading = wantsChanges && changes.isPending;
-  const failed = wantsChanges && changes.isError;
+  // Loading means NOTHING IS ON SCREEN YET, not "one of the two reads is still
+  // out". On the combined view the activities usually arrive first — the 360
+  // seeds them — and blanking them behind a skeleton until the change history
+  // lands takes rows away from a reader who already had them. It matters now
+  // that ALL is the default: every record page would open on a skeleton and
+  // then fill in.
+  // Rows already on screen are what makes a second feed's wait bearable, and
+  // only the COMBINED cut has any: on the changes cut the change feed is the
+  // whole list, so its wait and its failure are the section's own however many
+  // exchanges the record holds.
+  const holdingRows = filter === "all" && activityEntries.length > 0;
+  const loading = wantsChanges && changes.isPending && !holdingRows;
+  // Failure is judged the same way, and for the same reason: on the combined
+  // view a change history that could not be read must not erase the exchanges
+  // that WERE read. A reader who can see the conversation is better served by
+  // it than by a page saying the whole chronology is unavailable when half of
+  // it is on screen.
+  //
+  // The half that failed still goes unreported here, which is the gap worth
+  // naming: the notice belongs beside the rows rather than instead of them,
+  // and that is a change to what the footer says rather than to this test.
+  const failed = wantsChanges && changes.isError && !holdingRows;
 
   if (filter === "activities") {
     return {
@@ -153,6 +237,9 @@ export function useRecordChronology({
       changes,
       loading: false,
       failed: false,
+      // The Activities cut reads no changes, so there is no failure of theirs
+      // to report on it.
+      changesUnread: false,
       changesAreTheLimit: false,
       activities: loadMore,
     };
@@ -164,15 +251,29 @@ export function useRecordChronology({
       changes,
       loading,
       failed,
+      changesUnread: false,
       changesAreTheLimit: changes.hasNextPage,
       activities: undefined,
     };
   }
+  // The change feed joins the merge only once it has ANSWERED. A feed that has
+  // more rows and has loaded none is blind — its newest row is unknown, so no
+  // part of the merge is provably ordered and mergeChronology correctly
+  // returns nothing. But a read still in flight, or one that failed, is not a
+  // feed with more rows: it is a feed with no rows yet, and treating the two
+  // alike blanked the whole chronology on every record open once ALL became
+  // the default.
+  //
+  // The exchanges still say they are cut, because they are.
+  const changesAnswered =
+    wantsChanges && !changes.isPending && !changes.isError;
   const merged = mergeChronology<TimelineEntry>(
-    [
-      { rows: activityEntries, hasMore: activitiesHaveMore },
-      { rows: changeEntries, hasMore: changes.hasNextPage },
-    ],
+    changesAnswered
+      ? [
+          { rows: activityEntries, hasMore: activitiesHaveMore },
+          { rows: changeEntries, hasMore: changes.hasNextPage },
+        ]
+      : [{ rows: activityEntries, hasMore: activitiesHaveMore }],
     (entry) => entry.atIso,
   );
   return {
@@ -181,6 +282,7 @@ export function useRecordChronology({
     changes,
     loading,
     failed,
+    changesUnread: wantsChanges && changes.isError,
     changesAreTheLimit: changesOwnTheCut(
       changes.hasNextPage,
       activitiesHaveMore,
@@ -339,12 +441,17 @@ export function chronologyNotice(
   if (count > 0) {
     return undefined;
   }
+  // The caller's own sentence covers the combined cut as well as the narrow
+  // one: an empty ALL is an empty RECORD, and what a reader needs then is what
+  // would land here and how — which is the sentence the caller wrote about its
+  // own record, not the generic one about a merge. Only the changes cut has a
+  // fact of its own to state.
   return (
     <EmptyState>
       {t(
-        timeline.filter === "activities"
-          ? activitiesEmptyKey
-          : CHRONOLOGY_EMPTY_KEYS[timeline.filter],
+        timeline.filter === "changes"
+          ? CHRONOLOGY_EMPTY_KEYS.changes
+          : activitiesEmptyKey,
       )}
     </EmptyState>
   );

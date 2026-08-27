@@ -67,7 +67,7 @@ describe("mergeChronology", () => {
     expect(merged.truncated).toBe(false);
   });
 
-  it("cuts at the oldest row of a feed that has more, so the merge has no invisible gaps", () => {
+  it("cuts the OTHER feed's rows at a truncated feed's oldest, so the merge has no invisible gaps", () => {
     // The activity feed stops at 2026-02-01 and has older rows unfetched.
     // A change from January must NOT render under it: between them sit
     // activities nobody has loaded.
@@ -78,14 +78,22 @@ describe("mergeChronology", () => {
       ],
       at,
     );
-    expect(merged.rows.map(at)).toEqual(["2026-03-01", "2026-02-15"]);
+    // The activity feed's own 2026-02-01 stays — it is a row we are holding,
+    // and nothing unloaded sits above it. January's change goes: activities
+    // nobody has fetched sit between it and the row above.
+    expect(merged.rows.map(at)).toEqual([
+      "2026-03-01",
+      "2026-02-15",
+      "2026-02-01",
+    ]);
     expect(merged.truncated).toBe(true);
   });
 
-  it("drops the boundary row itself, because the feeds page on (time, id)", () => {
-    // Two activities share a second and the page broke between them. Keeping
-    // rows AT the boundary would render one of them and silently omit the
-    // other — the same invisible gap, one row further down.
+  it("drops ANOTHER feed's row at the boundary, because the feeds page on (time, id)", () => {
+    // The change shares a second with the activity feed's oldest loaded row,
+    // and that feed pages on (time, id) — so an activity at the same instant
+    // may sit unloaded above the change. The change goes; the activity that
+    // DEFINES the boundary stays, because it is a row we are holding.
     const merged = mergeChronology(
       [
         { rows: [row("2026-03-01"), row("2026-02-01")], hasMore: true },
@@ -93,13 +101,29 @@ describe("mergeChronology", () => {
       ],
       at,
     );
+    expect(merged.rows.map(at)).toEqual(["2026-03-01", "2026-02-01"]);
+    expect(merged.truncated).toBe(true);
+  });
+
+  it("keeps every row a lone truncated feed has loaded", () => {
+    // Its own paging hides rows OLDER than its oldest, never rows between two
+    // it returned — so cutting it at its own floor dropped the only row it
+    // had and rendered an empty chronology over a list it was holding.
+    const merged = mergeChronology(
+      [
+        { rows: [row("2026-03-01")], hasMore: true },
+        { rows: [], hasMore: false },
+      ],
+      at,
+    );
     expect(merged.rows.map(at)).toEqual(["2026-03-01"]);
     expect(merged.truncated).toBe(true);
   });
 
-  it("takes the newest boundary when both feeds have more", () => {
-    // The second feed loaded down to 2026-02-20 and has more, so nothing at
-    // or below that instant is provably complete.
+  it("cuts each feed at the other's floor when both have more", () => {
+    // Neither feed has an unloaded row newer than the other's oldest, so both
+    // boundary rows are provably placed and both stay. What each feed hides
+    // is older than its own floor, and that is what `truncated` says.
     const merged = mergeChronology(
       [
         { rows: [row("2026-03-01"), row("2026-02-01")], hasMore: true },
@@ -107,7 +131,11 @@ describe("mergeChronology", () => {
       ],
       at,
     );
-    expect(merged.rows.map(at)).toEqual(["2026-03-05", "2026-03-01"]);
+    expect(merged.rows.map(at)).toEqual([
+      "2026-03-05",
+      "2026-03-01",
+      "2026-02-20",
+    ]);
     expect(merged.truncated).toBe(true);
   });
 
