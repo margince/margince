@@ -24,6 +24,29 @@ API_BASE="${API_BASE:-$(dev_app_base_url)}"
 ADMIN_EMAIL="${ADMIN_EMAIL:-admin@demo.test}"
 ADMIN_PASSWORD="${ADMIN_PASSWORD:-demo-password-123}"
 
+# The BOOTSTRAP password, which is not the one anybody signs in with.
+#
+# `make dev` writes config/margince-admin-password and leaves it alone, so a
+# checkout where `make seed-dev` has already run holds demo-password-123 there
+# and a plain login works. A FRESH checkout does not: dev.sh writes
+# `operator-supplied-first-password` and the admin is on the first-login hold,
+# so signing in with the documented password fails outright.
+#
+# That is exactly what happened the first time this lane ran on GitHub — "could
+# not sign in as admin@demo.test", 30 seconds in, having driven no scenario.
+# Locally it had never been seen, because every local checkout had been seeded
+# by hand at some point.
+#
+# Read the FILE rather than keeping a copy of the default in step with dev.sh,
+# which is what scripts/seed-dev.sh does and for the same reason. A lane that
+# keeps the file elsewhere passes BOOTSTRAP_PASSWORD; the literal is the last
+# resort for a stack booted by hand.
+BOOTSTRAP_PASSWORD_FILE="${BOOTSTRAP_PASSWORD_FILE:-config/margince-admin-password}"
+if [ -z "${BOOTSTRAP_PASSWORD:-}" ] && [ -r "$BOOTSTRAP_PASSWORD_FILE" ]; then
+  BOOTSTRAP_PASSWORD="$(cat "$BOOTSTRAP_PASSWORD_FILE")"
+fi
+BOOTSTRAP_PASSWORD="${BOOTSTRAP_PASSWORD:-operator-supplied-first-password}"
+
 COOKIES="$(mktemp)"
 trap 'rm -f "$COOKIES"' EXIT
 
@@ -133,8 +156,26 @@ login_as() {
 # backend/tools/seed-demo/apiclient.go does, and for the same reason.
 DETOUR_PASSWORD="${DETOUR_PASSWORD:-demo-password-123-first-change}"
 
-login_as "$ADMIN_PASSWORD" || {
-  echo "could not sign in as $ADMIN_EMAIL" >&2; exit 1; }
+# Sign in with the chosen password, or fall back to the bootstrap one and
+# replace it. Both paths end with the admin owning ADMIN_PASSWORD.
+if ! login_as "$ADMIN_PASSWORD"; then
+  if ! login_as "$BOOTSTRAP_PASSWORD"; then
+    echo "could not sign in as $ADMIN_EMAIL with either the chosen password or" >&2
+    echo "the bootstrap one ($BOOTSTRAP_PASSWORD_FILE). The api bootstraps the demo" >&2
+    echo "organization at boot from config/margince.yaml; if those credentials" >&2
+    echo "changed, reset the dev database and restart the stack." >&2
+    exit 1
+  fi
+  echo "  signed in with the operator-supplied password; replacing it"
+  first_body="$(printf '{"current_password":"%s","new_password":"%s"}' \
+    "$BOOTSTRAP_PASSWORD" "$ADMIN_PASSWORD")"
+  if [ "$(status_of POST /auth/change-password "$first_body")" != "204" ]; then
+    echo "could not replace the operator-supplied password" >&2; exit 1
+  fi
+  login_as "$ADMIN_PASSWORD" || {
+    echo "could not sign in with the newly chosen password" >&2; exit 1; }
+  echo "  $ADMIN_EMAIL now owns its own password"
+fi
 
 # A write the admin is always allowed to attempt. 403 here means the hold, not
 # a permission problem — this account is an admin.
