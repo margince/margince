@@ -18909,6 +18909,11 @@ export interface components {
             evidence?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Format: uuid
+             * @description The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
+             */
+            undid_audit_log_id?: string | null;
             undoable?: components["schemas"]["Undoability"];
         };
         FieldHistoryListResponse: {
@@ -19037,6 +19042,11 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             summary: string;
+            /**
+             * Format: uuid
+             * @description The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
+             */
+            undid_audit_log_id?: string | null;
             undoable?: components["schemas"]["Undoability"];
         };
         /**

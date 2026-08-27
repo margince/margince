@@ -26035,6 +26035,16 @@ components:
         actor_id: { type: string }
         passport_id: { type: [string, 'null'], format: uuid, description: Agent Seat Passport that authorized the change; present for agent actors only. }
         evidence: { type: [object, 'null'], additionalProperties: true, description: Grounding evidence for an agent-authored change; present for agent actors only. }
+        undid_audit_log_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The history entry this one REVERSES, set on a row written by a restore and
+            null on every other row. A reader pairs the two rather than showing a reversal
+            as a fresh change. The opposite direction is deliberately NOT a field here: a
+            row that HAS been reversed already says so through `undoable.reason =
+            already_undone`, which is computed for the whole record rather than for one
+            page, so a second field would be a second answer to a question already asked.
         undoable:
           $ref: '#/components/schemas/Undoability'
 
@@ -26183,6 +26193,16 @@ components:
         before: { type: [object, 'null'], additionalProperties: true }
         after: { type: [object, 'null'], additionalProperties: true }
         summary: { type: string }
+        undid_audit_log_id:
+          type: [string, 'null']
+          format: uuid
+          description: >-
+            The history entry this one REVERSES, set on a row written by a restore and
+            null on every other row. A reader pairs the two rather than showing a reversal
+            as a fresh change. The opposite direction is deliberately NOT a field here: a
+            row that HAS been reversed already says so through `undoable.reason =
+            already_undone`, which is computed for the whole record rather than for one
+            page, so a second field would be a second answer to a question already asked.
         undoable:
           $ref: '#/components/schemas/Undoability'
 

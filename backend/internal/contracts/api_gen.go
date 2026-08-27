@@ -13561,6 +13561,9 @@ type AuditHistoryEntry struct {
 	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
 	Summary        string  `json:"summary"`
 
+	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
+	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`
+
 	// Undoable Whether this history entry can be put back, and if not, why. COMPUTED per read,
 	// never stored: a stored flag is a second copy of a question the audit spine already
 	// answers, and it goes stale the moment anyone else writes.
@@ -17084,6 +17087,9 @@ type FieldHistoryEntry struct {
 
 	// PassportId Agent Seat Passport that authorized the change; present for agent actors only.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
+
+	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
+	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`
 
 	// Undoable Whether this history entry can be put back, and if not, why. COMPUTED per read,
 	// never stored: a stored flag is a second copy of a question the audit spine already
