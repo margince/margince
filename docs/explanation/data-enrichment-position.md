@@ -278,7 +278,8 @@ I do not claim that LinkedIn's terms permit anything beyond this private graph u
 
 The design: Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91. And the same email asks the contact to grant or decline marketing consent, with the answer landing on the consent proof log and the send itself logged in the record's history.
 
-This flow actively reduces the risk of everything else on this page.
+Once it ships, this flow actively reduces the risk of everything else on this
+page.
 
 ### Tier B: build with controls, counsel signs off first
 
