@@ -3661,6 +3661,11 @@ export const en = {
     "Mail capture isn't configured in this deployment.",
   "connectors.reconnect": "Reconnect",
   "connectors.disconnect": "Disconnect",
+  "connectors.signatureEnrich.label": "Read signatures from this mailbox",
+  "connectors.signatureEnrich.followingDefault":
+    "Following your organization's setting. Change it here and this mailbox keeps its own answer.",
+  "connectors.signatureEnrich.ownAnswer":
+    "This mailbox's own answer, kept whatever your organization's setting becomes.",
   "connectors.disconnectTitle": "Disconnect this inbox?",
   "connectors.disconnectBody":
     "This will delete the credential we stored for this mailbox. Capture stops immediately; everything already captured stays in your CRM, and reconnecting will ask for permission again.",

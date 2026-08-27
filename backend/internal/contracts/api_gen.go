@@ -13984,6 +13984,15 @@ type CaptureConnection struct {
 	// Scopes The granted provider scopes.
 	Scopes []string `json:"scopes"`
 
+	// SignatureEnrichEnabled This mailbox's own answer to the nightly signature pass, or null to follow the
+	// tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
+	// a missing value: a mailbox that never chose moves with the default, and one that
+	// did keeps its answer whatever the default becomes.
+	//
+	// False means no mail from this mailbox is ever SELECTED for enrichment — the pass
+	// never reads it, rather than reading it and discarding the result.
+	SignatureEnrichEnabled *bool `json:"signature_enrich_enabled,omitempty"`
+
 	// Status Connection state; `reauth_required` when the stored token expired/was revoked upstream.
 	Status CaptureConnectionStatus `json:"status"`
 
@@ -23803,6 +23812,12 @@ type SetRoleObjectGrantRequest struct {
 	Update bool `json:"update"`
 }
 
+// SetSignatureEnrichmentRequest One mailbox's answer to the nightly signature pass.
+type SetSignatureEnrichmentRequest struct {
+	// Enabled true or false is this mailbox's own answer; null follows the tenant default.
+	Enabled *bool `json:"enabled"`
+}
+
 // Signal A surfaced "something changed / worth attention" item. Mirrors the `signal` table:
 // company-level and consent-gated by construction — the only mandatory attribution is
 // organizational (`resolved_org_id` after resolution); `resolved_person_id` is optional
@@ -29616,6 +29631,9 @@ type PreviewConnectorBackfillJSONRequestBody = BackfillPreviewRequest
 
 // ConnectConnectorJSONRequestBody defines body for ConnectConnector for application/json ContentType.
 type ConnectConnectorJSONRequestBody = ConnectConnectorRequest
+
+// SetConnectorSignatureEnrichmentJSONRequestBody defines body for SetConnectorSignatureEnrichment for application/json ContentType.
+type SetConnectorSignatureEnrichmentJSONRequestBody = SetSignatureEnrichmentRequest
 
 // CreateConsentPurposeJSONRequestBody defines body for CreateConsentPurpose for application/json ContentType.
 type CreateConsentPurposeJSONRequestBody = CreateConsentPurposeRequest
@@ -38079,6 +38097,9 @@ type ServerInterface interface {
 	// Disconnect the calling user's mail/calendar capture.
 	// (POST /connectors/{provider}/disconnect)
 	DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
+	// Set this mailbox's own answer to the nightly signature pass.
+	// (PUT /connectors/{provider}/signature-enrichment)
+	SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider)
 	// List the workspace's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request, params ListConsentPurposesParams)
@@ -39921,6 +39942,12 @@ func (_ Unimplemented) ConnectConnector(w http.ResponseWriter, r *http.Request, 
 // Disconnect the calling user's mail/calendar capture.
 // (POST /connectors/{provider}/disconnect)
 func (_ Unimplemented) DisconnectConnector(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Set this mailbox's own answer to the nightly signature pass.
+// (PUT /connectors/{provider}/signature-enrichment)
+func (_ Unimplemented) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request, provider CaptureProvider) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -46613,6 +46640,38 @@ func (siw *ServerInterfaceWrapper) DisconnectConnector(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.DisconnectConnector(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetConnectorSignatureEnrichment operation middleware
+func (siw *ServerInterfaceWrapper) SetConnectorSignatureEnrichment(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider CaptureProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetConnectorSignatureEnrichment(w, r, provider)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64719,6 +64778,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/connectors/{provider}/disconnect", wrapper.DisconnectConnector)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/connectors/{provider}/signature-enrichment", wrapper.SetConnectorSignatureEnrichment)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/consent-purposes", wrapper.ListConsentPurposes)

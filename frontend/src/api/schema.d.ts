@@ -5163,6 +5163,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/connectors/{provider}/signature-enrichment": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
+                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
+                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
+                 *     messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Set this mailbox's own answer to the nightly signature pass.
+         * @description The mailbox owner's switch, and an admin's on their behalf. `enabled` is tri-state:
+         *     true or false is this mailbox's own answer, and null hands the question back to the
+         *     tenant default so a later change to that default moves this mailbox with it.
+         *
+         *     Switched off, nothing from this mailbox is selected for the pass at all — the mail is
+         *     not read for enrichment and then discarded, it is never read. Audited like every other
+         *     change to a connection. Human-only: an agent never changes a capture posture.
+         */
+        put: operations["setConnectorSignatureEnrichment"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/connectors/{provider}/backfill/preview": {
         parameters: {
             query?: never;
@@ -11228,10 +11263,25 @@ export interface components {
             next_sync_due_at?: string | null;
             /** @description Summary of the connection's backfill run; state `none` when never run. */
             backfill?: components["schemas"]["BackfillStatus"];
+            /**
+             * @description This mailbox's own answer to the nightly signature pass, or null to follow the
+             *     tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
+             *     a missing value: a mailbox that never chose moves with the default, and one that
+             *     did keeps its answer whatever the default becomes.
+             *
+             *     False means no mail from this mailbox is ever SELECTED for enrichment — the pass
+             *     never reads it, rather than reading it and discarding the result.
+             */
+            signature_enrich_enabled?: boolean | null;
             /** Format: date-time */
             readonly created_at?: string;
             /** Format: date-time */
             readonly updated_at?: string;
+        };
+        /** @description One mailbox's answer to the nightly signature pass. */
+        SetSignatureEnrichmentRequest: {
+            /** @description true or false is this mailbox's own answer; null follows the tenant default. */
+            enabled: boolean | null;
         };
         WorkspaceEmailDomain: {
             /** @description The domain, IDNA-folded and lowercased. Covers its subdomains. */
@@ -31954,6 +32004,42 @@ export interface operations {
                 content?: never;
             };
             401: components["responses"]["Unauthorized"];
+            404: components["responses"]["NotFound"];
+        };
+    };
+    setConnectorSignatureEnrichment: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /**
+                 * @description The mail/calendar provider (A51 email+calendar parity). Every provider connects through
+                 *     the same operation; gmail/gcal/graph authorize by OAuth redirect, imap by credential
+                 *     submission. `gmail`/`gcal` = Google mail+calendar, `graph` = Microsoft 365 (Outlook via
+                 *     Graph), `imap` = the self-hostable IMAP engine. WhatsApp/Telegram connect is the
+                 *     messaging-channels surface, not this one.
+                 */
+                provider: components["parameters"]["CaptureProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetSignatureEnrichmentRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection, with its answer as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["CaptureConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
         };
     };

@@ -164,6 +164,12 @@ type ConnectionView struct {
 	// Backfill is the newest CAP-DDL-4 run, nil when never started —
 	// the list surface's per-connection summary (contract state "none").
 	Backfill *BackfillRun
+
+	// SignatureEnrichEnabled is this mailbox's own answer to the nightly
+	// signature pass, nil to follow the tenant default. Nil is a third state
+	// rather than a missing value: a mailbox that never chose moves with the
+	// default, and one that did keeps its answer whatever the default becomes.
+	SignatureEnrichEnabled *bool
 }
 
 // Connections lists the CALLING human's own standing connections in the
@@ -178,7 +184,8 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 	err := r.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT c.id, c.provider, c.status, c.sync_cursor, c.watch_expires_at, c.provider_scopes,
-			       c.account_label, s.last_synced_at, s.last_error_class, s.next_sync_at
+			       c.account_label, c.signature_enrich_enabled,
+			       s.last_synced_at, s.last_error_class, s.next_sync_at
 			FROM capture_connection c
 			LEFT JOIN capture_sync_state s ON s.connection_id = c.id
 			WHERE c.user_id = $1 AND c.archived_at IS NULL
@@ -190,7 +197,8 @@ func (r *Registry) Connections(ctx context.Context) ([]ConnectionView, error) {
 		for rows.Next() {
 			var v ConnectionView
 			if err := rows.Scan(&v.ID, &v.Provider, &v.Status, &v.Cursor, &v.WatchExpiresAt, &v.ProviderScopes,
-				&v.AccountLabel, &v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt); err != nil {
+				&v.AccountLabel, &v.SignatureEnrichEnabled,
+				&v.LastSyncedAt, &v.LastErrorClass, &v.NextSyncDueAt); err != nil {
 				return err
 			}
 			out = append(out, v)

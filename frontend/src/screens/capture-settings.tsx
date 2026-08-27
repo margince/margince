@@ -14,7 +14,10 @@ import { problemMessageOf, QueryGate, throwProblem } from "./common";
 // may change it, so the toggle is refused (never hidden) for other roles — a
 // rep still sees whether auto-enrich is on. Mirrors the WebhooksCard gating.
 
-function useCaptureSettings() {
+// Exported because the connectors card reads it too: a mailbox row has to say
+// whether its switch is showing that mailbox's own answer or the organization's,
+// and two queries against one path are two answers that can disagree on screen.
+export function useCaptureSettings() {
   return useQuery({
     queryKey: ["capture-settings"],
     queryFn: async () => {

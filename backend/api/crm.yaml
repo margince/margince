@@ -7878,6 +7878,38 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /connectors/{provider}/signature-enrichment:
+    parameters:
+      - $ref: '#/components/parameters/CaptureProvider'
+    put:
+      tags: [Connectors]
+      operationId: setConnectorSignatureEnrichment
+      summary: Set this mailbox's own answer to the nightly signature pass.
+      description: |
+        The mailbox owner's switch, and an admin's on their behalf. `enabled` is tri-state:
+        true or false is this mailbox's own answer, and null hands the question back to the
+        tenant default so a later change to that default moves this mailbox with it.
+
+        Switched off, nothing from this mailbox is selected for the pass at all — the mail is
+        not read for enrichment and then discarded, it is never read. Audited like every other
+        change to a connection. Human-only: an agent never changes a capture posture.
+      x-agent-access: human-only
+      security: [ { cookieAuth: [] } ]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetSignatureEnrichmentRequest' }
+      responses:
+        '200':
+          description: The connection, with its answer as it now stands.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/CaptureConnection' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /connectors/{provider}/backfill/preview:
     parameters:
       - $ref: '#/components/parameters/CaptureProvider'
@@ -17100,8 +17132,28 @@ components:
         last_sync_error_class: { type: [string, 'null'], description: 'rate_limited | unreachable | auth | history_gone | internal — class only, detail in system_log.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
         backfill: { allOf: [ { $ref: '#/components/schemas/BackfillStatus' } ], description: 'Summary of the connection''s backfill run; state `none` when never run.' }
+        signature_enrich_enabled:
+          type: [boolean, 'null']
+          description: |
+            This mailbox's own answer to the nightly signature pass, or null to follow the
+            tenant default (`CaptureSettings.signature_enrich`). Null is a third state and not
+            a missing value: a mailbox that never chose moves with the default, and one that
+            did keeps its answer whatever the default becomes.
+
+            False means no mail from this mailbox is ever SELECTED for enrichment — the pass
+            never reads it, rather than reading it and discarding the result.
         created_at: { type: string, format: date-time, readOnly: true }
         updated_at: { type: string, format: date-time, readOnly: true }
+    SetSignatureEnrichmentRequest:
+      type: object
+      additionalProperties: false
+      required: [enabled]
+      description: One mailbox's answer to the nightly signature pass.
+      properties:
+        enabled:
+          type: [boolean, 'null']
+          description: 'true or false is this mailbox''s own answer; null follows the tenant default.'
+
     WorkspaceEmailDomain:
       type: object
       required: [domain, source, verified]

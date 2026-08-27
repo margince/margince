@@ -3595,6 +3595,11 @@ export const vi = {
     "Việc thu thập thư chưa được cấu hình trên bản triển khai này.",
   "connectors.reconnect": "Kết nối lại",
   "connectors.disconnect": "Ngắt kết nối",
+  "connectors.signatureEnrich.label": "Đọc chữ ký từ hộp thư này",
+  "connectors.signatureEnrich.followingDefault":
+    "Đang theo thiết lập của tổ chức. Đổi ở đây thì hộp thư này giữ lựa chọn riêng.",
+  "connectors.signatureEnrich.ownAnswer":
+    "Lựa chọn riêng của hộp thư này, giữ nguyên dù thiết lập của tổ chức thay đổi.",
   "connectors.disconnectTitle": "Ngắt kết nối hộp thư này?",
   "connectors.disconnectBody":
     "Thao tác này xoá thông tin xác thực chúng tôi đã lưu cho hộp thư. Việc thu thập dừng ngay; mọi thứ đã thu thập vẫn nằm trong CRM của bạn, và kết nối lại thì phải xin quyền lần nữa.",

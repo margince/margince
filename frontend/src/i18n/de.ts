@@ -3625,6 +3625,11 @@ export const de = {
     "Die Mail-Erfassung ist in dieser Installation nicht konfiguriert.",
   "connectors.reconnect": "Neu verbinden",
   "connectors.disconnect": "Trennen",
+  "connectors.signatureEnrich.label": "Signaturen aus diesem Postfach lesen",
+  "connectors.signatureEnrich.followingDefault":
+    "Folgt der Einstellung Ihrer Organisation. Wird sie hier geändert, behält dieses Postfach seine eigene Antwort.",
+  "connectors.signatureEnrich.ownAnswer":
+    "Eigene Antwort dieses Postfachs — bleibt bestehen, was auch immer Ihre Organisation einstellt.",
   "connectors.disconnectTitle": "Dieses Postfach trennen?",
   "connectors.disconnectBody":
     "Dies löscht die für dieses Postfach gespeicherte Zugangsdaten. Die Erfassung stoppt sofort; alles bereits Erfasste bleibt in deinem CRM, und beim erneuten Verbinden wird wieder um Erlaubnis gebeten.",

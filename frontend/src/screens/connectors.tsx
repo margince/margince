@@ -9,11 +9,13 @@ import { Callout } from "../design-system/callout";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { Switch } from "../design-system/switch";
 import { formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { BackfillPanel } from "./backfill";
+import { useCaptureSettings } from "./capture-settings";
 import { problemCode, problemMessageOf, throwProblem } from "./common";
 import {
   errorClassKey,
@@ -662,6 +664,7 @@ function ConnectorRow({
           </div>
         }
       />
+      {conn.status === "connected" && <SignatureEnrichmentRow conn={conn} />}
       {conn.status === "connected" && (
         <div className="connector-backfill">
           <BackfillPanel provider={conn.provider} initial={conn.backfill} />
@@ -669,6 +672,71 @@ function ConnectorRow({
       )}
     </>
   );
+}
+
+// This mailbox's own answer to the nightly signature pass — a row of its own
+// under the connection it belongs to, because it is a DECISION about that
+// mailbox rather than a fact about its connection state.
+//
+// Tri-state on the wire, two states on screen. A Switch has no third position,
+// so what a reader sees is on or off and what they are told beside it is
+// whether that answer is this mailbox's own or the organization's — the
+// description says which. Turning the switch makes it the mailbox's own; there
+// is no control for handing the question back, because a reader who wants that
+// wants "follow the organization", and no product surface has ever needed to
+// say it twice.
+function SignatureEnrichmentRow({
+  conn,
+}: Readonly<{ conn: CaptureConnection }>) {
+  const t = useT();
+  const settings = useCaptureSettings();
+  const save = useSetSignatureEnrichment(conn.provider);
+  const workspaceDefault = settings.data?.signature_enrich ?? true;
+  const own = conn.signature_enrich_enabled;
+  const effective = own ?? workspaceDefault;
+  return (
+    <SettingRow
+      testId={`connector-${conn.provider}-signature-enrich`}
+      label={t("connectors.signatureEnrich.label")}
+      description={
+        own === null || own === undefined
+          ? t("connectors.signatureEnrich.followingDefault")
+          : t("connectors.signatureEnrich.ownAnswer")
+      }
+      control={
+        <Switch
+          testId={`connector-${conn.provider}-signature-enrich-toggle`}
+          label={t("connectors.signatureEnrich.label")}
+          labelHidden
+          checked={effective}
+          disabled={save.isPending}
+          onChange={(next) => save.mutate(next)}
+        />
+      }
+    />
+  );
+}
+
+function useSetSignatureEnrichment(provider: CaptureConnection["provider"]) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    // Takes the new answer as a VARIABLE rather than closing over the row's
+    // current one: the click belongs to the committed render, and a mutationFn
+    // reading render state would answer with whatever the previous render held
+    // (frontend/AGENTS.md, mutation-variable-coverage).
+    mutationFn: async (enabled: boolean) => {
+      const { error } = await api.PUT(
+        "/connectors/{provider}/signature-enrichment",
+        { params: { path: { provider } }, body: { enabled } },
+      );
+      if (error) {
+        throwProblem(error);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["connectors"] });
+    },
+  });
 }
 
 /**
