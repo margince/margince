@@ -4,7 +4,10 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { PersonProviderSection } from "./personprovider";
-import { providerCompletedProfile } from "./personprovider.fixtures";
+import {
+  completedProviderRun,
+  providerCompletedProfile,
+} from "./personprovider.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -28,13 +31,13 @@ afterEach(() => {
  *  that kept a location or a department would be a payload this state cannot
  *  produce — and would quietly prove the plate on a profile that has data.
  *
- *  `provider` is absent for the same reason: it is filled from the newest run,
- *  so the panel has to name the provider itself to send a request at all. */
+ *  `provider` is set: a section belongs to one named vendor whether or not a
+ *  run exists, which is what lets the reader tell who they are about to pay. */
 function neverRun(): Profile {
   return {
     ...providerCompletedProfile,
     state: "never_run",
-    provider: undefined,
+    provider: "surfe",
     retrieved_at: null,
     emails: [],
     mobile_phones: [],
@@ -61,7 +64,7 @@ function mount(profile: Profile, run: () => Response) {
   });
   render(
     <StoryProviders>
-      <PersonProviderSection personId="p-1" profile={profile} />
+      <PersonProviderSection personId="p-1" profiles={[profile]} />
     </StoryProviders>,
   );
   return posted;
@@ -94,7 +97,7 @@ describe("a contact nobody has bought data for", () => {
     const title = await screen.findByText(
       "Nothing bought for this contact yet",
     );
-    expect(await screen.findByText(/It spends credits/)).toBeDefined();
+    expect(await screen.findByText(/It spends Surfe credits/)).toBeDefined();
 
     // The verb lives INSIDE the plate, which is the whole point: a button that
     // stayed in the header corner would satisfy every text assertion above
@@ -104,7 +107,7 @@ describe("a contact nobody has bought data for", () => {
     expect(plate?.querySelector(".empty-action button")).not.toBeNull();
   });
 
-  it("asks the provider named in the contract when the profile carries none", async () => {
+  it("spends with the provider whose section the button sits in", async () => {
     const user = userEvent.setup();
     const posted = mount(neverRun(), queuedRun);
 
@@ -178,5 +181,73 @@ describe("a contact whose data was already bought", () => {
     expect(
       screen.queryByText("Nothing bought for this contact yet"),
     ).toBeNull();
+  });
+});
+
+describe("two providers connected", () => {
+  it("names each section and keeps one provider's values out of the other", async () => {
+    const bought = { ...providerCompletedProfile, provider: "surfe" as const };
+    const unasked = { ...neverRun(), provider: "acmedata" as const };
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-1": () =>
+        jsonResponse({ ...completedProviderRun, state: "completed" }),
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection personId="p-1" profiles={[bought, unasked]} />
+      </StoryProviders>,
+    );
+
+    // Each section says WHOSE it is. Without the name the reader cannot tell
+    // who sold them the address, nor who the button would spend with.
+    expect(await screen.findByText("Surfe")).toBeDefined();
+    expect(await screen.findByText("acmedata")).toBeDefined();
+
+    // The purchase belongs to the section of the provider that made it. A
+    // fold that mixed them would show this address under both headings.
+    const surfeSection = screen.getByText("Surfe").closest(".panel");
+    expect(surfeSection?.textContent?.includes(bought.emails[0].value)).toBe(
+      true,
+    );
+    const otherSection = screen.getByText("acmedata").closest(".panel");
+    expect(otherSection?.textContent?.includes(bought.emails[0].value)).toBe(
+      false,
+    );
+  });
+
+  it("offers a lookup per provider, so the reader chooses who to spend with", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "POST /people/p-1/enrichment-runs": (body) => {
+        posted.push(body);
+        return queuedRun();
+      },
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            { ...neverRun(), provider: "surfe" as const },
+            { ...neverRun(), provider: "acmedata" as const },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    // The SECOND section's button spends with the second provider. One shared
+    // button, or a body that named the wrong provider, would buy from whoever
+    // happened to be first.
+    const buttons = await screen.findAllByRole("button", {
+      name: /Look this contact up/,
+    });
+    expect(buttons.length).toBe(2);
+    await user.click(buttons[1]);
+
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({ provider: "acmedata" });
   });
 });

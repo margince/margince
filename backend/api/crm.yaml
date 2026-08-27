@@ -17811,8 +17811,16 @@ components:
 
     Provider:
       type: string
-      enum: [surfe]
-      description: Licensed provider adapter key; the domain/run contract remains provider-neutral.
+      pattern: '^[a-z][a-z0-9_]*$'
+      maxLength: 32
+      description: |
+        A licensed data provider registered in THIS installation; the domain/run contract
+        remains provider-neutral. Deliberately a pattern-constrained string rather than an
+        enum, for the reason `ProviderRef` gives for messaging transports: which providers
+        exist is a deployment fact — what this binary composed — so an enum would assert
+        that the legal set is identical everywhere, which is false. The registry refuses a
+        name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+        live set.
 
     ProviderConnectionStatus:
       type: string
@@ -18110,14 +18118,20 @@ components:
     PersonProviderProfile:
       type: object
       description: |
-        Separate “Provided by Surfe” snapshot for the Person360 response. Provider provenance is
-        not an underlying webpage citation; these values never silently overwrite canonical fields.
-      required: [state, categories_not_requested, emails, mobile_phones, job_history, departments, seniorities]
+        One connected provider's snapshot for the Person360 response, named by `provider`.
+        Provider provenance is not an underlying webpage citation; these values never silently
+        overwrite canonical fields. The reader sees one of these per connection, so every value
+        on the page says who was paid for it.
+      required: [provider, state, categories_not_requested, emails, mobile_phones, job_history, departments, seniorities]
       properties:
         state:
           type: string
           enum: [not_connected, not_eligible, never_run, queued, in_progress, completed, no_match, stale, invalid_credentials, insufficient_credits, rate_limited, provider_error, submission_unknown, completed_claims_unwritten]
-        provider: { $ref: '#/components/schemas/Provider' }
+        provider:
+          description: >-
+            Whose snapshot this is. Required: an entry in a list of providers that did not name
+            itself would leave the reader unable to tell who to ask, or who was already paid.
+          allOf: [{ $ref: '#/components/schemas/Provider' }]
         retrieved_at: { type: [string, 'null'], format: date-time }
         safe_status_code: { type: [string, 'null'] }
         categories_not_requested: { type: array, uniqueItems: true, items: { type: string } }
@@ -20048,13 +20062,19 @@ components:
             one row per project, work in motion first. Absent when the caller has no project
             grant, named in `sections_omitted` as `projects`.
           items: { $ref: '#/components/schemas/Organization360Project' }
-        provider_profile:
+        provider_profiles:
+          type: array
           description: >-
-            The purchased person-data snapshot (PO-EXT-9): what a connected provider
-            returned about this person, kept beside the canonical record and never
-            silently folded into it. Absent when the caller lacks the person grant,
-            named in `sections_omitted` as `provider_profile`.
-          allOf: [{ $ref: '#/components/schemas/PersonProviderProfile' }]
+            The purchased person-data snapshots (PO-EXT-9), one per CONNECTED provider:
+            what each returned about this person, kept beside the canonical record and
+            never silently folded into it. One entry per connection so a reader can see
+            who was paid for which value, and choose which provider to ask next; a
+            provider nobody has run yet is present with state `never_run` rather than
+            absent, because "we have not asked them" is the state the reader acts on.
+            Ordered by provider name so the sections do not reshuffle between reads.
+            Empty when no provider is connected. Absent when the caller lacks the person
+            grant, named in `sections_omitted` as `provider_profile`.
+          items: { $ref: '#/components/schemas/PersonProviderProfile' }
         relationship_changes:
           type: array
           description: >-

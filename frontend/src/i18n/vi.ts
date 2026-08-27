@@ -6147,7 +6147,7 @@ export const vi = {
   "provider.profile.lookingUp": "Đang hỏi nhà cung cấp. Việc này mất một lát.",
   "provider.profile.emptyTitle": "Chưa mua dữ liệu nào cho liên hệ này",
   "provider.profile.emptyBody":
-    "Một lượt tra cứu sẽ hỏi nhà cung cấp dữ liệu đã kết nối về liên hệ này, lấy những thông tin mà kết nối được đặt để mua. Việc đó tiêu tốn tín dụng, và những gì nhận được sẽ nằm cạnh hồ sơ chứ không ghi đè lên bất cứ điều gì đồng nghiệp đã nhập.",
+    "Một lượt tra cứu sẽ hỏi {provider} về liên hệ này, lấy những thông tin mà kết nối này được đặt để mua. Việc đó tiêu tốn tín dụng {provider}, và những gì nhận được sẽ nằm cạnh hồ sơ chứ không ghi đè lên bất cứ điều gì đồng nghiệp đã nhập.",
   "provider.profile.emails": "Địa chỉ email",
   "provider.profile.emailType.provider": "{type}, theo nhãn của nhà cung cấp",
   "provider.profile.emailType.requested":
