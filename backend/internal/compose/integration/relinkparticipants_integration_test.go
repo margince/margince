@@ -45,8 +45,11 @@ func TestRelinkRemovesTheDisplacedParticipantWhenTheTargetIsAlreadyOne(t *testin
 	act := seedRelinkActivity(t, e, "Quote follow-up")
 	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, act, her)
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'to', $2)`, act, her)
-	// He was on it too, in another role — which is a different row under
-	// uq_activity_participant, and used to be enough to skip the repoint.
+	// He was on it too, in ANOTHER role — a different row under
+	// uq_activity_participant, and no obstacle to the repoint, but enough to
+	// make the old guard skip it because that guard asked only about the
+	// person. The displaced row is promoted here; the same-role case below is
+	// the one that has to delete instead.
 	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'cc', $2)`, act, him)
 
 	if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
@@ -94,5 +97,33 @@ func TestRelinkMergesSeveralDisplacedParticipantsWithoutColliding(t *testing.T) 
 		if n := namedOn(t, e, act, p); n != 0 {
 			t.Errorf("%s is still named on the activity (%d row(s)) after being relinked away", name, n)
 		}
+	}
+}
+
+// The target already holds a row of the SAME shape, so there is nothing to
+// promote the displaced row into — it has to be deleted. This is the branch
+// the different-role case above cannot reach, and the one that decides whether
+// "merge" means merge or means duplicate.
+func TestRelinkDeletesTheDisplacedParticipantWhenTheTargetHoldsItsShape(t *testing.T) {
+	e := Setup(t)
+	admin := e.As(e.Rep1, nil, AdminPerms)
+	her, him := e.SeedPerson(t, "Ingrid Sattler", nil), e.SeedPerson(t, "Tomas Berg", nil)
+	act := seedRelinkActivity(t, e, "Quote follow-up")
+	e.WsExec(t, `INSERT INTO activity_link (activity_id, entity_type, person_id) VALUES ($1, 'person', $2)`, act, her)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'to', $2)`, act, her)
+	e.WsExec(t, `INSERT INTO activity_participant (activity_id, role, person_id) VALUES ($1, 'to', $2)`, act, him)
+
+	if _, err := e.Activities.RelinkActivity(admin, ids.From[ids.ActivityKind](act), activities.RelinkActivityInput{
+		EntityType: "person", EntityID: him, ReplaceExistingOfType: true,
+	}); err != nil {
+		t.Fatalf("relink: %v", err)
+	}
+
+	if n := namedOn(t, e, act, her); n != 0 {
+		t.Errorf("the displaced contact is still named on the activity (%d row(s))", n)
+	}
+	if n := namedOn(t, e, act, him); n != 1 {
+		t.Errorf("the target is named on %d row(s), want exactly 1 — its own row was already there, "+
+			"so the displaced one is removed rather than renamed onto it", n)
 	}
 }
