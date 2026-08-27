@@ -95,10 +95,16 @@ func (s *Service) connectedProviders(ctx context.Context, tx pgx.Tx) (map[string
 	return connected, nil
 }
 
-// namesToShow is every provider the page owes the reader a section for: the
-// connected ones, plus any that already hold a run or a purchase here. Sorted,
-// so the sections keep their order between reads rather than reshuffling under
-// somebody mid-click.
+// namesToShow collects the providers the page owes the reader a section for:
+// the connected ones, plus any that already hold a run or a purchase here.
+// Sorted, so the sections keep their order between reads rather than
+// reshuffling under somebody mid-click.
+//
+// Held by: TestAPurchaseSurvivesItsProviderBeingDisconnected and
+// TestSectionsKeepAStableOrderBetweenReads
+// (internal/compose/person360/providerpartition_test.go) — the first pins that
+// a provider with history but no connection is still named, the second the
+// order.
 func namesToShow(connected map[string]bool, runs []providerRunRow, claims []storedClaim) []string {
 	seen := map[string]bool{}
 	for name := range connected {

@@ -729,23 +729,25 @@ export const PageStory: Story = { name: "Page", render: () => <Page /> };
 // invitation is VISIBLE from a page the reader is already on.
 const neverBought: View = {
   ...populated,
-  provider_profiles: [{
-    ...providerCompletedProfile,
-    state: "never_run",
-    provider: "surfe",
-    retrieved_at: null,
-    emails: [],
-    mobile_phones: [],
-    linkedin_url: null,
-    current_employment: undefined,
-    job_history: [],
-    location: null,
-    departments: [],
-    seniorities: [],
-    latest_run: undefined,
-    contributing_runs: undefined,
-    categories_not_requested: [],
-  }],
+  provider_profiles: [
+    {
+      ...providerCompletedProfile,
+      state: "never_run",
+      provider: "surfe",
+      retrieved_at: null,
+      emails: [],
+      mobile_phones: [],
+      linkedin_url: null,
+      current_employment: undefined,
+      job_history: [],
+      location: null,
+      departments: [],
+      seniorities: [],
+      latest_run: undefined,
+      contributing_runs: undefined,
+      categories_not_requested: [],
+    },
+  ],
 };
 
 export const PageLookupWaiting: Story = {

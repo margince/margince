@@ -11,8 +11,8 @@ import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
-  providerBrandName,
   ProviderMark,
+  providerBrandName,
 } from "../design-system/provider-mark";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";

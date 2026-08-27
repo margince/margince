@@ -949,7 +949,10 @@ export function PersonResearchDrawer({
         {/* What was BOUGHT sits above what a public read found: it cost
             money, it is the firmer of the two, and a rep looking somebody up
             should see it before a page crawl's guesses. */}
-        <PersonProviderSection personId={personId} profiles={providerProfiles} />
+        <PersonProviderSection
+          personId={personId}
+          profiles={providerProfiles}
+        />
 
         {run.isLoading && (
           <p className="pe-prose">{t("person.research.running")}</p>

@@ -13,6 +13,11 @@
 -- operation with a receipt, not something a migration should do silently to
 -- somebody's paid-for data.
 
+-- Bounded for the reason the up migration states: these ALTERs block writers
+-- on tables they did not create, and an unbounded wait stalls every write for
+-- as long as a conflicting transaction stays open.
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE person_provider_claim
     ALTER COLUMN captured_by SET DEFAULT 'connector:surfe'::text;
 

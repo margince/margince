@@ -25,6 +25,12 @@
 -- the catalog update, and an older binary keeps working because it only ever
 -- writes the value the constraint used to demand.
 
+-- Each ALTER takes a lock that blocks writers on a table it did not create.
+-- Bounded so a transaction already holding a conflicting lock makes this
+-- migration fail fast instead of queueing behind it — an unbounded wait stalls
+-- every write to these tables for as long as the queue lasts.
+SET LOCAL lock_timeout = '3s';
+
 ALTER TABLE provider_connection
     DROP CONSTRAINT provider_connection_provider_check;
 
