@@ -19,10 +19,10 @@ import (
 //nolint:goconst // the map keys are wire field names and the values are COLUMN names; each is its own vocabulary, and the constants goconst names are filter params and report fields that spell the same words by coincidence
 func clearablePersonColumns(current crmcontracts.Person) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"first_name": {"first_name", current.FirstName},
-		"last_name":  {"last_name", current.LastName},
-		"title":      {"title", current.Title},
-		"owner_id":   {ownerIDColumn, current.OwnerId},
+		"first_name": {Column: "first_name", Current: current.FirstName},
+		"last_name":  {Column: "last_name", Current: current.LastName},
+		"title":      {Column: "title", Current: current.Title},
+		"owner_id":   {Column: ownerIDColumn, Current: current.OwnerId},
 	}
 }
 
@@ -34,13 +34,13 @@ func clearablePersonColumns(current crmcontracts.Person) map[string]storekit.Cle
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
 func clearableOrganizationColumns(current crmcontracts.Organization) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"legal_name":    {"legal_name", current.LegalName},
-		"description":   {"description", current.Description},
-		"industry":      {"industry", current.Industry},
-		"size_band":     {"size_band", current.SizeBand},
-		"linkedin_url":  {"linkedin_url", current.LinkedinUrl},
-		"owner_id":      {ownerIDColumn, current.OwnerId},
-		"parent_org_id": {"parent_org_id", current.ParentOrgId},
+		"legal_name":    {Column: "legal_name", Current: current.LegalName},
+		"description":   {Column: "description", Current: current.Description},
+		"industry":      {Column: "industry", Current: current.Industry},
+		"size_band":     {Column: "size_band", Current: current.SizeBand},
+		"linkedin_url":  {Column: "linkedin_url", Current: current.LinkedinUrl},
+		"owner_id":      {Column: ownerIDColumn, Current: current.OwnerId},
+		"parent_org_id": {Column: "parent_org_id", Current: current.ParentOrgId},
 	}
 }
 
@@ -53,10 +53,10 @@ func clearableOrganizationColumns(current crmcontracts.Organization) map[string]
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
 func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"title":             {"title", current.Title},
-		"company_name":      {leadCompanyColumn, current.CompanyName},
-		"candidate_org_key": {"candidate_org_key", current.CandidateOrgKey},
-		"project_id":        {"project_id", current.ProjectId},
-		"owner_id":          {ownerIDColumn, current.OwnerId},
+		"title":             {Column: "title", Current: current.Title},
+		"company_name":      {Column: leadCompanyColumn, Current: current.CompanyName},
+		"candidate_org_key": {Column: "candidate_org_key", Current: current.CandidateOrgKey},
+		"project_id":        {Column: "project_id", Current: current.ProjectId},
+		"owner_id":          {Column: ownerIDColumn, Current: current.OwnerId},
 	}
 }

@@ -22,10 +22,10 @@ import (
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
 func clearableDealColumns(current crmcontracts.Deal) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"expected_close_date": {"expected_close_date", current.ExpectedCloseDate},
-		"forecast_category":   {"forecast_category", current.ForecastCategory},
-		"wait_until":          {"wait_until", current.WaitUntil},
-		"owner_id":            {"owner_id", current.OwnerId},
-		"project_id":          {"project_id", current.ProjectId},
+		"expected_close_date": {Column: "expected_close_date", Current: current.ExpectedCloseDate},
+		"forecast_category":   {Column: "forecast_category", Current: current.ForecastCategory},
+		"wait_until":          {Column: "wait_until", Current: current.WaitUntil},
+		"owner_id":            {Column: "owner_id", Current: current.OwnerId},
+		"project_id":          {Column: "project_id", Current: current.ProjectId},
 	}
 }

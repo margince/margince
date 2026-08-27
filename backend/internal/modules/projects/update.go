@@ -154,10 +154,10 @@ func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) (*s
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns in the people module
 func clearableProjectColumns(current crmcontracts.Project) map[string]storekit.Clearable {
 	return map[string]storekit.Clearable{
-		"description":     {"description", current.Description},
-		"owner_id":        {"owner_id", current.OwnerId},
-		"started_at":      {startedAtColumn, current.StartedAt},
-		"target_end_date": {targetEndDateColumn, current.TargetEndDate},
-		"ended_at":        {endedAtColumn, current.EndedAt},
+		"description":     {Column: "description", Current: current.Description},
+		"owner_id":        {Column: "owner_id", Current: current.OwnerId},
+		"started_at":      {Column: startedAtColumn, Current: current.StartedAt},
+		"target_end_date": {Column: targetEndDateColumn, Current: current.TargetEndDate},
+		"ended_at":        {Column: endedAtColumn, Current: current.EndedAt},
 	}
 }
