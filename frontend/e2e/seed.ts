@@ -1326,6 +1326,18 @@ export async function mockApi(
             operators: ["eq", "neq", "in", "contains", "exists"],
             custom: false,
           },
+          // A custom field, because a picker offering only core fields is not
+          // the picker this product ships: #1286 made `cf_*` columns and tags
+          // selectable, and a fixture with `custom: false` on every row leaves
+          // that half of the vocabulary unexercised. Named as the physical
+          // column, which is what the wire carries — the label lives in
+          // /custom-fields and the picker joins on `column_name`.
+          {
+            name: "cf_fleet_size",
+            type: "number",
+            operators: ["eq", "neq", "gt", "gte", "lt", "lte", "in", "exists"],
+            custom: true,
+          },
           {
             name: "lifecycle",
             type: "picklist",
@@ -1401,9 +1413,13 @@ export async function mockApi(
         resource: "organization",
         match_count: 812,
         columns: ["id", "name", "industry"],
+        // Both rows match the authored predicate. A preview returning a row the
+        // filter excludes would let a results assertion pass over a screen
+        // rendering something the filter must not select — the fixture would be
+        // disagreeing with itself about what a filter means.
         rows: [
           { id: "o1", name: "Brandt Automotive", industry: "automotive" },
-          { id: "o2", name: "Kessler Logistik", industry: "logistics" },
+          { id: "o2", name: "Kessler Fahrzeugbau", industry: "automotive" },
         ],
         truncated: true,
       });

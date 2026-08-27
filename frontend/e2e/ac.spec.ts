@@ -1852,6 +1852,9 @@ test.describe("filters and views", () => {
       "industry",
       "lifecycle",
       "tag",
+      // The custom field, and it sorts after the core ones — a reader scanning
+      // for a column they added finds it in one place rather than interleaved.
+      "fleet size",
     ]);
     await page.getByRole("option", { name: "industry" }).click();
 
@@ -1872,6 +1875,41 @@ test.describe("filters and views", () => {
     // The count is the SERVER's — 812 is the fixture's match_count, a number no
     // arithmetic on the two returned rows could produce.
     await expect(page.getByText("812 Firmen treffen zu")).toBeVisible();
+  });
+
+  // #1286 made custom fields and tags selectable beside core fields, and the
+  // issue's own "done when" names that: a picker that offered only core fields
+  // would satisfy every other case here. The badge is the half a reader needs —
+  // `cf_fleet_size` and a core column look identical without it.
+  test("AC-filters-and-views-2: a custom field is offered beside the core ones, and says it is one", async ({
+    page,
+  }) => {
+    await page.goto("/#/filters/companies");
+    await expectShellRendered(page);
+    await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
+    await page.getByRole("combobox", { name: "Feld" }).click();
+    await page.getByRole("option", { name: "fleet size" }).click();
+
+    // The badge is beside the picker rather than inside the option, which is
+    // where it has to be: a chosen field's option is no longer on screen, and
+    // "this is a column somebody here added" is the fact a reader needs while
+    // reading the clause, not while opening the menu.
+    await expect(page.getByText("eigenes Feld")).toBeVisible();
+
+    // Its operators are its TYPE's — number, so the comparisons appear, and
+    // `enthält` does not. A picker that offered a fixed set here would produce
+    // a 422 the reader could not interpret.
+    await page.getByRole("combobox", { name: "Operator" }).click();
+    expect(await page.getByRole("option").allTextContents()).toEqual([
+      "ist",
+      "ist nicht",
+      "ist größer als",
+      "ist mindestens",
+      "ist kleiner als",
+      "ist höchstens",
+      "ist eines von",
+      "hat einen Wert",
+    ]);
   });
 
   test("AC-filters-and-views-4: clauses combine, the group names the join, and a linked field is narrowed", async ({
@@ -1932,6 +1970,18 @@ test.describe("filters and views", () => {
     await expect(
       page.getByRole("cell", { name: "Brandt Automotive", exact: true }),
     ).toBeVisible();
+    // EVERY row satisfies the filter, and that is asserted rather than assumed.
+    // A preview is what a reader checks a filter against before saving it as a
+    // list, so a row the predicate excludes is the one thing it must never
+    // show — and a test naming only the row it expected would pass over exactly
+    // that.
+    await expect(
+      page.getByRole("cell", { name: "Kessler Fahrzeugbau", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "automotive", exact: true }),
+    ).toHaveCount(2);
+    await expect(page.getByRole("cell", { name: "logistics" })).toHaveCount(0);
     // The caption that keeps the page honest: 812 match and two are shown, so
     // the reader is told this is a sample rather than the selection.
     await expect(
