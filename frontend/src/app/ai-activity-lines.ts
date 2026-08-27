@@ -204,6 +204,33 @@ export const RUN_DETAIL_LABEL: Readonly<Record<"stopped", MessageKey>> = {
 };
 
 /**
+ * The same lines with the subject NAMED, for the kinds whose source sends a
+ * name.
+ *
+ * PARTIAL on purpose, where `ACTIVITY_LINE` is total: a named variant is not
+ * something every kind can have. Most occurrences are about no single record,
+ * and the ones that are only carry a name when their emitter sends
+ * `subject_label` — which today is the document reading and nothing else. A
+ * total map here would demand copy for sentences no server can produce, which
+ * is the boilerplate the notDisplayed branch exists to avoid.
+ *
+ * Each entry is a strict alternative to the unnamed line, never a suffix: "I'm
+ * reading Q3-offer.pdf" is one sentence in every locale this ships in, and
+ * pasting a name onto the end of a translated sentence is how that stops being
+ * true.
+ */
+export const NAMED_LINE: Readonly<Partial<Record<ActivityKind, LineSet>>> = {
+  document_extract: {
+    queued: "agent.activity.documentExtractNamed.queued",
+    running: "agent.activity.documentExtractNamed.running",
+    stalled: "agent.activity.documentExtractNamed.stalled",
+    done: "agent.activity.documentExtractNamed.done",
+    degraded: "agent.activity.documentExtractNamed.degraded",
+    failed: "agent.activity.documentExtractNamed.failed",
+  },
+};
+
+/**
  * What to say about one item, or nothing at all.
  *
  * The existence check is not optional and `t()` cannot do it: translate() falls
@@ -225,8 +252,12 @@ export const RUN_DETAIL_LABEL: Readonly<Record<"stopped", MessageKey>> = {
  * is asserting against its own escape hatch instead of against the function.
  */
 export function lineFor(
-  item: Readonly<{ kind: string; state: string }>,
-  t: (key: MessageKey) => string,
+  item: Readonly<{
+    kind: string;
+    state: string;
+    subject_label?: string | null;
+  }>,
+  t: (key: MessageKey, params?: Record<string, string>) => string,
 ): string | null {
   if (!isActivityKind(item.kind)) {
     return null;
@@ -234,6 +265,19 @@ export function lineFor(
   const entry = ACTIVITY_LINE[item.kind];
   if ("notDisplayed" in entry) {
     return null;
+  }
+  // The named line first, and ONLY when both halves are present: a kind that
+  // has named copy and an occurrence that carried a name. Either missing falls
+  // through to the unnamed sentence, which is why an absent label is an
+  // ordinary case here rather than a gap to report.
+  const name = item.subject_label ?? "";
+  if (name !== "") {
+    const named: Readonly<Partial<Record<string, MessageKey>>> =
+      NAMED_LINE[item.kind] ?? {};
+    const namedKey = named[item.state];
+    if (namedKey !== undefined) {
+      return t(namedKey, { name });
+    }
   }
   const byState: Readonly<Partial<Record<string, MessageKey>>> = entry;
   const key = byState[item.state];

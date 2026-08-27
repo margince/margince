@@ -92,10 +92,24 @@ const (
 // Returns the pages in the same order, with Text trimmed where a shared
 // opening was found. The input is not modified.
 func stripSharedPrefix(pages []crawlPage) []crawlPage {
+	out, _ := stripSharedPrefixBlocks(pages)
+	return out
+}
+
+// stripSharedPrefixBlocks is stripSharedPrefix, and also answers WHICH blocks
+// it cut.
+//
+// The blocks leave with the pages because two callers need the same answer for
+// opposite reasons. The profile lane wants the text without them, so its
+// excerpt budget is spent on the company's own words. The evidence filter
+// wants the blocks themselves, so a finding cited to nothing but the menu can
+// be recognised — and a second measurement, taken separately, would be a
+// second definition of chrome free to disagree with this one.
+func stripSharedPrefixBlocks(pages []crawlPage) ([]crawlPage, []string) {
 	out := make([]crawlPage, len(pages))
 	copy(out, pages)
 	if len(pages) < boilerplateMinPages {
-		return out
+		return out, nil
 	}
 	total := 0
 	for _, page := range pages {
@@ -104,27 +118,31 @@ func stripSharedPrefix(pages []crawlPage) []crawlPage {
 	if total > boilerplateMaxCorpusBytes {
 		// Fail open: keeping the chrome is the old behaviour, and it beats
 		// spending unbounded CPU on a corpus the crawled site chose.
-		return out
+		return out, nil
 	}
 
 	// A multilingual site has one menu PER LANGUAGE, and each covers only
 	// its own pages: arvato.com's largest covers 10 of 38. One pass removes
 	// one menu and leaves the other locales carrying theirs, so the search
 	// repeats on what remains until nothing more qualifies.
+	var blocks []string
 	for round := 0; round < boilerplateMaxRounds; round++ {
-		if !stripOneSharedBlock(out) {
+		block := stripOneSharedBlock(out)
+		if block == "" {
 			break
 		}
+		blocks = append(blocks, block)
 	}
-	return out
+	return out, blocks
 }
 
 // stripOneSharedBlock finds the single most-shared opening in pages and cuts
-// it from every page carrying it, in place. Reports whether it cut anything.
-func stripOneSharedBlock(out []crawlPage) bool {
+// it from every page carrying it, in place. Answers the block it cut, or empty
+// when nothing qualified.
+func stripOneSharedBlock(out []crawlPage) string {
 	prefix := sharedOpening(out)
 	if utf8.RuneCountInString(prefix) < boilerplateMinRunes {
-		return false
+		return ""
 	}
 
 	cut := false
@@ -158,7 +176,10 @@ func stripOneSharedBlock(out []crawlPage) bool {
 		out[i].Text = trimmed
 		cut = true
 	}
-	return cut
+	if !cut {
+		return ""
+	}
+	return prefix
 }
 
 // chromeSearchRunes is how far into a page the shared header may start. Real

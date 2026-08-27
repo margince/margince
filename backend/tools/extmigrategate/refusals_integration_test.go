@@ -45,12 +45,13 @@ func TestGateRefusesEveryShapeOutsideTheAllowlist(t *testing.T) {
 }
 
 // valid is the shape the gate accepts; the grant and object rows below add one
-// thing to it, and the policy and column rows replace one part of it.
+// thing to it, and the policy rows build their own table instead.
 func valid(ns string) string { return scaffoldUp(ns) }
 
-// policyBody is the correct policy body, so a row that varies the command or
-// the roles is not also varying the predicate.
-var policyBody = "USING " + predicateSQL + " WITH CHECK " + predicateSQL
+// policyBody is an ordinary, correct-looking predicate over a column the table
+// actually has. The rule is that a unit table carries no policy AT ALL, so the
+// row proving it must not be refusable for anything the body itself says.
+var policyBody = "USING (created_at IS NOT NULL) WITH CHECK (created_at IS NOT NULL)"
 
 // refusalCases is split into three groups only because the craft gate caps a
 // function's length; the grouping follows what each row is about.
@@ -117,118 +118,58 @@ func grantRefusals() []refusal {
 // policy compares.
 func policyRefusals() []refusal {
 	return []refusal{{
-		tag: "twopolicies",
+		// A workspace column, the shape the tier carried until an installation
+		// became single-organization. Refused rather than tolerated: it is the
+		// column a policy would key on, and its presence is what makes the next
+		// author believe there is a tenant wall here.
+		tag: "tenantcolumn",
 		up: func(ns string) string {
-			return valid(ns) + fmt.Sprintf("CREATE POLICY %[1]s_note_extra ON ext.%[1]s_note FOR SELECT USING (true);\n", ns)
+			return noteTable(ns, "", tenantColumnSQL) + noteGrant(ns)
 		},
 		down:        dropNote,
-		mustMention: []string{"carries 2 policies", "_note_extra"},
+		mustMention: []string{"workspace_id", "one workspace"},
 	}, {
-		tag: "restrictive",
+		// RLS on with no policy: every row denied to a non-owner, and a table
+		// that reads at a glance as one somebody protected.
+		tag: "rlsnopolicy",
 		up: func(ns string) string {
-			return noteTable(ns, "", tenantColumnSQL) + noteRLS(ns, true) +
-				notePolicy(ns, "AS RESTRICTIVE "+policyBody) + noteGrant(ns)
+			return noteTable(ns, "", "") + noteRLS(ns) + noteGrant(ns)
 		},
 		down:        dropNote,
-		mustMention: []string{"RESTRICTIVE", "admits no row at all"},
+		mustMention: []string{"relrowsecurity=true", "no row-level rule"},
 	}, {
-		tag: "selectonly",
+		// A policy, whatever it says. The predicate below is the one the tier
+		// used to require, so this row proves the rule is "no policy" and not
+		// "no BADLY WRITTEN policy".
+		tag: "policy",
 		up: func(ns string) string {
-			return noteTable(ns, "", tenantColumnSQL) + noteRLS(ns, true) +
-				notePolicy(ns, "FOR SELECT USING "+predicateSQL) + noteGrant(ns)
+			return noteTable(ns, "", "") + noteRLS(ns) +
+				notePolicy(ns, policyBody) + noteGrant(ns)
 		},
 		down:        dropNote,
-		mustMention: []string{`applies to "SELECT" only`},
+		mustMention: []string{"row-level"},
 	}, {
-		// The other three single-command spellings, so the refusal names the
-		// command an author actually wrote rather than pg_policy's letter.
-		tag: "insertonly",
+		// A policy with RLS left off is dead text PostgreSQL never consults,
+		// and the reading it invites — that the table is isolated — is exactly
+		// the one a later author would carry forward.
+		tag: "deadpolicy",
 		up: func(ns string) string {
-			return noteTable(ns, "", tenantColumnSQL) + noteRLS(ns, true) +
-				notePolicy(ns, "FOR INSERT WITH CHECK "+predicateSQL) + noteGrant(ns)
+			// No ALTER at all: PostgreSQL accepts CREATE POLICY on a table with
+			// row-level security switched off, and never consults it.
+			return noteTable(ns, "", "") + notePolicy(ns, policyBody) + noteGrant(ns)
 		},
 		down:        dropNote,
-		mustMention: []string{`applies to "INSERT" only`},
+		mustMention: []string{"policy", "dead text"},
 	}, {
-		tag: "updateonly",
+		// A foreign key into core. The role holds nothing on public, so this is
+		// refused inside the apply rather than by a catalog assertion — which is
+		// the stronger place for it, and the reason the grant was dropped.
+		tag: "corefk",
 		up: func(ns string) string {
-			return noteTable(ns, "", tenantColumnSQL) + noteRLS(ns, true) +
-				notePolicy(ns, "FOR UPDATE USING "+predicateSQL) + noteGrant(ns)
+			return noteTable(ns, "", "owner_id uuid NOT NULL REFERENCES workspace(id)") + noteGrant(ns)
 		},
 		down:        dropNote,
-		mustMention: []string{`applies to "UPDATE" only`},
-	}, {
-		tag: "deleteonly",
-		up: func(ns string) string {
-			return noteTable(ns, "", tenantColumnSQL) + noteRLS(ns, true) +
-				notePolicy(ns, "FOR DELETE USING "+predicateSQL) + noteGrant(ns)
-		},
-		down:        dropNote,
-		mustMention: []string{`applies to "DELETE" only`},
-	}, {
-		tag: "rolescoped",
-		up: func(ns string) string {
-			return noteTable(ns, "", tenantColumnSQL) + noteRLS(ns, true) +
-				notePolicy(ns, "TO margince_app "+policyBody) + noteGrant(ns)
-		},
-		down:        dropNote,
-		mustMention: []string{"scoped TO specific roles"},
-	}, {
-		// No policy here, deliberately: with a text tenant column the canonical
-		// predicate does not even parse (text = uuid), so the fixture would be
-		// refused by the CREATE POLICY rather than by the column rule this row
-		// exists to exercise.
-		tag: "wrongtype",
-		up: func(ns string) string {
-			return noteTable(ns, "", "workspace_id text NOT NULL")
-		},
-		down:        dropNote,
-		mustMention: []string{"workspace_id is text NOT NULL", "uuid NOT NULL"},
-	}, {
-		tag: "nullable",
-		up: func(ns string) string {
-			return noteTable(ns, "", "workspace_id uuid NULL REFERENCES workspace(id) ON DELETE CASCADE") +
-				noteRLS(ns, true) + notePolicy(ns, policyBody) + noteGrant(ns)
-		},
-		down:        dropNote,
-		mustMention: []string{"uuid NULL", "uuid NOT NULL"},
-	}, {
-		tag: "nofk",
-		up: func(ns string) string {
-			return noteTable(ns, "", "workspace_id uuid NOT NULL") +
-				noteRLS(ns, true) + notePolicy(ns, policyBody) + noteGrant(ns)
-		},
-		down:        dropNote,
-		mustMention: []string{"no foreign key onto public.workspace(id)"},
-	}, {
-		// THE ONE THAT A PER-COLUMN LOOKUP MISSES. The tenant column and its key
-		// are entirely correct; a second, unexamined key from another column
-		// reinstates the harm the cascade rule exists to prevent.
-		tag: "secondfk",
-		up: func(ns string) string {
-			return noteTable(ns, "", tenantColumnSQL+",\n    pinned_ws    uuid            NULL REFERENCES workspace(id)") +
-				noteRLS(ns, true) + notePolicy(ns, policyBody) + noteGrant(ns)
-		},
-		down:        dropNote,
-		mustMention: []string{"declares 2 foreign keys onto public.workspace", "pinned_ws", "exactly one is allowed"},
-	}, {
-		// The single key is present and cascades, but hangs off the wrong column,
-		// so the row's tenancy claim and the column the policy compares disagree.
-		tag: "fkwrongcolumn",
-		up: func(ns string) string {
-			return noteTable(ns, "", "workspace_id uuid NOT NULL,\n    pinned_ws    uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE") +
-				noteRLS(ns, true) + notePolicy(ns, policyBody) + noteGrant(ns)
-		},
-		down:        dropNote,
-		mustMention: []string{"references public.workspace from (pinned_ws)", "rather than from workspace_id"},
-	}, {
-		tag: "nocascade",
-		up: func(ns string) string {
-			return noteTable(ns, "", "workspace_id uuid NOT NULL REFERENCES workspace(id)") +
-				noteRLS(ns, true) + notePolicy(ns, policyBody) + noteGrant(ns)
-		},
-		down:        dropNote,
-		mustMention: []string{"without ON DELETE CASCADE", "erasing a tenant"},
+		mustMention: []string{"permission denied"},
 	}}
 }
 
@@ -239,7 +180,7 @@ func relationRefusals() []refusal {
 		tag: "unlogged",
 		up: func(ns string) string {
 			return noteTable(ns, "UNLOGGED ", tenantColumnSQL) +
-				noteRLS(ns, true) + notePolicy(ns, policyBody) + noteGrant(ns)
+				noteRLS(ns) + notePolicy(ns, policyBody) + noteGrant(ns)
 		},
 		down:        dropNote,
 		mustMention: []string{"relpersistence", "loses its rows"},
@@ -495,9 +436,9 @@ func TestGateRefusesAManualReturnRule(t *testing.T) {
 	unit := unitName(t, "retrule")
 	ns := namespaceOf(t, unit)
 	up := scaffoldUp(ns) + fmt.Sprintf(`
-CREATE TABLE ext.%[1]s_asview (id uuid, workspace_id uuid);
+CREATE TABLE ext.%[1]s_asview (id uuid, body text);
 CREATE RULE "_RETURN" AS ON SELECT TO ext.%[1]s_asview
-    DO INSTEAD SELECT id, workspace_id FROM ext.%[1]s_note;
+    DO INSTEAD SELECT id, body FROM ext.%[1]s_note;
 `, ns)
 	down := fmt.Sprintf("DROP TABLE IF EXISTS ext.%s_asview CASCADE;\n", ns) + scaffoldDown(ns)
 

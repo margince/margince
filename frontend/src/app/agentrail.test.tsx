@@ -507,22 +507,22 @@ describe("AgentRail", () => {
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
   });
 
-  it("derives ingest from a real read in flight", async () => {
+  // The Core speaks the AGENT's vocabulary, so only the agent may move it. A
+  // read in flight is the browser fetching for the reader who asked, and it used
+  // to put the orb in `ingest` — which made the one state named for the agent
+  // taking something in the one state the agent could never cause.
+  it("does not move the Core for the tool's own reads", async () => {
     vi.useFakeTimers();
     stubAgentRailApi({ connectors: () => new Promise<Response>(() => {}) });
     const { container } = render(ROUTE);
     // Past both the BUSY_ON_MS/BUSY_OFF_MS steady windows (app/activity.ts)
-    // and the ticker's own LINGER_MS, so the line asserted below is the
-    // state's own resting line and not the ticker naming the mount-time
-    // reads.
+    // and the ticker's own LINGER_MS, so what is asserted below is the settled
+    // reading and not a window either of those two is still inside.
     await act(() => vi.advanceTimersByTimeAsync(2000));
-    expect(block(container).getAttribute("data-core-state")).toBe("ingest");
-    expect(container.querySelector(".arline")?.textContent).toBe(
-      LABELS.reading,
-    );
+    expect(block(container).getAttribute("data-core-state")).toBe("idle");
   });
 
-  it("derives working from a write in flight", async () => {
+  it("does not move the Core for the reader's own writes", async () => {
     vi.useFakeTimers();
     stubAgentRailApi();
     const client = new QueryClient({
@@ -533,10 +533,7 @@ describe("AgentRail", () => {
       children: <PendingWrite />,
     });
     await act(() => vi.advanceTimersByTimeAsync(2000));
-    expect(block(container).getAttribute("data-core-state")).toBe("working");
-    expect(container.querySelector(".arline")?.textContent).toBe(
-      LABELS.working,
-    );
+    expect(block(container).getAttribute("data-core-state")).toBe("idle");
   });
 
   // The count reaches the reader through the LINE and through the rail's own
@@ -556,44 +553,27 @@ describe("AgentRail", () => {
     expect(block(container).querySelector(".arbadge")).toBeNull();
   });
 
-  it("reports open duplicates only as a panel row, never as the section's own state", async () => {
+  // The duplicate queue is not the agent's work. It is a queue the product
+  // keeps, repaired on the screen that owns it, and it reached this surface in
+  // three places at once: a turn in the resting rotation, a tile in the panel,
+  // and a second telling of a number the worklist already carries. None of them
+  // is here now, and the state was never one of them because a queue is not a
+  // fault.
+  it("says nothing about the duplicate queue, in the line, the state or the panel", async () => {
     const user = userEvent.setup();
     stubAgentRailApi({
       dedupe: () =>
         jsonResponse({ data: [CANDIDATE("d-1"), CANDIDATE("d-2")] }),
     });
     const { container } = render(ROUTE);
-    await waitFor(() =>
-      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
-    );
-    // An open queue is something a resting agent can truthfully mention, so it
-    // reaches the LINE. What it must never reach is the state: a queue is not a
-    // fault, and amber is reserved for the things that are.
-    await settlesOnLine(container, `2 ${LABELS.duplicatesIdle}`);
+    await settlesOnLine(container, LABELS.allClear);
     expect(block(container).getAttribute("data-core-state")).toBe("idle");
 
     await openPanel(user, container);
-    const row = screen.getByRole("link", { name: /^Duplicate pairs open/ });
-    expect(row.getAttribute("href")).toBe("#/today");
-    expect(row.textContent).toContain("2");
-  });
-
-  // The dedupe read takes ONE page. A full page is a floor, not a total, and
-  // printing it flat told a workspace with two hundred open pairs it had fifty
-  // — a number that did not move as the reader cleared them.
-  it("marks the duplicates count as a floor when the page is full", async () => {
-    const user = userEvent.setup();
-    stubAgentRailApi({
-      dedupe: () =>
-        jsonResponse({
-          data: Array.from({ length: 50 }, (_, i) => CANDIDATE(`d-${i}`)),
-          page: { has_more: true, next_cursor: "more" },
-        }),
-    });
-    const { container } = render(ROUTE);
-    await openPanel(user, container);
-    const row = screen.getByRole("link", { name: /^Duplicate pairs open/ });
-    expect(row.textContent).toContain("50+");
+    expect(
+      screen.queryByRole("link", { name: /Duplicate pairs open/ }),
+    ).toBeNull();
+    expect(panel().textContent).not.toContain("Duplicate");
   });
 
   // Absence, not zero: a count nobody has computed yet must not be printed —
@@ -606,6 +586,48 @@ describe("AgentRail", () => {
     const { container } = render(ROUTE);
     await openPanel(user, container);
     expect(container.querySelector(".arbadge")).toBeNull();
+    expect(
+      screen.queryByRole("link", { name: new RegExp(`^${LABELS.approvals}`) }),
+    ).toBeNull();
+  });
+
+  // THREE cases, and the middle one is the whole point: a count nobody has read
+  // is not a count of zero. An unread count says nothing at all; a count that
+  // ANSWERED zero earns the all-clear.
+  it("says nothing about what is waiting until the read answers, and all-clear only when it answered zero", async () => {
+    const user = userEvent.setup();
+    stubAgentRailApi({ approvals: () => new Promise<Response>(() => {}) });
+    const { container } = render(ROUTE);
+    await openPanel(user, container);
+    // The whole section is absent: its heading, its all-clear and its tile. An
+    // unread count is reported by saying nothing, never by an all-clear the
+    // panel never read. (The resting LINE above it is a different reading with
+    // its own rules and is not what this asserts.)
+    expect(panel().textContent).not.toContain(LABELS.acrossWorkspace);
+    expect(
+      screen.queryByRole("link", { name: new RegExp(`^${LABELS.approvals}`) }),
+    ).toBeNull();
+  });
+
+  it("says all-clear once the read answers zero", async () => {
+    const user = userEvent.setup();
+    stubAgentRailApi();
+    const { container } = render(ROUTE);
+    await openPanel(user, container);
+    // Scoped to the workspace section on purpose: the resting LINE in the
+    // header reads all-clear too, so a whole-panel match would still pass with
+    // this paragraph gone and prove nothing about the answered zero.
+    await waitFor(() =>
+      expect(
+        [...panel().querySelectorAll(".arsect")]
+          .find((section) =>
+            section.textContent?.includes(LABELS.acrossWorkspace),
+          )
+          ?.querySelector(".arnone")?.textContent,
+      ).toBe(LABELS.allClear),
+    );
+    // A real zero is an answer, not a tile: "0 Decisions waiting" is a number
+    // nobody has to act on dressed as one somebody does.
     expect(
       screen.queryByRole("link", { name: new RegExp(`^${LABELS.approvals}`) }),
     ).toBeNull();
@@ -1013,6 +1035,121 @@ describe("AgentRail", () => {
     withRuns(RUN());
     const { container } = render(ROUTE);
     await settlesOnLine(container, BRIEF_RUNNING);
+  });
+
+  // Two subjects, two slots. They used to share one, so the agent's sentence
+  // disappeared for as long as anything was loading and a reader could not tell
+  // which of the two was talking. Both are true at the same moment here: an
+  // overnight brief is running, and this tab is fetching its own sources.
+  it("keeps the agent's line and the tool's narration in separate slots", async () => {
+    vi.useFakeTimers();
+    stubAgentRailApi({
+      agentActivity: () => jsonResponse({ running: [RUN()], recent: [] }),
+    });
+    const { container } = render(ROUTE);
+    // Inside the ticker's LINGER_MS, so the mount-time reads it named are still
+    // standing while the agent's own line has answered. That overlap IS the
+    // case: the two used to take turns in one slot, and the whole point of the
+    // change is that this moment shows both.
+    await act(() => vi.advanceTimersByTimeAsync(300));
+    expect(container.querySelector(".arline")?.textContent).toBe(BRIEF_RUNNING);
+    // WHICH of the mount reads is newest is a race between stubs and no part of
+    // the claim. That the tool has a line of its own, saying something other
+    // than the agent's, is the whole claim.
+    const tool = container.querySelector(".artool")?.textContent;
+    expect(tool).toBeTruthy();
+    expect(tool).not.toBe(BRIEF_RUNNING);
+  });
+
+  // The colour and the sentence are always about the SAME thing. A workspace in
+  // grace keeps running its agent, so amber-for-the-licence and a live run are
+  // true at once — and the licence outranks the run, which means the run's
+  // sentence must not caption it. Captioning an amber orb "I'm putting your
+  // morning brief together" tells a reader the brief is the fault.
+  it("never captions a state with a run that did not cause it", async () => {
+    stubAgentRailApi({
+      license: () =>
+        jsonResponse({
+          state: "rejected",
+          seats_used: 1,
+          over_limit: false,
+          checked_at: "2026-08-01T09:00:00Z",
+        }),
+      agentActivity: () => jsonResponse({ running: [RUN()], recent: [] }),
+    });
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("warning"),
+    );
+    expect(container.querySelector(".arline")?.textContent).not.toBe(
+      BRIEF_RUNNING,
+    );
+  });
+
+  // Opening the panel delivers EVERY settled run it lists, so it acknowledges
+  // every one of them. Clearing only the fault the orb happened to show would
+  // leave the colour up after the reader had already been told about both.
+  it("clears every fault the panel delivered, not one per open", async () => {
+    window.localStorage.removeItem("margince.agent.faults-seen");
+    withSettled(
+      RUN({ id: "019f7e65-fbf7-7114-b114-40af4af63c01", state: "failed" }),
+      RUN({ id: "019f7e65-fbf7-7114-b114-40af4af63c02", state: "degraded" }),
+    );
+    const user = userEvent.setup();
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("error"),
+    );
+    await openPanel(user, container);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
+    );
+  });
+
+  // The other half of the live vocabulary, and the half that had no producer at
+  // all until the lane came off the KIND of work: evidence arriving is `ingest`,
+  // reasoning over evidence already held is `working` (ai-activity-orb.ts).
+  it("moves the Core to ingest when the live run is evidence arriving", async () => {
+    withRuns(RUN({ kind: "document_extract" }));
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("ingest"),
+    );
+  });
+
+  // A run past the lease its own source declared. The server derives it, so a
+  // worker that died without saying so cannot go on being displayed as busy —
+  // and amber is right for it, because the work may yet land and there is
+  // nothing for the reader to do but know.
+  it("moves the Core to warning for a run past its own lease", async () => {
+    withRuns(RUN({ state: "stalled" }));
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("warning"),
+    );
+  });
+
+  // The overnight case, which is the whole reason a fault is acknowledged rather
+  // than decayed: a run fails at four in the morning and the person it ran for
+  // is asleep, so whatever the orb does at 04:12 is seen by nobody. It holds
+  // until the panel that lists it has actually been opened.
+  it("holds a failed run on the Core until the panel has been opened", async () => {
+    // Acknowledgement is remembered per browser, so the case owns its own id and
+    // its own storage: sharing either would make this test's verdict depend on
+    // which of its neighbours ran first.
+    window.localStorage.removeItem("margince.agent.faults-seen");
+    withSettled(
+      RUN({ id: "019f7e65-fbf7-7114-b114-40af4af63b02", state: "failed" }),
+    );
+    const user = userEvent.setup();
+    const { container } = render(ROUTE);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("error"),
+    );
+    await openPanel(user, container);
+    await waitFor(() =>
+      expect(block(container).getAttribute("data-core-state")).toBe("idle"),
+    );
   });
 
   // Above the counts, because a run happening right now outranks a queue that

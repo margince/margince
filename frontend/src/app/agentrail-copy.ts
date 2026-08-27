@@ -80,18 +80,20 @@ export const LABELS = {
   offline: "offline",
   idle: "Idle",
   reading: "Loading",
-  readingRecord: "Reading this record",
   working: "Working",
   unreachable: "Cannot reach Margince",
+  /** A broken run whose kind this build writes no sentence for. The feed is
+   *  asked only for the kinds the rail narrates, so these two are the words for
+   *  a server that answered with more than it was asked, never the daily case. */
+  runFailed: "A run failed",
+  runStopped: "A run stopped early",
   waiting: "waiting for you",
   cannotReach: "Cannot reach",
-  review: "Review",
   reconnect: "Reconnect",
   configure: "Set up",
   noModel: "No AI model is configured",
   devModel: "development (offline fake)",
   devLine: "Running on the offline model",
-  duplicates: "duplicate pairs to decide",
   duplicatesRow: "Duplicate pairs open",
   states: "State (review only)",
   /** The run control beside the state chips. It plays invented work: what it is
@@ -108,21 +110,19 @@ export const LABELS = {
   /** The shape of the month's spend, for the reader who cannot see the line. */
   spendShape: "What the agent has cost, day by day",
   nothingPriced: "nothing priced yet",
-  spentThisMonth: "spent this month",
   runningOn: "running on",
-  duplicatesIdle: "duplicates to decide",
 } as const;
 
 /**
  * The states no read can reach on this surface, and the sentence each carries.
  *
- * The section reaches `ingest`, `working` and `error` on its own, but about the
- * TOOL: a read in flight, a write in flight, a source it cannot get to. `working`
- * about the AGENT is real too now — `useAiActivity` reads the run row and
- * `RunSection` (`agentrail.tsx`) names it in the reader's own words. What stays
- * unreachable is narrower: there is no per-step progress stream (a run is
- * `queued`, `running` or settled, never "40% through"), and `ingest` here is
- * about the CAPTURE pipeline reading mail, which still has no read of its own.
+ * Every state the section shows is now the AGENT's, read from `/me/ai-activity`:
+ * a live run puts the orb in `ingest` or `working` by the kind of work it is, a
+ * broken one in `error` or `warning`. What stays unreachable is narrower than it
+ * was. There is no per-step progress stream, so a run is queued, running or
+ * settled and never "40% through" — and the capture pipeline reading mail, which
+ * is what the `ingest` sentence below describes, still files no occurrence of its
+ * own.
  *
  * They are here so the vocabulary can be reviewed whole, reachable only from the
  * switcher in the panel under its own review-only heading. Nothing derives them.
@@ -169,13 +169,20 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  * actually cares about.
  */
 /**
- * The lines the section rotates through while nothing is happening.
+ * The lines the section rotates through while the agent is at rest.
  *
- * An idle agent still has things to say, and they are all TRUE THINGS it already
- * read: what is waiting, what it cannot decide alone, what it has cost, what it
- * is running on. Nothing here is invented activity. A resting surface that
- * narrated fake work would teach a reader that none of the line means anything,
- * which is exactly the credit this surface cannot afford to spend.
+ * All three are the AGENT's own facts, and that is the whole selection rule.
+ * This rotation used to carry six, and the other three were about the
+ * installation rather than the agent: the duplicate queue, the month's spend,
+ * the licence. Six subjects taking turns in one slot at the edge of every screen
+ * is why a reader could not say what the line was for. What went is not lost,
+ * it moved to where it is acted on: the spend has its own figure in the block,
+ * the duplicates have their queue, and the licence is stated on the card in
+ * settings that can actually repair it.
+ *
+ * Nothing here is invented activity. A resting surface that narrated fake work
+ * would teach a reader that none of the line means anything, which is exactly
+ * the credit this surface cannot afford to spend.
  *
  * Each entry is a function of what was read, and one that has nothing to report
  * returns null and is skipped, so the rotation is only ever as long as the facts
@@ -183,16 +190,14 @@ export const RUNNING: ReadonlySet<MarginceCoreState> = new Set([
  */
 export const IDLE_ORDER = [
   "waiting",
-  "duplicates",
-  // Third: after the two things a person has to answer for, before the small
-  // print. What the scheduled runner finished overnight is news rather than a
-  // task, so it does not push a queue down the rotation — and it sits above the
-  // cost and the runtime lines because it is about this morning, while those are
-  // standing facts that read the same on any day.
+  // Second: what the scheduled runner finished while nobody was looking is news
+  // rather than a task, so it does not push the queue a person has to answer
+  // down the rotation.
   "finished",
-  "spend",
+  // Last, and standing rather than daily: an installation on the development
+  // path answers every call with an invention, and a reader who does not know
+  // that is being misled by a product that looks like it works.
   "model",
-  "licence",
 ] as const;
 
 export type IdleKind = (typeof IDLE_ORDER)[number];

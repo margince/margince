@@ -12629,6 +12629,20 @@ type AiActivityItem struct {
 	// a row cannot be left stalled by a writer that forgot, because no writer writes it.
 	State AiActivityItemState `json:"state"`
 
+	// SubjectLabel What the occurrence was ABOUT, named: the document that was read, in the words the
+	// product titles it elsewhere. "I'm reading Q3-offer.pdf" is a sentence about the
+	// reader's afternoon; "I'm reading your document" is a sentence about software.
+	//
+	// It is the source's own SNAPSHOT, taken when it emitted, and it is never re-resolved
+	// and never re-gated on read — a record renamed afterwards keeps the old name on a
+	// settled line, which is what that line was actually about. A source emits one only
+	// where the occurrence's actor is the person the record was already displayed to.
+	//
+	// Absent is the ordinary case, not an error: most kinds are about no single record,
+	// and a client that has no name draws its generic sentence. The client owns the
+	// words either way — this is the NAME to put in them, never a sentence.
+	SubjectLabel *string `json:"subject_label,omitempty"`
+
 	// Summary The occurrence's own prose when it wrote any, capped on the way to the wire. It is
 	// optional by construction: nothing validates that a finishing occurrence produced one,
 	// and it is never the status line — the reader's locale decides those words.

@@ -140,9 +140,6 @@ func TestMigrationsAreEmbedded(t *testing.T) {
 	}
 	for _, must := range []string{
 		"ext.ext_notes_note",
-		"FORCE ROW LEVEL SECURITY",
-		"ENABLE ROW LEVEL SECURITY",
-		"REFERENCES workspace(id) ON DELETE CASCADE",
 		// The author pair, and the constraint that keeps it coherent. Both
 		// columns are nullable so the tick's authorless rows can exist, which
 		// means the CHECK is the ONLY thing standing between the schema and a
@@ -158,13 +155,24 @@ func TestMigrationsAreEmbedded(t *testing.T) {
 		}
 	}
 
-	// And it carries NO foreign key from the author to a core table. The
-	// ext_notes role the pre-merge gate applies this file as holds REFERENCES
-	// (id) on `workspace` and nothing else on public, so `REFERENCES app_user`
-	// here does not fail in review — it fails when the gate applies the file,
-	// for this unit and for every unit that copies it as a template.
-	if strings.Contains(string(up), "REFERENCES app_user") {
-		t.Error("the author references a core table — the restricted role the migration gate applies this as cannot create that constraint")
+	// And it carries NO reference into public and no row-level rule. The
+	// ext_notes role the pre-merge gate applies this file as holds nothing on
+	// public at all, so `REFERENCES app_user` here does not fail in review — it
+	// fails when the gate applies the file, for this unit and for every unit
+	// that copies it as a template.
+	//
+	// The RLS pair is asserted absent for the opposite reason: it was present
+	// until the tier stopped carrying a workspace, and a policy re-added here
+	// would key on a column that is gone and read a GUC that fences nothing.
+	for _, absent := range []string{
+		"REFERENCES app_user",
+		"REFERENCES workspace",
+		"ROW LEVEL SECURITY",
+		"CREATE POLICY",
+	} {
+		if strings.Contains(string(up), absent) {
+			t.Errorf("the embedded migration carries %q — the restricted role the gate applies it as would refuse it", absent)
+		}
 	}
 
 	// The SECOND pair, by its own bytes. 0002 adds the `kind` column the

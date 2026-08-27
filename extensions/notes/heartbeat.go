@@ -77,7 +77,8 @@ func heartbeat(ctx context.Context, rt extension.Runtime) error {
 		// matched on the body's leading glyph, which meant a note a person
 		// typed starting with the same characters was counted as a tick and
 		// then DELETED by the prune below. Neither statement carries a tenant
-		// predicate; the policy is what makes both of them this workspace's.
+		// predicate, and neither needs one: the table holds one installation's
+		// rows and nothing else.
 		//
 		// The author columns are LEFT OUT rather than written as anything, and
 		// that is the whole handling of the no-author case on this side: a tick
@@ -87,8 +88,8 @@ func heartbeat(ctx context.Context, rt extension.Runtime) error {
 		// does not exist. Omitting them satisfies the both-or-neither CHECK by
 		// taking the "neither" branch, and the read renders no `author` at all.
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO `+noteTable+` (workspace_id, kind, body)
-			 VALUES (`+callerWorkspace+`, $1, $2 || `+callerWorkspace+`::text)`,
+			`INSERT INTO `+noteTable+` (kind, body)
+			 VALUES ($1, $2)`,
 			string(kindHeartbeat), heartbeatPrefix); err != nil {
 			return err
 		}
@@ -107,9 +108,10 @@ func heartbeat(ctx context.Context, rt extension.Runtime) error {
 }
 
 // heartbeatPrefix is the display text a tick's row carries, and it is display
-// text only — no query matches on it any more. The workspace id is appended by
-// the insert above.
-const heartbeatPrefix = "⟳ heartbeat — workspace "
+// text only — no query matches on it any more. It named the workspace until the
+// tier stopped carrying one; an installation holds a single workspace, so the
+// id it printed told a reader nothing the row's presence did not.
+const heartbeatPrefix = "⟳ heartbeat"
 
 // keptHeartbeats bounds the tick history. Ten is enough to see a sequence
 // arrive on screen and small enough that the notes read (LIMIT 200) stays

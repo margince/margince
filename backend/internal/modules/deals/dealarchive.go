@@ -65,7 +65,7 @@ func (s *Store) ArchiveDeal(ctx context.Context, id ids.DealID, ifVersion *int64
 		now := time.Now().UTC()
 		p := storekit.NewPatch()
 		p.Set("archived_at", nil, now)
-		if err := p.ApplyGuarded(ctx, tx, "deal", id.UUID, ifVersion); err != nil {
+		if err := applyDealPatchGuarded(ctx, tx, id, p, ifVersion); err != nil {
 			return fmt.Errorf("archive deal: %w", err)
 		}
 		if _, err := tx.Exec(ctx,

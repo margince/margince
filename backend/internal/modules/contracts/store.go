@@ -52,11 +52,28 @@ type Store struct {
 	// injected so a date-boundary test is deterministic rather than a race
 	// against midnight.
 	clock func() time.Time
+	// freezeRate resolves what a contract's currency converts at, on the day
+	// it activates. Injected because the reading belongs to the module that
+	// owns fx_rate, and contracts takes a seam rather than that module —
+	// the shape quotas' BaseCurrencyFunc already uses.
+	//
+	// REQUIRED by the constructor. A store built without one would activate
+	// foreign-currency contracts carrying no frozen rate at all, which is the
+	// state this exists to end: the base-currency freeze guard counts a
+	// contract by its frozen rate, so a NULL one is a contract the guard
+	// cannot see and an installation can restate underneath.
+	freezeRate FreezeRateFunc
 }
 
+// FreezeRateFunc answers what one currency converts to the installation's base
+// at, as of a day, inside a transaction the caller already holds. It reports
+// the rate and the day it is the rate FOR, which are two facts: the rate a
+// contract froze and the date that rate was published on.
+type FreezeRateFunc func(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error)
+
 // NewStore builds the contract store.
-func NewStore(db *database.DB) *Store {
-	return &Store{db: db, clock: time.Now}
+func NewStore(db *database.DB, freezeRate FreezeRateFunc) *Store {
+	return &Store{db: db, clock: time.Now, freezeRate: freezeRate}
 }
 
 func (s *Store) tx(ctx context.Context, fn func(pgx.Tx) error) error {

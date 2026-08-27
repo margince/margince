@@ -2930,6 +2930,14 @@ export const vi = {
     "Tôi mới đọc được một phần tài liệu của bạn rồi dừng.",
   "agent.activity.documentExtract.failed":
     "Tôi không đọc được tài liệu của bạn.",
+  "agent.activity.documentExtractNamed.queued": "{name} đang chờ được đọc.",
+  "agent.activity.documentExtractNamed.running": "Tôi đang đọc {name}.",
+  "agent.activity.documentExtractNamed.stalled":
+    "Việc đọc {name} kéo dài bất thường. Có thể nó đã dừng.",
+  "agent.activity.documentExtractNamed.done": "Tôi đã đọc xong {name}.",
+  "agent.activity.documentExtractNamed.degraded":
+    "Tôi mới đọc được một phần {name} rồi dừng.",
+  "agent.activity.documentExtractNamed.failed": "Tôi không đọc được {name}.",
   "agent.activity.summarize.queued":
     "Việc tổng hợp thông tin về công ty này đang chờ xử lý.",
   "agent.activity.summarize.running":

@@ -175,7 +175,11 @@ func crawlAndExtract(ctx context.Context, crawler *siteCrawler, x evidenceExtrac
 		collected.failed = append(collected.failed, fmt.Errorf("profile lane: %w", profileErr))
 	}
 	out.legalCensusIncomplete = collected.legalCensusIncomplete
-	out.merged = mergeInCommitOrder(crawl, collected.results)
+	// Here and not earlier: the fact lane reads a page as it commits, so the
+	// crawl it would have to be measured against does not exist until now.
+	results, chrome := suppressChromeEvidence(crawl.Pages, collected.results)
+	x.reportDrops(ctx, crawl.SeedURL, chrome)
+	out.merged = mergeInCommitOrder(crawl, results)
 	out.err = errors.Join(collected.failed...)
 	return crawl, out, nil
 }
@@ -425,6 +429,8 @@ func extractSite(ctx context.Context, x evidenceExtractor, pages []crawlPage, on
 	if profileErr != nil {
 		failed = append(failed, fmt.Errorf("profile lane: %w", profileErr))
 	}
+	kept, chrome := suppressChromeEvidence(pages, kept)
+	x.reportDrops(ctx, "", chrome)
 	out.merged = mergePageResults(kept)
 	out.err = errors.Join(failed...)
 	return out

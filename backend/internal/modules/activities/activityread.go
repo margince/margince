@@ -159,18 +159,6 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 	return activities, page, nil
 }
 
-// activityColumns is the select list every activity read scans, closed by
-// the caller's audience test as `content_available` — the one column that
-// decides whether scanActivity hands back the row's content or only its
-// markers. contentArm is the predicate auth.ActivityAudienceArm rendered for
-// this query's arguments.
-func activityColumns(contentArm string) string {
-	return `a.id, a.kind, a.channel_provider, a.subject, a.body, a.occurred_at, a.direction,
-	a.due_at, a.remind_at, a.assignee_id, a.is_done, a.done_at, a.duration_seconds, a.meeting_status,
-	a.host_user_id, a.source_system, a.source_id, a.source, a.captured_by, a.version, a.created_at, a.updated_at, a.archived_at,
-	a.thread_key, a.capture_label, a.bulk_mail_attested, a.audience, (` + contentArm + `) AS content_available`
-}
-
 // readActivity is the module's ONE single-row activity read, and it
 // carries the row scope itself. An activity has no owner_id and the
 // workspace predicate bounds only the tenant, so its scope exists solely
@@ -276,60 +264,16 @@ func attachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 	return rows.Err()
 }
 
+// scanActivity reads one row of the activity projection.
+//
+// Both the column list and these destinations come from activityProjection, so
+// a column added or moved carries its own destination with it — the transposed
+// scan that used to be possible among the string-ish neighbours has no second
+// list to disagree with.
 func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
-	var a crmcontracts.Activity
-	var id ids.UUID
-	var assigneeID, hostUserID *ids.UUID
-	var kind string
-	var channelProvider, direction, meetingStatus, threadKey, captureLabel *string
-	var bulkMailAttested bool
-	var version int64
-
-	var audience string
-	var contentAvailable bool
-
-	err := row.Scan(&id, &kind, &channelProvider, &a.Subject, &a.Body, &a.OccurredAt, &direction,
-		&a.DueAt, &a.RemindAt, &assigneeID, &a.IsDone, &a.DoneAt, &a.DurationSeconds, &meetingStatus,
-		&hostUserID, &a.SourceSystem, &a.SourceId, &a.Source, &a.CapturedBy, &version, &a.CreatedAt, &a.UpdatedAt, &a.ArchivedAt,
-		&threadKey, &captureLabel, &bulkMailAttested, &audience, &contentAvailable)
-	if err != nil {
-		return a, err
+	var s activityScan
+	if err := row.Scan(activityScanTargets(&s)...); err != nil {
+		return crmcontracts.Activity{}, err
 	}
-	aud := crmcontracts.ActivityAudience(audience)
-	a.Audience = &aud
-	state := crmcontracts.ActivityContentStateAvailable
-	if !contentAvailable {
-		// Withheld: the row is discoverable, its content is not the caller's.
-		// Everything that carries what was said — or identifies the message
-		// at the provider — goes; the markers stay.
-		state = crmcontracts.ActivityContentStateWithheld
-		a.Subject, a.Body, a.SourceId = nil, nil, nil
-		threadKey, captureLabel = nil, nil
-	}
-	a.ContentState = &state
-
-	a.Id = openapi_types.UUID(id)
-	a.AssigneeId = uuidPtr(assigneeID)
-	// Our own side of a meeting. Not gated by the content audience: who held a
-	// meeting is a marker like its date and its direction, and a caller who may
-	// discover the row may know whose meeting it was.
-	a.HostUserId = uuidPtr(hostUserID)
-	a.Kind = crmcontracts.ActivityKind(kind)
-	a.ChannelProvider = channelProvider
-	if direction != nil {
-		d := crmcontracts.ActivityDirection(*direction)
-		a.Direction = &d
-	}
-	if meetingStatus != nil {
-		m := crmcontracts.ActivityMeetingStatus(*meetingStatus)
-		a.MeetingStatus = &m
-	}
-	a.ThreadKey = threadKey
-	if captureLabel != nil {
-		label := crmcontracts.ActivityCaptureLabel(*captureLabel)
-		a.CaptureLabel = &label
-	}
-	a.BulkMailAttested = &bulkMailAttested
-	a.Version = &version
-	return a, nil
+	return s.record(), nil
 }

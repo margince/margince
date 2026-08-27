@@ -88,8 +88,8 @@ func (s *Store) SendOffer(ctx context.Context, id ids.OfferID, ifVersion *int64)
 
 		p := storekit.NewPatch()
 		p.Set("status", current.Status, "sent")
-		p.Set("fx_rate_to_base", current.FxRateToBase, rate)
-		p.Set("fx_rate_date", current.FxRateDate, rateDate)
+		p.Set(fxRateColumn, current.FxRateToBase, rate)
+		p.Set(fxRateDateColumn, current.FxRateDate, rateDate)
 		p.Set("buyer_snapshot", nil, storekit.JSONArg(buyer))
 		p.Set("issuer_snapshot", nil, storekit.JSONArg(issuer))
 		if err := p.ApplyGuarded(ctx, tx, "offer", id.UUID, ifVersion); err != nil {
@@ -203,10 +203,8 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 			return err
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(), map[string]any{
-			"status": "accepted", "accepted_at": now,
-			"deal_amount_minor": current.GrossMinor, "deal_currency": current.Currency,
-		})
+		auditID, err := storekit.Audit(ctx, tx, "update", "offer", id.UUID, p.Before(),
+			acceptedOfferImage(now, dealChanged))
 		if err != nil {
 			return fmt.Errorf("audit offer accept: %w", err)
 		}
@@ -219,11 +217,15 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 		// The paired deal.updated carries the FULL set of deal columns the sync
 		// actually wrote — including the re-frozen fx_rate_to_base/fx_rate_date
 		// on a closed deal — so a subscriber never retains stale
-		// base-currency state.
-		if err := storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{
-			ChangedFields: dealChanged,
-		}); err != nil {
-			return fmt.Errorf("emit paired deal.updated: %w", err)
+		// base-currency state. An accept that priced the deal at what it already
+		// held wrote none, and emits nothing: a deal.updated naming no field
+		// tells a subscriber the deal changed when it did not.
+		if len(dealChanged) > 0 {
+			if err := storekit.EmitEvent(ctx, tx, auditID, dealID.UUID, crmcontracts.PublicEventDealUpdated{
+				ChangedFields: dealChanged,
+			}); err != nil {
+				return fmt.Errorf("emit paired deal.updated: %w", err)
+			}
 		}
 		if out, err = readOfferWithLines(ctx, tx, id, storekit.LiveOnly); err != nil {
 			return fmt.Errorf("read accepted offer: %w", err)
@@ -233,55 +235,102 @@ func (s *Store) AcceptOffer(ctx context.Context, id ids.OfferID, ifVersion *int6
 	return out, err
 }
 
+// acceptedOfferImage is the accept's audit after-image: the offer's own
+// transition, plus what the accept did to the DEAL.
+//
+// The deal's columns are prefixed because this row's entity_type is `offer`, and
+// a bare `amount_minor` on it would read as the offer's own. They are taken from
+// what the sync WROTE rather than from the offer's gross, so an accept onto a
+// deal that already held the price records no re-price — the same fact the paired
+// deal.updated declines to announce, said the same way.
+func acceptedOfferImage(acceptedAt time.Time, dealChanged map[string]any) map[string]any {
+	image := map[string]any{"status": "accepted", "accepted_at": acceptedAt}
+	for column, value := range dealChanged {
+		image["deal_"+column] = value
+	}
+	return image
+}
+
 // syncDealAmountFromOffer writes the accepted gross onto the deal. A
-// still-open deal takes the amount as-is; a deal that already closed
-// must re-freeze FX as of its close date or the amount change would trip
-// deal_closed_fx / corrupt the frozen base-currency roll-up — the same
-// invariant applyMoneyInvariants enforces on direct deal edits.
-// It returns the deal columns the sync actually wrote, so the caller's paired
-// deal.updated reports the complete delta — on a closed deal that includes the
-// re-frozen fx_rate_to_base/fx_rate_date, not just amount_minor/currency.
+// still-open deal takes the amount as-is; a deal that already closed carries the
+// re-freeze freezeBaseRate states, which is the invariant applyMoneyInvariants
+// enforces on direct deal edits: re-pricing a deal is one rule whichever door
+// the price arrives through.
+//
+// The write goes through the deal patch seam rather than its own UPDATE, so the
+// deal's forecast move is recorded with it. Pricing a deal from its accepted
+// offer changes no stage, which is exactly the move deal_stage_history cannot
+// carry.
+//
+// It writes the money only where the deal does not already hold it. An accept
+// that prices the deal at what it was already priced at moved no forecast, and a
+// history row saying otherwise is a move a reconstruction would have to explain.
+//
+// It returns the deal columns the sync actually wrote — nothing when it wrote
+// nothing — so the caller's paired deal.updated reports the complete delta: on a
+// closed deal that includes the re-frozen fx_rate_to_base/fx_rate_date, not just
+// amount_minor/currency.
 func (s *Store) syncDealAmountFromOffer(ctx context.Context, tx pgx.Tx,
 	dealID ids.DealID, offer crmcontracts.Offer,
 ) (map[string]any, error) {
+	if offer.GrossMinor == nil {
+		// The totals engine derives a gross for every line and send refuses an
+		// offer with none, so a sent offer always carries one. Refusing rather
+		// than writing NULL keeps that reasoning falsifiable: a null amount
+		// beside the currency below would trip deal_amount_currency_pair, and
+		// the row would fail with nothing naming the offer that did it.
+		return nil, fmt.Errorf("accepted offer %s carries no gross to price deal %s with", offer.Id, dealID)
+	}
 	// The row lock makes the status read and the amount write below one
 	// race-free unit. IncludeArchived preserves the read below, which
 	// follows the deal row regardless of archived state.
-	if _, err := storekit.LockRow(ctx, tx, "deal", dealID.UUID, storekit.IncludeArchived); err != nil {
+	lock, err := storekit.LockRow(ctx, tx, dealTable, dealID.UUID, storekit.IncludeArchived)
+	if err != nil {
 		return nil, fmt.Errorf("lock deal for amount sync: %w", err)
 	}
 	var status string
 	var closedAt *time.Time
+	var amountBefore *int64
+	var currencyBefore *string
+	var rateBefore *string
+	var rateDateBefore *time.Time
+	// The frozen pair is read for its pre-image, not for a decision: re-pricing a
+	// closed deal replaces a rate it already carries, and the audit diff has to
+	// say which one.
 	if err := tx.QueryRow(ctx,
-		`SELECT status, closed_at FROM deal WHERE id = $1`, dealID).Scan(&status, &closedAt); err != nil {
+		`SELECT status, closed_at, amount_minor, currency, fx_rate_to_base::text, fx_rate_date
+		   FROM deal WHERE id = $1`,
+		dealID).Scan(&status, &closedAt, &amountBefore, &currencyBefore,
+		&rateBefore, &rateDateBefore); err != nil {
 		return nil, fmt.Errorf("read deal for amount sync: %w", err)
 	}
-	changed := map[string]any{"amount_minor": offer.GrossMinor, "currency": offer.Currency}
-	if DealStatus(status) == DealOpen {
-		if _, err := tx.Exec(ctx,
-			`UPDATE deal SET amount_minor = $2, currency = $3 WHERE id = $1`,
-			dealID, offer.GrossMinor, offer.Currency); err != nil {
-			return nil, fmt.Errorf("sync deal amount from offer: %w", err)
+
+	// The columns are nullable and the offer's figures are not, so each half is
+	// compared on its own terms. An unpriced deal and a priced one are different
+	// forecasts; so are two different prices; and re-pricing at the figure the
+	// deal already carries is neither.
+	p := storekit.NewPatch()
+	if amountBefore == nil || *amountBefore != *offer.GrossMinor {
+		p.Set(amountField, amountBefore, *offer.GrossMinor)
+	}
+	if currencyBefore == nil || *currencyBefore != offer.Currency {
+		p.Set(currencyField, currencyBefore, offer.Currency)
+	}
+	if p.Empty() {
+		// The deal already holds this offer's figures: no write, so no history
+		// row, and an empty delta for the caller's paired event to find nothing in.
+		return p.After(), nil
+	}
+	if DealStatus(status) != DealOpen {
+		// deal_closed_at guarantees closedAt on a non-open row.
+		if err := s.freezeBaseRate(ctx, tx, p, offer.Currency, *closedAt, rateBefore, rateDateBefore); err != nil {
+			return nil, fmt.Errorf("re-freeze fx for closed deal on accept: %w", err)
 		}
-		return changed, nil
 	}
-	base, err := s.installation.BaseCurrency(ctx, tx)
-	if err != nil {
-		return nil, err
+	if err := applyDealPatchLocked(ctx, tx, p, lock); err != nil {
+		return nil, fmt.Errorf("sync deal amount from offer: %w", err)
 	}
-	// deal_closed_at guarantees closedAt on a non-open row.
-	rate, rateDate, err := s.freezeFx(ctx, tx, base, offer.Currency, *closedAt)
-	if err != nil {
-		return nil, fmt.Errorf("re-freeze fx for closed deal on accept: %w", err)
-	}
-	if _, err := tx.Exec(ctx,
-		`UPDATE deal SET amount_minor = $2, currency = $3, fx_rate_to_base = $4, fx_rate_date = $5 WHERE id = $1`,
-		dealID, offer.GrossMinor, offer.Currency, rate, rateDate); err != nil {
-		return nil, fmt.Errorf("sync closed deal amount from offer: %w", err)
-	}
-	changed["fx_rate_to_base"] = rate
-	changed["fx_rate_date"] = rateDate
-	return changed, nil
+	return p.After(), nil
 }
 
 // RejectOffer runs sent → rejected. The optional reason rides the event

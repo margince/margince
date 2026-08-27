@@ -17,9 +17,9 @@ package main
 //     relation is refused by PostgreSQL inside the apply, because the ext_<name>
 //     role holds no privilege on it. Those tests assert the database's own
 //     message, not the gate's.
-//   - The rest DO apply cleanly and are caught by the positive catalog
-//     assertions afterwards. A table without workspace_id is perfectly legal
-//     SQL; only the allowlist refuses it.
+//   - The rest DO apply cleanly and are caught by the catalog assertions
+//     afterwards. A table carrying a workspace_id, or a policy, is perfectly
+//     legal SQL; only the allowlist refuses it.
 
 import (
 	"context"
@@ -123,23 +123,23 @@ func requireRefusal(t *testing.T, err error, mustMention ...string) {
 // is the worse one: a replacement that silently misses leaves a test asserting
 // a refusal it is no longer provoking.
 
-// tenantColumnSQL is the correct tenant column, and the parameter the column
-// tests vary.
-const tenantColumnSQL = "workspace_id uuid NOT NULL REFERENCES workspace(id) ON DELETE CASCADE"
+// tenantColumnSQL is the tenant column as the tier used to require it, kept as
+// the fixture for the test that proves it is now refused.
+const tenantColumnSQL = "workspace_id uuid NOT NULL"
 
-// predicateSQL is the canonical tenant predicate, as an author writes it.
-const predicateSQL = `(workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)`
-
-// noteTable builds the unit's one table with a caller-chosen tenant column.
-// modifier carries UNLOGGED and the like.
-func noteTable(ns, modifier, tenant string) string {
+// noteTable builds the unit's one table. modifier carries UNLOGGED and the
+// like; extra is a caller-chosen column line, empty for the correct shape and
+// set by the tests that add one the gate must refuse.
+func noteTable(ns, modifier, extra string) string {
+	if extra != "" {
+		extra = "    " + extra + ",\n"
+	}
 	return fmt.Sprintf(`CREATE %[2]sTABLE ext.%[1]s_note (
     id           uuid        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    %[3]s,
-    body         text        NOT NULL,
+%[3]s    body         text        NOT NULL,
     created_at   timestamptz NOT NULL DEFAULT now()
 );
-`, ns, modifier, tenant)
+`, ns, modifier, extra)
 }
 
 // notePolicy builds the table's single policy with a caller-chosen body, so a
@@ -149,26 +149,22 @@ func notePolicy(ns, body string) string {
 	return fmt.Sprintf("CREATE POLICY %[1]s_note_tenant_isolation ON ext.%[1]s_note %[2]s;\n", ns, body)
 }
 
-// noteRLS is ENABLE plus FORCE; the FORCE test passes force=false.
-func noteRLS(ns string, force bool) string {
-	sql := fmt.Sprintf("ALTER TABLE ext.%s_note ENABLE ROW LEVEL SECURITY;\n", ns)
-	if force {
-		sql += fmt.Sprintf("ALTER TABLE ext.%s_note FORCE ROW LEVEL SECURITY;\n", ns)
-	}
-	return sql
+// noteRLS is ENABLE plus FORCE, for the tests that prove a unit table may carry
+// neither.
+func noteRLS(ns string) string {
+	return fmt.Sprintf("ALTER TABLE ext.%[1]s_note ENABLE ROW LEVEL SECURITY;\n"+
+		"ALTER TABLE ext.%[1]s_note FORCE ROW LEVEL SECURITY;\n", ns)
 }
 
 func noteGrant(ns string) string {
 	return fmt.Sprintf("GRANT SELECT, INSERT, UPDATE, DELETE ON ext.%s_note TO margince_app;\n", ns)
 }
 
-// scaffoldUp is the shape a unit is meant to ship: one tenant table in ext,
-// namespaced, workspace-scoped, forced RLS, one policy, DML to the app role.
+// scaffoldUp is the shape a unit is meant to ship: one table in ext, namespaced,
+// owning its own rows, referencing nothing outside the schema, carrying no
+// row-level rule, DML to the app role.
 func scaffoldUp(ns string) string {
-	return noteTable(ns, "", tenantColumnSQL) +
-		noteRLS(ns, true) +
-		notePolicy(ns, "USING "+predicateSQL+" WITH CHECK "+predicateSQL) +
-		noteGrant(ns)
+	return noteTable(ns, "", "") + noteGrant(ns)
 }
 
 func scaffoldDown(ns string) string {
@@ -197,113 +193,46 @@ func TestGateAcceptsTheScaffoldedShape(t *testing.T) {
 	}
 }
 
-// Indexing workspace_id is the natural thing to do under RLS — the policy's
-// predicate is a comparison on it, so every query filters on it — and it is the
-// case the plan probe is most likely to get wrong. On a freshly created, empty,
-// un-ANALYZEd table the planner's default statistics favour the index, so the
-// predicate renders as `Index Cond:` and never as `Filter:`. That is exactly the
-// state the gate sees right after applying a migration.
-func TestGateAcceptsATenantTableIndexedOnWorkspaceID(t *testing.T) {
-	unit := unitName(t, "idx")
+// A workspace column is refused rather than ignored. It separates nothing on an
+// installation that holds one workspace, and left in place it reads to the next
+// author as a tenant boundary the tier no longer has.
+func TestGateRejectsTableWithWorkspaceID(t *testing.T) {
+	unit := unitName(t, "ws")
 	ns := namespaceOf(t, unit)
-	up := scaffoldUp(ns) + fmt.Sprintf("CREATE INDEX %[1]s_note_ws ON ext.%[1]s_note (workspace_id);\n", ns)
+	up := noteTable(ns, "", tenantColumnSQL) + noteGrant(ns)
 
-	if err := runGate(t, unit, migrationDir(t, up, scaffoldDown(ns))); err != nil {
-		t.Fatalf("a correctly isolated table that indexes %s must pass: %v", tenantColumn, err)
-	}
-}
-
-// The plan probe's whole job is to refuse a connection row-level security does
-// not bind, and the trap it guards is that such a connection reports
-// relforcerowsecurity=true just like a bound one. This drives the probe directly
-// with a SUPERUSER connection — the dev and CI owner, the exact Stage A trap —
-// over a table deliberately NAMED so that the bare string "workspace_id" appears
-// in the plan without the predicate binding anything.
-//
-// A probe that looked for the column name rather than the rendered predicate
-// passes this. That is the false-pass the exact match exists to close, and this
-// is the test that keeps it closed.
-func TestTheRLSProbeRefusesAConnectionRowLevelSecurityDoesNotBind(t *testing.T) {
-	ctx := context.Background()
-	owner := admin(t)
-
-	// Not created through the gate: the point is to hold the table's shape
-	// correct and vary only the connection the probe runs over.
-	name := fmt.Sprintf("ext_probe_%d_workspace_id_map", os.Getpid())
-	for _, statement := range []string{
-		fmt.Sprintf(`CREATE TABLE ext.%s (id uuid NOT NULL, workspace_id uuid NOT NULL)`, name),
-		fmt.Sprintf(`ALTER TABLE ext.%s ENABLE ROW LEVEL SECURITY`, name),
-		fmt.Sprintf(`ALTER TABLE ext.%s FORCE ROW LEVEL SECURITY`, name),
-		fmt.Sprintf(`CREATE POLICY %s_iso ON ext.%s USING %s WITH CHECK %s`, name, name, predicateSQL, predicateSQL),
-	} {
-		if _, err := owner.Exec(ctx, statement); err != nil {
-			t.Fatalf("building the probe fixture (%s): %v", statement, err)
-		}
-	}
-	t.Cleanup(func() {
-		if _, err := owner.Exec(context.Background(), `DROP TABLE IF EXISTS ext.`+name); err != nil {
-			t.Errorf("dropping the probe fixture: %v — every later gate run enumerates schema ext", err)
-		}
-	})
-
-	var super bool
-	if err := owner.QueryRow(ctx, `SELECT rolsuper FROM pg_roles WHERE rolname = current_user`).Scan(&super); err != nil {
-		t.Fatalf("reading the owner's attributes: %v", err)
-	}
-	if !super {
-		t.Fatalf("this cluster's owner is not a superuser, so FORCE binds it and the probe would pass — the trap being tested does not exist here")
-	}
-
-	rel := relation{name: name}
-	if err := owner.QueryRow(ctx, `
-		SELECT c.oid FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
-		 WHERE n.nspname = $1 AND c.relname = $2`, extSchema, name).Scan(&rel.oid); err != nil {
-		t.Fatalf("locating the probe fixture: %v", err)
-	}
-
-	requireRefusal(t, assertRLSBindsTheOwner(ctx, owner, rel, extSchema+"."+name),
-		"row-level security is not binding the owner", name)
-}
-
-func TestGateRejectsTableWithoutWorkspaceID(t *testing.T) {
-	unit := unitName(t, "nows")
-	ns := namespaceOf(t, unit)
-	up := fmt.Sprintf(`CREATE TABLE ext.%[1]s_thing (id uuid NOT NULL PRIMARY KEY);`, ns)
-	down := fmt.Sprintf(`DROP TABLE IF EXISTS ext.%s_thing;`, ns)
-
-	err := runGate(t, unit, migrationDir(t, up, down))
-	requireRefusal(t, err, "ext."+ns+"_thing", "workspace_id")
+	err := runGate(t, unit, migrationDir(t, up, scaffoldDown(ns)))
+	requireRefusal(t, err, "ext."+ns+"_note", "workspace_id")
 }
 
 // A policy that admits every row is the failure this whole tier exists to
 // prevent, and it is invisible to every textual rule: the SQL is well-formed,
 // the table is namespaced, RLS is on and forced. Only comparing the rendered
 // predicate against the one canonical spelling catches it.
-func TestGateRejectsPermissivePolicy(t *testing.T) {
-	unit := unitName(t, "perm")
+// Any policy at all, whatever it says. The gate used to pin the predicate's
+// rendered form and enumerate the ways to get it wrong; with no tenant to key
+// on there is nothing a policy here can mean, so the rule is the simpler one.
+func TestGateRejectsAnyPolicy(t *testing.T) {
+	unit := unitName(t, "pol")
 	ns := namespaceOf(t, unit)
-	up := noteTable(ns, "", tenantColumnSQL) +
-		noteRLS(ns, true) +
+	up := noteTable(ns, "", "") +
+		noteRLS(ns) +
 		notePolicy(ns, "USING (true) WITH CHECK (true)") +
 		noteGrant(ns)
 
 	err := runGate(t, unit, migrationDir(t, up, scaffoldDown(ns)))
-	requireRefusal(t, err, ns+"_note_tenant_isolation", "USING true")
+	requireRefusal(t, err, "ext."+ns+"_note", "row-level")
 }
 
-// ENABLE without FORCE is the subtlest of the seven: the table looks protected
-// and is, for the app role — but not for its OWNER, which is the unit's own
-// ext_<name> role, and that is the role the unit's own later migrations run as.
-func TestGateRejectsMissingForceRLS(t *testing.T) {
-	unit := unitName(t, "force")
+// Row-level security with no policy at all: the shape that denies every row to
+// a non-owner while looking, at a glance, like a table someone protected.
+func TestGateRejectsRowLevelSecurity(t *testing.T) {
+	unit := unitName(t, "rls")
 	ns := namespaceOf(t, unit)
-	up := noteTable(ns, "", tenantColumnSQL) +
-		noteRLS(ns, false) +
-		notePolicy(ns, "USING "+predicateSQL+" WITH CHECK "+predicateSQL) +
-		noteGrant(ns)
+	up := noteTable(ns, "", "") + noteRLS(ns) + noteGrant(ns)
 
 	err := runGate(t, unit, migrationDir(t, up, scaffoldDown(ns)))
-	requireRefusal(t, err, "ext."+ns+"_note", "relforcerowsecurity=false")
+	requireRefusal(t, err, "ext."+ns+"_note", "relrowsecurity=true")
 }
 
 // The core relations are not the extension's to touch, and this test asserts
@@ -355,22 +284,22 @@ func TestGateRejectsForeignTable(t *testing.T) {
 	t.Run("foreign table", func(t *testing.T) {
 		unit := unitName(t, "ftab")
 		ns := namespaceOf(t, unit)
-		up := fmt.Sprintf(`CREATE FOREIGN TABLE ext.%[1]s_remote (id uuid, workspace_id uuid) SERVER %[2]s OPTIONS (table_name 'anything');`, ns, server)
+		up := fmt.Sprintf(`CREATE FOREIGN TABLE ext.%[1]s_remote (id uuid, body text) SERVER %[2]s OPTIONS (table_name 'anything');`, ns, server)
 		down := fmt.Sprintf(`DROP FOREIGN TABLE IF EXISTS ext.%s_remote;`, ns)
 
 		err := runGate(t, unit, migrationDir(t, up, down))
-		requireRefusal(t, err, "ext."+ns+"_remote", "FOREIGN TABLE", "row-level security")
+		requireRefusal(t, err, "ext."+ns+"_remote", "FOREIGN TABLE", "outside this database")
 	})
 
 	t.Run("materialized view", func(t *testing.T) {
 		unit := unitName(t, "mview")
 		ns := namespaceOf(t, unit)
 		up := scaffoldUp(ns) + fmt.Sprintf(
-			"CREATE MATERIALIZED VIEW ext.%[1]s_digest AS SELECT workspace_id, count(*) AS n FROM ext.%[1]s_note GROUP BY 1;\n", ns)
+			"CREATE MATERIALIZED VIEW ext.%[1]s_digest AS SELECT body, count(*) AS n FROM ext.%[1]s_note GROUP BY 1;\n", ns)
 		down := fmt.Sprintf("DROP MATERIALIZED VIEW IF EXISTS ext.%s_digest;\n", ns) + scaffoldDown(ns)
 
 		err := runGate(t, unit, migrationDir(t, up, down))
-		requireRefusal(t, err, "ext."+ns+"_digest", "MATERIALIZED VIEW", "row-level security")
+		requireRefusal(t, err, "ext."+ns+"_digest", "MATERIALIZED VIEW", "standing copy")
 	})
 }
 
