@@ -127,10 +127,6 @@ func requireRefusal(t *testing.T, err error, mustMention ...string) {
 // the fixture for the test that proves it is now refused.
 const tenantColumnSQL = "workspace_id uuid NOT NULL"
 
-// predicateSQL is the tenant predicate the retired policies compared, kept as
-// the body for the tests that prove any policy is now refused.
-const predicateSQL = `(workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)`
-
 // noteTable builds the unit's one table. modifier carries UNLOGGED and the
 // like; extra is a caller-chosen column line, empty for the correct shape and
 // set by the tests that add one the gate must refuse.
