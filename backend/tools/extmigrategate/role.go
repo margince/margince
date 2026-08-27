@@ -227,10 +227,16 @@ func (r *extRole) assertRestricted(ctx context.Context) error {
 	case createPublic:
 		return fmt.Errorf("role %s holds CREATE on schema public — the namespace wall is that it does not, and with it a migration can create a core-schema table that this gate would then have to detect rather than have refused", r.name)
 	case !usagePublic:
-		// Not a violation of the role's own shape, but the tenant foreign key
-		// cannot be declared without it, so say so here rather than let every
-		// unit fail inside its own CREATE TABLE.
-		return fmt.Errorf("role %s cannot USE schema public, so it cannot name %s in a foreign key — grant USAGE on public to PUBLIC on this cluster (CREATE stays revoked)", r.name, coreTenantParent)
+		// Not a violation of the role's own shape, and no longer about a key a
+		// unit declares — none may, and assertNoForeignKeysOutOfExt refuses one.
+		// It is what makes the probes below MEAN anything: without USAGE the
+		// role cannot name a core object at all, so "this role cannot reference
+		// public.workspace" would be true of a cluster's schema permissions
+		// rather than of the grant surface this gate exists to police, and the
+		// gate would report a wall it never tested.
+		return fmt.Errorf("role %s cannot USE schema public, so this gate cannot tell a role that "+
+			"may not reach %s from a cluster where nobody may — grant USAGE on public to PUBLIC "+
+			"here (CREATE stays revoked)", r.name, coreTenantParent)
 	case !createExt || !usageExt:
 		return fmt.Errorf("role %s lacks CREATE/USAGE on schema %s — migration 0206 creates that schema; is this database migrated to head?", r.name, extSchema)
 	}
