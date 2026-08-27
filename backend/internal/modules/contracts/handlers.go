@@ -24,8 +24,8 @@ type Handlers struct {
 }
 
 // NewHandlers builds the contract handler set.
-func NewHandlers(db *database.DB) Handlers {
-	return Handlers{store: NewStore(db)}
+func NewHandlers(db *database.DB, freezeRate FreezeRateFunc) Handlers {
+	return Handlers{store: NewStore(db, freezeRate)}
 }
 
 // pathID converts a contract path parameter into its typed id.

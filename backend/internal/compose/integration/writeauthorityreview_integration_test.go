@@ -78,7 +78,7 @@ func TestAReadShareOfADealCannotRewriteItsContracts(t *testing.T) {
 		VALUES ($1, $2, 'Anchored Deal', $3, $4, $5, 'manual', 'human:x')`,
 		deal, e.Rep3, pipeline, open, org)
 
-	store := contracts.NewStore(e.DB())
+	store := ContractsStore(e.DB(), e.Deals)
 	// Fixed, because nothing here is about WHEN: the term's dates never reach an
 	// assertion, and a fixture reading the wall clock is one that can fail for a
 	// reason its own name does not mention.

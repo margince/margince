@@ -76,7 +76,7 @@ func contractAPI(srv Server, pool *pgxpool.Pool, identitySvc *identity.Service) 
 		BaseURL: httpserver.BaseURL,
 		Middlewares: []crmcontracts.MiddlewareFunc{
 			agentGate(registry, staging, provider, provider, fieldOwnership{pool: pool}, importsFor(&srv), gate),
-			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)))),
+			idempotency(pool, replayProbes(staging.svc, contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool)), dealrooms.NewStore(InstallationDB(pool)))),
 			// Outermost: an overlay-mode SoR write is refused before it can
 			// be recorded under an idempotency key or staged as an agent
 			// approval — the honest unsupported_by_sor, for every principal.

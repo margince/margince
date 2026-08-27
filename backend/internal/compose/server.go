@@ -104,7 +104,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		peopleHandlers:      newPeopleHandlers(pool).WithUploadLimit(limits.LinkedInImport),
 		dealsHandlers:       dealsH,
 		projectsHandlers:    projects.HandlersOver(ProjectsStore(pool)),
-		contractsHandlers:   contracts.NewHandlers(InstallationDB(pool)),
+		contractsHandlers:   contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool)),
 		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
 		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
