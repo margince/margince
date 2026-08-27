@@ -5,55 +5,36 @@ package people
 
 // Org-name matching for the markets that write the legal form BEFORE the name.
 //
-// WHY THIS EXISTS. PO-PARAM-1 strips a legal form that TRAILS the name — "Acme
-// Inc", "Acme GmbH" — because that is where English and German put it. Much of
-// the world puts it in front: "CÔNG TY CỔ PHẦN SỮA VIỆT NAM" is Vinamilk and the
-// first three words are "joint-stock company"; so are "PT Astra International",
-// "ООО Ромашка", "UAB Vilniaus Duona". Every company in such a market therefore
-// begins with the same run of words, and a character metric reads that as shared
-// identity — Jaro-Winkler boosts a shared PREFIX specifically. Measured before
-// this existed, two unrelated companies scored 0.76 to 0.91 against each other
-// on their boilerplate alone, well past the 0.72 review threshold.
+// PO-PARAM-1 strips a form that TRAILS the name, because that is where English
+// and German put it. Much of the world puts it in front — "CÔNG TY CỔ PHẦN SỮA
+// VIỆT NAM" is Vinamilk and the first three words are "joint-stock company" — so
+// every company in such a market begins with the same run of words, and
+// Jaro-Winkler's prefix boost read that as shared identity. Measured before this
+// existed, two unrelated companies scored 0.76 to 0.91 against each other.
 //
-// A PHRASE, NEVER A WORD. The folded syllables of a legal form are also real
-// brand syllables: "cổ", "cô" and "có" all fold to "co", "phần" and "phân" to
-// "phan", and "Cỏ May" is a rice company whose whole name folds to "co may". So
-// a word of a legal form is only removed as part of the WHOLE phrase, at the
-// front of the name. Deleting the token "phan" wherever it appeared would take
-// the brand off "Phan Minh".
+// A PHRASE, NEVER A WORD. The folded syllables of a legal form are also brand
+// syllables: "cổ" and "cỏ" both fold to "co", and "Cỏ May" is a rice company. So
+// a word is only removed as part of the whole phrase, at the front of the name.
 //
 // AND A SHORT LATIN FORM NEEDS A SECOND OPINION. "PT Solutions Physical
-// Therapy", "AO World", "AS Roma", "CV Sciences", "AB InBev", "SIA Engineering"
-// and "MB Financial" are all real companies whose first word is another market's
-// legal form. Position alone cannot tell those from "PT Astra International", so
-// an ambiguous marker is believed only when something else about the name agrees
-// — see corroboratedMarket.
+// Therapy", "AO World" and "AS Roma" are real companies whose first word is
+// another market's legal form — see corroboratedMarket.
 //
-// WHAT THIS IS NOT. Not a second normalizer for the org-name KEY:
-// NormalizeOrgName (namesim.go) is unchanged and still produces the exact and
-// grouping keys, so no stored key moves. This one is consulted only where two
-// names are COMPARED — the gate (orgnamegate.go) and the score (dedupeorg.go).
-// The difference matters: "Công ty CP Đầu tư ABC" and "Công ty CP Thương mại
-// ABC" must compare as one candidate pair and must NOT group under one key.
+// NOT a second normalizer for the org-name KEY: NormalizeOrgName is unchanged
+// and still produces the exact and grouping keys, so no stored key moves. This
+// one is consulted only where two names are COMPARED.
 
 import (
 	"strings"
 	"unicode"
 )
 
-// foldDStroke maps đ to d.
+// foldDStroke maps đ to d. U+0111 has no canonical decomposition, so the NFD
+// pass in normalizeName leaves it while Postgres f_unaccent maps it — without
+// this, "ĐẦU TƯ" folds to "đau tu" in Go and "dau tu" in the database.
 //
-// U+0111 LATIN SMALL LETTER D WITH STROKE has no canonical decomposition, so
-// the NFD pass in normalizeName cannot separate a combining mark from it and
-// the letter survives the fold intact: "ĐẦU TƯ" becomes "đau tu", not "dau tu".
-// Postgres f_unaccent DOES map it, so without this the same name folds two ways
-// — "dau tu" in the database and "đau tu" in Go — and no entry in the tables
-// could ever match a name typed with the letter Vietnamese uses for one of its
-// most common trade words.
-//
-// Deliberately NOT inside normalizeName, which is pinned as the input to the
-// similarity metric (PO-PARAM-JW-2) and shared with person and lead matching.
-// This is an org-name concern and stays on the org-name path.
+// Not inside normalizeName, which is pinned as the similarity metric's input
+// (PO-PARAM-JW-2) and shared with person and lead matching.
 func foldDStroke(s string) string {
 	if !strings.ContainsAny(s, "đĐ") {
 		return s
@@ -62,17 +43,11 @@ func foldDStroke(s string) string {
 }
 
 // stripLeadingMarkers removes legal forms from the FRONT of a name, longest
-// first, for as long as one matches.
+// first, for as long as one matches — the forms stack ("TỔNG CÔNG TY CỔ PHẦN"
+// carries two), and taking "cong ty" off "cong ty co phan x" first would leave
+// the remains of a longer form behind.
 //
-// Repeated, because the forms stack: "TỔNG CÔNG TY CỔ PHẦN …" carries two, and a
-// name may open with a form followed by several trade words.
-//
-// Longest-match, because the short forms are prefixes of the long ones. Taking
-// "cong ty" off "cong ty co phan x" would leave "co phan x" and put the remains
-// of a legal form into the comparison.
-//
-// An AMBIGUOUS marker is skipped unless the caller has already found
-// corroboration that this really is the market it looks like.
+// An AMBIGUOUS marker is skipped unless the caller found corroboration.
 func stripLeadingMarkers(fields []string, markers []orgFormMarker, corroborated bool) []string {
 	for {
 		longest := 0
@@ -92,28 +67,20 @@ func stripLeadingMarkers(fields []string, markers []orgFormMarker, corroborated 
 	}
 }
 
-// nameWordSeparators split a name into words, for the legal-form tables here and
-// for the gate that compares what is left.
+// nameWordSeparators split a name into words, for the tables here and the gate
+// that compares what is left.
 //
-// PUNCTUATION SEPARATES. Company names arrive punctuated every way a writer can
-// punctuate them — "ACME-Group", "Hewlett.Packard", "Capital.com", "S.C.",
-// "Sp. z o.o.", "ООО «Ромашка»", an en dash where a hyphen was meant — and a
-// fused token loses a real duplicate: "Acme Ltd" and "ACME-Group Ltd" share the
-// word "acme", but as one token "acme-group" it matches nothing.
+// PUNCTUATION SEPARATES, as a class rather than a list: names arrive punctuated
+// every way a writer can manage, and a fused "acme-group" matches nothing. An
+// earlier version named six ASCII characters and missed the period and the en
+// dash.
 //
-// A CLASS rather than a list, deliberately. An earlier version named six ASCII
-// characters and missed the period and the en dash, which is the shape of bug
-// that keeps being rediscovered one punctuation mark at a time.
+// A COMBINING MARK DOES NOT. Thai, Lao, Khmer and the Indic scripts write vowels
+// as marks, so a letters-and-digits rule cut "เมืองไทย" into four fragments.
+// Those scripts have no spaces either, so a Thai name is correctly one word.
 //
-// A COMBINING MARK DOES NOT SEPARATE, which the letters-and-digits rule got
-// wrong. Thai, Lao, Khmer and the Indic scripts write their vowels as marks
-// rather than letters, so that rule cut every Thai word into pieces:
-// "เมืองไทย" became four fragments. Those scripts have no spaces between words
-// either, so a Thai name is correctly ONE word here.
-//
-// Deliberately NOT done inside NormalizeOrgName, which also produces exact
-// grouping keys (orgMatchKeys in linkedinimport.go, the promotion sweep's
-// buckets). Splitting there would make two DIFFERENT names equal as keys.
+// NOT done inside NormalizeOrgName, which also produces exact grouping keys —
+// splitting there would make two DIFFERENT names equal as keys.
 func nameWordSeparators(r rune) bool {
 	return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.Is(unicode.Mn, r)
 }
@@ -182,26 +149,14 @@ func opensWith(fields, tokens []string) bool {
 }
 
 // corroboratedMarket answers whether a name that OPENS with an ambiguous marker
-// really belongs to that marker's market.
+// really belongs to that market. "PT Astra International Tbk" is Indonesian and
+// "PT Solutions Physical Therapy" is American, and the position of "PT" does not
+// distinguish them.
 //
-// The question exists because a two-letter Latin form is also an ordinary name.
-// "PT Astra International Tbk" is an Indonesian company; "PT Solutions Physical
-// Therapy" is an American one, and nothing about the position of "PT"
-// distinguishes them.
-//
-// TWO THINGS COUNT AS AGREEMENT, and both are properties of the name itself
-// rather than of the record around it:
-//
-//   - the market's own bracketing form closes the name. Indonesia's listed
-//     companies end in "Tbk", and no English name does.
-//   - the rest of the name is not written in Latin script. "ООО Ромашка" and
-//     "شركة الراجحي" are unambiguous by their letters, and a Latin marker in
-//     front of a Cyrillic or Arabic name is the same evidence.
-//
-// When neither holds, the marker stays in the name. That keeps today's false
-// positive for a genuine "PT Something" pair, which is the safer error: a name
-// wrongly stripped matches every company in its sector, while a name left alone
-// matches only the ones it already did.
+// Two things count, both properties of the name itself: the market's own
+// bracketing form closes it ("Tbk"), or the rest is not Latin script. When
+// neither holds the marker stays, which is the safer error — a name wrongly
+// stripped matches every company in its sector.
 func corroboratedMarket(raw string, fields []string, market marketForms) bool {
 	if len(fields) < 2 {
 		return false
@@ -242,40 +197,31 @@ func isLatinScript(fields []string) bool {
 	return true
 }
 
-// orgNameForMatching is the name reduced to what could identify a company: the
-// key with a leading legal form and its trailing trade vocabulary removed.
+// orgNameForMatching is the name reduced to what could identify a company.
 //
-// IT MAY RETURN EMPTY, and that is an answer rather than a failure. A name that
-// is nothing but a legal form and trade words — "CÔNG TY CỔ PHẦN THƯƠNG MẠI DỊCH
-// VỤ" — has said nothing about WHICH company it is, and two such names have said
-// nothing about being the same one. Callers treat empty as no evidence, never as
-// a wildcard.
-//
-// This is the one place it differs from NormalizeOrgName, which must never empty
-// a name because it produces a stored key and an empty key would collide with
-// every other empty key. A comparison has no such obligation: it is allowed to
-// say "I cannot tell these apart on their names".
+// IT MAY RETURN EMPTY, which is an answer: a name of nothing but a legal form and
+// trade words has not said WHICH company it is. Callers treat empty as no
+// evidence, never as a wildcard — which is the one thing NormalizeOrgName may
+// not do (namesim.go).
 func orgNameForMatching(s string) string {
 	name, _ := matchingFormOf(s)
 	return name
 }
 
 // matchingFormOf is orgNameForMatching plus the market the name declared, which
-// the gate needs: a market whose brands are built from a small pool of shared
-// syllables cannot treat one shared word as evidence of identity.
+// the gate needs to know whether one shared word is evidence.
 //
 // THE TRADE VOCABULARY IS ONLY STRIPPED FROM A NAME THAT DECLARED ITS MARKET.
-// Vietnam's abbreviations are two letters — "tm", "dv", "dt", "va" — and two
-// letters mean something else everywhere else: "VA Trading" and "DT Robotics"
-// are companies whose first word this table would otherwise eat. A legal form is
-// a strong enough signal to act on; a bare two-letter word is not.
+// Vietnam's abbreviations are two letters — "tm", "dv", "dt" — and two letters
+// mean something else elsewhere: "VA Trading" and "DT Robotics" are companies
+// whose first word this table would otherwise eat.
 func matchingFormOf(s string) (string, *marketForms) {
 	// The scripts with no word boundaries are answered first, by substring
 	// (orgnamecjk.go). Splitting them into words yields the whole name as one
 	// token, so every path below would find nothing to strip and nothing to
 	// compare.
 	if name, isCJK := cjkNameForMatching(s); isCJK {
-		return name, &cjkMarket
+		return name, nil
 	}
 	fields := strings.FieldsFunc(NormalizeOrgName(foldDStroke(s)), nameWordSeparators)
 	for i := range prefixMarkets {

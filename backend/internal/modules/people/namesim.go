@@ -81,33 +81,22 @@ func normalizeName(s string) string {
 // combiningDiaeresis is the mark that turns Cyrillic "е" into "ё".
 const combiningDiaeresis = '\u0308'
 
-// dropAccents removes the combining marks that are ACCENTS — the ones a writer
-// adds to a letter and a reader can do without — and keeps the ones that are
-// letters in their own right.
+// dropAccents removes the combining marks that are ACCENTS and keeps the ones
+// that are letters in their own right.
 //
-// REMOVING EVERY Mn MARK WAS WRONG outside the alphabets this started with. In
-// Thai, Lao, Khmer and the Indic scripts a combining mark is a LETTER: the
-// vowels hang above and below the consonant instead of sitting beside it.
-// Measured, an unrestricted strip turned "เมืองไทย" into "เมองไทย" and
-// "កម្ពុជា" into "កមពជា", so every Thai and Khmer company name lost characters
-// before any comparison began — and two different names could fold together.
+// The BASE LETTER decides, because NFD leaves a mark directly after the letter it
+// belongs to:
 //
-// The base letter decides, not the mark. NFD leaves a mark directly after the
-// letter it belongs to, so the base says which kind it is:
+//   - Latin and Greek write accents, and those go — Müller/Mueller, Straße,
+//     Việt Nam, Οδυσσεύς all depend on it.
+//   - Hebrew and Arabic write vocalization, optional and usually absent, so a
+//     pointed spelling folds onto the plain one.
+//   - Everything else writes letters, and those stay.
 //
-//   - Latin and Greek write ACCENTS, and those go. Müller/Mueller, Straße, Việt
-//     Nam and Οδυσσεύς all depend on it.
-//   - Hebrew and Arabic write VOCALIZATION — niqqud and harakat — which is
-//     optional and usually absent, so a pointed spelling must fold onto the
-//     plain one rather than becoming a second company.
-//   - Everything else writes LETTERS, and those stay.
-//
-// CYRILLIC IS NOT IN THAT LIST, and including it was wrong for the same reason
-// as Thai. Its marked letters are letters: "й" is not an accented "и" but the
-// character in every other Russian word, and stripping it turned "Мойка" into
-// "моика" and the Ukrainian "Київстар" into "киівстар". The one real accent
-// pair, "ё" against "е", is spelled out below because writers do treat those two
-// as interchangeable.
+// Removing every Mn mark instead was wrong wherever a mark IS a letter: it
+// turned "เมืองไทย" into "เมองไทย" and the Russian "Мойка" into "моика", so
+// those names lost characters before any comparison began. Cyrillic's one real
+// accent pair, "ё" against "е", is spelled out below.
 func dropAccents(decomposed string) string {
 	var out strings.Builder
 	out.Grow(len(decomposed))
@@ -186,18 +175,12 @@ func NormalizeOrgName(s string) string {
 	return strings.Join(fields, " ")
 }
 
-// undottedForm is a trailing word with the dots a writer put inside it removed,
-// so a legal form spelled with them is the same form spelled without.
+// undottedForm is a trailing word with its internal dots removed, so "S.R.L."
+// and "SRL" are one Romanian form. Trimming only the final dot left "s.r.l." as
+// one token matching no entry.
 //
-// "S.R.L." and "SRL" are one Romanian form, "A.Ş." and "AŞ" one Turkish form,
-// and a registry holds whichever the filer typed. Trimming only the FINAL dot
-// left "s.r.l." as a single token that matched no entry, so those names kept
-// their legal form and scored against every other company that kept the same
-// one.
-//
-// Only dots, and only for the lookup — the word itself is untouched when it
-// turns out not to be a legal form, so a name that really contains a dot keeps
-// it.
+// Only for the lookup: a word that turns out not to be a legal form keeps its
+// dots.
 func undottedForm(word string) string {
 	if !strings.Contains(word, ".") {
 		return word
