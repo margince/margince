@@ -5876,6 +5876,7 @@ func (e OnboardingCompanyMessageReplyRemainingRequiredFields) Valid() bool {
 const (
 	OnboardingCompanyLocaleDE OnboardingCompanyMessageRequestLocale = "de"
 	OnboardingCompanyLocaleEN OnboardingCompanyMessageRequestLocale = "en"
+	OnboardingCompanyLocaleVI OnboardingCompanyMessageRequestLocale = "vi"
 )
 
 // Valid indicates whether the value is a known member of the OnboardingCompanyMessageRequestLocale enum.
@@ -5884,6 +5885,8 @@ func (e OnboardingCompanyMessageRequestLocale) Valid() bool {
 	case OnboardingCompanyLocaleDE:
 		return true
 	case OnboardingCompanyLocaleEN:
+		return true
+	case OnboardingCompanyLocaleVI:
 		return true
 	default:
 		return false
@@ -11567,6 +11570,7 @@ func (e ListListsParamsEntityType) Valid() bool {
 const (
 	OnboardingProposalLocaleDE GetOnboardingCompanyProposalParamsLocale = "de"
 	OnboardingProposalLocaleEN GetOnboardingCompanyProposalParamsLocale = "en"
+	OnboardingProposalLocaleVI GetOnboardingCompanyProposalParamsLocale = "vi"
 )
 
 // Valid indicates whether the value is a known member of the GetOnboardingCompanyProposalParamsLocale enum.
@@ -11575,6 +11579,8 @@ func (e GetOnboardingCompanyProposalParamsLocale) Valid() bool {
 	case OnboardingProposalLocaleDE:
 		return true
 	case OnboardingProposalLocaleEN:
+		return true
+	case OnboardingProposalLocaleVI:
 		return true
 	default:
 		return false

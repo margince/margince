@@ -7401,9 +7401,9 @@ paths:
           description: Language for the open questions' copy; option values are locale-invariant.
           schema:
             type: string
-            enum: [en, de]
+            enum: [en, de, vi]
             default: en
-            x-enum-varnames: [OnboardingProposalLocaleEN, OnboardingProposalLocaleDE]
+            x-enum-varnames: [OnboardingProposalLocaleEN, OnboardingProposalLocaleDE, OnboardingProposalLocaleVI]
       responses:
         '200':
           description: The current deterministic proposal snapshot.
@@ -27157,8 +27157,8 @@ components:
         message: { type: string, minLength: 1, maxLength: 2000 }
         locale:
           type: string
-          enum: [en, de]
-          x-enum-varnames: [OnboardingCompanyLocaleEN, OnboardingCompanyLocaleDE]
+          enum: [en, de, vi]
+          x-enum-varnames: [OnboardingCompanyLocaleEN, OnboardingCompanyLocaleDE, OnboardingCompanyLocaleVI]
         act:
           $ref: '#/components/schemas/OnboardingAct'
           default: company

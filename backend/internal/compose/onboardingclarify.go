@@ -30,8 +30,6 @@ import (
 // than this presents the first six as printed.
 const onboardingClarifyOptionLimit = 6
 
-const localeDE = "de"
-
 // withSelectedOption records the clarify option the administrator
 // clicked — the strongest explicit instruction there is. It grants
 // exactly the named field with the chosen value (post-trim exact match)
@@ -319,50 +317,29 @@ func conflictOption(value, label, detail string) crmcontracts.OnboardingClarifyO
 }
 
 func clarifyEntityQuestion(locale string) string {
-	if locale == localeDE {
-		return "Die rechtlichen Angaben der Website nennen mehrere juristische Personen. Welche ist Ihr Unternehmen?"
-	}
-	return "The legal notice names more than one legal entity. Which one is your company?"
+	return copyFor(locale).entityQuestion
 }
 
 func clarifyAddressQuestion(locale string) string {
-	if locale == localeDE {
-		return "Die Website nennt mehrere Geschäftsanschriften. Welche gehört zu Ihrem Unternehmen?"
-	}
-	return "The website states more than one registered address. Which one belongs to your company?"
+	return copyFor(locale).addressQuestion
 }
 
 func clarifyConflictQuestion(locale, key string) string {
-	if locale == localeDE {
-		return fmt.Sprintf("Ihr gespeicherter Wert für %s unterscheidet sich von der Website. Welchen Wert soll ich verwenden?", key)
-	}
-	return fmt.Sprintf("Your saved value for %s differs from what the website states. Which value should I use?", key)
+	return fmt.Sprintf(copyFor(locale).conflictQuestion, key)
 }
 
 func clarifyKeepLabel(locale string) string {
-	if locale == localeDE {
-		return "Meinen Wert behalten"
-	}
-	return "Keep my value"
+	return copyFor(locale).keepLabel
 }
 
 func clarifyKeepDetail(locale string) string {
-	if locale == localeDE {
-		return "Von einem Menschen eingetragen; bleibt bei der Bestätigung unverändert (keep_current)."
-	}
-	return "Entered by a human; confirming keeps it unchanged (keep_current)."
+	return copyFor(locale).keepDetail
 }
 
 func clarifyTakeLabel(locale string) string {
-	if locale == localeDE {
-		return "Wert der Website übernehmen"
-	}
-	return "Use the website's value"
+	return copyFor(locale).takeLabel
 }
 
 func clarifyTakeDetail(locale string) string {
-	if locale == localeDE {
-		return "Von der Website gelesen; die Bestätigung übernimmt diesen Wert (accept_proposal)."
-	}
-	return "Read from the website; confirming takes this value (accept_proposal)."
+	return copyFor(locale).takeDetail
 }

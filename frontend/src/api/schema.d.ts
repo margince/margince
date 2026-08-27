@@ -19861,7 +19861,7 @@ export interface components {
         OnboardingCompanyMessageRequest: {
             message: string;
             /** @enum {string} */
-            locale: "en" | "de";
+            locale: "en" | "de" | "vi";
             /**
              * @description Which onboarding act the conversation is in; omitted means company.
              * @default company
@@ -31613,7 +31613,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Language for the open questions' copy; option values are locale-invariant. */
-                locale?: "en" | "de";
+                locale?: "en" | "de" | "vi";
             };
             header?: never;
             path?: never;

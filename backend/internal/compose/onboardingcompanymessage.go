@@ -195,7 +195,7 @@ func decodeOnboardingCompanyMessage(w http.ResponseWriter, r *http.Request) (crm
 		return req, "", false
 	}
 	if !req.Locale.Valid() {
-		httperr.Write(w, r, httperr.Validation("locale", "invalid", "locale must be en or de"))
+		httperr.Write(w, r, httperr.Validation("locale", "invalid", onboardingLocaleRefusal()))
 		return req, "", false
 	}
 	message := strings.TrimSpace(req.Message)
@@ -350,28 +350,17 @@ func isCompanyStatusQuestion(message string) bool {
 }
 
 func onboardingStatusMessage(locale string, research onboardingResearchState, missing int) string {
-	if locale == "de" {
-		if research.confirmed {
-			return "Ja. Ich habe das bestätigte Unternehmensprofil gespeichert."
-		}
-		if research.status == siteReadWireStatusFailed {
-			return fmt.Sprintf("Meine Web-Recherche ist beendet, konnte aber nicht abgeschlossen werden. Wir können die %d fehlenden Pflichtangaben hier gemeinsam manuell ergänzen; gespeichert ist noch nichts.", missing)
-		}
-		if !research.ready {
-			return "Ja. Ich recherchiere noch und zeige neue belegte Funde im Unternehmensentwurf. Gespeichert ist noch nichts."
-		}
-		return fmt.Sprintf("Ja. Meine Recherche funktioniert. Es fehlen noch %d Pflichtangaben; gespeichert ist noch nichts.", missing)
+	said := copyFor(locale)
+	switch {
+	case research.confirmed:
+		return said.statusConfirmed
+	case research.status == siteReadWireStatusFailed:
+		return fmt.Sprintf(said.statusFailed, missing)
+	case !research.ready:
+		return said.statusResearching
+	default:
+		return fmt.Sprintf(said.statusMissing, missing)
 	}
-	if research.confirmed {
-		return "Yes. I saved the confirmed company profile."
-	}
-	if research.status == siteReadWireStatusFailed {
-		return fmt.Sprintf("My website research has stopped without completing. We can fill the %d missing required details together here; nothing is saved yet.", missing)
-	}
-	if !research.ready {
-		return "Yes. I'm still researching and will add grounded findings to the company draft as they arrive. Nothing is saved yet."
-	}
-	return fmt.Sprintf("Yes. The company workspace is working. %d required details remain; nothing is saved yet.", missing)
 }
 
 func onboardingCompanyReply(act string, answer companyReadModelReply, evidence []companyReadEvidence, remaining []string, research onboardingResearchState, runtime ai.RunSummary) crmcontracts.OnboardingCompanyMessageReply {
