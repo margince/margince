@@ -3,7 +3,7 @@
 
 //gate:kind shape H2
 
-package backendarch
+package gates
 
 // The subject lock is the FIRST row a transaction takes.
 //
@@ -78,6 +78,7 @@ var mutatingStatement = regexp.MustCompile(
 var locksBeforeTheSubject = gatekit.Waive(map[string]string{})
 
 func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
+	t.Parallel()
 	defer locksBeforeTheSubject.AssertAllMatched(t)
 
 	var findings []string

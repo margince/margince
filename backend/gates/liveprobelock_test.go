@@ -3,7 +3,7 @@
 
 //gate:kind reachability H2
 
-package backendarch
+package gates
 
 // A live-probed write of a HELD row locks its subject.
 //
@@ -60,6 +60,7 @@ const (
 var unlockedLiveWrites = gatekit.Waive(map[string]string{})
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
+	t.Parallel()
 	defer unlockedLiveWrites.AssertAllMatched(t)
 
 	erasureClears := tablesArticle17Deletes(t)
