@@ -199,6 +199,15 @@ type golangciConfig struct {
 		Enable   []string `yaml:"enable"`
 		Disable  []string `yaml:"disable"`
 		Settings struct {
+			// Govet is read by the govet obligation in
+			// lintbuildtagreach_test.go: a config can enable the linter and
+			// then disable every analyzer it has, which reads as enabled to
+			// anything that looks only at the linter list.
+			Govet struct {
+				//nolint:tagliatelle // golangci-lint's key, not ours to case.
+				DisableAll bool     `yaml:"disable-all"`
+				Enable     []string `yaml:"enable"`
+			} `yaml:"govet"`
 			Forbidigo struct {
 				//nolint:tagliatelle // golangci-lint's key, not ours to case.
 				AnalyzeTypes bool         `yaml:"analyze-types"`
