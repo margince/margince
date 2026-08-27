@@ -45,9 +45,16 @@ const updateShapeOwner = "applyContractUpdate"
 // shape gate rather than here.
 const updateEvent = "PublicEventContractUpdated"
 
+// contractsPackage is where the event type is declared. The gate resolves each
+// file's own name for it rather than assuming one: `crmcontracts` is the
+// convention here, and a file that imported it as `cc`, or dot-imported it,
+// names the same type in a spelling a fixed comparison does not match — and a
+// census that cannot see a spelling reports the writer it cannot see as absent.
+const contractsPackage = "github.com/margince/margince/backend/internal/contracts"
+
 func TestTheContractUpdateShapeHasOneWriter(t *testing.T) {
-	emitters := functionsWhere(t, func(fn *ast.FuncDecl) bool {
-		return namesType(fn, "crmcontracts."+updateEvent)
+	emitters := functionsWhere(t, func(file *ast.File, fn *ast.FuncDecl) bool {
+		return namesType(fn, localNamesFor(file, contractsPackage, updateEvent))
 	})
 	switch {
 	case len(emitters) == 0:
@@ -66,8 +73,32 @@ func TestTheContractUpdateShapeHasOneWriter(t *testing.T) {
 	}
 }
 
-// functionsWhere names the package's non-test functions satisfying want.
-func functionsWhere(t *testing.T, want func(*ast.FuncDecl) bool) []string {
+// localNamesFor renders every spelling the named type has in this file: one per
+// import of its package, plus the bare name when that import is a dot import.
+func localNamesFor(file *ast.File, path, typeName string) []string {
+	var names []string
+	for _, spec := range file.Imports {
+		if strings.Trim(spec.Path.Value, `"`) != path {
+			continue
+		}
+		switch {
+		case spec.Name == nil:
+			names = append(names, "contracts."+typeName)
+		case spec.Name.Name == ".":
+			names = append(names, typeName)
+		case spec.Name.Name == "_":
+			// A blank import binds no name, so the type is unreachable here.
+		default:
+			names = append(names, spec.Name.Name+"."+typeName)
+		}
+	}
+	return names
+}
+
+// functionsWhere names the package's non-test functions satisfying want. The
+// file is handed to want because what a type is CALLED is a fact about the file
+// that names it, not about the package.
+func functionsWhere(t *testing.T, want func(*ast.File, *ast.FuncDecl) bool) []string {
 	t.Helper()
 	entries, err := os.ReadDir(".")
 	if err != nil {
@@ -88,7 +119,7 @@ func functionsWhere(t *testing.T, want func(*ast.FuncDecl) bool) []string {
 		}
 		for _, decl := range file.Decls {
 			fn, isFunc := decl.(*ast.FuncDecl)
-			if isFunc && fn.Body != nil && fn.Name != nil && want(fn) {
+			if isFunc && fn.Body != nil && fn.Name != nil && want(file, fn) {
 				found = append(found, fn.Name.Name)
 			}
 		}
@@ -100,8 +131,8 @@ func functionsWhere(t *testing.T, want func(*ast.FuncDecl) bool) []string {
 	return found
 }
 
-// namesType reports whether fn mentions the named type anywhere — in its
-// signature or its body.
+// namesType reports whether fn mentions the type under ANY of the spellings it
+// has in the file that declares fn — in its signature or its body.
 //
 // A mention, not a composite literal. Under-recognition is the one direction a
 // census must not fail in: a second writer that declared `var updated
@@ -115,14 +146,24 @@ func functionsWhere(t *testing.T, want func(*ast.FuncDecl) bool) []string {
 // event would name it too, and this module produces it rather than consuming
 // it — a consumer appearing later is a thing worth failing on and looking at,
 // not a false positive to design around in advance.
-func namesType(fn *ast.FuncDecl, typeName string) bool {
+func namesType(fn *ast.FuncDecl, spellings []string) bool {
+	if len(spellings) == 0 {
+		return false
+	}
 	found := false
 	inspect := func(node ast.Node) bool {
 		if node == nil {
 			return !found
 		}
-		if expr, isExpr := node.(ast.Expr); isExpr && exprText(expr) == typeName {
-			found = true
+		expr, isExpr := node.(ast.Expr)
+		if !isExpr {
+			return !found
+		}
+		text := exprText(expr)
+		for _, spelling := range spellings {
+			if text == spelling {
+				found = true
+			}
 		}
 		return !found
 	}
