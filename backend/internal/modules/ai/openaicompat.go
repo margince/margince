@@ -133,42 +133,6 @@ func (c *openAICompatClient) Embed(ctx context.Context, req model.EmbedRequest) 
 	return openAIWireEmbed(ctx, c.post, c.defaultModel, req)
 }
 
-// carriesNothing is the carriage declaration of an adapter whose wire has no
-// attachment parts at all. Named rather than written as a bare nil at each
-// site, so "this wire is text-only" reads as a decision instead of an omission.
-var carriesNothing []string
-
-// carriesImagesAndPDF is the carriage declaration shared by the adapters whose
-// wires take document parts natively.
-var carriesImagesAndPDF = []string{"image/*", "application/pdf"}
-
-// carriesImages is the declaration of an adapter whose wire takes images and
-// nothing else: the Ollama chat API, which spells an image as an entry in a
-// per-message `images` array and has no document part at all. Not a narrowing
-// of carriesImagesAndPDF but a different wire — there is no document lane here
-// to give a binding, which is why `input: [text, image]` on an ollama binding
-// buys nothing and takes nothing away.
-var carriesImages = []string{"image/*"}
-
-// DocumentMIMEs is every media type some adapter in this build carries as an
-// input part. It answers "could any binding have been handed this", which is a
-// different question from "will THIS binding take it" (that is Caps()) — the
-// certification corpus asks the first, because a fixture pinning a media type
-// no adapter accepts describes a call this build cannot make.
-//
-// Derived from the adapters whose carriage is fixed in code, which is the whole
-// answer while `image` — the only modality a binding may declare — is a subset
-// of what those adapters already carry. A modality that widens PAST this set
-// (audio, say) would have to widen this too, or the corpus would reject a
-// fixture some binding could in fact be handed.
-func DocumentMIMEs() []string { return slices.Clone(carriesImagesAndPDF) }
-
-// isImage selects which KIND of wire part an accepted attachment becomes, once
-// carriage has already been decided. It is not a carriage check — that is
-// CarriesMIME over the adapter's declaration — and using it as one is how the
-// two answers drift apart.
-func isImage(mime string) bool { return strings.HasPrefix(mime, "image/") }
-
 // isFetchableURL reports whether an attachment's URI is a URL the vendor can
 // fetch for itself, as opposed to a handle scoped to some provider's own file
 // registry. Every adapter that takes a URI has to answer this — openai to pick

@@ -148,7 +148,7 @@ func anthropicAttachmentBlock(a model.Attachment) anthropicBlock {
 // rather than mapped to a block the vendor would reject for a reason that names
 // the wrong thing.
 func anthropicRefuseAttachments(atts []model.Attachment, declared []string) error {
-	if err := refuseNarrowedAttachments("anthropic", atts, declared, carriesImagesAndPDF); err != nil {
+	if err := refuseNarrowedAttachments("anthropic", atts, declared, anthropicCarries); err != nil {
 		return err
 	}
 	for _, a := range atts {
