@@ -109,7 +109,8 @@ budget rather than keeping its own list of which pages are generated.
 - [outbound-messaging.md](explanation/outbound-messaging.md) — the egress twin of capture: the staging row, the transmit-time gates, receipt-before-bookkeeping, and the channel reply.
 - [outbound-webhooks.md](explanation/outbound-webhooks.md) — the governed egress surface: subscription config vs. delivery engine, secret sealing, the contract-first payload pipeline (`api/public-events.yaml` + `gen-payloads` + the typed `EmitEvent` seam) and its additive-only versioning, the retry/dead-letter state machine, the owner-scope fan-out gate (incl. the ratified deferred-delivery exceptions), and the Settings → Integrations UI.
 - [privacy-and-consent.md](explanation/privacy-and-consent.md) — the consent gate and the GDPR engines (erasure / SAR / retention).
-- [data-enrichment-position.md](explanation/data-enrichment-position.md) — the whitepaper on data enrichment: why Margince ships no scraping plugin, what EU and Vietnamese law actually permit, and the tiered feature position.
+- [data-enrichment-position.md](explanation/data-enrichment-position.md) — the whitepaper on data enrichment: why Margince ships no scraping plugin, and what EU and Vietnamese law actually permit.
+- [data-enrichment-tiers.md](explanation/data-enrichment-tiers.md) — what that analysis produces: the enrichment features built freely, gated behind counsel, or refused, with the sources for both pages.
 
 **AI, retrieval and automation**
 
