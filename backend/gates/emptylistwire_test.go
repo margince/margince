@@ -55,22 +55,9 @@ func TestEveryListEnvelopeCarriesItsRowsWhereTheWriterLooks(t *testing.T) {
 		t.Fatalf("parsing the generated contract: %v", err)
 	}
 
-	envelopes := 0
-	for name, fields := range structsIn(file) {
-		rows, page := fields[rowsField], fields["Page"]
-		// A list envelope is one that pages ROWS: it has a page, and a slice of
-		// something to put on it. Identified by shape rather than by a name
-		// ending in "ListResponse", so a renamed envelope is still judged and a
-		// type that merely reads like one is not.
-		if page == nil || rows == nil {
-			continue
-		}
-		if _, isSlice := rows.(*ast.ArrayType); !isSlice {
-			t.Errorf("%s pages something that is not a slice, so httperr.WriteJSON cannot "+
-				"normalise it and an empty one goes out as JSON null", name)
-			continue
-		}
-		envelopes++
+	envelopes, findings := judgeEnvelopes(file)
+	for _, finding := range findings {
+		t.Error(finding)
 	}
 
 	// The generated contract carries dozens. A census that found a handful is
@@ -110,4 +97,128 @@ func structsIn(file *ast.File) map[string]map[string]ast.Expr {
 		}
 	}
 	return out
+}
+
+// judgeEnvelopes returns how many list envelopes the file declares and what is
+// wrong with them.
+//
+// Split out so the cases below can drive it over sources this tree does not
+// contain. The mutation that matters — an envelope whose rows are named
+// something else — cannot be made in the generated contract, because renaming
+// the field stops every handler compiling. So the compiler prevents the bug and
+// prevents proving the gate would catch it, which is exactly when a synthetic
+// case earns its place.
+func judgeEnvelopes(file *ast.File) (int, []string) {
+	envelopes := 0
+	var findings []string
+	for name, fields := range structsIn(file) {
+		// A list envelope is one that IS a page: it carries a Page by value.
+		// Never identified by whether it has a `Data` field — a census that
+		// required `Data` to recognise an envelope would SKIP the one thing it
+		// exists to catch, a renamed rows field, and report the same green as a
+		// tree where every envelope is correct.
+		//
+		// By VALUE is the discriminator, and it is the contract's own: a `Page
+		// PageInfo` says this response IS a page of something, while a `Page
+		// *PageInfo` says a response may INCLUDE one — LeadScoreExplanation is
+		// a record that optionally carries its score history. The second kind
+		// has no problem to fix: its rows are a `*[]T` under `omitempty`, so an
+		// absent history is absent rather than null.
+		page := fields["Page"]
+		if page == nil {
+			continue
+		}
+		if _, optional := page.(*ast.StarExpr); optional {
+			continue
+		}
+		envelopes++
+		rows := fields[rowsField]
+		if rows == nil {
+			findings = append(findings, name+" pages rows and has no "+rowsField+
+				" field, so httperr.WriteJSON cannot find them — an empty one goes out as JSON "+
+				"null, which the contract declares an array")
+			continue
+		}
+		if _, isSlice := rows.(*ast.ArrayType); !isSlice {
+			findings = append(findings, name+" carries "+rowsField+" but not as a slice, so "+
+				"httperr.WriteJSON cannot normalise it and an empty one goes out as JSON null")
+		}
+	}
+	return envelopes, findings
+}
+
+// What the census must and must not report, over sources the generated contract
+// cannot hold.
+func TestTheEnvelopeCensusJudgesTheRightStructs(t *testing.T) {
+	t.Parallel()
+
+	for name, tc := range map[string]struct {
+		source    string
+		envelopes int
+		findings  int
+	}{
+		"a list envelope": {
+			source: `package p
+type PageInfo struct{ HasMore bool }
+type PersonListResponse struct {
+	Data []int
+	Page PageInfo
+}`,
+			envelopes: 1,
+		},
+		// THE case. The writer finds rows by field name, so an envelope that
+		// pages them under another name is correct on every list that has rows
+		// and null on exactly the empty ones nobody tests.
+		"an envelope whose rows are named something else": {
+			source: `package p
+type PageInfo struct{ HasMore bool }
+type PersonListResponse struct {
+	Rows []int
+	Page PageInfo
+}`,
+			envelopes: 1,
+			findings:  1,
+		},
+		"an envelope whose rows are not a slice": {
+			source: `package p
+type PageInfo struct{ HasMore bool }
+type PersonListResponse struct {
+	Data *[]int
+	Page PageInfo
+}`,
+			envelopes: 1,
+			findings:  1,
+		},
+		// A record that may INCLUDE a page is not a page. Its rows are optional
+		// and omitted when absent, so there is no null to fix.
+		"a record that optionally carries a page": {
+			source: `package p
+type PageInfo struct{ HasMore bool }
+type LeadScoreExplanation struct {
+	History *[]int
+	Page    *PageInfo
+	Score   int
+}`,
+			envelopes: 0,
+		},
+		"a record with no page at all": {
+			source: `package p
+type Person struct{ Name string }`,
+			envelopes: 0,
+		},
+	} {
+		t.Run(name, func(t *testing.T) {
+			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", tc.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the probe: %v", err)
+			}
+			envelopes, findings := judgeEnvelopes(file)
+			if envelopes != tc.envelopes {
+				t.Errorf("counted %d envelope(s), want %d", envelopes, tc.envelopes)
+			}
+			if len(findings) != tc.findings {
+				t.Errorf("reported %d finding(s) %v, want %d", len(findings), findings, tc.findings)
+			}
+		})
+	}
 }
