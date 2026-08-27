@@ -13,7 +13,9 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
+import { ToastRegion, useToast } from "../design-system/toast";
 import { ProvenanceTag } from "../design-system/trust";
+import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { ArchiveAction } from "./archive";
@@ -282,6 +284,63 @@ async function createContact(
   return data;
 }
 
+// Quick capture: the six things somebody reading a public profile in another
+// window can state, and nothing else. Deliberately NOT contactCreateFields
+// trimmed — the repeatable email and phone rows are two clicks each before a
+// value can be typed, which is the cost this path exists to remove.
+//
+// The company is one box. A picker would be the better control for attaching
+// an EXISTING company, and it is what the full form should grow; here it would
+// put a search-and-wait between two keystrokes, so the name creates a company
+// and the reader merges later if they typed a company that already exists.
+function quickCaptureFields(): CreateField[] {
+  return [
+    { key: "full_name", label: "create.fullName", required: true },
+    { key: "title", label: "create.personTitle" },
+    { key: "organization_name", label: "create.companyName" },
+    { key: "profile_url", label: "create.linkedin" },
+    { key: "email", label: "create.email", type: "email" },
+    { key: "phone", label: "create.phone" },
+  ];
+}
+
+// A blank box is a field the reader left alone, which is not the same as a
+// value they cleared — this path only ever creates, so an empty string is
+// simply omitted rather than sent as an explicit null.
+function statedValue(values: Record<string, string>, key: string) {
+  const value = values[key]?.trim();
+  return value ? value : undefined;
+}
+
+async function quickCapturePerson(
+  values: Record<string, string>,
+  t: (key: MessageKey) => string,
+): Promise<Person> {
+  const { data, error } = await api.POST("/people/quick-capture", {
+    body: {
+      full_name: values.full_name?.trim() ?? "",
+      title: statedValue(values, "title"),
+      organization_name: statedValue(values, "organization_name"),
+      // Normalized here rather than server-side for the same reason the person
+      // rail normalizes on save: a bare `linkedin.com/in/jdoe` is an address
+      // somebody typed, and storing it unusable makes the row permanently
+      // unlinkable on every surface that reads it.
+      profile_url: profileUrlOrUndefined(values.profile_url),
+      email: statedValue(values, "email"),
+      phone: statedValue(values, "phone"),
+    },
+  });
+  if (error) {
+    throwProblem(error, t);
+  }
+  return data.person;
+}
+
+function profileUrlOrUndefined(raw: string | undefined) {
+  const stated = raw?.trim();
+  return stated ? normalizeProfileUrl(stated) : undefined;
+}
+
 /**
  * PersonAside is the relationship column, and in overlay mode it SAYS it
  * cannot answer rather than disappearing.
@@ -334,6 +393,9 @@ export function ContactsScreen() {
   const ownerChips = useOwnerChips();
   const savedViews = useSavedViewTabs("people");
   const cf = useObjectCustomFields("person");
+  // The form that never closes gives no other feedback: without this, six
+  // saved people look exactly like six that failed silently.
+  const toast = useToast();
   const state = useListQuery<Person>({
     key: "people",
     initialSort: "-created_at",
@@ -347,16 +409,33 @@ export function ContactsScreen() {
         unit="unit.contacts"
         emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.contacts" })}
         action={
-          <CreateAction
-            label={t("create.contact")}
-            invalidate="people"
-            screen="contacts"
-            create={(values, rows) =>
-              createContact(values, rows, cf.toBody(values), t)
-            }
-            resolveExisting={(_code, id) => ({ screen: "contacts", id })}
-            fields={[...contactCreateFields(t), ...cf.formFields]}
-          />
+          <>
+            <CreateAction
+              label={t("create.quickCapture")}
+              invalidate="people"
+              screen="contacts"
+              testId="quick-capture"
+              keepOpen
+              create={(values) => quickCapturePerson(values, t)}
+              onCreated={(person) =>
+                toast.show(
+                  t("create.quickCaptureSaved", { name: person.full_name }),
+                )
+              }
+              resolveExisting={(_code, id) => ({ screen: "contacts", id })}
+              fields={quickCaptureFields()}
+            />
+            <CreateAction
+              label={t("create.contact")}
+              invalidate="people"
+              screen="contacts"
+              create={(values, rows) =>
+                createContact(values, rows, cf.toBody(values), t)
+              }
+              resolveExisting={(_code, id) => ({ screen: "contacts", id })}
+              fields={[...contactCreateFields(t), ...cf.formFields]}
+            />
+          </>
         }
         columns={[
           {
@@ -401,6 +480,7 @@ export function ContactsScreen() {
           { label: "list.viewAZ", sort: "full_name" },
         ]}
       />
+      <ToastRegion toast={toast} />
     </div>
   );
 }

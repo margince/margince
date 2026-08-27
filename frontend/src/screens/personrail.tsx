@@ -21,6 +21,7 @@ import {
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineText } from "../design-system/inlinechoice";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel } from "../design-system/panel";
 import {
   RecordPicker,
@@ -33,6 +34,7 @@ import {
 } from "../design-system/surfacestate";
 import { stable } from "../format/collate";
 import { formatDayMonth, formatNumber, relativeDays } from "../format/format";
+import { normalizeProfileUrl } from "../format/profileurl";
 import {
   type Locale,
   type Translator,
@@ -297,6 +299,17 @@ function TitleRow({ person, canEdit, readOnlyReason, patch }: DetailsRowProps) {
 // Always sends the WHOLE `social` object back with only `linkedin` changed —
 // `social` replaces the map wholesale on the wire, so omitting the other
 // entries (twitter, github, …) would blank them.
+//
+// The address is both a value to correct and a place to go, and one control
+// cannot be both: `InlineText`'s resting state is a button that opens an
+// editor, and it says in its own source that dressing a value as a link would
+// claim it is somewhere to go. So the pair sits side by side — the editable
+// value, then the visit affordance — and a reader gets the profile in one click
+// without losing the ability to fix a wrong address.
+//
+// The stored value is normalized on save rather than on read: a person pasting
+// `linkedin.com/in/jdoe` from a browser that hides the scheme has typed an
+// address, and storing it unusable would leave the row permanently unlinkable.
 function LinkedinRow({
   person,
   canEdit,
@@ -304,18 +317,31 @@ function LinkedinRow({
   patch,
 }: DetailsRowProps) {
   const t = useT();
+  const linkedin = linkedinOf(person);
   return (
     <FieldRow label={t("person.page.linkedin")}>
-      <InlineText
-        label={t("person.page.linkedin")}
-        value={linkedinOf(person)}
-        placeholder={t("field.addLinkedinUrl")}
-        canEdit={canEdit}
-        readOnlyReason={readOnlyReason}
-        onSave={(next) =>
-          patch({ social: { ...person.social, linkedin: next || null } })
-        }
-      />
+      <span className="pe-linkedin">
+        <InlineText
+          label={t("person.page.linkedin")}
+          value={linkedin}
+          placeholder={t("field.addLinkedinUrl")}
+          canEdit={canEdit}
+          readOnlyReason={readOnlyReason}
+          onSave={(next) =>
+            patch({
+              social: {
+                ...person.social,
+                linkedin: next ? normalizeProfileUrl(next) : null,
+              },
+            })
+          }
+        />
+        {linkedin ? (
+          <OffsiteLink href={linkedin}>
+            {t("person.page.openProfile")}
+          </OffsiteLink>
+        ) : null}
+      </span>
     </FieldRow>
   );
 }

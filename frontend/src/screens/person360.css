@@ -200,6 +200,17 @@
   min-width: 0;
 }
 
+/* The profile row's two halves: the address as a value somebody can correct,
+   and the verb that visits it. They wrap as a pair rather than the link being
+   pushed onto a line of its own, where it would read as a row of its own. */
+.pe-linkedin {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
 /* The prose card (the relationship brief): sentences, not rows. */
 .pe-prose {
   margin: 0 0 var(--space-3);

@@ -1295,6 +1295,10 @@ func (stubs) CreatePerson(w nethttp.ResponseWriter, r *nethttp.Request, params c
 	httperr.NotImplemented(w, r, "CreatePerson")
 }
 
+func (stubs) QuickCapturePerson(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.QuickCapturePersonParams) {
+	httperr.NotImplemented(w, r, "QuickCapturePerson")
+}
+
 func (stubs) ArchivePerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchivePersonParams) {
 	httperr.NotImplemented(w, r, "ArchivePerson")
 }

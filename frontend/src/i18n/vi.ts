@@ -2310,6 +2310,8 @@ export const vi = {
   "create.save": "Tạo",
   "create.saving": "Đang tạo…",
   "create.contact": "Contact mới",
+  "create.quickCapture": "Ghi nhanh",
+  "create.quickCaptureSaved": "Đã lưu {name}",
   "create.company": "Công ty mới",
   "create.lead": "Lead mới",
   "create.deal": "Deal mới",
@@ -5933,6 +5935,7 @@ export const vi = {
   "person.page.ownerAssigned": "Đã giao",
   "person.page.ownerUnassigned": "Chưa giao",
   "person.page.linkedin": "LinkedIn",
+  "person.page.openProfile": "Mở hồ sơ",
   "person.rail.detailsTitle": "Chi tiết",
   "person.rail.contactMethodImmutable":
     "Được thiết lập khi tạo liên hệ này. Email và số điện thoại không thể thay đổi tại đây.",

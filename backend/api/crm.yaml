@@ -795,6 +795,59 @@ paths:
                       field: emails[0].email
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /people/quick-capture:
+    post:
+      tags: [People]
+      operationId: quickCapturePerson
+      summary: Create a person, their employer and the employment edge in one write.
+      description: |
+        The fast path for a person researching a public profile in their own browser and
+        typing what they read. It is `createPerson` plus the employer, in ONE transaction:
+        a person created without the employment they were captured for is a record nobody
+        asked for, and two calls leave exactly that behind when the second one fails.
+
+        The company is named, not guessed: `organization_id` attaches an existing record,
+        `organization_name` creates one. Neither is required — a person with no employer
+        is a person.
+
+        Provenance is `manual` with the capturing user as `captured_by`, and the profile
+        URL is stored as given. Nothing here fetches that URL, now or ever.
+      x-agent-access: human-only
+      parameters:
+        - $ref: '#/components/parameters/IdempotencyKey'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/QuickCapturePersonRequest' }
+            examples:
+              fromAProfile:
+                summary: What a rep types while reading a profile
+                value:
+                  full_name: Dana Buyer
+                  title: VP Finance
+                  organization_name: Acme GmbH
+                  profile_url: https://linkedin.com/in/danabuyer
+                  email: dana@acme.com
+      responses:
+        '201':
+          description: Created, with the employer attached when one was named.
+          headers:
+            Location:
+              schema: { type: string }
+              description: URL of the created person.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QuickCapturePersonResult' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409':
+          description: The email already belongs to a live person.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /people/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -18445,6 +18498,50 @@ components:
         source: { type: string }
       additionalProperties: true
       x-extension: true
+
+    QuickCapturePersonRequest:
+      type: object
+      required: [full_name]
+      description: |
+        One person as a reader of their public profile can state them. Deliberately
+        flatter than CreatePersonRequest: one email and one phone rather than the
+        arrays, because a form optimized for typing has one box each.
+      properties:
+        full_name: { type: string }
+        title: { type: [string, 'null'] }
+        organization_id:
+          type: [string, 'null']
+          format: uuid
+          description: An existing employer. Wins over `organization_name` when both arrive.
+        organization_name:
+          type: [string, 'null']
+          description: A new employer to create, when no existing record was picked.
+        role:
+          type: [string, 'null']
+          description: What they do at that employer, when it differs from `title`.
+        profile_url:
+          type: [string, 'null']
+          description: The public profile this was read from. Stored, never fetched.
+        email: { type: [string, 'null'], format: email }
+        phone: { type: [string, 'null'] }
+      additionalProperties: false
+
+    QuickCapturePersonResult:
+      type: object
+      required: [person]
+      description: The person as created, plus the employer when one was attached.
+      properties:
+        person: { $ref: '#/components/schemas/Person' }
+        organization_id:
+          type: [string, 'null']
+          format: uuid
+          description: The employer this person was attached to, when one was named.
+        organization_created:
+          type: boolean
+          default: false
+          description: |
+            True when the employer is a record this call created. The surface says so
+            rather than letting a typo silently become a second company.
 
     UpdatePersonRequest:
       type: object

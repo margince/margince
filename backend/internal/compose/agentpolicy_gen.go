@@ -446,6 +446,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/overlay/reconcile":                                         {Op: "reconcileOverlay", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/passports":                                                 {Op: "issuePassport", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people":                                                    {Op: "createPerson", Access: "tool", Tool: "create_record", RecordType: "person", Tier: "auto_execute", Scope: "write"},
+	"POST /v1/people/quick-capture":                                      {Op: "quickCapturePerson", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/brief":                                         {Op: "regeneratePersonBrief", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/claims":                                        {Op: "recordConversationClaim", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/consent":                                       {Op: "recordConsent", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},

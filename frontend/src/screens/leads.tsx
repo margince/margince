@@ -20,6 +20,7 @@ import { RecordView } from "../design-system/composed";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
+import { OffsiteLink } from "../design-system/offsitelink";
 import { Panel, PanelBody } from "../design-system/panel";
 import {
   useRecordTimeline,
@@ -674,9 +675,9 @@ function LeadIdentityFields({
           </FieldRow>
           <FieldRow label={t("create.linkedinUrl")}>
             {lead.linkedin_url ? (
-              <a href={lead.linkedin_url} target="_blank" rel="noreferrer">
+              <OffsiteLink href={lead.linkedin_url}>
                 {t("lead.openLinkedIn")}
-              </a>
+              </OffsiteLink>
             ) : (
               t("lead.detailsUnset")
             )}

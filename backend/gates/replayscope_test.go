@@ -63,6 +63,11 @@ var rowScopedResponses = map[string]expectedTarget{
 	"Automation":          {table: "automation", idPath: "id"},
 	"PromoteLeadResponse": {table: "person", idPath: "person.id"},
 	"DemoteLeadResponse":  {table: "lead", idPath: "lead.id"},
+	// The quick-capture result wraps the person it created, alongside the
+	// employer it attached them to. The person is the record a replay hands
+	// back, so it is probed exactly as PromoteLeadResponse above is — the
+	// organization id beside it is a reference, not a second body.
+	"QuickCapturePersonResult": {table: "person", idPath: "person.id"},
 	// A scheduled message is readable only by the rep who scheduled it, which
 	// the store enforces with its own scheduled_by predicate rather than an
 	// owner column the generic probe could read. It still carries an id and

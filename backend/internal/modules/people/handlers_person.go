@@ -6,6 +6,8 @@ package people
 import (
 	"net/http"
 
+	openapi_types "github.com/oapi-codegen/runtime/types"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
@@ -74,6 +76,46 @@ func (h Handlers) CreatePerson(w http.ResponseWriter, r *http.Request, _ crmcont
 	}
 	w.Header().Set("Location", "/v1/people/"+person.Id.String())
 	httperr.WriteJSON(w, http.StatusCreated, person)
+}
+
+// QuickCapturePerson serves POST /people/quick-capture: the person, their employer
+// and the edge between them in one write. The store owns the transaction; this
+// handler is wire-only, and its one decision is that an absent employer is a
+// 201 like any other rather than a refusal.
+func (h Handlers) QuickCapturePerson(w http.ResponseWriter, r *http.Request, _ crmcontracts.QuickCapturePersonParams) {
+	var req crmcontracts.QuickCapturePersonRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	in := QuickCaptureInput{
+		FullName:         req.FullName,
+		Title:            req.Title,
+		OrganizationID:   idArg[ids.OrganizationKind](req.OrganizationId),
+		OrganizationName: req.OrganizationName,
+		Role:             req.Role,
+		ProfileURL:       req.ProfileUrl,
+		Phone:            req.Phone,
+	}
+	if req.Email != nil {
+		email := string(*req.Email)
+		in.Email = &email
+	}
+
+	captured, err := h.store.QuickCapture(r.Context(), in)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	out := crmcontracts.QuickCapturePersonResult{
+		Person:              captured.Person,
+		OrganizationCreated: &captured.OrganizationCreated,
+	}
+	if captured.OrganizationID != nil {
+		orgID := openapi_types.UUID(captured.OrganizationID.UUID)
+		out.OrganizationId = &orgID
+	}
+	w.Header().Set("Location", "/v1/people/"+captured.Person.Id.String())
+	httperr.WriteJSON(w, http.StatusCreated, out)
 }
 
 func (h Handlers) GetPerson(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {

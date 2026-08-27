@@ -336,6 +336,36 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/quick-capture": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create a person, their employer and the employment edge in one write.
+         * @description The fast path for a person researching a public profile in their own browser and
+         *     typing what they read. It is `createPerson` plus the employer, in ONE transaction:
+         *     a person created without the employment they were captured for is a record nobody
+         *     asked for, and two calls leave exactly that behind when the second one fails.
+         *
+         *     The company is named, not guessed: `organization_id` attaches an existing record,
+         *     `organization_name` creates one. Neither is required — a person with no employer
+         *     is a person.
+         *
+         *     Provenance is `manual` with the capturing user as `captured_by`, and the profile
+         *     URL is stored as given. Nothing here fetches that URL, now or ever.
+         */
+        post: operations["quickCapturePerson"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}": {
         parameters: {
             query?: never;
@@ -12624,6 +12654,44 @@ export interface components {
         } & {
             [key: string]: unknown;
         };
+        /**
+         * @description One person as a reader of their public profile can state them. Deliberately
+         *     flatter than CreatePersonRequest: one email and one phone rather than the
+         *     arrays, because a form optimized for typing has one box each.
+         */
+        QuickCapturePersonRequest: {
+            full_name: string;
+            title?: string | null;
+            /**
+             * Format: uuid
+             * @description An existing employer. Wins over `organization_name` when both arrive.
+             */
+            organization_id?: string | null;
+            /** @description A new employer to create, when no existing record was picked. */
+            organization_name?: string | null;
+            /** @description What they do at that employer, when it differs from `title`. */
+            role?: string | null;
+            /** @description The public profile this was read from. Stored, never fetched. */
+            profile_url?: string | null;
+            /** Format: email */
+            email?: string | null;
+            phone?: string | null;
+        };
+        /** @description The person as created, plus the employer when one was attached. */
+        QuickCapturePersonResult: {
+            person: components["schemas"]["Person"];
+            /**
+             * Format: uuid
+             * @description The employer this person was attached to, when one was named.
+             */
+            organization_id?: string | null;
+            /**
+             * @description True when the employer is a record this call created. The surface says so
+             *     rather than letting a typo silently become a second company.
+             * @default false
+             */
+            organization_created: boolean;
+        };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdatePersonRequest: {
             full_name?: string;
@@ -23165,6 +23233,62 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description An email on the request already belongs to a live person. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    quickCapturePerson: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
+                 *     create (API-CC-6). **Scope:** the key is unique within
+                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
+                 *     returns the original status + body. Reusing the same key with a *different* request body
+                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent).
+                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
+                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
+                 *     attempt already bumped the version.
+                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
+                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
+                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
+                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
+                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
+                 *     to retry blind.
+                 */
+                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QuickCapturePersonRequest"];
+            };
+        };
+        responses: {
+            /** @description Created, with the employer attached when one was named. */
+            201: {
+                headers: {
+                    /** @description URL of the created person. */
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QuickCapturePersonResult"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The email already belongs to a live person. */
             409: {
                 headers: {
                     [name: string]: unknown;
