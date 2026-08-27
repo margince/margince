@@ -6989,6 +6989,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/consent/qualifying-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the exchange that makes business correspondence lawful.
+         * @description A qualifying event is what a `business_correspondence` verdict reads to answer whether
+         *     we may write to somebody at all (`getPersonConsentGuard`). Most arrive on their own —
+         *     an inbound message, an inquiry, an open deal are all derived from records the product
+         *     already holds. One cannot: **a card handed over in person**, which happened away from
+         *     every system and is a fact only the person who was there can state.
+         *
+         *     This is where they state it. `in_person` requires a `note` saying what happened, because
+         *     that note IS the evidence — there is no message to cite and no deal to point at, and a
+         *     recorded basis nobody can check is not accountability.
+         *
+         *     It does not grant marketing consent and never could: §7 UWG asks for express consent, and
+         *     a card is not one. What it settles is the narrower question of whether an ordinary business
+         *     email may be sent — which is the question the confirm-your-details flow has to answer
+         *     before it can send anything at all.
+         *
+         *     Human-only. An agent never asserts that a person met somebody.
+         */
+        post: operations["recordQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -17947,6 +17985,31 @@ export interface components {
             /** @enum {string|null} */
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | null;
             source_id?: string | null;
+        };
+        /** @description One exchange that makes ordinary business correspondence lawful. */
+        RecordQualifyingEventRequest: {
+            /**
+             * @description Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
+             *     active_deal — are DERIVED from records the product already holds, and a hand-written
+             *     one would be a second, unbacked answer to a question the data already settles.
+             * @enum {string}
+             */
+            kind: "in_person";
+            /** @description What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has. */
+            note: string;
+            /**
+             * Format: date-time
+             * @description When the exchange happened, not when it was typed in.
+             */
+            occurred_at: string;
+        };
+        /** @description A recorded exchange, as it now stands on the person. */
+        QualifyingEventRecord: {
+            /** @enum {string} */
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person";
+            note: string | null;
+            /** Format: date-time */
+            occurred_at: string;
         };
         CreateSignalRequest: {
             /** @enum {string} */
@@ -34634,6 +34697,37 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordQualifyingEventRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded. The person's business-correspondence verdict now reads it. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualifyingEventRecord"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };

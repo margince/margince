@@ -3129,22 +3129,22 @@ func (e ConsentPassportOptionScopes) Valid() bool {
 
 // Defines values for ConsentQualifyingEventKind.
 const (
-	ActiveDeal     ConsentQualifyingEventKind = "active_deal"
-	InPerson       ConsentQualifyingEventKind = "in_person"
-	InboundMessage ConsentQualifyingEventKind = "inbound_message"
-	Inquiry        ConsentQualifyingEventKind = "inquiry"
+	ConsentQualifyingEventKindActiveDeal     ConsentQualifyingEventKind = "active_deal"
+	ConsentQualifyingEventKindInPerson       ConsentQualifyingEventKind = "in_person"
+	ConsentQualifyingEventKindInboundMessage ConsentQualifyingEventKind = "inbound_message"
+	ConsentQualifyingEventKindInquiry        ConsentQualifyingEventKind = "inquiry"
 )
 
 // Valid indicates whether the value is a known member of the ConsentQualifyingEventKind enum.
 func (e ConsentQualifyingEventKind) Valid() bool {
 	switch e {
-	case ActiveDeal:
+	case ConsentQualifyingEventKindActiveDeal:
 		return true
-	case InPerson:
+	case ConsentQualifyingEventKindInPerson:
 		return true
-	case InboundMessage:
+	case ConsentQualifyingEventKindInboundMessage:
 		return true
-	case Inquiry:
+	case ConsentQualifyingEventKindInquiry:
 		return true
 	default:
 		return false
@@ -8341,6 +8341,30 @@ func (e PutOnboardingStateRequestStep) Valid() bool {
 	}
 }
 
+// Defines values for QualifyingEventRecordKind.
+const (
+	QualifyingEventRecordKindActiveDeal     QualifyingEventRecordKind = "active_deal"
+	QualifyingEventRecordKindInPerson       QualifyingEventRecordKind = "in_person"
+	QualifyingEventRecordKindInboundMessage QualifyingEventRecordKind = "inbound_message"
+	QualifyingEventRecordKindInquiry        QualifyingEventRecordKind = "inquiry"
+)
+
+// Valid indicates whether the value is a known member of the QualifyingEventRecordKind enum.
+func (e QualifyingEventRecordKind) Valid() bool {
+	switch e {
+	case QualifyingEventRecordKindActiveDeal:
+		return true
+	case QualifyingEventRecordKindInPerson:
+		return true
+	case QualifyingEventRecordKindInboundMessage:
+		return true
+	case QualifyingEventRecordKindInquiry:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for QuotaAttainmentBand.
 const (
 	Accent QuotaAttainmentBand = "accent"
@@ -8461,6 +8485,21 @@ func (e RecordGrantSubjectType) Valid() bool {
 	case RecordGrantSubjectTypeTeam:
 		return true
 	case RecordGrantSubjectTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordQualifyingEventRequestKind.
+const (
+	InPerson RecordQualifyingEventRequestKind = "in_person"
+)
+
+// Valid indicates whether the value is a known member of the RecordQualifyingEventRequestKind enum.
+func (e RecordQualifyingEventRequestKind) Valid() bool {
+	switch e {
+	case InPerson:
 		return true
 	default:
 		return false
@@ -22722,6 +22761,16 @@ type QualifyDealRequest struct {
 	StageId    *openapi_types.UUID `json:"stage_id,omitempty"`
 }
 
+// QualifyingEventRecord A recorded exchange, as it now stands on the person.
+type QualifyingEventRecord struct {
+	Kind       QualifyingEventRecordKind `json:"kind"`
+	Note       *string                   `json:"note"`
+	OccurredAt time.Time                 `json:"occurred_at"`
+}
+
+// QualifyingEventRecordKind defines model for QualifyingEventRecord.Kind.
+type QualifyingEventRecordKind string
+
 // QuickCapturePersonRequest One person as a reader of their public profile can state them. Deliberately
 // flatter than CreatePersonRequest: one email and one phone rather than the
 // arrays, because a form optimized for typing has one box each.
@@ -22945,6 +22994,25 @@ type RecordGrantRecordType string
 
 // RecordGrantSubjectType defines model for RecordGrant.SubjectType.
 type RecordGrantSubjectType string
+
+// RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
+type RecordQualifyingEventRequest struct {
+	// Kind Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
+	// active_deal — are DERIVED from records the product already holds, and a hand-written
+	// one would be a second, unbacked answer to a question the data already settles.
+	Kind RecordQualifyingEventRequestKind `json:"kind"`
+
+	// Note What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has.
+	Note string `json:"note"`
+
+	// OccurredAt When the exchange happened, not when it was typed in.
+	OccurredAt time.Time `json:"occurred_at"`
+}
+
+// RecordQualifyingEventRequestKind Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
+// active_deal — are DERIVED from records the product already holds, and a hand-written
+// one would be a second, unbacked answer to a question the data already settles.
+type RecordQualifyingEventRequestKind string
 
 // RecordViewAck The per-user "I have seen this record" baseline, after an acknowledgment.
 type RecordViewAck struct {
@@ -29982,6 +30050,9 @@ type RecordConsentJSONRequestBody = RecordConsentRequest
 
 // IssueDoubleOptInJSONRequestBody defines body for IssueDoubleOptIn for application/json ContentType.
 type IssueDoubleOptInJSONRequestBody IssueDoubleOptInJSONBody
+
+// RecordQualifyingEventJSONRequestBody defines body for RecordQualifyingEvent for application/json ContentType.
+type RecordQualifyingEventJSONRequestBody = RecordQualifyingEventRequest
 
 // DraftPersonEmailJSONRequestBody defines body for DraftPersonEmail for application/json ContentType.
 type DraftPersonEmailJSONRequestBody DraftPersonEmailJSONBody
@@ -38865,6 +38936,9 @@ type ServerInterface interface {
 	// May we write to this person right now — per purpose and channel, with the reason.
 	// (GET /people/{id}/consent/guard)
 	GetPersonConsentGuard(w http.ResponseWriter, r *http.Request, id Id)
+	// Record the exchange that makes business correspondence lawful.
+	// (POST /people/{id}/consent/qualifying-events)
+	RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft an email to this person, grounded in their record.
 	// (POST /people/{id}/draft-email)
 	DraftPersonEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -41388,6 +41462,12 @@ func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, 
 // May we write to this person right now — per purpose and channel, with the reason.
 // (GET /people/{id}/consent/guard)
 func (_ Unimplemented) GetPersonConsentGuard(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record the exchange that makes business correspondence lawful.
+// (POST /people/{id}/consent/qualifying-events)
+func (_ Unimplemented) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -57063,6 +57143,38 @@ func (siw *ServerInterfaceWrapper) GetPersonConsentGuard(w http.ResponseWriter, 
 	handler.ServeHTTP(w, r)
 }
 
+// RecordQualifyingEvent operation middleware
+func (siw *ServerInterfaceWrapper) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordQualifyingEvent(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // DraftPersonEmail operation middleware
 func (siw *ServerInterfaceWrapper) DraftPersonEmail(w http.ResponseWriter, r *http.Request) {
 
@@ -65577,6 +65689,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/consent/guard", wrapper.GetPersonConsentGuard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/consent/qualifying-events", wrapper.RecordQualifyingEvent)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/draft-email", wrapper.DraftPersonEmail)

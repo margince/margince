@@ -10434,6 +10434,55 @@ paths:
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /people/{id}/consent/qualifying-events:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Compliance]
+      operationId: recordQualifyingEvent
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Record the exchange that makes business correspondence lawful.
+      description: |
+        A qualifying event is what a `business_correspondence` verdict reads to answer whether
+        we may write to somebody at all (`getPersonConsentGuard`). Most arrive on their own —
+        an inbound message, an inquiry, an open deal are all derived from records the product
+        already holds. One cannot: **a card handed over in person**, which happened away from
+        every system and is a fact only the person who was there can state.
+
+        This is where they state it. `in_person` requires a `note` saying what happened, because
+        that note IS the evidence — there is no message to cite and no deal to point at, and a
+        recorded basis nobody can check is not accountability.
+
+        It does not grant marketing consent and never could: §7 UWG asks for express consent, and
+        a card is not one. What it settles is the narrower question of whether an ordinary business
+        email may be sent — which is the question the confirm-your-details flow has to answer
+        before it can send anything at all.
+
+        Human-only. An agent never asserts that a person met somebody.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/RecordQualifyingEventRequest' }
+            examples:
+              handedOverACard:
+                summary: The case that has no other way in
+                value:
+                  kind: in_person
+                  note: Handed me their card at the Frankfurt trade fair, stand B12.
+                  occurred_at: '2026-08-20T14:30:00Z'
+      responses:
+        '201':
+          description: Recorded. The person's business-correspondence verdict now reads it.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/QualifyingEventRecord' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /records/{record_type}/{id}/claim:
     parameters:
       - name: record_type
@@ -24744,6 +24793,38 @@ components:
         snippet: { type: string }
         source_type: { type: [string, 'null'], enum: [activity, deal, signal, relationship, page, null] }
         source_id: { type: [string, 'null'] }
+
+    RecordQualifyingEventRequest:
+      type: object
+      additionalProperties: false
+      required: [kind, note, occurred_at]
+      description: One exchange that makes ordinary business correspondence lawful.
+      properties:
+        kind:
+          type: string
+          enum: [in_person]
+          description: |
+            Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
+            active_deal — are DERIVED from records the product already holds, and a hand-written
+            one would be a second, unbacked answer to a question the data already settles.
+        note:
+          type: string
+          minLength: 1
+          maxLength: 500
+          description: What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has.
+        occurred_at:
+          type: string
+          format: date-time
+          description: When the exchange happened, not when it was typed in.
+
+    QualifyingEventRecord:
+      type: object
+      required: [kind, occurred_at, note]
+      description: A recorded exchange, as it now stands on the person.
+      properties:
+        kind: { type: string, enum: [inbound_message, inquiry, active_deal, in_person] }
+        note: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time }
 
     CreateSignalRequest:
       type: object

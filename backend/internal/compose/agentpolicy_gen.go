@@ -462,6 +462,7 @@ var agentPolicies = map[string]agentPolicy{
 	"POST /v1/people/{id}/claims":                                        {Op: "recordConversationClaim", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/consent":                                       {Op: "recordConsent", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/consent/double-opt-in":                         {Op: "issueDoubleOptIn", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
+	"POST /v1/people/{id}/consent/qualifying-events":                     {Op: "recordQualifyingEvent", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/draft-email":                                   {Op: "draftPersonEmail", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/enrichment-runs":                               {Op: "createPersonEnrichmentRun", Access: "human-only", Tool: "", RecordType: "", Tier: "", Scope: ""},
 	"POST /v1/people/{id}/merge":                                         {Op: "mergePerson", Access: "tool", Tool: "merge_records", RecordType: "person", Tier: "auto_execute", Scope: "write"},
