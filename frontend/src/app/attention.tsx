@@ -31,8 +31,8 @@ import { useLocale, useT } from "../i18n";
  * What travels here is STANDING state: it is true until the screen says
  * otherwise, and the bar shows it for as long as it stands. Moments — a write
  * landing, a record being read — do not, because both are already legible from
- * the caches the app keeps (app/writewatch.ts), and a channel screens had to
- * remember to fire would go quiet exactly on the screen nobody updated.
+ * the query caches the app keeps, and a channel screens had to remember to fire
+ * would go quiet exactly on the screen nobody updated.
  */
 
 /** What the screen is currently about, beyond its route. */

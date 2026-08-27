@@ -197,9 +197,8 @@ export function mapWebhookUpdate(
 
 // Registering a subscription is registering outbound egress, not landing on
 // a record 360 — there is no webhook-subscription screen to navigate to, so
-// this is a bespoke mutation (mirrors tasks.tsx's create-in-place) rather
-// than the shared CreateAction choreography, whose success path always
-// navigates. On success it hands the one-time `signing_secret` up so the
+// this is a bespoke create-in-place mutation rather than the shared
+// CreateAction choreography, whose success path always navigates. On success it hands the one-time `signing_secret` up so the
 // card can reveal it, and invalidates the list query so the refreshed list
 // (which the wire never carries the secret on) replaces it.
 function useCreateWebhookSubscription(onCreated: (secret: string) => void) {

@@ -696,7 +696,7 @@
 
 /* RecordPicker: a pick is never silent. The current selection shows as an
  * accent-tinted summary that outlives the search results, and the matching
- * option in the live list carries the same pressed treatment as .cf-objchip. */
+ * option in the live list carries the same pressed treatment. */
 .recordpicker-options {
   list-style: none;
   margin: var(--space-2) 0;

@@ -158,9 +158,8 @@
   cursor: pointer;
 }
 
-/* Chips and buttons share a height and a pill silhouette so the toolbar reads
- * as one row of controls rather than several kinds of thing. */
-.lt-chip,
+/* The toolbar's buttons carry a pill silhouette so the row reads as one kind
+ * of thing rather than several. */
 .lt-btn {
   display: inline-flex;
   align-items: center;
@@ -176,20 +175,13 @@
   cursor: pointer;
   white-space: nowrap;
 }
-.lt-chip:hover,
 .lt-btn:hover {
   border-color: var(--borderStrong);
   color: var(--textPrimary);
 }
-.lt-chip.active,
 .lt-btn.on {
   border-color: var(--accentMed);
   background: var(--accentLight);
-  color: var(--accentText);
-}
-
-.lt-chip-value {
-  font-weight: 600;
   color: var(--accentText);
 }
 
@@ -1075,7 +1067,6 @@
  */
 .lt-vtab:focus-visible,
 .lt-btn:focus-visible,
-.lt-chip:focus-visible,
 .lt-mi:focus-visible,
 .lt-sort:focus-visible,
 .lt-frow-seg:focus-visible,
@@ -1104,7 +1095,6 @@
  */
 .lt-vtab,
 .lt-btn,
-.lt-chip,
 .lt-mi,
 .lt-sort,
 .lt-frow-seg,
@@ -1124,7 +1114,6 @@
    state, so pressing looks like the beginning of being chosen. */
 .lt-vtab:active,
 .lt-btn:active,
-.lt-chip:active,
 .lt-mi:active,
 .lt-frow-seg:active,
 .lt-frow-more:active,

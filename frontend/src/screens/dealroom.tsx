@@ -188,16 +188,6 @@ function OpenRoomCard({
   );
 }
 
-/**
- * Whether this deal has a Deal Room, for a caller deciding whether to give the
- * aside a slot at all. Sharing the query key means the caller's question costs
- * no second request.
- */
-export function useDealRoomPresence(dealId: string, enabled = true): boolean {
-  const roomQuery = useDealRoom(dealId, enabled);
-  return (roomQuery.data?.data?.length ?? 0) > 0;
-}
-
 export function useDealRoom(dealId: string, enabled = true) {
   return useQuery({
     // Off in overlay mode, where the deal is a mirror from another system of

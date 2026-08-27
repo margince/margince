@@ -31,13 +31,6 @@ export const DOCUMENT_GROUPS: readonly {
   },
 ];
 
-export function groupLabelKey(key: string): MessageKey {
-  return (
-    DOCUMENT_GROUPS.find((g) => g.key === key)?.labelKey ??
-    "room.docs.group.commercial"
-  );
-}
-
 export function useRoomDocuments(roomId: string) {
   return useQuery({
     queryKey: ["deal-room-documents", roomId],
