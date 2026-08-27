@@ -12,10 +12,16 @@ import {
   Users,
 } from "lucide-react";
 import type { MessageKey } from "../i18n/en";
+import { CUSTOM_SCREEN, customNavItems } from "./custom";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN } from "./extensions";
 import type { Route, Screen } from "./router";
-import { type NavSection, type NavTrailLevel, navTrail } from "./subnav";
+import {
+  type NavLevelEntry,
+  type NavSection,
+  type NavTrailLevel,
+  navTrail,
+} from "./subnav";
 
 // The level registry lives beside this list and is reached through it: a caller
 // asking where the sidebar can go has one module to import.
@@ -27,6 +33,7 @@ export type {
   NavTrailLevel,
 } from "./subnav";
 export {
+  entryLabel,
   navEntryHref,
   navEntryRoute,
   navLevelHref,
@@ -204,15 +211,61 @@ export const RAIL_LESS_SCREENS: ReadonlySet<Screen> = new Set([
 // the unit is configured with (see screens/extension-units.tsx). That is also
 // what makes the offer honest about permission, because the two settings pages
 // are already split by whose thing each surface is.
+// Which of the three headings a fork screen names, keyed by the heading it
+// declares. A fork says "records" and this is what that means to the rail — the
+// mapping lives here rather than in app/custom.ts because the group KEYS are
+// this list's, and a fork naming a fourth one fails to typecheck against
+// CustomScreen["nav"]["group"] rather than rendering into nothing.
+const CUSTOM_NAV_GROUPS: Partial<
+  Record<MessageKey, "records" | "work" | "intelligence">
+> = {
+  "nav.group.records": "records",
+  "nav.group.work": "work",
+  "nav.group.intelligence": "intelligence",
+};
+
+// A fork's own destinations, in the group each declared (app/custom.ts).
+//
+// Appended to the group rather than given one of theirs, and after the
+// product's rows rather than among them: a fork owns its build and may
+// legitimately grow the rail — which a composed UNIT may not, and the comment
+// above says why — but the product's own order is what every reader of this
+// codebase and every upstream test knows, so an addition goes at the end where
+// it reads as one.
+//
+// Addressed through `prefix`, which the level already has for a level that
+// spans two depths: `["x"]` plus the screen's key is `#/x/<key>`, and the entry
+// keeps its key as its `id` so `activeId` matching needs nothing new.
+//
+// Upstream's registry is empty, so in vanilla every one of these is a no-op and
+// the rail is the same ten rows rail.test.tsx pins.
+function forkItems(
+  headingKey: MessageKey | undefined,
+): readonly NavLevelEntry[] {
+  const group = headingKey ? CUSTOM_NAV_GROUPS[headingKey] : undefined;
+  if (!group) {
+    return [];
+  }
+  return customNavItems(group).map((screen) => ({
+    id: screen.key,
+    prefix: [CUSTOM_SCREEN],
+    label: screen.nav.label,
+    icon: screen.nav.icon,
+  }));
+}
+
 function primaryLevel(route: Route): NavTrailLevel {
   return {
     groups: NAV_GROUPS.map((group) => ({
       headingKey: group.headingKey,
-      items: group.items.map((item) => ({
-        id: item.screen,
-        labelKey: item.labelKey,
-        icon: item.icon,
-      })),
+      items: [
+        ...group.items.map((item) => ({
+          id: item.screen,
+          labelKey: item.labelKey,
+          icon: item.icon,
+        })),
+        ...forkItems(group.headingKey),
+      ],
     })),
     ancestor: opensARecord(route),
     path: [],
@@ -244,7 +297,20 @@ function opensARecord(route: Route): boolean {
 // honest answer to the question — a unit IS reached from Settings — and because
 // the level machinery asks it for every route, unit routes included.
 function activeRowFor(route: Route): string {
-  return route.screen === EXTENSION_SCREEN ? "settings" : route.screen;
+  if (route.screen === EXTENSION_SCREEN) {
+    return "settings";
+  }
+  // A fork's rows are keyed by the screen's KEY, not by `x` — one segment
+  // names every one of them, so a row identified by the segment could only ever
+  // be "some fork screen". `#/x/warranty` marks the warranty row and nothing
+  // else, which is what the rest of this list does for its own destinations.
+  //
+  // Falling back to the segment for `#/x` with no key: that address resolves to
+  // no screen and marks no row, which is the honest answer for one.
+  if (route.screen === CUSTOM_SCREEN) {
+    return route.id ?? route.screen;
+  }
+  return route.screen;
 }
 
 // The levels the sidebar shows for a route: the destinations, then whatever the

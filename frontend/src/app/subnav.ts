@@ -2,7 +2,9 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { LucideIcon } from "lucide-react";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { type CustomLabel, resolveCustomLabel } from "./custom";
 import { isScreen, type Route, routeHash } from "./router";
 
 // The sidebar is a STACK of navigation levels, not one rail with a special case
@@ -33,12 +35,42 @@ export type NavLevelEntry = {
   // the `id` stays the entry's identity either way — so `activeId` matching is
   // unaffected by how deep the entry lives.
   prefix?: readonly string[];
-  labelKey: MessageKey;
   icon: LucideIcon;
   // The level this entry opens. Grouping is possible at every depth, so the
   // children are a flat list only until one needs headings.
   children?: readonly NavLevelEntry[];
-};
+} & EntryLabel;
+
+// How an entry is named: a key into the catalog, or the words themselves.
+//
+// Two arms rather than one optional field, so exactly one is set and neither is
+// missing. The product's own entries take a KEY — that is what makes a
+// relabelled destination one edit in three locale files and what stops a typo
+// compiling. A fork's entry takes the words, because its screens live in a
+// directory upstream never writes to (app/custom.ts) and a key would send it
+// back into `i18n/en.ts` for the one string that names its row — which is the
+// upstream file the whole seam exists to keep it out of.
+type EntryLabel =
+  | { labelKey: MessageKey; label?: never }
+  | { label: CustomLabel; labelKey?: never };
+
+/**
+ * The words this entry shows, whichever way it was named.
+ *
+ * One resolver rather than `entry.label ?? t(entry.labelKey)` at each site: the
+ * fallback spelled six times is six chances for one of them to translate an
+ * absent key, and the union above is what makes this the only expression that
+ * typechecks.
+ */
+export function entryLabel(
+  entry: NavLevelEntry,
+  locale: Locale,
+  t: (key: MessageKey) => string,
+): string {
+  return entry.labelKey === undefined
+    ? resolveCustomLabel(entry.label, locale, t)
+    : t(entry.labelKey);
+}
 
 export type NavLevelGroup = {
   headingKey?: MessageKey;
@@ -194,6 +226,13 @@ export function navTrail(
     const active = activeEntry(level);
     const children = active?.children;
     if (!active || !children || children.length === 0) {
+      break;
+    }
+    // A fork's entry publishes no level of its own — CustomScreen has no
+    // children — so the title below is always a key. Guarded rather than
+    // asserted: if a fork entry ever did open a level, this stops at it instead
+    // of naming that level with a key it does not have.
+    if (active.labelKey === undefined) {
       break;
     }
     level = {

@@ -2,12 +2,17 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { CornerDownLeft, Search, Sparkles } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   settingsAddress,
   useSettingsEntryVisibility,
 } from "../screens/settings";
+import {
+  CUSTOM_SCREEN,
+  customPaletteScreens,
+  resolveCustomLabel,
+} from "./custom";
 import { ENTITY, ENTITY_KINDS, type EntityKind } from "./entity";
 import { NAV } from "./nav";
 import { navigate, type Route } from "./router";
@@ -36,6 +41,7 @@ type AdminEntry = "data-model" | "ai";
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
+  const { locale } = useLocale();
   // Without the company rollout probe: the palette offers no shortcut to General,
   // and that probe is a network read this hook would otherwise fire on every
   // screen (see useSettingsEntryVisibility).
@@ -50,6 +56,20 @@ export function useBuiltinCommands(): Command[] {
       keywords: [item.screen],
       type: "screen",
       route: { screen: item.screen },
+    }));
+    // A fork's own screens (app/custom.ts), asked for by name here rather than
+    // inherited from a rail entry: the rail is where things LIVE and the palette
+    // is what you can DO, and a fork screen can honestly want one without the
+    // other — a surface opened from a record has no rail row and is still worth
+    // finding by typing its name. So this reads `palette`, not `nav`.
+    //
+    // Empty upstream, like every other arm of this seam.
+    const forkScreens: Command[] = customPaletteScreens().map((screen) => ({
+      id: `screen:${CUSTOM_SCREEN}/${screen.key}`,
+      label: resolveCustomLabel(screen.palette.label, locale, t),
+      keywords: [screen.key],
+      type: "screen",
+      route: { screen: CUSTOM_SCREEN, id: screen.key },
     }));
     const actions: Command[] = [
       {
@@ -105,8 +125,8 @@ export function useBuiltinCommands(): Command[] {
     const settingsScreens: Command[] = settingsShortcuts.filter(
       (shortcut) => visible[shortcut.entry],
     );
-    return [...screens, ...actions, ...settingsScreens];
-  }, [t, visible]);
+    return [...screens, ...forkScreens, ...actions, ...settingsScreens];
+  }, [t, visible, locale]);
 }
 
 // The record kinds a search hit can route to (activity is a valid

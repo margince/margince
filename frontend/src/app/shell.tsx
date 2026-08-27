@@ -13,7 +13,7 @@ import {
 import type { components } from "../api/schema";
 import { Button, Modal } from "../design-system/atoms";
 import { Logomark } from "../design-system/logomark";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { SETTINGS_SCREEN, useSettingsSection } from "../screens/settings";
 import { AgentEdge } from "./agent-edge";
 import { AgentRail } from "./agentrail";
@@ -22,6 +22,7 @@ import { EmbedReindexBanner } from "./embedreindexbanner";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
 import {
+  entryLabel,
   GRIDDED_RECORD_SCREENS,
   GRIDDED_SCREENS,
   MOBILE_PRIMARY,
@@ -456,6 +457,7 @@ function SectionPickGroup({
   onPick: () => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   return (
     <div className="sectionpickgroup">
       {group.headingKey && <h3>{t(group.headingKey)}</h3>}
@@ -469,7 +471,7 @@ function SectionPickGroup({
           onClick={onPick}
         >
           <entry.icon size={16} aria-hidden />
-          {t(entry.labelKey)}
+          {entryLabel(entry, locale, t)}
         </a>
       ))}
     </div>
@@ -500,10 +502,11 @@ function SectionSwitcher({
   entry,
 }: Readonly<{ section: NavSection; entry: NavLevelEntry }>) {
   const t = useT();
+  const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const titleId = useId();
   const close = useCallback(() => setOpen(false), []);
-  const label = t(entry.labelKey);
+  const label = entryLabel(entry, locale, t);
   return (
     <>
       <button
@@ -570,6 +573,7 @@ export function PageTitle({
   section?: NavSection;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const phone = usePhoneViewport();
 
   const navItem = NAV.find((item) => item.screen === route.screen);
@@ -584,7 +588,9 @@ export function PageTitle({
   // because the sidebar shows destinations there and nothing else on screen said
   // which section the page belonged to. The trail says it at every width, so the
   // swap left the phone naming the section twice and the entry twice.
-  const entryTitle = inSection ? t(inSection.entry.labelKey) : undefined;
+  const entryTitle = inSection
+    ? entryLabel(inSection.entry, locale, t)
+    : undefined;
   const title = entryTitle ?? resolveTitle(route.screen, navItem?.labelKey, t);
   // A record kind, and only then: an id segment that names no record is a
   // screen's own state — the settings tab, for one — and the page is still the

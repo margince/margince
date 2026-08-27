@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { CUSTOM_SCREEN, findCustomScreen } from "./app/custom";
 import {
   EXTENSION_SCREEN,
   type ExtensionScreenRegistry,
@@ -357,6 +358,22 @@ function ResetRoute() {
 // one place both halves of the registry are visible at once.
 const extensionScreens: ExtensionScreenRegistry = composedScreens;
 
+// A fork's own screen, at `#/x/<key>`.
+//
+// Rendered from the registry rather than from a case in the dispatch above,
+// because the whole point of the seam is that a fork adds no case here. The
+// miss renders the same not-found the router gives a mistyped address: a key
+// nothing declares is not a page, and an empty frame would read as one that
+// failed to load.
+function CustomRoute({ name }: Readonly<{ name?: string }>) {
+  const screen = findCustomScreen(name);
+  if (!screen) {
+    return <ScreenNotice messageKey="shell.unknownPage" />;
+  }
+  const ForkScreen = screen.component;
+  return <ForkScreen />;
+}
+
 function ExtensionRoute({ name }: Readonly<{ name?: string }>) {
   const t = useT();
   const unit = findExtension(name);
@@ -473,6 +490,10 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     "oauth-consent": () => <OAuthConsent />,
     [RESET_ROUTE]: () => <ResetRoute />,
     [EXTENSION_SCREEN]: ({ id }) => <ExtensionRoute name={id} />,
+    // The fork seam (app/custom.ts). Upstream's registry is empty, so this arm
+    // renders the not-found card for every address in vanilla — which is the
+    // honest answer, and is why it does not need to be conditional.
+    [CUSTOM_SCREEN]: ({ id }) => <CustomRoute name={id} />,
     // A hash naming no address this app answers. The shell's heading says the
     // same word (shell.unknownPage), so the reader is told once by the page and
     // once by the column, and neither claims a page by that name exists.
