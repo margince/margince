@@ -12,7 +12,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { DealFiles } from "./dealfiles";
 
 // The deal's Files area as a rep meets it: a captured file says which message
@@ -32,7 +34,15 @@ const render = (ui: ReactNode) => {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        {/* The region is the shell's in the running app (`main.tsx`), so a
+            suite whose subject includes what a hide SAYS mounts it the same
+            way — the Undo this screen offers lives inside it. */}
+        <ToastProvider>
+          {ui}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 };
@@ -95,11 +105,23 @@ function me() {
   };
 }
 
-function stubApi(docs: DealDocument[]): { calls: Request[] } {
+/**
+ * The backend, recording every write. `refuse` answers one write with a problem
+ * document instead of a 204, which is how the refusal arms get driven.
+ */
+function stubApi(
+  docs: DealDocument[],
+  refuse?: (request: Request) => boolean,
+): { calls: Request[] } {
   const calls: Request[] = [];
   vi.stubGlobal("fetch", (input: Request) => {
     if (input.method !== "GET") {
       calls.push(input.clone());
+      if (refuse?.(input)) {
+        return Promise.resolve(
+          jsonResponse({ detail: "the message was deleted" }, 409),
+        );
+      }
       return Promise.resolve(new Response(null, { status: 204 }));
     }
     const path = new URL(input.url).pathname;
@@ -157,4 +179,67 @@ it("offers Delete on an upload and no Hide", async () => {
   expect(
     screen.queryByRole("button", { name: "Hide from this deal" }),
   ).not.toBeInTheDocument();
+});
+
+// What a hide SAYS, and the way back it offers. `DELETE .../hide` restores the
+// document exactly as it was, so this is one of the few Undos in this product
+// with a real inverse behind it — and the arm that matters most is the one
+// where that inverse is refused.
+it("puts a hidden file back through the Undo the confirmation carries", async () => {
+  const { calls } = stubApi([captured()]);
+  const user = userEvent.setup();
+  render(<DealFiles dealId="deal-1" />);
+
+  await user.click(
+    await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
+  );
+  await user.click(screen.getByRole("button", { name: "Hide from this deal" }));
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Hide from this deal",
+    }),
+  );
+
+  const said = await screen.findByRole("status");
+  expect(said).toHaveTextContent(en["dealfiles.hidden"]);
+  await user.click(
+    within(said).getByRole("button", { name: en["common.undo"] }),
+  );
+
+  await waitFor(() => expect(calls).toHaveLength(2));
+  expect(calls[1].method).toBe("DELETE");
+  expect(new URL(calls[1].url).pathname).toBe(
+    "/v1/deals/deal-1/documents/att-mail/hide",
+  );
+  expect(await screen.findByRole("status")).toHaveTextContent(
+    en["dealfiles.unhidden"],
+  );
+});
+
+it("says so when the Undo is refused, rather than letting it fail quietly", async () => {
+  // The message the Undo was offered from is consumed by the press, so a
+  // silent refusal leaves the reader watching a confirmation disappear and
+  // believing the file came back.
+  stubApi([captured()], (request) => request.method === "DELETE");
+  const user = userEvent.setup();
+  render(<DealFiles dealId="deal-1" />);
+
+  await user.click(
+    await screen.findByRole("button", { name: /Actions for MSA-redline/ }),
+  );
+  await user.click(screen.getByRole("button", { name: "Hide from this deal" }));
+  await user.click(
+    within(screen.getByRole("dialog")).getByRole("button", {
+      name: "Hide from this deal",
+    }),
+  );
+  await user.click(
+    within(await screen.findByRole("status")).getByRole("button", {
+      name: en["common.undo"],
+    }),
+  );
+
+  expect(
+    await screen.findByText("the message was deleted"),
+  ).toBeInTheDocument();
 });

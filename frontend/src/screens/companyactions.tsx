@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useToast } from "../design-system/toast";
@@ -259,18 +259,24 @@ export function TagAction({ orgId }: Readonly<{ orgId: string }>) {
   //
   // It reports its own refusal rather than failing quietly. A reader watched
   // the confirmation go and would otherwise believe the tag came off.
-  const takeTagOff = async (tagId: string, name: string) => {
-    const { error } = await api.DELETE("/tags/{id}/apply", {
-      params: { path: { id: tagId } },
-      body: { entity_type: "organization", entity_id: orgId },
-    });
-    if (error) {
+  const takeTagOff = useMutation({
+    mutationFn: async ({ tagId }: { tagId: string; name: string }) => {
+      const { error } = await api.DELETE("/tags/{id}/apply", {
+        params: { path: { id: tagId } },
+        body: { entity_type: "organization", entity_id: orgId },
+      });
+      if (error) {
+        throwProblem(error, t);
+      }
+    },
+    onError: (error) => {
       toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
-      return;
-    }
-    queryClient.invalidateQueries({ queryKey: ["organization360"] });
-    toast.show(t("co.tags.removed", { name }));
-  };
+    },
+    onSuccess: (_removed, { name }) => {
+      queryClient.invalidateQueries({ queryKey: ["organization360"] });
+      toast.show(t("co.tags.removed", { name }));
+    },
+  });
 
   const addTag = async (values: Record<string, string>) => {
     const name = values.name.trim();
@@ -296,9 +302,7 @@ export function TagAction({ orgId }: Readonly<{ orgId: string }>) {
     toast.show(t("co.tags.applied", { name }), {
       action: {
         label: t("common.undo"),
-        onAct: () => {
-          void takeTagOff(tagId, name);
-        },
+        onAct: () => takeTagOff.mutate({ tagId, name }),
       },
     });
     return { id: data.id };
