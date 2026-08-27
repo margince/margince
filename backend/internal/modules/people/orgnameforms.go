@@ -3,136 +3,43 @@
 
 package people
 
-// The Vietnamese half of org-name matching: a name whose legal form and trade
-// vocabulary come FIRST, with the brand at the end.
+// Org-name matching for the markets that write the legal form BEFORE the name.
 //
 // WHY THIS EXISTS. PO-PARAM-1 strips a legal form that TRAILS the name — "Acme
-// Inc", "Acme GmbH" — because that is where English and German put it. Vietnam
-// puts it in front and spells it in several words: "CÔNG TY CỔ PHẦN SỮA VIỆT
-// NAM" is Vinamilk, and the first three words are "joint-stock company". Every
-// Vietnamese company therefore begins with the same run of words, and a
-// character metric reads that shared run as shared identity: Jaro-Winkler
-// boosts a shared PREFIX specifically, so two unrelated Vietnamese companies
-// scored above the review threshold on their boilerplate alone.
+// Inc", "Acme GmbH" — because that is where English and German put it. Much of
+// the world puts it in front: "CÔNG TY CỔ PHẦN SỮA VIỆT NAM" is Vinamilk and the
+// first three words are "joint-stock company"; so are "PT Astra International",
+// "ООО Ромашка", "UAB Vilniaus Duona". Every company in such a market therefore
+// begins with the same run of words, and a character metric reads that as shared
+// identity — Jaro-Winkler boosts a shared PREFIX specifically. Measured before
+// this existed, two unrelated companies scored 0.76 to 0.91 against each other
+// on their boilerplate alone, well past the 0.72 review threshold.
 //
-// A PHRASE, NEVER A WORD. The folded syllables of the legal form are also real
-// brand syllables: "cổ" and "cô" and "có" all fold to "co", "phần" and "phân"
-// to "phan", and "Cỏ May" is a rice company whose whole name folds to "co may".
-// So a word of a legal form is only removed as part of the WHOLE phrase, at the
-// front of the name. Deleting the token "phan" wherever it appears would take
-// the brand off "Phan Minh", which is the failure this file is written to
-// avoid.
+// A PHRASE, NEVER A WORD. The folded syllables of a legal form are also real
+// brand syllables: "cổ", "cô" and "có" all fold to "co", "phần" and "phân" to
+// "phan", and "Cỏ May" is a rice company whose whole name folds to "co may". So
+// a word of a legal form is only removed as part of the WHOLE phrase, at the
+// front of the name. Deleting the token "phan" wherever it appeared would take
+// the brand off "Phan Minh".
+//
+// AND A SHORT LATIN FORM NEEDS A SECOND OPINION. "PT Solutions Physical
+// Therapy", "AO World", "AS Roma", "CV Sciences", "AB InBev", "SIA Engineering"
+// and "MB Financial" are all real companies whose first word is another market's
+// legal form. Position alone cannot tell those from "PT Astra International", so
+// an ambiguous marker is believed only when something else about the name agrees
+// — see corroboratedMarket.
 //
 // WHAT THIS IS NOT. Not a second normalizer for the org-name KEY:
-// NormalizeOrgName (namesim.go) is unchanged, and still produces the exact and
+// NormalizeOrgName (namesim.go) is unchanged and still produces the exact and
 // grouping keys, so no stored key moves. This one is consulted only where two
 // names are COMPARED — the gate (orgnamegate.go) and the score (dedupeorg.go).
 // The difference matters: "Công ty CP Đầu tư ABC" and "Công ty CP Thương mại
 // ABC" must compare as one candidate pair and must NOT group under one key.
 
-import "strings"
-
-// vietnameseLegalFormPrefixes are the forms a Vietnamese company name opens
-// with, written as they appear AFTER folding (lowercase, unaccented, đ→d).
-//
-// A HAND-WRITTEN, VERSIONED LIST, read the same way as orgNameStopwords and for
-// the same reason: a list derived from the workspace's own names would make two
-// names match in one workspace and not in another, and would put a query inside
-// the transaction that holds the organization-name write lock.
-//
-// Both spellings of each form, because both are how companies write themselves:
-// the legal "công ty trách nhiệm hữu hạn" and the everyday "công ty tnhh", and
-// "cty" for "công ty". A duplicate pair in this market is very often one
-// company written out in full against the same company abbreviated.
-//
-// Order does not matter here — matching takes the LONGEST phrase that fits, so
-// "cong ty co phan" wins over "cong ty" on the same name regardless of position
-// in this slice.
-//
-// The syllables recur because the language builds its legal forms out of them,
-// and the point of writing the table this way is that a reader can check it
-// against the language. Naming "cong" as a constant would hide what the entries
-// say, so the repetition is the readable form here rather than a smell.
-//
-//nolint:goconst // Vietnamese words, not repeated magic strings — see above.
-var vietnameseLegalFormPrefixes = [][]string{
-	{"cong", "ty", "trach", "nhiem", "huu", "han", "mot", "thanh", "vien"},
-	{"cong", "ty", "trach", "nhiem", "huu", "han"},
-	{"cong", "ty", "tnhh", "hai", "thanh", "vien", "tro", "len"},
-	{"cong", "ty", "tnhh", "mot", "thanh", "vien"},
-	{"cong", "ty", "tnhh", "mtv"},
-	{"cong", "ty", "tnhh"},
-	{"cty", "tnhh", "mtv"},
-	{"cty", "tnhh"},
-	{"ngan", "hang", "thuong", "mai", "co", "phan"},
-	{"ngan", "hang", "tmcp"},
-	{"cong", "ty", "co", "phan"},
-	{"cong", "ty", "cp"},
-	{"cty", "co", "phan"},
-	{"cty", "cp"},
-	{"ctcp"},
-	{"cong", "ty", "hop", "danh"},
-	{"cong", "ty", "lien", "doanh"},
-	{"doanh", "nghiep", "tu", "nhan"},
-	{"dntn"},
-	{"tong", "cong", "ty"},
-	{"tap", "doan"},
-	{"hop", "tac", "xa"},
-	{"cong", "ty"},
-	{"cty"},
-}
-
-// vietnameseLegalFormContinuations are the forms that appear only as the SECOND
-// half of a stacked one, where they arrive stripped of their leading "công ty".
-//
-// "TỔNG CÔNG TY CỔ PHẦN BIA RƯỢU SÀI GÒN" is a corporation that is also a
-// joint-stock company: once "tổng công ty" is taken off the front, what remains
-// opens with a bare "cổ phần".
-//
-// SEPARATE FROM THE TABLE ABOVE, because these words are only boilerplate in
-// that position. A company that simply calls itself "Cổ Phần Xanh" has those
-// words as its name, and a strip that ran them from the front of any name would
-// take it. So they are consulted only after a form has already been removed.
-var vietnameseLegalFormContinuations = [][]string{
-	{"co", "phan"},
-	{"trach", "nhiem", "huu", "han", "mot", "thanh", "vien"},
-	{"trach", "nhiem", "huu", "han"},
-	{"tnhh", "mot", "thanh", "vien"},
-	{"tnhh", "mtv"},
-	{"tnhh"},
-}
-
-// vietnameseSectorFillers are the trade words that stack between the legal form
-// and the brand: "CÔNG TY TNHH THƯƠNG MẠI DỊCH VỤ TÂN HIỆP PHÁT" is a trading
-// and services company called Tân Hiệp Phát.
-//
-// They are the market's vocabulary, not an identity — unrelated companies share
-// long identical runs of them, and the same run appears in different orders. So
-// they are removed for the purposes of comparison, exactly as "solutions" and
-// "systems" are dropped by orgNameStopwords on the English side.
-//
-// STRIPPED ONLY AT THE FRONT, after the legal form. A filler word that appears
-// later is part of the brand — "SỮA VIỆT NAM" ends in a word that is elsewhere
-// a filler, and it is the name of the company.
-var vietnameseSectorFillers = [][]string{
-	{"xuat", "nhap", "khau"},
-	{"thuong", "mai"},
-	{"dich", "vu"},
-	{"dau", "tu"},
-	{"phat", "trien"},
-	{"xay", "dung"},
-	{"san", "xuat"},
-	{"cong", "nghe"},
-	{"ky", "thuat"},
-	{"giai", "phap"},
-	{"quoc", "te"},
-	{"xnk"},
-	{"tm"},
-	{"dv"},
-	{"sx"},
-	{"dt"},
-	{"va"},
-}
+import (
+	"strings"
+	"unicode"
+)
 
 // foldDStroke maps đ to d.
 //
@@ -141,8 +48,8 @@ var vietnameseSectorFillers = [][]string{
 // the letter survives the fold intact: "ĐẦU TƯ" becomes "đau tu", not "dau tu".
 // Postgres f_unaccent DOES map it, so without this the same name folds two ways
 // — "dau tu" in the database and "đau tu" in Go — and no entry in the tables
-// above could ever match a name typed with the letter Vietnamese uses for one
-// of its most common trade words.
+// could ever match a name typed with the letter Vietnamese uses for one of its
+// most common trade words.
 //
 // Deliberately NOT inside normalizeName, which is pinned as the input to the
 // similarity metric (PO-PARAM-JW-2) and shared with person and lead matching.
@@ -154,22 +61,28 @@ func foldDStroke(s string) string {
 	return strings.NewReplacer("đ", "d", "Đ", "D").Replace(s)
 }
 
-// stripLeadingPhrases removes phrases from the FRONT of a name, longest first,
-// for as long as one matches.
+// stripLeadingMarkers removes legal forms from the FRONT of a name, longest
+// first, for as long as one matches.
 //
-// Repeated, because the forms stack: "TỔNG CÔNG TY CỔ PHẦN …" carries two, and
-// a name may open with a legal form followed by three trade words.
+// Repeated, because the forms stack: "TỔNG CÔNG TY CỔ PHẦN …" carries two, and a
+// name may open with a form followed by several trade words.
 //
-// Longest-match, because the short phrases are prefixes of the long ones.
-// Taking "cong ty" off "cong ty co phan x" would leave "co phan x" and put the
-// remains of a legal form into the comparison.
-func stripLeadingPhrases(fields []string, table [][]string) []string {
+// Longest-match, because the short forms are prefixes of the long ones. Taking
+// "cong ty" off "cong ty co phan x" would leave "co phan x" and put the remains
+// of a legal form into the comparison.
+//
+// An AMBIGUOUS marker is skipped unless the caller has already found
+// corroboration that this really is the market it looks like.
+func stripLeadingMarkers(fields []string, markers []orgFormMarker, corroborated bool) []string {
 	for {
 		longest := 0
-		for _, phrase := range table {
-			if len(phrase) > longest && len(phrase) <= len(fields) &&
-				matchesAt(fields, phrase) {
-				longest = len(phrase)
+		for _, marker := range markers {
+			if marker.ambiguous && !corroborated {
+				continue
+			}
+			if len(marker.tokens) > longest && len(marker.tokens) <= len(fields) &&
+				opensWith(fields, marker.tokens) {
+				longest = len(marker.tokens)
 			}
 		}
 		if longest == 0 {
@@ -179,9 +92,58 @@ func stripLeadingPhrases(fields []string, table [][]string) []string {
 	}
 }
 
-// matchesAt answers whether the name opens with exactly this phrase.
-func matchesAt(fields, phrase []string) bool {
-	for i, word := range phrase {
+// nameWordSeparators split a name into words, for the legal-form tables here and
+// for the gate that compares what is left.
+//
+// PUNCTUATION SEPARATES. Company names arrive punctuated every way a writer can
+// punctuate them — "ACME-Group", "Hewlett.Packard", "Capital.com", "S.C.",
+// "Sp. z o.o.", "ООО «Ромашка»", an en dash where a hyphen was meant — and a
+// fused token loses a real duplicate: "Acme Ltd" and "ACME-Group Ltd" share the
+// word "acme", but as one token "acme-group" it matches nothing.
+//
+// A CLASS rather than a list, deliberately. An earlier version named six ASCII
+// characters and missed the period and the en dash, which is the shape of bug
+// that keeps being rediscovered one punctuation mark at a time.
+//
+// A COMBINING MARK DOES NOT SEPARATE, which the letters-and-digits rule got
+// wrong. Thai, Lao, Khmer and the Indic scripts write their vowels as marks
+// rather than letters, so that rule cut every Thai word into pieces:
+// "เมืองไทย" became four fragments. Those scripts have no spaces between words
+// either, so a Thai name is correctly ONE word here.
+//
+// Deliberately NOT done inside NormalizeOrgName, which also produces exact
+// grouping keys (orgMatchKeys in linkedinimport.go, the promotion sweep's
+// buckets). Splitting there would make two DIFFERENT names equal as keys.
+func nameWordSeparators(r rune) bool {
+	return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.Is(unicode.Mn, r)
+}
+
+// stripTrailingWords removes a market's own trailing forms, for the bracketing
+// markets where the brand sits between two halves of one legal form.
+//
+// Never down to nothing: a name that is only its legal form keeps the last word,
+// the same rule NormalizeOrgName follows when a suffix IS the company.
+func stripTrailingWords(fields []string, suffixes []string) []string {
+	for len(fields) > 1 {
+		last := fields[len(fields)-1]
+		matched := false
+		for _, suffix := range suffixes {
+			if last == suffix {
+				matched = true
+				break
+			}
+		}
+		if !matched {
+			return fields
+		}
+		fields = fields[:len(fields)-1]
+	}
+	return fields
+}
+
+// opensWith answers whether the name opens with exactly this form.
+func opensWith(fields, tokens []string) bool {
+	for i, word := range tokens {
 		if strings.Trim(fields[i], ".") != word {
 			return false
 		}
@@ -189,40 +151,107 @@ func matchesAt(fields, phrase []string) bool {
 	return true
 }
 
+// corroboratedMarket answers whether a name that OPENS with an ambiguous marker
+// really belongs to that marker's market.
+//
+// The question exists because a two-letter Latin form is also an ordinary name.
+// "PT Astra International Tbk" is an Indonesian company; "PT Solutions Physical
+// Therapy" is an American one, and nothing about the position of "PT"
+// distinguishes them.
+//
+// TWO THINGS COUNT AS AGREEMENT, and both are properties of the name itself
+// rather than of the record around it:
+//
+//   - the market's own bracketing form closes the name. Indonesia's listed
+//     companies end in "Tbk", and no English name does.
+//   - the rest of the name is not written in Latin script. "ООО Ромашка" and
+//     "شركة الراجحي" are unambiguous by their letters, and a Latin marker in
+//     front of a Cyrillic or Arabic name is the same evidence.
+//
+// When neither holds, the marker stays in the name. That keeps today's false
+// positive for a genuine "PT Something" pair, which is the safer error: a name
+// wrongly stripped matches every company in its sector, while a name left alone
+// matches only the ones it already did.
+func corroboratedMarket(raw string, fields []string, market marketForms) bool {
+	if len(fields) < 2 {
+		return false
+	}
+	for _, closer := range market.closers {
+		// Asked of the RAW name, because the suffix strip in NormalizeOrgName
+		// has already removed the closer from `fields` by the time this runs —
+		// the evidence would be gone exactly when it is needed.
+		if closesWith(raw, closer) {
+			return true
+		}
+	}
+	return !isLatinScript(fields[1:])
+}
+
+// closesWith answers whether a name ends in this word.
+func closesWith(raw, word string) bool {
+	words := strings.FieldsFunc(normalizeName(raw), nameWordSeparators)
+	return len(words) > 0 && words[len(words)-1] == word
+}
+
+// isLatinScript answers whether these words are written in the Latin alphabet.
+//
+// Digits and punctuation say nothing either way, so a name of nothing but those
+// counts as Latin: it carries no evidence of another market, which is what the
+// caller is asking about.
+func isLatinScript(fields []string) bool {
+	for _, field := range fields {
+		for _, r := range field {
+			if !unicode.IsLetter(r) {
+				continue
+			}
+			if !unicode.Is(unicode.Latin, r) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 // orgNameForMatching is the name reduced to what could identify a company: the
-// key with a Vietnamese legal form and its trailing trade vocabulary removed.
+// key with a leading legal form and its trailing trade vocabulary removed.
 //
 // IT MAY RETURN EMPTY, and that is an answer rather than a failure. A name that
-// is nothing but a legal form and trade words — "CÔNG TY CỔ PHẦN THƯƠNG MẠI
-// DỊCH VỤ" — has said nothing about WHICH company it is, and two such names
-// have said nothing about being the same one. Callers treat empty as no
-// evidence, never as a wildcard.
+// is nothing but a legal form and trade words — "CÔNG TY CỔ PHẦN THƯƠNG MẠI DỊCH
+// VỤ" — has said nothing about WHICH company it is, and two such names have said
+// nothing about being the same one. Callers treat empty as no evidence, never as
+// a wildcard.
 //
-// This is the one place it differs from NormalizeOrgName, which must never
-// empty a name because it produces a stored key and an empty key would collide
-// with every other empty key. A comparison has no such obligation: it is
-// allowed to say "I cannot tell these apart on their names".
+// This is the one place it differs from NormalizeOrgName, which must never empty
+// a name because it produces a stored key and an empty key would collide with
+// every other empty key. A comparison has no such obligation: it is allowed to
+// say "I cannot tell these apart on their names".
 func orgNameForMatching(s string) string {
 	name, _ := matchingFormOf(s)
 	return name
 }
 
-// matchingFormOf is orgNameForMatching plus the fact the caller sometimes needs:
-// whether this name declared itself Vietnamese by carrying a legal form.
+// matchingFormOf is orgNameForMatching plus the market the name declared, which
+// the gate needs: a market whose brands are built from a small pool of shared
+// syllables cannot treat one shared word as evidence of identity.
 //
-// THE TRADE VOCABULARY IS ONLY STRIPPED FROM A NAME THAT DID. Its abbreviations
-// are two letters — "tm", "dv", "dt", "va" — and two letters mean something else
-// in every other market: "VA Software" and "DT Systems" are companies whose
-// first word this table would otherwise eat, leaving them equal to "Software"
-// and "Systems". A legal form is a strong enough signal to act on; a bare
-// two-letter word at the front of a name is not.
-func matchingFormOf(s string) (string, bool) {
-	fields := strings.Fields(NormalizeOrgName(foldDStroke(s)))
-	stripped := stripLeadingPhrases(fields, vietnameseLegalFormPrefixes)
-	vietnamese := len(stripped) < len(fields)
-	if !vietnamese {
-		return strings.Join(stripped, " "), false
+// THE TRADE VOCABULARY IS ONLY STRIPPED FROM A NAME THAT DECLARED ITS MARKET.
+// Vietnam's abbreviations are two letters — "tm", "dv", "dt", "va" — and two
+// letters mean something else everywhere else: "VA Trading" and "DT Robotics"
+// are companies whose first word this table would otherwise eat. A legal form is
+// a strong enough signal to act on; a bare two-letter word is not.
+func matchingFormOf(s string) (string, *marketForms) {
+	fields := strings.FieldsFunc(NormalizeOrgName(foldDStroke(s)), nameWordSeparators)
+	for i := range prefixMarkets {
+		market := &prefixMarkets[i]
+		stripped := stripLeadingMarkers(fields, market.prefixes,
+			corroboratedMarket(s, fields, *market))
+		if len(stripped) == len(fields) {
+			continue
+		}
+		stripped = stripLeadingMarkers(stripped, market.continuations, true)
+		stripped = stripLeadingMarkers(stripped, market.fillers, true)
+		stripped = stripTrailingWords(stripped, market.suffixes)
+		return strings.Join(stripped, " "), market
 	}
-	stripped = stripLeadingPhrases(stripped, vietnameseLegalFormContinuations)
-	return strings.Join(stripLeadingPhrases(stripped, vietnameseSectorFillers), " "), true
+	return strings.Join(fields, " "), nil
 }
