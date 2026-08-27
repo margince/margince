@@ -487,7 +487,6 @@ function LeadOwner({
 function LeadScorePanel({
   lead,
   id,
-  readOnly,
   terminalReasonId,
   overriding,
   setOverriding,
@@ -495,11 +494,10 @@ function LeadScorePanel({
   setScoreValue,
   reasonValue,
   setReasonValue,
-  patch,
+  writer,
 }: Readonly<{
   lead: Lead;
   id: string;
-  readOnly: boolean;
   terminalReasonId: string;
   overriding: boolean;
   setOverriding: (next: boolean) => void;
@@ -507,10 +505,11 @@ function LeadScorePanel({
   setScoreValue: (next: string) => void;
   reasonValue: string;
   setReasonValue: (next: string) => void;
-  patch: { isPending: boolean; mutate: (body: UpdateLeadRequest) => void };
+  writer: LeadWriter;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const { readOnly } = writer;
   const reasonBlank = reasonValue.trim() === "";
   const scoreBlank = scoreValue.trim() === "";
   const parsedScore = Number(scoreValue);
@@ -540,9 +539,9 @@ function LeadScorePanel({
           )}
           <Button
             small
-            disabled={patch.isPending || readOnly}
+            disabled={writer.patch.isPending || readOnly}
             reasonId={readOnly ? terminalReasonId : undefined}
-            onClick={() => patch.mutate({ score: null })}
+            onClick={() => writer.save({ score: null })}
           >
             {t("lead.clearOverride")}
           </Button>
@@ -574,10 +573,10 @@ function LeadScorePanel({
             <Button
               variant="primary"
               small
-              disabled={reasonBlank || scoreInvalid || patch.isPending}
+              disabled={reasonBlank || scoreInvalid || writer.patch.isPending}
               reasonId={readOnly ? terminalReasonId : undefined}
               onClick={() =>
-                patch.mutate({
+                writer.save({
                   score: parsedScore,
                   score_override_reason: reasonValue.trim(),
                 })
@@ -712,8 +711,13 @@ function LeadIdentityFields({
   );
 }
 
-/** The shared write, as the panels that call it see it. */
-type LeadPatch = ReturnType<typeof useLeadPatch>["patch"];
+/**
+ * The shared write, as the panels that call it see it: the mutation's STATE
+ * (pending, refused, what it carried) and the two ways to start one. Handed
+ * over as one object rather than as a mutation plus a loose function, so no
+ * caller can reach past `save` to `mutate` and skip the version it stamps.
+ */
+type LeadWriter = ReturnType<typeof useLeadPatch>;
 
 /**
  * The lead page's ONE write, and the two facts every control on it reads.
@@ -726,12 +730,24 @@ type LeadPatch = ReturnType<typeof useLeadPatch>["patch"];
  * second writer of one invariant, which is the defect this hook exists to
  * make impossible rather than to document.
  */
-function useLeadPatch(
-  lead: Lead,
-  id: string,
-  onChanged: () => void,
-  onSaved: () => void,
-) {
+/**
+ * One write's variables: what to change, and the record it is changing.
+ *
+ * The version and the closed flag travel WITH the body rather than being read
+ * off `lead` inside the mutation. A handler belongs to the render that drew
+ * the control the reader pressed, so a version it hands over cannot be older
+ * than that control — while a `mutationFn` reaching for `lead` reads whatever
+ * render it happens to close over, which under React Query's passive re-arm
+ * is not always the one on screen.
+ */
+type LeadWrite = {
+  body: UpdateLeadRequest;
+  version: number;
+  /** Whether the record was already closed when the reader pressed. */
+  archived: boolean;
+};
+
+function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   const t = useT();
   // A terminal lead takes no writes: the server refuses score, status and
   // owner on it, so every control here is refused by ONE fact. Derived once
@@ -740,20 +756,20 @@ function useLeadPatch(
   const readOnly = Boolean(lead.archived_at);
   const patch = useMutation({
     mutationKey: ["lead-edit", id],
-    mutationFn: async (body: UpdateLeadRequest) => {
+    mutationFn: async ({ body, version, archived }: LeadWrite) => {
       // The last word on a terminal lead, and deliberately not a per-control
       // check: the server refuses every one of these writes, and a control
-      // added later would otherwise have to remember on its own. `readOnly`
-      // is read from the record the mutation is about, not from render state,
-      // so a lead that went terminal while this page was open is refused too.
-      if (lead.archived_at) {
+      // added later would otherwise have to remember on its own. It reads the
+      // flag the PRESS carried, so a lead that went terminal while this page
+      // was open is refused by the render that saw it go.
+      if (archived) {
         // Catalog copy in a problem body, on the same terms as every other
         // refusal this screen shows: "a terminal lead takes no writes" is a
         // sentence for whoever reads this file, not for whoever is refused.
         throwProblem({ detail: t("lead.terminalReadOnly") });
       }
       const { data, error } = await api.PATCH("/leads/{id}", {
-        params: { path: { id }, ...ifMatch(requireVersion(lead.version)) },
+        params: { path: { id }, ...ifMatch(requireVersion(version)) },
         body,
       });
       if (error) {
@@ -761,20 +777,27 @@ function useLeadPatch(
       }
       return data;
     },
-    onSuccess: () => {
-      onChanged();
-      onSaved();
-    },
+    onSuccess: onChanged,
   });
+
+  // The record as it stands in THIS render, stamped onto the write the caller
+  // is starting. Every control goes through one of these two, so no call site
+  // has to remember to carry the version.
+  const write = (body: UpdateLeadRequest): LeadWrite => ({
+    body,
+    version: requireVersion(lead.version),
+    archived: Boolean(lead.archived_at),
+  });
+  const save = (body: UpdateLeadRequest) => patch.mutate(write(body));
 
   // The inline rows await their save and render what it throws, so they need a
   // promise rather than the mutation's fire-and-forget. mutateAsync is that
   // same mutation — one PATCH shape, one If-Match, one invalidation.
   const saveField = async (body: UpdateLeadRequest) => {
-    await patch.mutateAsync(body);
+    await patch.mutateAsync(write(body));
   };
 
-  return { patch, readOnly, saveField };
+  return { patch, readOnly, save, saveField };
 }
 
 /**
@@ -787,20 +810,19 @@ function useLeadPatch(
  */
 function LeadLadderPanel({
   lead,
-  patch,
-  readOnly,
+  writer,
   overlay,
   onQualify,
   onDisqualify,
 }: Readonly<{
   lead: Lead;
-  patch: LeadPatch;
-  readOnly: boolean;
+  writer: LeadWriter;
   overlay: boolean;
   onQualify: () => void;
   onDisqualify: () => void;
 }>) {
   const t = useT();
+  const { readOnly } = writer;
   return (
     <Panel
       title={t("lead.ladder.title")}
@@ -814,7 +836,7 @@ function LeadLadderPanel({
               mirror refuses a lifecycle write, so in overlay it only reads. */}
           <LeadStepper
             lead={lead}
-            pending={patch.isPending}
+            pending={writer.patch.isPending}
             readOnlyReason={
               readOnly
                 ? t("lead.terminalReadOnly")
@@ -825,8 +847,8 @@ function LeadLadderPanel({
             onStep={(status) => {
               // Same one-write-at-a-time rule as the inline rows: a status
               // sent while another save is in flight races it for If-Match.
-              if (!patch.isPending && !readOnly && !overlay) {
-                patch.mutate({ status });
+              if (!writer.patch.isPending && !readOnly && !overlay) {
+                writer.save({ status });
               }
             }}
             onQualify={onQualify}
@@ -836,11 +858,6 @@ function LeadLadderPanel({
               server derives sla_state from the setting, so an installation
               that never opted in sees nothing here. */}
           <FirstResponseLine lead={lead} />
-          {patch.isError && (
-            <Callout tone="danger" live="alert">
-              {problemMessageOf(patch.error, t)}
-            </Callout>
-          )}
         </div>
       </PanelBody>
     </Panel>
@@ -859,27 +876,29 @@ function LeadLadderPanel({
 function LeadRail({
   lead,
   id,
-  patch,
-  readOnly,
-  saveField,
+  writer,
   terminalReasonId,
 }: Readonly<{
   lead: Lead;
   id: string;
-  patch: LeadPatch;
-  readOnly: boolean;
-  saveField: (body: UpdateLeadRequest) => Promise<void>;
+  writer: LeadWriter;
   terminalReasonId: string;
 }>) {
+  const { readOnly } = writer;
   const t = useT();
   const { locale } = useLocale();
   const me = useMe();
   const [overriding, setOverriding] = useState(false);
   const [scoreValue, setScoreValue] = useState("");
   const [reasonValue, setReasonValue] = useState("");
-  // The override form clears when a save lands, and only then: a refused save
-  // must leave what the reader typed where they typed it.
-  const saved = patch.isSuccess;
+  // THIS form's save, not any save. The mutation is shared with the owner
+  // picker and the ladder, so `isSuccess` alone cleared a half-typed override
+  // the moment somebody assigned an owner — and a refused save must leave what
+  // the reader typed where they typed it either way. `score` is what both of
+  // this form's writes carry (a value to set, or null to clear) and no other
+  // control on the page sends.
+  const saved =
+    writer.patch.isSuccess && "score" in (writer.patch.variables?.body ?? {});
   useEffect(() => {
     if (saved) {
       setOverriding(false);
@@ -892,8 +911,8 @@ function LeadRail({
     <div className="record-stack">
       <LeadIdentityFields
         lead={lead}
-        save={saveField}
-        saving={patch.isPending}
+        save={writer.saveField}
+        saving={writer.patch.isPending}
         readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
       />
       <Panel title={t("lead.railTitle")}>
@@ -903,8 +922,8 @@ function LeadRail({
               lead={lead}
               meId={me.data?.user?.id}
               terminalReasonId={terminalReasonId}
-              pending={patch.isPending || readOnly}
-              onAssign={(ownerId) => patch.mutate({ owner_id: ownerId })}
+              pending={writer.patch.isPending || readOnly}
+              onAssign={(ownerId) => writer.save({ owner_id: ownerId })}
             />
             {/* The score is a reading, not the work: it folds to one line with
               its top factor, and opens for the breakdown, the override and
@@ -926,7 +945,6 @@ function LeadRail({
               <LeadScorePanel
                 lead={lead}
                 id={id}
-                readOnly={readOnly}
                 terminalReasonId={terminalReasonId}
                 overriding={overriding}
                 setOverriding={setOverriding}
@@ -934,7 +952,7 @@ function LeadRail({
                 setScoreValue={setScoreValue}
                 reasonValue={reasonValue}
                 setReasonValue={setReasonValue}
-                patch={patch}
+                writer={writer}
               />
               <LeadManualSignals
                 // Keyed by lead: a half-typed input for one lead must not be
@@ -1321,8 +1339,7 @@ function useLadderRefresh(id: string): () => void {
 function LeadOverviewPane({
   lead,
   id,
-  patch,
-  readOnly,
+  writer,
   promotion,
   overlay,
   onQualify,
@@ -1331,8 +1348,7 @@ function LeadOverviewPane({
 }: Readonly<{
   lead: Lead;
   id: string;
-  patch: LeadPatch;
-  readOnly: boolean;
+  writer: LeadWriter;
   promotion: PromotionRecord;
   overlay: boolean;
   onQualify: () => void;
@@ -1351,8 +1367,7 @@ function LeadOverviewPane({
       )}
       <LeadLadderPanel
         lead={lead}
-        patch={patch}
-        readOnly={readOnly}
+        writer={writer}
         overlay={overlay}
         onQualify={onQualify}
         onDisqualify={onDisqualify}
@@ -1588,18 +1603,11 @@ function LeadRecord({
   // left the reversal with nowhere to start from. The page reads the
   // promotion off its own audit row and says what happened.
   const promotion = usePromotionRecord(id, Boolean(lead.promoted_person_id));
-  const { patch, readOnly, saveField } = useLeadPatch(
-    lead,
-    id,
-    () => {
-      for (const key of leadWriteKeys(id)) {
-        queryClient.invalidateQueries({ queryKey: key });
-      }
-    },
-    // The rail's override form clears on this; the ladder and the grid have
-    // nothing of their own to reset.
-    () => undefined,
-  );
+  const writer = useLeadPatch(lead, id, () => {
+    for (const key of leadWriteKeys(id)) {
+      queryClient.invalidateQueries({ queryKey: key });
+    }
+  });
 
   return (
     <RecordView
@@ -1654,6 +1662,15 @@ function LeadRecord({
       band={
         <>
           <LeadStrip lead={lead} />
+          {/* The page's one write serves both columns and every tab, so what
+              it REFUSES is stated where both are visible. In the ladder panel
+              this reached only the Overview tab, and a rail write refused
+              while the reader was on History said nothing at all. */}
+          {writer.patch.isError && (
+            <Callout tone="danger" live="alert">
+              {problemMessageOf(writer.patch.error, t)}
+            </Callout>
+          )}
           {/* Stated ONCE for the page. Every control the closure refuses
               points at this element by id, so a screen reader reaches it from
               each of them without the sentence being printed beside all six. */}
@@ -1678,9 +1695,7 @@ function LeadRecord({
         <LeadRail
           lead={lead}
           id={id}
-          patch={patch}
-          readOnly={readOnly}
-          saveField={saveField}
+          writer={writer}
           terminalReasonId={terminalReasonId}
         />
       }
@@ -1701,8 +1716,7 @@ function LeadRecord({
         <LeadOverviewPane
           lead={lead}
           id={id}
-          patch={patch}
-          readOnly={readOnly}
+          writer={writer}
           promotion={promotion}
           overlay={overlay}
           onQualify={() => setDialog("qualify")}

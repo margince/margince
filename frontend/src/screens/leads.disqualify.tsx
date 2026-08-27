@@ -38,19 +38,27 @@ export function DisqualifyDialog({
     (reason) => reason.active,
   );
 
+  // Which lead, closed for which reason, with which note — carried as the
+  // mutation's variable rather than read off render state inside it. The press
+  // belongs to the render that drew the confirm, so what it hands over cannot
+  // be older than the form the reader filled in.
   const disqualify = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (closure: {
+      leadId: string;
+      reasonId: string;
+      note: string | null;
+    }) => {
       const { data, error } = await api.DELETE("/leads/{id}", {
-        params: { path: { id: lead.id } },
-        body: { reason_id: reasonId, note: note.trim() || null },
+        params: { path: { id: closure.leadId } },
+        body: { reason_id: closure.reasonId, note: closure.note },
       });
       if (error) {
         throwProblem(error, t);
       }
       return data;
     },
-    onSuccess: (closed) => {
-      for (const key of leadWriteKeys(lead.id)) {
+    onSuccess: (closed, closure) => {
+      for (const key of leadWriteKeys(closure.leadId)) {
         queryClient.invalidateQueries({ queryKey: key });
       }
       onDisqualified(closed);
@@ -76,7 +84,13 @@ export function DisqualifyDialog({
       // Required, and said so: a closed lead with no reason is what the
       // administered list exists to prevent.
       confirmReason={reasonId ? undefined : t("lead.disqualify.reasonRequired")}
-      onConfirm={() => disqualify.mutate()}
+      onConfirm={() =>
+        disqualify.mutate({
+          leadId: lead.id,
+          reasonId,
+          note: note.trim() || null,
+        })
+      }
       pending={disqualify.isPending}
       error={
         disqualify.isError ? problemMessageOf(disqualify.error, t) : undefined
