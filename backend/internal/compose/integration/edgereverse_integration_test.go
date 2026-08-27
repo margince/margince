@@ -55,23 +55,23 @@ func seedEmploymentOverHTTP(t *testing.T, e *apptest.AppEnv) linkedPair {
 	role := seededEdgeRole
 	var person personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Ada Employed"}, nil, &person); status != 201 {
+		AnyMap{"full_name": "Ada Employed"}, nil, &person); status != 201 {
 		t.Fatalf("create person → %d", status)
 	}
 	var org struct {
 		ID string `json:"id"`
 	}
 	if status := e.Call(t, "POST", "/v1/organizations",
-		apptest.AnyMap{"display_name": "Employer GmbH"}, nil, &org); status != 201 {
+		AnyMap{"display_name": "Employer GmbH"}, nil, &org); status != 201 {
 		t.Fatalf("create organization → %d", status)
 	}
-	return linkedPair{person: person.ID, org: org.ID, edge: linkEdge(t, e, apptest.AnyMap{
+	return linkedPair{person: person.ID, org: org.ID, edge: linkEdge(t, e, AnyMap{
 		"kind": "employment", "person_id": person.ID, "organization_id": org.ID,
 		"role": role, "source": "manual",
 	})}
 }
 
-func linkEdge(t *testing.T, e *apptest.AppEnv, body apptest.AnyMap) relationshipRecord {
+func linkEdge(t *testing.T, e *apptest.AppEnv, body AnyMap) relationshipRecord {
 	t.Helper()
 	var rel relationshipRecord
 	if status := e.Call(t, "POST", "/v1/relationships", body, nil, &rel); status != 201 {
@@ -264,10 +264,10 @@ func TestEndToEnd_reversingAProjectCompanyRefusesByNameAndWritesNothing(t *testi
 		Version int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/organizations",
-		apptest.AnyMap{"display_name": "Client GmbH"}, nil, &org); status != 201 {
+		AnyMap{"display_name": "Client GmbH"}, nil, &org); status != 201 {
 		t.Fatalf("create organization → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/projects", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/projects", AnyMap{
 		"name": "Joint rollout", "organization_id": org.ID, "source": "manual",
 	}, nil, nil); status != 201 {
 		t.Fatalf("create project → %d", status)
@@ -305,7 +305,7 @@ func TestEndToEnd_reversingAnEdgeChangeReplaysWhatTheLinkHeld(t *testing.T) {
 	pair := seedEmploymentOverHTTP(t, e)
 	var patched relationshipRecord
 	if status := e.Call(t, "PATCH", "/v1/relationships/"+pair.edge.ID,
-		apptest.AnyMap{"role": "coo"}, map[string]string{"If-Match": fmt.Sprint(pair.edge.Version)},
+		AnyMap{"role": "coo"}, map[string]string{"If-Match": fmt.Sprint(pair.edge.Version)},
 		&patched); status != 200 {
 		t.Fatalf("patch the link → %d", status)
 	}
@@ -430,7 +430,7 @@ func TestEndToEnd_reversingALinkFromAStaleRecordScreenIsRefusedAndWritesNothing(
 	stale := readPerson(t, e, pair.person)
 	// The record moves under the open screen, which is the whole premise.
 	if status := e.Call(t, "PATCH", "/v1/people/"+pair.person,
-		apptest.AnyMap{"title": "COO"}, nil, nil); status != 200 {
+		AnyMap{"title": "COO"}, nil, nil); status != 200 {
 		t.Fatalf("move the person under the screen → %d", status)
 	}
 
