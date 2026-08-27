@@ -293,9 +293,11 @@ func catalogOf(d provider.Descriptor) []CategoryCost {
 	}
 	out := make([]CategoryCost, 0, len(d.Categories))
 	for _, category := range d.Categories {
-		// The WORST case, the fallback included: a price quoted before a
-		// cascade fires would understate what pressing the button can spend.
-		cost, err := d.WorstCase([]provider.Category{category})
+		// Priced WITH its trigger where it has one. A cascade bills only when
+		// both its own category and the category it follows were requested,
+		// so pricing the fallback alone reads as free — which is exactly the
+		// understatement a button must not make about what it can spend.
+		cost, err := d.WorstCase(pricedWith(d, category))
 		if err != nil {
 			// An unmetered or subscription provider prices nothing per
 			// category; the whole catalog reads free, which it is.
@@ -312,6 +314,19 @@ func catalogOf(d provider.Descriptor) []CategoryCost {
 			Free:     free[category],
 			Cost:     priced,
 		})
+	}
+	return out
+}
+
+// pricedWith is the category set whose worst case is the true price of asking
+// for one category: itself, plus the trigger of any cascade it is the fallback
+// for.
+func pricedWith(d provider.Descriptor, category provider.Category) []provider.Category {
+	out := []provider.Category{category}
+	for _, cascade := range d.Cascades {
+		if cascade.Category == category {
+			out = append(out, cascade.After)
+		}
 	}
 	return out
 }

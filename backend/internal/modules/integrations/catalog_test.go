@@ -69,3 +69,35 @@ func TestACatalogEntryAgreesWithTheCostTableItComesFrom(t *testing.T) {
 		t.Errorf("professional_email costs %v, want 1 email credit", byName["professional_email"].Cost)
 	}
 }
+
+func TestAFallbackIsPricedWithTheCategoryThatTriggersIt(t *testing.T) {
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "personal_email"},
+		CostTable: map[provider.Category]map[provider.Pool]int{
+			"professional_email": {"email": 1},
+			// Free to request on its own, which is the trap.
+			"personal_email": {},
+		},
+		Cascades: []provider.Cascade{{
+			Category: "personal_email",
+			After:    "professional_email",
+			Cost:     map[provider.Pool]int{"email": 2},
+		}},
+	}
+
+	byName := map[string]CategoryCost{}
+	for _, entry := range catalogOf(desc) {
+		byName[entry.Category] = entry
+	}
+
+	// A cascade bills only when its trigger was requested too, so pricing the
+	// fallback alone reads as free — the understatement a buy button must
+	// never make about what pressing it can spend.
+	fallback := byName["personal_email"]
+	if fallback.Free {
+		t.Error("personal_email reads free, and issuing it costs two email credits")
+	}
+	if fallback.Cost["email"] != 3 {
+		t.Errorf("personal_email costs %v, want the trigger's 1 plus the fallback's 2", fallback.Cost)
+	}
+}
