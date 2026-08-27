@@ -60,6 +60,31 @@ const vcardMaxBytes = 4 << 20 // 4 MiB
 // ceiling says what may be sent, this says what may be held.
 const vcardSpillBytes = 1 << 20 // 1 MiB
 
+// vcardMaxCards bounds one upload. An address book is hundreds of cards; a file
+// holding more than this is not one, and each card opens its own transaction —
+// so the count is refused before the writes start rather than discovered
+// halfway through them.
+const vcardMaxCards = 5000
+
+// vcardMaxLines bounds the unfolded line count. Folding joins a continuation
+// onto the line before it, which copies that line, so a file of millions of
+// one-character continuations costs quadratic work inside a byte budget that
+// looks small. The cap is what makes the fold linear in practice.
+const vcardMaxLines = 200_000
+
+// TooManyCardsError refuses a file with more cards than one upload may carry.
+type TooManyCardsError struct{ Limit int }
+
+func (e *TooManyCardsError) Error() string {
+	return fmt.Sprintf("the file holds more than %d cards", e.Limit)
+}
+
+// FieldFault carries the verdict to every surface, as the module's other
+// refusals do.
+func (e *TooManyCardsError) FieldFault() (field, code, message string) {
+	return "file", "too_many_cards", e.Error()
+}
+
 // ParseVCards reads every card in one file.
 //
 // A malformed card is a parse error for the whole file rather than a card
@@ -108,17 +133,44 @@ func unfoldVCardLines(r io.Reader) ([]string, error) {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1<<20)
 	var lines []string
+	// The line under construction is built in ONE builder rather than by
+	// re-appending to the slice's last element: `lines[n-1] += x` copies the
+	// whole accumulated line every time, which turns a file of many short
+	// continuations into quadratic work.
+	var folding strings.Builder
+	var open bool
+	flush := func() {
+		if open {
+			lines = append(lines, folding.String())
+			folding.Reset()
+			open = false
+		}
+	}
+	read := 0
 	for scanner.Scan() {
+		read += len(scanner.Bytes()) + 1
+		if read > vcardMaxBytes {
+			// The LimitReader above would otherwise hand back a prefix and this
+			// would parse it as though it were the file, silently importing
+			// part of an address book.
+			return nil, fmt.Errorf("people: the vCard file exceeds %d bytes", vcardMaxBytes)
+		}
+		if len(lines) > vcardMaxLines {
+			return nil, fmt.Errorf("people: the vCard file holds more than %d lines", vcardMaxLines)
+		}
 		line := strings.TrimRight(scanner.Text(), "\r")
 		if line == "" {
 			continue
 		}
-		if (line[0] == ' ' || line[0] == '\t') && len(lines) > 0 {
-			lines[len(lines)-1] += line[1:]
+		if (line[0] == ' ' || line[0] == '\t') && open {
+			folding.WriteString(line[1:])
 			continue
 		}
-		lines = append(lines, line)
+		flush()
+		folding.WriteString(line)
+		open = true
 	}
+	flush()
 	if err := scanner.Err(); err != nil {
 		return nil, fmt.Errorf("people: reading the vCard file: %w", err)
 	}
@@ -165,9 +217,11 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 		entry.FullName = strings.TrimSpace(value)
 	case "N":
 		// Only when FN said nothing: FN is the display name the person chose,
-		// and N is the structured fallback for a card that omits it.
+		// and N is the structured fallback for a card that omits it. Split on
+		// the RAW value for the same reason ORG is: an escaped semicolon
+		// inside a family name is part of the name, not a component boundary.
 		if entry.FullName == "" {
-			entry.FullName = nameFromStructured(value)
+			entry.FullName = nameFromStructured(params, raw)
 		}
 	case "ORG":
 		// Split on the RAW value: unescaping first would turn an escaped
@@ -190,7 +244,7 @@ func applyVCardProperty(entry *VCardEntry, name string, params []string, raw str
 		}
 	case "ADR":
 		if entry.Address == "" {
-			entry.Address = addressFromStructured(value)
+			entry.Address = addressFromStructured(params, raw)
 		}
 	}
 }
@@ -239,6 +293,25 @@ func unescapeVCardText(s string) string {
 	return replacer.Replace(s)
 }
 
+// splitVCardComponents breaks a structured value on its UNESCAPED semicolons
+// and decodes each component afterwards. Decoding first would turn an escaped
+// semicolon inside one component into a separator that was never there.
+func splitVCardComponents(params []string, raw string) []string {
+	var parts []string
+	start := 0
+	for i := 0; i < len(raw); i++ {
+		if raw[i] == ';' && (i == 0 || raw[i-1] != '\\') {
+			parts = append(parts, raw[start:i])
+			start = i + 1
+		}
+	}
+	parts = append(parts, raw[start:])
+	for i, p := range parts {
+		parts[i] = strings.TrimSpace(decodeVCardValue(params, p))
+	}
+	return parts
+}
+
 // firstComponent takes the part before the first unescaped semicolon.
 func firstComponent(value string) string {
 	for i := 0; i < len(value); i++ {
@@ -251,11 +324,8 @@ func firstComponent(value string) string {
 
 // nameFromStructured reads N: family;given;additional;prefix;suffix, and puts
 // it back in reading order.
-func nameFromStructured(value string) string {
-	parts := strings.Split(value, ";")
-	for i, p := range parts {
-		parts[i] = strings.TrimSpace(p)
-	}
+func nameFromStructured(params []string, raw string) string {
+	parts := splitVCardComponents(params, raw)
 	var ordered []string
 	// given, then family — the two components a person is addressed by. The
 	// prefixes and suffixes are dropped: "Dr." is not part of a name this
@@ -271,8 +341,8 @@ func nameFromStructured(value string) string {
 
 // addressFromStructured reads ADR: pobox;ext;street;locality;region;code;country
 // into one line, dropping the components a card left empty.
-func addressFromStructured(value string) string {
-	parts := strings.Split(value, ";")
+func addressFromStructured(params []string, raw string) string {
+	parts := splitVCardComponents(params, raw)
 	var kept []string
 	for i, p := range parts {
 		// The first two components are a post-office box and an extended

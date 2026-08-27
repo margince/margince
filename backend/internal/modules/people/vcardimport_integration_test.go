@@ -22,6 +22,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func importCards(ctx context.Context, t *testing.T, e *dedupeEnv, file string) []VCardResult {
@@ -146,6 +147,63 @@ func TestImportingAFileReportsEveryCardInOrder(t *testing.T) {
 	}
 	if results[1].Reason == "" {
 		t.Error("a skipped card gives no reason — a reader cannot act on that")
+	}
+}
+
+// Two cards from the same company are two employees of ONE company. Without
+// the lookup, a ten-card export from Acme creates ten Acmes for a human to
+// merge afterwards.
+func TestImportingTwoCardsFromOneCompanyCreatesOneCompany(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	// Names deliberately unalike: two colleagues sharing a mail domain score
+	// on employer agreement, and a near-match is the fuzzy tier doing its job
+	// rather than the question this test asks.
+	results := importCards(ctx, t, e,
+		"BEGIN:VCARD\nFN:Priya Raghunathan\nORG:One Acme GmbH\nEMAIL;TYPE=WORK:priya@one-acme.example\nEND:VCARD\n"+
+			"BEGIN:VCARD\nFN:Bartholomew Quist\nORG:One Acme GmbH\nEMAIL;TYPE=WORK:bart@one-acme.example\nEND:VCARD\n")
+
+	for i, r := range results {
+		if r.Outcome != VCardCreated {
+			t.Fatalf("card %d outcome = %q, want created", i, r.Outcome)
+		}
+	}
+	if got := countOrganizationsNamed(ctx, t, e, "One Acme GmbH"); got != 1 {
+		t.Errorf("organizations named One Acme GmbH = %d, want 1", got)
+	}
+}
+
+// The import UPDATES people, so it asks for person:update — the create grant
+// that let somebody start an import says nothing about changing a record that
+// already exists.
+func TestImportingRefusesACallerWhoMayNotUpdatePeople(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := principal.WithWorkspaceID(context.Background(), e.ws)
+	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
+	ctx = principal.WithActor(ctx, principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:" + e.rep.String(), UserID: e.rep,
+		Permissions: principal.Permissions{
+			RoleKeys: []string{"rep"},
+			Objects: map[string]principal.ObjectGrant{
+				// Create but not update.
+				"person":       {Create: true, Read: true},
+				"organization": {Create: true, Read: true, Update: true},
+				"relationship": {Create: true, Read: true},
+			},
+			RowScope: principal.RowScopeAll,
+		},
+	})
+
+	entries, err := ParseVCards(strings.NewReader("BEGIN:VCARD\nFN:Refused Import\nEND:VCARD\n"))
+	if err != nil {
+		t.Fatalf("parsing: %v", err)
+	}
+	if _, err := e.store.ImportVCards(ctx, entries); err == nil {
+		t.Fatal("the import ran without person:update")
+	}
+	if got := countPeopleNamed(ctx, t, e, "Refused Import"); got != 0 {
+		t.Errorf("%d person row(s) landed on a refused import, want 0", got)
 	}
 }
 

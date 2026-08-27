@@ -118,6 +118,33 @@ func TestParseVCardsReadsTheCardsExportersWrite(t *testing.T) {
 	}
 }
 
+func TestParseVCardsKeepsAnEscapedSemicolonInsideAComponent(t *testing.T) {
+	// A structured value is split on its UNESCAPED semicolons. Decoding first
+	// would turn an escaped one inside a family name into a component
+	// boundary, and the person's own identity — what dedupe matches on —
+	// would be assembled wrong.
+	card := `BEGIN:VCARD` + "\n" + `N:Smith\;Jones;Alice;;;` + "\n" + `END:VCARD` + "\n"
+	got, err := ParseVCards(strings.NewReader(card))
+	if err != nil {
+		t.Fatalf("parsing: %v", err)
+	}
+	if got[0].FullName != "Alice Smith;Jones" {
+		t.Errorf("full name = %q, want %q", got[0].FullName, "Alice Smith;Jones")
+	}
+}
+
+func TestParseVCardsRefusesAFileTooLargeRatherThanReadingItsPrefix(t *testing.T) {
+	// The bound must REFUSE, not truncate: a prefix that parses is an import
+	// of part of an address book, and nobody can tell which part.
+	var b strings.Builder
+	b.WriteString("BEGIN:VCARD\nFN:Big Card\nNOTE:")
+	b.WriteString(strings.Repeat("x", vcardMaxBytes))
+	b.WriteString("\nEND:VCARD\n")
+	if _, err := ParseVCards(strings.NewReader(b.String())); err == nil {
+		t.Fatal("an oversized file parsed, want a refusal")
+	}
+}
+
 func TestParseVCardsReadsEveryCardInAMultiCardFile(t *testing.T) {
 	file := "BEGIN:VCARD\nFN:First Person\nEND:VCARD\n" +
 		"BEGIN:VCARD\nFN:Second Person\nEND:VCARD\n" +

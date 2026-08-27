@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // vcardSource is the provenance every row this import writes carries.
@@ -72,6 +73,20 @@ type VCardResult struct {
 // find and fix the one row before any of it lands is a reader who gives up. The
 // per-card outcome list is what makes that legible.
 func (s *Store) ImportVCards(ctx context.Context, entries []VCardEntry) ([]VCardResult, error) {
+	// Both grants, up front. The import CREATES people and it UPDATES the ones
+	// a card already matches, and those are two different permissions: the
+	// create grant that lets somebody start an import says nothing about
+	// changing a record that already exists, which is what UpdatePerson asks
+	// for on every other path into the same rows.
+	if err := auth.Require(ctx, entityPerson, principal.ActionCreate); err != nil {
+		return nil, err
+	}
+	if err := auth.Require(ctx, entityPerson, principal.ActionUpdate); err != nil {
+		return nil, err
+	}
+	if len(entries) > vcardMaxCards {
+		return nil, &TooManyCardsError{Limit: vcardMaxCards}
+	}
 	results := make([]VCardResult, 0, len(entries))
 	for i, entry := range entries {
 		result, err := s.importOneVCard(ctx, i, entry)
@@ -108,8 +123,13 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 			// the reader can act on "you may not write this one".
 			if err := auth.EnsureWritableLive(ctx, tx, entityPerson, decision.PersonID.UUID); err != nil {
 				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+					// Deliberately says nothing about WHAT was matched. The two
+					// refusals are one sentence because telling them apart
+					// would confirm that the address on this card belongs to a
+					// real contact in this workspace, to somebody who may not
+					// see that contact.
 					result.Outcome = VCardSkipped
-					result.Reason = "this card matches a contact you may not write"
+					result.Reason = "this card could not be written here"
 					return nil
 				}
 				return fmt.Errorf("probing write authority over the matched person: %w", err)
@@ -121,7 +141,20 @@ func (s *Store) importOneVCard(ctx context.Context, index int, entry VCardEntry)
 			// Named, not merged, and not created either: creating beside a
 			// near-match is how a file of forty cards quietly doubles a
 			// contact list.
+			//
+			// The candidate is named only when the caller may READ it. The
+			// dedupe lanes search the whole workspace by design — that is what
+			// makes them able to find a duplicate at all — so handing the id
+			// back unchecked would turn an upload into a lookup for records
+			// outside the caller's scope.
 			result.Outcome = VCardNeedsReview
+			if err := auth.EnsureVisible(ctx, tx, entityPerson, decision.PersonID.UUID); err != nil {
+				if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+					result.Reason = "this card resembles an existing contact"
+					return nil
+				}
+				return fmt.Errorf("probing visibility of the candidate: %w", err)
+			}
 			result.PersonID = &decision.PersonID
 			return nil
 		default:
@@ -173,6 +206,12 @@ func personFromVCard(entry VCardEntry) CreatePersonInput {
 	if url := strings.TrimSpace(entry.URL); url != "" {
 		person.Social = map[string]any{profileURLField: url}
 	}
+	// The card's postal address, as the one line it was reduced to. Parsing a
+	// field and then dropping it is the quieter defect: a reader who sees an
+	// address on the card they just imported expects to find it on the record.
+	if street := strings.TrimSpace(entry.Address); street != "" {
+		person.Address = &crmcontracts.Address{Line1: &street}
+	}
 	for i, email := range entry.Emails {
 		person.Emails = append(person.Emails, PersonEmailInput{
 			Email:     strings.ToLower(strings.TrimSpace(email.Value)),
@@ -204,19 +243,15 @@ func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, personID ids
 	if name == "" {
 		return nil
 	}
-	org, err := s.CreateOrganizationTx(ctx, tx, CreateOrganizationInput{
-		DisplayName: name,
-		Source:      vcardSource,
-	})
+	orgID, err := s.employerByName(ctx, tx, name)
 	if err != nil {
 		return err
 	}
-	orgID := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
 	role := strings.TrimSpace(entry.Title)
 	edge := CreateRelationshipInput{
 		Kind:           employmentKind,
 		PersonID:       &personID,
-		OrganizationID: &orgID,
+		OrganizationID: orgID,
 		Source:         vcardSource,
 	}
 	if role != "" {
@@ -224,6 +259,36 @@ func (s *Store) attachVCardEmployer(ctx context.Context, tx pgx.Tx, personID ids
 	}
 	_, err = s.CreateRelationshipTx(ctx, tx, edge)
 	return err
+}
+
+// employerByName finds the company the card names, or creates it.
+//
+// Without the lookup, two cards from the same company create two companies:
+// every employee of Acme arrives with `ORG:Acme`, and a create-only path turns
+// a ten-card export into ten Acmes that a human then has to merge.
+func (s *Store) employerByName(ctx context.Context, tx pgx.Tx, name string) (*ids.OrganizationID, error) {
+	var existing ids.OrganizationID
+	err := tx.QueryRow(ctx, `
+		SELECT id FROM organization
+		 WHERE lower(display_name) = lower($1) AND archived_at IS NULL AND merged_into_id IS NULL
+		 ORDER BY created_at
+		 LIMIT 1`, name).Scan(&existing)
+	switch {
+	case err == nil:
+		return &existing, nil
+	case errors.Is(err, pgx.ErrNoRows):
+		org, createErr := s.CreateOrganizationTx(ctx, tx, CreateOrganizationInput{
+			DisplayName: name,
+			Source:      vcardSource,
+		})
+		if createErr != nil {
+			return nil, createErr
+		}
+		made := ids.From[ids.OrganizationKind](ids.UUID(org.Id))
+		return &made, nil
+	default:
+		return nil, fmt.Errorf("looking for the card's employer: %w", err)
+	}
 }
 
 // fillFromVCard writes the card's stated fields onto a person who already
