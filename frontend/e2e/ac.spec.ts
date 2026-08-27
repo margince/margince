@@ -1396,6 +1396,57 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await expectNoAaViolations(page, "companies/o-brandt");
   });
 
+  // The transient confirmation, swept while it is ON SCREEN.
+  //
+  // Every other case in this file sweeps a settled page, and a toast is by
+  // definition not on one — it arrives after a write and takes itself away
+  // again. So it is swept where it actually appears, over a record page, with
+  // the contrast of its own dark plate and the reachability of what it carries
+  // both in scope. The qualify confirmation is the one to use because its body
+  // carries a LINK to the contact that was just created: a control inside a
+  // message is the case where "can a keyboard reader get to it, and back out of
+  // it" has an answer worth having.
+  test("no AA violations while a confirmation is on screen", async ({
+    page,
+  }) => {
+    await page.goto("/#/leads/l-1");
+    await page.waitForLoadState("networkidle");
+    await page
+      .getByRole("button", { name: "Qualifizieren", exact: true })
+      .click();
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: /^Qualifizieren/ })
+      .click();
+
+    const said = page.getByRole("status");
+    await expect(said).toBeVisible();
+
+    // Keyboard, before the sweep: the link the message carries is reachable,
+    // and reaching it STOPS the withdrawal — a control that walks out from
+    // under the focus ring three and a half seconds after a reader tabbed to it
+    // is a control they cannot use (WCAG 2.2.1).
+    // A BUTTON, not a link: `EntityRef` opens the record through the app's own
+    // hash router rather than by navigating, so what the message carries is a
+    // control. Which is the point — it is focusable either way.
+    const carried = said.getByRole("button").first();
+    await carried.focus();
+    await expect(carried).toBeFocused();
+    await page.waitForTimeout(4000);
+    await expect(said).toBeVisible();
+
+    // `settleAnimations` is what every other sweep in this file runs first, and
+    // it applies here too: the toast rises into place on `.arrive`, and axe
+    // reading a half-faded plate measures a colour nothing is ever drawn in.
+    await settleAnimations(page);
+    await expectNoAaViolations(page, "leads/l-1 (confirmation on screen)");
+
+    // And the way out, from inside the message rather than from its own
+    // buttons — the distinction a body-carried control is the whole reason for.
+    await page.keyboard.press("Escape");
+    await expect(said).toBeHidden();
+  });
+
   // The lead record (#/leads/<id>), for the same reason and on the same terms
   // as the company one above: an id-bearing route CORE_SCREENS does not name.
   // Unlike that one the harness answers this read properly, so the sweep

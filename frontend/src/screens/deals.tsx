@@ -51,7 +51,7 @@ import {
 } from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { type Toast, ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { AutonomyDot, ProvenanceTag } from "../design-system/trust";
 import {
   formatDate,
@@ -1437,10 +1437,6 @@ type AdvanceInput = {
  * and two people moving one deal at the same moment no longer both succeed —
  * the second reads the version the first replaced and fails 409 version_skew
  * instead of quietly undoing a stage change nobody saw.
- *
- * The toast is the CALLER'S, not this hook's: `useToast` is local state, so an
- * instance minted here would be a second one the caller's `ToastRegion` never
- * renders, and every confirmation would be shown to nobody.
  */
 /**
  * What a terminal advance says about HOW the deal closed, on top of the stage
@@ -1464,7 +1460,8 @@ function closingFields(input: AdvanceInput) {
   return {};
 }
 
-function useAdvanceDeal(toast: Toast) {
+function useAdvanceDeal() {
+  const toast = useToast();
   const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
@@ -1769,11 +1766,10 @@ export function DealsScreen({
   // Bulk selection, by deal id. Cleared after any bulk run except for the rows
   // that refused, since every other row's version has moved.
   const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
-  const toast = useToast();
   const dragging = useRef<string | null>(null);
   const lastDragEnd = useRef(0);
 
-  const advance = useAdvanceDeal(toast);
+  const advance = useAdvanceDeal();
 
   const stages = effectivePipeline?.stages ?? [];
   const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
@@ -2231,7 +2227,6 @@ export function DealsScreen({
           {problemMessageOf(advance.error, t)}
         </p>
       )}
-      <ToastRegion toast={toast} />
       <ConfirmAdvanceModal
         pending={pending}
         onClose={() => setPending(null)}
@@ -2813,9 +2808,10 @@ function DealActions({
     : undefined;
   return (
     <>
-      <EditAction
+      <EditAction<Deal>
         disabledReasonId={refusedByArchive}
         label={t("deal.edit")}
+        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
         fields={[
           ...dealEditFields(t, {
@@ -2879,6 +2875,7 @@ function DealActions({
           disabledReasonId={refusedByArchive}
           label={t("deal.archive")}
           confirmText={t("deal.archiveConfirm")}
+          archivedMessage={t("record.archiveDone", { name: deal.name })}
           archive={async () => {
             const { data, error } = await api.DELETE("/deals/{id}", {
               params: { path: { id: deal.id } },
@@ -3372,8 +3369,7 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
   const archivedReasonId = useId();
   const [tab, setTab] = useState<DealTab>("overview");
   const [pending, setPending] = useState<PendingAdvance | null>(null);
-  const toast = useToast();
-  const advance = useAdvanceDeal(toast);
+  const advance = useAdvanceDeal();
   const dealQuery = useQuery({
     queryKey: ["deal", id],
     queryFn: async () => {
@@ -3674,7 +3670,6 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                   )
                 }
               />
-              <ToastRegion toast={toast} />
             </RecordView>
           );
         }}

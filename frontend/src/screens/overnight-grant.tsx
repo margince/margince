@@ -11,6 +11,7 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import "./overnight-grant.css";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -100,6 +101,8 @@ export function useAgentGrants() {
  * withdrawing revokes it. Neither is a field this client could send. */
 export function useSetAgentGrant() {
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const t = useT();
   return useMutation({
     mutationFn: async (granted: boolean) => {
       const { data, error } = await api.PUT("/me/agent-grants/{spec}", {
@@ -111,7 +114,10 @@ export function useSetAgentGrant() {
       }
       return data;
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: GRANTS_KEY }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: GRANTS_KEY });
+      toast.show(t("settings.saved"));
+    },
   });
 }
 

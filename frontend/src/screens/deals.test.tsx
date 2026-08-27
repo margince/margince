@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { formatMoney } from "../format/format";
 import { LocaleProvider } from "../i18n";
 import {
@@ -62,7 +63,14 @@ const render = (ui: ReactNode) => {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        {/* The region is the shell's in the running app (`main.tsx`); a suite whose
+          subject is what a write SAYS mounts it the same way. */}
+        <ToastProvider>
+          {ui}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 };

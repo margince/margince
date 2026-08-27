@@ -30,6 +30,49 @@ const staticDir = join(repoRoot, "frontend/storybook-static");
 const outDir = join(repoRoot, ".tmp/fe-uat");
 const allowMissing = process.argv.includes("--allow-missing");
 
+// The document's OWN entry module is not a component: it exports nothing and
+// renders the application into the DOM, so there is no story that could cover
+// it and requiring one is the same false gate the `.d.ts` skip above avoids.
+//
+// Read out of `index.html` rather than named here, for the reason the rulebook
+// gives about a gate that hard-codes part of its subject: spelled as a literal,
+// renaming the entry would silently stop excluding anything, and the next
+// author would meet this failure with no clue why. Derived, it follows the
+// rename. Absent or unparseable, nothing is excluded and the gate stays strict.
+function entryModule() {
+  const html = join(repoRoot, "frontend/index.html");
+  if (!existsSync(html)) return null;
+  // Each `<script>` tag's attributes are read INDEPENDENTLY rather than matched
+  // in one fixed order. A single pattern pinning `type` before `src` and double
+  // quotes is a detector that answers correctly for the file as it is written
+  // today and wrongly the moment somebody swaps two attributes — and its way of
+  // being wrong is to exclude nothing, which fails the gate on a file no story
+  // can ever cover.
+  for (const tag of readFileSync(html, "utf8").matchAll(
+    /<script\b([^>]*)>/gi,
+  )) {
+    const attributes = tag[1];
+    // Anchored on whitespace or the tag's start, NOT on a word boundary: `\b`
+    // sits happily between the hyphen and the `t` of `data-type`, so a tag
+    // carrying `data-type="module" data-src="…"` read as the entry module and
+    // excluded a file that is not one.
+    const read = (name) =>
+      new RegExp(`(?:^|\\s)${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i").exec(
+        attributes,
+      );
+    const type = read("type");
+    if (!type || (type[2] ?? type[3]).trim().toLowerCase() !== "module") {
+      continue;
+    }
+    const src = read("src");
+    const value = src ? (src[2] ?? src[3]).trim() : "";
+    if (value.startsWith("/")) return "frontend" + value;
+  }
+  return null;
+}
+
+const documentEntry = entryModule();
+
 // git without a shell — args split on spaces (a range like "<sha>..HEAD" is one arg).
 function git(args) {
   const r = spawnSync("git", args.split(" "), { cwd: repoRoot });
@@ -161,6 +204,7 @@ for (const f of changed) {
   // API types (src/api/schema.d.ts) regenerate on any contract change, so
   // requiring a story for them is a false gate. Skip them.
   if (f.endsWith(".d.ts")) continue;
+  if (f === documentEntry) continue;
   if (/\.stories\.[tj]sx?$/.test(f)) {
     storyFiles.add(f);
   } else if (

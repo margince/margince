@@ -1,4 +1,5 @@
 /** @vitest-environment jsdom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   cleanup,
@@ -10,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { en } from "../i18n/en";
 import { AccessPreviewPanel, TeamsCard } from "./users-access";
@@ -37,7 +39,14 @@ const REP: Parameters<typeof AccessPreviewPanel>[0]["role"] = "rep";
 
 type Call = { method: string; path: string; body: unknown };
 
-function backend(opts: Readonly<{ preview?: Preview; teams?: Team[] }>) {
+function backend(
+  opts: Readonly<{
+    preview?: Preview;
+    teams?: Team[];
+    /** Answers one write with a problem document, to drive the refusal arms. */
+    refuse?: (call: Call) => boolean;
+  }>,
+) {
   const calls: Call[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -53,6 +62,12 @@ function backend(opts: Readonly<{ preview?: Preview; teams?: Team[] }>) {
         body:
           request.method === "GET" ? undefined : await request.clone().json(),
       });
+      if (opts.refuse?.(calls[calls.length - 1])) {
+        return new Response(JSON.stringify({ detail: "the team was merged" }), {
+          status: 409,
+          headers: { "Content-Type": "application/problem+json" },
+        });
+      }
       // The teams list answers as the contract answers: a page, with the
       // cursor of the next one. Without `page` the roster walk has nothing to
       // read the end of the list from.
@@ -76,7 +91,15 @@ function Providers({ children }: { children: ReactNode }) {
   });
   return (
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{children}</LocaleProvider>
+      <LocaleProvider initial="en">
+        {/* The region is the shell's in the running app (`main.tsx`), so a
+            suite whose subject includes what an archive SAYS mounts it the
+            same way — the Undo this card offers lives inside it. */}
+        <ToastProvider>
+          {children}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }
@@ -220,6 +243,82 @@ describe("TeamsCard", () => {
     const patch = calls.find((call) => call.method === "PATCH");
     expect(patch?.path).toContain("/teams/t-1");
     expect(patch?.body).toEqual({ archived: true });
+  });
+
+  // A team is the one archive in this product with a way back, so it is the one
+  // place the word Undo means what it says. Both arms are pinned: the restore
+  // that lands, and the one the server refuses.
+  it("puts an archived team back through the Undo the confirmation carries", async () => {
+    const user = userEvent.setup();
+    const { fetchMock, calls } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    await screen.findByText("Nord");
+    await user.click(
+      screen.getByRole("button", {
+        name: en["users.archiveTeam"].replace("{name}", "Nord"),
+      }),
+    );
+
+    const said = await screen.findByRole("status");
+    // The NAME, not a uuid: the archive invalidated ["teams"], so by the time
+    // this is read the row it came from may already be gone from the roster.
+    expect(said).toHaveTextContent(
+      en["users.teamArchived"].replace("{name}", "Nord"),
+    );
+    await user.click(
+      within(said).getByRole("button", { name: en["common.undo"] }),
+    );
+
+    await waitFor(() =>
+      expect(calls.filter((call) => call.method === "PATCH")).toHaveLength(2),
+    );
+    expect(calls.filter((call) => call.method === "PATCH")[1].body).toEqual({
+      archived: false,
+    });
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      en["users.teamRestored"].replace("{name}", "Nord"),
+    );
+  });
+
+  it("says so when the restore is refused, rather than letting it fail quietly", async () => {
+    // The message the Undo was offered from is consumed by the press, so a
+    // silent refusal leaves the reader watching a confirmation disappear and
+    // believing the team came back.
+    const user = userEvent.setup();
+    const { fetchMock } = backend({
+      teams: [{ id: "t-1", name: "Nord", member_count: 2 }],
+      refuse: (call) =>
+        call.method === "PATCH" &&
+        (call.body as { archived: boolean }).archived === false,
+    });
+    vi.stubGlobal("fetch", fetchMock);
+    render(
+      <Providers>
+        <TeamsCard />
+      </Providers>,
+    );
+
+    await screen.findByText("Nord");
+    await user.click(
+      screen.getByRole("button", {
+        name: en["users.archiveTeam"].replace("{name}", "Nord"),
+      }),
+    );
+    await user.click(
+      within(await screen.findByRole("status")).getByRole("button", {
+        name: en["common.undo"],
+      }),
+    );
+
+    expect(await screen.findByText("the team was merged")).toBeTruthy();
   });
 
   it("creates a team through the dialog its title verb opens, trimming the name", async () => {

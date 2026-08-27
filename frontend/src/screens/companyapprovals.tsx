@@ -2,7 +2,6 @@ import { useId } from "react";
 import type { components } from "../api/schema";
 import { Button, EmptyState, Modal, Skeleton } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
-import { ToastRegion, useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { approvalKindLabel } from "./approvalkind";
@@ -93,9 +92,6 @@ export function CompanyApprovalsPanel({
   // A decision changes what the page says is waiting, so the composite read
   // behind the chip is re-read alongside the approvals list.
   const extraInvalidateKeys = [["organization360", orgId]];
-  // The modal owns the toast: a decision drops its row from the list, and a
-  // sticky offer owned by that row would leave with it.
-  const toast = useToast();
   return (
     <Modal open onClose={onClose} labelledBy={titleId} size="wide">
       <h2 id={titleId} className="t-h2 modal-title">
@@ -129,12 +125,10 @@ export function CompanyApprovalsPanel({
               approval={approval}
               onAlreadyDecided={sink.onAlreadyDecided}
               extraInvalidateKeys={extraInvalidateKeys}
-              toast={toast}
             />
           ))}
         </section>
       ))}
-      <ToastRegion toast={toast} />
     </Modal>
   );
 }

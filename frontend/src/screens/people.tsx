@@ -13,7 +13,7 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { ProvenanceTag } from "../design-system/trust";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
@@ -480,7 +480,6 @@ export function ContactsScreen() {
           { label: "list.viewAZ", sort: "full_name" },
         ]}
       />
-      <ToastRegion toast={toast} />
     </div>
   );
 }
@@ -568,11 +567,14 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                     pointing at the page's one sentence about the archive
                     (STATE-4a): a missing control says nothing about the
                     record, while a refused one names the reason. */}
-                <EditAction
+                <EditAction<Person>
                   disabledReasonId={
                     person.archived_at ? archivedReasonId : undefined
                   }
                   label={t("record.edit")}
+                  savedMessage={(saved) =>
+                    t("record.saveDone", { name: saved.full_name })
+                  }
                   notice={overlay ? t("overlay.partialWriteBack") : undefined}
                   fields={[...personEditFields, ...cf.formFields]}
                   record={{
@@ -647,6 +649,9 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                   }
                   label={t("record.archive")}
                   confirmText={t("record.archiveConfirm")}
+                  archivedMessage={t("record.archiveDone", {
+                    name: person.full_name,
+                  })}
                   archive={async () => {
                     const { data, error } = await api.DELETE("/people/{id}", {
                       params: { path: { id } },

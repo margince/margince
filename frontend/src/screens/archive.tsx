@@ -4,6 +4,7 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useId, useState } from "react";
 import { Button, Modal } from "../design-system/atoms";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf } from "./common";
 
@@ -18,20 +19,34 @@ export function useArchiveRecord<Archived extends { id: string }>({
   archive,
   invalidate,
   recordKey,
+  archivedMessage,
   onDone,
 }: Readonly<{
   archive: () => Promise<Archived>;
   invalidate: string;
   recordKey: string;
+  // What the reader is told once it is gone, already translated. REQUIRED, and
+  // that is the point: an archive is destructive and has no restore endpoint
+  // behind it, so the closing dialog was the only thing a reader got and it
+  // says nothing about whether the server agreed. A caller that would rather
+  // stay silent has to say so by writing the sentence, which is a decision
+  // somebody makes rather than one that happens by nobody adding a line.
+  //
+  // No `action` here for the same reason the comment at the top of this file
+  // gives: the contract has no restore endpoint, and an Undo with nothing
+  // behind it is worse than none.
+  archivedMessage: string;
   onDone: (archived: Archived) => void;
 }>) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   return useMutation({
     mutationFn: archive,
     onSuccess: (archived) => {
       queryClient.invalidateQueries({ queryKey: [invalidate] });
       queryClient.invalidateQueries({ queryKey: [recordKey, archived.id] });
       onDone(archived);
+      toast.show(archivedMessage);
     },
   });
 }
@@ -46,6 +61,7 @@ export function ArchiveAction<Archived extends { id: string }>({
   archive,
   invalidate,
   recordKey,
+  archivedMessage,
   onArchived,
   disabledReasonId,
 }: Readonly<{
@@ -54,6 +70,8 @@ export function ArchiveAction<Archived extends { id: string }>({
   archive: () => Promise<Archived>;
   invalidate: string;
   recordKey: string;
+  // What the reader is told once it is gone. See `useArchiveRecord`.
+  archivedMessage: string;
   onArchived: () => void;
   // Why this action is unavailable, when it is. STATE-4a settles the
   // absent-vs-disabled question by CAUSE: a control blocked by STATE
@@ -69,6 +87,7 @@ export function ArchiveAction<Archived extends { id: string }>({
     archive,
     invalidate,
     recordKey,
+    archivedMessage,
     onDone: () => {
       setConfirming(false);
       onArchived();

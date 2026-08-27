@@ -67,7 +67,7 @@ import { PassportSelect, ScopeChips } from "../design-system/passportselect";
 import { FieldGuard, RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { type Toast, ToastRegion, useToast } from "../design-system/toast";
+import { type Toast, useToast } from "../design-system/toast";
 import {
   AutonomyDot,
   EvidenceChip,
@@ -1022,7 +1022,6 @@ function AccountCard() {
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
         </SettingList>
-        <ToastRegion toast={toast} />
       </PanelBody>
     </Panel>
   );
@@ -2300,8 +2299,9 @@ function StageRow({
           holding one without the other still sees the one it may use. */}
       <span className="stage-verbs">
         {canEdit && (
-          <EditAction
+          <EditAction<Stage>
             label={t("stage.edit")}
+            savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
             invalidate="pipelines"
             recordKey="stage"
             record={{
@@ -2368,8 +2368,11 @@ function PipelineRow({
             </Badge>
             {canEdit && (
               <>
-                <EditAction
+                <EditAction<Pipeline>
                   label={t("pipeline.edit")}
+                  savedMessage={(saved) =>
+                    t("record.saveDone", { name: saved.name })
+                  }
                   invalidate="pipelines"
                   recordKey="pipeline"
                   record={{

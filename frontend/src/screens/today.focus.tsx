@@ -2,7 +2,6 @@ import { CheckCircle2 } from "lucide-react";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import { type Toast, ToastRegion, useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
@@ -82,8 +81,7 @@ function AllClear({ decided }: Readonly<{ decided: number }>) {
 function FocusBody({
   item,
   onDone,
-  toast,
-}: Readonly<{ item: AttentionItem; onDone: () => void; toast: Toast }>) {
+}: Readonly<{ item: AttentionItem; onDone: () => void }>) {
   const t = useT();
   const dispose = useDisposeDuplicate();
   const pending = dispose.isPending;
@@ -128,15 +126,14 @@ function FocusBody({
   // evidence stands behind it. So the card fetches the one approval it is
   // showing. One card is on screen, so this is one read, and it is the same
   // read the record page makes.
-  return <StagedDecision id={item.id} onDone={onDone} toast={toast} />;
+  return <StagedDecision id={item.id} onDone={onDone} />;
 }
 
 // One staged proposal, fetched whole because it is the one being decided.
 function StagedDecision({
   id,
   onDone,
-  toast,
-}: Readonly<{ id: string; onDone: () => void; toast: Toast }>) {
+}: Readonly<{ id: string; onDone: () => void }>) {
   const t = useT();
   const approval = useApproval(id);
   // A body that carries no `kind` is not a proposal this card can draw: the
@@ -174,7 +171,6 @@ function StagedDecision({
           // every proposal the reader answers normally.
           onAlreadyDecided={onDone}
           extraInvalidateKeys={[attentionKey]}
-          toast={toast}
         />
       )}
     </SurfaceState>
@@ -206,7 +202,6 @@ export function FocusLane({
   // card — that is how the queue advances — and a sticky offer owned by the
   // card would leave with it, which is the one message that must survive the
   // card it was shown from.
-  const toast = useToast();
   return (
     <Panel
       title={
@@ -223,7 +218,7 @@ export function FocusLane({
         ) : current ? (
           <div className="focus">
             <Progress done={decided} total={total} />
-            <FocusBody item={current} onDone={onDecided} toast={toast} />
+            <FocusBody item={current} onDone={onDecided} />
             {/* Later, not never. A queue whose only exits are terminal is one
                 a reader stops opening the moment it holds something they
                 cannot answer yet. */}
@@ -237,7 +232,6 @@ export function FocusLane({
           <AllClear decided={decided} />
         )}
       </PanelBody>
-      <ToastRegion toast={toast} />
     </Panel>
   );
 }

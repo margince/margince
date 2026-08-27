@@ -246,9 +246,10 @@ function ProjectActions({
   const overlay = useSorMode() === "overlay";
   return (
     <>
-      <EditAction
+      <EditAction<Project>
         disabledReasonId={refusedReasonId}
         label={t("project.edit")}
+        savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
         fields={projectFields(t, {
           companies,
           me: me.data?.user.id ?? "",
@@ -277,6 +278,7 @@ function ProjectActions({
           disabledReasonId={refusedReasonId}
           label={t("project.archive")}
           confirmText={t("project.archiveConfirm")}
+          archivedMessage={t("record.archiveDone", { name: project.name })}
           archive={async () => {
             // Archive answers 204: the archived record is the one the page
             // already holds, so its id is what the shared choreography gets.

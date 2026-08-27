@@ -6,6 +6,7 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -35,6 +36,8 @@ type CaptureSettingsPatch =
 
 function useUpdateCaptureSettings() {
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const t = useT();
   return useMutation({
     // A sparse patch rather than one boolean: the card now carries two
     // settings, and a mutation that could only send one would have to grow a
@@ -50,6 +53,7 @@ function useUpdateCaptureSettings() {
     },
     onSuccess: (data) => {
       queryClient.setQueryData(["capture-settings"], data);
+      toast.show(t("settings.saved"));
     },
   });
 }
