@@ -29,13 +29,19 @@ type pipelineRefs struct {
 	// contractsByRef lets the renewal read its successor's terms: a renewal
 	// inherits nothing, so every field is restated from the dataset.
 	contractsByRef []demoContract
-	// dealsByCompany is filled after the deals are seeded, so an activity can
+	// dealsByOrg is filled after the deals are seeded, so an activity can
 	// link to the deal it moved.
-	dealsByCompany map[string][]string
-	// projectsByCompany holds the seeded projects, keyed by company domain and
+	//
+	// Keyed by ORGANIZATION, not by domain, because that is whose work it is.
+	// Both of these were keyed by domain and built by reversing orgsByDom,
+	// which silently dropped every domain but one for an account that has
+	// several — and which one survived was Go map iteration order, so an
+	// activity naming a valid alias found nothing, differently on each run.
+	dealsByOrg map[string][]string
+	// projectsByOrg holds the seeded projects, keyed by organization and
 	// ordered oldest first, so an activity can link to the delivery work it
 	// was about.
-	projectsByCompany map[string][]seededProject
+	projectsByOrg map[string][]seededProject
 	// anchorName and orgNameByID name the parties a document prints.
 	anchorName  string
 	orgNameByID map[string]string
@@ -48,6 +54,14 @@ type pipelineRefs struct {
 	ownerRefByDomain map[string]string
 	pipelineID       string
 	now              time.Time
+}
+
+// orgForDomain answers which account a company domain names. Phases hold a
+// domain because that is what the dataset writes down; the work belongs to the
+// organization, and an account reached by any of its domains must find the
+// same deals and the same projects.
+func (r pipelineRefs) orgForDomain(domain string) string {
+	return r.orgsByDom[strings.ToLower(domain)]
 }
 
 // dayOffset turns a dataset offset into a date. Negative is the past.
@@ -67,17 +81,17 @@ func (r pipelineRefs) timestamp(days int) string {
 // once, so each phase is a straight write rather than a search.
 func loadPipelineRefs(c *client, cfg demoConfig, now time.Time) (pipelineRefs, error) {
 	refs := pipelineRefs{
-		contractsByRef:    cfg.Contracts,
-		dealsByCompany:    map[string][]string{},
-		projectsByCompany: map[string][]seededProject{},
-		ownerRefByDomain:  map[string]string{},
-		orgNameByID:       map[string]string{},
-		domainByOrgID:     map[string]string{},
-		anchorName:        cfg.Anchor.LegalName,
-		usersByRef:        map[string]string{},
-		orgsByDom:         map[string]string{},
-		stagesByNm:        map[string]string{},
-		now:               now,
+		contractsByRef:   cfg.Contracts,
+		dealsByOrg:       map[string][]string{},
+		projectsByOrg:    map[string][]seededProject{},
+		ownerRefByDomain: map[string]string{},
+		orgNameByID:      map[string]string{},
+		domainByOrgID:    map[string]string{},
+		anchorName:       cfg.Anchor.LegalName,
+		usersByRef:       map[string]string{},
+		orgsByDom:        map[string]string{},
+		stagesByNm:       map[string]string{},
+		now:              now,
 	}
 
 	var users struct {
@@ -374,10 +388,6 @@ func (r *pipelineRefs) loadOrganizations(c *client) error {
 // dataset's own left every generated deal without a buying committee, and
 // left activities unable to link to one.
 func (r *pipelineRefs) loadDeals(c *client, _ demoConfig) error {
-	domainByOrg := map[string]string{}
-	for domain, orgID := range r.orgsByDom {
-		domainByOrg[orgID] = domain
-	}
 	return c.getAll("/v1/deals", nil, func(raw json.RawMessage) error {
 		var rows []struct {
 			ID             string `json:"id"`
@@ -387,11 +397,12 @@ func (r *pipelineRefs) loadDeals(c *client, _ demoConfig) error {
 			return err
 		}
 		for _, row := range rows {
-			domain, ok := domainByOrg[row.OrganizationID]
-			if !ok {
+			// An account nobody can name by domain is one no phase reaches,
+			// so recording its deals would only grow a map nothing reads.
+			if _, named := r.domainByOrgID[row.OrganizationID]; !named {
 				continue
 			}
-			r.dealsByCompany[domain] = append(r.dealsByCompany[domain], row.ID)
+			r.dealsByOrg[row.OrganizationID] = append(r.dealsByOrg[row.OrganizationID], row.ID)
 		}
 		return nil
 	})
