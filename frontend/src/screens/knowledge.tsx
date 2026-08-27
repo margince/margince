@@ -465,7 +465,23 @@ function DocumentRow({
 
 // One refused file out of several. Named, because "3 of 10 failed" leaves the
 // reader to work out WHICH three by comparing two lists by eye.
-type UploadRefusal = Readonly<{ filename: string; message: string }>;
+//
+// `id` is the file's OWN identity, not its position in the batch: two refused
+// files may share a name now that both are kept, and a key that changes when
+// the list is rebuilt would let React reuse the wrong message.
+type UploadRefusal = Readonly<{
+  id: string;
+  filename: string;
+  message: string;
+}>;
+
+// What distinguishes one picked file from another without opening it. Two
+// distinct files agreeing on all three are the same bytes for every purpose
+// this screen has — and the server would refuse both identically, so a
+// collision could only ever merge two messages that read the same.
+function fileIdentity(file: File): string {
+  return `${file.name}:${file.size}:${file.lastModified}`;
+}
 
 function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
   const t = useT();
@@ -493,6 +509,7 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
         // One bad file does not abandon the rest: a reader who dropped ten
         // handbook pages and has one duplicate among them wants the nine.
         refused.push({
+          id: fileIdentity(file),
           filename: file.name,
           message: problemMessageOf(err, t),
         });
@@ -543,11 +560,8 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
           })}
         </Button>
       </div>
-      {/* Keyed by position, not by filename: two refused files may share a
-          name now that the pick handler keeps both, and a duplicate React key
-          would drop one of the two messages a reader needs. */}
-      {refusals.map((refusal, at) => (
-        <Callout key={`${at}-${refusal.filename}`} tone="danger">
+      {refusals.map((refusal) => (
+        <Callout key={refusal.id} tone="danger">
           {t("knowledge.upload.refused", {
             filename: refusal.filename,
             message: refusal.message,
