@@ -4972,6 +4972,30 @@ func (e HealthDimensionRating) Valid() bool {
 	}
 }
 
+// Defines values for HistoryEdgeOtherEntityType.
+const (
+	HistoryEdgeOtherEntityTypeDeal         HistoryEdgeOtherEntityType = "deal"
+	HistoryEdgeOtherEntityTypeOrganization HistoryEdgeOtherEntityType = "organization"
+	HistoryEdgeOtherEntityTypePerson       HistoryEdgeOtherEntityType = "person"
+	HistoryEdgeOtherEntityTypeProject      HistoryEdgeOtherEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the HistoryEdgeOtherEntityType enum.
+func (e HistoryEdgeOtherEntityType) Valid() bool {
+	switch e {
+	case HistoryEdgeOtherEntityTypeDeal:
+		return true
+	case HistoryEdgeOtherEntityTypeOrganization:
+		return true
+	case HistoryEdgeOtherEntityTypePerson:
+		return true
+	case HistoryEdgeOtherEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportObject.
 const (
 	ImportObjectLead         ImportObject = "lead"
@@ -9626,6 +9650,7 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 const (
 	UndoabilityReasonAlreadyUndone           UndoabilityReason = "already_undone"
 	UndoabilityReasonBehindErasureBoundary   UndoabilityReason = "behind_erasure_boundary"
+	UndoabilityReasonEdgeRelinkUnsupported   UndoabilityReason = "edge_relink_unsupported"
 	UndoabilityReasonNoBeforeImage           UndoabilityReason = "no_before_image"
 	UndoabilityReasonNotAReplayableVerb      UndoabilityReason = "not_a_replayable_verb"
 	UndoabilityReasonNotRestorableByThisPath UndoabilityReason = "not_restorable_by_this_path"
@@ -9642,6 +9667,8 @@ func (e UndoabilityReason) Valid() bool {
 	case UndoabilityReasonAlreadyUndone:
 		return true
 	case UndoabilityReasonBehindErasureBoundary:
+		return true
+	case UndoabilityReasonEdgeRelinkUnsupported:
 		return true
 	case UndoabilityReasonNoBeforeImage:
 		return true
@@ -11613,31 +11640,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
-	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
-	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
-	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
+	Customer       ListOrganizationsParamsLifecycle = "customer"
+	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	Prospect       ListOrganizationsParamsLifecycle = "prospect"
+	Target         ListOrganizationsParamsLifecycle = "target"
+	Unknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case ListOrganizationsParamsLifecycleCustomer:
+	case Customer:
 		return true
-	case ListOrganizationsParamsLifecycleDisqualified:
+	case Disqualified:
 		return true
-	case ListOrganizationsParamsLifecycleFormerCustomer:
+	case FormerCustomer:
 		return true
-	case ListOrganizationsParamsLifecycleOpportunity:
+	case Opportunity:
 		return true
-	case ListOrganizationsParamsLifecycleProspect:
+	case Prospect:
 		return true
-	case ListOrganizationsParamsLifecycleTarget:
+	case Target:
 		return true
-	case ListOrganizationsParamsLifecycleUnknown:
+	case Unknown:
 		return true
 	default:
 		return false
@@ -13551,8 +13578,25 @@ type AuditHistoryEntry struct {
 	AgentClient       *string                 `json:"agent_client,omitempty"`
 	AuthorizationRule *string                 `json:"authorization_rule,omitempty"`
 	Before            *map[string]interface{} `json:"before,omitempty"`
-	Id                openapi_types.UUID      `json:"id"`
-	OccurredAt        time.Time               `json:"occurred_at"`
+
+	// Edge Set when this history entry changed a LINK between two records rather than a field
+	// of this one, and null on every ordinary row.
+	//
+	// A link is recorded against the link itself, so both records it joins carry the same
+	// entry — each naming the other end. The other endpoint is named so the line can say
+	// WHAT was linked ("linked Northwind Logistics as employer"), and carries its id so a
+	// reader can navigate to it.
+	//
+	// A caller who cannot see the other endpoint does not receive the row AT ALL: it is
+	// absent rather than refused, because a refusal is proof the record exists.
+	//
+	// There is no field diff on an edge row. `role`, `started_at` and the primary-employer
+	// flag belong to the link, not to either record, and projecting them as a record's own
+	// fields would invent fields it does not have — which is also why edge entries never
+	// appear in `/field-history`.
+	Edge       *HistoryEdge       `json:"edge,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+	OccurredAt time.Time          `json:"occurred_at"`
 
 	// OnBehalfOf Granting human's user id for agent actions.
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
@@ -17394,6 +17438,34 @@ type HealthDimension struct {
 
 // HealthDimensionRating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 type HealthDimensionRating string
+
+// HistoryEdge Set when this history entry changed a LINK between two records rather than a field
+// of this one, and null on every ordinary row.
+//
+// A link is recorded against the link itself, so both records it joins carry the same
+// entry — each naming the other end. The other endpoint is named so the line can say
+// WHAT was linked ("linked Northwind Logistics as employer"), and carries its id so a
+// reader can navigate to it.
+//
+// A caller who cannot see the other endpoint does not receive the row AT ALL: it is
+// absent rather than refused, because a refusal is proof the record exists.
+//
+// There is no field diff on an edge row. `role`, `started_at` and the primary-employer
+// flag belong to the link, not to either record, and projecting them as a record's own
+// fields would invent fields it does not have — which is also why edge entries never
+// appear in `/field-history`.
+type HistoryEdge struct {
+	// Kind The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`.
+	Kind            string                     `json:"kind"`
+	OtherEntityId   openapi_types.UUID         `json:"other_entity_id"`
+	OtherEntityType HistoryEdgeOtherEntityType `json:"other_entity_type"`
+
+	// OtherLabel The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it.
+	OtherLabel *string `json:"other_label,omitempty"`
+}
+
+// HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.
+type HistoryEdgeOtherEntityType string
 
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
@@ -24353,12 +24425,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable.
 type UndoabilityReason string
 
 // UpdateActivityRequest defines model for UpdateActivityRequest.

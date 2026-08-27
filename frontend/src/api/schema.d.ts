@@ -19047,8 +19047,36 @@ export interface components {
              * @description The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
              */
             undid_audit_log_id?: string | null;
+            edge?: components["schemas"]["HistoryEdge"];
             undoable?: components["schemas"]["Undoability"];
         };
+        /**
+         * @description Set when this history entry changed a LINK between two records rather than a field
+         *     of this one, and null on every ordinary row.
+         *
+         *     A link is recorded against the link itself, so both records it joins carry the same
+         *     entry — each naming the other end. The other endpoint is named so the line can say
+         *     WHAT was linked ("linked Northwind Logistics as employer"), and carries its id so a
+         *     reader can navigate to it.
+         *
+         *     A caller who cannot see the other endpoint does not receive the row AT ALL: it is
+         *     absent rather than refused, because a refusal is proof the record exists.
+         *
+         *     There is no field diff on an edge row. `role`, `started_at` and the primary-employer
+         *     flag belong to the link, not to either record, and projecting them as a record's own
+         *     fields would invent fields it does not have — which is also why edge entries never
+         *     appear in `/field-history`.
+         */
+        HistoryEdge: {
+            /** @description The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`. */
+            kind: string;
+            /** @enum {string} */
+            other_entity_type: "person" | "organization" | "deal" | "project";
+            /** Format: uuid */
+            other_entity_id: string;
+            /** @description The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it. */
+            other_label?: string | null;
+        } | null;
         /**
          * @description Whether this history entry can be put back, and if not, why. COMPUTED per read,
          *     never stored: a stored flag is a second copy of a question the audit spine already
@@ -19066,10 +19094,10 @@ export interface components {
         Undoability: {
             undoable: boolean;
             /**
-             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable.
              * @enum {string|null}
              */
-            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | null;
+            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "edge_relink_unsupported" | null;
             /** @description The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says. */
             detail?: string | null;
         };

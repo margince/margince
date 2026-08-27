@@ -31,10 +31,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// edgeEntityType is the audit spine's entity_type for an edge row. The wording
+// EdgeEntityType is the audit spine's entity_type for an edge row. The wording
 // keys on the (action, entity_type) PAIR, so it is a value here and not an
-// implicit assumption in a switch.
-const edgeEntityType = "relationship"
+// implicit assumption in a switch — and the reversal seam dispatches on the same
+// value, which is why it is exported rather than typed a second time there.
+const EdgeEntityType = "relationship"
 
 // edgeEndpoint is one of relationship's endpoint columns, the record kind it
 // points at, and the column that NAMES that record on screen.
@@ -267,7 +268,7 @@ func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCT
 			SELECT`+recordAuditColumns+`,
 				`+edgeSubjectColumns+`
 			FROM edge e
-			JOIN audit_log a ON a.entity_type = '`+edgeEntityType+`' AND a.entity_id = e.rel_id`+
+			JOIN audit_log a ON a.entity_type = '`+EdgeEntityType+`' AND a.entity_id = e.rel_id`+
 		auditActorNameJoins+agentClientNameJoin+`%s
 			ORDER BY a.occurred_at DESC, a.id DESC
 			LIMIT $%d`, edgeWhere, fetchPos)
@@ -278,4 +279,30 @@ func recordHistoryWindowSQL(typePos, idPos, fetchPos int, conds []string, edgeCT
 			(%s)) AS spine
 		ORDER BY occurred_at DESC, id DESC
 		LIMIT $%d`, edgeCTE, own, edges, fetchPos)
+}
+
+// HistoryEdge is the edge a history line was about, as the wire declares it: the
+// kind, and the OTHER end named and identified so a reader can go and look at
+// it. Nil on every row that changed a field of the record itself.
+//
+// It carries no field diff and never will. role, the dates and the
+// primary-employer flag belong to the LINK rather than to either record it
+// joins, so projecting them as the record's own fields would invent fields the
+// record does not have — which is the same reason edge rows never enter field
+// history.
+type HistoryEdge struct {
+	Kind            string
+	OtherEntityType string
+	OtherEntityID   ids.UUID
+	OtherLabel      *string
+}
+
+// historyEdgeOf renders the scanned subject for a caller outside this package.
+func historyEdgeOf(edge edgeSubject) HistoryEdge {
+	return HistoryEdge{
+		Kind:            edge.kind,
+		OtherEntityType: edge.otherType,
+		OtherEntityID:   edge.otherID,
+		OtherLabel:      edge.otherLabel,
+	}
 }

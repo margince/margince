@@ -46,6 +46,9 @@ type RestoreSeam struct {
 	// caller who may not see the record is answered 404 and never a refusal,
 	// whatever the gate happens to allow in a given fixture.
 	visible func(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID) error
+	// edges performs a LINK's inverse. It is a port because `relationship` is the
+	// people module's table, and the rules an edge write obeys are that module's.
+	edges EdgeReverser
 }
 
 // Restore puts the named audit row's before-image back.
@@ -62,6 +65,12 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 	if err != nil {
 		return privacy.RecordHistoryEntry{}, err
 	}
+	// The TARGET row's own entity_type decides the mechanism, and it is not the
+	// path's: a link's rows sit on ('relationship', edge_id) and appear on the
+	// history of both records it joins.
+	if row.EntityType == edgeEntityType {
+		return s.reverseEdge(ctx, entityType, id, row)
+	}
 	patch, err := s.decide(ctx, row)
 	if err != nil {
 		return privacy.RecordHistoryEntry{}, err
@@ -72,28 +81,39 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 	return s.readRestoreEntry(ctx, entityType, id, auditID)
 }
 
-// readRow loads the target entry, bound to the path's own record.
+// readRow loads the target entry — an entry of the path record's HISTORY, which
+// is not the same thing as a row the path record owns.
 //
-// The record's row-scope gate is taken FIRST, and its error is returned
-// unchanged. Reading the audit row before asking whether the caller may see the
-// record would answer "this change cannot be put back" for a record they are
-// not allowed to know exists — and a caller who can tell a refusal from a 404
-// can tell a hidden record from an absent one, which is the whole of what the
-// row-scope rule hides.
+// Two identities, and keeping them apart is what this function is for. The
+// record's row-scope gate is taken FIRST, and its error is returned unchanged:
+// reading the audit row before asking whether the caller may see the record
+// would answer "this change cannot be put back" for a record they are not
+// allowed to know exists, and a caller who can tell a refusal from a 404 can
+// tell a hidden record from an absent one. The audit row is then admitted by
+// MEMBERSHIP of that record's history — privacy's own admission, which for a
+// link is endpoint membership plus the other end's visibility and erasure.
 //
-// An audit row belonging to a DIFFERENT record is ErrNotFound for the same
-// reason, never a 403.
+// Bound instead to `entity_type = $2 AND entity_id = $3`, a link's row is never
+// found and no link is reversible. Admitted by its id alone, a caller holding an
+// audit id could probe for a link whose other end they may not see. Either way
+// the answer is ErrNotFound, never a 403: a refusal is proof the row exists.
 func (s RestoreSeam) readRow(ctx context.Context, entityType string, id, auditID ids.UUID) (AuditRow, error) {
 	var row AuditRow
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := s.visible(ctx, tx, entityType, id); err != nil {
 			return err
 		}
+		served, err := privacy.HistoryServesEntry(ctx, tx, entityType, id, auditID)
+		if err != nil {
+			return err
+		}
+		if !served {
+			return apperrors.ErrNotFound
+		}
 		return tx.QueryRow(ctx, `
 			SELECT id, entity_type, entity_id, action, before, after, occurred_at
 			FROM audit_log
-			WHERE id = $1 AND entity_type = $2 AND entity_id = $3`,
-			auditID, entityType, id,
+			WHERE id = $1`, auditID,
 		).Scan(&row.ID, &row.EntityType, &row.EntityID, &row.Action, &row.Before, &row.After, &row.OccurredAt)
 	})
 	if err != nil {

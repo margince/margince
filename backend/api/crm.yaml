@@ -26203,8 +26203,43 @@ components:
             row that HAS been reversed already says so through `undoable.reason =
             already_undone`, which is computed for the whole record rather than for one
             page, so a second field would be a second answer to a question already asked.
+        edge:
+          $ref: '#/components/schemas/HistoryEdge'
         undoable:
           $ref: '#/components/schemas/Undoability'
+
+    HistoryEdge:
+      type: [object, 'null']
+      description: |
+        Set when this history entry changed a LINK between two records rather than a field
+        of this one, and null on every ordinary row.
+
+        A link is recorded against the link itself, so both records it joins carry the same
+        entry — each naming the other end. The other endpoint is named so the line can say
+        WHAT was linked ("linked Northwind Logistics as employer"), and carries its id so a
+        reader can navigate to it.
+
+        A caller who cannot see the other endpoint does not receive the row AT ALL: it is
+        absent rather than refused, because a refusal is proof the record exists.
+
+        There is no field diff on an edge row. `role`, `started_at` and the primary-employer
+        flag belong to the link, not to either record, and projecting them as a record's own
+        fields would invent fields it does not have — which is also why edge entries never
+        appear in `/field-history`.
+      required: [kind, other_entity_type, other_entity_id]
+      properties:
+        kind:
+          type: string
+          description: The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`.
+        other_entity_type:
+          type: string
+          enum: [person, organization, deal, project]
+        other_entity_id: { type: string, format: uuid }
+        other_label:
+          type: [string, 'null']
+          description: >-
+            The other endpoint's display name, resolved by the read. Null when the row no
+            longer resolves — the line then names the link without claiming a name for it.
 
     Undoability:
       type: object
@@ -26232,9 +26267,13 @@ components:
             ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the
             entry would have to clear a field the record's own write path cannot clear, so it is
             refused rather than reporting a success that changed nothing.
+            `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an
+            un-archive, which this path does not perform. The refusal says the link can be
+            made again from the record's own screen, because that is true and actionable.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
-                 record_archived, null_unwritable_by_module, not_writable_by_caller, null]
+                 record_archived, null_unwritable_by_module, not_writable_by_caller,
+                 edge_relink_unsupported, null]
         detail:
           type: [string, 'null']
           description: >-

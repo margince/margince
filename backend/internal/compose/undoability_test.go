@@ -81,13 +81,13 @@ func TestARestoreVerbIsItselfReplayable(t *testing.T) {
 }
 
 // A type the history screens do not serve is refused by name rather than
-// half-served. relationship is a write shape with no history endpoint.
+// half-served. A custom field is audited and has no history screen of its own.
 func TestARecordTypeWithNoHistoryScreenIsRefusedByName(t *testing.T) {
 	row := personRow(`{"role":"cfo"}`)
-	row.EntityType = "relationship"
+	row.EntityType = "custom_field"
 	answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
 	if answer.Reason != ReasonUnsupportedRecordType {
-		t.Errorf("relationship: reason = %q, want %q", answer.Reason, ReasonUnsupportedRecordType)
+		t.Errorf("custom_field: reason = %q, want %q", answer.Reason, ReasonUnsupportedRecordType)
 	}
 }
 

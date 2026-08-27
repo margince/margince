@@ -72,6 +72,11 @@ type RecordHistoryEntry struct {
 	// been reversed says so through its undoability answer, computed for the
 	// whole record rather than for one page.
 	UndidAuditLogID *ids.UUID
+	// Edge is the LINK this entry changed, with the other end named. Nil on
+	// every row that changed a field of the record itself, which is what a
+	// reader needs to tell the two apart: an edge line has no field diff to
+	// draw, because the fields it moved are the link's and not this record's.
+	Edge *HistoryEdge
 }
 
 // RecordHistoryPage is one keyset window of the timeline, NEWEST first — the
@@ -137,7 +142,13 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 			summary = line
 		}
 	}
+	var edge *HistoryEdge
+	if row.edge != nil {
+		rendered := historyEdgeOf(*row.edge)
+		edge = &rendered
+	}
 	return RecordHistoryEntry{
+		Edge:              edge,
 		AgentClient:       row.agentClientName,
 		ID:                row.id,
 		ActorType:         row.actorType,

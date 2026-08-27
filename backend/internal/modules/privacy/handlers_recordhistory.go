@@ -96,5 +96,13 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 		after := e.After
 		out.After = &after
 	}
+	if e.Edge != nil {
+		out.Edge = &crmcontracts.HistoryEdge{
+			Kind:            e.Edge.Kind,
+			OtherEntityType: crmcontracts.HistoryEdgeOtherEntityType(e.Edge.OtherEntityType),
+			OtherEntityId:   openapi_types.UUID(e.Edge.OtherEntityID),
+			OtherLabel:      e.Edge.OtherLabel,
+		}
+	}
 	return out
 }

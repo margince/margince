@@ -18,12 +18,14 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/auditverb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -49,9 +51,9 @@ const (
 	// admitting it is what makes undoing an undo work. archive, promote and
 	// merge have their own verbs; a field patch is not how you reverse them.
 	ReasonNotAReplayableVerb Reason = "not_a_replayable_verb"
-	// ReasonUnsupportedRecordType — the type is outside the six this path
-	// serves. relationship is in the write shapes and has no history endpoint,
-	// so it is honestly unsupported here rather than silently absent.
+	// ReasonUnsupportedRecordType — the type is outside what this path serves:
+	// the six record types, and the link rows that appear on their histories.
+	// Anything else is honestly unsupported here rather than silently absent.
 	ReasonUnsupportedRecordType Reason = "unsupported_record_type"
 	// ReasonSuperseded — a later audit row wrote one of these fields. The
 	// product refuses; it never clobbers. Where another person edited in
@@ -88,6 +90,12 @@ const (
 	// worse than a refusal — the person reads the confirmation and stops
 	// looking.
 	ReasonNullUnwritableByModule Reason = "null_unwritable_by_module"
+	// ReasonEdgeRelinkUnsupported — the entry REMOVED a link between two records.
+	// Putting one back is an un-archive, and no write path here performs one, so
+	// the refusal names itself rather than hiding behind a generic reason: the
+	// reader CAN make the link again from the record's own screen, and a refusal
+	// that does not say so is a dead end where an instruction belongs.
+	ReasonEdgeRelinkUnsupported Reason = "edge_relink_unsupported"
 	// ReasonNotWritableByCaller — the caller may read this history but not
 	// change the record, so the button is honest rather than a 403 waiting to
 	// happen.
@@ -108,6 +116,7 @@ var Reasons = []Reason{
 	ReasonRecordArchived,
 	ReasonNotWritableByCaller,
 	ReasonAlreadyUndone,
+	ReasonEdgeRelinkUnsupported,
 	ReasonSuperseded,
 	ReasonBehindErasureBoundary,
 	ReasonNotRestorableByThisPath,
@@ -157,9 +166,9 @@ const (
 	Binding
 )
 
-// undoableRecordTypes are the six the history screens serve. relationship is a
-// write shape without a history endpoint, so a restore of one has nowhere to be
-// pressed from and is refused by name rather than half-served.
+// undoableRecordTypes are the six the history screens serve. A link's rows
+// appear on those screens too and are reversed by their own branch, so they are
+// not here: this list is what a field-image replay can be sent to.
 //
 //nolint:goconst // the six this path serves, listed once
 var undoableRecordTypes = []string{
@@ -197,6 +206,16 @@ type Evaluator struct {
 	// today — a retired enum member, a deleted custom field, a departed owner.
 	// It is best-effort on the read and authoritative inside the write.
 	Unwritable func(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, patch map[string]json.RawMessage) ([]string, error)
+	// EdgeFacts reads the live state of the edge one audit row was about: what
+	// the row cannot say, because it was written before whatever happened next.
+	// Nil where no edge is served, which answers every edge row as unjudged
+	// rather than as undoable.
+	EdgeFacts func(ctx context.Context, tx pgx.Tx, edgeID ids.UUID) (people.EdgeFacts, error)
+	// EdgeWritable answers the authority an edge write asks for — the edge's own
+	// grant, and its ANCHOR's, which is not either endpoint the history page was
+	// read from. It returns the refusal unchanged so a caller that wants to
+	// surface it can.
+	EdgeWritable func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts) error
 	// ExternallyGoverned reports whether this workspace's records live in an
 	// incumbent system rather than here. A reversal there is a write-back, and
 	// the write-back path records its own verb and its own evidence — so the
@@ -212,6 +231,13 @@ type Evaluator struct {
 // reports the most useful one. The image is judged AFTER the filter: the raw
 // image can be present and still reduce to nothing a restore could send.
 func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode Mode) (Undoability, error) {
+	// The audit row's own entity_type decides the mechanism, and an edge row's is
+	// not the record's. Asked first because the branches below read the RECORD's
+	// update shape: an edge has none, so every one of them would answer about a
+	// table this row is not on.
+	if row.EntityType == edgeEntityType {
+		return e.evaluateEdge(ctx, tx, row)
+	}
 	if !replayableVerb(row.Action) {
 		return refuse(ReasonNotAReplayableVerb, row.Action), nil
 	}
@@ -253,6 +279,116 @@ func (e Evaluator) Evaluate(ctx context.Context, tx pgx.Tx, row AuditRow, mode M
 		return answer, err
 	}
 	return e.trailState(ctx, tx, row, patch, mode)
+}
+
+// evaluateEdge answers whether one audited change to a LINK can be reversed.
+//
+// Its own branch set rather than the record's, because only three of the
+// refusals mean the same thing about an edge — and because two of the record's
+// would read the wrong table. The order is the record path's: cheapest and most
+// certain first, so a row failing several reports the most useful one.
+func (e Evaluator) evaluateEdge(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, error) {
+	if e.EdgeFacts == nil {
+		return Undoability{}, fmt.Errorf("compose: no edge reader is wired, so entry %s cannot be judged", row.ID)
+	}
+	facts, err := e.EdgeFacts(ctx, tx, row.EntityID)
+	if err != nil {
+		if refusal, refused := edgeScopeRefusal(err); refused {
+			return refusal, nil
+		}
+		return Undoability{}, err
+	}
+	if answer, decided := edgeShapeRefusal(row.Action, facts); decided {
+		return answer, nil
+	}
+	// Asked before the link's own state, for the reason the record path asks it
+	// before supersession: an entry somebody has put back should SAY so. Putting
+	// a link back removes it, so "the link is gone" would otherwise answer first
+	// and tell the reader nothing they can act on.
+	if e.AlreadyUndone != nil {
+		undone, err := e.AlreadyUndone(ctx, tx, row)
+		if err != nil {
+			return Undoability{}, err
+		}
+		if undone {
+			return refuse(ReasonAlreadyUndone, ""), nil
+		}
+	}
+	if facts.Archived {
+		// The link this entry made has since been removed, and putting it back is
+		// an un-archive no write path here performs. Naming the state is what a
+		// reader can act on.
+		return refuse(ReasonRecordArchived, ""), nil
+	}
+	if e.EdgeWritable != nil {
+		if err := e.EdgeWritable(ctx, tx, facts); err != nil {
+			if refusal, refused := edgeScopeRefusal(err); refused {
+				return refusal, nil
+			}
+			return Undoability{}, err
+		}
+	}
+	unclearable, err := edgeFieldsNoPatchCanClear(row.Before, row.After)
+	if err != nil {
+		return Undoability{}, err
+	}
+	if len(unclearable) > 0 {
+		return refuse(ReasonNullUnwritableByModule, strings.Join(unclearable, ", ")), nil
+	}
+	return e.edgeTrailState(ctx, tx, row)
+}
+
+// edgeScopeRefusal renders a refusal from the edge's own gates as the answer the
+// button shows. The row reached the caller through the history read's gates, so
+// its existence is not what is hidden here — only whether they may act on it, and
+// a fault is a different thing and stays one.
+func edgeScopeRefusal(err error) (Undoability, bool) {
+	if !isWriteScopeRefusal(err) {
+		return Undoability{}, false
+	}
+	return refuse(ReasonNotWritableByCaller, ""), true
+}
+
+// edgeShapeRefusal answers the refusals decided by the KIND of link and the verb
+// alone, before any authority is asked. Kind first, and whatever the verb:
+// project_company needs write authority over the project ROW and a project must
+// keep one company, so a generic reverse of one is a side door around both rules
+// — including on an unlink, where the honest answer names the kind rather than
+// the un-archive it would also have refused.
+func edgeShapeRefusal(action string, facts people.EdgeFacts) (Undoability, bool) {
+	if facts.Kind == people.ProjectCompanyKind {
+		return refuse(ReasonNotRestorableByThisPath, facts.Kind), true
+	}
+	if action == edgeActionArchive {
+		return refuse(ReasonEdgeRelinkUnsupported, ""), true
+	}
+	if !reversibleEdgeAction(action) {
+		return refuse(ReasonNotAReplayableVerb, action), true
+	}
+	return Undoability{}, false
+}
+
+// edgeTrailState asks the two refusals that read past this entry. Supersession is
+// computed against the EDGE, whose columns the image names — the record's own
+// fields are not what an edge change moved.
+func (e Evaluator) edgeTrailState(ctx context.Context, tx pgx.Tx, row AuditRow) (Undoability, error) {
+	moved, err := fieldsThatMovedSince(ctx, tx, row)
+	if err != nil {
+		return Undoability{}, err
+	}
+	if len(moved) > 0 {
+		return refuse(ReasonSuperseded, strings.Join(moved, ", ")), nil
+	}
+	if e.BehindErasure != nil {
+		behind, err := e.BehindErasure(ctx, tx, row)
+		if err != nil {
+			return Undoability{}, err
+		}
+		if behind {
+			return refuse(ReasonBehindErasureBoundary, ""), nil
+		}
+	}
+	return undoable(), nil
 }
 
 // liveState asks the refusals that read the record itself. A record that is

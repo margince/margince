@@ -60,15 +60,35 @@ func ReadRestoreOf(ctx context.Context, db *database.DB, entityType string, enti
 	return entry, nil
 }
 
+// queryRestoreOf reads the reversal row through the record-history window, so a
+// reversal recorded on a LINK is found from the record whose history was being
+// read. An edge reversal's audit row sits on ('relationship', edge_id): bound to
+// the record's own identity this read misses it, the write is reported as a
+// no-op, and a link that really was removed reads as "the record already holds
+// these values".
+//
+// The window's admission is what keeps that widening honest — the reversal is
+// found only through an edge the record is an end of, whose other end the caller
+// may see.
 func queryRestoreOf(ctx context.Context, tx pgx.Tx, entityType string, entityID, undidID ids.UUID) (recordAuditRow, error) {
+	var args []any
+	arg := func(v any) int { args = append(args, v); return len(args) }
+	typePos, idPos := arg(entityType), arg(entityID)
+	conds := []string{fmt.Sprintf("%s = $%d::text", reversalLinkColumn, arg(undidID))}
+
+	edgeCTE, err := edgeSubjectCTE(ctx, entityType, idPos, arg)
+	if errors.Is(err, apperrors.ErrPermissionDenied) {
+		edgeCTE = ""
+	} else if err != nil {
+		return recordAuditRow{}, err
+	}
+
 	var row recordAuditRow
-	err := scanRecordAuditRow(tx.QueryRow(ctx, `
-		SELECT`+recordAuditColumns+`
-		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
-		WHERE a.entity_type = $1 AND a.entity_id = $2
-		  AND `+reversalLinkColumn+` = $3::text
-		ORDER BY a.occurred_at DESC, a.id DESC
-		LIMIT 1`, entityType, entityID, undidID), &row)
+	// Newest first with a window of one: a record with several reversals of one
+	// entry has the newest as its current answer, which is the order the window
+	// already imposes.
+	err = scanEdgeAuditRow(tx.QueryRow(ctx,
+		recordHistoryWindowSQL(typePos, idPos, arg(1), conds, edgeCTE), args...), &row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordAuditRow{}, apperrors.ErrNotFound
 	}

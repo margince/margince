@@ -46,13 +46,13 @@ type edgePhrase struct {
 // action absent here falls back to the record phrasing, which is honest if
 // clumsy — the alternative is a line that claims to know what happened.
 var edgePhrases = map[auditVerbKey]edgePhrase{
-	{action: "create", entityType: edgeEntityType}: {
+	{action: "create", entityType: EdgeEntityType}: {
 		template: "%s linked %s as %s", detail: edgeRoleOrKind,
 	},
-	{action: "update", entityType: edgeEntityType}: {
+	{action: "update", entityType: EdgeEntityType}: {
 		template: "%s changed %s's %s", detail: edgeChangedFields,
 	},
-	{action: actionArchive, entityType: edgeEntityType}: {
+	{action: actionArchive, entityType: EdgeEntityType}: {
 		template: "%s unlinked %s",
 	},
 }
@@ -64,7 +64,7 @@ var edgePhrases = map[auditVerbKey]edgePhrase{
 // Claude", "System" — so attribution reads identically on an edge line and on
 // every other line of the same page.
 func edgeSummary(subject, action string, edge edgeSubject, after map[string]any) (string, bool) {
-	phrase, known := edgePhrases[auditVerbKey{action: action, entityType: edgeEntityType}]
+	phrase, known := edgePhrases[auditVerbKey{action: action, entityType: EdgeEntityType}]
 	if !known {
 		return "", false
 	}

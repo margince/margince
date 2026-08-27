@@ -19,11 +19,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -134,6 +132,9 @@ type UpdateRelationshipInput struct {
 	StartedAt        *time.Time
 	EndedAt          *time.Time
 	IfVersion        *int64
+	// Evidence lands on the audit row as context ABOUT the write, never as a
+	// field image. The reversal path names the entry it put back there.
+	Evidence map[string]any
 }
 
 // lockPersonForEmployment serializes every writer of one person's employment
@@ -251,7 +252,8 @@ func (s *Store) UpdateRelationship(ctx context.Context, id ids.UUID, in UpdateRe
 			// update. current.Kind, because a patch cannot change the kind.
 			return mapRelationshipConstraint(err, current.Kind)
 		}
-		return emitRelationshipChange(ctx, tx, "update", relationshipFieldImage(current), out)
+		return emitRelationshipChangeWithEvidence(ctx, tx, "update",
+			relationshipFieldImage(current), out, in.Evidence)
 	})
 	return out, err
 }
@@ -285,6 +287,14 @@ func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) erro
 // back for the reason the statement's RETURNING never had to think about: the
 // row this reads is the one just archived.
 func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID, ifVersion *int64) (relationshipRow, error) {
+	return s.archiveRelationship(ctx, id, ifVersion, nil)
+}
+
+// archiveRelationship is the archive carrying audit evidence — the reversal path
+// names the entry it put back, and every other caller records none.
+func (s *Store) archiveRelationship(ctx context.Context, id ids.UUID, ifVersion *int64,
+	evidence map[string]any,
+) (relationshipRow, error) {
 	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {
 		return relationshipRow{}, err
 	}
@@ -316,29 +326,7 @@ func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID, ifVersion 
 		} else if err != nil {
 			return err
 		}
-		return emitRelationshipChange(ctx, tx, "archive", nil, out)
+		return emitRelationshipChangeWithEvidence(ctx, tx, "archive", nil, out, evidence)
 	})
 	return out, err
-}
-
-// relationshipUpdatedPayload builds the anchor's .updated event for a
-// relationship mutation — the same changed_fields delta wrapped in
-// whichever of the three anchors' published OPEN envelopes this edge
-// points at. All three (deal.updated, person.updated,
-// organization.updated) are OPEN envelopes with an identical
-// changed_fields shape, so the only real work here is picking the right
-// generated struct for the anchor.
-//
-//nolint:ireturn // dispatches to one of PublicEventDeal/Project/Person/OrganizationUpdated by anchorObject; tested directly via the interface in person_organization_payload_test.go
-func relationshipUpdatedPayload(anchorObject string, changedFields map[string]any) events.Payload {
-	switch anchorObject {
-	case anchorDeal:
-		return crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}
-	case projectObjectName:
-		return crmcontracts.PublicEventProjectUpdated{ChangedFields: changedFields}
-	case anchorPerson:
-		return crmcontracts.PublicEventPersonUpdated{ChangedFields: changedFields}
-	default: // organization
-		return crmcontracts.PublicEventOrganizationUpdated{ChangedFields: changedFields}
-	}
 }

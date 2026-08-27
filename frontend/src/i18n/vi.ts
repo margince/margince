@@ -87,6 +87,8 @@ export const vi = {
   "history.undo.nullUnwritable":
     "Không thể hoàn tác vì thao tác này sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
+  "history.undo.edgeRelinkUnsupported":
+    "Chưa hỗ trợ phục hồi liên kết đã xoá — hãy thêm lại liên kết trên bản ghi này.",
   "history.reversal.collapsed":
     "Thay đổi của {actor}, đã được {undoer} hoàn tác",
   "history.reversal.collapsedSelf":

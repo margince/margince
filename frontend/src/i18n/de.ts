@@ -81,6 +81,8 @@ export const de = {
     "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann, und ist daher nicht möglich.",
   "history.undo.notWritableByCaller":
     "Sie haben keine Berechtigung, diese Felder zu schreiben.",
+  "history.undo.edgeRelinkUnsupported":
+    "Eine entfernte Verknüpfung wiederherzustellen ist noch nicht möglich — legen Sie sie auf diesem Datensatz erneut an.",
   "history.reversal.collapsed":
     "Änderung von {actor}, zurückgesetzt von {undoer}",
   "history.reversal.collapsedSelf":

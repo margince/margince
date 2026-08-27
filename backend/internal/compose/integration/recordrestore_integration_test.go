@@ -22,8 +22,14 @@ import (
 )
 
 type historyEntry struct {
-	ID       string `json:"id"`
-	Action   string `json:"action"`
+	ID      string `json:"id"`
+	Action  string `json:"action"`
+	Summary string `json:"summary"`
+	// UndidAuditLogID is the entry this line REVERSES, which is how a reversal is
+	// told from a fresh change.
+	UndidAuditLogID *string `json:"undid_audit_log_id"`
+	// Edge is set exactly on the lines that changed a LINK rather than a field.
+	Edge     *historyEdge `json:"edge"`
 	Undoable struct {
 		Undoable bool    `json:"undoable"`
 		Reason   *string `json:"reason"`
@@ -32,6 +38,13 @@ type historyEntry struct {
 	Before   map[string]any `json:"before"`
 	After    map[string]any `json:"after"`
 	Evidence map[string]any `json:"evidence"`
+}
+
+type historyEdge struct {
+	Kind            string  `json:"kind"`
+	OtherEntityType string  `json:"other_entity_type"`
+	OtherEntityID   string  `json:"other_entity_id"`
+	OtherLabel      *string `json:"other_label"`
 }
 
 type historyPage struct {

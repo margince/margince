@@ -85,6 +85,8 @@ export const en = {
     "Putting this back would have to clear a field this record cannot clear, so it cannot be put back.",
   "history.undo.notWritableByCaller":
     "You do not have permission to write these fields.",
+  "history.undo.edgeRelinkUnsupported":
+    "Putting a removed link back isn't supported yet — add it again on this record.",
   "history.reversal.collapsed": "{actor}'s change, undone by {undoer}",
   "history.reversal.collapsedSelf": "{actor} undid their own change",
   "history.reversal.partly": "{actor}'s change, partly undone by {undoer}",

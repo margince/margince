@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -25,16 +26,23 @@ import (
 // NewRestoreSeam assembles the reversal executor over the installation pool and
 // the update dispatcher, with the evaluator's ports bound to the real readers.
 func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher) RestoreSeam {
+	// The edge's rules are the people module's, and so is its table. This seam
+	// reaches them through that module's own store rather than restating any of
+	// them, which is also why it owns no relationship SQL.
+	edges := people.NewStore(InstallationDB(pool))
 	return RestoreSeam{
 		pool:       pool,
 		dispatcher: dispatcher,
 		visible:    recordIsVisibleToCaller,
+		edges:      edges,
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,
 			BehindErasure: rowIsBehindTheErasureBoundary,
 			AlreadyUndone: rowIsAlreadyUndone,
 			Unwritable:    valuesNoLongerWritable,
+			EdgeFacts:     edges.EdgeFactsForReverse,
+			EdgeWritable:  edgeIsWritableByCaller(edges),
 			ExternallyGoverned: func(ctx context.Context) (bool, error) {
 				return dispatcher.isOverlayUncached(ctx)
 			},
@@ -85,6 +93,23 @@ func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string,
 		return auth.EnsureActivityWritable(ctx, tx, id)
 	}
 	return auth.EnsureWritable(ctx, tx, entityType, id)
+}
+
+// edgeIsWritableByCaller asks both halves of an edge write's authority: the
+// OBJECT grants the people store asks at its own entry, and the ROW scope on the
+// ANCHOR the edge annotates.
+//
+// The anchor and not the record whose history was open, and the two are not
+// symmetric: an employment anchors the PERSON, so a seat holding
+// organization-write and not person-write is refused the button on the company's
+// page. Asking the record instead would light a button the write then refuses.
+func edgeIsWritableByCaller(edges *people.Store) func(context.Context, pgx.Tx, people.EdgeFacts) error {
+	return func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts) error {
+		if err := edges.RefuseEdgeWrite(ctx, facts.Kind); err != nil {
+			return err
+		}
+		return recordIsWritableByCaller(ctx, tx, facts.Anchor, facts.AnchorID)
+	}
 }
 
 // entityTypeActivity is the record kind whose row-scope checks dispatch
