@@ -18,6 +18,7 @@ package people
 
 import (
 	"context"
+	"regexp"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -164,7 +165,7 @@ func personFromQuickCapture(in QuickCaptureInput) CreatePersonInput {
 		Title:    in.Title,
 		Source:   quickCaptureSource,
 	}
-	if url := trimmedValue(in.ProfileURL); url != "" {
+	if url := profileURLWithScheme(trimmedValue(in.ProfileURL)); url != "" {
 		person.Social = map[string]any{profileURLField: url}
 	}
 	if email := trimmedValue(in.Email); email != "" {
@@ -187,6 +188,32 @@ func personFromQuickCapture(in QuickCaptureInput) CreatePersonInput {
 	}
 	return person
 }
+
+// profileURLWithScheme puts a scheme on a bare host.
+//
+// The browser hides `https://`, so what somebody copies out of the address bar
+// and types here is `linkedin.com/in/jdoe`. Stored as-is it is not an absolute
+// URL, the frontend's own `webUrl` refuses it, and the row is permanently
+// unlinkable on every surface that reads it — which is exactly what the
+// profile-as-a-link work was for. The web client normalizes before sending;
+// this is the same rule for every other caller of the endpoint.
+//
+// Only a value with NO scheme is touched. One that carries `http://` keeps it:
+// the caller typed a scheme, and quietly upgrading it would claim a
+// certificate nobody has seen.
+func profileURLWithScheme(url string) string {
+	if url == "" || bareProfileHost.MatchString(url) {
+		if url == "" {
+			return ""
+		}
+		return "https://" + url
+	}
+	return url
+}
+
+// bareProfileHost matches a value that opens with a hostname rather than a
+// scheme — `linkedin.com/in/jdoe`, `www.example.com`.
+var bareProfileHost = regexp.MustCompile(`^[a-zA-Z0-9-]+(\.[a-zA-Z0-9-]+)+(/|$)`)
 
 func trimmedValue(v *string) string {
 	if v == nil {
