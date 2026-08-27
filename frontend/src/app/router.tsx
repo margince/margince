@@ -11,12 +11,21 @@ import { useState, useSyncExternalStore } from "react";
 // rest, and `navigate({ screen: "dealz" })` fails to compile instead of
 // rendering a surface that reads as unbuilt.
 //
-// Three members are also spelled as a named constant elsewhere, because the
+// Four members are also spelled as a named constant elsewhere, because the
 // module that owns the route owns the name: `ext` is app/extensions.ts's
-// EXTENSION_SCREEN, `reset-password` is screens/auth.tsx's RESET_ROUTE, and
-// `scheduled` is screens/scheduledsends.tsx's SCHEDULED_SCREEN. All three are
-// literal types used where a `Screen` is expected, so a rename there stops
-// compiling here rather than drifting.
+// EXTENSION_SCREEN, `x` is app/custom.ts's CUSTOM_SCREEN, `reset-password` is
+// screens/auth.tsx's RESET_ROUTE, and `scheduled` is
+// screens/scheduledsends.tsx's SCHEDULED_SCREEN. All four are literal types
+// used where a `Screen` is expected, so a rename there stops compiling here
+// rather than drifting.
+//
+// `x` is this union's WIDENING POINT, and it is one member rather than a
+// template literal on purpose. A fork adds destinations under `#/x/<key>`
+// (app/custom.ts), so the set of addresses this build answers grows without
+// this list growing — while the list stays FINITE, which is what lets App.tsx's
+// dispatch be an exhaustive Record. A `Screen` admitting `x-${string}` could
+// not be exhausted, and that exhaustiveness is the thing stopping a destination
+// existing in the router and being missing from the dispatch.
 const SCREENS = [
   "home",
   "contacts",
@@ -42,6 +51,7 @@ const SCREENS = [
   "oauth-consent",
   "reset-password",
   "ext",
+  "x",
   "not-found",
 ] as const;
 
@@ -158,6 +168,13 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   "oauth-consent": WHOLE_ADDRESS,
   "reset-password": WHOLE_ADDRESS,
   ext: WHOLE_ADDRESS,
+  // Every segment of `#/x/<key>` names the thing: the key IS which fork screen
+  // this is, so moving between two of them must remount rather than re-render
+  // one with the other's state. One depth serves every fork screen, which is
+  // this seam's one real limit — a fork screen wanting a TAB in its address
+  // keeps that tab's state inside its own component, because declaring a depth
+  // here would mean editing this file, which is what the seam exists to stop.
+  x: WHOLE_ADDRESS,
   "not-found": WHOLE_ADDRESS,
 };
 
