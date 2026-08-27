@@ -8,7 +8,7 @@ package testdb_test
 // The lane's connection budget, asserted against the cluster the lane is
 // ACTUALLY running on rather than against the committed compose file.
 //
-// backend/laneconnbudget_test.go already gates the committed configuration in
+// backend/gates/laneconnbudget_test.go already gates the committed configuration in
 // `make check`, and that is the gate a pull request meets. It cannot see the one
 // failure mode that costs an afternoon: a container started before the compose
 // file changed. Postgres applies max_connections at startup, so a cluster left

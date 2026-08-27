@@ -289,7 +289,7 @@ caller to hold your unit's object AND the core `activity` one, and nothing decla
 
 **And what your migrations may CREATE is what your SQL may NAME — in your tests too.** `rt.Tx()` runs
 on the shared `margince_app` role, so a statement naming `person` would work, which is why
-`TestExtensionSQLNamesOnlyTheUnitsOwnTables` (`backend/extensionsqlscope_test.go`) reads **every `.go`
+`TestExtensionSQLNamesOnlyTheUnitsOwnTables` (`backend/gates/extensionsqlscope_test.go`) reads **every `.go`
 file your unit ships**, folds the string constants a table name is usually spelled through, and refuses
 a table outside `ext.ext_<name>_…`. A unit test that seeds a core table fails it exactly as a handler
 would, and that is deliberate: a test is where the habit starts. Qualify the schema — `ext` is on no `search_path` the app connects with,

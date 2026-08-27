@@ -36,7 +36,7 @@ const relationshipTypePartner = string(crmcontracts.OrganizationRelationshipType
 // validRelationshipTypes is the closed vocabulary, checked before the database
 // sees it so a bad value is a 422 naming the field rather than a CHECK
 // violation surfacing as a 500.
-// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/contractvocabulary_test.go)
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 var validRelationshipTypes = map[string]bool{
 	string(crmcontracts.OrganizationRelationshipTypesCustomer):         true,
 	string(crmcontracts.OrganizationRelationshipTypesPartner):          true,
@@ -275,7 +275,7 @@ func lifecycleValue(l *crmcontracts.OrganizationLifecycle) string {
 
 // validLifecycles is the closed vocabulary, checked before the database sees
 // it so a bad value is a 422 naming the field rather than a CHECK violation.
-// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/contractvocabulary_test.go)
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 var validLifecycles = map[string]bool{
 	string(crmcontracts.OrganizationLifecycleUnknown):        true,
 	string(crmcontracts.OrganizationLifecycleTarget):         true,
@@ -317,7 +317,7 @@ func checkSizeBand(value string) error {
 // Spelling the contract's constants carries the VALUES and not the SET: a band
 // crm.yaml gains reaches the generated Valid() and would not reach here, and
 // checkSizeBand would then refuse a band the contract publishes.
-// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/contractvocabulary_test.go)
+// Held by: TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt (backend/gates/contractvocabulary_test.go)
 var validSizeBands = map[string]bool{
 	string(crmcontracts.OrganizationSizeBandN110):      true,
 	string(crmcontracts.OrganizationSizeBandN1150):     true,

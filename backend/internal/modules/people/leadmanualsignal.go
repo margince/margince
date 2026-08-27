@@ -39,7 +39,7 @@ var leadManualFactorBands = map[string]map[string]int{
 // The audit and problem-field keys this surface spells more than once.
 // Named so the audit trail and the 422 body cannot drift apart from the
 // wire field they both describe.
-// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/claimedspelling_test.go)
+// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const (
 	auditKeyManualSignal = "manual_signal"
 	fieldKeyFactor       = "factor"

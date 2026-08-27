@@ -3,7 +3,7 @@
 
 // Package backoff is the one transient-failure ladder.
 //
-// Held by: TestTheJitteredLadderIsSpelledOnce (backend/onejitteredbackoff_test.go)
+// Held by: TestTheJitteredLadderIsSpelledOnce (backend/gates/onejitteredbackoff_test.go)
 //
 // It was spelled twice — the capture registry's and the overlay sweep's —
 // character for character, down to the same //nolint comment on the same line.

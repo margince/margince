@@ -204,16 +204,37 @@ func fuzzyOrganization(ctx context.Context, tx pgx.Tx, c OrganizationCandidate) 
 	}, nil
 }
 
-// orgTrigramArms builds one `%` arm per (non-empty candidate axis × stored
+// orgTrigramArms builds one `<%` arm per (non-empty candidate axis × stored
 // column), appending each value to args once.
 //
-// An EMPTY axis is dropped rather than passed as "". A `%` arm whose right
-// side is empty matches nothing, but Postgres cannot satisfy it from the GIN
-// index, so its presence makes the planner abandon the index for the whole OR
-// group and sequentially scan the table — on the common case, since most
-// organizations carry no registered name. Measured: two arms with a real value
-// give a BitmapOr across both trigram indexes; adding the empty arms turns the
-// same query into a Seq Scan.
+// An EMPTY axis is dropped rather than passed as "". An arm whose left side is
+// empty matches nothing, but Postgres cannot satisfy it from the GIN index, so
+// its presence makes the planner abandon the index for the whole OR group and
+// sequentially scan the table — on the common case, since most organizations
+// carry no registered name. Measured: two arms with a real value give a
+// BitmapOr across both trigram indexes; adding the empty arms turns the same
+// query into a Seq Scan.
+//
+// TWO ARMS PER PAIRING, and each catches what the other cannot.
+//
+// `%` compares the two strings ENTIRE, so a short name loses against a long one
+// on length alone. A market that writes its legal form into the name makes that
+// the common case: measured against the stored names, "Hòa Bình" scores 0.265
+// against its own company's registered name "CÔNG TY TNHH MỘT THÀNH VIÊN HÒA
+// BÌNH", under the 0.3 limit, so the true duplicate was never returned for
+// scoring at all. "FPT" scored 0.174 and "An Bình" 0.167.
+//
+// `<%` asks the other question — does the candidate appear as a RUN OF WORDS
+// inside the stored name — and answers 1.0 for all three. But it is asymmetric
+// and its threshold is higher (0.6 against 0.3), so it cannot replace `%`:
+// reversed, a long candidate against a short stored name scores 0.429, and the
+// spelling variant "Roehm" against "Röhm" scores 0.375. Both are recall this
+// tier already had and must keep.
+//
+// This WIDENS the candidate set and decides nothing: everything returned is
+// still put to the gate and the score, which is where identity is judged. The
+// same GIN indexes serve both — `<%` reaches gin_trgm_ops through the `%>`
+// commutator — so no index changes and the plan stays a Bitmap Index Scan.
 func orgTrigramArms(args *[]any, axes ...string) []string {
 	var arms []string
 	for _, axis := range axes {
@@ -222,9 +243,20 @@ func orgTrigramArms(args *[]any, axes ...string) []string {
 		}
 		*args = append(*args, axis)
 		n := len(*args)
+		// The containment arm is offered only for a name that still says something
+		// once its market's boilerplate is removed. "The" is a run of words inside
+		// every stored name beginning with it, and an all-boilerplate Vietnamese
+		// name is a run of words inside every other one — each would return a large
+		// share of the table for the gate to reject one row at a time, while the
+		// workspace-wide organization-name write lock is held.
+		containment := len(distinctiveOrgTokens(axis)) > 0
 		for _, column := range []string{fieldDisplayName, fieldLegalName} {
 			arms = append(arms, fmt.Sprintf(
 				"f_fold_apostrophes(lower(%s)) %% f_fold_apostrophes(lower($%d))", column, n))
+			if containment {
+				arms = append(arms, fmt.Sprintf(
+					"f_fold_apostrophes(lower($%d)) <%% f_fold_apostrophes(lower(%s))", n, column))
+			}
 		}
 	}
 	return arms
@@ -243,6 +275,12 @@ func orgTrigramArms(args *[]any, axes ...string) []string {
 // names — where every name in a market ends in the same nouns — that made it
 // read shared vocabulary as shared identity: measured at 179 false pairs
 // against 1 true one across one real workspace.
+//
+// The gate and the score read the SAME string (orgNameForMatching), so a word
+// the gate refused to count cannot come back to lift the score. A Vietnamese
+// name carries its legal form in front, where Jaro-Winkler's prefix boost is
+// strongest, so scoring the unstripped name put two unrelated companies over
+// the threshold on their boilerplate alone.
 func bestOrgNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal string) OrganizationCandidateScore {
 	sides := []struct {
 		value string
@@ -252,7 +290,7 @@ func bestOrgNamePairing(candidateDisplay, candidateLegal, rowDisplay, rowLegal s
 	var best OrganizationCandidateScore
 	for _, left := range []string{candidateDisplay, candidateLegal} {
 		for _, right := range sides {
-			normalizedLeft, normalizedRight := NormalizeOrgName(left), NormalizeOrgName(right.value)
+			normalizedLeft, normalizedRight := orgNameForMatching(left), orgNameForMatching(right.value)
 			if normalizedLeft == "" || normalizedRight == "" {
 				continue
 			}

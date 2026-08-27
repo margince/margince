@@ -225,7 +225,7 @@ function sourceFiles(dir: string): string[] {
 // is about in the code.
 //
 // `minorunits.ts` is the minor-unit scale, held in step with its Go half by
-// `backend/frontendminorunits_test.go`. `format.ts` holds no table at all and
+// `backend/gates/frontendminorunits_test.go`. `format.ts` holds no table at all and
 // is deliberately NOT listed — it asks Intl. The test files are listed because
 // a suite about currencies has to name them to assert about them.
 const CURRENCY_TABLE_OWNERS = [

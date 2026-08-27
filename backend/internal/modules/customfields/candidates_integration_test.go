@@ -18,7 +18,7 @@ package customfields
 // refusal paths only. Mirrors automation's own
 // autofixture_integration_test.go: seeding is spelled locally because
 // the compose-layer harness cannot be imported here (modules never see
-// compose, tests included — backend/arch_test.go).
+// compose, tests included — backend/gates/arch_test.go).
 
 import (
 	"context"

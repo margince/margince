@@ -3190,7 +3190,7 @@ public.person_profile_field.value text NOT NULL gen=- def=-
 public.person_profile_field.version bigint NOT NULL gen=- def=1
 public.person_profile_field_pkey CREATE UNIQUE INDEX person_profile_field_pkey ON public.person_profile_field USING btree (id)
 public.person_provider_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.person_provider_claim.captured_by text NOT NULL gen=- def='connector:surfe'::text
+public.person_provider_claim.captured_by text NOT NULL gen=- def=-
 public.person_provider_claim.claim_key text NOT NULL gen=- def=-
 public.person_provider_claim.confidence numeric(5,4) gen=- def=-
 public.person_provider_claim.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -3200,13 +3200,12 @@ public.person_provider_claim.person_provider_claim_claim_key_check CHECK ((claim
 public.person_provider_claim.person_provider_claim_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))
 public.person_provider_claim.person_provider_claim_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.person_provider_claim.person_provider_claim_pkey PRIMARY KEY (id)
-public.person_provider_claim.person_provider_claim_provider_check CHECK ((provider = 'surfe'::text))
 public.person_provider_claim.person_provider_claim_run_id_claim_key_key UNIQUE (run_id, claim_key)
 public.person_provider_claim.person_provider_claim_run_id_fkey FOREIGN KEY (run_id) REFERENCES provider_run(id) ON DELETE CASCADE
 public.person_provider_claim.provider text NOT NULL gen=- def=-
 public.person_provider_claim.retrieved_at timestamp with time zone NOT NULL gen=- def=-
 public.person_provider_claim.run_id uuid NOT NULL gen=- def=-
-public.person_provider_claim.source text NOT NULL gen=- def='surfe'::text
+public.person_provider_claim.source text NOT NULL gen=- def=-
 public.person_provider_claim.validation_status text gen=- def=-
 public.person_provider_claim.value_json jsonb NOT NULL gen=- def=-
 public.person_provider_claim_latest CREATE INDEX person_provider_claim_latest ON public.person_provider_claim USING btree (person_id, provider, retrieved_at DESC)
@@ -3350,7 +3349,6 @@ public.provider_connection.provider_connection_daily_run_limit_check CHECK ((dai
 public.provider_connection.provider_connection_disconnected_shape CHECK ((((status = 'disconnected'::text) AND (credential_ref IS NULL)) OR (status <> 'disconnected'::text)))
 public.provider_connection.provider_connection_mode_check CHECK ((mode = ANY (ARRAY['automatic_on_create'::text, 'on_demand'::text])))
 public.provider_connection.provider_connection_pkey PRIMARY KEY (id)
-public.provider_connection.provider_connection_provider_check CHECK ((provider = 'surfe'::text))
 public.provider_connection.provider_connection_provider_key UNIQUE (provider)
 public.provider_connection.provider_connection_refresh_after_days_check CHECK ((refresh_after_days > 0))
 public.provider_connection.provider_connection_status_check CHECK ((status = ANY (ARRAY['disconnected'::text, 'validating'::text, 'connected'::text, 'invalid_credentials'::text, 'insufficient_credits'::text, 'rate_limited'::text, 'provider_error'::text])))
@@ -3398,7 +3396,6 @@ public.provider_run.provider_run_claims_unwritten_shape CHECK (((NOT claims_unwr
 public.provider_run.provider_run_external_correlation_id_key UNIQUE (external_correlation_id)
 public.provider_run.provider_run_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.provider_run.provider_run_pkey PRIMARY KEY (id)
-public.provider_run.provider_run_provider_check CHECK ((provider = 'surfe'::text))
 public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id)
 public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text]))))
 public.provider_run.provider_run_skip_reason_shape CHECK (((state = 'skipped'::text) = (skip_reason IS NOT NULL)))

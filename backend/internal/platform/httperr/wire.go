@@ -237,7 +237,7 @@ type Download struct {
 // on the wire a header is no longer settable and a failure is no longer
 // reportable, which is the rule both body shapes below live under.
 //
-// Held by: TestADownloadsHeadersAreSpelledOnce (backend/onedownloadheader_test.go)
+// Held by: TestADownloadsHeadersAreSpelledOnce (backend/gates/onedownloadheader_test.go)
 func (d Download) WriteHeaders(w http.ResponseWriter) {
 	contentType := d.ContentType
 	if contentType == "" {

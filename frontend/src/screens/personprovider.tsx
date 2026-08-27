@@ -10,6 +10,10 @@ import { Callout } from "../design-system/callout";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody } from "../design-system/panel";
+import {
+  ProviderMark,
+  providerBrandName,
+} from "../design-system/provider-mark";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, throwProblem } from "./common";
@@ -43,17 +47,36 @@ function boughtFrom(profile: Profile) {
   };
 }
 
+/**
+ * One panel per connected provider, each named and marked with its own logo.
+ *
+ * Named rather than "the connected data provider": every value here was PAID
+ * for, and a reader deciding whether to spend again has to know who was already
+ * asked, who answered, and who is about to be. With two providers connected the
+ * unnamed card could not even be acted on — there was no way to say which one
+ * the button would spend with.
+ */
 export function PersonProviderSection({
   personId,
-  profile,
-}: Readonly<{ personId: string; profile: Profile | undefined }>) {
-  if (!profile) {
+  profiles,
+}: Readonly<{ personId: string; profiles: Profile[] | undefined }>) {
+  if (!profiles) {
     // Absent means the caller lacks the grant — `sections_omitted` names it —
     // which is not the same as empty, so the section stays away entirely
     // rather than claiming this person has nothing.
     return null;
   }
-  return <ProviderPanel personId={personId} profile={profile} />;
+  return (
+    <>
+      {profiles.map((profile) => (
+        <ProviderPanel
+          key={profile.provider}
+          personId={personId}
+          profile={profile}
+        />
+      ))}
+    </>
+  );
 }
 
 /** Whether this profile holds anything a provider sold us. Every field the
@@ -95,13 +118,27 @@ function ProviderPanel({
   // says never_run and carries purchases, and a plate reading "nothing bought"
   // over somebody's bought mobile number invites paying for it twice.
   const firstRun = profile.state === "never_run" && !hasValues(profile);
+  // The vendor as the reader should see it named. Spelled once and used by
+  // both the heading and the plate: two spellings would let a section headed
+  // "Surfe" explain a purchase from "surfe".
+  const name = providerBrandName(profile.provider) ?? profile.provider;
   return (
     // The record page's own card, with the provider's state in the header's
     // action slot. It used to be a bare `<section className="pe-card">` — a
     // class no stylesheet defines — which read as unframed text the moment it
     // was shown anywhere but inside a drawer.
     <Panel
-      title={t("provider.profile.title")}
+      // The vendor's own name and mark, so the reader knows whose data this is
+      // and who the button would spend with. `providerBrandName` falls back to
+      // the contract key for a provider this build has no name for — an
+      // installation can register one this frontend has never heard of, and a
+      // section with no heading would be worse than one headed `acmedata`.
+      title={
+        <span className="pe-provider-title">
+          <ProviderMark providerKey={profile.provider} />
+          {name}
+        </span>
+      }
       titleAction={
         <Badge tone={profileTone(profile.state)}>
           {t(profileLabel(profile.state))}
@@ -127,7 +164,7 @@ function ProviderPanel({
             title={t("provider.profile.emptyTitle")}
             action={<EnrichNow profile={profile} enrich={enrich} />}
           >
-            {t("provider.profile.emptyBody")}
+            {t("provider.profile.emptyBody", { provider: name })}
           </EmptyState>
         ) : (
           <ProviderValues profile={profile} />

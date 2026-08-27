@@ -8,7 +8,7 @@ package automation
 // The shared fixture for this package's integration suites, over the
 // already-migrated database (`make migrate` is the integration lane's
 // precondition). The compose-layer harness cannot be imported here
-// (modules never see compose, tests included — backend/arch_test.go),
+// (modules never see compose, tests included — backend/gates/arch_test.go),
 // so the seeding is spelled locally: an owner connection for RLS-free
 // seeding and assertions, and the workspace-bound app pool the code under
 // test runs on.

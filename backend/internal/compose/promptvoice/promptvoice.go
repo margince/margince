@@ -5,7 +5,7 @@
 // writes prose a person reads.
 //
 // Held by: TestEveryPromptEitherSpeaksInTheOneVoiceOrSaysWhyNot
-// (backend/promptvoice_test.go)
+// (backend/gates/promptvoice_test.go)
 //
 // Every prose surface used to carry its own voice paragraph, hand-written by
 // whoever built it. Two existed and they already disagreed: the deal card asked
@@ -31,7 +31,7 @@
 package promptvoice
 
 // Heading opens the rule, and it is what the fitness gate in
-// backend/promptvoice_test.go recognises a governed prompt by.
+// backend/gates/promptvoice_test.go recognises a governed prompt by.
 //
 // Exported so that gate can READ it rather than restate it, for the reason
 // promptlang.Heading is: a gate carrying its own copy of the string it looks

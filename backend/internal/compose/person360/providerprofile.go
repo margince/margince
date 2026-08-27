@@ -28,7 +28,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
-// providerProfileSection assembles the snapshot.
+// providerProfileSection assembles one snapshot per CONNECTED provider.
+//
+// One section per connection rather than one for "the provider": the reader
+// decides who to spend money with, and a page that named nobody left them
+// unable to tell who had already been paid for the number on screen. A
+// provider nobody has run yet is present with never_run, because an absent
+// section is a verb the reader cannot reach.
 //
 // The gate is the PERSON read: a claim is a fact about this person, bought
 // about them, so seeing it requires seeing them. No separate grant exists and
@@ -38,23 +44,126 @@ func (s *Service) providerProfileSection(ctx context.Context, tx pgx.Tx, personI
 	if err := requireRead(ctx, "person"); err != nil {
 		return err
 	}
-	// Whether a provider is connected AT ALL, read from the same row the
-	// settings card reads: a page that said "never run" while the card said
-	// "not connected" would have the reader looking for a button that is not
-	// there. No registry is consulted — a connection row exists only where an
-	// adapter registered one.
-	var connected bool
-	if err := tx.QueryRow(ctx,
-		`SELECT EXISTS (SELECT 1 FROM provider_connection WHERE status = 'connected')`).
-		Scan(&connected); err != nil {
-		return fmt.Errorf("person360: reading the provider connection state: %w", err)
+	statuses, err := s.connectionStatuses(ctx, tx)
+	if err != nil {
+		return err
 	}
 	runs, err := s.providerRuns(ctx, tx, personID)
 	if err != nil {
 		return err
 	}
+	claims, err := s.storedClaims(ctx, tx, personID)
+	if err != nil {
+		return err
+	}
+	// A provider this person has runs or purchases under, but which nobody is
+	// connected to any more, still gets a section: disconnecting stops new
+	// egress, it does not delete what was bought, and a page that dropped the
+	// section would hide a purchase the customer paid for.
+	//
+	// Set even when empty — a pointer to no sections says "nobody is
+	// connected", which is a different fact from the nil the grant check
+	// leaves behind, and `sections_omitted` is what names the second.
+	profiles, err := s.profilesFor(namesToShow(statuses, runs, claims), statuses, runs, claims)
+	if err != nil {
+		return err
+	}
+	out.ProviderProfiles = &profiles
+	return nil
+}
+
+// connectionStatuses is each provider's connection status, read from the same
+// rows the settings card reads: a page that said "never run" while the card
+// said "not connected" would have the reader looking for a button that is not
+// there. No registry is consulted — a connection row exists only where an
+// adapter registered one.
+//
+// The STATUS, not merely whether one is connected. A connection can be present
+// and impaired — the key was refused, the credits ran out, the vendor asked us
+// to slow down — and each of those is something an operator can act on. Read as
+// a boolean they all collapsed into "not connected", which the page then
+// reported as `stale`: "bought earlier, nobody is connected any more". That
+// sends somebody looking at the contact for a problem that is in the settings.
+func (s *Service) connectionStatuses(ctx context.Context, tx pgx.Tx) (map[string]string, error) {
+	rows, err := tx.Query(ctx, `SELECT provider, status FROM provider_connection`)
+	if err != nil {
+		return nil, fmt.Errorf("person360: reading the provider connection state: %w", err)
+	}
+	defer rows.Close()
+	statuses := map[string]string{}
+	for rows.Next() {
+		var name, status string
+		if err := rows.Scan(&name, &status); err != nil {
+			return nil, fmt.Errorf("person360: scanning a connected provider: %w", err)
+		}
+		statuses[name] = status
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("person360: reading the provider connection state: %w", err)
+	}
+	return statuses, nil
+}
+
+// impairedStates maps a connection that EXISTS but cannot buy onto the sentence
+// the page shows. Each names the installation's own condition, because that is
+// where the fix is — none of them is a fact about the contact.
+var impairedStates = map[string]crmcontracts.PersonProviderProfileState{
+	"invalid_credentials":  crmcontracts.PersonProviderProfileStateInvalidCredentials,
+	"insufficient_credits": crmcontracts.PersonProviderProfileStateInsufficientCredits,
+	"rate_limited":         crmcontracts.PersonProviderProfileStateRateLimited,
+	"provider_error":       crmcontracts.PersonProviderProfileStateProviderError,
+}
+
+// namesToShow collects the providers the page owes the reader a section for:
+// the connected ones, plus any that already hold a run or a purchase here.
+// Sorted, so the sections keep their order between reads rather than
+// reshuffling under somebody mid-click.
+//
+// Held by: TestAPurchaseSurvivesItsProviderBeingDisconnected and
+// TestSectionsKeepAStableOrderBetweenReads
+// (internal/compose/person360/providerpartition_test.go) — the first pins that
+// a provider with history but no connection is still named, the second the
+// order.
+func namesToShow(statuses map[string]string, runs []providerRunRow, claims []storedClaim) []string {
+	seen := map[string]bool{}
+	for name := range statuses {
+		seen[name] = true
+	}
+	for _, r := range runs {
+		seen[r.providerName] = true
+	}
+	for _, c := range claims {
+		seen[c.provider] = true
+	}
+	names := make([]string, 0, len(seen))
+	for name := range seen {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
+}
+
+// profilesFor builds one snapshot per named provider, each seeing only its own
+// runs and its own claims. The partition is the whole point: a value bought
+// from one vendor must never appear under another's name.
+func (s *Service) profilesFor(names []string, statuses map[string]string, runs []providerRunRow, claims []storedClaim) ([]crmcontracts.PersonProviderProfile, error) {
+	profiles := make([]crmcontracts.PersonProviderProfile, 0, len(names))
+	for _, name := range names {
+		profile, err := s.profileFor(name, statuses[name], runsOf(name, runs), claimsOf(name, claims))
+		if err != nil {
+			return nil, err
+		}
+		profiles = append(profiles, profile)
+	}
+	return profiles, nil
+}
+
+// profileFor is one provider's section: what it was asked, what it answered,
+// and what it sold us.
+func (s *Service) profileFor(name string, status string, runs []providerRunRow, claims []storedClaim) (crmcontracts.PersonProviderProfile, error) {
 	profile := crmcontracts.PersonProviderProfile{
-		State:                  resolveProviderState(runs, connected),
+		Provider:               crmcontracts.Provider(name),
+		State:                  resolveProviderState(runs, status),
 		CategoriesNotRequested: []string{},
 		Emails:                 []crmcontracts.PersonProviderEmail{},
 		MobilePhones:           []crmcontracts.PersonProviderPhone{},
@@ -64,7 +173,6 @@ func (s *Service) providerProfileSection(ctx context.Context, tx pgx.Tx, personI
 	}
 	if len(runs) > 0 {
 		latest := runs[0]
-		profile.Provider = providerPtr(crmcontracts.Provider(latest.providerName))
 		profile.RetrievedAt = latest.completedAt
 		if latest.safeCode != "" {
 			profile.SafeStatusCode = providerPtr(latest.safeCode)
@@ -72,16 +180,37 @@ func (s *Service) providerProfileSection(ctx context.Context, tx pgx.Tx, personI
 		profile.LatestRun = providerPtr(toWireRun(latest))
 		profile.ContributingRuns = providerPtr(contributingRuns(runs))
 		if s.providers != nil {
-			if desc, err := s.providers.Descriptor(latest.providerName); err == nil {
+			if desc, err := s.providers.Descriptor(name); err == nil {
 				profile.CategoriesNotRequested = categoriesNotRequested(desc, latest.requested)
 			}
 		}
 	}
-	if err := s.foldClaims(ctx, tx, personID, &profile); err != nil {
-		return err
+	if err := foldClaims(claims, &profile); err != nil {
+		return crmcontracts.PersonProviderProfile{}, err
 	}
-	out.ProviderProfile = &profile
-	return nil
+	return profile, nil
+}
+
+// runsOf and claimsOf narrow the person's history to one provider, preserving
+// the order the reads established: runs newest-first, claims oldest-first.
+func runsOf(name string, runs []providerRunRow) []providerRunRow {
+	var out []providerRunRow
+	for _, r := range runs {
+		if r.providerName == name {
+			out = append(out, r)
+		}
+	}
+	return out
+}
+
+func claimsOf(name string, claims []storedClaim) []storedClaim {
+	var out []storedClaim
+	for _, c := range claims {
+		if c.provider == name {
+			out = append(out, c)
+		}
+	}
+	return out
 }
 
 // providerRunRow is one run as this section reads it: the lifecycle facts and
@@ -196,8 +325,15 @@ func categoriesNotRequested(desc provider.Descriptor, requested []string) []stri
 // person is not eligible for one, and nobody has asked yet are different
 // answers to "why is this empty", and only the reader can act on the right
 // one.
-func resolveProviderState(runs []providerRunRow, configured bool) crmcontracts.PersonProviderProfileState {
-	if !configured {
+func resolveProviderState(runs []providerRunRow, status string) crmcontracts.PersonProviderProfileState {
+	// A connection that exists but cannot buy says WHY, before anything about
+	// this person's runs. The condition is the installation's — a refused key,
+	// an exhausted wallet — and it outranks the run history because it is what
+	// the next lookup will hit, and the only thing anybody can act on.
+	if impaired, ok := impairedStates[status]; ok {
+		return impaired
+	}
+	if status != "connected" {
 		// Disconnected, and the data this installation already PAID for is
 		// still on the page below — disconnecting stops new egress, it does
 		// not delete what was bought. So the honest word is stale, not

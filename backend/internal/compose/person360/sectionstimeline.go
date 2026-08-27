@@ -315,7 +315,7 @@ func profileFieldClaimPath(field string) string { return "profile_field:" + fiel
 // through here.
 //
 // Held by: TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger
-// (backend/profilefieldreaders_test.go) — it censuses every statement that
+// (backend/gates/profilefieldreaders_test.go) — it censuses every statement that
 // serves a value from that table and requires each to overlay the verdict, so a
 // second render path fails rather than quietly serving the overridden claim.
 //

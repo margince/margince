@@ -129,6 +129,7 @@ import { MailSharingCard } from "./mail-sharing";
 import { OfferTemplatesAdmin } from "./offertemplates";
 import { OverlayCard } from "./overlay";
 import { MirrorUserMapCard } from "./overlay-usermap";
+import { OvernightGrantCard } from "./overnight-grant";
 import { OwnDomainsCard } from "./own-domains";
 import { PasswordSettingRow } from "./passwordcard";
 import { ConsentPurposesCard, PrivacyInboxCard } from "./privacy";
@@ -374,6 +375,12 @@ function ConnectionsTab() {
           connection below. */}
       <MailSharingCard />
       <ConnectorsCard />
+      {/* Directly under the mailboxes, because it is the same decision seen
+          from the other side: those cards say what Margince may READ, this one
+          says whether it may act on it overnight while nobody is watching. The
+          rep was asked this once beside the very same connectors during
+          onboarding — this is where that answer is found again. */}
+      <OvernightGrantCard />
       <LinkedInImportCard />
       {/* No review queue here: a match a human must judge is a proposal, and
           proposals live in the approvals inbox. This shows what the import

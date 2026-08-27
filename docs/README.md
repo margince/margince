@@ -72,7 +72,7 @@ Several reference pages are **generated** and say so in their own first lines â€
 `mcp-info`, `agent-tool-budget`, `rbac-matrix`, `performance-budgets` and the
 `perfbench/` records. Do not hand-edit them, and do not try to shorten them: their
 length is a function of the surface they tabulate, which is why
-`backend/docspagelength_test.go` reads that marker and exempts them from the page
+`backend/gates/docspagelength_test.go` reads that marker and exempts them from the page
 budget rather than keeping its own list of which pages are generated.
 
 - [rbac-matrix.md](reference/rbac-matrix.md) â€” what each seeded role may do to each kind of record. Generated from the seeded policy, never hand-edited.

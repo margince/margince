@@ -164,7 +164,7 @@ func faultFor(ctx context.Context, kind string, err error) error {
 // meant to reassure about, since a unit declaring a cadence above this bound
 // reconciles its delay against that cadence perfectly and then gets clamped to
 // less, polling a refusing provider harder during an outage than in health.
-// backend/pollcadenceparity_test.go reads this bound out of this file and holds
+// backend/gates/pollcadenceparity_test.go reads this bound out of this file and holds
 // every postponing unit under it.
 const (
 	minRescheduleDelay = time.Second

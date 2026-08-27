@@ -3,7 +3,7 @@
 -- x_sor_mode and x_incumbent are the last two columns on `workspace` that are
 -- not identity or lifecycle, and they are the last thing standing between that
 -- table and retirement. They are also the reason overlay holds a standing
--- waiver to write a table identity owns (backend/tableownership_test.go): the
+-- waiver to write a table identity owns (backend/gates/tableownership_test.go): the
 -- x_overlay_iff_incumbent CHECK requires both to move together with the
 -- connection row, so routing them through identity would split one
 -- transaction across a sibling module. Owning the row removes the waiver

@@ -5456,6 +5456,76 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/agent-grants": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The calling rep's own standing answers, one per scheduled agent.
+         * @description Every scheduled agent this build runs, each carrying the rep's answer: granted,
+         *     declined, or never asked. Human-only — an agent reading whether it is allowed to
+         *     run, and by extension being able to ask, is the self-grant this model forbids.
+         *
+         *     `credential_usable` is read from the passport at request time rather than stored:
+         *     a passport expires at a moment nothing writes to the grant, so a stored copy would
+         *     say "granted" about a credential that stopped working hours ago. When it is false
+         *     against a granted answer, the rep agreed and has nothing to act with — the renewal
+         *     case, which the client must offer rather than silently showing the feature as on.
+         */
+        get: operations["listMyAgentGrants"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/agent-grants/{spec}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Which scheduled agent this answer is about. */
+                spec: components["schemas"]["ScheduledAgentName"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * The calling rep answers for one agent — granting or withdrawing.
+         * @description Idempotent: re-answering replaces the previous answer, because a rep who declined
+         *     and later changes their mind is giving a NEW answer to the same question rather
+         *     than a second one.
+         *
+         *     GRANTING MINTS. What authorizes an overnight run is a passport, and the single
+         *     production mint binds `on_behalf_of` and `granted_by` to the same session user —
+         *     so granting mints the rep's own credential inside the same transaction as the
+         *     answer. A mint that committed beside a failed grant would be live authority
+         *     nothing points at; a grant beside a failed mint would claim an authority that does
+         *     not exist. The token is never returned: this passport is for the scheduler, not
+         *     for the caller, and re-disclosing it would put an agent credential on a screen.
+         *
+         *     WITHDRAWING REVOKES. The answer flips to declined and the passport it named is
+         *     revoked, so the authority actually ends rather than merely being unreferenced.
+         *     The declined row is kept on purpose — a rep who said no and a rep who was never
+         *     asked are indistinguishable from the passport table alone, and a product that
+         *     cannot tell them apart asks the declining rep again every night.
+         *
+         *     Human-only: an agent granting itself standing authority is the self-grant this
+         *     whole model exists to refuse.
+         */
+        put: operations["setMyAgentGrant"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/capture/settings": {
         parameters: {
             query?: never;
@@ -12074,10 +12144,15 @@ export interface components {
             outbound_90d?: number;
         };
         /**
-         * @description Licensed provider adapter key; the domain/run contract remains provider-neutral.
-         * @enum {string}
+         * @description A licensed data provider registered in THIS installation; the domain/run contract
+         *     remains provider-neutral. Deliberately a pattern-constrained string rather than an
+         *     enum, for the reason `ProviderRef` gives for messaging transports: which providers
+         *     exist is a deployment fact — what this binary composed — so an enum would assert
+         *     that the legal set is identical everywhere, which is false. The registry refuses a
+         *     name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+         *     live set.
          */
-        Provider: "surfe";
+        Provider: string;
         /** @enum {string} */
         ProviderConnectionStatus: "disconnected" | "validating" | "connected" | "invalid_credentials" | "insufficient_credits" | "rate_limited" | "provider_error";
         /** @enum {string} */
@@ -12317,13 +12392,16 @@ export interface components {
             linkedin_url?: string | null;
         };
         /**
-         * @description Separate “Provided by Surfe” snapshot for the Person360 response. Provider provenance is
-         *     not an underlying webpage citation; these values never silently overwrite canonical fields.
+         * @description One connected provider's snapshot for the Person360 response, named by `provider`.
+         *     Provider provenance is not an underlying webpage citation; these values never silently
+         *     overwrite canonical fields. The reader sees one of these per connection, so every value
+         *     on the page says who was paid for it.
          */
         PersonProviderProfile: {
             /** @enum {string} */
             state: "not_connected" | "not_eligible" | "never_run" | "queued" | "in_progress" | "completed" | "no_match" | "stale" | "invalid_credentials" | "insufficient_credits" | "rate_limited" | "provider_error" | "submission_unknown" | "completed_claims_unwritten";
-            provider?: components["schemas"]["Provider"];
+            /** @description Whose snapshot this is. Required: an entry in a list of providers that did not name itself would leave the reader unable to tell who to ask, or who was already paid. */
+            provider: components["schemas"]["Provider"];
             /** Format: date-time */
             retrieved_at?: string | null;
             safe_status_code?: string | null;
@@ -13835,8 +13913,8 @@ export interface components {
             strength?: components["schemas"]["RelationshipStrength"];
             /** @description The unarchived projects this person is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Organization360Project"][];
-            /** @description The purchased person-data snapshot (PO-EXT-9): what a connected provider returned about this person, kept beside the canonical record and never silently folded into it. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`. */
-            provider_profile?: components["schemas"]["PersonProviderProfile"];
+            /** @description The purchased person-data snapshots (PO-EXT-9), one per CONNECTED provider: what each returned about this person, kept beside the canonical record and never silently folded into it. One entry per connection so a reader can see who was paid for which value, and choose which provider to ask next; a provider nobody has run yet is present with state `never_run` rather than absent, because "we have not asked them" is the state the reader acts on. Ordered by provider name so the sections do not reshuffle between reads. Empty when no provider is connected. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`. */
+            provider_profiles?: components["schemas"]["PersonProviderProfile"][];
             /** @description What CHANGED about this relationship, most consequential first — derived at read from the person's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold. */
             relationship_changes?: components["schemas"]["PersonRelationshipChange"][];
             /** @description The ONE thing this contact needs today, selected server-side by the fixed ladder in `PersonMoment.rule` (ADR-0096 D2). Exactly one primary moment wins: a page that offers five reasons has told the reader to choose, which is the work the ladder exists to do. Deterministic and computed at read from captured data. Absent when the caller lacks a grant the ladder needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence. */
@@ -18092,7 +18170,7 @@ export interface components {
         /**
          * @description The closed set of RBAC-governed object types (features/04 §1).
          *     The web client types every capability check against this enum, which openapi-typescript renders as a string union — so a misspelled object is a compile error there.
-         *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
+         *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
         RbacObject: "person" | "organization" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "quota" | "offer_template" | "overlay_connection" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "commission" | "deal_room";
@@ -18632,6 +18710,52 @@ export interface components {
             running: components["schemas"]["AiActivityItem"][];
             /** @description Occurrences that SETTLED since midnight in the server's own timezone (not the reader's, and not UTC unless the server runs on it), newest-settled first, at most 10. */
             recent: components["schemas"]["AiActivityItem"][];
+        };
+        /**
+         * @description A scheduled agent a rep can grant standing authority to. The set matches
+         *     runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
+         *     and this enum moves with it.
+         * @enum {string}
+         */
+        ScheduledAgentName: "morning_brief" | "overnight_at_risk_sweep";
+        /**
+         * @description The rep's answer. `never_asked` is not stored — it is the absence of a row, and it
+         *     is a distinct answer from `declined` on purpose: the product asks once, so it has
+         *     to tell "said no" apart from "has not been asked", or it asks the declining rep
+         *     again every night.
+         * @enum {string}
+         */
+        MyAgentGrantState: "granted" | "declined" | "never_asked";
+        /** @description One rep's standing answer for one scheduled agent. */
+        MyAgentGrant: {
+            spec: components["schemas"]["ScheduledAgentName"];
+            state: components["schemas"]["MyAgentGrantState"];
+            /**
+             * @description Whether the passport behind a granted answer is live RIGHT NOW — not revoked,
+             *     not expired. Read from the passport at request time, never stored, because it
+             *     changes at a moment nothing writes to the grant. False against `granted` is
+             *     the renewal case: the rep agreed and has nothing to act with.
+             */
+            credential_usable: boolean;
+            /**
+             * Format: date-time
+             * @description When the rep last answered. Absent when they never were asked.
+             */
+            decided_at?: string;
+        };
+        MyAgentGrants: {
+            /** @description One entry per scheduled agent, including the ones never answered. */
+            data: components["schemas"]["MyAgentGrant"][];
+        };
+        /** @description The rep's answer for one scheduled agent. */
+        SetMyAgentGrantRequest: {
+            /**
+             * @description True grants and mints the rep's own passport; false withdraws and revokes the
+             *     one it named. There is no field naming a user or a passport: the rep comes from
+             *     the session, and the credential is the server's to mint, so a caller cannot
+             *     answer for somebody else or point a grant at a credential they do not own.
+             */
+            granted: boolean;
         };
         /**
          * @description What kind of AI work an occurrence is. Every AI task this build can run reports here,
@@ -31555,6 +31679,58 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    listMyAgentGrants: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The rep's standing answers. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAgentGrants"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setMyAgentGrant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Which scheduled agent this answer is about. */
+                spec: components["schemas"]["ScheduledAgentName"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetMyAgentGrantRequest"];
+            };
+        };
+        responses: {
+            /** @description The rep's updated answer for this agent. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MyAgentGrant"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
         };
     };
     getCaptureSettings: {

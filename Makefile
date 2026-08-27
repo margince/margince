@@ -12,6 +12,31 @@
 # one target here that invokes the compiler directly instead of delegating.
 GO ?= go
 
+# The deterministic script gates `check-backend` fans out. One list, one
+# consumer — see the comment on check-backend for why they are not that
+# target's prerequisites.
+ROOT_SCRIPT_GATES := check-craft-doc craft-test test-dev-isolation \
+  test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco \
+  test-laneorder check-image-pins check-host-ports ci-doc-parity \
+  make-target-parity contract-breaking-check contract-frontend-drift \
+  test-contract-frontend-drift migration-versions test-migration-versions \
+  test-lanes env-reads gofmt lint-modules go-file-length rls-store-path \
+  no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale \
+  test-selfdir pkg-freeze
+
+# How wide the gate fan-out runs. 4 is what the CI runner has and what
+# backend/Makefile's own fan-out already uses; a bigger machine can raise it.
+#
+# Four gates writing at once interleaves their output, which make 4.0's
+# --output-sync would fix and the 3.81 macOS ships would not. The flag is left
+# off rather than probed for: it is not free — it holds a target's output back
+# until that target ENDS, so the same switch applied to the long lanes would
+# turn a streaming test run into five silent minutes — and every gate here
+# already names itself in its own OK:/FAIL: line, with make naming the target
+# again on the way out. Set it by hand (`make check-backend MAKEFLAGS=…`) on a
+# run whose interleaving you need untangled.
+GATE_JOBS ?= 4
+
 # Where the demo dataset lives. It is a SEPARATE, private repo (it carries real
 # company names and crawled pages), cloned beside this one by convention. The
 # seeder has the same default; naming it here is what lets `make seed-demo` be
@@ -102,8 +127,37 @@ install: fe-install tools hooks
 ## #1639 is about: a backend-only author never runs the lane that would
 ## otherwise catch a stranded frontend schema. On a pull request CI covers the
 ## same ground from the other side, through fe-quality's fe-drift.
-check-backend: check-craft-doc craft-test test-dev-isolation test-golangci-guard test-scheduled-report test-ci-verdict test-check-dco test-laneorder check-image-pins check-host-ports ci-doc-parity make-target-parity contract-breaking-check contract-frontend-drift test-contract-frontend-drift migration-versions test-migration-versions test-lanes env-reads gofmt lint-modules go-file-length rls-store-path no-jurisdiction one-spelling test-one-spelling money-scale test-money-scale test-selfdir pkg-freeze
-	$(MAKE) -C backend check
+##
+## The gates run as a FAN-OUT rather than as a prerequisite list. Every one of
+## them is a reader — each either walks the tree and judges what it finds, or
+## builds its fixtures under mktemp — so nothing but the list itself ever
+## ordered them, and serially they were 191 s of this target (measured, 8-core
+## darwin, warm caches). Four alone were 130 s of that: money-scale,
+## test-money-scale, one-spelling and test-one-spelling each re-walk the whole
+## tree, and the two `test-` halves re-walk a synthesized copy of it on top.
+##
+## Named in ROOT_SCRIPT_GATES rather than left as prerequisites here, because a
+## prerequisite list AND a sub-make over the same names would run each gate
+## twice — the fan-out has to be the only place they are asked for.
+## Each phase is bracketed by scripts/phase-timer.sh, so a green run ends with a
+## table of where its time went. Two things about the bracketing:
+##
+##   - The brackets are separate recipe lines, not a wrapper around the
+##     sub-make. The fan-out line has to STAY a bare `$(MAKE)` line, because
+##     backend/gates/frontendlaneparity_test.go reads those lines to find the
+##     legs and a wrapper would hide all thirty of them.
+##   - The backend gate is NOT bracketed here. It times its own four phases, and
+##     a phase around them would be their sum counted twice. PHASE_TIMER_OWNED
+##     tells it this target owns the ledger, so it adds its rows to this table
+##     instead of resetting and printing one of its own — which is what it does
+##     when somebody runs it directly (`make check-go`).
+check-backend:
+	@bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "root script gates (x$(words $(ROOT_SCRIPT_GATES)), -j$(GATE_JOBS))"
+	$(MAKE) -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
+	@bash scripts/phase-timer.sh stop
+	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
+	@bash scripts/phase-timer.sh report
 
 ## check — the full merge gate: backend + frontend
 ## (`check = check-backend check-fe`). check-fe fails if the frontend deps are
@@ -130,11 +184,11 @@ check-go:
 ## check-gates — the meta-gate lane: the waiver census, the obligations derived
 ## from the migrations and the contract, and the walk-scope proofs. A dev-loop
 ## convenience for iterating on those gates, and NEVER a prerequisite of
-## check-backend: every test named below lives in `package backendarch`, which
+## check-backend: every test named below lives in `package gates`, which
 ## `make -C backend check` already runs uncached, so `make check` covers them
 ## and a prerequisite here would only run them twice.
 check-gates:
-	@cd backend && $(GO) test -count=1 -run 'TestEveryPackageLevelReasonMapIsAWaiverOrADeclaredFixture|TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce|TestGatekitServesTestsOnly|TestEveryVersionPinnedTableBumpsItsVersion|TestEveryToolRegistrarIsInvokedByEveryFullRegistry|TestAPublishedFieldNameIsAFieldNameNotProse|TestEveryValidationFieldLiteralNamesAContractField|TestSeamReachableModulesCarryTheirOwnFieldVerdict|TestEveryStoreEntryPointIsAuthGated' .
+	@cd backend && $(GO) test -count=1 -run 'TestEveryPackageLevelReasonMapIsAWaiverOrADeclaredFixture|TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce|TestGatekitServesTestsOnly|TestEveryVersionPinnedTableBumpsItsVersion|TestEveryToolRegistrarIsInvokedByEveryFullRegistry|TestAPublishedFieldNameIsAFieldNameNotProse|TestEveryValidationFieldLiteralNamesAContractField|TestSeamReachableModulesCarryTheirOwnFieldVerdict|TestEveryStoreEntryPointIsAuthGated' ./gates
 
 ## infra-up / infra-down — aliases for the dev stack (some deploy tooling and
 ## UAT guides call the infra lane by these names). infra-up

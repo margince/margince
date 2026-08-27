@@ -3529,6 +3529,21 @@ export const de = {
     "Erweiterungen, die diese Installation mit einem gemeinsamen Zugang betreibt. Was du hier einstellst, gilt für alle.",
 
   "connectors.title": "Verbundene Postfächer",
+  // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
+  // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
+  "overnightGrant.title": "Vorbereitung über Nacht",
+  "overnightGrant.sub":
+    "Margince arbeitet nachts deine Deals durch und hat deinen Morgen fertig, wenn du kommst. Es handelt als du, sieht nur was du sehen darfst, und du kannst es jederzeit stoppen.",
+  "overnightGrant.label":
+    "Margince darf meinen Morgen-Überblick über Nacht vorbereiten",
+  "overnightGrant.help":
+    "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist. Es verschickt nie etwas von allein — alles, was nach außen geht, wartet auf deine Freigabe.",
+  "overnightGrant.danger":
+    "ACHTUNG: Ohne diese Freigabe bleiben dein Morgen-Überblick, deine Arbeitsliste und dein Wochenrückblick leer. Das sind die Bildschirme, mit denen Margince startet — der größte Teil des Produkts wirkt dann, als würde er nicht funktionieren.",
+  "overnightGrant.saveFailed":
+    "Deine Antwort auf die Nacht-Frage konnte nicht gespeichert werden. Alles andere ist verbunden — stelle es unter Einstellungen → Verbindungen ein, sobald du drin bist.",
+  "overnightGrant.renew":
+    "Du hast zugestimmt, aber die Vollmacht, unter der Margince gearbeitet hat, ist abgelaufen. Schalte die Option aus und wieder ein, um sie zu erneuern — bis dahin wird dein Überblick nicht vorbereitet.",
   "mailSharing.title": "E-Mail-Freigabe",
   "mailSharing.sub":
     "Erfasste E-Mails sind für alle Kolleginnen und Kollegen lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet — das macht die Pipeline gemeinsam.",
@@ -6267,7 +6282,7 @@ export const de = {
   "provider.profile.lookingUp": "Wir fragen den Anbieter. Das dauert kurz.",
   "provider.profile.emptyTitle": "Für diesen Kontakt wurde noch nichts gekauft",
   "provider.profile.emptyBody":
-    "Eine Abfrage holt beim verbundenen Datenanbieter Angaben zu diesem Kontakt — je nachdem, was für die Verbindung eingekauft werden soll. Sie kostet Credits, und was zurückkommt steht hier neben dem Datensatz; überschrieben wird nichts, was jemand aus dem Team eingetragen hat.",
+    "Eine Abfrage holt bei {provider} Angaben zu diesem Kontakt — je nachdem, was für diese Verbindung eingekauft werden soll. Sie kostet {provider}-Credits, und was zurückkommt steht hier neben dem Datensatz; überschrieben wird nichts, was jemand aus dem Team eingetragen hat.",
   "provider.profile.emails": "E-Mail-Adressen",
   "provider.profile.emailType.provider": "{type}, so vom Anbieter bezeichnet",
   "provider.profile.emailType.requested":

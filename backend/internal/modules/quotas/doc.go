@@ -21,5 +21,5 @@
 // Imports shared + platform + the generated contract only; never a
 // sibling module. Every mutation rides storekit's audit shape inside
 // one transaction; the events.md §5 catalog defines no quota.* type, so
-// the writes are ratified audit-only (backend/writeshape_test.go).
+// the writes are ratified audit-only (backend/gates/writeshape_test.go).
 package quotas

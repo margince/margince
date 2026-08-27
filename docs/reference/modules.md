@@ -17,7 +17,7 @@ for the store/write mechanics every module shares, see
   composition root (`internal/compose/server.go`) via an adapter — never `import ".../modules/b"`.
   Three gates enforce this ([backend-onboarding.md → gates](../explanation/backend-onboarding.md#the-gates-that-judge-your-pr-fitness-functions)).
 - **A module writes only the tables it owns.** The "Owns tables" column below is the ownership
-  declared in each module's `doc.go` and enforced by `backend/tableownership_test.go`. The few
+  declared in each module's `doc.go` and enforced by `backend/gates/tableownership_test.go`. The few
   sanctioned cross-store writes (merge relinks, GDPR erasure) are ratified in that test.
 - **Two spine shapes, and only two.** *Handlers→Store* (CRUD modules: the store owns the write shape
   and the RBAC gate at its entry points) or *Handlers→Service* (engine modules: a service owns
@@ -61,7 +61,7 @@ still answer a generated `501` until its handler lands; it is not an implementat
 
 Some tables are owned by the composition layer rather than by a module, and
 they fall into three kinds. The live set is the map in
-`backend/tableownership_test.go`, which gates it — count them there, not here.
+`backend/gates/tableownership_test.go`, which gates it — count them there, not here.
 
 **Transport plumbing** — `idempotency_key` (HTTP replay protection),
 `activity_participant_replay`, and the two vocabulary tables `activity_kind`
@@ -83,7 +83,7 @@ changing. These are `user_record_view` (the per-user visit baseline) and
 deal page's one written card, cached per reader on a fingerprint of the facts
 it was written from.
 
-The live list is the map in `backend/tableownership_test.go`, which gates it;
+The live list is the map in `backend/gates/tableownership_test.go`, which gates it;
 this paragraph is prose over that map and the map wins. Compose-level
 *features* — company context, the cold-start transport, reply drafting,
 deep-read orchestration, the AI certification lane — are likewise not modules:

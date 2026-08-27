@@ -93,7 +93,7 @@ The mailbox owner is knowable **only from the connector principal**. `capture_co
 per-user-per-provider, so the registry stamps the granting human onto the principal that runs the sync;
 by the time any other module sees the activity, its `captured_by` reads `connector:gmail` and the human
 behind it is unrecoverable. That is the ratified reason `capture` writes a table `activities` owns —
-`backend/tableownership_test.go` carries it verbatim, and a reasonless or stale waiver fails the gate.
+`backend/gates/tableownership_test.go` carries it verbatim, and a reasonless or stale waiver fails the gate.
 
 Capture writes the counterparty as an **address**, not a person: the tiered creation gate runs *after*
 that transaction commits, and for a suppressed sender it never runs at all. Direction decides the roles
@@ -416,7 +416,7 @@ policy, reached only through `database.WithWorkspaceTx` — see
 | Agent-tool seams (`who_knows`, `account_coverage`, `intro_path_to`, `at_risk_relationships`) | `internal/compose/networkseams.go`, `introseams.go`; `internal/modules/agents/tools_network.go` |
 | Erasure of participants, ghosts and edges (one transaction) | `internal/modules/privacy/erasure_graph.go`, `retention_graph.go` |
 | Deactivation deleting a departing member's network | `internal/modules/identity/users.go` |
-| Cross-store ratifications for every table above | `backend/tableownership_test.go` |
+| Cross-store ratifications for every table above | `backend/gates/tableownership_test.go` |
 | The tables + RLS | `activity_participant` (`migrations/core/0157_*`), `graph_interaction_edge` (`0158_*`), `linkedin_connection` (`0159_*`), `linkedin_account` (`0160_*`) |
 | The REST contract | `backend/api/crm.yaml` (`getPersonNetwork`, `getDealCoverage`) |
 | The job contract (cadence, fan-out, batch sizes) | `backend/api/jobs.yaml` (`graph_edge_reconcile`, `participant_backfill`, `linkedin_rematch`) |

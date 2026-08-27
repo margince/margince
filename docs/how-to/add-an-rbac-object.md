@@ -50,9 +50,9 @@ silently denies forever.
 
 What keeps the two halves equal is a merge-blocking parity test,
 **`TestContractObjectEnumMatchesPolicyVocabulary`** in
-`backend/rbacvocabulary_test.go`. Both sides are derived — the object list is
+`backend/gates/rbacvocabulary_test.go`. Both sides are derived — the object list is
 AST-parsed out of `policy.go` by `coreObjectsFromSource`
-(`backend/rbacvocabularysource_test.go`), the contract side is read from the YAML
+(`backend/gates/rbacvocabularysource_test.go`), the contract side is read from the YAML
 — so the test never becomes a third place to keep current. Editing the enum alone
 changes what clients can *express*, never what the server *enforces*.
 
@@ -140,7 +140,7 @@ touches the new object calls `auth.Require(ctx, "<object>", principal.ActionX)`,
 plus `auth.EnsureVisible` / `auth.ScopeClauseFor` for row scope — see
 [reference/platform-toolkit.md](../reference/platform-toolkit.md#platformauth--the-admission-point).
 This is not optional politeness: `TestEveryStoreEntryPointIsAuthGated`
-(`backend/rbacgate_test.go`) derives the entry-point set from the tree and fails
+(`backend/gates/rbacgate_test.go`) derives the entry-point set from the tree and fails
 an ungated one, because an ungated store method is a door into tenant data that
 is reachable by any transport wired to it and invisible to review.
 
@@ -205,7 +205,7 @@ is safe to commit is a second gate, not the file itself. Editing that fixture is
 exactly how a backfill that does not work is made to look like one that does: move
 the object into the starting state and the convergence it never delivered is
 already there. So `TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded`
-(`backend/rbacbaselineerafixture_test.go`, unit lane) pins it to
+(`backend/gates/rbacbaselineerafixture_test.go`, unit lane) pins it to
 `git show <baseline>:backend/migrations/testdata/rbac_seeded_defaults.json` —
 compared as decoded JSON, so re-indentation is not a difference but any changed
 key or value is — and
