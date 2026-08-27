@@ -355,7 +355,7 @@ func buildPersonPatch(current crmcontracts.Person, in UpdatePersonInput) (*store
 	if in.OwnerID != nil {
 		p.Set(ownerIDColumn, current.OwnerId, *in.OwnerID)
 	}
-	if err := applyClears(p, in.Clear, clearablePersonColumns(current)); err != nil {
+	if err := storekit.ApplyClears(p, in.Clear, clearablePersonColumns(current)); err != nil {
 		return nil, err
 	}
 	if in.Address != nil {
