@@ -25,6 +25,34 @@ SLUG="${E2E_LLM_SLUG:-e2ellm}"
 SCENARIO_DIR="${E2E_LLM_SCENARIOS:-$ROOT/e2e/llm/scenarios}"
 RECORD_DIR="${E2E_LLM_RECORDS:-$ROOT/e2e/llm/records}"
 ONLY="${SCENARIO:-}"
+
+# THE MODEL IS PINNED, and that is not a performance tweak.
+#
+# Left unset, the CLI picks whatever it defaults to in the environment it finds
+# itself in. The recorded transcripts show that meant claude-fable-5 locally and
+# claude-opus-5[1m] on a GitHub runner — two different models, silently, with
+# nothing recording which produced which number.
+#
+# An unpinned model means a pass rate that MOVES CANNOT BE READ. The lane is
+# supposed to answer "did the product change", and an answer that also moves
+# when the CLI changes its default answers nothing: a case dropping from 3/3 to
+# 1/3 would be indistinguishable from a model swap. A weekly number is only
+# worth having if the thing being measured holds still.
+#
+# Pinned to OPUS because it is the class of model the deck's hosts actually put
+# in front of this surface. The lane asks whether a real assistant can drive
+# Margince and say something true, and the honest version of that question uses
+# the model a real user gets.
+#
+# NOTE for anyone comparing numbers: every result recorded before 2026-08-27 —
+# the 5-of-6 sweep and the case 6 finding in MCP Testing/findings/
+# ACCEPTANCE-CRITERIA.md — was measured on claude-fable-5, because nothing
+# pinned this then. Those numbers describe a different model and are not a
+# baseline for these. The first Opus sweep sets the new one.
+#
+# Override to measure a different model deliberately — that is a different
+# question, honestly asked.
+E2E_LLM_MODEL="${E2E_LLM_MODEL:-claude-opus-5}"
 KEEP="${E2E_LLM_KEEP:-0}"
 
 if [ "${MARGINCE_E2E_LLM:-0}" != "1" ]; then
@@ -80,6 +108,7 @@ echo "==> booting the $SLUG stack (never :8080)"
 . "$ROOT/scripts/lib-devstate.sh"
 APP_BASE="$(DEV_SLUG="$SLUG" dev_app_base_url)"
 echo "==> app at $APP_BASE"
+echo "==> model $E2E_LLM_MODEL"
 
 seed_everything() {
   (cd "$ROOT" && API_BASE="$APP_BASE" bash e2e/llm/seed-llm-fixtures.sh >/dev/null)
@@ -157,6 +186,7 @@ mint_passport
 run_once() {
   local prompt_file="$1" out="$2"
   claude -p "$(cat "$prompt_file")" \
+    --model "$E2E_LLM_MODEL" \
     --mcp-config "$MCP_CONFIG" --strict-mcp-config \
     --allowedTools "mcp__margince__*" --tools "" \
     --permission-mode dontAsk \
