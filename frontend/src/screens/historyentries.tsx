@@ -13,7 +13,7 @@ import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Card, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { FieldDiff, ProvenanceTag } from "../design-system/trust";
+import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -30,6 +30,7 @@ import {
   entryFieldChanges,
   provenanceOfEntry,
 } from "./history.logic";
+import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
 import { historyValue } from "./historyvalues";
@@ -101,19 +102,12 @@ function EntryFieldDetail({
           <span className="entry-field-name">
             {historyFieldLabel(change.field, t)}
           </span>
-          <FieldDiff
-            oldValue={historyValue(
-              change.field,
-              change.oldValue,
-              currency,
-              locale,
-            )}
-            newValue={historyValue(
-              change.field,
-              change.newValue,
-              currency,
-              locale,
-            )}
+          <HistoryFieldDiff
+            field={change.field}
+            oldValue={change.oldValue}
+            newValue={change.newValue}
+            currency={currency}
+            locale={locale}
           />
         </li>
       ))}
