@@ -47,7 +47,7 @@ const updateEvent = "PublicEventContractUpdated"
 
 func TestTheContractUpdateShapeHasOneWriter(t *testing.T) {
 	emitters := functionsWhere(t, func(fn *ast.FuncDecl) bool {
-		return buildsType(fn.Body, "crmcontracts."+updateEvent)
+		return namesType(fn, "crmcontracts."+updateEvent)
 	})
 	switch {
 	case len(emitters) == 0:
@@ -100,17 +100,36 @@ func functionsWhere(t *testing.T, want func(*ast.FuncDecl) bool) []string {
 	return found
 }
 
-// buildsType reports a composite literal of the named type, however few fields
-// it carries — an event with no fields set is still an event published.
-func buildsType(body *ast.BlockStmt, typeName string) bool {
+// namesType reports whether fn mentions the named type anywhere — in its
+// signature or its body.
+//
+// A mention, not a composite literal. Under-recognition is the one direction a
+// census must not fail in: a second writer that declared `var updated
+// crmcontracts.PublicEventContractUpdated` and filled it in by assignment, or
+// that took the payload as a parameter, contributes nothing to a literal-only
+// count. The count stays at one, the gate reports PASS, and the duplicate this
+// exists to catch lands unseen.
+//
+// Naming the type is how a function comes to publish it, and there is no way to
+// publish it without naming it. The width costs nothing here: a reader of this
+// event would name it too, and this module produces it rather than consuming
+// it — a consumer appearing later is a thing worth failing on and looking at,
+// not a false positive to design around in advance.
+func namesType(fn *ast.FuncDecl, typeName string) bool {
 	found := false
-	ast.Inspect(body, func(node ast.Node) bool {
-		lit, isLit := node.(*ast.CompositeLit)
-		if isLit && lit.Type != nil && exprText(lit.Type) == typeName {
+	inspect := func(node ast.Node) bool {
+		if node == nil {
+			return !found
+		}
+		if expr, isExpr := node.(ast.Expr); isExpr && exprText(expr) == typeName {
 			found = true
 		}
 		return !found
-	})
+	}
+	ast.Inspect(fn.Type, inspect)
+	if fn.Body != nil {
+		ast.Inspect(fn.Body, inspect)
+	}
 	return found
 }
 

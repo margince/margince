@@ -164,6 +164,13 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 // applyContractUpdate is the update write shape: guard the patch, audit it,
 // emit contract.updated, and leave the row read to the caller.
 //
+// It authorizes NOTHING. Every caller has already run auth.Require for the
+// action and resolved the row through writableContract, which is what carries
+// the row scope; this function is handed a patch and a row that were both
+// already permitted. Said out loud because a shared write seam is exactly the
+// thing a later caller reaches for directly, and the two obligations above are
+// invisible from in here.
+//
 // Two verbs spelled this out identically — a field patch and a cancellation
 // notice — and the only difference between the two copies was the noun in the
 // error text. Two copies of a write shape drift towards whichever one gets
