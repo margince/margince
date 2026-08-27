@@ -329,8 +329,15 @@ func (s *Store) UpdateAttachmentMetadata(
 		}
 		// No version guard: attachment carries no version column, so there is
 		// nothing to compare a precondition against (the wire operation does not
-		// advertise If-Match for the same reason).
-		if err := p.ApplyGuarded(ctx, tx, "attachment", id, nil); err != nil {
+		// advertise If-Match for the same reason). The row lock is what
+		// serializes the write, and it is taken by name — a nil version here
+		// would read as a precondition this caller could have supplied, when the
+		// table has none to supply.
+		lock, err := storekit.LockRow(ctx, tx, "attachment", id, storekit.LiveOnly)
+		if err != nil {
+			return err
+		}
+		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
 		// Audited against the PARENT's object type, which is where the authority

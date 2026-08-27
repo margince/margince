@@ -347,8 +347,14 @@ func applyParticipantPatch(ctx context.Context, tx pgx.Tx, room crmcontracts.Dea
 	}
 	// No If-Match: a participant carries no version column, and the corrections
 	// this accepts are last-writer-wins by nature — two stewards fixing the same
-	// typo do not need to be told they collided.
-	if err := p.ApplyGuardedIn(ctx, tx, participantObject, id.UUID, nil, storekit.NoArchiveColumn); err != nil {
+	// typo do not need to be told they collided. The row lock is still what
+	// orders them, and it is taken by name rather than left implicit in a nil
+	// version, which reads as a precondition this caller chose not to use.
+	lock, err := storekit.LockRow(ctx, tx, participantObject, id.UUID, storekit.NoArchiveColumn)
+	if err != nil {
+		return err
+	}
+	if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 		if storekit.IsUniqueViolation(err) {
 			return errAlreadyInvited
 		}
