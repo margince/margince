@@ -30,7 +30,7 @@ import (
 //
 // subjectEmails and subjectName are the caller's, read before the
 // anonymization overwrote them.
-func scrubPersonGraphTraces(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string, subjectName string) error {
+func scrubPersonGraphTraces(ctx context.Context, tx pgx.Tx, id ids.UUID, subjectEmails []string, subjectName string, linkedInHandles []string) error {
 	// Delete then null, in that order and for the reason the
 	// eraser documents: a participant row must name somebody, so a
 	// row whose only identity is the subject cannot be blanked,
@@ -53,25 +53,17 @@ func scrubPersonGraphTraces(ctx context.Context, tx pgx.Tx, id ids.UUID, subject
 			`DELETE FROM graph_interaction_edge WHERE person_id = $1`, id)
 	}
 	if err == nil {
-		// The same reach the request-driven eraser uses, including the
-		// name-and-employer arm. Most exported rows carry no address,
-		// so a person-and-email-only sweep leaves the common case
-		// behind — and this is the path nobody asks for, which is
-		// exactly why it must not be the thinner one.
-		_, err = tx.Exec(ctx, `
-			DELETE FROM linkedin_connection g
-			 WHERE g.matched_person_id = $1
-			    OR (g.email IS NOT NULL AND g.email = ANY($2))
-			    OR (g.normalized_company IS NOT NULL
-			        AND g.normalized_name = lower(f_unaccent($3))
-			        AND EXISTS (
-			            SELECT 1 FROM relationship r
-			              JOIN organization o ON o.id = r.organization_id
-			             WHERE r.person_id = $1 AND r.kind = 'employment'
-			               AND r.archived_at IS NULL
-			               AND (r.organization_id = g.matched_org_id
-			                    OR lower(f_unaccent(o.display_name)) = g.normalized_company)))`,
-			id, subjectEmails, subjectName)
+		// The SAME reach the request-driven eraser uses, by calling it rather
+		// than by restating it. This path used to carry its own copy of the
+		// predicate and the copy had drifted: no profile-URL arm, and an
+		// employer compared only for equality where the eraser also matches a
+		// longer name. Both gaps left a named third party's row standing after
+		// the clock said it was gone, and the comment here claimed the reaches
+		// were identical the whole time.
+		//
+		// This is the path nobody asks for, which is exactly why it must not be
+		// the thinner one.
+		err = deleteSubjectLinkedInGhosts(ctx, tx, ids.From[ids.PersonKind](id), subjectEmails, subjectName, linkedInHandles)
 	}
 	return err
 }
