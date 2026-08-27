@@ -217,11 +217,11 @@ The Betriebsvereinbarung then fixes the purpose in writing: account coverage yes
 
 That negotiation is winnable because the product gives the works council something concrete to hold. A scraping plugin gives it something to veto.
 
-## 5. What we build, what we gate, what we refuse
+## 5. What we build, what we will build, and what we refuse
 
 The product policy now becomes very simple.
 
-We build A1 to A6 today. We gate B1 to B3 until the named controls exist and counsel signs off. We refuse all five Tier C models.
+We will build A1 to A6 once there is demand. No worries, we release quickly; you won't have to wait months for this. It might be built already if you read this much later than August 2026. We refuse all five Tier C models.
 
 Each item below is rated on four axes: GDPR posture, Vietnam compatibility, platform-contract exposure and works-council temperature.
 
@@ -242,7 +242,7 @@ The line must stay sharp. The moment a natural person appears in the source, per
 
 The identifier spine is EUID, LEI, VAT ID and the Vietnamese MST.
 
-**A2. The counterparty's own website, read deeper.** Build. The chassis already ships.
+**A2. The counterparty's own website, read deeper.** Built already, and it needs to be enhanced.
 
 Margince already reads company websites, as described in [company-context.md](company-context.md). The deeper read handles people named on those sites in exactly the shape this paper argues for. A stranger found on a team page is staged as a lead and remains staged until a human accepts. The system never auto-creates a new person.
 
@@ -252,13 +252,13 @@ The clean extensions are straightforward: parse the Impressum, whose publication
 
 Crawling stays polite and respects robots.txt. The existing rule also remains: a human click can write directly; an automatic read stages the suggestion.
 
-**A3. Technical enrichment.** Build.
+**A3. Technical enrichment.** Not built yet: none of this is in the tree today.
 
 MX and DNS records, TLS certificate-transparency logs, and technology-stack fingerprints from the company's public pages are company-level signals. They work the same way in Hamburg and Da Nang.
 
 The A1 caveat still applies. A personal name inside a certificate or domain record is personal data, so Margince keeps the stored signal at company level.
 
-**A4. First-party person capture.** Build. Most of it already ships.
+**A4. First-party person capture.** Half built.
 
 The contact sent you the details. Margince's capture works from that fact. Connected mailboxes are processed automatically. A nightly pass extracts only stated fields from email signatures: name, title and phone number, with nothing inferred. Workspace exclusion lists keep entire addresses and domains outside capture.
 
