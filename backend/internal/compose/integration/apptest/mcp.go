@@ -183,7 +183,8 @@ func (c *MCPClient) rpc(t *testing.T, method string, params map[string]any) map[
 		t.Fatalf("encoding %s request: %v", method, err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, c.env.TS.URL+"/mcp", strings.NewReader(string(payload)))
+	req, err := http.NewRequestWithContext(t.Context(), http.MethodPost, c.env.TS.URL+"/mcp",
+		strings.NewReader(string(payload)))
 	if err != nil {
 		t.Fatalf("building %s request: %v", method, err)
 	}
@@ -193,7 +194,6 @@ func (c *MCPClient) rpc(t *testing.T, method string, params map[string]any) map[
 		req.Header.Set("Authorization", "Bearer "+c.bearer)
 	}
 
-	//nolint:bodyclose // closed by CloseBody below; bodyclose only recognises a Close in the same package
 	resp, err := c.env.Client.Do(req)
 	if err != nil {
 		t.Fatalf("%s: %v", method, err)

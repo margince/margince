@@ -36,13 +36,10 @@ const (
 	colleagueName  = "Alex Colleague"
 )
 
-// The scope sets a scenario mints a passport with. Named rather than spelled
-// at each call site: a scenario that quietly asks for write when it is testing
-// a read is a test proving less than it claims.
-var (
-	scopesRead      = []string{"read"}
-	scopesReadWrite = []string{"read", "write"}
-)
+// scopesRead is what a read-only scenario mints its passport with. Named
+// rather than spelled at each call site: a scenario that quietly asks for write
+// when it is testing a read is a test proving less than it claims.
+var scopesRead = []string{"read"}
 
 // scenario is one use case's world: the running app, the assistant's client,
 // and the two seats.
@@ -59,16 +56,20 @@ type scenario struct {
 
 // boot brings up a composed app with /mcp mounted and a passport ready.
 //
+// It takes no extra compose options on purpose. A scenario that needs one —
+// case 3's blob store, a job runner for the transcript reader — adds its own
+// variant beside this rather than widening a signature nothing else passes.
+//
 // The connector options are not optional: without WithMCPConnector the handler
 // is nil and the /mcp route is never registered, so every call 404s and the
 // scenario reads it as a broken test rather than a missing option.
-func boot(t *testing.T, scopes []string, extra ...compose.Option) *scenario {
+func boot(t *testing.T, scopes []string) *scenario {
 	t.Helper()
 	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
-		return append([]compose.Option{
+		return []compose.Option{
 			compose.WithMCPConnector(),
 			compose.WithMCPResource(origin + "/mcp"),
-		}, extra...)
+		}
 	})
 	apptest.BootstrapWorkspaceSession(t, e, "Use Cases", repEmail, repName)
 
@@ -174,4 +175,28 @@ func recordName(t *testing.T, fields json.RawMessage) string {
 		return named.FullName
 	}
 	return "(unnamed record)"
+}
+
+// defaultOpenStage names the installation's default pipeline and an OPEN stage
+// in it.
+//
+// Scenarios read these rather than seeding their own. The bootstrap creates a
+// pipeline with its stages, so an inserted second one collides on
+// pipeline_name_unique — and an inserted second DEFAULT would be a state the
+// product itself cannot produce, which is not a state worth testing against.
+func (s *scenario) defaultOpenStage(t *testing.T) (pipeline, stage ids.UUID) {
+	t.Helper()
+	err := apptest.InWorkspace(s.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), `
+			SELECT p.id, st.id
+			  FROM pipeline p
+			  JOIN stage st ON st.pipeline_id = p.id AND st.semantic = 'open'
+			 WHERE p.is_default
+			 ORDER BY st.position
+			 LIMIT 1`).Scan(&pipeline, &stage)
+	})
+	if err != nil {
+		t.Fatalf("reading the installation's default pipeline: %v", err)
+	}
+	return pipeline, stage
 }
