@@ -23,8 +23,7 @@ import (
 // The fold reads bodies now. These pin that it does, that the envelope block
 // never reaches the prompt, and that a message with no body still folds.
 func TestARepeatedSubjectThreadReachesTheModelWithItsWords(t *testing.T) {
-	view := viewWithActivities(
-		t,
+	view := viewWithActivities(t,
 		activityWith(t, "Re: Welcome to Surfe!",
 			"From: marine@surfe.com\nTo: rep@gradion.com\n\nWe are comparing three "+
 				"providers this quarter and the deadline is the end of August."),

@@ -148,8 +148,7 @@ func TestModifyThenApproveCannotRetargetTheEffect(t *testing.T) {
 	mine := e.SeedDeal(t, "Mine", pipeline, open, &e.Rep1)
 	hidden := e.SeedDeal(t, "Another team's book", pipeline, open, &e.Rep2)
 	staged, stagedHash, err := diffhash.Canonical(
-		json.RawMessage(`{"deal_id":"` + mine.String() + `","note":"agent version"}`),
-	)
+		json.RawMessage(`{"deal_id":"` + mine.String() + `","note":"agent version"}`))
 	if err != nil {
 		t.Fatal(err)
 	}

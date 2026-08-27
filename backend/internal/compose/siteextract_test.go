@@ -374,8 +374,7 @@ func TestALargeCrawlIsProfiledOnEverythingItFound(t *testing.T) {
 	for i := 0; i < pages; i++ {
 		pageURL := fmt.Sprintf("%s/services-%02d", seedURL, i)
 		brain.pageReplies[pageURL] = fmt.Sprintf(
-			`{"facts":[{"f":"service","v":"Audit %02d — catalog line","e":"s0"}]}`, i,
-		)
+			`{"facts":[{"f":"service","v":"Audit %02d — catalog line","e":"s0"}]}`, i)
 	}
 	crawler := testSiteCrawler(site)
 	// Commit a few pages per round, the way a real crawl arrives. With the

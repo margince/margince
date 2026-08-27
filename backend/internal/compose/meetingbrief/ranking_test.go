@@ -14,8 +14,7 @@ import (
 // spec's order that wants it.
 func TestNoClaimIsSaidTwiceAcrossTheBrief(t *testing.T) {
 	in := fullInput()
-	in.Commitments = append(
-		in.Commitments,
+	in.Commitments = append(in.Commitments,
 		ClaimIn{PersonName: "Ana Roth", Kind: kindObjection, Body: "the cure period is too short", Status: statusOpen, SourceID: activityID},
 		ClaimIn{PersonName: "Ana Roth", Kind: kindPriority, Body: "go-live before Q4", Status: statusOpen, SourceID: activityID},
 		ClaimIn{PersonName: "Ana Roth", Kind: kindDecision, Body: "pilot on two sites first", Status: "done", SourceID: activityID},

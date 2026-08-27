@@ -39,8 +39,7 @@ func occurrenceImages(ctx context.Context, t *testing.T, s *Store, personID ids.
 	t.Helper()
 	var beforeJSON, afterJSON []byte
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(
-			ctx,
+		return tx.QueryRow(ctx,
 			`SELECT before, after FROM audit_log
 			  WHERE entity_type = 'person' AND entity_id = $1 AND action = 'update' AND after ? $2
 			  ORDER BY occurred_at DESC, id DESC LIMIT 1`, personID, key,

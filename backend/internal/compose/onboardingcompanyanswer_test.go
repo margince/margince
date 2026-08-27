@@ -35,8 +35,7 @@ func TestClarifySelectionCarriesItsValueInsideTheCallsBoundary(t *testing.T) {
 		"go on", nil, onboardingConversationContext{NextRequired: "legal_name"}, "en",
 		&crmcontracts.OnboardingClarifySelection{
 			ClarifyId: "legal-name", Field: "legal_name", Value: siteText,
-		},
-	)
+		})
 	if err != nil {
 		t.Fatalf("building the request: %v", err)
 	}
@@ -72,8 +71,7 @@ func TestClarifySelectionCannotCloseTheBoundaryItWasNeverShown(t *testing.T) {
 			"go on", nil, onboardingConversationContext{}, "en",
 			&crmcontracts.OnboardingClarifySelection{
 				ClarifyId: "legal-name", Field: "legal_name", Value: forged,
-			},
-		)
+			})
 		if err != nil {
 			t.Fatalf("building the request: %v", err)
 		}

@@ -84,8 +84,7 @@ func (documentFieldsCases) Prepare(fixture, expected json.RawMessage) (aitasks.P
 	var want map[string]string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"document_extract/fields: the expected answer is not a map of field name to the value it should carry: %w", err,
-		)
+			"document_extract/fields: the expected answer is not a map of field name to the value it should carry: %w", err)
 	}
 	if err := refuseUnreachableFields(want); err != nil {
 		return nil, err
@@ -100,32 +99,27 @@ func sourceFromFixture(f documentFieldsFixture) (documentSource, error) {
 	switch {
 	case text != "" && len(f.Bytes) > 0:
 		return documentSource{}, errors.New(
-			"document_extract/fields: the fixture supplies both text and bytes, and a reading takes one lane or the other",
-		)
+			"document_extract/fields: the fixture supplies both text and bytes, and a reading takes one lane or the other")
 	case text == "" && len(f.Bytes) == 0:
 		return documentSource{}, errors.New(
-			"document_extract/fields: the fixture supplies no document, so there is nothing to read",
-		)
+			"document_extract/fields: the fixture supplies no document, so there is nothing to read")
 	case text != "":
 		if len(text) > maxDocumentTextChars {
 			return documentSource{}, fmt.Errorf(
 				"document_extract/fields: the fixture is %d characters, and one reading addresses at most %d",
-				len(text), maxDocumentTextChars,
-			)
+				len(text), maxDocumentTextChars)
 		}
 		return documentSource{Text: text, Filename: f.Filename}, nil
 	}
 	if len(f.Bytes) > maxDocumentBytes {
 		return documentSource{}, fmt.Errorf(
 			"document_extract/fields: the fixture is %d bytes, and one reading carries at most %d",
-			len(f.Bytes), maxDocumentBytes,
-		)
+			len(f.Bytes), maxDocumentBytes)
 	}
 	if !model.CarriesMIME(carriedDocumentMIMEs(), f.MIME) {
 		return documentSource{}, fmt.Errorf(
 			"document_extract/fields: the fixture is %q, which no adapter that carries documents accepts — "+
-				"the reading would never have reached a model with it", f.MIME,
-		)
+				"the reading would never have reached a model with it", f.MIME)
 	}
 	return documentSource{
 		Part:     model.Attachment{MIME: f.MIME, Bytes: f.Bytes, Name: f.Filename},
@@ -155,14 +149,12 @@ func refuseUnreachableFields(want map[string]string) error {
 		// between the prompt and the reply, settled before a corpus sees it.
 		if !slices.Contains(documentFieldOrder(), name) {
 			return fmt.Errorf(
-				"document_extract/fields: the scenario expects %q, which is not a field this site reads for", name,
-			)
+				"document_extract/fields: the scenario expects %q, which is not a field this site reads for", name)
 		}
 		if strings.TrimSpace(want[name]) == "" {
 			return fmt.Errorf(
 				"document_extract/fields: the scenario expects %q to be empty; a field the document does not state is expressed by leaving it out",
-				name,
-			)
+				name)
 		}
 		// The amount is scaled against the currency the reading grounds, which a
 		// scenario states separately — so it is checked as the integer it will
@@ -173,15 +165,13 @@ func refuseUnreachableFields(want map[string]string) error {
 		if _, ok := coerceDocumentValue(name, want[name]); !ok {
 			return fmt.Errorf(
 				"document_extract/fields: the scenario expects %s = %q, which this site could never write onto a deal",
-				name, want[name],
-			)
+				name, want[name])
 		}
 	}
 	if _, amount := want[documentFieldAmount]; amount {
 		if _, currency := want[documentFieldCurrency]; !currency {
 			return errors.New(
-				"document_extract/fields: the scenario expects an amount and no currency, and an amount is scaled by the currency the same reading found",
-			)
+				"document_extract/fields: the scenario expects an amount and no currency, and an amount is scaled by the currency the same reading found")
 		}
 	}
 	return nil
@@ -259,8 +249,7 @@ func (c *documentFieldsCase) disagreements(fields []extraction.ExtractedField) [
 			out = append(out, fmt.Sprintf("the reading offers %s = %q where the document states %q", name, got, want))
 		case !expected && offered:
 			out = append(out, fmt.Sprintf(
-				"the reading offers %s = %q, which this document does not state", name, got,
-			))
+				"the reading offers %s = %q, which this document does not state", name, got))
 		}
 	}
 	return out

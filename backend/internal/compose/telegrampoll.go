@@ -396,7 +396,6 @@ func (w *telegramPollWorker) answerRivalConsumer(wsCtx context.Context, target c
 // Connect would put a decision in their audit trail that they did not make.
 func (w *telegramPollWorker) stopPolling(wsCtx context.Context, target capture.ChannelPollTarget, status, reason string) error {
 	actorCtx := principal.WithCorrelationID(
-		principal.WithActor(wsCtx, telegramChannelPrincipal()), ids.NewV7(),
-	)
+		principal.WithActor(wsCtx, telegramChannelPrincipal()), ids.NewV7())
 	return capture.StopPollingChannelConnection(actorCtx, w.pool, target.ID, status, reason)
 }

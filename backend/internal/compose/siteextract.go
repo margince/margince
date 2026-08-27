@@ -169,8 +169,7 @@ func crawlAndExtract(ctx context.Context, crawler *siteCrawler, x evidenceExtrac
 	// threshold: asking again, with a LARGER prompt, spends against an
 	// allowance that is already exhausted.
 	fields, recovered := reprofileOverWholeCrawl(
-		ctx, x, crawl.Pages, profiledPages, out.fields, profileErr,
-	)
+		ctx, x, crawl.Pages, profiledPages, out.fields, profileErr)
 	out.fields = fields
 	if profileErr != nil && !recovered {
 		collected.failed = append(collected.failed, fmt.Errorf("profile lane: %w", profileErr))

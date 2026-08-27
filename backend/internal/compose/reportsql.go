@@ -181,8 +181,7 @@ func referenceScopeClauses(ctx context.Context, spec reportSpec, arg func(any) i
 		}
 		clauses = append(clauses, fmt.Sprintf(
 			"(%s IS NULL OR EXISTS (SELECT 1 FROM %s ref WHERE ref.id = %s AND %s))",
-			column, table, column, scope,
-		))
+			column, table, column, scope))
 	}
 	return clauses, nil
 }

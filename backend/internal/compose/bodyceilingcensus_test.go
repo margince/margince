@@ -84,8 +84,7 @@ func uploadOperationsIn(raw []byte) (map[string]string, []string, error) {
 			var op contractOperation
 			if err := node.Decode(&op); err != nil {
 				problems = append(problems, fmt.Sprintf(
-					"%s %s could not be read: %v", strings.ToUpper(method), path, err,
-				))
+					"%s %s could not be read: %v", strings.ToUpper(method), path, err))
 				continue
 			}
 			if op.RequestBody == nil {
@@ -95,8 +94,7 @@ func uploadOperationsIn(raw []byte) (map[string]string, []string, error) {
 				problems = append(problems, fmt.Sprintf(
 					"%s %s takes its requestBody by $ref (%s), which this gate cannot "+
 						"follow — it cannot tell whether the route carries a file",
-					strings.ToUpper(method), path, op.RequestBody.Ref,
-				))
+					strings.ToUpper(method), path, op.RequestBody.Ref))
 				continue
 			}
 			if _, isFile := op.RequestBody.Content[multipartMediaType]; !isFile {
@@ -106,8 +104,7 @@ func uploadOperationsIn(raw []byte) (map[string]string, []string, error) {
 				problems = append(problems, fmt.Sprintf(
 					"%s %s takes a file body, but the chassis grants the wider ceiling "+
 						"on POST alone, so this route can never receive one",
-					strings.ToUpper(method), path,
-				))
+					strings.ToUpper(method), path))
 				continue
 			}
 			// As the chassis sees it: the generated router mounts the contract's
@@ -301,16 +298,14 @@ func censusProblems(contract map[string]string, declared map[string]int64) []str
 			problems = append(problems, fmt.Sprintf(
 				"%s (%s) takes a file body but has no ceiling, so it parses "+
 					"under the JSON bound and the cap it declares never runs",
-				path, op,
-			))
+				path, op))
 		}
 	}
 	for path := range declared {
 		if _, ok := contract[path]; !ok {
 			problems = append(problems, fmt.Sprintf(
 				"%s has a ceiling but no contract operation takes a file body "+
-					"there — usually the other half of a mistyped path", path,
-			))
+					"there — usually the other half of a mistyped path", path))
 		}
 	}
 	slices.Sort(problems)

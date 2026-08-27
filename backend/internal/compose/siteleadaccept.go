@@ -50,8 +50,7 @@ func siteLeadAcceptEffect(svc *approvals.Service, sink connector.Sink) approvals
 		// made.
 		if proposal.NaturalKey == "" {
 			proposal.NaturalKey = siteLeadSourceID(
-				proposal.OrganizationID, proposal.Name, proposal.PublishedEmail,
-			)
+				proposal.OrganizationID, proposal.Name, proposal.PublishedEmail)
 		}
 		// The capture executes as the siteread executor on behalf of the
 		// human whose approval released it. The Sink admits connector

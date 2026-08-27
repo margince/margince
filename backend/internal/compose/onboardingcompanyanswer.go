@@ -69,8 +69,7 @@ func onboardingCompanyAnswerRequest(
 		// before this runs — stays outside it.
 		messages = append(messages, model.Message{Role: chatRoleUser, Content: fmt.Sprintf(
 			"I selected this value for %s from your clarification options: %s",
-			strings.TrimSpace(selection.Field), fence.Wrap(strings.TrimSpace(selection.Value)),
-		)})
+			strings.TrimSpace(selection.Field), fence.Wrap(strings.TrimSpace(selection.Value)))})
 	}
 	messages = append(messages, model.Message{Role: chatRoleUser, Content: message})
 	return model.Request{

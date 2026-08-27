@@ -339,8 +339,7 @@ func (a *assembly) suggestionInputsOnce() (suggestionInputs, error) {
 				return a.advice, a.adviceErr
 			}
 			a.advice, a.adviceErr = gatherSuggestionInputs(
-				a.ctx, a.tx, a.orgID, a.now, facts, lifecycle, base,
-			)
+				a.ctx, a.tx, a.orgID, a.now, facts, lifecycle, base)
 		}
 		a.adviceRead = true
 	}

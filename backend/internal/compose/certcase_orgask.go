@@ -62,8 +62,7 @@ func (orgAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedC
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"summarize/org_ask: the expected answer is not a list of record labels the answer must cite: %w", err,
-		)
+			"summarize/org_ask: the expected answer is not a list of record labels the answer must cite: %w", err)
 	}
 	in, label, err := orgBriefInput(f.orgBriefFixture)
 	if err != nil {

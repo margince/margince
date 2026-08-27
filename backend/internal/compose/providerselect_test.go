@@ -22,6 +22,7 @@ import (
 )
 
 func TestAnUnconfiguredInstallationStillOffersTheProviderSurface(t *testing.T) {
+
 	reg, configured, err := ProviderRegistryFromEnv(time.Now, config.Static(map[string]string{ProviderModeEnv: ""}))
 	if err != nil {
 		t.Fatalf("the default mode failed to boot: %v", err)
@@ -41,6 +42,7 @@ func TestAnUnconfiguredInstallationStillOffersTheProviderSurface(t *testing.T) {
 // path may reach the network: the credential is the gate, and an installation
 // that has never pasted a key must be in exactly the zero-egress state.
 func TestBootingTheLiveAdapterCallsNothing(t *testing.T) {
+
 	// A URL that would fail loudly if anything dialled it. The adapter's own
 	// host is a constant, so this is belt-and-braces: the assertion that
 	// matters is that New() returns without touching the network at all.

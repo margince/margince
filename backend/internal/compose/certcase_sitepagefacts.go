@@ -99,15 +99,13 @@ func (sitePageFactsCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 	}
 	if !f.Kind.Valid() {
 		return nil, fmt.Errorf(
-			"site_fact_extract/page_facts: the page is of kind %q, which the crawler never classifies a page as", f.Kind,
-		)
+			"site_fact_extract/page_facts: the page is of kind %q, which the crawler never classifies a page as", f.Kind)
 	}
 	menu, routed := menuForKind(f.Kind)
 	if !routed {
 		return nil, fmt.Errorf(
 			"site_fact_extract/page_facts: a page of kind %q states too few facts to be worth a call, so the lane makes "+
-				"none — and a scenario over one would certify a request the product never issues", f.Kind,
-		)
+				"none — and a scenario over one would certify a request the product never issues", f.Kind)
 	}
 	page := crawlPage{URL: f.URL, Kind: f.Kind, Text: f.Text}
 	// The SAME excerpt the lane applies. A certification that indexed the
@@ -116,8 +114,7 @@ func (sitePageFactsCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 	idx := newSnippetIndex(excerpt)
 	if len(idx.refs) == 0 {
 		return nil, errors.New(
-			"site_fact_extract/page_facts: the fixture's page yields no passage, and the lane calls no model without one",
-		)
+			"site_fact_extract/page_facts: the fixture's page yields no passage, and the lane calls no model without one")
 	}
 	var want map[string]string
 	if err := json.Unmarshal(expected, &want); err != nil {
@@ -158,22 +155,18 @@ func refuseUngroundableFacts(want map[string]string, kind crmcontracts.SiteReadP
 		case !slices.Contains(menu.factFields, field):
 			return fmt.Errorf(
 				"site_fact_extract/page_facts: the scenario expects %q, which a %s page's menu never offers the model",
-				field, kind,
-			)
+				field, kind)
 		case strings.TrimSpace(value) == "":
 			return fmt.Errorf(
-				"site_fact_extract/page_facts: the scenario expects an empty value for %q, which the gate drops", field,
-			)
+				"site_fact_extract/page_facts: the scenario expects an empty value for %q, which the gate drops", field)
 		case zeroedStat(field, value):
 			return fmt.Errorf(
 				"site_fact_extract/page_facts: the scenario expects %q to read %q, which the gate drops as a figure a "+
-					"page animated up from zero", field, value,
-			)
+					"page animated up from zero", field, value)
 		case !citableInSomePassage(idx, factName(value)):
 			return fmt.Errorf(
 				"site_fact_extract/page_facts: the scenario expects %q to read %q, whose name no passage of this fixture "+
-					"contains, and the gate demands it appear in the passage cited for it", field, value,
-			)
+					"contains, and the gate demands it appear in the passage cited for it", field, value)
 		}
 	}
 	return nil

@@ -63,8 +63,7 @@ func storyLines(f facts) []sentence {
 	if last, ok := lastContact(f); ok {
 		lines = append(lines, cited(
 			fmt.Sprintf("The last contact was %s: %s.", since(f.now, last.OccurredAt), subjectOf(last)),
-			last,
-		))
+			last))
 	} else {
 		lines = append(lines, plain("Nothing has been logged on this deal yet."))
 	}

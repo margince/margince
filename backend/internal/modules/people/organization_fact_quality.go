@@ -46,8 +46,7 @@ var (
 	sizeShaped = regexp.MustCompile(
 		`^(?i:(ca|approx|approx\.|about|etwa|rund|über|ueber|mehr als|more than|~|>|<|>=|<=)\.?\s*)?` +
 			`\d[\d.,\s]*(\s*[-–—]\s*\d[\d.,\s]*)?\s*\+?` +
-			`(\s+\p{L}[\p{L}.]*)*$`,
-	)
+			`(\s+\p{L}[\p{L}.]*)*$`)
 )
 
 // phoneShaped is a value made only of phone punctuation AND carrying enough

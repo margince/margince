@@ -129,8 +129,7 @@ func (i importSeam) ReadReport(ctx context.Context, id ids.UUID) (crmcontracts.I
 		// that has not been validated has no report, and answering an empty
 		// one would read as "this import will do nothing".
 		return crmcontracts.ImportRunReport{}, fmt.Errorf(
-			"import run %s has not been validated yet: %w", run.ID, apperrors.ErrConflict,
-		)
+			"import run %s has not been validated yet: %w", run.ID, apperrors.ErrConflict)
 	}
 	return toContractImportReport(run), nil
 }

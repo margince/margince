@@ -389,8 +389,7 @@ func (l idSpellingLane) Complete(context.Context, model.Request) (model.Response
 	for _, task := range l.tasks {
 		written = append(written, fmt.Sprintf(
 			`{"text":"You have an open task %q (ID: %s).","evidence":[{"entity_type":"activity","entity_id":%q}]}`,
-			task.Name, task.ID, task.ID,
-		))
+			task.Name, task.ID, task.ID))
 	}
 	return model.Response{Text: `{"sentences":[` + strings.Join(written, ",") + `]}`}, nil
 }

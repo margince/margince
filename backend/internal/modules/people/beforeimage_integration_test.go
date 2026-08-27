@@ -36,8 +36,7 @@ func auditImagesHolding(ctx context.Context, t *testing.T, s *Store, entityType 
 	t.Helper()
 	var beforeJSON, afterJSON []byte
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(
-			ctx,
+		return tx.QueryRow(ctx,
 			`SELECT before, after FROM audit_log
 			  WHERE entity_type = $1 AND entity_id = $2 AND action = 'update' AND after ? $3
 			  ORDER BY occurred_at DESC, id DESC LIMIT 1`, entityType, id, key,

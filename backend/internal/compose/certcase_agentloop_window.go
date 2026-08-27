@@ -66,8 +66,7 @@ func (w *agentLoopToolWindow) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf(
 				"%s: the fixture offers the tool surface %q, and the only word this site knows is %q "+
 					"(spell the tools out to offer a narrower window)",
-				agentLoopSite, spelling, agentLoopCatalogSpelling,
-			)
+				agentLoopSite, spelling, agentLoopCatalogSpelling)
 		}
 		w.catalog = true
 		return nil
@@ -75,8 +74,7 @@ func (w *agentLoopToolWindow) UnmarshalJSON(b []byte) error {
 	if err := json.Unmarshal(b, &w.listed); err != nil {
 		return fmt.Errorf(
 			"%s: the fixture's tool surface is neither a list of tools nor the word %q: %w",
-			agentLoopSite, agentLoopCatalogSpelling, err,
-		)
+			agentLoopSite, agentLoopCatalogSpelling, err)
 	}
 	return nil
 }
@@ -101,8 +99,7 @@ func (w agentLoopToolWindow) specs() ([]mcp.ToolSpec, error) {
 		if len(w.listed) == 0 {
 			return nil, fmt.Errorf(
 				"%s: the fixture offers no tools, and a run is always offered the workspace's governed "+
-					"tool surface", agentLoopSite,
-			)
+					"tool surface", agentLoopSite)
 		}
 		return agentLoopToolSpecs(w.listed)
 	}
@@ -110,8 +107,7 @@ func (w agentLoopToolWindow) specs() ([]mcp.ToolSpec, error) {
 	if len(specs) == 0 {
 		return nil, fmt.Errorf(
 			"%s: the composed registry offers no tools, so a scenario naming %q would grade a choice "+
-				"between nothing", agentLoopSite, agentLoopCatalogSpelling,
-		)
+				"between nothing", agentLoopSite, agentLoopCatalogSpelling)
 	}
 	return specs, nil
 }
@@ -146,8 +142,7 @@ func (s *agentLoopStep) UnmarshalJSON(b []byte) error {
 	if err := decoder.Decode(&object); err != nil {
 		return fmt.Errorf(
 			"%s: the expected answer is not a step name, and not a {step, args} object either: %w",
-			agentLoopSite, err,
-		)
+			agentLoopSite, err)
 	}
 	s.name, s.args = object.Step, object.Args
 	return nil
@@ -169,8 +164,7 @@ func refuseUnaskableArguments(want agentLoopStep, specs []mcp.ToolSpec) error {
 	if want.name == agentLoopFinalStep {
 		return fmt.Errorf(
 			"%s: the scenario pins arguments on %q, and the step that ends a run carries none",
-			agentLoopSite, agentLoopFinalStep,
-		)
+			agentLoopSite, agentLoopFinalStep)
 	}
 	for _, spec := range specs {
 		if spec.Name != want.name {
@@ -181,8 +175,7 @@ func refuseUnaskableArguments(want agentLoopStep, specs []mcp.ToolSpec) error {
 			if !declared[arg] {
 				return fmt.Errorf(
 					"%s: the scenario pins the argument %q on %s, which its input schema does not declare",
-					agentLoopSite, arg, want.name,
-				)
+					agentLoopSite, arg, want.name)
 			}
 		}
 	}

@@ -357,8 +357,7 @@ func (f listFilters) ownershipClause(arg func(any) int) (string, error) {
 	case f.OwnerTeamID != nil:
 		return storekit.SQLf(
 			"owner_id IN (SELECT tm.user_id FROM team_membership tm WHERE tm.team_id = $%d)",
-			arg(*f.OwnerTeamID),
-		), nil
+			arg(*f.OwnerTeamID)), nil
 	case unassigned:
 		return "owner_id IS NULL", nil
 	}

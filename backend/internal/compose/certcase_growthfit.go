@@ -141,8 +141,7 @@ func refuseUngroundableFit(want growthFitExpectation, label map[string]string) e
 	for _, name := range want.Cites {
 		if _, ok := label[name]; !ok {
 			return fmt.Errorf(
-				"the scenario expects %q, which the fixture does not supply, so the reply could never cite it", name,
-			)
+				"the scenario expects %q, which the fixture does not supply, so the reply could never cite it", name)
 		}
 	}
 	if len(want.Bands) == 0 {
@@ -152,8 +151,7 @@ func refuseUngroundableFit(want growthFitExpectation, label map[string]string) e
 	for _, band := range want.Bands {
 		if !orgdossier.BandIsJudgeable(crmcontracts.GrowthFitBand(band)) {
 			return fmt.Errorf(
-				"the scenario accepts band %q, which is not a band the model may propose", band,
-			)
+				"the scenario accepts band %q, which is not a band the model may propose", band)
 		}
 		// Counted distinctly, so a list padded with repeats cannot slip past the
 		// accepts-everything check below while still accepting everything.

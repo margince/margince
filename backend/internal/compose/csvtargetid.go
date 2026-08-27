@@ -60,8 +60,7 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 	if w.object != migration.ObjectOrganization {
 		return targetID{named: true, reason: fmt.Sprintf(
 			"only a company row can name an %q; a %s row is identified by its own key",
-			csvTargetID, w.object,
-		)}
+			csvTargetID, w.object)}
 	}
 	parsed, err := ids.Parse(raw)
 	if err != nil {
@@ -70,8 +69,7 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 		// run over it would tell a person nothing about which line to look at.
 		return targetID{named: true, reason: fmt.Sprintf(
 			"%q is not a company id; export the companies to get theirs, or leave the column empty "+
-				"to import this row as a new company", raw,
-		)}
+				"to import this row as a new company", raw)}
 	}
 	// GetOrganization runs under the caller's own row scope, so a company they
 	// may not read answers not-found here exactly as it would anywhere else.
@@ -83,8 +81,7 @@ func (w *csvWriters) targetIDOf(ctx context.Context, row migration.Row) targetID
 		storekit.LiveOnly); err != nil {
 		return targetID{named: true, reason: fmt.Sprintf(
 			"no company you can see has the id %q; it may have been archived, merged away, or belong "+
-				"to a workspace this file did not come from", raw,
-		)}
+				"to a workspace this file did not come from", raw)}
 	}
 	return targetID{id: parsed, named: true}
 }

@@ -51,8 +51,7 @@ const (
 // for a reply — the variant that can issue all three calls.
 func replyDraftVoicedFixture() replyDraftFixture {
 	return replyDraftFixture{
-		Activity: replyActivityData{
-			Thread:  "inbound_mail",
+		Activity: replyActivityData{Thread: "inbound_mail",
 			Subject: "Heat recovery commissioning",
 			Body:    "We need commissioning in September. Can you confirm the window?",
 			Intent:  "Confirm the delivery window",
@@ -111,8 +110,7 @@ func runReplyDraftCase(
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
 	prepared, err := replyDraftCases{}.Prepare(
-		replyDraftFixtureJSON(t, fixture), replyDraftExpectationJSON(t, register),
-	)
+		replyDraftFixtureJSON(t, fixture), replyDraftExpectationJSON(t, register))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -403,8 +401,7 @@ func assertReplyDraftMatchesProduction(t *testing.T, tc replyDraftParityCase) {
 	}
 	script := replyDraftScript(tc.replies)
 	draft, version, _, productionErr := replyDrafter{brain: script}.completeVoiced(
-		context.Background(), ids.NewV7(), tc.fixture.Activity, voice,
-	)
+		context.Background(), ids.NewV7(), tc.fixture.Activity, voice)
 
 	outcome, trace := runReplyDraftCase(t, tc.fixture, tc.register, tc.replies)
 

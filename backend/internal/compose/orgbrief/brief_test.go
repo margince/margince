@@ -172,8 +172,7 @@ func TestParseBriefReadsAFencedReply(t *testing.T) {
 func TestParseBriefKeepsASentenceCitingTheAccount(t *testing.T) {
 	kept, err := ParseBrief(
 		`{"sentences":[{"text":"An automotive supplier.","evidence":[{"entity_type":"organization","entity_id":"`+briefOrgID+`"}]}]}`,
-		briefOrgID, inputFixture(),
-	)
+		briefOrgID, inputFixture())
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -302,8 +301,7 @@ func TestDeterministicNamesTheStalledDealAndTheLastTouch(t *testing.T) {
 func TestParseBriefRefusesACitationToAnotherAccount(t *testing.T) {
 	kept, err := ParseBrief(
 		`{"sentences":[{"text":"A promising account.","evidence":[{"entity_type":"organization","entity_id":"44444444-4444-4444-8444-444444444444"}]}]}`,
-		briefOrgID, inputFixture(),
-	)
+		briefOrgID, inputFixture())
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -320,8 +318,7 @@ func TestParseBriefRefusesARealIDUnderTheWrongType(t *testing.T) {
 	dealID := in.OpenDeals[0].ID
 	kept, err := ParseBrief(
 		`{"sentences":[{"text":"Dana is the champion.","evidence":[{"entity_type":"person","entity_id":"`+dealID+`"}]}]}`,
-		briefOrgID, in,
-	)
+		briefOrgID, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -340,8 +337,7 @@ func TestParseBriefDropsASentenceWithAnyUngroundedCitation(t *testing.T) {
 		`{"sentences":[{"text":"The retrofit stalled after the buyer left.","evidence":[
 		  {"entity_type":"deal","entity_id":"`+in.OpenDeals[0].ID+`"},
 		  {"entity_type":"person","entity_id":"55555555-5555-4555-8555-555555555555"}]}]}`,
-		briefOrgID, in,
-	)
+		briefOrgID, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}
@@ -362,8 +358,7 @@ func TestParseBriefGroundsContactsAndTasks(t *testing.T) {
 		`{"sentences":[
 		  {"text":"Dana Buyer is your contact.","evidence":[{"entity_type":"person","entity_id":"`+in.Contacts[0].ID+`"}]},
 		  {"text":"One task is open.","evidence":[{"entity_type":"activity","entity_id":"`+in.OpenTasks[0].ID+`"}]}]}`,
-		briefOrgID, in,
-	)
+		briefOrgID, in)
 	if err != nil {
 		t.Fatalf("parse: %v", err)
 	}

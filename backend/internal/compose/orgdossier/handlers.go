@@ -129,8 +129,7 @@ func (h Handlers) native(w http.ResponseWriter, r *http.Request) bool {
 		// — and it refuses as OUR fault, because nothing about the request is
 		// wrong and a 4xx would send the reader looking for a bad field.
 		httperr.Write(w, r, errors.New(
-			"the dossier cannot confirm which system of record this workspace reads from",
-		))
+			"the dossier cannot confirm which system of record this workspace reads from"))
 		return false
 	}
 	overlay, err := h.overlay(r.Context())

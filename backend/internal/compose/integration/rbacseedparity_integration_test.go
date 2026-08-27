@@ -119,8 +119,7 @@ const controlRole = "custom_scoped_role"
 var controlDocument = []byte(
 	`{"objects": {"deal": {"create": false, "read": true, "update": false, "delete": false}, ` +
 		`"person": {"create": false, "read": true, "update": false, "delete": false}}, ` +
-		`"row_scope": "team"}`,
-)
+		`"row_scope": "team"}`)
 
 // roleDocument is one role's permissions document. Grants stay RawMessage: this
 // file owns whether the two paths AGREE, never what a grant should be — the
@@ -562,8 +561,7 @@ var (
 	// a quoted schema qualifier are included because Postgres accepts them and
 	// this pattern deciding "not a write" is how a real grant leaves the gate.
 	rolePermissionWrite = regexp.MustCompile(
-		`(?is)\b(?:UPDATE|INSERT\s+INTO|MERGE\s+INTO)\s+(?:ONLY\s+)?(?:"?public"?\.)?"?role"?\b[\s\S]*?\bpermissions\b`,
-	)
+		`(?is)\b(?:UPDATE|INSERT\s+INTO|MERGE\s+INTO)\s+(?:ONLY\s+)?(?:"?public"?\.)?"?role"?\b[\s\S]*?\bpermissions\b`)
 	// The object a write grants, in EITHER jsonb path spelling Postgres accepts:
 	// the brace text literal `'{objects,deal}'` and the array form
 	// `ARRAY['objects', 'deal']`. Only the first was recognised, which made a
@@ -623,8 +621,7 @@ func rolePermissionMigrations(t *testing.T) []permissionWrite {
 		body := strings.Join(statements, "\n")
 		objects := dedupe(append(
 			objectPath.FindAllStringSubmatch(body, -1),
-			objectArrayPath.FindAllStringSubmatch(body, -1)...,
-		))
+			objectArrayPath.FindAllStringSubmatch(body, -1)...))
 		// Every objects-path literal, whatever its shape, must be accounted for.
 		// A path naming a VERB (`{objects,deal,delete}`) is a legitimate write
 		// this rewind cannot undo — removing the whole object would overshoot —
@@ -633,8 +630,7 @@ func rolePermissionMigrations(t *testing.T) []permissionWrite {
 		// assertPreStateIsNotAlreadyTheAnswer calls the likelier next one.
 		declared := dedupe(append(
 			anyObjectPath.FindAllStringSubmatch(body, -1),
-			normalizeArrayPaths(anyObjectArrayPath.FindAllStringSubmatch(body, -1))...,
-		))
+			normalizeArrayPaths(anyObjectArrayPath.FindAllStringSubmatch(body, -1))...))
 		for _, m := range declared {
 			if slices.Contains(objects, m) {
 				continue

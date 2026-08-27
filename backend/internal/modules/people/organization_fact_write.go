@@ -36,8 +36,7 @@ func (s *Store) UpdateOrganizationFact(
 	if in.Value == nil {
 		return crmcontracts.OrganizationFact{}, fmt.Errorf(
 			"a correction carries a value; use the confirm operation to agree without changing one: %w",
-			apperrors.ErrConflict,
-		)
+			apperrors.ErrConflict)
 	}
 	return s.writeFact(ctx, orgID, factKey, in)
 }
@@ -109,8 +108,7 @@ func readFactRow(
 	if !ok {
 		return r, errMalformedFactKey()
 	}
-	err := tx.QueryRow(
-		ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT id, value, source, evidence_snippet, source_url, confidence, verified_at, verified_by, captured_by
 		  FROM organization_fact
 		 WHERE organization_id = $1 AND field = $2 AND value_key = $3`,
@@ -139,8 +137,7 @@ func readFactWire(
 	if !ok {
 		return f, errMalformedFactKey()
 	}
-	err := tx.QueryRow(
-		ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT id, category, field, value, value_key, source, captured_by,
 		       evidence_snippet, source_url, confidence,
 		       retrieved_at, verified_at, verified_by, updated_at

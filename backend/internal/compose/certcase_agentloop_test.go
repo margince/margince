@@ -97,8 +97,7 @@ func runAgentLoopCase(
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
 	prepared, err := agentLoopCases{}.Prepare(
-		agentLoopFixtureJSON(t, fixture), agentLoopExpectationJSON(t, expected),
-	)
+		agentLoopFixtureJSON(t, fixture), agentLoopExpectationJSON(t, expected))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}

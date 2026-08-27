@@ -50,8 +50,7 @@ import (
 var errNoLiveIncumbent = fmt.Errorf(
 	"compose: the integration build binds no live incumbent — this suite reached one; "+
 		"pass your own through WithOverlayIncumbentResolver (applied AFTER WithKeyvault) "+
-		"if it needs incumbent behaviour: %w", hubspot.ErrUnreachable,
-)
+		"if it needs incumbent behaviour: %w", hubspot.ErrUnreachable)
 
 // liveIncumbentFactory is the integration half of the split — see
 // overlayincumbent_live.go for the production one.

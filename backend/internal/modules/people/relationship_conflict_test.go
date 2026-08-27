@@ -30,8 +30,7 @@ func TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint(t *te
 	for constraint := range relationshipConflictDetails {
 		t.Run(constraint, func(t *testing.T) {
 			mapped := mapRelationshipConstraint(
-				&pgconn.PgError{Code: "23505", ConstraintName: constraint}, "project_stakeholder",
-			)
+				&pgconn.PgError{Code: "23505", ConstraintName: constraint}, "project_stakeholder")
 
 			if !errors.Is(mapped, apperrors.ErrConflict) {
 				t.Fatalf("mapped error %v does not carry ErrConflict — the transport would not answer 409", mapped)

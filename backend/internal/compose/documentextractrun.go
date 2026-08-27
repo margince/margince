@@ -245,8 +245,7 @@ func (d *DocumentExtractor) sourceFor(
 	if len(bytes) > maxDocumentBytes {
 		return documentSource{}, fmt.Sprintf(
 			"this document is larger than the %d MB one reading carries; a reading of part of it could not say which part it saw",
-			maxDocumentBytes>>20,
-		), nil
+			maxDocumentBytes>>20), nil
 	}
 	if model.CarriesMIME(documentTextMIMEs, mime) {
 		src, detail := d.textSource(meta, bytes)
@@ -263,8 +262,7 @@ func (d *DocumentExtractor) sourceFor(
 	}
 	return documentSource{}, fmt.Sprintf(
 		"this installation's model cannot read a %s document; a file whose text can be read directly, or a model bound to carry documents, would be read",
-		mime,
-	), nil
+		mime), nil
 }
 
 // textSource takes the text lane, where the document's bytes are its text.
@@ -276,8 +274,7 @@ func (d *DocumentExtractor) textSource(meta crmcontracts.Attachment, raw []byte)
 	if len(text) > maxDocumentTextChars {
 		return documentSource{}, fmt.Sprintf(
 			"this document is %d characters, and one reading addresses at most %d",
-			len(text), maxDocumentTextChars,
-		)
+			len(text), maxDocumentTextChars)
 	}
 	return documentSource{Text: text, Filename: meta.Filename}, ""
 }

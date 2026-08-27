@@ -51,8 +51,7 @@ func activityDiscoverScope(ctx context.Context, arg func(any) int) (string, erro
 }
 
 func activityScopeUnder(ctx context.Context, arg func(any) int,
-	gate func(context.Context, string, func(any) int) (string, error),
-) (string, error) {
+	gate func(context.Context, string, func(any) int) (string, error)) (string, error) {
 	clause, err := gate(ctx, "a", arg)
 	if err != nil {
 		return "", err
@@ -447,8 +446,7 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 	if !ok || p.UserID == (ids.UUID{}) {
 		return ids.UserID{}, fmt.Errorf(
 			"the visit baseline is per-user and this call carries no user: %w",
-			apperrors.ErrPermissionDenied,
-		)
+			apperrors.ErrPermissionDenied)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
 }

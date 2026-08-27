@@ -83,8 +83,7 @@ func (f *flipRunner) exportSince(ctx context.Context, since time.Time) (bool, er
 	}
 	var ok bool
 	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(
-			ctx, `
+		return tx.QueryRow(ctx, `
 			SELECT EXISTS (
 				SELECT 1 FROM audit_log
 				WHERE entity_type = 'workspace' AND action = 'export' AND occurred_at >= $1)`,

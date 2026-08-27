@@ -42,8 +42,7 @@ func TestAnOrganizationEventQueuesTheEnrichPassNow(t *testing.T) {
 		t.Fatalf("organization.created queued %d enrich pass(es), want exactly 1", n)
 	}
 	var workspace string
-	if err := e.Pool.QueryRow(
-		ctx,
+	if err := e.Pool.QueryRow(ctx,
 		`SELECT coalesce(args->>'workspace_id', '') FROM river_job WHERE kind = $1`, kind,
 	).Scan(&workspace); err != nil {
 		t.Fatalf("reading the queued pass: %v", err)

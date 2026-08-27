@@ -89,8 +89,7 @@ func ScheduleAsAgentForTest(
 	}
 	store := sendStore(pool, SendPath{})
 	agentCtx := principal.WithCorrelationID(
-		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor), ids.NewV7(),
-	)
+		principal.WithActor(principal.WithWorkspaceID(ctx, workspace), actor), ids.NewV7())
 	return store.SendOrSchedule(agentCtx, activities.FromActivity(anchor), in,
 		&activities.SendSchedule{At: at, TZ: "Europe/Berlin"},
 		consent.NewGate(consent.NewStore(InstallationDB(pool))),
@@ -110,8 +109,7 @@ func DriveScheduledSendRecoveryForTest(ctx context.Context, pool *pgxpool.Pool) 
 		return err
 	}
 	worker := newScheduledSendRecoveryWorker(
-		identity.NewService(pool), sendStore(pool, SendPath{}), NewScheduleTimer(inserter), slog.New(slog.DiscardHandler),
-	)
+		identity.NewService(pool), sendStore(pool, SendPath{}), NewScheduleTimer(inserter), slog.New(slog.DiscardHandler))
 	return worker.Work(ctx, &river.Job[ScheduledSendRecoveryArgs]{
 		JobRow: &rivertype.JobRow{Attempt: 1, MaxAttempts: 1},
 	})

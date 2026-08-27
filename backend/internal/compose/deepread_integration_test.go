@@ -107,8 +107,7 @@ func newDeepReadTestWorker(e *integration.Env, site *fakeSite, brain completer) 
 func startDeepRead(t *testing.T, e *integration.Env, org ids.UUID) (people.SiteRead, SiteDeepReadArgs) {
 	t.Helper()
 	read, joined, err := e.People.StartSiteRead(
-		e.As(e.Rep1, nil, integration.AdminPerms), orgIDOf(org), seedURL, "human:"+e.Rep1.String(),
-	)
+		e.As(e.Rep1, nil, integration.AdminPerms), orgIDOf(org), seedURL, "human:"+e.Rep1.String())
 	if err != nil {
 		t.Fatalf("StartSiteRead: %v", err)
 	}

@@ -157,8 +157,7 @@ func refuseUnrunnableJob(d extension.JobDeclaration) error {
 func composedJobSpecs(set []composedJob) []jobs.Spec {
 	specs := make([]jobs.Spec, 0, 2*len(set))
 	for _, j := range set {
-		specs = append(
-			specs,
+		specs = append(specs,
 			jobs.Spec{
 				Kind: j.decl.DispatcherKind(),
 				// The args type is shared across every composed job, so GoType

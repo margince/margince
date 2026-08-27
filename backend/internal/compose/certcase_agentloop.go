@@ -171,28 +171,23 @@ func agentLoopToolSpecs(tools []agentLoopTool) ([]mcp.ToolSpec, error) {
 		case strings.TrimSpace(tool.Name) == "":
 			return nil, fmt.Errorf(
 				"%s: the fixture offers a tool with no name, and the name is the only thing a step can call it by",
-				agentLoopSite,
-			)
+				agentLoopSite)
 		case seen[tool.Name]:
 			return nil, fmt.Errorf(
 				"%s: the fixture offers tool %q twice, and the registry holds one entry per name",
-				agentLoopSite, tool.Name,
-			)
+				agentLoopSite, tool.Name)
 		case tool.Name == agentLoopFinalStep:
 			return nil, fmt.Errorf(
 				"%s: the fixture offers a tool named %q, which is the step protocol's own word for ending a run — "+
-					"an expectation could not tell the two apart", agentLoopSite, agentLoopFinalStep,
-			)
+					"an expectation could not tell the two apart", agentLoopSite, agentLoopFinalStep)
 		case strings.TrimSpace(tool.Description) == "":
 			return nil, fmt.Errorf(
 				"%s: tool %q carries no description, and the window prints the description the model chooses it by",
-				agentLoopSite, tool.Name,
-			)
+				agentLoopSite, tool.Name)
 		case !agentLoopSchemaObject(tool.InputSchema):
 			return nil, fmt.Errorf(
 				"%s: tool %q advertises no input schema object, and the window prints the schema the model has to "+
-					"call it by", agentLoopSite, tool.Name,
-			)
+					"call it by", agentLoopSite, tool.Name)
 		}
 		seen[tool.Name] = true
 		specs = append(specs, mcp.ToolSpec{
@@ -222,20 +217,17 @@ func refuseUnrunnableAgentJob(f agentLoopFixture) error {
 	case strings.TrimSpace(f.Goal) == "":
 		return fmt.Errorf(
 			"%s: the fixture carries no goal, and the goal is the prompt's only statement of what to do",
-			agentLoopSite,
-		)
+			agentLoopSite)
 	case strings.TrimSpace(f.TriggerRef) == "":
 		return fmt.Errorf(
 			"%s: the fixture names no trigger, and every run the scheduler starts is one named occurrence",
-			agentLoopSite,
-		)
+			agentLoopSite)
 	}
 	for _, item := range f.Grounding {
 		if strings.TrimSpace(item.TrustTier) == "" {
 			return fmt.Errorf(
 				"%s: seed item %q carries no trust tier, and the tier is what decides whether it enters the prompt "+
-					"raw or inside the run's boundary", agentLoopSite, item.SourceID,
-			)
+					"raw or inside the run's boundary", agentLoopSite, item.SourceID)
 		}
 	}
 	return nil
@@ -252,8 +244,7 @@ func refuseUnreachableAgentStep(want string, specs []mcp.ToolSpec) error {
 	}
 	if strings.TrimSpace(want) == "" {
 		return fmt.Errorf(
-			"%s: the scenario names no step the turn must take, so it asserts nothing", agentLoopSite,
-		)
+			"%s: the scenario names no step the turn must take, so it asserts nothing", agentLoopSite)
 	}
 	offered := make([]string, 0, len(specs))
 	for _, spec := range specs {
@@ -264,8 +255,7 @@ func refuseUnreachableAgentStep(want string, specs []mcp.ToolSpec) error {
 	}
 	return fmt.Errorf(
 		"%s: the scenario expects the turn to call %q, and this window offers %s (or %q to answer the goal)",
-		agentLoopSite, want, strings.Join(offered, ", "), agentLoopFinalStep,
-	)
+		agentLoopSite, want, strings.Join(offered, ", "), agentLoopFinalStep)
 }
 
 // agentLoopSeedContext re-types the fixture's seed items into the loop's own

@@ -234,8 +234,7 @@ func TestCaptureStampsTheMessageItFilesUnderAProject(t *testing.T) {
 	seed := newProjectSeeder(t, e)
 	erp := seed.project(t, "ERP replacement")
 
-	sync(
-		t,
+	sync(t,
 		emailAbout("stamp1@acme.example", "", "["+erp.Key+"] weekly status"),
 		emailAbout("stamp2@acme.example", "", "lunch on Thursday"),
 	)
@@ -280,8 +279,7 @@ func TestCaptureFilesAMessageUnderTheProjectItsSubjectNames(t *testing.T) {
 	// like that, so this one is written straight onto the row.
 	seed.rekey(t, seed.project(t, "Regulatory review"), "RE")
 
-	sync(
-		t,
+	sync(t,
 		emailAbout("pk1@acme.example", "", "["+erp.Key+"] weekly status"),
 		emailAbout("pk2@acme.example", "", "["+erp.Key+"NEXT] evaluation"),
 		emailAbout("pk3@acme.example", "", "["+erp.Key+"] and ["+crm.Key+"] together"),
@@ -501,8 +499,7 @@ func TestCaptureFilesAMessageUnderTheProjectOfItsDeal(t *testing.T) {
 	crm := seed.project(t, "CRM rollout")
 	onOtherProject := seed.dealOnProject(t, "CRM phase one", crm.ID)
 
-	env.syncFiledUnderDeal(
-		t,
+	env.syncFiledUnderDeal(t,
 		map[string][]ids.UUID{
 			"dl1@acme.example": {onProject},
 			"dl2@acme.example": {offProject},

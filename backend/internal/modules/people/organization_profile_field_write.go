@@ -118,8 +118,7 @@ func (s *Store) UpdateOrganizationProfileField(
 	if in.Value == nil {
 		return crmcontracts.CompanyProfileField{}, fmt.Errorf(
 			"a correction carries a value; use the confirm operation to agree without changing one: %w",
-			apperrors.ErrConflict,
-		)
+			apperrors.ErrConflict)
 	}
 	return s.writeProfileField(ctx, orgID, field, in)
 }
@@ -239,8 +238,7 @@ func readProfileFieldRow(
 	ctx context.Context, tx pgx.Tx, orgID ids.OrganizationID, field string,
 ) (evidenceRow, error) {
 	var r evidenceRow
-	err := tx.QueryRow(
-		ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT id, value, source, evidence_snippet, source_url, confidence, verified_at, verified_by, captured_by
 		  FROM organization_profile_field
 		 WHERE organization_id = $1 AND field = $2`,
@@ -264,8 +262,7 @@ func readProfileFieldWire(
 		rowID        ids.UUID
 		fieldV, srcV string
 	)
-	err := tx.QueryRow(
-		ctx, `
+	err := tx.QueryRow(ctx, `
 		SELECT id, field, value, source, captured_by, evidence_snippet, source_url, confidence,
 		       retrieved_at, verified_at, verified_by, updated_at
 		  FROM organization_profile_field

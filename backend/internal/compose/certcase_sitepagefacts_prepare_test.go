@@ -80,8 +80,7 @@ func TestSitePageFactsCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := sitePageFactsCases{}.Prepare(
-				sitePageFactsFixtureJSON(t, tc.kind, tc.text), sitePageFactsJSON(t, tc.want),
-			)
+				sitePageFactsFixtureJSON(t, tc.kind, tc.text), sitePageFactsJSON(t, tc.want))
 			if err == nil {
 				t.Fatalf("a scenario expecting %v prepared", tc.want)
 			}
@@ -127,8 +126,7 @@ func TestSitePageFactsCaseRefusesAPageThatWouldIssueNoCall(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := sitePageFactsCases{}.Prepare(
-				sitePageFactsFixtureJSON(t, tc.kind, tc.text), sitePageFactsJSON(t, sitePageFactsWantAudit),
-			)
+				sitePageFactsFixtureJSON(t, tc.kind, tc.text), sitePageFactsJSON(t, sitePageFactsWantAudit))
 			if err == nil {
 				t.Fatal("a page the fact lane would never call a model for prepared")
 			}

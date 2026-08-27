@@ -30,8 +30,7 @@ import (
 func openDealsWhere(orgPos int, dealScope string) string {
 	return fmt.Sprintf(
 		`WHERE d.organization_id = $%d AND d.status = 'open' AND d.archived_at IS NULL AND (%s)`,
-		orgPos, dealScope,
-	)
+		orgPos, dealScope)
 }
 
 // dealsSection reads the account's open deals plus the two lifetime

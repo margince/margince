@@ -176,4 +176,5 @@ func TestSendMessageMCPLoopSendsOnASendScopedPassportAgainstRealPostgres(t *test
 	if n := c.outboundActivities(t); n != 1 {
 		t.Fatalf("%d outbound activities logged after the approved retry, want 1", n)
 	}
+
 }

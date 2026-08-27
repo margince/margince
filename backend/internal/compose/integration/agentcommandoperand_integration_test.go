@@ -57,8 +57,7 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 
 	wsA := apptest.InstallationWorkspaceUUID(context.Background(), t, e.Owner)
 	rep := ids.NewV7()
-	seedInWorkspace(
-		t, e, wsA,
+	seedInWorkspace(t, e, wsA,
 		stmt(`UPDATE organization SET visibility = 'owner' WHERE id = $1`, orgID),
 		stmt(`INSERT INTO app_user (id, email, display_name) VALUES ($1, 'rep@example.com', 'Rep One')`, rep),
 		// Borrow the bootstrap admin's hash so the rep can actually sign in —

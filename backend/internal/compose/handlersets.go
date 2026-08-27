@@ -114,8 +114,7 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// through the verb the move names, and the only row it writes is its own
 	// per-reader cache entry.
 	s.dealStatusSvc = dealstatus.NewService(
-		pool, s.dealsStore, activities.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)), time.Now,
-	).
+		pool, s.dealsStore, activities.NewStore(InstallationDB(pool)), dealrooms.NewStore(InstallationDB(pool)), time.Now).
 		WithSeats(dealSeatReader(pool))
 	s.dealStatusHandlers = dealstatus.NewHandlers(s.dealStatusSvc)
 	// No provider is registered, which is the supported configuration rather
@@ -131,8 +130,7 @@ func (s *Server) wirePerson360(pool *pgxpool.Pool) {
 	// answers from its deterministic floor rather than 501-ing.
 	s.personDraftHandlers = persondraft.NewHandlers(
 		persondraft.NewService(s.person360Svc, nil).
-			WithEnvelope(draftEnvelope(pool, s.log)), s.sorDispatch.isOverlay,
-	)
+			WithEnvelope(draftEnvelope(pool, s.log)), s.sorDispatch.isOverlay)
 }
 
 // wireProject360 assembles the project page from the module stores the

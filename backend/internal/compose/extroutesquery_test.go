@@ -294,8 +294,7 @@ func TestQueryArgumentsForRefusesADeclarationItCannotDescribe(t *testing.T) {
 	// could send would ever satisfy it, so the route can never answer 200.
 	unsatisfiable := queryVerb()
 	unsatisfiable.InputSchema = json.RawMessage(
-		`{"type":"object","properties":{"payload":{"type":"string"}},"required":["missing"]}`,
-	)
+		`{"type":"object","properties":{"payload":{"type":"string"}},"required":["missing"]}`)
 	if _, err := queryArgumentsFor(unsatisfiable); err == nil {
 		t.Error("a required argument the schema does not declare was accepted")
 	}

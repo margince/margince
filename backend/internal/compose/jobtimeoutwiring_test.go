@@ -127,14 +127,12 @@ func readRegistration(call *ast.CallExpr, name string, typeArgs []ast.Expr) (gov
 	}
 	if len(typeArgs) != 1 {
 		return governedRegistration{}, fmt.Errorf(
-			"%s is called with %d explicit type arguments; write the args type out, because reading an inferred one would need a type checker and this gate reads source", name, len(typeArgs),
-		)
+			"%s is called with %d explicit type arguments; write the args type out, because reading an inferred one would need a type checker and this gate reads source", name, len(typeArgs))
 	}
 	argsType, bare := typeArgs[0].(*ast.Ident)
 	if !bare {
 		return governedRegistration{}, fmt.Errorf(
-			"%s names its args type as %s rather than a bare identifier; api/jobs.yaml states a plain go_type, so there is nothing to join this to", name, types.ExprString(typeArgs[0]),
-		)
+			"%s names its args type as %s rather than a bare identifier; api/jobs.yaml states a plain go_type, so there is nothing to join this to", name, types.ExprString(typeArgs[0]))
 	}
 	reg := governedRegistration{goType: argsType.Name}
 	if wantArgs == 3 {

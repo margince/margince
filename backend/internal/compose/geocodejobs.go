@@ -266,8 +266,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 		// logs the cause for us, so the wrap below is what an operator reads.
 		return jobs.FaultContext(wsCtx, errors.Join(
 			fmt.Errorf("geocoding %q: %w: %w", address.Query, apperrors.ErrProviderUnusable, err),
-			recErr,
-		))
+			recErr))
 	}
 	if !found {
 		// The geocoder answered, and the answer is that this address is not a
@@ -289,8 +288,7 @@ func (w *geocodeWorker) Work(ctx context.Context, job *river.Job[GeocodeOrganiza
 	})
 	return jobs.FaultContext(wsCtx, errors.Join(
 		store.RecordGeocode(wsCtx, orgID, people.GeocodeOK, &point.Lat, &point.Lon, geocodeProvider, address.InputHash),
-		cacheErr,
-	))
+		cacheErr))
 }
 
 // geocodeJobActor binds the principal a geocode lookup runs as: the

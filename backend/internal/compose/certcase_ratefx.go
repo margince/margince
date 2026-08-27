@@ -99,13 +99,11 @@ func (rateFxCases) Prepare(fixture, expected json.RawMessage) (aitasks.PreparedC
 	var stated map[string]string
 	if err := json.Unmarshal(expected, &stated); err != nil {
 		return nil, fmt.Errorf(
-			"rate_extract/fx: the expected answer is not a map of currency code to its rate against the base: %w", err,
-		)
+			"rate_extract/fx: the expected answer is not a map of currency code to its rate against the base: %w", err)
 	}
 	if len(stated) == 0 {
 		return nil, errors.New(
-			"rate_extract/fx: the scenario expects no currency, so no reply could disagree with it",
-		)
+			"rate_extract/fx: the scenario expects no currency, so no reply could disagree with it")
 	}
 	rates, err := convertExpectedRates(stated, want)
 	if err != nil {
@@ -132,8 +130,7 @@ func refuseUnrefreshableSheet(f rateFxFixture, base string, want map[string]bool
 		return errors.New("rate_extract/fx: the fixture tracks an entry that names no currency")
 	case want[base]:
 		return fmt.Errorf(
-			"rate_extract/fx: the fixture tracks its own base %q, which the refresh never asks a page to price", base,
-		)
+			"rate_extract/fx: the fixture tracks its own base %q, which the refresh never asks a page to price", base)
 	}
 	return nil
 }
@@ -154,20 +151,17 @@ func convertExpectedRates(stated map[string]string, want map[string]bool) (map[s
 		case strings.ToUpper(strings.TrimSpace(code)) != code:
 			return nil, fmt.Errorf(
 				"rate_extract/fx: the scenario expects %q, and the anchor upper-cases and trims every currency code before it is compared",
-				code,
-			)
+				code)
 		case !want[code]:
 			return nil, fmt.Errorf(
 				"rate_extract/fx: the scenario expects %q, which this sheet does not track, so the refresh drops it unread",
-				code,
-			)
+				code)
 		}
 		rate, err := fxRateString(stated[code], false)
 		if err != nil {
 			return nil, fmt.Errorf(
 				"rate_extract/fx: the scenario expects %s for %q, which is not a rate the sheet can store: %w",
-				stated[code], code, err,
-			)
+				stated[code], code, err)
 		}
 		out[code] = rateFxExpectation{stated: stated[code], rate: rate}
 	}

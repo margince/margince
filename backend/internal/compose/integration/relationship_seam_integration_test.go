@@ -110,8 +110,7 @@ func createEmployment(ctx context.Context, t *testing.T, r *agents.Registry, per
 	t.Helper()
 	created, err := r.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,"source":"ui"%s}}`,
-		person, org, extra,
-	)))
+		person, org, extra)))
 	if err != nil {
 		t.Fatalf("create_record relationship: %v", err)
 	}
@@ -142,8 +141,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	// value to undo — which is what makes this the case that proves the patch
 	// path serves an edge at all.
 	updated, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-02-01"}}`, edgeID,
-	)))
+		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-02-01"}}`, edgeID)))
 	if err != nil {
 		t.Fatalf("update_record relationship: %v", err)
 	}
@@ -165,8 +163,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	// is the rule that stops a tool call quietly undoing someone's edit, and a
 	// new record type inherits it or it does not hold.
 	_, err = registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"role":"vp_sales"}}`, edgeID,
-	)))
+		`{"record_type":"relationship","id":%q,"fields":{"role":"vp_sales"}}`, edgeID)))
 	var overwrite *workflow.StagedApprovalError
 	if !errors.As(err, &overwrite) {
 		t.Errorf("overwriting a human-written role answered %v, want a staged approval", err)
@@ -177,8 +174,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 	// proven over REST with a real passport
 	// (TestArchivingAnEdgeStagesForAnAgentAndPinsItsVersion).
 	if _, err := registry.Invoke(ctx, "archive_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q}`, edgeID,
-	))); err != nil {
+		`{"record_type":"relationship","id":%q}`, edgeID))); err != nil {
 		t.Fatalf("archive_record relationship: %v", err)
 	}
 	// And it is GONE from the read, like every other archived record: a Read
@@ -187,8 +183,7 @@ func TestAnEmploymentEdgeLivesItsWholeLifeThroughTheToolSurface(t *testing.T) {
 		t.Errorf("reading the archived edge = %v, want ErrNotFound", err)
 	}
 	if _, err := registry.Invoke(ctx, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-04-01"}}`, edgeID,
-	))); !errors.Is(err, apperrors.ErrNotFound) {
+		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-04-01"}}`, edgeID))); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("patching the archived edge = %v, want ErrNotFound", err)
 	}
 }
@@ -254,8 +249,7 @@ func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing
 	}
 	created, err := registry.Invoke(admin, "create_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,"source":"ui"}}`,
-		person.Id, org.Id,
-	)))
+		person.Id, org.Id)))
 	if err != nil {
 		t.Fatalf("create_record relationship as admin: %v", err)
 	}
@@ -292,8 +286,7 @@ func TestAnEdgeIsInvisibleWhenEitherEndpointIsOutOfTheCallersRowScope(t *testing
 	// started_at, not role: role carries a human's audited write from the create,
 	// so patching it would stage for precedence and say nothing about row scope.
 	if _, err := registry.Invoke(stranger, "update_record", json.RawMessage(fmt.Sprintf(
-		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-03-01"}}`, ownEdge,
-	))); err != nil {
+		`{"record_type":"relationship","id":%q,"fields":{"started_at":"2026-03-01"}}`, ownEdge))); err != nil {
 		t.Errorf("Rep3 patching their own edge: %v — the refusals above are a blanket denial, not row scope", err)
 	}
 }
@@ -322,8 +315,7 @@ func TestAnEdgeCannotBeCreatedOverAnEndpointTheCallerCannotSee(t *testing.T) {
 
 	_, err = registry.Invoke(stranger, "create_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,"source":"ui"}}`,
-		mine.Id, hidden.Id,
-	)))
+		mine.Id, hidden.Id)))
 
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound — an edge onto an invisible organization would disclose it", err)
@@ -409,8 +401,7 @@ func TestAnEdgeEndingBeforeItBeganNamesTheDateField(t *testing.T) {
 
 	_, err = registry.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,`+
-			`"started_at":"2026-06-01","ended_at":"2026-01-01","source":"ui"}}`, person.Id, org.Id,
-	)))
+			`"started_at":"2026-06-01","ended_at":"2026-01-01","source":"ui"}}`, person.Id, org.Id)))
 	if err == nil {
 		t.Fatal("an edge that ended before it began was accepted")
 	}
@@ -449,8 +440,7 @@ func TestAProjectStakeholderEdgeKeepsTheProjectItNames(t *testing.T) {
 
 	created, err := registry.Invoke(ctx, "create_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","fields":{"kind":"project_stakeholder","project_id":%q,"person_id":%q,`+
-			`"role":"sponsor","source":"ui"}}`, projectID, person.Id,
-	)))
+			`"role":"sponsor","source":"ui"}}`, projectID, person.Id)))
 	if err != nil {
 		t.Fatalf("create_record project_stakeholder: %v — this is the shape that fails when project_id "+
 			"is dropped between the body and the store", err)
@@ -494,8 +484,7 @@ func TestOneHiddenEndpointIsEnoughToHideTheEdge(t *testing.T) {
 	// Created by the admin, so the edge's existence owes nothing to the stranger.
 	created, err := registry.Invoke(admin, "create_record", json.RawMessage(fmt.Sprintf(
 		`{"record_type":"relationship","fields":{"kind":"employment","person_id":%q,"organization_id":%q,"source":"ui"}}`,
-		mine.Id, hidden.Id,
-	)))
+		mine.Id, hidden.Id)))
 	if err != nil {
 		t.Fatalf("create_record as admin over a mixed pair: %v", err)
 	}

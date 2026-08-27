@@ -118,8 +118,7 @@ func nextMeetingSection(
 		dealID   *ids.UUID
 		occurred *time.Time
 	)
-	err = tx.QueryRow(
-		ctx, fmt.Sprintf(`
+	err = tx.QueryRow(ctx, fmt.Sprintf(`
 		SELECT a.id, a.occurred_at, coalesce(a.subject, ''),
 		       (SELECT dl.deal_id FROM activity_link dl
 		         WHERE dl.activity_id = a.id AND dl.entity_type = 'deal' AND %[3]s
@@ -146,8 +145,8 @@ func nextMeetingSection(
 		  AND %[1]s AND %[2]s%[7]s
 		ORDER BY a.occurred_at, a.id
 		LIMIT 1`,
-			activityScope, activities.OrgLinkedActivityExists(orgPos), dealVisible, nowPos,
-			personVisible, meetingParticipantLimit, opts.projectScope(arg)),
+		activityScope, activities.OrgLinkedActivityExists(orgPos), dealVisible, nowPos,
+		personVisible, meetingParticipantLimit, opts.projectScope(arg)),
 		args...,
 	).Scan(&id, &occurred, &meeting.Subject, &dealID, &meeting.Participants)
 	if errors.Is(err, pgx.ErrNoRows) {

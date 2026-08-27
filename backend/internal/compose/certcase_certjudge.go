@@ -104,8 +104,7 @@ func (certJudgeCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 	var band certJudgeBand
 	if err := json.Unmarshal(expected, &band); err != nil {
 		return nil, fmt.Errorf(
-			"%s: the expected answer is not a score band {min, max}: %w", certJudgeSite, err,
-		)
+			"%s: the expected answer is not a score band {min, max}: %w", certJudgeSite, err)
 	}
 	if err := refuseUnreachableBand(band); err != nil {
 		return nil, err
@@ -126,14 +125,12 @@ func (certJudgeCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 func refuseUngradeableCall(f certJudgeFixture) error {
 	if strings.TrimSpace(f.Rubric) == "" {
 		return fmt.Errorf(
-			"%s: the fixture supplies no rubric, and the grader is instructed to score against one", certJudgeSite,
-		)
+			"%s: the fixture supplies no rubric, and the grader is instructed to score against one", certJudgeSite)
 	}
 	if strings.TrimSpace(f.ScenarioInput) == "" {
 		return fmt.Errorf(
 			"%s: the fixture supplies no scenario input, so the grader is asked whether an answer suits a question it cannot see",
-			certJudgeSite,
-		)
+			certJudgeSite)
 	}
 	return nil
 }
@@ -149,27 +146,22 @@ func refuseUnreachableBand(band certJudgeBand) error {
 	case band.Max == 0:
 		return fmt.Errorf(
 			"%s: the scenario's band ends at 0, which is what an omitted expectation decodes to — name the range a competent grader must score this output in",
-			certJudgeSite,
-		)
+			certJudgeSite)
 	case band.Min < 0 || band.Max > 100:
 		return fmt.Errorf(
 			"%s: the scenario expects %d-%d, and a verdict outside 0-100 is refused before it is ever compared to a band",
-			certJudgeSite, band.Min, band.Max,
-		)
+			certJudgeSite, band.Min, band.Max)
 	case band.Min > band.Max:
 		return fmt.Errorf(
-			"%s: the scenario expects %d-%d, which no score is inside", certJudgeSite, band.Min, band.Max,
-		)
+			"%s: the scenario expects %d-%d, which no score is inside", certJudgeSite, band.Min, band.Max)
 	case band.Min == band.Max:
 		return fmt.Errorf(
 			"%s: the scenario expects exactly %d, and no two graders put the same number on the same answer — express the judgment as a range",
-			certJudgeSite, band.Min,
-		)
+			certJudgeSite, band.Min)
 	case band.Min == 0 && band.Max == 100:
 		return fmt.Errorf(
 			"%s: the scenario expects 0-100, which every readable verdict is inside — no grader could disagree with it",
-			certJudgeSite,
-		)
+			certJudgeSite)
 	}
 	return nil
 }

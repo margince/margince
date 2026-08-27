@@ -67,8 +67,7 @@ func TestOrganizationDocumentsHideAFileWhoseParentIsOutOfScope(t *testing.T) {
 	seedDocument(t, e, org, "organization", org, "nda.pdf", "legal", false)
 
 	docs, _, err := store.ListOrganizationDocuments(
-		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{},
-	)
+		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{})
 	if err != nil {
 		t.Fatalf("list documents: %v", err)
 	}
@@ -185,8 +184,7 @@ func TestAnUploadedDocumentReachesTheAccountLibrary(t *testing.T) {
 	}
 
 	docs, _, err := store.ListOrganizationDocuments(
-		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{},
-	)
+		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{})
 	if err != nil {
 		t.Fatalf("ListOrganizationDocuments: %v", err)
 	}
@@ -319,8 +317,7 @@ func TestAnActivityBorneFileReachesTheLibraryAndStaysGated(t *testing.T) {
 	seedDocument(t, e, org, "activity", hiddenEmail, "their-msa.pdf", "contract", false)
 
 	docs, _, err := store.ListOrganizationDocuments(
-		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{},
-	)
+		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), org, activities.DocumentFilters{})
 	if err != nil {
 		t.Fatalf("ListOrganizationDocuments: %v", err)
 	}
@@ -388,8 +385,7 @@ func TestAnOrganizationMergeCarriesTheDocumentsAcross(t *testing.T) {
 	}
 
 	docs, _, err := files.ListOrganizationDocuments(
-		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), survivor, activities.DocumentFilters{},
-	)
+		e.As(e.Rep1, []ids.UUID{e.Team1}, AccountRepPerms), survivor, activities.DocumentFilters{})
 	if err != nil {
 		t.Fatalf("ListOrganizationDocuments: %v", err)
 	}

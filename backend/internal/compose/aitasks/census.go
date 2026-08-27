@@ -130,8 +130,7 @@ func (r *Registry) Validate() error {
 	}
 	for _, key := range r.caseDupes {
 		problems = append(problems, fmt.Sprintf(
-			"site %s has a second certification case bound (keep the one that certifies the request this build sends, and delete the other)", key,
-		))
+			"site %s has a second certification case bound (keep the one that certifies the request this build sends, and delete the other)", key))
 	}
 
 	declared := map[string]string{} // "task/variant" -> kind
@@ -145,22 +144,19 @@ func (r *Registry) Validate() error {
 		kind, ok := declared[s.key()]
 		if !ok {
 			problems = append(problems, fmt.Sprintf(
-				"site %s is registered but the contract declares no such site (add it to sites[] in ai-tasks.yaml, or delete the registration)", s.key(),
-			))
+				"site %s is registered but the contract declares no such site (add it to sites[] in ai-tasks.yaml, or delete the registration)", s.key()))
 			continue
 		}
 		if s.Kind != kind {
 			problems = append(problems, fmt.Sprintf(
-				"site %s is registered as kind %q but the contract declares %q", s.key(), s.Kind, kind,
-			))
+				"site %s is registered as kind %q but the contract declares %q", s.key(), s.Kind, kind))
 		}
 	}
 
 	for key := range r.cases {
 		if _, registered := r.sites[key]; !registered {
 			problems = append(problems, fmt.Sprintf(
-				"a certification case is bound to site %s, which is not registered (register the site, or delete the case)", key,
-			))
+				"a certification case is bound to site %s, which is not registered (register the site, or delete the case)", key))
 		}
 	}
 
@@ -188,16 +184,14 @@ func (r *Registry) statusProblems() []string {
 			for _, site := range ai.SitesFor(task) {
 				if _, ok := r.Lookup(task, site.Name); !ok {
 					problems = append(problems, fmt.Sprintf(
-						"task %s is shipped but its site %q is not registered", task, site.Name,
-					))
+						"task %s is shipped but its site %q is not registered", task, site.Name))
 				}
 			}
 		case ai.StatusPlanned:
 			for _, s := range r.All() {
 				if s.Task == task {
 					problems = append(problems, fmt.Sprintf(
-						"task %s is planned but site %q is registered — mark it shipped in the contract, or drop the registration", task, s.Variant,
-					))
+						"task %s is planned but site %q is registered — mark it shipped in the contract, or drop the registration", task, s.Variant))
 				}
 			}
 		}
@@ -227,8 +221,7 @@ func (r *Registry) caseProblems() []string {
 			}
 			if _, bound := r.cases[key]; !bound {
 				problems = append(problems, fmt.Sprintf(
-					"site %s is registered but no certification case is bound (bind one in NewTaskCensus, or the site ships uncertifiable)", key,
-				))
+					"site %s is registered but no certification case is bound (bind one in NewTaskCensus, or the site ships uncertifiable)", key))
 			}
 		}
 	}
@@ -250,8 +243,7 @@ func (r *Registry) bindingProblems() []string {
 		}
 		problems = append(problems, fmt.Sprintf(
 			"site %s (kind %q) is bound to a certification case claiming site %s (kind %q) — bind each case under the site its own Site() names",
-			b.site.key(), b.site.Kind, claimed.key(), claimed.Kind,
-		))
+			b.site.key(), b.site.Kind, claimed.key(), claimed.Kind))
 	}
 	return problems
 }
@@ -271,15 +263,13 @@ func (r *Registry) scopeProblems() []string {
 		declared := scoped.CertifiedScope()
 		if !KnownScope(declared) {
 			problems = append(problems, fmt.Sprintf(
-				"site %s declares the certified scope %q, which is not one a record can report", b.site.key(), declared,
-			))
+				"site %s declares the certified scope %q, which is not one a record can report", b.site.key(), declared))
 			continue
 		}
 		if kind := b.site.CertifiedScope(); scopeRank(declared) < scopeRank(kind) {
 			problems = append(problems, fmt.Sprintf(
 				"site %s declares the certified scope %q, which claims more than its kind's %q — a case may only narrow what its site allows",
-				b.site.key(), declared, kind,
-			))
+				b.site.key(), declared, kind))
 		}
 	}
 	return problems

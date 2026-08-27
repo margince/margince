@@ -174,8 +174,7 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 		// In overlay mode the bundle additionally carries the mirror
 		// snapshot and documents where canonical data lives (AC-OV-9) —
 		// P7 stays honestly partial until the flip.
-		if err := tx.QueryRow(
-			ctx, `
+		if err := tx.QueryRow(ctx, `
 			SELECT coalesce(incumbent, '') FROM overlay_mode`,
 		).Scan(&incumbent); err != nil {
 			return fmt.Errorf("export: resolving the installation's SoR mode: %w", err)

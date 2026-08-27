@@ -35,8 +35,7 @@ func orgAuditImages(ctx context.Context, t *testing.T, e *dedupeEnv, orgID ids.O
 	t.Helper()
 	var beforeJSON, afterJSON []byte
 	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		return tx.QueryRow(
-			ctx,
+		return tx.QueryRow(ctx,
 			`SELECT before, after FROM audit_log
 			  WHERE entity_type = 'organization' AND entity_id = $1 AND action = 'update'
 			  ORDER BY occurred_at DESC, id DESC LIMIT 1`, orgID,

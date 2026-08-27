@@ -124,8 +124,7 @@ func validateDocumentField(field documentField, src documentSource) string {
 	}
 	if !valueSupportedByQuote(field) {
 		return fmt.Sprintf(
-			"field %q reports a value its own quote does not contain, so the quote grounds something else", field.Field,
-		)
+			"field %q reports a value its own quote does not contain, so the quote grounds something else", field.Field)
 	}
 	return ""
 }

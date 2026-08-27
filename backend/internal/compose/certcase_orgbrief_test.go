@@ -46,8 +46,7 @@ const orgBriefFixtureJSON = `{
 func prepareOrgBrief(t *testing.T, expected string) aitasks.PreparedCase {
 	t.Helper()
 	prepared, err := orgBriefCases{}.Prepare(
-		json.RawMessage(orgBriefFixtureJSON), json.RawMessage(expected),
-	)
+		json.RawMessage(orgBriefFixtureJSON), json.RawMessage(expected))
 	if err != nil {
 		t.Fatalf("prepare: %v", err)
 	}
@@ -98,8 +97,7 @@ func TestOrgBriefCaseRefusesAnExpectationNoReplyCouldFail(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := (orgBriefCases{}).Prepare(
-				json.RawMessage(orgBriefFixtureJSON), json.RawMessage(expected),
-			); err == nil {
+				json.RawMessage(orgBriefFixtureJSON), json.RawMessage(expected)); err == nil {
 				t.Error("Prepare accepted an expectation no reply could disagree with")
 			}
 		})
@@ -109,8 +107,7 @@ func TestOrgBriefCaseRefusesAnExpectationNoReplyCouldFail(t *testing.T) {
 func TestOrgBriefCaseRefusesAFixtureNoExpectationCouldName(t *testing.T) {
 	unlabelled := `{"name":"Acme","open_deals":[{"label":"","name":"X"}]}`
 	if _, err := (orgBriefCases{}).Prepare(
-		json.RawMessage(unlabelled), json.RawMessage(`["x"]`),
-	); err == nil {
+		json.RawMessage(unlabelled), json.RawMessage(`["x"]`)); err == nil {
 		t.Error("Prepare accepted a fixture whose record carries no label")
 	}
 }

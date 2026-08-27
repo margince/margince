@@ -64,8 +64,7 @@ func signatureEnrichClaim(field, value, evidence string) string {
 
 func signatureEnrichClaimAt(field, value, evidence string, confidence float64) string {
 	return fmt.Sprintf(
-		`{"field":%q,"value":%q,"evidence_snippet":%q,"confidence":%v}`, field, value, evidence, confidence,
-	)
+		`{"field":%q,"value":%q,"evidence_snippet":%q,"confidence":%v}`, field, value, evidence, confidence)
 }
 
 func signatureEnrichFixtureJSON(t *testing.T, body string) json.RawMessage {
@@ -97,8 +96,7 @@ func runSignatureEnrichCase(
 ) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
 	prepared, err := signatureEnrichCases{}.Prepare(
-		signatureEnrichFixtureJSON(t, body), signatureEnrichExpectation(t, want),
-	)
+		signatureEnrichFixtureJSON(t, body), signatureEnrichExpectation(t, want))
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -362,8 +360,7 @@ func TestSignatureEnrichCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := signatureEnrichCases{}.Prepare(
-				signatureEnrichFixtureJSON(t, signatureEnrichMail), signatureEnrichExpectation(t, tc.want),
-			)
+				signatureEnrichFixtureJSON(t, signatureEnrichMail), signatureEnrichExpectation(t, tc.want))
 			if err == nil {
 				t.Fatalf("a scenario expecting %v prepared", tc.want)
 			}
@@ -380,8 +377,7 @@ func TestSignatureEnrichCaseRefusesAnUnreachableExpectation(t *testing.T) {
 func TestSignatureEnrichCaseRefusesAMailWithNoSignatureBlock(t *testing.T) {
 	_, err := signatureEnrichCases{}.Prepare(
 		signatureEnrichFixtureJSON(t, "> On Tuesday, Alice wrote:\n> Could you send the March numbers?\n"),
-		signatureEnrichExpectation(t, signatureEnrichWantTitle),
-	)
+		signatureEnrichExpectation(t, signatureEnrichWantTitle))
 	if err == nil {
 		t.Fatal("a mail with no signature block prepared")
 	}
@@ -408,8 +404,7 @@ func TestSignatureEnrichCaseRefusesAnExpectationItCannotRead(t *testing.T) {
 // certify a prompt built from whatever survived the decode.
 func TestSignatureEnrichCaseRefusesAFixtureItCannotRead(t *testing.T) {
 	_, err := signatureEnrichCases{}.Prepare(
-		json.RawMessage(`"Best, Bob"`), signatureEnrichExpectation(t, signatureEnrichWantTitle),
-	)
+		json.RawMessage(`"Best, Bob"`), signatureEnrichExpectation(t, signatureEnrichWantTitle))
 	if err == nil {
 		t.Fatal("a fixture that is not a candidate prepared")
 	}

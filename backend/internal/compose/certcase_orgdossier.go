@@ -48,8 +48,7 @@ func (orgDossierCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"summarize/org_dossier: the expected answer is not a list of record labels the dossier must cite: %w", err,
-		)
+			"summarize/org_dossier: the expected answer is not a list of record labels the dossier must cite: %w", err)
 	}
 	in, label, err := growthFitInput(f)
 	if err != nil {
@@ -71,8 +70,7 @@ func refuseUngroundableDossier(want []string, label map[string]string) error {
 	for _, name := range want {
 		if _, ok := label[name]; !ok {
 			return fmt.Errorf(
-				"the scenario expects %q, which the fixture does not supply, so the reply could never cite it", name,
-			)
+				"the scenario expects %q, which the fixture does not supply, so the reply could never cite it", name)
 		}
 	}
 	return nil

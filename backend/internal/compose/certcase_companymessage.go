@@ -139,8 +139,7 @@ func (onboardingCompanyMessageCases) Prepare(fixture, expected json.RawMessage) 
 func refuseUnsendableCompanyTurn(f onboardingCompanyMessageFixture) error {
 	if !crmcontracts.OnboardingCompanyMessageRequestLocale(f.Locale).Valid() {
 		return fmt.Errorf(
-			"%s: the fixture asks for the locale %q, which onboarding never answers in", companyMessageSite, f.Locale,
-		)
+			"%s: the fixture asks for the locale %q, which onboarding never answers in", companyMessageSite, f.Locale)
 	}
 	if err := refuseUnsendableCompanyMessage(companyMessageSite, f.Message); err != nil {
 		return err
@@ -155,20 +154,17 @@ func refuseUnsendableCompanyTurn(f onboardingCompanyMessageFixture) error {
 	if strings.TrimSpace(selection.ClarifyId) == "" {
 		return fmt.Errorf(
 			"%s: the fixture's selected option echoes no clarify id, and the transport refuses one that does not",
-			companyMessageSite,
-		)
+			companyMessageSite)
 	}
 	if !crmcontracts.CompanySiteReadSuggestedChangeField(strings.TrimSpace(selection.Field)).Valid() {
 		return fmt.Errorf(
 			"%s: the fixture's selected option names %q, which is not a company field a clarification can offer",
-			companyMessageSite, selection.Field,
-		)
+			companyMessageSite, selection.Field)
 	}
 	if strings.TrimSpace(selection.Value) == "" {
 		return fmt.Errorf(
 			"%s: the fixture's selected option carries no value, and the grant it authorizes is exactly that value",
-			companyMessageSite,
-		)
+			companyMessageSite)
 	}
 	return nil
 }

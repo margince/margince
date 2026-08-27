@@ -125,13 +125,11 @@ func (ratePricingCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 	var stated map[string]ratePricedModel
 	if err := json.Unmarshal(expected, &stated); err != nil {
 		return nil, fmt.Errorf(
-			"rate_extract/pricing: the expected answer is not a map of model id to its prices: %w", err,
-		)
+			"rate_extract/pricing: the expected answer is not a map of model id to its prices: %w", err)
 	}
 	if len(stated) == 0 {
 		return nil, errors.New(
-			"rate_extract/pricing: the scenario expects no model, so no reply could disagree with it",
-		)
+			"rate_extract/pricing: the scenario expects no model, so no reply could disagree with it")
 	}
 	want, err := convertExpectedPrices(stated)
 	if err != nil {
@@ -152,13 +150,11 @@ func (ratePricingCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 func refuseUncrawlablePage(f ratePricingFixture) error {
 	if strings.TrimSpace(f.Provider) == "" {
 		return errors.New(
-			"rate_extract/pricing: the fixture names no provider, and the crawl skips a source without one",
-		)
+			"rate_extract/pricing: the fixture names no provider, and the crawl skips a source without one")
 	}
 	if numberPassages(f.PageText) == "" {
 		return errors.New(
-			"rate_extract/pricing: the fixture supplies no page text, so no passage could ground a price",
-		)
+			"rate_extract/pricing: the fixture supplies no page text, so no passage could ground a price")
 	}
 	return nil
 }
@@ -178,15 +174,13 @@ func convertExpectedPrices(stated map[string]ratePricedModel) (map[string]ratePr
 		case strings.TrimSpace(id) != id:
 			return nil, fmt.Errorf(
 				"rate_extract/pricing: the scenario expects %q, and the gate trims every model id before it is compared",
-				id,
-			)
+				id)
 		}
 		buckets, convertible := allMicro(stated[id].asExtracted())
 		if !convertible {
 			return nil, fmt.Errorf(
 				"rate_extract/pricing: the scenario expects %s for %q, which are not per-MTok decimals the sheet can store",
-				stated[id].priceLine(), id,
-			)
+				stated[id].priceLine(), id)
 		}
 		want[id] = ratePricingExpectation{stated: stated[id], buckets: buckets}
 	}

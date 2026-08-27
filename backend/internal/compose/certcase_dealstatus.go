@@ -86,8 +86,7 @@ func (dealStatusCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"deal_health/deal_status: the expected answer is not a list of timeline labels the card must cite: %w", err,
-		)
+			"deal_health/deal_status: the expected answer is not a list of timeline labels the card must cite: %w", err)
 	}
 	in, label, err := dealStatusInput(f)
 	if err != nil {

@@ -122,8 +122,7 @@ func misfiledKinds(wired map[string]wiredWorker) []string {
 		if got := goTypeName(reflect.TypeOf(wired[kind].args)); got != spec.GoType {
 			findings = append(findings, fmt.Sprintf(
 				"%s is registered with %s, but api/jobs.yaml pairs that kind with %s — River works these rows under the declaration %s carries, not %s's; check what Kind() returns",
-				kind, got, spec.GoType, spec.GoType, got,
-			))
+				kind, got, spec.GoType, spec.GoType, got))
 		}
 	}
 	return findings

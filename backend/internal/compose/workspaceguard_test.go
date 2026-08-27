@@ -223,8 +223,7 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		},
 		OverlayRefetchArgs{}.Kind(): func(ctx context.Context) error {
 			return (&overlayRefetchWorker{log: slog.New(slog.DiscardHandler)}).Work(
-				ctx, &river.Job[OverlayRefetchArgs]{},
-			)
+				ctx, &river.Job[OverlayRefetchArgs]{})
 		},
 		SiteDeepReadArgs{}.Kind(): func(ctx context.Context) error {
 			return (&siteDeepReadWorker{}).Work(ctx, &river.Job[SiteDeepReadArgs]{
@@ -264,8 +263,7 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		// unbound workspace is answered by the guard, not by a nil deref.
 		TranscriptProposeArgs{}.Kind(): func(ctx context.Context) error {
 			return (&transcriptProposeWorker{log: slog.New(slog.DiscardHandler)}).Work(
-				ctx, &river.Job[TranscriptProposeArgs]{Args: TranscriptProposeArgs{}},
-			)
+				ctx, &river.Job[TranscriptProposeArgs]{Args: TranscriptProposeArgs{}})
 		},
 
 		// The document reading refuses before it reaches the store, so a worker
@@ -273,8 +271,7 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		// workspace is answered by the guard, not by a nil deref.
 		DocumentExtractArgs{}.Kind(): func(ctx context.Context) error {
 			return (&documentExtractWorker{log: slog.New(slog.DiscardHandler)}).Work(
-				ctx, &river.Job[DocumentExtractArgs]{Args: DocumentExtractArgs{}},
-			)
+				ctx, &river.Job[DocumentExtractArgs]{Args: DocumentExtractArgs{}})
 		},
 	}
 }

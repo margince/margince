@@ -300,8 +300,7 @@ func (f *flipRunner) importMirrorEstate(ctx context.Context, run migration.Run, 
 		f.log.Error("overlay flip: migration run failed", "run_id", run.ID.String(), "mode", string(mode), "err", err)
 		return migration.Report{}, fmt.Errorf(
 			"the flip's migration run did not complete; it is resumable — re-run the flip to continue from its checkpoint (run %s): %w",
-			run.ID, apperrors.ErrConflict,
-		)
+			run.ID, apperrors.ErrConflict)
 	}
 	return rep, nil
 }

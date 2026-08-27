@@ -162,8 +162,7 @@ func TestOrg360_AReaderWithoutTheActivityGrantGetsRowsAndIsToldTheReasonsAreMiss
 	// to that rep reaches this assertion too.
 	view, err := org360Service(e).Assemble(
 		e.As(e.Rep1, []ids.UUID{e.Team1}, org360NoActivityPerms),
-		ids.From[ids.OrganizationKind](orgID),
-	)
+		ids.From[ids.OrganizationKind](orgID))
 	if err != nil {
 		t.Fatalf("assembling the 360: %v", err)
 	}
@@ -317,8 +316,7 @@ func TestOrg360_ACommitmentNeedsThePersonGrantAndNotOnlyTheRowScope(t *testing.T
 	// rather than handed both.
 	view, err := org360Service(e).Assemble(
 		e.As(e.Rep1, []ids.UUID{e.Team1}, org360NoPersonPerms),
-		ids.From[ids.OrganizationKind](orgID),
-	)
+		ids.From[ids.OrganizationKind](orgID))
 	if err != nil {
 		t.Fatalf("assembling the 360: %v", err)
 	}
@@ -352,8 +350,7 @@ func TestOrg360_ACommitmentByAnInvisiblePersonIsReportedRatherThanDropped(t *tes
 
 	view, err := org360Service(e).Assemble(
 		e.As(e.Rep1, []ids.UUID{e.Team1}, org360OwnScopePerms),
-		ids.From[ids.OrganizationKind](orgID),
-	)
+		ids.From[ids.OrganizationKind](orgID))
 	if err != nil {
 		t.Fatalf("assembling the 360: %v", err)
 	}
@@ -423,8 +420,7 @@ func TestOrg360_ClosedProjectsOverflowingTheCapDoNotClaimMoreWorkInFlight(t *tes
 		}
 		// Through the real writer: a closed project carries a reason the
 		// schema insists on, and a hand-set phase never produces one.
-		if _, err := e.Projects.AdvanceProjectPhase(
-			e.Admin(),
+		if _, err := e.Projects.AdvanceProjectPhase(e.Admin(),
 			ids.From[ids.ProjectKind](ids.UUID(closed.Id)),
 			projects.AdvanceProjectPhaseInput{ToPhase: "closed", Reason: ptrTo("delivered")},
 		); err != nil {

@@ -571,8 +571,7 @@ func TestAnInventedAttributionQuoteIsRefused(t *testing.T) {
 	} {
 		reply := fmt.Sprintf(
 			`{"facts":[],"people":[{"n":"Anna Muster","r":"Chief Executive Officer","q":%q,"m":"anna@acme.example","e":"s0"}]}`,
-			tc.quote,
-		)
+			tc.quote)
 		res, dropped := gatePageFacts(reply, page, menu, idx)
 		if len(res.people) != 0 {
 			t.Fatalf("%s: a quote the page does not carry must be refused: %+v", tc.name, res.people)

@@ -132,8 +132,7 @@ func unregisteredDeclarations(mux *http.ServeMux, verbs []extension.Verb, routes
 			violations = append(violations, fmt.Sprintf(
 				"%s (%s, operation %s) is declared in the merged contract but no route is registered for it, "+
 					"so the contract publishes an endpoint that answers 404. Mount it in MountExtensionRoutes, or "+
-					"remove the operation from extensions/%s/api/%s.", pattern, v.Unit, v.OperationID, v.Unit, v.Contract,
-			))
+					"remove the operation from extensions/%s/api/%s.", pattern, v.Unit, v.OperationID, v.Unit, v.Contract))
 			continue
 		}
 		// Registered is not the same as reachable: a pattern can be recorded and
@@ -157,8 +156,7 @@ func undeclaredRegistrations(verbs []extension.Verb, routes []MountedRoute) []st
 			violations = append(violations, fmt.Sprintf(
 				"%s is a mounted extension route that no contract operation declares, so an authenticated caller "+
 					"can reach a verb no contract granted and no unit manifest asks an operator about. Declare the "+
-					"operation in the unit's api/ fragment, or stop mounting it.", route.Pattern,
-			))
+					"operation in the unit's api/ fragment, or stop mounting it.", route.Pattern))
 		}
 	}
 	return violations

@@ -130,15 +130,13 @@ func (c *JobCensus) everyArgsFieldIsDeclaredAndBack() []string {
 		for _, field := range spec.Args {
 			if !slices.Contains(reading.fields, field.Name) {
 				findings = append(findings, fmt.Sprintf(
-					"%s declares an args field %s that %s does not have — a declaration for a field nobody carries governs nothing", reading.kind, field.Name, spec.GoType,
-				))
+					"%s declares an args field %s that %s does not have — a declaration for a field nobody carries governs nothing", reading.kind, field.Name, spec.GoType))
 			}
 		}
 		for _, name := range reading.fields {
 			if _, found := declaredArg(spec, name); !found {
 				findings = append(findings, fmt.Sprintf(
-					"%s.%s is not declared in api/jobs.yaml — say what it carries: `%s: id`, or a scalar with the reason it is safe in a table Art. 17 erasure never reaches", spec.GoType, name, name,
-				))
+					"%s.%s is not declared in api/jobs.yaml — say what it carries: `%s: id`, or a scalar with the reason it is safe in a table Art. 17 erasure never reaches", spec.GoType, name, name))
 			}
 		}
 	}
@@ -174,8 +172,7 @@ func (c *JobCensus) everyFanOutChildCarriesItsUnitKey() []string {
 		key := units[kind].ArgsKey()
 		if key == "" {
 			findings = append(findings, fmt.Sprintf(
-				"%s is fanned out to but its dispatcher declares no fan_out_unit, so nothing says what one of its rows stands for", kind,
-			))
+				"%s is fanned out to but its dispatcher declares no fan_out_unit, so nothing says what one of its rows stands for", kind))
 			continue
 		}
 		written, err := argsJSONKeys(wired.args)
@@ -186,8 +183,7 @@ func (c *JobCensus) everyFanOutChildCarriesItsUnitKey() []string {
 		if !slices.Contains(written, key) {
 			findings = append(findings, fmt.Sprintf(
 				"%s is fanned out per %s but its rows carry no %q key (they carry %v) — the sweep gauges group on that key, so every child of this kind would be dropped from the count rather than reported as a failure",
-				kind, fanOutUnitName(units[kind]), key, written,
-			))
+				kind, fanOutUnitName(units[kind]), key, written))
 		}
 	}
 	return findings
@@ -235,12 +231,10 @@ func argsFieldNames(args river.JobArgs) ([]string, error) {
 		return nil, errors.New("the registration recorded no args value at all, so there is nothing to read the carried fields off — register the kind with its args type")
 	case marshalsItself(t):
 		return nil, fmt.Errorf(
-			"%s encodes ITSELF: what a row of this kind carries is decided by its own MarshalJSON/MarshalText rather than by its fields, so the declaration in api/jobs.yaml governs nothing and this walk sees nothing. Let the encoder write the struct — and if the method arrived by embedding, make the embedding a named field so what it writes sits under one declared key", t,
-		)
+			"%s encodes ITSELF: what a row of this kind carries is decided by its own MarshalJSON/MarshalText rather than by its fields, so the declaration in api/jobs.yaml governs nothing and this walk sees nothing. Let the encoder write the struct — and if the method arrived by embedding, make the embedding a named field so what it writes sits under one declared key", t)
 	case t.Kind() != reflect.Struct:
 		return nil, fmt.Errorf(
-			"%s is a %s rather than a struct, so what it carries has no field names to hold a declaration to. River persists args as one JSON object per row and api/jobs.yaml governs that object field by field: give the kind a struct whose fields can be named", t, t.Kind(),
-		)
+			"%s is a %s rather than a struct, so what it carries has no field names to hold a declaration to. River persists args as one JSON object per row and api/jobs.yaml governs that object field by field: give the kind a struct whose fields can be named", t, t.Kind())
 	}
 	return jsonFieldsWritten(t), nil
 }

@@ -172,8 +172,7 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 	// — refuse instead of minting a zombie authority object.
 	if !approvals.KindHasDecisionGrants(pol.Tool) {
 		httperr.Write(w, r, fmt.Errorf(
-			"agent gate: %s (%s) has no approval decision mapping: %w", pol.Op, pol.Tool, apperrors.ErrPermissionDenied,
-		))
+			"agent gate: %s (%s) has no approval decision mapping: %w", pol.Op, pol.Tool, apperrors.ErrPermissionDenied))
 		return
 	}
 	target, ok := stagedTarget(w, r, commands, pol, body)
@@ -207,14 +206,12 @@ func stageRefusal(w http.ResponseWriter, r *http.Request, staging agents.Approva
 	if alreadyApproved {
 		httperr.Write(w, r, fmt.Errorf(
 			"a human has already approved this exact request as approval %s — repeat it with the %s: %s header and do not stage another: %w",
-			approvalID, approvalTokenHeader, approvalID, apperrors.ErrRequiresApproval,
-		))
+			approvalID, approvalTokenHeader, approvalID, apperrors.ErrRequiresApproval))
 		return
 	}
 	httperr.Write(w, r, fmt.Errorf(
 		"staged as approval %s — once a human approves it, repeat this exact request with the %s: %s header: %w",
-		approvalID, approvalTokenHeader, approvalID, apperrors.ErrRequiresApproval,
-	))
+		approvalID, approvalTokenHeader, approvalID, apperrors.ErrRequiresApproval))
 }
 
 // stagedTarget answers what the approval binds to: the record type and the id
@@ -256,8 +253,7 @@ func stagedTarget(w http.ResponseWriter, r *http.Request, commands restCommandDe
 	if !info.TargetID.IsZero() && info.TargetType == "" {
 		httperr.Write(w, r, fmt.Errorf(
 			"agent gate: %s stages against a concrete record but declares no record type: %w",
-			pol.Op, apperrors.ErrPermissionDenied,
-		))
+			pol.Op, apperrors.ErrPermissionDenied))
 		return agents.StageInfo{}, false
 	}
 	return info, true
@@ -286,8 +282,7 @@ func resolveStagedTarget(w http.ResponseWriter, r *http.Request, commands restCo
 	if !described {
 		httperr.Write(w, r, fmt.Errorf(
 			"agent gate: %s decodes into no governed call, so nothing can say what an approval of it would "+
-				"bind to: %w", pol.Op, apperrors.ErrPermissionDenied,
-		))
+				"bind to: %w", pol.Op, apperrors.ErrPermissionDenied))
 		return agents.StageInfo{}, false
 	}
 	call, err := decode(pol, commands, r, body)

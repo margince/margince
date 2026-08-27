@@ -38,14 +38,12 @@ func TestListRecordsNarrowsRatherThanAnsweringEveryRow(t *testing.T) {
 		`{"record_type":"deal","fields":{"name":"Narrowed out","pipeline_id":"`+
 			pipeline.String()+`","stage_id":"`+open.String()+`"}}`)
 	if _, err := registry.Invoke(ctx, "advance_deal", json.RawMessage(
-		`{"deal_id":"`+outOfStage.String()+`","to_stage_id":"`+won.String()+`","won_without_contract_reason":"imported"}`,
-	)); err != nil {
+		`{"deal_id":"`+outOfStage.String()+`","to_stage_id":"`+won.String()+`","won_without_contract_reason":"imported"}`)); err != nil {
 		t.Fatalf("moving the second deal out of the filtered stage: %v", err)
 	}
 
 	out, err := registry.Invoke(ctx, "list_records", json.RawMessage(
-		`{"record_type":"deal","filters":{"stage_id":"`+open.String()+`"}}`,
-	))
+		`{"record_type":"deal","filters":{"stage_id":"`+open.String()+`"}}`))
 	if err != nil {
 		t.Fatalf("listing deals in one stage: %v", err)
 	}
@@ -73,8 +71,7 @@ func TestListRecordsNarrowsByOwner(t *testing.T) {
 		`{"record_type":"person","fields":{"full_name":"Owned By Rep Two","owner_id":"`+e.Rep2.String()+`"}}`)
 
 	out, err := registry.Invoke(ctx, "list_records", json.RawMessage(
-		`{"record_type":"person","filters":{"owner_id":"`+e.Rep1.String()+`"}}`,
-	))
+		`{"record_type":"person","filters":{"owner_id":"`+e.Rep1.String()+`"}}`))
 	if err != nil {
 		t.Fatalf("listing people by owner: %v", err)
 	}

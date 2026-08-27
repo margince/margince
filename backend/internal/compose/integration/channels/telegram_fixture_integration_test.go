@@ -240,8 +240,7 @@ func setupTelegram(t *testing.T) *telegramEnv {
 
 	// Option ORDER is the contract WithChannelSurface states: the transport is
 	// composed first, and WithKeyvault is what hands it the vault it seals with.
-	e := apptest.SetupAppWithOptions(
-		t,
+	e := apptest.SetupAppWithOptions(t,
 		compose.WithChannelSurface(),
 		compose.WithKeyvault(vault),
 	)

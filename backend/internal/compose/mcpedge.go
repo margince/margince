@@ -119,8 +119,7 @@ func (s *Server) mcpHandler(pool *pgxpool.Pool, auth *identity.Service, log *slo
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(
 				agents.NewCapabilitiesResource(s.toolRegistry),
-				search.NewQuerySchemaResource(queryVocabulary(pool)), s.appViews,
-			)...,
+				search.NewQuerySchemaResource(queryVocabulary(pool)), s.appViews)...,
 		)),
 		// And the OTHER half of the same promise. A tool's UI.ResourceURI is a
 		// constant baked at registration; whether that document arrived is a

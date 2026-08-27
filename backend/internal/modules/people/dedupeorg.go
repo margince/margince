@@ -185,8 +185,7 @@ func fuzzyOrganization(ctx context.Context, tx pgx.Tx, c OrganizationCandidate) 
 			return OrganizationMatch{}, fmt.Errorf("scan org candidate: %w", err)
 		}
 		score := bestOrgNamePairing(
-			c.DisplayName, c.LegalName, name, rowLegal,
-		)
+			c.DisplayName, c.LegalName, name, rowLegal)
 		if score.Confidence >= dedupeReviewThreshold {
 			score.OrganizationID = id
 			ranked = append(ranked, score)
@@ -281,12 +280,10 @@ func orgTrigramArms(args *[]any, axes ...string) []string {
 		containment := len(distinctiveOrgTokens(axis)) > 0
 		for _, column := range []string{fieldDisplayName, fieldLegalName} {
 			arms = append(arms, fmt.Sprintf(
-				"f_fold_apostrophes(lower(%s)) %% f_fold_apostrophes(lower($%d))", column, n,
-			))
+				"f_fold_apostrophes(lower(%s)) %% f_fold_apostrophes(lower($%d))", column, n))
 			if containment {
 				arms = append(arms, fmt.Sprintf(
-					"f_fold_apostrophes(lower($%d)) <%% f_fold_apostrophes(lower(%s))", n, column,
-				))
+					"f_fold_apostrophes(lower($%d)) <%% f_fold_apostrophes(lower(%s))", n, column))
 			}
 		}
 	}

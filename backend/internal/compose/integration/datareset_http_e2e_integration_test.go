@@ -27,8 +27,7 @@ import (
 // pass if the capability is independent of the posture, and fails against any
 // regression to `allowed && env.IsNonProduction()`.
 func TestResetDataOverHTTP(t *testing.T) {
-	e := apptest.SetupAppWithOptions(
-		t,
+	e := apptest.SetupAppWithOptions(t,
 		compose.WithDataReset(nil, deployconfig.Seeds{}, true),
 		compose.WithNonProduction(runtimeenv.Production),
 		compose.WithDataResetAvailable(true),

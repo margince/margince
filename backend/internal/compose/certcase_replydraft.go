@@ -138,14 +138,12 @@ func (replyDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 			return nil, fmt.Errorf(
 				"%s: the scenario expects the %q register from a workspace with no Voice DNA state, "+
 					"and the plain variant is the only prompt that call can send",
-				replyDraftSite, replyDraftRegisterVoiced,
-			)
+				replyDraftSite, replyDraftRegisterVoiced)
 		}
 	default:
 		return nil, fmt.Errorf(
 			"%s: the scenario expects the register %q, and this site serves %q or %q",
-			replyDraftSite, want, replyDraftRegisterVoiced, replyDraftRegisterPlain,
-		)
+			replyDraftSite, want, replyDraftRegisterVoiced, replyDraftRegisterPlain)
 	}
 	// The anchor keys the learning signal a served draft records; it identifies
 	// the activity, never reaches a prompt, and no model has ever seen one. The
@@ -171,15 +169,13 @@ func refuseUnsendableActivity(activity replyActivityData) error {
 	var fields map[string]string
 	if err := json.Unmarshal(encoded, &fields); err != nil {
 		return fmt.Errorf(
-			"%s: the fixture's activity is not the flat block the prompt carries: %w", replyDraftSite, err,
-		)
+			"%s: the fixture's activity is not the flat block the prompt carries: %w", replyDraftSite, err)
 	}
 	for _, name := range slices.Sorted(maps.Keys(fields)) {
 		if n := len([]rune(fields[name])); n > replyActivityMaxRunes {
 			return fmt.Errorf(
 				"%s: the fixture's %s is %d characters, and the drafter is handed at most %d",
-				replyDraftSite, name, n, replyActivityMaxRunes,
-			)
+				replyDraftSite, name, n, replyActivityMaxRunes)
 		}
 	}
 	return nil
@@ -201,8 +197,7 @@ func replyDraftVoiceState(artifact *replyDraftVoiceArtifact) (voiceContext, erro
 	if strings.TrimSpace(artifact.VoiceProfileMD) == "" {
 		return voiceContext{}, fmt.Errorf(
 			"%s: the fixture's profile carries no derived voice profile, and only a built one is ever active",
-			replyDraftSite,
-		)
+			replyDraftSite)
 	}
 	profileJSON, err := replyDraftStoredJSON(replyDraftProfileArtifact{Exemplars: artifact.Exemplars})
 	if err != nil {
@@ -221,8 +216,7 @@ func replyDraftVoiceState(artifact *replyDraftVoiceArtifact) (voiceContext, erro
 	if shown := ai.VersionExemplars(version); !slices.Equal(shown, artifact.Exemplars) {
 		return voiceContext{}, fmt.Errorf(
 			"%s: the fixture supplies %d verbatim examples and drafting shows %d",
-			replyDraftSite, len(artifact.Exemplars), len(shown),
-		)
+			replyDraftSite, len(artifact.Exemplars), len(shown))
 	}
 	return voiceContext{
 		// The profile id keys the learning signal, never a prompt, so it is

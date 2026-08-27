@@ -54,8 +54,7 @@ func ladderForTask(binding ai.ProviderConfig, profile ai.Profile, task ai.Task) 
 	if err := ai.ValidateTierBinding(profile, ladder[0], binding); err != nil {
 		return ai.RoutingConfig{}, fmt.Errorf(
 			"aicert: MARGINCE_AICERT_MODEL=%s:%s under profile %s: %w",
-			binding.Provider, binding.Model, profile, err,
-		)
+			binding.Provider, binding.Model, profile, err)
 	}
 	// The embed lane is bound to the same model because the ROUTER requires one,
 	// not because certification embeds anything: this lane drives chat tasks and

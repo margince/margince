@@ -158,8 +158,7 @@ func carryConsent(ctx context.Context, tx pgx.Tx, kind consentCarryKind, fromID,
 		return nil
 	}
 	if _, err := tx.Exec(ctx, storekit.SQLf(
-		`UPDATE consent_event SET %[2]s = $2 WHERE %[1]s = $1`, spec.from, spec.to,
-	),
+		`UPDATE consent_event SET %[2]s = $2 WHERE %[1]s = $1`, spec.from, spec.to),
 		fromID, toID); err != nil {
 		return fmt.Errorf("carry the consent proof rows onto the surviving record: %w", err)
 	}
@@ -218,8 +217,7 @@ func repointCarriedConsent(ctx context.Context, tx pgx.Tx, spec consentCarrySpec
 		clearOldKey = storekit.SQLf(", %s = NULL", spec.from)
 	}
 	_, err := tx.Exec(ctx, storekit.SQLf(
-		`UPDATE person_consent SET %[2]s = $2%[3]s WHERE %[1]s = $1`, spec.from, spec.to, clearOldKey,
-	),
+		`UPDATE person_consent SET %[2]s = $2%[3]s WHERE %[1]s = $1`, spec.from, spec.to, clearOldKey),
 		fromID, toID)
 	if err != nil {
 		return fmt.Errorf("re-point the carried consent rows: %w", err)

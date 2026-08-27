@@ -39,7 +39,6 @@ func WithCaptureTrace(tracePayloads bool) Option {
 		// activities holds the label and the person link, and neither may
 		// import the other, so compose injects both.
 		s.pipelineTraceHandlers = pipelinetrace.NewHandlers(pipelinetrace.NewAssembler(
-			traces, activities.NewStore(InstallationDB(pool)), tracePayloads,
-		))
+			traces, activities.NewStore(InstallationDB(pool)), tracePayloads))
 	}
 }

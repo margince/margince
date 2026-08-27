@@ -181,8 +181,7 @@ func fillCommercialStrip(out *struct {
 	OpenPipelineMinorBase *int                `json:"open_pipeline_minor_base,omitempty"`
 	PricedCount           int                 `json:"priced_count"`
 	StalledCount          int                 `json:"stalled_count"`
-}, open pipeline,
-) {
+}, open pipeline) {
 	out.OpenCount = open.OpenCount
 	out.StalledCount = len(open.Stalled)
 	out.PricedCount = open.Priced
@@ -371,8 +370,7 @@ func (a *assembly) lastMeetingAt() (*time.Time, error) {
 		activityScope = scopeAll
 	}
 	var occurred *time.Time
-	err = a.tx.QueryRow(
-		a.ctx, fmt.Sprintf(`
+	err = a.tx.QueryRow(a.ctx, fmt.Sprintf(`
 		SELECT a.occurred_at
 		  FROM activity a
 		 WHERE a.kind = 'meeting' AND a.archived_at IS NULL
@@ -381,7 +379,7 @@ func (a *assembly) lastMeetingAt() (*time.Time, error) {
 		   AND %[1]s AND %[2]s
 		 ORDER BY a.occurred_at DESC, a.id DESC
 		 LIMIT 1`,
-			activityScope, activities.OrgLinkedActivityExists(orgPos), nowPos),
+		activityScope, activities.OrgLinkedActivityExists(orgPos), nowPos),
 		args...,
 	).Scan(&occurred)
 	if errors.Is(err, pgx.ErrNoRows) {

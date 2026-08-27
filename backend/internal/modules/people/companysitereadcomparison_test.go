@@ -340,8 +340,7 @@ func TestValidateSiteReadConfirmationTellsEachRefusalApart(t *testing.T) {
 		})
 	}
 	if err := validateSiteReadConfirmation(
-		SiteRead{Status: "partial", DraftVersion: 3, ProposalHash: "hash-3"}, in,
-	); err != nil {
+		SiteRead{Status: "partial", DraftVersion: 3, ProposalHash: "hash-3"}, in); err != nil {
 		t.Fatalf("a partial read is confirmable: %v", err)
 	}
 }

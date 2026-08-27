@@ -77,8 +77,7 @@ func (fieldExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 	}
 	if len(want) == 0 {
 		return nil, errors.New(
-			"cold_start/field_extract: the scenario expects no field, so no reply could disagree with it",
-		)
+			"cold_start/field_extract: the scenario expects no field, so no reply could disagree with it")
 	}
 	accepted := make(map[string]bool, len(f.AcceptedFields))
 	for _, name := range f.AcceptedFields {
@@ -109,16 +108,13 @@ func refuseUnextractableExpectation(want map[string]string, accepted map[string]
 		switch {
 		case !slices.Contains(extractionFieldNames, name):
 			return fmt.Errorf(
-				"cold_start/field_extract: the scenario expects %q, which this prompt never offers the model", name,
-			)
+				"cold_start/field_extract: the scenario expects %q, which this prompt never offers the model", name)
 		case !accepted[name]:
 			return fmt.Errorf(
-				"cold_start/field_extract: the scenario expects %q, which the fixture's accepted_fields excludes", name,
-			)
+				"cold_start/field_extract: the scenario expects %q, which the fixture's accepted_fields excludes", name)
 		case strings.TrimSpace(want[name]) == "":
 			return fmt.Errorf(
-				"cold_start/field_extract: the scenario expects an empty value for %q, which the gate drops", name,
-			)
+				"cold_start/field_extract: the scenario expects an empty value for %q, which the gate drops", name)
 		}
 	}
 	return nil

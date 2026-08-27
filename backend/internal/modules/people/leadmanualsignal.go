@@ -81,8 +81,7 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 	}
 	if setBy.IsZero() {
 		return crmcontracts.LeadManualSignal{}, fmt.Errorf(
-			"%w: a manual scoring input needs a human behind it", apperrors.ErrPermissionDenied,
-		)
+			"%w: a manual scoring input needs a human behind it", apperrors.ErrPermissionDenied)
 	}
 
 	var out crmcontracts.LeadManualSignal

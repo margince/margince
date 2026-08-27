@@ -23,8 +23,7 @@ import (
 // personState reads the two columns a demotion touches on the person side.
 func (e *promoteConsentEnv) personState(t *testing.T, id ids.UUID) (archived bool, convertedFrom *ids.UUID) {
 	t.Helper()
-	if err := e.owner.QueryRow(
-		context.Background(),
+	if err := e.owner.QueryRow(context.Background(),
 		`SELECT archived_at IS NOT NULL, converted_from_lead_id FROM person WHERE id = $1`, id,
 	).Scan(&archived, &convertedFrom); err != nil {
 		t.Fatal(err)

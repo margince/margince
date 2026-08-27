@@ -254,8 +254,7 @@ func TestColdStartPreviewReturnsEvidencedFieldsAndStagesNothing(t *testing.T) {
 func TestColdStartPreviewRefusesWhatItCannotQuote(t *testing.T) {
 	e := integration.Setup(t)
 	fake := ai.NewFakeClient().Script(
-		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`,
-	)
+		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`)
 	engine := &coldStartEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, fake).ColdStart}, approvals: approvals.NewService(e.DB())}
 
 	var unreadable *unreadableError
@@ -269,8 +268,7 @@ func TestColdStartRefusesWhenNothingSurvivesTheGate(t *testing.T) {
 	e := integration.Setup(t)
 	fake := ai.NewFakeClient().Script(
 		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`,
-		`not even JSON`,
-	)
+		`not even JSON`)
 	brain := fakeModelPath(t, fake).ColdStart
 	engine := &coldStartEngine{extract: evidenceExtractor{fetch: acmePage, brain: brain}, approvals: approvals.NewService(e.DB())}
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.SchedulerPerms)

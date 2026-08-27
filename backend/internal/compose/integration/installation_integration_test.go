@@ -196,6 +196,7 @@ func TestBootstrapSeedsTheAiModelRatePriceSheet(t *testing.T) {
 	if total != want {
 		t.Fatalf("ai_model_rate rows for the bootstrapped workspace = %d, want %d (len(SeedModelRates))", total, want)
 	}
+
 }
 
 // TestBootBindsWithoutReadingASpentBootstrapSecret is the restart an operator

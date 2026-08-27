@@ -176,8 +176,7 @@ func overSendBudget(total int64) error {
 	}
 	return fmt.Errorf(
 		"comms: this message's files total more than %d MiB, which is more than a send may carry: %w",
-		maxSendBytes>>20, connector.ErrFilesNotCarried,
-	)
+		maxSendBytes>>20, connector.ErrFilesNotCarried)
 }
 
 // maxSendBytes caps what ONE message may carry in total.

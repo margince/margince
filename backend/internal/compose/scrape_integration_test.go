@@ -147,8 +147,7 @@ func TestScrapeDegradesHonestly(t *testing.T) {
 	// (a) A visible org with a domain but nothing survives the gate → unreadable.
 	orgID := insertOrg(t, e, e.Rep1, "acme.example", "")
 	allHallucinated := ai.NewFakeClient().Script(
-		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`,
-	)
+		`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"nowhere on the page","confidence":0.9}]}`)
 	engine := &scrapeEngine{extract: evidenceExtractor{fetch: acmePage, brain: fakeModelPath(t, allHallucinated).ColdStart}, people: e.People, approvals: approvals.NewService(e.DB())}
 	var unreadable *unreadableError
 	if _, err := engine.Propose(e.As(e.Rep1, []ids.UUID{e.Team1}, scrapePerms), orgID, ""); !errors.As(err, &unreadable) {

@@ -319,6 +319,5 @@ func jaro(a, b string) float64 {
 // of the query it sits in, where the trigram arm answers first and hides it.
 func personNameKeySQL(expr string) string {
 	return storekit.SQLf(
-		`btrim(regexp_replace(replace(f_fold_apostrophes(lower(%s)), 'ς', 'σ'), '\s+', ' ', 'g'))`, expr,
-	)
+		`btrim(regexp_replace(replace(f_fold_apostrophes(lower(%s)), 'ς', 'σ'), '\s+', ' ', 'g'))`, expr)
 }

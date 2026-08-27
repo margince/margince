@@ -122,8 +122,7 @@ func (h importHandlers) profileAndStore(
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
 		return crmcontracts.ImportSourceProfile{}, fmt.Errorf(
-			"no workspace is bound to this request: %w", apperrors.ErrPermissionDenied,
-		)
+			"no workspace is bound to this request: %w", apperrors.ErrPermissionDenied)
 	}
 	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), importBlobKind, ids.NewV7().String())
 	if err := h.blobs.Put(ctx, key, bytes.NewReader(body), int64(len(body)), "text/csv"); err != nil {
@@ -286,8 +285,7 @@ func (h importHandlers) commitRun(
 	if run.Mapping == nil {
 		return crmcontracts.ImportRun{}, fmt.Errorf(
 			"import run %s carries no mapping, so it is not an approvable import: %w",
-			run.ID, apperrors.ErrConflict,
-		)
+			run.ID, apperrors.ErrConflict)
 	}
 	if h.blobs == nil {
 		return crmcontracts.ImportRun{}, errNoObjectStore

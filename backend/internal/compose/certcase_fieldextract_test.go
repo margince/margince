@@ -103,8 +103,7 @@ var fieldExtractWantLegalName = map[string]string{
 
 func TestFieldExtractCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 	legalNameClaim := fieldExtractClaim(
-		string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH", "Impressum: Acme Robotics GmbH",
-	)
+		string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH", "Impressum: Acme Robotics GmbH")
 
 	cases := []struct {
 		name       string
@@ -126,8 +125,7 @@ func TestFieldExtractCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			name: "every claim quotes something the page never said",
 			want: fieldExtractWantLegalName,
 			reply: fieldExtractReply(fieldExtractClaim(
-				string(crmcontracts.ColdStartFieldFieldLegalName), "Globex SE", "Globex SE, a subsidiary of Acme",
-			)),
+				string(crmcontracts.ColdStartFieldFieldLegalName), "Globex SE", "Globex SE, a subsidiary of Acme")),
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: dropEvidenceNotOnPage,
 		},
@@ -151,8 +149,7 @@ func TestFieldExtractCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			name: "a grounded fact the scenario disagrees with",
 			want: fieldExtractWantLegalName,
 			reply: fieldExtractReply(fieldExtractClaim(
-				string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics", "Acme Robotics GmbH builds warehouse robots",
-			)),
+				string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics", "Acme Robotics GmbH builds warehouse robots")),
 			wantResult: aitasks.OutcomeWrongAnswer,
 			wantDetail: "Acme Robotics GmbH",
 		},
@@ -189,11 +186,9 @@ func TestFieldExtractCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 func TestFieldExtractCaseReportsGateDropsEvenWhenItAccepts(t *testing.T) {
 	outcome, _ := runFieldExtractCase(t, fieldExtractWantLegalName, fieldExtractReply(
 		fieldExtractClaim(
-			string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH", "Impressum: Acme Robotics GmbH",
-		),
+			string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH", "Impressum: Acme Robotics GmbH"),
 		fieldExtractClaim(
-			string(crmcontracts.ColdStartFieldFieldValueProposition), "we ship to 40 countries", "Acme ships to 40 countries",
-		),
+			string(crmcontracts.ColdStartFieldFieldValueProposition), "we ship to 40 countries", "Acme ships to 40 countries"),
 	))
 
 	if outcome.Result != aitasks.OutcomeAccepted {
@@ -225,8 +220,7 @@ func TestFieldExtractCaseComparesValuesTheWayTheGateComparesEvidence(t *testing.
 	}
 	trace, err := prepared.Run(context.Background(), &fieldExtractCompleterStub{
 		reply: fieldExtractReply(fieldExtractClaim(
-			string(crmcontracts.ColdStartFieldFieldValueProposition), "Acme’s  promise", "cut picking time in half",
-		)),
+			string(crmcontracts.ColdStartFieldFieldValueProposition), "Acme’s  promise", "cut picking time in half")),
 	})
 	if err != nil {
 		t.Fatalf("running the case: %v", err)
@@ -263,8 +257,7 @@ func TestFieldExtractFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 // inspect.
 func TestFieldExtractCaseTraceCarriesTheRequestItIssued(t *testing.T) {
 	outcome, trace := runFieldExtractCase(t, fieldExtractWantLegalName, fieldExtractReply(fieldExtractClaim(
-		string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH", "Impressum: Acme Robotics GmbH",
-	)))
+		string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH", "Impressum: Acme Robotics GmbH")))
 
 	if outcome.Result != aitasks.OutcomeAccepted {
 		t.Fatalf("Result = %q (%s), want accepted", outcome.Result, outcome.Detail)

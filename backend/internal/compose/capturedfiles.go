@@ -24,8 +24,7 @@ import (
 // errStagedFileNotOurs marks a staged file that did not come from this
 // adapter's own Stage call — a wiring mistake, never a runtime condition.
 var errStagedFileNotOurs = errors.New(
-	"compose: a captured file was staged by something other than the timeline store",
-)
+	"compose: a captured file was staged by something other than the timeline store")
 
 // capturedFileKeeper adapts the timeline store to capture's seam.
 type capturedFileKeeper struct {

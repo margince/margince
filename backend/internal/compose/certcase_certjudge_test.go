@@ -60,8 +60,7 @@ func certJudgeReply(score, reason string) string {
 func runCertJudgeCase(t *testing.T, expected json.RawMessage, reply string) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
 	prepared, err := certJudgeCases{}.Prepare(
-		certJudgeFixtureOf(t, certJudgeRubric, certJudgeInput, certJudgeAnswer), expected,
-	)
+		certJudgeFixtureOf(t, certJudgeRubric, certJudgeInput, certJudgeAnswer), expected)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -188,8 +187,7 @@ func TestCertJudgeCaseRefusesAnUnreachableExpectation(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := certJudgeCases{}.Prepare(
-				certJudgeFixtureOf(t, certJudgeRubric, certJudgeInput, certJudgeAnswer), tc.expected,
-			)
+				certJudgeFixtureOf(t, certJudgeRubric, certJudgeInput, certJudgeAnswer), tc.expected)
 			if err == nil {
 				t.Fatal("an unreachable expectation prepared")
 			}
@@ -214,8 +212,7 @@ func TestCertJudgeCaseRefusesACallItCouldNotGrade(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := certJudgeCases{}.Prepare(
-				certJudgeFixtureOf(t, tc.rubric, tc.input, certJudgeAnswer), certJudgeBandOf(t, 70, 100),
-			)
+				certJudgeFixtureOf(t, tc.rubric, tc.input, certJudgeAnswer), certJudgeBandOf(t, 70, 100))
 			if err == nil {
 				t.Fatal("a call the grader could not have made prepared")
 			}
@@ -231,8 +228,7 @@ func TestCertJudgeCaseRefusesACallItCouldNotGrade(t *testing.T) {
 // scenario asking whether the grader passes an empty answer must be runnable.
 func TestCertJudgeCaseGradesAnEmptyCandidateOutput(t *testing.T) {
 	prepared, err := certJudgeCases{}.Prepare(
-		certJudgeFixtureOf(t, certJudgeRubric, certJudgeInput, ""), certJudgeBandOf(t, 0, 20),
-	)
+		certJudgeFixtureOf(t, certJudgeRubric, certJudgeInput, ""), certJudgeBandOf(t, 0, 20))
 	if err != nil {
 		t.Fatalf("an empty candidate output is one production grades: %v", err)
 	}

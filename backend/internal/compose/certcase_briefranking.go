@@ -98,8 +98,7 @@ func (briefRankingCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pre
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"brief_ranking/rank: the expected answer is not a best-first list of candidate labels: %w", err,
-		)
+			"brief_ranking/rank: the expected answer is not a best-first list of candidate labels: %w", err)
 	}
 	if err := refuseUnreachableRanking(want, f); err != nil {
 		return nil, err
@@ -135,8 +134,7 @@ func refuseUnrankableQueue(f briefRankingFixture) error {
 	if len(f.Candidates) < 2 {
 		return fmt.Errorf(
 			"brief_ranking/rank: the fixture supplies %d candidates, and a queue of fewer than two is returned unread — the model is never called",
-			len(f.Candidates),
-		)
+			len(f.Candidates))
 	}
 	seen := make(map[string]bool, len(f.Candidates))
 	for i, c := range f.Candidates {
@@ -148,8 +146,7 @@ func refuseUnrankableQueue(f briefRankingFixture) error {
 		case i > 0 && c.Composite > f.Candidates[i-1].Composite:
 			return fmt.Errorf(
 				"brief_ranking/rank: the fixture lists %q (composite %g) above %q (composite %g), which the deterministic composite-descending order never hands the ranker",
-				f.Candidates[i-1].Label, f.Candidates[i-1].Composite, c.Label, c.Composite,
-			)
+				f.Candidates[i-1].Label, f.Candidates[i-1].Composite, c.Label, c.Composite)
 		}
 		seen[c.Label] = true
 	}
@@ -170,8 +167,7 @@ func refuseUnreachableRanking(want []string, f briefRankingFixture) error {
 	if len(want) > len(f.Candidates) {
 		return fmt.Errorf(
 			"brief_ranking/rank: the scenario expects %d ranked deals where the fixture supplies %d candidates",
-			len(want), len(f.Candidates),
-		)
+			len(want), len(f.Candidates))
 	}
 	carried := make(map[string]bool, len(f.Candidates))
 	for _, c := range f.Candidates {
@@ -183,12 +179,10 @@ func refuseUnreachableRanking(want []string, f briefRankingFixture) error {
 		case !carried[label]:
 			return fmt.Errorf(
 				"brief_ranking/rank: the scenario expects %q, which the fixture does not supply, and the queue only ever contains its own candidates",
-				label,
-			)
+				label)
 		case expected[label]:
 			return fmt.Errorf(
-				"brief_ranking/rank: the scenario expects %q twice, and the queue ranks every candidate exactly once", label,
-			)
+				"brief_ranking/rank: the scenario expects %q twice, and the queue ranks every candidate exactly once", label)
 		}
 		expected[label] = true
 	}
@@ -258,14 +252,12 @@ func (c *briefRankingCase) repaired(order []ids.UUID, ranked []briefs.BriefQueue
 	if len(order) != len(ranked) {
 		return fmt.Sprintf(
 			"the model ordered %d ids where the queue holds %d candidates, so the ranker completed the order itself",
-			len(order), len(ranked),
-		)
+			len(order), len(ranked))
 	}
 	for i := range order {
 		if ranked[i].DealID != order[i] {
 			return fmt.Sprintf(
-				"the model's id at position %d is not a candidate it was given, or one it had already ranked", i+1,
-			)
+				"the model's id at position %d is not a candidate it was given, or one it had already ranked", i+1)
 		}
 	}
 	return ""

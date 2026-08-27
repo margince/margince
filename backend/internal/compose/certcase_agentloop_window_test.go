@@ -67,8 +67,7 @@ func TestAgentLoopCatalogWindowOffersTheRegisteredSurface(t *testing.T) {
 
 	prepared, err := agentLoopCases{}.Prepare(
 		agentLoopFixtureJSON(t, agentLoopCatalogFixture()),
-		agentLoopExpectationJSON(t, agentLoopCatalogRead),
-	)
+		agentLoopExpectationJSON(t, agentLoopCatalogRead))
 	if err != nil {
 		t.Fatalf("preparing a catalog scenario: %v", err)
 	}

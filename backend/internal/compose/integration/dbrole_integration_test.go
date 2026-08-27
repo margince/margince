@@ -33,8 +33,7 @@ func TestAssertRuntimeRoleRefusesTheOwnerPool(t *testing.T) {
 	// superuser. An owner that holds neither would make the assertion below
 	// pass or fail for reasons that have nothing to do with the code.
 	var super, bypass bool
-	if err := owner.QueryRow(
-		ctx,
+	if err := owner.QueryRow(ctx,
 		`SELECT rolsuper, rolbypassrls FROM pg_roles WHERE rolname = current_user`,
 	).Scan(&super, &bypass); err != nil {
 		t.Fatalf("reading the owner role's attributes: %v", err)
@@ -98,8 +97,7 @@ func TestAssertRuntimeRoleRefusesARoleOwningTheExtSchema(t *testing.T) {
 	}
 	owner := OwnerConn(t)
 	var priorOwner string
-	if err := owner.QueryRow(
-		ctx,
+	if err := owner.QueryRow(ctx,
 		`SELECT pg_get_userbyid(nspowner) FROM pg_namespace WHERE nspname = 'ext'`,
 	).Scan(&priorOwner); err != nil {
 		t.Fatalf("reading the ext schema's owner: %v", err)

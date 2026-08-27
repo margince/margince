@@ -170,8 +170,7 @@ func TestSiteProfileCaseAcceptsWhatItGroundsAndTheScenarioExpects(t *testing.T) 
 			},
 			reply: siteProfileReply(siteProfileClaim(
 				string(crmcontracts.ColdStartFieldFieldValueProposition),
-				"industrial robots and automation lines", siteProfileSnippetID(t, "industrial robots"),
-			)),
+				"industrial robots and automation lines", siteProfileSnippetID(t, "industrial robots"))),
 		},
 	})
 }
@@ -194,8 +193,7 @@ func TestSiteProfileCaseReportsAReplyTheGateRefusesEntirely(t *testing.T) {
 			name: "a citation outside this call's own index",
 			want: siteProfileWantLegalName,
 			reply: siteProfileReply(siteProfileClaim(
-				string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH", "s99",
-			)),
+				string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH", "s99")),
 			wantDetail: dropSnippetIDUnknown,
 		},
 		{
@@ -253,8 +251,7 @@ func TestSiteProfileCaseReportsAReplyThatGroundsNothingAsAnAbstention(t *testing
 func siteProfileLegalNameClaim(t *testing.T, value string) string {
 	t.Helper()
 	return siteProfileClaim(
-		string(crmcontracts.ColdStartFieldFieldLegalName), value, siteProfileSnippetID(t, "Acme Robotics GmbH"),
-	)
+		string(crmcontracts.ColdStartFieldFieldLegalName), value, siteProfileSnippetID(t, "Acme Robotics GmbH"))
 }
 
 // The overlap check on a paraphrase field is warning-class: the field survives,
@@ -266,12 +263,10 @@ func TestSiteProfileCaseReportsTheWarningClassOverlapItAccepts(t *testing.T) {
 	outcome, _ := runSiteProfileCase(t, siteProfileWantLegalName, siteProfileReply(
 		siteProfileClaim(
 			string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH",
-			siteProfileSnippetID(t, "Acme Robotics GmbH"),
-		),
+			siteProfileSnippetID(t, "Acme Robotics GmbH")),
 		siteProfileClaim(
 			string(crmcontracts.ColdStartFieldFieldIcp), "Fertigungsbetriebe in der DACH-Region",
-			siteProfileSnippetID(t, "industrial robots"),
-		),
+			siteProfileSnippetID(t, "industrial robots")),
 	))
 
 	if outcome.Result != aitasks.OutcomeAccepted {
@@ -325,8 +320,7 @@ func TestSiteProfileFixtureCarriesOnlyWhatProductionIsGiven(t *testing.T) {
 func TestSiteProfileCaseTraceCarriesTheRequestItIssued(t *testing.T) {
 	outcome, trace := runSiteProfileCase(t, siteProfileWantLegalName, siteProfileReply(siteProfileClaim(
 		string(crmcontracts.ColdStartFieldFieldLegalName), "Acme Robotics GmbH",
-		siteProfileSnippetID(t, "Acme Robotics GmbH"),
-	)))
+		siteProfileSnippetID(t, "Acme Robotics GmbH"))))
 
 	if outcome.Result != aitasks.OutcomeAccepted {
 		t.Fatalf("Result = %q (%s), want accepted", outcome.Result, outcome.Detail)

@@ -87,8 +87,7 @@ func (voiceEvalScoresCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	var order []int
 	if err := json.Unmarshal(expected, &order); err != nil {
 		return nil, fmt.Errorf(
-			"%s: the expected answer is not a ranking of draft numbers, best first: %w", voiceEvalScoresSite, err,
-		)
+			"%s: the expected answer is not a ranking of draft numbers, best first: %w", voiceEvalScoresSite, err)
 	}
 	if err := refuseUnrankableOrder(order, f.Drafts); err != nil {
 		return nil, err
@@ -105,14 +104,12 @@ func refuseUnjudgeablePrompt(f voiceEvalScoresFixture) error {
 	if strings.TrimSpace(f.AuthorSample) == "" {
 		return fmt.Errorf(
 			"%s: the fixture supplies no author sample, and the drafts are scored against one",
-			voiceEvalScoresSite,
-		)
+			voiceEvalScoresSite)
 	}
 	if len(f.Drafts) != voiceEvalRepeatsPerPrompt {
 		return fmt.Errorf(
 			"%s: the fixture supplies %d drafts, and the evaluation judges all %d repeats of one prompt in one call",
-			voiceEvalScoresSite, len(f.Drafts), voiceEvalRepeatsPerPrompt,
-		)
+			voiceEvalScoresSite, len(f.Drafts), voiceEvalRepeatsPerPrompt)
 	}
 	return nil
 }
@@ -129,8 +126,7 @@ func refuseUnrankableOrder(order []int, drafts []string) error {
 	if len(order) < 2 {
 		return fmt.Errorf(
 			"%s: the scenario ranks %d drafts, which compares nothing — a ranking needs two",
-			voiceEvalScoresSite, len(order),
-		)
+			voiceEvalScoresSite, len(order))
 	}
 	named := make(map[int]bool, len(order))
 	for _, number := range order {
@@ -145,8 +141,7 @@ func refuseUnrankableOrder(order []int, drafts []string) error {
 			return fmt.Errorf(
 				"%s: the scenario ranks draft %d, and draft %d is empty — an unusable draft's score is discarded "+
 					"before it is compared to anything",
-				voiceEvalScoresSite, number, number,
-			)
+				voiceEvalScoresSite, number, number)
 		}
 		named[number] = true
 	}
@@ -229,8 +224,7 @@ func (c *voiceEvalScoresCase) brokenComparisons(scores []float64) []string {
 		}
 		out = append(out, fmt.Sprintf(
 			"draft %d scores %.4f and draft %d scores %.4f, where the scenario expects draft %d above draft %d",
-			above, scores[above-1], below, scores[below-1], above, below,
-		))
+			above, scores[above-1], below, scores[below-1], above, below))
 	}
 	return out
 }

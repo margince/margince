@@ -274,8 +274,7 @@ func followUpPrecheck() approvals.ReleasePrecheck {
 		}
 		if _, err := time.Parse(time.DateOnly, proposal.DueDate); err != nil {
 			return &approvals.InvalidEditError{Cause: fmt.Errorf(
-				"the due date %q is not a date — write it as YYYY-MM-DD", proposal.DueDate,
-			)}
+				"the due date %q is not a date — write it as YYYY-MM-DD", proposal.DueDate)}
 		}
 		return nil
 	}

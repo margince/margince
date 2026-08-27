@@ -162,8 +162,7 @@ func splitHumanOwnedUpdate(w http.ResponseWriter, r *http.Request, next http.Han
 			// admitted unprobed.
 			httperr.Write(w, r, fmt.Errorf(
 				"agent gate: %s routes update_record without a target id in {%s} — the ownership probe cannot run: %w",
-				pol.Op, param, apperrors.ErrPermissionDenied,
-			))
+				pol.Op, param, apperrors.ErrPermissionDenied))
 			return
 		}
 		httperr.Write(w, r, err)
@@ -276,8 +275,7 @@ func applyAutoExecuteAndStageResidue(w http.ResponseWriter, r *http.Request, nex
 	if uErr := dec.Decode(&record); uErr != nil {
 		httperr.Write(w, r, fmt.Errorf(
 			"agent gate: %s applied the permitted fields, but its response cannot carry the staging note for the withheld human-edited fields (%s): %w",
-			pol.Op, strings.Join(split.Conflicts, ", "), uErr,
-		))
+			pol.Op, strings.Join(split.Conflicts, ", "), uErr))
 		return
 	}
 	// No version pin travels from here, and the residue is still staged against
@@ -327,13 +325,11 @@ func splitStagingNote(conflicts []string, approvalID ids.ApprovalID, alreadyAppr
 	if alreadyApproved {
 		return fmt.Sprintf(
 			"fields %s were last edited by a human and were NOT applied; a human has already approved this exact overwrite as approval %s — repeat this request with ONLY those fields and the %s: %s header, and do not stage another",
-			fields, approvalID, approvalTokenHeader, approvalID,
-		)
+			fields, approvalID, approvalTokenHeader, approvalID)
 	}
 	return fmt.Sprintf(
 		"fields %s were last edited by a human and were NOT applied; staged as approval %s — once a human approves it, repeat this request with ONLY those fields and the %s: %s header",
-		fields, approvalID, approvalTokenHeader, approvalID,
-	)
+		fields, approvalID, approvalTokenHeader, approvalID)
 }
 
 // bufferedResponse holds a handler's answer so the gate can decide

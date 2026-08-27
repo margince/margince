@@ -110,8 +110,7 @@ func TestLadderForTaskCarriesTheEndpointToEveryRung(t *testing.T) {
 func TestLadderForTaskRefusesACloudModelUnderASovereignProfile(t *testing.T) {
 	_, err := ladderForTask(
 		ai.ProviderConfig{Provider: "anthropic", Model: "claude-cert-test"},
-		ai.ProfileSovereign, ai.TaskColdStart,
-	)
+		ai.ProfileSovereign, ai.TaskColdStart)
 	if err == nil {
 		t.Fatal("a cloud binding under profile sovereign was accepted; the run would have built the client and called api.anthropic.com")
 	}
@@ -130,8 +129,7 @@ func TestLadderForTaskRefusesACloudModelUnderASovereignProfile(t *testing.T) {
 func TestLadderForTaskAcceptsALocalModelUnderASovereignProfile(t *testing.T) {
 	bound, err := ladderForTask(
 		ai.ProviderConfig{Provider: "ollama", Model: "qwen3:14b"},
-		ai.ProfileSovereign, ai.TaskColdStart,
-	)
+		ai.ProfileSovereign, ai.TaskColdStart)
 	if err != nil {
 		t.Fatalf("a local binding under profile sovereign must run, got %v", err)
 	}

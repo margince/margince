@@ -233,8 +233,7 @@ func newAnchorEnv(t *testing.T) *anchorEnv {
 	t.Helper()
 	base := setupCapturePrivacy(t)
 	ctx := principal.WithCorrelationID(
-		principal.WithWorkspaceID(context.Background(), base.ws), ids.NewV7(),
-	)
+		principal.WithWorkspaceID(context.Background(), base.ws), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:" + base.admin.String(), UserID: base.admin,
 		Permissions: principal.Permissions{

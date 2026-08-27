@@ -90,13 +90,11 @@ func (w *csvWriters) resolveEmployer(ctx context.Context, name string) (employer
 	switch {
 	case !ok:
 		return employerResolution{reason: fmt.Sprintf(
-			"no company named %q is in the CRM, so there was nothing to link this person to", strings.TrimSpace(name),
-		)}, nil
+			"no company named %q is in the CRM, so there was nothing to link this person to", strings.TrimSpace(name))}, nil
 	case hit.count > 1:
 		return employerResolution{reason: fmt.Sprintf(
 			"more than one company is named %q, so which one employs this person is a question only a human can answer",
-			strings.TrimSpace(name),
-		)}, nil
+			strings.TrimSpace(name))}, nil
 	default:
 		return employerResolution{id: hit.id, found: true}, nil
 	}
@@ -223,8 +221,7 @@ func (w *csvWriters) linkEmployer(ctx context.Context, a migration.Assoc) (migra
 		// The row never landed — refused, skipped, or not yet committed. The
 		// person is the thing missing, so that is what the report says.
 		return migration.AssocResult{Reason: fmt.Sprintf(
-			"the person identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID,
-		)}, nil
+			"the person identified by %q was not imported, so there was nobody to link to %q", a.FromID, a.ToID)}, nil
 	}
 	resolved, err := w.resolveEmployer(ctx, a.ToID)
 	if err != nil {

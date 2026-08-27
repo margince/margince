@@ -65,8 +65,7 @@ var storeBuilders = regexp.MustCompile(`(providerRunStore|workspaceJobDB|Install
 // no actor in it — the precise bug this gate exists to catch, sailing past a
 // check that only asked whether the name appeared.
 var actorBinders = regexp.MustCompile(
-	`\w+\s*(=|:=)\s*(providerJobActor|principal\.WithActor)\(`,
-)
+	`\w+\s*(=|:=)\s*(providerJobActor|principal\.WithActor)\(`)
 
 // workMethod matches a River worker's entry point and captures its receiver,
 // which is the worker's name in the failure message.

@@ -142,8 +142,7 @@ func newTranscriptProposeWorker(pool *pgxpool.Pool, brain completer, log *slog.L
 	}
 	if brain != nil {
 		worker.proposer = NewTranscriptProposer(
-			pool, brain, approvalsServiceWithEffects(pool), time.Now, log,
-		)
+			pool, brain, approvalsServiceWithEffects(pool), time.Now, log)
 	}
 	return worker
 }
