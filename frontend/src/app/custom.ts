@@ -152,12 +152,42 @@ export type CustomScreenRegistry = ReadonlyMap<string, CustomScreen>;
  * is a fork's, and a work-in-progress file there must not stop the product
  * compiling.
  */
-export const customScreens: CustomScreenRegistry = new Map(
-  Object.values(declared)
-    .map((module) => module.screen)
-    .filter((screen): screen is CustomScreen => screen !== undefined)
-    .map((screen) => [screen.key, screen]),
-);
+export const customScreens: CustomScreenRegistry = buildRegistry(declared);
+
+/**
+ * The registry, refusing a key claimed twice.
+ *
+ * A Map would silently keep the last of them, and the loser would be a screen
+ * with a directory, a component and a rail row that no address reaches — the
+ * failure this seam is worst at, because there is no error to read and nothing
+ * looks wrong. It THROWS, at module load, so a fork learns on its first build
+ * rather than from a page that never opens.
+ *
+ * A throw and not a console warning: the registry is what the router dispatches
+ * on, and a build where two screens claim one address has no correct behaviour
+ * to fall back to.
+ */
+export function buildRegistry(
+  modules: Record<string, { readonly screen?: CustomScreen }>,
+): CustomScreenRegistry {
+  const registry = new Map<string, CustomScreen>();
+  for (const [path, module] of Object.entries(modules)) {
+    const screen = module.screen;
+    if (screen === undefined) {
+      continue;
+    }
+    const claimed = registry.get(screen.key);
+    if (claimed !== undefined) {
+      throw new Error(
+        `two custom screens claim the key "${screen.key}" (${path} is the second). ` +
+          "The key is the address segment that reaches a screen, so the first would " +
+          "become unreachable — give one of them a different key.",
+      );
+    }
+    registry.set(screen.key, screen);
+  }
+  return registry;
+}
 
 // The three readers below are pure functions OF a registry, defaulting to the
 // discovered one. Not test scaffolding, and the same reason app/extensions.ts

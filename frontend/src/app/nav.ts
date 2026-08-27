@@ -297,7 +297,20 @@ function opensARecord(route: Route): boolean {
 // honest answer to the question — a unit IS reached from Settings — and because
 // the level machinery asks it for every route, unit routes included.
 function activeRowFor(route: Route): string {
-  return route.screen === EXTENSION_SCREEN ? "settings" : route.screen;
+  if (route.screen === EXTENSION_SCREEN) {
+    return "settings";
+  }
+  // A fork's rows are keyed by the screen's KEY, not by `x` — one segment
+  // names every one of them, so a row identified by the segment could only ever
+  // be "some fork screen". `#/x/warranty` marks the warranty row and nothing
+  // else, which is what the rest of this list does for its own destinations.
+  //
+  // Falling back to the segment for `#/x` with no key: that address resolves to
+  // no screen and marks no row, which is the honest answer for one.
+  if (route.screen === CUSTOM_SCREEN) {
+    return route.id ?? route.screen;
+  }
+  return route.screen;
 }
 
 // The levels the sidebar shows for a route: the destinations, then whatever the

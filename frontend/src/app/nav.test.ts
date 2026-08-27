@@ -42,6 +42,28 @@ describe("the rail and a composed unit", () => {
     expect(primary.activeId).toBe("settings");
   });
 
+  // A fork's rows are keyed by the screen's KEY rather than by the `x` segment
+  // — one segment names every one of them, so a row identified by the segment
+  // could only ever be "some fork screen". This is the DATA half, like the unit
+  // cases above it: whether an element resolves that id is shell.test.tsx's
+  // question, and reads identically from here.
+  it("marks a fork screen's own row current on its route", () => {
+    const [primary] = railTrail({ screen: "x", id: "warranty" });
+    expect(primary.activeId).toBe("warranty");
+  });
+
+  // `#/x` naming no screen resolves to nothing and marks nothing: unlike a unit
+  // route, there is no section it belongs to — a fork's destinations are its
+  // own, spread across the three groups, and the segment names none of them.
+  it("marks no row for a fork route naming no screen", () => {
+    const [primary] = railTrail({ screen: "x" });
+    expect(primary.activeId).toBe("x");
+    const rows = primary.groups.flatMap((group) =>
+      group.items.map((i) => i.id),
+    );
+    expect(rows).not.toContain("x");
+  });
+
   it("leaves the product's rows marking themselves", () => {
     const [primary] = railTrail({ screen: "deals" });
     expect(primary.activeId).toBe("deals");

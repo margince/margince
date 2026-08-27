@@ -4,6 +4,7 @@ import { Users } from "lucide-react";
 import { describe, expect, it } from "vitest";
 import type { MessageKey } from "../i18n/en";
 import {
+  buildRegistry,
   CUSTOM_SCREEN,
   type CustomNavScreen,
   type CustomPaletteScreen,
@@ -136,6 +137,33 @@ describe("a fork's screen reaches the rail, the palette and the router", () => {
     );
   });
 
+  // Two directories claiming one key is the failure this seam is worst at: a
+  // Map keeps the last, and the loser is a screen with a component and a rail
+  // row that no address reaches, with nothing to read and nothing looking wrong.
+  it("refuses a key two screens claim", () => {
+    expect(() =>
+      buildRegistry({
+        "./warranty/screen.tsx": { screen: warranty },
+        "./legacy-warranty/screen.tsx": { screen: { ...warranty } },
+      }),
+    ).toThrow(/two custom screens claim the key "warranty"/);
+    // And names the second one, so a fork knows which directory to change.
+    expect(() =>
+      buildRegistry({
+        "./warranty/screen.tsx": { screen: warranty },
+        "./legacy-warranty/screen.tsx": { screen: { ...warranty } },
+      }),
+    ).toThrow(/legacy-warranty/);
+  });
+
+  it("skips a module that exports no screen", () => {
+    const registry = buildRegistry({
+      "./warranty/screen.tsx": { screen: warranty },
+      "./half-written/screen.tsx": {},
+    });
+    expect([...registry.keys()]).toEqual(["warranty"]);
+  });
+
   it("is addressed at the segment its rail row builds", () => {
     // The round trip, not either half: the rail builds `path + prefix + id` and
     // the router parses the same string back, and a prefix and a parser that
@@ -174,6 +202,36 @@ describe("the glob and the documented layout are the same layout", () => {
     "utf8",
   );
   const pattern = /import\.meta\.glob<[^>]*>\(\s*"([^"]+)"/.exec(source)?.[1];
+
+  it("globs the directory a fork is told to write in", () => {
+    // The DIRECTORY, not just that some directory exists: a glob pointed at
+    // `../screens/other/*/screen.tsx` would pass a file-name check, because the
+    // README's example ends in `screen.tsx` too — and a fork following the
+    // README would put its screens somewhere nothing looks.
+    expect(pattern).toBeDefined();
+    const readme = readFileSync(
+      fileURLToPath(new URL("../screens/custom/README.md", import.meta.url)),
+      "utf8",
+    );
+    const documented = /(src\/screens\/[a-z-]+)\/[a-z-]+\/[a-z-]+\.tsx/.exec(
+      readme,
+    )?.[1];
+    if (documented === undefined || pattern === undefined) {
+      throw new Error(
+        "the README names no screen path, or custom.ts globs none",
+      );
+    }
+    // Both resolved to an absolute path, because they are written from
+    // different places: the README's is repo-relative and the glob's is
+    // relative to this module.
+    const globbed = fileURLToPath(
+      new URL(pattern.slice(0, pattern.indexOf("*")), import.meta.url),
+    );
+    const told = fileURLToPath(
+      new URL(`../../${documented}/`, import.meta.url),
+    );
+    expect(globbed).toBe(told);
+  });
 
   it("globs a directory that exists", () => {
     expect(pattern).toBeDefined();
