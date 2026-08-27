@@ -4,6 +4,9 @@ import { historyRows, netChanges } from "./historyreversal";
 
 type AuditHistoryEntry = components["schemas"]["AuditHistoryEntry"];
 
+// A fixture built as a real AuditHistoryEntry rather than asserted into one:
+// an `as` here would let a contract field change under these tests without a
+// compiler error, and what they check is how a row's own fields pair.
 function entry(
   over: Partial<AuditHistoryEntry> & { id: string },
 ): AuditHistoryEntry {
@@ -17,7 +20,7 @@ function entry(
     before: null,
     after: null,
     ...over,
-  } as AuditHistoryEntry;
+  };
 }
 
 // A title moving B -> C, and the restore that put it back C -> B.

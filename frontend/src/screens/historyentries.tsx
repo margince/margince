@@ -255,9 +255,15 @@ function UndoButton({
     : (refusalSentence(advisory.reason, advisory.detail, t) ??
       t("common.errorNoCause"));
   const press = () => {
-    // More than one field moves: the reader is told which, and what each goes
-    // back to, before a write lands on somebody else's data.
-    if (changes.length > 1) {
+    // Two presses get confirmed, for the same reason: the reader is told what
+    // the write will do before it lands on somebody else's data.
+    //
+    // More than one field moves — they are told which, and what each goes back
+    // to. And ANY link change, because reversing one removes or re-points a
+    // connection between two records rather than editing a value on this one.
+    // An edge entry carries no field changes at all, so the field count alone
+    // would wave through the more consequential of the two.
+    if (changes.length > 1 || entry.edge) {
       setConfirming(true);
       return;
     }
@@ -288,9 +294,13 @@ function UndoButton({
         }
       >
         <p>
-          {t("history.undo.confirmBody", {
-            count: formatNumber(changes.length, locale),
-          })}
+          {entry.edge
+            ? t("history.undo.confirmEdgeBody", {
+                other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
+              })
+            : t("history.undo.confirmBody", {
+                count: formatNumber(changes.length, locale),
+              })}
         </p>
         <ul className="entry-fields">
           {changes.map((change) => (

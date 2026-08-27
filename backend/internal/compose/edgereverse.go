@@ -57,17 +57,25 @@ type EdgeReverser interface {
 // reverseEdge puts one audited edge change back and answers with the line that
 // recorded it.
 //
-// The version pinned on the write is the EDGE's, read by the binding evaluation
-// immediately before it. The record's If-Match cannot serve here: an edge write
-// does not touch either record it joins, so neither record's version moves and
-// neither would notice a second person reversing the same link from the other
-// end. The edge's own version is what serialises them.
-func (s RestoreSeam) reverseEdge(ctx context.Context, entityType string, id ids.UUID, row AuditRow) (privacy.RecordHistoryEntry, error) {
+// TWO guards, and each answers a question the other cannot.
+//
+// The record's If-Match says "the history screen I decided from was current",
+// which is what the route requires it for, and it is verified against the PATH
+// record — the record whose history was open. An edge row sits on both records it
+// joins, so reversing from the person's page checks the person's version and from
+// the company's page the company's.
+//
+// It cannot be the write's guard as well: an edge write does not touch either
+// record it joins, so neither record's version moves and neither would notice a
+// second person reversing the same link from the other end. The EDGE's own
+// version, read by the binding evaluation immediately before the write, is what
+// serialises those two.
+func (s RestoreSeam) reverseEdge(ctx context.Context, entityType string, id ids.UUID, row AuditRow, ifVersion int64) (privacy.RecordHistoryEntry, error) {
 	if s.edges == nil {
 		return privacy.RecordHistoryEntry{}, fmt.Errorf(
 			"compose: no edge writer is wired, so entry %s cannot be put back", row.ID)
 	}
-	facts, answer, err := s.decideEdge(ctx, row)
+	facts, answer, err := s.decideEdge(ctx, entityType, id, row, ifVersion)
 	if err != nil {
 		return privacy.RecordHistoryEntry{}, err
 	}
@@ -77,6 +85,9 @@ func (s RestoreSeam) reverseEdge(ctx context.Context, entityType string, id ids.
 	before, err := edgeImage(row.Before)
 	if err != nil {
 		return privacy.RecordHistoryEntry{}, err
+	}
+	if s.afterEdgeDecision != nil {
+		s.afterEdgeDecision()
 	}
 	if err := s.edges.ReverseEdge(ctx, people.ReverseEdgeInput{
 		EdgeID:    row.EntityID,
@@ -112,7 +123,17 @@ func edgeWriteRefusal(err error) error {
 // One reading, because the version the write pins and the state the decision was
 // taken on have to be the same one: pinning a version read separately guards a
 // state nobody judged.
-func (s RestoreSeam) decideEdge(ctx context.Context, row AuditRow) (people.EdgeFacts, Undoability, error) {
+//
+// The path record's If-Match is verified in this SAME transaction as the
+// decision, so the two are one answer about one moment rather than two readings
+// a client cannot tell apart. The write is the people store's own transaction
+// and cannot be joined to this one without that module restating a guard it does
+// not own; what a caller decided on the screen is therefore bound here and what
+// happens to the LINK between here and the write is bound by the edge version
+// this returns. The record's version cannot move in that interval on an edge
+// write at all — TestEndToEnd_anEdgeReverseDoesNotMoveEitherRecordsVersion is
+// what keeps that true.
+func (s RestoreSeam) decideEdge(ctx context.Context, entityType string, id ids.UUID, row AuditRow, ifVersion int64) (people.EdgeFacts, Undoability, error) {
 	if s.evaluator.EdgeFacts == nil {
 		return people.EdgeFacts{}, Undoability{},
 			fmt.Errorf("compose: no edge reader is wired, so entry %s cannot be judged", row.ID)
@@ -120,6 +141,9 @@ func (s RestoreSeam) decideEdge(ctx context.Context, row AuditRow) (people.EdgeF
 	var facts people.EdgeFacts
 	var answer Undoability
 	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := recordVersionUnmoved(ctx, tx, entityType, id, ifVersion); err != nil {
+			return err
+		}
 		var err error
 		facts, err = s.evaluator.EdgeFacts(ctx, tx, row.EntityID)
 		if err != nil {
@@ -139,6 +163,12 @@ func (s RestoreSeam) decideEdge(ctx context.Context, row AuditRow) (people.EdgeF
 		answer, err = pinned.Evaluate(ctx, tx, row, Binding)
 		return err
 	})
+	if errors.Is(err, apperrors.ErrVersionSkew) {
+		// Unwrapped: the sentinel's own sentence is what the 409 carries, and a
+		// caller reading `code: version_skew` is told to re-read and decide again
+		// rather than shown this path's internal narration.
+		return people.EdgeFacts{}, Undoability{}, err
+	}
 	if err != nil {
 		return people.EdgeFacts{}, Undoability{},
 			fmt.Errorf("compose: decide whether the link can be put back: %w", err)

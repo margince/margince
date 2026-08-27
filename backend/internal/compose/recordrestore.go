@@ -49,6 +49,13 @@ type RestoreSeam struct {
 	// edges performs a LINK's inverse. It is a port because `relationship` is the
 	// people module's table, and the rules an edge write obeys are that module's.
 	edges EdgeReverser
+	// afterEdgeDecision is entered between the binding edge decision and the edge
+	// write — the ONE window in which a second reverser of the same link can
+	// overtake this one. It exists so a test can hold the path open there, and it
+	// is unexported and never set by NewRestoreSeam, so no production caller can
+	// reach it. Without it a race test only proves whatever the scheduler happened
+	// to do that run, which is the same as proving nothing.
+	afterEdgeDecision func()
 }
 
 // Restore puts the named audit row's before-image back.
@@ -69,7 +76,7 @@ func (s RestoreSeam) Restore(ctx context.Context, entityType string, id, auditID
 	// path's: a link's rows sit on ('relationship', edge_id) and appear on the
 	// history of both records it joins.
 	if row.EntityType == edgeEntityType {
-		return s.reverseEdge(ctx, entityType, id, row)
+		return s.reverseEdge(ctx, entityType, id, row, ifVersion)
 	}
 	patch, err := s.decide(ctx, row)
 	if err != nil {

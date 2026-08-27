@@ -17,6 +17,7 @@ package integration
 
 import (
 	"fmt"
+	"net/http"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -89,10 +90,30 @@ func theEdgeEntry(t *testing.T, page historyPage, action string) historyEntry {
 func reverseEntry(t *testing.T, e *apptest.AppEnv, entityType, id, auditID string, version int64) (int, historyEntry) {
 	t.Helper()
 	var entry historyEntry
-	status := e.Call(t, "POST",
-		fmt.Sprintf("/v1/records/%s/%s/history/%s/restore", entityType, id, auditID),
-		nil, map[string]string{"If-Match": fmt.Sprint(version)}, &entry)
+	status := e.Call(t, "POST", restoreRoute(entityType, id, auditID),
+		nil, ifMatch(version), &entry)
 	return status, entry
+}
+
+// reverseRefusal reads the route's REFUSAL: the status and the machine code a
+// client matches on, which the reversal's own history line has no field for.
+func reverseRefusal(t *testing.T, e *apptest.AppEnv, entityType, id, auditID string, version int64) (int, string) {
+	t.Helper()
+	var problem struct {
+		Code string `json:"code"`
+	}
+	status := e.Call(t, "POST", restoreRoute(entityType, id, auditID),
+		nil, ifMatch(version), &problem)
+	return status, problem.Code
+}
+
+func restoreRoute(entityType, id, auditID string) string {
+	return fmt.Sprintf("/v1/records/%s/%s/history/%s/restore", entityType, id, auditID)
+}
+
+// ifMatch is the header the route REQUIRES: the record's last-seen version.
+func ifMatch(version int64) map[string]string {
+	return map[string]string{"If-Match": fmt.Sprint(version)}
 }
 
 // liveEdgesOf is the person's un-archived links, which is how "the edge is
@@ -323,14 +344,19 @@ func TestEndToEnd_anEdgeReverseDoesNotMoveEitherRecordsVersion(t *testing.T) {
 	}
 }
 
-// Two people reversing ONE link from opposite ends. Exactly one lands.
+// Two people reversing ONE link from opposite ends over HTTP. Exactly one lands.
 //
-// The record's If-Match cannot serialise them — neither record's version moves
-// on an edge write — so what does is the EDGE's own version, pinned by the
-// decision that read it. Both requests are honestly concurrent, so WHICH refusal
-// the loser gets depends on where it was overtaken: the version moved under it,
-// or the link was already gone. Both are 409, and what may never happen is both
-// committing or the loser being told its entry does not exist.
+// Both requests are honestly concurrent, so WHICH refusal the loser gets depends
+// on where it was overtaken: the version moved under it, or the link was already
+// gone. Both are 409, and what may never happen is both committing or the loser
+// being told its entry does not exist.
+//
+// What this case does NOT establish is that the loser was overtaken INSIDE the
+// window between its decision and its write — nothing here holds it there, so a
+// run in which the two requests simply happened in sequence looks the same.
+// TestAnEdgeReverseOvertakenInsideItsDecisionWindowRefuses (package compose)
+// forces that overtake on a channel; this one is the end-to-end shape over the
+// real route, including the two ends being different records.
 func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
@@ -378,5 +404,36 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 	}
 	if loser.status != 409 {
 		t.Errorf("the losing reverse answered %d (%s), want 409", loser.status, loser.reason)
+	}
+}
+
+// A reverse decided from a screen the RECORD has moved under is refused, and the
+// link is untouched.
+//
+// If-Match is required on this route alone and means "the history screen I
+// decided from was current". An edge write never moves either record's version,
+// so the edge's own version cannot answer that question — and a route whose
+// guard binds on one branch and not the other means two different things
+// depending on which row a person pressed Undo on.
+func TestEndToEnd_reversingALinkFromAStaleRecordScreenIsRefusedAndWritesNothing(t *testing.T) {
+	e := apptest.SetupApp(t)
+	e.BootstrapWorkspace(t)
+	pair := seedEmploymentOverHTTP(t, e, "cto")
+
+	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
+	stale := readPerson(t, e, pair.person)
+	// The record moves under the open screen, which is the whole premise.
+	if status := e.Call(t, "PATCH", "/v1/people/"+pair.person,
+		apptest.AnyMap{"title": "COO"}, nil, nil); status != 200 {
+		t.Fatalf("move the person under the screen → %d", status)
+	}
+
+	status, code := reverseRefusal(t, e, "person", pair.person, entry.ID, stale.Version)
+	if status != http.StatusConflict || code != "version_skew" {
+		t.Errorf("a reverse decided from a stale screen → %d %q, want 409 version_skew", status, code)
+	}
+	if edges := liveEdgesOf(t, e, pair.person); len(edges) != 1 {
+		t.Errorf("the link is %+v after a refused reverse; the record's If-Match is "+
+			"required on this route and the edge branch has to honour it too", edges)
 	}
 }

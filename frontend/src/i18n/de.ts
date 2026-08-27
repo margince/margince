@@ -58,6 +58,8 @@ export const de = {
   "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird zurückgesetzt…",
   "history.undo.confirmTitle": "Diese Änderung zurücksetzen?",
+  "history.undo.confirmEdgeBody":
+    "Dies ändert die Verknüpfung mit {other}. Die Datensätze bleiben; nur die Verbindung zwischen ihnen ändert sich.",
   "history.undo.confirmBody":
     "{count} Felder kehren auf den Stand vor dieser Änderung zurück:",
   "history.undo.versionSkew":

@@ -62,6 +62,8 @@ export const en = {
   "history.undo.redo": "Redo",
   "history.undo.busy": "Putting this change back…",
   "history.undo.confirmTitle": "Put this change back?",
+  "history.undo.confirmEdgeBody":
+    "This changes the link with {other}. The records stay; only the connection between them changes.",
   "history.undo.confirmBody":
     "{count} fields go back to what they were before this change:",
   "history.undo.versionSkew":

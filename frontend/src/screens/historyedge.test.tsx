@@ -298,3 +298,34 @@ describe("a link's columns never reach a pair's face", () => {
     expect(row.whollyUndone).toBe(true);
   });
 });
+
+// Reversing a link asks first.
+//
+// The confirm gate used to key on the number of fields a change moved, and an
+// edge entry moves none — so a two-field edit asked and REMOVING A LINK BETWEEN
+// TWO RECORDS did not. The more consequential of the two was the unconfirmed one.
+describe("reversing a link asks before it writes", () => {
+  it("opens a confirmation naming the other record, and does not write on the first press", async () => {
+    const fetchMock = servingHistory([linked]);
+    vi.stubGlobal("fetch", fetchMock);
+    render(<RecordHistory kind="person" id="p-1" restore={RESTORE} />);
+    const button = await screen.findByRole("button", { name: /put back/i });
+    await userEvent.click(button);
+
+    // The dialog names the record at the other end, so the reader knows which
+    // connection they are about to change. Matched on the dialog's own sentence
+    // because the ROW names the company too — asserting on the name alone would
+    // pass on a page that never opened a dialog at all.
+    const asked = await screen.findByText(
+      /only the connection between them changes/i,
+    );
+    expect(asked.textContent).toContain("Employer GmbH");
+    // Nothing was written by the press that opened it. The restore route is
+    // the only write this surface makes, so its absence from the calls is the
+    // whole claim.
+    const reached = fetchMock.mock.calls.map(([input]) =>
+      String(input instanceof Request ? input.url : input),
+    );
+    expect(reached.some((url) => url.includes("/restore"))).toBe(false);
+  });
+});

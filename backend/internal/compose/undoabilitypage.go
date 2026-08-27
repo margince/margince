@@ -254,9 +254,16 @@ func advisoryEvaluator(binding Evaluator, shared recordFacts, row pageRow, undon
 }
 
 // judge asks the same branches the write binds, in the same order, with the
-// page-level facts already in hand. The ports answer from those facts rather
-// than querying, which is what makes the page flat in its size while leaving
-// ONE set of branches to keep correct.
+// page-level facts already in hand, which leaves ONE set of branches to keep
+// correct.
+//
+// The RECORD's facts are read once for the page. An EDGE row is not flat: each
+// one reads its own edge facts and its anchor's write authority, because those
+// are properties of the link rather than of the record whose page this is. The
+// cost is bounded by the page size, and it is the price of judging a link on the
+// same branches that will bind its write — an edge row judged from the record's
+// facts would light a button the write refuses, which is the shape this whole
+// surface exists to remove.
 func (p UndoabilityPage) judge(ctx context.Context, tx pgx.Tx, row pageRow,
 	shared recordFacts, undone map[string]bool,
 ) (privacy.UndoabilityAnswer, error) {

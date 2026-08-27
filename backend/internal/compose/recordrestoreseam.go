@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -65,6 +66,31 @@ func recordIsArchived(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 		return false, err
 	}
 	return archived, nil
+}
+
+// recordVersionUnmoved refuses a decision taken from a screen the record has
+// moved under. It is the route's REQUIRED If-Match, asked of the record whose
+// history was open — the record path gets the same guard from the update it
+// sends, and the edge path has to ask it here because its write lands on the
+// link and never on the record.
+//
+// The table name is the record type, which servesRecordType has already closed
+// to the six: no identifier reaches this statement from a request body.
+func recordVersionUnmoved(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, ifVersion int64) error {
+	if !servesRecordType(entityType) {
+		return fmt.Errorf("compose: undoability: %q is not a record type this path reads", entityType)
+	}
+	var version int64
+	err := tx.QueryRow(ctx,
+		`SELECT version FROM `+pgx.Identifier{entityType}.Sanitize()+` WHERE id = $1`,
+		id).Scan(&version)
+	if err != nil {
+		return err
+	}
+	if version != ifVersion {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
 }
 
 // recordIsVisibleToCaller is the row-scope gate every read of this record
