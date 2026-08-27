@@ -230,14 +230,23 @@ function storyTitle(path: string, text: string): string | null {
     : named;
   if (!meta || !ts.isObjectLiteralExpression(meta)) return null;
   for (const property of meta.properties) {
-    if (
-      ts.isPropertyAssignment(property) &&
-      property.name.getText(source) === "title" &&
-      ts.isStringLiteralLike(property.initializer)
-    ) {
-      return property.initializer.text;
-    }
+    if (!ts.isPropertyAssignment(property)) continue;
+    if (propertyKey(property.name) !== "title") continue;
+    const value = unwrap(property.initializer);
+    if (ts.isStringLiteralLike(value)) return value.text;
   }
+  return null;
+}
+
+// The key, whichever way it is written. `{ title: … }` and `{ "title": … }` are
+// the same property, but reading the name's SOURCE TEXT compares the quotes
+// too, so the quoted spelling matched nothing and the story fell out of the
+// root check — skipped rather than reported, the one direction this gate must
+// not be wrong in. A computed key is deliberately not resolved: what it
+// evaluates to is not a question the parser can answer, and guessing would be
+// worse than the honest null.
+function propertyKey(name: ts.PropertyName): string | null {
+  if (ts.isIdentifier(name) || ts.isStringLiteralLike(name)) return name.text;
   return null;
 }
 
@@ -452,6 +461,30 @@ describe("the detectors report what they are for", () => {
         'export default { title: "Shell/Top bar" } satisfies Meta<typeof Bar>;',
       ),
     ).toBe("Shell/Top bar");
+  });
+
+  it("reads a title whichever way the key and value are written", () => {
+    for (const meta of [
+      'const meta = { "title": "Shell/Top bar" };',
+      'const meta = { title: "Shell/Top bar" as const };',
+      'const meta = { title: ("Shell/Top bar") };',
+      'const meta = { "title": "Shell/Top bar" as const };',
+    ]) {
+      expect(storyTitle(probe, `${meta}\nexport default meta;`)).toBe(
+        "Shell/Top bar",
+      );
+    }
+  });
+
+  it("reports no title rather than resolving a computed key", () => {
+    // What a computed key evaluates to is not a question the parser can answer,
+    // and a guess would be worse than the honest null.
+    expect(
+      storyTitle(
+        probe,
+        'const k = "title";\nconst meta = { [k]: "Shell/Top bar" };\nexport default meta;',
+      ),
+    ).toBe(null);
   });
 
   it("reports no title rather than guessing when there is no default export", () => {
