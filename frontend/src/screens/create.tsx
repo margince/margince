@@ -179,6 +179,28 @@ export function submittedValues(
   return out;
 }
 
+// What survives a save on a form that stays open: a field whose value is still
+// exactly what was sent is cleared to its default, and a field the reader has
+// since changed keeps what they typed.
+//
+// The comparison is against the SUBMITTED value rather than a timestamp or a
+// dirty flag, because that is the question being asked — "is this still the
+// saved record's word, or the next one's?" — and it answers correctly however
+// slow the round trip was.
+export function keepUnsubmitted(
+  current: Record<string, string>,
+  submitted: Record<string, string>,
+  defaults: Record<string, string>,
+): Record<string, string> {
+  const next = { ...defaults };
+  for (const [key, value] of Object.entries(current)) {
+    if (value !== "" && value !== submitted[key]) {
+      next[key] = value;
+    }
+  }
+  return next;
+}
+
 // The label a top-level field shows: the literal labelText wins; otherwise the
 // i18n key. (Subfields are always core, so they keep using t(label) directly.)
 export function fieldLabel(
@@ -847,6 +869,9 @@ export function CreateRecordModal({
   const headingId = useId();
   const [values, setValues] = useState<Record<string, string>>({});
   const [rows, setRows] = useState<FormRows>({});
+  // What the last submit carried, so a reset can tell the saved record's words
+  // apart from words typed after it while the save was still in flight.
+  const [submitted, setSubmitted] = useState<Record<string, string>>({});
   // Seeding happens DURING RENDER on the closed→open transition, not in an
   // effect — see EditRecordModal (edit.tsx) for the race an effect opens and
   // why this shape closes it. Keying off the transition (rather than `fields`,
@@ -869,7 +894,15 @@ export function CreateRecordModal({
           defaults[field.key] = field.options?.[0]?.value ?? "";
         }
       }
-      setValues(defaults);
+      // A form that stays open to take the next record clears only what the
+      // save it just made carried. Nothing disables the fields during the
+      // round trip, so a reader who kept typing while it was in flight has
+      // words on screen that belong to the NEXT person — and blanking the
+      // whole form would take them with it. `submitted` is what went; anything
+      // typed after it stays exactly where the reader put it.
+      setValues((current) =>
+        reopened ? defaults : keepUnsubmitted(current, submitted, defaults),
+      );
       setRows({});
     }
   }
@@ -889,7 +922,10 @@ export function CreateRecordModal({
         error={error}
         existing={existing}
         resolveExisting={resolveExisting}
-        onSubmit={onSubmit}
+        onSubmit={(sent, sentRows) => {
+          setSubmitted(sent);
+          onSubmit(sent, sentRows);
+        }}
         onClose={onClose}
         submitLabelKey="create.save"
       />

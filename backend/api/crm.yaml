@@ -812,6 +812,12 @@ paths:
 
         Provenance is `manual` with the capturing user as `captured_by`, and the profile
         URL is stored as given. Nothing here fetches that URL, now or ever.
+
+        Human-only, and not a `create_record` tool: quick capture is a form somebody
+        types into while reading a profile, so there is no agent story for it and
+        nothing to stage. The overlay posture is `createPerson`'s, because the button
+        that reaches it is a `CreateAction` on a mirrored screen and those render
+        nothing in overlay mode.
       x-agent-access: human-only
       parameters:
         - $ref: '#/components/parameters/IdempotencyKey'
