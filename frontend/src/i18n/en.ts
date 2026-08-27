@@ -2144,6 +2144,11 @@ export const en = {
   "decision.detailTechnical": "Technical details",
   "decision.detailAsked": "Asked",
   "decision.detailDecided": "Decided",
+  // The confirmation after an approval, and the way back to the change it
+  // made. The undo lives on the RECORD — the history panel reverses the
+  // update this approval wrote — so the verb says where it is going.
+  "decision.applied": "Done.",
+  "decision.undoOnRecord": "Undo on the record",
   "decision.status.approved": "Approved",
   "decision.status.rejected": "Rejected",
   "decision.status.expired": "Expired",

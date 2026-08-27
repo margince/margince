@@ -2113,6 +2113,8 @@ export const de = {
   "decision.detailTechnical": "Technische Details",
   "decision.detailAsked": "Gefragt am",
   "decision.detailDecided": "Entschieden am",
+  "decision.applied": "Erledigt.",
+  "decision.undoOnRecord": "Am Datensatz rückgängig machen",
   "decision.status.approved": "Genehmigt",
   "decision.status.rejected": "Abgelehnt",
   "decision.status.expired": "Abgelaufen",

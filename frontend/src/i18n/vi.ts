@@ -2099,6 +2099,8 @@ export const vi = {
   "decision.detailTechnical": "Chi tiết kỹ thuật",
   "decision.detailAsked": "Đã hỏi",
   "decision.detailDecided": "Đã quyết định",
+  "decision.applied": "Xong.",
+  "decision.undoOnRecord": "Hoàn tác trên bản ghi",
   "decision.status.approved": "Đã duyệt",
   "decision.status.rejected": "Đã từ chối",
   "decision.status.expired": "Đã hết hạn",

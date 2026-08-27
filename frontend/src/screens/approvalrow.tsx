@@ -10,6 +10,8 @@ import {
   KIND_TO_VERB,
   useAgentTierMap,
 } from "../app/autonomy";
+import { ENTITY, isEntityKind } from "../app/entity";
+import { navigate, type Route } from "../app/router";
 import { Button, Card, Field, Textarea } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import {
@@ -19,6 +21,7 @@ import {
   type DecisionStatusLabels,
   DecisionToolChip,
 } from "../design-system/decisioncard";
+import { type Toast, ToastRegion, useToast } from "../design-system/toast";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
@@ -142,14 +145,43 @@ function statusLabels(t: Translator, locale: Locale): DecisionStatusLabels {
   };
 }
 
+// The record page an approved change can be put back on, or undefined when
+// there is none.
+//
+// isEntityKind is the same question the breadcrumb asks before it links, and it
+// narrows the wire's free-form string to the five kinds with a record page. The
+// history panel serves one more — `activity` — which has no page to route to,
+// so a target of that kind is honestly not offered rather than linked into
+// nothing.
+export function recordRoute(
+  entityType: string | null | undefined,
+  entityID: string | null | undefined,
+): Route | undefined {
+  if (!entityID || !entityType || !isEntityKind(entityType)) {
+    return undefined;
+  }
+  return ENTITY[entityType].route(entityID);
+}
+
 export function ApprovalRow({
   approval,
   decided,
   onAlreadyDecided,
   extraInvalidateKeys,
+  toast: hostToast,
 }: Readonly<{
   approval: Approval;
   decided?: boolean;
+  // The surface's own toast, where it has one. The undo offer is sticky and
+  // outlives this row: approving invalidates ["approvals"], which unmounts the
+  // row it was shown from, and a toast owned HERE would go with it. A screen
+  // that shows a queue therefore owns the toast and its region, and hands the
+  // controller down.
+  //
+  // Optional, because a surface may render one row and nothing else (the
+  // stories do). Then the row falls back to its own, which is correct for a
+  // row nothing is going to unmount.
+  toast?: Toast;
   // Lift the already-decided signal to a surface that survives this row's
   // unmount (the pending invalidation drops it). Optional so a surface can
   // reuse the row without a screen-level surface.
@@ -164,6 +196,8 @@ export function ApprovalRow({
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
   const tierMap = useAgentTierMap();
+  const ownToast = useToast();
+  const toast = hostToast ?? ownToast;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [rejecting, setRejecting] = useState(false);
@@ -175,6 +209,47 @@ export function ApprovalRow({
   // Decided lists (interval 0 ⇒ useNow does not tick).
   const needsCountdown = !decided && approval.expires_at != null;
   const now = useNow(needsCountdown ? 1000 : 0);
+
+  // Where an approved change can be put back, and where it cannot.
+  //
+  // The undo is the RECORD's, not the approval's: an effect that changes a
+  // field writes an ordinary `update` audit row on the record it changed, and
+  // the history panel already reverses one of those (compose/undoability.go
+  // judges it, and refuses with a named reason where it cannot). So this offers
+  // the way there rather than a second reversal engine.
+  //
+  // Only for an approval naming a record type that panel serves — recordRoute
+  // above decides which. A kind that sends mail, creates a record, or names no
+  // target at all has nothing to put back, and a button leading to a page with
+  // no entry for it would be an offer the product cannot keep.
+  const undoTarget = recordRoute(
+    approval.target_entity_type,
+    approval.target_entity_id,
+  );
+
+  // Sticky, because this confirmation carries a verb and a reader reaching for
+  // it must not lose it mid-reach. Only on approve: a rejection changed
+  // nothing, so there is nothing to put back.
+  const showUndoOffer = (verdict: "approve" | "reject") => {
+    if (verdict !== "approve" || !undoTarget) {
+      return;
+    }
+    toast.show(
+      <span>
+        {t("decision.applied")}{" "}
+        <Button
+          small
+          onClick={() => {
+            toast.dismiss();
+            navigate(undoTarget);
+          }}
+        >
+          {t("decision.undoOnRecord")}
+        </Button>
+      </span>,
+      { sticky: true },
+    );
+  };
 
   const decide = useMutation({
     mutationFn: async (input: {
@@ -200,11 +275,12 @@ export function ApprovalRow({
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_data, input) => {
       queryClient.invalidateQueries({ queryKey: ["approvals"] });
       for (const queryKey of extraInvalidateKeys ?? []) {
         queryClient.invalidateQueries({ queryKey });
       }
+      showUndoOffer(input.verdict);
     },
     onError: (error) => {
       const problem = error instanceof ProblemError ? error.problem : null;
@@ -339,6 +415,9 @@ export function ApprovalRow({
         />
       }
     >
+      {/* Only where the row owns the toast. A region for somebody else's
+          controller would be a second place the same message renders. */}
+      {!hostToast && <ToastRegion toast={ownToast} />}
       <ConfirmModal
         open={rejecting}
         onClose={() => setRejecting(false)}
