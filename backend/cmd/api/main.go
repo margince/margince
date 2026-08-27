@@ -82,37 +82,25 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	config.WarnUndeclared(logger, cfg.unknownVars)
 
-	pool, err := database.NewPool(ctx, cfg.dsn)
+	// Already proven to connect as a role row-level security binds — boot.go
+	// carries why that check belongs with the pool's own construction.
+	pool, err := boundPool(ctx, cfg.dsn)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
-	// Before anything reads or writes through it: a pool connecting as a role
-	// row-level security does not bind serves every tenant's rows to every
-	// request, and nothing later in this boot would say so.
-	if err := compose.AssertRuntimeRole(ctx, pool); err != nil {
-		return err
-	}
 
 	deployCfg, license, err := bindInstallation(ctx, cfg, pool, logger)
 	if err != nil {
 		return err
 	}
-	// What this binary IS, recorded before it serves anything. AFTER
-	// bindInstallation, because a pre-bootstrap installation has no workspace to
-	// record against; BEFORE the server is assembled, which loads the transport
-	// directory from the rows this writes. boot.go holds the phase.
-	if err := recordBootLedger(ctx, pool, logger, extensions); err != nil {
+	// What this binary IS and what it CARRIES, both settled before it serves
+	// anything. AFTER bindInstallation, because a pre-bootstrap installation has
+	// no workspace to record against; BEFORE the server is assembled, which
+	// loads the transport directory from the rows this writes. boot.go holds the
+	// phase and the order inside it.
+	if err := recordBootFacts(ctx, pool, logger, extensions); err != nil {
 		return err
-	}
-	// The handbook this release carries, filed into the corpus it is asked
-	// through. Logged and CONTINUED rather than returned: the handbook is help
-	// content, and an installation that cannot file it should still serve every
-	// record, pipeline and approval it holds. Failing the boot here would take
-	// a whole CRM down over a documentation corpus — and the operator would
-	// have no way to start the process that would tell them why.
-	if err := fileReleaseHandbook(ctx, pool, logger); err != nil {
-		logger.Error("this release's handbook was not filed; the rest of the product is unaffected", "error", err)
 	}
 
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, compose.CaptureConfigFromDeploy(deployCfg.Capture, logger), pool, logger, stdout, license)
