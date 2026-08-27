@@ -33,7 +33,7 @@ func project360Reader(pool *pgxpool.Pool) agents.Project360Reader {
 		deals.NewStore(InstallationDB(pool), DealsInstallation()).WithFieldCatalog(catalog),
 		ProjectsStore(pool),
 		people.NewStore(InstallationDB(pool)).WithFieldCatalog(catalog),
-		contracts.NewStore(InstallationDB(pool)),
+		contracts.NewStore(InstallationDB(pool), ContractFreezeRate(pool)),
 		activities.NewStore(InstallationDB(pool)),
 		clockNow,
 	)

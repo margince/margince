@@ -9,6 +9,7 @@ import (
 	"context"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -127,7 +128,7 @@ func Setup(t *testing.T) *Env {
 	e.People = people.NewStore(harnessDB(pool, e.WS))
 	e.Deals = deals.NewStore(harnessDB(pool, e.WS), installseam.Deals())
 	e.Projects = ProjectsStore(harnessDB(pool, e.WS))
-	e.Contracts = contracts.NewStore(harnessDB(pool, e.WS))
+	e.Contracts = ContractsStore(harnessDB(pool, e.WS), e.Deals)
 	e.Activities = activities.NewStore(harnessDB(pool, e.WS))
 	return e
 }
@@ -148,6 +149,21 @@ func Setup(t *testing.T) *Env {
 func ProjectsStore(db *database.DB) *projects.Store {
 	return projects.NewStore(db).
 		WithCompanyEdges(people.AttachCompanyToProjectTx, projects.CompaniesFrom(people.CompaniesOnProjectTx))
+}
+
+// ContractsStore builds the contract store the way compose builds it.
+//
+// The rate resolver is why it exists. Activation freezes a contract's
+// conversion, and a store built without one refuses every activation of a
+// foreign-currency contract — deliberately, since a contract activated with no
+// frozen rate is one the base-currency freeze guard cannot see. A suite calling
+// contracts.NewStore directly would have to invent that seam, and would then be
+// testing its own idea of the rate rather than the one production freezes.
+func ContractsStore(db *database.DB, dealStore *deals.Store) *contracts.Store {
+	return contracts.NewStore(db,
+		func(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error) {
+			return dealStore.FreezeRateAt(ctx, tx, currency, asOf)
+		})
 }
 
 // SchemaPool opens the owner-privileged schema-change pool the

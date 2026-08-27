@@ -94,7 +94,11 @@ func (s *Store) ChangeStatus(ctx context.Context, id ids.ContractID, to string, 
 		if err := refuseInvalidTransition(statusOf(existing), to); err != nil {
 			return err
 		}
-		out, err = applyStatusTx(ctx, tx, id, existing, to, nil, ifVersion, s.today())
+		frozen, err := s.freezeRateForActivation(ctx, tx, existing, to)
+		if err != nil {
+			return err
+		}
+		out, err = applyStatusTx(ctx, tx, id, existing, to, nil, ifVersion, s.today(), frozen)
 		return err
 	})
 	return out, err
@@ -128,12 +132,19 @@ func statusOf(c crmcontracts.Contract) string {
 
 // applyStatusTx writes one status transition with its audit and event.
 func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing crmcontracts.Contract,
-	to string, supersededBy *ids.ContractID, ifVersion *int64, asOf time.Time,
+	to string, supersededBy *ids.ContractID, ifVersion *int64, asOf time.Time, frozen *frozenRate,
 ) (crmcontracts.Contract, error) {
 	patch := storekit.NewPatch()
 	patch.Set("status", statusOf(existing), to)
 	if supersededBy != nil {
 		patch.Set("superseded_by_id", existing.SupersededById, supersededBy.UUID)
+	}
+	if frozen != nil {
+		// Both, always together: the schema's contract_fx_pair CHECK holds that
+		// a rate without its date is not a frozen conversion, and a caller
+		// reading one without the other cannot say what it converted at.
+		patch.Set("fx_rate_to_base", existing.FxRateToBase, frozen.rate)
+		patch.Set("fx_rate_date", existing.FxRateDate, frozen.on)
 	}
 	if err := patch.ApplyGuarded(ctx, tx, "contract", id.UUID, ifVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok {
@@ -159,6 +170,51 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 		return crmcontracts.Contract{}, fmt.Errorf("emit contract.status_changed: %w", err)
 	}
 	return readContract(ctx, tx, id, asOf)
+}
+
+// frozenRate is what activation stamps: the conversion and the day it is the
+// conversion for. A pointer at the call site, because most status changes
+// freeze nothing and a zero value would be indistinguishable from a rate of
+// zero on the zero date.
+type frozenRate struct {
+	rate string
+	on   time.Time
+}
+
+// freezeRateForActivation resolves the conversion a contract activates at, or
+// nil when this transition freezes nothing.
+//
+// The rate is frozen AT ACTIVATION and never re-read, which is the whole point:
+// a contract's base-currency value is what it was worth when the parties agreed
+// it, not what it is worth at the moment somebody runs a report. The schema
+// documented that; nothing wrote it, so every activated foreign-currency
+// contract carried NULL — and the base-currency freeze guard counts a contract
+// by its frozen rate, so an installation holding only contract rows could still
+// change its base currency and silently restate them.
+//
+// Only into `active`, and only once: a contract that already carries a rate
+// keeps it. Re-activating after a cancellation must not re-price an agreement
+// nobody renegotiated.
+//
+// A contract with no currency has nothing to convert and freezes nothing —
+// which is not the same as a contract whose rate is unavailable, and that one
+// refuses.
+func (s *Store) freezeRateForActivation(ctx context.Context, tx pgx.Tx,
+	existing crmcontracts.Contract, to string,
+) (*frozenRate, error) {
+	//nolint:nilnil // "this transition freezes nothing" is an answer, not a missing one: most status changes carry no conversion, and a sentinel error would make the ordinary case an error path.
+	if to != StatusActive || existing.Currency == nil || *existing.Currency == "" {
+		return nil, nil
+	}
+	//nolint:nilnil // same answer for a contract that already froze: it keeps what it has.
+	if existing.FxRateToBase != nil {
+		return nil, nil
+	}
+	rate, on, err := s.freezeRate(ctx, tx, *existing.Currency, s.today())
+	if err != nil {
+		return nil, err
+	}
+	return &frozenRate{rate: rate, on: on}, nil
 }
 
 // Cancel records notice of cancellation and when it takes effect, and changes
@@ -237,7 +293,7 @@ func (s *Store) Renew(ctx context.Context, id ids.ContractID, successor CreateCo
 			return err
 		}
 		successorID := ids.ContractID{UUID: ids.UUID(created.Id)}
-		if _, err := applyStatusTx(ctx, tx, id, predecessor, StatusSuperseded, &successorID, ifVersion, s.today()); err != nil {
+		if _, err := applyStatusTx(ctx, tx, id, predecessor, StatusSuperseded, &successorID, ifVersion, s.today(), nil); err != nil {
 			return err
 		}
 		out = created

@@ -353,6 +353,26 @@ func (e *MissingFxRateError) MessageFault() (code, message string) {
 	return "fx_rate_unavailable", e.Error() + " — an admin must load the rate for this currency pair before this close can succeed"
 }
 
+// FreezeRateAt resolves what a currency converts at, as of a day, against the
+// installation's own base — the same reading a closing deal freezes.
+//
+// Exported for a caller outside this module that has to freeze the same
+// number: a contract, at activation. It could read fx_rate itself — the table
+// is deals', and the ownership gate binds writes rather than reads — and then
+// there would be two spellings of "the latest rate on or before this day", free
+// to disagree about the boundary, the same-currency shortcut, or what a missing
+// rate means. One of them would be corrected.
+//
+// Handed over as a function rather than as this store, so the caller takes a
+// seam and not a module (the shape quotas' BaseCurrencyFunc already uses).
+func (s *Store) FreezeRateAt(ctx context.Context, tx pgx.Tx, currency string, asOf time.Time) (string, time.Time, error) {
+	base, err := s.installation.BaseCurrency(ctx, tx)
+	if err != nil {
+		return "", time.Time{}, err
+	}
+	return s.freezeFx(ctx, tx, base, currency, asOf)
+}
+
 // freezeFx resolves the frozen currency→base conversion for a closed
 // deal: the latest fx_rate on or before asOf. Used at close (asOf = now)
 // and when a closed deal is re-priced (asOf = its close date), so the
