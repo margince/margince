@@ -70,18 +70,66 @@ func readSetupOffers(t *testing.T) []setupOffer {
 	return offers
 }
 
+// gateSeedDay pins the day this file hands SeedModelRates. Nothing here asserts
+// on a date; a real clock would only give the gate a way to differ between runs.
+var gateSeedDay = time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)
+
+// seedSheet is the seeded price sheet keyed the way this gate asks about it:
+// what lane, if any, "provider/model" is filed under.
+func seedSheet() map[string]ai.Lane {
+	sheet := map[string]ai.Lane{}
+	for _, r := range ai.SeedModelRates(gateSeedDay) {
+		sheet[r.Provider+"/"+r.ModelID] = r.Lane
+	}
+	return sheet
+}
+
 func TestOnboardingOffersOnlyModelsTheServerPrices(t *testing.T) {
 	t.Parallel()
-	priced := map[string]bool{}
-	for _, r := range ai.SeedModelRates(time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)) {
-		priced[r.Provider+"/"+r.ModelID] = true
-	}
+	sheet := seedSheet()
 	for _, o := range readSetupOffers(t) {
-		for lane, model := range map[string]string{"chat": o.chatModel, "embeddings": o.embedModel} {
-			if !priced[o.provider+"/"+model] {
+		for lane, model := range map[ai.Lane]string{ai.LaneChat: o.chatModel, ai.LaneEmbeddings: o.embedModel} {
+			filed, priced := sheet[o.provider+"/"+model]
+			if !priced {
 				t.Errorf("onboarding offers %s as %s's %s lane, and SeedModelRates does not price %s/%s — "+
 					"every call an admin makes in their first week would report UNPRICED",
 					model, o.id, lane, o.provider, model)
+				continue
+			}
+			// Priced is half the question. The sheet is also the CATALOGUE the
+			// routing form's picker reads, so a model filed under the other lane
+			// is offered on every screen except the one that needs it — and the
+			// preset that seeded it serves a lane it cannot answer.
+			if filed != lane {
+				t.Errorf("onboarding seeds %s as %s's %s model, and the sheet files %s/%s under %q",
+					model, o.id, lane, o.provider, model, filed)
+			}
+		}
+	}
+}
+
+// A provider onboarding offers must be able to fill BOTH fields from the sheet,
+// or its picker opens empty on the one screen a first-time admin cannot skip —
+// which reads as a broken installation rather than as a list nobody wrote.
+//
+// Derived from the presets and the sheet rather than listed here: a provider
+// added to onboarding is asked the same question without anyone remembering to
+// come back and add it.
+func TestEveryOfferedProviderCanFillBothLanesFromTheSheet(t *testing.T) {
+	t.Parallel()
+	lanes := map[string]map[ai.Lane]int{}
+	for _, r := range ai.SeedModelRates(gateSeedDay) {
+		if lanes[r.Provider] == nil {
+			lanes[r.Provider] = map[ai.Lane]int{}
+		}
+		lanes[r.Provider][r.Lane]++
+	}
+	for _, o := range readSetupOffers(t) {
+		for _, lane := range []ai.Lane{ai.LaneChat, ai.LaneEmbeddings} {
+			if lanes[o.provider][lane] == 0 {
+				t.Errorf("onboarding offers %s on provider %q, and the sheet prices no %s model for it — "+
+					"that field's picker opens with nothing in it",
+					o.id, o.provider, lane)
 			}
 		}
 	}
