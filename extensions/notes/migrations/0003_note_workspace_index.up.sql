@@ -10,5 +10,18 @@
 -- page. Without it that read is a sequential scan plus a sort of every note the
 -- installation has ever taken, which is fine at the size a unit starts at and
 -- is not the size it stays at.
+--
+-- Not CONCURRENTLY: a migration runs in one transaction and CONCURRENTLY
+-- forbids that, so this holds a write-blocking SHARE lock on the table for the
+-- length of the build. Recorded rather than avoided, because avoiding it means
+-- a second, non-transactional migration path, and that path would exist for one
+-- index on one extension table.
+--
+-- Bounded, because the table is 0001's rather than this migration's: a
+-- lock_timeout caps how long this waits to acquire the lock, so an open
+-- transaction holding a conflicting one fails the migration instead of stalling
+-- every note write behind it indefinitely.
+SET LOCAL lock_timeout = '3s';
+
 CREATE INDEX ext_notes_note_created
     ON ext.ext_notes_note (created_at DESC);
