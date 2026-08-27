@@ -145,6 +145,52 @@ bisecting is the honest first move rather than assuming the newest commit."\
     || unreported=1
 fi
 
+# The mobile budget splits the same two ways and for the same reason. Its
+# discriminator is the spec's own log line rather than a failure message: the
+# spec prints `perfbench [fast-3g/390px]: … p95=…` and THEN asserts, so the line
+# is present exactly when a number was measured.
+if [[ "${MOBILE_RESULT:-}" = "failure" ]] && [[ "${MOBILE_OUTCOME:-}" != "breach" ]]; then
+  report "the weekly MOBILE-AC-2 run could not complete" bug \
+"\`make bench-mobile-check\` failed on the weekly run of \`main\` WITHOUT reaching a
+budget verdict: $RUN_URL
+
+No p95 was measured, so nothing is known about PERF-1's perceived budget either
+way. The step separates the two outcomes precisely so this issue does not claim
+a regression that was never measured.
+
+Likely causes, in the order they occur: \`pnpm install --frozen-lockfile\` found
+the lockfile out of date, \`pnpm build\` failed, the Chromium download failed, or
+the preview server on :4317 never came up.
+
+Reproduce with \`make bench-mobile-check\`. The published budgets page is
+untouched either way: this lane clears MARGINCE_BENCH_RECORD."\
+    || unreported=1
+fi
+
+if [[ "${MOBILE_OUTCOME:-}" = "breach" ]]; then
+  report "PERF-1's perceived budget is breaching on main" bug \
+"\`make bench-mobile-check\` measured a p95 over the 300 ms perceived budget on
+the weekly run of \`main\`: $RUN_URL
+
+The measured number is in the job log, on the \`perfbench [fast-3g/390px]\` line.
+Read it before bisecting: this is a THROTTLED measurement (Fast-3G, 390px), and
+it is the harder of the two conditions on purpose — a budget that holds here
+holds on a fast link by construction, so a breach here is not yet a breach a
+user meets.
+
+Runner contention is the alternative explanation and is worth ruling out first,
+because it is what took this budget off the acceptance lane: that assertion was
+a single unthrottled wall-clock sample sitting at 1027 ms against 1000 ms, and
+it measured the machine. This lane runs 20 samples against 4.6x headroom, so
+contention should not reach it — if it does, the honest answer is to take the
+lane out again rather than to widen the budget it exists to hold.
+
+No record was written — this lane clears \`MARGINCE_BENCH_RECORD\`, so the
+published page still shows the last number a human measured. Publish a new one
+with \`make bench-mobile\` only once the breach is understood."\
+    || unreported=1
+fi
+
 if [[ "${CLOCK_RESULT:-}" = "failure" ]]; then
   report "the frontend suite's verdict depends on the calendar" bug \
 "\`make fe-clock-drift\` failed on the scheduled run of \`main\`: $RUN_URL

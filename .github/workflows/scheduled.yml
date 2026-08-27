@@ -447,6 +447,93 @@ jobs:
           # seconds in. The absence of transcripts is itself the finding.
           if-no-files-found: error
 
+  # PERF-1's PERCEIVED budget (MOBILE-AC-2), the browser half of what
+  # perf-budgets measures over HTTP.
+  #
+  # A SIBLING job rather than a step in perf-budgets, because the two share a
+  # cadence and nothing else: that one is Go against a seeded Postgres, this one
+  # is Playwright against the built SPA with the network mocked at the edge.
+  # Folding this in would make a browser toolchain a dependency of a job that
+  # seeds a quarter of a million contacts, and a failure in either would report
+  # as the other.
+  #
+  # It records NOTHING, for the reason bench-perf-check states above: a record
+  # is a human's to publish, and a scheduled job is the machine that rule is
+  # about. `make bench-mobile-check` CLEARS MARGINCE_BENCH_RECORD rather than
+  # leaving it unset, so writing nothing is a property of the target rather than
+  # of this runner's environment.
+  #
+  # Why this budget is schedulable when the acceptance lane's unthrottled
+  # assertion was not: the Fast-3G profile's per-request latency dominates
+  # runner contention, and the recorded p95 is 65 ms against a 300 ms budget.
+  # The assertion that was removed sat at 1027 against 1000 — a single
+  # wall-clock sample on a runner shared with six integration shards, which
+  # measured the machine. Headroom is what makes the difference, so if this lane
+  # starts failing on contention rather than on a regression, the answer is to
+  # take it out again rather than to widen the budget it exists to hold.
+  perf-mobile:
+    name: perf budget (MOBILE-AC-2, throttled Fast-3G)
+    outputs:
+      outcome: ${{ steps.bench.outputs.outcome }}
+    # The same weekly cadence and the same dispatch input as perf-budgets: both
+    # are the perf lane, and a reader turning "the budgets" on by hand means
+    # both halves of the published page rather than whichever one they recalled.
+    if: github.event.schedule == '0 2 * * 1' || (github.event_name == 'workflow_dispatch' && inputs.perf)
+    runs-on: ubuntu-latest
+    # DERIVED from the measurement rather than picked: 20 samples over a link
+    # throttled to Fast-3G is what the spec's own 300s per-test bound covers,
+    # and install, `pnpm build` and the browser download are the rest. A job
+    # ceiling equal to the inner bound could never let the inner one fire, and a
+    # hang would then report as an opaque cancellation with no p95 line — which
+    # the outcome branch below reads as a lane failure, correctly, but with
+    # nothing to say why.
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@0977fd99725f1db4007ccb2928dbb4e90d06cc86 # v6.0.10
+        with:
+          version: 11
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      # The browser only. `make bench-mobile-check` runs the install and the
+      # build itself, so doing them here as well would install twice and leave
+      # two spellings of the lane's setup to drift apart.
+      - name: Install the Playwright Chromium browser
+        working-directory: frontend
+        run: pnpm exec playwright install --with-deps chromium
+      # The step separates "the budget breached" from "the lane could not run",
+      # exactly as perf-budgets does and for the same reason: a failed install,
+      # a build error or a preview server that never came up all reach the
+      # reporter as `failure`, and an issue saying a budget is breaching sends
+      # somebody bisecting a regression that does not exist.
+      #
+      # The distinction is taken from the spec's own words. It logs
+      # `perfbench [fast-3g/390px]: record_open_perceived p95=…` and THEN
+      # asserts, so the line is present exactly when a measurement was taken —
+      # its absence means the run never got that far.
+      - name: MOBILE-AC-2 on a throttled Fast-3G profile at 390px
+        id: bench
+        working-directory: .
+        run: |
+          set -o pipefail
+          if make bench-mobile-check 2>&1 | tee bench-mobile.log; then
+            echo "outcome=ok" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if grep -q "perfbench \[fast-3g/390px\]:" bench-mobile.log; then
+            echo "outcome=breach" >> "$GITHUB_OUTPUT"
+          else
+            echo "outcome=lane-failed" >> "$GITHUB_OUTPUT"
+          fi
+          exit 1
+
   # The suite's verdict must not depend on the calendar.
   #
   # A fixture date only becomes a bomb when the COMPONENT compares it to now to
@@ -524,7 +611,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, backend-lane, fe-clock-drift, perf-budgets, llm-use-cases, reap-caches]
+    needs: [vuln, quality-gate, backend-lane, fe-clock-drift, perf-budgets, perf-mobile, llm-use-cases, reap-caches]
     if: >-
       !cancelled()
       && (needs.vuln.result == 'failure'
@@ -532,6 +619,7 @@ jobs:
         || needs.backend-lane.result == 'failure'
         || needs['fe-clock-drift'].result == 'failure'
         || needs.perf-budgets.result == 'failure'
+        || needs['perf-mobile'].result == 'failure'
         || needs['llm-use-cases'].result == 'failure'
         || needs.reap-caches.result == 'failure')
     runs-on: ubuntu-latest
@@ -564,6 +652,8 @@ jobs:
           CLOCK_RESULT: ${{ needs['fe-clock-drift'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
+          MOBILE_RESULT: ${{ needs['perf-mobile'].result }}
+          MOBILE_OUTCOME: ${{ needs['perf-mobile'].outputs.outcome }}
           LLM_RESULT: ${{ needs['llm-use-cases'].result }}
           LLM_OUTCOME: ${{ needs['llm-use-cases'].outputs.outcome }}
           CACHE_RESULT: ${{ needs.reap-caches.result }}
