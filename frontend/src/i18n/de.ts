@@ -821,7 +821,7 @@ export const de = {
   "tab.documents": "Dokumente",
   "tab.profile": "Profil",
   "tab.meetings": "Termine",
-  "tab.research": "Recherche",
+  "tab.research": "Daten & Tools",
   // Das Briefing nach den Fragen, die es beantwortet, und die Art jeder
   // Aussage — eine Einschätzung darf nicht wie ein Fakt wirken.
   "co.brief.nature.fact": "Fakt",
@@ -6191,6 +6191,10 @@ export const de = {
   "provider.profile.claimsUnwritten":
     "Bezahlt, aber die Daten sind nie an diesem Datensatz angekommen. Niemand muss danach suchen — das hier ist die Lücke.",
   "provider.profile.enrichNow": "Kontakt nachschlagen",
+  "provider.profile.lookingUp": "Wir fragen den Anbieter. Das dauert kurz.",
+  "provider.profile.emptyTitle": "Für diesen Kontakt wurde noch nichts gekauft",
+  "provider.profile.emptyBody":
+    "Eine Abfrage holt beim verbundenen Datenanbieter Angaben zu diesem Kontakt — je nachdem, was für die Verbindung eingekauft werden soll. Sie kostet Credits, und was zurückkommt steht hier neben dem Datensatz; überschrieben wird nichts, was jemand aus dem Team eingetragen hat.",
   "provider.profile.emails": "E-Mail-Adressen",
   "provider.profile.emailType.provider": "{type}, so vom Anbieter bezeichnet",
   "provider.profile.emailType.requested":

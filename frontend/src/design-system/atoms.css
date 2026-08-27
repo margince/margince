@@ -514,6 +514,18 @@
   color: var(--textPrimary);
   box-shadow: var(--shadow-card);
 }
+/* Something waits behind this option. An accent dot rather than an indigo one:
+ * indigo claims an agent proposed something, and what this marks is only that
+ * a surface has an action nobody has taken yet. */
+.segmented-mark {
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-left: 5px;
+  vertical-align: 2px;
+  border-radius: 50%;
+  background: var(--accent);
+}
 /* Keyboard focus reads an accent-token ring (matches .input/.textarea) rather
  * than the browser's off-palette native outline. */
 .segmented button:focus-visible {

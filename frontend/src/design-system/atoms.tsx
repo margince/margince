@@ -1075,6 +1075,7 @@ export function SegmentedControl<Option extends string>({
   onChange,
   labels,
   label,
+  marks,
 }: Readonly<{
   options: readonly Option[];
   value: Option;
@@ -1084,6 +1085,12 @@ export function SegmentedControl<Option extends string>({
   // screen reader announces it alongside each option so the buttons aren't
   // read out of context. Optional so existing callers are unaffected.
   label?: string;
+  // Options carrying a dot: something waits behind that option. Decorative by
+  // construction — the dot is `aria-hidden` and the fact it hints at must be
+  // stated in words on the surface the option opens, because a mark is the one
+  // thing a screen reader cannot read out and a colour-blind reader may not
+  // see. It draws attention; it never carries the meaning alone.
+  marks?: Partial<Record<Option, boolean>>;
 }>) {
   return (
     <fieldset className="segmented" aria-label={label}>
@@ -1095,6 +1102,7 @@ export function SegmentedControl<Option extends string>({
           onClick={() => onChange(option)}
         >
           {labels[option]}
+          {marks?.[option] && <span className="segmented-mark" aria-hidden />}
         </button>
       ))}
     </fieldset>

@@ -863,7 +863,7 @@ export const en = {
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",
-  "tab.research": "Research",
+  "tab.research": "Data & tools",
   // The brief under the questions it answers, and what kind of claim each
   // sentence makes — a judgment must not read as a stored fact.
   "co.brief.nature.fact": "Fact",
@@ -6238,6 +6238,10 @@ export const en = {
   "provider.profile.claimsUnwritten":
     "Paid for, but the details never reached this record. Nobody has to hunt for them — this is the gap.",
   "provider.profile.enrichNow": "Look this contact up",
+  "provider.profile.lookingUp": "Asking the provider. This takes a moment.",
+  "provider.profile.emptyTitle": "Nothing bought for this contact yet",
+  "provider.profile.emptyBody":
+    "A lookup asks the connected data provider about this contact, for whichever details the connection is set to buy. It spends credits, and what comes back sits here beside the record rather than overwriting anything a colleague typed.",
   "provider.profile.emails": "Email addresses",
   "provider.profile.emailType.provider": "{type}, as the provider labelled it",
   "provider.profile.emailType.requested":
