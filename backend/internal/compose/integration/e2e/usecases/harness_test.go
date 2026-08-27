@@ -15,7 +15,6 @@ package usecases
 import (
 	"context"
 	"encoding/json"
-	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -137,20 +136,6 @@ func (s *scenario) seedID(t *testing.T, sql string, args ...any) ids.UUID {
 	id := ids.NewV7()
 	s.seed(t, sql, append([]any{id}, args...)...)
 	return id
-}
-
-// containsAll says whether every needle appears in the haystack.
-//
-// Case-insensitive, because these are assertions about whether a caller was
-// TOLD something, and a tool that says "Address" has told them.
-func containsAll(haystack string, needles ...string) bool {
-	lowered := strings.ToLower(haystack)
-	for _, needle := range needles {
-		if !strings.Contains(lowered, strings.ToLower(needle)) {
-			return false
-		}
-	}
-	return true
 }
 
 // recordName reads a record's display name out of its fields, for a failure
