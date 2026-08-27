@@ -334,3 +334,86 @@ func seedLeadInStatus(t *testing.T, owner *pgx.Conn, status string) ids.UUID {
 	}
 	return id
 }
+
+// recentlyWorked is INSIDE the cutoff: a touch at this instant means somebody
+// is working the relationship right now.
+var recentlyWorked = eligibilityScanNow.AddDate(0, 0, -1)
+
+// seedTouchAt is seedQuietTouch with the instant named, so a suite can put one
+// touch either side of the cutoff and assert which one decided the outcome.
+func seedTouchAt(t *testing.T, owner *pgx.Conn, at time.Time) ids.UUID {
+	t.Helper()
+	id := ids.NewV7()
+	if _, err := owner.Exec(context.Background(),
+		`INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
+		 VALUES ($1, 'email', 'Genuine engagement', $2, 'manual', 'human:x')`,
+		id, at); err != nil {
+		t.Fatalf("seeding a touch at %s: %v", at, err)
+	}
+	return id
+}
+
+// An account is reached by mail filed against its CONTACT, which is how
+// capture files it — the message names the person it was with, never the
+// company. Counting only the account's own links, this account looks untouched
+// since the old direct mail and earns a reminder about a relationship a rep
+// worked yesterday.
+func TestAnAccountWorkedThroughItsContactIsNotRemindedAbout(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	org := e.SeedOrg(t, "Worked Through Its People", nil)
+	deal := e.SeedDeal(t, "Renewal", pipeline, open, nil)
+	attachDealToOrg(t, owner, deal, org)
+	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
+
+	// The account's own last direct mail is old.
+	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, quietSince), "organization", org)
+
+	// Yesterday a rep mailed the contact. Capture files that against the
+	// PERSON, so it carries no organization link of its own.
+	contact := e.SeedPerson(t, "Ingrid Sattler", nil)
+	seedEmployment(t, owner, contact, org)
+	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, recentlyWorked), "person", contact)
+
+	seedNoActivityReminder(t, owner, e.WS)
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "organization", org); got != 0 {
+		t.Fatalf("reminder tasks on an account mailed through its contact yesterday = %d, want 0 — "+
+			"the account is being worked, and the mail reaches it through the person it was with", got)
+	}
+}
+
+// The mirror case, and the reason this is not just a false-positive fix: an
+// account whose correspondence NEVER carried a direct link was not merely
+// mis-dated, it was invisible. Counting only its own links it has no last
+// touch at all, so it never entered the draw and could never be reminded about
+// however long it went quiet.
+func TestAnAccountWhoseOnlyMailIsItsContactsIsStillDrawnWhenItGoesQuiet(t *testing.T) {
+	e := Setup(t)
+	owner := OwnerConn(t)
+	pipeline, open, _ := DealFixture(t, e)
+
+	org := e.SeedOrg(t, "Quiet Through Its People", nil)
+	deal := e.SeedDeal(t, "Renewal", pipeline, open, nil)
+	attachDealToOrg(t, owner, deal, org)
+	backdateCreatedAt(t, owner, "organization", org, longEstablished)
+	backdateCreatedAt(t, owner, "deal", deal, longEstablished)
+
+	// Every message this account ever had is filed against its contact, and
+	// the last of them is long past the cutoff. No direct link, ever.
+	contact := e.SeedPerson(t, "Ingrid Sattler", nil)
+	seedEmployment(t, owner, contact, org)
+	linkTouch(t, owner, e.WS, seedTouchAt(t, owner, quietSince), "person", contact)
+
+	seedNoActivityReminder(t, owner, e.WS)
+	runEligibilityScan(t, e)
+
+	if got := taskCountOn(t, e, "organization", org); got != 1 {
+		t.Fatalf("reminder tasks on a quiet account reached only through its contact = %d, want 1 — "+
+			"an account with no direct link is still an account somebody stopped talking to", got)
+	}
+}

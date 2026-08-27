@@ -49,6 +49,78 @@ type LastTouchCandidate struct {
 	LastTouch  time.Time
 }
 
+// lastTouchCandidateQuery is LastTouchBefore's read: every linked entity's most
+// recent genuine engagement, narrowed to the ones carrying live work. It is a
+// function rather than a constant because two of its fragments are built —
+// the link-id coalesce, and the organization walk — and it sits apart from the
+// scan so the scan reads as what it does with the rows.
+//
+// $1 is the source the automation engine stamps, $2 the cutoff, $3 the cap.
+func lastTouchCandidateQuery() string {
+	return storekit.SQLf(`
+			WITH genuine AS (
+				SELECT a.id, a.occurred_at
+				FROM activity a
+				WHERE a.archived_at IS NULL
+				  AND a.source <> $1
+			), direct AS (
+				SELECT al.entity_type AS entity_type,
+				       %[1]s AS entity_id,
+				       max(g.occurred_at) AS last_touch
+				FROM activity_link al
+				JOIN genuine g ON g.id = al.activity_id
+				WHERE al.entity_type <> '%[3]s'
+				GROUP BY al.entity_type, %[1]s
+			), accounts AS (
+				SELECT '%[3]s' AS entity_type,
+				       reach.organization_id AS entity_id,
+				       max(g.occurred_at) AS last_touch
+				FROM (%[6]s) reach
+				JOIN genuine g ON g.id = reach.activity_id
+				GROUP BY reach.organization_id
+			), quiet AS (
+				SELECT entity_type, entity_id, last_touch FROM direct
+				UNION ALL
+				SELECT entity_type, entity_id, last_touch FROM accounts
+			)
+			SELECT q.entity_type, q.entity_id, q.last_touch
+			FROM quiet q
+			WHERE q.last_touch < $2
+			  AND ((q.entity_type = '%[2]s' AND EXISTS (
+			         SELECT 1 FROM deal d
+			         WHERE d.id = q.entity_id
+			           AND d.status = 'open' AND d.archived_at IS NULL
+			           AND d.created_at < $2))
+			   OR (q.entity_type = '%[3]s' AND EXISTS (
+			         SELECT 1 FROM organization o
+			         JOIN deal d ON d.organization_id = o.id
+			                    AND d.status = 'open' AND d.archived_at IS NULL
+			         WHERE o.id = q.entity_id
+			           AND o.archived_at IS NULL
+			           AND o.created_at < $2))
+			   OR (q.entity_type = '%[4]s' AND EXISTS (
+			         SELECT 1 FROM person p
+			         JOIN relationship r ON r.person_id = p.id
+			                    AND r.kind = 'deal_stakeholder'
+			                    AND r.ended_at IS NULL AND r.archived_at IS NULL
+			         JOIN deal d ON d.id = r.deal_id
+			                    AND d.status = 'open' AND d.archived_at IS NULL
+			         WHERE p.id = q.entity_id
+			           AND p.archived_at IS NULL
+			           AND p.created_at < $2))
+			   OR (q.entity_type = '%[5]s' AND EXISTS (
+			         SELECT 1 FROM lead l
+			         WHERE l.id = q.entity_id
+			           AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
+			           AND l.created_at < $2)))
+			ORDER BY q.last_touch, q.entity_id
+			LIMIT $3`,
+		linkIDCoalesceQualified("al"),
+		datasource.RecordDeal, datasource.RecordOrganization,
+		datasource.RecordPerson, datasource.RecordLead,
+		OrgReachSet())
+}
+
 // LastTouchBefore returns the entities that are BOTH quiet and worth
 // reminding about: linked through activity_link, most recent
 // GENUINE-engagement activity.occurred_at before cutoff, and carrying
@@ -81,6 +153,22 @@ type LastTouchCandidate struct {
 //   - organization — it has at least one open, unarchived deal. The
 //     account is what the rep works, so the reminder belongs on the
 //     account, once.
+//
+// An account's last touch is read through the three-arm walk (OrgReachSet)
+// rather than off its own links, and that is the difference between this
+// trigger working and not. Capture files mail against the PERSON it was with,
+// so on a real workspace an account's correspondence carries no direct
+// organization link at all: counting only direct links, an account whose reps
+// mailed a contact yesterday looked untouched and earned a reminder about a
+// relationship somebody is actively working, while an account that never got a
+// direct link was never drawn at all. The other three types keep their own
+// links, because each is the thing the activity names.
+//
+// It widens the draw in both directions and that is the point: accounts
+// previously invisible become candidates, and accounts previously drawn while
+// being worked stop being. Eligibility is unchanged — an account still needs an
+// open unarchived deal — so the batch is spent on accounts somebody is working
+// rather than on ones nobody is.
 //   - person — they hold a live deal_stakeholder seat on an open deal.
 //     Deliberately NOT "their employer has an open deal": that would mint
 //     one reminder per employee of every busy account, each one a
@@ -110,53 +198,7 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 		// vocabulary (linktarget.go), the same source the coalesce
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
-		rows, err := tx.Query(ctx, storekit.SQLf(`
-			WITH quiet AS (
-				SELECT al.entity_type AS entity_type,
-				       %[1]s AS entity_id,
-				       max(a.occurred_at) AS last_touch
-				FROM activity_link al
-				JOIN activity a ON a.id = al.activity_id
-				WHERE a.archived_at IS NULL
-				  AND a.source <> $1
-				GROUP BY al.entity_type, %[1]s
-				HAVING max(a.occurred_at) < $2
-			)
-			SELECT q.entity_type, q.entity_id, q.last_touch
-			FROM quiet q
-			WHERE (q.entity_type = '%[2]s' AND EXISTS (
-			         SELECT 1 FROM deal d
-			         WHERE d.id = q.entity_id
-			           AND d.status = 'open' AND d.archived_at IS NULL
-			           AND d.created_at < $2))
-			   OR (q.entity_type = '%[3]s' AND EXISTS (
-			         SELECT 1 FROM organization o
-			         JOIN deal d ON d.organization_id = o.id
-			                    AND d.status = 'open' AND d.archived_at IS NULL
-			         WHERE o.id = q.entity_id
-			           AND o.archived_at IS NULL
-			           AND o.created_at < $2))
-			   OR (q.entity_type = '%[4]s' AND EXISTS (
-			         SELECT 1 FROM person p
-			         JOIN relationship r ON r.person_id = p.id
-			                    AND r.kind = 'deal_stakeholder'
-			                    AND r.ended_at IS NULL AND r.archived_at IS NULL
-			         JOIN deal d ON d.id = r.deal_id
-			                    AND d.status = 'open' AND d.archived_at IS NULL
-			         WHERE p.id = q.entity_id
-			           AND p.archived_at IS NULL
-			           AND p.created_at < $2))
-			   OR (q.entity_type = '%[5]s' AND EXISTS (
-			         SELECT 1 FROM lead l
-			         WHERE l.id = q.entity_id
-			           AND l.status IN ('new','contacted','engaged') AND l.archived_at IS NULL
-			           AND l.created_at < $2))
-			ORDER BY q.last_touch, q.entity_id
-			LIMIT $3`,
-			linkIDCoalesceQualified("al"),
-			datasource.RecordDeal, datasource.RecordOrganization,
-			datasource.RecordPerson, datasource.RecordLead),
-			automationSource, cutoff, limit)
+		rows, err := tx.Query(ctx, lastTouchCandidateQuery(), automationSource, cutoff, limit)
 		if err != nil {
 			return err
 		}
