@@ -18,9 +18,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/overlay"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // edgeRow is one audited change to a link, as the reversal path receives it.
@@ -190,5 +192,35 @@ func TestTheAbsentBeforeImageOfACreateIsNotAnUnclearableField(t *testing.T) {
 	}
 	if len(unclearable) != 0 {
 		t.Errorf("a create's absent image reads as unclearable: %v", unclearable)
+	}
+}
+
+// The PREMISE under the edge path's overlay exemption, pinned so it cannot go
+// quietly wrong.
+//
+// evaluateEdge does not ask ExternallyGoverned, and the reason is that a link has
+// no incumbent counterpart to write back to: `relationship` has no overlay mirror
+// projection, and the overlay provider declares no write verb for it. That is a
+// fact about another package, so the exemption is only as sound as the fact — and
+// the day the mirror learns to carry links, a reversal there would write the local
+// half of a link the incumbent also holds, and the two would disagree silently.
+//
+// TestALinkInAnOverlayGovernedWorkspaceIsStillReversible holds the behaviour
+// against real rows; this holds the reason for it. Both must be revisited
+// together, which is why each names the other.
+func TestNoOverlayWriteVerbServesALink(t *testing.T) {
+	verbs := overlay.AllWriteVerbs()
+	if len(verbs) == 0 {
+		t.Fatal("no overlay write verbs to ask about; the premise would read as sound " +
+			"because the corpus is empty")
+	}
+	for _, verb := range verbs {
+		if overlay.SupportsWrite(verb, datasource.EntityRelationship) {
+			t.Errorf("the overlay provider now serves %q for a link, so an overlay workspace "+
+				"can hold one in its incumbent. evaluateEdge exempts the edge path from "+
+				"ReasonNotRestorableByThisPath on the grounds that it cannot — a reversal "+
+				"there would now write the local half alone and leave the two systems "+
+				"disagreeing with nobody told", verb)
+		}
 	}
 }

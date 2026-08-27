@@ -181,7 +181,8 @@ var unresolvableAuditActions = gatekit.Waive(map[string]string{
 // storekit itself is absent on purpose: it IS the doors, and its own statement
 // is what they reach.
 var directAuditLogWriters = gatekit.Waive(map[string]string{
-	"internal/modules/approvals/service.go": "the approval row's own lifecycle, which is not a record whose fields move: the statement writes no before or after column at all, so there is no image for the door's rule to be about",
+	"internal/modules/approvals/service.go":       "the approval row's own lifecycle, which is not a record whose fields move: the statement writes no before or after column at all, so there is no image for the door's rule to be about",
+	"internal/compose/integration/harnessseed.go": "the integration harness's scrub-tombstone fixture, and the only writer here that is not product code. Its rows are erase tombstones — no before or after column, so there is no image for the door's rule to be about — and there is no door to reach: every product path that stamps one also archives its subject, and a tombstone on a LIVE record is the one seed that isolates an erasure boundary from that cascade",
 })
 
 func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {

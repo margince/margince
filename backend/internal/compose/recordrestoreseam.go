@@ -146,7 +146,18 @@ const entityTypeActivity = "activity"
 // than restating it. An Art. 17 erasure is one of the few rules where a second
 // spelling that is merely ALMOST the same would resurrect what was certified
 // destroyed.
+//
+// A LINK's row takes privacy's edge predicate instead of this one, and the
+// difference is not a refinement. The boundary is keyed on the row's own
+// (entity_type, entity_id), which for a link is ('relationship', edge_id) — an
+// identity no write path in this tree ever records a scrub verb against. Asked
+// here, every link that has ever existed answers "never erased", so the branch
+// would be nominal and the refusal unreachable. What bounds a link's image is
+// the erasure of the records it joins.
 func rowIsBehindTheErasureBoundary(ctx context.Context, tx pgx.Tx, row AuditRow) (bool, error) {
+	if row.EntityType == edgeEntityType {
+		return privacy.EdgeBehindErasureBoundary(ctx, tx, row.ID)
+	}
 	// The placeholder is derived from the argument slice rather than typed:
 	// the verb list reaches privacy's predicate as a POSITION, and nothing
 	// checks that a hand-written one still matches the arguments beside it.

@@ -39,6 +39,12 @@ import (
 // is served by this admission and refused by the evaluator's own
 // behind_erasure_boundary branch, which is the answer a person can act on;
 // answering "no such entry" would say the row does not exist when it does.
+//
+// That division of labour holds for a LINK's row only because the evaluator asks
+// the boundary of the records the link JOINS (EdgeBehindErasureBoundary) rather
+// than of the link itself. Keyed on the row's own identity it would answer about
+// ('relationship', edge_id), which no scrub verb is ever written against, and
+// this admission would be handing the write a row nothing downstream bounds.
 func HistoryServesEntry(ctx context.Context, tx pgx.Tx, entityType string, entityID, auditID ids.UUID) (bool, error) {
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }

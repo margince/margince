@@ -21,13 +21,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // linkEmployment links a person to an organization through the people store's
@@ -97,29 +93,6 @@ func containsLine(lines []string, want string) bool {
 		}
 	}
 	return false
-}
-
-// seedScrubTombstone stamps an erase tombstone on a record's own audit spine.
-//
-// Raw rather than through the eraser, and deliberately: the eraser also ARCHIVES
-// its subject, and an archived endpoint is withheld by the edge's endpoint
-// conjunction whatever the tombstone says. A tombstone on a LIVE record is the
-// only seed that isolates the boundary itself, and no product path writes one
-// for an organization — so this is the fixture that makes the erasure filter
-// falsifiable rather than merely present.
-func seedScrubTombstone(t *testing.T, e *Env, entityType string, id ids.UUID, at time.Time) {
-	t.Helper()
-	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		_, err := tx.Exec(ctx, `
-			INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
-			VALUES ($1, 'system', 'system', 'erase', $2, $3, $4)`,
-			ids.NewV7(), entityType, id, at)
-		return err
-	})
-	if err != nil {
-		t.Fatalf("seeding a %s scrub tombstone: %v", entityType, err)
-	}
 }
 
 func TestEdgeHistoryShowsAnEmploymentOnBothEnds(t *testing.T) {
@@ -231,7 +204,7 @@ func TestEdgeHistoryStopsAtTheAnchorsOwnScrubTombstone(t *testing.T) {
 	// The tombstone lands on the ANCHOR being read, after the link. Everything
 	// strictly older is the data the scrub certified gone, edge rows included:
 	// the link's image carries the role and the dates.
-	seedScrubTombstone(t, e, "organization", org, time.Now().Add(time.Hour).UTC())
+	e.SeedScrubTombstone(t, "organization", org, time.Now().Add(time.Hour).UTC())
 
 	for _, line := range summaries(edgeHistoryOf(t, e, "organization", org, nil)) {
 		if strings.Contains(line, "linked Ada Employed") {
@@ -269,7 +242,7 @@ func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndCarriesAScrubTombstone(t *testin
 	// The tombstone is on the OTHER end and that record is still LIVE, so the
 	// endpoint conjunction's own archived arm cannot be what withholds the row.
 	// This is the erasure filter alone.
-	seedScrubTombstone(t, e, "organization", org, time.Now().Add(time.Hour).UTC())
+	e.SeedScrubTombstone(t, "organization", org, time.Now().Add(time.Hour).UTC())
 
 	for _, line := range summaries(edgeHistoryOf(t, e, "person", person, nil)) {
 		if strings.Contains(line, "Employer GmbH") {

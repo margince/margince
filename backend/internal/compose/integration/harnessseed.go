@@ -16,6 +16,7 @@ package integration
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
@@ -153,4 +154,21 @@ func (e *Env) MakeCapturePrivate(t *testing.T, table string, id, owner ids.UUID)
 		t.Fatalf("MakeCapturePrivate: %s carries no visibility column", table)
 	}
 	e.WsExec(t, `UPDATE `+table+` SET visibility = 'owner', owner_id = $2 WHERE id = $1`, id, owner)
+}
+
+// SeedScrubTombstone stamps an erase tombstone on one record's own audit spine,
+// dated `at`.
+//
+// Raw rather than through the eraser, and deliberately: the eraser also ARCHIVES
+// its subject and cascades over its links, and an archived record is withheld or
+// refused on those grounds whatever any boundary says. A tombstone on a LIVE
+// record is therefore the only seed that isolates the erasure boundary itself,
+// and no product path writes one for an organization at all — so this is the
+// fixture that makes a boundary filter falsifiable rather than merely present.
+func (e *Env) SeedScrubTombstone(t *testing.T, entityType string, id ids.UUID, at time.Time) {
+	t.Helper()
+	e.WsExec(t, `
+		INSERT INTO audit_log (id, actor_type, actor_id, action, entity_type, entity_id, occurred_at)
+		VALUES ($1, 'system', 'system', 'erase', $2, $3, $4)`,
+		ids.NewV7(), entityType, id, at)
 }
