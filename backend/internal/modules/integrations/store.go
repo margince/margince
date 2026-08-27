@@ -321,6 +321,11 @@ func catalogOf(d provider.Descriptor) []CategoryCost {
 // pricedWith is the category set whose worst case is the true price of asking
 // for one category: itself, plus the trigger of any cascade it is the fallback
 // for.
+//
+// ONE hop. No adapter declares a cascade whose trigger is itself a fallback,
+// and a chain would need this to walk it — said here rather than built for,
+// because the descriptor that needed it would also be the one to prove what
+// walking should cost.
 func pricedWith(d provider.Descriptor, category provider.Category) []provider.Category {
 	out := []provider.Category{category}
 	for _, cascade := range d.Cascades {

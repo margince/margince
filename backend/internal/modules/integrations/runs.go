@@ -455,10 +455,16 @@ func freezeSnapshot(c admittedConnection) provider.Snapshot {
 	}
 }
 
-// fingerprintOf hashes exactly what will be SENT plus what was asked for. Two
-// runs share a fingerprint when they would produce the same purchase, which is
-// what makes the live-run index a duplicate-spend guard rather than a
-// coincidence.
+// fingerprintOf hashes exactly what will be SENT plus what was asked for, so a
+// repeat of the SAME request finds the run already in flight rather than
+// buying the same answer twice.
+//
+// It does not catch two runs whose category sets overlap without matching:
+// they hash differently, both pass the live-run index, and both buy the
+// category they share. Guarding that needs a per-category claim rather than a
+// whole-set hash, which is a schema change — tracked as its own work, and said
+// here rather than left for the next reader to discover from a duplicate
+// charge.
 func fingerprintOf(id provider.PersonIdentifiers, cats []provider.Category) string {
 	names := make([]string, 0, len(cats))
 	for _, c := range cats {
