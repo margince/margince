@@ -17884,7 +17884,7 @@ export interface components {
              *     (`entity_type: project`), attributed to the project's company.
              * @enum {string}
              */
-            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet";
+            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet" | "funding" | "leadership_change" | "expansion" | "product_launch";
             /**
              * @description Where the raw signal came from.
              * @default derived

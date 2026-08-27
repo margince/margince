@@ -24693,7 +24693,7 @@ components:
           type: string
           enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other,
                  contract_ended, new_opportunity, commitment_made, ghosted_thread,
-                 project_gone_quiet]
+                 project_gone_quiet, funding, leadership_change, expansion, product_launch]
           description: |
             The first six are what a human files by hand. The rest are what the producers
             raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read

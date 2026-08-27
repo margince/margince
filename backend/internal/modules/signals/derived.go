@@ -60,6 +60,14 @@ type DerivedSignal struct {
 	// Audit carries whatever the producer wants recorded about the derivation
 	// beyond the row itself.
 	Audit map[string]any
+	// Channel is WHERE the finding came from, in the signal table's own
+	// vocabulary. Empty means `derived` — a finding computed from what this
+	// workspace already holds, which is what every producer was until a
+	// company's own newsroom became one.
+	Channel string
+	// Source names the producer for the audit trail. Empty means the signal
+	// scan, for the same reason.
+	Source string
 	// PrivateTo is the one reader this finding answers to, or the zero value
 	// when the whole workspace may read it.
 	//
@@ -90,9 +98,16 @@ func nullableOwner(owner ids.UUID) *ids.UUID {
 }
 
 // DerivedEvidence is one citable record behind a derived signal.
+//
+// The two source shapes are exclusive and both are cited the same way: an
+// ACTIVITY the finding was drawn from, or a PAGE it was read on. A web finding
+// carries the second because there is no activity to open — what a reader wants
+// is the article, and storing the article's text instead of its address is the
+// thing this product does not do.
 type DerivedEvidence struct {
 	Snippet    string
 	ActivityID ids.UUID
+	SourceURL  string
 }
 
 // RecordDerived writes one derived signal inside the caller's transaction, or
@@ -115,6 +130,7 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 		return false, err
 	}
 	subjectType, subjectID := in.subject()
+	channel, source := in.channelAndSource()
 	// Every placeholder is derived from the argument slice, so a column added
 	// to this statement cannot bind to its neighbour's value.
 	var args []any
@@ -129,8 +145,8 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 		   evidence, fingerprint, source_channel, resolution_state, severity,
 		   status, detected_at, source, captured_by, visibility, owner_id)
 		VALUES (`+arg(in.Kind)+`, `+arg(subjectType)+`, `+arg(subjectID)+`, `+arg(in.OrganizationID)+`, `+arg(in.Summary)+`,
-		        `+arg(evidence)+`, `+arg(in.Fingerprint)+`, 'derived', 'resolved', `+arg(in.Severity)+`,
-		        'open', `+arg(detectedAt)+`, 'signal-scan', `+arg(by)+`, `+arg(visibility)+`, `+arg(nullableOwner(in.PrivateTo))+`)
+		        `+arg(evidence)+`, `+arg(in.Fingerprint)+`, `+arg(channel)+`, 'resolved', `+arg(in.Severity)+`,
+		        'open', `+arg(detectedAt)+`, `+arg(source)+`, `+arg(by)+`, `+arg(visibility)+`, `+arg(nullableOwner(in.PrivateTo))+`)
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
 		args...).Scan(&signalID)
@@ -151,7 +167,7 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 	if err := storekit.EmitEvent(ctx, tx, auditID, signalID, crmcontracts.PublicEventSignalDetected{
 		SignalId:        openapi_types.UUID(signalID),
 		Kind:            in.Kind,
-		SourceChannel:   "derived",
+		SourceChannel:   channel,
 		ResolutionState: resolutionResolved,
 		Severity:        in.Severity,
 		// The signal's SUBJECT. The envelope's own entity is the signal.
@@ -161,6 +177,20 @@ func RecordDerived(ctx context.Context, tx pgx.Tx, in DerivedSignal, detectedAt 
 		return false, fmt.Errorf("emit signal.detected: %w", err)
 	}
 	return true, nil
+}
+
+// channelAndSource fills in what a producer left unsaid. The defaults are what
+// every producer meant before there was a second kind: a finding computed from
+// this workspace's own records, by the signal scan.
+func (in DerivedSignal) channelAndSource() (channel, source string) {
+	channel, source = in.Channel, in.Source
+	if channel == "" {
+		channel = "derived"
+	}
+	if source == "" {
+		source = "signal-scan"
+	}
+	return channel, source
 }
 
 // subject is the (entity_type, entity_id) pair the row carries: the project
@@ -177,11 +207,18 @@ func (in DerivedSignal) subject() (string, ids.UUID) {
 func derivedEvidenceRows(in []DerivedEvidence) []map[string]any {
 	out := make([]map[string]any, 0, len(in))
 	for _, cited := range in {
-		out = append(out, map[string]any{
-			"snippet":     cited.Snippet,
-			"source_type": "activity",
-			"source_id":   cited.ActivityID.String(),
-		})
+		row := map[string]any{"snippet": cited.Snippet}
+		if cited.SourceURL != "" {
+			// `page` is the contract's own word for a cited web page
+			// (SignalEvidence.source_type). Inventing a second one here would
+			// write rows the published enum refuses.
+			row["source_type"] = "page"
+			row["source_id"] = cited.SourceURL
+		} else {
+			row["source_type"] = "activity"
+			row["source_id"] = cited.ActivityID.String()
+		}
+		out = append(out, row)
 	}
 	return out
 }

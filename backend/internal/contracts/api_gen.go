@@ -9037,9 +9037,13 @@ const (
 	SignalKindChampionLeft     SignalKind = "champion_left"
 	SignalKindCommitmentMade   SignalKind = "commitment_made"
 	SignalKindContractEnded    SignalKind = "contract_ended"
+	SignalKindExpansion        SignalKind = "expansion"
+	SignalKindFunding          SignalKind = "funding"
 	SignalKindGhostedThread    SignalKind = "ghosted_thread"
+	SignalKindLeadershipChange SignalKind = "leadership_change"
 	SignalKindNewOpportunity   SignalKind = "new_opportunity"
 	SignalKindOther            SignalKind = "other"
+	SignalKindProductLaunch    SignalKind = "product_launch"
 	SignalKindProjectGoneQuiet SignalKind = "project_gone_quiet"
 	SignalKindReengagement     SignalKind = "reengagement"
 	SignalKindRisk             SignalKind = "risk"
@@ -9057,11 +9061,19 @@ func (e SignalKind) Valid() bool {
 		return true
 	case SignalKindContractEnded:
 		return true
+	case SignalKindExpansion:
+		return true
+	case SignalKindFunding:
+		return true
 	case SignalKindGhostedThread:
+		return true
+	case SignalKindLeadershipChange:
 		return true
 	case SignalKindNewOpportunity:
 		return true
 	case SignalKindOther:
+		return true
+	case SignalKindProductLaunch:
 		return true
 	case SignalKindProjectGoneQuiet:
 		return true
