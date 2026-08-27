@@ -2148,15 +2148,18 @@ public.knowledge_corpus.created_at timestamp with time zone NOT NULL gen=- def=n
 public.knowledge_corpus.default_ask boolean NOT NULL gen=- def=false
 public.knowledge_corpus.description text gen=- def=-
 public.knowledge_corpus.id uuid NOT NULL gen=- def=uuidv7()
+public.knowledge_corpus.knowledge_corpus_managed_source_known CHECK (((managed_source IS NULL) OR (managed_source = 'handbook'::text)))
 public.knowledge_corpus.knowledge_corpus_min_similarity_range CHECK (((min_similarity >= (0)::double precision) AND (min_similarity <= (1)::double precision)))
 public.knowledge_corpus.knowledge_corpus_pkey PRIMARY KEY (id)
 public.knowledge_corpus.knowledge_corpus_touch CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.knowledge_corpus.managed_source text gen=- def=-
 public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
 public.knowledge_corpus.name text NOT NULL gen=- def=-
 public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
 public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-
 public.knowledge_corpus.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.knowledge_corpus_one_default CREATE UNIQUE INDEX knowledge_corpus_one_default ON public.knowledge_corpus USING btree (default_ask) WHERE (default_ask AND (archived_at IS NULL))
+public.knowledge_corpus_one_per_managed_source CREATE UNIQUE INDEX knowledge_corpus_one_per_managed_source ON public.knowledge_corpus USING btree (managed_source) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))
 public.knowledge_corpus_pkey CREATE UNIQUE INDEX knowledge_corpus_pkey ON public.knowledge_corpus USING btree (id)
 public.knowledge_document acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.knowledge_document.archived_at timestamp with time zone gen=- def=-
@@ -2174,13 +2177,16 @@ public.knowledge_document.ingest_started_at timestamp with time zone gen=- def=-
 public.knowledge_document.ingest_status text NOT NULL gen=- def='queued'::text
 public.knowledge_document.knowledge_document_corpus_fk FOREIGN KEY (corpus_id) REFERENCES knowledge_corpus(id) ON DELETE RESTRICT
 public.knowledge_document.knowledge_document_detail_shape CHECK (((ingest_status = 'failed'::text) = (ingest_detail IS NOT NULL)))
+public.knowledge_document.knowledge_document_managed_source_known CHECK (((managed_source IS NULL) OR (managed_source = 'handbook'::text)))
 public.knowledge_document.knowledge_document_pkey PRIMARY KEY (id)
 public.knowledge_document.knowledge_document_status_check CHECK ((ingest_status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))
 public.knowledge_document.knowledge_document_touch CREATE TRIGGER knowledge_document_touch BEFORE UPDATE ON public.knowledge_document FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.knowledge_document.managed_source text gen=- def=-
 public.knowledge_document.storage_key text NOT NULL gen=- def=-
 public.knowledge_document.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.knowledge_document_by_corpus CREATE INDEX knowledge_document_by_corpus ON public.knowledge_document USING btree (corpus_id, archived_at)
 public.knowledge_document_one_per_content CREATE UNIQUE INDEX knowledge_document_one_per_content ON public.knowledge_document USING btree (corpus_id, checksum) WHERE (archived_at IS NULL)
+public.knowledge_document_one_per_managed_page CREATE UNIQUE INDEX knowledge_document_one_per_managed_page ON public.knowledge_document USING btree (corpus_id, filename) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))
 public.knowledge_document_pkey CREATE UNIQUE INDEX knowledge_document_pkey ON public.knowledge_document USING btree (id)
 public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at)

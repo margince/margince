@@ -206,6 +206,20 @@ ranks what deserves your first hour. If it found nothing, it says so plainly:
 "The overnight brief found nothing worth your first hour. That is the answer,
 not an omission."
 
+Where the overnight pass has something to say about a ranked deal, it writes it
+onto the item itself, beside the rank — so the reason is in the same place as
+the thing it is a reason for, rather than in a second list you have to hold
+against the first. Every finding names a deal that is already in your queue; the
+pass cannot add a deal to your brief by writing about it.
+
+**A deal you dismissed, coming back.** Waving a deal away holds it out of every
+later brief — it does not come back tomorrow because tomorrow is a new day. It
+comes back only when something actually happens on it: a linked activity after
+the moment you dismissed it. So a returning deal always carries the pair that
+explains it — the day you dismissed it, and the activity that brought it back.
+That is not the software guessing why it is showing you something twice. It is
+the rule that put it back, stated: no activity, no return.
+
 ## Every derived claim carries its evidence
 
 Nothing the AI writes on screen is presented as a bare fact. A generated value
@@ -260,6 +274,29 @@ an administrator, can recover it for you.
 Revoking takes effect at the agent's next call. So does demoting the person
 behind it: authority is re-derived every time, so a change binds mid-session
 rather than at the next login.
+
+### Letting an agent work overnight on your behalf
+
+A scheduled agent runs while nobody is at a keyboard, so it cannot borrow your
+authority from a session you are not in. It has to be given, in advance, by you:
+Settings lists every scheduled agent this installation runs, and you answer for
+each one — granted, declined, or not yet asked.
+
+Granting **mints your own passport** in the same act. That is the whole point:
+the overnight run carries a credential that is yours, bound to you as both the
+person acted for and the person who granted it, so everything it does is limited
+to what you could have done yourself and is attributed to you. Withdrawing the
+grant revokes that credential rather than merely unlinking it — the authority
+actually ends.
+
+You may see a grant that says you agreed and is still not working. That is
+honest rather than broken: a passport expires on its own schedule, and nothing
+writes to your answer when it does. The screen tells you the credential behind
+the grant is no longer live, and the remedy is to grant it again, which mints a
+fresh one.
+
+Nobody can do this on your behalf, and no agent can do it for itself. An agent
+that could grant itself standing authority would be deciding its own rights.
 
 ### Volume allowances
 

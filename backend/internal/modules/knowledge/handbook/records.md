@@ -267,6 +267,39 @@ audience: everyone in the organization (the default), the participants, or a
 named few. That audience is not overridden by seniority — someone who can see
 every record still does not read a message they were not an audience for.
 
+## Putting a change back
+
+Every record keeps a history of what changed, who changed it and when. From that
+history you can put a single change back — one entry, not the whole record to a
+point in time.
+
+Putting a change back is an ordinary edit, not a special power. It re-applies
+what the field held before that entry, goes through the same rules as if you had
+typed the old value yourself, and appears in the history as its own entry naming
+the change it reversed. So an undo is visible, and an undo can itself be undone.
+
+Not every entry can be put back, and the history says which and why before you
+press anything:
+
+- **The field moved again since.** Putting the entry back would silently discard
+  whatever was written after it. The reason names the field, so you can look at
+  what happened in between and decide.
+- **The record was archived.** Restore the record first; a change cannot be put
+  back onto something that is not there.
+- **The change did not come from an editable path.** Some entries record things
+  the record's own edit path cannot write — an entry that would have to clear a
+  field nothing can clear. These are shown as history, not as something to undo.
+
+One thing to expect: the button can be honest when you read the screen and the
+answer can still change by the time you press it, because somebody else may have
+edited the record in between. When that happens the change is refused and
+nothing is written, rather than being applied to a record that has moved. Read
+the reason, look at the record again, and decide from what is there now.
+
+**An agent cannot put a change back.** It is a person's authority on purpose:
+otherwise an agent could reach a change it was never allowed to make directly by
+making it, and then undoing the undo.
+
 ## Money
 
 Amounts are stored as whole minor units plus a currency code. There is no

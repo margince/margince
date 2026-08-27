@@ -14,8 +14,8 @@ its own, so you can also come straight to the one you need.
   handbook uses.
 - **[Contacts, companies, leads, deals and projects](records.md)** — the five
   kinds of record, what each holds, and which connections between them are
-  required and which are not. Includes the lead ladder and what qualifying a lead
-  actually does.
+  required and which are not. Includes the lead ladder, what qualifying a lead
+  actually does, and how to put a single change back from a record's history.
 - **[The pipeline](the-pipeline.md)** — stages and what they mean, moving a deal,
   what closing does and what winning requires, reopening, the 60-day stalled
   rule, and how to read the weighted numbers.
