@@ -152,25 +152,49 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			out = existing
 			return nil
 		}
-		if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
-			if constraint, ok := storekit.CheckViolation(err); ok {
-				return contractCheckError(constraint)
-			}
-			return fmt.Errorf("patch contract: %w", err)
-		}
-
-		auditID, err := storekit.Audit(ctx, tx, "update", contractObject, id.UUID, patch.Before(), patch.After())
-		if err != nil {
-			return fmt.Errorf("audit contract update: %w", err)
-		}
-		if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
-			crmcontracts.PublicEventContractUpdated{ChangedFields: patch.After()}); err != nil {
-			return fmt.Errorf("emit contract.updated: %w", err)
+		if err := applyContractUpdate(ctx, tx, id, patch, ifVersion, "contract update"); err != nil {
+			return err
 		}
 		out, err = readContract(ctx, tx, id, s.today())
 		return err
 	})
 	return out, err
+}
+
+// applyContractUpdate is the update write shape: guard the patch, audit it,
+// emit contract.updated, and leave the row read to the caller. `what` names the
+// change for an operator reading a failure — which of the four steps broke, and
+// on which verb.
+//
+// It authorizes NOTHING. Every caller runs auth.Require for the action and
+// resolves the row through writableContract, which is what carries the row
+// scope; this is handed a patch and a row that were both already permitted.
+//
+// And it PUBLISHES the patch's after-image, whole, as contract.updated's
+// changed_fields — which is `additionalProperties: true` on the public webhook
+// contract. Both obligations are invisible from in here, and a shared write
+// seam is exactly the thing a later caller reaches for directly: a patch built
+// over custom-field columns would put their values in front of external
+// subscribers with nothing at the call site saying so.
+func applyContractUpdate(ctx context.Context, tx pgx.Tx, id ids.ContractID,
+	patch *storekit.Patch, ifVersion *int64, what string,
+) error {
+	if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
+		if constraint, ok := storekit.CheckViolation(err); ok {
+			return contractCheckError(constraint)
+		}
+		return fmt.Errorf("write %s: %w", what, err)
+	}
+	auditID, err := storekit.Audit(ctx, tx, "update", contractObject, id.UUID,
+		patch.Before(), patch.After())
+	if err != nil {
+		return fmt.Errorf("audit %s: %w", what, err)
+	}
+	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
+		crmcontracts.PublicEventContractUpdated{ChangedFields: patch.After()}); err != nil {
+		return fmt.Errorf("emit contract.updated for %s: %w", what, err)
+	}
+	return nil
 }
 
 // ArchiveContract soft-deletes an agreement. The row and its history stay:
