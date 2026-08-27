@@ -119,6 +119,12 @@ func seatPersonOnQualifiedDeal(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	if err != nil {
 		return err
 	}
+	// The stakeholder edge this writes hangs off the person, so an archive in
+	// flight must not be outrun — see lockPersonForAttach. This is the edge the
+	// race was found on.
+	if err := lockPersonForAttach(ctx, tx, personID); err != nil {
+		return err
+	}
 	row := tx.QueryRow(ctx, `
 		INSERT INTO relationship (kind, person_id, deal_id, role, source, captured_by)
 		VALUES ('deal_stakeholder', $1, $2, NULL, $3, $4)

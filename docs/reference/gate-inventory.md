@@ -57,7 +57,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 
-## Census (64)
+## Census (65)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -108,6 +108,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onevoiceversionwriter_test.go` | H2 | voice\_profile\_version and voice\_profile\_delta each have ONE writer. |
 | `parallelgates_test.go` | H3 | Every gate here runs in parallel with the others, and this is what keeps that true as gates are added. |
 | `passportmint_test.go` | H1 | A passport is minted for the session user, and for nobody else. |
+| `personattachlock_test.go` | H2 | A relationship carrying a person is written under that person's row lock. |
 | `personprofilefieldwriter_test.go` | H2 | people.writePersonProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `piicoverage_test.go` | H2 | PII reach as a fitness function. |
 | `precheckwiring_test.go` | H2 | A precheck that exists but is not wired protects nothing. |
