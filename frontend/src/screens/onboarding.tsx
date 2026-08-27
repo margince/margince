@@ -354,6 +354,9 @@ export function onboardingDraftPayload(values: CompanyForm) {
     legal_name: optionalDraftValue(values.legal_name),
     registered_address: optionalDraftValue(values.registered_address),
     register_vat: optionalDraftValue(values.register_vat),
+    legal_form: optionalDraftValue(values.legal_form),
+    register_court: optionalDraftValue(values.register_court),
+    register_number: optionalDraftValue(values.register_number),
     industry: optionalDraftValue(values.industry),
     history: optionalDraftValue(values.history),
   };

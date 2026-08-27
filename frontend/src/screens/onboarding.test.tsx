@@ -16,7 +16,14 @@ import {
 } from "../../vitest.budget";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { OnboardingScreen } from "./onboarding";
+import {
+  CUSTOMER_FIELDS,
+  LEGAL_IDENTITY_FIELDS,
+  OFFER_FIELDS,
+  onboardingDraftPayload,
+  OnboardingScreen,
+  SALES_FIELDS,
+} from "./onboarding";
 import { READ_POLL_MS } from "./onboarding-conversation/use-company-read";
 
 // The onboarding invariants that survived the conversational flip, driven
@@ -685,5 +692,30 @@ describe("the mandatory company minimum", () => {
       (screen.getByLabelText(/What do you sell\?/) as HTMLTextAreaElement)
         .value,
     ).toBe("Revenue software");
+  });
+});
+
+// onboardingDraftPayload serializes the interview's answers for BOTH the
+// /onboarding/state checkpoint and the conversational company_draft, so a
+// field it forgets is a field the reader answers and then gets asked for
+// again on resume. It is a hand-listed mirror of the four field groups and
+// nothing else fails when it falls short of them — a profile field shipped
+// missing from it exactly this way.
+describe("the onboarding draft payload", () => {
+  it("carries every field the interview can collect", () => {
+    const collected = [
+      ...LEGAL_IDENTITY_FIELDS,
+      ...OFFER_FIELDS,
+      ...CUSTOMER_FIELDS,
+      ...SALES_FIELDS,
+    ];
+    const blank = Object.fromEntries(collected.map((field) => [field, ""]));
+    // `website` is the address the read starts from rather than something the
+    // profile states, so it is the one form key the payload owes nothing for.
+    const serialized = Object.keys(
+      onboardingDraftPayload({ ...blank, website: "" }),
+    );
+
+    expect([...collected].sort()).toEqual(serialized.sort());
   });
 });
