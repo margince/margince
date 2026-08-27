@@ -103,7 +103,7 @@ func TestSubWorkspaceFanOutsSelectsExactlyTheFinerGrains(t *testing.T) {
 		if unit == FanOutWorkspace {
 			workspaceGrain++
 			if slices.Contains(kinds, kind) {
-				t.Errorf("%s fans out per workspace but is read by the unit pair, where it would restate margince_sweep_workspaces_total exactly", kind)
+				t.Errorf("%s fans out per workspace but is read by the unit pair, where it would restate margince_sweep_workspaces exactly", kind)
 			}
 			continue
 		}

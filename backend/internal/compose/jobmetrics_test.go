@@ -128,7 +128,7 @@ func TestTheSweepPairIsRenderedPerFanOutKind(t *testing.T) {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 	for _, line := range []string{
-		`margince_sweep_workspaces_total{sweep="privacy_retention_workspace"} 42`,
+		`margince_sweep_workspaces{sweep="privacy_retention_workspace"} 42`,
 		`margince_sweep_workspaces_failed{sweep="privacy_retention_workspace"} 3`,
 	} {
 		if !strings.Contains(buf.String(), line) {
@@ -150,7 +150,7 @@ func TestTheSweepUnitPairIsRenderedAtTheDeclaredGrain(t *testing.T) {
 		t.Fatalf("writeJobMetrics: %v", err)
 	}
 	for _, line := range []string{
-		`margince_sweep_units_total{sweep="capture_sync",unit="connection"} 9`,
+		`margince_sweep_units{sweep="capture_sync",unit="connection"} 9`,
 		`margince_sweep_units_failed{sweep="capture_sync",unit="connection"} 2`,
 	} {
 		if !strings.Contains(buf.String(), line) {
@@ -210,9 +210,9 @@ func TestAnEmptySnapshotWritesEveryFamilyHeaderAndNoSeries(t *testing.T) {
 		"margince_job_discarded",
 		"margince_job_cancelled",
 		"margince_job_oldest_queued_age_seconds",
-		"margince_sweep_workspaces_total",
+		"margince_sweep_workspaces",
 		"margince_sweep_workspaces_failed",
-		"margince_sweep_units_total",
+		"margince_sweep_units",
 		"margince_sweep_units_failed",
 	} {
 		if !strings.Contains(buf.String(), "# TYPE "+family+" gauge") {
