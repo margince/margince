@@ -124,11 +124,7 @@ func judgeEnvelopes(file *ast.File) (int, []string) {
 		// a record that optionally carries its score history. The second kind
 		// has no problem to fix: its rows are a `*[]T` under `omitempty`, so an
 		// absent history is absent rather than null.
-		page := fields["Page"]
-		if page == nil {
-			continue
-		}
-		if _, optional := page.(*ast.StarExpr); optional {
+		if !pagesRows(fields["Page"]) {
 			continue
 		}
 		envelopes++
@@ -145,6 +141,25 @@ func judgeEnvelopes(file *ast.File) (int, []string) {
 		}
 	}
 	return envelopes, findings
+}
+
+// pagesRows reports a `Page PageInfo` — the field that says this response IS a
+// page of something.
+//
+// The TYPE as well as the shape. A non-pointer `Page` alone admits any struct
+// with a field of that name — `Page string` on a record about a printed page —
+// which the census would then count as an envelope and report for having no
+// rows. Two wrong answers from one loose test: a type nobody paginates named as
+// a defect, and the count that guards against a broken walk quietly inflated by
+// it.
+//
+// A POINTER is the other half and is not this: `Page *PageInfo` says a response
+// may INCLUDE a page, which is what a record carrying optional history does.
+// Those have no problem to fix — their rows are a `*[]T` under `omitempty`, so
+// an absent list is absent rather than null.
+func pagesRows(page ast.Expr) bool {
+	ident, isValue := page.(*ast.Ident)
+	return isValue && ident.Name == "PageInfo"
 }
 
 // What the census must and must not report, over sources the generated contract
@@ -198,6 +213,17 @@ type LeadScoreExplanation struct {
 	History *[]int
 	Page    *PageInfo
 	Score   int
+}`,
+			envelopes: 0,
+		},
+		// A field named Page that is not a page. Counted as an envelope by a
+		// test that looks only at the name, and then reported for having no
+		// rows — a defect invented out of a type nobody paginates.
+		"a record whose Page is not a PageInfo": {
+			source: `package p
+type Leaflet struct {
+	Page  string
+	Title string
 }`,
 			envelopes: 0,
 		},
