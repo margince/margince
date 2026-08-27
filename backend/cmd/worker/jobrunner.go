@@ -109,15 +109,63 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 		return nil, err
 	}
 	_, _ = fmt.Fprintln(stdout, jobRunnerBanner(cfg, watchCfg, modelPath, vault, lanes.runner))
-	return func() {
-		// The run context is already cancelled at shutdown, so give the
-		// drain its own bounded window.
-		stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			logger.Warn("stopping job runner", "err", err)
-		}
-	}, nil
+	return func() { stopJobRunner(ctx, runner, logger) }, nil
+}
+
+// jobLane is the job runner as SHUTDOWN sees it: two ways to stop, one softer
+// than the other. Named as an interface so the escalation between them can be
+// driven by a test — a real drain overrun needs a job that will not finish,
+// which is the one thing a test cannot arrange without waiting for it.
+type jobLane interface {
+	Stop(ctx context.Context) error
+	StopAndCancel(ctx context.Context) error
+}
+
+// jobDrainWindow bounds the graceful drain: a job caught mid-flight by shutdown
+// gets this long to finish on its own terms.
+const jobDrainWindow = 30 * time.Second
+
+// jobCancelWindow bounds the wait AFTER the work contexts are cancelled. Short,
+// because nothing is being given time to finish here — only to notice it was
+// cancelled and return.
+const jobCancelWindow = 5 * time.Second
+
+// stopJobRunner ends the job lane before this process closes what the jobs
+// write through.
+//
+// The drain is bounded, and River's Stop RETURNS on that deadline rather than
+// enforcing it — in-flight job goroutines keep running. Shutdown does not wait
+// for them: run() closes the bus and then the pool as its deferred calls
+// unwind, so an overrun used to leave a job writing an overlay budget meter
+// into a closed Redis client, or reading through a closed pool. The failure
+// lands in whatever the job logs, at shutdown, where it reads as a symptom of
+// stopping rather than of a job that was never stopped.
+//
+// So an overrun escalates rather than proceeding. Cancelling the work contexts
+// and waiting again is what actually ends those goroutines; River marks a job
+// cancelled this way for retry, so the cost is a job that runs again, not one
+// that is lost.
+//
+// If even that overruns, the process closes its connections under live job
+// goroutines — the same shape as before, but named at Error with what will
+// fail, rather than left to be inferred from a downstream write's complaint.
+func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger) {
+	// The run context is already cancelled at shutdown, so give the
+	// drain its own bounded window.
+	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), jobDrainWindow)
+	defer cancel()
+	drained := lane.Stop(stopCtx)
+	if drained == nil {
+		return
+	}
+	logger.Warn("the job drain did not finish inside its window; cancelling the jobs still in flight so they cannot outlive the bus and the pool this process is about to close",
+		"window", jobDrainWindow, "err", drained)
+	cancelCtx, cancelHard := context.WithTimeout(context.WithoutCancel(ctx), jobCancelWindow)
+	defer cancelHard()
+	if err := lane.StopAndCancel(cancelCtx); err != nil {
+		logger.Error("job goroutines are STILL running as this process closes the bus and the pool; whatever they write next fails against a closed client, and that failure will look like a shutdown problem rather than this one",
+			"window", jobCancelWindow, "err", err)
+	}
 }
 
 // newJobRunner declares every scheduled lane this role runs, and for each the
