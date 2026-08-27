@@ -437,3 +437,63 @@ func TestWithOverlayWebhookAbsentWithoutSecretOrInserter(t *testing.T) {
 		t.Error("a nil inserter must leave the webhook route unmounted")
 	}
 }
+
+// A halt is global state and HubSpot delivers batches CONCURRENTLY, so a
+// "not halted" answer is only true of the instant it was read. Caching it for
+// the length of a batch let a rival delivery halt the mirror mid-batch while
+// this one carried on re-fetching into it on its own stale negative — which is
+// exactly the fail-safe the halt exists to be.
+//
+// The rival is stood in for by a checker that answers false once and true
+// afterwards: nothing in THIS batch halts anything, so a cached negative would
+// enqueue both events.
+func TestWebhookReceiverRereadsTheHaltFlagAfterANegative(t *testing.T) {
+	enq := &capturingEnqueuer{}
+	h := newTestWebhookHandler(enq, ids.New[ids.WorkspaceKind]())
+	reads := 0
+	h.halted = func(context.Context) (bool, error) {
+		reads++
+		return reads > 1, nil // another delivery halts the mirror between the two events
+	}
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, signedWebhookRequest(t,
+		`[{"portalId":777,"objectId":42,"subscriptionType":"contact.propertyChange","propertyName":"firstname","propertyValue":"Ada"},`+
+			`{"portalId":777,"objectId":43,"subscriptionType":"contact.propertyChange","propertyName":"lastname","propertyValue":"Lovelace"}]`))
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", rec.Code)
+	}
+	if reads != 2 {
+		t.Fatalf("the halt flag was read %d time(s), want one per event — a negative answer is not the batch's to keep", reads)
+	}
+	if len(enq.jobs) != 1 {
+		t.Fatalf("re-fetches enqueued = %d, want 1 — the second event arrives after the mirror was halted elsewhere", len(enq.jobs))
+	}
+}
+
+// The yes, however, IS the batch's to keep: nothing but a disconnect clears a
+// halt, so once this delivery has seen one the rest of its events are skipped
+// without asking again.
+func TestWebhookReceiverKeepsAConfirmedHaltForTheRestOfTheBatch(t *testing.T) {
+	enq := &capturingEnqueuer{}
+	h := newTestWebhookHandler(enq, ids.New[ids.WorkspaceKind]())
+	reads := 0
+	h.halted = func(context.Context) (bool, error) {
+		reads++
+		return true, nil
+	}
+
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, signedWebhookRequest(t,
+		`[{"portalId":777,"objectId":42,"subscriptionType":"contact.propertyChange","propertyName":"firstname","propertyValue":"Ada"},`+
+			`{"portalId":777,"objectId":43,"subscriptionType":"contact.propertyChange","propertyName":"lastname","propertyValue":"Lovelace"}]`))
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status = %d, want 204", rec.Code)
+	}
+	if reads != 1 {
+		t.Fatalf("the halt flag was read %d time(s), want 1 — a confirmed halt is not re-queried per event", reads)
+	}
+	if len(enq.jobs) != 0 {
+		t.Errorf("a halted mirror must ingest nothing, got %d jobs", len(enq.jobs))
+	}
+}
