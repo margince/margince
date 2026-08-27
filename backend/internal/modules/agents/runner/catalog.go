@@ -107,22 +107,21 @@ func (a AgentSpec) TriggerRef(day time.Time, seat ids.UserID) string {
 
 // seatDigest is the short, stable, non-record-shaped name of one seat.
 //
-// Truncated to 12 hex characters: this distinguishes seats within one
-// workspace-day, which is all the ref has to do, and the uniqueness that
-// matters is still enforced by the database rather than by this string being
-// unguessable.
+// WHAT A COLLISION WOULD COST is why this is not truncated further. It would be
+// authority-safe — EnqueueJob conflicts to DO NOTHING, so the losing seat gets
+// no job rather than inheriting the winner's passport — but it would not cost
+// one night. The digest is a pure function of a stable user id, so the SAME
+// seat would lose every day, for every spec it granted, silently, until
+// somebody noticed one rep never gets a brief. There is no ceiling on
+// installation size to bound that against, and a starvation nothing reports is
+// exactly the failure this whole change exists to remove.
 //
-// WHAT A COLLISION COSTS, stated honestly. It is authority-safe — EnqueueJob
-// conflicts to DO NOTHING, so the losing seat gets no job rather than
-// inheriting the winner's passport. But it does not cost one night: the digest
-// is a pure function of a stable user id, so the same seat loses every day and
-// for every spec it granted, silently, until somebody notices one rep never
-// gets a brief. The probability is n(n-1)/2^49 — around 1.8e-7 at ten thousand
-// seats — and this trades that against printing a record-shaped uuid into a
-// model prompt, which is a certainty rather than a chance.
+// So it keeps the full 32 hex characters. A shorter digest reads no better in
+// a log line, and the only thing brevity would buy is a probability nobody has
+// a reason to accept.
 func seatDigest(seat ids.UserID) string {
 	sum := sha256.Sum256([]byte(seat.String()))
-	return hex.EncodeToString(sum[:6])
+	return hex.EncodeToString(sum[:16])
 }
 
 // DueAt is when the given day's occurrence becomes runnable.
