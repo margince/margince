@@ -283,4 +283,29 @@ describe("useBuiltinCommands", () => {
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/filters");
   });
+
+  // The scheduled queue is off the rail deliberately, so the rail-derived rows
+  // above cannot carry it and nothing else did: it was reachable only by typing
+  // the address, while a rep sat on a message they wanted back.
+  it("reaches the scheduled queue, which no rail row names", async () => {
+    const user = userEvent.setup();
+    renderProbe();
+    await user.type(screen.getByRole("textbox"), "scheduled");
+    const rows = screen.getAllByRole("button");
+    expect(rows[0].textContent).toContain("Scheduled messages");
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/scheduled");
+  });
+
+  // The words a rep would actually type: they think of the CONTROL they used,
+  // not of the destination. The alias is that control's own label, so it is
+  // translated with it — English prose here would be words a German or
+  // Vietnamese reader would never type.
+  it("finds it under the words the composer's control uses", async () => {
+    const user = userEvent.setup();
+    renderProbe();
+    await user.type(screen.getByRole("textbox"), "Schedule send");
+    await user.keyboard("{Enter}");
+    expect(window.location.hash).toBe("#/scheduled");
+  });
 });

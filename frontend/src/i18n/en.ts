@@ -2824,6 +2824,12 @@ export const en = {
   // neither, and it can be moved or withdrawn until it goes.
   "compose.schedule": "Schedule send",
   "compose.scheduleConfirmTitle": "Schedule this email?",
+  // The composer computed that it had scheduled a send and said nothing —
+  // it closed the way a SENT message closes it. The confirm dialog above
+  // promises a place to move or withdraw the message from; these two are how a
+  // rep gets there.
+  "compose.scheduledQueued": "Scheduled. It has not gone out yet.",
+  "compose.scheduledOpenQueue": "Scheduled messages",
   "compose.scheduleBody":
     "This does not go out now. It waits for the moment you picked, and the consent and mailbox checks run again then. Until it goes you can move it or take it back from Scheduled messages.",
   "compose.sendMessageConfirmTitle": "Send this message?",
