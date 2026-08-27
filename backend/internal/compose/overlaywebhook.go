@@ -169,9 +169,17 @@ func (h *hubspotWebhookHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 }
 
 // webhookCaches are the lookup caches the events of ONE delivery share: portal
-// bindings resolved once per portal, and the mirror-halt flag read once per
-// workspace (a mid-batch collision flips it so the rest of the batch is skipped
-// without re-querying).
+// bindings resolved once per portal, and the workspaces this delivery has seen
+// halted.
+//
+// halted records only the YES. A halt is global state and HubSpot delivers
+// batches concurrently, so a negative cached for the length of a batch is a
+// promise this request cannot keep: another delivery classifying a collision
+// halts the mirror in the database, and the events still to come in THIS batch
+// would read their own stale "not halted" and re-fetch into a mirror whose
+// state is no longer trusted — the fail-safe the halt exists to be. A yes is
+// safe to keep, because nothing but a disconnect clears it, so a mid-batch
+// collision still skips the rest of the batch without re-querying.
 type webhookCaches struct {
 	portals map[string]portalResolution
 	halted  map[string]bool
@@ -257,15 +265,17 @@ func (h *hubspotWebhookHandler) mirrorHalted(ctx context.Context, caches webhook
 	if h.halted == nil {
 		return false, nil
 	}
-	if halted, cached := caches.halted[ws.String()]; cached {
-		return halted, nil
+	if caches.halted[ws.String()] {
+		return true, nil
 	}
 	halted, err := h.halted(ctx)
 	if err != nil {
 		h.log.ErrorContext(ctx, "overlay webhook: reading the mirror-halt flag", "err", err)
 		return false, err
 	}
-	caches.halted[ws.String()] = halted
+	if halted {
+		caches.halted[ws.String()] = true
+	}
 	return halted, nil
 }
 
