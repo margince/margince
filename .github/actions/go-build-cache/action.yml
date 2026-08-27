@@ -6,8 +6,8 @@ description: >-
 # Why this exists: actions/setup-go caches ~/.cache/go-build under a key that
 # hashes only go.sum, so the entry is written ONCE and then every later run logs
 # "Cache hit occurred on the primary key ... not saving cache" and restores that
-# first, near-empty snapshot forever. A warm build cache for this repo measures
-# ~550 MB; the blob setup-go restores is ~25 MB. The result was that every Go
+# first, near-empty snapshot forever. A warm build cache for this repo is
+# multiple GB; the blob setup-go restores is ~25 MB. The result was that every Go
 # job in the pipeline — the integration shards, the merge gate, the
 # composed-build lane, the coverage pass, live-boot, govulncheck — compiled the
 # module from scratch on every run. setup-go keeps caching the MODULE cache
@@ -20,8 +20,26 @@ description: >-
 # last fallback drops the dependency hash entirely: after a dependency bump a
 # mostly-warm cache still beats a cold one, and the stale entries age out under
 # Go's own trimming rather than being served in error.
+#
+# "Age out under Go's own trimming" is the part that needs watching: Go only
+# trims when its `trim.txt` marker is over 24 hours old, and cache-warm both
+# restores that marker and runs every three hours, so the trim cannot fire on
+# its own. cache-warm therefore does it explicitly before saving. Without that
+# the entry grew about a gigabyte a day — it was 8.4 GB when this was found,
+# and every one of those gigabytes is restored by eleven jobs per run.
 
 inputs:
+  restore:
+    description: >-
+      Whether to actually restore. A CONSUMER wants the cache and leaves this
+      alone. The scheduled writer sets it to `false`: it exists to produce the
+      entry every consumer then restores, and an entry built on top of the
+      previous one accumulates instead of describing a build. Compiling from
+      cold makes what it saves exactly the working set of the lane it mirrors.
+      The key is still computed and returned either way, because a writer that
+      spelled its own key could write one no restore looks for.
+    required: false
+    default: "true"
   flavor:
     description: >-
       Which set of compiled artifacts this job produces, and therefore which
@@ -59,6 +77,7 @@ runs:
         } >> "$GITHUB_OUTPUT"
 
     - name: Restore the Go build cache
+      if: ${{ inputs.restore == 'true' }}
       uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/go-build
