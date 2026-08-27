@@ -143,11 +143,14 @@ export const Read: Story = {
 };
 
 /**
- * Never looked up. The card offers the lookup and says plainly that there is
- * nothing yet — an empty card with no sentence reads as "this company runs
- * nothing", which is a different and false claim.
+ * Not read yet — an account whose site nothing has crawled.
+ *
+ * The sentence carries the weight: an empty card with no sentence reads as
+ * "this company runs nothing", and one that only offered a button would ask
+ * for a press the reader does not owe. The reading arrives with the site read
+ * and refreshes on a schedule; the button is the impatient path.
  */
-export const NeverLookedUp: Story = {
+export const NotReadYet: Story = {
   render: () => {
     installFetchStub({
       "GET /me": CAN_ENRICH,

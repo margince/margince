@@ -1663,7 +1663,7 @@ export const vi = {
   "co.tech.read": "Tra cứu",
   "co.tech.reading": "Đang tra cứu…",
   "co.tech.empty":
-    "Chưa tra cứu. Việc tra cứu đọc các bản ghi công khai của tên miền trên hồ sơ này.",
+    "Chưa có dữ liệu kỹ thuật. Mục này tự điền khi website của công ty được đọc, và tự làm mới — nút bấm chỉ dành cho khi bạn không muốn chờ.",
   "co.tech.unavailable": "Bản cài đặt này không thực hiện tra cứu kỹ thuật.",
   "co.tech.queued": "Đã xếp hàng tra cứu. Thường mất chưa đến một phút.",
   "co.tech.laneFailed":

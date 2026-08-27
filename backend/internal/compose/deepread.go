@@ -247,6 +247,12 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 	// guarded egress, under its own deadline, whose failure is never the
 	// read's. A company that publishes no newsroom is the ordinary case.
 	w.readNewsroom(ctx, claim, crawl)
+	// The third side lane, and the only one that queues rather than fetches:
+	// what the company publicly RUNS, beside what its pages SAY. Its three
+	// services are paced on their own single-threaded queue, so a deep-read
+	// worker hands the question over instead of waiting on it
+	// (technicalonsiteread.go).
+	w.askWhatTheCompanyRuns(ctx, claim)
 
 	return w.reportRead(ctx, args, claim, crawl, extraction)
 }

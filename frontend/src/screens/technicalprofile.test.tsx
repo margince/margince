@@ -110,8 +110,10 @@ describe("the technical profile card", () => {
   });
 
   // An empty card with no sentence reads as "this company runs nothing", which
-  // is a different and false claim from "nobody has looked".
-  it("says plainly when nothing has been looked up", async () => {
+  // is a different and false claim from "this has not been read yet". The
+  // sentence also has to say the reading happens on its own, or the card asks
+  // for a press it does not need.
+  it("says plainly that nothing has been read yet", async () => {
     installFetchStub({
       "GET /me": CAN_ENRICH,
       [`GET /organizations/${ORG}/facts`]: () => jsonResponse({ data: [] }),
@@ -119,7 +121,9 @@ describe("the technical profile card", () => {
         jsonResponse({ title: "not found" }, 404),
     });
     renderCard();
-    expect(await screen.findByText(/Noch nichts nachgeschaut/)).toBeTruthy();
+    expect(
+      await screen.findByText(/Noch nichts Technisches gelesen/),
+    ).toBeTruthy();
   });
 
   // The notice is what tells a reader that an absent service means "not checked
