@@ -171,6 +171,12 @@ func TestRecordingAnExchangeRefusesWhatItCannotStandBehind(t *testing.T) {
 		{"no note", RecordQualifyingEventInput{Kind: "in_person", OccurredAt: when}},
 		{"a blank note", RecordQualifyingEventInput{Kind: "in_person", Note: "   ", OccurredAt: when}},
 		{"no date", RecordQualifyingEventInput{Kind: "in_person", Note: "met them"}},
+		// A date in the future is not a memory. It also wins the verdict's
+		// `ORDER BY occurred_at DESC`, so accepting one would let a fabricated
+		// row authorize sending now AND shadow the real evidence beneath it.
+		{"a date in the future", RecordQualifyingEventInput{
+			Kind: "in_person", Note: "will meet them", OccurredAt: time.Now().Add(48 * time.Hour),
+		}},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -181,7 +187,40 @@ func TestRecordingAnExchangeRefusesWhatItCannotStandBehind(t *testing.T) {
 	}
 	// None of them moved the verdict.
 	if after := e.verdict(t); after.State != VerdictUnknown {
-		t.Errorf("the verdict = %q after four refusals, want unknown", after.State)
+		t.Errorf("the verdict = %q after five refusals, want unknown", after.State)
+	}
+}
+
+// The rows ARE the legal evidence, so a retry must not stack a second one
+// claiming a second meeting happened. A double click, or a client that resends
+// on a timeout, is one exchange.
+func TestRecordingTheSameExchangeTwiceKeepsOneRow(t *testing.T) {
+	e := setupQualifying(t)
+	in := RecordQualifyingEventInput{
+		Kind:       "in_person",
+		Note:       "Handed me their card at the Frankfurt trade fair, stand B12.",
+		OccurredAt: time.Now().Add(-24 * time.Hour).Truncate(time.Second),
+	}
+	for i := 0; i < 3; i++ {
+		if _, err := e.store.RecordQualifyingEvent(e.ctx, e.person, in); err != nil {
+			t.Fatalf("recording pass %d: %v", i+1, err)
+		}
+	}
+
+	var rows int
+	if err := e.store.db.Tx(e.ctx, func(tx pgx.Tx) error {
+		return tx.QueryRow(e.ctx,
+			`SELECT count(*) FROM consent_qualifying_event WHERE person_id = $1`,
+			e.person).Scan(&rows)
+	}); err != nil {
+		t.Fatalf("counting the rows: %v", err)
+	}
+	if rows != 1 {
+		t.Errorf("qualifying-event rows = %d, want 1 — three sends of one exchange are one exchange", rows)
+	}
+	// And the claim still stands.
+	if after := e.verdict(t); after.State != VerdictAllowed {
+		t.Errorf("the verdict = %q, want allowed", after.State)
 	}
 }
 

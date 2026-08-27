@@ -24797,7 +24797,7 @@ components:
     RecordQualifyingEventRequest:
       type: object
       additionalProperties: false
-      required: [kind, occurred_at]
+      required: [kind, note, occurred_at]
       description: One exchange that makes ordinary business correspondence lawful.
       properties:
         kind:

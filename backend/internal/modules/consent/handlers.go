@@ -141,14 +141,11 @@ func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	in := RecordQualifyingEventInput{
+	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.PersonKind](id), RecordQualifyingEventInput{
 		Kind:       string(req.Kind),
+		Note:       req.Note,
 		OccurredAt: req.OccurredAt,
-	}
-	if req.Note != nil {
-		in.Note = *req.Note
-	}
-	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.PersonKind](id), in)
+	})
 	if err != nil {
 		writeConsentErr(w, r, err)
 		return

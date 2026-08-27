@@ -17996,7 +17996,7 @@ export interface components {
              */
             kind: "in_person";
             /** @description What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has. */
-            note?: string;
+            note: string;
             /**
              * Format: date-time
              * @description When the exchange happened, not when it was typed in.

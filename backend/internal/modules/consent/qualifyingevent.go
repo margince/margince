@@ -22,6 +22,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -51,6 +52,13 @@ const noteMaxRunes = 500
 // fieldNote is the field name a refusal about the note carries, which is what
 // the surface highlights.
 const fieldNote = "note"
+
+// fieldOccurredAt is the same, for the date.
+const fieldOccurredAt = "occurred_at"
+
+// clockSkewAllowance is how far ahead of this server a client's clock may be
+// before a date reads as a claim about the future rather than a fast watch.
+const clockSkewAllowance = 5 * time.Minute
 
 // RecordQualifyingEventInput is one exchange, as the person who was there
 // states it.
@@ -88,8 +96,25 @@ func (s *Store) RecordQualifyingEvent(
 	}
 	if in.OccurredAt.IsZero() {
 		return QualifyingEvent{}, &InvalidQualifyingEventError{
-			Field: "occurred_at", Reason: "say when it happened, not when it was typed in",
+			Field: fieldOccurredAt, Reason: "say when it happened, not when it was typed in",
 		}
+	}
+	// An exchange somebody remembers happened in the PAST. A future date is not
+	// a memory, and the verdict reads the most recent row — so a fabricated one
+	// would authorize sending now and shadow the genuine evidence under it. The
+	// small skew allowance is for a client clock that runs fast, not for a
+	// claim about tomorrow.
+	if in.OccurredAt.After(s.now().Add(clockSkewAllowance)) {
+		return QualifyingEvent{}, &InvalidQualifyingEventError{
+			Field: fieldOccurredAt, Reason: "an exchange you remember happened before now",
+		}
+	}
+	// Human-only HERE, not only on the route: an agent never asserts that a
+	// person met somebody. The REST gate refuses the route today, and an
+	// in-process caller carrying an agent principal would otherwise reach this
+	// exported method with nothing between it and the row.
+	if err := auth.RequireHuman(ctx); err != nil {
+		return QualifyingEvent{}, err
 	}
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return QualifyingEvent{}, err
@@ -107,21 +132,43 @@ func (s *Store) RecordQualifyingEvent(
 		if err := auth.EnsureWritableLive(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `
+		// The same exchange, re-sent, is one exchange. A retry — a double click,
+		// a client that resends on a timeout — must not stack a second row
+		// claiming a second meeting happened, because the rows ARE the legal
+		// evidence and a duplicated one is a claim nobody made.
+		//
+		// Matched on the person, the moment and the words: two genuinely
+		// different exchanges with the same person do not share all three.
+		var inserted bool
+		if err := tx.QueryRow(ctx, `
 			INSERT INTO consent_qualifying_event
 				(person_id, kind, note, occurred_at, source, captured_by)
-			VALUES ($1, $2, $3, $4, 'human', $5)`,
-			personID, kindInPerson, note, in.OccurredAt, by); err != nil {
+			SELECT $1, $2, $3, $4, 'human', $5
+			 WHERE NOT EXISTS (
+				SELECT 1 FROM consent_qualifying_event
+				 WHERE person_id = $1 AND kind = $2 AND note = $3 AND occurred_at = $4)
+			RETURNING true`,
+			personID, kindInPerson, note, in.OccurredAt, by).Scan(&inserted); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				// Already on file. The caller's claim stands, and nothing was
+				// written twice — so there is nothing to audit either.
+				return nil
+			}
 			return fmt.Errorf("consent: recording the in-person exchange: %w", err)
 		}
-		// Audit-only, like every other consent-basis write beside it: the
-		// closed public-event catalog carries no type for a lawful basis, and
-		// what an auditor asks — who said this happened, and what did they say
-		// — is a row question rather than a subscriber's.
-		_, err := storekit.AuditEvent(ctx, tx, "create", "person_consent", personID.UUID, map[string]any{
+		// Audit-only, like every other consent-basis write beside it: the closed
+		// public-event catalog carries no type for a lawful basis, and what an
+		// auditor asks — who said this happened, and what did they say — is a
+		// row question rather than a subscriber's.
+		//
+		// The entity is `person`, which is the row the caller was authorized
+		// against and the row this changes the sendability of. Naming
+		// `person_consent` would have put a rule in the trail
+		// (`person_consent.create`) that authorized nothing here.
+		_, err := storekit.AuditEvent(ctx, tx, "update", "person", personID.UUID, map[string]any{
 			"qualifying_event": kindInPerson,
 			fieldNote:          note,
-			"occurred_at":      in.OccurredAt.UTC().Format(time.RFC3339),
+			fieldOccurredAt:    in.OccurredAt.UTC().Format(time.RFC3339),
 		})
 		return err
 	})

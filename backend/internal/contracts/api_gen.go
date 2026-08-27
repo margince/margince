@@ -23003,7 +23003,7 @@ type RecordQualifyingEventRequest struct {
 	Kind RecordQualifyingEventRequestKind `json:"kind"`
 
 	// Note What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has.
-	Note *string `json:"note,omitempty"`
+	Note string `json:"note"`
 
 	// OccurredAt When the exchange happened, not when it was typed in.
 	OccurredAt time.Time `json:"occurred_at"`
