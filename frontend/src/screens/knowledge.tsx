@@ -17,7 +17,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { FileDropzone } from "../design-system/filedropzone";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { formatNumber } from "../format/format";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
 // The document sets a workspace can be asked questions of.
@@ -469,6 +469,7 @@ type UploadRefusal = Readonly<{ filename: string; message: string }>;
 
 function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
   const t = useT();
+  const plural = usePlural();
   const { locale } = useLocale();
   const [files, setFiles] = useState<readonly File[]>([]);
   const [refusals, setRefusals] = useState<readonly UploadRefusal[]>([]);
@@ -525,11 +526,13 @@ function UploadDocument({ corpusId }: Readonly<{ corpusId: string }>) {
       />
       <div className="form-actions">
         <Button disabled={files.length === 0 || sending} onClick={send}>
-          {files.length > 1
-            ? t("knowledge.upload.submitMany", {
-                count: formatNumber(files.length, locale),
-              })
-            : t("knowledge.upload.submit")}
+          {/* Before anything is chosen the button names the ACT, not a count
+              of nothing: "Add 0 documents" on a disabled button reads like a
+              refusal rather than an invitation. One file and none both take the
+              singular; the count only appears once there is one to state. */}
+          {plural("knowledge.upload.submit", files.length || 1, {
+            count: formatNumber(files.length, locale),
+          })}
         </Button>
       </div>
       {refusals.map((refusal) => (

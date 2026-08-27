@@ -80,7 +80,7 @@ func TestTheFirstBootFilesEveryPageThisBuildCarries(t *testing.T) {
 			len(q.queued), len(pages))
 	}
 
-	filed := filedPages(t, e, ctx)
+	filed := filedPages(ctx, t, e)
 	if len(filed) != len(pages) {
 		t.Fatalf("filed %d rows, want %d", len(filed), len(pages))
 	}
@@ -100,7 +100,7 @@ func TestASecondBootOfTheSameBuildChangesNothing(t *testing.T) {
 	if _, err := store.ReconcileHandbook(ctx, noSerialize, first.queue()); err != nil {
 		t.Fatalf("first reconcile: %v", err)
 	}
-	before := filedPages(t, e, ctx)
+	before := filedPages(ctx, t, e)
 
 	var second recordingQueue
 	written, err := store.ReconcileHandbook(ctx, noSerialize, second.queue())
@@ -116,7 +116,7 @@ func TestASecondBootOfTheSameBuildChangesNothing(t *testing.T) {
 	// The ids too, not just the count: a reconciliation that deleted and
 	// re-filed every page would also report a stable NUMBER of rows while
 	// breaking every citation and download link already handed to a reader.
-	after := filedPages(t, e, ctx)
+	after := filedPages(ctx, t, e)
 	for filename, id := range before {
 		if after[filename] != id {
 			t.Errorf("%s changed id across a boot, so every citation naming it now points at nothing", filename)
@@ -133,7 +133,7 @@ func TestARewordedPageKeepsItsRowAndIsReadAgain(t *testing.T) {
 	if _, err := store.ReconcileHandbook(ctx, noSerialize, first.queue()); err != nil {
 		t.Fatalf("first reconcile: %v", err)
 	}
-	before := filedPages(t, e, ctx)
+	before := filedPages(ctx, t, e)
 
 	// Stand in for the previous release having shipped different prose. The
 	// embedded pages are fixed at compile time, so the row is moved to a
@@ -152,7 +152,7 @@ func TestARewordedPageKeepsItsRowAndIsReadAgain(t *testing.T) {
 	if written != 1 {
 		t.Fatalf("wrote %d pages, want exactly the one whose bytes moved", written)
 	}
-	after := filedPages(t, e, ctx)
+	after := filedPages(ctx, t, e)
 	if after[target] != before[target] {
 		t.Fatal("the reworded page was re-filed under a new id, breaking every citation that named it")
 	}
@@ -190,7 +190,7 @@ func TestAWithdrawnPageStopsBeingCitable(t *testing.T) {
 	// A page an earlier release shipped and this one does not. Planted rather
 	// than removed, for the same reason as above: the embed is fixed at compile
 	// time, and this is the row an upgrade leaves behind.
-	corpusID := handbookCorpusID(t, e, ctx)
+	corpusID := handbookCorpusID(ctx, t, e)
 	e.WsExec(t, `INSERT INTO knowledge_document
 	    (corpus_id, filename, content_type, byte_size, storage_key, checksum, managed_source, captured_by)
 	  VALUES ($1, 'withdrawn.md', 'text/markdown', 12, 'handbook:withdrawn.md', 'old-release', $2, 'system:test')`,
@@ -200,7 +200,7 @@ func TestAWithdrawnPageStopsBeingCitable(t *testing.T) {
 	if _, err := store.ReconcileHandbook(ctx, noSerialize, second.queue()); err != nil {
 		t.Fatalf("second reconcile: %v", err)
 	}
-	if _, still := filedPages(t, e, ctx)["withdrawn.md"]; still {
+	if _, still := filedPages(ctx, t, e)["withdrawn.md"]; still {
 		t.Fatal("a page this release does not ship is still filed, so the ask can still cite prose that was withdrawn")
 	}
 }
@@ -269,7 +269,7 @@ func TestARestartDoesNotTakeBackTheDefault(t *testing.T) {
 	// The handbook takes the default on an installation that had none — the
 	// positive arm, here so a change making the flag never set could not pass
 	// this test by satisfying the negative one below.
-	if !defaultAskIsHandbook(t, e, ctx) {
+	if !defaultAskIsHandbook(ctx, t, e) {
 		t.Fatal("the handbook did not take the default on an installation that had none")
 	}
 
@@ -284,12 +284,12 @@ func TestARestartDoesNotTakeBackTheDefault(t *testing.T) {
 	if _, err := store.ReconcileHandbook(ctx, noSerialize, second.queue()); err != nil {
 		t.Fatalf("second reconcile: %v", err)
 	}
-	if defaultAskIsHandbook(t, e, ctx) {
+	if defaultAskIsHandbook(ctx, t, e) {
 		t.Fatal("a restart took the default back from the corpus an administrator chose")
 	}
 }
 
-func defaultAskIsHandbook(t *testing.T, e *Env, ctx context.Context) bool {
+func defaultAskIsHandbook(ctx context.Context, t *testing.T, e *Env) bool {
 	t.Helper()
 	var isHandbook bool
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
@@ -302,7 +302,7 @@ func defaultAskIsHandbook(t *testing.T, e *Env, ctx context.Context) bool {
 	return isHandbook
 }
 
-func handbookCorpusID(t *testing.T, e *Env, ctx context.Context) ids.UUID {
+func handbookCorpusID(ctx context.Context, t *testing.T, e *Env) ids.UUID {
 	t.Helper()
 	var id ids.UUID
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
@@ -316,7 +316,7 @@ func handbookCorpusID(t *testing.T, e *Env, ctx context.Context) ids.UUID {
 }
 
 // filedPages is filename → row id for the handbook's own documents.
-func filedPages(t *testing.T, e *Env, ctx context.Context) map[string]ids.UUID {
+func filedPages(ctx context.Context, t *testing.T, e *Env) map[string]ids.UUID {
 	t.Helper()
 	out := map[string]ids.UUID{}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {

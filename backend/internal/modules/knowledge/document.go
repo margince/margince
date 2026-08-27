@@ -102,10 +102,10 @@ func (s *Store) UploadDocument(ctx context.Context, in NewDocument, queue QueueI
 			return fmt.Errorf("insert corpus document: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "knowledge_document", id, nil, map[string]any{
-			"corpus_id":    in.CorpusID,
-			"filename":     in.Filename,
-			"content_type": media,
-			"byte_size":    size,
+			corpusIDKey:    in.CorpusID,
+			filenameKey:    in.Filename,
+			contentTypeKey: media,
+			byteSizeKey:    size,
 		}); err != nil {
 			return fmt.Errorf("audit corpus document create: %w", err)
 		}
@@ -326,9 +326,9 @@ func (s *Store) DeleteDocument(ctx context.Context, documentID ids.UUID) error {
 		// behind in the audit trail is not a deletion.
 		if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", documentID,
 			map[string]any{
-				"filename":       doc.filename,
+				filenameKey:      doc.filename,
 				"checksum":       doc.checksum,
-				"content_type":   doc.contentType,
+				contentTypeKey:   doc.contentType,
 				chunkCountColumn: doc.chunkCount,
 			}, nil); err != nil {
 			return fmt.Errorf("audit corpus document delete: %w", err)

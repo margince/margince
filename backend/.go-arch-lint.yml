@@ -85,7 +85,9 @@ components:
   deals:       { in: internal/modules/deals }
   projects:    { in: internal/modules/projects }
   dealrooms:   { in: internal/modules/dealrooms }
-  knowledge:   { in: internal/modules/knowledge }
+  # Includes internal/modules/knowledge/handbook: the shipped prose and the
+  # reader that opens it belong to the module that files them into a corpus.
+  knowledge:   { in: [internal/modules/knowledge, internal/modules/knowledge/**] }
   finance:     { in: internal/modules/finance }
   integrations: { in: [internal/modules/integrations, internal/modules/integrations/**] }
   activities:  { in: internal/modules/activities }
@@ -172,7 +174,9 @@ deps:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
   knowledge:
-    mayDependOn: [contracts, platform]
+    # knowledge itself: the module reads its own handbook subpackage, the same
+    # self-reference agents carries for its own.
+    mayDependOn: [knowledge, contracts, platform]
     canUse: [pgx, oapi]
   projects:
     mayDependOn: [contracts, platform]

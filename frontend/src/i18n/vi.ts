@@ -4849,9 +4849,9 @@ export const vi = {
   "knowledge.upload.hint":
     "Văn bản thuần, Markdown, CSV hoặc JSON. Ở đây không có bộ đọc PDF hay Word; tệp như vậy sẽ bị từ chối thay vì nộp rỗng.",
   "knowledge.upload.empty": "Kéo tệp văn bản vào đây, hoặc chọn một tệp",
-  "knowledge.upload.submitMany": "Thêm {count} tài liệu",
+  "knowledge.upload.submit_other": "Thêm {count} tài liệu",
   "knowledge.upload.refused": "{filename} chưa được thêm: {message}",
-  "knowledge.upload.submit": "Thêm tài liệu",
+  "knowledge.upload.submit_one": "Thêm tài liệu",
   "knowledge.new.title": "Bộ tài liệu mới",
   "knowledge.new.name": "Tên",
   "knowledge.new.topic": "Bộ này bao gồm những gì",

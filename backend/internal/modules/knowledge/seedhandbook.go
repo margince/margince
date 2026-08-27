@@ -144,7 +144,7 @@ func ensureHandbookCorpus(ctx context.Context, tx pgx.Tx, by string) (ids.UUID, 
 		"topic_statement": handbookTopic,
 		"min_similarity":  DefaultMinSimilarity,
 		defaultAskColumn:  !defaultTaken,
-		"managed_source":  HandbookSource,
+		managedSourceKey:  HandbookSource,
 	}); err != nil {
 		return ids.Nil, fmt.Errorf("audit the shipped handbook corpus: %w", err)
 	}
@@ -196,7 +196,7 @@ func reconcilePages(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, pages []h
 			return 0, fmt.Errorf("remove the withdrawn handbook page: %w", err)
 		}
 		if _, err := storekit.Audit(ctx, tx, "delete", "knowledge_document", doc.id,
-			map[string]any{"filename": filename, "managed_source": HandbookSource}, nil); err != nil {
+			map[string]any{filenameKey: filename, managedSourceKey: HandbookSource}, nil); err != nil {
 			return 0, fmt.Errorf("audit the withdrawn handbook page: %w", err)
 		}
 		written++
@@ -291,11 +291,11 @@ func replacePage(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, page handboo
 // same reason the document module pins its own images to four keys.
 func pageImage(corpusID ids.UUID, filename string, size int64) map[string]any {
 	return map[string]any{
-		"corpus_id":      corpusID,
-		"filename":       filename,
-		"content_type":   handbookContentType,
-		"byte_size":      size,
-		"managed_source": HandbookSource,
+		corpusIDKey:      corpusID,
+		filenameKey:      filename,
+		contentTypeKey:   handbookContentType,
+		byteSizeKey:      size,
+		managedSourceKey: HandbookSource,
 	}
 }
 

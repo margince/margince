@@ -28,6 +28,20 @@ import (
 // one typo from an audit row describing a field that does not exist.
 const defaultAskColumn = "default_ask"
 
+// The audit-image keys a document's history is read by.
+//
+// Named because two writers spell them now — an uploaded document and a shipped
+// handbook page — and a document's history is only readable as one sequence if
+// both use the same keys. Two images of one entity that disagree on their key
+// names do not read as a record changing; they read as two records.
+const (
+	filenameKey      = "filename"
+	contentTypeKey   = "content_type"
+	managedSourceKey = "managed_source"
+	byteSizeKey      = "byte_size"
+	corpusIDKey      = "corpus_id"
+)
+
 // DefaultMinSimilarity is the grounding floor a corpus starts life with: the
 // cosine a passage must reach before it may be cited at all.
 //
