@@ -183,8 +183,10 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 			if desc, err := s.providers.Descriptor(name); err == nil {
 				profile.CategoriesNotRequested = categoriesNotRequested(desc, latest.requested)
 				if answerable(latest) {
+					delivered := deliveredKeys(latest.id, claims)
+					profile.CategoriesAsked = providerPtr(asked(desc, latest.requested, delivered))
 					profile.CategoriesWithoutAnswer = providerPtr(categoriesWithoutAnswer(
-						desc, latest.requested, deliveredKeys(latest.id, claims)))
+						desc, latest.requested, delivered))
 				}
 			}
 		}

@@ -307,9 +307,15 @@ describe("a lookup that came back mostly empty", () => {
       state: "completed",
       retrieved_at: "2026-08-27T08:36:52Z",
       current_employment: { company_name: "e-Kugellager" },
+      categories_asked: [
+        "professional_email",
+        "linkedin_profile",
+        "current_employment",
+        "job_history",
+        "personal_email",
+      ],
       categories_without_answer: [
         "professional_email",
-        "mobile",
         "linkedin_profile",
         "job_history",
         "personal_email",
@@ -334,7 +340,7 @@ describe("a lookup that came back mostly empty", () => {
     // The count is the answer to "did my lookup do anything": six asked, one
     // returned. Without it a green badge over one field reads as a success.
     expect(
-      await screen.findByText(/asked for 6 details, got 1 back/),
+      await screen.findByText(/asked for 5 details, got 1 back/),
     ).toBeDefined();
   });
 
@@ -345,7 +351,9 @@ describe("a lookup that came back mostly empty", () => {
     // The provider's vocabulary is a set of keys — `professional_email`,
     // `linkedin_profile`. Printed raw they are not words anybody uses.
     expect(line.textContent).toContain("work email");
-    expect(line.textContent).toContain("mobile number");
+    // Surfe skips the mobile lookup when it found no email, so it was
+    // never asked and must not be listed as something they lacked.
+    expect(line.textContent).not.toContain("mobile number");
     expect(line.textContent).toContain("LinkedIn profile");
     expect(line.textContent).not.toContain("professional_email");
 

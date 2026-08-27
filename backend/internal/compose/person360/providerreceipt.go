@@ -31,24 +31,33 @@ import (
 // would mask what the latest one failed to return.
 func categoriesWithoutAnswer(desc provider.Descriptor, requested []string, delivered map[string]bool) []string {
 	out := []string{}
+	for _, name := range asked(desc, requested, delivered) {
+		if !answeredBy(desc.Answers[provider.Category(name)], delivered) {
+			out = append(out, name)
+		}
+	}
+	sort.Strings(out)
+	return out
+}
+
+// asked is what the run actually put to the provider: every requested category
+// the adapter can speak for and that was genuinely sent.
+//
+// The denominator for "how much of what we asked came back". Requested is the
+// wrong one — a fallback that never fired and a category skipped for want of
+// its prerequisite were never sent, so counting them as answered inflates the
+// figure and counting them as unanswered blames the provider for silence
+// nobody asked for.
+func asked(desc provider.Descriptor, requested []string, delivered map[string]bool) []string {
+	out := []string{}
 	for _, name := range requested {
 		category := provider.Category(name)
-		keys, declared := desc.Answers[category]
-		if !declared {
+		if _, declared := desc.Answers[category]; !declared {
 			// The adapter never said what answers this category, so nothing
-			// here can conclude the provider withheld it.
-			continue
-		}
-		if answeredBy(keys, delivered) {
+			// here can say whether it was answered.
 			continue
 		}
 		if !issued(desc, category, delivered) {
-			// A fallback that was never issued was never asked, so the
-			// provider had no chance to answer it. Surfe's personal-email pass
-			// runs only when the professional one comes back empty; listing it
-			// as "asked for and not found" would report a lookup that did not
-			// happen, on a line whose whole job is telling the reader what
-			// their money actually bought.
 			continue
 		}
 		out = append(out, name)

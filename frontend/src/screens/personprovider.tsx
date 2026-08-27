@@ -228,7 +228,12 @@ function RunReceipt({ profile }: Readonly<{ profile: Profile }>) {
       <p className="t-caption">{t("provider.profile.receiptAt", { at })}</p>
     );
   }
-  const asked = run.requested_categories.length;
+  // What was actually PUT TO the provider, not everything requested: a
+  // fallback that never fired and a category skipped for want of its
+  // prerequisite were never sent, and counting them as answered would inflate
+  // the very figure this line exists to be honest about.
+  const asked =
+    profile.categories_asked?.length ?? run.requested_categories.length;
   return (
     <p className="t-caption">
       {t("provider.profile.receipt", {

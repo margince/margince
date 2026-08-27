@@ -360,3 +360,41 @@ func TestOnlyACompletedRunWithItsClaimsWrittenSpeaksForTheProvider(t *testing.T)
 		})
 	}
 }
+
+func TestTheAskedSetExcludesWhatWasNeverSent(t *testing.T) {
+	runID := ids.NewV7()
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "mobile", "personal_email"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"mobile":             {provider.ClaimMobilePhones},
+			"personal_email":     {provider.ClaimPersonalEmails},
+		},
+		Cascades: []provider.Cascade{{
+			Category: "personal_email",
+			After:    "professional_email",
+		}},
+		RequiresAnswerTo: map[provider.Category]provider.Category{
+			"mobile": "professional_email",
+		},
+	}
+	// The professional pass answered: the fallback never fired, and the mobile
+	// lookup was sent because its prerequisite was satisfied.
+	claims := []storedClaim{{key: string(provider.ClaimProfessionalEmails), runID: runID}}
+	requested := []string{"professional_email", "mobile", "personal_email"}
+
+	got := asked(desc, requested, deliveredKeys(runID, claims))
+
+	// Two questions reached the provider, not three. Counting the unfired
+	// fallback would report a lookup nobody made, and the receipt divides by
+	// this number.
+	want := []string{"mobile", "professional_email"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v — the fallback never fired", got, want)
+	}
+	for i, name := range want {
+		if got[i] != name {
+			t.Errorf("position %d is %q, want %q", i, got[i], name)
+		}
+	}
+}

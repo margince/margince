@@ -18302,6 +18302,18 @@ components:
         retrieved_at: { type: [string, 'null'], format: date-time }
         safe_status_code: { type: [string, 'null'] }
         categories_not_requested: { type: array, uniqueItems: true, items: { type: string } }
+        categories_asked:
+          type: array
+          uniqueItems: true
+          description: >-
+            What the latest run actually PUT TO the provider. Usually every requested
+            category, but not always: a fallback fires only when the category it follows
+            comes back empty, and a category with a prerequisite is skipped when that
+            prerequisite found nothing — Surfe asks for no mobile number when it found no
+            email. Neither was sent, so neither is a question the provider declined to
+            answer, and counting them would report a lookup nobody made. This is the
+            honest denominator for "how much of what we asked came back".
+          items: { type: string }
         categories_without_answer:
           type: array
           uniqueItems: true
