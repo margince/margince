@@ -101,6 +101,19 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	calls := []struct{ tool, args string }{
 		{"list_pipelines", `{}`},
 		{"read_brief", `{}`},
+		// The write half of the brief pair, annotating the run read_brief just
+		// read. EMPTY on purpose: the schema requires nothing at the top level,
+		// and `AnnotateBriefArgs` says so — "Empty is a real answer: a quiet
+		// night has no sentence". So this proves the answer shape and the
+		// envelope without the sweep leaving prose on a rep's morning as a side
+		// effect of checking a schema, which is the same posture the approval
+		// call below takes by rejecting rather than releasing.
+		//
+		// It reaches a handler rather than a refusal only because the fixture
+		// assembles a run for TODAY: annotate writes onto what the deterministic
+		// engine ranked, and answers not-found when there is nothing to write
+		// onto. Both halves of the pair rest on `snapshotBriefRun` above.
+		{"annotate_brief", `{}`},
 		// Who the caller is, and who else they can hand work to. Both answer
 		// about the acting human rather than about a record, so the empty
 		// object is the whole input; list_colleagues also runs narrowed,
