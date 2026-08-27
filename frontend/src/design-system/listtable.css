@@ -996,6 +996,36 @@
     margin-left: 0;
   }
 
+  /* The view rail is ONE row that continues sideways, never two rows that
+     wrap — the same rule the record page's tab strip keeps, and for the same
+     reason: wrapped tabs read as two rows of navigation rather than one row
+     with more in it. It is also what the rows below are paying for. A list
+     with eight views (the lead queue has eight) wrapped its rail to two lines
+     and, on a 390px screen where the surface is already carrying a search box,
+     a filter row and a pager, left 62px of actual list — one row of a
+     twenty-five row page. Scrolling the rail gives those lines back.
+
+     It takes the room LEFT on its line rather than a line of its own: the
+     primary action stays beside it, which is what keeps a three-view list
+     (contacts, deals) at the height it already had. `min-width: 0` is what
+     lets it shrink below its content — without it a flex item refuses to, and
+     the rail pushes the action off the line instead of scrolling. The
+     scrollbar is hidden because the row is short and a bar under it would
+     read as a rule. */
+  .lt-views {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lt-views::-webkit-scrollbar {
+    display: none;
+  }
+  .lt-vtab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   .lt-search {
     flex: 1 1 100%;
   }

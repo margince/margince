@@ -1936,9 +1936,14 @@ describe("LeadScreen — History tab", () => {
       expect(screen.getByText("Lead score changed")).toBeTruthy(),
     );
     // The identity header (name) must stay visible on the History tab, not
-    // just the overview — it lives in LeadScreen above the tab switch now,
-    // matching person/company/deal's persistent RecordView header.
-    expect(screen.getByText(lead.full_name)).toBeTruthy();
+    // just the overview — it lives above the tab switch, matching
+    // person/company/deal's persistent RecordView header. Named by ROLE
+    // rather than by text: the rail's details grid sits outside the tab
+    // switch too and carries the same name in its editable Full name row,
+    // which is the page working as intended and not a second header.
+    expect(
+      screen.getByRole("heading", { level: 1, name: lead.full_name }),
+    ).toBeTruthy();
   });
 });
 

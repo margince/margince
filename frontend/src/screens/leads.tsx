@@ -861,12 +861,14 @@ function LeadRail({
   id,
   patch,
   readOnly,
+  saveField,
   terminalReasonId,
 }: Readonly<{
   lead: Lead;
   id: string;
   patch: LeadPatch;
   readOnly: boolean;
+  saveField: (body: UpdateLeadRequest) => Promise<void>;
   terminalReasonId: string;
 }>) {
   const t = useT();
@@ -887,57 +889,67 @@ function LeadRail({
   }, [saved]);
 
   return (
-    <Panel title={t("lead.railTitle")}>
-      <PanelBody>
-        <div className="lead-stack">
-          <LeadOwner
-            lead={lead}
-            meId={me.data?.user?.id}
-            terminalReasonId={terminalReasonId}
-            pending={patch.isPending || readOnly}
-            onAssign={(ownerId) => patch.mutate({ owner_id: ownerId })}
-          />
-          {/* The score is a reading, not the work: it folds to one line with
+    <div className="record-stack">
+      <LeadIdentityFields
+        lead={lead}
+        save={saveField}
+        saving={patch.isPending}
+        readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
+      />
+      <Panel title={t("lead.railTitle")}>
+        <PanelBody>
+          <div className="lead-stack">
+            <LeadOwner
+              lead={lead}
+              meId={me.data?.user?.id}
+              terminalReasonId={terminalReasonId}
+              pending={patch.isPending || readOnly}
+              onAssign={(ownerId) => patch.mutate({ owner_id: ownerId })}
+            />
+            {/* The score is a reading, not the work: it folds to one line with
               its top factor, and opens for the breakdown, the override and
               the rep's own inputs. */}
-          <Disclosure
-            summary={
-              <span className="lead-score-summary">
-                <Badge tone={scoreTone(lead.score)}>
-                  {t("lead.score")}: {formatNumber(lead.score, locale)}
-                </Badge>{" "}
-                <span className="t-caption">
-                  {lead.score_reason
-                    ? scoreFactorLabel(lead.score_reason, t)
-                    : t("lead.scoreNoSignals")}
+            <Disclosure
+              summary={
+                <span className="lead-score-summary">
+                  <Badge tone={scoreTone(lead.score)}>
+                    {t("lead.score")}: {formatNumber(lead.score, locale)}
+                  </Badge>{" "}
+                  <span className="t-caption">
+                    {lead.score_reason
+                      ? scoreFactorLabel(lead.score_reason, t)
+                      : t("lead.scoreNoSignals")}
+                  </span>
                 </span>
-              </span>
-            }
-          >
-            <LeadScorePanel
-              lead={lead}
-              id={id}
-              readOnly={readOnly}
-              terminalReasonId={terminalReasonId}
-              overriding={overriding}
-              setOverriding={setOverriding}
-              scoreValue={scoreValue}
-              setScoreValue={setScoreValue}
-              reasonValue={reasonValue}
-              setReasonValue={setReasonValue}
-              patch={patch}
-            />
-            <LeadManualSignals
-              // Keyed by lead: a half-typed input for one lead must not be
-              // submitted against the next one the reader navigates to.
-              key={id}
-              id={id}
-              readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
-            />
-          </Disclosure>
-        </div>
-      </PanelBody>
-    </Panel>
+              }
+            >
+              <LeadScorePanel
+                lead={lead}
+                id={id}
+                readOnly={readOnly}
+                terminalReasonId={terminalReasonId}
+                overriding={overriding}
+                setOverriding={setOverriding}
+                scoreValue={scoreValue}
+                setScoreValue={setScoreValue}
+                reasonValue={reasonValue}
+                setReasonValue={setReasonValue}
+                patch={patch}
+              />
+              <LeadManualSignals
+                // Keyed by lead: a half-typed input for one lead must not be
+                // submitted against the next one the reader navigates to.
+                key={id}
+                id={id}
+                readOnlyReason={
+                  readOnly ? t("lead.terminalReadOnly") : undefined
+                }
+              />
+            </Disclosure>
+          </div>
+        </PanelBody>
+      </Panel>
+    </div>
   );
 }
 
@@ -1311,7 +1323,6 @@ function LeadOverviewPane({
   id,
   patch,
   readOnly,
-  saveField,
   promotion,
   overlay,
   onQualify,
@@ -1322,7 +1333,6 @@ function LeadOverviewPane({
   id: string;
   patch: LeadPatch;
   readOnly: boolean;
-  saveField: (body: UpdateLeadRequest) => Promise<void>;
   promotion: PromotionRecord;
   overlay: boolean;
   onQualify: () => void;
@@ -1332,7 +1342,6 @@ function LeadOverviewPane({
   // History mid-climb.
   onTouchLogged: () => void;
 }>) {
-  const t = useT();
   return (
     <div className="record-stack">
       {/* A promoted lead's page leads with what the promotion did — the
@@ -1347,12 +1356,6 @@ function LeadOverviewPane({
         overlay={overlay}
         onQualify={onQualify}
         onDisqualify={onDisqualify}
-      />
-      <LeadIdentityFields
-        lead={lead}
-        save={saveField}
-        saving={patch.isPending}
-        readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
       />
       {/* The composer follows the facts so opening a lead answers "what
           should I do" before asking the rep to type. */}
@@ -1677,6 +1680,7 @@ function LeadRecord({
           id={id}
           patch={patch}
           readOnly={readOnly}
+          saveField={saveField}
           terminalReasonId={terminalReasonId}
         />
       }
@@ -1699,7 +1703,6 @@ function LeadRecord({
           id={id}
           patch={patch}
           readOnly={readOnly}
-          saveField={saveField}
           promotion={promotion}
           overlay={overlay}
           onQualify={() => setDialog("qualify")}
