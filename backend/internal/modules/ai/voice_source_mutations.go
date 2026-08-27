@@ -66,8 +66,8 @@ func (s *VoiceStore) UpdateSource(ctx context.Context, profileID, sourceID ids.U
 }
 
 func validateSourceUpdate(in UpdateSourceInput) (*bool, error) {
-	if in.Weight != nil && (*in.Weight < 0 || *in.Weight > 2.0) {
-		return nil, &CorpusIngestError{Field: voiceKeyWeight, Reason: "must be between 0 and 2"}
+	if in.Weight != nil && voiceWeightRefused(*in.Weight) {
+		return nil, &CorpusIngestError{Field: voiceKeyWeight, Reason: voiceWeightRange}
 	}
 	excluded := in.Excluded
 	if in.Included != nil {
