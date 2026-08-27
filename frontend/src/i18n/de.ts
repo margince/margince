@@ -6194,7 +6194,7 @@ export const de = {
   "provider.profile.lookingUp": "Wir fragen den Anbieter. Das dauert kurz.",
   "provider.profile.emptyTitle": "Für diesen Kontakt wurde noch nichts gekauft",
   "provider.profile.emptyBody":
-    "Eine Abfrage holt beim verbundenen Datenanbieter Angaben zu diesem Kontakt — je nachdem, was für die Verbindung eingekauft werden soll. Sie kostet Credits, und was zurückkommt steht hier neben dem Datensatz; überschrieben wird nichts, was jemand aus dem Team eingetragen hat.",
+    "Eine Abfrage holt bei {provider} Angaben zu diesem Kontakt — je nachdem, was für diese Verbindung eingekauft werden soll. Sie kostet {provider}-Credits, und was zurückkommt steht hier neben dem Datensatz; überschrieben wird nichts, was jemand aus dem Team eingetragen hat.",
   "provider.profile.emails": "E-Mail-Adressen",
   "provider.profile.emailType.provider": "{type}, so vom Anbieter bezeichnet",
   "provider.profile.emailType.requested":

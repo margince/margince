@@ -118,6 +118,10 @@ function ProviderPanel({
   // says never_run and carries purchases, and a plate reading "nothing bought"
   // over somebody's bought mobile number invites paying for it twice.
   const firstRun = profile.state === "never_run" && !hasValues(profile);
+  // The vendor as the reader should see it named. Spelled once and used by
+  // both the heading and the plate: two spellings would let a section headed
+  // "Surfe" explain a purchase from "surfe".
+  const name = providerBrandName(profile.provider) ?? profile.provider;
   return (
     // The record page's own card, with the provider's state in the header's
     // action slot. It used to be a bare `<section className="pe-card">` — a
@@ -132,7 +136,7 @@ function ProviderPanel({
       title={
         <span className="pe-provider-title">
           <ProviderMark providerKey={profile.provider} />
-          {providerBrandName(profile.provider) ?? profile.provider}
+          {name}
         </span>
       }
       titleAction={
@@ -160,7 +164,7 @@ function ProviderPanel({
             title={t("provider.profile.emptyTitle")}
             action={<EnrichNow profile={profile} enrich={enrich} />}
           >
-            {t("provider.profile.emptyBody")}
+            {t("provider.profile.emptyBody", { provider: name })}
           </EmptyState>
         ) : (
           <ProviderValues profile={profile} />

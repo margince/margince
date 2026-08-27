@@ -6241,7 +6241,7 @@ export const en = {
   "provider.profile.lookingUp": "Asking the provider. This takes a moment.",
   "provider.profile.emptyTitle": "Nothing bought for this contact yet",
   "provider.profile.emptyBody":
-    "A lookup asks the connected data provider about this contact, for whichever details the connection is set to buy. It spends credits, and what comes back sits here beside the record rather than overwriting anything a colleague typed.",
+    "A lookup asks {provider} about this contact, for whichever details this connection is set to buy. It spends {provider} credits, and what comes back sits here beside the record rather than overwriting anything a colleague typed.",
   "provider.profile.emails": "Email addresses",
   "provider.profile.emailType.provider": "{type}, as the provider labelled it",
   "provider.profile.emailType.requested":

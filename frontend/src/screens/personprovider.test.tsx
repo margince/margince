@@ -31,8 +31,8 @@ afterEach(() => {
  *  that kept a location or a department would be a payload this state cannot
  *  produce — and would quietly prove the plate on a profile that has data.
  *
- *  `provider` is absent for the same reason: it is filled from the newest run,
- *  so the panel has to name the provider itself to send a request at all. */
+ *  `provider` is set: a section belongs to one named vendor whether or not a
+ *  run exists, which is what lets the reader tell who they are about to pay. */
 function neverRun(): Profile {
   return {
     ...providerCompletedProfile,
@@ -97,7 +97,7 @@ describe("a contact nobody has bought data for", () => {
     const title = await screen.findByText(
       "Nothing bought for this contact yet",
     );
-    expect(await screen.findByText(/It spends credits/)).toBeDefined();
+    expect(await screen.findByText(/It spends Surfe credits/)).toBeDefined();
 
     // The verb lives INSIDE the plate, which is the whole point: a button that
     // stayed in the header corner would satisfy every text assertion above
@@ -107,7 +107,7 @@ describe("a contact nobody has bought data for", () => {
     expect(plate?.querySelector(".empty-action button")).not.toBeNull();
   });
 
-  it("asks the provider named in the contract when the profile carries none", async () => {
+  it("spends with the provider whose section the button sits in", async () => {
     const user = userEvent.setup();
     const posted = mount(neverRun(), queuedRun);
 
