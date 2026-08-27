@@ -214,9 +214,9 @@ func TestStageUnlessDeclinedWaitsForACompetingPassBeforeReading(t *testing.T) {
 // ordering it claims to exercise and pass having proved nothing.
 func waitForLockWaiter(t *testing.T, e *stagingEnv, done <-chan struct{}) {
 	t.Helper()
-	waitForBlockedBackend(t, done,
+	testdb.WaitForContention(t, done,
 		"the staging finished without ever blocking on the identity lock — it read the world before the competing pass wrote to it, which is the defect this test exists to catch",
-		fmt.Sprintf("no backend waited on an advisory lock in this database within %s — the staging never reached the lock, so this run proved nothing", probeBudget),
+		fmt.Sprintf("no backend waited on an advisory lock in this database within %s — the staging never reached the lock, so this run proved nothing", testdb.ProbeBudget),
 		func(ctx context.Context) (bool, error) {
 			// pg_locks reads the lock manager directly rather than the
 			// statistics snapshot, so it answers live even from inside a

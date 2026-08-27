@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -478,9 +479,9 @@ func (e *stagingEnv) competingTx(t *testing.T) pgx.Tx {
 // connection it runs on.
 func waitForRowLockWaiter(t *testing.T, e *stagingEnv, blocker int, done <-chan struct{}) {
 	t.Helper()
-	waitForBlockedBackend(t, done,
+	testdb.WaitForContention(t, done,
 		"the bundle decision finished without ever blocking on the contested member — it never reached the row the competing transaction was holding, so this run proved nothing",
-		fmt.Sprintf("nothing waited on backend %d within %s — the decision never reached the row it should have blocked on", blocker, probeBudget),
+		fmt.Sprintf("nothing waited on backend %d within %s — the decision never reached the row it should have blocked on", blocker, testdb.ProbeBudget),
 		func(ctx context.Context) (bool, error) {
 			// The competing transaction is open ON THIS CONNECTION, so every
 			// probe below runs inside it — and pg_stat_activity's row set is

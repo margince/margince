@@ -5,10 +5,11 @@
 
 package approvals
 
-// The one way this package waits for a backend that is provably blocked. Both
-// contention suites here — the bundle decision racing a held row, the staging
-// racing a held identity lock — ask the database the same question in the same
-// shape, and they used to disagree about how to give up on it.
+// The pg_stat_activity half of this repository's contention probing: is anyone
+// blocked by THIS backend. The loop around that question — the budget, the
+// pacing, and the rule that a probe which gave up says what the run failed to
+// prove — is testdb.WaitForContention, shared with the row-lock probe that asks
+// a different question in the same shape.
 
 import (
 	"context"
@@ -16,98 +17,9 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 )
-
-// probeBudget bounds the wait for a backend that never blocks.
-//
-// It is a DURATION, and it used to be a count of 20 000 probes. A count is not a
-// budget: it is a race between how fast probe round trips complete and how fast
-// the racer reaches its lock, and the lane's own concurrency slows BOTH, so a
-// count generous on an idle machine is not generous on a loaded one. A duration
-// means the same thing on every machine.
-//
-// Generous enough that only a genuine miss trips it, short enough that the miss
-// reports itself rather than running into the package timeout, where it would
-// read as a hung suite instead of a stated fact. That ceiling is arithmetic
-// rather than taste: five call sites in this package can each spend this budget,
-// against the lane's 600s per-package timeout (INTEGRATION_TIMEOUT). At 90s a run
-// in which every one of them misses spends 450s and still reports what it found.
-// Raise this number and that sum moves with it.
-const probeBudget = 90 * time.Second
-
-// probeInterval paces the poll, so the observer is not competing for the very
-// resource it is waiting on.
-//
-// Unpaced, these loops issued round trips as fast as the server would answer
-// them, and the pg_stat_activity probe's pg_blocking_pids is documented as
-// needing exclusive access to the lock manager's shared state for a short time —
-// the same state the racer must acquire to register its own lock wait. A watcher
-// holding that thousands of times a second is not a neutral observer of
-// contention; on a loaded runner it is part of it.
-//
-// 25ms is far finer than anything here needs: every block these tests wait for
-// persists until the holding transaction ends, so it cannot be missed between
-// ticks, and a racer that FINISHES is seen at once through done rather than on a
-// tick.
-const probeInterval = 25 * time.Millisecond
-
-// waitForBlockedBackend polls look until it reports the wait the caller needs,
-// the racer finishes without ever blocking, or the budget runs out. Both of the
-// latter are failures, and each caller supplies what they mean in its own terms:
-// a probe that gave up must say what the run failed to prove, never pass having
-// proved nothing.
-func waitForBlockedBackend(
-	t *testing.T,
-	done <-chan struct{},
-	finishedEarly, missed string,
-	look func(context.Context) (bool, error),
-) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), probeBudget)
-	defer cancel()
-	pace := time.NewTicker(probeInterval)
-	defer pace.Stop()
-	for {
-		blocked, err := look(ctx)
-		switch {
-		case err != nil && ctx.Err() != nil:
-			t.Fatal(racerMessage(done, finishedEarly, missed))
-		case err != nil:
-			t.Fatalf("probing for a blocked backend: %v", err)
-		}
-		if blocked {
-			return
-		}
-		// One select for all three answers: the racer finished, the budget ran
-		// out, or it is time to look again.
-		select {
-		case <-done:
-			t.Fatal(finishedEarly)
-		case <-ctx.Done():
-			t.Fatal(racerMessage(done, finishedEarly, missed))
-		case <-pace.C:
-		}
-	}
-}
-
-// racerMessage picks which failure actually happened when the budget expires.
-//
-// When the racer finishes AS the budget runs out, both channels are ready and
-// select picks between them arbitrarily — so the timeout branch can be taken
-// while a finished racer sits unread, and the run would be reported as "nothing
-// ever blocked" when what really happened is that the racer never blocked at
-// all. Those are different diagnoses and the second one is the useful one.
-func racerMessage(done <-chan struct{}, finishedEarly, missed string) string {
-	select {
-	case <-done:
-		return finishedEarly
-	default:
-		return missed
-	}
-}
 
 // The row-lock probe sees a backend that dials AFTER it starts looking.
 //
