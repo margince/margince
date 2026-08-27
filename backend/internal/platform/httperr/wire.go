@@ -230,6 +230,9 @@ func WriteJSON(w http.ResponseWriter, status int, body any) {
 	if meter, metered := w.(ServedMeter); metered && !meter.NoteServed(recordsIn(body)) {
 		return
 	}
+	// A list with no rows is `[]`, never `null` — see withEmptyLists for why
+	// that is a contract question rather than a cosmetic one.
+	body = withEmptyLists(body)
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(status)
 	//craft:ignore swallowed-errors WriteHeader already committed the response — nothing can report an encode failure to the client anymore
