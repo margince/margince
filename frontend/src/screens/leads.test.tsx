@@ -710,45 +710,32 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     expect(screen.queryByText(/Disqualified — this lead/)).toBeNull();
   });
 
-  it("finds the promotion when earlier audit rows push it onto a later page", async () => {
-    // The history is served OLDEST FIRST, 20 to a page, and `promote` is the
-    // LAST thing that happens to a lead. So a lead worked long enough to
-    // collect a page of earlier rows carries its promotion on a later one, and
-    // reading only the first page reported "we cannot tell" on exactly the
-    // leads someone worked hardest.
-    const filler = Array.from({ length: 20 }, (_, i) => ({
-      id: `a-${i}`,
-      actor_type: "human",
-      actor_id: "human:u-9",
-      action: "update",
-      occurred_at: "2026-06-01T08:00:00Z",
-      after: { status: "contacted" },
-    }));
+  it("asks for the promotion by verb, and reads it without a second page", async () => {
+    // What this replaced: the history is 20 rows to a page, so a lead worked
+    // long enough to collect other audit rows carried its promotion on a later
+    // one — and reading the first page reported "we cannot tell" on exactly the
+    // leads somebody had worked hardest. The client answer was to page on until
+    // it turned up; the server answer is to ask for the row (#1611).
+    //
+    // So the assertion is BOTH halves: the request names the verb, and there is
+    // exactly one request. A screen that still walked would pass the first.
+    const historyURLs: string[] = [];
     stubFetch(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/records/lead/")) {
-        // The second page is asked for by cursor; the first hands one back.
-        if (url.includes("cursor=")) {
-          return jsonResponse({
-            data: [
-              {
-                id: "a-99",
-                actor_type: "human",
-                actor_id: "human:u-9",
-                action: "promote",
-                occurred_at: "2026-06-20T08:00:00Z",
-                after: {
-                  dedupe_outcome: "merged",
-                  trigger: "inbound_reply",
-                },
-              },
-            ],
-            page: { next_cursor: null, has_more: false },
-          });
-        }
+        historyURLs.push(url);
         return jsonResponse({
-          data: filler,
-          page: { next_cursor: "page-2", has_more: true },
+          data: [
+            {
+              id: "a-99",
+              actor_type: "human",
+              actor_id: "human:u-9",
+              action: "promote",
+              occurred_at: "2026-06-20T08:00:00Z",
+              after: { dedupe_outcome: "merged", trigger: "inbound_reply" },
+            },
+          ],
+          page: { next_cursor: null, has_more: false },
         });
       }
       return jsonResponse({
@@ -765,32 +752,19 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
         "This lead merged into a contact we already knew — no duplicate was created.",
       ),
     ).toBeTruthy();
+    expect(historyURLs).toHaveLength(1);
+    expect(historyURLs[0]).toContain("action=promote");
   });
 
-  it("stops walking when a later page fails, and says so", async () => {
-    // The pages already read stay cached, so hasNextPage stays true and
-    // isFetchingNextPage falls back to false the moment the failure settles.
-    // Without a stop that re-arms the walk forever — and `pending` outranking
-    // `failed` would hide the error behind a waiting line the whole time.
-    let historyCalls = 0;
-    const filler = Array.from({ length: 20 }, (_, i) => ({
-      id: `a-${i}`,
-      actor_type: "human",
-      actor_id: "human:u-9",
-      action: "update",
-      occurred_at: "2026-06-01T08:00:00Z",
-      after: { status: "contacted" },
-    }));
+  it("reports a failed history read as failed, never as still pending", async () => {
+    // `pending` outranking `failed` renders a waiting line over an error
+    // nobody ever sees — which is what a walk that re-armed on failure did.
     stubFetch(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url.includes("/records/lead/")) {
-        historyCalls += 1;
-        if (url.includes("cursor=")) {
-          return jsonResponse({ title: "boom" }, 500);
-        }
-        return jsonResponse({
-          data: filler,
-          page: { next_cursor: "page-2", has_more: true },
+        return new Response(JSON.stringify({ title: "Server Error" }), {
+          status: 500,
+          headers: { "Content-Type": "application/problem+json" },
         });
       }
       return jsonResponse({
@@ -803,13 +777,14 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     render(<LeadScreen id="l-1" />);
 
     expect(
-      await screen.findByText(
-        "We cannot show whether this merged or created a contact.",
-      ),
+      await screen.findByText("Promoted — this lead is now read-only."),
     ).toBeTruthy();
-    // And it stopped rather than hammering the endpoint: page 1 plus a bounded
-    // number of failed attempts, not an unbounded retry storm.
-    expect(historyCalls).toBeLessThan(6);
+    // The outcome line never claims a result it could not read.
+    expect(
+      screen.queryByText(
+        "This lead merged into a contact we already knew — no duplicate was created.",
+      ),
+    ).toBeNull();
   });
 
   it("re-reads the history after promoting, so the new audit row is not missed", async () => {

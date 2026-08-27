@@ -34111,6 +34111,18 @@ export interface operations {
                 cursor?: components["parameters"]["Cursor"];
                 /** @description Max items in the page. */
                 limit?: components["parameters"]["Limit"];
+                /**
+                 * @description Return only the rows recording this verb. A caller that wants ONE event —
+                 *     "how was this lead promoted", "when was it erased" — asks for it rather than
+                 *     paging the trail looking for it: without this, reading a single event costs a
+                 *     walk whose length is the record's whole history, and a caller who reads only
+                 *     the first page gets a confidently wrong answer on exactly the records somebody
+                 *     worked hardest.
+                 *     The vocabulary is `audit_log.action`'s own; an unknown verb is `422` rather
+                 *     than an empty page, because "no such verb" and "that never happened here" are
+                 *     different answers and only one of them is worth acting on.
+                 */
+                action?: string;
             };
             header?: never;
             path: {
@@ -34122,7 +34134,7 @@ export interface operations {
         };
         requestBody?: never;
         responses: {
-            /** @description A page of rendered history lines, oldest first (empty when none). */
+            /** @description A page of rendered history lines, newest first (empty when none). */
             200: {
                 headers: {
                     [name: string]: unknown;

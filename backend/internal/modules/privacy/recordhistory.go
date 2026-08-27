@@ -40,6 +40,11 @@ type RecordHistoryFilter struct {
 	EntityID   ids.UUID
 	Cursor     *string
 	Limit      *int
+	// Action narrows to one audit verb. A caller after ONE event asks for it
+	// rather than paging the trail looking for it — a walk whose length is the
+	// record's whole history, and whose first page is a confidently wrong
+	// answer on exactly the records somebody worked hardest.
+	Action *string
 }
 
 // RecordHistoryEntry is one audit_log row rendered as a history line —
@@ -287,6 +292,10 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 		// image holds the role and the dates the scrub covered.
 		conds = append(conds, fmt.Sprintf("(a.occurred_at, a.id) >= ($%d, $%d)", len(args)+1, len(args)+2))
 		args = append(args, boundary.occurredAt, boundary.id)
+	}
+	if f.Action != nil {
+		conds = append(conds, fmt.Sprintf("a.action = $%d", len(args)+1))
+		args = append(args, *f.Action)
 	}
 	if useCursor {
 		// The page walks BACKWARDS in time, so the keyset takes what is older

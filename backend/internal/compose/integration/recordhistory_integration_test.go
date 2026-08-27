@@ -434,3 +434,78 @@ func TestRecordHistoryMalformedCursorIsAClientFault(t *testing.T) {
 		t.Fatalf("err = %v, want *storekit.MalformedCursorError untouched", err)
 	}
 }
+
+// One recorded event is one read.
+//
+// The trail is served newest-first and 20 to a page, so a caller after a single
+// event — "how was this lead promoted", "when was it erased" — either pages
+// until it turns up or reads the first page and gets a confident wrong answer.
+// The promoted-lead panel hit exactly that: it reported the outcome as
+// unknowable on the leads somebody had worked hardest, because those are the
+// ones with enough other rows to push the one it wanted off the page it read
+// (issue #1611).
+//
+// Seeded so the wanted row is NOT the newest and NOT the oldest. A filter that
+// silently did nothing would still return it at one of those two ends, and the
+// case would pass over a `WHERE` nobody wired.
+func TestRecordHistoryAnswersOneVerbWithoutAWalk(t *testing.T) {
+	e := Setup(t)
+	personID := e.SeedPerson(t, "Filtered Subject", nil)
+	actor := seedWorkspaceUser(t, e, "Vera Verb")
+
+	base := time.Now().Add(time.Hour).UTC().Truncate(time.Microsecond)
+	for i, action := range []string{"update", "assign", "archive", "update", "restore"} {
+		seedRecordAuditRow(t, e, action, personID, "human", "human:"+actor.String(), nil,
+			nil, map[string]any{"n": i}, base.Add(time.Duration(i)*time.Hour))
+	}
+
+	archive := "archive"
+	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
+		EntityType: "person", EntityID: personID, Action: &archive,
+	})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(page.Entries) != 1 {
+		t.Fatalf("entries = %d, want exactly the one archive row — a filter that narrowed "+
+			"nothing would answer the whole trail: %+v", len(page.Entries), page.Entries)
+	}
+	if page.Entries[0].Action != archive {
+		t.Errorf("answered a %q row for action=%q", page.Entries[0].Action, archive)
+	}
+	// And it is the WHOLE answer: a caller reading one verb must be told there
+	// is no more, or they page on for rows that do not exist.
+	if page.HasMore || page.NextCursor != "" {
+		t.Errorf("a filtered page that holds every match must report exhaustion: "+
+			"has_more=%v cursor=%q", page.HasMore, page.NextCursor)
+	}
+}
+
+// A KNOWN verb this record never saw answers an honest empty page.
+//
+// Named for what it checks, which is the store's half. The other half — a verb
+// the installation does not record at all — is refused 422 by the HANDLER, and
+// asserting it here would be asserting it of a function that never sees it:
+// ListRecordHistory takes a filter, not a request, so a bad verb reaching it
+// has already passed the door that was supposed to stop it.
+//
+// The two answers must stay different. This one is a fact about the record;
+// the other is a mistyped request, and a caller who reads an empty page for it
+// concludes something false about their data.
+func TestRecordHistoryAnswersAnEmptyPageForAVerbThisRecordNeverSaw(t *testing.T) {
+	e := Setup(t)
+	personID := e.SeedPerson(t, "Refusal Subject", nil)
+
+	// Reaches the store, which is where an empty page would be manufactured.
+	// The wire refusal is the handler's and is asserted where the handler is.
+	neverHappened := "restore"
+	page, err := privacy.ListRecordHistory(e.Admin(), e.DB(), privacy.RecordHistoryFilter{
+		EntityType: "person", EntityID: personID, Action: &neverHappened,
+	})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	if len(page.Entries) != 0 {
+		t.Errorf("entries = %d, want none — this record has no restore row", len(page.Entries))
+	}
+}
