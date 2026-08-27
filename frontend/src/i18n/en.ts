@@ -3479,6 +3479,22 @@ export const en = {
   // Connected inboxes (Settings → Connections): the "manage in Settings"
   // surface the onboarding copy promises.
   "connectors.title": "Connected inboxes",
+  // The rep's standing overnight authority — one question, asked beside the
+  // mailbox connect in onboarding and again in Settings. The danger line names
+  // the features that go empty, because "some things stop working" is not
+  // something a rep can weigh.
+  "overnightGrant.title": "Overnight preparation",
+  "overnightGrant.sub":
+    "Margince works through your deals while you sleep and has your morning ready when you arrive. It acts as you, sees only what you can see, and you can stop it at any time.",
+  "overnightGrant.label": "Let Margince prepare my morning brief overnight",
+  "overnightGrant.help":
+    "It reads your deals and mail to rank what needs you today. It never sends anything on its own — anything that leaves the building waits for your approval.",
+  "overnightGrant.danger":
+    "Without this, your morning brief, your worklist lanes and your weekly review stay empty. These are the screens Margince opens on, so most of the product will look like it is not working.",
+  "overnightGrant.saveFailed":
+    "Your answer to the overnight question could not be saved. Everything else is connected — set it under Settings → Connections when you are in.",
+  "overnightGrant.renew":
+    "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
     "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes the pipeline shared.",
