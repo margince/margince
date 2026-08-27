@@ -23,7 +23,7 @@ import (
 // it is visibility-probed before the edge lands.
 func buildOrganizationPatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Organization, in UpdateOrganizationInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
-	if err := applyClears(p, in.Clear, clearableOrganizationColumns(current)); err != nil {
+	if err := storekit.ApplyClears(p, in.Clear, clearableOrganizationColumns(current)); err != nil {
 		return nil, err
 	}
 	setOrganizationPlainFields(p, current, in)

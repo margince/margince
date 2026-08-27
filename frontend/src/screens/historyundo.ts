@@ -28,6 +28,7 @@ const UNDO_REFUSALS: Readonly<Record<UndoRefusal, MessageKey>> = {
   record_archived: "history.undo.recordArchived",
   null_unwritable_by_module: "history.undo.nullUnwritable",
   not_writable_by_caller: "history.undo.notWritableByCaller",
+  edge_relink_unsupported: "history.undo.edgeRelinkUnsupported",
 };
 
 // The record moved under the caller. Not a refusal ABOUT the change — the same

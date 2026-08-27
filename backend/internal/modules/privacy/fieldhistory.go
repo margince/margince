@@ -50,6 +50,10 @@ type FieldHistoryEntry struct {
 	ActorID    string
 	PassportID *ids.UUID
 	Evidence   map[string]any
+	// UndidAuditLogID is the entry this one REVERSES — the same link the record
+	// spine carries, because this projection is interleaved into the same
+	// chronology and a reversal reads as a fresh change on either of them.
+	UndidAuditLogID *ids.UUID
 }
 
 // FieldHistoryPage is one keyset window of the timeline, newest first.
@@ -359,6 +363,13 @@ func queryFieldHistoryBatch(ctx context.Context, tx pgx.Tx, f FieldHistoryFilter
 		if err := unmarshalJSONBMap(evidenceJSON, &r.evidence); err != nil {
 			return nil, 0, fmt.Errorf("audit row %s evidence: %w", r.id, err)
 		}
+		// The image is already decoded for an agent actor's evidence, so the link
+		// rides it here rather than costing this read a second projection.
+		undid, err := reversalLinkFromEvidence(r.evidence)
+		if err != nil {
+			return nil, 0, fmt.Errorf("audit row %s: %w", r.id, err)
+		}
+		r.undidAuditLogID = undid
 		if err := unmarshalJSONBMap(beforeJSON, &r.before); err != nil {
 			return nil, 0, fmt.Errorf("audit row %s before: %w", r.id, err)
 		}

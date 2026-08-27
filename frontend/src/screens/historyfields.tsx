@@ -17,7 +17,6 @@ import {
 import type { TimelineEntry } from "../design-system/composed";
 import {
   EvidenceChip,
-  FieldDiff,
   PassportChip,
   ProvenanceTag,
   toEvidence,
@@ -37,8 +36,8 @@ import {
   groupByField,
   provenanceOfEntry,
 } from "./history.logic";
+import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
-import { historyValue } from "./historyvalues";
 import "./history.css";
 
 // The per-field old→new diff view (B-EP09.x): every field-change row the
@@ -135,19 +134,12 @@ function FieldGroupSection({
       <ul>
         {group.changes.map((change) => (
           <li key={change.id} className="change">
-            <FieldDiff
-              oldValue={historyValue(
-                group.field,
-                change.old_value,
-                currency,
-                locale,
-              )}
-              newValue={historyValue(
-                group.field,
-                change.new_value,
-                currency,
-                locale,
-              )}
+            <HistoryFieldDiff
+              field={group.field}
+              oldValue={change.old_value}
+              newValue={change.new_value}
+              currency={currency}
+              locale={locale}
             />
             <span className="tl-meta">
               {formatDateTime(change.changed_at, locale, recordZone)}
@@ -331,11 +323,10 @@ export function FieldHistoryTimeline({
 export function changeTimeline(
   changes: FieldHistoryEntry[],
   label: (field: string) => string,
-  // The record's own money context. A minor-unit column is an integer count of
-  // units its currency defines, so rendering one raw shows a figure a hundred
-  // times the price on most currencies — the reason this goes through
-  // historyValue rather than to the diff directly, on every field, whether or
-  // not the record type happens to hold money today.
+  // The record's own money context, handed to every row whether or not this
+  // record type holds money today. A minor-unit column is an integer count of
+  // the units its currency defines, so a row that reaches the diff without it
+  // shows a figure a hundred times the price on most currencies.
   money: Readonly<{ currency: string | null | undefined; locale: Locale }>,
   viewerUserId?: string,
 ): TimelineEntry[] {
@@ -355,19 +346,12 @@ export function changeTimeline(
     // per-field view — the reader kept the claim and lost the proof.
     via: <ChangeGrounding change={change} />,
     detail: (
-      <FieldDiff
-        oldValue={historyValue(
-          change.field,
-          change.old_value,
-          money.currency,
-          money.locale,
-        )}
-        newValue={historyValue(
-          change.field,
-          change.new_value,
-          money.currency,
-          money.locale,
-        )}
+      <HistoryFieldDiff
+        field={change.field}
+        oldValue={change.old_value}
+        newValue={change.new_value}
+        currency={money.currency}
+        locale={money.locale}
       />
     ),
   }));

@@ -42,13 +42,31 @@ func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {
 	if err != nil {
 		t.Fatalf("record history of a project: %v", err)
 	}
-	if len(record.Entries) != 2 {
-		t.Fatalf("record history has %d entries, want 2 (create, advance_phase): %+v", len(record.Entries), record.Entries)
+	// The project's OWN lines are the creation and the move. The third is the
+	// company its creation linked: a record's history includes the links it holds,
+	// so a count over the whole page would absorb a missing line of the project's
+	// own the moment a link row appeared beside it.
+	var own []privacy.RecordHistoryEntry
+	var links int
+	for _, entry := range record.Entries {
+		if entry.Edge != nil {
+			links++
+			continue
+		}
+		own = append(own, entry)
+	}
+	if len(own) != 2 {
+		t.Fatalf("the project's own history has %d entries, want 2 (create, advance_phase): %+v",
+			len(own), record.Entries)
+	}
+	if links != 1 {
+		t.Fatalf("the project's history carries %d link lines, want the one company its "+
+			"creation linked: %+v", links, record.Entries)
 	}
 	var move *privacy.RecordHistoryEntry
-	for i := range record.Entries {
-		if record.Entries[i].Action == "advance_phase" {
-			move = &record.Entries[i]
+	for i := range own {
+		if own[i].Action == "advance_phase" {
+			move = &own[i]
 		}
 	}
 	if move == nil {

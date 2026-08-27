@@ -94,3 +94,43 @@
   font-size: 12px;
   color: var(--textMeta);
 }
+
+/* A reversal and the change it reversed, as one line. The disclosure's body is
+ * the ordinary timeline indented under the pair, so the two rows inside read as
+ * the audit rows they are rather than as a summary of them. */
+.reversal-net {
+  font-size: 12px;
+  color: var(--textMeta);
+}
+
+.reversal-pair-body {
+  margin-top: var(--space-2);
+  padding-left: var(--space-3);
+  border-left: 1px solid var(--borderSubtle);
+}
+
+.reversal-toggle {
+  margin-top: var(--space-2);
+}
+
+/* What a row is to the rows around it, when the sentence the server wrote
+ * cannot say it. Meta weight: it qualifies the line rather than competing with
+ * it. */
+.entry-note {
+  font-size: 12px;
+  color: var(--textMeta);
+}
+
+/* An edge row's own block: the mark saying this row is a LINK rather than a
+ * field edit, and the record at the other end. It carries the accent hairline
+ * because telling the two apart at a glance is the whole reason it is drawn —
+ * a record with many contacts otherwise reads as one undifferentiated list. */
+.entry-edge {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+  padding-left: var(--space-2);
+  border-left: 2px solid var(--accent);
+}

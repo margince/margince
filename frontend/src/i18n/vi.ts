@@ -63,8 +63,11 @@ export const vi = {
   "history.tabChanges": "Theo thay đổi",
   "history.tabFields": "Theo trường",
   "history.undo.action": "Hoàn tác",
+  "history.undo.redo": "Làm lại",
   "history.undo.busy": "Đang hoàn tác thay đổi…",
   "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
+  "history.undo.confirmEdgeBody":
+    "Thao tác này thay đổi liên kết với {other}. Các bản ghi vẫn còn; chỉ mối liên kết giữa chúng thay đổi.",
   "history.undo.confirmBody":
     "{count} trường sẽ trở lại giá trị trước thay đổi này:",
   "history.undo.versionSkew":
@@ -86,6 +89,23 @@ export const vi = {
   "history.undo.nullUnwritable":
     "Không thể hoàn tác vì thao tác này sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
+  "history.undo.edgeRelinkUnsupported":
+    "Chưa hỗ trợ phục hồi liên kết đã xoá — hãy thêm lại liên kết trên bản ghi này.",
+  "history.reversal.collapsed":
+    "Thay đổi của {actor}, đã được {undoer} hoàn tác",
+  "history.reversal.collapsedSelf":
+    "{actor} đã hoàn tác thay đổi của chính mình",
+  "history.reversal.partly":
+    "Thay đổi của {actor}, đã được {undoer} hoàn tác một phần",
+  "history.reversal.partlySelf":
+    "{actor} đã hoàn tác một phần thay đổi của chính mình",
+  "history.reversal.net": "kết quả: không thay đổi",
+  "history.reversal.stillChanged": "vẫn còn thay đổi",
+  "history.reversal.expand": "Hiện cả hai thay đổi",
+  "history.reversal.collapse": "Ẩn",
+  "history.reversal.undoneBy": "đã được {undoer} hoàn tác",
+  "history.reversal.unpaired": "hoàn tác một thay đổi trước đó",
+  "history.edge.marker": "Liên kết",
   "history.field.address": "Địa chỉ",
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",

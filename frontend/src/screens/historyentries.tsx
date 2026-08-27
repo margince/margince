@@ -13,7 +13,7 @@ import type { EntityKind } from "../app/entity";
 import { useRecordZone } from "../app/recordzone";
 import { Button, Card, EmptyState } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
-import { FieldDiff, ProvenanceTag } from "../design-system/trust";
+import { ProvenanceTag } from "../design-system/trust";
 import { formatDateTime, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -30,7 +30,11 @@ import {
   entryFieldChanges,
   provenanceOfEntry,
 } from "./history.logic";
+import { HistoryEdgeDetail } from "./historyedge";
+import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
+import { historyRows } from "./historyreversal";
+import { actorName, ReversalPairRow } from "./historyreversalrow";
 import { undoRefusalKey, VERSION_SKEW_CODE } from "./historyundo";
 import { historyValue } from "./historyvalues";
 import "./history.css";
@@ -101,19 +105,12 @@ function EntryFieldDetail({
           <span className="entry-field-name">
             {historyFieldLabel(change.field, t)}
           </span>
-          <FieldDiff
-            oldValue={historyValue(
-              change.field,
-              change.oldValue,
-              currency,
-              locale,
-            )}
-            newValue={historyValue(
-              change.field,
-              change.newValue,
-              currency,
-              locale,
-            )}
+          <HistoryFieldDiff
+            field={change.field}
+            oldValue={change.oldValue}
+            newValue={change.newValue}
+            currency={currency}
+            locale={locale}
           />
         </li>
       ))}
@@ -173,6 +170,11 @@ function UndoButton({
   changes,
   currency,
   restore,
+  // The verb this press means. One engine, two intents: putting a change back
+  // and putting a REVERSAL back are the same write, and the second one redoes
+  // what the first undid — so the label is the caller's to name, and the two
+  // must never read the same on adjacent rows.
+  label = "history.undo.action",
 }: Readonly<{
   entry: AuditHistoryEntry;
   kind: EntityKind;
@@ -180,6 +182,7 @@ function UndoButton({
   changes: readonly EntryFieldChange[];
   currency: string | null | undefined;
   restore: RecordRestore;
+  label?: MessageKey;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -252,9 +255,15 @@ function UndoButton({
     : (refusalSentence(advisory.reason, advisory.detail, t) ??
       t("common.errorNoCause"));
   const press = () => {
-    // More than one field moves: the reader is told which, and what each goes
-    // back to, before a write lands on somebody else's data.
-    if (changes.length > 1) {
+    // Two presses get confirmed, for the same reason: the reader is told what
+    // the write will do before it lands on somebody else's data.
+    //
+    // More than one field moves — they are told which, and what each goes back
+    // to. And ANY link change, because reversing one removes or re-points a
+    // connection between two records rather than editing a value on this one.
+    // An edge entry carries no field changes at all, so the field count alone
+    // would wave through the more consequential of the two.
+    if (changes.length > 1 || entry.edge) {
       setConfirming(true);
       return;
     }
@@ -271,23 +280,27 @@ function UndoButton({
         busyLabel={t("history.undo.busy")}
         onClick={press}
       >
-        {t("history.undo.action")}
+        {t(label)}
       </Button>
       {refused && <span className="entry-undo-refusal">{refused}</span>}
       <ConfirmModal
         open={confirming}
         onClose={() => setConfirming(false)}
         title={t("history.undo.confirmTitle")}
-        confirmLabel={t("history.undo.action")}
+        confirmLabel={t(label)}
         pending={putBack.isPending}
         onConfirm={() =>
           putBack.mutate({ kind, id, auditId: entry.id, version })
         }
       >
         <p>
-          {t("history.undo.confirmBody", {
-            count: formatNumber(changes.length, locale),
-          })}
+          {entry.edge
+            ? t("history.undo.confirmEdgeBody", {
+                other: entry.edge.other_label ?? t("ref.nameLoadFailed"),
+              })
+            : t("history.undo.confirmBody", {
+                count: formatNumber(changes.length, locale),
+              })}
         </p>
         <ul className="entry-fields">
           {changes.map((change) => (
@@ -318,6 +331,8 @@ function HistoryEntryRow({
   locale,
   currency,
   restore,
+  note,
+  undoLabel,
 }: Readonly<{
   entry: AuditHistoryEntry;
   kind: EntityKind;
@@ -325,9 +340,18 @@ function HistoryEntryRow({
   locale: ReturnType<typeof useLocale>["locale"];
   currency: string | null | undefined;
   restore: RecordRestore | undefined;
+  // What this row is to the rows around it, when the sentence the server wrote
+  // cannot say it: that a reversal undid something older than this page, or
+  // that the change on this row has since been undone by the row above it.
+  note?: string;
+  undoLabel?: MessageKey;
 }>) {
   const viewerId = useViewerId();
   const recordZone = useRecordZone();
+  // An edge entry's images are the LINK's columns, not this record's, so it has
+  // no field changes to draw or to name in a confirm — the sentence the read
+  // wrote and the edge block below are the whole of what this row says.
+  const edge = entry.edge;
   const changes = entryFieldChanges(entry);
   return (
     <li>
@@ -348,8 +372,13 @@ function HistoryEntryRow({
             // sentence above was fixed to avoid.
             renderUser={() => entry.actor_name}
           />
+          {note && <span className="entry-note">{note}</span>}
         </span>
-        <EntryFieldDetail changes={changes} currency={currency} />
+        {edge ? (
+          <HistoryEdgeDetail edge={edge} />
+        ) : (
+          <EntryFieldDetail changes={changes} currency={currency} />
+        )}
         {restore && (
           <UndoButton
             entry={entry}
@@ -358,6 +387,7 @@ function HistoryEntryRow({
             changes={changes}
             currency={currency}
             restore={restore}
+            label={undoLabel}
           />
         )}
       </span>
@@ -396,17 +426,56 @@ export function RecordHistory({
     body = (
       <>
         <ul className="timeline">
-          {entries.map((entry) => (
-            <HistoryEntryRow
-              key={entry.id}
-              entry={entry}
-              kind={kind}
-              id={id}
-              locale={locale}
-              currency={currency}
-              restore={restore}
-            />
-          ))}
+          {historyRows(entries).map((row) =>
+            row.kind === "pair" ? (
+              <ReversalPairRow
+                key={row.reversal.id}
+                row={row}
+                currency={currency}
+              >
+                <HistoryEntryRow
+                  entry={row.reversal}
+                  kind={kind}
+                  id={id}
+                  locale={locale}
+                  currency={currency}
+                  restore={restore}
+                  undoLabel="history.undo.redo"
+                />
+                <HistoryEntryRow
+                  entry={row.reversed}
+                  kind={kind}
+                  id={id}
+                  locale={locale}
+                  currency={currency}
+                  restore={restore}
+                  note={t("history.reversal.undoneBy", {
+                    undoer: actorName(row.reversal.actor_name, t),
+                  })}
+                />
+              </ReversalPairRow>
+            ) : (
+              <HistoryEntryRow
+                key={row.entry.id}
+                entry={row.entry}
+                kind={kind}
+                id={id}
+                locale={locale}
+                currency={currency}
+                restore={restore}
+                note={
+                  row.kind === "unpairedReversal"
+                    ? t("history.reversal.unpaired")
+                    : undefined
+                }
+                undoLabel={
+                  row.kind === "unpairedReversal"
+                    ? "history.undo.redo"
+                    : undefined
+                }
+              />
+            ),
+          )}
         </ul>
         <LoadMoreButton query={query} />
       </>

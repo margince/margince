@@ -59,8 +59,11 @@ export const en = {
   "history.tabChanges": "By change",
   "history.tabFields": "By field",
   "history.undo.action": "Put back",
+  "history.undo.redo": "Redo",
   "history.undo.busy": "Putting this change back…",
   "history.undo.confirmTitle": "Put this change back?",
+  "history.undo.confirmEdgeBody":
+    "This changes the link with {other}. The records stay; only the connection between them changes.",
   "history.undo.confirmBody":
     "{count} fields go back to what they were before this change:",
   "history.undo.versionSkew":
@@ -84,6 +87,19 @@ export const en = {
     "Putting this back would have to clear a field this record cannot clear, so it cannot be put back.",
   "history.undo.notWritableByCaller":
     "You do not have permission to write these fields.",
+  "history.undo.edgeRelinkUnsupported":
+    "Putting a removed link back isn't supported yet — add it again on this record.",
+  "history.reversal.collapsed": "{actor}'s change, undone by {undoer}",
+  "history.reversal.collapsedSelf": "{actor} undid their own change",
+  "history.reversal.partly": "{actor}'s change, partly undone by {undoer}",
+  "history.reversal.partlySelf": "{actor} partly undid their own change",
+  "history.reversal.net": "net: unchanged",
+  "history.reversal.stillChanged": "still changed",
+  "history.reversal.expand": "Show both changes",
+  "history.reversal.collapse": "Hide",
+  "history.reversal.undoneBy": "undone by {undoer}",
+  "history.reversal.unpaired": "undoing an earlier change",
+  "history.edge.marker": "Link",
   "history.field.address": "Address",
   "history.field.amount_minor": "Value",
   "history.field.assignee_id": "Assignee",

@@ -55,8 +55,11 @@ export const de = {
   "history.tabChanges": "Nach Änderung",
   "history.tabFields": "Nach Feld",
   "history.undo.action": "Zurücksetzen",
+  "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird zurückgesetzt…",
   "history.undo.confirmTitle": "Diese Änderung zurücksetzen?",
+  "history.undo.confirmEdgeBody":
+    "Dies ändert die Verknüpfung mit {other}. Die Datensätze bleiben; nur die Verbindung zwischen ihnen ändert sich.",
   "history.undo.confirmBody":
     "{count} Felder kehren auf den Stand vor dieser Änderung zurück:",
   "history.undo.versionSkew":
@@ -80,6 +83,23 @@ export const de = {
     "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann, und ist daher nicht möglich.",
   "history.undo.notWritableByCaller":
     "Sie haben keine Berechtigung, diese Felder zu schreiben.",
+  "history.undo.edgeRelinkUnsupported":
+    "Eine entfernte Verknüpfung wiederherzustellen ist noch nicht möglich — legen Sie sie auf diesem Datensatz erneut an.",
+  "history.reversal.collapsed":
+    "Änderung von {actor}, zurückgesetzt von {undoer}",
+  "history.reversal.collapsedSelf":
+    "{actor} hat die eigene Änderung zurückgesetzt",
+  "history.reversal.partly":
+    "Änderung von {actor}, teilweise zurückgesetzt von {undoer}",
+  "history.reversal.partlySelf":
+    "{actor} hat die eigene Änderung teilweise zurückgesetzt",
+  "history.reversal.net": "Ergebnis: unverändert",
+  "history.reversal.stillChanged": "weiterhin geändert",
+  "history.reversal.expand": "Beide Änderungen anzeigen",
+  "history.reversal.collapse": "Ausblenden",
+  "history.reversal.undoneBy": "zurückgesetzt von {undoer}",
+  "history.reversal.unpaired": "setzt eine frühere Änderung zurück",
+  "history.edge.marker": "Verknüpfung",
   "history.field.address": "Adresse",
   "history.field.amount_minor": "Wert",
   "history.field.assignee_id": "Zuständig",
