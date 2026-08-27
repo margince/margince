@@ -24,7 +24,7 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { fiscalYearLabel } from "../format/fiscalyear";
 import { identifierNumber, monthName } from "../format/format";
 import { LOCALES, type Locale, localeNameKey, useLocale, useT } from "../i18n";
@@ -406,7 +406,6 @@ function InstallationSettingsForm({
             onSubmit={submit}
           />
         )}
-        <ToastRegion toast={toast} />
       </PanelBody>
     </Panel>
   );

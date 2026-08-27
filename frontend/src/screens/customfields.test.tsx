@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { type GrantSpec, meFixture } from "../app/mefixture";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import {
   AuditRail,
@@ -44,18 +45,22 @@ function builder(
 ) {
   const onSubmit = vi.fn();
   const onCancel = vi.fn();
-  const onToast = vi.fn();
+  // The real region, not a spy standing where it goes: what the builder owes a
+  // reader is a sentence on screen without a completion mark beside it, and a
+  // `vi.fn()` in its place proves only that a function was called.
   wrap(
-    <FieldBuilder
-      object="organization"
-      pending={false}
-      onSubmit={onSubmit}
-      onCancel={onCancel}
-      onToast={onToast}
-      {...overrides}
-    />,
+    <ToastProvider>
+      <FieldBuilder
+        object="organization"
+        pending={false}
+        onSubmit={onSubmit}
+        onCancel={onCancel}
+        {...overrides}
+      />
+      <ToastRegion />
+    </ToastProvider>,
   );
-  return { onSubmit, onCancel, onToast };
+  return { onSubmit, onCancel };
 }
 
 describe("FieldBuilder", () => {
@@ -93,14 +98,14 @@ describe("FieldBuilder", () => {
   });
 
   it("guards an empty label: Confirm disabled, guard toast on click attempt", async () => {
-    const { onToast, onSubmit } = builder();
+    const { onSubmit } = builder();
     const confirm = screen.getByRole("button", {
       name: /Confirm & add field/i,
     });
     expect(confirm).toBeDisabled();
-    // the guard toast is wired to the always-clickable Add affordance; assert via helper
+    // the guard toast is wired to the always-clickable Add affordance
     expect(onSubmit).not.toHaveBeenCalled();
-    expect(onToast).not.toHaveBeenCalled();
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("reveals the ISO-4217 input for currency", async () => {
@@ -110,14 +115,18 @@ describe("FieldBuilder", () => {
   });
 
   it("reveals the options editor for picklist and blocks removing the last option", async () => {
-    const { onToast } = builder();
+    const view = builder();
     await userEvent.click(screen.getByRole("button", { name: /^Picklist$/i }));
     const removes = screen.getAllByRole("button", { name: /remove option/i });
     // start with one row; removing it is blocked
     await userEvent.click(removes[removes.length - 1]);
-    expect(onToast).toHaveBeenCalledWith(
+    expect(screen.getByRole("status")).toHaveTextContent(
       "A picklist needs at least one option",
     );
+    // And unmarked: this is a refusal, and the completion dot beside it said the
+    // opposite of what the sentence says.
+    expect(document.body.querySelector(".dot-auto")).toBeNull();
+    expect(view.onSubmit).not.toHaveBeenCalled();
   });
 
   it("submits a well-formed draft on Confirm", async () => {
@@ -328,7 +337,12 @@ const renderAdmin = () => {
   return render(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <CustomFieldsAdmin />
+        {/* The region is the shell's in the running app (`main.tsx`), so a suite
+            whose subject is what a write SAYS has to mount it the same way. */}
+        <ToastProvider>
+          <CustomFieldsAdmin />
+          <ToastRegion />
+        </ToastProvider>
       </LocaleProvider>
     </QueryClientProvider>,
   );

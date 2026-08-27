@@ -78,7 +78,6 @@ export const BuilderText: Story = {
         pending={false}
         onSubmit={noop}
         onCancel={noop}
-        onToast={noop}
       />
     </StoryProviders>
   ),
@@ -99,7 +98,6 @@ export const BuilderTextDark: Story = {
         pending={false}
         onSubmit={noop}
         onCancel={noop}
-        onToast={noop}
       />
     </StoryProviders>
   ),
@@ -115,7 +113,6 @@ export const BuilderCurrency: Story = {
         pending={false}
         onSubmit={noop}
         onCancel={noop}
-        onToast={noop}
       />
     </StoryProviders>
   ),
@@ -137,7 +134,6 @@ export const BuilderPicklist: Story = {
         pending={false}
         onSubmit={noop}
         onCancel={noop}
-        onToast={noop}
       />
     </StoryProviders>
   ),
@@ -163,7 +159,6 @@ export const BuilderRefusal: Story = {
         pending={false}
         onSubmit={noop}
         onCancel={noop}
-        onToast={noop}
       />
     </StoryProviders>
   ),

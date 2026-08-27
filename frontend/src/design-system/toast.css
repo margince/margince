@@ -1,0 +1,132 @@
+/*
+ * The transient confirmation, at the foot of the viewport.
+ *
+ * These rules lived in `atoms.css` while the toast was a hook every screen
+ * mounted for itself. They are here now for the reason every other per-component
+ * sheet is: the component imports its own stylesheet, and a class whose home is
+ * the same file as forty other components is one nobody finds when they go
+ * looking for why the toast sits where it does.
+ */
+
+.toast-region {
+  position: fixed;
+  /*
+   * The shell publishes where the bottom edge actually is, and this reads it
+   * rather than holding an opinion. It used to say `bottom: 20px`, which on a
+   * phone put the confirmation ON TOP of the fixed navigation bar — the toast
+   * sits at z-index 60 and the bar at 30, so it covered the bar rather than
+   * being covered by it, and the reader lost their way out of the screen for as
+   * long as the message was up. `--stickyBottomInset` is `--space-2` wherever
+   * no bar is drawn, so the desktop ledge is unchanged.
+   */
+  bottom: calc(var(--stickyBottomInset) + var(--space-2));
+  /*
+   * The page gutter on both sides, so the message can never be wider than the
+   * screen. On a phone that is what makes it a full-width bar; on a desktop the
+   * `max-width` below wins long before these do, and `margin-inline: auto` is
+   * what centres it. Centring by `left: 50%` + `translateX(-50%)` — which is
+   * what this did — cannot express a maximum width AND a gutter at once, and at
+   * 390px a long record name took the message off both edges at once.
+   */
+  left: var(--pageGutter);
+  right: var(--pageGutter);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  /* Above the modal overlay (50, atoms.css) so a confirmation raised by a
+     dialog's own action is visible, and below the select popup (70) and the
+     tooltip (80), which are attached to controls a reader is actively driving. */
+  z-index: 60;
+  /* The region spans the viewport so its contents can be centred in it; only
+     the message itself is a target. Without this the invisible full-width strip
+     would swallow clicks aimed at whatever is under it. */
+  pointer-events: none;
+}
+
+.toast {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  /*
+   * Wide enough for a sentence, never wider than the column it stands in. A
+   * message naming a record carries user data of unbounded length, and without
+   * a ceiling the box grew to the full width of a desktop window — which reads
+   * as a banner rather than as something passing through.
+   */
+  max-width: min(34rem, 100%);
+  background: var(--bgRail);
+  color: var(--textOnAccent);
+  border-radius: var(--r-md);
+  padding: 10px 14px;
+  font-size: 13px;
+  box-shadow: var(--shadow-pop);
+  pointer-events: auto;
+}
+
+/*
+ * The sentence, held apart from the verbs beside it. It wraps — a toast is
+ * allowed to be two lines, and truncating a confirmation would hide the half
+ * that names what happened — while the mark, the action and the dismiss keep
+ * their own width.
+ */
+.toast-said {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+/*
+ * The verb a confirmation carries: Undo, and the handful of things like it.
+ *
+ * Drawn as a text affordance rather than as a `Button`, for the same reason
+ * `.toast-dismiss` beside it is: this sits on the rail's dark ground, where
+ * every one of `Button`'s fills reads as a second surface stacked on the
+ * message. It keeps the underline so it is legible as a control without one.
+ */
+.toast-action {
+  flex: none;
+  margin-left: var(--space-1);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--textOnAccent);
+  font: inherit;
+  font-weight: var(--fw-semibold);
+  text-decoration: underline;
+  cursor: pointer;
+}
+.toast-action:hover {
+  text-decoration: none;
+}
+.toast-action:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* A sticky confirmation's way out. Small and quiet: the message beside it is the
+   point, and this is only the reader's answer to having read it. It sits on the
+   rail's dark ground like the rest of the toast, so it takes the on-accent text
+   colour rather than the page's. */
+.toast-dismiss {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  margin-left: var(--space-1);
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--textOnAccent);
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity var(--dur-state) var(--ease-out);
+}
+.toast-dismiss:hover {
+  opacity: 1;
+}
+.toast-dismiss:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+  opacity: 1;
+}

@@ -159,10 +159,11 @@
   position: relative;
   /* No `contain: layout` here, tempting as it is for the collapse animation's
      relayout cost: containment makes this element the containing block for every
-     fixed-position descendant, and the screens render their toasts and their
-     modals inside it. They would anchor to this column and be clipped by its
-     `overflow: hidden` instead of standing on the viewport. The collapse
-     is 200ms; correctness is worth more than those frames. */
+     fixed-position descendant. The overlays are portalled to the body and so are
+     out of reach, but a screen that positions anything against the viewport from
+     inside its own markup would be anchored to this column instead and clipped
+     by its `overflow: hidden`. The collapse is 200ms; correctness is worth more
+     than those frames. */
 }
 /* The content area is the ground, not a panel: screens float their own cards on
    it (hairlines, not shadows). The sidebar is the only chrome panel left. */
@@ -1525,10 +1526,11 @@
  * six-column table stretched across a metre of desk with the eye losing the row
  * between name and status.
  *
- * Keyed off the wrap CARRYING a surface, not on it being the only child: a
- * toast is a sibling in the markup even though it is fixed and takes no space,
- * and an `:only-child` rule switched the whole layout off for as long as one
- * was on screen. */
+ * Keyed off the wrap CARRYING a surface, not on it being the only child. An
+ * `:only-child` rule states that the layout depends on the surface having no
+ * siblings, which is a fact about the screen's markup rather than about the
+ * surface — it switched the whole layout off the first time a screen rendered
+ * anything beside its list, including a box that took no space at all. */
 .wrap:has(> .lt) {
   display: flex;
   flex-direction: column;

@@ -7,6 +7,7 @@ import { AttentionProvider } from "./app/attention";
 import { AppErrorBoundary } from "./app/errorboundary";
 import { createQueryClient } from "./app/queryclient";
 import { startTheme } from "./app/theme";
+import { ToastProvider, ToastRegion } from "./design-system/toast";
 import { LocaleProvider } from "./i18n";
 import "./app.css";
 
@@ -71,7 +72,15 @@ createRoot(root).render(
               and the screens that publish it are both under App, and a provider
               that mounted with them would remount every time App did. */}
           <AttentionProvider>
-            <App />
+            {/* Outside App for the same reason as the provider above it, and
+                the region is a SIBLING of App rather than a child: it is
+                portalled to the body either way, but rendering it here is what
+                makes "exactly one region exists" a fact about this file rather
+                than a habit each screen has to keep. */}
+            <ToastProvider>
+              <App />
+              <ToastRegion />
+            </ToastProvider>
           </AttentionProvider>
         </AppErrorBoundary>
       </LocaleProvider>

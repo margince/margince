@@ -1024,6 +1024,40 @@ describe("unsaved edits", () => {
   });
 });
 
+describe("the transient confirmation", () => {
+  // The defect this is derived from is not hypothetical and was not caught by
+  // anything: `screens/commissiondecide.tsx` called `useToast` and rendered no
+  // region, so every approve/pay/void confirmation it showed was written into a
+  // `useState` nobody read. Nothing failed — the suite only ever rendered the
+  // toast's own harness, and a confirmation shown to nobody looks exactly like
+  // one nobody triggered.
+  //
+  // The shape of the fix is `UnsavedGuard`'s: one mount, above the screens, held
+  // here. A second region would be a second answer to "where does a confirmation
+  // appear", and a screen mounting its own is back to the state above.
+  it("mounts one provider and one region, above the screens", () => {
+    const mounts = (tag: string) =>
+      files
+        .filter((file) => /\.tsx$/.test(file))
+        .filter((file) => !/\.(test|stories)\.tsx$/.test(file))
+        .filter((file) =>
+          new RegExp(`<${tag}[\\s/>]`).test(readFileSync(file, "utf8")),
+        )
+        .map((file) => relative(frontendRoot, file))
+        .sort();
+    expect(
+      mounts("ToastProvider"),
+      "a second provider is a second queue, and a screen under the wrong one " +
+        "shows its confirmations to nobody; mount the one in main.tsx",
+    ).toEqual(["src/main.tsx"]);
+    expect(
+      mounts("ToastRegion"),
+      "a screen rendering its own region is the defect this gate exists for; " +
+        "call `useToast().show` and let the region in main.tsx draw it",
+    ).toEqual(["src/main.tsx"]);
+  });
+});
+
 describe("the phone nav's clearance", scanBudget, () => {
   // The nav bar belongs to the shell, so where it is belongs to the shell too.
   // Three sheets used to keep their own answer — the record action bar at 720px,

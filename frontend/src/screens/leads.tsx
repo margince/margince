@@ -29,7 +29,7 @@ import {
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import {
   formatDateAbbrev,
   formatDecimal,
@@ -1712,7 +1712,6 @@ function LeadRecord({
         />
       }
     >
-      <ToastRegion toast={toast} />
       {tab === "overview" && (
         <LeadOverviewPane
           lead={lead}

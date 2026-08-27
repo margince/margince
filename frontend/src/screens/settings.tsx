@@ -67,7 +67,7 @@ import { PassportSelect, ScopeChips } from "../design-system/passportselect";
 import { FieldGuard, RoleBadge } from "../design-system/rbac";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
-import { type Toast, ToastRegion, useToast } from "../design-system/toast";
+import { type Toast, useToast } from "../design-system/toast";
 import {
   AutonomyDot,
   EvidenceChip,
@@ -1022,7 +1022,6 @@ function AccountCard() {
           <SignatureSettingRow toast={toast} />
           <LanguageSettingRow />
         </SettingList>
-        <ToastRegion toast={toast} />
       </PanelBody>
     </Panel>
   );
