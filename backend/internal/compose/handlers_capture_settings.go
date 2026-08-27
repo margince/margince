@@ -9,7 +9,6 @@ package compose
 // audit-only write.
 
 import (
-	"encoding/json"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -47,8 +46,7 @@ func (h captureSettingsHandlers) UpdateCaptureSettings(w http.ResponseWriter, r 
 		return
 	}
 	var req crmcontracts.UpdateCaptureSettingsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	settings, err := h.store.Update(r.Context(), req.AutoEnrich, req.MailSharing, req.SignatureEnrich)

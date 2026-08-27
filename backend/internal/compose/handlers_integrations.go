@@ -12,7 +12,6 @@ package compose
 // declares.
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -64,8 +63,7 @@ func (h integrationsHandlers) ConnectProvider(w http.ResponseWriter, r *http.Req
 		return
 	}
 	var body crmcontracts.ConnectProviderRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	conn, err := h.store.Connect(r.Context(), integrations.ConnectInput{
@@ -90,8 +88,7 @@ func (h integrationsHandlers) UpdateProviderConnection(w http.ResponseWriter, r 
 		return
 	}
 	var body crmcontracts.UpdateProviderConnectionRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	// Read off the header rather than the generated params struct, which is
@@ -157,8 +154,7 @@ func (h integrationsHandlers) CreatePersonEnrichmentRun(w http.ResponseWriter, r
 		return
 	}
 	var body crmcontracts.CreatePersonEnrichmentRunRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	run, err := h.runs.QueueRun(r.Context(), provider.QueueInput{

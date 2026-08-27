@@ -4,7 +4,6 @@
 package compose
 
 import (
-	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -25,8 +24,12 @@ func (h reportHandlers) RunReport(w http.ResponseWriter, r *http.Request, report
 	var req reportRequest
 	// The body is optional (a prebuilt report runs on its defaults);
 	// anything present must decode strictly.
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil && !errors.Is(err, io.EOF) {
-		httperr.Write(w, r, httperr.Validation("body", "malformed_json", err.Error()))
+	// io.EOF and nothing else: DecodeOrRefusal passes an empty body through
+	// unwrapped precisely so a caller whose body is optional can tell it from a
+	// body that was wrong, and every other refusal it returns is already the
+	// one this endpoint should write.
+	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil && !errors.Is(err, io.EOF) {
+		httperr.Write(w, r, err)
 		return
 	}
 

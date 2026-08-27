@@ -5,7 +5,6 @@ package identity
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"slices"
@@ -278,8 +277,7 @@ func (h Handlers) GetAuthCapabilities(w http.ResponseWriter, r *http.Request) {
 // organization is bound by the middleware (installation.go).
 func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.LoginRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "malformed_json", err.Error()))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	// Throttle BEFORE the Argon2 verification — the work factor that

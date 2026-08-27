@@ -23,6 +23,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
+// codeBodyTooLarge is the contract's wire code for a body over the cap, named
+// once: the writer that emits it and the predicate that recognises it have to
+// agree, and a second spelling would make BodyTooLarge answer false for the
+// refusal DecodeOrRefusal just built.
+const codeBodyTooLarge = "body_too_large"
+
 // MaxBodyBytes bounds every JSON request body (1 MiB): no contract
 // payload is legitimately larger, and an unbounded read is free memory
 // amplification on the cheapest endpoints.
@@ -46,41 +52,86 @@ const MaxBodyBytes = 1 << 20
 //
 //craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
 func Decode(w http.ResponseWriter, r *http.Request, into any) bool {
+	err := DecodeOrRefusal(w, r, into)
+	if err == nil {
+		return true
+	}
+	// An empty body reaches here as a bare io.EOF, because DecodeOrRefusal leaves
+	// that question to its caller. THIS caller answers it the way it always
+	// did: a missing payload is something the sender got wrong, so it is the
+	// 422 that says the payload is empty rather than a bare EOF written as a
+	// server fault.
+	if errors.Is(err, io.EOF) {
+		err = bodyDecodeRefusal(r, nil, into, err)
+	}
+	Write(w, r, err)
+	return false
+}
+
+// DecodeOrRefusal is Decode with the refusal RETURNED rather than written.
+//
+// It exists for the handful of handlers whose wire shape is not this package's.
+// Dynamic client registration answers RFC 7591's `{"error": …}` and a report run
+// treats an absent body as its defaults; neither can be served by a function
+// that writes problem+json, and before this both simply decoded `r.Body`
+// directly — which left the chassis as their only size bound and put the 1 MiB
+// invariant in two places (issue #1548).
+//
+// So the BOUND is here and the ANSWER is the caller's. A handler that needs its
+// own refusal takes this one and writes what its contract says; every other
+// handler takes Decode above and writes nothing.
+//
+// io.EOF passes through unwrapped, because "the body was empty" is a question
+// some callers answer differently from "the body was wrong".
+//
+//craft:ignore naked-any the JSON deserialization seam: the decode target is whichever contract request struct the handler owns
+func DecodeOrRefusal(w http.ResponseWriter, r *http.Request, into any) error {
 	raw, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
 	if err != nil {
 		var tooLarge *http.MaxBytesError
 		if errors.As(err, &tooLarge) {
-			Write(w, r, &DetailedError{Status: http.StatusRequestEntityTooLarge,
-				Code: "body_too_large", Detail: "request body exceeds the 1 MiB cap"})
-			return false
+			return &DetailedError{
+				Status: http.StatusRequestEntityTooLarge,
+				Code:   codeBodyTooLarge, Detail: "request body exceeds the 1 MiB cap",
+			}
 		}
 		// A read that failed mid-body is a transport fact — timed-out sockets
 		// carry host and port — so the caller is told what to do about it and
 		// the operator's half stays in the log.
 		slog.WarnContext(r.Context(), "reading request body", "method", r.Method, "path", r.URL.Path, "err", err)
-		Write(w, r, Validation("body", "malformed_json",
-			"the request body could not be read to the end; resend the request with a complete body"))
-		return false
+		return Validation("body", "malformed_json",
+			"the request body could not be read to the end; resend the request with a complete body")
 	}
 	// A field key that only case-folds onto a contract field (or is
 	// unknown) is refused rather than matched by encoding/json's
 	// case-insensitive fallback — the same gate the provider seam applies,
 	// so REST and MCP agree on which keys are a field patch.
 	if kErr := datasource.RejectNonCanonicalKeys(raw, into); kErr != nil {
-		Write(w, r, Validation("body", "unknown_field", kErr.Error()))
-		return false
+		return Validation("body", "unknown_field", kErr.Error())
 	}
 	dec := json.NewDecoder(bytes.NewReader(raw))
 	if err := dec.Decode(into); err != nil {
-		Write(w, r, bodyDecodeRefusal(r, raw, into, err))
-		return false
+		// Unwrapped, so `errors.Is(err, io.EOF)` still answers for a caller
+		// whose body is optional. Every other decode error becomes the refusal.
+		if errors.Is(err, io.EOF) {
+			return err
+		}
+		return bodyDecodeRefusal(r, raw, into, err)
 	}
 	if dec.More() {
-		Write(w, r, Validation("body", "malformed_json", "trailing content after the JSON value"))
-		return false
+		return Validation("body", "malformed_json", "trailing content after the JSON value")
 	}
 	stashPresentFields(r, raw)
-	return true
+	return nil
+}
+
+// BodyTooLarge reports whether a DecodeOrRefusal refusal is the size cap rather than
+// a shape problem, for a caller answering in its own vocabulary: the two are
+// different things to tell a client, and only one of them is worth retrying
+// with a smaller request.
+func BodyTooLarge(err error) bool {
+	var detailed *DetailedError
+	return errors.As(err, &detailed) && detailed.Code == codeBodyTooLarge
 }
 
 // presentFieldsKey carries the decoded body's top-level keys, so a handler can

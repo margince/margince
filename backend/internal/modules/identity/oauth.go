@@ -16,7 +16,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/hex"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -61,7 +60,17 @@ type dcrRequest struct {
 
 func (h Handlers) oauthRegister(w http.ResponseWriter, r *http.Request) {
 	var req dcrRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// The bound is httperr's and the ANSWER is RFC 7591's: a registration
+	// endpoint speaks `{"error": …}`, and a problem+json body here would be a
+	// document no conforming client parses. Public and unauthenticated, which
+	// is why the bound matters most on this one — before this it had no bound
+	// of its own at all and rode whatever the chassis happened to apply.
+	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil {
+		if httperr.BodyTooLarge(err) {
+			oauthError(w, http.StatusRequestEntityTooLarge, "invalid_client_metadata",
+				"registration document exceeds the 1 MiB cap")
+			return
+		}
 		oauthError(w, http.StatusBadRequest, "invalid_client_metadata", "malformed registration document")
 		return
 	}

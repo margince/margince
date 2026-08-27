@@ -10,7 +10,6 @@ package compose
 // the company.
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -62,8 +61,7 @@ func (h blockedDomainHandlers) SetBlockedDomain(w http.ResponseWriter, r *http.R
 		return
 	}
 	var body crmcontracts.SetBlockedDomainRequest
-	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &body) {
 		return
 	}
 	// Shape is the transport's job, and it is checked HERE so a caller learns

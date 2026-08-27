@@ -8,7 +8,6 @@ package identity
 // only handlers in this module that speak about passports rather than sessions.
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"time"
@@ -31,8 +30,7 @@ func (h Handlers) IssuePassport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req crmcontracts.IssuePassportRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "malformed_json", err.Error()))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 

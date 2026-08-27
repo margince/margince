@@ -11,7 +11,6 @@ package compose
 // wire mapping and the human-only refusal.
 
 import (
-	"encoding/json"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -50,8 +49,7 @@ func (h aiRoutingHandlers) ReplaceAiRouting(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	var req crmcontracts.AiRouting
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	cfg, err := h.store.Replace(r.Context(), fromContractAiRouting(req))
