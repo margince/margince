@@ -192,7 +192,12 @@ type golangciConfig struct {
 		BuildTags []string `yaml:"build-tags"`
 	} `yaml:"run"`
 	Linters struct {
+		// Default and Disable are read by the govet obligation in
+		// lintbuildtagreach_test.go: `standard` and `all` both carry govet
+		// without naming it, and Disable overrides whichever way it arrived.
+		Default  string   `yaml:"default"`
 		Enable   []string `yaml:"enable"`
+		Disable  []string `yaml:"disable"`
 		Settings struct {
 			Forbidigo struct {
 				//nolint:tagliatelle // golangci-lint's key, not ours to case.

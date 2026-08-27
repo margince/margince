@@ -123,3 +123,25 @@ func allCloudKeys() config.Lookup {
 	}
 	return config.Static(keys)
 }
+
+func TestParseBindingRefusesAMalformedSpec(t *testing.T) {
+	for _, spec := range []string{"no-colon-here", ":model-only", "provider-only:"} {
+		if _, err := ParseBinding(spec, ""); err == nil || !strings.Contains(err.Error(), "provider:model") {
+			t.Errorf("ParseBinding(%q) = %v, want a provider:model complaint", spec, err)
+		}
+	}
+}
+
+func TestParseBindingKeepsAVariantSuffixedModelSlugWhole(t *testing.T) {
+	// OpenRouter marks a model's served variant with a colon suffix (":free",
+	// ":batch", ":thinking"), so the split must cut at the FIRST colon —
+	// cutting at the last would certify a different variant than was asked for
+	// and file the record under the name of the one that was not run.
+	got, err := ParseBinding("openai_compatible:openai/gpt-oss-20b:free", "https://openrouter.ai/api")
+	if err != nil {
+		t.Fatalf("variant-suffixed spec rejected: %v", err)
+	}
+	if got.Provider != "openai_compatible" || got.Model != "openai/gpt-oss-20b:free" {
+		t.Fatalf("ParseBinding split to %+v, want the whole slug including its variant suffix", got)
+	}
+}

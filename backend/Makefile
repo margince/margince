@@ -194,26 +194,18 @@ build: composition ## Compile every package (composed workspace), host AND windo
 	# not change meaning on a machine that has a Windows C toolchain.
 	CGO_ENABLED=0 GOOS=windows GOARCH=amd64 $(GOWORK_COMPOSED) $(GO) build ./...
 
-vet: composition ## Run go vet over every package, untagged AND -tags 'integration bench' (composed workspace)
+vet: composition ## Run go vet over every package, untagged (composed workspace)
+	# UNTAGGED, and only untagged. The tagged lanes are vetted by `make lint`:
+	# .golangci.yml carries every build tag that gates a file in this tree and
+	# enables govet, so it already runs these analyzers over a SUPERSET of what
+	# a `-tags` pass here would reach. Both halves of that are held by
+	# gates/lintbuildtagreach_test.go, because losing either is silent — the
+	# lint pass still runs, still reports, and still passes.
+	#
+	# This pass is not redundant with it, which is why it stays. golangci runs
+	# WITH those tags, so a file guarded `//go:build !integration` is excluded
+	# there and read here and nowhere else.
 	$(GOWORK_COMPOSED) $(GO) vet ./...
-	# The INTEGRATION lane, type-checked. `make check` otherwise never compiles
-	# a single //go:build integration file — build, vet, lint and test all run
-	# untagged — while internal/compose alone holds hundreds of them. A helper
-	# renamed, a signature changed, or a name that collides with one declared in
-	# a tagged file compiles clean untagged and fails only when somebody runs
-	# `make test-it`, which the merge gate does not. That is how a duplicate
-	# declaration reached a green check-q during this branch.
-	#
-	# vet, not test: type-checking the tagged lane needs no database, no Docker
-	# and no fixtures, so it costs seconds and belongs in the always-on gate.
-	# RUNNING those tests is the integration lane's job and stays there.
-	#
-	# `bench` rides along and needs this MORE than the integration lane does:
-	# the bench files are run by hand from a make target, so unlike the
-	# integration lane nothing scheduled ever compiles them. Setting a tag only
-	# ADDS files, so this one invocation still covers everything `-tags
-	# integration` alone would.
-	$(GOWORK_COMPOSED) $(GO) vet -tags 'integration bench' ./...
 
 test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
 	# ./... covers UNCACHED_TEST_PKGS too, and the result it computes for them
