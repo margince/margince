@@ -558,6 +558,29 @@ public.approval.target_version bigint gen=- def=-
 public.approval.trg_approval_updated CREATE TRIGGER trg_approval_updated BEFORE UPDATE ON public.approval FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.approval.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.approval.version bigint NOT NULL gen=- def=1
+public.approval_autonomy_policy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval_autonomy_policy.approval_autonomy_policy_counts_nonnegative CHECK (((approved_clean >= 0) AND (approved_edited >= 0) AND (rejected >= 0)))
+public.approval_autonomy_policy.approval_autonomy_policy_kind_grammar CHECK (((kind ~ '^[a-z][a-z0-9_]*$'::text) AND (char_length(kind) <= 64)))
+public.approval_autonomy_policy.approval_autonomy_policy_mode_check CHECK ((mode = ANY (ARRAY['manual'::text, 'veto'::text, 'auto'::text])))
+public.approval_autonomy_policy.approval_autonomy_policy_pkey PRIMARY KEY (id)
+public.approval_autonomy_policy.approval_autonomy_policy_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.approval_autonomy_policy.approval_autonomy_policy_window_positive CHECK (((veto_window IS NULL) OR (veto_window > '00:00:00'::interval)))
+public.approval_autonomy_policy.approval_autonomy_policy_window_shape CHECK ((((mode = 'veto'::text) AND (veto_window IS NOT NULL)) OR ((mode <> 'veto'::text) AND (veto_window IS NULL))))
+public.approval_autonomy_policy.approved_clean integer NOT NULL gen=- def=0
+public.approval_autonomy_policy.approved_edited integer NOT NULL gen=- def=0
+public.approval_autonomy_policy.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.approval_autonomy_policy.demoted_at timestamp with time zone gen=- def=-
+public.approval_autonomy_policy.id uuid NOT NULL gen=- def=uuidv7()
+public.approval_autonomy_policy.kind text NOT NULL gen=- def=-
+public.approval_autonomy_policy.mode text NOT NULL gen=- def='manual'::text
+public.approval_autonomy_policy.promoted_at timestamp with time zone gen=- def=-
+public.approval_autonomy_policy.rejected integer NOT NULL gen=- def=0
+public.approval_autonomy_policy.trg_approval_autonomy_policy_updated CREATE TRIGGER trg_approval_autonomy_policy_updated BEFORE UPDATE ON public.approval_autonomy_policy FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.approval_autonomy_policy.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.approval_autonomy_policy.uq_approval_autonomy_policy_user_kind UNIQUE (user_id, kind)
+public.approval_autonomy_policy.user_id uuid NOT NULL gen=- def=-
+public.approval_autonomy_policy.veto_window interval gen=- def=-
+public.approval_autonomy_policy_pkey CREATE UNIQUE INDEX approval_autonomy_policy_pkey ON public.approval_autonomy_policy USING btree (id)
 public.approval_pkey CREATE UNIQUE INDEX approval_pkey ON public.approval USING btree (id)
 public.assert_deal_project_same_org() secdef=false cfg=- acl=- 
 BEGIN
@@ -4011,6 +4034,7 @@ public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activ
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
 public.uq_ai_call_ws_id CREATE UNIQUE INDEX uq_ai_call_ws_id ON public.ai_call USING btree (id)
 public.uq_app_user_email CREATE UNIQUE INDEX uq_app_user_email ON public.app_user USING btree (lower(email))
+public.uq_approval_autonomy_policy_user_kind CREATE UNIQUE INDEX uq_approval_autonomy_policy_user_kind ON public.approval_autonomy_policy USING btree (user_id, kind)
 public.uq_attachment_extraction_inflight CREATE UNIQUE INDEX uq_attachment_extraction_inflight ON public.attachment_extraction USING btree (attachment_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.uq_brief_item_run_deal CREATE UNIQUE INDEX uq_brief_item_run_deal ON public.brief_item USING btree (brief_run_id, deal_id)
 public.uq_brief_item_run_rank CREATE UNIQUE INDEX uq_brief_item_run_rank ON public.brief_item USING btree (brief_run_id, rank)
