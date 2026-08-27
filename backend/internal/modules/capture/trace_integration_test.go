@@ -125,7 +125,7 @@ func TestWorkspaceOwnedRowsCarryNoMemberAndStillDedupe(t *testing.T) {
 	entry := capture.TraceEntry{
 		Stage:     pipelinetrace.StageTierLadder,
 		Connector: "telegram", SourceSystem: "telegram", SourceID: "chat-1:42",
-		Outcome: capture.TraceCaptured, ChannelIdentity: true,
+		Outcome: capture.TraceCaptured, SourceIDNamesAPerson: true,
 	}
 
 	writeTrace(ctx, t, db, entry, false)
@@ -159,7 +159,7 @@ func TestAChannelAccountIdIsHashedNeverStored(t *testing.T) {
 	writeTrace(ctx, t, db, capture.TraceEntry{
 		Stage:     pipelinetrace.StageTierLadder,
 		Connector: "telegram", SourceSystem: "telegram", SourceID: accountID,
-		Outcome: capture.TraceCaptured, ChannelIdentity: true,
+		Outcome: capture.TraceCaptured, SourceIDNamesAPerson: true,
 	}, false)
 
 	var stored string
@@ -315,7 +315,6 @@ func TestTraceNamesACounterpartyThatHasNoAddress(t *testing.T) {
 
 	entry := mailTrace("chan-named", capture.TraceCaptured)
 	entry.Connector, entry.SourceSystem = "zalo_oa", "ext:zalo-oa:zalo-oa"
-	entry.ChannelIdentity = true
 	entry.Counterparty = "" // the provider gives an Official Account no address
 	entry.CounterpartyProvider = "zalo_oa"
 	entry.CounterpartyAccountID = "4033837145949898046:6677650832821588240"
@@ -372,7 +371,6 @@ func TestTraceWithholdsTheNameOfAnErasedChannelIdentity(t *testing.T) {
 
 	entry := mailTrace("chan-erased", capture.TraceCaptured)
 	entry.Connector, entry.SourceSystem = provider, "ext:zalo-oa:zalo-oa"
-	entry.ChannelIdentity = true
 	entry.Counterparty = ""
 	entry.CounterpartyProvider, entry.CounterpartyAccountID = provider, account
 	entry.CounterpartyName, entry.Subject = "Tin Nguyen", "Zalo message from Tin Nguyen"
@@ -405,7 +403,6 @@ func TestTraceRecordsNoCounterpartyWhenTheRecordNamesNobody(t *testing.T) {
 	ctx, db := traceWorkspace(t)
 
 	entry := mailTrace("chan-anon", capture.TraceCaptured)
-	entry.ChannelIdentity = true
 	entry.Counterparty, entry.CounterpartyName = "", ""
 	entry.Subject = "a message from nobody nameable"
 	writeTrace(ctx, t, db, entry, true)

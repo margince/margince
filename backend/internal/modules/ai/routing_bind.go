@@ -3,7 +3,7 @@
 
 package ai
 
-import "slices"
+import "github.com/margince/margince/backend/internal/shared/ports/model"
 
 // ModelRef is a bound (provider, model) pair — the identity a rate is keyed
 // on. The cost pre-flight estimator prices an observed served slice against
@@ -83,24 +83,9 @@ func (r *Router) AttachmentMIMEs(task Task) []string {
 			carried, started = declared, true
 			continue
 		}
-		carried = intersectMIMEs(carried, declared)
+		carried = model.IntersectMIMEs(carried, declared)
 	}
 	return carried
-}
-
-// intersectMIMEs keeps the declarations both rungs make, compared as the
-// literal patterns they are. Two rungs spelling the same carriage differently
-// ("image/*" against "image/png") intersect to nothing, which is the safe
-// direction: it costs a document lane that might have worked, where the other
-// direction would promise carriage one rung cannot honour.
-func intersectMIMEs(a, b []string) []string {
-	kept := make([]string, 0, len(a))
-	for _, pattern := range a {
-		if slices.Contains(b, pattern) {
-			kept = append(kept, pattern)
-		}
-	}
-	return kept
 }
 
 // CurrentModelForTier returns the model currently bound to tier; ok=false when

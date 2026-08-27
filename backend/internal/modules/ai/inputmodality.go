@@ -32,6 +32,8 @@ import (
 	"strings"
 
 	"gopkg.in/yaml.v3"
+
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The accepted modality words. `text` is every chat binding's baseline and
@@ -56,6 +58,14 @@ var acceptedModalities = []string{modalityText, modalityImage}
 // modalityCarriage maps one modality word to the media types it admits, in
 // model.CarriesMIME's spelling. `text` admits none: it is the baseline every
 // chat binding already has, not an attachment kind.
+//
+// `image` stays a wildcard while the adapters name their vendor's types, and
+// the asymmetry is the point: this side is a PERMISSION — the operator saying
+// which kinds of thing may leave their deployment — and the adapter's side is a
+// DECODER. An operator writing `image` is not claiming their vendor reads SVG;
+// they are declining to enumerate a vendor's list in their config, which is not
+// theirs to keep current. model.IntersectMIMEs composes the two, so the binding
+// gets exactly what the wire decodes and nothing the operator did not permit.
 var modalityCarriage = map[string][]string{
 	modalityText:  nil,
 	modalityImage: {"image/*"},
@@ -90,7 +100,7 @@ func narrowedCarriage(wireCarries, input []string) []string {
 	if input == nil {
 		return wireCarries
 	}
-	return intersectMIMEs(wireCarries, carriageFor(input))
+	return model.IntersectMIMEs(wireCarries, carriageFor(input))
 }
 
 // blankInputDeclarations names every binding that wrote `input:` with no value.

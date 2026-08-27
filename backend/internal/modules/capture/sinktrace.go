@@ -86,27 +86,25 @@ func (s *Sink) traceEntry(ctx context.Context, rec connector.NormalizedRecord,
 	stage pipelinetrace.Stage, outcome TraceOutcome, reason string,
 ) TraceEntry {
 	_, owner := capturePrincipal(ctx)
-	// Read from the COUNTERPARTY on purpose, unlike traceConnector below, and
-	// the two are not inconsistent: this flag does not ask whether the message
-	// arrived on a channel, it asks whether SourceID is a provider ACCOUNT id
-	// that has to be hashed. Which is a question about how the record names its
-	// human. Do not "correct" it to match its neighbour.
+	// Read from the KEY, because the question is about the key: does SourceID
+	// embed a person's provider account id, and so have to be hashed before the
+	// trace stores it.
 	//
-	// It is imperfect — a connector whose natural key is a message id on BOTH
-	// branches has one branch hashed and one not (issue #1465) — but the error
-	// is toward hashing, and the fix belongs with the natural key rather than
-	// here.
-	channel := rec.Counterparty.ChannelIdentity.Provider != ""
+	// It used to be read off the counterparty, which asks how the record names
+	// its HUMAN — a different question, and one that comes apart from this one
+	// on any connector that names some counterparties by a channel account and
+	// others by an address while keying every record the same way. Only the
+	// producer of a key knows what is in it, so the producer now says.
 	return TraceEntry{
-		Stage:           stage,
-		UserID:          owner,
-		Connector:       traceConnector(rec),
-		SourceSystem:    rec.NaturalKey.SourceSystem,
-		SourceID:        rec.NaturalKey.SourceID,
-		Outcome:         outcome,
-		Reason:          reason,
-		ChannelIdentity: channel,
-		Counterparty:    rec.Counterparty.Email,
+		Stage:                stage,
+		UserID:               owner,
+		Connector:            traceConnector(rec),
+		SourceSystem:         rec.NaturalKey.SourceSystem,
+		SourceID:             rec.NaturalKey.SourceID,
+		Outcome:              outcome,
+		Reason:               reason,
+		SourceIDNamesAPerson: rec.NaturalKey.SourceIDNamesAPerson,
+		Counterparty:         rec.Counterparty.Email,
 		// Carried so the trace can name a counterparty that has no address —
 		// which is every counterparty, for a connector whose provider gives it
 		// none. tracePayload decides which of the two it may write, and against

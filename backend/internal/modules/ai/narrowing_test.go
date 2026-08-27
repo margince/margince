@@ -23,13 +23,17 @@ func TestADeclarationNarrowsANativeProvidersCarriage(t *testing.T) {
 		cfg  ProviderConfig
 		want []string
 	}{
+		// Written out rather than derived from geminiCarries: the point of the
+		// case is that Caps() reports the media types the vendor decodes, so a
+		// want computed from the same declaration would agree with it however
+		// wrong the declaration became.
 		"undeclared gemini keeps its whole wire": {
 			cfg:  ProviderConfig{Provider: providerGemini, Model: "m"},
-			want: carriesImagesAndPDF,
+			want: []string{"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif", "application/pdf"},
 		},
 		"gemini narrowed to images loses the document lane": {
 			cfg:  ProviderConfig{Provider: providerGemini, Model: "m", Input: []string{"text", "image"}},
-			want: []string{"image/*"},
+			want: []string{"image/jpeg", "image/png", "image/webp", "image/heic", "image/heif"},
 		},
 		"gemini narrowed to text carries nothing": {
 			cfg:  ProviderConfig{Provider: providerGemini, Model: "m", Input: []string{"text"}},
@@ -37,14 +41,18 @@ func TestADeclarationNarrowsANativeProvidersCarriage(t *testing.T) {
 		},
 		"undeclared anthropic keeps its whole wire": {
 			cfg:  ProviderConfig{Provider: providerAnthropic, Model: "m"},
-			want: carriesImagesAndPDF,
+			want: []string{"image/jpeg", "image/png", "image/gif", "image/webp", "application/pdf"},
 		},
 		// The privacy narrowing this field exists for, on the tier most
 		// deployments bind: keep the model for text and images, keep scanned
 		// documents off it.
+		// `input: [text, image]` is a permission spelled `image/*`, and the wire
+		// is a decoder spelled as four types. The operator gets the four — which
+		// is what the wildcard MEANT, and what a literal intersection used to
+		// answer as nothing at all.
 		"anthropic narrowed to images loses the document lane": {
 			cfg:  ProviderConfig{Provider: providerAnthropic, Model: "m", Input: []string{"text", "image"}},
-			want: []string{"image/*"},
+			want: []string{"image/jpeg", "image/png", "image/gif", "image/webp"},
 		},
 		"anthropic narrowed to text carries nothing": {
 			cfg:  ProviderConfig{Provider: providerAnthropic, Model: "m", Input: []string{"text"}},
@@ -120,9 +128,14 @@ func TestNoDeclarationCanWidenAnyProvidersCarriage(t *testing.T) {
 
 				// At most what was asked for. True of every provider, including
 				// the two where the declaration IS the carriage.
+				// Coverage, not literal membership: `image/*` asked for and
+				// `image/png` answered is the narrowing working, while a
+				// literal test would read it as a violation. CarriesMIME is
+				// what decides whether a set admits a pattern anywhere else, so
+				// it is what decides it here.
 				asked := carriageFor(input)
 				for _, mime := range declared {
-					if !slices.Contains(asked, mime) {
+					if !model.CarriesMIME(asked, mime) {
 						t.Errorf("declaring %v got %q, which was not asked for (%v)", input, mime, asked)
 					}
 				}
@@ -134,7 +147,7 @@ func TestNoDeclarationCanWidenAnyProvidersCarriage(t *testing.T) {
 					return
 				}
 				for _, mime := range declared {
-					if !slices.Contains(undeclared, mime) {
+					if !model.CarriesMIME(undeclared, mime) {
 						t.Errorf("declaring %v got %q, which %s does not carry undeclared (%v)",
 							input, mime, provider, undeclared)
 					}
@@ -166,7 +179,7 @@ func capsFor(t *testing.T, provider string, input []string) []string {
 func TestANarrowedRefusalNamesTheLineThatCausedIt(t *testing.T) {
 	narrowed := refuseNarrowedAttachments("gemini",
 		[]model.Attachment{{MIME: "application/pdf", Bytes: []byte("%PDF")}},
-		[]string{"image/*"}, carriesImagesAndPDF)
+		[]string{"image/*"}, geminiCarries)
 	if !errors.Is(narrowed, model.ErrAttachmentUnsupported) {
 		t.Fatalf("a narrowed binding must still refuse with the sentinel, got %v", narrowed)
 	}

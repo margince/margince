@@ -137,9 +137,11 @@ type TraceEntry struct {
 
 	ActivityID ids.UUID
 
-	// ChannelIdentity reports that SourceID is a provider ACCOUNT id rather than
-	// a message id — which is personal data, and is hashed on write.
-	ChannelIdentity bool
+	// SourceIDNamesAPerson reports that SourceID embeds a provider ACCOUNT id
+	// rather than naming a message — which is personal data, and is hashed on
+	// write. Carried from the natural key, whose producer is the only party
+	// that knows what its own key is made of.
+	SourceIDNamesAPerson bool
 
 	// Counterparty and Subject are written only when the deployment turned
 	// payload capture on.
@@ -162,6 +164,16 @@ type TraceEntry struct {
 	// records in place of an address.
 	CounterpartyName string
 }
+
+// namesItsHumanByAccount reports that this record identifies its counterparty
+// by a provider account rather than by an address.
+//
+// Asked of the counterparty fields, which are where the answer is, and named so
+// that a reader cannot mistake it for the question the source id asks. A record
+// can be either, both or neither: a notification keyed by its own id may still
+// name a person by their channel account, and a chat message keyed by an
+// account id may still be from somebody with an address.
+func (in TraceEntry) namesItsHumanByAccount() bool { return in.CounterpartyProvider != "" }
 
 // traceOutcomeTotals counts what this PROCESS has traced since it started, one
 // counter per outcome.
@@ -222,7 +234,7 @@ func Trace(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) error {
 		ON CONFLICT (COALESCE(user_id, '00000000-0000-0000-0000-000000000000'::uuid),
 		             source_system, source_id, stage, outcome) DO NOTHING`,
 		nullableID(in.UserID), in.Connector, in.SourceSystem,
-		traceSourceID(in.SourceID, in.ChannelIdentity),
+		traceSourceID(in.SourceID, in.SourceIDNamesAPerson),
 		string(in.Stage), string(in.Outcome), in.Reason, nullableID(in.ActivityID),
 		counterparty, subject)
 	if err != nil {
@@ -273,8 +285,11 @@ func tracePayload(ctx context.Context, tx pgx.Tx, in TraceEntry, payloads bool) 
 	// written either way, because a member is owed the answer that their message
 	// was handled; but the second case is ALSO the class a manager can read, and
 	// a fault must not be the thing that carries somebody's mail across that
-	// boundary. ChannelIdentity is what tells the two apart.
-	if in.UserID.IsZero() && !in.ChannelIdentity {
+	// boundary. How the record NAMES ITS HUMAN is what tells the two apart, and
+	// that is a different question from the one the source id asks — this one is
+	// about the counterparty, so it is asked of the counterparty. The two shared
+	// a field until they disagreed (issue #1465).
+	if in.UserID.IsZero() && !in.namesItsHumanByAccount() {
 		return nil, nil, nil
 	}
 	if !payloads {
@@ -369,8 +384,8 @@ func (in TraceEntry) validate() error {
 // id, and that permission was written about mail, where the id identifies a
 // message rather than a person — and where it is what makes a support question
 // answerable at all.
-func traceSourceID(sourceID string, channelIdentity bool) string {
-	if !channelIdentity {
+func traceSourceID(sourceID string, namesAPerson bool) string {
+	if !namesAPerson {
 		return sourceID
 	}
 	sum := sha256.Sum256([]byte(sourceID))

@@ -152,7 +152,7 @@ func TestAnthropicAndOllamaAdvertiseWhatTheyCarry(t *testing.T) {
 		cfg  ProviderConfig
 		want []string
 	}{
-		"anthropic": {cfg: ProviderConfig{Provider: "anthropic", Model: "m"}, want: carriesImagesAndPDF},
+		"anthropic": {cfg: ProviderConfig{Provider: "anthropic", Model: "m"}, want: anthropicCarries},
 		"ollama":    {cfg: ProviderConfig{Provider: "ollama", Model: "m"}, want: carriesImages},
 	} {
 		t.Run(name, func(t *testing.T) {
