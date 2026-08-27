@@ -74,6 +74,7 @@ func labelledKinds(t *testing.T, source string) []string {
 }
 
 func TestEveryStageableKindHasAFrontendLabel(t *testing.T) {
+	t.Parallel()
 	source, err := os.ReadFile(frontendApprovalKinds)
 	if err != nil {
 		t.Fatalf("reading the frontend approval-kind map: %v", err)

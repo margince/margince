@@ -30,6 +30,7 @@ import (
 const contractGen = "internal/contracts/api_gen.go"
 
 func TestEveryListResponseCarriesADataSlice(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, contractGen, nil, 0)
 	if err != nil {

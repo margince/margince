@@ -66,6 +66,7 @@ var scanned = map[string]bool{
 }
 
 func TestPublicTreeCitesNothingPrivate(t *testing.T) {
+	t.Parallel()
 	out, err := exec.Command("git", "-C", "..", "ls-files", "-z").Output()
 	if err != nil {
 		t.Fatalf("listing tracked files: %v (this test must run inside the git worktree)", err)

@@ -197,6 +197,7 @@ func endOfBlockComment(statement string, i int) int {
 var remembersTheRecheckItself = gatekit.Waive(map[string]string{})
 
 func TestEveryOrganizationRenameReachesTheDuplicateRecheck(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching covers a writer that has moved or been
 	// fixed, and leaving it in place quietly re-exempts whatever takes its name.
 	defer remembersTheRecheckItself.AssertAllMatched(t)
@@ -282,6 +283,7 @@ func firstRenameStatement(statements []string) (string, bool) {
 // the tree is clean: it reads the same over a clean tree and over a detector
 // that has stopped detecting.
 func TestTheRenameDetectorReadsSQLAndNotProse(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name   string
 		sql    string

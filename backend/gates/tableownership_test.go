@@ -751,6 +751,7 @@ func unratifiedCrossStoreWrites(t testing.TB, waivers *gatekit.Waivers[string], 
 }
 
 func TestEveryPackageOnlyWritesTablesItOwns(t *testing.T) {
+	t.Parallel()
 	defer crossStoreWrites.AssertAllMatched(t)
 	defer indirectTableArg.AssertAllMatched(t)
 
@@ -772,6 +773,7 @@ func TestEveryPackageOnlyWritesTablesItOwns(t *testing.T) {
 // one marks its entries matched for the whole package, which would quietly
 // satisfy the staleness sweep for whichever entry this case names.
 func TestASecondCopyOfARatifiedWriteIsNotCoveredByTheFirst(t *testing.T) {
+	t.Parallel()
 	const (
 		owner = "internal/modules/people"
 		table = "activity_link"

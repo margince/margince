@@ -47,6 +47,7 @@ import (
 // extensions/ to exercise the tier, so a fixture git does not have is the same
 // defect one lane further out.
 func TestEveryEnabledExtensionIsTracked(t *testing.T) {
+	t.Parallel()
 	for _, root := range []string{"../extensions", "../fixtures/extensions"} {
 		entries, err := os.ReadDir(root)
 		if os.IsNotExist(err) {

@@ -84,6 +84,7 @@ var clearedOnlyByTheEraser = gatekit.Waive(map[string]string{
 var clearedOnlyByTheAnonymize = gatekit.Waive(map[string]string{})
 
 func TestErasingAndAnonymizingClearTheSameTables(t *testing.T) {
+	t.Parallel()
 	defer clearedOnlyByTheEraser.AssertAllMatched(t)
 	defer clearedOnlyByTheAnonymize.AssertAllMatched(t)
 

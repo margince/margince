@@ -89,6 +89,7 @@ func declaredReasons() []string {
 // as a raw identifier under a disabled button — and no gate here would notice,
 // because all three of the others read the list rather than the branches.
 func TestEveryReasonABranchReturnsIsListed(t *testing.T) {
+	t.Parallel()
 	body, err := parser.ParseFile(token.NewFileSet(),
 		filepath.Join("internal", "compose", "undoability.go"), nil, 0)
 	if err != nil {
@@ -112,6 +113,7 @@ func TestEveryReasonABranchReturnsIsListed(t *testing.T) {
 }
 
 func TestTheContractAdmitsExactlyTheReasonsTheEvaluatorCanReturn(t *testing.T) {
+	t.Parallel()
 	declared, published := declaredReasons(), contractReasonEnum(t)
 	if len(declared) == 0 {
 		t.Fatal("compose.Reasons is empty; the census would report agreement between two " +
@@ -129,6 +131,7 @@ func TestTheContractAdmitsExactlyTheReasonsTheEvaluatorCanReturn(t *testing.T) {
 // is the greyed button with no explanation this feature exists to remove —
 // and it fails silently, because the button still renders.
 func TestTheFrontendHasWordsForEveryReason(t *testing.T) {
+	t.Parallel()
 	copyText := readFrontendReasonCopy(t)
 	for _, reason := range declaredReasons() {
 		if !strings.Contains(copyText, reason) {
@@ -181,6 +184,7 @@ func readFrontendReasonCopy(t *testing.T) string {
 // not that the read can return a word the write cannot, or the reverse. Both
 // modes run the same branches, and this is the assertion that they do.
 func TestBothEvaluationModesCanReturnTheSameReasons(t *testing.T) {
+	t.Parallel()
 	body, err := parser.ParseFile(token.NewFileSet(),
 		filepath.Join("internal", "compose", "undoability.go"), nil, 0)
 	if err != nil {

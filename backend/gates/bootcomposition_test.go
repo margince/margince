@@ -33,6 +33,7 @@ const (
 )
 
 func TestEveryRoleThatComposesExtensionsRecordsWhatItComposed(t *testing.T) {
+	t.Parallel()
 	roles, err := os.ReadDir("cmd")
 	if err != nil {
 		t.Fatalf("reading the process roles under cmd/: %v", err)

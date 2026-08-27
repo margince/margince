@@ -237,6 +237,7 @@ var lintConfigs = []string{".golangci.yml", ".golangci.strict.yml"}
 // forbidigo. Keeping the two sets identical by hand would restore the waiver
 // and reintroduce the duplicate nobody maintains.
 func TestForbidigoIsEnabledInExactlyOneConfig(t *testing.T) {
+	t.Parallel()
 	var enabling []string
 	for _, name := range lintConfigs {
 		if slices.Contains(readGolangciConfig(t, name).Linters.Enable, "forbidigo") {
@@ -260,6 +261,7 @@ func TestForbidigoIsEnabledInExactlyOneConfig(t *testing.T) {
 // files only would leave them covered by NOTHING, which is where an http.Error
 // or a stray fmt.Print goes unnoticed for longest.
 func TestTheOwningConfigLintsTheTaggedLanes(t *testing.T) {
+	t.Parallel()
 	// The owner is DERIVED, not named: this holds whichever config enables
 	// forbidigo to the tags, so moving ownership moves the obligation with it
 	// rather than leaving this passing about a config that no longer runs the
@@ -343,6 +345,7 @@ func banCovers(t *testing.T, rules []forbidRule, expr string) bool {
 // fourth way to register fails here, at the line of the upgrade, rather than
 // on the first pull request that quietly uses it.
 func TestTheRegistrationBanCoversEveryRiverEntryPoint(t *testing.T) {
+	t.Parallel()
 	entryPoints := riverRegistrationEntryPoints(t)
 	rules := riverForbidRules(t)
 
@@ -362,6 +365,7 @@ func TestTheRegistrationBanCoversEveryRiverEntryPoint(t *testing.T) {
 // the file never declared and the census cannot see — so every exported method
 // on it has to be forbidden, not just the ones that exist today.
 func TestTheScheduleBanCoversEveryPeriodicBundleMutator(t *testing.T) {
+	t.Parallel()
 	mutators := riverPeriodicBundleMutators(t)
 	rules := riverForbidRules(t)
 

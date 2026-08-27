@@ -103,6 +103,7 @@ type gate struct {
 // Neither fails anything. That is the point: the hole would be made entirely of
 // green, so it takes an assertion rather than a gate noticing.
 func TestNoGoSourceHidesWhereThisCensusCannotSeeIt(t *testing.T) {
+	t.Parallel()
 	atRoot, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatalf("listing the module root: %v", err)
@@ -133,6 +134,7 @@ func TestNoGoSourceHidesWhereThisCensusCannotSeeIt(t *testing.T) {
 }
 
 func TestEveryGateDeclaresItsShape(t *testing.T) {
+	t.Parallel()
 	gates, untagged := readGateDeclarations(t)
 	if len(untagged) > 0 {
 		t.Errorf("%d gate file(s) carry no //gate:kind declaration:\n\t%s\n\n"+
@@ -150,6 +152,11 @@ func TestEveryGateDeclaresItsShape(t *testing.T) {
 	}
 }
 
+// Deliberately NOT parallel, and named in parallelExempt for the reason: under
+// -update-gate-inventory this REWRITES gateInventoryPage, which the gates that
+// walk ../docs read. os.WriteFile truncates, so a concurrent reader can see
+// half a page and report a broken link or a wrong length. Sequential orders the
+// write after every such read, including ones not written yet.
 func TestTheGateInventoryPageIsCurrent(t *testing.T) {
 	gates, _ := readGateDeclarations(t)
 	if len(gates) < gateFloor {
@@ -246,18 +253,13 @@ func parseGateFile(t *testing.T, path string, source []byte) *ast.File {
 // of one is not a gate.
 func declaresATest(file *ast.File) bool {
 	for _, decl := range file.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Recv != nil || !strings.HasPrefix(fn.Name.Name, "Test") {
-			continue
+		// isGateTest (parallelgates_test.go) is the one spelling of "this
+		// declaration is one of the package's gates", TestMain carve-out
+		// included — a file holding only TestMain judges nothing, so it owes no
+		// //gate:kind declaration and belongs on no row of the page.
+		if fn, ok := decl.(*ast.FuncDecl); ok && isGateTest(fn) {
+			return true
 		}
-		// TestMain is the package's entry point and not one of its tests — Go
-		// itself runs it INSTEAD of the tests and hands them to it. A file that
-		// holds only TestMain judges nothing, so it owes no //gate:kind
-		// declaration and belongs on no row of the page.
-		if fn.Name.Name == "TestMain" {
-			continue
-		}
-		return true
 	}
 	return false
 }
@@ -429,6 +431,7 @@ The eight shapes, what each is for, and how each one silently passes:
 // unmerged branch — and nothing said so: a citation is prose, and prose is
 // where a doc rots. Review caught it, which is the thing a gate is for.
 func TestGatePatternsCitesGatesThatExist(t *testing.T) {
+	t.Parallel()
 	page, err := os.ReadFile(gatePatternsPage)
 	if err != nil {
 		t.Fatalf("reading %s: %v", gatePatternsPage, err)
@@ -465,6 +468,7 @@ var citedTestFiles = regexp.MustCompile("`([a-z_0-9]+_test\\.go)`")
 const gateCitationFloor = 20
 
 func TestFirstSentenceKeepsACitationWhoseDotIsPartOfAWord(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, prose, want string }{
 		{
 			"legal citation", "The Art. 7(1) invariant holds. The rest does not.",

@@ -35,6 +35,7 @@ import (
 // it could, and that drift was the way around the guard for a member-supplied
 // host.
 func TestPublishedReservedNetsMatchTheGuard(t *testing.T) {
+	t.Parallel()
 	published := extension.ReservedNets()
 	internal := netguard.ReservedNetsForTest()
 	if len(published) != len(internal) {
@@ -51,6 +52,7 @@ func TestPublishedReservedNetsMatchTheGuard(t *testing.T) {
 // across a module boundary to callers the core does not control, and a caller
 // that reslices or overwrites an element would be editing the guard itself.
 func TestReservedNetsDoesNotHandOutTheGuardsOwnSlice(t *testing.T) {
+	t.Parallel()
 	first := extension.ReservedNets()
 	if len(first) == 0 {
 		t.Fatal("ReservedNets returned nothing — the denylist is the guard")

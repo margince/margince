@@ -248,6 +248,7 @@ func (f *writeAuthorityFn) noteWrite(table string) {
 }
 
 func TestEveryMutationOfAShareableRecordProbesForWriteAuthority(t *testing.T) {
+	t.Parallel()
 	defer readAuthorityOnAWritePath.AssertAllMatched(t)
 
 	tables := shareableTables(t)

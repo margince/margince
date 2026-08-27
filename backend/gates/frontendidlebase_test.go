@@ -49,6 +49,7 @@ var tsIdleFallback = regexp.MustCompile(`\.\s*([a-z_]+)\s*\?\?\s*[A-Za-z_$]+\s*\
 var tsIdleComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 func TestTheDealBoardMeasuresIdleTheWayTheServerDoes(t *testing.T) {
+	t.Parallel()
 	source, err := os.ReadFile(frontendIdleBase)
 	if err != nil {
 		t.Fatalf("reading the frontend idle-base helper: %v", err)

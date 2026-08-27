@@ -70,6 +70,7 @@ type rowGateFn struct {
 }
 
 func TestNoWriteResolvesItsRowThroughAPackagesReadSpelling(t *testing.T) {
+	t.Parallel()
 	byDir := rowGateIndex(t)
 	pairs := 0
 	for _, fns := range byDir {

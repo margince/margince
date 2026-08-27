@@ -63,6 +63,7 @@ var voiceRuleHeading = promptvoice.Heading
 const voiceWaiverPrefix = "//promptvoice:exempt"
 
 func TestEveryPromptEitherSpeaksInTheOneVoiceOrSaysWhyNot(t *testing.T) {
+	t.Parallel()
 	sites := everyModelRequest(t)
 	if len(sites) == 0 {
 		t.Fatal("found no model.Request literals at all; this gate would pass vacuously")
@@ -79,6 +80,7 @@ func TestEveryPromptEitherSpeaksInTheOneVoiceOrSaysWhyNot(t *testing.T) {
 }
 
 func TestEveryVoiceWaiverGivesAReason(t *testing.T) {
+	t.Parallel()
 	for _, site := range everyModelRequest(t) {
 		if site.voiceWaived && site.voiceWaiverReason == "" {
 			t.Errorf("%s waives the voice without saying why. A waiver nobody can check is one nobody will "+
@@ -97,6 +99,7 @@ func TestEveryVoiceWaiverGivesAReason(t *testing.T) {
 // a file waiving one and not the other is the case that proves they are read
 // separately.
 func TestTheVoiceWaiverIsItsOwnAnswer(t *testing.T) {
+	t.Parallel()
 	languageOnly := 0
 	for _, site := range everyModelRequest(t) {
 		if site.waived && !site.voiceWaived {

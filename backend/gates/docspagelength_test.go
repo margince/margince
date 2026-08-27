@@ -252,6 +252,7 @@ func docsPageLineCount(t *testing.T, rel string) int {
 }
 
 func TestEveryHandWrittenDocsPageFitsItsBudget(t *testing.T) {
+	t.Parallel()
 	pages := handWrittenDocsPages(t)
 	if len(pages) == 0 {
 		t.Fatal("found no hand-written page in any documented tree — this gate would pass by " +
@@ -310,6 +311,7 @@ func TestEveryHandWrittenDocsPageFitsItsBudget(t *testing.T) {
 // is about, so the exemption cannot quietly widen into "any page with a comment
 // near the top".
 func TestTheDocsBudgetGateSeesAGeneratedPageAsGenerated(t *testing.T) {
+	t.Parallel()
 	dir := t.TempDir()
 	cases := map[string]struct {
 		body string

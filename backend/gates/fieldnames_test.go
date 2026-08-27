@@ -159,6 +159,7 @@ func typesPublishingAFieldName(files []parsedFile) map[string]bool {
 }
 
 func TestAPublishedFieldNameIsAFieldNameNotProse(t *testing.T) {
+	t.Parallel()
 	files := parseInternalTree(t)
 	policed := typesPublishingAFieldName(files)
 	if len(policed) == 0 {
@@ -377,6 +378,7 @@ var validationFieldsOutsideTheContract = gatekit.Waive(map[string]string{
 // certifying nothing is asserted rather than counted — a walk that judged no literal at all
 // fails below, as does a vocabulary too small to be the contract's.
 func TestEveryValidationFieldLiteralNamesAContractField(t *testing.T) {
+	t.Parallel()
 	vocabulary := contractFieldNames(t)
 	checked := 0
 	for _, pf := range parseInternalTree(t) {

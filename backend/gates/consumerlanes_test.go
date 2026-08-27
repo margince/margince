@@ -50,6 +50,7 @@ var reservedGroups = gatekit.Waive(map[string]string{
 })
 
 func TestEveryDeclaredConsumerGroupIsSubscribedSomewhere(t *testing.T) {
+	t.Parallel()
 	subscribed := groupNamesTheRolesName(t)
 	// A walk that found no group at all reports exactly like a tree where every
 	// group has a lane, which is the failure this gate is closing elsewhere.
@@ -119,6 +120,7 @@ func collectGroupLiterals(file *ast.File, fset *token.FileSet, path string, out 
 // vacuously if Groups() ever answers a set this file cannot see, and a gate
 // whose subject list has collapsed reports exactly like a tree with no gap.
 func TestTheLaneCensusReadsTheWholeCatalog(t *testing.T) {
+	t.Parallel()
 	names := make([]string, 0, len(kevents.Groups()))
 	for _, g := range kevents.Groups() {
 		names = append(names, g.Name)

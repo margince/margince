@@ -66,6 +66,7 @@ var sanctionedMintSites = gatekit.Waive(map[string]string{
 })
 
 func TestEveryIdentityInsertGoesThroughTheChokepoint(t *testing.T) {
+	t.Parallel()
 	defer sanctionedMintSites.AssertAllMatched(t)
 	for _, path := range goSourceFiles(t, ".") {
 		if strings.HasSuffix(path, "_test.go") {
@@ -107,6 +108,7 @@ var leadClaimCheckSQL = regexp.MustCompile(`(?is)SELECT\s+id\s+FROM\s+lead\s+WHE
 // ever called, so two imports of one person under different addresses both
 // landed.
 func TestLeadIdentityProbesAreSingleSourced(t *testing.T) {
+	t.Parallel()
 	const home = "internal/platform/database/storekit/leadidentity.go"
 	for _, path := range goSourceFiles(t, ".") {
 		if strings.HasSuffix(path, "_test.go") {
@@ -148,6 +150,7 @@ var sanctionedMergeWriters = gatekit.Waive(map[string]string{
 // else; only a human's disposition, executed by the merge path, may point one
 // record at another.
 func TestOnlyTheMergePathRetiresARecord(t *testing.T) {
+	t.Parallel()
 	defer sanctionedMergeWriters.AssertAllMatched(t)
 	for _, path := range goSourceFiles(t, ".") {
 		if strings.HasSuffix(path, "_test.go") {

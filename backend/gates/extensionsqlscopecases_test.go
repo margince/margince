@@ -318,6 +318,7 @@ const source = "FROM person LIMIT 1"`,
 // TestExtensionSQLScopeRefusesWhatItMust drives the gate with sources the real
 // tree does not contain.
 func TestExtensionSQLScopeRefusesWhatItMust(t *testing.T) {
+	t.Parallel()
 	for _, probe := range extSQLGateCases {
 		t.Run(probe.name, func(t *testing.T) {
 			scan := scanUnitSQL(t, probeUnit, map[string]string{"probe.go": probeSource(probe.body, probe.decls)})

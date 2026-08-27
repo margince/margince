@@ -42,6 +42,7 @@ import (
 const documentReadingKind = activities.ExtractionAITask
 
 func TestEveryKindSomethingProducesIsOneTheContractCanExpress(t *testing.T) {
+	t.Parallel()
 	declared := crmYAMLNamedEnum(t, "AiActivityKind")
 	if len(declared) == 0 {
 		t.Fatal("AiActivityKind declares no enum; this gate would pass vacuously")
@@ -110,6 +111,7 @@ func producedKinds() []string {
 // The reverse: a kind nothing can produce is copy three locales carry, a line
 // no reader will see, and a promise the server cannot keep.
 func TestEveryContractKindHasSomethingThatProducesIt(t *testing.T) {
+	t.Parallel()
 	produced := producedKinds()
 	for _, kind := range crmYAMLNamedEnum(t, "AiActivityKind") {
 		if !slices.Contains(produced, kind) {
@@ -125,6 +127,7 @@ func TestEveryContractKindHasSomethingThatProducesIt(t *testing.T) {
 // a string a strict client rejects; a smaller one truncates below what the
 // contract promised a reader would get.
 func TestTheReadsTextCapsAreTheOnesTheContractPublishes(t *testing.T) {
+	t.Parallel()
 	for _, b := range []struct {
 		property string
 		cap      int
@@ -171,6 +174,7 @@ func crmYAMLMaxLength(t *testing.T, schema, property string) int {
 // A spec name that is not a legal message-key segment cannot have copy keyed on
 // it, which is the other half of "the rail renders nothing".
 func TestEverySpecNameCanBeAMessageKeySegment(t *testing.T) {
+	t.Parallel()
 	for _, spec := range runner.Catalog() {
 		if strings.ContainsAny(spec.Name, " .") || spec.Name == "" {
 			t.Errorf("spec name %q cannot key a locale message", spec.Name)

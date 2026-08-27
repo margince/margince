@@ -42,6 +42,7 @@ const (
 var requiredList = regexp.MustCompile(`^\s*required:\s*\[([^\]]*)\]`)
 
 func TestResetDataResponseMatchesTheContract(t *testing.T) {
+	t.Parallel()
 	contract := resetDataRequiredFields(t)
 	if len(contract) == 0 {
 		t.Fatalf("no required field list found for the resetData 200 response in %s — "+

@@ -171,6 +171,7 @@ func isAlphanumeric(c byte) bool {
 }
 
 func TestFleetEnumerationOnlyAtRatifiedSites(t *testing.T) {
+	t.Parallel()
 	found := map[string]int{}
 	paths, err := goFilesUnder("internal")
 	if err != nil {

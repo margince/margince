@@ -166,6 +166,7 @@ func blankComments(source string) string {
 
 // TestFiscalYearLabelIsSpelledTheSameOnBothSidesOfTheWire holds the mirror.
 func TestFiscalYearLabelIsSpelledTheSameOnBothSidesOfTheWire(t *testing.T) {
+	t.Parallel()
 	frontend := readFiscalSource(t, frontendFiscalYear)
 	backend := readFiscalSource(t, backendFiscalYear)
 
@@ -221,6 +222,7 @@ func TestFiscalYearLabelIsSpelledTheSameOnBothSidesOfTheWire(t *testing.T) {
 // would keep passing. So the two directions are both planted here: a fragment
 // in a comment must NOT be seen, and the same fragment in code must be.
 func TestTheGateReadsCodeRatherThanComments(t *testing.T) {
+	t.Parallel()
 	source := "package p\n" +
 		"// was: reportFiscalStartMonthToken + \" = 1\"\n" +
 		"/* also: reportFiscalStartMonthToken + \" = 1\" */\n" +

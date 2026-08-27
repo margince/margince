@@ -53,6 +53,7 @@ const theFrontendFilter = "frontend"
 // TestTheContractReachesTheFrontendLane fails when a contract change would no
 // longer run the CI job that regenerates and diffs the frontend schema.
 func TestTheContractReachesTheFrontendLane(t *testing.T) {
+	t.Parallel()
 	raw, err := os.ReadFile(ciWorkflowForContractLane)
 	if err != nil {
 		t.Fatalf("reading %s: %v", ciWorkflowForContractLane, err)

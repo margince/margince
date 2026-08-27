@@ -52,6 +52,7 @@ const testOnlySetterFloor = 1
 // TestJobRunnerConfigIsNeverSetInProduction is the whole obligation: TestOnly may
 // be set from a test file, and from nowhere else.
 func TestJobRunnerConfigIsNeverSetInProduction(t *testing.T) {
+	t.Parallel()
 	var offenders, permitted []string
 	fset := token.NewFileSet()
 

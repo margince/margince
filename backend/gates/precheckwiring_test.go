@@ -76,6 +76,7 @@ func parseComposeFiles(t *testing.T, root string) []composeFile {
 }
 
 func TestEveryPrecheckInComposeIsWired(t *testing.T) {
+	t.Parallel()
 	files := parseComposeFiles(t, filepath.Join("internal", "compose"))
 
 	// Keyed by package AND name: two compose subpackages may each declare a

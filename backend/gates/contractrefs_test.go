@@ -33,6 +33,7 @@ var (
 )
 
 func TestContractRefsResolve(t *testing.T) {
+	t.Parallel()
 	const path = "api/crm.yaml"
 	raw, err := os.ReadFile(path)
 	if err != nil {

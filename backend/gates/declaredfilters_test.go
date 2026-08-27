@@ -118,6 +118,7 @@ var overlayDialsTheMirrorAnswersTheSameWayEitherWay = gatekit.Waive(map[string]s
 
 // TestEveryDeclaredNarrowingParameterIsReadByItsHandler is the native obligation.
 func TestEveryDeclaredNarrowingParameterIsReadByItsHandler(t *testing.T) {
+	t.Parallel()
 	declared := narrowingParametersByType(t)
 	if len(declared) < wantMinimumNarrowedOperations {
 		t.Fatalf("only %d operations declare a narrowing query parameter in %s, want at least %d — "+
@@ -145,6 +146,7 @@ func TestEveryDeclaredNarrowingParameterIsReadByItsHandler(t *testing.T) {
 // TestEveryDeclaredNarrowingParameterIsForwardedOrRefusedByItsOverlayShadow is
 // the second obligation — #579's fitness function.
 func TestEveryDeclaredNarrowingParameterIsForwardedOrRefusedByItsOverlayShadow(t *testing.T) {
+	t.Parallel()
 	declared := narrowingParametersByType(t)
 	shadows := 0
 	for _, file := range overlayShadowScope().Files(t) {
@@ -208,6 +210,7 @@ func callsOverlayModeDispatch(file *ast.File) bool {
 // the walk must tell apart is put to it here, against source written for the
 // purpose rather than against the tree it judges.
 func TestTheDeclaredFilterWalkReportsADroppedParameterAndNothingElse(t *testing.T) {
+	t.Parallel()
 	declared := map[string][]declaredFilter{"ListThingsParams": {{field: "Tag", wire: "tag"}}}
 	for _, probe := range []struct {
 		name   string
@@ -269,6 +272,7 @@ func TestTheDeclaredFilterWalkReportsADroppedParameterAndNothingElse(t *testing.
 // silent failure: a census that mistook the paging components for filters, or
 // missed a form tag, would judge the wrong set without ever reporting it.
 func TestTheDeclaredFilterCensusReadsTheGeneratedShape(t *testing.T) {
+	t.Parallel()
 	declared := narrowingParametersByType(t)
 	people, listed := declared["ListPeopleParams"]
 	if !listed {

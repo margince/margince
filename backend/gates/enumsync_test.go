@@ -204,6 +204,7 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 }
 
 func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
+	t.Parallel()
 	checks := tableCheckSets(t)
 	for col, binding := range enumBindings {
 		want, ok := checks[col]

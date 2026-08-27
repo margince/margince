@@ -35,6 +35,7 @@ const searchBranchFile = "internal/modules/search/store.go"
 const contextPath = "/records/{entity_type}/{id}/context"
 
 func TestContextAnchorEnumMatchesTheSearchableEntities(t *testing.T) {
+	t.Parallel()
 	contract := contextAnchorEnum(t)
 	searchable := searchableEntitiesFromSource(t)
 	slices.Sort(contract)
@@ -51,6 +52,7 @@ func TestContextAnchorEnumMatchesTheSearchableEntities(t *testing.T) {
 // type must be an admissible ref type. A missing member makes the endpoint's
 // own answer fail validation against the contract that describes it.
 func TestEveryContextAnchorIsAnAdmissibleRefType(t *testing.T) {
+	t.Parallel()
 	refTypes := contractSchema(t, "ContextEntityRef").Properties["type"]
 	var typeSchema contractSchemaFields
 	if err := refTypes.Decode(&typeSchema); err != nil {

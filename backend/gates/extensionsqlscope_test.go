@@ -96,6 +96,7 @@ const computedFragment = "?"
 // TestExtensionSQLNamesOnlyTheUnitsOwnTables reads every unit's SQL and refuses
 // a table outside the unit's namespace.
 func TestExtensionSQLNamesOnlyTheUnitsOwnTables(t *testing.T) {
+	t.Parallel()
 	trees := extensionTrees(t)
 	if len(trees) == 0 {
 		t.Fatal("no extension tree was found: this gate judges extensions/* and fixtures/extensions/*, and a run that enrols none certifies nothing")

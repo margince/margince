@@ -355,6 +355,7 @@ var sharedEventTypes = gatekit.Waive(map[string]string{
 })
 
 func TestEveryEventTypeHasOneEmittingModule(t *testing.T) {
+	t.Parallel()
 	sites := collectEmitSites(t)
 	// A walk that found no emit at all reports exactly like a tree where every
 	// type has one owner, which is the failure mode this gate is closing in a
@@ -413,6 +414,7 @@ var unemittedEventTypes = gatekit.Waive(map[string]string{
 // schemas. What this refuses is a type that quietly stops being emitted — the
 // contract keeps promising it, subscribers keep waiting, and nothing fails.
 func TestEveryUnemittedEventTypeSaysWhyNothingEmitsIt(t *testing.T) {
+	t.Parallel()
 	sites := collectEmitSites(t)
 	// Armed after the walk, which can fatal. Deferred above it, the sweep runs on
 	// the way out and buries the one true line under an entry per waiver, each

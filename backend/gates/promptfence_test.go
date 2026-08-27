@@ -104,6 +104,7 @@ func goFilesUnderTree(t *testing.T, visit func(path, code string)) {
 }
 
 func TestNoPromptDeclaresAFixedDataBoundary(t *testing.T) {
+	t.Parallel()
 	var offenders []string
 	goFilesUnderTree(t, func(path, body string) {
 		if strings.HasPrefix(path, promptfencePackage) {
@@ -132,6 +133,7 @@ func TestNoPromptDeclaresAFixedDataBoundary(t *testing.T) {
 // lane — making the promise with no nonce behind it anywhere, which is the shape
 // every instance found so far has taken.
 func TestAFileThatPromisesADataBoundaryBuildsOne(t *testing.T) {
+	t.Parallel()
 	var offenders []string
 	claimants := 0
 	goFilesUnderTree(t, func(path, body string) {
@@ -167,6 +169,7 @@ func TestAFileThatPromisesADataBoundaryBuildsOne(t *testing.T) {
 // still names a claim, not that the claim still needs waiving — a file that now
 // mints its fence as well still matches, and stays matched.
 func TestEveryBoundaryClaimWaiverIsStillReachable(t *testing.T) {
+	t.Parallel()
 	defer claimWithoutFence.AssertAllMatched(t)
 	goFilesUnderTree(t, func(path, body string) {
 		if boundaryClaim.MatchString(body) {

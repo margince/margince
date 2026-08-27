@@ -33,6 +33,7 @@ import (
 )
 
 func TestEveryGrantFundsTheToolsItsAgentDeclares(t *testing.T) {
+	t.Parallel()
 	granted := grantedScopes(t)
 	required := toolScopes(t)
 	declared := agentToolLists(t)

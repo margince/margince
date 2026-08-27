@@ -94,6 +94,7 @@ var addressColumns = []string{
 }
 
 func TestTheSchemaMarksCoordinatesStaleWhenAnAddressMoves(t *testing.T) {
+	t.Parallel()
 	// Missing entirely is lastStatement's own failure: without the trigger every
 	// address writer has to remember to invalidate, and the one that forgets
 	// produces a company answering radius queries from an address it no longer
@@ -120,6 +121,7 @@ func TestTheSchemaMarksCoordinatesStaleWhenAnAddressMoves(t *testing.T) {
 // own would answer from the previous address however diligently the trigger
 // fired.
 func TestOnlyResolvedCoordinatesAreQueryable(t *testing.T) {
+	t.Parallel()
 	// A missing index is lastStatement's own failure: a radius query would then
 	// have nothing to select through.
 	index := lastStatement(t, `CREATE INDEX idx_organization_geocoded\b.*?;`)
@@ -132,6 +134,7 @@ func TestOnlyResolvedCoordinatesAreQueryable(t *testing.T) {
 // Every organization address writer is still accounted for, so the trigger's
 // coverage can be checked against something rather than assumed.
 func TestTheAddressWritersAreStillTheOnesTheTriggerCovers(t *testing.T) {
+	t.Parallel()
 	root := filepath.Join("internal", "modules", "people")
 	entries, err := os.ReadDir(root)
 	if err != nil {

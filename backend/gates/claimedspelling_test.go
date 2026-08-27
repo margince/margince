@@ -80,6 +80,7 @@ type claimedConst struct {
 }
 
 func TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed(t *testing.T) {
+	t.Parallel()
 	if claimShapes[driftShape] == nil {
 		t.Fatalf("the detector no longer declares the %q shape, so this gate's corpus is empty and "+
 			"every claim it used to judge is unjudged", driftShape)

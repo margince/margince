@@ -57,6 +57,7 @@ var triggerKeyedConstraints = []string{
 // passed" while seeding one identical ref for every seat, which is the bug
 // this exists to prevent.
 func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
+	t.Parallel()
 	calls := triggerRefCalls(t)
 	if len(calls) == 0 {
 		t.Fatal("no production call to TriggerRef was found: this gate proves nothing " +
@@ -87,6 +88,7 @@ func TestEveryScheduledOccurrenceIsNamedForOneSeat(t *testing.T) {
 // segment redundant rather than load-bearing, and a later author reading only
 // the gate above would be told to preserve a rule that no longer holds.
 func TestTheTriggerRefStillCarriesTheWholeUniquenessKey(t *testing.T) {
+	t.Parallel()
 	sql := readMigrations(t)
 	for _, name := range triggerKeyedConstraints {
 		// The LAST mention, not the first: the baseline defines these

@@ -183,6 +183,7 @@ var directAuditLogWriters = gatekit.Waive(map[string]string{
 })
 
 func TestEveryAuditedUpdateRecordsWhatItChangedFrom(t *testing.T) {
+	t.Parallel()
 	defer eventShapedUpdates.AssertAllMatched(t)
 	defer unresolvableAuditActions.AssertAllMatched(t)
 	defer directAuditLogWriters.AssertAllMatched(t)

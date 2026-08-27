@@ -57,6 +57,7 @@ var backfillWindowSchemas = []string{
 }
 
 func TestTheBackfillWindowSetIsOneSet(t *testing.T) {
+	t.Parallel()
 	contract := contractWindowSets(t)
 	months := contract[backfillWindowSchemas[0]]
 	for _, schema := range backfillWindowSchemas {

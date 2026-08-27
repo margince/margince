@@ -45,6 +45,7 @@ var consentProofInsert = regexp.MustCompile(`(?is)INSERT\s+INTO\s+consent_event\
 var unprovenConsentWrites = gatekit.Waive(map[string]string{})
 
 func TestEveryConsentStateWriteAppendsProof(t *testing.T) {
+	t.Parallel()
 	defer unprovenConsentWrites.AssertAllMatched(t)
 	fset := token.NewFileSet()
 	for _, root := range []string{"internal/modules", "internal/compose"} {

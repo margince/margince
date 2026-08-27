@@ -47,6 +47,7 @@ const (
 // own entry point the same way and for the same reason.
 
 func TestRetentionPassCtxOnlyDrivesTheRetentionPass(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	references := 0
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
@@ -120,6 +121,7 @@ func TestRetentionPassCtxOnlyDrivesTheRetentionPass(t *testing.T) {
 // instead of by luck: exactly one declaration, in the package that owns the
 // retention engine.
 func TestTheRetentionScopeSinkIsTheOneTheGateMeans(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	var found []string
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {

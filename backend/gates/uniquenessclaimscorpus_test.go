@@ -53,6 +53,7 @@ var gateIdentifiers = []string{
 const exemptGateFiles = 3
 
 func TestOnlyTheGatesOwnSourcesAreExemptFromTheSweep(t *testing.T) {
+	t.Parallel()
 	if len(gateFiles) != exemptGateFiles {
 		t.Fatalf("%d file(s) are exempt from the sweep against a pin of %d.\n\n"+
 			"An exemption removes a file's claims from the register without holding or "+
@@ -117,6 +118,7 @@ func gateNamesDeclaredIn(file *ast.File) []string {
 // from the same rule the sweep itself uses — a module of generated files is
 // legitimately unswept and needs no exemption anybody has to remember.
 func TestTheSweptCorpusIsEveryModuleThatCouldCarryAClaim(t *testing.T) {
+	t.Parallel()
 	const repoRoot = ".."
 	rootOf := func(tree claimedTree) string {
 		return filepath.Clean(filepath.Join("backend", tree.root))
@@ -266,6 +268,7 @@ func declaresItsOwnModule(dir string) (bool, error) {
 // so both refusals would go unexercised by the sweep — and a guard the tree
 // happens not to reach is a guard with no test.
 func TestTheTwoDoorsAreJudgedRatherThanTrusted(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name  string
 		paths []string

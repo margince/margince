@@ -60,6 +60,7 @@ var ceilings = map[string]int{
 }
 
 func TestNoRulebookGrowsPastItsCeiling(t *testing.T) {
+	t.Parallel()
 	dirs := rulebookDirs(t)
 	if len(dirs) == 0 {
 		t.Fatal("rulebookDirs found no AGENTS.md at all — this gate would pass by " +

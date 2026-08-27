@@ -44,6 +44,7 @@ import (
 // contract is a state the server can emit and the client cannot name; one added
 // to the contract and not to the CHECK is a promise no writer can keep.
 func TestTheWireStateEnumIsTheProjectionsPlusTheDerivedOne(t *testing.T) {
+	t.Parallel()
 	stored := aiTaskRunCheckValues(t, "state")
 	wire := crmYAMLEnum(t, "AiActivityItem", "state")
 
@@ -110,6 +111,7 @@ func crmYAMLSchemas(t *testing.T) map[string]crmYAMLSchema {
 }
 
 func TestTheAiTaskPayloadEnumsMatchTheProjectionsChecks(t *testing.T) {
+	t.Parallel()
 	for _, b := range []struct{ property, column string }{
 		{"state", "state"},
 		{"quantity_unit", "quantity_unit"},

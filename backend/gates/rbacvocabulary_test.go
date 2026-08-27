@@ -45,6 +45,7 @@ const (
 )
 
 func TestContractObjectEnumMatchesPolicyVocabulary(t *testing.T) {
+	t.Parallel()
 	contract := contractSchema(t, "RbacObject").Enum
 	if len(contract) == 0 {
 		t.Fatal("api/crm.yaml declares no RbacObject enum; the vocabulary the web client " +
@@ -87,6 +88,7 @@ func TestContractObjectEnumMatchesPolicyVocabulary(t *testing.T) {
 // fifth action cannot exist without a fifth field, which is what makes this
 // derivation total rather than a spot check.
 func TestContractActionEnumMatchesObjectGrant(t *testing.T) {
+	t.Parallel()
 	fields := objectGrantActions(t)
 	if len(fields) == 0 {
 		t.Fatal("parsed no fields from principal.ObjectGrant; the struct this gate derives from has moved")

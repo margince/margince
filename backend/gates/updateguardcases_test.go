@@ -261,6 +261,7 @@ const HeldRename = ` + "`" + marker + "`",
 }
 
 func TestTheGuardCensusJudgesEveryStatementAFunctionAnswersFor(t *testing.T) {
+	t.Parallel()
 	for _, tc := range statementReadingCases {
 		t.Run(tc.name, func(t *testing.T) {
 			fset := token.NewFileSet()

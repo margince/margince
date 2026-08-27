@@ -95,6 +95,7 @@ var ownPools = gatekit.Waive(map[string]string{
 // TestModuleSuitesTakeTheProcessSharedPool fails when a module integration test
 // builds its own pool instead of taking testdb's.
 func TestModuleSuitesTakeTheProcessSharedPool(t *testing.T) {
+	t.Parallel()
 	var offenders, sharing, unguarded []string
 	fset := token.NewFileSet()
 	err := filepath.WalkDir(modulesTree, func(path string, d fs.DirEntry, err error) error {

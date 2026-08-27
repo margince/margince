@@ -122,6 +122,7 @@ func schemaWritesFormulaSQL(doc map[string]any, schema map[string]any, seen map[
 // property, derived from the live contract rather than a point check on
 // today's operation list — an operation added tomorrow is covered for free.
 func TestContract_noOperationWritesFormulaSQL(t *testing.T) {
+	t.Parallel()
 	doc := loadContract(t)
 	paths, ok := doc["paths"].(map[string]any)
 	if !ok {
@@ -186,6 +187,7 @@ func TestContract_noOperationWritesFormulaSQL(t *testing.T) {
 // fires the moment such an operation is added, not just that today's
 // contract happens to lack one.
 func TestSchemaWritesFormulaSQL_detectsAWritableProperty(t *testing.T) {
+	t.Parallel()
 	doc := map[string]any{
 		"components": map[string]any{
 			"schemas": map[string]any{

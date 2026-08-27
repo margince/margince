@@ -46,6 +46,7 @@ import (
 var voiceWriteTables = []string{"voice_profile_version", "voice_profile_delta"}
 
 func TestVoiceVersionsHaveOneWriter(t *testing.T) {
+	t.Parallel()
 	for _, table := range voiceWriteTables {
 		t.Run(table, func(t *testing.T) {
 			scope := gatekit.Scope{
@@ -174,6 +175,7 @@ func holdsWholeMatch(expr ast.Expr, pattern *regexp.Regexp) bool {
 // stops matching passes by finding nothing, which is the same word it prints
 // over a clean tree.
 func TestTheWriterCensusStillSeesItsSubject(t *testing.T) {
+	t.Parallel()
 	for _, table := range voiceWriteTables {
 		subject := insertsInto(table)
 		written := parseGateFixture(t, "package p\nfunc f() { q(`\n\t\tINSERT INTO "+table+

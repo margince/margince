@@ -28,6 +28,7 @@ import (
 const workerFloor = 20
 
 func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
+	t.Parallel()
 	// The ratified log-and-return-nil workers, each bound to the durable retry
 	// policy that makes its green River row honest. They are DECLARED per kind
 	// in api/jobs.yaml (fault: nil_after_logging) and joined to the receiver

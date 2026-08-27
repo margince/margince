@@ -72,6 +72,7 @@ func isCarryOver(sql string) bool { return carryOverSource.MatchString(sql) }
 var carryOverSource = regexp.MustCompile(`(?is)INSERT\s+INTO\s+person_profile_field.*\bFROM\s+person_profile_field\b`)
 
 func TestEveryProfileFieldWriteUsesTheOneWriter(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching describes a write that has moved or
 	// been folded in, and leaving it quietly re-exempts whatever takes its name.
 	defer bulkRelinkIsNotAFill.AssertAllMatched(t)
@@ -197,6 +198,7 @@ var personProfileFieldProbes = []struct {
 // The waiver's second half, read directly: a file key alone would ratify the
 // topic, and this is what makes it ratify the instance.
 func TestOnlyACarryOverIsRatifiedInTheMergeRelink(t *testing.T) {
+	t.Parallel()
 	carryOver := "INSERT INTO person_profile_field\n  (person_id, field, value)\n  SELECT $2, field, value\n    FROM person_profile_field WHERE person_id = $1\n  ON CONFLICT (person_id, field) DO NOTHING"
 	if !isCarryOver(carryOver) {
 		t.Error("the merge relink's own statement is not recognised as a carry-over, so its waiver ratifies nothing")
@@ -210,6 +212,7 @@ func TestOnlyACarryOverIsRatifiedInTheMergeRelink(t *testing.T) {
 }
 
 func TestTheProfileFieldWriteDetectorSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	for _, tc := range personProfileFieldProbes {
 		t.Run(tc.name, func(t *testing.T) {

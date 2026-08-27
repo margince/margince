@@ -80,6 +80,7 @@ func writesConsentState(_ string, file *ast.File) bool {
 const theCarryFile = "internal/modules/people/consentcarry.go"
 
 func TestTheConsentCarryIsSpelledOnceInPeople(t *testing.T) {
+	t.Parallel()
 	scope := gatekit.Scope{
 		Roots:   []string{"internal/modules/people"},
 		Subject: writesConsentState,
@@ -112,6 +113,7 @@ func TestTheConsentCarryIsSpelledOnceInPeople(t *testing.T) {
 // count at one and is a second answer to "what happens to a withdrawal when the
 // record holding it retires".
 func TestEveryConsentWriteInTheCarryFileBelongsToTheCarry(t *testing.T) {
+	t.Parallel()
 	source, err := os.ReadFile(theCarryFile)
 	if err != nil {
 		t.Fatalf("reading the carry: %v", err)
@@ -153,6 +155,7 @@ var reKeyedConsent = regexp.MustCompile(`(?is)UPDATE\s+(person_consent|consent_e
 // only thing it could see — and a re-key added to the consent module, which the
 // scope above waives wholesale, is exactly the copy this is here to catch.
 func TestOnlyTheCarryReKeysAConsentRow(t *testing.T) {
+	t.Parallel()
 	scope := gatekit.Scope{
 		Roots:   []string{"internal/modules"},
 		Subject: func(_ string, file *ast.File) bool { return holdsMatchingLiteral(file, reKeyedConsent) },

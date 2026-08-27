@@ -202,6 +202,7 @@ var idleBaseScope = gatekit.Scope{
 }
 
 func TestTheIdleBaseIsSpelledOnce(t *testing.T) {
+	t.Parallel()
 	inside := idleBaseScope.Files(t)
 	if len(inside) > 1 {
 		var where []string
@@ -415,6 +416,7 @@ func isNilIdent(expr ast.Expr) bool {
 // on the column is not a second copy of the rule, and neither is a coalesce
 // onto something that is not the creation instant.
 func TestTheGateRecognisesEverySpellingOfTheIdleBase(t *testing.T) {
+	t.Parallel()
 	spellings := map[string]string{
 		"an ORDER BY over the base": "" +
 			"func f() { q(`ORDER BY coalesce(d.last_activity_at, d.created_at), d.id`) }",

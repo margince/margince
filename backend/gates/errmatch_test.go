@@ -79,6 +79,7 @@ func matchesErrorText(n ast.Node) (verb string, found bool) {
 }
 
 func TestNoErrorMessageStringMatching(t *testing.T) {
+	t.Parallel()
 	defer errTextMatchWaivers.AssertAllMatched(t)
 	fset := token.NewFileSet()
 	err := filepath.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {

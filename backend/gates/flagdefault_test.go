@@ -45,6 +45,7 @@ var directEnvFlagDefault = []*regexp.Regexp{
 }
 
 func TestNoStringFlagDefaultsToAnEnvironmentValue(t *testing.T) {
+	t.Parallel()
 	roots := []string{"cmd", "internal/compose"}
 	checked := 0
 

@@ -106,6 +106,7 @@ func tallyParagraphs(path string) ([]prosePara, error) {
 }
 
 func TestNoRulebookSpellsOutACountableTally(t *testing.T) {
+	t.Parallel()
 	for _, path := range rulebookProse(t) {
 		// Every path here comes from the walk or is the catalog the rulebook
 		// sends a reader to, so all of them exist. An unreadable one is a
@@ -230,6 +231,7 @@ func indented(line string) bool {
 // tally (the gate agrees with a stale number) or a false one (the gate refuses
 // correct prose, which is how a gate gets switched off).
 func TestTheTallyGateReadsMarkdownCorrectly(t *testing.T) {
+	t.Parallel()
 	tests := []struct {
 		name    string
 		md      string

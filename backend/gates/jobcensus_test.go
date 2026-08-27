@@ -21,6 +21,7 @@ import (
 )
 
 func TestJobCensusMatchesTheContract(t *testing.T) {
+	t.Parallel()
 	census, err := compose.NewJobCensus()
 	if err != nil {
 		t.Fatalf("building the job census: %v", err)

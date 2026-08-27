@@ -34,6 +34,7 @@ import (
 const dealsDir = "internal/modules/deals"
 
 func TestTheBaseCurrencyGuardCountsEveryFrozenRate(t *testing.T) {
+	t.Parallel()
 	schema := tablesWithFrozenRateColumn(t)
 	if len(schema) == 0 {
 		t.Fatal("no table carries fx_rate_to_base — this test has stopped reading the migrations it derives from")
@@ -138,6 +139,7 @@ func contains(haystack []string, needle string) bool {
 // path refuses. The claim is checkable against the schema, so it is checked
 // rather than trusted to the constant's name.
 func TestNoArchiveColumnIsOnlyPassedForTablesWithoutOne(t *testing.T) {
+	t.Parallel()
 	archivable := tablesWithArchivedAt(t)
 	// Both halves are derived, so both can go silently empty and leave the
 	// comparison vacuously true. `organization` is the archivable table this

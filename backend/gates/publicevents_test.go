@@ -78,6 +78,7 @@ func subscribableTypes() []string {
 }
 
 func TestEverySubscribableEventHasAPayloadSchema(t *testing.T) {
+	t.Parallel()
 	var uncovered []string
 	for _, tp := range subscribableTypes() {
 		if _, ok := crmcontracts.PublicEventVersions[tp]; !ok {
@@ -91,6 +92,7 @@ func TestEverySubscribableEventHasAPayloadSchema(t *testing.T) {
 }
 
 func TestNoOrphanPayloadSchema(t *testing.T) {
+	t.Parallel()
 	catalog := map[string]bool{}
 	for _, tp := range events.Types() {
 		catalog[tp] = true
@@ -103,6 +105,7 @@ func TestNoOrphanPayloadSchema(t *testing.T) {
 }
 
 func TestPayloadVersionsMatchCatalog(t *testing.T) {
+	t.Parallel()
 	for tp, wantVersion := range crmcontracts.PublicEventVersions {
 		if got := events.VersionOf(tp); got != wantVersion {
 			t.Errorf("version drift for %q: events.VersionOf = %d, PublicEventVersions = %d (contract x-version and catalog.go disagree)", tp, got, wantVersion)
@@ -176,6 +179,7 @@ func parseSubscribableEventTypeEnum(t *testing.T) []string {
 // PublicEvent<Event> schema but is never appended to the enum drifts
 // silently, and the picker quietly under-offers it forever.
 func TestSubscribableEventTypeEnumMatchesPayloadCatalog(t *testing.T) {
+	t.Parallel()
 	enum := map[string]bool{}
 	for _, tp := range parseSubscribableEventTypeEnum(t) {
 		if enum[tp] {
@@ -231,6 +235,7 @@ var dynamicProbeResolved = gatekit.Waive(map[string]string{
 })
 
 func TestEverySubscribableEventIsDeliveryResolvable(t *testing.T) {
+	t.Parallel()
 	defer dynamicProbeResolved.AssertAllMatched(t)
 	entityByEvent := parseContractEntityTypes(t)
 	c := parseDeliveryClassification(t)
@@ -458,6 +463,7 @@ func stringLit(t *testing.T, expr ast.Expr) string {
 // events (capture.* via EmitPipeline, a distinct function) are exempt by
 // construction: they carry no PublicEvent schema and use a different call.
 func TestNoRawEmitForSubscribableEvent(t *testing.T) {
+	t.Parallel()
 	subscribable := map[string]bool{}
 	for tp := range crmcontracts.PublicEventVersions {
 		subscribable[tp] = true

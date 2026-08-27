@@ -54,6 +54,7 @@ func compiledConfigSchema(t *testing.T) *jsonschema.Schema {
 // ships. They are the files an operator copies, so a schema that rejects one is
 // telling them their starting point is wrong.
 func TestEveryShippedConfigValidatesAgainstTheSchema(t *testing.T) {
+	t.Parallel()
 	schema := compiledConfigSchema(t)
 	paths, err := filepath.Glob("../config/margince*.yaml")
 	if err != nil {
@@ -111,6 +112,7 @@ func asJSONValue(t *testing.T, path string) any {
 // the struct together, so it derives its list from the struct rather than
 // restating one.
 func TestTheSchemaAcceptsEveryFieldTheConfigDeclares(t *testing.T) {
+	t.Parallel()
 	raw, err := os.ReadFile(configSchemaPath)
 	if err != nil {
 		t.Fatalf("read schema: %v", err)
@@ -174,6 +176,7 @@ func schemaFieldName(f reflect.StructField) (string, bool) {
 // section out without deleting it. A schema that flagged that would be wrong
 // about the file in the direction that teaches people to ignore the squiggle.
 func TestTheSchemaAcceptsAnExplicitNullWhereTheLoaderDoes(t *testing.T) {
+	t.Parallel()
 	const withNulls = `version: 1
 bootstrap_admin: null
 uploads:

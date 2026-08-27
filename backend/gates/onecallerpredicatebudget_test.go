@@ -62,6 +62,7 @@ var callerPredicateBudgetScope = gatekit.Scope{
 }
 
 func TestTheCallerPredicateBudgetIsDeclaredOnce(t *testing.T) {
+	t.Parallel()
 	// EXACTLY one DECLARATION, not one file. A file is the wrong unit twice
 	// over: two declarations in one file are two numbers and would report as
 	// one, and zero of them reads the same as a clean tree — the direction a
@@ -92,6 +93,7 @@ func TestTheCallerPredicateBudgetIsDeclaredOnce(t *testing.T) {
 // gate holding its own copy of the number it protects has become the second
 // copy it exists to forbid.
 func TestTheGateAgreesWithTheConstantItGuards(t *testing.T) {
+	t.Parallel()
 	if callerPredicateBudget != database.CallerPredicateBudget {
 		t.Errorf("this gate measures %s and platform/database declares %s; the gate is guarding a number "+
 			"the tree no longer uses", callerPredicateBudget, database.CallerPredicateBudget)
@@ -197,6 +199,7 @@ func durationUnit(expr ast.Expr) (time.Duration, bool) {
 // has stopped matching passes by finding nothing, which is the same word it
 // prints over a clean tree.
 func TestTheBudgetCensusStillSeesItsSubject(t *testing.T) {
+	t.Parallel()
 	subjects := map[string]string{
 		"the ceiling as the tree spells it": "" +
 			"package p\nimport \"time\"\nconst previewStatementBudget = 5 * time.Second\n",

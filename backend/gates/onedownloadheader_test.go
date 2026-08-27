@@ -59,6 +59,7 @@ var downloadHeaderScope = gatekit.Scope{
 }
 
 func TestADownloadsHeadersAreSpelledOnce(t *testing.T) {
+	t.Parallel()
 	// EXACTLY one WRITE, not one file. A file is the wrong unit twice over:
 	// two writes in one file are two spellings reported as one, and zero of
 	// them reads the same as a clean tree.
@@ -188,6 +189,7 @@ func isResponseHeaderSet(n ast.Node, name string, hoisted map[string]bool) bool 
 // census that has stopped matching passes by finding nothing, which is the same
 // word it prints over a clean tree.
 func TestTheDownloadHeaderCensusStillSeesItsSubject(t *testing.T) {
+	t.Parallel()
 	subjects := map[string]string{
 		"a disposition written straight onto the response": "" +
 			"func f(w http.ResponseWriter) { w.Header().Set(\"Content-Disposition\", `attachment; filename=\"x\"`) }",

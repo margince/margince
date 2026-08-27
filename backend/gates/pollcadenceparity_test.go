@@ -70,6 +70,7 @@ var (
 const faultSource = "internal/platform/jobs/fault.go"
 
 func TestEveryPostponingConnectorPostponesByItsOwnDeclaredCadence(t *testing.T) {
+	t.Parallel()
 	ceiling, hasCeiling := durationIn(t, faultSource, rescheduleCeiling, "the postponement ceiling")
 	if !hasCeiling {
 		t.Fatalf("%s declares no maxRescheduleDelay — either the seam stopped clamping a postponement, in which case delete this half of the gate, or this expression no longer finds the bound", faultSource)

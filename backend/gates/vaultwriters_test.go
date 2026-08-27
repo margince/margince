@@ -75,6 +75,7 @@ var vaultWriters = map[string]string{
 }
 
 func TestEveryKeyVaultWriterHasAVerdict(t *testing.T) {
+	t.Parallel()
 	found := map[string]bool{}
 	root := "internal"
 	err := filepath.WalkDir(root, func(path string, d os.DirEntry, err error) error {

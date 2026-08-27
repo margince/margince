@@ -197,6 +197,7 @@ func pathWrites(t *testing.T, file string) map[string]bool {
 }
 
 func TestEveryPersonSatelliteJoinsEveryLifecyclePathThatApplies(t *testing.T) {
+	t.Parallel()
 	satellites := personSatellites(t)
 	var missing []string
 	for _, path := range satelliteLifecyclePaths {

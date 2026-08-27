@@ -65,6 +65,7 @@ const (
 )
 
 func TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded(t *testing.T) {
+	t.Parallel()
 	assertCommitIsTheUpgradeFloor(t)
 	derived := baselineEraFromHistory(t)
 	committed := readJSONFixture(t, baselineEraFixture)
@@ -96,6 +97,7 @@ func TestBaselineEraFixtureIsTheMatrixTheBaselineSeeded(t *testing.T) {
 // integration arm refuses that too, but only later, in the database lane; here it
 // is cheap, and this is the lane that runs on every push.
 func TestBaselineEraFixtureStillDiffersFromTheSeededMatrix(t *testing.T) {
+	t.Parallel()
 	before := readJSONFixture(t, baselineEraFixture)
 	after := readJSONFixture(t, seededDefaultsPath)
 

@@ -184,6 +184,7 @@ var composedJobArgsTypes = map[string]bool{
 // river.JobArgs, and cmd/api holds seven inserter handles — would be invisible
 // to them. This walks the tree instead, so the type existing at all is enough.
 func TestEveryJobArgsTypeIsDeclaredInTheContract(t *testing.T) {
+	t.Parallel()
 	byType := methodsByType(t, filepath.Join("internal", "compose"))
 	declared := declaredKindTypes(t)
 
@@ -210,6 +211,7 @@ func TestEveryJobArgsTypeIsDeclaredInTheContract(t *testing.T) {
 // just as happily by a type that ALSO implements WorkspaceID. Only a walker
 // sees both at once.
 func TestNoJobArgsDeclaresBothRoles(t *testing.T) {
+	t.Parallel()
 	byType := methodsByType(t, filepath.Join("internal", "compose"))
 	roled := 0
 	for typeName, methods := range byType {

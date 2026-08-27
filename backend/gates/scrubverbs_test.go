@@ -73,6 +73,7 @@ var privacyNonScrubVerbs = gatekit.Waive(map[string]string{
 })
 
 func TestEveryPrivacyAuditVerbIsJudgedAScrubOrNot(t *testing.T) {
+	t.Parallel()
 	defer privacyNonScrubVerbs.AssertAllMatched(t)
 
 	consts := privacyPackageConstants(t)

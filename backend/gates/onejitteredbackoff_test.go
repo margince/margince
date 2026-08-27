@@ -54,6 +54,7 @@ var jitteredBackoffScope = gatekit.Scope{
 }
 
 func TestTheJitteredLadderIsSpelledOnce(t *testing.T) {
+	t.Parallel()
 	inside := jitteredBackoffScope.Files(t)
 	if len(inside) > 1 {
 		var where []string
@@ -130,6 +131,7 @@ func localNameForMathRand(file *ast.File) (string, bool) {
 // has stopped matching passes by finding nothing, which is the same word it
 // prints over a clean tree.
 func TestTheJitterCensusStillSeesItsSubject(t *testing.T) {
+	t.Parallel()
 	subjects := map[string]string{
 		"a jitter multiplier drawn the way this tree draws one": "" +
 			"package p\nimport \"math/rand/v2\"\nfunc f() float64 { return 0.8 + 0.4*rand.Float64() }",

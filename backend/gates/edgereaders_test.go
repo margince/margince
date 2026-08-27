@@ -218,6 +218,7 @@ func readsRelationshipTable(filePath string, file *ast.File) bool {
 }
 
 func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testing.T) {
+	t.Parallel()
 	files := edgeReaderScope.Files(t)
 	gated := gatedFunctionsByPackage(t, files)
 

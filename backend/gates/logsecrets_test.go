@@ -113,6 +113,7 @@ const attrGroup = "Group"
 // attribute key without standing in the failure branch of the channel that
 // should have carried it.
 func TestACredentialIsLoggedOnlyWhenItsOwnChannelFailed(t *testing.T) {
+	t.Parallel()
 	defer spreadTailWaivers.AssertAllMatched(t)
 	if len(credentialLogKeys) != wantCredentialLogKeys {
 		t.Fatalf("credentialLogKeys holds %d keys, wantCredentialLogKeys is %d — a key was removed; "+

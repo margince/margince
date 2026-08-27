@@ -34,6 +34,7 @@ import (
 )
 
 func TestEveryEmittedAITaskIsDeclaredInTheContract(t *testing.T) {
+	t.Parallel()
 	declared := make([]string, 0, len(ai.AllTasks()))
 	for _, task := range ai.AllTasks() {
 		declared = append(declared, string(task))

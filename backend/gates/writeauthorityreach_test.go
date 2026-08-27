@@ -160,6 +160,7 @@ func reachesWriteAuthorityCore(fns map[string]*writeAuthorityFn, name string, se
 }
 
 func TestEveryWriteToAShareableRecordReachesAWriteAuthorityProbe(t *testing.T) {
+	t.Parallel()
 	defer writesWithoutARowProbe.AssertAllMatched(t)
 
 	tables := shareableTables(t)
@@ -235,6 +236,7 @@ func TestEveryWriteToAShareableRecordReachesAWriteAuthorityProbe(t *testing.T) {
 // assembled at run time would fall out of the census silently, and silence is
 // indistinguishable from safety.
 func TestNoMutationOfAShareableRecordHidesItsTableFromThisGate(t *testing.T) {
+	t.Parallel()
 	for dir, byReceiver := range writeAuthorityIndex(t, shareableTables(t)) {
 		for _, fns := range byReceiver {
 			for name, info := range fns {

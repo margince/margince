@@ -46,6 +46,7 @@ const passportOwner = "internal/modules/identity"
 // So every call site must pass an identity it READ from the request context,
 // never one it built. identityFrom is the only way to obtain one honestly.
 func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	calls := 0
 	roots := []string{"internal", "cmd"}
@@ -94,6 +95,7 @@ func TestEveryPassportMintTakesItsUserFromTheSession(t *testing.T) {
 }
 
 func TestOnlyIdentityMintsAPassportAndOnlyForTheSessionUser(t *testing.T) {
+	t.Parallel()
 	var inserts []string
 	roots := []string{"internal", "cmd"}
 	for _, root := range roots {

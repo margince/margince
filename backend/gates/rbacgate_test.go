@@ -632,6 +632,7 @@ func reachesAuthGate(fns map[string]*gateFnInfo, name string, seen map[string]bo
 }
 
 func TestEveryStoreEntryPointIsAuthGated(t *testing.T) {
+	t.Parallel()
 	defer ungatedEntryPoints.AssertAllMatched(t)
 	defer entryPointsOutsideModules.AssertAllMatched(t)
 

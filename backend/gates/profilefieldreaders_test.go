@@ -143,6 +143,7 @@ func unoverlaidValueReaders(file *ast.File) []string {
 }
 
 func TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger(t *testing.T) {
+	t.Parallel()
 	defer profileFieldValueReaders.AssertAllMatched(t)
 	files := profileFieldReaderScope.Files(t)
 	if len(files) == 0 {
@@ -174,6 +175,7 @@ func TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger(t *testing
 // Each was found by a person or a bot, not by the gate, which is the argument
 // for this test.
 func TestTheProfileFieldCensusSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	for name, tc := range map[string]struct {
 		source string
 		want   []string

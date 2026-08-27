@@ -57,6 +57,7 @@ var goAttachmentCaps = map[string]struct {
 // TestTheSendAttachmentCapMatchesTheContract holds every Go statement of the cap
 // to the contract's own maxItems.
 func TestTheSendAttachmentCapMatchesTheContract(t *testing.T) {
+	t.Parallel()
 	want := contractAttachmentCap(t)
 	for name, site := range goAttachmentCaps {
 		src, err := os.ReadFile(site.file)

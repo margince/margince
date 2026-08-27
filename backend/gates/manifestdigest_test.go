@@ -59,6 +59,7 @@ var manifestTrees = []struct {
 }
 
 func TestEveryGeneratedManifestHashNamesItsAlgorithm(t *testing.T) {
+	t.Parallel()
 	for _, tree := range manifestTrees {
 		var tiered int
 		for _, path := range committedManifests(t, tree.root) {

@@ -135,6 +135,12 @@ const (
 var updateCitationRegister = flag.Bool("update-citations", false,
 	"prune danglingcitations.txt of entries the tree no longer has")
 
+// Deliberately NOT parallel, and named in parallelExempt for the reason: under
+// -update-citations this REWRITES danglingcitations.txt, which
+// TestTheCitationRegisterIsSortedAndUnique reads. Go resumes parallel tests
+// only once every sequential one has finished, so staying sequential orders
+// this write after every read — including reads nobody has added yet, which
+// holding the reader back instead would not cover.
 func TestEveryCitedMigrationExists(t *testing.T) {
 	known := knownMigrationVersions(t)
 	found, unread, scanned, skipped := scanTreeForCitations(t, known)
@@ -193,6 +199,7 @@ func TestEveryCitedMigrationExists(t *testing.T) {
 // the honest half — each is a real shape this gate cannot see, and flipping one
 // is how a future widening announces itself.
 func TestTheCitationDetectorSeesWhatItClaims(t *testing.T) {
+	t.Parallel()
 	known := map[string]map[string]bool{
 		"core":   {"0001": true, "1787320004": true},
 		"custom": {"20260716120000": true},
@@ -244,6 +251,7 @@ func TestTheCitationDetectorSeesWhatItClaims(t *testing.T) {
 // and the next prune rewrites the whole file sorted — so an unsorted register
 // produces a diff full of moves that hides the one line that matters.
 func TestTheCitationRegisterIsSortedAndUnique(t *testing.T) {
+	t.Parallel()
 	entries := registerEntries(t, citationRegisterPath)
 	seen := map[string]bool{}
 	for i, e := range entries {

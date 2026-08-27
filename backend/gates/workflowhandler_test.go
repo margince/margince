@@ -72,6 +72,7 @@ var expectedHandlerTypes = []string{
 }
 
 func TestWorkflowHandlerMatchAndPlanAreReadOnly(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	methodsByType := map[string]map[string]bool{}      // "dir.Type" -> method-name set
 	matchPlanDecls := map[string][]handlerMethodDecl{} // "dir.Type" -> its Match/Plan decls

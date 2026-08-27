@@ -71,6 +71,7 @@ var governedSurfaces = []string{
 }
 
 func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
+	t.Parallel()
 	found := offenders(t)
 	for _, where := range found {
 		t.Errorf("%s divides a duration by 24 to count days. That is the second spelling of a rule "+
@@ -87,6 +88,7 @@ func TestOnlyElapsedCountsDaysOfSilence(t *testing.T) {
 // still recognises the shape it was written for — the exact line the coverage
 // rule used to carry — rather than only that today's tree is clean.
 func TestTheGateCanStillSeeItsOwnSubject(t *testing.T) {
+	t.Parallel()
 	wasReal := `	days := int(now.Sub(c.LastTouchAt).Hours() / hoursPerDay)`
 	if !durationOverADay.MatchString(wasReal) {
 		t.Error("the pattern no longer matches the line this gate was written to catch, so it is guarding nothing")

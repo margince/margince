@@ -125,6 +125,7 @@ func mappedSentinels(t *testing.T) map[string]bool {
 }
 
 func TestEverySentinelHasAWireVerdict(t *testing.T) {
+	t.Parallel()
 	declared := declaredSentinels(t)
 	mapped := mappedSentinels(t)
 

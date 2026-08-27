@@ -49,6 +49,7 @@ var (
 )
 
 func TestEveryRelativeLinkUnderDocsResolves(t *testing.T) {
+	t.Parallel()
 	const docsRoot = "../docs"
 
 	scanned := 0
