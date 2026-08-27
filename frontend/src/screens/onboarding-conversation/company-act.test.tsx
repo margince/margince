@@ -239,6 +239,13 @@ const REVIEW_FIELDS: readonly FieldFixture[] = [
   proposedField("industry", "B2B software", 0.6),
   proposedField("history", "Founded 2019", 0.9),
   // legal_name, registered_address, register_vat: left blank on purpose.
+  // legal_form and register_court are grounded so the identity section keeps
+  // exactly NAV_NAMED_LIMIT outstanding rows: past that the nav stops naming
+  // them one by one and falls back to an overflow count, and this case is
+  // about the two surfaces agreeing field for field.
+  proposedField("legal_form", "GmbH", 0.9),
+  proposedField("register_court", "Amtsgericht Charlottenburg", 0.9),
+  // register_number: left blank on purpose, like the trio above it.
   proposedField("value_proposition", "Faster onboarding", 0.9),
   proposedField("usp", "AI-native from day one", 0.9),
   // offer_summary: left blank on purpose (also required).
@@ -338,11 +345,11 @@ describe("the rail's review to-do list", () => {
 
     const items = container.querySelectorAll(".ob-conv-attention li");
     expect(items).toHaveLength(boardTotal);
-    // The scenario's own arithmetic (0 blocking + 4 advisory in identity, 1
+    // The scenario's own arithmetic (0 blocking + 5 advisory in identity, 1
     // blocking in offer, 1 blocking + 2 advisory in customer, 0 in sales):
     // pinned so a change to the fixture above cannot silently stop
     // exercising the invariant.
-    expect(boardTotal).toBe(8);
+    expect(boardTotal).toBe(9);
   });
 
   // The board's own nav badges (`.ob-triage-nav-badge b`, confirm-card.tsx)
@@ -421,7 +428,9 @@ describe("the rail's review to-do list", () => {
         ".ob-conv-attention button[data-kind='decision']",
       ),
     ).toHaveLength(1);
-    expect(container.querySelectorAll(".ob-conv-attention li")).toHaveLength(9);
+    expect(container.querySelectorAll(".ob-conv-attention li")).toHaveLength(
+      10,
+    );
   });
 
   it("names the header whenever the list itself renders", async () => {
@@ -494,6 +503,7 @@ describe("the rail's review to-do list", () => {
       proposedField("legal_name", "Gradion GmbH", 0.9),
       proposedField("registered_address", "Berlin, Germany", 0.9),
       proposedField("register_vat", "DE123456789", 0.9),
+      proposedField("register_number", "HRB 12345 B", 0.9),
       proposedField("offer_summary", "Revenue software", 0.9),
       proposedField("icp", "Mid-market B2B", 0.9),
       proposedField("desired_outcomes", "Faster ramp", 0.9),

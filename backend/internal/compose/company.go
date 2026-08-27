@@ -41,6 +41,9 @@ const (
 	fieldLegalName         = "legal_name"
 	fieldRegisteredAddress = "registered_address"
 	fieldRegisterVat       = "register_vat"
+	fieldLegalForm         = "legal_form"
+	fieldRegisterCourt     = "register_court"
+	fieldRegisterNumber    = "register_number"
 	fieldIndustry          = "industry"
 	fieldICP               = "icp"
 	fieldValueProposition  = "value_proposition"
@@ -146,6 +149,9 @@ func (h companyHandlers) PutCompany(w http.ResponseWriter, r *http.Request) {
 			fieldLegalName:         trimOptional(req.LegalName),
 			fieldRegisteredAddress: trimOptional(req.RegisteredAddress),
 			fieldRegisterVat:       trimOptional(req.RegisterVat),
+			fieldLegalForm:         trimOptional(req.LegalForm),
+			fieldRegisterCourt:     trimOptional(req.RegisterCourt),
+			fieldRegisterNumber:    trimOptional(req.RegisterNumber),
 			fieldIndustry:          trimOptional(req.Industry),
 			fieldICP:               req.Icp,
 			fieldValueProposition:  req.ValueProposition,
@@ -268,6 +274,9 @@ func toContractCompany(c people.Company) crmcontracts.CompanyProfile {
 		fieldLegalName:         &out.LegalName,
 		fieldRegisteredAddress: &out.RegisteredAddress,
 		fieldRegisterVat:       &out.RegisterVat,
+		fieldLegalForm:         &out.LegalForm,
+		fieldRegisterCourt:     &out.RegisterCourt,
+		fieldRegisterNumber:    &out.RegisterNumber,
 		fieldIndustry:          &out.Industry,
 		fieldICP:               &out.Icp,
 		fieldValueProposition:  &out.ValueProposition,

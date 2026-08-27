@@ -4,7 +4,11 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../i18n/en";
-import type { CompanyFieldName, CompanyForm } from "./onboarding";
+import {
+  type CompanyFieldName,
+  type CompanyForm,
+  EMPTY_DRAFT,
+} from "./onboarding";
 import { ManualCompanyInterview } from "./onboarding-manual-interview";
 import { StoryProviders } from "./story-utils";
 
@@ -18,11 +22,10 @@ import { StoryProviders } from "./story-utils";
 // interview in the middle: a story that wants question three has to answer its
 // way there, which is also the only honest way to show that advancing works.
 
-// Three of the sixteen questions refuse an empty answer — `display_name`,
-// `offer_summary` and `icp` — and every one of them sits before the middle of
-// the run. So a story that walks forward has to have answered at least those,
-// or `advance` refuses silently and the story stops on a question its own name
-// does not claim.
+// Three questions refuse an empty answer — `display_name`, `offer_summary`
+// and `icp` — and every one of them sits early in the run. So a story that
+// walks forward has to have answered at least those, or `advance` refuses
+// silently and the story stops on a question its own name does not claim.
 const ANSWERS: Partial<Record<CompanyFieldName, string>> = {
   legal_name: "Brandt Automotive GmbH",
   registered_address: "Werkstraße 14, 70565 Stuttgart",
@@ -34,27 +37,11 @@ const ANSWERS: Partial<Record<CompanyFieldName, string>> = {
   industry: "Automotive tier-one supply",
 };
 
+// Built from the screen's own empty form rather than restated here: a story
+// that spells the whole shape stops compiling every time the company gains a
+// field, and says nothing about the story either way.
 function form(overrides: Partial<CompanyForm> = {}): CompanyForm {
-  return {
-    display_name: "",
-    website: "",
-    legal_name: "",
-    register_vat: "",
-    registered_address: "",
-    industry: "",
-    offer_summary: "",
-    icp: "",
-    value_proposition: "",
-    usp: "",
-    customer_pains: "",
-    desired_outcomes: "",
-    buying_center: "",
-    buying_intents: "",
-    common_objections: "",
-    sales_motion: "",
-    history: "",
-    ...overrides,
-  };
+  return { ...EMPTY_DRAFT.values, ...overrides };
 }
 
 const meta: Meta<typeof ManualCompanyInterview> = {

@@ -519,8 +519,8 @@ describe("the conversational company act", () => {
     ) as HTMLElement;
     expect(attention).not.toBeNull();
     const items = within(attention).getAllByRole("button");
-    // Every field but legal_name is empty: 16 fields minus the one grounded.
-    expect(items).toHaveLength(15);
+    // Every field but legal_name is empty: 19 fields minus the one grounded.
+    expect(items).toHaveLength(18);
 
     await userEvent.click(items[0]);
     const row = document.getElementById("ob-triage-row-display_name");
@@ -1015,17 +1015,17 @@ describe("the conversational company act", () => {
     ).toBeTruthy();
 
     // Answering it, too, finally reaches the review — with both decisions
-    // settled. The read only ever grounded 5 of the 16 fields (the fixture's
+    // settled. The read only ever grounded 5 of the 19 fields (the fixture's
     // usual four plus the industry this clarify just filled), and all three
     // REQUIRED_FIELDS are among those five, so nothing left blocks confirm —
-    // the other 11 rows are advisory only, and the rail says so plainly
+    // the other 14 rows are advisory only, and the rail says so plainly
     // rather than calling them an obstacle.
     await userEvent.click(screen.getByRole("radio", { name: /Robotics/ }));
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
     await screen.findByText(/Here is everything I found/);
     expect(
       screen.getByText(
-        "Your review is ready on the right. Nothing blocks you; 11 things are worth a look.",
+        "Your review is ready on the right. Nothing blocks you; 14 things are worth a look.",
       ),
     ).toBeTruthy();
     const rail = document.querySelector(".mw-thread");

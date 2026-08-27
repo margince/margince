@@ -1642,6 +1642,9 @@ export const en = {
   "co.profileField.legal_name": "Registered legal name",
   "co.profileField.registered_address": "Registered address",
   "co.profileField.register_vat": "Register / VAT ID",
+  "co.profileField.legal_form": "Legal form",
+  "co.profileField.register_court": "Register court",
+  "co.profileField.register_number": "Register number",
   "co.profileField.industry": "Industry",
   "co.profileField.history": "History",
   "co.profile.title": "Company profile",
@@ -3616,6 +3619,15 @@ export const en = {
   "ob.manual.register_vat": "What are the register and VAT/UID numbers?",
   "ob.manual.register_vatHint":
     "Enter the identifiers exactly as issued. Leave this empty when none applies.",
+  "ob.manual.legal_form": "What legal form does the company have?",
+  "ob.manual.legal_formHint":
+    "The form as the register states it, such as GmbH, AG or Ltd.",
+  "ob.manual.register_court": "Which court holds the register entry?",
+  "ob.manual.register_courtHint":
+    "The court named in the legal notice, such as Amtsgericht Charlottenburg.",
+  "ob.manual.register_number": "What is the commercial register number?",
+  "ob.manual.register_numberHint":
+    "The register entry alone, such as HRB 12345 B. The VAT ID goes in the field above.",
   "ob.manual.industry": "Which industry is the company in?",
   "ob.manual.industryHint":
     "Choose the description your customers would immediately recognize.",
@@ -3667,6 +3679,9 @@ export const en = {
   "ob.field.legal_name": "Registered legal name",
   "ob.field.registered_address": "Registered address",
   "ob.field.register_vat": "Register / VAT ID",
+  "ob.field.legal_form": "Legal form",
+  "ob.field.register_court": "Register court",
+  "ob.field.register_number": "Register number",
   "ob.field.industry": "Industry",
   "ob.field.history": "Company history",
 
