@@ -162,20 +162,20 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 }
 
 // applyContractUpdate is the update write shape: guard the patch, audit it,
-// emit contract.updated, and leave the row read to the caller.
+// emit contract.updated, and leave the row read to the caller. `what` names the
+// change for an operator reading a failure — which of the four steps broke, and
+// on which verb.
 //
-// It authorizes NOTHING. Every caller has already run auth.Require for the
-// action and resolved the row through writableContract, which is what carries
-// the row scope; this function is handed a patch and a row that were both
-// already permitted. Said out loud because a shared write seam is exactly the
-// thing a later caller reaches for directly, and the two obligations above are
-// invisible from in here.
+// It authorizes NOTHING. Every caller runs auth.Require for the action and
+// resolves the row through writableContract, which is what carries the row
+// scope; this is handed a patch and a row that were both already permitted.
 //
-// Two verbs spelled this out identically — a field patch and a cancellation
-// notice — and the only difference between the two copies was the noun in the
-// error text. Two copies of a write shape drift towards whichever one gets
-// edited, and the half that does not is where an audit row or an event goes
-// missing while the domain row still lands.
+// And it PUBLISHES the patch's after-image, whole, as contract.updated's
+// changed_fields — which is `additionalProperties: true` on the public webhook
+// contract. Both obligations are invisible from in here, and a shared write
+// seam is exactly the thing a later caller reaches for directly: a patch built
+// over custom-field columns would put their values in front of external
+// subscribers with nothing at the call site saying so.
 func applyContractUpdate(ctx context.Context, tx pgx.Tx, id ids.ContractID,
 	patch *storekit.Patch, ifVersion *int64, what string,
 ) error {
@@ -192,7 +192,7 @@ func applyContractUpdate(ctx context.Context, tx pgx.Tx, id ids.ContractID,
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID,
 		crmcontracts.PublicEventContractUpdated{ChangedFields: patch.After()}); err != nil {
-		return fmt.Errorf("emit contract.updated: %w", err)
+		return fmt.Errorf("emit contract.updated for %s: %w", what, err)
 	}
 	return nil
 }

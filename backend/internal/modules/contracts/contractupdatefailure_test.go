@@ -24,6 +24,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"regexp"
 	"strings"
 	"testing"
@@ -210,7 +211,7 @@ func TestARefusedCheckBecomesAFieldLevelRefusal(t *testing.T) {
 
 // An If-Match request takes a different branch of the guarded patch — a
 // compare-and-set rather than a row lock — and that branch mints the skew a
-// caller must be able to retry on. The new wrap must not bury it: a client that
+// caller must be able to retry on. The wrap must not bury it: a client that
 // gets an opaque failure instead of a version conflict cannot tell "try again
 // with a fresh read" from "this will never work".
 func TestAStaleIfMatchSurvivesTheUpdateShapesWrap(t *testing.T) {
@@ -275,8 +276,14 @@ func (r *recordingTx) Exec(_ context.Context, sql string, args ...any) (pgconn.C
 	if r.record(sql, args) {
 		return pgconn.CommandTag{}, r.err
 	}
-	if r.missed && domainWrite.MatchString(sql) {
+	switch {
+	case r.missed && domainWrite.MatchString(sql):
 		return pgconn.NewCommandTag("UPDATE 0"), nil
+	case auditWrite.MatchString(sql), eventWrite.MatchString(sql):
+		// An INSERT tagged as an UPDATE would answer a RowsAffected check on
+		// either of these vacuously, which is the shape of fake that makes a
+		// future assertion pass without being true.
+		return pgconn.NewCommandTag("INSERT 0 1"), nil
 	}
 	return pgconn.NewCommandTag("UPDATE 1"), nil
 }
@@ -320,6 +327,11 @@ type answerRow struct {
 	err    error
 }
 
+// Scan REFUSES a destination it does not serve, for the reason recordingTx
+// panics on the methods the shape does not call. Returning nil and leaving an
+// unrecognised destination at its zero value is how a future step — a version
+// read, a RETURNING clause — gets a silent answer and every test here goes on
+// passing over it. A fake that cannot answer must say so.
 func (a answerRow) Scan(into ...any) error {
 	if a.err != nil {
 		return a.err
@@ -330,6 +342,9 @@ func (a answerRow) Scan(into ...any) error {
 			*slot = a.id
 		case *bool:
 			*slot = a.exists
+		default:
+			return fmt.Errorf("answerRow: no answer for %T — the update shape issued a query "+
+				"this fake does not serve, so a test using it would pass on a zero value", target)
 		}
 	}
 	return nil

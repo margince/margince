@@ -9,20 +9,19 @@ import (
 	"go/token"
 	"os"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 )
 
 // An update to a contract row is four things that must happen together: the
 // guarded patch, the audit row, the contract.updated event, and the check
-// violation translated into the error a caller can act on. Two verbs spelled
-// all four out separately — a field patch and a cancellation notice — and the
-// only thing that differed between the copies was the noun in the error text.
+// violation translated into the error a caller can act on.
 //
-// That is the shape a write loses a half of. The two copies drift towards
-// whichever one is edited, and the half nobody edited is where an audit row or
-// an event stops being written while the domain row still lands: the change
-// happened, the trail says it did not, and the consumers never hear.
+// It is the shape a write loses a half of. Spelled in two places the copies
+// drift towards whichever one is edited, and the half nobody edited is where an
+// audit row or an event stops being written while the domain row still lands:
+// the change happened, the trail says it did not, and no consumer hears.
 //
 // So the claim is that the update shape has one writer, found by the event it
 // publishes.
@@ -40,21 +39,50 @@ const updateShapeOwner = "applyContractUpdate"
 // contract.status_changed and carries the from/to a consumer needs. The event
 // is the discriminator, and the only one.
 //
-// What this gate does NOT hold: a patch that audits and publishes nothing at
-// all. That has no event to be found by, and it is held tree-wide by the write
-// shape gate rather than here.
+// Two neighbouring cases, and only one of them is covered elsewhere. A patch
+// that files an audit row and publishes NO event is held tree-wide, by
+// TestEveryAuditedMutationEmitsAnEvent. A patch that writes the contract row
+// and files neither an audit row nor an event is held by NOTHING — that gate
+// starts counting once it has seen an Audit call, and the module-granularity
+// audit gate is already satisfied by this package's other writes. Said plainly
+// because the shorter sentence read as covering both.
 const updateEvent = "PublicEventContractUpdated"
 
-// contractsPackage is where the event type is declared. The gate resolves each
-// file's own name for it rather than assuming one: `crmcontracts` is the
-// convention here, and a file that imported it as `cc`, or dot-imported it,
-// names the same type in a spelling a fixed comparison does not match — and a
-// census that cannot see a spelling reports the writer it cannot see as absent.
-const contractsPackage = "github.com/margince/margince/backend/internal/contracts"
+// contractsPackage is where the event type is declared, and contractsDir is
+// that package's directory relative to this one.
+//
+// The gate resolves each file's own name for the type rather than assuming one:
+// a file that imported the package as `cc`, or dot-imported it, names the same
+// type in a spelling a fixed comparison does not match, and a census that
+// cannot see a spelling reports the writer using it as absent.
+//
+// The DECLARED package name is read from the source rather than taken from the
+// directory. They differ here — the directory is `contracts` and the package is
+// `crmcontracts` — so an unaliased import binds `crmcontracts`, and a census
+// built on the directory name hunts a string no file in this tree can produce.
+// That is the fail-short direction again, so the name is derived and its
+// absence is fatal rather than empty.
+const (
+	contractsPackage = "github.com/margince/margince/backend/internal/contracts"
+	contractsDir     = "../../contracts"
+)
+
+// updateEventType is how the event names itself on the wire, and the second way
+// a function can publish it.
+//
+// storekit.Emit takes the event type as a STRING rather than deriving it from a
+// payload, so a writer reaching for it publishes contract.updated without ever
+// naming the Go type — invisible to a census over type names, and invisible to
+// the tree-wide event-ownership gate for the same reason. One raw caller exists
+// today and it is in another module, so this arm holds a route rather than a
+// present defect.
+const updateEventType = "contract.updated"
 
 func TestTheContractUpdateShapeHasOneWriter(t *testing.T) {
+	declared := declaredPackageName(t, contractsDir)
 	emitters := functionsWhere(t, func(file *ast.File, fn *ast.FuncDecl) bool {
-		return namesType(fn, localNamesFor(file, contractsPackage, updateEvent))
+		return namesType(fn, localNamesFor(file, contractsPackage, declared, updateEvent)) ||
+			namesLiteral(fn, updateEventType)
 	})
 	switch {
 	case len(emitters) == 0:
@@ -75,7 +103,7 @@ func TestTheContractUpdateShapeHasOneWriter(t *testing.T) {
 
 // localNamesFor renders every spelling the named type has in this file: one per
 // import of its package, plus the bare name when that import is a dot import.
-func localNamesFor(file *ast.File, path, typeName string) []string {
+func localNamesFor(file *ast.File, path, declared, typeName string) []string {
 	var names []string
 	for _, spec := range file.Imports {
 		if strings.Trim(spec.Path.Value, `"`) != path {
@@ -83,7 +111,9 @@ func localNamesFor(file *ast.File, path, typeName string) []string {
 		}
 		switch {
 		case spec.Name == nil:
-			names = append(names, "contracts."+typeName)
+			// An unaliased import binds the package's DECLARED name, which is
+			// not always its directory's.
+			names = append(names, declared+"."+typeName)
 		case spec.Name.Name == ".":
 			names = append(names, typeName)
 		case spec.Name.Name == "_":
@@ -93,6 +123,34 @@ func localNamesFor(file *ast.File, path, typeName string) []string {
 		}
 	}
 	return names
+}
+
+// declaredPackageName reads the package clause of the sources in dir.
+//
+// Derived rather than assumed, and fatal rather than empty: a gate that
+// silently resolved no name would judge a population of nothing and report a
+// clean package, which is the one way a census must not fail.
+func declaredPackageName(t *testing.T, dir string) string {
+	t.Helper()
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("reading %s for its package name: %v", dir, err)
+	}
+	fset := token.NewFileSet()
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") {
+			continue
+		}
+		file, perr := parser.ParseFile(fset, dir+"/"+name, nil, parser.PackageClauseOnly)
+		if perr != nil || file.Name == nil {
+			continue
+		}
+		return file.Name.Name
+	}
+	t.Fatalf("no package clause found in %s, so this gate cannot say what an unaliased "+
+		"import of it binds and would hunt a spelling no file can produce", dir)
+	return ""
 }
 
 // functionsWhere names the package's non-test functions satisfying want. The
@@ -128,6 +186,24 @@ func functionsWhere(t *testing.T, want func(*ast.File, *ast.FuncDecl) bool) []st
 		t.Fatal("this package has no non-test source, so the census read nothing")
 	}
 	sort.Strings(found)
+	return found
+}
+
+// namesLiteral reports whether fn contains the given string literal.
+func namesLiteral(fn *ast.FuncDecl, want string) bool {
+	if fn.Body == nil {
+		return false
+	}
+	found := false
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		lit, isLit := node.(*ast.BasicLit)
+		if isLit && lit.Kind == token.STRING {
+			if text, err := strconv.Unquote(lit.Value); err == nil && text == want {
+				found = true
+			}
+		}
+		return !found
+	})
 	return found
 }
 
