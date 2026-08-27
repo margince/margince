@@ -99,6 +99,11 @@ func TestCSVImportByIDUpdatesTheNamedCompany(t *testing.T) {
 
 // The three cases that destroyed data under name matching, each harmless here.
 func TestCSVImportByIDIsImmuneToEveryAmbiguityThatBrokeNameMatching(t *testing.T) {
+	// Each case seeds a DIFFERENT ambiguity into the same table, and the
+	// subject is which record an id resolves to among them. A shared fixture
+	// would leave the first case's two Kestrel Data rows in place while the
+	// third case is about a trading name that is somebody else's registered
+	// name — a different ambiguity from the one it is named for.
 	t.Run("two companies sharing a name", func(t *testing.T) {
 		e := setupImportApp(t)
 		wanted := createOrgReturningID(t, e, map[string]any{"display_name": "Kestrel Data"})

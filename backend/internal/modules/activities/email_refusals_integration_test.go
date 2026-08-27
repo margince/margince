@@ -392,6 +392,15 @@ func TestReplayingASourceKeyLeavesTheStoredThreadKeyUntouched(t *testing.T) {
 // is documentation on this surface rather than a validator, so the refusal has
 // to live where both transports pass through.
 func TestSendEmailRefusesAMessageWhoseAddresseeLineIsEmpty(t *testing.T) {
+	// One fixture for all three, which is what the cases actually share: what
+	// varies is the To/Cc pair, and the subject — the subtraction that empties
+	// the addressee line — reads none of the seeded state.
+	//
+	// The outbound count below is then CUMULATIVE, and that is a stronger
+	// assertion rather than a weaker one: a case that staged a delivery would
+	// be caught by its own assertion and by every later case's.
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
 	for _, tc := range []struct {
 		name           string
 		recipients, cc []string
@@ -407,8 +416,8 @@ func TestSendEmailRefusesAMessageWhoseAddresseeLineIsEmpty(t *testing.T) {
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			e := setupSend(t)
-			anchor := e.seedAnchor(t, "", "")
+			// The stager stays per case: it accumulates, so a shared one would
+			// let a later case read an earlier case's staging as its own.
 			stager := &recordingStager{}
 			in := sendInput("transactional")
 			in.Recipients, in.Cc = tc.recipients, tc.cc

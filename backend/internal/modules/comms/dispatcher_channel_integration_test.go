@@ -177,8 +177,12 @@ func TestDispatcherRoutesAChannelDeliveryToMessageSender(t *testing.T) {
 // redelivered job must refuse to transmit rather than deliver a second copy to a
 // customer with nothing able to detect it.
 func TestChannelDeliveryParksOnAnUnknownOutcome(t *testing.T) {
+	// One fixture, a reply of its own per case. Each stages its own delivery
+	// and every assertion is by that id — what the two halves share is the
+	// workspace and the store, which neither of them changes.
+	e := setupStore(t)
+
 	t.Run("the attempt that gets no answer parks rather than retrying", func(t *testing.T) {
-		e := setupStore(t)
 		id := e.stageReply(t)
 
 		unanswered := errors.New("telegram: sendMessage: context deadline exceeded")
@@ -219,7 +223,6 @@ func TestChannelDeliveryParksOnAnUnknownOutcome(t *testing.T) {
 	})
 
 	t.Run("a crashed attempt's marker stops the next one from transmitting", func(t *testing.T) {
-		e := setupStore(t)
 		id := e.stageReply(t)
 
 		// Exactly what a killed worker leaves behind: the marker committed

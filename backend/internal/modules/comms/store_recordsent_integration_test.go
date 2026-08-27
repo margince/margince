@@ -140,6 +140,11 @@ func TestRecordSentReKeysTheDeliveryWhenTheIdentityMoved(t *testing.T) {
 		{"a reply keeps its anchor's root", conversationRoot, conversationRoot},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// A fixture of its own, and not for tidiness: a message identity is
+			// unique per workspace while it is staged, so two cases staging
+			// stagedIdentity into one workspace is a conflict. Hoisting this
+			// passes only because the case above happens to stamp the identity
+			// away first — a dependency between cases that reads as none.
 			e := setupStore(t)
 			in := e.baseInput(e.activity, stagedIdentity)
 			in.ThreadKey = tc.threadKey
