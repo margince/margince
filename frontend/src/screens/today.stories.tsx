@@ -145,6 +145,42 @@ export const NothingToDecide: Story = {
 // accident: the reader should be able to close the page and believe it.
 export const ClearDay: Story = { render: today(quiet) };
 
+// Relationships that went quiet, and NOTHING else on the page. This is the one
+// state the lane can get wrong in a way a reader would notice: nobody is
+// waiting on them, so every "is anything waiting?" branch is false, and a
+// headline that only asked those would print "your day is clear" directly above
+// three contacts nobody has spoken to in months. The story exists to keep that
+// combination on screen.
+export const RelationshipsGoingQuiet: Story = {
+  render: today({
+    ...quiet,
+    relationship_decay: [
+      {
+        id: "rd-1",
+        source: "relationship_decay",
+        title: "Dana Weiss",
+        detail: "63",
+        occurred_at: "2026-06-23T09:00:00Z",
+        actions: [],
+      },
+      {
+        id: "rd-2",
+        source: "relationship_decay",
+        title: "Ines Sommer",
+        detail: "48",
+        occurred_at: "2026-07-08T09:00:00Z",
+        actions: [],
+      },
+    ],
+    counts: {
+      this_morning: 0,
+      needs_you: 0,
+      planned: 0,
+      relationship_decay: 2,
+    },
+  }),
+};
+
 // A lane the reader may not read. Said out loud in the warn family — nothing is
 // broken, they are simply not seeing everything, and a page that stayed silent
 // would report a clear day it cannot actually see.

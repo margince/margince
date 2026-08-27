@@ -74,6 +74,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 		// notify firing surfaces as a visible 'skipped' run instead
 		// (automation.ErrNoNotificationTransport, engine_run.go) until a
 		// real channel lands here.
+		Claims: automation.NewEffectClaims(db),
 	}
 	for _, handler := range automation.StarterWorkflows(ex) {
 		engine.RegisterWorkflow(handler)
@@ -85,7 +86,11 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	for _, handler := range people.LeadSLAWorkflows(peopleStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}
-	engine.RegisterSystemWorkflow(leadSLAEscalation{activities: activities.NewStore(db), now: time.Now})
+	activityStore := activities.NewStore(db)
+	engine.RegisterSystemWorkflow(leadSLAEscalation{activities: activityStore, now: time.Now})
+	for _, handler := range activities.FollowUpWorkflows(activityStore) {
+		engine.RegisterSystemWorkflow(handler)
+	}
 	return engine
 }
 

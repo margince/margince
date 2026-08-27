@@ -288,6 +288,15 @@ const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
 // departed colleague as a route in.
 const liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND u.status = 'active' AND u.archived_at IS NULL`
 
+// laterMemberJoin is the same rule asked about a SECOND edge in one statement:
+// has any live colleague spoken to this contact since. It is spelled out rather
+// than derived from liveMemberJoin because TestOnlyOneSpellingOfALiveMember
+// reads source text, and a predicate assembled at runtime is a predicate that
+// census cannot see — under-recognition being the one way that gate must not
+// break. Both spellings are ratified there by name, and it fails if either
+// stops naming both halves.
+const laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND lu.status = 'active' AND lu.archived_at IS NULL`
+
 // EdgesForPerson answers "who on our team knows this contact".
 //
 // It returns edges in LAST-CONTACT order and does NOT rank by warmth, because

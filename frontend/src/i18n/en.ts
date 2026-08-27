@@ -175,6 +175,8 @@ export const en = {
   "day.lead.promises": "You promised {count} — those come first.",
   "day.lead.meetings": "{count} on the calendar today.",
   "day.lead.atRisk": "{count} going quiet. Nothing else is waiting on you.",
+  "day.lead.decay":
+    "{count} you have not spoken to in a while. Nothing is waiting on you.",
   "day.lead.morningOnly":
     "Nothing waiting on you — the night picked out {count} to start with.",
   "day.lead.ranOvernight": "Nothing needs you. Here is what ran overnight.",
@@ -190,6 +192,11 @@ export const en = {
   "day.atRisk": "Going quiet",
   "day.atRisk.empty": "No deal is drifting.",
   "day.risk.quiet": "No contact for {days} days.",
+  "day.decay": "Relationships going quiet",
+  "day.decay.empty": "You are in touch with everyone you were.",
+  "day.decay.quiet": "You have not spoken in {days} days.",
+  "day.decay.quietSince":
+    "You have not spoken in {days} days — last on {date}.",
   "day.risk.closeOverdue": "Expected to close {date} — still open.",
   "day.commitments": "You promised",
   "day.commitments.empty": "No promises coming due.",
@@ -1642,6 +1649,9 @@ export const en = {
   "co.profileField.legal_name": "Registered legal name",
   "co.profileField.registered_address": "Registered address",
   "co.profileField.register_vat": "Register / VAT ID",
+  "co.profileField.legal_form": "Legal form",
+  "co.profileField.register_court": "Register court",
+  "co.profileField.register_number": "Register number",
   "co.profileField.industry": "Industry",
   "co.profileField.history": "History",
   "co.profile.title": "Company profile",
@@ -3616,6 +3626,15 @@ export const en = {
   "ob.manual.register_vat": "What are the register and VAT/UID numbers?",
   "ob.manual.register_vatHint":
     "Enter the identifiers exactly as issued. Leave this empty when none applies.",
+  "ob.manual.legal_form": "What legal form does the company have?",
+  "ob.manual.legal_formHint":
+    "The form as the register states it, such as GmbH, AG or Ltd.",
+  "ob.manual.register_court": "Which court holds the register entry?",
+  "ob.manual.register_courtHint":
+    "The court named in the legal notice, such as Amtsgericht Charlottenburg.",
+  "ob.manual.register_number": "What is the commercial register number?",
+  "ob.manual.register_numberHint":
+    "The register entry alone, such as HRB 12345 B. The VAT ID goes in the field above.",
   "ob.manual.industry": "Which industry is the company in?",
   "ob.manual.industryHint":
     "Choose the description your customers would immediately recognize.",
@@ -3667,6 +3686,9 @@ export const en = {
   "ob.field.legal_name": "Registered legal name",
   "ob.field.registered_address": "Registered address",
   "ob.field.register_vat": "Register / VAT ID",
+  "ob.field.legal_form": "Legal form",
+  "ob.field.register_court": "Register court",
+  "ob.field.register_number": "Register number",
   "ob.field.industry": "Industry",
   "ob.field.history": "Company history",
 

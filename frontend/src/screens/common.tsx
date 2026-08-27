@@ -775,6 +775,9 @@ const COLD_FIELD_LABELS: Record<string, MessageKey> = {
   legal_name: "ob.field.legal_name",
   registered_address: "ob.field.registered_address",
   register_vat: "ob.field.register_vat",
+  legal_form: "ob.field.legal_form",
+  register_court: "ob.field.register_court",
+  register_number: "ob.field.register_number",
   industry: "ob.field.industry",
   history: "ob.field.history",
 };

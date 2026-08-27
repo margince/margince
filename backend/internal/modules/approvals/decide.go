@@ -165,16 +165,63 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 	// (quotarelease.go).
 	if approve && a.Kind == KindQuotaRelease {
 		if err := s.applyQuotaRelease(ctx, a); err != nil {
-			return fmt.Errorf("approved, but widening the agent's window failed: %w", err)
+			return s.recordEffectFailure(ctx, id,
+				"the agent's window could not be widened, so the approval has not taken effect",
+				fmt.Errorf("approved, but widening the agent's window failed: %w", err))
 		}
 		return nil
 	}
 	if effect, ok := s.effects[a.Kind]; ok && approve && serverProposed(a) {
 		if err := effect(ctx, id, a.ProposedChange, a.DiffHash); err != nil {
-			return fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err)
+			return s.recordEffectFailure(ctx, id,
+				"this was approved, but the work it released did not run",
+				fmt.Errorf("approved, but executing the %s effect failed: %w", a.Kind, err))
 		}
 	}
 	return nil
+}
+
+// recordEffectFailure marks an approved row whose effect did not run, and
+// returns the caller's own error unchanged.
+//
+// Without the mark the row is unreachable: it is not pending, so the decision
+// lane skips it, and it names a human decider, so the receipts lane does too. A
+// person approved something, was told it was approved, and the work never
+// happened — with the only trace an error on one request nobody may have read.
+//
+// The stored sentence is written HERE rather than from the executor's error,
+// which carries whatever the failing module said and can name a table, a
+// statement or a host. What reaches a reader says what happened and what it
+// means for them.
+//
+// A failure to record the failure is logged and swallowed on purpose, and it is
+// the one place in this file that swallows anything: the caller is already
+// returning an error about the effect, and replacing it with a bookkeeping
+// error would tell the human who approved the row the wrong thing about what
+// went wrong.
+func (s *Service) recordEffectFailure(ctx context.Context, id ids.ApprovalID, reader string, cause error) error {
+	// Detached from the request's cancellation: an effect that failed BECAUSE
+	// the request was cancelled or timed out is exactly a failure this mark
+	// exists to keep, and writing it through the dead context would lose it.
+	ctx = context.WithoutCancel(ctx)
+	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		// The IS NULL arm is the CAS: two failures racing on one row keep the
+		// FIRST mark, because that is the one whose timestamp says when the
+		// work was actually lost. Zero rows affected is that race resolved,
+		// not an error.
+		tag, err := tx.Exec(ctx,
+			`UPDATE approval SET effect_failed_at = now(), effect_failure = $2
+			  WHERE id = $1 AND effect_failed_at IS NULL`, id, reader)
+		if err == nil && tag.RowsAffected() == 0 {
+			s.logger().InfoContext(ctx, "approvals: effect failure already marked", "approval_id", id.String())
+		}
+		return err
+	})
+	if err != nil {
+		s.logger().ErrorContext(ctx, "approvals: an approved effect failed and the row could not be marked",
+			"approval_id", id.String(), "error", err)
+	}
+	return cause
 }
 
 // serverProposed reports whether this staging was minted by a SERVER-SIDE

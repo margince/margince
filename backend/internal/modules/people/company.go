@@ -42,6 +42,9 @@ const (
 	fieldLegalName         = "legal_name"
 	fieldRegisteredAddress = "registered_address"
 	fieldRegisterVat       = "register_vat"
+	fieldLegalForm         = "legal_form"
+	fieldRegisterCourt     = "register_court"
+	fieldRegisterNumber    = "register_number"
 	fieldIndustry          = "industry"
 	fieldICP               = "icp"
 	fieldValueProposition  = "value_proposition"
@@ -107,6 +110,12 @@ var companyFields = []companyField{
 	// have known to copy.
 	{name: fieldRegisteredAddress, update: `UPDATE organization SET address_line1 = $2 WHERE id = $1 AND address_line1 IS DISTINCT FROM $2`},
 	{name: fieldRegisterVat},
+	// The rest of the §5 DDG block. No `update` arm: the organization table
+	// carries no column for a legal form, a register court or a register
+	// entry, so the profile-field row IS the record of them.
+	{name: fieldLegalForm},
+	{name: fieldRegisterCourt},
+	{name: fieldRegisterNumber},
 	{name: fieldIndustry, update: `UPDATE organization SET industry = $2 WHERE id = $1 AND industry IS DISTINCT FROM $2`},
 	{name: fieldICP},
 	{name: fieldValueProposition},

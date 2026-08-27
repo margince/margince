@@ -59,7 +59,7 @@ func (l optionalLane) collect(
 	}
 }
 
-// optionalLanes describes the three, in the order they are read.
+// optionalLanes describes the four, in the order they are read.
 //
 // The meetings window opens at NOW rather than at midnight: a meeting that
 // began an hour ago cannot be prepared for, and one that ended would be plainly
@@ -93,6 +93,14 @@ func (s *Service) optionalLanes(
 				}), err
 			},
 			into: &out.Commitments, count: &out.Counts.Commitments,
+		},
+		{
+			name: "relationship_decay", bound: s.decay != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				lapsed, err := s.decay.Lapsed(ctx)
+				return renderEach(lapsed, lapsedItem), err
+			},
+			into: &out.RelationshipDecay, count: &out.Counts.RelationshipDecay,
 		},
 	}
 }

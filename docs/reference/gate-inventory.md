@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (37)
+## Parity (38)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -26,6 +26,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `auditcoherence_test.go` | H3 | The audit\_log enum-coherence gate as a fitness function. |
 | `backfillwindow_test.go` | H3 | The CAP-PARAM-4 window set as a fitness function: the contract's four enums, the Go validator and the capture\_backfill CHECK all state the SAME set, derived from the tree rather than remembered here. |
 | `benchrecordswitch_test.go` | H2 | Both bench harnesses ask the SAME variable whether to publish a record, and both answer only to the same value. |
+| `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and this gate is what makes widening seven of them a failure instead of a silent half-job. |
 | `configschema_test.go` | H3 | The margince.yaml schema is editor tooling, and editor tooling that lies is worse than none: an operator trusts the squiggle. |
 | `contextanchorenum_test.go` | H3 | GET /records/{entity\_type}/{id}/context accepts exactly the record types the search module can search, and the contract has to say the same set. |
 | `contractfrontendlane_test.go` | H3 | A contract change owes three regenerations, and the one that strands the FRONTEND types is enforced in two different places for two different readers. |
@@ -109,6 +110,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onevoiceversionwriter_test.go` | H2 | voice\_profile\_version and voice\_profile\_delta each have ONE writer. |
 | `parallelgates_test.go` | H3 | Every gate here runs in parallel with the others, and this is what keeps that true as gates are added. |
 | `passportmint_test.go` | H1 | A passport is minted for the session user, and for nobody else. |
+| `personattachlock_test.go` | H2 | A relationship carrying a person is written under that person's row lock. |
 | `personprofilefieldwriter_test.go` | H2 | people.writePersonProfileField is the one writer of person\_profile\_field, and the one place the precedence rule lives: a machine fill claims an unanswered field, a human's acceptance replaces what is there. |
 | `piicoverage_test.go` | H2 | PII reach as a fitness function. |
 | `precheckwiring_test.go` | H2 | A precheck that exists but is not wired protects nothing. |

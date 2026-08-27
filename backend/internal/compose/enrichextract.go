@@ -87,11 +87,11 @@ type extractedField struct {
 // gate-valid, unique ColdStartField — an entry can never drift AHEAD of the
 // gate the model's output passes through (coldStartFieldValid).
 //
-// The one gap Go can't close: a contract value ADDED but not listed here is
-// gate-valid yet never offered to the model or admitted by the schema enum, so
-// it is silently never extracted. There is no generated ColdStartField values
-// slice to iterate, so this direction can't be auto-gated — KEEP IN SYNC with
-// the ColdStartField enum whenever a field is added to it.
+// The other direction — a vocabulary value ADDED but not listed here, so it is
+// gate-valid yet never offered to the model and silently never extracted — is
+// held by companyprofilevocabulary_test.go, which derives the whole vocabulary
+// from the organization_profile_field CHECK and fails when this list falls
+// short of it.
 var extractionFieldNames = []string{
 	string(crmcontracts.ColdStartFieldFieldDisplayName),
 	string(crmcontracts.ColdStartFieldFieldOfferSummary),
@@ -107,6 +107,9 @@ var extractionFieldNames = []string{
 	string(crmcontracts.ColdStartFieldFieldLegalName),
 	string(crmcontracts.ColdStartFieldFieldRegisteredAddress),
 	string(crmcontracts.ColdStartFieldFieldRegisterVat),
+	string(crmcontracts.ColdStartFieldFieldLegalForm),
+	string(crmcontracts.ColdStartFieldFieldRegisterCourt),
+	string(crmcontracts.ColdStartFieldFieldRegisterNumber),
 	string(crmcontracts.ColdStartFieldFieldIndustry),
 	string(crmcontracts.ColdStartFieldFieldHistory),
 }
@@ -233,6 +236,9 @@ var legalPageFields = map[string]bool{
 	string(crmcontracts.ColdStartFieldFieldLegalName):         true,
 	string(crmcontracts.ColdStartFieldFieldRegisteredAddress): true,
 	string(crmcontracts.ColdStartFieldFieldRegisterVat):       true,
+	string(crmcontracts.ColdStartFieldFieldLegalForm):         true,
+	string(crmcontracts.ColdStartFieldFieldRegisterCourt):     true,
+	string(crmcontracts.ColdStartFieldFieldRegisterNumber):    true,
 }
 
 // extract reads the SITE the URL names — the given page plus, when the site

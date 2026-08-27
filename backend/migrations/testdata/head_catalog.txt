@@ -533,6 +533,7 @@ public.app_user_pkey CREATE UNIQUE INDEX app_user_pkey ON public.app_user USING 
 public.approval acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.approval.approval_decided CHECK ((((status = 'pending'::text) AND (decided_at IS NULL)) OR (status = 'expired'::text) OR ((status = ANY (ARRAY['approved'::text, 'rejected'::text])) AND (decided_at IS NOT NULL))))
 public.approval.approval_decided_by_fkey FOREIGN KEY (decided_by) REFERENCES app_user(id) ON DELETE SET NULL (decided_by)
+public.approval.approval_effect_failure_is_stated CHECK (((effect_failed_at IS NULL) = (effect_failure IS NULL))) NOT VALID
 public.approval.approval_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
 public.approval.approval_passport_id_fkey FOREIGN KEY (passport_id) REFERENCES passport(id) ON DELETE SET NULL (passport_id)
 public.approval.approval_pkey PRIMARY KEY (id)
@@ -545,6 +546,8 @@ public.approval.decided_by uuid gen=- def=-
 public.approval.decided_by_system boolean NOT NULL gen=- def=false
 public.approval.decision_reason text gen=- def=-
 public.approval.diff_hash text NOT NULL gen=- def=-
+public.approval.effect_failed_at timestamp with time zone gen=- def=-
+public.approval.effect_failure text gen=- def=-
 public.approval.evidence jsonb gen=- def=-
 public.approval.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.approval.id uuid NOT NULL gen=- def=uuidv7()
@@ -584,6 +587,7 @@ public.approval_autonomy_policy.uq_approval_autonomy_policy_user_kind UNIQUE (us
 public.approval_autonomy_policy.user_id uuid NOT NULL gen=- def=-
 public.approval_autonomy_policy.veto_window interval gen=- def=-
 public.approval_autonomy_policy_pkey CREATE UNIQUE INDEX approval_autonomy_policy_pkey ON public.approval_autonomy_policy USING btree (id)
+public.approval_effect_failed_idx CREATE INDEX approval_effect_failed_idx ON public.approval USING btree (effect_failed_at DESC) WHERE (effect_failed_at IS NOT NULL)
 public.approval_pkey CREATE UNIQUE INDEX approval_pkey ON public.approval USING btree (id)
 public.assert_deal_project_same_org() secdef=false cfg=- acl=- 
 BEGIN
@@ -721,6 +725,16 @@ public.automation.tier text NOT NULL gen=- def='confirmation_required'::text
 public.automation.trigger jsonb NOT NULL gen=- def=-
 public.automation.updated_at timestamp with time zone gen=- def=-
 public.automation.version bigint NOT NULL gen=- def=1
+public.automation_effect_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.automation_effect_claim.automation_effect_claim_pkey PRIMARY KEY (id)
+public.automation_effect_claim.automation_effect_claim_unique UNIQUE (handler, occurrence_key, effect_fingerprint)
+public.automation_effect_claim.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.automation_effect_claim.effect_fingerprint text NOT NULL gen=- def=-
+public.automation_effect_claim.handler text NOT NULL gen=- def=-
+public.automation_effect_claim.id uuid NOT NULL gen=- def=uuidv7()
+public.automation_effect_claim.occurrence_key text NOT NULL gen=- def=-
+public.automation_effect_claim_pkey CREATE UNIQUE INDEX automation_effect_claim_pkey ON public.automation_effect_claim USING btree (id)
+public.automation_effect_claim_unique CREATE UNIQUE INDEX automation_effect_claim_unique ON public.automation_effect_claim USING btree (handler, occurrence_key, effect_fingerprint)
 public.automation_pkey CREATE UNIQUE INDEX automation_pkey ON public.automation USING btree (id)
 public.booking_page acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.booking_page.booking_page_host_fkey FOREIGN KEY (host_user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -2964,7 +2978,7 @@ public.organization_profile_field.org_profile_field_verified_pair CHECK (((verif
 public.organization_profile_field.org_profile_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
 public.organization_profile_field.organization_id uuid NOT NULL gen=- def=-
 public.organization_profile_field.organization_profile_field_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
-public.organization_profile_field.organization_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text])))
+public.organization_profile_field.organization_profile_field_field_check CHECK ((field = ANY (ARRAY['display_name'::text, 'offer_summary'::text, 'icp'::text, 'value_proposition'::text, 'usp'::text, 'customer_pains'::text, 'desired_outcomes'::text, 'buying_center'::text, 'buying_intents'::text, 'common_objections'::text, 'sales_motion'::text, 'legal_name'::text, 'registered_address'::text, 'register_vat'::text, 'industry'::text, 'history'::text, 'legal_form'::text, 'register_court'::text, 'register_number'::text])))
 public.organization_profile_field.organization_profile_field_pkey PRIMARY KEY (id)
 public.organization_profile_field.organization_profile_field_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
 public.organization_profile_field.retrieved_at timestamp with time zone gen=- def=-

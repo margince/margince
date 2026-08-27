@@ -16189,7 +16189,7 @@ components:
       required: true
       schema:
         type: string
-        enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history]
+        enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number]
       description: The profile field's key — the same closed vocabulary `CompanyProfileField.field` carries.
     FactKey:
       name: factKey
@@ -26921,7 +26921,7 @@ components:
         ONLY for `source_kind=url` (nullable otherwise — text/self-description evidence has no URL).
       required: [field, value, evidence_snippet, source_kind, confidence]
       properties:
-        field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history] }
+        field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number] }
         value: { type: string }
         evidence_snippet: { type: string, minLength: 1, description: 'Verbatim source text (from the page, the pasted text, or the user''s own words) — non-empty or the field is absent.' }
         source_kind: { type: string, enum: [url, text, self_description], description: 'Where evidence_snippet came from. For self_description the "evidence" is the user''s own statement — a self-declared ICP is grounded in that statement (B-E01.13), not fabricated.' }
@@ -26977,6 +26977,9 @@ components:
         legal_name: { type: [string, 'null'], maxLength: 2000 }
         registered_address: { type: [string, 'null'], maxLength: 2000 }
         register_vat: { type: [string, 'null'], maxLength: 2000 }
+        legal_form: { type: [string, 'null'], maxLength: 2000 }
+        register_court: { type: [string, 'null'], maxLength: 2000 }
+        register_number: { type: [string, 'null'], maxLength: 2000 }
         industry: { type: [string, 'null'], maxLength: 2000 }
         history: { type: [string, 'null'], maxLength: 2000 }
 
@@ -27036,7 +27039,10 @@ components:
         website: { type: [string, 'null'], description: 'The company''s own domain (acme.com) — stored as its primary domain, the same handle a read-back resolves organizations by. A full URL is accepted on write and reduced to its domain.' }
         legal_name: { type: [string, 'null'], description: 'The registered legal entity, when it differs from display_name.' }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
-        register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B).' }
+        register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
+        legal_form: { type: [string, 'null'], description: 'The legal form as the imprint prints it (GmbH, AG, Ltd) — §5 DDG makes a German site state it.' }
+        register_court: { type: [string, 'null'], description: 'The court holding the commercial register entry (e.g. Amtsgericht Charlottenburg).' }
+        register_number: { type: [string, 'null'], description: 'The commercial register entry alone (e.g. HRB 12345 B) — a registry identity, unlike the VAT ID a tax authority issues.' }
         industry: { type: [string, 'null'] }
         offer_summary: { type: [string, 'null'], description: Plain-language summary of what the company sells or delivers. }
         icp: { type: [string, 'null'], description: Ideal customer profile — who this company sells to. }
@@ -27073,7 +27079,10 @@ components:
         display_name: { type: string, minLength: 1 }
         legal_name: { type: [string, 'null'], description: The registered legal entity. }
         registered_address: { type: [string, 'null'], description: The registered address as one formatted line. }
-        register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B).' }
+        register_vat: { type: [string, 'null'], description: 'VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.' }
+        legal_form: { type: [string, 'null'], description: 'The legal form as the imprint prints it (GmbH, AG, Ltd).' }
+        register_court: { type: [string, 'null'], description: The court holding the commercial register entry. }
+        register_number: { type: [string, 'null'], description: 'The commercial register entry alone (e.g. HRB 12345 B).' }
         industry: { type: [string, 'null'] }
         website: { type: [string, 'null'], description: 'The company''s own domain or full URL; stored as the bare domain.' }
         offer_summary: { type: [string, 'null'] }
@@ -27113,7 +27122,7 @@ components:
           type: [string, 'null']
           readOnly: true
           description: The human who confirmed the claim. Server-stamped, never accepted from a request body.
-        field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history] }
+        field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number] }
         value: { type: string }
         source: { type: string, enum: [human, site_read, connector, migration, technical_lookup] }
         captured_by: { type: string, readOnly: true }
@@ -27344,7 +27353,7 @@ components:
       type: object
       required: [field, value, reason]
       properties:
-        field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history] }
+        field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history, legal_form, register_court, register_number] }
         value: { type: string, minLength: 1 }
         reason: { type: string, minLength: 1 }
 
@@ -30088,13 +30097,32 @@ components:
             actually used, so the card never implies a patience the server did not apply.
 
             Absent — not empty — on an installation whose feed does not read deals.
+        relationship_decay:
+          type: array
+          items: { $ref: '#/components/schemas/AttentionItem' }
+          description: |
+            The reader's OWN relationships that have gone silent, longest silence first —
+            people they were in contact with and are not any more.
+
+            A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
+            a contact carrying no open deal never reaches that lane, and those are exactly
+            the relationships that lapse unnoticed. `detail` carries the silence in days,
+            from the same §4 derivation the contact's own page shows, so the two surfaces
+            cannot come to disagree about when somebody went quiet.
+
+            Only relationships this reader actually had: a contact nobody here ever spoke
+            to has not gone quiet, and a lane that said otherwise would report every
+            dormant record as a lapse.
+
+            Absent — not empty — on an installation whose feed does not derive relationship
+            changes.
         done_for_you:
           type: array
           items: { $ref: '#/components/schemas/AttentionItem' }
           description: "What the system did on its own, most recent first. Receipts, not questions."
         lanes_omitted:
           type: array
-          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings] }
+          items: { type: string, enum: [this_morning, needs_you, planned, done_for_you, commitments, at_risk, meetings, relationship_decay] }
           description: "Lanes withheld because the caller may not read what they contain. Never returned empty instead."
         counts: { $ref: '#/components/schemas/AttentionCounts' }
 
@@ -30129,6 +30157,13 @@ components:
             How many promises this lane is CARRYING, which is the bounded page rather than every
             promise due — the same bound `planned` reports under. A rep past the bound sees the
             soonest-due ones, which is the order the lane is in.
+        relationship_decay:
+          type: integer
+          minimum: 0
+          description: >-
+            How many lapsed relationships this lane is CARRYING — the bounded page, as the
+            other lanes report. A rep past the bound sees the longest silences, which is the
+            order the lane is in.
 
 
     AttentionItem:
@@ -30143,7 +30178,7 @@ components:
         id: { type: string, description: "The owning record's id, as its own endpoint spells it." }
         source:
           type: string
-          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting]
+          enum: [approval, dedupe_candidate, task, brief_item, conversation_claim, deal_at_risk, meeting, relationship_decay]
           description: "Which producer raised it, and therefore which endpoint its verbs go to."
         kind: { type: string, description: 'The producer''s own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority.' }
         title:

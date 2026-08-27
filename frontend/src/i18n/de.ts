@@ -173,6 +173,8 @@ export const de = {
   "day.lead.promises": "Du hast {count} zugesagt — das geht vor.",
   "day.lead.meetings": "{count} heute im Kalender.",
   "day.lead.atRisk": "{count} werden still. Sonst wartet nichts auf dich.",
+  "day.lead.decay":
+    "Mit {count} hast du länger nicht gesprochen. Es wartet nichts auf dich.",
   "day.lead.morningOnly":
     "Nichts wartet auf dich — die Nacht hat {count} zum Anfangen herausgesucht.",
   "day.lead.ranOvernight":
@@ -190,6 +192,11 @@ export const de = {
   "day.atRisk": "Wird still",
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
+  "day.decay": "Beziehungen, die einschlafen",
+  "day.decay.empty": "Sie sind mit allen in Kontakt, mit denen Sie es waren.",
+  "day.decay.quiet": "Seit {days} Tagen kein Austausch.",
+  "day.decay.quietSince":
+    "Seit {days} Tagen kein Austausch — zuletzt am {date}.",
   "day.risk.closeOverdue": "Abschluss war für {date} geplant — noch offen.",
   "day.commitments": "Du hast zugesagt",
   "day.commitments.empty": "Keine Zusagen werden f\u00e4llig.",
@@ -1604,6 +1611,9 @@ export const de = {
   "co.profileField.legal_name": "Eingetragener Name",
   "co.profileField.registered_address": "Eingetragene Anschrift",
   "co.profileField.register_vat": "Register / USt-IdNr.",
+  "co.profileField.legal_form": "Rechtsform",
+  "co.profileField.register_court": "Registergericht",
+  "co.profileField.register_number": "Registernummer",
   "co.profileField.industry": "Branche",
   "co.profileField.history": "Historie",
   "co.profile.title": "Firmenprofil",
@@ -3582,6 +3592,15 @@ export const de = {
   "ob.manual.register_vat": "Wie lauten Register- und USt-IdNr./UID?",
   "ob.manual.register_vatHint":
     "Trage die Kennungen exakt wie ausgegeben ein. Leer lassen, wenn keine zutrifft.",
+  "ob.manual.legal_form": "Welche Rechtsform hat das Unternehmen?",
+  "ob.manual.legal_formHint":
+    "Die Form, wie sie im Register steht, etwa GmbH, AG oder Ltd.",
+  "ob.manual.register_court": "Welches Gericht führt den Registereintrag?",
+  "ob.manual.register_courtHint":
+    "Das im Impressum genannte Gericht, etwa Amtsgericht Charlottenburg.",
+  "ob.manual.register_number": "Wie lautet die Handelsregisternummer?",
+  "ob.manual.register_numberHint":
+    "Nur der Registereintrag, etwa HRB 12345 B. Die USt-IdNr. gehört in das Feld darüber.",
   "ob.manual.industry": "In welcher Branche ist das Unternehmen tätig?",
   "ob.manual.industryHint":
     "Wähle die Beschreibung, die deine Kunden sofort verstehen würden.",
@@ -3634,6 +3653,9 @@ export const de = {
   "ob.field.legal_name": "Eingetragener Firmenname",
   "ob.field.registered_address": "Anschrift",
   "ob.field.register_vat": "Register / USt-ID",
+  "ob.field.legal_form": "Rechtsform",
+  "ob.field.register_court": "Registergericht",
+  "ob.field.register_number": "Registernummer",
   "ob.field.industry": "Branche",
   "ob.field.history": "Firmengeschichte",
 

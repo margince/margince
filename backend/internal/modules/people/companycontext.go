@@ -110,6 +110,9 @@ var profileContextScopes = map[string]CompanyContextScope{
 	fieldLegalName:         CompanyContextAdministrative,
 	fieldRegisteredAddress: CompanyContextAdministrative,
 	fieldRegisterVat:       CompanyContextAdministrative,
+	fieldLegalForm:         CompanyContextAdministrative,
+	fieldRegisterCourt:     CompanyContextAdministrative,
+	fieldRegisterNumber:    CompanyContextAdministrative,
 }
 
 // GetCompanyContext reads and assembles the selected anchor-company scopes

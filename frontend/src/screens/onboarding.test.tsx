@@ -16,7 +16,15 @@ import {
 } from "../../vitest.budget";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
-import { OnboardingScreen } from "./onboarding";
+import {
+  CUSTOMER_FIELDS,
+  EMPTY_DRAFT,
+  LEGAL_IDENTITY_FIELDS,
+  OFFER_FIELDS,
+  OnboardingScreen,
+  onboardingDraftPayload,
+  SALES_FIELDS,
+} from "./onboarding";
 import { READ_POLL_MS } from "./onboarding-conversation/use-company-read";
 
 // The onboarding invariants that survived the conversational flip, driven
@@ -331,6 +339,9 @@ async function completeManualInterview() {
   await answerManual("Gradion GmbH");
   await answerManual("Hauptstrasse 1, 10115 Berlin");
   await answerManual("HRB 12345 · DE123456789");
+  await answerManual("GmbH");
+  await answerManual("Amtsgericht Charlottenburg");
+  await answerManual("HRB 12345 B");
   await answerManual("Gradion");
   await answerManual("Revenue software for manufacturers");
   await answerManual("Mid-market manufacturers");
@@ -630,6 +641,11 @@ describe("the mandatory company minimum", () => {
     await chooseManual();
 
     expect(screen.getByText("Your legal organization")).toBeTruthy();
+    // Past the six optional legal facts to display_name, the one question in
+    // this chapter that blocks the interview until it is answered.
+    await skipManual();
+    await skipManual();
+    await skipManual();
     await skipManual();
     await skipManual();
     await skipManual();
@@ -677,5 +693,29 @@ describe("the mandatory company minimum", () => {
       (screen.getByLabelText(/What do you sell\?/) as HTMLTextAreaElement)
         .value,
     ).toBe("Revenue software");
+  });
+});
+
+// onboardingDraftPayload serializes the interview's answers for BOTH the
+// /onboarding/state checkpoint and the conversational company_draft, so a
+// field it forgets is a field the reader answers and then gets asked for
+// again on resume. It is a hand-listed mirror of the four field groups and
+// nothing else fails when it falls short of them — a profile field shipped
+// missing from it exactly this way.
+describe("the onboarding draft payload", () => {
+  it("carries every field the interview can collect", () => {
+    const collected = [
+      ...LEGAL_IDENTITY_FIELDS,
+      ...OFFER_FIELDS,
+      ...CUSTOMER_FIELDS,
+      ...SALES_FIELDS,
+    ];
+    // EMPTY_DRAFT.values is the form's own blank shape, so this asks the
+    // question of the real type rather than of a literal assembled here.
+    // `website` rides along in it and is the one form key the payload owes
+    // nothing for: it is the address a read starts from, not a profile fact.
+    const serialized = Object.keys(onboardingDraftPayload(EMPTY_DRAFT.values));
+
+    expect([...collected].sort()).toEqual(serialized.sort());
   });
 });

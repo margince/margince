@@ -19569,7 +19569,7 @@ export interface components {
          */
         ColdStartField: {
             /** @enum {string} */
-            field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history";
+            field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
             value: string;
             /** @description Verbatim source text (from the page, the pasted text, or the user's own words) — non-empty or the field is absent. */
             evidence_snippet: string;
@@ -19638,6 +19638,9 @@ export interface components {
             legal_name?: string | null;
             registered_address?: string | null;
             register_vat?: string | null;
+            legal_form?: string | null;
+            register_court?: string | null;
+            register_number?: string | null;
             industry?: string | null;
             history?: string | null;
         };
@@ -19701,8 +19704,14 @@ export interface components {
             legal_name?: string | null;
             /** @description The registered address as one formatted line. */
             registered_address?: string | null;
-            /** @description VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). */
+            /** @description VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number. */
             register_vat?: string | null;
+            /** @description The legal form as the imprint prints it (GmbH, AG, Ltd) — §5 DDG makes a German site state it. */
+            legal_form?: string | null;
+            /** @description The court holding the commercial register entry (e.g. Amtsgericht Charlottenburg). */
+            register_court?: string | null;
+            /** @description The commercial register entry alone (e.g. HRB 12345 B) — a registry identity, unlike the VAT ID a tax authority issues. */
+            register_number?: string | null;
             industry?: string | null;
             /** @description Plain-language summary of what the company sells or delivers. */
             offer_summary?: string | null;
@@ -19741,8 +19750,14 @@ export interface components {
             legal_name?: string | null;
             /** @description The registered address as one formatted line. */
             registered_address?: string | null;
-            /** @description VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). */
+            /** @description VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number. */
             register_vat?: string | null;
+            /** @description The legal form as the imprint prints it (GmbH, AG, Ltd). */
+            legal_form?: string | null;
+            /** @description The court holding the commercial register entry. */
+            register_court?: string | null;
+            /** @description The commercial register entry alone (e.g. HRB 12345 B). */
+            register_number?: string | null;
             industry?: string | null;
             /** @description The company's own domain or full URL; stored as the bare domain. */
             website?: string | null;
@@ -19777,7 +19792,7 @@ export interface components {
             /** @description The human who confirmed the claim. Server-stamped, never accepted from a request body. */
             readonly verified_by?: string | null;
             /** @enum {string} */
-            field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history";
+            field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
             value: string;
             /** @enum {string} */
             source: "human" | "site_read" | "connector" | "migration" | "technical_lookup";
@@ -19994,7 +20009,7 @@ export interface components {
         };
         CompanySiteReadSuggestedChange: {
             /** @enum {string} */
-            field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history";
+            field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
             value: string;
             reason: string;
         };
@@ -22637,10 +22652,28 @@ export interface components {
              *     Absent — not empty — on an installation whose feed does not read deals.
              */
             at_risk?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The reader's OWN relationships that have gone silent, longest silence first —
+             *     people they were in contact with and are not any more.
+             *
+             *     A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
+             *     a contact carrying no open deal never reaches that lane, and those are exactly
+             *     the relationships that lapse unnoticed. `detail` carries the silence in days,
+             *     from the same §4 derivation the contact's own page shows, so the two surfaces
+             *     cannot come to disagree about when somebody went quiet.
+             *
+             *     Only relationships this reader actually had: a contact nobody here ever spoke
+             *     to has not gone quiet, and a lane that said otherwise would report every
+             *     dormant record as a lapse.
+             *
+             *     Absent — not empty — on an installation whose feed does not derive relationship
+             *     changes.
+             */
+            relationship_decay?: components["schemas"]["AttentionItem"][];
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22661,6 +22694,8 @@ export interface components {
             at_risk?: number;
             /** @description How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
             commitments?: number;
+            /** @description How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in. */
+            relationship_decay?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22675,7 +22710,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**
@@ -23155,7 +23190,7 @@ export interface components {
         /** @description Narrow the brief to one body of work: it is written from the 360 scoped to that project — activity filed under another project drops out, activity filed under none stays — and the response's `scope` says so. The cache fingerprint carries the project, so a scoped and an unscoped brief never serve each other. Must be a live project the caller can read; an invisible or archived one is `404`. */
         BriefProjectId: string;
         /** @description The profile field's key — the same closed vocabulary `CompanyProfileField.field` carries. */
-        ProfileFieldKey: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history";
+        ProfileFieldKey: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history" | "legal_form" | "register_court" | "register_number";
         /**
          * @description One fact's identity within its organization, spelled `<field>:<value_key>` (e.g.
          *     `named_customer:acme-inc`). A fact is multi-valued, so `field` alone does not name a row and
