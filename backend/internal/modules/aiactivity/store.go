@@ -44,8 +44,12 @@ type Change struct {
 	FinishedAt *time.Time
 	StaleAfter *time.Time
 
-	SubjectType  string
-	SubjectID    ids.UUID
+	SubjectType string
+	SubjectID   ids.UUID
+	// SubjectLabel is what that record is CALLED, as the source knew it when it
+	// emitted. Stored rather than resolved: this package reaches back into no
+	// source's tables, so a name it is not handed is a name it cannot have.
+	SubjectLabel string
 	Quantity     *int
 	QuantityUnit string
 
@@ -86,9 +90,9 @@ INSERT INTO ai_task_run (
   source, occurrence_key, kind, ai_task, attempt,
   actor_scope, actor_user_id, passport_id,
   state, queued_at, started_at, finished_at, stale_after,
-  subject_type, subject_id, quantity, quantity_unit,
+  subject_type, subject_id, subject_label, quantity, quantity_unit,
   degrade_reason, summary, last_event_id)
-VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
+VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)
 ON CONFLICT (source, occurrence_key) DO UPDATE SET
   kind = EXCLUDED.kind, ai_task = EXCLUDED.ai_task, attempt = EXCLUDED.attempt,
   actor_scope = EXCLUDED.actor_scope, actor_user_id = EXCLUDED.actor_user_id,
@@ -97,6 +101,7 @@ ON CONFLICT (source, occurrence_key) DO UPDATE SET
   started_at = EXCLUDED.started_at, finished_at = EXCLUDED.finished_at,
   stale_after = EXCLUDED.stale_after,
   subject_type = EXCLUDED.subject_type, subject_id = EXCLUDED.subject_id,
+  subject_label = EXCLUDED.subject_label,
   quantity = EXCLUDED.quantity, quantity_unit = EXCLUDED.quantity_unit,
   degrade_reason = EXCLUDED.degrade_reason, summary = EXCLUDED.summary,
   last_event_id = EXCLUDED.last_event_id,
@@ -154,7 +159,8 @@ func (c Change) args() []any {
 		c.Source, c.OccurrenceKey, c.Kind, textOrNil(c.AITask), c.Attempt,
 		c.ActorScope, uuidOrNil(c.ActorUserID), uuidOrNil(c.PassportID),
 		c.State, c.QueuedAt, c.StartedAt, c.FinishedAt, c.StaleAfter,
-		textOrNil(c.SubjectType), uuidOrNil(c.SubjectID), c.Quantity, textOrNil(c.QuantityUnit),
+		textOrNil(c.SubjectType), uuidOrNil(c.SubjectID), textOrNil(c.SubjectLabel),
+		c.Quantity, textOrNil(c.QuantityUnit),
 		textOrNil(c.DegradeReason), textOrNil(c.Summary), c.EventID,
 	}
 }

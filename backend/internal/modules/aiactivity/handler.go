@@ -117,6 +117,7 @@ func change(p crmcontracts.InternalEventAiTaskStateChanged, scope string, user i
 		StaleAfter:    staleAfter(p),
 		SubjectType:   deref(p.SubjectType),
 		SubjectID:     derefContractID(p.SubjectId),
+		SubjectLabel:  deref(p.SubjectLabel),
 		Quantity:      p.Quantity,
 		QuantityUnit:  deref(p.QuantityUnit),
 		DegradeReason: deref(p.DegradeReason),

@@ -2,8 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { useMutation } from "@tanstack/react-query";
-import { type ReactNode, useEffect } from "react";
+import type { ReactNode } from "react";
 import { userEvent, within } from "storybook/test";
 import {
   installFetchStub,
@@ -30,9 +29,23 @@ type Answers = Readonly<{
   connectorStatus: "connected" | "reauth_required";
   licenseState: "valid" | "absent" | "rejected";
   approvals: number;
-  duplicates: number;
   calls: readonly Readonly<{ task: string; minutesAgo: number }>[];
+  /** What `/me/ai-activity` answers. The agent's own states come from here and
+   *  from nowhere else, so a story for one is a story about this feed. */
+  running?: readonly unknown[];
+  recent?: readonly unknown[];
 }>;
+
+/** One occurrence as the wire spells it. */
+function occurrence(over: Readonly<Record<string, unknown>>) {
+  return {
+    id: `run-${String(over.kind)}-${String(over.state)}`,
+    kind: "morning_brief",
+    state: "running",
+    started_at: new Date(NOW - 4 * 60_000).toISOString(),
+    ...over,
+  };
+}
 
 // The two objects the section actually asks about: `license` gates the posture
 // the orb reads (`useLicensePosture`) and `automation:update` gates the runtime
@@ -64,19 +77,6 @@ function callRow(task: string, minutesAgo: number, index: number) {
     latency_ms: 840,
     has_payload: false,
   };
-}
-
-/** A write held open for the life of the story — the only way to reach
- *  `working` without a real mutation somewhere else in the tree to trigger. */
-function PendingWrite() {
-  const write = useMutation({
-    mutationFn: () => new Promise<void>(() => {}),
-  });
-  // biome-ignore lint/correctness/useExhaustiveDependencies: mutate is stable for the life of this hook; listing it would refire the pending write on every render instead of holding one open.
-  useEffect(() => {
-    write.mutate();
-  }, []);
-  return null;
 }
 
 function Rail({
@@ -128,13 +128,6 @@ function story(answers: Answers, collapsed = false, grants = OPERATOR) {
             },
           ],
         }),
-      "GET /dedupe/candidates": () =>
-        jsonResponse({
-          data: Array.from({ length: answers.duplicates }, (_, index) => ({
-            id: `dupe-${index}`,
-            status: "open",
-          })),
-        }),
       "GET /ai/calls": () =>
         jsonResponse({
           data: answers.calls.map((call, index) =>
@@ -146,6 +139,11 @@ function story(answers: Answers, collapsed = false, grants = OPERATOR) {
         jsonResponse({
           days: [],
           budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
+        }),
+      "GET /me/ai-activity": () =>
+        jsonResponse({
+          running: answers.running ?? [],
+          recent: answers.recent ?? [],
         }),
     });
     return (
@@ -163,7 +161,6 @@ const HEALTHY: Answers = {
   connectorStatus: "connected",
   licenseState: "valid",
   approvals: 0,
-  duplicates: 0,
   calls: [
     { task: "growth_fit", minutesAgo: 12 },
     { task: "summarize", minutesAgo: 47 },
@@ -181,82 +178,36 @@ type Story = StoryObj<typeof AgentRail>;
 /** Idle: every source reachable, nothing waiting, a model bound, a valid licence. */
 export const Idle: Story = { render: story(HEALTHY) };
 
-/** Ingest: a read of the record on screen is in flight. Held open by a
- *  connectors read the fetch stub never answers, the same evidence the real
- *  section derives `ingest` from. */
+/** Ingest: evidence arriving. Which half of the live vocabulary a run puts the
+ *  orb in comes from the KIND of work (ai-activity-orb.ts), and a document being
+ *  read is the plainest case of something coming in. */
 export const Ingest: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": meRoute(OPERATOR),
-      "GET /assistant/profile": () =>
-        jsonResponse({
-          name: "Margince",
-          kind: "ai",
-          state: "configured",
-          inference_mode: "cloud",
-          providers: ["anthropic"],
-        }),
-      "GET /installation/license": () =>
-        jsonResponse({
-          state: "valid",
-          seats_used: 1,
-          over_limit: false,
-          checked_at: "2026-08-01T09:00:00Z",
-        }),
-      "GET /connectors": () => new Promise<Response>(() => {}),
-      "GET /ai/usage": () =>
-        jsonResponse({
-          days: [],
-          budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
-        }),
-    });
-    return (
-      <StoryProviders>
-        <Rail>
-          <AgentRail route={{ screen: "companies" }} />
-        </Rail>
-      </StoryProviders>
-    );
-  },
+  render: story({
+    ...HEALTHY,
+    running: [occurrence({ kind: "document_extract" })],
+  }),
 };
 
-/** Working: a write in flight. `PendingWrite` holds one mutation open for the
- *  life of the story, the same evidence the real section derives `working`
- *  from. */
+/** Working: the agent reasoning over evidence it already holds. Nothing this
+ *  tab does reaches the orb, so the story is a run and not a pending write. */
 export const Working: Story = {
-  render: () => {
-    installFetchStub({
-      "GET /me": meRoute(OPERATOR),
-      "GET /assistant/profile": () =>
-        jsonResponse({
-          name: "Margince",
-          kind: "ai",
-          state: "configured",
-          inference_mode: "cloud",
-          providers: ["anthropic"],
-        }),
-      "GET /installation/license": () =>
-        jsonResponse({
-          state: "valid",
-          seats_used: 1,
-          over_limit: false,
-          checked_at: "2026-08-01T09:00:00Z",
-        }),
-      "GET /ai/usage": () =>
-        jsonResponse({
-          days: [],
-          budget: { monthly_tokens: 0, spent_tokens: 0, band: "normal" },
-        }),
-    });
-    return (
-      <StoryProviders>
-        <PendingWrite />
-        <Rail>
-          <AgentRail route={{ screen: "companies" }} />
-        </Rail>
-      </StoryProviders>
-    );
-  },
+  render: story({ ...HEALTHY, running: [occurrence({})] }),
+};
+
+/** Error: the overnight brief failed. It holds the orb until the panel that
+ *  lists it has been opened, because a run that broke at four in the morning was
+ *  seen by nobody. */
+export const RunFailed: Story = {
+  render: story({
+    ...HEALTHY,
+    recent: [occurrence({ state: "failed" })],
+  }),
+};
+
+/** Warning: a live run past the lease its own source declared. The work may yet
+ *  land, and there is nothing for the reader to do but know. */
+export const RunStalled: Story = {
+  render: story({ ...HEALTHY, running: [occurrence({ state: "stalled" })] }),
 };
 
 /** Warning: no licence bound. The orb goes amber and the line names the fault
@@ -296,7 +247,7 @@ export const CollapsedRail: Story = {
 /** The panel open, showing the recap, the runtime row and the workspace
  *  section together — the detail the block itself has no room for. */
 export const PanelOpen: Story = {
-  render: story({ ...HEALTHY, approvals: 3, duplicates: 2 }),
+  render: story({ ...HEALTHY, approvals: 3 }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(

@@ -19,17 +19,14 @@ import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
-import { type CappedCount, cappedCountLabel } from "../format/cappedcount";
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { usePendingApprovals } from "../screens/approvals.queries";
-import { useOrganization360 } from "../screens/company360";
 import { useConnectors } from "../screens/connectors";
-import { useDedupeQueue } from "../screens/dedupe.queries";
 import { useLicenseEntitlement } from "../screens/license";
-import { type AppActivity, useAppActivity } from "./activity";
 import { clearAgentEdge, publishAgentEdge } from "./agent-edge-signal";
+import { type AgentFault, useAgentFault } from "./agent-fault";
 import {
   IDLE_ORDER,
   type IdleKind,
@@ -43,6 +40,7 @@ import { type DemoRun, useDemoRun } from "./agentrail-demo";
 import { useAgentTicker } from "./agentrail-ticker";
 import { type AiActivity, useAiActivity } from "./ai-activity";
 import { lineFor, PANEL_HEADING, RUN_DETAIL_LABEL } from "./ai-activity-lines";
+import { laneFor } from "./ai-activity-orb";
 import { useAgentTierMap } from "./autonomy";
 import { useCan } from "./capability";
 import { usePopoverDismiss } from "./popover";
@@ -94,8 +92,6 @@ type Signals = Readonly<{
   waiting: number | undefined;
   /** Sources the agent cannot reach, named as the reader knows them. */
   offline: readonly string[];
-  /** Duplicate pairs the agent will not decide for itself; undefined until read. */
-  duplicates: CappedCount | undefined;
   /** Whether this deployment has a model bound at all. */
   ai: AiPosture;
   /** What the installation is entitled to; undefined when this seat may not
@@ -159,26 +155,18 @@ function useSignals(): Signals {
   const t = useT();
   const approvals = usePendingApprovals();
   const connectors = useConnectors();
-  const dedupe = useDedupeQueue();
   const ai = useAiPosture();
   const license = useLicensePosture();
 
   const offline = (connectors.data?.data ?? [])
     .filter((connection) => connection.status !== "connected")
     .map((connection) => connection.account_label ?? connection.provider);
-  const duplicates = dedupe.data
-    ? {
-        seen: dedupe.data.data.length,
-        more: dedupe.data.page?.has_more ?? false,
-      }
-    : undefined;
 
   return {
     // Absent `data` means the read has not answered, or was refused. A 0 here
     // would be this surface inventing an all-clear.
     waiting: approvals.data ? approvals.data.data.length : undefined,
     offline,
-    duplicates,
     ai,
     license,
     licenseLine:
@@ -338,33 +326,6 @@ function modelText(
     return `${latest.provider}/${latest.served_model}`;
   }
   return read.allowed ? LABELS.noCallsYet : LABELS.unreadable;
-}
-
-/**
- * What the agent has to say about the record you are on.
- *
- * The account's own suggestions, from the same 360 read the company page makes —
- * one query key, so the bar and the page can never disagree about what is
- * standing. Only organizations serve them today; every other screen gets the
- * honest empty line rather than an invented finding.
- */
-/**
- * What the agent has on the record you are standing on, and whether it is
- * reading it right now.
- *
- * The same 360 query the company page makes — one key, so the two can never
- * disagree, and being on that page costs nothing extra because the page has
- * already asked. `reading` is the honest source for the bar's one moment of
- * `ingesting`: the app is literally fetching this record's evidence, so the orb
- * taking context in is a report and not a flourish.
- */
-function useRecordRead(route: Route): Readonly<{ reading: boolean }> {
-  const isCompany = route.screen === "companies" && Boolean(route.id);
-  // Enabled, not id-juggled: an empty id is a request the server answers 422,
-  // and chrome that fires one on every screen is chrome that logs an error on
-  // every screen.
-  const org = useOrganization360(route.id ?? "", isCompany);
-  return { reading: isCompany && org.isFetching };
 }
 
 /**
@@ -648,22 +609,34 @@ function AgentPanel({
       <RunSection heading={PANEL_HEADING.running} items={running} />
       <RunSection heading={PANEL_HEADING.settled} items={recent} />
 
-      {/* The counts, as tiles rather than rows: they are the two numbers somebody
-          opens this panel to act on, and a number in a list of rows reads as one
-          more line of text. The strip carries whichever of them answered, which
-          is anything from none to both. */}
-      <div className="arsect">
-        <h4>{LABELS.acrossWorkspace}</h4>
-        {signals.waiting === undefined && signals.duplicates === undefined ? (
-          // Nothing to act on, said in words. An absent block would read as a
-          // panel that has not looked; this is the agent saying it looked.
-          <p className="arnone">{LABELS.allClear}</p>
-        ) : (
-          <div className="artiles">
-            {/* The tile leads with the number because that is what a reader
-                scans for, and its NAME leads with the label because "10" spoken
-                alone is not a sentence about anything. */}
-            {signals.waiting !== undefined && (
+      {/* The one count somebody opens this panel to act on, as a tile rather
+          than a row: a number in a list of rows reads as one more line of text.
+          The duplicate queue used to stand beside it and does not any more. It
+          is not the agent's work — it is a queue the product keeps, repaired on
+          the screen that owns it, and every place it appeared here was a second
+          telling of a number the worklist already carries. */}
+      {/* THREE cases, not two, and the difference is the whole doctrine of this
+          surface: a count nobody has read is not a count of zero.
+
+          Absent when the read has not answered or this seat may not make it —
+          the panel cannot tell those two apart, and both would be misreported
+          by either sentence available: "nothing needs you" claims an all-clear
+          nobody read, and "not readable on this seat" accuses a seat whose read
+          is merely still in flight. Silence is the one honest answer to a
+          question that was never answered.
+
+          A read that ANSWERED zero is different, and it earns the sentence:
+          the agent looked, and there is nothing waiting. */}
+      {signals.waiting !== undefined && (
+        <div className="arsect">
+          <h4>{LABELS.acrossWorkspace}</h4>
+          {signals.waiting === 0 ? (
+            <p className="arnone">{LABELS.allClear}</p>
+          ) : (
+            <div className="artiles">
+              {/* The tile leads with the number because that is what a reader
+                  scans for, and its NAME leads with the label because "10"
+                  spoken alone is not a sentence about anything. */}
               <a
                 className="arbox artile"
                 href="#/today"
@@ -672,20 +645,10 @@ function AgentPanel({
                 <b>{formatNumber(signals.waiting, locale)}</b>
                 <span>{LABELS.approvals}</span>
               </a>
-            )}
-            {signals.duplicates !== undefined && (
-              <a
-                className="arbox artile"
-                href="#/today"
-                aria-label={`${LABELS.duplicatesRow} ${cappedCountLabel(signals.duplicates, locale)}`}
-              >
-                <b>{cappedCountLabel(signals.duplicates, locale)}</b>
-                <span>{LABELS.duplicatesRow}</span>
-              </a>
-            )}
-          </div>
-        )}
-      </div>
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="arsect">
         <h4>
@@ -898,39 +861,55 @@ function usePanelFrame(
 }
 
 /**
- * What amber is about.
- *
- * Amber is the state a person is meant to notice and not act on this second, and
- * the licence is what puts the product there: it keeps working, and it keeps
- * saying so. The duplicate queue is the other thing that can hold amber, and it
- * ranks under the licence because it is true of one screen rather than of the
- * whole installation.
- */
-function warningLine(signals: Signals, locale: Locale): string {
-  if (signals.license === "none" || signals.license === "refused") {
-    return signals.licenseLine;
-  }
-  if (signals.duplicates?.seen) {
-    return `${cappedCountLabel(signals.duplicates, locale)} ${LABELS.duplicates}`;
-  }
-  return LABELS.review;
-}
-
-/**
  * The state the section shows when nobody has overridden it.
  *
- * The order is severity. Red is NOT CONNECTED and nothing else: a source the
- * agent cannot reach, or no model bound at all, in both cases the agent is not
- * running. Amber is the fault that can wait, and an unlicensed installation is
- * the case it exists for. Everything else is the tool working or at rest.
+ * ONE SUBJECT: the agent. Nothing the browser does reaches this function. The
+ * rail used to derive `ingest` from a query being in flight and `working` from a
+ * mutation, which meant the Core spoke the agent's vocabulary while reporting
+ * the reader's own clicks: the orb went to `ingest` because a list was loading,
+ * and `ingest` was therefore the one state the agent could never cause. What the
+ * tool is doing is still reported, in its own quieter line under this one, and
+ * it no longer borrows the agent's voice to do it.
+ *
+ * The order is severity, and it starts with the faults that stop the agent
+ * running AT ALL, because an agent with no model bound is not a broken run, it
+ * is no runs. Under those, a run that actually broke. Under that, the licence.
+ * Only then the agent's own live work, and at the bottom, rest.
+ *
+ * It answers the CAUSE alongside the state, and the two travel together for one
+ * reason: the sentence the block carries is the cause's own, so a caller that
+ * re-derived the cause by its own reading could caption a colour with a run that
+ * did not produce it. A licensing amber over an installation whose agent is
+ * mid-brief is exactly that case, and it is not hypothetical: a workspace in
+ * grace keeps running its agent.
  */
+type Reading = Readonly<{
+  state: MarginceCoreState;
+  /** The occurrence the state is ABOUT, or null when no occurrence caused it. */
+  cause: AiActivityItem | null;
+}>;
+
 function derive(
-  activity: AppActivity,
   signals: Signals,
   server: AiActivity,
-): MarginceCoreState {
+  fault: AgentFault | null,
+): Reading {
   if (signals.ai === "unconfigured" || signals.offline.length > 0) {
-    return "error";
+    return { state: "error", cause: null };
+  }
+  // A run that broke, and that this reader has not been shown yet. It outranks
+  // the licence because it is a thing that HAPPENED rather than a standing
+  // condition, and it clears by being read rather than by being repaired.
+  if (fault !== null) {
+    return { state: fault.severity, cause: fault.item };
+  }
+  // A live run past the lease its own source declared. The server derives it, so
+  // a worker that died without saying so cannot go on being displayed as busy,
+  // and amber is right for it: the work may yet land, and there is nothing for
+  // the reader to do but know.
+  const stalled = server.running.find((item) => item.state === "stalled");
+  if (stalled) {
+    return { state: "warning", cause: stalled };
   }
   // REFUSED only, and it stays amber rather than escalating, because escalating
   // would make the chrome a sales surface.
@@ -948,24 +927,25 @@ function derive(
   // names both absences and says what each one costs — instead of spending the
   // chrome's only ambient warning channel on something that is permanently true.
   if (signals.license === "refused") {
-    return "warning";
+    return { state: "warning", cause: null };
   }
-  // Below the two faults, because a source the agent cannot reach outranks work
-  // in progress. Either side of the or is the same standing: the scheduled
-  // runner works while nobody is looking at this tab, and a rail that moved only
-  // for its own fetches reported an agent at rest whenever the reader was.
-  if (server.working || activity.working) {
-    return "working";
-  }
-  if (activity.reading) {
-    return "ingest";
+  // The agent's own live work, and which half of the lifecycle it is in comes
+  // from the KIND of work rather than from how far along it is: evidence
+  // arriving is `ingest`, reasoning over evidence already held is `working`
+  // (ai-activity-orb.ts). A queued occurrence counts as live for this, because
+  // the agent has taken the work up and the reader has no use for the
+  // difference; the line under the orb carries that precision, in copy the feed
+  // already has for every state.
+  const live = server.running.find((item) => item.state !== "stalled");
+  if (live) {
+    return { state: laneFor(live), cause: live };
   }
   // A request that failed a moment ago does NOT colour the orb. One dropped
   // request on a flaky connection would otherwise flash the corner of every
   // screen red and green and red again, and a light that does that is a light
   // nobody reads. What the orb reports is standing state; the screen that made
   // the request reports the request.
-  return "idle";
+  return { state: "idle", cause: null };
 }
 
 /**
@@ -977,10 +957,7 @@ function derive(
  */
 function idleLines(
   signals: Signals,
-  spend: Readonly<{ allowed: boolean; minor: number | undefined }>,
-  money: string,
   devLine: string,
-  locale: Locale,
   /** The newest run that settled today, or null when there is none to name. */
   settledLine: string | null,
 ): readonly string[] {
@@ -994,21 +971,9 @@ function idleLines(
       signals.waiting !== undefined && signals.waiting > 0
         ? `${signals.waiting} ${LABELS.waiting}`
         : undefined,
-    duplicates:
-      signals.duplicates !== undefined && signals.duplicates.seen > 0
-        ? `${cappedCountLabel(signals.duplicates, locale)} ${LABELS.duplicatesIdle}`
-        : undefined,
-    spend:
-      spend.allowed && spend.minor !== undefined
-        ? `${money} ${LABELS.spentThisMonth}`
-        : undefined,
     // The development path answers every call with an invention, and a reader who
     // does not know that is being misled by a product that looks like it works.
     model: signals.ai === "development" ? devLine : undefined,
-    licence:
-      signals.license === "none" || signals.license === "refused"
-        ? signals.licenseLine
-        : undefined,
   };
   const lines = IDLE_ORDER.map((kind) => said[kind]).filter(
     (line): line is string => line !== undefined,
@@ -1043,39 +1008,74 @@ function useIdleLine(lines: readonly string[]): string {
   return lines[at % count] ?? lines[0];
 }
 
-/** The one line the block carries, for whichever state is showing. */
+/**
+ * What that occurrence is called, in the reader's words.
+ *
+ * A kind the copy map does not narrate answers with the plainest true thing
+ * instead of nothing, but ONLY where the state is a fault: an unnamed failure
+ * still has to say a failure happened, while an unnamed run in flight can fall
+ * through to the state's own generic word without losing anything.
+ */
+function causeLine(
+  cause: AiActivityItem | null,
+  t: (key: MessageKey) => string,
+): string | null {
+  if (cause === null) {
+    return null;
+  }
+  const said = lineFor(cause, t);
+  if (said !== null) {
+    return said;
+  }
+  if (cause.state === "failed") {
+    return LABELS.runFailed;
+  }
+  return cause.state === "degraded" || cause.state === "stalled"
+    ? LABELS.runStopped
+    : null;
+}
+
+/**
+ * The one line the block carries, for whichever state is showing.
+ *
+ * `agentLine` is the sentence belonging to the occurrence that PUT the orb in
+ * this state, in the reader's own locale: the run that broke, the one past its
+ * lease, or the one running now. It leads wherever it exists, because a state is
+ * a colour and a named run is an answer. It is null only for a state no
+ * occurrence caused (a licence, an unbound model) or for a kind this build
+ * writes no sentence for.
+ */
 function barLine(
   state: MarginceCoreState,
   signals: Signals,
-  record: Readonly<{ reading: boolean }>,
   devLine: string,
-  locale: Locale,
-  /** What the server says it is doing, or null when it says nothing this
-   *  surface has words for. */
-  serverLine: string | null,
+  agentLine: string | null,
 ): string {
   if (state === "error") {
-    // Red says NOT CONNECTED, and the line says what is not connected: a
-    // deployment with no model bound is a different repair from a source that
-    // stopped answering, and "cannot reach Margince" would be wrong about both.
+    // A deployment with no model bound and a source that stopped answering are
+    // different repairs, and both outrank a run that broke: an agent that cannot
+    // run at all is not a failed run, it is no runs.
     if (signals.ai === "unconfigured") {
       return LABELS.noModel;
     }
     if (signals.offline.length > 0) {
       return `${LABELS.cannotReach} ${signals.offline.join(", ")}`;
     }
-    return LABELS.unreachable;
+    return agentLine ?? LABELS.runFailed;
   }
   if (state === "warning") {
-    return warningLine(signals, locale);
+    // Amber with no occurrence behind it is the licence, and it is the only way
+    // to reach that: derive() ranks a broken run and a stalled one above it, and
+    // both carry a sentence of their own.
+    return agentLine ?? signals.licenseLine;
   }
   if (state === "working") {
-    // The named run outranks the generic word: "Working" is true of both a local
-    // save and an overnight brief, and only one of them is news.
-    return serverLine ?? LABELS.working;
+    // The named run outranks the generic word: "Working" is true of an overnight
+    // brief and of a one-line summary, and only one of them is news.
+    return agentLine ?? LABELS.working;
   }
   if (state === "ingest") {
-    return record.reading ? LABELS.readingRecord : LABELS.reading;
+    return agentLine ?? LABELS.reading;
   }
   if (signals.waiting !== undefined && signals.waiting > 0) {
     return `${signals.waiting} ${LABELS.waiting}`;
@@ -1115,16 +1115,16 @@ export function AgentRail({
   const phone = usePhoneViewport();
   const signals = useSignals();
   const model = useRecentCalls();
-  const record = useRecordRead(route);
-  const activity = useAppActivity();
   const server = useAiActivity();
   const ticker = useAgentTicker();
   const spend = useAiSpend();
   const { locale } = useLocale();
   const demo = useDemoRun();
+  const { fault, acknowledge } = useAgentFault(server.recent);
   // A run outranks everything, including a held state: it is the reviewer's own
   // request, and it lasts seconds.
-  const state = demo.state ?? override ?? derive(activity, signals, server);
+  const derived = derive(signals, server, fault);
+  const state = demo.state ?? override ?? derived.state;
 
   // What the screen's margins draw, published rather than re-derived: the run,
   // the switcher and the reads above are all local to this component, so a second
@@ -1173,14 +1173,7 @@ export function AgentRail({
   // The bar keeps the live run because that is what is true this second.
   const settledLine = server.recent[0] ? lineFor(server.recent[0], t) : null;
   const resting = useIdleLine(
-    idleLines(
-      signals,
-      spend,
-      money,
-      t("auth.coreDevelopment"),
-      locale,
-      settledLine,
-    ),
+    idleLines(signals, t("auth.coreDevelopment"), settledLine),
   );
 
   // The one screen it absents itself from, and the reason is not layout: the Ask
@@ -1198,23 +1191,21 @@ export function AgentRail({
   // because a reviewer asked for that state; then whatever the state itself has
   // to say, because a fault outranks small talk; and at rest, the rotation of
   // true readings.
-  // The first run the server reports, when this surface has words for it. It
-  // outranks the resting rotation: a live run is what is true right now, and the
-  // rotation is what is true in general.
-  const serverLine = server.running[0] ? lineFor(server.running[0], t) : null;
+  //
+  // The named occurrence is the one that put the orb where it is, so the colour
+  // and the sentence can never be about two different runs.
+  // Only when the state SHOWING is the one the reading produced. The switcher
+  // and the scripted run both replace the state without replacing what caused
+  // it, and a caption from a reading nobody is looking at would name a run that
+  // has nothing to do with the colour on screen.
+  const agentLine =
+    state === derived.state ? causeLine(derived.cause, t) : null;
   const line =
     demo.said ??
     (override && REVIEW_ONLY[override]) ??
     (state === "idle"
       ? resting
-      : barLine(
-          state,
-          signals,
-          record,
-          t("auth.coreDevelopment"),
-          locale,
-          serverLine,
-        ));
+      : barLine(state, signals, t("auth.coreDevelopment"), agentLine));
   return (
     <section
       className="arblock"
@@ -1258,7 +1249,17 @@ export function AgentRail({
         ref={trigger}
         aria-expanded={open}
         aria-label={open ? LABELS.collapse : LABELS.expand}
-        onClick={() => setOpen((current) => !current)}
+        // Opening the panel is what acknowledges a broken run: the panel is
+        // where it is listed, in words, with whatever the source said about why
+        // it stopped, so opening it is the moment the reader has actually been
+        // told. Until then the orb holds the fault, however many hours it takes
+        // them to look.
+        onClick={() => {
+          if (!open) {
+            acknowledge();
+          }
+          setOpen((current) => !current);
+        }}
       >
         <MarginceCoreScene
           state={state}
@@ -1269,17 +1270,23 @@ export function AgentRail({
         {/* Hidden by the stylesheet on the collapsed rail, where the orb and the
             count are the whole report and the button's name carries the rest. */}
         <span className="arwords">
-          {/* One named thing at a time while the tool is fetching, the state's
-              own line when it is not. Keyed on the event id so a repeated phrase
-              still arrives as a new line rather than sitting there looking
-              stuck: what a reader is counting is EVENTS, and two identical
-              sentences in a row are two of them. */}
-          {ticker.length > 0 && demo.said === null ? (
-            <span className="arline arsaid" key={ticker[0].id}>
+          {/* The agent's line, and it is the agent's alone. It used to be shared
+              with the tool's own narration below, which meant the one sentence
+              about the agent vanished for as long as anything was loading: the
+              two subjects took turns in one slot, and a reader could not tell
+              which of them was talking. */}
+          <span className="arline">{line}</span>
+          {/* What the TOOL is fetching for this reader, one named thing at a
+              time, in its own quieter register underneath. It is true at the
+              same moment as the line above and about something else, so it sits
+              beside it rather than replacing it. Keyed on the event id so a
+              repeated phrase still arrives as a new line rather than sitting
+              there looking stuck: what a reader is counting is EVENTS, and two
+              identical sentences in a row are two of them. */}
+          {ticker.length > 0 && demo.said === null && (
+            <span className="artool" key={ticker[0].id}>
               {ticker[0].said}
             </span>
-          ) : (
-            <span className="arline">{line}</span>
           )}
           {/* The spend sits in the bar and not only in the panel: it is the one
               figure somebody is accountable for, and a number nobody opens a

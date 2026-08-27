@@ -2906,6 +2906,19 @@ export const en = {
   "agent.activity.documentExtract.degraded":
     "I got partway through your document and stopped.",
   "agent.activity.documentExtract.failed": "I couldn't read your document.",
+  // The same six, with the document NAMED. A rail that says "I'm reading your
+  // document" reports that software is busy; one that says "I'm reading
+  // Q3-offer.pdf" reports the reader's own afternoon. The name is the source's
+  // snapshot of what the product calls that document elsewhere, so these are
+  // used only when it sent one — every kind falls back to the pair above.
+  "agent.activity.documentExtractNamed.queued": "{name} is queued to be read.",
+  "agent.activity.documentExtractNamed.running": "I'm reading {name}.",
+  "agent.activity.documentExtractNamed.stalled":
+    "Reading {name} has taken unusually long. It may have stopped.",
+  "agent.activity.documentExtractNamed.done": "I've read {name}.",
+  "agent.activity.documentExtractNamed.degraded":
+    "I got partway through {name} and stopped.",
+  "agent.activity.documentExtractNamed.failed": "I couldn't read {name}.",
   // The AI work a person ASKS for and then waits on. Same rules as the
   // scheduled lines above — first person, result first, and never a word that
   // reads as finished on a run that stopped part-way.

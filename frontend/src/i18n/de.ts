@@ -2870,6 +2870,16 @@ export const de = {
     "Ich bin bei deinem Dokument nur teilweise durchgekommen und habe gestoppt.",
   "agent.activity.documentExtract.failed":
     "Ich konnte dein Dokument nicht lesen.",
+  "agent.activity.documentExtractNamed.queued":
+    "{name} steht zum Lesen in der Warteschlange.",
+  "agent.activity.documentExtractNamed.running": "Ich lese {name}.",
+  "agent.activity.documentExtractNamed.stalled":
+    "Das Lesen von {name} dauert ungewöhnlich lange. Möglicherweise wurde es abgebrochen.",
+  "agent.activity.documentExtractNamed.done": "Ich habe {name} gelesen.",
+  "agent.activity.documentExtractNamed.degraded":
+    "Ich bin bei {name} nur teilweise durchgekommen und habe gestoppt.",
+  "agent.activity.documentExtractNamed.failed":
+    "Ich konnte {name} nicht lesen.",
   "agent.activity.summarize.queued":
     "Das Zusammentragen zu diesem Unternehmen steht in der Warteschlange.",
   "agent.activity.summarize.running":
