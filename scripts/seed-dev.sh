@@ -84,6 +84,20 @@ capture_session() {
 # happens twice.
 sign_in_as_admin() {
   local status
+
+  # A 200 here proves nothing when the chosen and operator-supplied passwords
+  # are the same string — which is what the shipped defaults do
+  # (config/margince-admin-password and ADMIN_PASSWORD both ship
+  # demo-password-123). The login succeeds whether or not the account is still
+  # on the mandatory-change hold, and the api refuses to rotate a password to
+  # itself, so there is no direct way to lift the hold in that case. Detour
+  # through an intermediate value instead: unconditional, and convergent
+  # whichever state the account started in.
+  if [ "$ADMIN_PASSWORD" = "$BOOTSTRAP_PASSWORD" ]; then
+    rotate_admin_password_via_detour
+    return
+  fi
+
   status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
   if [ "$status" = "200" ]; then
     capture_session
@@ -117,6 +131,60 @@ sign_in_as_admin() {
   fi
   capture_session
   echo "  OK: $ADMIN_EMAIL now owns its own password"
+}
+
+# Lifts the mandatory-change hold when ADMIN_PASSWORD and BOOTSTRAP_PASSWORD
+# are the same string, so a login can never be read as proof the hold is
+# cleared. Two real changes clear it honestly — the api refuses to "change" a
+# password to the value it already holds — and leave the account on
+# ADMIN_PASSWORD either way, whether this run found it still on the hold or
+# already past it from an earlier run.
+#
+# A failure between the two leaves the account on the detour value; the error
+# says so rather than making the next run guess.
+rotate_admin_password_via_detour() {
+  local detour="${ADMIN_PASSWORD}-seed-dev-detour" status
+
+  status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
+  if [ "$status" != "200" ]; then
+    echo "  response body:" >&2
+    cat "$workdir/body" >&2
+    fail "login as $ADMIN_EMAIL returned HTTP $status — the api bootstraps the demo organization at boot from its margince.yaml (make dev writes it); if the credentials changed, reset the dev database and restart the stack"
+  fi
+  capture_session
+
+  status="$(api POST /auth/change-password \
+    "$(jq -n --arg c "$ADMIN_PASSWORD" --arg n "$detour" '{current_password:$c,new_password:$n}')")"
+  if [ "$status" != "204" ]; then
+    echo "  response body:" >&2
+    cat "$workdir/body" >&2
+    fail "POST /v1/auth/change-password (rotating off the operator-supplied password) returned HTTP $status"
+  fi
+
+  status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$detour" '{email:$e,password:$p}')")"
+  if [ "$status" != "200" ]; then
+    echo "  response body:" >&2
+    cat "$workdir/body" >&2
+    fail "login with the detour password returned HTTP $status — the account is now on an intermediate password; re-run with ADMIN_PASSWORD=\"$detour\" to recover it, then re-run again with the original ADMIN_PASSWORD"
+  fi
+  capture_session
+
+  status="$(api POST /auth/change-password \
+    "$(jq -n --arg c "$detour" --arg n "$ADMIN_PASSWORD" '{current_password:$c,new_password:$n}')")"
+  if [ "$status" != "204" ]; then
+    echo "  response body:" >&2
+    cat "$workdir/body" >&2
+    fail "POST /v1/auth/change-password (restoring $ADMIN_PASSWORD) returned HTTP $status — the account is stuck on the detour password \"$detour\""
+  fi
+
+  status="$(api POST /auth/login "$(jq -n --arg e "$ADMIN_EMAIL" --arg p "$ADMIN_PASSWORD" '{email:$e,password:$p}')")"
+  if [ "$status" != "200" ]; then
+    echo "  response body:" >&2
+    cat "$workdir/body" >&2
+    fail "login with the chosen password returned HTTP $status after restoring it"
+  fi
+  capture_session
+  echo "  OK: $ADMIN_EMAIL owns its own password (rotated via detour: the chosen password equals the operator-supplied one)"
 }
 
 echo "== seed-dev: API reachability =="
