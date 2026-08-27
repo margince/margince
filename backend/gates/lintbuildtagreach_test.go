@@ -91,16 +91,32 @@ func skipForeignTree(name string) bool {
 // analyses marks the passes that also run a linter over what they compile. A
 // pass that only builds still answers the type-error question, which is why it
 // is counted at all.
+//
+// goBuildOnly marks a pass whose recipe is `go build`, which never compiles a
+// _test.go. Without it the model and its own diagnostic disagree: a
+// windows-only TEST file would report as "compiled but analysed by nothing"
+// when in truth nothing compiles it either.
+//
+// cgo mirrors what the recipe sets, because MatchFile reads it for the `cgo`
+// build tag. It is pinned per pass rather than inherited from the host, so the
+// gate's verdict is the merge gate's and not the verdict of whichever machine
+// happens to run it — a developer without a C toolchain would otherwise get a
+// different answer from CI about the same file.
 type compilingPass struct {
-	name     string
-	goos     string
-	tags     []string
-	analyses bool
+	name        string
+	goos        string
+	tags        []string
+	analyses    bool
+	goBuildOnly bool
+	cgo         bool
 }
 
 // admits reports whether this pass compiles the named file, asked of go/build so
 // that no rule about constraints is restated here.
 func (p compilingPass) admits(dir, name string) (bool, error) {
+	if p.goBuildOnly && strings.HasSuffix(name, "_test.go") {
+		return false, nil
+	}
 	ctx := build.Default
 	ctx.GOOS = p.goos
 	// The runner and every machine this gate runs on are 64-bit. A file
@@ -108,6 +124,7 @@ func (p compilingPass) admits(dir, name string) (bool, error) {
 	// these passes and worth being told.
 	ctx.GOARCH = "amd64"
 	ctx.BuildTags = p.tags
+	ctx.CgoEnabled = p.cgo
 	return ctx.MatchFile(dir, name)
 }
 
@@ -125,20 +142,23 @@ func (p compilingPass) admits(dir, name string) (bool, error) {
 func mergeGatePasses(t *testing.T) []compilingPass {
 	t.Helper()
 	passes := []compilingPass{
-		{name: "untagged (`make build`, `make vet`, `make test`, and `make lint-modules` outside backend/)", goos: "linux", analyses: true},
+		{name: "untagged (`make build`, `make vet`, `make test`, and `make lint-modules` outside backend/)", goos: "linux", analyses: true, cgo: true},
 		// `go build` never compiles a _test.go, so this row covers non-test
-		// files only. It is listed anyway because a windows-only production
-		// file would otherwise report as unread when that cross-compile does
-		// read it; a windows-only TEST file is genuinely unread.
-		{name: "the windows/amd64 cross-compile of non-test files (`make build`)", goos: "windows"},
-		{name: "the integration shards (`make test-integration`)", goos: "linux", tags: []string{"integration"}},
+		// files only — goBuildOnly is what makes that true of the code and not
+		// only of this comment. It is listed at all because a windows-only
+		// PRODUCTION file would otherwise report as unread when that
+		// cross-compile does read it.
+		//
+		// cgo off, mirroring the recipe's own `CGO_ENABLED=0`.
+		{name: "the windows/amd64 cross-compile of non-test files (`make build`)", goos: "windows", goBuildOnly: true},
+		{name: "the integration shards (`make test-integration`)", goos: "linux", tags: []string{"integration"}, cgo: true},
 	}
 	for _, path := range lintConfigs {
 		carried := readGolangciConfig(t, path).Run.BuildTags
 		if len(carried) == 0 {
 			t.Errorf("%s carries no build tag at all, so every tagged file in the tree is invisible to it", path)
 		}
-		passes = append(passes, compilingPass{name: path + " (`make lint`)", goos: "linux", tags: carried, analyses: true})
+		passes = append(passes, compilingPass{name: path + " (`make lint`)", goos: "linux", tags: carried, analyses: true, cgo: true})
 	}
 	return passes
 }
@@ -226,7 +246,7 @@ func TestBothLintConfigsReadTheSameFiles(t *testing.T) {
 	// file under a negation is one that comparing lists would miss.
 	var configs []compilingPass
 	for _, path := range lintConfigs {
-		configs = append(configs, compilingPass{name: path, goos: "linux", tags: readGolangciConfig(t, path).Run.BuildTags})
+		configs = append(configs, compilingPass{name: path, goos: "linux", tags: readGolangciConfig(t, path).Run.BuildTags, cgo: true})
 	}
 	if len(configs) != 2 {
 		t.Fatalf("expected two lint configs to compare, found %d", len(configs))
