@@ -13,9 +13,8 @@ package people
 // real duplicate. A genuine duplicate shares a whole word — "Arvato Systems"
 // contains "arvato" — while the noise shares only letters.
 //
-// `nameSimilarity` itself is unchanged: it stays the pinned Jaro-Winkler
-// (PO-PARAM-JW-1) shared with person and lead dedupe, where the character metric
-// is the right one.
+// This gate never touches `nameSimilarity`, which is pinned by PO-PARAM-JW-1 and
+// shared with person and lead dedupe, where the character metric is right.
 
 import "strings"
 
@@ -105,8 +104,8 @@ const orgFuzzyTokenFloor = 3
 const orgGateTokenBudget = 32
 
 // orgFuzzyTokenSimilarity is the bar a token PAIR clears to count as the same
-// word: above the pairs that must stay apart, below the transliterations the
-// DACH market produces daily ("Müller"/"Mueller" scores 0.93).
+// word. It sits in a measured gap: the pairs that must stay apart score 0.78 to
+// 0.85, the transliterations the DACH market produces daily score 0.93 and up.
 const orgFuzzyTokenSimilarity = 0.90
 
 // orgFuzzyTokenLengthSlack is how much longer one word may be than the other and
@@ -217,9 +216,6 @@ func sharesADistinctiveWord(a, b string) bool {
 	//
 	// EITHER side declaring the market is enough: a company does not stop being
 	// Vietnamese when someone types its bare brand.
-	//
-	// Strictly more than half, because at half the two names disagree about as
-	// much as they agree.
 	if isSyllabicMarket(leftMarket) || isSyllabicMarket(rightMarket) {
 		return 2*shared > min(len(left), len(right))
 	}

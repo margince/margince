@@ -201,8 +201,8 @@ func isLatinScript(fields []string) bool {
 //
 // IT MAY RETURN EMPTY, which is an answer: a name of nothing but a legal form and
 // trade words has not said WHICH company it is. Callers treat empty as no
-// evidence, never as a wildcard. NormalizeOrgName may not do this, because it
-// produces a stored key and an empty key collides with every other.
+// evidence, never as a wildcard — which is the one thing NormalizeOrgName may
+// not do (namesim.go).
 func orgNameForMatching(s string) string {
 	name, _ := matchingFormOf(s)
 	return name

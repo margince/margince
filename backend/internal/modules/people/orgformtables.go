@@ -7,11 +7,9 @@ package people
 //
 // A TABLE PER MARKET because the forms differ in how safely they can be removed.
 // "ООО" is Cyrillic and collides with nothing. "PT" is two Latin letters, and
-// "PT Solutions Physical Therapy" is a company in Georgia — removing it there
-// leaves a name matching every firm whose name begins "Solutions". These ten are
-// all real companies a position-only rule would damage: PT Solutions Physical
-// Therapy, AO World, AS Roma, CV Sciences, SIA Engineering, II-VI, TOO Group,
-// AB InBev, SA Recycling, MB Financial.
+// "PT Solutions Physical Therapy" is a company — removing it there leaves a name
+// matching every firm whose name begins "Solutions". So is "AO World", and so is
+// "AS Roma"; orgformtables_test.go holds the rest.
 
 // orgFormMarker is one legal form as it appears after folding, split into the
 // words a name is split into.

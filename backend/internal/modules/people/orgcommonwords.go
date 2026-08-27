@@ -78,11 +78,8 @@ func agreeEntirely(shorter, longer []string) bool {
 		return false
 	}
 	// A name of nothing but common words may only agree with a name of exactly
-	// the same words. "Bank of Ireland" and "Bank of Ireland Group" are one
-	// company — "group" is deleted upstream, so both arrive as the same two
-	// words. "First National Bank" arrives as "first bank" and "First Republic
-	// Bank" as "first republic bank": one is a strict subset of the other, both
-	// are vocabulary end to end, and there is no company between them to find.
+	// the same words. Where one is a strict SUBSET of the other and both are
+	// vocabulary end to end, there is no company between them to find.
 	//
 	// A one-word name is exempt: a company called "Sun" has said all it has to
 	// say, and "Sun Microsystems" is that name qualified.

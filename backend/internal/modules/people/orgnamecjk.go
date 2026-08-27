@@ -28,9 +28,9 @@ import (
 )
 
 // cjkLegalForms are the company-type strings, matched against the ends of a name
-// longest-first. "有限公司" is a suffix of "有限责任公司", so a short match taken
-// alone would leave "有限责任" on the brand; the loop repeats because a name can
-// carry a form at each end.
+// longest-first, in a loop. "有限公司" is a suffix of "有限责任公司", so a short
+// match alone would leave "有限责任" on the brand — either the ordering or the
+// repetition covers that. What needs BOTH is a form at each end.
 //
 // Simplified and Traditional are separate entries: NFKC does not bridge them, so
 // a table with one spelling is blind to half the market.
@@ -67,11 +67,9 @@ var cjkFormAliases = map[string]string{
 	"(유)": "유한회사",
 }
 
-// cjkBrandTierWords LOOK like a legal form and are not. 中国中车集团有限公司 is a
-// state-owned parent and 中国中车股份有限公司 its listed subsidiary, so stripping
-// 集团 would file a parent as its own subsidiary — the standard shape of the
-// largest Chinese groups. Named here so a test can hold the intent; the forms
-// above simply do not contain them.
+// cjkBrandTierWords LOOK like a legal form and are not: 集团 and 控股 name a
+// different legal person from the company beside them, so the tables above must
+// never contain them. Named here so a test can hold that intent.
 var cjkBrandTierWords = []string{"集团", "集團", "控股", "控股集团"}
 
 // cjkMaxFormsStripped bounds how many forms one name may shed. The strip is a
@@ -83,6 +81,9 @@ const cjkMaxFormsStripped = 4
 // cjkMinimumBrandRunes is the shortest name a strip may leave behind. A bare
 // "株式会社" arrives in real exports and must not become the empty string, which
 // would match every other empty string.
+//
+// One and not two: Japan and Korea set no floor on a brand's length, and dirty
+// data sets none at all.
 const cjkMinimumBrandRunes = 1
 
 // carriesCJKForm answers whether this path owns the name: does it begin or end
@@ -134,8 +135,11 @@ func isVariationSelector(r rune) bool {
 }
 
 // cjkNameForMatching is the name with its legal form removed from either end.
-// Returns false for a name carrying none of them, so the caller can hand it to
-// the word-level path.
+//
+// Returns false for a name carrying none of these forms, so the caller can hand
+// it to the word-level path. A name that DOES carry one belongs here whatever
+// else it is written in: the word-level path would see it as a single token and
+// then strip Latin forms out of it.
 func cjkNameForMatching(s string) (string, bool) {
 	// Normalized BEFORE the script test, because a squared form carries no Han
 	// of its own: "㈱" is one compatibility character, and the script only
