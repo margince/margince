@@ -27,6 +27,7 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strconv"
 	"strings"
 	"time"
 
@@ -335,17 +336,14 @@ func noNextStepSuggestion(
 		return nil
 	}
 	open := in.open
-	evidence := []crmcontracts.OrganizationBriefEvidence{{
-		EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeOrganization,
-		EntityId:   openapi_types.UUID(orgID.UUID),
-	}}
+	evidence := openDealEvidence(orgID, open.Open)
 	// The digest over EVERY open deal rides the fingerprint, so closing one or
 	// opening another re-raises this rather than leaving a dismissal in force
 	// over a pipeline the account no longer has — including a change to a deal
 	// no card listed, which a fingerprint built from a fetched page would miss.
 	out := &crmcontracts.Organization360Suggestion{
 		Kind:        suggestNoNextStep,
-		Reason:      fmt.Sprintf("%d open deal(s) here and no task saying what happens next.", open.OpenCount),
+		Reason:      noNextStepReason(open),
 		Fingerprint: fingerprint(string(suggestNoNextStep), open.OpenDigest, evidence),
 		Evidence:    evidence,
 		Title:       ptrString("Set the next step"),
@@ -355,6 +353,72 @@ func noNextStepSuggestion(
 	// No deal named: the account has several open, and picking one for the
 	// reader would be a guess dressed as advice.
 	out.Action = newSuggestionAction(crmcontracts.Organization360SuggestionActionKindAddTask)
+	return out
+}
+
+// How many deals the advice names before it stops naming them. Past three the
+// list stops being a reason and becomes an inventory, and the deals section
+// above it is already the inventory.
+const namedDeals = 3
+
+// The reason, with the deals in it.
+//
+// A count alone is a claim a reader cannot check without leaving the card, and
+// on an account with one open deal it is also worse writing than the deal's own
+// name. Past the cap it stays a count: the reader is being told there is no
+// next step, not being handed the pipeline.
+func noNextStepReason(open pipeline) string {
+	names := make([]string, 0, namedDeals)
+	for _, deal := range open.Open {
+		if len(names) == namedDeals {
+			break
+		}
+		names = append(names, strconv.Quote(deal.Name))
+	}
+	switch {
+	case len(names) == 0:
+		// The count survived a read the names did not. Rare, and the advice is
+		// still true: something is open and nothing says what happens next.
+		return fmt.Sprintf("%d deals are open here and no task says what happens next.", open.OpenCount)
+	case open.OpenCount == 1:
+		return fmt.Sprintf("%s is open and no task says what happens next.", names[0])
+	case open.OpenCount > len(names):
+		return fmt.Sprintf(
+			"%d deals are open here, including %s, and no task says what happens next.",
+			open.OpenCount, strings.Join(names, ", "),
+		)
+	default:
+		return fmt.Sprintf(
+			"%s are open and no task says what happens next.", strings.Join(names, ", "),
+		)
+	}
+}
+
+// What the advice was read from: the open deals themselves, so the receipt
+// opens the records the claim is about.
+//
+// The organization stands in when the deals did not survive the read. The
+// suggestion is dismissible and its dismissal is keyed on this list, so an
+// empty one would key every account's dismissal alike.
+func openDealEvidence(
+	orgID ids.OrganizationID, deals []openDeal,
+) []crmcontracts.OrganizationBriefEvidence {
+	if len(deals) == 0 {
+		return []crmcontracts.OrganizationBriefEvidence{{
+			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeOrganization,
+			EntityId:   openapi_types.UUID(orgID.UUID),
+		}}
+	}
+	out := make([]crmcontracts.OrganizationBriefEvidence, 0, min(len(deals), namedDeals))
+	for _, deal := range deals {
+		if len(out) == namedDeals {
+			break
+		}
+		out = append(out, crmcontracts.OrganizationBriefEvidence{
+			EntityType: crmcontracts.OrganizationBriefEvidenceEntityTypeDeal,
+			EntityId:   openapi_types.UUID(deal.ID),
+		})
+	}
 	return out
 }
 

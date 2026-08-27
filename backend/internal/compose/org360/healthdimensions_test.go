@@ -126,6 +126,22 @@ func TestCommercialIsAbsentWhenTheReaderHasNoDealGrant(t *testing.T) {
 	}
 }
 
+// An account with no pipeline gets no commercial verdict.
+//
+// "No open deal" is not a risk: a customer under contract who is not being sold
+// to today is in the ordinary state of a customer. Rated at risk it put a red
+// verdict on an account that had done nothing to earn one, and the worst-of
+// rule then carried that verdict into the account's overall standing.
+func TestCommercialIsUnratedWhenNothingIsOpen(t *testing.T) {
+	health := crmcontracts.Organization360Health{}
+	rateHealthDimensions(&health, commercialStrip(0, 0))
+
+	if health.Commercial != nil {
+		t.Fatalf("commercial = %+v, want absent — there is no verdict to give on a pipeline that does not exist",
+			health.Commercial)
+	}
+}
+
 func TestCommercialReadsWhetherWorkIsMoving(t *testing.T) {
 	cases := []struct {
 		name      string
@@ -134,7 +150,6 @@ func TestCommercialReadsWhetherWorkIsMoving(t *testing.T) {
 		want      crmcontracts.HealthDimensionRating
 		reasonHas string
 	}{
-		{"nothing open", 0, 0, crmcontracts.HealthDimensionRatingAtRisk, "Nothing open"},
 		{"everything stalled", 2, 2, crmcontracts.HealthDimensionRatingAtRisk, "All 2"},
 		{"some stalled", 3, 1, crmcontracts.HealthDimensionRatingGood, "1 of 3"},
 		{"all moving", 2, 0, crmcontracts.HealthDimensionRatingStrong, "none stalled"},

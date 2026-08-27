@@ -167,7 +167,7 @@ func ListActivitiesTx(ctx context.Context, tx pgx.Tx, in ListActivitiesInput) ([
 func activityColumns(contentArm string) string {
 	return `a.id, a.kind, a.channel_provider, a.subject, a.body, a.occurred_at, a.direction,
 	a.due_at, a.remind_at, a.assignee_id, a.is_done, a.done_at, a.duration_seconds, a.meeting_status,
-	a.source_system, a.source_id, a.source, a.captured_by, a.version, a.created_at, a.updated_at, a.archived_at,
+	a.host_user_id, a.source_system, a.source_id, a.source, a.captured_by, a.version, a.created_at, a.updated_at, a.archived_at,
 	a.thread_key, a.capture_label, a.bulk_mail_attested, a.audience, (` + contentArm + `) AS content_available`
 }
 
@@ -279,7 +279,7 @@ func attachLinks(ctx context.Context, tx pgx.Tx, activities []crmcontracts.Activ
 func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
 	var a crmcontracts.Activity
 	var id ids.UUID
-	var assigneeID *ids.UUID
+	var assigneeID, hostUserID *ids.UUID
 	var kind string
 	var channelProvider, direction, meetingStatus, threadKey, captureLabel *string
 	var bulkMailAttested bool
@@ -290,7 +290,7 @@ func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
 
 	err := row.Scan(&id, &kind, &channelProvider, &a.Subject, &a.Body, &a.OccurredAt, &direction,
 		&a.DueAt, &a.RemindAt, &assigneeID, &a.IsDone, &a.DoneAt, &a.DurationSeconds, &meetingStatus,
-		&a.SourceSystem, &a.SourceId, &a.Source, &a.CapturedBy, &version, &a.CreatedAt, &a.UpdatedAt, &a.ArchivedAt,
+		&hostUserID, &a.SourceSystem, &a.SourceId, &a.Source, &a.CapturedBy, &version, &a.CreatedAt, &a.UpdatedAt, &a.ArchivedAt,
 		&threadKey, &captureLabel, &bulkMailAttested, &audience, &contentAvailable)
 	if err != nil {
 		return a, err
@@ -310,6 +310,10 @@ func scanActivity(row pgx.Row) (crmcontracts.Activity, error) {
 
 	a.Id = openapi_types.UUID(id)
 	a.AssigneeId = uuidPtr(assigneeID)
+	// Our own side of a meeting. Not gated by the content audience: who held a
+	// meeting is a marker like its date and its direction, and a caller who may
+	// discover the row may know whose meeting it was.
+	a.HostUserId = uuidPtr(hostUserID)
 	a.Kind = crmcontracts.ActivityKind(kind)
 	a.ChannelProvider = channelProvider
 	if direction != nil {

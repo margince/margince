@@ -57,6 +57,39 @@ func TestThreadColumnsReachTheWire(t *testing.T) {
 	}
 }
 
+// The 360 spine names both sides of a meeting: the contact from its links,
+// the colleague who held it from this column. A meeting scanned without it
+// leaves the spine unable to say who was in the room.
+func TestHostUserIDReachesTheWireOnAMeeting(t *testing.T) {
+	e := setupSend(t)
+	ctx := e.as(principal.RowScopeAll)
+	id := ids.New[ids.ActivityKind]()
+	if _, err := e.owner.Exec(context.Background(), `
+		INSERT INTO activity (id, kind, subject, occurred_at, host_user_id, source, captured_by)
+		VALUES ($1, 'meeting', 'Quarterly review', now(), $2, 'human', 'human:x')`,
+		id, e.rep); err != nil {
+		t.Fatalf("seeding the meeting: %v", err)
+	}
+
+	got, _, err := e.store(nil).ListActivities(ctx, ListActivitiesInput{})
+	if err != nil {
+		t.Fatalf("list: %v", err)
+	}
+	var found bool
+	for _, a := range got {
+		if ids.UUID(a.Id) != id.UUID {
+			continue
+		}
+		found = true
+		if a.HostUserId == nil || ids.UUID(*a.HostUserId) != e.rep {
+			t.Errorf("host_user_id = %v, want %s — the read's own answer to who held the meeting", a.HostUserId, e.rep)
+		}
+	}
+	if !found {
+		t.Fatal("the seeded meeting is not in the list at all")
+	}
+}
+
 func TestThreadKeyFilterReturnsOneConversation(t *testing.T) {
 	e := setupSend(t)
 	ctx := e.as(principal.RowScopeAll)
