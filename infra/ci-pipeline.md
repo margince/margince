@@ -582,7 +582,8 @@ beside the gate, deliberately outside it:
   The cadence is the knob: two hours costs ~15 jobs a run and narrows the suspect
   range to roughly a dozen commits at eight merges an hour.
 
-- **`scheduled.yml`** — daily on `main`, the checks whose answer changes when
+- **`scheduled.yml`** — daily on `main`, plus a **weekly Monday cron** for the
+  two jobs too expensive to ask daily; the checks whose answer changes when
   nothing is being merged. `ci.yml` asks "is this diff sound?" and runs because a
   diff exists; these ask "is `main` still sound?", which a PR gate structurally
   cannot answer. `govulncheck` runs against a vulnerability database that changes
@@ -606,9 +607,26 @@ beside the gate, deliberately outside it:
   green over them for a month. No static rule finds the next one: "an absolute
   date in a file that never pins the clock" matches 129 files, nearly all
   harmless, so the gate is a second run rather than a pattern.
+  Two jobs run **weekly** rather than daily, on their own Monday cron. The
+  **PERF-3/PERF-7 budgets** seed a quarter of a million contacts twice, and
+  weekly is the honest cadence for a budget nobody merges against. The
+  **model-driven use cases** (`make e2e-llm`) drive the six deck scenarios with
+  a real assistant and check what it SAID — the half the deterministic suite
+  cannot reach, since those tests pin payloads and refusals and would stay green
+  while the surface became undrivable by a model. It costs real tokens, so it is
+  weekly, and it skips rather than fails when `ANTHROPIC_API_KEY` is absent: a
+  lane nobody has funded must not turn `main` red every Monday, and a skipped job
+  says "not configured" where a red one says "broken". It is not deterministic by
+  construction — three runs per scenario, passing at two — and its transcripts
+  are uploaded as an artifact, because the verdict line says which scenario
+  failed and only the transcript says what the assistant actually did.
   Findings become **issues** (`scripts/scheduled-report.sh`), one open issue per
   check keyed on an exact title, because a red scheduled run notifies nobody and
   these checks exist precisely for the case where nothing prompts a human to look.
+  Two of those checks split one job result into **two** findings — the perf
+  budgets and the model lane both distinguish "the thing under test is wrong"
+  from "the lane could not run", because filing the former for the latter sends
+  somebody bisecting a regression that was never measured.
   The reporting job is the sole holder of `issues: write` and runs no build code —
   the same permission isolation `sbom.yml` uses for signing.
 
