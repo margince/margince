@@ -73,7 +73,11 @@ echo "reconciled $declared label(s) from $SOURCE"
 # limited, unauthenticated or offline would report "nothing extra" and exit 0.
 # That is the worst answer this script can give: it is the reading somebody
 # would act on to conclude the repository holds exactly what the file names.
-if ! live="$(gh label list --limit 200 --json name --jq '.[].name')"; then
+# `--paginate`, not a limit. `gh label list --limit N` truncates at N, and a
+# truncated listing looks exactly like a complete one here: labels past the cut
+# are simply absent from `extra` and the run reports nothing to decide about.
+# The number would also have to be guessed, and guessed high enough forever.
+if ! live="$(gh api --paginate "repos/{owner}/{repo}/labels" --jq '.[].name')"; then
   echo "FAIL: could not list this repository's labels, so the report below cannot be made."
   echo "The reconcile above already ran; only the 'what is not in the file' half is missing."
   exit 1
