@@ -641,7 +641,14 @@
 }
 
 /* The grip on a column's trailing edge. Its hit area is wider than the line it
- * draws, so it can be grabbed without hunting for a 1px target. */
+ * lights, so it can be grabbed without hunting for a 1px target.
+ *
+ * It draws NOTHING at rest. The divider between two columns is the cell's own
+ * `border-right` above, and a second hairline inset 4px beside it read as a
+ * rendering fault: two parallel lines, different colours, different heights,
+ * on every column of every table. What the grip owns is the LIT state — the
+ * same edge, thickened and in the accent, while a reader is over it or moving
+ * it. */
 .lt-grip {
   position: absolute;
   top: 0;
@@ -654,21 +661,30 @@
   cursor: col-resize;
   touch-action: none;
 }
+/* Right on the divider, not beside it: the line the reader grabs is the line
+ * they were already looking at. */
 .lt-grip::after {
   content: "";
   position: absolute;
-  top: 25%;
-  right: 4px;
-  width: 1px;
-  height: 50%;
-  background: var(--borderStrong);
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--accent);
+  opacity: 0;
 }
 .lt-grip:hover::after,
-.lt-grip:focus-visible::after {
-  top: 0;
-  height: 100%;
-  width: 2px;
-  background: var(--accent);
+.lt-grip:focus-visible::after,
+.lt-grip.is-dragging::after {
+  opacity: 1;
+}
+
+/* For the length of a drag the whole grid wears the gesture: nothing selects,
+ * and the resize cursor stays under a pointer that has travelled off the 10px
+ * grip. Without it a drag across the table highlighted every name it passed. */
+.lt-table.is-resizing {
+  user-select: none;
+  cursor: col-resize;
 }
 
 .lt-sort {
@@ -972,6 +988,36 @@
     margin-left: 0;
   }
 
+  /* The view rail is ONE row that continues sideways, never two rows that
+     wrap — the same rule the record page's tab strip keeps, and for the same
+     reason: wrapped tabs read as two rows of navigation rather than one row
+     with more in it. It is also what the rows below are paying for. A list
+     with eight views (the lead queue has eight) wrapped its rail to two lines
+     and, on a 390px screen where the surface is already carrying a search box,
+     a filter row and a pager, left 62px of actual list — one row of a
+     twenty-five row page. Scrolling the rail gives those lines back.
+
+     It takes the room LEFT on its line rather than a line of its own: the
+     primary action stays beside it, which is what keeps a three-view list
+     (contacts, deals) at the height it already had. `min-width: 0` is what
+     lets it shrink below its content — without it a flex item refuses to, and
+     the rail pushes the action off the line instead of scrolling. The
+     scrollbar is hidden because the row is short and a bar under it would
+     read as a rule. */
+  .lt-views {
+    flex: 1 1 auto;
+    min-width: 0;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .lt-views::-webkit-scrollbar {
+    display: none;
+  }
+  .lt-vtab {
+    flex: 0 0 auto;
+    white-space: nowrap;
+  }
+
   .lt-search {
     flex: 1 1 100%;
   }
@@ -1032,6 +1078,19 @@
   display: inline-flex;
   margin-right: var(--space-2);
   vertical-align: middle;
+}
+
+/* WCAG 2.2 AA §2.5.8: 24×24 CSS px, and this box has no visible label to
+   stand in for the missing area — its name is screen-reader-only, so the
+   `.checkfield` label a form checkbox is pressed by is 13px wide here. The
+   native box is scaled rather than overlaid: the target-size rule measures the
+   focusable control itself, so a pseudo-element covering it would satisfy a
+   reader's finger and not the rule, which is the case that matters least. Only
+   the row and header boxes grow; a checkbox with words beside it is pressed by
+   those words and is left alone. */
+.lt-select > input[type="checkbox"] {
+  inline-size: 24px;
+  block-size: 24px;
 }
 
 .lt-bulkbar {

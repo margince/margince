@@ -445,6 +445,23 @@
   margin-top: 18px;
 }
 
+/* A refused confirm explains itself in the column `Button` renders for it, and
+   in a right-aligned row that column stacks the sentence UNDER the button and
+   drags the pair out of line with Cancel beside it. Aligning the row to its
+   items' first line puts the two buttons back on one line and lets the
+   sentence hang below the one it belongs to, capped so a long reason wraps
+   inside the dialog instead of setting its width. */
+.modal .actions:has(.btn-with-reason) {
+  align-items: flex-start;
+}
+.modal .actions .btn-with-reason {
+  align-items: flex-end;
+  max-inline-size: 24ch;
+}
+.modal .actions .btn-with-reason > .t-caption {
+  text-align: end;
+}
+
 /* A cross-record reference rendered inline as a text link (EntityRef): the
    accent colour + hover underline read as navigable, with no button chrome. */
 .entity-link {

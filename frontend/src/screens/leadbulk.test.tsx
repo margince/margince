@@ -5,6 +5,7 @@ import {
   render as rtlRender,
   screen,
   waitFor,
+  within,
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
@@ -177,8 +178,29 @@ function renderWithClient(ui: ReactNode) {
   return { rendered, invalidated, pending: () => outstanding };
 }
 
-const disqualifyButton = () =>
-  screen.getByRole("button", { name: "Disqualify" });
+// The bar's own verb. Once the confirm is open there are two buttons reading
+// "Disqualify" — the one that ASKS and the one that DOES — so the bar's is the
+// one outside the dialog, exactly as a reader sees it.
+const disqualifyButton = () => {
+  const dialog = screen.queryByRole("dialog");
+  const verb = screen
+    .getAllByRole("button", { name: "Disqualify" })
+    .find((button) => !dialog?.contains(button));
+  if (!verb) {
+    throw new Error("the bulk bar has no disqualify verb");
+  }
+  return verb;
+};
+
+/** Press the bar's verb, then answer the confirm it opens. */
+async function runDisqualify(user: ReturnType<typeof userEvent.setup>) {
+  await user.click(disqualifyButton());
+  await user.click(
+    within(await screen.findByRole("dialog")).getByRole("button", {
+      name: "Disqualify",
+    }),
+  );
+}
 
 describe("LeadBulkBar — disqualify", () => {
   it("refuses the verb until a reason is chosen, and says why", async () => {
@@ -226,7 +248,7 @@ describe("LeadBulkBar — disqualify", () => {
     await waitFor(() =>
       expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
     );
-    await user.click(disqualifyButton());
+    await runDisqualify(user);
 
     await waitFor(() => expect(deletions).toHaveLength(2));
     expect(deletions).toEqual([
@@ -260,7 +282,7 @@ describe("LeadBulkBar — disqualify", () => {
     await waitFor(() =>
       expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
     );
-    await user.click(disqualifyButton());
+    await runDisqualify(user);
 
     await waitFor(() => expect(deletions).toHaveLength(2));
     // Both rows were attempted, one refused, and the bar says so by name with
@@ -304,7 +326,7 @@ describe("LeadBulkBar — disqualify", () => {
     await waitFor(() =>
       expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
     );
-    await user.click(disqualifyButton());
+    await runDisqualify(user);
     await waitFor(() => expect(deletions).toHaveLength(2));
 
     await waitFor(() => expect(invalidated).toContainEqual(["lead", "l-1"]));
@@ -345,7 +367,7 @@ describe("LeadBulkBar — disqualify", () => {
     await waitFor(() =>
       expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
     );
-    await user.click(disqualifyButton());
+    await runDisqualify(user);
     await waitFor(() => expect(deletions).toHaveLength(2));
 
     await waitFor(() => expect(invalidated).toContainEqual(["leads"]));
@@ -382,7 +404,7 @@ describe("LeadBulkBar — disqualify", () => {
     await waitFor(() =>
       expect(disqualifyButton().hasAttribute("disabled")).toBe(false),
     );
-    await user.click(disqualifyButton());
+    await runDisqualify(user);
     await waitFor(() => expect(deletions).toHaveLength(2));
 
     await waitFor(() => expect(outstandingWhenDone).toHaveLength(1));

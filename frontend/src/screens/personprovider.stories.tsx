@@ -244,7 +244,7 @@ export const TwoProviders: Story = {
     });
     return (
       <StoryProviders>
-        <div className="pe-overview-stack">
+        <div className="record-stack">
           <PersonProviderSection
             personId="p-1"
             profiles={[

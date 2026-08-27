@@ -319,7 +319,7 @@ export const en = {
   "record.edit": "Edit",
   "record.save": "Save",
   "record.archive": "Archive",
-  "record.disqualify": "Disqualify…",
+  "record.disqualify": "Disqualify",
   "record.archiveConfirm":
     "Are you sure? This archives the record — there is no undo control.",
   "record.archived": "Archived",
@@ -1736,7 +1736,7 @@ export const en = {
   "lead.boardCount": "{count} leads",
   "lead.duplicateFound":
     "A lead with this email or LinkedIn profile already exists.",
-  "lead.promote": "Qualify…",
+  "lead.promote": "Qualify",
   "lead.promoteIneligible": "needs an email address and an open status",
   "lead.filterStatus": "Status",
   "lead.filterStatusAll": "All statuses",
@@ -1747,6 +1747,10 @@ export const en = {
   "lead.bulkOwnerPick": "Pick an owner",
   "lead.bulkAssign": "Assign",
   "lead.bulkDisqualify": "Disqualify",
+  "lead.bulkDisqualifyTitle_one": "Disqualify this lead?",
+  "lead.bulkDisqualifyTitle_other": "Disqualify {count} leads?",
+  "lead.bulkDisqualifyBody":
+    "Closed with the reason \u201c{reason}\u201d. Each lead keeps its own record, and there is no one step that puts them back.",
   "lead.bulkFailed": "{count} not applied —",
   "lead.bulkFailedRow": "could not be saved",
   "lead.bulkSelectRow": "Select {name}",
@@ -1764,6 +1768,8 @@ export const en = {
   "lead.filterScoreWarm": "60 and up",
   "lead.filterScoreCool": "40 and up",
   "lead.details": "Details",
+  "lead.ladder.title": "Where this lead stands",
+  "lead.railTitle": "Owner and score",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.boardTerminalOnly":
@@ -1786,6 +1792,7 @@ export const en = {
   "lead.demoteExplain":
     "The lead returns to the queue as “Working”. A contact the promotion created is archived; a contact it merged into stays as it is. A contact on a live deal cannot be reversed.",
   "lead.demoteReason": "Reason (recorded in the audit trail)",
+  "lead.demoteReasonRequired": "Say why first.",
   "lead.demoteConfirm": "Reverse",
   "lead.promotedOutcomePending": "Reading what this promotion did…",
   "lead.promotedOutcomeUnavailable":
@@ -1837,7 +1844,7 @@ export const en = {
   "lead.signalUnset": "Not entered",
   "lead.signalClear": "Withdraw",
   "lead.signalBandPick": "Pick a value",
-  "lead.signalMore": "More…",
+  "lead.signalMore": "More",
   "lead.signalProvenanceHint":
     "Untouched, an answer is stored as an estimate with no confidence claimed.",
   "lead.signalEvidenceQuality": "How reliable is this?",

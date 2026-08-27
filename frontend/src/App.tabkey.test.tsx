@@ -72,7 +72,7 @@ function recordHead(): Element {
 }
 
 function tabStrip(): Element {
-  const found = document.querySelector(".pe-tabs");
+  const found = document.querySelector(".record-tabs");
   if (!found) {
     throw new Error("the contact record's tab strip never rendered");
   }
@@ -84,7 +84,7 @@ function tabStrip(): Element {
 // waiting on it is what makes the node comparisons below claims about a move
 // that HAPPENED rather than one still in flight.
 function currentTab(): string {
-  const on = document.querySelector('.pe-tabs button[aria-pressed="true"]');
+  const on = document.querySelector('.record-tabs button[aria-pressed="true"]');
   if (!on) {
     throw new Error("no tab is current");
   }

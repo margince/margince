@@ -199,9 +199,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
   it("the qualify dialog derives the reason from what was captured, and asks for no trigger", async () => {
     stubFetch(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Qualify…" }),
-    );
+    await userEvent.click(await screen.findByTestId("lead-qualify"));
     // A lead with no captured engagement is qualified by the rep's own
     // judgement — said as a sentence, not picked from a technical list.
     expect(await screen.findByText("Reason: qualified by you.")).toBeTruthy();
@@ -226,14 +224,16 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       });
     });
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Qualify…" }),
-    );
+    await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(await screen.findByText(/Reason: they replied on/)).toBeTruthy();
     // Engaged leads start with the deal block ticked; untick it here so the
     // request is the bare promotion.
     await userEvent.click(screen.getByTestId("lead-qualify-with-deal"));
-    await userEvent.click(screen.getByTestId("lead-qualify-confirm"));
+    await userEvent.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Qualify/,
+      }),
+    );
     await waitFor(() => expect(promoteBody).toBeTruthy());
     expect(promoteBody).toMatchObject({
       trigger: "inbound_reply",
@@ -256,12 +256,16 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     });
     window.location.hash = "#/leads/l-1";
     render(<LeadScreen id="l-1" />);
-    await user.click(await screen.findByRole("button", { name: "Qualify…" }));
+    await user.click(await screen.findByTestId("lead-qualify"));
     await user.type(
       screen.getByLabelText("Evidence note (optional)"),
       "Booked via calendly",
     );
-    await user.click(screen.getByTestId("lead-qualify-confirm"));
+    await user.click(
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Qualify/,
+      }),
+    );
     await waitFor(() => expect(promoteBody).toBeTruthy());
     expect(promoteBody).toMatchObject({
       trigger: "human_qualify",
@@ -338,7 +342,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
-    await user.click(await screen.findByRole("button", { name: "Qualify…" }));
+    await user.click(await screen.findByTestId("lead-qualify"));
     await user.click(screen.getByTestId("lead-qualify-with-deal"));
     await user.type(
       await screen.findByTestId("lead-qualify-deal-name"),
@@ -388,10 +392,12 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     );
     vi.stubGlobal("fetch", fetchMock);
     render(<LeadScreen id="l-1" />);
+    await userEvent.click(await screen.findByTestId("lead-qualify"));
     await userEvent.click(
-      await screen.findByRole("button", { name: "Qualify…" }),
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Qualify/,
+      }),
     );
-    await userEvent.click(screen.getByTestId("lead-qualify-confirm"));
     // The refusal is shown where the reader is; the page re-reads the lead
     // and its outcome card then says what it became.
     expect(await screen.findByRole("alert")).toBeTruthy();
@@ -592,9 +598,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Qualify…" }),
-    );
+    await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(
       await screen.findByText(/Promoting will merge into the existing contact/),
     ).toBeTruthy();
@@ -613,9 +617,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       return jsonResponse(lead);
     });
     render(<LeadScreen id="l-1" />);
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Qualify…" }),
-    );
+    await userEvent.click(await screen.findByTestId("lead-qualify"));
     expect(
       await screen.findByText(
         "Promoting will merge into an existing contact you cannot see.",
@@ -659,13 +661,17 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Reverse promotion" }),
     );
-    const confirm = screen.getByRole("button", { name: "Reverse" });
-    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    const confirm = () =>
+      screen.getByRole("button", { name: "Reverse" }) as HTMLButtonElement;
+    expect(confirm().disabled).toBe(true);
     await userEvent.type(
-      screen.getByLabelText("Reason (recorded in the audit trail)"),
+      screen.getByLabelText("Reason (recorded in the audit trail) *"),
       "Promoted the wrong prospect",
     );
-    await userEvent.click(confirm);
+    // Re-queried rather than held: a refused Button draws its reason beside
+    // itself, so the element the reader presses once the refusal lifts is not
+    // the node that was there while it stood.
+    await userEvent.click(confirm());
     await waitFor(() => expect(demoteBody).not.toBeNull());
     expect(demoteBody).toEqual({ reason: "Promoted the wrong prospect" });
   });
@@ -839,10 +845,12 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
       </QueryClientProvider>,
     );
 
+    await userEvent.click(await screen.findByTestId("lead-qualify"));
     await userEvent.click(
-      await screen.findByRole("button", { name: "Qualify…" }),
+      within(screen.getByRole("dialog")).getByRole("button", {
+        name: /^Qualify/,
+      }),
     );
-    await userEvent.click(screen.getByTestId("lead-qualify-confirm"));
 
     await waitFor(() =>
       expect(
@@ -900,7 +908,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // stand in for "ineligible" (ADR-0119/A170).
     stubFetch(async () => jsonResponse({ ...lead, email: null }));
     render(<LeadScreen id="l-1" />);
-    const button = await screen.findByRole("button", { name: "Qualify…" });
+    const button = await screen.findByRole("button", { name: "Qualify" });
     await waitFor(() =>
       expect((button as HTMLButtonElement).disabled).toBe(true),
     );
@@ -1289,21 +1297,22 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     stubFetch(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
     await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    expect(screen.getByRole("button", { name: "Qualify…" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Qualify" })).toBeTruthy();
     // The score reads in the band AND on the folded score section's summary.
     expect(screen.getAllByText("Score: 72").length).toBeGreaterThan(0);
-    // The badge and the status control now read the SAME word, which is the
-    // point: a German reader saw "In Bearbeitung" on the chip and the raw
-    // enum "contacted" in the cell. The badge is the one asserted here.
+    // Status and company are READINGS in the band's strip, not pills among
+    // pills. The word is what matters and it is the same word everywhere: a
+    // German reader saw "In Bearbeitung" on the chip and the raw enum
+    // "contacted" in the cell, which is the defect one spelling closed.
     expect(
       screen
         .getAllByText("Contacted")
-        .some((el) => el.classList.contains("badge")),
+        .some((el) => el.classList.contains("stat-card-value")),
     ).toBe(true);
     expect(
       screen
         .getAllByText("Nordwind Logistik")
-        .some((el) => el.classList.contains("badge")),
+        .some((el) => el.classList.contains("stat-card-value")),
     ).toBe(true);
   });
 });
@@ -1367,10 +1376,14 @@ describe("LeadScreen — disqualify (P-3)", () => {
     render(<LeadScreen id="l-1" />);
 
     await user.click(await screen.findByTestId("lead-disqualify"));
-    // Nothing is sent without a reason, and the button says so.
-    const confirm = screen.getByTestId(
-      "lead-disqualify-confirm",
-    ) as HTMLButtonElement;
+    // Nothing is sent without a reason, and the button says so. The confirm is
+    // named inside the dialog rather than by a test id: the trigger that
+    // opened it carries the same word, so the dialog is what tells the two
+    // apart — which is also how a reader tells them apart.
+    const dialog = within(screen.getByRole("dialog"));
+    const confirm = dialog.getByRole("button", {
+      name: "Disqualify",
+    }) as HTMLButtonElement;
     expect(confirm.disabled).toBe(true);
     await pickOption(user, screen.getByLabelText("Reason *"), "Bad timing");
     expect(screen.queryByRole("option", { name: "Retired" })).toBeNull();
@@ -1378,7 +1391,7 @@ describe("LeadScreen — disqualify (P-3)", () => {
       screen.getByLabelText("Note (optional)"),
       "Call back in Q4",
     );
-    await user.click(screen.getByTestId("lead-disqualify-confirm"));
+    await user.click(dialog.getByRole("button", { name: "Disqualify" }));
 
     await waitFor(() => expect(deleteBody).toBeTruthy());
     expect(deleteBody).toEqual({ reason_id: "r-2", note: "Call back in Q4" });
@@ -1923,9 +1936,14 @@ describe("LeadScreen — History tab", () => {
       expect(screen.getByText("Lead score changed")).toBeTruthy(),
     );
     // The identity header (name) must stay visible on the History tab, not
-    // just the overview — it lives in LeadScreen above the tab switch now,
-    // matching person/company/deal's persistent RecordView header.
-    expect(screen.getByText(lead.full_name)).toBeTruthy();
+    // just the overview — it lives above the tab switch, matching
+    // person/company/deal's persistent RecordView header. Named by ROLE
+    // rather than by text: the rail's details grid sits outside the tab
+    // switch too and carries the same name in its editable Full name row,
+    // which is the page working as intended and not a second header.
+    expect(
+      screen.getByRole("heading", { level: 1, name: lead.full_name }),
+    ).toBeTruthy();
   });
 });
 
@@ -2016,7 +2034,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }
     // Qualify is gone rather than disabled: a disqualified lead is not a
     // qualifiable one, and the header's primary action is for live leads.
-    expect(screen.queryByRole("button", { name: "Qualify…" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Qualify" })).toBeNull();
   });
 
   it("shows an 'overridden' badge when the score is human-overridden", async () => {

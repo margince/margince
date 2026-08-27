@@ -8,14 +8,16 @@ import { activityTimeline } from "../design-system/activitytimeline";
 import {
   Badge,
   Button,
-  Card,
   Disclosure,
-  Modal,
+  Field,
   SegmentedControl,
+  StatCard,
   Textarea,
   TextInput,
 } from "../design-system/atoms";
+import { Callout } from "../design-system/callout";
 import { RecordView } from "../design-system/composed";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { FieldGrid, FieldRow } from "../design-system/fieldgrid";
 import { InlineChoice, InlineText } from "../design-system/inlinechoice";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -24,7 +26,9 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { Select } from "../design-system/select";
+import { StatStrip } from "../design-system/statstrip";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
+import { ToastRegion, useToast } from "../design-system/toast";
 import {
   formatDateAbbrev,
   formatDecimal,
@@ -58,8 +62,8 @@ import {
 import { RecordHistoryTab, useRecordHistory } from "./history";
 import {
   FirstResponseLine,
+  leadStatusLabel,
   promoteEligible,
-  StatusBadge,
   scoreFactorLabel,
   scoreTone,
   terminalBadge,
@@ -191,15 +195,9 @@ function ScoreShortfall({ lead }: Readonly<{ lead: Lead }>) {
   missing.push(t("lead.shortfall.engagementMoves"));
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-      }}
-    >
+    <div className="lead-stack-tight">
       <span className="t-caption">{t("lead.shortfall.lead")}</span>
-      <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+      <ul className="lead-plainlist">
         {missing.map((reason) => (
           <li key={reason} className="t-caption">
             {reason}
@@ -258,13 +256,7 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
   const overridden = current.override_reason != null;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-1)",
-      }}
-    >
+    <div className="lead-stack-tight">
       {overridden && (
         <span className="t-caption">
           {t("lead.scoreFactorsExplainMachine", {
@@ -275,16 +267,9 @@ function ScoreBreakdown({ id, lead }: Readonly<{ id: string; lead: Lead }>) {
       {factors.length === 0 ? (
         <span className="t-caption">{t("lead.scoreNoFactors")}</span>
       ) : (
-        <ul style={{ listStyle: "none", margin: 0, padding: 0 }}>
+        <ul className="lead-plainlist">
           {factors.map((factor) => (
-            <li
-              key={factor.factor}
-              style={{
-                display: "flex",
-                gap: "var(--space-2)",
-                alignItems: "baseline",
-              }}
-            >
+            <li key={factor.factor} className="lead-factor">
               <span>{scoreFactorLabel(factor.factor, t)}</span>
               <span className="t-mono">
                 {formatDecimal(factor.points, locale, 1)}
@@ -376,13 +361,7 @@ function AssigneePicker({
   }
   if (roster.isError) {
     return (
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          alignItems: "center",
-        }}
-      >
+      <div className="lead-line">
         <span className="t-caption share-error">
           {t("share.rosterErrorUsers")}
         </span>
@@ -448,20 +427,8 @@ function LeadOwner({
     });
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-2)",
-      }}
-    >
-      <div
-        style={{
-          display: "flex",
-          gap: "var(--space-2)",
-          alignItems: "center",
-        }}
-      >
+    <div className="lead-stack">
+      <div className="lead-line">
         <span className="t-caption">{t("lead.ownerLabel")}</span>
         {lead.owner_id ? (
           lead.owner_id === meId ? (
@@ -520,7 +487,6 @@ function LeadOwner({
 function LeadScorePanel({
   lead,
   id,
-  readOnly,
   terminalReasonId,
   overriding,
   setOverriding,
@@ -528,13 +494,10 @@ function LeadScorePanel({
   setScoreValue,
   reasonValue,
   setReasonValue,
-  scoreFieldId,
-  reasonFieldId,
-  patch,
+  writer,
 }: Readonly<{
   lead: Lead;
   id: string;
-  readOnly: boolean;
   terminalReasonId: string;
   overriding: boolean;
   setOverriding: (next: boolean) => void;
@@ -542,12 +505,11 @@ function LeadScorePanel({
   setScoreValue: (next: string) => void;
   reasonValue: string;
   setReasonValue: (next: string) => void;
-  scoreFieldId: string;
-  reasonFieldId: string;
-  patch: { isPending: boolean; mutate: (body: UpdateLeadRequest) => void };
+  writer: LeadWriter;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const { readOnly } = writer;
   const reasonBlank = reasonValue.trim() === "";
   const scoreBlank = scoreValue.trim() === "";
   const parsedScore = Number(scoreValue);
@@ -558,23 +520,11 @@ function LeadScorePanel({
     parsedScore > 100;
 
   return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-2)",
-      }}
-    >
+    <div className="lead-stack">
       <span className="t-caption">{t("lead.explainScore")}</span>
       <ScoreBreakdown id={id} lead={lead} />
       {lead.score_override_reason ? (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-          }}
-        >
+        <div className="lead-stack">
           <p>
             {t("lead.scoreOverridden", {
               reason: lead.score_override_reason,
@@ -589,63 +539,44 @@ function LeadScorePanel({
           )}
           <Button
             small
-            disabled={patch.isPending || readOnly}
+            disabled={writer.patch.isPending || readOnly}
             reasonId={readOnly ? terminalReasonId : undefined}
-            onClick={() => patch.mutate({ score: null })}
+            onClick={() => writer.save({ score: null })}
           >
             {t("lead.clearOverride")}
           </Button>
         </div>
       ) : overriding ? (
-        <div
-          style={{
-            display: "flex",
-            flexDirection: "column",
-            gap: "var(--space-2)",
-            maxWidth: 320,
-          }}
-        >
-          <div
-            className="t-caption"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-1)",
-            }}
-          >
-            <label htmlFor={scoreFieldId}>{t("lead.overrideScoreValue")}</label>
-            <TextInput
-              id={scoreFieldId}
-              type="number"
-              min={0}
-              max={100}
-              value={scoreValue}
-              onChange={(event) => setScoreValue(event.target.value)}
-            />
-          </div>
-          <div
-            className="t-caption"
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              gap: "var(--space-1)",
-            }}
-          >
-            <label htmlFor={reasonFieldId}>{t("lead.overrideReason")}</label>
-            <TextInput
-              id={reasonFieldId}
-              value={reasonValue}
-              onChange={(event) => setReasonValue(event.target.value)}
-            />
-          </div>
-          <div style={{ display: "flex", gap: "var(--space-2)" }}>
+        <div className="lead-stack lead-override">
+          <Field label={t("lead.overrideScoreValue")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                type="number"
+                min={0}
+                max={100}
+                value={scoreValue}
+                onChange={(event) => setScoreValue(event.target.value)}
+              />
+            )}
+          </Field>
+          <Field label={t("lead.overrideReason")}>
+            {(control) => (
+              <TextInput
+                {...control}
+                value={reasonValue}
+                onChange={(event) => setReasonValue(event.target.value)}
+              />
+            )}
+          </Field>
+          <div className="lead-line">
             <Button
               variant="primary"
               small
-              disabled={reasonBlank || scoreInvalid || patch.isPending}
+              disabled={reasonBlank || scoreInvalid || writer.patch.isPending}
               reasonId={readOnly ? terminalReasonId : undefined}
               onClick={() =>
-                patch.mutate({
+                writer.save({
                   score: parsedScore,
                   score_override_reason: reasonValue.trim(),
                 })
@@ -780,53 +711,65 @@ function LeadIdentityFields({
   );
 }
 
-function LeadLifecycle({
-  lead,
-  id,
-  onChanged,
-  terminalReasonId,
-  onQualify,
-  onDisqualify,
-  overlay,
-}: Readonly<{
-  lead: Lead;
-  id: string;
-  onChanged: () => void;
-  terminalReasonId: string;
-  onQualify: () => void;
-  onDisqualify: () => void;
-  overlay: boolean;
-}>) {
+/**
+ * The shared write, as the panels that call it see it: the mutation's STATE
+ * (pending, refused, what it carried) and the two ways to start one. Handed
+ * over as one object rather than as a mutation plus a loose function, so no
+ * caller can reach past `save` to `mutate` and skip the version it stamps.
+ */
+type LeadWriter = ReturnType<typeof useLeadPatch>;
+
+/**
+ * The lead page's ONE write, and the two facts every control on it reads.
+ *
+ * The ladder, the identity grid, the owner picker and the score override are
+ * now in two different columns, and they were one card when they shared this
+ * mutation. Sharing it is the part that matters: one PATCH shape, one
+ * If-Match, one invalidation, so two edits a second apart cannot send two
+ * versions of the same row. A second `useMutation` in the rail would be a
+ * second writer of one invariant, which is the defect this hook exists to
+ * make impossible rather than to document.
+ */
+/**
+ * One write's variables: what to change, and the record it is changing.
+ *
+ * The version and the closed flag travel WITH the body rather than being read
+ * off `lead` inside the mutation. A handler belongs to the render that drew
+ * the control the reader pressed, so a version it hands over cannot be older
+ * than that control — while a `mutationFn` reaching for `lead` reads whatever
+ * render it happens to close over, which under React Query's passive re-arm
+ * is not always the one on screen.
+ */
+type LeadWrite = {
+  body: UpdateLeadRequest;
+  version: number;
+  /** Whether the record was already closed when the reader pressed. */
+  archived: boolean;
+};
+
+function useLeadPatch(lead: Lead, id: string, onChanged: () => void) {
   const t = useT();
-  const { locale } = useLocale();
-  const me = useMe();
-  const scoreFieldId = useId();
-  const reasonFieldId = useId();
-  const [overriding, setOverriding] = useState(false);
-  const [scoreValue, setScoreValue] = useState("");
-  const [reasonValue, setReasonValue] = useState("");
   // A terminal lead takes no writes: the server refuses score, status and
   // owner on it, so every control here is refused by ONE fact. Derived once
   // rather than re-tested per control, because the control that gets missed
   // is the one that had to remember on its own.
   const readOnly = Boolean(lead.archived_at);
-
   const patch = useMutation({
     mutationKey: ["lead-edit", id],
-    mutationFn: async (body: UpdateLeadRequest) => {
+    mutationFn: async ({ body, version, archived }: LeadWrite) => {
       // The last word on a terminal lead, and deliberately not a per-control
       // check: the server refuses every one of these writes, and a control
-      // added later would otherwise have to remember on its own. `readOnly`
-      // is read from the record the mutation is about, not from render state,
-      // so a lead that went terminal while this page was open is refused too.
-      if (lead.archived_at) {
+      // added later would otherwise have to remember on its own. It reads the
+      // flag the PRESS carried, so a lead that went terminal while this page
+      // was open is refused by the render that saw it go.
+      if (archived) {
         // Catalog copy in a problem body, on the same terms as every other
         // refusal this screen shows: "a terminal lead takes no writes" is a
         // sentence for whoever reads this file, not for whoever is refused.
         throwProblem({ detail: t("lead.terminalReadOnly") });
       }
       const { data, error } = await api.PATCH("/leads/{id}", {
-        params: { path: { id }, ...ifMatch(requireVersion(lead.version)) },
+        params: { path: { id }, ...ifMatch(requireVersion(version)) },
         body,
       });
       if (error) {
@@ -834,146 +777,249 @@ function LeadLifecycle({
       }
       return data;
     },
-    onSuccess: () => {
-      onChanged();
-      setOverriding(false);
-      setScoreValue("");
-      setReasonValue("");
-    },
+    onSuccess: onChanged,
   });
 
-  const meId = me.data?.user?.id;
+  // The record as it stands in THIS render, stamped onto the write the caller
+  // is starting. Every control goes through one of these two, so no call site
+  // has to remember to carry the version.
+  const write = (body: UpdateLeadRequest): LeadWrite => ({
+    body,
+    version: requireVersion(lead.version),
+    archived: Boolean(lead.archived_at),
+  });
+  const save = (body: UpdateLeadRequest) => patch.mutate(write(body));
 
   // The inline rows await their save and render what it throws, so they need a
   // promise rather than the mutation's fire-and-forget. mutateAsync is that
   // same mutation — one PATCH shape, one If-Match, one invalidation.
   const saveField = async (body: UpdateLeadRequest) => {
-    await patch.mutateAsync(body);
+    await patch.mutateAsync(write(body));
   };
 
+  return { patch, readOnly, save, saveField };
+}
+
+/**
+ * The page's LEAD: where this lead stands, and the one step to take next.
+ *
+ * It is the tinted panel because it is the only surface here asking for a
+ * MOVE — everything else on the page reports. The tone follows the finding
+ * rather than the layout: a first response already breached is bad news, and
+ * the warn family is what says so, in the same pairing `Callout` draws.
+ */
+function LeadLadderPanel({
+  lead,
+  writer,
+  overlay,
+  onQualify,
+  onDisqualify,
+}: Readonly<{
+  lead: Lead;
+  writer: LeadWriter;
+  overlay: boolean;
+  onQualify: () => void;
+  onDisqualify: () => void;
+}>) {
+  const t = useT();
+  const { readOnly } = writer;
   return (
-    <Card
-      as="div"
-      inset
-      style={{
-        marginTop: "var(--space-4)",
-        display: "flex",
-        flexDirection: "column",
-        gap: "var(--space-3)",
-      }}
+    <Panel
+      title={t("lead.ladder.title")}
+      tone={lead.sla_state === "breached" ? "warn" : "accent"}
     >
-      {/* The ladder leads: where this lead stands and how it got there is
-          the first thing a rep needs, and the step they take next is one
-          click on it (the terminal steps open their own dialogs). The mirror
-          refuses a lifecycle write, so in overlay the ladder only reads. */}
-      <LeadStepper
-        lead={lead}
-        pending={patch.isPending}
-        readOnlyReason={
-          readOnly
-            ? t("lead.terminalReadOnly")
-            : overlay
-              ? t("lead.ladder.overlay")
-              : undefined
-        }
-        onStep={(status) => {
-          // Same one-write-at-a-time rule as the inline rows: a status
-          // sent while another save is in flight races it for If-Match.
-          if (!patch.isPending && !readOnly && !overlay) {
-            patch.mutate({ status });
-          }
-        }}
-        onQualify={onQualify}
-        onDisqualify={onDisqualify}
-      />
-      {/* The first-response line only exists while the target is on: the
-          server derives sla_state from the setting, so an installation that
-          never opted in sees nothing here. */}
-      <FirstResponseLine lead={lead} />
-      <LeadIdentityFields
-        lead={lead}
-        save={saveField}
-        saving={patch.isPending}
-        readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
-      />
-
-      <LeadOwner
-        lead={lead}
-        meId={meId}
-        terminalReasonId={terminalReasonId}
-        pending={patch.isPending || readOnly}
-        onAssign={(ownerId) => patch.mutate({ owner_id: ownerId })}
-      />
-
-      {/* The score is a reading, not the work: it folds to one line with
-          its top factor, and opens for the breakdown, the override and the
-          rep's own inputs. */}
-      <Disclosure
-        summary={
-          <span className="lead-score-summary">
-            <Badge tone={scoreTone(lead.score)}>
-              {t("lead.score")}: {formatNumber(lead.score, locale)}
-            </Badge>{" "}
-            <span className="t-caption">
-              {lead.score_reason
-                ? scoreFactorLabel(lead.score_reason, t)
-                : t("lead.scoreNoSignals")}
-            </span>
-          </span>
-        }
-      >
-        <LeadScorePanel
-          lead={lead}
-          id={id}
-          readOnly={readOnly}
-          terminalReasonId={terminalReasonId}
-          overriding={overriding}
-          setOverriding={setOverriding}
-          scoreValue={scoreValue}
-          setScoreValue={setScoreValue}
-          reasonValue={reasonValue}
-          setReasonValue={setReasonValue}
-          scoreFieldId={scoreFieldId}
-          reasonFieldId={reasonFieldId}
-          patch={patch}
-        />
-        <LeadManualSignals
-          // Keyed by lead: a half-typed input for one lead must not be
-          // submitted against the next one the reader navigates to.
-          key={id}
-          id={id}
-          readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
-        />
-      </Disclosure>
-
-      {patch.isError && (
-        <span className="t-caption" style={{ color: "var(--danger)" }}>
-          {problemMessageOf(patch.error, t)}
-        </span>
-      )}
-    </Card>
+      <PanelBody>
+        <div className="lead-stack">
+          {/* The ladder leads: where this lead stands and how it got there is
+              the first thing a rep needs, and the step they take next is one
+              click on it (the terminal steps open their own dialogs). The
+              mirror refuses a lifecycle write, so in overlay it only reads. */}
+          <LeadStepper
+            lead={lead}
+            pending={writer.patch.isPending}
+            readOnlyReason={
+              readOnly
+                ? t("lead.terminalReadOnly")
+                : overlay
+                  ? t("lead.ladder.overlay")
+                  : undefined
+            }
+            onStep={(status) => {
+              // Same one-write-at-a-time rule as the inline rows: a status
+              // sent while another save is in flight races it for If-Match.
+              if (!writer.patch.isPending && !readOnly && !overlay) {
+                writer.save({ status });
+              }
+            }}
+            onQualify={onQualify}
+            onDisqualify={onDisqualify}
+          />
+          {/* The first-response line only exists while the target is on: the
+              server derives sla_state from the setting, so an installation
+              that never opted in sees nothing here. */}
+          <FirstResponseLine lead={lead} />
+        </div>
+      </PanelBody>
+    </Panel>
   );
 }
 
-// The lead-360 badge row. Extracted so LeadScreen's render stays legible and
-// the terminal-state labelling lives in one place (terminalBadge).
-function LeadBadges({ lead }: Readonly<{ lead: Lead }>) {
+/**
+ * The rail: who owns this lead, and why it scores what it scores.
+ *
+ * Both are READINGS with an edit behind them — the answer to "should I be
+ * working this one", which a rep consults while doing the work in the column
+ * beside it. They were stacked in the middle of that column, between the
+ * ladder and the composer, where every one of them pushed the next action
+ * further down the page.
+ */
+function LeadRail({
+  lead,
+  id,
+  writer,
+  terminalReasonId,
+}: Readonly<{
+  lead: Lead;
+  id: string;
+  writer: LeadWriter;
+  terminalReasonId: string;
+}>) {
+  const { readOnly } = writer;
   const t = useT();
   const { locale } = useLocale();
-  const terminal = terminalBadge(lead.status);
+  const me = useMe();
+  const [overriding, setOverriding] = useState(false);
+  const [scoreValue, setScoreValue] = useState("");
+  const [reasonValue, setReasonValue] = useState("");
+  // THIS form's save, not any save. The mutation is shared with the owner
+  // picker and the ladder, so `isSuccess` alone cleared a half-typed override
+  // the moment somebody assigned an owner — and a refused save must leave what
+  // the reader typed where they typed it either way. `score` is what both of
+  // this form's writes carry (a value to set, or null to clear) and no other
+  // control on the page sends.
+  const saved =
+    writer.patch.isSuccess && "score" in (writer.patch.variables?.body ?? {});
+  useEffect(() => {
+    if (saved) {
+      setOverriding(false);
+      setScoreValue("");
+      setReasonValue("");
+    }
+  }, [saved]);
+
   return (
-    <div
-      style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 12 }}
-    >
-      <Badge tone={scoreTone(lead.score)}>
-        {t("lead.score")}: {formatNumber(lead.score, locale)}
-      </Badge>
-      {lead.score_override_reason && <Badge>{t("lead.overriddenBadge")}</Badge>}
-      <StatusBadge status={lead.status} />
-      {lead.company_name && <Badge>{lead.company_name}</Badge>}
-      {lead.source && <Badge>{sourceLabelFor(lead, undefined, t)}</Badge>}
-      {terminal && <Badge tone={terminal.tone}>{t(terminal.label)}</Badge>}
+    <div className="record-stack">
+      <LeadIdentityFields
+        lead={lead}
+        save={writer.saveField}
+        saving={writer.patch.isPending}
+        readOnlyReason={readOnly ? t("lead.terminalReadOnly") : undefined}
+      />
+      <Panel title={t("lead.railTitle")}>
+        <PanelBody>
+          <div className="lead-stack">
+            <LeadOwner
+              lead={lead}
+              meId={me.data?.user?.id}
+              terminalReasonId={terminalReasonId}
+              pending={writer.patch.isPending || readOnly}
+              onAssign={(ownerId) => writer.save({ owner_id: ownerId })}
+            />
+            {/* The score is a reading, not the work: it folds to one line with
+              its top factor, and opens for the breakdown, the override and
+              the rep's own inputs. */}
+            <Disclosure
+              summary={
+                <span className="lead-score-summary">
+                  <Badge tone={scoreTone(lead.score)}>
+                    {t("lead.score")}: {formatNumber(lead.score, locale)}
+                  </Badge>{" "}
+                  <span className="t-caption">
+                    {lead.score_reason
+                      ? scoreFactorLabel(lead.score_reason, t)
+                      : t("lead.scoreNoSignals")}
+                  </span>
+                </span>
+              }
+            >
+              <LeadScorePanel
+                lead={lead}
+                id={id}
+                terminalReasonId={terminalReasonId}
+                overriding={overriding}
+                setOverriding={setOverriding}
+                scoreValue={scoreValue}
+                setScoreValue={setScoreValue}
+                reasonValue={reasonValue}
+                setReasonValue={setReasonValue}
+                writer={writer}
+              />
+              <LeadManualSignals
+                // Keyed by lead: a half-typed input for one lead must not be
+                // submitted against the next one the reader navigates to.
+                key={id}
+                id={id}
+                readOnlyReason={
+                  readOnly ? t("lead.terminalReadOnly") : undefined
+                }
+              />
+            </Disclosure>
+          </div>
+        </PanelBody>
+      </Panel>
     </div>
+  );
+}
+
+/** The status as the strip states it: the terminal wording when it has one. */
+function statusReading(lead: Lead, t: ReturnType<typeof useT>): string {
+  const terminal = terminalBadge(lead.status);
+  const label = terminal?.label ?? leadStatusLabel(lead.status);
+  return label ? t(label) : lead.status;
+}
+
+/**
+ * The lead's readings, across the band: the six facts that change how a
+ * reader interprets everything under them.
+ *
+ * A strip rather than the row of badges this was, for the reason `StatStrip`
+ * exists: six pills of equal weight are read as decoration and skipped, while
+ * ruled slots with their labels are read as a table of what is true. Every
+ * slot states its absence in words — a lead with no company has none, and an
+ * empty slot would say the page failed to load one.
+ */
+function LeadStrip({ lead }: Readonly<{ lead: Lead }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const sources = useLeadSources();
+  return (
+    <StatStrip>
+      <StatCard
+        label={t("lead.score")}
+        value={formatNumber(lead.score, locale)}
+        numeric
+        detail={
+          lead.score_override_reason
+            ? t("lead.overriddenBadge")
+            : lead.score_reason
+              ? scoreFactorLabel(lead.score_reason, t)
+              : t("lead.scoreNoSignals")
+        }
+      />
+      <StatCard label={t("lead.status")} value={statusReading(lead, t)} />
+      <StatCard
+        label={t("lead.source")}
+        value={
+          lead.source
+            ? sourceLabelFor(lead, sources.data?.data, t)
+            : t("lead.detailsUnset")
+        }
+      />
+      <StatCard
+        label={t("create.companyName")}
+        value={lead.company_name ?? t("lead.detailsUnset")}
+      />
+    </StatStrip>
   );
 }
 
@@ -1093,7 +1139,6 @@ function usePromotionRecord(id: string, promoted: boolean): PromotionRecord {
 function DemoteAction({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
-  const headingId = useId();
   const [open, setOpen] = useState(false);
   const [reason, setReason] = useState("");
   const demote = useMutation({
@@ -1124,56 +1169,31 @@ function DemoteAction({ id }: Readonly<{ id: string }>) {
       <Button small onClick={() => setOpen(true)}>
         {t("lead.demote")}
       </Button>
-      <Modal open={open} onClose={close} labelledBy={headingId}>
-        <h2
-          id={headingId}
-          className="t-h2"
-          style={{ marginBottom: "var(--space-3)" }}
-        >
-          {t("lead.demoteDialog")}
-        </h2>
-        <p className="t-body" style={{ marginBottom: "var(--space-3)" }}>
-          {t("lead.demoteExplain")}
-        </p>
-        <label
-          className="t-caption field"
-          style={{ marginBottom: "var(--space-4)" }}
-        >
-          {t("lead.demoteReason")}
-          <Textarea
-            aria-label={t("lead.demoteReason")}
-            value={reason}
-            onChange={(event) => setReason(event.target.value)}
-          />
-        </label>
-        {demote.isError && (
-          <p
-            className="t-caption"
-            style={{ color: "var(--danger)", marginBottom: "var(--space-3)" }}
-          >
-            {problemMessageOf(demote.error, t)}
-          </p>
-        )}
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Button small onClick={close} disabled={demote.isPending}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            small
-            variant="primary"
-            disabled={demote.isPending || reason.trim() === ""}
-            onClick={() => demote.mutate()}
-          >
-            {t("lead.demoteConfirm")}
-          </Button>
+      <ConfirmModal
+        open={open}
+        onClose={close}
+        title={t("lead.demoteDialog")}
+        confirmLabel={t("lead.demoteConfirm")}
+        confirmReason={
+          reason.trim() === "" ? t("lead.demoteReasonRequired") : undefined
+        }
+        onConfirm={() => demote.mutate()}
+        pending={demote.isPending}
+        error={demote.isError ? problemMessageOf(demote.error, t) : undefined}
+      >
+        <div className="lead-stack">
+          <p className="t-body">{t("lead.demoteExplain")}</p>
+          <Field label={t("lead.demoteReason")} required>
+            {(control) => (
+              <Textarea
+                {...control}
+                value={reason}
+                onChange={(event) => setReason(event.target.value)}
+              />
+            )}
+          </Field>
         </div>
-      </Modal>
+      </ConfirmModal>
     </>
   );
 }
@@ -1221,41 +1241,39 @@ function PromotedLeadPanel({
   return (
     <Panel title={t("lead.promotedTitle")}>
       <PanelBody>
-        <p className="t-body">{outcomeLine()}</p>
-        <p className="t-body" style={{ marginTop: "var(--space-2)" }}>
-          <EntityRef kind="person" id={lead.promoted_person_id} />
-        </p>
-        {lead.promoted_at && (
-          <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
-            {t("lead.promotedAt")}{" "}
-            {formatDateAbbrev(
-              lead.promoted_at,
-              locale,
-              // The reader's own zone, the same one the shell stamps this
-              // page's timeline rows in — a lead carries no location of its
-              // own to prefer over where the reader is.
-              viewerZone(),
-            )}
+        <div className="lead-stack">
+          <p className="t-body">{outcomeLine()}</p>
+          <p className="t-body">
+            <EntityRef kind="person" id={lead.promoted_person_id} />
           </p>
-        )}
-        {triggerLabel && (
-          <p className="t-caption">
-            {t("lead.promotedTrigger")} {t(triggerLabel)}
-          </p>
-        )}
-        {promotion.evidenceNote && (
-          <p className="t-caption">
-            {t("lead.promotedEvidence")} {promotion.evidenceNote}
-          </p>
-        )}
-        {/* The reversal lives here and nowhere else: this is the record the
-            promotion is a fact about. Not in overlay, where the mirror owns
-            the person. */}
-        {!overlay && (
-          <div style={{ marginTop: "var(--space-3)" }}>
-            <DemoteAction id={lead.id} />
-          </div>
-        )}
+          {lead.promoted_at && (
+            <p className="t-caption">
+              {t("lead.promotedAt")}{" "}
+              {formatDateAbbrev(
+                lead.promoted_at,
+                locale,
+                // The reader's own zone, the same one the shell stamps this
+                // page's timeline rows in — a lead carries no location of its
+                // own to prefer over where the reader is.
+                viewerZone(),
+              )}
+            </p>
+          )}
+          {triggerLabel && (
+            <p className="t-caption">
+              {t("lead.promotedTrigger")} {t(triggerLabel)}
+            </p>
+          )}
+          {promotion.evidenceNote && (
+            <p className="t-caption">
+              {t("lead.promotedEvidence")} {promotion.evidenceNote}
+            </p>
+          )}
+          {/* The reversal lives here and nowhere else: this is the record the
+              promotion is a fact about. Not in overlay, where the mirror owns
+              the person. */}
+          {!overlay && <DemoteAction id={lead.id} />}
+        </div>
       </PanelBody>
     </Panel>
   );
@@ -1321,43 +1339,38 @@ function useLadderRefresh(id: string): () => void {
 function LeadOverviewPane({
   lead,
   id,
+  writer,
   promotion,
-  terminalReasonId,
+  overlay,
   onQualify,
   onDisqualify,
-  onLifecycleChanged,
   onTouchLogged,
 }: Readonly<{
   lead: Lead;
   id: string;
+  writer: LeadWriter;
   promotion: PromotionRecord;
-  terminalReasonId: string;
+  overlay: boolean;
   onQualify: () => void;
   onDisqualify: () => void;
-  onLifecycleChanged: () => void;
   // Owned by LeadScreen, ABOVE the tab switch: the refresh timers this
   // schedules must survive this pane unmounting when the reader flips to
   // History mid-climb.
   onTouchLogged: () => void;
 }>) {
-  // Qualify turns a mirrored lead into a person — a write the incumbent mirror
-  // refuses (unsupported_by_sor), so the verbs are hidden in overlay.
-  const overlay = useSorMode() === "overlay";
   return (
-    <>
+    <div className="record-stack">
       {/* A promoted lead's page leads with what the promotion did — the
           reader arrived asking whether this became a contact, and which one. */}
       {lead.promoted_person_id && (
         <PromotedLeadPanel lead={lead} promotion={promotion} />
       )}
-      <LeadLifecycle
+      <LeadLadderPanel
         lead={lead}
-        id={id}
-        onChanged={onLifecycleChanged}
-        terminalReasonId={terminalReasonId}
+        writer={writer}
+        overlay={overlay}
         onQualify={onQualify}
         onDisqualify={onDisqualify}
-        overlay={overlay}
       />
       {/* The composer follows the facts so opening a lead answers "what
           should I do" before asking the rep to type. */}
@@ -1365,7 +1378,7 @@ function LeadOverviewPane({
         <LogActivity entityType="lead" entityId={id} onLogged={onTouchLogged} />
       )}
       <CustomFieldsCard object="lead" record={lead} />
-    </>
+    </div>
   );
 }
 
@@ -1535,11 +1548,32 @@ function LeadDialogs({
   return null;
 }
 
-export function LeadScreen({ id }: Readonly<{ id: string }>) {
-  const refreshAfterTouch = useLadderRefresh(id);
+/**
+ * One lead's page, with the record in hand.
+ *
+ * Split from `LeadScreen` because the page's ONE write is a hook and the lead
+ * it writes only exists inside the query gate: a hook cannot be called from a
+ * render prop, and moving the mutation above the gate would have it guarding a
+ * record it had not read yet.
+ */
+function LeadRecord({
+  lead,
+  id,
+  cf,
+  overlay,
+}: Readonly<{
+  lead: Lead;
+  id: string;
+  cf: ReturnType<typeof useObjectCustomFields>;
+  // Read ABOVE the query gate and handed down, so the posture is known on the
+  // page's FIRST paint. Read here it would start loading only once the lead
+  // had arrived, and the page would draw one frame of native affordances — an
+  // offered Disqualify the mirror refuses — before correcting itself.
+  overlay: boolean;
+}>) {
   const t = useT();
-  const cf = useObjectCustomFields("lead");
   const queryClient = useQueryClient();
+  const refreshAfterTouch = useLadderRefresh(id);
   // ONE sentence about this lead being closed, minted here and pointed at by
   // every control the closure refuses (ADR-0108 §6).
   const terminalReasonId = useId();
@@ -1550,6 +1584,178 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
   // lifecycle transition the seam refuses outright, so it and share stay
   // hidden (share: a record grant probes the native lead row, which a
   // mirror lead has no row in — see deals.tsx's DealBadges).
+  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
+  const timelineQuery = useRecordTimeline("lead", id, {
+    filters: timelineFilters,
+  });
+  const viewerId = useViewerId();
+  const timelineEntries = activityTimeline(timelineQuery.activities, viewerId);
+  const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(null);
+  // What the last qualify did, said once: the contact and, when one was
+  // opened, the deal. The page stays (ADR-0119) and the outcome panel below
+  // carries the links on, so this is the confirmation rather than the record —
+  // which is what `useToast` is, withdrawing itself instead of sitting in the
+  // column as a second, permanent copy of the same news.
+  const toast = useToast();
+  // A promoted lead keeps its page (ADR-0119/A170). It no longer redirects to
+  // the person: the redirect said the lead had ceased to exist, which is
+  // untrue of a record this product keeps, audits and can reverse — and it
+  // left the reversal with nowhere to start from. The page reads the
+  // promotion off its own audit row and says what happened.
+  const promotion = usePromotionRecord(id, Boolean(lead.promoted_person_id));
+  const writer = useLeadPatch(lead, id, () => {
+    for (const key of leadWriteKeys(id)) {
+      queryClient.invalidateQueries({ queryKey: key });
+    }
+  });
+
+  return (
+    <RecordView
+      name={leadIdentityName(lead) || t("lead.unnamed")}
+      avatarSrc={null}
+      // The "Lead" marker rides the identity, not a badge among badges: a
+      // reader has to know this is a prospect and not a contact BEFORE they
+      // read anything else about them (ADR-0108 §1).
+      subtitle={<Badge tone="accent">{t("lead.marker")}</Badge>}
+      pulse={
+        lead.email ? (
+          <span className="t-mono lead-email">{lead.email}</span>
+        ) : null
+      }
+      actions={
+        <LeadActions
+          lead={lead}
+          id={id}
+          cf={cf}
+          overlay={overlay}
+          terminalReasonId={terminalReasonId}
+          onQualify={() => setDialog("qualify")}
+          onDisqualify={() => setDialog("disqualify")}
+        />
+      }
+      actionsInline
+      // The shell stamps timeline rows in this zone. The viewer's own is the
+      // honest default for a prospect: a lead carries no workspace location of
+      // its own to prefer over where the reader is.
+      zone={viewerZone()}
+      timeline={timelineEntries}
+      timelineGroups={groupChronology(
+        timelineEntries,
+        timelineQuery.hasNextPage,
+      )}
+      timelineHeader={
+        overlay ? undefined : (
+          <TimelineFilterBar
+            value={timelineFilters}
+            onChange={setTimelineFilters}
+          />
+        )
+      }
+      timelineFooter={<LoadMoreButton query={timelineQuery} />}
+      timelineNotice={timelineZoneNotice(
+        { overlay, pending: timelineQuery.isPending },
+        t,
+      )}
+      // The readings ride the band, above the columns: they describe the
+      // PROSPECT, and a strip that vanished on the History tab would move the
+      // tab bar and re-flow the page under the reader.
+      band={
+        <>
+          <LeadStrip lead={lead} />
+          {/* The page's one write serves both columns and every tab, so what
+              it REFUSES is stated where both are visible. In the ladder panel
+              this reached only the Overview tab, and a rail write refused
+              while the reader was on History said nothing at all. */}
+          {writer.patch.isError && (
+            <Callout tone="danger" live="alert">
+              {problemMessageOf(writer.patch.error, t)}
+            </Callout>
+          )}
+          {/* Stated ONCE for the page. Every control the closure refuses
+              points at this element by id, so a screen reader reaches it from
+              each of them without the sentence being printed beside all six. */}
+          {lead.archived_at && (
+            <p id={terminalReasonId} className="t-caption">
+              {/* Which closure, not merely THAT it is closed. Both terminal
+                  states archive the row, so keying this off archived_at alone
+                  told every promoted lead it had been disqualified — invisible
+                  until ADR-0119 stopped the page redirecting away before
+                  anyone could read it. */}
+              {lead.status === "promoted"
+                ? t("lead.terminalPromoted")
+                : t("lead.terminalDisqualified")}
+            </p>
+          )}
+        </>
+      }
+      railLabel={t("lead.railTitle")}
+      // The rail carries what a rep CONSULTS — who owns this and why it scores
+      // what it scores — so the column beside it can stay the work.
+      rail={
+        <LeadRail
+          lead={lead}
+          id={id}
+          writer={writer}
+          terminalReasonId={terminalReasonId}
+        />
+      }
+      tabs={
+        <SegmentedControl
+          options={LEAD_TABS}
+          value={tab}
+          onChange={setTab}
+          labels={{
+            overview: t("tab.overview"),
+            history: t("tab.history"),
+          }}
+        />
+      }
+    >
+      <ToastRegion toast={toast} />
+      {tab === "overview" && (
+        <LeadOverviewPane
+          lead={lead}
+          id={id}
+          writer={writer}
+          promotion={promotion}
+          overlay={overlay}
+          onQualify={() => setDialog("qualify")}
+          onDisqualify={() => setDialog("disqualify")}
+          onTouchLogged={refreshAfterTouch}
+        />
+      )}
+      <LeadDialogs
+        lead={lead}
+        dialog={dialog}
+        onClose={() => setDialog(null)}
+        onQualified={(done) => {
+          setDialog(null);
+          toast.show(done);
+        }}
+      />
+      {tab === "history" && !overlay && (
+        <RecordHistoryTab
+          kind="lead"
+          id={lead.id}
+          restore={{
+            version: lead.version,
+            onRestored: () => invalidateRecord(queryClient, "lead", lead.id),
+          }}
+        />
+      )}
+      {tab === "history" && overlay && <OverlayUnavailable />}
+    </RecordView>
+  );
+}
+
+export function LeadScreen({ id }: Readonly<{ id: string }>) {
+  const cf = useObjectCustomFields("lead");
+  // The seam serves update for a mirrored lead (write-back projects onto the
+  // incumbent, overlay/provider_writes.go), so Edit renders in overlay too.
+  // DELETE /leads/{id} is disqualify_lead, not an archive — a cross-type
+  // lifecycle transition the seam refuses outright, so it and share stay
+  // hidden (share: a record grant probes the native lead row, which a mirror
+  // lead has no row in — see deals.tsx's DealBadges).
   const overlay = useSorMode() === "overlay";
   const leadQuery = useQuery({
     queryKey: leadKey(id),
@@ -1563,171 +1769,21 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
       return data;
     },
   });
-  // A lead's own activities: what we already did about this prospect
-  // (ADR-0118/A169). `activity_link` has carried the lead arm since migration
-  // 0038; only the screen was missing.
-  const [timelineFilters, setTimelineFilters] = useTimelineFilters(id);
-  const timelineQuery = useRecordTimeline("lead", id, {
-    filters: timelineFilters,
-  });
-  const viewerId = useViewerId();
-  const timelineEntries = activityTimeline(timelineQuery.activities, viewerId);
-  const [dialog, setDialog] = useState<"qualify" | "disqualify" | null>(null);
-  // What the last qualify did, said once under the header: the contact and,
-  // when one was opened, the deal. The page stays (ADR-0119): a promoted
-  // lead keeps its page, and the outcome card below carries the links on.
-  const [toast, setToast] = useState<ReactNode>(null);
-  // This screen stays mounted from one lead to the next: an open dialog or a
-  // sentence about the previous lead must not carry over to this one.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: the reset runs when the lead changes, and the lead is the only input
-  useEffect(() => {
-    setDialog(null);
-    setToast(null);
-  }, [id]);
-
-  // A promoted lead keeps its page (ADR-0119/A170). It no longer redirects to
-  // the person: the redirect said the lead had ceased to exist, which is untrue
-  // of a record this product keeps, audits and can reverse — and it left the
-  // reversal with nowhere to start from. The page reads the promotion off its
-  // own audit row and says what happened.
-  const promotion = usePromotionRecord(
-    id,
-    Boolean(leadQuery.data?.promoted_person_id),
-  );
 
   return (
     <div className="wrap lead-surface">
       <QueryGate query={leadQuery}>
         {(lead) => (
-          <RecordView
-            name={leadIdentityName(lead) || t("lead.unnamed")}
-            avatarSrc={null}
-            // The "Lead" marker rides the identity, not a badge among badges:
-            // a reader has to know this is a prospect and not a contact
-            // BEFORE they read anything else about them (ADR-0108 §1).
-            subtitle={<Badge tone="accent">{t("lead.marker")}</Badge>}
-            pulse={
-              lead.email ? (
-                <span className="t-mono lead-email">{lead.email}</span>
-              ) : null
-            }
-            actions={
-              <LeadActions
-                lead={lead}
-                id={id}
-                cf={cf}
-                overlay={overlay}
-                terminalReasonId={terminalReasonId}
-                onQualify={() => setDialog("qualify")}
-                onDisqualify={() => setDialog("disqualify")}
-              />
-            }
-            actionsInline
-            // The shell stamps timeline rows in this zone. The viewer's own is
-            // the honest default for a prospect: a lead carries no workspace
-            // location of its own to prefer over where the reader is.
-            zone={viewerZone()}
-            timeline={timelineEntries}
-            timelineGroups={groupChronology(
-              timelineEntries,
-              timelineQuery.hasNextPage,
-            )}
-            timelineHeader={
-              overlay ? undefined : (
-                <TimelineFilterBar
-                  value={timelineFilters}
-                  onChange={setTimelineFilters}
-                />
-              )
-            }
-            timelineFooter={<LoadMoreButton query={timelineQuery} />}
-            timelineNotice={timelineZoneNotice(
-              { overlay, pending: timelineQuery.isPending },
-              t,
-            )}
-            // The readings ride the band, above the columns: they describe the
-            // PROSPECT, and a strip that vanished on the History tab would
-            // move the tab bar and re-flow the page under the reader.
-            band={
-              <>
-                <LeadBadges lead={lead} />
-                {/* Stated ONCE for the page. Every control the closure
-                    refuses points at this element by id, so a screen reader
-                    reaches it from each of them without the sentence being
-                    printed beside all six. */}
-                {lead.archived_at && (
-                  <p id={terminalReasonId} className="t-caption">
-                    {/* Which closure, not merely THAT it is closed. Both
-                        terminal states archive the row, so keying this off
-                        archived_at alone told every promoted lead it had been
-                        disqualified — invisible until ADR-0119 stopped the
-                        page redirecting away before anyone could read it. */}
-                    {lead.status === "promoted"
-                      ? t("lead.terminalPromoted")
-                      : t("lead.terminalDisqualified")}
-                  </p>
-                )}
-              </>
-            }
-          >
-            {/* The bar leads the column it governs. */}
-            <div style={{ marginBottom: "var(--space-4)" }}>
-              <SegmentedControl
-                options={LEAD_TABS}
-                value={tab}
-                onChange={setTab}
-                labels={{
-                  overview: t("tab.overview"),
-                  history: t("tab.history"),
-                }}
-              />
-            </div>
-            {toast && (
-              <div className="toast-region">
-                <output className="toast">
-                  <span className="dot dot-auto" />
-                  {toast}
-                </output>
-              </div>
-            )}
-            {tab === "overview" && (
-              <LeadOverviewPane
-                lead={lead}
-                id={id}
-                promotion={promotion}
-                terminalReasonId={terminalReasonId}
-                onQualify={() => setDialog("qualify")}
-                onDisqualify={() => setDialog("disqualify")}
-                onLifecycleChanged={() => {
-                  for (const key of leadWriteKeys(id)) {
-                    queryClient.invalidateQueries({ queryKey: key });
-                  }
-                }}
-                onTouchLogged={refreshAfterTouch}
-              />
-            )}
-            <LeadDialogs
-              lead={lead}
-              dialog={dialog}
-              onClose={() => setDialog(null)}
-              onQualified={(done) => {
-                setDialog(null);
-                setToast(done);
-              }}
-            />
-            {tab === "history" && !overlay && (
-              <RecordHistoryTab
-                kind="lead"
-                id={lead.id}
-                restore={{
-                  version: lead.version,
-                  onRestored: () =>
-                    invalidateRecord(queryClient, "lead", lead.id),
-                }}
-              />
-            )}
-            {tab === "history" && overlay && <OverlayUnavailable />}
-          </RecordView>
+          // Keyed by lead: every piece of page state below — the open dialog,
+          // the tab, a half-typed score override — is about THIS lead, and
+          // this screen stays mounted from one to the next.
+          <LeadRecord
+            key={lead.id}
+            lead={lead}
+            id={id}
+            cf={cf}
+            overlay={overlay}
+          />
         )}
       </QueryGate>
     </div>

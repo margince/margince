@@ -320,11 +320,7 @@ export function PersonPageV2({
             onExplain={() => navigate({ screen: "contacts", id })}
           />
         }
-      >
-        {/* The bar leads the column it governs, so it sits in the main column
-            rather than in the band above it: what it chooses is what appears
-            beneath it, not the readings over it. */}
-        <div className="pe-tabs">
+        tabs={
           <SegmentedControl
             options={PERSON_TABS}
             value={tab}
@@ -348,13 +344,10 @@ export function PersonPageV2({
               ),
             }}
           />
-        </div>
-
+        }
+      >
         {tab === "overview" && (
-          // One vertical stack of full-width panels, not a grid of half-width
-          // cards: every panel here is read top to bottom once, and prose in a
-          // half-column column gets a measure too narrow to read as prose.
-          <div className="pe-overview-stack">
+          <div className="record-stack">
             {view.data.moment && (
               <PersonToday
                 moment={view.data.moment}

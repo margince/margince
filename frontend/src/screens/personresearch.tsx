@@ -60,7 +60,7 @@ export function PersonResearchTab({
   }
 
   return (
-    <div className="pe-overview-stack">
+    <div className="record-stack">
       {view &&
         (providerWithheld ? (
           <Panel title={t("provider.profile.title")}>

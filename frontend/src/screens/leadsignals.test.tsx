@@ -171,7 +171,7 @@ describe("LeadManualSignals", () => {
     const writes: Write[] = [];
     await show(writes);
 
-    const summary = screen.getByText("More…");
+    const summary = screen.getByText("More");
     await user.click(summary);
     expect(summary.closest("details")?.open).toBe(true);
 
