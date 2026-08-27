@@ -19,6 +19,7 @@ import {
   MarginceCoreScene,
   type MarginceCoreState,
 } from "../design-system/margince-core";
+import { type CappedCount, cappedCountLabel } from "../format/cappedcount";
 import { formatMoney, formatNumber, INTL_LOCALE } from "../format/format";
 import { type Locale, useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -85,23 +86,6 @@ const MARK_FADE = 0.16;
 
 /** Where the whole trace lives, and where a model gets bound. Same tab. */
 const AI_SETTINGS_HREF = "#/settings/admin/ai";
-
-/**
- * A count read off ONE page of a keyset-paged list.
- *
- * The dedupe queue returns no total and this rail reads a single 50-row page,
- * so a full page means "at least this many" and nothing more. Printing the
- * page length flat reads as a total: a workspace with two hundred open pairs
- * said "50", and the reader who cleared fifty of them found the number
- * unmoved. (The approvals count beside it needs none of this — its query walks
- * every page before counting.)
- */
-type CappedCount = Readonly<{ seen: number; more: boolean }>;
-
-/** The count as the rail prints it: "50+" when the page was full. */
-function countLabel(count: CappedCount): string {
-  return count.more ? `${count.seen}+` : String(count.seen);
-}
 
 /** What the installation can actually tell us, and what it cannot. */
 type Signals = Readonly<{
@@ -693,9 +677,9 @@ function AgentPanel({
               <a
                 className="arbox artile"
                 href="#/today"
-                aria-label={`${LABELS.duplicatesRow} ${countLabel(signals.duplicates)}`}
+                aria-label={`${LABELS.duplicatesRow} ${cappedCountLabel(signals.duplicates, locale)}`}
               >
-                <b>{countLabel(signals.duplicates)}</b>
+                <b>{cappedCountLabel(signals.duplicates, locale)}</b>
                 <span>{LABELS.duplicatesRow}</span>
               </a>
             )}
@@ -922,12 +906,12 @@ function usePanelFrame(
  * ranks under the licence because it is true of one screen rather than of the
  * whole installation.
  */
-function warningLine(signals: Signals): string {
+function warningLine(signals: Signals, locale: Locale): string {
   if (signals.license === "none" || signals.license === "refused") {
     return signals.licenseLine;
   }
   if (signals.duplicates?.seen) {
-    return `${countLabel(signals.duplicates)} ${LABELS.duplicates}`;
+    return `${cappedCountLabel(signals.duplicates, locale)} ${LABELS.duplicates}`;
   }
   return LABELS.review;
 }
@@ -996,6 +980,7 @@ function idleLines(
   spend: Readonly<{ allowed: boolean; minor: number | undefined }>,
   money: string,
   devLine: string,
+  locale: Locale,
   /** The newest run that settled today, or null when there is none to name. */
   settledLine: string | null,
 ): readonly string[] {
@@ -1011,7 +996,7 @@ function idleLines(
         : undefined,
     duplicates:
       signals.duplicates !== undefined && signals.duplicates.seen > 0
-        ? `${countLabel(signals.duplicates)} ${LABELS.duplicatesIdle}`
+        ? `${cappedCountLabel(signals.duplicates, locale)} ${LABELS.duplicatesIdle}`
         : undefined,
     spend:
       spend.allowed && spend.minor !== undefined
@@ -1064,6 +1049,7 @@ function barLine(
   signals: Signals,
   record: Readonly<{ reading: boolean }>,
   devLine: string,
+  locale: Locale,
   /** What the server says it is doing, or null when it says nothing this
    *  surface has words for. */
   serverLine: string | null,
@@ -1081,7 +1067,7 @@ function barLine(
     return LABELS.unreachable;
   }
   if (state === "warning") {
-    return warningLine(signals);
+    return warningLine(signals, locale);
   }
   if (state === "working") {
     // The named run outranks the generic word: "Working" is true of both a local
@@ -1187,7 +1173,14 @@ export function AgentRail({
   // The bar keeps the live run because that is what is true this second.
   const settledLine = server.recent[0] ? lineFor(server.recent[0], t) : null;
   const resting = useIdleLine(
-    idleLines(signals, spend, money, t("auth.coreDevelopment"), settledLine),
+    idleLines(
+      signals,
+      spend,
+      money,
+      t("auth.coreDevelopment"),
+      locale,
+      settledLine,
+    ),
   );
 
   // The one screen it absents itself from, and the reason is not layout: the Ask
@@ -1214,7 +1207,14 @@ export function AgentRail({
     (override && REVIEW_ONLY[override]) ??
     (state === "idle"
       ? resting
-      : barLine(state, signals, record, t("auth.coreDevelopment"), serverLine));
+      : barLine(
+          state,
+          signals,
+          record,
+          t("auth.coreDevelopment"),
+          locale,
+          serverLine,
+        ));
   return (
     <section
       className="arblock"

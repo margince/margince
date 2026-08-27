@@ -3,7 +3,8 @@
 
 import { ArrowRight } from "lucide-react";
 import type { ReactNode } from "react";
-import { formatNumber, hourInZone } from "../format/format";
+import { type CappedCount, cappedCountLabel } from "../format/cappedcount";
+import { hourInZone } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, usePlural, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -89,7 +90,8 @@ export type GlanceFacts = Readonly<{
   brief: GlanceBrief | null;
   overnight: GlanceOvernight | null;
   /** Open deals that have gone quiet. */
-  stalled: number | null;
+  /** Open deals gone quiet, as a floor: Home reads one page of deals. */
+  stalled: CappedCount | null;
 }>;
 
 export type GlanceProps = GlanceFacts &
@@ -115,9 +117,17 @@ export type GlanceProps = GlanceFacts &
  */
 function CountMark({
   count,
+  more,
   onClick,
   label,
-}: Readonly<{ count: number; onClick?: () => void; label?: string }>) {
+}: Readonly<{
+  count: number;
+  /** Whether the figure is a floor rather than a total — the reading came off
+   *  one page and there was another behind it. */
+  more?: boolean;
+  onClick?: () => void;
+  label?: string;
+}>) {
   const { locale } = useLocale();
   // A figure with nowhere to go is a figure, not a control. The overnight
   // capture count is the case: Home has no destination that lists the messages
@@ -127,7 +137,7 @@ function CountMark({
   if (!onClick) {
     return (
       <span className="glance-count glance-count-flat t-mono">
-        {formatNumber(count, locale)}
+        {cappedCountLabel({ seen: count, more: more ?? false }, locale)}
       </span>
     );
   }
@@ -137,7 +147,7 @@ function CountMark({
   // at two places would announce the same name.
   return (
     <button type="button" className="glance-count t-mono" onClick={onClick}>
-      {formatNumber(count, locale)}
+      {cappedCountLabel({ seen: count, more: more ?? false }, locale)}
       {label ? <span className="sr-only"> {label}</span> : null}
       <ArrowRight size={13} aria-hidden="true" />
     </button>
@@ -147,12 +157,15 @@ function CountMark({
 /** One line of the briefing: a numeral that goes somewhere, then the clause. */
 function GlanceLine({
   count,
+  more,
   onClick,
   goLabel,
   children,
   testId,
 }: Readonly<{
   count: number;
+  /** Whether the figure is a floor — forwarded to `CountMark`. */
+  more?: boolean;
   /** Omitted where the figure has no destination — see `CountMark`. */
   onClick?: () => void;
   goLabel?: string;
@@ -161,7 +174,7 @@ function GlanceLine({
 }>) {
   return (
     <p className="glance-line" data-testid={testId}>
-      <CountMark count={count} onClick={onClick} label={goLabel} />
+      <CountMark count={count} more={more} onClick={onClick} label={goLabel} />
       <span className="glance-clause">{children}</span>
     </p>
   );
@@ -254,14 +267,15 @@ export function HomeGlance({
             {plural("home.glance.duplicates", overnight.duplicates)}
           </GlanceLine>
         )}
-        {stalled !== null && stalled > 0 && (
+        {stalled !== null && stalled.seen > 0 && (
           <GlanceLine
             testId="glance-quiet"
-            count={stalled}
+            count={stalled.seen}
+            more={stalled.more}
             onClick={onGoToWatch}
             goLabel={t("home.glance.goWatch")}
           >
-            {plural("home.glance.quiet", stalled)}
+            {plural("home.glance.quiet", stalled.seen)}
           </GlanceLine>
         )}
       </div>
