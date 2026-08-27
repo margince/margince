@@ -23,8 +23,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// contractObject is this record type's RBAC object name, spelled once.
-const contractObject = "contract"
+// Three different subjects in this module answer to the word "contract", and
+// none of them follows another.
+//
+// contractObject is the RBAC OBJECT — what auth.Require gates on and what an
+// audit row names as its entity type. contractTable is the ROW the patches
+// write. They are equal today and moving either is a different act: renaming
+// the object is a permissions change a deployment migrates its grants for,
+// renaming the table is a schema migration. One constant for both would make
+// each rename silently perform the other.
+//
+// The third is a wire field name — handlers.go faults on "contract" when a
+// terms check contradicts and no narrower field is to blame. That one belongs
+// to the HTTP contract and is spelled where it is used.
+const (
+	contractObject = "contract"
+	contractTable  = "contract"
+)
 
 // Status values. Asserted by a human or an approved proposal — never derived
 // from a date, here or anywhere (ADR-0109 §2).

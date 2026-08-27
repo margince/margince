@@ -38,7 +38,7 @@ func (s *Store) ClaimDeal(ctx context.Context, id ids.DealID, ifVersion *int64) 
 	}
 	out := DealClaim{OwnerID: actor.UserID}
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
-		claim, auditID, err := storekit.ClaimOwnership(ctx, tx, "deal", id.UUID, actor.UserID, ifVersion)
+		claim, auditID, err := storekit.ClaimOwnership(ctx, tx, dealTable, id.UUID, actor.UserID, ifVersion)
 		if err != nil {
 			return err
 		}

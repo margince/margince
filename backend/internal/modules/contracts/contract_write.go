@@ -152,7 +152,7 @@ func (s *Store) UpdateContract(ctx context.Context, id ids.ContractID, in crmcon
 			out = existing
 			return nil
 		}
-		if err := patch.ApplyGuarded(ctx, tx, "contract", id.UUID, ifVersion); err != nil {
+		if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
 			if constraint, ok := storekit.CheckViolation(err); ok {
 				return contractCheckError(constraint)
 			}
@@ -189,7 +189,7 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 		// the row lock instead. Taken by name rather than by handing the guarded
 		// seam a nil version, which does the same thing while reading as a
 		// caller who had a version and chose not to use it.
-		lock, err := storekit.LockRow(ctx, tx, "contract", id.UUID, storekit.LiveOnly)
+		lock, err := storekit.LockRow(ctx, tx, contractTable, id.UUID, storekit.LiveOnly)
 		if err != nil {
 			return err
 		}

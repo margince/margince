@@ -33,7 +33,7 @@ func (s *Store) GetDeal(ctx context.Context, id ids.DealID, archived storekit.Ar
 	}
 	var out crmcontracts.Deal
 	err = s.Tx(ctx, func(tx pgx.Tx) (err error) {
-		if err := auth.EnsureVisible(ctx, tx, "deal", id.UUID); err != nil {
+		if err := auth.EnsureVisible(ctx, tx, dealTable, id.UUID); err != nil {
 			return err
 		}
 		out, err = readDealForCaller(ctx, tx, id, archived, active)
@@ -119,7 +119,7 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	return storekit.RunListPage(ctx, s, pre, "deal", dealColumns, active, where, scanDealPage,
+	return storekit.RunListPage(ctx, s, pre, dealTable, dealColumns, active, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 		func(tx pgx.Tx, page []crmcontracts.Deal) error { return maskDeals(ctx, tx, page) })
 }
@@ -137,7 +137,7 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	return storekit.RunListPageTx(ctx, tx, pre, "deal", dealColumns, active.cols, where, scanDealPage,
+	return storekit.RunListPageTx(ctx, tx, pre, dealTable, dealColumns, active.cols, where, scanDealPage,
 		func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 		func(tx pgx.Tx, page []crmcontracts.Deal) error { return maskDeals(ctx, tx, page) })
 }

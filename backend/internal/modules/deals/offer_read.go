@@ -62,7 +62,7 @@ func (s *Store) ListDealOffers(ctx context.Context, dealID ids.DealID, in ListDe
 		// The deal is the offer's visibility anchor: out of the caller's
 		// row scope, the whole listing answers 404, never an empty page
 		// that discloses the deal exists.
-		if err := auth.EnsureLinkTarget(ctx, tx, "deal", dealID.UUID); err != nil {
+		if err := auth.EnsureLinkTarget(ctx, tx, dealTable, dealID.UUID); err != nil {
 			return err
 		}
 

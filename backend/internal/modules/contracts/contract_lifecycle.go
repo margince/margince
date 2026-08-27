@@ -146,7 +146,7 @@ func applyStatusTx(ctx context.Context, tx pgx.Tx, id ids.ContractID, existing c
 		patch.Set("fx_rate_to_base", existing.FxRateToBase, frozen.rate)
 		patch.Set("fx_rate_date", existing.FxRateDate, frozen.on)
 	}
-	if err := patch.ApplyGuarded(ctx, tx, "contract", id.UUID, ifVersion); err != nil {
+	if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
 		if constraint, ok := storekit.CheckViolation(err); ok {
 			return crmcontracts.Contract{}, contractCheckError(constraint)
 		}
@@ -235,7 +235,7 @@ func (s *Store) Cancel(ctx context.Context, id ids.ContractID, noticeOn, effecti
 		patch := storekit.NewPatch()
 		patch.Set("cancellation_notice_on", existing.CancellationNoticeOn, noticeOn)
 		patch.Set("cancellation_effective_on", existing.CancellationEffectiveOn, effectiveOn)
-		if err := patch.ApplyGuarded(ctx, tx, "contract", id.UUID, ifVersion); err != nil {
+		if err := patch.ApplyGuarded(ctx, tx, contractTable, id.UUID, ifVersion); err != nil {
 			if constraint, ok := storekit.CheckViolation(err); ok {
 				return contractCheckError(constraint)
 			}
