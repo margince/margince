@@ -30,6 +30,7 @@ import {
   formatDecimal,
   formatNumber,
 } from "../format/format";
+import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -1504,7 +1505,7 @@ function LeadDialogs({
           onQualified(
             <span>
               {t("lead.qualify.done", {
-                name: lead.full_name ?? lead.email ?? "",
+                name: leadIdentityName(lead),
               })}{" "}
               <EntityRef kind="person" id={result.person.id} />
               {result.deal_id && (
@@ -1598,7 +1599,7 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
       <QueryGate query={leadQuery}>
         {(lead) => (
           <RecordView
-            name={lead.full_name ?? lead.email ?? t("nav.leads")}
+            name={leadIdentityName(lead) || t("lead.unnamed")}
             avatarSrc={null}
             // The "Lead" marker rides the identity, not a badge among badges:
             // a reader has to know this is a prospect and not a contact

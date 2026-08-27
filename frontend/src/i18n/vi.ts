@@ -1633,6 +1633,7 @@ export const vi = {
   "lead.bulkFailed": "{count} không áp dụng được —",
   "lead.bulkFailedRow": "không lưu được",
   "lead.bulkSelectRow": "Chọn {name}",
+  "lead.unnamed": "Khách hàng tiềm năng chưa có tên",
   "lead.sla.breached": "Quá hạn",
   "lead.sla.atRisk": "Sắp đến hạn",
   "lead.sla.withinTarget": "Đúng hạn",
