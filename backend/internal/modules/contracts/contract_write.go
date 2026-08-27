@@ -185,9 +185,17 @@ func (s *Store) ArchiveContract(ctx context.Context, id ids.ContractID) error {
 		if err != nil {
 			return err
 		}
+		// Archiving takes no If-Match on the wire, so the write is serialized by
+		// the row lock instead. Taken by name rather than by handing the guarded
+		// seam a nil version, which does the same thing while reading as a
+		// caller who had a version and chose not to use it.
+		lock, err := storekit.LockRow(ctx, tx, "contract", id.UUID, storekit.LiveOnly)
+		if err != nil {
+			return err
+		}
 		patch := storekit.NewPatch()
 		patch.Set("archived_at", existing.ArchivedAt, time.Now().UTC())
-		if err := patch.ApplyGuarded(ctx, tx, "contract", id.UUID, nil); err != nil {
+		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
 			return fmt.Errorf("archive contract: %w", err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, "archive", contractObject, id.UUID, patch.Before(), patch.After())

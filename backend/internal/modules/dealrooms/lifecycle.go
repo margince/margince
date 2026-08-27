@@ -125,7 +125,8 @@ func (s *Store) moveRoom(ctx context.Context, id ids.DealRoomID, move roomMove) 
 		// Lock before deciding: without it two concurrent pauses both read
 		// `live`, both pass the check, and the second writes over a state the
 		// first already changed.
-		if _, err := storekit.LockRow(ctx, tx, roomObject, id.UUID, storekit.LiveOnly); err != nil {
+		lock, err := storekit.LockRow(ctx, tx, roomObject, id.UUID, storekit.LiveOnly)
+		if err != nil {
 			return err
 		}
 		current, err = readRoom(ctx, tx, id)
@@ -143,8 +144,11 @@ func (s *Store) moveRoom(ctx context.Context, id ids.DealRoomID, move roomMove) 
 			p.Set(move.stampsCol, nil, time.Now().UTC())
 		}
 		// No If-Match: none of the three access moves takes one on the wire, and
-		// the row lock above already serializes them against each other.
-		if err := p.ApplyGuarded(ctx, tx, roomObject, id.UUID, nil); err != nil {
+		// the row lock above already serializes them against each other. Written
+		// through the lock's own witness rather than as a nil version, so the
+		// serialization this relies on is the one the compiler can see — a nil
+		// there re-derives the same lock and says nothing about holding it.
+		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return fmt.Errorf("apply deal room %s: %w", move.action, err)
 		}
 		auditID, err := storekit.Audit(ctx, tx, move.action, roomObject, id.UUID, p.Before(), p.After())

@@ -197,7 +197,13 @@ func (s *Store) UpdateLeadDisqualifyReason(ctx context.Context, id ids.UUID, in 
 			out = before
 			return nil
 		}
-		if err := p.ApplyGuardedIn(ctx, tx, "lead_disqualify_reason", id, nil, storekit.NoArchiveColumn); err != nil {
+		// No If-Match: the table carries no version column, so the row lock is
+		// the whole of the serialization and is taken by name.
+		lock, err := storekit.LockRow(ctx, tx, "lead_disqualify_reason", id, storekit.NoArchiveColumn)
+		if err != nil {
+			return err
+		}
+		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "lead_disqualify_reason", id, p.Before(), p.After()); err != nil {

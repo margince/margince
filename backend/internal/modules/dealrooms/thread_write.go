@@ -349,7 +349,15 @@ func (s *Store) ResolveThread(ctx context.Context, roomID ids.DealRoomID, thread
 		p.Set("state", threadOpen, threadResolved)
 		p.Set("resolved_at", nil, time.Now().UTC())
 		p.Set("resolved_by_user_id", nil, userID)
-		if err := p.ApplyGuardedIn(ctx, tx, threadObject, threadID, nil, storekit.NoArchiveColumn); err != nil {
+		// No If-Match: a thread carries no version column, so there is no
+		// precondition to compare. The row lock is what serializes two people
+		// resolving at once, and it is taken by name — a nil version reads as a
+		// caller who had one and declined it.
+		lock, err := storekit.LockRow(ctx, tx, threadObject, threadID, storekit.NoArchiveColumn)
+		if err != nil {
+			return err
+		}
+		if err := p.ApplyLocked(ctx, tx, lock); err != nil {
 			return err
 		}
 		auditID, err := storekit.Audit(ctx, tx, "resolve", threadObject, threadID, p.Before(), p.After())
