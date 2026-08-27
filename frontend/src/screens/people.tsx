@@ -13,7 +13,7 @@ import {
   useTimelineFilters,
 } from "../design-system/recordtimeline";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { ProvenanceTag } from "../design-system/trust";
 import { normalizeProfileUrl } from "../format/profileurl";
 import { useLocale, useT } from "../i18n";
@@ -480,7 +480,6 @@ export function ContactsScreen() {
           { label: "list.viewAZ", sort: "full_name" },
         ]}
       />
-      <ToastRegion toast={toast} />
     </div>
   );
 }

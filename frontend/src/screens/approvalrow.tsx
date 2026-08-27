@@ -21,7 +21,7 @@ import {
   type DecisionStatusLabels,
   DecisionToolChip,
 } from "../design-system/decisioncard";
-import { type Toast, ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
@@ -168,20 +168,9 @@ export function ApprovalRow({
   decided,
   onAlreadyDecided,
   extraInvalidateKeys,
-  toast: hostToast,
 }: Readonly<{
   approval: Approval;
   decided?: boolean;
-  // The surface's own toast, where it has one. The undo offer is sticky and
-  // outlives this row: approving invalidates ["approvals"], which unmounts the
-  // row it was shown from, and a toast owned HERE would go with it. A screen
-  // that shows a queue therefore owns the toast and its region, and hands the
-  // controller down.
-  //
-  // Optional, because a surface may render one row and nothing else (the
-  // stories do). Then the row falls back to its own, which is correct for a
-  // row nothing is going to unmount.
-  toast?: Toast;
   // Lift the already-decided signal to a surface that survives this row's
   // unmount (the pending invalidation drops it). Optional so a surface can
   // reuse the row without a screen-level surface.
@@ -196,8 +185,13 @@ export function ApprovalRow({
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
   const tierMap = useAgentTierMap();
-  const ownToast = useToast();
-  const toast = hostToast ?? ownToast;
+  // No ownership question left to answer. The offer outlives this row —
+  // approving invalidates ["approvals"], which unmounts the row that showed it
+  // — and the region it renders into belongs to the application rather than to
+  // whichever surface happened to be on screen, so the message survives on its
+  // own. The prop that used to hand a controller down from the queue, and the
+  // conditional region under it, went with that.
+  const toast = useToast();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [rejecting, setRejecting] = useState(false);
@@ -234,21 +228,14 @@ export function ApprovalRow({
     if (verdict !== "approve" || !undoTarget) {
       return;
     }
-    toast.show(
-      <span>
-        {t("decision.applied")}{" "}
-        <Button
-          small
-          onClick={() => {
-            toast.dismiss();
-            navigate(undoTarget);
-          }}
-        >
-          {t("decision.undoOnRecord")}
-        </Button>
-      </span>,
-      { sticky: true },
-    );
+    // The verb goes through `action`: the region draws it on its own ground,
+    // and withdraws the message once it has been pressed.
+    toast.show(t("decision.applied"), {
+      action: {
+        label: t("decision.undoOnRecord"),
+        onAct: () => navigate(undoTarget),
+      },
+    });
   };
 
   const decide = useMutation({
@@ -415,9 +402,6 @@ export function ApprovalRow({
         />
       }
     >
-      {/* Only where the row owns the toast. A region for somebody else's
-          controller would be a second place the same message renders. */}
-      {!hostToast && <ToastRegion toast={ownToast} />}
       <ConfirmModal
         open={rejecting}
         onClose={() => setRejecting(false)}
