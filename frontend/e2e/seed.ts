@@ -35,6 +35,11 @@ const E2E_ADMIN_GRANTS: GrantSpec = {
   // role. Read alone, because no spec exercises a person write from here and a
   // grant this fixture does not need is a grant it should not claim.
   person: ["read"],
+  // Filters & views reads the vocabulary and previews a tree under `list:read`
+  // (collections/handlers.go), and saving a filter as a dynamic list is a
+  // `list:create`. Without them the sweep would measure a screen whose picker
+  // never loaded — a page that renders and says nothing, which both sweeps pass.
+  list: ["create", "read", "update", "delete"],
 };
 
 // The coherent seed (mirrors design/seed-fixtures.md entities: Anna Weber,
@@ -1284,6 +1289,143 @@ export async function mockApi(
           },
         ]),
       );
+    }
+    if (path === "/filters/vocabulary" && method === "GET") {
+      // What a record type may be filtered on, as the server would answer it.
+      //
+      // The operator sets are NOT invented here: each is what
+      // storekit.operatorsByType admits for that type, narrowed by
+      // linkOperators where the field is reached through a join. A fixture that
+      // offered an operator the engine refuses would let a spec build a tree
+      // the product cannot, and the screen would look correct while doing
+      // something the server would 422.
+      const resource = url.searchParams.get("resource") ?? "person";
+      const owner = {
+        name: "owner_id",
+        type: "id",
+        operators: ["eq", "neq", "in", "exists"],
+        custom: false,
+        references: "app_user",
+      };
+      // A linked field: `contains` is gone, which is the narrowing a picker has
+      // to honour and the reason the fixture carries one.
+      const tag = {
+        name: "tag",
+        type: "id",
+        operators: ["eq", "neq", "in", "exists"],
+        custom: false,
+        references: "tag",
+      };
+      const byResource: Record<string, unknown[]> = {
+        person: [owner, tag],
+        organization: [
+          owner,
+          {
+            name: "industry",
+            type: "text",
+            operators: ["eq", "neq", "in", "contains", "exists"],
+            custom: false,
+          },
+          // A custom field, because a picker offering only core fields is not
+          // the picker this product ships: #1286 made `cf_*` columns and tags
+          // selectable, and a fixture with `custom: false` on every row leaves
+          // that half of the vocabulary unexercised. Named as the physical
+          // column, which is what the wire carries — the label lives in
+          // /custom-fields and the picker joins on `column_name`.
+          {
+            name: "cf_fleet_size",
+            type: "number",
+            operators: ["eq", "neq", "gt", "gte", "lt", "lte", "in", "exists"],
+            custom: true,
+          },
+          {
+            name: "lifecycle",
+            type: "picklist",
+            operators: ["eq", "neq", "in", "exists"],
+            custom: false,
+            options: ["prospect", "customer", "churned"],
+          },
+          tag,
+        ],
+        deal: [
+          owner,
+          {
+            name: "status",
+            type: "picklist",
+            operators: ["eq", "neq", "in", "exists"],
+            custom: false,
+            options: ["open", "won", "lost"],
+          },
+          tag,
+        ],
+      };
+      return json({
+        resource,
+        fields: byResource[resource] ?? [owner],
+      });
+    }
+    if (path === "/filters/preview" && method === "POST") {
+      // A count and the export's own projection. Two rows against a count of 812
+      // so `truncated` is the true answer rather than a flag nothing reads: the
+      // screen says "showing N of 812", and a fixture whose count equalled its
+      // page would let that sentence be wrong and still pass.
+      //
+      // ANSWERED FROM THE REQUEST, not from the path. A handler that returned
+      // these rows whatever was posted would let the preview assertions pass
+      // over a screen that sent the wrong resource, or a filter that was not
+      // the one the reader authored — the count on screen would be right and
+      // the thing it counted would be nobody's. So the body is read, and a
+      // request that does not match what the spec authored gets an honest empty
+      // answer instead of somebody else's rows.
+      type Leaf = { field?: string; op?: string; value?: unknown };
+      type Predicate = Leaf & { and?: Predicate[]; or?: Predicate[] };
+      const asked = (route.request().postDataJSON() ?? {}) as {
+        resource?: string;
+        filter?: Predicate;
+      };
+      // The root a builder sends is the group, not the clause: `encode`
+      // (segmentpredicate.ts) renders the tree, and its root is always a join.
+      // Flattened here rather than matched shape-for-shape, so the fixture
+      // answers the same filter however the reader nested it.
+      const leaves = (node: Predicate | undefined): Leaf[] =>
+        node === undefined
+          ? []
+          : node.and || node.or
+            ? [...(node.and ?? []), ...(node.or ?? [])].flatMap(leaves)
+            : [node];
+      const clauses = leaves(asked.filter);
+      const authored =
+        asked.resource === "organization" &&
+        clauses.length === 1 &&
+        clauses[0].field === "industry" &&
+        clauses[0].op === "eq" &&
+        clauses[0].value === "automotive";
+      if (!authored) {
+        return json({
+          resource: asked.resource ?? "organization",
+          match_count: 0,
+          columns: [],
+          rows: [],
+          truncated: false,
+        });
+      }
+      return json({
+        resource: "organization",
+        match_count: 812,
+        columns: ["id", "name", "industry"],
+        // Both rows match the authored predicate. A preview returning a row the
+        // filter excludes would let a results assertion pass over a screen
+        // rendering something the filter must not select — the fixture would be
+        // disagreeing with itself about what a filter means.
+        rows: [
+          { id: "o1", name: "Brandt Automotive", industry: "automotive" },
+          { id: "o2", name: "Kessler Fahrzeugbau", industry: "automotive" },
+        ],
+        truncated: true,
+      });
+    }
+    if (path === "/lists" && method === "GET") {
+      return json(page([]));
     }
     if (path === "/views" && method === "GET") {
       // One saved deals view, and it names the NON-default pipeline. A view is

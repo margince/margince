@@ -40,7 +40,10 @@
 
 .filter-group-empty {
   margin: 0;
-  color: var(--textMuted);
+  /* --textMeta is the canonical AA role for text this size; --textMuted is the
+   * decorative tone and measured 1.53:1 here. This line tells a reader what an
+   * empty group needs from them, which is not text to make hard to read. */
+  color: var(--textMeta);
   font-size: var(--fs-sm);
 }
 

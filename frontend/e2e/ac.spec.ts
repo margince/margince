@@ -82,6 +82,13 @@ const CORE_SCREENS = [
   // whose primary surface a reader can swap under the same address, so the
   // 390px pass has two layouts to find a horizontal scroll in rather than one.
   "leads",
+  // Filters & views. It is a rail destination AC-shell-1 already asserts by
+  // name, and it was in neither sweep — so the one screen in the product whose
+  // body is a nested editor grew clause rows, an operator control and a preview
+  // table with nobody measuring them at 390px or against axe. It is also the
+  // screen most able to be WIDE: a clause is a row of three controls, and a
+  // second level of nesting indents it again.
+  "filters",
   "today",
   "reports",
   "settings",
@@ -1794,4 +1801,216 @@ test("PERF-1: a record's heading does not wait on GET /people/{id}", async ({
   ).toBeVisible();
   expect(readStarted).toBe(true);
   expect(readAnswered).toBe(false);
+});
+
+// AC-filters-and-views: authoring a dynamic list's filter in the product.
+//
+// The screen shipped without entering either sweep and with no criterion of its
+// own asserted, which is why #1468 could read as open against a surface that had
+// been live for weeks: nothing in this file mentioned it, so nothing here
+// contradicted the report. Adding `filters` to CORE_SCREENS above puts it in the
+// 390px and axe passes — which found a 257px overflow and two 1.5:1 captions on
+// their first run. These four say what the screen is FOR.
+//
+// Four rather than eight. 2, 6 and 7 are cited nowhere in this tree, and a test
+// naming a criterion whose text nobody here can read would assert whatever I
+// guessed it said.
+test.describe("filters and views", () => {
+  // Every clause below is authored the way a person authors one — through the
+  // picker — rather than by seeding a tree in code. "A human can build this" is
+  // the claim, and a tree set in code is one no human went through.
+  async function authorIndustryIs(page: Page) {
+    await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
+    await page.getByRole("combobox", { name: "Feld" }).click();
+    await page.getByRole("option", { name: "industry" }).click();
+    await page.getByRole("combobox", { name: "Operator" }).click();
+    await page.getByRole("option", { name: "ist", exact: true }).click();
+    await page.getByRole("textbox", { name: "Wert" }).fill("automotive");
+  }
+
+  test("AC-filters-and-views-3: a clause is a field, an operator its type admits, and a value", async ({
+    page,
+  }) => {
+    await page.goto("/#/filters/companies");
+    await expectShellRendered(page);
+
+    // Before anything is authored the count says so, rather than showing a zero
+    // that would read as "no companies match".
+    await expect(
+      page.getByText("Bedingung hinzufügen, um die Treffer zu sehen"),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
+
+    // The field picker is the SERVER's vocabulary, not a list this screen keeps:
+    // `industry` and `lifecycle` are organization fields, `tag` is the leaf that
+    // is an EXISTS over a join rather than a column, and none of them is
+    // spelled anywhere in the frontend.
+    await page.getByRole("combobox", { name: "Feld" }).click();
+    expect(await page.getByRole("option").allTextContents()).toEqual([
+      "owner id",
+      "industry",
+      "lifecycle",
+      "tag",
+      // The custom field, and it sorts after the core ones — a reader scanning
+      // for a column they added finds it in one place rather than interleaved.
+      "fleet size",
+    ]);
+    await page.getByRole("option", { name: "industry" }).click();
+
+    // And the operator set is the FIELD's. `industry` is text, so `enthält` is
+    // offered; the tag clause in AC-4 proves the narrowing by its absence.
+    await page.getByRole("combobox", { name: "Operator" }).click();
+    expect(await page.getByRole("option").allTextContents()).toEqual([
+      "ist",
+      "ist nicht",
+      "ist eines von",
+      "enthält",
+      "hat einen Wert",
+    ]);
+    await page.getByRole("option", { name: "ist", exact: true }).click();
+
+    await page.getByRole("textbox", { name: "Wert" }).fill("automotive");
+
+    // The count is the SERVER's — 812 is the fixture's match_count, a number no
+    // arithmetic on the two returned rows could produce.
+    await expect(page.getByText("812 Firmen treffen zu")).toBeVisible();
+  });
+
+  // #1286 made custom fields and tags selectable beside core fields, and the
+  // issue's own "done when" names that: a picker that offered only core fields
+  // would satisfy every other case here. The badge is the half a reader needs —
+  // `cf_fleet_size` and a core column look identical without it.
+  test("AC-filters-and-views-2: a custom field is offered beside the core ones, and says it is one", async ({
+    page,
+  }) => {
+    await page.goto("/#/filters/companies");
+    await expectShellRendered(page);
+    await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
+    await page.getByRole("combobox", { name: "Feld" }).click();
+    await page.getByRole("option", { name: "fleet size" }).click();
+
+    // The badge is beside the picker rather than inside the option, which is
+    // where it has to be: a chosen field's option is no longer on screen, and
+    // "this is a column somebody here added" is the fact a reader needs while
+    // reading the clause, not while opening the menu.
+    await expect(page.getByText("eigenes Feld")).toBeVisible();
+
+    // Its operators are its TYPE's — number, so the comparisons appear, and
+    // `enthält` does not. A picker that offered a fixed set here would produce
+    // a 422 the reader could not interpret.
+    await page.getByRole("combobox", { name: "Operator" }).click();
+    expect(await page.getByRole("option").allTextContents()).toEqual([
+      "ist",
+      "ist nicht",
+      "ist größer als",
+      "ist mindestens",
+      "ist kleiner als",
+      "ist höchstens",
+      "ist eines von",
+      "hat einen Wert",
+    ]);
+  });
+
+  test("AC-filters-and-views-4: clauses combine, the group names the join, and a linked field is narrowed", async ({
+    page,
+  }) => {
+    await page.goto("/#/filters/companies");
+    await expectShellRendered(page);
+
+    // The join control is present before a second clause exists, because it is a
+    // property of the GROUP rather than of having two of anything.
+    const joins = page.getByRole("group", {
+      name: "Wie diese Gruppe ihre Bedingungen verknüpft",
+    });
+    await expect(joins).toHaveCount(1);
+    await expect(
+      joins.getByRole("button", { name: "ALLE · UND", pressed: true }),
+    ).toBeVisible();
+    await joins.getByRole("button", { name: "BELIEBIGE · ODER" }).click();
+    await expect(
+      joins.getByRole("button", { name: "BELIEBIGE · ODER", pressed: true }),
+    ).toBeVisible();
+
+    await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
+    await page.getByRole("button", { name: "Bedingung hinzufügen" }).click();
+    await expect(page.getByRole("combobox", { name: "Feld" })).toHaveCount(2);
+
+    // A tag leaf is reached through a join, so the engine narrows it to the link
+    // operators — `enthält` is gone, and a picker that offered it would produce
+    // a 422 the reader could not interpret.
+    await page.getByRole("combobox", { name: "Feld" }).first().click();
+    await page.getByRole("option", { name: "tag" }).click();
+    await page.getByRole("combobox", { name: "Operator" }).first().click();
+    expect(await page.getByRole("option").allTextContents()).toEqual([
+      "ist",
+      "ist nicht",
+      "ist eines von",
+      "hat einen Wert",
+    ]);
+    await page.keyboard.press("Escape");
+
+    // And nesting: a group inside a group is what mixing AND with OR needs.
+    await page.getByRole("button", { name: "Gruppe hinzufügen" }).click();
+    await expect(joins).toHaveCount(2);
+  });
+
+  test("AC-filters-and-views-5: the preview shows matching records, and says it is a page of them", async ({
+    page,
+  }) => {
+    await page.goto("/#/filters/companies");
+    await expectShellRendered(page);
+    await authorIndustryIs(page);
+
+    await expect(
+      page.getByRole("heading", { level: 2, name: "Passende Datensätze" }),
+    ).toBeVisible();
+    // By CELL: the shell's own workspace strip carries the same company name,
+    // and a bare text match would pass on the chrome while the table was empty.
+    await expect(
+      page.getByRole("cell", { name: "Brandt Automotive", exact: true }),
+    ).toBeVisible();
+    // EVERY row satisfies the filter, and that is asserted rather than assumed.
+    // A preview is what a reader checks a filter against before saving it as a
+    // list, so a row the predicate excludes is the one thing it must never
+    // show — and a test naming only the row it expected would pass over exactly
+    // that.
+    await expect(
+      page.getByRole("cell", { name: "Kessler Fahrzeugbau", exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByRole("cell", { name: "automotive", exact: true }),
+    ).toHaveCount(2);
+    await expect(page.getByRole("cell", { name: "logistics" })).toHaveCount(0);
+    // The caption that keeps the page honest: 812 match and two are shown, so
+    // the reader is told this is a sample rather than the selection.
+    await expect(
+      page.getByText(
+        "Die erste Seite der Treffer — genug, um den Filter zu prüfen, nicht die gesamte Auswahl.",
+      ),
+    ).toBeVisible();
+  });
+
+  test("AC-filters-and-views-1: the object tab is part of the address", async ({
+    page,
+  }) => {
+    await page.goto("/#/filters/deals");
+    await expectShellRendered(page);
+    const objects = page.getByRole("group", {
+      name: "Welche Datensätze gefiltert werden",
+    });
+    await expect(
+      objects.getByRole("button", { name: "Geschäfte", pressed: true }),
+    ).toBeVisible();
+
+    await objects.getByRole("button", { name: "Kontakte" }).click();
+    await expect(page).toHaveURL(/#\/filters\/contacts$/);
+
+    // Reloaded, not just navigated: the tab is where you ARE, so a shared link
+    // and a refresh have to land on the same object.
+    await page.reload();
+    await expect(
+      objects.getByRole("button", { name: "Kontakte", pressed: true }),
+    ).toBeVisible();
+  });
 });
