@@ -244,6 +244,12 @@ func Readyz(aiState string, embedState func(context.Context) string, checks ...R
 		if aiState != "" {
 			body.printf("ai: %s\n", aiState)
 		}
+		// Nothing is READ for a probe whose reader is gone, the same rule the
+		// exposition takes: embedState resolves a marker, and resolving one
+		// for a body that cannot be delivered is work with no reader.
+		if body.gone() {
+			return
+		}
 		// The embed line is written unconditionally, unlike the AI one: a nil
 		// embedState and a marker-read that already failed into "unknown" are
 		// deliberately indistinguishable here, so omitting it would turn one

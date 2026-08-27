@@ -119,9 +119,15 @@ func TestNoCounterIsReadForAScrapeThatHasAlreadyGone(t *testing.T) {
 // not worth assembling.
 func TestReadyzStopsWritingWhenItsReaderHangsUp(t *testing.T) {
 	w := &hangUp{ResponseWriter: httptest.NewRecorder()}
+	resolved := false
 
-	Readyz("declared", func(context.Context) string { return "ready" })(
+	Readyz("declared", func(context.Context) string { resolved = true; return "ready" })(
 		w, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+
+	if resolved {
+		t.Error("the embed marker was resolved after the probe's reader was gone — a read for a " +
+			"body that cannot be delivered")
+	}
 
 	// "ready" lands, the ai line is refused, and the embed line must not add a
 	// second attempt on a writer that already said no.
