@@ -12,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -95,11 +96,22 @@ const entityTypeActivity = "activity"
 // spelling that is merely ALMOST the same would resurrect what was certified
 // destroyed.
 func rowIsBehindTheErasureBoundary(ctx context.Context, tx pgx.Tx, row AuditRow) (bool, error) {
+	// The placeholder is derived from the argument slice rather than typed:
+	// the verb list reaches privacy's predicate as a POSITION, and nothing
+	// checks that a hand-written one still matches the arguments beside it.
+	var args []any
+	arg := func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	}
+	idPlaceholder := arg(row.ID)
+	verbsPlaceholder := arg(privacy.ScrubVerbs())
+
 	var readable bool
 	err := tx.QueryRow(ctx, `
-		SELECT `+privacy.UnscrubbedImageSQL("a", "$2")+`
-		FROM audit_log a WHERE a.id = $1`,
-		row.ID, privacy.ScrubVerbs()).Scan(&readable)
+		SELECT `+privacy.UnscrubbedImageSQL("a", verbsPlaceholder)+`
+		FROM audit_log a WHERE a.id = `+idPlaceholder,
+		args...).Scan(&readable)
 	if err != nil {
 		return false, err
 	}

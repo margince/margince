@@ -26,6 +26,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"strconv"
 
 	"github.com/jackc/pgx/v5"
 
@@ -118,12 +119,26 @@ type pageRow struct {
 // here is how two readers of one erasure come to disagree about where it sits,
 // and an Art. 17 boundary is not a rule where almost-the-same is survivable.
 func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, auditIDs []ids.UUID) ([]pageRow, error) {
+	// Derived, not typed. The verb list reaches privacy's predicate as a
+	// POSITION, so a hand-written placeholder here and the argument order
+	// below are two spellings of one fact that nothing holds together.
+	var args []any
+	arg := func(v any) string {
+		args = append(args, v)
+		return "$" + strconv.Itoa(len(args))
+	}
+	typePlaceholder := arg(entityType)
+	idPlaceholder := arg(entityID)
+	verbsPlaceholder := arg(privacy.ScrubVerbs())
+	rowsPlaceholder := arg(auditIDs)
+
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.entity_type, a.entity_id, a.action, a.before, a.after, a.occurred_at,
-		       NOT (`+privacy.UnscrubbedImageSQL("a", "$3")+`) AS behind_erasure
+		       NOT (`+privacy.UnscrubbedImageSQL("a", verbsPlaceholder)+`) AS behind_erasure
 		FROM audit_log a
-		WHERE a.entity_type = $1 AND a.entity_id = $2 AND a.id = ANY($4::uuid[])`,
-		entityType, entityID, privacy.ScrubVerbs(), auditIDs)
+		WHERE a.entity_type = `+typePlaceholder+` AND a.entity_id = `+idPlaceholder+`
+		  AND a.id = ANY(`+rowsPlaceholder+`::uuid[])`,
+		args...)
 	if err != nil {
 		return nil, err
 	}

@@ -124,7 +124,12 @@ function EntryFieldDetail({
 // The variables one press carries. A mutationFn takes what it needs rather
 // than closing over render state: the click belongs to the committed render,
 // so what it passes cannot be older than the control that carried it.
-type RestorePress = Readonly<{ auditId: string; version: number }>;
+type RestorePress = Readonly<{
+  kind: EntityKind;
+  id: string;
+  auditId: string;
+  version: number;
+}>;
 
 // What a change put back needs from the record it belongs to.
 export type RecordRestore = Readonly<{
@@ -186,12 +191,21 @@ function UndoButton({
   const [refused, setRefused] = useState<string | null>(null);
 
   const putBack = useMutation({
-    mutationFn: async ({ auditId, version }: RestorePress) => {
+    mutationFn: async ({
+      kind: pressedKind,
+      id: pressedId,
+      auditId,
+      version,
+    }: RestorePress) => {
       const { data, error } = await api.POST(
         "/records/{entity_type}/{id}/history/{audit_id}/restore",
         {
           params: {
-            path: { entity_type: kind, id, audit_id: auditId },
+            path: {
+              entity_type: pressedKind,
+              id: pressedId,
+              audit_id: auditId,
+            },
             ...ifMatch(version),
           },
         },
@@ -244,7 +258,7 @@ function UndoButton({
       setConfirming(true);
       return;
     }
-    putBack.mutate({ auditId: entry.id, version });
+    putBack.mutate({ kind, id, auditId: entry.id, version });
   };
 
   return (
@@ -266,7 +280,9 @@ function UndoButton({
         title={t("history.undo.confirmTitle")}
         confirmLabel={t("history.undo.action")}
         pending={putBack.isPending}
-        onConfirm={() => putBack.mutate({ auditId: entry.id, version })}
+        onConfirm={() =>
+          putBack.mutate({ kind, id, auditId: entry.id, version })
+        }
       >
         <p>
           {t("history.undo.confirmBody", {

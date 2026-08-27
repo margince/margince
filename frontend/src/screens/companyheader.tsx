@@ -211,25 +211,37 @@ async function patchCompanyField(
 export function useCompanyFieldPatch(org: Organization) {
   const queryClient = useQueryClient();
   const save = useMutation({
-    mutationFn: (body: UpdateOrganizationRequest) =>
-      patchCompanyField(org, body),
-    onSuccess: async () => {
+    // The record travels WITH the body, for the reason the invalidation below
+    // exists: `org.version` is the If-Match this write pins and it moves on
+    // every successful write. Read out of the closure, two edits from one
+    // render would both send the version that predates the first, and the
+    // second would fail a conflict check it should pass.
+    mutationFn: ({ org: target, body }: CompanyFieldPress) =>
+      patchCompanyField(target, body),
+    onSuccess: async (_result, { org: target }) => {
       await queryClient.invalidateQueries({ queryKey: ["organizations"] });
       await queryClient.invalidateQueries({
-        queryKey: ["organization360", org.id],
+        queryKey: ["organization360", target.id],
       });
       // The header renders from the SINGLE-record query, and its version is the
       // If-Match the next inline edit sends. Leaving it stale shows the old value
       // after a successful save and makes the following edit fail on a version
       // the server has already moved past.
       await queryClient.invalidateQueries({
-        queryKey: ["organization", org.id],
+        queryKey: ["organization", target.id],
       });
     },
   });
   return (body: UpdateOrganizationRequest) =>
-    save.mutateAsync(body).then(() => undefined);
+    save.mutateAsync({ org, body }).then(() => undefined);
 }
+
+// What one inline account edit carries: the record it is written against and
+// the field values, so neither is read out of the closure at click time.
+type CompanyFieldPress = Readonly<{
+  org: Organization;
+  body: UpdateOrganizationRequest;
+}>;
 
 // companyReadOnlyReason says why this record cannot be edited, when there is
 // something worth saying. Archived first: it is the one a reader can act on
