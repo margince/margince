@@ -55,6 +55,12 @@ func capture(t *testing.T, run func()) string {
 	go func() {
 		var buf bytes.Buffer
 		_, err := io.Copy(&buf, read)
+		// io.Copy does not close what it read from, and a helper called once per
+		// test would leak a descriptor per call. The copy's own failure is the
+		// more informative one, so it wins where both have something to say.
+		if closeErr := read.Close(); err == nil {
+			err = closeErr
+		}
 		done <- read1{text: buf.String(), err: err}
 	}()
 
