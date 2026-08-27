@@ -367,3 +367,50 @@ func TestCustomFilterClauses_EmptyFilterIsNoClause(t *testing.T) {
 		t.Fatalf("empty filters: got %v, %v", clauses, err)
 	}
 }
+
+// The refusal a log line and a debugging session actually read. A SortError
+// that printed only its machine code would name what went wrong without
+// naming what it went wrong ON, which is the whole of the remedy: the field
+// came off the caller's own query string.
+//
+// Here rather than through a store, which is where it used to be asserted: the
+// formatting is a pure function of two strings, and reaching it through a
+// booted app and a migrated Postgres proved nothing about it that this does
+// not.
+func TestSortError_NamesTheFieldAndTheCode(t *testing.T) {
+	err := &SortError{Message: "not_a_real_field is not sortable", Code: CodeSortFieldNotAllowed}
+
+	msg := err.Error()
+	if !strings.Contains(msg, "not_a_real_field") {
+		t.Errorf("Error() = %q and does not name the field — the remedy is to change that field", msg)
+	}
+	if !strings.Contains(msg, CodeSortFieldNotAllowed) {
+		t.Errorf("Error() = %q and does not carry %q, which is what a caller matches on",
+			msg, CodeSortFieldNotAllowed)
+	}
+}
+
+// A token that does not decode at all, as against one that decodes to a
+// position the sort cannot continue. Both are the client's fault and both must
+// be refused before the query, but they fail at different steps and only one
+// of them was covered: DecodeCursor rejects this one before KeysetClause has a
+// sort to compare against, so a nil ListSort reaches it too.
+func TestKeysetClause_UndecodableTokenIsMalformed(t *testing.T) {
+	sorted, err := ParseListSort(sortSpec("cf_score"), testVocab)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var def *ListSort
+
+	for name, s := range map[string]*ListSort{"default list": def, "sorted list": sorted} {
+		t.Run(name, func(t *testing.T) {
+			arg, _ := keysetArgs()
+			_, err := s.KeysetClause("not-a-valid-base64url-token!!", arg)
+			var malformed *MalformedCursorError
+			if !errors.As(err, &malformed) {
+				t.Fatalf("err = %v, want MalformedCursorError — an undecodable token must not reach "+
+					"the query, where Postgres would answer a 500 for a caller's typo", err)
+			}
+		})
+	}
+}
