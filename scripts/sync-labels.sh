@@ -72,7 +72,14 @@ extra="$(comm -13 \
 if [[ -n "$extra" ]]; then
   echo
   echo "NOT IN $SOURCE, and left alone:"
-  printf '  %s\n' $extra
+  # One line at a time, quoted. A label name may hold spaces — `good first issue`
+  # and `help wanted` both do — and an unquoted expansion would report one label
+  # as three, then let the shell try to glob any `*` or `?` in it. The report is
+  # what somebody reads before deciding to retire a label; it has to name the
+  # label they would type.
+  while IFS= read -r label; do
+    printf '  %s\n' "$label"
+  done <<<"$extra"
   echo
   echo "Each is a label somebody added by hand. Add it to the file if it belongs to the"
   echo "taxonomy, or retire it deliberately with 'gh label delete' — which strips it from"

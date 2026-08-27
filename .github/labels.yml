@@ -9,9 +9,16 @@
 # picks a worse-fitting area (issue #1508).
 #
 # This file is the source. `docs/reference/issue-labels.md` is checked against it
-# offline by backend/gates/issuelabels_test.go, and `.github/workflows/labels.yml`
+# offline by backend/gates/issuelabels_test.go, and `scripts/sync-labels.sh`
 # reconciles the repository's own labels from it — so the third copy stops being
 # a copy and becomes an output.
+#
+# THE SYNC IS RUN BY HAND, for now. The workflow that would call the script on a
+# push to main is not in this tree: pushing a file under .github/workflows/ needs
+# an OAuth scope the agent that wrote this does not hold, so it is written down
+# in the pull request instead of half-added here. Until somebody adds it, an edit
+# to this file reaches the repository when a person runs the script — and the
+# gate keeps the reference page honest either way.
 #
 # Colour carries meaning within an axis and none between them. Every `area:` is
 # one colour on purpose: an area is a place, not a severity, and colouring
