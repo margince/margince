@@ -14,6 +14,7 @@ package approvals
 // None of it can be shown without Postgres.
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"testing"
@@ -177,6 +178,42 @@ func TestARejectionAndAnEditAreCountedApartFromACleanApproval(t *testing.T) {
 	}
 	if edited != 0 {
 		t.Errorf("edited = %d, want 0 — nothing here was edited", edited)
+	}
+}
+
+// An approval the rep rewrote counts as an edit, not as agreement with what was
+// proposed. This is the case the ladder exists to tell apart: a kind whose
+// payload is corrected every time is the kind the software must keep asking
+// about, and counting those as clean approvals would promote it fastest.
+func TestAnEditedApprovalIsNotACleanOne(t *testing.T) {
+	e := setupStaging(t)
+	ctx := e.asRep(e.rep)
+
+	id := e.stageCounted(ctx, t)
+	staged, err := e.svc.Get(ctx, id)
+	if err != nil {
+		t.Fatalf("reading the staged proposal: %v", err)
+	}
+	// The same deal, a different date: an edit may correct the proposal but
+	// never re-aim it, so the deal_id has to survive verbatim.
+	edited := bytes.Replace(staged.ProposedChange,
+		[]byte(`"2026-12-01"`), []byte(`"2027-03-15"`), 1)
+	if bytes.Equal(edited, staged.ProposedChange) {
+		t.Fatal("the edit changed nothing, so this proves nothing about editing")
+	}
+	if _, err := e.svc.DecideEdited(ctx, id, edited); err != nil {
+		t.Fatalf("approving with an edit: %v", err)
+	}
+
+	_, clean, editedCount, rejected := e.policyOf(t, e.rep)
+	if editedCount != 1 {
+		t.Errorf("approved_edited = %d, want 1 — the rep rewrote the payload", editedCount)
+	}
+	if clean != 0 {
+		t.Errorf("approved_clean = %d, want 0 — an edit is a correction, not agreement", clean)
+	}
+	if rejected != 0 {
+		t.Errorf("rejected = %d, want 0", rejected)
 	}
 }
 

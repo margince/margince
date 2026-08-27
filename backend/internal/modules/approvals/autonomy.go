@@ -21,6 +21,7 @@ package approvals
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"time"
@@ -395,15 +396,18 @@ func (o decisionOutcome) column() (string, error) {
 	return "", errors.New("crmapprovals: no counter for this decision outcome")
 }
 
-// decisionOutcomeOf reads the two facts the decision already knows into the
-// shape the ladder counts. Named apart from bundle.go's outcomeOf, which
-// answers a different question — what a bulk call did to a row it could not
-// decide — and would otherwise read as the same one.
-func decisionOutcomeOf(approve bool, edited bool) decisionOutcome {
+// decisionOutcomeOf reads what the decision already knows into the shape the
+// ladder counts: the verdict, and the edited payload the caller either has or
+// does not. It takes the payload rather than a second flag so the two cannot be
+// swapped at a call site where both would compile.
+//
+// Named apart from bundle.go's outcomeOf, which answers a different question —
+// what a bulk call did to a row it could not decide.
+func decisionOutcomeOf(approve bool, edited json.RawMessage) decisionOutcome {
 	if !approve {
 		return outcomeRejected
 	}
-	if edited {
+	if len(edited) > 0 {
 		return outcomeApprovedEdited
 	}
 	return outcomeApprovedClean
