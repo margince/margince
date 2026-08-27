@@ -75,9 +75,7 @@ type rawCaptureEnvelope struct {
 // anything else travels base64 in a self-describing envelope. Only the third
 // case is new, and it is exactly the case that was being lost.
 func rawCapturePayload(raw []byte) ([]byte, error) {
-	// \u0000 is legal JSON and illegal jsonb, so a provider's own escaped NUL
-	// has to leave the JSON path too.
-	if json.Valid(raw) && !bytes.Contains(bytes.ToLower(raw), []byte(`\u0000`)) {
+	if json.Valid(raw) && !jsonEscapesNUL(raw) {
 		return raw, nil
 	}
 	if utf8.Valid(raw) && !bytes.ContainsRune(raw, 0) {
@@ -87,4 +85,32 @@ func rawCapturePayload(raw []byte) ([]byte, error) {
 		Encoding: RawCaptureBase64Encoding,
 		Data:     base64.StdEncoding.EncodeToString(raw),
 	})
+}
+
+// jsonEscapesNUL reports whether a JSON document decodes to a string carrying a
+// NUL. That escape is legal JSON and illegal jsonb, so such a document has to
+// leave the as-itself path even though it parses.
+//
+// Parity, not substring. The bytes `\\u0000` are a valid JSON document that
+// decodes to a BACKSLASH followed by the text u0000 — no NUL anywhere — and a
+// plain search would send it down the base64 path for nothing. Only a `u0000`
+// preceded by an ODD run of backslashes is an escape rather than the text of
+// one, because the run's last backslash is what escapes the u.
+func jsonEscapesNUL(raw []byte) bool {
+	lower := bytes.ToLower(raw)
+	for at := 0; ; {
+		found := bytes.Index(lower[at:], []byte("u0000"))
+		if found < 0 {
+			return false
+		}
+		found += at
+		slashes := 0
+		for k := found - 1; k >= 0 && lower[k] == '\\'; k-- {
+			slashes++
+		}
+		if slashes%2 == 1 {
+			return true
+		}
+		at = found + len("u0000")
+	}
 }

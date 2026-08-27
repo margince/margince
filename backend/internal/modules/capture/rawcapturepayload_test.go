@@ -49,6 +49,11 @@ func TestARawCapturePayloadComesBackByteIdentical(t *testing.T) {
 		{"a body that is not valid UTF-8", []byte("Subject: Gr\xfc\xdfe\r\n\r\nlatin-1 \xff\xfe bytes")},
 		{"a body carrying a NUL", []byte("Subject: quarterly update\r\n\r\nHello\x00World")},
 		{"JSON whose own string escapes a NUL", []byte(`{"body":"Hello\u0000World"}`)},
+		// The lookalike: an escaped BACKSLASH followed by the text u0000. It
+		// decodes to a backslash and five characters, carries no NUL, and jsonb
+		// takes it — so it must stay stored as itself rather than be sent down
+		// the base64 path by a search that cannot tell the two apart.
+		{"JSON carrying the TEXT of a NUL escape", []byte(`{"body":"Hello\\u0000World"}`)},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			stored, err := rawCapturePayload(tc.raw)
@@ -117,4 +122,21 @@ func carriesNUL(v any) bool {
 		}
 	}
 	return false
+}
+
+// The lookalike above decides between two spellings, so it gets its own
+// assertion rather than only riding the round-trip.
+func TestTheTextOfANULEscapeIsStoredAsJSON(t *testing.T) {
+	lookalike := []byte(`{"body":"Hello\\u0000World"}`)
+	stored, err := rawCapturePayload(lookalike)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(stored) != string(lookalike) {
+		t.Errorf("stored as %q, want the document unchanged — it carries the TEXT of an escape, not a NUL", stored)
+	}
+	escaped := []byte(`{"body":"Hello\u0000World"}`)
+	if stored, err := rawCapturePayload(escaped); err != nil || string(stored) == string(escaped) {
+		t.Errorf("a real NUL escape stored as %q (err %v), want it off the as-itself path", stored, err)
+	}
 }
