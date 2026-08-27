@@ -33,9 +33,10 @@ import (
 )
 
 // requestNightlyWorklistPasses opens the owner connection and asks for one run
-// of each pass. A dry run asks for nothing, and no DSN means this phase is
-// skipped entirely — the same two conditions every other SQL phase carries.
-func requestNightlyWorklistPasses(dsn string, mode runMode) error {
+// of each pass, in one transaction. A dry run asks for nothing, and no DSN means
+// this phase is skipped entirely — the same two conditions every other SQL phase
+// carries.
+func requestNightlyWorklistPasses(dsn string, mode runMode) (err error) {
 	if mode == modeDryRun || dsn == "" {
 		return nil
 	}
@@ -44,12 +45,47 @@ func requestNightlyWorklistPasses(dsn string, mode runMode) error {
 	if err != nil {
 		return fmt.Errorf("connecting to request the worklist passes: %w", err)
 	}
-	//craft:ignore swallowed-errors closing a seed connection has no failure the caller can act on
-	defer func() { _ = conn.Close(ctx) }()
-	if err := requestNightlyPasses(ctx, conn); err != nil {
+	// A close that fails after the inserts committed still matters: it is the
+	// one signal that the connection was not in the state the writes assumed.
+	// It must not mask them, so it only becomes the error when they succeeded.
+	defer func() {
+		if closeErr := conn.Close(ctx); closeErr != nil && err == nil {
+			err = fmt.Errorf("closing the connection that requested the worklist passes: %w", closeErr)
+		}
+	}()
+	// One transaction over all three requests. Half a worklist is worse than
+	// none: the surface fills with close-date cards and silently lacks the
+	// follow-ups, which reads as a working feature with nothing to say rather
+	// than as a seed that failed. The brief's delete joins it for the same
+	// reason — it must not survive an insert that never happened.
+	tx, err := conn.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("opening the transaction for the worklist passes: %w", err)
+	}
+	//craft:ignore swallowed-errors a rollback after a failed commit path has no outcome the caller can act on
+	defer func() { _ = tx.Rollback(ctx) }()
+	if err := requestNightlyPasses(ctx, tx); err != nil {
 		return err
 	}
-	return requestTheMorningBrief(ctx, conn)
+	cleared, err := requestTheMorningBrief(ctx, tx)
+	if err != nil {
+		return err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return fmt.Errorf("committing the worklist passes: %w", err)
+	}
+	reportRequestedPasses(cleared)
+	return nil
+}
+
+// reportRequestedPasses says what was asked for, after the commit that makes it
+// true. Printing inside the transaction would announce passes that a failed
+// commit then threw away.
+func reportRequestedPasses(cleared int64) {
+	fmt.Println("worklist:      close-date and follow-up passes requested — " +
+		"cards arrive with the next worker pass")
+	fmt.Printf("brief:         %d empty run(s) cleared, morning brief requested — "+
+		"it fills once the installation's morning hour has arrived\n", cleared)
 }
 
 // nightlyWorklistJobs are the passes that stage the worklist's cards. Both are
@@ -67,20 +103,19 @@ var nightlyWorklistJobs = []string{"close_date_sweep", "follow_up_reconcile"}
 // A stack with no worker running leaves the rows waiting, which is the right
 // outcome: the cards appear when the worker comes up rather than the seed
 // failing over a queue nobody is reading.
-func requestNightlyPasses(ctx context.Context, conn *pgx.Conn) error {
+func requestNightlyPasses(ctx context.Context, tx pgx.Tx) error {
 	for _, kind := range nightlyWorklistJobs {
-		if _, err := conn.Exec(ctx,
+		if _, err := tx.Exec(ctx,
 			`INSERT INTO river_job (state, kind, queue, priority, max_attempts, args, scheduled_at)
 			 VALUES ('available', $1, 'default', 1, 3, '{}'::jsonb, now())`, kind); err != nil {
 			return fmt.Errorf("requesting the %s pass: %w", kind, err)
 		}
 	}
-	fmt.Println("worklist:      close-date and follow-up passes requested — " +
-		"cards arrive with the next worker pass")
 	return nil
 }
 
-// requestTheMorningBrief drops the empty runs and asks for the brief again.
+// requestTheMorningBrief drops the empty runs and asks for the brief again,
+// reporting how many it cleared so the caller can say so after the commit.
 //
 // It cannot simply be added to nightlyWorklistJobs, because it is suppressed
 // rather than idempotent. repsWithoutARunFor anti-joins on brief_run and
@@ -108,20 +143,18 @@ func requestNightlyPasses(ctx context.Context, conn *pgx.Conn) error {
 // repsDueTheirMorning finds nobody due, and the brief arrives at the first tick
 // after morning. The hour is not repeated here — briefingHour is unexported in
 // compose, and a copy of the number would drift the moment the engine's changed.
-func requestTheMorningBrief(ctx context.Context, conn *pgx.Conn) error {
-	cleared, err := conn.Exec(ctx, `
+func requestTheMorningBrief(ctx context.Context, tx pgx.Tx) (int64, error) {
+	cleared, err := tx.Exec(ctx, `
 		DELETE FROM brief_run br
 		WHERE br.candidate_count = 0
 		  AND NOT EXISTS (SELECT 1 FROM brief_item bi WHERE bi.brief_run_id = br.id)`)
 	if err != nil {
-		return fmt.Errorf("clearing the empty brief runs this seed outran: %w", err)
+		return 0, fmt.Errorf("clearing the empty brief runs this seed outran: %w", err)
 	}
-	if _, err := conn.Exec(ctx,
+	if _, err := tx.Exec(ctx,
 		`INSERT INTO river_job (state, kind, queue, priority, max_attempts, args, scheduled_at)
 		 VALUES ('available', 'brief_generate', 'default', 1, 3, '{}'::jsonb, now())`); err != nil {
-		return fmt.Errorf("requesting the morning brief: %w", err)
+		return 0, fmt.Errorf("requesting the morning brief: %w", err)
 	}
-	fmt.Printf("brief:         %d empty run(s) cleared, morning brief requested — "+
-		"it fills once the installation's morning hour has arrived\n", cleared.RowsAffected())
-	return nil
+	return cleared.RowsAffected(), nil
 }

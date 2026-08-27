@@ -73,7 +73,15 @@ var connectionAcquirers = map[string]string{
 }
 
 func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
-	exempt := gatekit.Waive(map[string]string{})
+	exempt := gatekit.Waive(map[string]string{
+		// The seeding tool, which is not a seam: it opens the transaction it
+		// then passes down, so there is no caller whose transaction could be
+		// borrowed and no second connection to take. The roots stay at the
+		// tiers that serve requests rather than widening to tools/, because
+		// this gate's subject is the C5 shared-tx seam and a demo fixture that
+		// owns its own connection is not one.
+		"tools/seed-demo/nightlypasses.go": "requestNightlyWorklistPasses opens the transaction itself and hands it to the two request helpers; nothing here runs on a caller's tx",
+	})
 	scope := gatekit.Scope{
 		Roots:   []string{"internal", "cmd"},
 		Subject: func(_ string, file *ast.File) bool { return len(txBorrowingBodies(file)) > 0 },
