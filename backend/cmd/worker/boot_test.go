@@ -5,6 +5,8 @@ package main
 
 import (
 	"context"
+	"io"
+	"log/slog"
 	"strings"
 	"sync"
 	"testing"
@@ -26,7 +28,7 @@ import (
 // lanes' context and does not return until each goroutine has left its handler.
 func TestJoinCancelsTheLanesAndWaitsForThem(t *testing.T) {
 	ctx, stop := context.WithCancel(context.Background())
-	lanes := workerLanes{background: &sync.WaitGroup{}, stop: stop}
+	lanes := workerLanes{background: &sync.WaitGroup{}, stop: stop, logger: slog.New(slog.NewTextHandler(io.Discard, nil))}
 
 	// Two lanes, each ending only on cancellation — no sleep and no clock, so
 	// the test can only pass by the cancel actually reaching them.

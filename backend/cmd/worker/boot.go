@@ -22,13 +22,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/integrations"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
-	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/config"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/geocode"
@@ -105,43 +102,6 @@ func resetFlush(path compose.ModelPath) func(ids.UUID) {
 	}
 }
 
-// workerLanes is what the event lanes leave behind for the job runner, which
-// schedules against the SAME instances those lanes consume into: one governed
-// registry and one brain per role, ONE deliverer FACTORY across both outbound-webhook
-// lanes (E10/S-E10.6) — never two that could drift apart — plus the object
-// store the deep-read logo write and the retention purge share.
-type workerLanes struct {
-	// background holds every lane goroutine so run() returns only after
-	// in-flight handlers finish their ack — the same shape as cmd/api's relay
-	// group; a bare goroutine would be killed mid-handler when the relay
-	// returns.
-	background *sync.WaitGroup
-	// stop ends every lane goroutine. It pairs with background: join() is the
-	// only thing that should call either, so the lanes have one shutdown.
-	stop context.CancelFunc
-	// laneCtx is what stop cancels, carried so a lane started LATER than this
-	// value — the extension subscriptions, which wait for the runtime binding
-	// the job runner makes — still lives and dies with all the others. A second
-	// context there would be a second shutdown, and join() would return with a
-	// consumer still reading the bus.
-	ctx       context.Context //nolint:containedctx // the lanes' lifetime IS this value; join() is the only thing that ends it.
-	runner    *compose.RunnerService
-	deliverer func(*database.DB) *webhooks.Deliverer
-	blob      blobstore.Store
-	// providers is the licensed-data-provider adapter registry this boot was
-	// configured with (MARGINCE_PROVIDER_SURFE). Nil is a deployment with no
-	// provider: the run lanes register nothing and nothing can reach a vendor.
-	providers *integrations.Registry
-}
-
-// join ends the lanes and waits for the handler each is in. It is what makes the
-// bus and the pool safe to close: run() defers both closes before the lanes
-// start, so LIFO runs them after this returns, never under a live subscriber.
-func (l workerLanes) join() {
-	l.stop()
-	l.background.Wait()
-}
-
 // startEventLanes starts the lanes this role runs before the job runner exists
 // and resolves what the runner then needs from them, in the order an operator
 // reads at boot.
@@ -153,7 +113,7 @@ func (l workerLanes) join() {
 // stack trace where the boot error belongs.
 func startEventLanes(ctx context.Context, cfg workerConfig, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, modelPath compose.ModelPath, logger *slog.Logger, stdout io.Writer) (workerLanes, error) {
 	laneCtx, stopLanes := context.WithCancel(ctx)
-	lanes := workerLanes{background: &sync.WaitGroup{}, stop: stopLanes, ctx: laneCtx}
+	lanes := workerLanes{background: &sync.WaitGroup{}, stop: stopLanes, ctx: laneCtx, logger: logger}
 
 	if err := startRunnerLane(laneCtx, cfg, pool, rdb, vault, modelPath, &lanes, logger, stdout); err != nil {
 		return lanes, err

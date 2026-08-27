@@ -157,6 +157,22 @@ func (r *Runner) Stop(ctx context.Context) error {
 	return nil
 }
 
+// StopAndCancel is the harder stop, for when a graceful drain has already
+// overrun its window: it cancels the work contexts of every job still in flight
+// and waits for those goroutines to return, rather than leaving them running.
+//
+// A job cancelled this way is not lost. River marks it for retry, so it is
+// picked up by this replica's next boot or by another one that is still
+// serving — which is the trade the caller is making: an interrupted job that
+// runs again beats a job goroutine that outlives the connections it writes
+// through.
+func (r *Runner) StopAndCancel(ctx context.Context) error {
+	if err := r.client.StopAndCancel(ctx); err != nil {
+		return fmt.Errorf("jobs: stop and cancel: %w", err)
+	}
+	return nil
+}
+
 // SubscribeCompleted delivers job-completion events so callers can await a
 // specific job without polling or sleeping. Subscribe before Start so no
 // completion is missed; call the returned cancel when done.
