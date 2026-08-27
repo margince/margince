@@ -108,7 +108,10 @@ func (sitePageFactsCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 				"none — and a scenario over one would certify a request the product never issues", f.Kind)
 	}
 	page := crawlPage{URL: f.URL, Kind: f.Kind, Text: f.Text}
-	idx := newSnippetIndex([]crawlPage{page})
+	// The SAME excerpt the lane applies. A certification that indexed the
+	// whole page would certify a prompt this product never sends.
+	excerpt, _ := pageFactsExcerpt(page)
+	idx := newSnippetIndex(excerpt)
 	if len(idx.refs) == 0 {
 		return nil, errors.New(
 			"site_fact_extract/page_facts: the fixture's page yields no passage, and the lane calls no model without one")

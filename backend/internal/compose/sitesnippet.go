@@ -136,9 +136,26 @@ type snippetIndex struct {
 	refs []snippetRef
 }
 
+// excerptPages is text a lane has already decided how much of to read.
+//
+// A prompt built from a crawled page is as long as whoever published the page
+// chose to make it, which spends a metered provider's tokens and sizes the
+// context window a local one must allocate. The profile lane bounded its
+// corpus; the page-facts lane did not, and nothing said the two were the same
+// obligation — so one of them was fixed and the other was not noticed.
+//
+// The type names the obligation at the one place every such prompt is built,
+// and it does NOT enforce it: a named slice type is assignable from its
+// unnamed underlying type, and everything here is one package anyway, so no
+// declaration in Go stops a caller writing the raw pages in. What holds it is
+// TestEverySnippetIndexIsBuiltFromAnExcerpt, which requires the argument to be
+// a call to a function that applied a budget — so a third lane cannot index a
+// page's full text without first deciding how much of it to read.
+type excerptPages []crawlPage
+
 // newSnippetIndex numbers the pages' passages in page order. Ids are
 // index-derived ("s12"), so rendering and resolution can never disagree.
-func newSnippetIndex(pages []crawlPage) snippetIndex {
+func newSnippetIndex(pages excerptPages) snippetIndex {
 	var idx snippetIndex
 	for _, page := range pages {
 		for _, passage := range segmentPassages(page.Text) {

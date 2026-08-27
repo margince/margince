@@ -125,14 +125,14 @@ func profileSchema(snippetIDs []string) json.RawMessage {
 // total budget. The legal census is a separate page-fact lane, so the
 // profile prompt represents at most one legal page and reserves room for
 // About, services, products, home, contact, and team evidence.
-func profileExcerptPages(pages []crawlPage) []crawlPage {
+func profileExcerptPages(pages []crawlPage) excerptPages {
 	// Drop the navigation chrome first, so the per-page cap below is spent
 	// on the company's own words rather than on the mega-menu every page
 	// opens with. See siteboilerplate.go for why this is measured from the
 	// corpus rather than guessed at.
 	ranked := stripSharedPrefix(pages)
 	sortPagesByCorpusRank(ranked)
-	var out []crawlPage
+	var out excerptPages
 	used := 0
 	legalPages := 0
 	legalRunes := 0

@@ -18,6 +18,7 @@ package compose
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -72,6 +73,14 @@ type threadMessage struct {
 	Subject   string
 	Body      string
 	At        time.Time
+	// UnreadRunes is how much of this body extractBodyLimit left behind.
+	//
+	// Carried rather than inferred, because it cannot be inferred: a body cut
+	// at the limit and a body that was exactly that long reach the prompt
+	// identically, and the reading is drawn from the head either way. The
+	// remainder is the half that says which happened, and how far the model's
+	// view of the exchange falls short of it.
+	UnreadRunes int
 }
 
 // settledThread is one conversation due for a read, with the account it
@@ -273,9 +282,14 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 // threadMessages reads the tail of one conversation, oldest first, so the
 // prompt reads in the order the exchange happened.
 func threadMessages(ctx context.Context, tx pgx.Tx, key string) ([]threadMessage, error) {
+	// The remainder is measured in the same statement that cuts the body:
+	// asked for afterwards it would be a second read of a row that may have
+	// changed, and the number would then describe a different message from the
+	// one in the prompt.
 	rows, err := tx.Query(ctx, `
 		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
-		       coalesce(left(body, $1), ''), occurred_at
+		       coalesce(left(body, $1), ''),
+		       greatest(coalesce(char_length(body), 0) - $1, 0), occurred_at
 		  FROM (SELECT id, direction, subject, body, occurred_at
 		          FROM activity
 		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
@@ -287,15 +301,32 @@ func threadMessages(ctx context.Context, tx pgx.Tx, key string) ([]threadMessage
 	}
 	defer rows.Close()
 	var out []threadMessage
+	unread, cut := 0, 0
 	for rows.Next() {
 		var message threadMessage
 		if err := rows.Scan(&message.ID, &message.Direction, &message.Subject,
-			&message.Body, &message.At); err != nil {
+			&message.Body, &message.UnreadRunes, &message.At); err != nil {
 			return nil, err
+		}
+		if message.UnreadRunes > 0 {
+			unread += message.UnreadRunes
+			cut++
 		}
 		out = append(out, message)
 	}
-	return out, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	if cut > 0 {
+		// Said once per conversation rather than once per message: what a
+		// reader needs is how much of THIS exchange the reading was drawn
+		// from, and a line per body would bury that under the long threads it
+		// is most true of.
+		slog.WarnContext(ctx, "part of this conversation was not read; the events extracted from it are drawn from the head of each mail and anything stated below the cut is absent rather than judged",
+			"thread_key", key, "messages_cut", cut, "messages_read", len(out),
+			"body_limit", extractBodyLimit, "unread_runes", unread)
+	}
+	return out, nil
 }
 
 // recordThreadRefusal counts one refused reading of this exact conversation

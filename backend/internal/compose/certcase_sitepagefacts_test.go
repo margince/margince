@@ -66,7 +66,8 @@ func sitePageFactsClaim(field, value, snippetID string) string {
 // page splits, so a citation is computed rather than written down.
 func sitePageFactsSnippetID(t *testing.T, kind crmcontracts.SiteReadPageKind, text, contains string) string {
 	t.Helper()
-	idx := newSnippetIndex([]crawlPage{{URL: sitePageFactsURL, Kind: kind, Text: text}})
+	excerpt, _ := pageFactsExcerpt(crawlPage{URL: sitePageFactsURL, Kind: kind, Text: text})
+	idx := newSnippetIndex(excerpt)
 	for i, ref := range idx.refs {
 		if strings.Contains(ref.passage, contains) {
 			return fmt.Sprintf("s%d", i)

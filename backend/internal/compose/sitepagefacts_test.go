@@ -25,7 +25,8 @@ func pageFixture(kind crmcontracts.SiteReadPageKind, url, text string) (crawlPag
 	if !ok {
 		panic("fixture kind has no menu")
 	}
-	return page, menu, newSnippetIndex([]crawlPage{page})
+	excerpt, _ := pageFactsExcerpt(page)
+	return page, menu, newSnippetIndex(excerpt)
 }
 
 func dropReasons(dropped []droppedFinding) map[string]string {
@@ -244,7 +245,8 @@ func TestGatePageFactsEntitiesOnlyFromShallowLegalPages(t *testing.T) {
 		URL: seedURL + "/customers/other/legal", Kind: crmcontracts.SiteReadPageKindImpressum,
 		Text: "Other Co AG imprint for a customer project hosted under a deep path with plenty of text.",
 	}
-	deepIdx := newSnippetIndex([]crawlPage{deepPage})
+	deepExcerpt, _ := pageFactsExcerpt(deepPage)
+	deepIdx := newSnippetIndex(deepExcerpt)
 	res, dropped = gatePageFacts(`{"facts":[],"entities":[{"n":"Other Co AG","e":"s0"}]}`, deepPage, menu, deepIdx)
 	if len(res.entities) != 0 {
 		t.Fatalf("a deep legal page testified: %+v", res.entities)
