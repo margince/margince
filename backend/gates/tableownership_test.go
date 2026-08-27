@@ -138,6 +138,13 @@ var tableOwners = map[string]string{
 	"organization_fact":             "internal/modules/people",
 	"organization_geocode_state":    "internal/modules/people",
 	"geocode_cache":                 "internal/modules/people",
+	// What a technical lookup last read for one company, per public source,
+	// and what those sources answered. The cache is installation-global for
+	// the same reason geocode_cache is — a domain's DNS records are the same
+	// for every tenant — and people owns both because it owns the company
+	// record they describe.
+	"organization_technical_state": "internal/modules/people",
+	"technical_lookup_cache":       "internal/modules/people",
 	// What a mail domain is allowed to create. It governs ORGANIZATION
 	// creation, which people owns, so the verdict lives with the records it
 	// authorizes rather than with the capture path that asks the question.
