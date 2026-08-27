@@ -4825,9 +4825,6 @@ export const vi = {
   "knowledge.sub":
     "Những tập văn bản mà tổ chức này có thể được hỏi. Câu trả lời chỉ đến từ những gì đã nộp ở đây; câu hỏi nằm ngoài phạm vi sẽ bị từ chối thay vì đoán.",
   "knowledge.withheld": "Bạn không được xem có những bộ tài liệu nào.",
-  "knowledge.empty.title": "Chưa có bộ tài liệu nào",
-  "knowledge.empty.body":
-    "Tạo một bộ, nộp tài liệu văn bản vào đó, và mọi người ở đây có thể hỏi bằng lời của mình.",
   "knowledge.coverage":
     "{documents} tài liệu · {embedded} trên {total} đoạn có thể tìm kiếm",
   "knowledge.reindexing":

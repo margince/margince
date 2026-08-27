@@ -4930,9 +4930,6 @@ export const en = {
   "knowledge.sub":
     "Bodies of text this organization can be asked questions of. An answer comes only from what is filed here, and a question they do not cover is refused rather than guessed at.",
   "knowledge.withheld": "Which document sets exist is not yours to see.",
-  "knowledge.empty.title": "No document sets yet",
-  "knowledge.empty.body":
-    "Create one, file text documents in it, and anyone here can ask it questions in their own words.",
   "knowledge.coverage":
     "{documents} documents · {embedded} of {total} passages searchable",
   "knowledge.reindexing":

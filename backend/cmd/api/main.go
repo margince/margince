@@ -105,6 +105,15 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	if err := recordBootLedger(ctx, pool, logger, extensions); err != nil {
 		return err
 	}
+	// The handbook this release carries, filed into the corpus it is asked
+	// through. Logged and CONTINUED rather than returned: the handbook is help
+	// content, and an installation that cannot file it should still serve every
+	// record, pipeline and approval it holds. Failing the boot here would take
+	// a whole CRM down over a documentation corpus — and the operator would
+	// have no way to start the process that would tell them why.
+	if err := fileReleaseHandbook(ctx, pool, logger); err != nil {
+		logger.Error("this release's handbook was not filed; the rest of the product is unaffected", "error", err)
+	}
 
 	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, compose.CaptureConfigFromDeploy(deployCfg.Capture, logger), pool, logger, stdout, license)
 	if err != nil {

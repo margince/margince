@@ -244,29 +244,18 @@ func (s *Store) FailIngest(ctx context.Context, documentID ids.UUID, detail stri
 	}); err != nil {
 		return err
 	}
-	// After the row commits, and only when an object store is bound. A role
-	// without one never wrote the bytes in the first place, and a delete that
-	// could not run is not a reason to leave the document `running` — the row
-	// already says why it failed, which is what the uploader reads.
-	if s.blob == nil {
-		return nil
-	}
-	if err := s.blob.Delete(ctx, storageKey); err != nil {
-		return fmt.Errorf("delete the failed document's stored file: %w", err)
-	}
-	return nil
+	// After the row commits. Whether there are bytes to destroy at all — a role
+	// with no object store never wrote any, a handbook page's live in the
+	// binary — is content.go's judgement, not this function's, and a delete
+	// that could not run is not a reason to leave the document `running`: the
+	// row already says why it failed, which is what the uploader reads.
+	return s.discardContent(ctx, storageKey)
 }
 
-// OpenDocument streams a stored document's bytes.
+// OpenDocument streams a stored document's bytes, from object storage or from
+// the embedded handbook — content.go decides which, for every caller.
 func (s *Store) OpenDocument(ctx context.Context, storageKey string) (io.ReadCloser, error) {
-	if s.blob == nil {
-		return nil, ErrBlobstoreUnconfigured
-	}
-	body, _, err := s.blob.Get(ctx, storageKey)
-	if err != nil {
-		return nil, fmt.Errorf("read the stored document: %w", err)
-	}
-	return body, nil
+	return s.openContent(ctx, storageKey)
 }
 
 func deleteChunksOf(ctx context.Context, tx pgx.Tx, documentID ids.UUID) error {

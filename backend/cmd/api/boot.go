@@ -56,6 +56,21 @@ func recordBootLedger(
 	return compose.RecordComposition(ctx, pool, logger, extensions)
 }
 
+// fileReleaseHandbook puts this release's operator handbook into the corpus the
+// product answers questions from.
+//
+// Its own phase rather than a line in recordBootLedger, because it is the one
+// boot write that ENQUEUES work: it needs an insert-only River client, and the
+// ledger phase runs before any job wiring exists. It is also the only one whose
+// failure must not stop the boot — see the call site.
+func fileReleaseHandbook(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) error {
+	inserter, err := jobs.NewInserter(pool, logger)
+	if err != nil {
+		return fmt.Errorf("the handbook corpus needs a job inserter to queue its ingests: %w", err)
+	}
+	return compose.ReconcileHandbookCorpus(ctx, pool, logger, inserter)
+}
+
 // bindInstallation settles what this installation IS before anything serves:
 // the boot state machine (A107/ADR-0061) — bootstrap an empty database from the
 // deployment file, bind an existing singleton, refuse a multi-workspace database

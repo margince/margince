@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useCan, useCanWrite } from "../app/capability";
@@ -64,21 +64,6 @@ function useDocumentSets(enabled: boolean) {
       return data;
     },
   });
-
-  // The set's own line — "10 documents, N of M passages searchable" — is served
-  // by a DIFFERENT query, so it does not move when a document finishes being
-  // read. Refreshed here at the moment this list settles, because that is where
-  // the transition is observable: the alternative is polling the sets list on a
-  // condition it cannot see, which would either never stop or never start.
-  const items = query.data?.items;
-  const done = items !== undefined && settled(items);
-  useEffect(() => {
-    if (done) {
-      void client.invalidateQueries({ queryKey: SETS_KEY });
-    }
-  }, [done, client]);
-
-  return query;
 }
 
 function useCreateDocumentSet() {
@@ -151,6 +136,21 @@ function useDocuments(corpusId: string, enabled: boolean) {
       return data;
     },
   });
+
+  // The set's own line — "10 documents, N of M passages searchable" — is served
+  // by a DIFFERENT query, so it does not move when a document finishes being
+  // read. Refreshed here at the moment THIS list settles, because that is where
+  // the transition is observable: the alternative is polling the sets list on a
+  // condition it cannot see, which would either never stop or never start.
+  const items = query.data?.items;
+  const done = items !== undefined && settled(items);
+  useEffect(() => {
+    if (done) {
+      void client.invalidateQueries({ queryKey: SETS_KEY });
+    }
+  }, [done, client]);
+
+  return query;
 }
 
 function useUploadDocument(corpusId: string) {
@@ -288,18 +288,17 @@ export function KnowledgeCard() {
   );
 }
 
+// No empty state, because the list is never empty. Every installation is filed
+// with the operator handbook as its shipped corpus when the api boots, so
+// "this workspace has no document sets" is not a state a reader can reach. An
+// empty state here would be a message written for a screen nobody sees — and
+// worse, the ONE way it could appear is a failed handbook reconciliation, where
+// "no document sets yet" is exactly the wrong thing to say: it reads as normal,
+// invites the reader to create one, and hides that something did not run.
 function DocumentSetList({
   sets,
   canManage,
 }: Readonly<{ sets: readonly Corpus[]; canManage: boolean }>) {
-  const t = useT();
-  if (sets.length === 0) {
-    return (
-      <EmptyState title={t("knowledge.empty.title")}>
-        <p className="t-small">{t("knowledge.empty.body")}</p>
-      </EmptyState>
-    );
-  }
   return (
     <>
       {sets.map((set) => (

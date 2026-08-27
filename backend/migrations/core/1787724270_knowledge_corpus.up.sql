@@ -10,11 +10,26 @@ CREATE TABLE knowledge_corpus (
     min_similarity double precision DEFAULT 0.35 NOT NULL,
     default_ask boolean DEFAULT false NOT NULL,
     reindexing boolean DEFAULT false NOT NULL,
+    -- Which shipped body of prose this corpus IS, when it is not a user's.
+    -- NULL is a corpus somebody in the workspace defined; 'handbook' is the
+    -- operator handbook the binary carries and reconciles on start.
+    --
+    -- A column rather than a match on `name`: the seeding has to find the
+    -- corpus it owns on every boot, and a name is the one thing an
+    -- administrator is free to change. Matching on it would let a rename either
+    -- orphan the handbook or, worse, walk the seeding into overwriting a
+    -- corpus somebody built by hand.
+    managed_source text,
     captured_by text NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
     archived_at timestamptz,
-    CONSTRAINT knowledge_corpus_min_similarity_range CHECK (min_similarity >= 0 AND min_similarity <= 1)
+    CONSTRAINT knowledge_corpus_min_similarity_range CHECK (min_similarity >= 0 AND min_similarity <= 1),
+    -- The set is closed here rather than left to the writer. A typo'd source
+    -- reconciles against nothing and would sit in the table looking managed
+    -- while the boot step creates a second corpus beside it every release.
+    CONSTRAINT knowledge_corpus_managed_source_known
+        CHECK (managed_source IS NULL OR managed_source IN ('handbook'))
 );
 
 ALTER TABLE knowledge_corpus ADD CONSTRAINT knowledge_corpus_pkey PRIMARY KEY (id);
@@ -24,6 +39,12 @@ ALTER TABLE knowledge_corpus ADD CONSTRAINT knowledge_corpus_pkey PRIMARY KEY (i
 -- order.
 CREATE UNIQUE INDEX knowledge_corpus_one_default
     ON knowledge_corpus ((default_ask)) WHERE default_ask AND archived_at IS NULL;
+
+-- One live corpus per managed source. The boot step reconciles into the corpus
+-- it finds, so two of them would mean each boot picks by row order and half the
+-- handbook lands in one and half in the other.
+CREATE UNIQUE INDEX knowledge_corpus_one_per_managed_source
+    ON knowledge_corpus (managed_source) WHERE managed_source IS NOT NULL AND archived_at IS NULL;
 
 CREATE TABLE knowledge_document (
     id uuid DEFAULT uuidv7() NOT NULL,
@@ -41,6 +62,12 @@ CREATE TABLE knowledge_document (
     ingest_started_at timestamptz,
     ingest_detail text,
     chunk_count integer DEFAULT 0 NOT NULL,
+    -- Set on a document the binary ships, matching its corpus's own
+    -- managed_source. It is what tells the boot reconciliation which rows are
+    -- ITS to update and delete, so a document an administrator uploaded into
+    -- the handbook corpus is left alone rather than swept away as "not a page
+    -- this release carries".
+    managed_source text,
     captured_by text NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     updated_at timestamptz DEFAULT now() NOT NULL,
@@ -50,7 +77,9 @@ CREATE TABLE knowledge_document (
     -- A failure that does not say why is a support ticket. A success that
     -- explains itself is noise.
     CONSTRAINT knowledge_document_detail_shape
-        CHECK ((ingest_status = 'failed') = (ingest_detail IS NOT NULL))
+        CHECK ((ingest_status = 'failed') = (ingest_detail IS NOT NULL)),
+    CONSTRAINT knowledge_document_managed_source_known
+        CHECK (managed_source IS NULL OR managed_source IN ('handbook'))
 );
 
 ALTER TABLE knowledge_document ADD CONSTRAINT knowledge_document_pkey PRIMARY KEY (id);
@@ -68,6 +97,17 @@ ALTER TABLE knowledge_document ADD CONSTRAINT knowledge_document_pkey PRIMARY KE
 -- must not stop the same file being filed again.
 CREATE UNIQUE INDEX knowledge_document_one_per_content
     ON knowledge_document (corpus_id, checksum) WHERE archived_at IS NULL;
+
+-- One live document per page name inside a managed corpus. The boot
+-- reconciliation looks its rows up by (corpus, filename) — the page name is
+-- what the release ships and what a citation shows — so two rows for one page
+-- would leave it updating whichever came back first and citing the other.
+-- Scoped to managed rows: a person uploading two files of the same name into
+-- their own corpus is their business, and the checksum index above already
+-- refuses the case that actually duplicates content.
+CREATE UNIQUE INDEX knowledge_document_one_per_managed_page
+    ON knowledge_document (corpus_id, filename)
+    WHERE managed_source IS NOT NULL AND archived_at IS NULL;
 
 -- A document's audit image names its filename and audit_log is append-only, so
 -- a document may only die by a path that read it first: deleting a corpus that

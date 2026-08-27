@@ -4871,9 +4871,6 @@ export const de = {
     "Textbestände, zu denen diese Organisation befragt werden kann. Eine Antwort stammt ausschließlich aus dem, was hier abgelegt ist; eine Frage, die sie nicht abdecken, wird abgelehnt statt geraten.",
   "knowledge.withheld":
     "Welche Dokumentensammlungen es gibt, dürfen Sie nicht sehen.",
-  "knowledge.empty.title": "Noch keine Dokumentensammlungen",
-  "knowledge.empty.body":
-    "Legen Sie eine an, füllen Sie Textdokumente hinein, und alle hier können sie in eigenen Worten befragen.",
   "knowledge.coverage":
     "{documents} Dokumente · {embedded} von {total} Abschnitten durchsuchbar",
   "knowledge.reindexing":

@@ -5,7 +5,6 @@ package knowledge
 
 import (
 	"context"
-	"fmt"
 	"io"
 
 	"github.com/jackc/pgx/v5"
@@ -32,9 +31,6 @@ func (s *Store) OpenForDownload(ctx context.Context, documentID ids.UUID) (crmco
 	if err := auth.Require(ctx, "knowledge_document", principal.ActionRead); err != nil {
 		return crmcontracts.KnowledgeDocument{}, nil, err
 	}
-	if s.blob == nil {
-		return crmcontracts.KnowledgeDocument{}, nil, ErrBlobstoreUnconfigured
-	}
 	var doc crmcontracts.KnowledgeDocument
 	var key string
 	if err := s.tx(ctx, func(tx pgx.Tx) error {
@@ -49,9 +45,13 @@ func (s *Store) OpenForDownload(ctx context.Context, documentID ids.UUID) (crmco
 	}); err != nil {
 		return crmcontracts.KnowledgeDocument{}, nil, err
 	}
-	body, _, err := s.blob.Get(ctx, key)
+	// The blobstore check moved into openContent with the rest of the choice:
+	// a handbook page downloads from an installation that has no object storage
+	// at all, and a guard here would have refused exactly those installations
+	// the citation they were just handed.
+	body, err := s.openContent(ctx, key)
 	if err != nil {
-		return crmcontracts.KnowledgeDocument{}, nil, fmt.Errorf("read the stored document: %w", err)
+		return crmcontracts.KnowledgeDocument{}, nil, err
 	}
 	return doc, body, nil
 }
