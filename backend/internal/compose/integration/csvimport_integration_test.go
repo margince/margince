@@ -176,7 +176,7 @@ func createRunOnDuplicate(t *testing.T, e *apptest.AppEnv, object, sourceRef str
 func createRunWithMapping(t *testing.T, e *apptest.AppEnv, object, sourceRef string, mapping map[string]string) (importRunDTO, int) {
 	t.Helper()
 	var run importRunDTO
-	status := e.Call(t, http.MethodPost, "/v1/imports", apptest.AnyMap{
+	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": object,
 		"source_ref": sourceRef, "mapping": mapping,
 	}, nil, &run)
@@ -195,7 +195,7 @@ func leadCount(t *testing.T, e *apptest.AppEnv) int {
 func importedPersonCount(t *testing.T, e *apptest.AppEnv) int {
 	t.Helper()
 	var people struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, http.MethodGet, "/v1/people?limit=100", nil, nil, &people); status != http.StatusOK {
 		t.Fatalf("GET /v1/people → %d, want 200", status)
@@ -397,7 +397,7 @@ func TestCSVImportRefusesAnImpossibleMapping(t *testing.T) {
 	e := setupImportApp(t)
 
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
-	status := e.Call(t, http.MethodPost, "/v1/imports", apptest.AnyMap{
+	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef,
 		"mapping":    map[string]string{"Email": "email", "Title": "annual_revenue"},
@@ -417,7 +417,7 @@ func TestCSVImportRefusesAForeignSourceReference(t *testing.T) {
 	profile, _ := uploadCSV(t, e, "lead", prospectCSV)
 	foreign := "11111111-1111-7111-8111-111111111111/import/" + path.Base(profile.SourceRef)
 
-	status := e.Call(t, http.MethodPost, "/v1/imports", apptest.AnyMap{
+	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": foreign, "mapping": profile.SuggestedMapping,
 	}, nil, nil)
@@ -466,7 +466,7 @@ func TestCSVImportRecordsAValidationThatCouldNotFinish(t *testing.T) {
 		t.Fatalf("removing the stored upload: %v", err)
 	}
 
-	status := e.Call(t, http.MethodPost, "/v1/imports", apptest.AnyMap{
+	status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef, "mapping": profile.SuggestedMapping,
 	}, nil, nil)
@@ -513,7 +513,7 @@ func TestCSVImportRunNamesWhoOpenedIt(t *testing.T) {
 		ID         string `json:"id"`
 		CapturedBy string `json:"captured_by"`
 	}
-	if status := e.Call(t, http.MethodPost, "/v1/imports", apptest.AnyMap{
+	if status := e.Call(t, http.MethodPost, "/v1/imports", AnyMap{
 		"connector": "csv", "object": "lead",
 		"source_ref": profile.SourceRef, "mapping": profile.SuggestedMapping,
 	}, nil, &run); status != http.StatusAccepted {

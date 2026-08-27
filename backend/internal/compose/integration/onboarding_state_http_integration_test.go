@@ -23,12 +23,12 @@ type onboardingStateDTO struct {
 	Version          int            `json:"version"`
 }
 
-func onboardingStateBody(version int, step string) apptest.AnyMap {
-	return apptest.AnyMap{
+func onboardingStateBody(version int, step string) AnyMap {
+	return AnyMap{
 		"expected_version":   version,
 		"step":               step,
 		"source_mode":        "manual",
-		"company_draft":      apptest.AnyMap{"display_name": "Acme draft"},
+		"company_draft":      AnyMap{"display_name": "Acme draft"},
 		"selected_fact_keys": []string{},
 		"voice_skipped":      false,
 		"connect_skipped":    false,
@@ -65,7 +65,7 @@ func TestOnboardingStateResumesAndRejectsStaleTabs(t *testing.T) {
 		t.Fatalf("resumed state = %+v, want the persisted draft", resumed)
 	}
 
-	var blocked apptest.AnyMap
+	var blocked AnyMap
 	status = e.Call(t, http.MethodPut, "/v1/onboarding/state",
 		onboardingStateBody(1, "voice"), onboardingHeaders("onboarding-blocked"), &blocked)
 	if status != http.StatusConflict || blocked["code"] != "conflict" {
@@ -83,7 +83,7 @@ func TestOnboardingStateResumesAndRejectsStaleTabs(t *testing.T) {
 		t.Fatalf("advanced state = %d %+v, want creator/v2", status, advanced)
 	}
 
-	var stale apptest.AnyMap
+	var stale AnyMap
 	status = e.Call(t, http.MethodPut, "/v1/onboarding/state",
 		onboardingStateBody(1, "connect"), onboardingHeaders("onboarding-stale"), &stale)
 	if status != http.StatusConflict || stale["code"] != "version_skew" {

@@ -226,7 +226,7 @@ func TestRosterWithholdsRoleKeysFromANonAdmin(t *testing.T) {
 	}
 
 	// Now the deny arm, from the rep's own session.
-	if status := e.Call(t, "POST", "/v1/auth/login", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
 		"email": "rep@example.com", "password": "correct-horse-battery",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("rep login → %d, want 200", status)

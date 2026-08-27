@@ -70,17 +70,17 @@ type requiredIDFixtures struct {
 func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures {
 	t.Helper()
 	var out requiredIDFixtures
-	out.person = createAndID(t, e, "/v1/people", apptest.AnyMap{"full_name": "Merge Source"})
-	out.organization = createAndID(t, e, "/v1/organizations", apptest.AnyMap{"display_name": "Merge Org"})
-	out.activity = createAndID(t, e, "/v1/activities", apptest.AnyMap{
+	out.person = createAndID(t, e, "/v1/people", AnyMap{"full_name": "Merge Source"})
+	out.organization = createAndID(t, e, "/v1/organizations", AnyMap{"display_name": "Merge Org"})
+	out.activity = createAndID(t, e, "/v1/activities", AnyMap{
 		"kind": "note", "body": "relink probe",
-		"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": out.person}},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": out.person}},
 	})
-	out.list = createAndID(t, e, "/v1/lists", apptest.AnyMap{
+	out.list = createAndID(t, e, "/v1/lists", AnyMap{
 		"name": "Required IDs", "entity_type": "person", "list_type": "static",
 	})
-	out.tag = createAndID(t, e, "/v1/tags", apptest.AnyMap{"name": "required-ids"})
-	out.project = createAndID(t, e, "/v1/projects", apptest.AnyMap{
+	out.tag = createAndID(t, e, "/v1/tags", AnyMap{"name": "required-ids"})
+	out.project = createAndID(t, e, "/v1/projects", AnyMap{
 		"name": "Stakeholder probe", "organization_id": out.organization, "source": "manual",
 	})
 	out.deal = seedDealForRequiredIDs(t, e)
@@ -102,7 +102,7 @@ func seedRequiredIDFixtures(t *testing.T, e *apptest.AppEnv) requiredIDFixtures 
 // createAndID posts one fixture and returns its id, failing loudly if the create
 // itself was refused — a fixture that silently did not exist would turn every row
 // below into a 404 about the path.
-func createAndID(t *testing.T, e *apptest.AppEnv, path string, body apptest.AnyMap) string {
+func createAndID(t *testing.T, e *apptest.AppEnv, path string, body AnyMap) string {
 	t.Helper()
 	var created struct {
 		ID string `json:"id"`
@@ -120,7 +120,7 @@ func createAndID(t *testing.T, e *apptest.AppEnv, path string, body apptest.AnyM
 // the id under test, so the status difference cannot come from anything else.
 type requiredIDCase struct {
 	method, path      string
-	omitted, supplied apptest.AnyMap
+	omitted, supplied AnyMap
 	field             string
 }
 
@@ -135,64 +135,64 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		// that has to keep up: one rule, one answer, whichever surface asks.
 		"AdvanceDealRequest.to_stage_id": {
 			method: "POST", path: "/v1/deals/" + f.deal + "/advance",
-			omitted: apptest.AnyMap{}, supplied: apptest.AnyMap{"to_stage_id": absent}, field: "to_stage_id",
+			omitted: AnyMap{}, supplied: AnyMap{"to_stage_id": absent}, field: "to_stage_id",
 		},
 		"CreateStageRequest.pipeline_id": {
 			method: "POST", path: "/v1/stages",
-			omitted:  apptest.AnyMap{"name": "Orphan stage", "position": 9},
-			supplied: apptest.AnyMap{"name": "Orphan stage", "position": 9, "pipeline_id": absent},
+			omitted:  AnyMap{"name": "Orphan stage", "position": 9},
+			supplied: AnyMap{"name": "Orphan stage", "position": 9, "pipeline_id": absent},
 			field:    "pipeline_id",
 		},
 		"MergePersonJSONBody.target_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/merge",
-			omitted: apptest.AnyMap{}, supplied: apptest.AnyMap{"target_id": absent}, field: "target_id",
+			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
 		},
 		"MergeOrganizationJSONBody.target_id": {
 			method: "POST", path: "/v1/organizations/" + f.organization + "/merge",
-			omitted: apptest.AnyMap{}, supplied: apptest.AnyMap{"target_id": absent}, field: "target_id",
+			omitted: AnyMap{}, supplied: AnyMap{"target_id": absent}, field: "target_id",
 		},
 		"RelinkActivityJSONBody.entity_id": {
 			method: "POST", path: "/v1/activities/" + f.activity + "/relink",
-			omitted:  apptest.AnyMap{"entity_type": "person"},
-			supplied: apptest.AnyMap{"entity_type": "person", "entity_id": absent},
+			omitted:  AnyMap{"entity_type": "person"},
+			supplied: AnyMap{"entity_type": "person", "entity_id": absent},
 			field:    "entity_id",
 		},
 		"RecordConsentRequest.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent",
-			omitted:  apptest.AnyMap{"new_state": "granted"},
-			supplied: apptest.AnyMap{"new_state": "granted", "purpose_id": absent},
+			omitted:  AnyMap{"new_state": "granted"},
+			supplied: AnyMap{"new_state": "granted", "purpose_id": absent},
 			field:    "purpose_id",
 		},
 		"IssueDoubleOptInJSONBody.purpose_id": {
 			method: "POST", path: "/v1/people/" + f.person + "/consent/double-opt-in",
-			omitted: apptest.AnyMap{}, supplied: apptest.AnyMap{"purpose_id": absent}, field: "purpose_id",
+			omitted: AnyMap{}, supplied: AnyMap{"purpose_id": absent}, field: "purpose_id",
 		},
 		"AddListMemberRequest.entity_id": {
 			method: "POST", path: "/v1/lists/" + f.list + "/members",
-			omitted:  apptest.AnyMap{"entity_type": "person"},
-			supplied: apptest.AnyMap{"entity_type": "person", "entity_id": absent},
+			omitted:  AnyMap{"entity_type": "person"},
+			supplied: AnyMap{"entity_type": "person", "entity_id": absent},
 			field:    "entity_id",
 		},
 		"ApplyTagRequest.entity_id": {
 			method: "POST", path: "/v1/tags/" + f.tag + "/apply",
-			omitted:  apptest.AnyMap{"entity_type": "person"},
-			supplied: apptest.AnyMap{"entity_type": "person", "entity_id": absent},
+			omitted:  AnyMap{"entity_type": "person"},
+			supplied: AnyMap{"entity_type": "person", "entity_id": absent},
 			field:    "entity_id",
 		},
 		"SetProjectStakeholderRequest.person_id": {
 			method: "PUT", path: "/v1/projects/" + f.project + "/stakeholders",
-			omitted:  apptest.AnyMap{"role": "sponsor"},
-			supplied: apptest.AnyMap{"role": "sponsor", "person_id": absent},
+			omitted:  AnyMap{"role": "sponsor"},
+			supplied: AnyMap{"role": "sponsor", "person_id": absent},
 			field:    "person_id",
 		},
 		// Two required ids, so two rows: a guard that named only the first would
 		// leave the second answering not-found for a subject nobody sent.
 		"CreateRecordGrantRequest.record_id": {
 			method: "POST", path: "/v1/record-grants",
-			omitted: apptest.AnyMap{
+			omitted: AnyMap{
 				"access": "read", "record_type": "person", "subject_type": "user", "subject_id": f.subjectUser,
 			},
-			supplied: apptest.AnyMap{
+			supplied: AnyMap{
 				"access": "read", "record_type": "person", "subject_type": "user",
 				"subject_id": f.subjectUser, "record_id": absent,
 			},
@@ -200,10 +200,10 @@ func requiredIDCases(f requiredIDFixtures, absent string) map[string]requiredIDC
 		},
 		"CreateRecordGrantRequest.subject_id": {
 			method: "POST", path: "/v1/record-grants",
-			omitted: apptest.AnyMap{
+			omitted: AnyMap{
 				"access": "read", "record_type": "person", "subject_type": "user", "record_id": f.person,
 			},
-			supplied: apptest.AnyMap{
+			supplied: AnyMap{
 				"access": "read", "record_type": "person", "subject_type": "user",
 				"record_id": f.person, "subject_id": absent,
 			},
@@ -277,7 +277,7 @@ func seedDealForRequiredIDs(t *testing.T, e *apptest.AppEnv) string {
 	var deal struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/deals", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Advance probe", "pipeline_id": pipeline.ID, "stage_id": open,
 		"currency": "EUR", "amount_minor": 1000, "source": "ui",
 	}, nil, &deal); status != http.StatusCreated {
@@ -301,7 +301,7 @@ func TestAPassportReadsTheSameRefusalAsASessionForAnOmittedStage(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "stage agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
@@ -309,8 +309,8 @@ func TestAPassportReadsTheSameRefusalAsASessionForAnOmittedStage(t *testing.T) {
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
 	var asSession, asPassport problemBody
-	sessionStatus := e.Call(t, "POST", "/v1/deals/"+deal+"/advance", apptest.AnyMap{}, nil, &asSession)
-	passportStatus := e.Call(t, "POST", "/v1/deals/"+deal+"/advance", apptest.AnyMap{}, bearer, &asPassport)
+	sessionStatus := e.Call(t, "POST", "/v1/deals/"+deal+"/advance", AnyMap{}, nil, &asSession)
+	passportStatus := e.Call(t, "POST", "/v1/deals/"+deal+"/advance", AnyMap{}, bearer, &asPassport)
 
 	if sessionStatus != http.StatusUnprocessableEntity || passportStatus != http.StatusUnprocessableEntity {
 		t.Fatalf("session → %d, passport → %d; want 422 from both", sessionStatus, passportStatus)

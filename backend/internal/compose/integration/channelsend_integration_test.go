@@ -77,7 +77,7 @@ func setupChannelSend(t *testing.T) *channelSendEnv {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Telegram Buyer"}, nil, &person); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Telegram Buyer"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
 	c.personID = person.ID
@@ -158,7 +158,7 @@ func (c *channelSendEnv) grantConsent(t *testing.T, key string) {
 	if purposeID == "" {
 		t.Fatalf("bootstrap seeded no %q purpose: %+v", key, purposes.Data)
 	}
-	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/people/"+c.personID+"/consent", AnyMap{
 		"purpose_id": purposeID, "new_state": "granted", "lawful_basis": "consent",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("record consent → %d", status)
@@ -197,7 +197,7 @@ func (c *channelSendEnv) sendReply(t *testing.T, purpose, body string, headers m
 			} `json:"errors"`
 		} `json:"details"`
 	}
-	status = c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", apptest.AnyMap{
+	status = c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", AnyMap{
 		"body": body, "consent_purpose": purpose,
 	}, headers, &answer)
 	if errs := answer.Details.Errors; len(errs) > 0 {
@@ -212,7 +212,7 @@ func (c *channelSendEnv) mintPassport(t *testing.T, scopes []string) string {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := c.Call(t, "POST", "/v1/passports", apptest.AnyMap{"label": "reply agent", "scopes": scopes}, nil, &minted); status != http.StatusCreated {
+	if status := c.Call(t, "POST", "/v1/passports", AnyMap{"label": "reply agent", "scopes": scopes}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
 	}
 	return minted.Token
@@ -460,7 +460,7 @@ func TestSentMessageLandsAsAnOutboundActivity(t *testing.T) {
 		Direction string `json:"direction"`
 		Body      string `json:"body"`
 	}
-	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/activities/"+c.activityID+"/send-message", AnyMap{
 		"body": "On its way.", "consent_purpose": "transactional",
 	}, nil, &sent); status != http.StatusAccepted {
 		t.Fatalf("human reply → %d", status)

@@ -51,7 +51,7 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 	// An account is readable by every seat unless its capture is private:
 	// visibility='owner' narrows it to owner_id, which is the admin and not
 	// the rep below, so the miss is genuine rather than incidental.
-	orgID := createdID(t, e, "/v1/organizations", apptest.AnyMap{
+	orgID := createdID(t, e, "/v1/organizations", AnyMap{
 		"display_name": "Capture-Private Inc", "owner_id": adminID,
 	})
 
@@ -67,7 +67,7 @@ func TestAConfirmFirstFactCallAgainstAnUnseeableOrganizationStagesNothing(t *tes
 		// whose capture is private to somebody else.
 		stmt(`INSERT INTO role_assignment (role_id, user_id) SELECT r.id, $1 FROM role r WHERE r.key = 'rep'`, rep),
 	)
-	if status := e.Call(t, "POST", "/v1/auth/login", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
 		"email": "rep@example.com", "password": "correct-horse-battery",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("rep login → %d, want 200", status)
@@ -142,7 +142,7 @@ func stageWebhookCreate(t *testing.T, e *apptest.AppEnv, bearer map[string]strin
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
 		"target_url": url, "event_types": []string{"organization.created"},
 	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
 		t.Fatalf("agent subscription create %q → %d %q, want 403 approval_required", url, status, problem.Code)

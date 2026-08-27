@@ -25,14 +25,14 @@ func TestPipelineStageConfigLifecycle(t *testing.T) {
 		ID        string `json:"id"`
 		IsDefault bool   `json:"is_default"`
 	}
-	if status := e.Call(t, "POST", "/v1/pipelines", apptest.AnyMap{
-		"name": "Partnerships", "stages": []apptest.AnyMap{{"name": "Scout", "position": 1}},
+	if status := e.Call(t, "POST", "/v1/pipelines", AnyMap{
+		"name": "Partnerships", "stages": []AnyMap{{"name": "Scout", "position": 1}},
 	}, nil, &second); status != http.StatusCreated {
 		t.Fatalf("create pipeline → %d", status)
 	}
 
 	// Promoting the new pipeline demotes the seeded default in one tx.
-	if status := e.Call(t, "PATCH", "/v1/pipelines/"+second.ID, apptest.AnyMap{"is_default": true}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/pipelines/"+second.ID, AnyMap{"is_default": true}, nil, nil); status != http.StatusOK {
 		t.Fatalf("promote default → %d", status)
 	}
 	var defaults int
@@ -48,13 +48,13 @@ func TestPipelineStageConfigLifecycle(t *testing.T) {
 		ID             string `json:"id"`
 		WinProbability int    `json:"win_probability"`
 	}
-	if status := e.Call(t, "POST", "/v1/stages", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/stages", AnyMap{
 		"pipeline_id": second.ID, "name": "Won", "position": 2, "semantic": "won",
 	}, nil, &stage); status != http.StatusCreated {
 		t.Fatalf("create stage → %d", status)
 	}
 	// A colliding position is a 409, not a 500.
-	if status := e.Call(t, "POST", "/v1/stages", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/stages", AnyMap{
 		"pipeline_id": second.ID, "name": "Dup", "position": 2,
 	}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("position collision → %d, want 409", status)
@@ -64,10 +64,10 @@ func TestPipelineStageConfigLifecycle(t *testing.T) {
 	}
 
 	// Rename → stage.updated; reorder → ONE pipeline.updated.
-	if status := e.Call(t, "PATCH", "/v1/stages/"+stage.ID, apptest.AnyMap{"name": "Closed Won"}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/stages/"+stage.ID, AnyMap{"name": "Closed Won"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("rename stage → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/stages/"+stage.ID, apptest.AnyMap{"position": 5}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/stages/"+stage.ID, AnyMap{"position": 5}, nil, nil); status != http.StatusOK {
 		t.Fatalf("reorder stage → %d", status)
 	}
 	var stageUpdated, pipelineUpdated int
@@ -110,13 +110,13 @@ func TestDealStakeholdersView(t *testing.T) {
 	var deal struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/deals", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Stakeholder Deal", "pipeline_id": pipelines.Data[0].ID,
 		"stage_id": pipelines.Data[0].Stages[0].ID,
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/relationships", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/relationships", AnyMap{
 		"kind": "deal_stakeholder", "deal_id": deal.ID, "person_id": e.personID,
 		"role": "champion", "source": "ui",
 	}, nil, nil); status != http.StatusCreated {

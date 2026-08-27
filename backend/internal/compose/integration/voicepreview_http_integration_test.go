@@ -56,7 +56,7 @@ func TestVoiceCorpusPreviewAndIngestStatsHTTP(t *testing.T) {
 
 	var preview voicePreviewWire
 	if status := e.Call(t, "POST", base+"/sources/preview",
-		apptest.AnyMap{"format": "transcript", "content": previewMeetingTranscript},
+		AnyMap{"format": "transcript", "content": previewMeetingTranscript},
 		nil, &preview); status != http.StatusOK {
 		t.Fatalf("preview → %d", status)
 	}
@@ -80,7 +80,7 @@ func TestVoiceCorpusPreviewAndIngestStatsHTTP(t *testing.T) {
 
 	// The raw request keeps the response headers: the refusal contract is
 	// the 422 body AND its problem+json media type.
-	rawBody, err := json.Marshal(apptest.AnyMap{"format": "docx", "content": "binary"})
+	rawBody, err := json.Marshal(AnyMap{"format": "docx", "content": "binary"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -118,7 +118,7 @@ func TestVoiceCorpusPreviewAndIngestStatsHTTP(t *testing.T) {
 			SpeakersSeen   []string `json:"speakers_seen"`
 		} `json:"ingest_stats"`
 	}
-	if status := e.Call(t, "POST", base+"/sources", apptest.AnyMap{
+	if status := e.Call(t, "POST", base+"/sources", AnyMap{
 		"kind": "transcript", "register": "spoken", "source_label": "Meeting",
 		"source_ref": "meeting-1", "format": "transcript",
 		"speaker_label": "Lars Jankowfsky", "content": previewMeetingTranscript,
@@ -137,7 +137,7 @@ func TestVoiceCorpusPreviewAndIngestStatsHTTP(t *testing.T) {
 	}
 
 	var unlabeled problemWire
-	if status := e.Call(t, "POST", base+"/sources", apptest.AnyMap{
+	if status := e.Call(t, "POST", base+"/sources", AnyMap{
 		"kind": "transcript", "register": "spoken", "source_label": "Meeting",
 		"source_ref": "meeting-2", "format": "transcript",
 		"content": previewMeetingTranscript,

@@ -62,12 +62,12 @@ func TestTheComposedMCPMountPublishesTheQueryVocabulary(t *testing.T) {
 	bearer := readPassport(t, env.AppEnv, "query vocabulary reader")
 
 	// The catalogue advertises it, which is how a client finds it at all.
-	listed := mcpRPC(env.AppEnv, t, bearer, `{"jsonrpc":"2.0","id":1,"method":"resources/list"}`)
+	listed := mcpRPC(t, env.AppEnv, bearer, `{"jsonrpc":"2.0","id":1,"method":"resources/list"}`)
 	if !strings.Contains(listed, search.QuerySchemaURI) {
 		t.Fatalf("resources/list does not advertise %s: %s", search.QuerySchemaURI, listed)
 	}
 
-	doc := readVocabulary(env.AppEnv, t, bearer)
+	doc := readVocabulary(t, env.AppEnv, bearer)
 	if doc.Version != search.PlanVersion {
 		t.Fatalf("published vocabulary is version %q, want %q", doc.Version, search.PlanVersion)
 	}
@@ -125,7 +125,7 @@ func TestACustomFieldReachesThePublishedVocabularyWithoutADeploy(t *testing.T) {
 	env := setupConnectorWith(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	bearer := readPassport(t, env.AppEnv, "custom field reader")
 
-	before := readVocabulary(env.AppEnv, t, bearer)
+	before := readVocabulary(t, env.AppEnv, bearer)
 	if fieldNamed(dealVocabulary(t, before), "cf_renewal_risk") {
 		t.Fatal("the field under test already exists in the vocabulary")
 	}
@@ -146,7 +146,7 @@ func TestACustomFieldReachesThePublishedVocabularyWithoutADeploy(t *testing.T) {
 		Title      string `json:"title"`
 		Detail     string `json:"detail"`
 	}
-	status := env.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+	status := env.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
 		"object": "deal", "label": "Renewal risk", "type": "text", "source": "ui",
 	}, nil, &created)
 	if status != http.StatusCreated {
@@ -156,7 +156,7 @@ func TestACustomFieldReachesThePublishedVocabularyWithoutADeploy(t *testing.T) {
 		t.Fatalf("the engine named the column %q; this test asks the vocabulary for cf_renewal_risk", created.ColumnName)
 	}
 
-	added := readVocabulary(env.AppEnv, t, bearer)
+	added := readVocabulary(t, env.AppEnv, bearer)
 	if !fieldNamed(dealVocabulary(t, added), "cf_renewal_risk") {
 		t.Fatal("a custom field active in the catalog is not in the published vocabulary")
 	}
@@ -164,7 +164,7 @@ func TestACustomFieldReachesThePublishedVocabularyWithoutADeploy(t *testing.T) {
 	if status := env.Call(t, "POST", "/v1/custom-fields/"+created.ID+"/retire", nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("retiring the custom field → %d", status)
 	}
-	if fieldNamed(dealVocabulary(t, readVocabulary(env.AppEnv, t, bearer)), "cf_renewal_risk") {
+	if fieldNamed(dealVocabulary(t, readVocabulary(t, env.AppEnv, bearer)), "cf_renewal_risk") {
 		t.Error("a retired custom field is still published; the vocabulary is cached rather than derived")
 	}
 }
@@ -175,7 +175,7 @@ func TestAnUnservedResourceURIIsRefusedOverTheTransport(t *testing.T) {
 	env := setupConnector(t)
 	bearer := readPassport(t, env.AppEnv, "resource prober")
 
-	out := mcpRPC(env.AppEnv, t, bearer,
+	out := mcpRPC(t, env.AppEnv, bearer,
 		`{"jsonrpc":"2.0","id":9,"method":"resources/read","params":{"uri":"margince://schema/secrets"}}`)
 	if !strings.Contains(out, `"error"`) || !strings.Contains(out, "-32002") {
 		t.Fatalf("read of an unserved URI → %s, want a resource-not-found error", out)
@@ -192,7 +192,7 @@ func readPassport(t *testing.T, e *apptest.AppEnv, label string) string {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/passports", integration.AnyMap{
 		"label": label, "scopes": []string{"read"},
 	}, nil, &minted)
 	if status != http.StatusCreated {
@@ -209,9 +209,9 @@ func readPassport(t *testing.T, e *apptest.AppEnv, label string) string {
 // mcpRPC posts one JSON-RPC exchange to the composed /mcp mount and returns
 // the raw body — the errors this file asserts on live in the envelope, not in
 // a decoded result.
-func mcpRPC(e *apptest.AppEnv, t *testing.T, bearer, payload string) string {
+func mcpRPC(t *testing.T, e *apptest.AppEnv, bearer, payload string) string {
 	t.Helper()
-	got := mcpRaw(e, t, http.MethodPost, "/mcp", payload, map[string]string{
+	got := mcpRaw(t, e, http.MethodPost, "/mcp", payload, map[string]string{
 		"Content-Type": "application/json", "Authorization": "Bearer " + bearer,
 	})
 	if got.StatusCode != http.StatusOK {
@@ -221,9 +221,9 @@ func mcpRPC(e *apptest.AppEnv, t *testing.T, bearer, payload string) string {
 }
 
 // readVocabulary fetches and decodes the published document.
-func readVocabulary(e *apptest.AppEnv, t *testing.T, bearer string) vocabularyDoc {
+func readVocabulary(t *testing.T, e *apptest.AppEnv, bearer string) vocabularyDoc {
 	t.Helper()
-	body := mcpRPC(e, t, bearer,
+	body := mcpRPC(t, e, bearer,
 		`{"jsonrpc":"2.0","id":2,"method":"resources/read","params":{"uri":"`+search.QuerySchemaURI+`"}}`)
 
 	var envelope struct {

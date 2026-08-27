@@ -42,6 +42,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
@@ -212,7 +213,7 @@ func (we *webhookEnv) createSubscription(t *testing.T, target string, eventTypes
 		} `json:"subscription"`
 		SigningSecret string `json:"signing_secret"`
 	}
-	status := we.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	status := we.Call(t, "POST", "/v1/webhook-subscriptions", integration.AnyMap{
 		"target_url": target, "event_types": eventTypes,
 	}, nil, &created)
 	if status != http.StatusCreated {
@@ -248,19 +249,19 @@ func TestWebhookSubscriptionCRUDOverHTTP(t *testing.T) {
 	we := setupWebhooks(t)
 
 	// http:// is rejected at create.
-	if status := we.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := we.Call(t, "POST", "/v1/webhook-subscriptions", integration.AnyMap{
 		"target_url": "http://insecure.example/hook", "event_types": []string{"deal.created"},
 	}, nil, nil); status != 422 {
 		t.Fatalf("http target → %d, want 422", status)
 	}
 	// An unknown event type is rejected.
-	if status := we.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := we.Call(t, "POST", "/v1/webhook-subscriptions", integration.AnyMap{
 		"target_url": "https://ok.example/hook", "event_types": []string{"nonsense.happened"},
 	}, nil, nil); status != 422 {
 		t.Fatalf("unknown event type → %d, want 422", status)
 	}
 	// A pipeline (entity-less) event type is not subscribable (BYO-EVT-4).
-	if status := we.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := we.Call(t, "POST", "/v1/webhook-subscriptions", integration.AnyMap{
 		"target_url": "https://ok.example/hook", "event_types": []string{"capture.received"},
 	}, nil, nil); status != 422 {
 		t.Fatalf("pipeline event type → %d, want 422", status)
@@ -310,12 +311,12 @@ func TestWebhookSubscriptionCRUDOverHTTP(t *testing.T) {
 
 	// An empty update body is a 422 at runtime, matching the contract's
 	// minProperties:1 — never a silent no-op.
-	if status := we.Call(t, "PATCH", "/v1/webhook-subscriptions/"+subID, apptest.AnyMap{}, nil, nil); status != 422 {
+	if status := we.Call(t, "PATCH", "/v1/webhook-subscriptions/"+subID, integration.AnyMap{}, nil, nil); status != 422 {
 		t.Fatalf("empty PATCH → %d, want 422", status)
 	}
 
 	// Pause via PATCH, then archive.
-	if status := we.Call(t, "PATCH", "/v1/webhook-subscriptions/"+subID, apptest.AnyMap{"state": "paused"}, nil, nil); status != http.StatusOK {
+	if status := we.Call(t, "PATCH", "/v1/webhook-subscriptions/"+subID, integration.AnyMap{"state": "paused"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("pause → %d", status)
 	}
 	if status := we.Call(t, "DELETE", "/v1/webhook-subscriptions/"+subID, nil, nil, nil); status != http.StatusOK {

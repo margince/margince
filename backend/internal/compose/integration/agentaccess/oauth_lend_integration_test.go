@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
 // approve is one consent decision that LENDS a named passport: the GET arms the
@@ -327,13 +327,13 @@ func TestAPendingConsentDoesNotSurviveItsHumansDeactivation(t *testing.T) {
 	// not be deactivated — the organization would lose user administration with
 	// no way back. A second admin is what the guard is protecting against, so
 	// inviting one is what lets the real endpoint run.
-	if status := o.Call(t, "POST", "/v1/users", apptest.AnyMap{
+	if status := o.Call(t, "POST", "/v1/users", integration.AnyMap{
 		"email": "second-admin@fable.test", "display_name": "Second Admin", "role": "admin",
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("inviting a second admin → %d", status)
 	}
 	granter := o.userIDByEmail(t, "granter@fable.test")
-	if status := o.Call(t, "POST", "/v1/users/"+granter+"/deactivate", apptest.AnyMap{
+	if status := o.Call(t, "POST", "/v1/users/"+granter+"/deactivate", integration.AnyMap{
 		"reason": "left the company",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("deactivate → %d", status)

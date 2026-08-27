@@ -26,7 +26,7 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	org := anchorOrg(t, e, "Stark Industries")
 	var project projectDTO
-	if status := e.Call(t, "POST", "/v1/projects", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/projects", AnyMap{
 		"name": "Arc reactor", "organization_id": org, "source": "manual",
 	}, nil, &project); status != http.StatusCreated {
 		t.Fatalf("POST /projects → %d, want 201", status)
@@ -38,7 +38,7 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 		var activity struct {
 			ID string `json:"id"`
 		}
-		if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 			"kind": "note", "source": "manual", "body": "part of one conversation",
 		}, nil, &activity); status != http.StatusCreated {
 			t.Fatalf("POST /activities → %d, want 201", status)
@@ -56,7 +56,7 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 	}
 
 	var out relinkBatchDTO
-	if status := e.Call(t, "POST", "/v1/activities/relink-thread", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/relink-thread", AnyMap{
 		"thread_key": key, "entity_type": "project", "entity_id": project.ID,
 	}, nil, &out); status != http.StatusOK {
 		t.Fatalf("POST /activities/relink-thread → %d, want 200", status)
@@ -66,14 +66,14 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 	}
 
 	var problem projectProblem
-	if status := e.Call(t, "POST", "/v1/activities/relink-thread", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/relink-thread", AnyMap{
 		"thread_key": key, "entity_type": "invoice", "entity_id": project.ID,
 	}, nil, &problem); status != http.StatusUnprocessableEntity {
 		t.Errorf("a destination outside the link vocabulary → %d, want 422", status)
 	}
 
 	var bulk relinkBatchDTO
-	if status := e.Call(t, "POST", "/v1/activities/relink-bulk", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/relink-bulk", AnyMap{
 		"activity_ids": members[:2], "entity_type": "organization", "entity_id": org,
 	}, nil, &bulk); status != http.StatusOK {
 		t.Fatalf("POST /activities/relink-bulk → %d, want 200", status)
@@ -81,7 +81,7 @@ func TestRelinkingAThreadOverHTTP(t *testing.T) {
 	if bulk.Relinked != 2 {
 		t.Errorf("bulk relinked = %d, want 2", bulk.Relinked)
 	}
-	if status := e.Call(t, "POST", "/v1/activities/relink-bulk", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/relink-bulk", AnyMap{
 		"activity_ids": []string{ids.NewV7().String()}, "entity_type": "organization", "entity_id": org,
 	}, nil, &problem); status != http.StatusNotFound {
 		t.Errorf("a named id that does not exist → %d, want 404", status)

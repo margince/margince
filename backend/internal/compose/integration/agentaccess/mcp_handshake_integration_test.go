@@ -17,7 +17,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
 // TestAConnectorCompletesTheWholeHandshakeOnOneOrigin is the phase's headline
@@ -35,7 +35,7 @@ func TestAConnectorCompletesTheWholeHandshakeOnOneOrigin(t *testing.T) {
 	var registered struct {
 		ClientID string `json:"client_id"`
 	}
-	if status := e.Call(t, "POST", advertised.register, apptest.AnyMap{
+	if status := e.Call(t, "POST", advertised.register, integration.AnyMap{
 		"client_name": "one-origin connector", "redirect_uris": []string{oauthRedirect},
 	}, nil, &registered); status != http.StatusCreated || registered.ClientID == "" {
 		t.Fatalf("DCR at %s → %d %+v", advertised.register, status, registered)
@@ -61,7 +61,7 @@ func TestAConnectorCompletesTheWholeHandshakeOnOneOrigin(t *testing.T) {
 	// ADR-0092 §6 it mints no session, so every later request on this
 	// connection carries its credential and the revision and nothing more.
 	const requested = "2025-06-18"
-	initialized := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp",
+	initialized := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp",
 		`{"jsonrpc":"2.0","id":2,"method":"initialize","params":{"protocolVersion":"`+requested+
 			`","clientInfo":{"name":"conformance","version":"1"}}}`,
 		map[string]string{"Content-Type": "application/json", "Authorization": "Bearer " + token})
@@ -116,16 +116,16 @@ type advertisedEndpoints struct {
 // instead of much later as an unexplained client error.
 func (e *connectorEnv) discover(t *testing.T) advertisedEndpoints {
 	t.Helper()
-	unauth := listTools(e.AppEnv, t, "")
+	unauth := listTools(t, e.AppEnv, "")
 	if unauth.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated POST /mcp → %d, want 401", unauth.StatusCode)
 	}
-	resourceDoc := getJSON(e.AppEnv, t, e.pathOn(t, resourceMetadataParam(t, unauth.Header.Get("WWW-Authenticate"))))
+	resourceDoc := getJSON(t, e.AppEnv, e.pathOn(t, resourceMetadataParam(t, unauth.Header.Get("WWW-Authenticate"))))
 	servers, ok := resourceDoc["authorization_servers"].([]any)
 	if !ok || len(servers) != 1 || servers[0] != e.origin {
 		t.Fatalf("authorization_servers = %v, want [%s]", resourceDoc["authorization_servers"], e.origin)
 	}
-	asDoc := getJSON(e.AppEnv, t, "/.well-known/oauth-authorization-server")
+	asDoc := getJSON(t, e.AppEnv, "/.well-known/oauth-authorization-server")
 	out := advertisedEndpoints{
 		register:  e.pathOn(t, stringField(t, asDoc, "registration_endpoint")),
 		authorize: e.pathOn(t, stringField(t, asDoc, "authorization_endpoint")),

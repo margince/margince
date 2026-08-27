@@ -40,7 +40,7 @@ func TestARestArchiveOutsideTheToolSchemaPerformsOnTheAgentsPassport(t *testing.
 	e.BootstrapWorkspace(t)
 	bearer := agentBearer(t, e, "outside-the-tool-schema agent")
 
-	tagID := createdID(t, e, "/v1/tags", apptest.AnyMap{"name": "Champion"})
+	tagID := createdID(t, e, "/v1/tags", AnyMap{"name": "Champion"})
 
 	if status := e.Call(t, "DELETE", "/v1/tags/"+tagID, nil, bearer, nil); status == http.StatusForbidden {
 		t.Fatalf("agent tag archive → 403 — a passport archives what its holder could archive unaided")

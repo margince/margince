@@ -26,6 +26,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -57,7 +58,7 @@ func setupOAuthWith(t *testing.T, extra ...compose.Option) *oauthEnv {
 	var registered struct {
 		ClientID string `json:"client_id"`
 	}
-	if status := e.Call(t, "POST", "/oauth/register", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/oauth/register", integration.AnyMap{
 		"client_name": "night agent", "redirect_uris": []string{oauthRedirect},
 	}, nil, &registered); status != http.StatusCreated || registered.ClientID == "" {
 		t.Fatalf("DCR → %d %+v", status, registered)
@@ -377,7 +378,7 @@ func TestOAuthRefusesDowngradesAndPrivilegedClients(t *testing.T) {
 
 	// No confidential clients, ever.
 	var problem map[string]any
-	if status := o.Call(t, "POST", "/oauth/register", apptest.AnyMap{
+	if status := o.Call(t, "POST", "/oauth/register", integration.AnyMap{
 		"client_name": "privileged", "redirect_uris": []string{oauthRedirect},
 		"token_endpoint_auth_method": "client_secret_basic",
 	}, nil, &problem); status != http.StatusBadRequest {

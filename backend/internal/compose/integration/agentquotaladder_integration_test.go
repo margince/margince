@@ -85,11 +85,11 @@ func pendingStepUp(t *testing.T, e *apptest.AppEnv) (id ids.ApprovalID, passport
 // presented passport. It ignores the answer: every caller here is about what
 // the call left BEHIND — a staged question, or the absence of one — and a tool
 // refusal is the expected outcome in all of them.
-func callTool(t *testing.T, e *apptest.AppEnv, bearer map[string]string, tool string, args apptest.AnyMap) {
+func callTool(t *testing.T, e *apptest.AppEnv, bearer map[string]string, tool string, args AnyMap) {
 	t.Helper()
-	status := e.Call(t, "POST", "/mcp", apptest.AnyMap{
+	status := e.Call(t, "POST", "/mcp", AnyMap{
 		"jsonrpc": "2.0", "id": 1, "method": "tools/call",
-		"params": apptest.AnyMap{"name": tool, "arguments": args},
+		"params": AnyMap{"name": tool, "arguments": args},
 	}, bearer, nil)
 	if status != http.StatusOK {
 		t.Fatalf("tools/call %s → %d, want 200 with the refusal inside the result", tool, status)
@@ -112,7 +112,7 @@ func TestAReadPastItsThresholdIsReleasedByTheHumanWhoLentThePassport(t *testing.
 	// The REST door refuses without staging (it has no tool to name), so the
 	// question is put through the MCP door — which is the door the ladder is
 	// written for.
-	callTool(t, e, bearer, "search_records", apptest.AnyMap{"query": "Metered"})
+	callTool(t, e, bearer, "search_records", AnyMap{"query": "Metered"})
 
 	id, staged, summary := pendingStepUp(t, e)
 	if staged != passport {
@@ -143,7 +143,7 @@ func TestOneReleaseIsOneMoreAllowanceAndNotAStandingPermission(t *testing.T) {
 	bearer, passport := passportWithID(t, e, "reading agent", "read")
 	seedPeople(t, e, 2)
 	spendCounter(t, e, meter, passport, agentquota.Reads, 120)
-	callTool(t, e, bearer, "search_records", apptest.AnyMap{"query": "Metered"})
+	callTool(t, e, bearer, "search_records", AnyMap{"query": "Metered"})
 	id, _, _ := pendingStepUp(t, e)
 	if status := e.Call(t, "POST", "/v1/approvals/"+id.String()+"/approve", nil, nil, nil); status != http.StatusOK {
 		t.Fatalf("approving the step-up → %d", status)
@@ -165,7 +165,7 @@ func TestASpentEgressCeilingAsksNobodyAnything(t *testing.T) {
 	bearer, passport := passportWithID(t, e, "sending agent", "read", "send")
 	spendCounter(t, e, meter, passport, agentquota.Egress, 5)
 
-	callTool(t, e, bearer, "send_email", apptest.AnyMap{
+	callTool(t, e, bearer, "send_email", AnyMap{
 		"to": "someone@example.com", "subject": "s", "body": "b",
 	})
 

@@ -19,6 +19,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
@@ -26,7 +27,7 @@ import (
 // payload.
 //
 //craft:ignore naked-any want is whichever JSON-decoded shape the wire carries for the field's type (string/bool/float64) — the assertion seam mirrors env.call's out
-func assertWireCF(t *testing.T, payload apptest.AnyMap, key string, want any) {
+func assertWireCF(t *testing.T, payload integration.AnyMap, key string, want any) {
 	t.Helper()
 	if payload[key] != want {
 		t.Fatalf("wire %s = %v (%T), want top-level %v", key, payload[key], payload[key], want)
@@ -35,9 +36,9 @@ func assertWireCF(t *testing.T, payload apptest.AnyMap, key string, want any) {
 
 // createWithCF posts one record body and returns the decoded response
 // plus its id, asserting the 201.
-func createWithCF(t *testing.T, e *apptest.AppEnv, path string, body apptest.AnyMap) (apptest.AnyMap, string) {
+func createWithCF(t *testing.T, e *apptest.AppEnv, path string, body integration.AnyMap) (integration.AnyMap, string) {
 	t.Helper()
-	var created apptest.AnyMap
+	var created integration.AnyMap
 	if status := e.Call(t, "POST", path, body, nil, &created); status != http.StatusCreated {
 		t.Fatalf("POST %s status = %d (%v)", path, status, created)
 	}
@@ -50,25 +51,25 @@ func createWithCF(t *testing.T, e *apptest.AppEnv, path string, body apptest.Any
 
 func assertPersonWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
-	created, id := createWithCF(t, e, "/v1/people", apptest.AnyMap{
+	created, id := createWithCF(t, e, "/v1/people", integration.AnyMap{
 		"full_name": "Ada Lovelace", "source": "ui", col: "gold",
 	})
 	assertWireCF(t, created, col, "gold")
 
-	var got apptest.AnyMap
+	var got integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/people/"+id, nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("get person status = %d", status)
 	}
 	assertWireCF(t, got, col, "gold")
 
-	var updated apptest.AnyMap
-	if status := e.Call(t, "PATCH", "/v1/people/"+id, apptest.AnyMap{col: "silver"}, nil, &updated); status != http.StatusOK {
+	var updated integration.AnyMap
+	if status := e.Call(t, "PATCH", "/v1/people/"+id, integration.AnyMap{col: "silver"}, nil, &updated); status != http.StatusOK {
 		t.Fatalf("update person status = %d (%v)", status, updated)
 	}
 	assertWireCF(t, updated, col, "silver")
 
 	var list struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []integration.AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/people", nil, nil, &list); status != http.StatusOK {
 		t.Fatalf("list people status = %d", status)
@@ -81,12 +82,12 @@ func assertPersonWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 
 func assertOrganizationWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
-	created, id := createWithCF(t, e, "/v1/organizations", apptest.AnyMap{
+	created, id := createWithCF(t, e, "/v1/organizations", integration.AnyMap{
 		"display_name": "Acme GmbH", "source": "ui", col: "emea",
 	})
 	assertWireCF(t, created, col, "emea")
 
-	var got apptest.AnyMap
+	var got integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/organizations/"+id, nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("get organization status = %d", status)
 	}
@@ -99,26 +100,26 @@ func assertOrganizationWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string
 func assertDealWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	created, id := createWithCF(t, e, "/v1/deals", apptest.AnyMap{
+	created, id := createWithCF(t, e, "/v1/deals", integration.AnyMap{
 		"name": "Acme Renewal", "pipeline_id": stages.PipelineID, "stage_id": stages.Open,
 		"source": "ui", col: "enterprise",
 	})
 	assertWireCF(t, created, col, "enterprise")
 
-	var got apptest.AnyMap
+	var got integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/deals/"+id, nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("get deal status = %d", status)
 	}
 	assertWireCF(t, got, col, "enterprise")
 
-	var updated apptest.AnyMap
-	if status := e.Call(t, "PATCH", "/v1/deals/"+id, apptest.AnyMap{col: "mid-market"}, nil, &updated); status != http.StatusOK {
+	var updated integration.AnyMap
+	if status := e.Call(t, "PATCH", "/v1/deals/"+id, integration.AnyMap{col: "mid-market"}, nil, &updated); status != http.StatusOK {
 		t.Fatalf("update deal status = %d (%v)", status, updated)
 	}
 	assertWireCF(t, updated, col, "mid-market")
 
 	var list struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []integration.AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/deals", nil, nil, &list); status != http.StatusOK {
 		t.Fatalf("list deals status = %d", status)
@@ -134,25 +135,25 @@ func assertDealWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 // carry the cf key top-level over the wire.
 func assertLeadWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 	t.Helper()
-	created, id := createWithCF(t, e, "/v1/leads", apptest.AnyMap{
+	created, id := createWithCF(t, e, "/v1/leads", integration.AnyMap{
 		"full_name": "Grace Hopper", "source": "ui", col: "champion",
 	})
 	assertWireCF(t, created, col, "champion")
 
-	var got apptest.AnyMap
+	var got integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/leads/"+id, nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("get lead status = %d", status)
 	}
 	assertWireCF(t, got, col, "champion")
 
-	var updated apptest.AnyMap
-	if status := e.Call(t, "PATCH", "/v1/leads/"+id, apptest.AnyMap{col: "detractor"}, nil, &updated); status != http.StatusOK {
+	var updated integration.AnyMap
+	if status := e.Call(t, "PATCH", "/v1/leads/"+id, integration.AnyMap{col: "detractor"}, nil, &updated); status != http.StatusOK {
 		t.Fatalf("update lead status = %d (%v)", status, updated)
 	}
 	assertWireCF(t, updated, col, "detractor")
 
 	var list struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []integration.AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/leads", nil, nil, &list); status != http.StatusOK {
 		t.Fatalf("list leads status = %d", status)
@@ -168,7 +169,7 @@ func assertLeadWireRoundTrip(t *testing.T, e *apptest.AppEnv, col string) {
 // type — the wire-level twin of TestCustomFieldValues_AllSixTypesRoundTrip.
 func sixTypeWireFields(t *testing.T, e *apptest.AppEnv) map[string]string {
 	t.Helper()
-	specs := map[string]apptest.AnyMap{
+	specs := map[string]integration.AnyMap{
 		"text":     {"object": "person", "label": "Note", "type": "text", "source": "ui"},
 		"number":   {"object": "person", "label": "Score", "type": "number", "source": "ui"},
 		"date":     {"object": "person", "label": "Renewal", "type": "date", "source": "ui"},
@@ -195,7 +196,7 @@ func sixTypeWireFields(t *testing.T, e *apptest.AppEnv) map[string]string {
 func assertSixTypesWireRoundTrip(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	cols := sixTypeWireFields(t, e)
-	want := apptest.AnyMap{
+	want := integration.AnyMap{
 		cols["text"]:     "prefers morning calls",
 		cols["number"]:   42.5,
 		cols["date"]:     "2026-07-11",
@@ -203,7 +204,7 @@ func assertSixTypesWireRoundTrip(t *testing.T, e *apptest.AppEnv) {
 		cols["picklist"]: "partner",
 		cols["boolean"]:  true,
 	}
-	body := apptest.AnyMap{"full_name": "Grace Hopper", "source": "ui"}
+	body := integration.AnyMap{"full_name": "Grace Hopper", "source": "ui"}
 	for col, v := range want {
 		body[col] = v
 	}
@@ -212,7 +213,7 @@ func assertSixTypesWireRoundTrip(t *testing.T, e *apptest.AppEnv) {
 		assertWireCF(t, created, col, v)
 	}
 
-	var got apptest.AnyMap
+	var got integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/people/"+id, nil, nil, &got); status != http.StatusOK {
 		t.Fatalf("get person status = %d", status)
 	}
@@ -229,7 +230,7 @@ func assertPicklistCheckViolation422(t *testing.T, e *apptest.AppEnv, col string
 	// below could look for it — a disclosure guard reading a filtered copy of
 	// the thing it is guarding.
 	var raw json.RawMessage
-	status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
 		"full_name": "Bad Option", "source": "ui", col: "bogus",
 	}, nil, &raw)
 	var problem customFieldProblem
@@ -259,26 +260,26 @@ func assertPicklistCheckViolation422(t *testing.T, e *apptest.AppEnv, col string
 func TestCustomFieldValuesHTTP(t *testing.T) {
 	e := schemaWiredEnv(t)
 
-	status, tier, problem := createCustomField(t, e, apptest.AnyMap{
+	status, tier, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "person", "label": "Tier", "type": "picklist",
 		"options": []string{"gold", "silver"}, "source": "ui",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create person field status = %d: %+v", status, problem)
 	}
-	status, region, problem := createCustomField(t, e, apptest.AnyMap{
+	status, region, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "organization", "label": "Region", "type": "text", "source": "ui",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create organization field status = %d: %+v", status, problem)
 	}
-	status, segment, problem := createCustomField(t, e, apptest.AnyMap{
+	status, segment, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "deal", "label": "Segment", "type": "text", "source": "ui",
 	})
 	if status != http.StatusCreated {
 		t.Fatalf("create deal field status = %d: %+v", status, problem)
 	}
-	status, persona, problem := createCustomField(t, e, apptest.AnyMap{
+	status, persona, problem := createCustomField(t, e, integration.AnyMap{
 		"object": "lead", "label": "Persona", "type": "text", "source": "ui",
 	})
 	if status != http.StatusCreated {

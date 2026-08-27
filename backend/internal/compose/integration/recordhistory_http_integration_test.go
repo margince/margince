@@ -72,8 +72,8 @@ const recordHistoryFixtureRows = 4
 
 func seedRecordHistoryHTTPFixture(t *testing.T, e *apptest.AppEnv, dbEnv *Env) recordHistoryHTTPFixture {
 	t.Helper()
-	var person apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var person AnyMap
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Record History Subject",
 		"source":    "ui",
 	}, nil, &person); status != http.StatusCreated {

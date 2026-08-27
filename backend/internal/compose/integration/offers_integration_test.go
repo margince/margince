@@ -50,7 +50,7 @@ func offerFixture(t *testing.T, e *apptest.AppEnv) (dealID string) {
 	var deal struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/deals", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name": "Offer-bearing deal", "pipeline_id": pipelines.Data[0].ID, "stage_id": stageID, "source": "manual",
 	}, nil, &deal); status != http.StatusCreated {
 		t.Fatalf("create deal → %d", status)
@@ -114,13 +114,13 @@ func createRateCardProduct(t *testing.T, e *apptest.AppEnv) string {
 		UnitPriceMinor int64  `json:"unit_price_minor"`
 		Version        int64  `json:"version"`
 	}
-	if status := e.Call(t, "POST", "/v1/products", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/products", AnyMap{
 		"name": "Consulting day", "sku": "CONS-DAY", "unit": "day",
 		"unit_price_minor": 120000, "currency": "EUR", "default_tax_rate": 19.0, "source": "manual",
 	}, nil, &product); status != http.StatusCreated {
 		t.Fatalf("create product → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/products", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/products", AnyMap{
 		"name": "Duplicate", "sku": "CONS-DAY", "unit_price_minor": 1, "currency": "EUR", "source": "manual",
 	}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("duplicate live sku → %d, want 409", status)
@@ -142,7 +142,7 @@ func assertOfferTotalsAreDerived(t *testing.T, e *apptest.AppEnv, dealID string)
 			} `json:"errors"`
 		} `json:"details"`
 	}
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual", "net_minor": 999999,
 	}, nil, &problem); status != http.StatusUnprocessableEntity || problem.Details.Errors[0].Code != "totals_derived" {
 		t.Fatalf("client-supplied net_minor → %d %+v, want 422 totals_derived", status, problem)
@@ -160,9 +160,9 @@ func TestOfferProductSnapshotAndDerivedTotals(t *testing.T) {
 	// 2 days × 1200.00 @19% → net 240000, tax 45600
 	// 3 × 99.99 − 10% = 269.97…→ 26997 @7% → tax 1890 (1889.79 → 1890)
 	var offer offerBody
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{
+		"line_items": []AnyMap{
 			{"product_id": productID, "quantity": 2},
 			{"description": "Licence", "quantity": 3, "unit_price_minor": 9999, "discount_pct": 10.0, "tax_rate": 7.0},
 		},
@@ -180,7 +180,7 @@ func TestOfferProductSnapshotAndDerivedTotals(t *testing.T) {
 
 	// Snapshot semantics (B-E03.17): re-pricing the product must NOT
 	// mutate the existing line.
-	if status := e.Call(t, "PATCH", "/v1/products/"+productID, apptest.AnyMap{"unit_price_minor": 999999}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/products/"+productID, AnyMap{"unit_price_minor": 999999}, nil, nil); status != http.StatusOK {
 		t.Fatalf("re-price product → %d", status)
 	}
 	var after offerBody
@@ -209,7 +209,7 @@ func exerciseDraftLineWrites(t *testing.T, e *apptest.AppEnv, offer offerBody) {
 			} `json:"errors"`
 		} `json:"details"`
 	}
-	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/line-items", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/line-items", AnyMap{
 		"description": "Sneaky", "quantity": 1, "unit_price_minor": 100, "line_total_minor": 1,
 	}, nil, &problem); status != http.StatusUnprocessableEntity {
 		t.Fatalf("client-supplied line_total_minor → %d, want 422", status)
@@ -217,7 +217,7 @@ func exerciseDraftLineWrites(t *testing.T, e *apptest.AppEnv, offer offerBody) {
 
 	// Draft line CRUD recomputes the totals every time.
 	var withLine offerBody
-	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/line-items", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/offers/"+offer.ID+"/line-items", AnyMap{
 		"description": "Support", "quantity": 1.5, "unit_price_minor": 20000, "tax_rate": 19.0,
 	}, nil, &withLine); status != http.StatusCreated {
 		t.Fatalf("add line → %d", status)
@@ -229,7 +229,7 @@ func exerciseDraftLineWrites(t *testing.T, e *apptest.AppEnv, offer offerBody) {
 
 	lineID := withLine.LineItems[len(withLine.LineItems)-1].ID
 	var updated offerBody
-	if status := e.Call(t, "PATCH", "/v1/offers/"+offer.ID+"/line-items/"+lineID, apptest.AnyMap{
+	if status := e.Call(t, "PATCH", "/v1/offers/"+offer.ID+"/line-items/"+lineID, AnyMap{
 		"quantity": 2.0,
 	}, nil, &updated); status != http.StatusOK {
 		t.Fatalf("update line → %d", status)
@@ -258,7 +258,7 @@ func TestOfferLifecycleSendAcceptRegenerate(t *testing.T) {
 
 	// An empty draft has nothing to send.
 	var empty offerBody
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
 	}, nil, &empty); status != http.StatusCreated {
 		t.Fatalf("create empty offer → %d", status)
@@ -271,10 +271,10 @@ func TestOfferLifecycleSendAcceptRegenerate(t *testing.T) {
 	assertSendFreezesDailyFxRate(t, e, wsID, usd.ID)
 
 	// A sent offer is immutable: header, lines and re-send all refuse.
-	if status := e.Call(t, "PATCH", "/v1/offers/"+usd.ID, apptest.AnyMap{"intro_text": "rewrite"}, nil, nil); status != http.StatusUnprocessableEntity {
+	if status := e.Call(t, "PATCH", "/v1/offers/"+usd.ID, AnyMap{"intro_text": "rewrite"}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("patch sent offer → %d, want 422", status)
 	}
-	if status := e.Call(t, "POST", "/v1/offers/"+usd.ID+"/line-items", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/offers/"+usd.ID+"/line-items", AnyMap{
 		"description": "Late line", "quantity": 1, "unit_price_minor": 1,
 	}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("add line to sent offer → %d, want 422", status)
@@ -291,7 +291,7 @@ func TestOfferLifecycleSendAcceptRegenerate(t *testing.T) {
 		t.Fatal("send EUR offer failed")
 	}
 	var rejected offerBody
-	if status := e.Call(t, "POST", "/v1/offers/"+eur.ID+"/reject", apptest.AnyMap{"reason": "budget cut"}, nil, &rejected); status != http.StatusOK || rejected.Status != "rejected" {
+	if status := e.Call(t, "POST", "/v1/offers/"+eur.ID+"/reject", AnyMap{"reason": "budget cut"}, nil, &rejected); status != http.StatusOK || rejected.Status != "rejected" {
 		t.Fatalf("reject → %d %q", status, rejected.Status)
 	}
 
@@ -327,9 +327,9 @@ func TestOfferLifecycleSendAcceptRegenerate(t *testing.T) {
 func createOfferInCurrency(t *testing.T, e *apptest.AppEnv, dealID, currency string) offerBody {
 	t.Helper()
 	var o offerBody
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": currency, "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &o); status != http.StatusCreated {
 		t.Fatalf("create %s offer → %d", currency, status)
 	}
@@ -426,7 +426,7 @@ func TestOfferSendIsHumanOnlyButTheHumanPathStillWorks(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		// Even the broadest cap the contract knows for this surface does not
 		// reach a human-only verb — there is no cap that would.
 		"label": "offer agent", "scopes": []string{"read", "write", "send"},
@@ -437,9 +437,9 @@ func TestOfferSendIsHumanOnlyButTheHumanPathStillWorks(t *testing.T) {
 
 	// 🟢 create_record: the agent drafts the offer, provenance is the agent.
 	var offer offerBody
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "mcp",
-		"line_items": []apptest.AnyMap{{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0}},
 	}, bearer, &offer); status != http.StatusCreated {
 		t.Fatalf("agent 🟢 offer draft → %d", status)
 	}

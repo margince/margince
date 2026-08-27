@@ -54,7 +54,7 @@ func TestResetDataOverHTTP(t *testing.T) {
 	}
 
 	// Wrong confirmation is refused before anything is deleted.
-	if code := e.Call(t, "POST", "/v1/admin/reset-data", apptest.AnyMap{"confirmation": "wrong"}, nil, nil); code != 422 {
+	if code := e.Call(t, "POST", "/v1/admin/reset-data", AnyMap{"confirmation": "wrong"}, nil, nil); code != 422 {
 		t.Fatalf("reset with wrong confirmation = %d, want 422", code)
 	}
 
@@ -63,7 +63,7 @@ func TestResetDataOverHTTP(t *testing.T) {
 		Status        string `json:"status"`
 		TablesCleared int    `json:"tables_cleared"`
 	}
-	if code := e.Call(t, "POST", "/v1/admin/reset-data", apptest.AnyMap{"confirmation": "Fable E2E"}, nil, &out); code != 200 {
+	if code := e.Call(t, "POST", "/v1/admin/reset-data", AnyMap{"confirmation": "Fable E2E"}, nil, &out); code != 200 {
 		t.Fatalf("reset with the org name = %d, want 200", code)
 	}
 	if out.Status != "reset" {

@@ -524,17 +524,17 @@ func TestAcceptance_OVA_AC_1_TeardownPurges(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	var conn map[string]any
-	if status := e.Call(t, "POST", "/v1/overlay/connection", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/overlay/connection", integration.AnyMap{
 		"incumbent": "hubspot", "region": "eu1", "privateAppToken": "fake-token-never-used",
 	}, nil, &conn); status != http.StatusCreated {
 		t.Fatalf("connect overlay = %d %v", status, conn)
 	}
 
-	var me apptest.AnyMap
+	var me integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("/me status = %d", status)
 	}
-	adminID, err := ids.Parse(me["user"].(apptest.AnyMap)["id"].(string))
+	adminID, err := ids.Parse(me["user"].(integration.AnyMap)["id"].(string))
 	if err != nil {
 		t.Fatalf("parsing admin user id: %v", err)
 	}

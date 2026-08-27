@@ -73,9 +73,9 @@ func TestAnAnnotationWithVerifiableCitationsIsWritten(t *testing.T) {
 	run := seedRunWithItems(t, e)
 	item := run.Items[0]
 
-	status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
+	status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
 		"narrative": "Two replies overnight, one deal went quiet.",
-		"items": []apptest.AnyMap{{
+		"items": []AnyMap{{
 			"item_id":        item.ID,
 			"finding":        "He asked about the delivery date and you usually answer within a day.",
 			"cited_evidence": item.EvidenceIds[:1],
@@ -111,9 +111,9 @@ func TestAQuietNightIsStampedEvenWithNothingToSay(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	seedRunWithItems(t, e)
 
-	if status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
+	if status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
 		"narrative": "",
-		"items":     []apptest.AnyMap{},
+		"items":     []AnyMap{},
 	}, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("annotate with an empty narrative = %d, want 204", status)
 	}
@@ -139,9 +139,9 @@ func TestACitationOutsideTheItemsOwnEvidenceRefusesTheWholeWrite(t *testing.T) {
 	// is the shape a plausible-looking hallucination takes: it is not invented,
 	// it is simply not evidence for the claim it is attached to.
 	borrowed := second.EvidenceIds[0]
-	status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
+	status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
 		"narrative": "Something happened.",
-		"items": []apptest.AnyMap{{
+		"items": []AnyMap{{
 			"item_id":        first.ID,
 			"finding":        "This claims to rest on a row that belongs to another deal.",
 			"cited_evidence": []string{borrowed},
@@ -166,8 +166,8 @@ func TestAnItemFromAnotherRunCannotBeAnnotated(t *testing.T) {
 	seedRunWithItems(t, e)
 
 	// A well-formed uuid that names no item in this run.
-	status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
-		"items": []apptest.AnyMap{{
+	status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
+		"items": []AnyMap{{
 			"item_id":        "01a04000-0000-7000-8000-000000000000",
 			"finding":        "A finding about a queue entry that is not in this brief.",
 			"cited_evidence": []string{"01a04000-0000-7000-8000-000000000001"},
@@ -183,9 +183,9 @@ func TestAnnotatingWithNoRunTodayIsRefused(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 	// Deliberately no POST /v1/brief: this rep has no run today.
-	status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
+	status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
 		"narrative": "A sentence about a morning that was never assembled.",
-		"items":     []apptest.AnyMap{},
+		"items":     []AnyMap{},
 	}, nil, nil)
 	// Inventing a run here would produce a brief carrying prose with no ranking
 	// behind it.
@@ -201,9 +201,9 @@ func TestASecondPassReplacesTheFirstRatherThanAppending(t *testing.T) {
 	item := run.Items[0]
 
 	for _, narrative := range []string{"First reading of the night.", "Corrected reading."} {
-		if status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
+		if status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
 			"narrative": narrative,
-			"items": []apptest.AnyMap{{
+			"items": []AnyMap{{
 				"item_id":        item.ID,
 				"finding":        narrative + " (finding)",
 				"cited_evidence": item.EvidenceIds[:1],
@@ -230,9 +230,9 @@ func TestProseBeyondTheCeilingIsRefusedWithSomethingActionable(t *testing.T) {
 	for i := range long {
 		long[i] = 'x'
 	}
-	status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
+	status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
 		"narrative": string(long),
-		"items":     []apptest.AnyMap{},
+		"items":     []AnyMap{},
 	}, nil, nil)
 	// 422 rather than a driver error surfacing as a failed run: an agent can
 	// read this and shorten, which is the whole point of refusing in Go as well
@@ -251,8 +251,8 @@ func TestAFindingThatCitesNothingIsRefused(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	run := seedRunWithItems(t, e)
 
-	status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
-		"items": []apptest.AnyMap{{
+	status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
+		"items": []AnyMap{{
 			"item_id": run.Items[0].ID,
 			"finding": "He is going to sign this week.",
 		}},
@@ -277,9 +277,9 @@ func TestASecondPassClearsFindingsItDoesNotRestate(t *testing.T) {
 	first, second := run.Items[0], run.Items[1]
 
 	// Night one annotates both items.
-	if status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
+	if status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
 		"narrative": "Two things moved.",
-		"items": []apptest.AnyMap{
+		"items": []AnyMap{
 			{"item_id": first.ID, "finding": "First deal moved.", "cited_evidence": first.EvidenceIds[:1]},
 			{"item_id": second.ID, "finding": "Second deal moved.", "cited_evidence": second.EvidenceIds[:1]},
 		},
@@ -288,9 +288,9 @@ func TestASecondPassClearsFindingsItDoesNotRestate(t *testing.T) {
 	}
 
 	// Night two has something to say about the first deal only.
-	if status := e.Call(t, "PUT", "/v1/brief/annotations", apptest.AnyMap{
+	if status := e.Call(t, "PUT", "/v1/brief/annotations", AnyMap{
 		"narrative": "One thing moved.",
-		"items": []apptest.AnyMap{
+		"items": []AnyMap{
 			{"item_id": first.ID, "finding": "First deal moved again.", "cited_evidence": first.EvidenceIds[:1]},
 		},
 	}, nil, nil); status != http.StatusNoContent {

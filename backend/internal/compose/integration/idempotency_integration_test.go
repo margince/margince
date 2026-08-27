@@ -28,21 +28,21 @@ func TestIdempotencyKeyReplay(t *testing.T) {
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Probe", "admin@idem.test", "Admin")
 
 	keyed := map[string]string{"Idempotency-Key": "lead-retry-1"}
-	leadReq := apptest.AnyMap{
+	leadReq := AnyMap{
 		"full_name":    "Retry Prospect",
 		"email":        "retry@example.org",
 		"company_name": "Retry AG",
 		"source":       "import:idem",
 	}
 
-	var first apptest.AnyMap
+	var first AnyMap
 	if status := e.Call(t, "POST", "/v1/leads", leadReq, keyed, &first); status != http.StatusCreated {
 		t.Fatalf("keyed create lead = %d %v", status, first)
 	}
 
 	// The replay is byte-identical: same status, same body — NOT the 409
 	// the natural email dedupe would answer if the request re-executed.
-	var replay apptest.AnyMap
+	var replay AnyMap
 	if status := e.Call(t, "POST", "/v1/leads", leadReq, keyed, &replay); status != http.StatusCreated {
 		t.Fatalf("keyed replay = %d %v, want the original 201", status, replay)
 	}
@@ -52,7 +52,7 @@ func TestIdempotencyKeyReplay(t *testing.T) {
 
 	// Exactly one lead landed.
 	var leads struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/leads", nil, nil, &leads); status != http.StatusOK {
 		t.Fatalf("list leads = %d", status)
@@ -62,8 +62,8 @@ func TestIdempotencyKeyReplay(t *testing.T) {
 	}
 
 	// The same key with a DIFFERENT body is a conflict, never a replay.
-	var problem apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/leads", apptest.AnyMap{
+	var problem AnyMap
+	status := e.Call(t, "POST", "/v1/leads", AnyMap{
 		"full_name": "Different Intent",
 		"email":     "other@example.org",
 		"source":    "import:idem",
@@ -85,14 +85,14 @@ func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Erase", "admin@idemerase.test", "Admin")
 
 	keyed := map[string]string{"Idempotency-Key": "lead-erase-1"}
-	leadReq := apptest.AnyMap{
+	leadReq := AnyMap{
 		"full_name":    "Erasable Prospect",
 		"email":        "erasable@example.org",
 		"company_name": "Erasable AG",
 		"source":       "import:idem",
 	}
 
-	var first apptest.AnyMap
+	var first AnyMap
 	if status := e.Call(t, "POST", "/v1/leads", leadReq, keyed, &first); status != http.StatusCreated {
 		t.Fatalf("keyed create lead = %d %v", status, first)
 	}
@@ -103,7 +103,7 @@ func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
 
 	// The positive control, BEFORE the record goes: the replay works, so a
 	// later refusal is the archive doing it and not the mechanism being broken.
-	var live apptest.AnyMap
+	var live AnyMap
 	if status := e.Call(t, "POST", "/v1/leads", leadReq, keyed, &live); status != http.StatusCreated {
 		t.Fatalf("replay while the record is live = %d %v, want the original 201", status, live)
 	}
@@ -112,7 +112,7 @@ func TestIdempotencyReplayRefusesAnArchivedRecord(t *testing.T) {
 		t.Fatalf("archiving the lead = %d, want 200", status)
 	}
 
-	var problem apptest.AnyMap
+	var problem AnyMap
 	status := e.Call(t, "POST", "/v1/leads", leadReq, keyed, &problem)
 	if status != http.StatusNotFound {
 		t.Fatalf("replay after the record was archived = %d %v, want 404 — the recorded body is a snapshot of a record that no longer exists",
@@ -130,23 +130,23 @@ func TestIdempotencyKeyReplay_createQuota(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	var me apptest.AnyMap
+	var me AnyMap
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("/me = %d", status)
 	}
-	adminID := me["user"].(apptest.AnyMap)["id"].(string)
+	adminID := me["user"].(AnyMap)["id"].(string)
 
 	keyed := map[string]string{"Idempotency-Key": "quota-retry-1"}
-	quotaReq := apptest.AnyMap{
+	quotaReq := AnyMap{
 		"owner_id": adminID, "period_start": "2026-01-01", "period_end": "2026-03-31",
 		"target_minor": 1000000, "currency": "EUR",
 	}
 
-	var first apptest.AnyMap
+	var first AnyMap
 	if status := e.Call(t, "POST", "/v1/quotas", quotaReq, keyed, &first); status != http.StatusCreated {
 		t.Fatalf("keyed create quota = %d %v", status, first)
 	}
-	var replay apptest.AnyMap
+	var replay AnyMap
 	if status := e.Call(t, "POST", "/v1/quotas", quotaReq, keyed, &replay); status != http.StatusCreated {
 		t.Fatalf("keyed replay = %d %v, want the original 201", status, replay)
 	}
@@ -155,7 +155,7 @@ func TestIdempotencyKeyReplay_createQuota(t *testing.T) {
 	}
 
 	var quotas struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/quotas", nil, nil, &quotas); status != http.StatusOK {
 		t.Fatalf("list quotas = %d", status)
@@ -165,8 +165,8 @@ func TestIdempotencyKeyReplay_createQuota(t *testing.T) {
 	}
 
 	// The same key with a DIFFERENT body is a conflict, never a replay.
-	var problem apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/quotas", apptest.AnyMap{
+	var problem AnyMap
+	status := e.Call(t, "POST", "/v1/quotas", AnyMap{
 		"owner_id": adminID, "period_start": "2026-04-01", "period_end": "2026-06-30",
 		"target_minor": 2000000, "currency": "EUR",
 	}, keyed, &problem)
@@ -180,22 +180,22 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 
 	apptest.BootstrapWorkspaceSession(t, e, "Idem Activity", "admin@idem-act.test", "Admin")
 
-	var person apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var person AnyMap
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Idem Person", "source": "ui",
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person = %d %v", status, person)
 	}
 
 	keyed := map[string]string{"Idempotency-Key": "act-retry-1"}
-	logReq := apptest.AnyMap{
+	logReq := AnyMap{
 		"kind":    "note",
 		"subject": "Keyed note",
 		"source":  "ui",
-		"links":   []apptest.AnyMap{{"entity_type": "person", "entity_id": person["id"]}},
+		"links":   []AnyMap{{"entity_type": "person", "entity_id": person["id"]}},
 	}
 
-	var first, replay apptest.AnyMap
+	var first, replay AnyMap
 	if status := e.Call(t, "POST", "/v1/activities", logReq, keyed, &first); status != http.StatusCreated {
 		t.Fatalf("keyed log activity = %d %v", status, first)
 	}
@@ -207,7 +207,7 @@ func TestIdempotencyKeyReplay_logActivity(t *testing.T) {
 	}
 
 	var activities struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/activities", nil, nil, &activities); status != http.StatusOK {
 		t.Fatalf("list activities = %d", status)

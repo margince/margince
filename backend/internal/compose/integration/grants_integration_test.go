@@ -19,7 +19,6 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
@@ -195,7 +194,7 @@ func TestRecordGrantHTTPLifecycle(t *testing.T) {
 		ID string `json:"id"`
 	}
 	// Sharing with a random subject refuses (the subject must exist).
-	if status := e.Call(t, "POST", "/v1/record-grants", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/record-grants", AnyMap{
 		"record_type": "person", "record_id": e.personID,
 		"subject_type": "user", "subject_id": "00000000-0000-7000-8000-00000000dead",
 		"access": "read",
@@ -203,7 +202,7 @@ func TestRecordGrantHTTPLifecycle(t *testing.T) {
 		t.Fatalf("grant to missing subject → %d, want 404", status)
 	}
 	subject := meUserID(t, e)
-	if status := e.Call(t, "POST", "/v1/record-grants", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/record-grants", AnyMap{
 		"record_type": "person", "record_id": e.personID,
 		"subject_type": "user", "subject_id": subject,
 		"access": "write", "reason": "deal desk assist",
@@ -245,7 +244,7 @@ func TestReAssertingAGrantUpdatesTheSameRow(t *testing.T) {
 	e := setupRelationships(t)
 	subject := meUserID(t, e)
 
-	assert := func(body apptest.AnyMap) (int, grantBody) {
+	assert := func(body AnyMap) (int, grantBody) {
 		var got grantBody
 		body["record_type"], body["record_id"] = "person", e.personID
 		body["subject_type"], body["subject_id"] = "user", subject
@@ -253,7 +252,7 @@ func TestReAssertingAGrantUpdatesTheSameRow(t *testing.T) {
 	}
 
 	expiry := time.Now().Add(72 * time.Hour).UTC().Truncate(time.Second)
-	status, first := assert(apptest.AnyMap{
+	status, first := assert(AnyMap{
 		"access": "read", "reason": "quarter review", "expires_at": expiry.Format(time.RFC3339),
 	})
 	if status != http.StatusCreated {
@@ -267,7 +266,7 @@ func TestReAssertingAGrantUpdatesTheSameRow(t *testing.T) {
 	// An upgrade: same tuple, wider access, no expiry and no reason. Every
 	// field the contract names moves, and `expires_at` moving to NULL is the
 	// half a COALESCE-shaped upsert would silently refuse to do.
-	status, second := assert(apptest.AnyMap{"access": "write"})
+	status, second := assert(AnyMap{"access": "write"})
 	if status != http.StatusCreated {
 		t.Fatalf("re-assert → %d, want 201 (the contract declares no 409 for this operation)", status)
 	}
@@ -289,7 +288,7 @@ func TestReAssertingAGrantUpdatesTheSameRow(t *testing.T) {
 	}
 
 	// And back down again: the contract says upgrades AND downgrades.
-	if status, third := assert(apptest.AnyMap{"access": "read"}); status != http.StatusCreated || third.Access != "read" {
+	if status, third := assert(AnyMap{"access": "read"}); status != http.StatusCreated || third.Access != "read" {
 		t.Fatalf("downgrade → %d %q, want 201 read", status, third.Access)
 	}
 
@@ -313,7 +312,7 @@ func TestReAssertingAGrantAuditsWhatItDisplaced(t *testing.T) {
 	subject := meUserID(t, e)
 	share := func(access string) {
 		t.Helper()
-		if status := e.Call(t, "POST", "/v1/record-grants", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/record-grants", AnyMap{
 			"record_type": "person", "record_id": e.personID,
 			"subject_type": "user", "subject_id": subject, "access": access,
 		}, nil, nil); status != http.StatusCreated {

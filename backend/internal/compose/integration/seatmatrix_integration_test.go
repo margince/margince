@@ -58,7 +58,7 @@ func seatActions() []seatAction {
 		{
 			class: "mutate (create)", object: "person", verb: "create",
 			call: func(t *testing.T, e *apptest.AppEnv, _ seatFixtures) (int, string) {
-				return callForCode(t, e, "POST", "/v1/people", apptest.AnyMap{
+				return callForCode(t, e, "POST", "/v1/people", AnyMap{
 					"full_name": "Matrix Probe", "source": "manual",
 				})
 			},
@@ -66,14 +66,14 @@ func seatActions() []seatAction {
 		{
 			class: "mutate (update)", object: "person", verb: "update",
 			call: func(t *testing.T, e *apptest.AppEnv, f seatFixtures) (int, string) {
-				return callForCode(t, e, "PATCH", "/v1/people/"+f.personID, apptest.AnyMap{"title": "Probed"})
+				return callForCode(t, e, "PATCH", "/v1/people/"+f.personID, AnyMap{"title": "Probed"})
 			},
 		},
 		{
 			class: "advance", object: "deal", verb: "update",
 			call: func(t *testing.T, e *apptest.AppEnv, f seatFixtures) (int, string) {
 				return callForCode(t, e, "POST", "/v1/deals/"+f.dealID+"/advance",
-					apptest.AnyMap{"to_stage_id": f.nextStage})
+					AnyMap{"to_stage_id": f.nextStage})
 			},
 		},
 		{
@@ -82,16 +82,16 @@ func seatActions() []seatAction {
 				// owner_id is the person vocabulary's one filterable leaf,
 				// and a filterless export is refused for its own reasons
 				// before it ever reaches the gate this cell is about.
-				return exportForCode(t, e, apptest.AnyMap{
+				return exportForCode(t, e, AnyMap{
 					"object": "person", "format": "csv",
-					"filter": apptest.AnyMap{"field": "owner_id", "op": "eq", "value": ids.NewV7().String()},
+					"filter": AnyMap{"field": "owner_id", "op": "eq", "value": ids.NewV7().String()},
 				})
 			},
 		},
 		{
 			class: "share (write record_grant)", object: "person", verb: "update",
 			call: func(t *testing.T, e *apptest.AppEnv, f seatFixtures) (int, string) {
-				return callForCode(t, e, "POST", "/v1/record-grants", apptest.AnyMap{
+				return callForCode(t, e, "POST", "/v1/record-grants", AnyMap{
 					"record_type": "person", "record_id": f.personID,
 					"subject_type": "user", "subject_id": f.colleague, "access": "write",
 				})
@@ -178,7 +178,7 @@ func TestAWriteGrantIsRefusedToAReadSeat(t *testing.T) {
 	readSeatColleague(t, e, fixtures.colleague)
 
 	share := func(access string) (int, string) {
-		return callForCode(t, e, "POST", "/v1/record-grants", apptest.AnyMap{
+		return callForCode(t, e, "POST", "/v1/record-grants", AnyMap{
 			"record_type": "person", "record_id": fixtures.personID,
 			"subject_type": "user", "subject_id": fixtures.colleague, "access": access,
 		})
@@ -195,7 +195,7 @@ func TestAWriteGrantIsRefusedToAReadSeat(t *testing.T) {
 	// directly because team CRUD is deferred in the contract — the row is
 	// a fixture here, not the writer under test.
 	team := teamFixture(t, e)
-	if status, code := callForCode(t, e, "POST", "/v1/record-grants", apptest.AnyMap{
+	if status, code := callForCode(t, e, "POST", "/v1/record-grants", AnyMap{
 		"record_type": "person", "record_id": fixtures.personID,
 		"subject_type": "team", "subject_id": team, "access": "write",
 	}); status != http.StatusCreated {
@@ -235,7 +235,7 @@ func TestAReAssertCannotWalkAWriteGrantPastTheSeatCeiling(t *testing.T) {
 	readSeatColleague(t, e, fixtures.colleague)
 
 	share := func(access string) (int, string) {
-		return callForCode(t, e, "POST", "/v1/record-grants", apptest.AnyMap{
+		return callForCode(t, e, "POST", "/v1/record-grants", AnyMap{
 			"record_type": "person", "record_id": fixtures.personID,
 			"subject_type": "user", "subject_id": fixtures.colleague, "access": access,
 		})
@@ -371,7 +371,7 @@ func readSeatColleague(t *testing.T, e *apptest.AppEnv, userID string) {
 // exportForCode is callForCode for the one action whose SUCCESS is not JSON:
 // a granted export answers text/csv, which the shared decode would choke on.
 // Status always, code only from a problem body.
-func exportForCode(t *testing.T, e *apptest.AppEnv, body apptest.AnyMap) (int, string) {
+func exportForCode(t *testing.T, e *apptest.AppEnv, body AnyMap) (int, string) {
 	t.Helper()
 	raw, err := json.Marshal(body)
 	if err != nil {
@@ -405,7 +405,7 @@ func exportForCode(t *testing.T, e *apptest.AppEnv, body apptest.AnyMap) (int, s
 
 // callForCode issues one request and answers its status and problem code —
 // the two things every cell of the matrix is about.
-func callForCode(t *testing.T, e *apptest.AppEnv, method, path string, body apptest.AnyMap) (int, string) {
+func callForCode(t *testing.T, e *apptest.AppEnv, method, path string, body AnyMap) (int, string) {
 	t.Helper()
 	var problem struct {
 		Code string `json:"code"`
@@ -421,7 +421,7 @@ func seedSeatFixtures(t *testing.T, e *apptest.AppEnv) seatFixtures {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Matrix Subject", "source": "manual",
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("seed person → %d", status)
@@ -463,7 +463,7 @@ func inviteColleague(t *testing.T, e *apptest.AppEnv) string {
 	var user struct {
 		ID string `json:"id"`
 	}
-	status := e.Call(t, "POST", "/v1/users", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/users", AnyMap{
 		"email": "colleague@fable.test", "display_name": "Colleague", "role": "rep",
 	}, nil, &user)
 	if status != http.StatusCreated || user.ID == "" {

@@ -21,6 +21,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -98,7 +99,7 @@ func TestASlowToolCallOutlivesTheServersWriteDeadline(t *testing.T) {
 	var thread struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", integration.AnyMap{
 		"kind": "email", "subject": "Renewal terms", "body": "What would renewal look like?",
 		"direction": "inbound",
 	}, nil, &thread); status != http.StatusCreated {
@@ -107,7 +108,7 @@ func TestASlowToolCallOutlivesTheServersWriteDeadline(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", integration.AnyMap{
 		"label": "slow caller", "scopes": []string{"read", "draft"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)

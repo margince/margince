@@ -87,7 +87,7 @@ func createDealClosingThisWeek(t *testing.T, e *apptest.AppEnv, stages apptest.S
 	var created struct {
 		Id string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/deals", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals", AnyMap{
 		"name":                name,
 		"pipeline_id":         stages.PipelineID,
 		"stage_id":            stages.Open,
@@ -106,14 +106,14 @@ func assertSnoozeHidesItem(t *testing.T, e *apptest.AppEnv, toSnooze briefItemRe
 	t.Helper()
 	past := time.Now().UTC().Add(-time.Hour).Format(time.RFC3339)
 	if status := e.Call(t, "POST", "/v1/brief/items/"+toSnooze.Id+"/snooze",
-		apptest.AnyMap{"snoozed_until": past}, nil, nil); status != http.StatusUnprocessableEntity {
+		AnyMap{"snoozed_until": past}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("snooze into the past = %d, want 422", status)
 	}
 
 	until := time.Now().UTC().Add(48 * time.Hour).Format(time.RFC3339)
 	var snoozed briefItemResponse
 	if status := e.Call(t, "POST", "/v1/brief/items/"+toSnooze.Id+"/snooze",
-		apptest.AnyMap{"snoozed_until": until}, nil, &snoozed); status != http.StatusOK {
+		AnyMap{"snoozed_until": until}, nil, &snoozed); status != http.StatusOK {
 		t.Fatalf("snooze = %d, want 200", status)
 	}
 	if snoozed.State != "snoozed" || snoozed.SnoozedUntil == "" {

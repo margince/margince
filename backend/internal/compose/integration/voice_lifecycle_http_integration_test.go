@@ -157,7 +157,7 @@ func TestVoiceLifecycleHTTPRoundTrip(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)
 	base := "/v1/voice-profiles/" + created.ID
-	removable := ingest(t, e, base, apptest.AnyMap{
+	removable := ingest(t, e, base, AnyMap{
 		"kind": "email", "source_label": "Removable sample", "source_ref": "remove-me",
 		"content": "This source proves permanent removal through the governed HTTP lifecycle.",
 	})
@@ -198,7 +198,7 @@ func TestVoiceLifecycleHTTPRoundTrip(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/voice-profiles/"+ids.NewV7().String()+"/learning", nil, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("unknown learning profile → %d, want 404", status)
 	}
-	if status := e.Call(t, "POST", base+"/draft-rejections", apptest.AnyMap{"draft_ref": ""}, nil, nil); status != http.StatusUnprocessableEntity {
+	if status := e.Call(t, "POST", base+"/draft-rejections", AnyMap{"draft_ref": ""}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("empty draft reference → %d, want 422", status)
 	}
 
@@ -261,7 +261,7 @@ func TestVoiceLifecycleHTTPRoundTrip(t *testing.T) {
 		t.Fatalf("learning summary before rejection = %+v", beforeReject)
 	}
 	var afterReject voiceLearningSummaryWire
-	if status := e.Call(t, "POST", base+"/draft-rejections", apptest.AnyMap{"draft_ref": draftRef}, nil, &afterReject); status != http.StatusOK {
+	if status := e.Call(t, "POST", base+"/draft-rejections", AnyMap{"draft_ref": draftRef}, nil, &afterReject); status != http.StatusOK {
 		t.Fatalf("reject draft → %d", status)
 	}
 	if afterReject.Drafted != 0 || afterReject.Rejected != 1 {

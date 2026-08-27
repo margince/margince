@@ -31,10 +31,10 @@ func TestOfferPdfHTTP_DownloadBeforeRenderReturns404(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
 
-	var offer apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	var offer AnyMap
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &offer); status != http.StatusCreated {
 		t.Fatalf("create offer for pdf download = %d %v", status, offer)
 	}
@@ -62,10 +62,10 @@ func TestOfferPdfHTTP_DownloadWhenTheBlobIsGoneReturns404(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
 
-	var offer apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	var offer AnyMap
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &offer); status != http.StatusCreated {
 		t.Fatalf("create offer for pdf download = %d %v", status, offer)
 	}
@@ -75,7 +75,7 @@ func TestOfferPdfHTTP_DownloadWhenTheBlobIsGoneReturns404(t *testing.T) {
 	}
 
 	var rendered renderedOffer
-	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", apptest.AnyMap{}, nil, &rendered); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", AnyMap{}, nil, &rendered); status != http.StatusOK {
 		t.Fatalf("render offer = %d %+v, want 200", status, rendered)
 	}
 
@@ -96,10 +96,10 @@ func TestOfferPdfHTTP_DownloadAfterRenderReturnsTheRenderedBytes(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	dealID := offerFixture(t, e)
 
-	var offer apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	var offer AnyMap
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &offer); status != http.StatusCreated {
 		t.Fatalf("create offer for pdf download = %d %v", status, offer)
 	}
@@ -109,7 +109,7 @@ func TestOfferPdfHTTP_DownloadAfterRenderReturnsTheRenderedBytes(t *testing.T) {
 	}
 
 	var rendered renderedOffer
-	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", apptest.AnyMap{}, nil, &rendered); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/offers/"+offerID+"/render", AnyMap{}, nil, &rendered); status != http.StatusOK {
 		t.Fatalf("render offer = %d %+v, want 200", status, rendered)
 	}
 

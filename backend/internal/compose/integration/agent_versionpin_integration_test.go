@@ -36,7 +36,7 @@ func TestAnAgentDraftsPricesAndArchivesAnOfferOnItsOwnPassport(t *testing.T) {
 	bearer := map[string]string{"Authorization": "Bearer " + token}
 
 	// The agent prices the terms, then archives — neither asks a human.
-	if status := e.Call(t, "PATCH", "/v1/offers/"+offer.ID+"/line-items/"+offer.LineItems[0].ID, apptest.AnyMap{
+	if status := e.Call(t, "PATCH", "/v1/offers/"+offer.ID+"/line-items/"+offer.LineItems[0].ID, AnyMap{
 		"unit_price_minor": 100,
 	}, bearer, nil); status != http.StatusOK {
 		t.Fatalf("agent line-item rewrite → %d", status)
@@ -76,7 +76,7 @@ func seedOfferForPin(t *testing.T, e *apptest.AppEnv) (string, string, pinOffer)
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		// The version-pin race happens inside archive_record's approval, so the
 		// passport must be able to spend `write` to get there.
 		"label": "pin agent", "scopes": []string{"read", "write"},
@@ -86,9 +86,9 @@ func seedOfferForPin(t *testing.T, e *apptest.AppEnv) (string, string, pinOffer)
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
 	var offer pinOffer
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "mcp",
-		"line_items": []apptest.AnyMap{
+		"line_items": []AnyMap{
 			{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0},
 		},
 	}, bearer, &offer); status != http.StatusCreated {

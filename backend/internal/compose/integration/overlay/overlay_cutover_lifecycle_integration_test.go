@@ -33,7 +33,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	overlaymod "github.com/margince/margince/backend/internal/modules/overlay"
@@ -75,10 +75,10 @@ func TestOverlayCutoverRetirementAndReconstruction(t *testing.T) {
 		t.Fatalf("writing the pre-flip export: %v", err)
 	}
 	var verdict crmcontracts.OverlayFlipPreflight
-	if code := e.Call(t, "POST", "/v1/overlay/flip:preflight", apptest.AnyMap{}, nil, &verdict); code != http.StatusOK || !verdict.Ready {
+	if code := e.Call(t, "POST", "/v1/overlay/flip:preflight", integration.AnyMap{}, nil, &verdict); code != http.StatusOK || !verdict.Ready {
 		t.Fatalf("preflight = %d ready=%v blocking=%v", code, verdict.Ready, verdict.Blocking)
 	}
-	if code := e.Call(t, "POST", "/v1/overlay/flip", apptest.AnyMap{
+	if code := e.Call(t, "POST", "/v1/overlay/flip", integration.AnyMap{
 		"confirmation_phrase": "FLIP TO SOR",
 	}, nil, nil); code != http.StatusAccepted {
 		t.Fatalf("execute = %d", code)

@@ -13,8 +13,6 @@ import (
 	"net/http"
 	"testing"
 	"time"
-
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func TestDataSubjectRequestLifecycle(t *testing.T) {
@@ -25,30 +23,30 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 		ID     string `json:"id"`
 		Status string `json:"status"`
 	}
-	if status := c.Call(t, "POST", "/v1/data-subject-requests", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind": "erasure", "subject_ref": c.personID, "due_at": due,
 	}, nil, &dsr); status != http.StatusCreated || dsr.Status != "open" {
 		t.Fatalf("create DSR → %d %+v", status, dsr)
 	}
 
 	// Closing without a resolution refuses.
-	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, apptest.AnyMap{
+	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "fulfilled",
 	}, nil, nil); status != 422 {
 		t.Fatalf("resolution-less close → %d, want 422", status)
 	}
-	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, apptest.AnyMap{
+	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "in_progress",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("start → %d", status)
 	}
-	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, apptest.AnyMap{
+	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "fulfilled", "resolution": "erased person + activities per retention policy",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfill → %d", status)
 	}
 	// A closed request never reopens.
-	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, apptest.AnyMap{
+	if status := c.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "open",
 	}, nil, nil); status != 422 {
 		t.Fatalf("reopen → %d, want 422", status)
@@ -67,13 +65,13 @@ func TestDataSubjectRequestLifecycle(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := c.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "dsr probe", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("mint passport → %d", status)
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
-	if status := c.Call(t, "POST", "/v1/data-subject-requests", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind": "access", "subject_ref": "x", "due_at": due,
 	}, bearer, nil); status != http.StatusForbidden {
 		t.Fatalf("agent DSR create → %d, want 403 (human-only)", status)

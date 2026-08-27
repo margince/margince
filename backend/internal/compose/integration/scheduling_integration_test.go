@@ -15,8 +15,6 @@ import (
 	"net/http"
 	"testing"
 	"time"
-
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func TestAvailabilityAndBooking(t *testing.T) {
@@ -52,9 +50,9 @@ func TestAvailabilityAndBooking(t *testing.T) {
 		ID   string `json:"id"`
 		Kind string `json:"kind"`
 	}
-	if status := e.Call(t, "POST", "/v1/bookings", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
 		"start": first.Start, "end": first.End, "subject": "Discovery call",
-		"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": e.personID}},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": e.personID}},
 	}, nil, &booked); status != http.StatusCreated || booked.Kind != "meeting" {
 		t.Fatalf("book → %d %+v", status, booked)
 	}
@@ -63,9 +61,9 @@ func TestAvailabilityAndBooking(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "POST", "/v1/bookings", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
 		"start": first.Start, "end": first.End,
-		"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": e.personID}},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": e.personID}},
 	}, nil, &problem); status != http.StatusConflict || problem.Code != "slot_taken" {
 		t.Fatalf("double-book → %d %q, want 409 slot_taken", status, problem.Code)
 	}
@@ -80,9 +78,9 @@ func TestAvailabilityAndBooking(t *testing.T) {
 	}
 
 	// A link target outside visibility refuses the booking (H1).
-	if status := e.Call(t, "POST", "/v1/bookings", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/bookings", AnyMap{
 		"start": first.Start.Add(3 * time.Hour), "end": first.End.Add(3 * time.Hour),
-		"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": "00000000-0000-7000-8000-00000000dead"}},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": "00000000-0000-7000-8000-00000000dead"}},
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("booking with invisible link → %d, want 404", status)
 	}

@@ -148,12 +148,12 @@ func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) 
 	var scheduled struct {
 		ID string `json:"id"`
 	}
-	status := p.Call(t, "POST", "/v1/emails", apptest.AnyMap{
+	status := p.Call(t, "POST", "/v1/emails", AnyMap{
 		"subject": "Quiet copy", "body": "You were blind-copied on this.",
 		"to":              []string{"visible@preflight.test"},
 		"bcc":             []string{"buyer@preflight.test", otherBlind},
 		"consent_purpose": "transactional",
-		"links": []apptest.AnyMap{
+		"links": []AnyMap{
 			{"entity_type": "person", "entity_id": p.personID},
 		},
 		"scheduled_at": time.Now().Add(6 * time.Hour).UTC().Format(time.RFC3339),

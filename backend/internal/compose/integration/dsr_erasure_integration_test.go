@@ -14,8 +14,6 @@ import (
 	"context"
 	"net/http"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 func TestBootstrapSeedsDefaultRetentionPolicies(t *testing.T) {
@@ -60,12 +58,12 @@ func TestFulfillingAnErasureDSRExecutesTheErasure(t *testing.T) {
 	var dsr struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/data-subject-requests", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/data-subject-requests", AnyMap{
 		"kind": "erasure", "subject_ref": e.personID, "due_at": "2026-08-01T00:00:00Z",
 	}, nil, &dsr); status != http.StatusCreated {
 		t.Fatalf("create DSR → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, apptest.AnyMap{
+	if status := e.Call(t, "PATCH", "/v1/data-subject-requests/"+dsr.ID, AnyMap{
 		"status": "fulfilled", "resolution": "erased per Art. 17",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("fulfill DSR → %d", status)

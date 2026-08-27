@@ -242,12 +242,6 @@ func (e *AppEnv) Call(t *testing.T, method, path string, body any, headers map[s
 	return resp.StatusCode
 }
 
-// AnyMap is the shape a scenario builds an ad-hoc JSON request body in, and
-// reads a response into when it asserts on one or two fields rather than a
-// typed struct. An alias, not a new type, so it interchanges freely with the
-// map literals the suites already write.
-type AnyMap = map[string]any
-
 // BootstrapWorkspaceSession provisions the installation's organization through
 // the A107 boot path — configuration-driven, exactly what cmd/api runs at
 // startup — and signs its admin in over HTTP. The arrange step every e2e
@@ -277,7 +271,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, organizationName, adminE
 	if err := compose.EnsureInstallation(context.Background(), e.Pool, slog.New(slog.NewTextHandler(io.Discard, nil)), cfg); err != nil {
 		t.Fatalf("bootstrap: %v", err)
 	}
-	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
+	if status := e.Call(t, "POST", "/v1/auth/login", map[string]any{
 		"email": adminEmail, "password": operatorSupplied,
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("login → %d", status)
@@ -287,7 +281,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, organizationName, adminE
 	// fixture does what a real first login does rather than clearing the flag
 	// in SQL — a suite arranged around a state the product cannot reach would
 	// prove nothing about the product.
-	if status := e.Call(t, "POST", "/v1/auth/change-password", AnyMap{
+	if status := e.Call(t, "POST", "/v1/auth/change-password", map[string]any{
 		"current_password": operatorSupplied, "new_password": adminPassword,
 	}, nil, nil); status != http.StatusNoContent {
 		t.Fatalf("completing setup (change-password) → %d", status)
@@ -295,7 +289,7 @@ func BootstrapWorkspaceSession(t *testing.T, e *AppEnv, organizationName, adminE
 	// The change ended every session, this one included. Signing in again with
 	// the chosen password is what a real admin does next, and it leaves the
 	// suites holding the session they expect.
-	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
+	if status := e.Call(t, "POST", "/v1/auth/login", map[string]any{
 		"email": adminEmail, "password": adminPassword,
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("login after completing setup → %d", status)

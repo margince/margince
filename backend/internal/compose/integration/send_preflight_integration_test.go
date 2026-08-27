@@ -99,18 +99,18 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Consented Buyer",
-		"emails":    []apptest.AnyMap{{"email": "buyer@preflight.test"}},
+		"emails":    []AnyMap{{"email": "buyer@preflight.test"}},
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
 	var activity struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Inbound question", "direction": "inbound",
-		"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
@@ -135,7 +135,7 @@ func setupPreflightIn(t *testing.T, extra ...compose.Option) *preflightEnv {
 	if transactional == "" {
 		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
 	}
-	if status := e.Call(t, "POST", "/v1/people/"+person.ID+"/consent", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
 		"purpose_id": transactional, "new_state": "granted", "lawful_basis": "consent",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("record consent → %d", status)
@@ -172,7 +172,7 @@ func (p *preflightEnv) send(t *testing.T) (status int, code, message string) {
 			} `json:"errors"`
 		} `json:"details"`
 	}
-	status = p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", apptest.AnyMap{
+	status = p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Re: Inbound question", "body": "answer",
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
 	}, nil, &problem)

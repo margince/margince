@@ -75,7 +75,7 @@ func TestOneRefusedAgentCallCollectsExactlyOneApprovalHoweverOftenItIsRetried(t 
 	}
 	c.assertApprovalCount(t, 1, "an early retry")
 
-	if status := c.Call(t, "POST", "/v1/approvals/"+first.ApprovalID.String()+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := c.Call(t, "POST", "/v1/approvals/"+first.ApprovalID.String()+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 
@@ -166,13 +166,13 @@ func TestAnApprovedCallWhoseTargetMovedIsStagedAfreshRatherThanHandedBackDead(t 
 	args := enrichArgs(org)
 
 	staged := c.stagedApproval(t, invoke, args)
-	if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := c.Call(t, "POST", "/v1/approvals/"+staged.ApprovalID.String()+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 	// A human edits the record the approval is pinned to, which is ordinary work
 	// on the very company the enrich would rewrite.
 	if status := c.Call(t, "PATCH", "/v1/organizations/"+org,
-		apptest.AnyMap{"industry": "logistics"}, nil, nil); status != http.StatusOK {
+		AnyMap{"industry": "logistics"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human edit of the target → %d", status)
 	}
 
@@ -206,7 +206,7 @@ func TestAnApprovalStagedByOnePassportIsNeverOfferedToAnother(t *testing.T) {
 
 	first := c.enrichInvoker(t, c.mintPassport(t, []string{"read", "enrich"}))
 	mine := c.stagedApproval(t, first, args)
-	if status := c.Call(t, "POST", "/v1/approvals/"+mine.ApprovalID.String()+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := c.Call(t, "POST", "/v1/approvals/"+mine.ApprovalID.String()+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 
@@ -233,19 +233,19 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Greta Human"}, nil, &person); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Greta Human"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("human create → %d", status)
 	}
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "duplicate-approval agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
-	overwrite := apptest.AnyMap{"full_name": "Greta Machine"}
+	overwrite := AnyMap{"full_name": "Greta Machine"}
 
 	stage := func(what string) (id, detail string) {
 		t.Helper()
@@ -270,7 +270,7 @@ func TestTheRESTDoorAlsoCollectsExactlyOneApprovalPerIdenticalCall(t *testing.T)
 	}
 	assertPersonApprovalCount(t, e, 1, "two identical refused PATCHes")
 
-	if status := e.Call(t, "POST", "/v1/approvals/"+first+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/approvals/"+first+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("human approve → %d", status)
 	}
 

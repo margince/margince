@@ -51,9 +51,9 @@ func TestEnrichRefusesAPassportWithoutTheEnrichCap(t *testing.T) {
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
 		"display_name": "Acme GmbH", "source": "ui",
-		"domains": []apptest.AnyMap{{"domain": "acme.example", "is_primary": true}},
+		"domains": []AnyMap{{"domain": "acme.example", "is_primary": true}},
 	}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create org → %d", status)
 	}
@@ -124,9 +124,9 @@ func TestOfferSendRefusesAnyAgentAsHumanOnly(t *testing.T) {
 	// Drafting is 🟢 under `write` and still is: send being human-only is
 	// not a blanket tightening of the offer surface.
 	var offer offerBody
-	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "mcp",
-		"line_items": []apptest.AnyMap{{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Pilot", "quantity": 1, "unit_price_minor": 250000, "tax_rate": 19.0}},
 	}, bearer, &offer); status != http.StatusCreated {
 		t.Fatalf("agent 🟢 offer draft → %d", status)
 	}

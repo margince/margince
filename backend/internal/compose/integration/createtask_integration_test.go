@@ -21,11 +21,11 @@ func TestATaskCreatedThroughItsOwnDoorIsATaskOnTheTimeline(t *testing.T) {
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	dealID := apptest.CreateOpenDeal(t, e, stages)
 
-	var task apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/tasks", apptest.AnyMap{
+	var task AnyMap
+	if status := e.Call(t, "POST", "/v1/tasks", AnyMap{
 		"subject": "Send the redline",
 		"due_at":  "2026-09-01T09:00:00+02:00",
-		"links":   []apptest.AnyMap{{"entity_type": "deal", "entity_id": dealID}},
+		"links":   []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
 		"source":  "ui",
 	}, nil, &task); status != http.StatusCreated {
 		t.Fatalf("create task = %d %v", status, task)
@@ -34,7 +34,7 @@ func TestATaskCreatedThroughItsOwnDoorIsATaskOnTheTimeline(t *testing.T) {
 		t.Fatalf("task = %v", task)
 	}
 
-	var listed apptest.AnyMap
+	var listed AnyMap
 	if status := e.Call(t, "GET", "/v1/activities?kind=task&entity_type=deal&entity_id="+dealID, nil, nil, &listed); status != http.StatusOK {
 		t.Fatalf("list = %d %v", status, listed)
 	}
@@ -42,7 +42,7 @@ func TestATaskCreatedThroughItsOwnDoorIsATaskOnTheTimeline(t *testing.T) {
 	if len(rows) != 1 {
 		t.Fatalf("timeline tasks = %v, want the one created", rows)
 	}
-	if status := e.Call(t, "POST", "/v1/tasks", apptest.AnyMap{"subject": "", "source": "ui"}, nil, nil); status != http.StatusUnprocessableEntity {
+	if status := e.Call(t, "POST", "/v1/tasks", AnyMap{"subject": "", "source": "ui"}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("empty subject = %d, want 422", status)
 	}
 }

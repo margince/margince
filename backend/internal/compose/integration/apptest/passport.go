@@ -25,7 +25,7 @@ func PassportBearer(t *testing.T, e *AppEnv, label string, scopes ...string) map
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", map[string]any{
 		"label": label, "scopes": scopes,
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport %q → %d", label, status)
