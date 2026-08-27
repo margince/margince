@@ -1112,9 +1112,7 @@ test.describe("§3.8: 390px mobile", () => {
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
-    await page
-      .getByRole("button", { name: "Expand the agent panel" })
-      .click();
+    await page.getByRole("button", { name: "Expand the agent panel" }).click();
     const panel = page.locator(".arpanel");
     await expect(panel).toBeVisible();
     await settleAnimations(page);
@@ -1167,9 +1165,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
     await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
-    await page
-      .getByRole("button", { name: "Expand the agent panel" })
-      .click();
+    await page.getByRole("button", { name: "Expand the agent panel" }).click();
     await expect(page.locator(".arpanel")).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "home — the agent's panel (390px, dark)");

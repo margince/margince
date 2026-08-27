@@ -244,7 +244,7 @@ export function PersonDealsTab({
     loading,
   );
   return (
-    <div className="pe-overview-stack">
+    <div className="record-stack">
       <Panel title={t("tab.deals")}>
         <SurfaceState state={state} emptyLabel={t("person.deals.empty")}>
           {roles.map((role) => (
@@ -354,7 +354,7 @@ export function PersonMeetingsTab({
   );
   const next = view?.next_meeting;
   return (
-    <div className="pe-overview-stack">
+    <div className="record-stack">
       <Panel title={t("person.meetings.next")}>
         <PanelBody>
           <SurfaceState

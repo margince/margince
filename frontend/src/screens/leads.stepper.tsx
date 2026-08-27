@@ -96,10 +96,13 @@ export function LeadStepper({
         {steps.map((step, index) => (
           <li
             key={step.key}
+            // `is-current` was here too and nothing ever styled it: the step
+            // the lead is on is carried by `aria-current` and by the button's
+            // primary variant, which is one claim in two places rather than
+            // three.
             className={[
               "lead-ladder-step",
               step.filled ? "is-filled" : "",
-              step.current ? "is-current" : "",
               step.rung === 3 ? "is-terminal" : "",
             ]
               .filter(Boolean)

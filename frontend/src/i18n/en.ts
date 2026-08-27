@@ -1768,6 +1768,8 @@ export const en = {
   "lead.filterScoreWarm": "60 and up",
   "lead.filterScoreCool": "40 and up",
   "lead.details": "Details",
+  "lead.ladder.title": "Where this lead stands",
+  "lead.railTitle": "Owner and score",
   "lead.detailsUnset": "Not set",
   "lead.terminalReadOnly": "This lead is closed and takes no changes.",
   "lead.boardTerminalOnly":
@@ -1790,6 +1792,7 @@ export const en = {
   "lead.demoteExplain":
     "The lead returns to the queue as “Working”. A contact the promotion created is archived; a contact it merged into stays as it is. A contact on a live deal cannot be reversed.",
   "lead.demoteReason": "Reason (recorded in the audit trail)",
+  "lead.demoteReasonRequired": "Say why first.",
   "lead.demoteConfirm": "Reverse",
   "lead.promotedOutcomePending": "Reading what this promotion did…",
   "lead.promotedOutcomeUnavailable":

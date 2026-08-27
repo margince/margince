@@ -661,13 +661,17 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: "Reverse promotion" }),
     );
-    const confirm = screen.getByRole("button", { name: "Reverse" });
-    expect((confirm as HTMLButtonElement).disabled).toBe(true);
+    const confirm = () =>
+      screen.getByRole("button", { name: "Reverse" }) as HTMLButtonElement;
+    expect(confirm().disabled).toBe(true);
     await userEvent.type(
-      screen.getByLabelText("Reason (recorded in the audit trail)"),
+      screen.getByLabelText("Reason (recorded in the audit trail) *"),
       "Promoted the wrong prospect",
     );
-    await userEvent.click(confirm);
+    // Re-queried rather than held: a refused Button draws its reason beside
+    // itself, so the element the reader presses once the refusal lifts is not
+    // the node that was there while it stood.
+    await userEvent.click(confirm());
     await waitFor(() => expect(demoteBody).not.toBeNull());
     expect(demoteBody).toEqual({ reason: "Promoted the wrong prospect" });
   });
@@ -904,10 +908,7 @@ describe("LeadsScreen + LeadScreen (B-EP09.10b, §3.5 segregation)", () => {
     // stand in for "ineligible" (ADR-0119/A170).
     stubFetch(async () => jsonResponse({ ...lead, email: null }));
     render(<LeadScreen id="l-1" />);
-    const button = await screen.findByRole("button", {
-      name: "Qualify",
-      exact: true,
-    });
+    const button = await screen.findByRole("button", { name: "Qualify" });
     await waitFor(() =>
       expect((button as HTMLButtonElement).disabled).toBe(true),
     );
@@ -1296,23 +1297,22 @@ describe("LeadScreen — edit with If-Match (P-1)", () => {
     stubFetch(async () => jsonResponse(lead));
     render(<LeadScreen id="l-1" />);
     await waitFor(() => expect(screen.getByTestId("edit-record")).toBeTruthy());
-    expect(
-      screen.getByRole("button", { name: "Qualify", exact: true }),
-    ).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Qualify" })).toBeTruthy();
     // The score reads in the band AND on the folded score section's summary.
     expect(screen.getAllByText("Score: 72").length).toBeGreaterThan(0);
-    // The badge and the status control now read the SAME word, which is the
-    // point: a German reader saw "In Bearbeitung" on the chip and the raw
-    // enum "contacted" in the cell. The badge is the one asserted here.
+    // Status and company are READINGS in the band's strip, not pills among
+    // pills. The word is what matters and it is the same word everywhere: a
+    // German reader saw "In Bearbeitung" on the chip and the raw enum
+    // "contacted" in the cell, which is the defect one spelling closed.
     expect(
       screen
         .getAllByText("Contacted")
-        .some((el) => el.classList.contains("badge")),
+        .some((el) => el.classList.contains("stat-card-value")),
     ).toBe(true);
     expect(
       screen
         .getAllByText("Nordwind Logistik")
-        .some((el) => el.classList.contains("badge")),
+        .some((el) => el.classList.contains("stat-card-value")),
     ).toBe(true);
   });
 });
@@ -2029,9 +2029,7 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     }
     // Qualify is gone rather than disabled: a disqualified lead is not a
     // qualifiable one, and the header's primary action is for live leads.
-    expect(
-      screen.queryByRole("button", { name: "Qualify", exact: true }),
-    ).toBeNull();
+    expect(screen.queryByRole("button", { name: "Qualify" })).toBeNull();
   });
 
   it("shows an 'overridden' badge when the score is human-overridden", async () => {

@@ -1235,7 +1235,7 @@ const emptyBand: View = {
 export const BriefStates: Story = {
   render: () => (
     <StoryProviders>
-      <div className="pe-overview-stack" style={{ maxWidth: 720 }}>
+      <div className="record-stack" style={{ maxWidth: 720 }}>
         <PersonBriefCard
           brief={{
             person_id: "p-1",
@@ -1271,7 +1271,7 @@ export const BriefStates: Story = {
 export const OverviewPanels: Story = {
   render: () => (
     <StoryProviders>
-      <div className="pe-overview-stack" style={{ maxWidth: 720 }}>
+      <div className="record-stack" style={{ maxWidth: 720 }}>
         <PersonBriefCard
           brief={{
             person_id: "p-1",
@@ -1318,7 +1318,7 @@ export const OverviewChannelConversation: Story = {
     });
     return (
       <StoryProviders>
-        <div className="pe-overview-stack" style={{ maxWidth: 720 }}>
+        <div className="record-stack" style={{ maxWidth: 720 }}>
           <PersonBriefCard
             brief={{
               person_id: "p-1",
@@ -1471,7 +1471,7 @@ const emptyMemory: View = {
 export const OverviewGaps: Story = {
   render: () => (
     <StoryProviders>
-      <div className="pe-overview-stack" style={{ maxWidth: 720 }}>
+      <div className="record-stack" style={{ maxWidth: 720 }}>
         <PersonBriefCard brief={undefined} loading view={populated} />
         <PersonBriefCard brief={undefined} loading={false} view={populated} />
         <PersonCommercialCard view={withheld} />

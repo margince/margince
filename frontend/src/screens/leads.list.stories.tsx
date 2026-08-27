@@ -196,3 +196,75 @@ export const Phone: Story = {
   tags: ["uat-phone"],
   render: leads([lead({ score: 1204 }), lead({ id: "l-2", score: 58 })]),
 };
+
+/** The read in flight: placeholder rows under a toolbar that is already
+ *  usable, rather than an empty grid that reads as "no leads". */
+export const Loading: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ lead: ["read", "update"] }, { roles: ["manager"] }),
+      // Never settles, which is the state this story is about. Storybook tears
+      // the story down on navigation, so nothing is left pending afterwards.
+      "GET /leads": () => new Promise<Response>(() => undefined),
+      "GET /users": () => jsonResponse(ROSTER),
+    });
+    return (
+      <StoryProviders>
+        <LeadsScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+/** The read refused. The surface says so and offers the retry — an empty
+ *  table here would be a claim about the data instead of about the request. */
+export const Failed: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ lead: ["read", "update"] }, { roles: ["manager"] }),
+      "GET /leads": () =>
+        jsonResponse(
+          {
+            type: "about:blank",
+            title: "Internal Server Error",
+            status: 500,
+            detail: "The lead index is rebuilding.",
+          },
+          500,
+        ),
+      "GET /users": () => jsonResponse(ROSTER),
+    });
+    return (
+      <StoryProviders>
+        <LeadsScreen />
+      </StoryProviders>
+    );
+  },
+};
+
+/** More than one page: the count line says what is loaded rather than
+ *  inventing a total the cursor cannot know, and the pager offers the next. */
+export const MorePages: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": meRoute({ lead: ["read", "update"] }, { roles: ["manager"] }),
+      "GET /leads": () =>
+        jsonResponse({
+          data: [
+            lead(),
+            lead({ id: "l-2", full_name: "Marta Alvarez", score: 58 }),
+            lead({ id: "l-3", full_name: "Tobias Krause", score: 91 }),
+          ],
+          page: { next_cursor: "c-2", has_more: true },
+        }),
+      "GET /leads/settings": () =>
+        jsonResponse({ first_response_enabled: true }),
+      "GET /users": () => jsonResponse(ROSTER),
+    });
+    return (
+      <StoryProviders>
+        <LeadsScreen />
+      </StoryProviders>
+    );
+  },
+};

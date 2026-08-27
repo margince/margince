@@ -355,6 +355,32 @@
   margin-bottom: var(--space-5);
 }
 
+/* The bar that chooses which part of the record is drawn under it. It scrolls
+   sideways on a narrow screen rather than wrapping: wrapped tabs read as two
+   rows of navigation, which is a different thing from one row that continues.
+   The scrollbar is hidden because the row is short, its overflow is obvious
+   from the clipped tab, and a scrollbar under it would read as a divider. */
+.record-tabs {
+  margin-bottom: var(--space-5);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.record-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* One vertical stack of full-width panels, which is what a record's work
+   column is: every panel in it is read top to bottom once rather than compared
+   with the one beside it, and a panel whose body is prose gets a measure too
+   narrow to read in a half-width column. */
+.record-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  min-width: 0;
+}
+
 /* The record page's zones — the grid itself is `PageZones` (pagezones.css),
    which the record page composes rather than owns: the ratios and the two folds
    are a page shape, not a record's. `.record-zones` is what the record adds ON

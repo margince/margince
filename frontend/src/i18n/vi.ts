@@ -1723,7 +1723,11 @@ export const vi = {
   "lead.filterScoreHot": "Từ 80",
   "lead.filterScoreWarm": "Từ 60",
   "lead.filterScoreCool": "Từ 40",
-  "lead.details": "Chi tiết",
+  "lead.details": "Chi ti\u1ebft",
+  "lead.ladder.title":
+    "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
+  "lead.railTitle":
+    "Ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch v\u00e0 \u0111i\u1ec3m",
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
@@ -1748,6 +1752,7 @@ export const vi = {
   "lead.demoteExplain":
     "Lead quay lại hàng đợi ở trạng thái “Đang xử lý”. Liên hệ do việc chuyển tạo ra sẽ được lưu trữ; liên hệ đã được gộp vào giữ nguyên. Không thể hoàn tác với liên hệ đang gắn với một deal.",
   "lead.demoteReason": "Lý do (được ghi vào nhật ký)",
+  "lead.demoteReasonRequired": "H\u00e3y n\u00eau l\u00fd do tr\u01b0\u1edbc.",
   "lead.demoteConfirm": "Hoàn tác",
   "lead.promotedOutcomePending": "Đang đọc kết quả của lần chuyển này…",
   "lead.promotedOutcomeUnavailable":

@@ -1730,6 +1730,8 @@ export const de = {
   "lead.filterScoreWarm": "Ab 60",
   "lead.filterScoreCool": "Ab 40",
   "lead.details": "Details",
+  "lead.ladder.title": "Wo dieser Lead steht",
+  "lead.railTitle": "Zust\u00e4ndigkeit und Score",
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
@@ -1754,6 +1756,7 @@ export const de = {
   "lead.demoteExplain":
     "Der Lead kehrt als „In Bearbeitung“ in die Liste zurück. Ein Kontakt, den die Übernahme angelegt hat, wird archiviert; ein Kontakt, mit dem zusammengeführt wurde, bleibt unverändert. Bei einem Kontakt an einem laufenden Deal ist die Rücknahme nicht möglich.",
   "lead.demoteReason": "Grund (wird im Protokoll festgehalten)",
+  "lead.demoteReasonRequired": "Bitte zuerst begr\u00fcnden.",
   "lead.demoteConfirm": "Rückgängig machen",
   "lead.promotedOutcomePending":
     "Wird gelesen, was diese Übernahme bewirkt hat …",
