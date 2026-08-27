@@ -183,6 +183,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault ONCE. |
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
 | `modulepoolsharing_test.go` | H2 | Pool-sharing discipline for the module suites, as a fitness function. |
+| `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |
 | `promptfence_test.go` | H1 | Prompt-boundary fitness functions: no prompt may declare a data boundary the writer of that data can spell. |
 | `publicreferences_test.go` | H1 | This repository is public. |
 | `retentionscope_test.go` | H2 | retentionScopeBuilder is the fixture whose reach these gates bound, retentionScopeSink is the one call it may feed, and retentionScopeSinkOwner is the package that call must live in. |

@@ -18,6 +18,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"strings"
 	"unicode"
 
@@ -273,6 +274,39 @@ type pageFactsResult struct {
 	entities []corpusLegalEntity
 }
 
+// pageFactsExcerptRunes bounds what ONE page contributes to its own fact call.
+//
+// Derived from the profile lane's WHOLE-CALL budget, not from its per-page
+// share, because that is the matching quantity: the profile lane spends
+// profileExcerptBudgetRunes across a corpus in one call, and this lane issues
+// one call per page, so a page here may cost what a corpus costs there.
+//
+// It has to be bounded by something. Without this the prompt was as long as
+// whoever published the page chose to make it — up to webread's 1 MiB fetch
+// cap, most of which survives StripTags on a text-heavy page. That spends a
+// metered provider's tokens on a stranger's decision, and on a local provider
+// it sizes the context window the adapter must allocate, which is how this was
+// found.
+const pageFactsExcerptRunes = profileExcerptBudgetRunes
+
+// pageFactsExcerpt bounds one page for its own fact call, and answers how many
+// runes it left behind.
+//
+// The count leaves with the page because the cap alone cannot say what was
+// lost: a page one rune over the budget and one a hundred times over are read
+// identically, and only the remainder tells them apart. Same reasoning the
+// embed adapter's window report carries, for the same reason — a truncation
+// nobody is told about is indistinguishable downstream from a complete read.
+func pageFactsExcerpt(page crawlPage) (excerptPages, int) {
+	runes := []rune(page.Text)
+	if len(runes) <= pageFactsExcerptRunes {
+		return excerptPages{page}, 0
+	}
+	unread := len(runes) - pageFactsExcerptRunes
+	page.Text = string(runes[:pageFactsExcerptRunes])
+	return excerptPages{page}, unread
+}
+
 // extractPageFacts runs one page's call on the fact lane and gates the
 // reply. Pages whose kind has no menu return empty without a call.
 func (x evidenceExtractor) extractPageFacts(ctx context.Context, page crawlPage) (pageFactsResult, error) {
@@ -280,7 +314,16 @@ func (x evidenceExtractor) extractPageFacts(ctx context.Context, page crawlPage)
 	if !ok {
 		return pageFactsResult{url: page.URL, kind: page.Kind}, nil
 	}
-	idx := newSnippetIndex([]crawlPage{page})
+	excerpt, unread := pageFactsExcerpt(page)
+	if unread > 0 {
+		// Both numbers, because the ratio is the finding: a page that
+		// overruns by a paragraph and one whose facts are mostly past the cap
+		// produce the same result and the same absent facts, and only the
+		// remainder says which happened.
+		slog.WarnContext(ctx, "a page is longer than this lane reads; its facts are extracted from the head of the page and anything stated below the cut is absent rather than refused",
+			"url", page.URL, "kind", page.Kind, "read_runes", pageFactsExcerptRunes, "unread_runes", unread)
+	}
+	idx := newSnippetIndex(excerpt)
 	if len(idx.refs) == 0 {
 		return pageFactsResult{url: page.URL, kind: page.Kind}, nil
 	}
