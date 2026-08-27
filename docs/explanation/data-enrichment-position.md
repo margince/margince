@@ -221,11 +221,9 @@ That negotiation is winnable because the product gives the works council somethi
 
 The product policy now becomes very simple.
 
-Part of Tier A ships today. The rest is in work, with the ticket number next to each item. We release quickly, so "in work" means weeks, not months, and it may already be shipped by the time you read this. We refuse all five Tier C models.
-
 Each item below is rated on four axes: GDPR posture, Vietnam compatibility, platform-contract exposure and works-council temperature.
 
-### Tier A: build freely
+### Tier A: Building or already built
 
 **A1. Company enrichment from official sources.** Company data is the easy case. Data about the legal entity itself sits outside the GDPR under Recital 14: company name, legal form, VAT number and registered address.
 
@@ -241,43 +239,43 @@ We will build these adapters on demand once the need arises. No worries, we will
 | Licensed aggregators (e.g. North Data) | Structured DACH register and financial data | Paid API | The clean bulk route |
 
 
-**A2. The counterparty's own website, read deeper.** Built already; the enhancements are in work.
+**A2. The counterparty's own website, read deeper.** Built.
 
 Margince already reads company websites.[^41] The deeper read handles people named on those sites in exactly the shape this paper argues for. A stranger found on a team page is staged as a lead and remains staged until a human accepts. The system never auto-creates a new person.
 
 When the published person unmistakably matches someone already recorded at that company, through an exact email match or a single high-confidence name match, Margince fills empty fields such as role, title and profile link. Every value is evidence-backed with the source stored on the row. The system never overwrites information entered by a human.
 
-The enhancements under way: parse the Impressum, whose publication German law *mandates* under Section 5 DDG, and consume newsroom RSS feeds for company events. We store the signal and a link, never a cached copy of the full text.
+Margince also parses the Impressum, whose publication German law *mandates* under Section 5 DDG, and consumes newsroom RSS feeds for company events. We store the signal and a link, never a cached copy of the full text.
 
 Crawling stays polite and respects robots.txt. The existing rule also remains: a human click can write directly; an automatic read stages the suggestion.
 
-**A3. Technical enrichment.** Not built yet: none of this is in the tree today.
+**A3. Technical enrichment.** We build this on demand once a customer needs it. It is quick work.
 
 MX and DNS records, TLS certificate-transparency logs, and technology-stack fingerprints from the company's public pages are company-level signals. They work the same way in Hamburg and Da Nang.
 
 The A1 caveat still applies. A personal name inside a certificate or domain record is personal data, so Margince keeps the stored signal at company level.
 
-**A4. First-party person capture.** Half built; the other half is in work.[^44]
+**A4. First-party person capture.** Built.[^44]
 
 The contact sent you the details. Margince's capture works from that fact. Connected mailboxes are processed automatically. A nightly pass extracts only stated fields from email signatures: name, title and phone number, with nothing inferred. Workspace exclusion lists keep entire addresses and domains outside capture.
 
-The second half, in work now: vCard import and a per-mailbox switch for the signature pass, so an organisation can turn the granularity all the way down.
+vCard import and a per-mailbox switch for the signature pass complete the channel, so an organisation can turn the granularity all the way down.
 
 First-party collection is the only person-data channel that scales cleanly.[^39]
 
 **A5. LinkedIn as a link, plus the member's own export.** We store the LinkedIn profile URL as a clickable link. Margince never fetches the page server-side.
 
-The user reads the profile in their own browser and manually enters what they learned; a quick-capture form built for exactly that moment is in work. LinkedIn also allows every member to download their own data, and Margince imports the member's `Connections.csv` in a deliberately limited form.[^42]
+The user reads the profile in their own browser and enters what they learned into a quick-capture form built for exactly that moment. LinkedIn also allows every member to download their own data, and Margince imports the member's `Connections.csv` in a deliberately limited form.[^42]
 
 The imported connections become private graph substrate, "ghosts", used only for reach and warmth. They are visible only to the importer. They never become contact records and never create people.
 
 I do not claim that LinkedIn's terms permit anything beyond this private graph use. Margince therefore stops there. It does not create contacts and provides no parser for pasted profile text. Once software copies the page on the user's behalf, the scraping clause is back in play. We draw the line on the safe side.
 
-**A6. The "confirm your details" flow.** In work now, bundled with the marketing-consent ask.[^45]
+**A6. The "confirm your details" flow.** Bundled with the marketing-consent ask.[^45]
 
-The design: Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91. And the same email asks the contact to grant or decline marketing consent, with the answer landing on the consent proof log and the send itself logged in the record's history.
+Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91. And the same email asks the contact to grant or decline marketing consent, with the answer landing on the consent proof log and the send itself logged in the record's history.
 
-Once it ships, this flow actively reduces the risk of everything else on this page.
+This flow actively reduces the risk of everything else on this page.
 
 ### Tier B: build with controls, counsel signs off first
 
