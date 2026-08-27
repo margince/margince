@@ -60,8 +60,21 @@ func docsPageCeiling(rel string) int {
 	switch {
 	case strings.HasPrefix(rel, "docs/how-to/"), strings.HasPrefix(rel, "docs/tutorials/"):
 		return 350
+	// EXPLANATION is the section that carries a mechanism, and it was measured
+	// again in August 2026 because the number had stopped describing it. The
+	// section holds 28 pages. Their 75th percentile is 404 by nearest rank and
+	// 412 interpolated, so 1.5x is 606 to 618 — while the constant said 450,
+	// which is about 1.1x. Four pages were over, all four waived, and a new
+	// mechanism page was arriving over budget on its first commit.
+	//
+	// 620 is the top of that band, rounded. Deliberately NOT a number chosen to
+	// clear the four waived pages: the longest is 519, so the band would have
+	// freed them at any point in it. Picking the top rather than the middle is
+	// the one judgement here, and it is made because 606 and 618 are the same
+	// measurement read two defensible ways — a budget should not sit between
+	// them and depend on which.
 	case strings.HasPrefix(rel, "docs/explanation/"):
-		return 450
+		return 620
 	// A user guide is a narrative followed once, so it runs longer than a how-to
 	// that is consulted a field at a time — the same reason an explanation does.
 	case strings.HasPrefix(rel, "user-guide/"):
@@ -87,7 +100,13 @@ func docsPageCeiling(rel string) int {
 // that needs a baseline of the list, and the list IS the baseline — the only place
 // the addition is visible is the diff, which is where a reviewer reads it. Named
 // here so the pin is not mistaken for a complete guard.
-const waivedPageBudget = 10
+// 10 → 6 when the explanation budget was re-measured in August 2026: four
+// waived pages were already inside the new number and left the list without a
+// word of their prose changing. Lowering the pin in the same change is what
+// keeps that a ratchet tooth rather than four spare slots — the swap above is
+// still open, and a re-measure that freed pages without lowering the pin would
+// widen it.
+const waivedPageBudget = 6
 
 const (
 	docsWaiverFile = "../scripts/docs-page-length-waivers.txt"

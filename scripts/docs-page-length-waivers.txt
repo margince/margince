@@ -8,10 +8,6 @@
 # budget and stayed listed, and when a line names a page that no longer exists —
 # so this file cannot rot into "pages allowed to be long".
 docs/evidence/extension-tier/DESIGN.md
-docs/explanation/extensibility.md
-docs/explanation/job-fleet.md
-docs/explanation/outbound-messaging.md
-docs/explanation/outbound-webhooks.md
 docs/how-to/add-an-extension.md
 docs/how-to/flip-an-overlay-to-native.md
 docs/principles/one-source-of-truth.md
