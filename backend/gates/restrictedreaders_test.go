@@ -139,6 +139,7 @@ func unguardedActivityReaders(file *ast.File) []string {
 }
 
 func TestEveryReaderOfTheActivityTableExcludesRestrictedRows(t *testing.T) {
+	t.Parallel()
 	defer restrictedReadersAdmitted.AssertAllMatched(t)
 	for _, src := range activityReaderScope.Files(t) {
 		if restrictedReadersAdmitted.Waived(t, src.Path) {

@@ -50,6 +50,7 @@ var tsMinorUnitEntry = regexp.MustCompile(`["']?\b([A-Z]{3})\b["']?:\s*(\d+)\b`)
 var tsComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 
 func TestTheFrontendMinorUnitTableMatchesTheGoOne(t *testing.T) {
+	t.Parallel()
 	source, err := os.ReadFile(frontendMinorUnits)
 	if err != nil {
 		t.Fatalf("reading the frontend minor-unit table: %v", err)

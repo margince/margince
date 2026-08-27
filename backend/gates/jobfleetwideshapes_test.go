@@ -36,6 +36,7 @@ func parseFleetWideSource(t *testing.T, src string) (*token.FileSet, []*ast.File
 // be fixed by weakening it, and the weakening is what the next sweep loop walks
 // back in through — so every shape the tree actually uses is a test.
 func TestTheFleetWideGateAcceptsEveryDispatchShapeInTheTree(t *testing.T) {
+	t.Parallel()
 	eachShape(t, fleetWideShapesInTheTree(), fleetWideShapeFloor, func(t *testing.T, d fleetWideDispatcher) {
 		if !d.fansOut {
 			t.Errorf("the gate does not recognize this dispatch shape as a fan-out; it is in the tree and must be in the allowlist")
@@ -89,6 +90,7 @@ func eachShape(t *testing.T, shapes map[string]string, floor int, assert func(*t
 // the gate exists for: both plants declare FleetWide, both would keep a null
 // `args->>'workspace_id'`, and both do a tenant's work inside one row.
 func TestTheFleetWideGateRejectsADispatcherThatDoesTenantWork(t *testing.T) {
+	t.Parallel()
 	plants := map[string]string{
 		"a write in the dispatcher's own body": `
 			func (w *sweepWorker) Work(ctx context.Context, _ *river.Job[SweepArgs]) error {
@@ -127,6 +129,7 @@ func TestTheFleetWideGateRejectsADispatcherThatDoesTenantWork(t *testing.T) {
 // whatever attempt cap the author typed instead of the one the child declares.
 // A dispatcher shaped like this is the defect that shipped once already.
 func TestTheFleetWideGateRejectsAFanOutThatGoesAroundTheChokepoints(t *testing.T) {
+	t.Parallel()
 	plants := map[string]string{
 		"a due-scan fanning out one client.Insert per due row": `
 			func (w *sweepWorker) Work(ctx context.Context, _ *river.Job[SweepArgs]) error {

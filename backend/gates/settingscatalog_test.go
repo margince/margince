@@ -40,6 +40,7 @@ import (
 var keyShape = regexp.MustCompile(`^[a-z][a-z0-9_]*\.[a-z][a-z0-9_]*$`)
 
 func TestEverySettingIsUniqueWellFormedAndGoverned(t *testing.T) {
+	t.Parallel()
 	defs := compose.SettingsCatalogForTest()
 	if len(defs) == 0 {
 		t.Fatal("the settings catalog is empty; this gate would pass vacuously")
@@ -88,6 +89,7 @@ func TestEverySettingIsUniqueWellFormedAndGoverned(t *testing.T) {
 }
 
 func TestEverySettingKeyIsPrefixedByItsOwningModule(t *testing.T) {
+	t.Parallel()
 	modules, err := os.ReadDir(filepath.Join("internal", "modules"))
 	if err != nil {
 		t.Fatalf("listing modules: %v", err)
@@ -117,6 +119,7 @@ func TestEverySettingKeyIsPrefixedByItsOwningModule(t *testing.T) {
 }
 
 func TestNoSettingKeyIsAlsoADeploymentConfigKey(t *testing.T) {
+	t.Parallel()
 	// Derived from the config STRUCT, not from the example file: the template
 	// is illustrative and omits whole sections (there is no `capture:` block
 	// in it today), so comparing against it would pass vacuously for exactly
@@ -147,6 +150,7 @@ var settingsWithInjectedFreeze = map[string]string{
 }
 
 func TestEverySettingWithAnInjectedFreezeActuallyHasOne(t *testing.T) {
+	t.Parallel()
 	seen := map[string]bool{}
 	for _, d := range compose.SettingsCatalogForTest() {
 		why, wants := settingsWithInjectedFreeze[d.Key]

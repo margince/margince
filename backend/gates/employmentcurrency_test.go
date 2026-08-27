@@ -102,6 +102,7 @@ var endedAtCurrency = regexp.MustCompile(`ended_at\s+IS\s+(NOT\s+)?NULL|ended_at
 const employmentCurrencyOwner = "internal/modules/people/employmentcurrency.go"
 
 func TestEveryEmploymentCurrencyTestUsesTheOneDefinition(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching is a ratification for a site that has
 	// moved or been fixed, and leaving it in place quietly re-exempts whatever
 	// takes its name next.
@@ -309,6 +310,7 @@ func read() string {
 }
 
 func TestTheEmploymentDetectorSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	for _, tc := range employmentProbes {
 		t.Run(tc.name, func(t *testing.T) {
@@ -480,6 +482,7 @@ const slotProbeFile = gateDir + "/employmentcurrency_test.go"
 var slotColumn = regexp.MustCompile(`(?i)is_current_primary`)
 
 func TestEveryCurrentPrimarySlotGuardUsesTheOneSpelling(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching describes a site that has moved or
 	// been fixed, and leaving it quietly re-exempts whatever takes its name.
 	defer slotBlockedByTheModuleDAG.AssertAllMatched(t)
@@ -621,6 +624,7 @@ var slotProbes = []struct {
 }
 
 func TestTheSlotDetectorSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	for _, tc := range slotProbes {
 		t.Run(tc.name, func(t *testing.T) {

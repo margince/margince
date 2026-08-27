@@ -228,6 +228,7 @@ func literalTypeName(lit *ast.CompositeLit) string {
 // TestARefusalAboutACursorIsTheContractsRefusal is the first arm: nothing but
 // storekit's type may name a cursor as the field it refuses.
 func TestARefusalAboutACursorIsTheContractsRefusal(t *testing.T) {
+	t.Parallel()
 	files := refusalFiles(t)
 	if len(files) < 300 {
 		t.Fatalf("the census read only %d files, so it covered almost nothing", len(files))
@@ -278,6 +279,7 @@ func TestARefusalAboutACursorIsTheContractsRefusal(t *testing.T) {
 // Keyed on the decode rather than on the error's shape, because a refusal that
 // names no field is invisible to the first arm.
 func TestEveryCursorDecoderCanAnswerMalformed(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching is one for a function that has moved or
 	// been folded in, and leaving it quietly re-exempts whatever takes its name.
 	defer connectorCursors.AssertAllMatched(t)

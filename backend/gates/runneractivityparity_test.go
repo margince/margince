@@ -28,6 +28,7 @@ import (
 )
 
 func TestEveryAgentRunStatusHasAProjectionState(t *testing.T) {
+	t.Parallel()
 	statuses := checkValues(t, "agent_run_status_check")
 	if len(statuses) == 0 {
 		t.Fatal("derived no agent_run statuses; this gate would pass vacuously")

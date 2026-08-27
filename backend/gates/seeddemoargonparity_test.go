@@ -65,6 +65,7 @@ var argonParityPairs = map[string]string{
 }
 
 func TestSeedDemoHashesAtTheParametersTheProductShips(t *testing.T) {
+	t.Parallel()
 	product := map[string]int64{}
 	for _, f := range argonParityFiles {
 		for k, v := range intConstants(t, f) {

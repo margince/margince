@@ -50,6 +50,7 @@ import (
 var upwardLink = regexp.MustCompile(`]\(\s*[^)\s]*(?:AGENTS|CLAUDE)\.md(?:#[^)\s]*)?\s*\)`)
 
 func TestNothingUnderDocsLinksUpToARulebook(t *testing.T) {
+	t.Parallel()
 	const docsRoot = "../docs"
 
 	scanned := 0
@@ -96,6 +97,7 @@ func TestNothingUnderDocsLinksUpToARulebook(t *testing.T) {
 // the pattern stopped naming a path spelling: every `want: true` row below except
 // the first is a link the `(?:\.\./)+` spelling reported as clean.
 func TestTheUpwardLinkPatternSeesEverySpellingOfTheDefect(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		line string

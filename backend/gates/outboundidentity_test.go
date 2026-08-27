@@ -39,6 +39,7 @@ var identitySurfaceRoots = []string{
 }
 
 func TestNoOutboundIdentityIsWrittenAtItsCallSite(t *testing.T) {
+	t.Parallel()
 	var findings []string
 	headerWrites := 0
 	// Gathered per PACKAGE, not per file. A constant is package-scoped, so

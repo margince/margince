@@ -94,6 +94,7 @@ var unguardedRequiredIDBodies = gatekit.Waive(map[string]string{
 })
 
 func TestEveryContractBodyWithARequiredIDIsAccountedFor(t *testing.T) {
+	t.Parallel()
 	bodies := contractBodiesWithARequiredID(t)
 	if len(bodies) == 0 {
 		t.Fatalf("no request body in %s declares a required non-pointer UUID — the walk is reading "+

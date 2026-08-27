@@ -96,6 +96,7 @@ func main() {
 `
 
 func TestTheGateAcceptsADeclaredKind(t *testing.T) {
+	t.Parallel()
 	out, ok := compileScratch(t, scratchPreamble+"\taddDeclaredWorker[AArgs](aWorker{})\n}\n")
 	if !ok {
 		t.Fatalf("a declared kind must register cleanly; the gate would block a legitimate author:\n%s", out)
@@ -103,6 +104,7 @@ func TestTheGateAcceptsADeclaredKind(t *testing.T) {
 }
 
 func TestTheGateRejectsAnUndeclaredKind(t *testing.T) {
+	t.Parallel()
 	out, ok := compileScratch(t, scratchPreamble+"\taddDeclaredWorker[CArgs](cWorker{})\n}\n")
 	if ok {
 		t.Fatal("an undeclared kind compiled — the closed type set is not closed")
@@ -116,6 +118,7 @@ func TestTheGateRejectsAnUndeclaredKind(t *testing.T) {
 }
 
 func TestTheGateRejectsAWorkerRegisteredUnderTheWrongKind(t *testing.T) {
+	t.Parallel()
 	out, ok := compileScratch(t, scratchPreamble+"\taddDeclaredWorker[BArgs](aWorker{})\n}\n")
 	if ok {
 		t.Fatal("worker A registered under kind B compiled — the type parameter is not binding the worker")
@@ -207,6 +210,7 @@ func buildComposeWith(t *testing.T, body string) (string, bool) {
 // stale import, a renamed helper — would otherwise read exactly like a union
 // doing its job.
 func TestTheRealGeneratedUnionRefusesAnUndeclaredKind(t *testing.T) {
+	t.Parallel()
 	if out, unmodified := buildComposeWith(t, ""); !unmodified {
 		t.Fatalf("internal/compose does not build as it stands, so nothing below could be attributed to the union:\n%s", out)
 	}

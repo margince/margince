@@ -29,6 +29,7 @@ import (
 var goDirective = regexp.MustCompile(`(?m)^go (\d+\.\d+(?:\.\d+)?)$`)
 
 func TestEveryGoVersionPinMatchesTheProductModule(t *testing.T) {
+	t.Parallel()
 	want := goVersionOf(t, "go.mod")
 	if strings.Count(want, ".") != 2 {
 		t.Fatalf("backend/go.mod pins %q; a patch version is what the other pins have to match", want)

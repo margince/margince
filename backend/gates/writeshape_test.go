@@ -193,6 +193,7 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 })
 
 func TestEveryAuditedMutationEmitsAnEvent(t *testing.T) {
+	t.Parallel()
 	defer auditOnlyWrites.AssertAllMatched(t)
 	emissionPathsByDir := map[string]map[string]bool{}
 	fset := token.NewFileSet()

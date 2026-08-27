@@ -53,6 +53,7 @@ func gitIgnored(t *testing.T, path string) bool {
 var configPath = regexp.MustCompile(`(?:\.\./)?config/[A-Za-z0-9._*-]+\.(?:ya?ml|json)`)
 
 func TestEveryConfigPathAMakefileNamesExists(t *testing.T) {
+	t.Parallel()
 	makefiles := []string{"Makefile", "../Makefile"}
 	checked := 0
 	for _, mk := range makefiles {

@@ -80,6 +80,7 @@ func projectImports(t *testing.T, dir string) []string {
 // (ADR-0054 §5) — it may import shared and other platform packages, but
 // never a domain module, the composition layer, or a process role.
 func TestPlatformOwnsNoDomain(t *testing.T) {
+	t.Parallel()
 	forbidden := []string{
 		modulePath + "/internal/modules/",
 		modulePath + "/internal/compose",
@@ -102,6 +103,7 @@ func TestPlatformOwnsNoDomain(t *testing.T) {
 // module list is derived from the tree, so a new module is enrolled the
 // moment its directory exists.
 func TestNoSiblingModuleImports(t *testing.T) {
+	t.Parallel()
 	modules, err := filepath.Glob("internal/modules/*")
 	if err != nil {
 		t.Fatal(err)
@@ -128,6 +130,7 @@ func TestNoSiblingModuleImports(t *testing.T) {
 // and an extension register the same type, ADR-0069 §3). Anything else
 // is an architecture defect.
 func TestSharedIsPure(t *testing.T) {
+	t.Parallel()
 	for _, dir := range packagesUnder(t, "internal/shared") {
 		for _, imp := range projectImports(t, dir) {
 			if strings.HasPrefix(imp, modulePath+"/internal/shared/") {
@@ -146,6 +149,7 @@ func TestSharedIsPure(t *testing.T) {
 // nothing else. Any other import would become transitively-frozen
 // published API the moment an extension binds it.
 func TestPublishedSurfaceIsPure(t *testing.T) {
+	t.Parallel()
 	for _, dir := range packagesUnder(t, "pkg") {
 		for _, imp := range projectImports(t, dir) {
 			if strings.HasPrefix(imp, modulePath+"/pkg/") {
@@ -183,6 +187,7 @@ var modelPathAssemblySeam = map[string]bool{
 // assembly is DB-less by design (siteread debug, tests); a production
 // role has a pool and belongs on the metered compose.NewModelPath.
 func TestNoModelClientOutsideTheGate(t *testing.T) {
+	t.Parallel()
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
@@ -284,6 +289,7 @@ func funcsCallingSelector(t *testing.T, dir, pkgIdent, funcName string) []string
 // intended to grow. The role list is derived from the tree, so a new
 // cmd/<role> is enrolled the moment its directory exists.
 func TestOneModelPathPerRole(t *testing.T) {
+	t.Parallel()
 	roles, err := filepath.Glob("cmd/*")
 	if err != nil {
 		t.Fatal(err)

@@ -68,6 +68,7 @@ type aggregateJobs struct {
 }
 
 func TestEveryAggregatedJobCanRunOnTheMergeQueue(t *testing.T) {
+	t.Parallel()
 	raw, err := os.ReadFile(aggregateWorkflow) // #nosec G304 -- a fixed repo-relative path
 	if err != nil {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
@@ -162,6 +163,7 @@ var callerConcerns = []string{
 // the fan-ins need `always()` precisely so a failed sibling cannot skip them into
 // a green.
 func TestNoLaneWorkflowDecidesItsOwnScope(t *testing.T) {
+	t.Parallel()
 	lanes, err := filepath.Glob(filepath.Join(workflowDir, "_lane-*.yml"))
 	if err != nil {
 		t.Fatalf("listing lane workflows: %v", err)

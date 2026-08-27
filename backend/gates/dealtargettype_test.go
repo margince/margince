@@ -28,6 +28,7 @@ import (
 )
 
 func TestEveryStagingNamesItsDealTargetThroughOneConstant(t *testing.T) {
+	t.Parallel()
 	root := filepath.Join("internal", "compose")
 	fset := token.NewFileSet()
 	var offenders []string

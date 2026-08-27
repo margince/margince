@@ -218,6 +218,7 @@ func namesIn(t *testing.T, path string) map[string]bool {
 // of leaves an operator guessing, and a secret nobody wrote down cannot be
 // provisioned at all.
 func TestEveryEnvVarIsDocumented(t *testing.T) {
+	t.Parallel()
 	documented := namesIn(t, configurationDoc)
 	sites := envVarsReadByGoCode(t)
 
@@ -237,6 +238,7 @@ func TestEveryEnvVarIsDocumented(t *testing.T) {
 // worse than no entry at all, because it invites an operator to supply a value
 // that cannot take effect.
 func TestEnvExampleNamesOnlyLiveVars(t *testing.T) {
+	t.Parallel()
 	assertNamesOnlyLiveVars(t, envExample)
 }
 
@@ -244,6 +246,7 @@ func TestEnvExampleNamesOnlyLiveVars(t *testing.T) {
 // bar as the template it now absorbs. Without it the more authoritative file is
 // the one free to keep a row for a var that no longer exists.
 func TestConfigurationDocNamesOnlyLiveVars(t *testing.T) {
+	t.Parallel()
 	assertNamesOnlyLiveVars(t, configurationDoc)
 }
 
@@ -266,6 +269,7 @@ var entrypointRequired = regexp.MustCompile(`\$\{(MARGINCE_[A-Z0-9_]+):?\?`)
 // script that rejects them. docs/deployment.md names .env.example as that
 // file, which is what makes this an obligation rather than a nicety.
 func TestEntrypointRequiredVarsAreInTheEnvExample(t *testing.T) {
+	t.Parallel()
 	offered := namesIn(t, envExample)
 
 	required := map[string]string{}
@@ -349,6 +353,7 @@ var docDefaultTable = regexp.MustCompile(`(?mi)^\|\s*Env\s*\|\s*Default\s*\|`)
 var docDefaultLiteral = regexp.MustCompile("^`([^`]*)`$")
 
 func TestEveryDeclaredDefaultMatchesTheDocumentedOne(t *testing.T) {
+	t.Parallel()
 	declared := declaredConfigDefaults(t)
 	documented := documentedDefaults(t)
 	if len(declared) == 0 {

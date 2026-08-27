@@ -65,6 +65,7 @@ var laneWiringExemptions = gatekit.Waive(map[string]string{
 })
 
 func TestEveryCensusedSiteRidesALaneAProcessRoleWires(t *testing.T) {
+	t.Parallel()
 	defer laneWiringExemptions.AssertAllMatched(t)
 	census, err := compose.NewTaskCensus()
 	if err != nil {

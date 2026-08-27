@@ -80,6 +80,7 @@ var writesViewBaseline = regexp.MustCompile(
 // TestUserRecordViewHasOneWriter is the census `org360.RecordVisit`'s doc
 // comment names.
 func TestUserRecordViewHasOneWriter(t *testing.T) {
+	t.Parallel()
 	var findings []string
 	judged := 0
 	for _, root := range []string{".", "../extensions", "../fixtures"} {
@@ -142,6 +143,7 @@ func TestUserRecordViewHasOneWriter(t *testing.T) {
 // over a detector that has stopped detecting, so the detector needs its own
 // evidence.
 func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	caught := []string{
 		"INSERT INTO user_record_view (user_id, entity_type, entity_id, last_viewed_at)",
 		// The worst second writer: no GREATEST at all, so it rewinds.

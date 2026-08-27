@@ -57,6 +57,7 @@ func isGenerated(path, text string) bool {
 // happens to name a directory the same way — an inherited exemption is a file
 // shipping with no notice and a gate reporting it clean.
 func TestTheContractsExemptionIsAnchoredToTheBackendTree(t *testing.T) {
+	t.Parallel()
 	const unlicensed = "package contracts\n"
 	if !isGenerated("internal/contracts/doc.go", unlicensed) {
 		t.Error("the backend's frozen contracts package lost its exemption")
@@ -90,6 +91,7 @@ var licensedTrees = []licensedTree{
 }
 
 func TestEveryHandWrittenGoFileCarriesTheLicenseHeader(t *testing.T) {
+	t.Parallel()
 	var missing []string
 	walk := func(root string) (int, error) {
 		checked := 0

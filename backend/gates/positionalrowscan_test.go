@@ -38,6 +38,7 @@ import (
 var positionalScanTrees = []string{".", "../extensions", "../fixtures"}
 
 func TestAPositionalRowScanTargetsItsOwnPackagesStruct(t *testing.T) {
+	t.Parallel()
 	calls := 0
 	for _, root := range positionalScanTrees {
 		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {

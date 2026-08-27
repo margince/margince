@@ -98,6 +98,7 @@ type triggerBody struct {
 }
 
 func TestEveryVersionPinnedTableBumpsItsVersion(t *testing.T) {
+	t.Parallel()
 	pinned := versionPinnedTables(t)
 	if len(pinned) < versionPinnedTableFloor {
 		t.Fatalf("resolved only %d keys of approvals.versionTables, expected at least %d: the AST derivation broke, not the subject — every key is a constant identifier declared elsewhere in package %s, so this gate is currently certifying nothing",

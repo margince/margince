@@ -103,6 +103,7 @@ type gate struct {
 // Neither fails anything. That is the point: the hole would be made entirely of
 // green, so it takes an assertion rather than a gate noticing.
 func TestNoGoSourceHidesWhereThisCensusCannotSeeIt(t *testing.T) {
+	t.Parallel()
 	atRoot, err := filepath.Glob("*.go")
 	if err != nil {
 		t.Fatalf("listing the module root: %v", err)
@@ -133,6 +134,7 @@ func TestNoGoSourceHidesWhereThisCensusCannotSeeIt(t *testing.T) {
 }
 
 func TestEveryGateDeclaresItsShape(t *testing.T) {
+	t.Parallel()
 	gates, untagged := readGateDeclarations(t)
 	if len(untagged) > 0 {
 		t.Errorf("%d gate file(s) carry no //gate:kind declaration:\n\t%s\n\n"+
@@ -151,6 +153,7 @@ func TestEveryGateDeclaresItsShape(t *testing.T) {
 }
 
 func TestTheGateInventoryPageIsCurrent(t *testing.T) {
+	t.Parallel()
 	gates, _ := readGateDeclarations(t)
 	if len(gates) < gateFloor {
 		t.Fatalf("refusing to judge the page against %d gate(s); see TestEveryGateDeclaresItsShape",
@@ -429,6 +432,7 @@ The eight shapes, what each is for, and how each one silently passes:
 // unmerged branch — and nothing said so: a citation is prose, and prose is
 // where a doc rots. Review caught it, which is the thing a gate is for.
 func TestGatePatternsCitesGatesThatExist(t *testing.T) {
+	t.Parallel()
 	page, err := os.ReadFile(gatePatternsPage)
 	if err != nil {
 		t.Fatalf("reading %s: %v", gatePatternsPage, err)
@@ -465,6 +469,7 @@ var citedTestFiles = regexp.MustCompile("`([a-z_0-9]+_test\\.go)`")
 const gateCitationFloor = 20
 
 func TestFirstSentenceKeepsACitationWhoseDotIsPartOfAWord(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct{ name, prose, want string }{
 		{
 			"legal citation", "The Art. 7(1) invariant holds. The rest does not.",

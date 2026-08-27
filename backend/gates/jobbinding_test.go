@@ -35,6 +35,7 @@ const workspaceBindFloor = 15
 // and bind another, or bind a zero UUID, with the role gate in jobrole_test.go
 // still green. That is the drift this prevents.
 func TestOnlyTheSharedHelperBindsAWorkspace(t *testing.T) {
+	t.Parallel()
 	fset, files := parseGoFilesUnder(t, filepath.Join("internal", "compose"))
 	guarded := 0
 	for _, file := range files {

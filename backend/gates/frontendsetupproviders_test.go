@@ -71,6 +71,7 @@ func readSetupOffers(t *testing.T) []setupOffer {
 }
 
 func TestOnboardingOffersOnlyModelsTheServerPrices(t *testing.T) {
+	t.Parallel()
 	priced := map[string]bool{}
 	for _, r := range ai.SeedModelRates(time.Date(2026, 8, 1, 0, 0, 0, 0, time.UTC)) {
 		priced[r.Provider+"/"+r.ModelID] = true
@@ -87,6 +88,7 @@ func TestOnboardingOffersOnlyModelsTheServerPrices(t *testing.T) {
 }
 
 func TestOnboardingOffersOnlyProvidersTheServerServes(t *testing.T) {
+	t.Parallel()
 	known := map[string]bool{}
 	for _, p := range ai.KnownProviders() {
 		known[p] = true

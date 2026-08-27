@@ -87,6 +87,7 @@ var asksIfLateInSQL = []*regexp.Regexp{
 // A census asserting a shape is ABSENT passes identically over a clean tree and
 // over a pattern that has stopped matching.
 func TestTheSQLPatternsSeeWhatTheyClaimTo(t *testing.T) {
+	t.Parallel()
 	caught := []string{
 		"WHERE a.due_at <= now()",
 		"WHERE a.due_at <= $2",
@@ -129,6 +130,7 @@ func anyAsksIfLate(statement string) bool {
 }
 
 func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching is one for a statement that has moved
 	// or been fixed, and leaving it re-exempts whatever takes its place.
 	defer schedulerClaims.AssertAllMatched(t)

@@ -146,6 +146,7 @@ type referenceSite struct {
 }
 
 func TestEveryComposeReadOfARecordReferenceAppliesItsRowScope(t *testing.T) {
+	t.Parallel()
 	defer unscopedReferenceReads.AssertAllMatched(t)
 
 	tables := rowScopedTables(t)

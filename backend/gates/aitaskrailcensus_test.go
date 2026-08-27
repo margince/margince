@@ -50,6 +50,7 @@ var carrierSources = map[string]string{
 }
 
 func TestEveryAITaskNamesTheSourceThatReportsIt(t *testing.T) {
+	t.Parallel()
 	tasks := everyRoutableTask(t)
 	if len(tasks) == 0 {
 		t.Fatal("derived no tasks at all; this gate would pass vacuously")
@@ -164,6 +165,7 @@ func taskConstantValues(file *ast.File) []string {
 // nobody can act on, and it would keep the router quiet about a name that no
 // longer routes anywhere.
 func TestTheRailRegistryNamesNoTaskTheContractDropped(t *testing.T) {
+	t.Parallel()
 	declared := map[string]bool{}
 	for _, task := range everyRoutableTask(t) {
 		declared[string(task)] = true
@@ -181,6 +183,7 @@ func TestTheRailRegistryNamesNoTaskTheContractDropped(t *testing.T) {
 // is one no module writes, the task is reported by NOBODY — which reads exactly
 // like a task that is wired.
 func TestEveryCarrierOverrideNamesASourceThatIsReallyEmitted(t *testing.T) {
+	t.Parallel()
 	for task, source := range ai.RailOwners() {
 		if source == ai.SourceRouter || source == ai.SourceNoOccurrence {
 			continue

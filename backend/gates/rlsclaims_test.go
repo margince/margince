@@ -53,6 +53,7 @@ var rlsClaim = regexp.MustCompile(`(?i)\bRLS[ -](?:scope|bound|confine|restrict|
 // three that must survive it. A gate whose pattern silently stopped matching
 // would read exactly like a clean tree.
 func TestTheRLSClaimPatternCatchesTheSpellingsThisTreeGrew(t *testing.T) {
+	t.Parallel()
 	mustMatch := []string{
 		"// EmailSuppressed reports whether an address belongs to an erased subject in the current workspace (RLS scopes the read).",
 		"// members (row-scoped by RLS), optionally filtered by in.Q.",
@@ -85,6 +86,7 @@ func TestTheRLSClaimPatternCatchesTheSpellingsThisTreeGrew(t *testing.T) {
 // license notice covers — derived from the tree, so a new file is enrolled the
 // moment it exists.
 func TestNoGoSourceClaimsRLSStillScopesARead(t *testing.T) {
+	t.Parallel()
 	var claims []string
 	checked := 0
 	for _, tree := range licensedTrees {

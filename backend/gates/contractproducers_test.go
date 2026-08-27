@@ -43,6 +43,7 @@ var producedSchemas = []string{
 var genField = regexp.MustCompile("^\t([A-Z][A-Za-z0-9]*)\\s+\\S")
 
 func TestEveryContractPropertyOnAPageCompositeHasAProducer(t *testing.T) {
+	t.Parallel()
 	fields := map[string][]string{}
 	for _, schema := range producedSchemas {
 		found := generatedFieldsOf(t, schema)

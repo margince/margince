@@ -143,6 +143,7 @@ func allowlistedSurface(t *testing.T) map[string]bool {
 // module, or a sibling extension (EXT-P2/P7). Third-party imports are
 // the extension's own business (its go.mod carries them).
 func TestExtensionsImportOnlyTheAllowlistedSurface(t *testing.T) {
+	t.Parallel()
 	trees := extensionTrees(t)
 	modPaths := extensionModulePaths(t, trees)
 	surface := allowlistedSurface(t)
@@ -177,6 +178,7 @@ func TestExtensionsImportOnlyTheAllowlistedSurface(t *testing.T) {
 // else in the backend tree. Test files are exempt: the allowlist
 // derivation never reads them (this file's own constant included).
 func TestSurfaceMarkerLivesOnlyUnderPkg(t *testing.T) {
+	t.Parallel()
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return err
@@ -220,6 +222,7 @@ var compositionWiringFiles = map[string]bool{
 // directly (extensions reach the backend only through the generated
 // compose file, ADR-0069 §3).
 func TestCompositionWiredOnlyFromCmd(t *testing.T) {
+	t.Parallel()
 	extMods := extensionModulePaths(t, extensionTrees(t))
 	wired := map[string]bool{}
 	for file, imports := range goImports(t, ".") {

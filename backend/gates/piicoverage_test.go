@@ -527,6 +527,7 @@ func statementDestroying(statements []string, table, column string) string {
 }
 
 func TestErasureAndSARReachEveryPIITable(t *testing.T) {
+	t.Parallel()
 	writes := map[string]bool{}
 	for _, path := range erasureCascadeFiles {
 		for _, lit := range sqlLiterals(t, path) {

@@ -42,6 +42,7 @@ const (
 )
 
 func TestOnlyTheGatedResetFlushClearsTheAuthLockouts(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	file, err := parser.ParseFile(fset, resetFlushFile, nil, 0)
 	if err != nil {

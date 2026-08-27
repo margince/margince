@@ -91,6 +91,7 @@ type sqlCall struct {
 // TestEveryContentionProbeClearsTheStatsSnapshot fails on a function that asks
 // pg_blocking_pids without a snapshot clear that can actually reach it.
 func TestEveryContentionProbeClearsTheStatsSnapshot(t *testing.T) {
+	t.Parallel()
 	var offenders []string
 	fset := token.NewFileSet()
 

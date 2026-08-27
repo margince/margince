@@ -338,6 +338,7 @@ func ciGateTargets(t *testing.T, path string) []string {
 }
 
 func TestEveryLocalFrontendGateLegRunsInCI(t *testing.T) {
+	t.Parallel()
 	targets := parseMakefile(t, "../Makefile")
 	local := reachable(targets, localGateRoot)
 	if len(local) < 2 {
@@ -367,6 +368,7 @@ func TestEveryLocalFrontendGateLegRunsInCI(t *testing.T) {
 // each arm below states what the reading must be, including the two that must
 // still refuse.
 func TestASubMakeBehindAVariableIsStillReadAsLegs(t *testing.T) {
+	t.Parallel()
 	vars := readLiteralVars("LEGS := fe-lint fe-test\nWIDTH := 4\n" +
 		"DERIVED := $(LEGS) fe-build\nCONTINUED := fe-a \\\n  fe-b\n")
 
@@ -420,6 +422,7 @@ func TestASubMakeBehindAVariableIsStillReadAsLegs(t *testing.T) {
 // a lane to a fraction of what CI runs. Each case below is what `make` itself
 // would expand the name to.
 func TestTheThreeAssignmentsAreReadAsMakeReadsThem(t *testing.T) {
+	t.Parallel()
 	for _, c := range []struct {
 		name, makefile, want string
 	}{
@@ -451,6 +454,7 @@ func TestTheThreeAssignmentsAreReadAsMakeReadsThem(t *testing.T) {
 // an empty ROOT_SCRIPT_GATES would otherwise make the loop below assert nothing
 // and pass, which is indistinguishable from a fan-out that reaches everything.
 func TestTheFanOutsOwnLegsAreVisibleToThisGate(t *testing.T) {
+	t.Parallel()
 	const fanOutFloor = 20
 
 	body, err := os.ReadFile("../Makefile")

@@ -148,6 +148,7 @@ func mappedIdempotentOperations(t *testing.T) map[string]bool {
 }
 
 func TestIdempotentOperationsMirrorTheContract(t *testing.T) {
+	t.Parallel()
 	declared := idempotencyKeyDeclarations(t)
 	mapped := mappedIdempotentOperations(t)
 	// Vacuous-pass guards: both sides carry dozens of operations; finding

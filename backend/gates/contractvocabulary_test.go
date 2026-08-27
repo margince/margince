@@ -126,6 +126,7 @@ type vocabularySet struct {
 }
 
 func TestEveryClosedVocabularyOverAContractEnumHoldsAllOfIt(t *testing.T) {
+	t.Parallel()
 	byName, byEnum := contractEnumIndex(t)
 	scope := gatekit.Scope{
 		Roots:   []string{"internal/compose", "internal/modules"},

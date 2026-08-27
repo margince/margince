@@ -47,6 +47,7 @@ var cursorEnvelopeScope = gatekit.Scope{
 }
 
 func TestTheCursorEnvelopeIsSpelledOnce(t *testing.T) {
+	t.Parallel()
 	inside := cursorEnvelopeScope.Files(t)
 	if len(inside) > 1 {
 		var where []string
@@ -128,6 +129,7 @@ func raisesMalformedCursor(body *ast.BlockStmt) bool {
 // that has stopped matching passes by finding nothing, which is the same word
 // it prints over a clean tree.
 func TestTheCursorEnvelopeCensusStillSeesItsSubject(t *testing.T) {
+	t.Parallel()
 	subjects := map[string]string{
 		"a hand-rolled envelope, as all four were written": "" +
 			"package p\nfunc f(token string) error {\n\traw, err := base64.RawURLEncoding.DecodeString(token)\n" +

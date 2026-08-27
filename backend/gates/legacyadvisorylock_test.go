@@ -76,6 +76,7 @@ var legacyAdvisoryLockKeys = []string{
 }
 
 func TestLegacyAdvisoryLockKeysStillMatchThePreviousRelease(t *testing.T) {
+	t.Parallel()
 	var found []string
 	// The same hand-written Go corpus the licence notice covers, for the same
 	// reason: extensions/ and fixtures/ are separate modules that a `./...`

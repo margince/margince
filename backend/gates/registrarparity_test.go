@@ -74,6 +74,7 @@ var fullToolRegistries = []struct{ path, builder, claim string }{
 type toolRegistrar struct{ name, at string }
 
 func TestEveryToolRegistrarIsInvokedByEveryFullRegistry(t *testing.T) {
+	t.Parallel()
 	registrars, methods := toolRegistrars(t)
 	if len(registrars) < toolRegistrarFloor {
 		t.Fatalf("discovered only %d tool registrars in %s, expected at least %d: the AST derivation broke, not the subject — a registrar is a package-level func taking *%s, and this gate is currently certifying every builder against an empty list",

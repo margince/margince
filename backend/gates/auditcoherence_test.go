@@ -47,6 +47,7 @@ import (
 var auditActionDBOnly = gatekit.Waive(map[string]string{})
 
 func TestAuditLogEnumCoherence(t *testing.T) {
+	t.Parallel()
 	defer auditActionDBOnly.AssertAllMatched(t)
 	contractAction, contractActorType := auditLogContractEnums(t)
 	ddl := tableCheckSets(t) // reused from enumsync_test.go (last-wins over migrations)
@@ -112,6 +113,7 @@ func TestAuditLogEnumCoherence(t *testing.T) {
 //
 // So this reads the tree the way the other direction reads the migrations.
 func TestEveryAuditVerbTheCodeWritesIsLegal(t *testing.T) {
+	t.Parallel()
 	ddl := tableCheckSets(t)
 	allowed, ok := ddl["audit_log.action"]
 	if !ok {

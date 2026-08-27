@@ -429,6 +429,7 @@ func isUnprocessableEntity(expr ast.Expr) bool {
 }
 
 func TestSeamReachableModulesCarryTheirOwnFieldVerdict(t *testing.T) {
+	t.Parallel()
 	defer seamOutsideRoots.AssertAllMatched(t)
 
 	reachable := seamReachableUnits(t)

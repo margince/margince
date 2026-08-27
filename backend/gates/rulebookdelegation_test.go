@@ -83,6 +83,7 @@ func rulebookDirs(t *testing.T) []string {
 // opens, so a Claude session in that directory works without those rules and
 // nothing says so.
 func TestEveryRulebookHasAClaudeShim(t *testing.T) {
+	t.Parallel()
 	for _, dir := range rulebookDirs(t) {
 		shim := filepath.Join(dir, "CLAUDE.md")
 		if _, err := os.Stat(shim); err != nil {
@@ -105,6 +106,7 @@ func TestEveryRulebookHasAClaudeShim(t *testing.T) {
 // only that line cannot hold a fence to hide it in, which is the second reason
 // this shape is the one to gate.
 func TestEveryClaudeShimIsNothingButTheImport(t *testing.T) {
+	t.Parallel()
 	for _, dir := range rulebookDirs(t) {
 		path := filepath.Join(dir, "CLAUDE.md")
 		raw, err := os.ReadFile(path)

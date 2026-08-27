@@ -52,6 +52,7 @@ const (
 )
 
 func TestEveryWorkspaceScopedArgsSpellsItsWorkspaceKeyTheSameWay(t *testing.T) {
+	t.Parallel()
 	dir := filepath.Join("internal", "compose")
 	byType := methodsByType(t, dir)
 	fset, files := parseGoFilesUnder(t, dir)

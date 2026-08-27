@@ -50,6 +50,7 @@ type workflowJobs struct {
 }
 
 func TestEveryWorkflowJobCarriesATimeoutCeiling(t *testing.T) {
+	t.Parallel()
 	// Both extensions, because GitHub Actions honours both. Globbing one would
 	// leave the gate blind to a whole class of workflow — the precise hole a
 	// derived check exists to not have.

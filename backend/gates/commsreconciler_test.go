@@ -51,6 +51,7 @@ func isCommsNewStore(fun ast.Expr) bool {
 }
 
 func TestEveryComposedDeliveryStoreCarriesAMessageIdentityReconciler(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	found := 0
 	for _, root := range []string{"internal", "cmd"} {

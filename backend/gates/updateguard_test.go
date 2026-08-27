@@ -691,6 +691,7 @@ func lockedTable(call *ast.CallExpr, consts map[string]string) string {
 }
 
 func TestEveryByIDUpdateCarriesAConcurrencyGuard(t *testing.T) {
+	t.Parallel()
 	defer unguardedByIDUpdates.AssertAllMatched(t)
 	versioned := versionedTables(t)
 	fset := token.NewFileSet()

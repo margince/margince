@@ -106,6 +106,7 @@ type expectedTarget struct {
 const replayScopeSource = "internal/compose/replayscope.go"
 
 func TestReplayScopeCoversEveryIdempotentOperation(t *testing.T) {
+	t.Parallel()
 	governance := mappedReplayScope(t)
 	responses := successResponseSchemas(t)
 

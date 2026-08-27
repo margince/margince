@@ -208,6 +208,7 @@ func moduleWritesAuditRow(module string, subjects map[string]bool) (bool, error)
 }
 
 func TestEveryTableOwningModuleWritesAnAuditRow(t *testing.T) {
+	t.Parallel()
 	modules := modulesOwningTables()
 	// A census that examined nothing reports exactly like a tree where every
 	// module audits, which is the shape of the hole this gate closes.

@@ -73,6 +73,7 @@ var picklistInContract = map[string]struct{ schema, property string }{
 }
 
 func TestEveryOfferedPicklistMatchesTheContractsValues(t *testing.T) {
+	t.Parallel()
 	doc := loadContractDocument(t)
 	compared := 0
 	for _, resource := range vocabularyResources(t, doc) {

@@ -75,6 +75,7 @@ var domainResolvers = gatekit.Waive(map[string]string{
 })
 
 func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching is a ratification for a site that has
 	// moved or been fixed, and leaving it in place quietly re-exempts whatever
 	// takes its name next.
@@ -152,6 +153,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 // A gate asserting a shape is ABSENT passes identically over a clean tree and
 // over a detector that has stopped detecting.
 func TestTheDomainClaimCensusSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	caught := []string{
 		"SELECT organization_id FROM organization_domain WHERE domain = lower($1)",
 		// Wrapped across lines, which is how it is actually written.

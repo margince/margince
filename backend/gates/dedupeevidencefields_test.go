@@ -25,6 +25,7 @@ import (
 // `full_name` and `org` on screen. A field the contract publishes and nothing
 // writes is a word three translations carry for a row that never arrives.
 func TestEveryDedupeEvidenceFieldIsNameableOnTheWire(t *testing.T) {
+	t.Parallel()
 	written := people.DedupeEvidenceFields()
 	published := publishedEvidenceEnum(t, "field")
 
@@ -49,6 +50,7 @@ func TestEveryDedupeEvidenceFieldIsNameableOnTheWire(t *testing.T) {
 // every identity-conflict card on screen shows an empty comparison. That is
 // exactly what it did.
 func TestEveryDedupeEvidenceSignalIsNameableOnTheWire(t *testing.T) {
+	t.Parallel()
 	written := people.DedupeEvidenceSignals()
 	published := publishedEvidenceEnum(t, "signal")
 

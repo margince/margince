@@ -389,5 +389,6 @@ func checkFleetWideDispatchers(t *testing.T, dir string) {
 // TestEveryFleetWideJobOnlyDispatches is the gate. See the file comment for the
 // allowlist and what it deliberately does not prove.
 func TestEveryFleetWideJobOnlyDispatches(t *testing.T) {
+	t.Parallel()
 	checkFleetWideDispatchers(t, filepath.Join("internal", "compose"))
 }

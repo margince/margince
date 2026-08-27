@@ -72,6 +72,7 @@ var inlineMigrators = gatekit.Waive(map[string]string{
 })
 
 func TestIntegrationSuitesMigrateOncePerProcess(t *testing.T) {
+	t.Parallel()
 	var offenders, inMigrations []string
 	fset := token.NewFileSet()
 	err := filepath.WalkDir(".", func(path string, d fs.DirEntry, err error) error {

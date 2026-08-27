@@ -48,6 +48,7 @@ var retryAfterScope = gatekit.Scope{
 }
 
 func TestTheRetryAfterReadingIsSpelledOnce(t *testing.T) {
+	t.Parallel()
 	inside := retryAfterScope.Files(t)
 	if len(inside) > 1 {
 		var where []string
@@ -94,6 +95,7 @@ func readsTheRetryAfterHeader(_ string, file *ast.File) bool {
 // that has stopped matching passes by finding nothing, which is the same word
 // it prints over a clean tree.
 func TestTheRetryAfterCensusStillSeesItsSubject(t *testing.T) {
+	t.Parallel()
 	subjects := map[string]string{
 		"a read off a response's headers": "" +
 			"package p\nfunc f(resp *http.Response) string { return resp.Header.Get(\"Retry-After\") }",

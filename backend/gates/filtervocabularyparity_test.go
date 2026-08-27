@@ -166,6 +166,7 @@ func operatorConstant(name string) string {
 }
 
 func TestBothFilterSurfacesOfferTheSameOperators(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching is one for a difference already closed.
 	defer declaredDifferences.AssertAllMatched(t)
 
@@ -240,6 +241,7 @@ var filterCompilers = []string{
 }
 
 func TestNeitherFilterCompilerDropsAnUnsetRowFromNeq(t *testing.T) {
+	t.Parallel()
 	nullSafe := 0
 	var findings []string
 	for _, path := range filterCompilers {

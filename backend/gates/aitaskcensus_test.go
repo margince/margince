@@ -18,6 +18,7 @@ import (
 )
 
 func TestTaskCensusMatchesTheContract(t *testing.T) {
+	t.Parallel()
 	registry, err := compose.NewTaskCensus()
 	if err != nil {
 		t.Fatalf("building the task census: %v", err)
@@ -32,6 +33,7 @@ func TestTaskCensusMatchesTheContract(t *testing.T) {
 // about the request this build sends. Validate names the gap; this test is
 // where the composition is held to it.
 func TestTaskCensusBindsACaseToEverySite(t *testing.T) {
+	t.Parallel()
 	registry, err := compose.NewTaskCensus()
 	if err != nil {
 		t.Fatalf("building the task census: %v", err)

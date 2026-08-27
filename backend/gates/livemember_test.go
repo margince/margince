@@ -148,6 +148,7 @@ var appUserAlias = regexp.MustCompile(`(?i)\bapp_user\b(?:\s+AS)?\s+([a-z]\w*)`)
 var readsAppUser = regexp.MustCompile(`(?i)\bapp_user\b`)
 
 func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching covers a site that has moved or been
 	// fixed, and leaving it in place quietly re-exempts whatever takes its name.
 	defer cannotReachIdentity.AssertAllMatched(t)
@@ -231,6 +232,7 @@ func TestOnlyOneSpellingOfALiveMember(t *testing.T) {
 // not bound as a parameter, so a caller that passed request input would inject.
 // Every call site names a table alias it wrote itself, and this says so.
 func TestEveryLiveMemberAliasIsALiteral(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	var findings []string
 	calls := 0
@@ -706,6 +708,7 @@ func read() string {
 }
 
 func TestTheLiveMemberDetectorSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	for _, tc := range liveMemberProbes {
 		t.Run(tc.name, func(t *testing.T) {

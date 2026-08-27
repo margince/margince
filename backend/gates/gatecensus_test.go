@@ -75,6 +75,7 @@ type censusDecl struct {
 // is not "no map" — some of these maps ARE the assertion — but saying which,
 // once, at the declaration.
 func TestEveryPackageLevelReasonMapIsAWaiverOrADeclaredFixture(t *testing.T) {
+	t.Parallel()
 	files, fset := censusFiles(t, "test source", isTestSource)
 	declared, annotated, written := 0, 0, 0
 	for _, pf := range files {
@@ -134,6 +135,7 @@ func TestEveryPackageLevelReasonMapIsAWaiverOrADeclaredFixture(t *testing.T) {
 // constructed: a set a helper assembles grants exactly what an inline literal
 // grants, so reading the entries would decide the obligation on a spelling.
 func TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce(t *testing.T) {
+	t.Parallel()
 	files, fset := censusFiles(t, "Go source", func(string) bool { return true })
 
 	// A package, not a directory: a waiver set is unexported, so only the
@@ -190,6 +192,7 @@ func TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce(t *testing.T) {
 // so the toolchain's internal-package rule refuses them the import before this
 // walk would have to.
 func TestGatekitServesTestsOnly(t *testing.T) {
+	t.Parallel()
 	files, _ := censusFiles(t, "product source", func(p string) bool { return !isTestSource(p) })
 	for _, pf := range files {
 		for _, imported := range pf.file.Imports {
@@ -324,6 +327,7 @@ func reasonMapOrWaiverSet(spec *ast.ValueSpec, gatekitLocal string) (mapped, wai
 // this most — nothing in the tree declares a waiver that way today, so only a
 // probe can prove the arm still classifies it.
 func TestTheCensusClassifiesEveryWaiverAndReasonMapSpelling(t *testing.T) {
+	t.Parallel()
 	for _, probe := range []struct {
 		name        string
 		declaration string

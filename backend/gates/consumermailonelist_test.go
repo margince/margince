@@ -115,6 +115,7 @@ func looksLikeADomain(value string) bool {
 const consumerMailOwner = "internal/platform/freemail/"
 
 func TestOnlyOnePackageDeclaresConsumerMailProviders(t *testing.T) {
+	t.Parallel()
 	found := consumerMailListsIn(t, "internal")
 	if len(found) > 0 {
 		t.Fatalf("a second consumer-mail list — ask platform/freemail instead:\n%s",
@@ -126,6 +127,7 @@ func TestOnlyOnePackageDeclaresConsumerMailProviders(t *testing.T) {
 // blind detector, and this one was written over a literal that had been sitting
 // in the tree for months.
 func TestConsumerMailCensusSeesTheShapesThatShipped(t *testing.T) {
+	t.Parallel()
 	for _, tc := range []struct {
 		name string
 		code string

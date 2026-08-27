@@ -73,6 +73,7 @@ var connectionAcquirers = map[string]string{
 }
 
 func TestATxAcceptingFunctionAcquiresNoConnectionOfItsOwn(t *testing.T) {
+	t.Parallel()
 	exempt := gatekit.Waive(map[string]string{
 		// The seeding tool, which is not a seam: it opens the transaction it
 		// then passes down, so there is no caller whose transaction could be
@@ -245,6 +246,7 @@ func (b txBorrowing) receiverIsTheBorrowedTx(recv ast.Expr) bool {
 // gate. Each case below runs it over source holding one defect it exists for,
 // and over the repair that must read clean.
 func TestTheGateSeesASeamThatReachesForTheCatalogInsideTheCallersTransaction(t *testing.T) {
+	t.Parallel()
 	const seam = fixtureImports + `
 func (s *Store) GetPersonTx(ctx context.Context, tx pgx.Tx, id ids.PersonID) (Person, error) {
 	active, err := s.activeColumns(ctx, "person")
@@ -273,6 +275,7 @@ func (s *Store) GetPersonTx(ctx context.Context, tx pgx.Tx, id ids.PersonID, act
 // The shape the gate exists to catch most: not a named seam at all, but the
 // callback a transaction opener is handed.
 func TestTheGateSeesAnAcquireInsideATransactionCallback(t *testing.T) {
+	t.Parallel()
 	const assembler = fixtureImports + `
 func (s *Service) Assemble(ctx context.Context, id ids.PersonID) (Person, error) {
 	var out Person
@@ -311,6 +314,7 @@ func (s *Service) Assemble(ctx context.Context, id ids.PersonID) (Person, error)
 
 // A file that spells the import under another name is judged, not skipped.
 func TestTheGateFollowsAnAliasedPgxImport(t *testing.T) {
+	t.Parallel()
 	const aliased = `package people
 
 import pg "github.com/jackc/pgx/v5"
@@ -362,6 +366,7 @@ func assertGateReads(t *testing.T, src, body string, want ...string) {
 // out, not a transaction it borrows: whoever supplies the literal is judged
 // where they wrote it.
 func TestTheGateReadsAFuncTypedParameterAsItsSuppliersBusiness(t *testing.T) {
+	t.Parallel()
 	const callbackTaker = fixtureImports + `
 func (s *Store) ClaimAndEnqueue(ctx context.Context, enqueue func(tx pgx.Tx) error) error {
 	return s.claim(ctx, enqueue)

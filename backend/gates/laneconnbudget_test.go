@@ -174,6 +174,7 @@ func laneConnectionDemand(t *testing.T, jobs int) int {
 func fits(demand, maxConns int) bool { return demand <= maxConns }
 
 func TestTheLaneFitsInsideTheClusterItRunsAgainst(t *testing.T) {
+	t.Parallel()
 	script := readRepoFile(t, laneScriptPath)
 	jobs := ciIntegrationJobs(t, gateWorkflows(t))
 	perPool := laneTerm(t, script, "LANE_POOL_MAX_CONNS")
@@ -224,6 +225,7 @@ different package set every run (#1109).`,
 // configuration and accepts every broken one while reading green here. So both
 // directions of `fits` are exercised by name.
 func TestTheBudgetGateRefusesTheConfigurationThatShipped(t *testing.T) {
+	t.Parallel()
 	const (
 		jobsInCI      = 16  // .github/workflows/ci.yml, at the time of #1109
 		stockMaxConns = 100 // what a Postgres with no max_connections serves
@@ -250,6 +252,7 @@ func TestTheBudgetGateRefusesTheConfigurationThatShipped(t *testing.T) {
 // budgeting for a limit nothing applies. Both ends of that seam are asserted,
 // because either one alone can be present while the pin does nothing.
 func TestTheLanePinsThePoolCeilingItBudgetsFor(t *testing.T) {
+	t.Parallel()
 	script := readRepoFile(t, laneScriptPath)
 	// The lane's end: the ceiling is EXPORTED, since the workers re-exec and a
 	// variable that is set but not exported expands to empty in them.

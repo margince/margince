@@ -357,6 +357,7 @@ func collectIdents(node ast.Node, into map[string]bool) {
 }
 
 func TestEveryPromptVersionIsDerivedFromItsPrompt(t *testing.T) {
+	t.Parallel()
 	packages := promptSurfacePackages(t)
 	var findings, unreadable []string
 	declaring := 0
@@ -401,6 +402,7 @@ func TestEveryPromptVersionIsDerivedFromItsPrompt(t *testing.T) {
 }
 
 func TestEveryPromptOfADerivingPackageRidesItsDigest(t *testing.T) {
+	t.Parallel()
 	// A ratification that stops matching is one for a prompt that has moved or
 	// been folded in, and leaving it quietly re-exempts whatever takes its name.
 	defer uncachedPrompts.AssertAllMatched(t)
@@ -451,6 +453,7 @@ func TestEveryPromptOfADerivingPackageRidesItsDigest(t *testing.T) {
 // A census asserting a shape is ABSENT passes identically over a clean tree and
 // over a detector that has stopped detecting.
 func TestThePromptCensusSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	for _, name := range []string{"briefSystem", "askSystem", "dossierSystem", "growthFitSystem", "judgeSystemPrompt"} {
 		if !promptConstantName.MatchString(name) {
 			t.Errorf("the census does not recognise %q as a prompt constant", name)

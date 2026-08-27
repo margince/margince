@@ -364,6 +364,7 @@ func handWrittenGoFiles(t *testing.T) []string {
 }
 
 func TestNobodyBuildsAMinorUnitScaleByHand(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	var findings []string
 	for _, path := range handWrittenGoFiles(t) {
@@ -589,6 +590,7 @@ func decimate(n int64) int64 {
 }
 
 func TestTheHandScaledDetectorSeesWhatItClaimsTo(t *testing.T) {
+	t.Parallel()
 	fset := token.NewFileSet()
 	for _, tc := range handScaledProbes {
 		t.Run(tc.name, func(t *testing.T) {

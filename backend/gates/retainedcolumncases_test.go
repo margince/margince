@@ -19,6 +19,7 @@ package gates
 import "testing"
 
 func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
+	t.Parallel()
 	const table, column = "activity", "counterparty_email"
 
 	for _, tc := range []struct {
@@ -94,6 +95,7 @@ func TestTheRetainedColumnCheckSeesEveryDestructiveShape(t *testing.T) {
 // statement, so an unrelated statement — or a helper nothing calls — cannot
 // answer for an erasure that no longer happens.
 func TestDeclaredErasuresMustArriveInOneStatement(t *testing.T) {
+	t.Parallel()
 	declared := []string{"body = NULL", "raw = NULL"}
 
 	together := []string{`update activity set body = null, raw = null, subject = $2 where id = $1`}

@@ -201,6 +201,7 @@ func testFunctions(t *testing.T) map[string][]string {
 }
 
 func TestEveryUniquenessClaimNamesItsGateOrIsRegisteredDebt(t *testing.T) {
+	t.Parallel()
 	claims := allClaims(t)
 	registered := map[string]bool{}
 	for _, key := range readRegister(t) {
@@ -226,6 +227,7 @@ func TestEveryUniquenessClaimNamesItsGateOrIsRegisteredDebt(t *testing.T) {
 }
 
 func TestANamedGateExistsAndLivesWhereTheClaimSaysItDoes(t *testing.T) {
+	t.Parallel()
 	claims := allClaims(t)
 	tests := testFunctions(t)
 	held := 0
@@ -309,6 +311,7 @@ func namesTheFile(paths []string, want string) bool {
 // green while the collision returns. A guard the tree happens not to reach is a
 // guard with no test.
 func TestADeclarationsKeyIsUniqueWithinItsFile(t *testing.T) {
+	t.Parallel()
 	const source = `package probe
 
 type Reader interface{ Read() }
@@ -389,6 +392,7 @@ const (
 }
 
 func TestABindingDoesNotOpenTheDocCommentItSitsIn(t *testing.T) {
+	t.Parallel()
 	// Go's convention — and revive's `exported` rule — is that a doc comment
 	// opens with the identifier it documents. A binding written above that
 	// sentence turns the claim's own documentation into a footnote and fails
@@ -409,6 +413,7 @@ func TestABindingDoesNotOpenTheDocCommentItSitsIn(t *testing.T) {
 }
 
 func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
+	t.Parallel()
 	claims := allClaims(t)
 	live := map[string]bool{}
 	for _, c := range claims {
@@ -490,6 +495,7 @@ func registeredDebt() int {
 }
 
 func TestTheRegisterHoldsExactlyTheDebtItPins(t *testing.T) {
+	t.Parallel()
 	keys := readRegister(t)
 	debt := registeredDebt()
 	if len(keys) > debt {
@@ -516,6 +522,7 @@ func TestTheRegisterHoldsExactlyTheDebtItPins(t *testing.T) {
 // stops reaching claims — is paid for by editing the very row that was supposed
 // to notice.
 func TestEveryShapeAttributesTheClaimsItsCensusPins(t *testing.T) {
+	t.Parallel()
 	attributed := map[string]int{}
 	for _, c := range allClaims(t) {
 		if c.held == "" {
@@ -570,6 +577,7 @@ func TestEveryShapeAttributesTheClaimsItsCensusPins(t *testing.T) {
 }
 
 func TestTheRegisterIsSortedAndFreeOfDuplicates(t *testing.T) {
+	t.Parallel()
 	keys := readRegister(t)
 	if len(keys) == 0 {
 		t.Fatal("the register is empty — either every claim in the tree is held (in which case " +
@@ -601,6 +609,7 @@ func TestTheRegisterIsSortedAndFreeOfDuplicates(t *testing.T) {
 // matching nothing in the real tree fails, and there is nothing to fabricate:
 // the evidence is whatever the walk found.
 func TestEveryShapeEarnsItsPlaceInTheRealTree(t *testing.T) {
+	t.Parallel()
 	claims := allClaims(t)
 	perShape := map[string]string{}
 	for _, c := range claims {
@@ -653,6 +662,7 @@ func TestEveryShapeEarnsItsPlaceInTheRealTree(t *testing.T) {
 // arbitrarily and this arm stays green — a negative corpus with holes permits
 // exactly the widening it exists to refuse.
 func TestNoShapeReadsOrdinaryProseAsAClaim(t *testing.T) {
+	t.Parallel()
 	// One sentence per shape, each written to graze the shape it is paired
 	// with — the pairing is asserted below, so a case cannot quietly stop
 	// being a near-miss of anything.
@@ -701,6 +711,7 @@ func TestNoShapeReadsOrdinaryProseAsAClaim(t *testing.T) {
 // one, or every claim that happens to follow a hyphenated word goes quiet and
 // the register falls with nothing to say why.
 func TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt(t *testing.T) {
+	t.Parallel()
 	onlyNoun := claimShapes["only-noun"]
 	if onlyNoun == nil {
 		t.Fatal("the only-noun shape is gone, so the cases below prove nothing about it")
@@ -779,6 +790,7 @@ func TestAHyphenatedModifierIsNotAClaimAndDoesNotHideTheClaimBesideIt(t *testing
 // next sentence would be invisible to every arm — the two readings of one text
 // have to agree about which match is the claim.
 func TestAnIdiomDoesNotHideTheDerivedShapesRealClaim(t *testing.T) {
+	t.Parallel()
 	named := namedExhaustiveness("func Read")
 	if named == nil {
 		t.Fatal("the derived shape built nothing for a plain function, so this case proves nothing")
@@ -805,6 +817,7 @@ func TestAnIdiomDoesNotHideTheDerivedShapesRealClaim(t *testing.T) {
 // parser on the shapes an author will actually write, including the ones that
 // must NOT bind.
 func TestTheBindingIsReadOffTheCommentRatherThanGuessedAt(t *testing.T) {
+	t.Parallel()
 	binds := []struct {
 		comment, test, file string
 	}{

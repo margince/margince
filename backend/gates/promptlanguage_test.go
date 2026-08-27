@@ -63,6 +63,7 @@ var promptTrees = []string{
 }
 
 func TestEveryPromptSaysWhatLanguageToAnswerIn(t *testing.T) {
+	t.Parallel()
 	// The two rule spellings must stay recognisable to one gate. A block that
 	// stopped opening with the heading would leave every drafting surface
 	// looking unguarded, and the gate would fail loudly rather than quietly
@@ -87,6 +88,7 @@ func TestEveryPromptSaysWhatLanguageToAnswerIn(t *testing.T) {
 }
 
 func TestEveryPromptLanguageWaiverGivesAReason(t *testing.T) {
+	t.Parallel()
 	for _, site := range everyModelRequest(t) {
 		if site.waived && site.waiverReason == "" {
 			t.Errorf("%s waives the language rule without saying why. A waiver nobody can check is one nobody will revisit: "+
@@ -347,6 +349,7 @@ func readSource(t *testing.T, path string) string {
 // second block — correspondence follows the correspondence's language, not the
 // installation's, and it says so where it is declared.
 func TestOnlyPromptlangSpellsTheLanguageRule(t *testing.T) {
+	t.Parallel()
 	const (
 		owner     = "internal/compose/promptlang/promptlang.go"
 		sanctionA = "internal/compose/draftrules"
@@ -402,6 +405,7 @@ func TestOnlyPromptlangSpellsTheLanguageRule(t *testing.T) {
 // reaches a model exactly like a literal does, and would carry no rule while
 // the gate stayed green.
 func TestAModelRequestIsBuiltAsALiteral(t *testing.T) {
+	t.Parallel()
 	for _, tree := range promptTrees {
 		err := filepath.WalkDir(tree, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
