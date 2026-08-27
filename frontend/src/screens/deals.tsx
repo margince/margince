@@ -88,6 +88,7 @@ import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
 import { useObjectCustomFields } from "./customfields.form";
+import { DealCommitteeMap } from "./deal360/dealcommittee";
 import { DealFacts } from "./deal360/dealfacts";
 import { DealPulse } from "./deal360/dealpulse";
 import { DealSeats } from "./deal360/dealseats";
@@ -3633,6 +3634,20 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                     }
                   }}
                 />
+              )}
+              {/* The seats are in the rail as CONTEXT — who these people are.
+                  The map is in the column because it is a working surface: it
+                  draws how the deal is threaded and where the cover is
+                  missing, which is what a reader acts on. */}
+              {tab === "overview" && (
+                <div style={{ marginTop: "var(--space-4)" }}>
+                  <DealCommitteeMap
+                    coverage={coverageRead.coverage}
+                    withheld={coverageRead.withheld}
+                    pending={coverageRead.pending}
+                    overlay={overlay}
+                  />
+                </div>
               )}
               {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
               {tab === "files" && overlay && <OverlayUnavailable />}

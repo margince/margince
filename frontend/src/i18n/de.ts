@@ -918,6 +918,7 @@ export const de = {
   "tab.deals": "Deals",
   "tab.tasks": "Aufgaben",
   "tab.timeline": "Verlauf",
+  "tab.network": "Netzwerk",
   "tab.documents": "Dokumente",
   "tab.profile": "Profil",
   "tab.meetings": "Termine",
@@ -1989,6 +1990,16 @@ export const de = {
   "deal.seats.title": "Wer an diesem Deal beteiligt ist",
   "deal.seats.empty": "Für diesen Deal ist niemand erfasst",
   "deal.seats.ours": "{count} von uns tragen ihn",
+  "deal.committee.title": "Das Buying Center",
+  "deal.committee.empty": "Für diesen Deal ist niemand hinterlegt",
+  "deal.committee.engaged": "Im Austausch",
+  "deal.committee.quiet": "Keine Antwort",
+  "deal.committee.unnamedSeat": "Beteiligte Person, für Sie nicht sichtbar",
+  "deal.committee.legendEngaged": "Im Austausch mit uns",
+  "deal.committee.legendQuiet": "Am Deal beteiligt, aber still",
+  "deal.committee.legendGap": "Fehlende Abdeckung",
+  "deal.committee.threads":
+    "{engaged} von {total} Beteiligten sprechen mit uns.",
   "deal.strip.money": "Das Geld",
   "deal.strip.money.offer": "Angebot {number} · {status}",
   "deal.strip.money.noOffer": "Noch kein Angebot geschrieben",
@@ -6036,16 +6047,10 @@ export const de = {
   "person.graph.noRoute":
     "Bisher steht hier niemand im Austausch mit ihnen oder mit jemandem in ihrem Unternehmen.",
   "person.graph.direct": "Wer sie kennt",
-  "person.graph.directSub":
-    "Kolleginnen und Kollegen, die selbst mit diesem Kontakt korrespondiert haben.",
   "person.graph.noDirect": "Hier hat niemand mit ihnen korrespondiert.",
   "person.graph.account": "Im selben Unternehmen",
-  "person.graph.accountSub":
-    "Ihre Kolleginnen und Kollegen \u2014 und wer hier zu jedem den w\u00e4rmsten Draht hat.",
   "person.graph.noAccount":
     "Keine weiteren Kontakte in diesem Unternehmen erfasst.",
-  "person.graph.omitted":
-    "Ein Teil davon ist ausgeblendet, weil die Berechtigung daf\u00fcr fehlt.",
   "person.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "person.graph.withColleague": "mit {name}",
   "person.graph.withContact": "mit diesem Kontakt",
@@ -6055,6 +6060,14 @@ export const de = {
     "Nur Z\u00e4hlwerte \u2014 die Nachrichten selbst bleiben in der Chronik.",
   "person.graph.untitledMessage": "Nachricht ohne Betreff",
   "person.graph.dropped": "{count} weitere werden nicht angezeigt.",
+  "person.network.ringTitle": "Wer diese Person erreicht",
+  "person.network.ringSub":
+    "Unsere Seite und dieser Account, nach der Wärme der Beziehung. Wählen Sie jemanden aus, um zu sehen, worauf sie beruht.",
+  "person.network.momentsTitle": "Was sich zuletzt bewegt hat",
+  "person.network.momentsSub":
+    "Bewegungen in dieser Beziehung, aus den Nachrichten selbst.",
+  "person.network.noMoments":
+    "In dieser Beziehung hat sich zuletzt nichts bewegt.",
   "person.change.repliedAfterGap": "Antwort nach {days} stillen Tagen.",
   "person.change.wentQuiet": "Seit {days} Tagen ist nichts passiert.",
   "person.change.warmed": "Die Beziehung ist von {from} auf {to} gestiegen.",

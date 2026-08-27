@@ -904,6 +904,7 @@ export const vi = {
   "tab.deals": "Deals",
   "tab.tasks": "Công việc",
   "tab.timeline": "Lịch sử",
+  "tab.network": "Mạng lưới",
   "tab.documents": "Tài liệu",
   "tab.profile": "Hồ sơ",
   "tab.meetings": "Cuộc họp",
@@ -1982,6 +1983,16 @@ export const vi = {
   "deal.seats.title": "Ai tham gia giao dịch này",
   "deal.seats.empty": "Chưa ghi nhận ai trong giao dịch này",
   "deal.seats.ours": "{count} người bên mình phụ trách",
+  "deal.committee.title": "Nhóm ra quyết định mua",
+  "deal.committee.empty": "Chưa có ai được ghi nhận cho giao dịch này",
+  "deal.committee.engaged": "Đang trao đổi",
+  "deal.committee.quiet": "Chưa hồi đáp",
+  "deal.committee.unnamedSeat": "Một người tham gia bạn không xem được",
+  "deal.committee.legendEngaged": "Đang trao đổi với chúng ta",
+  "deal.committee.legendQuiet": "Có tham gia nhưng không trao đổi",
+  "deal.committee.legendGap": "Thiếu người phụ trách",
+  "deal.committee.threads":
+    "{engaged} trong {total} người tham gia đang trao đổi với chúng ta.",
   "deal.strip.money": "Số tiền",
   "deal.strip.money.offer": "Báo giá {number} · {status}",
   "deal.strip.money.noOffer": "Chưa có báo giá nào",
@@ -5984,15 +5995,10 @@ export const vi = {
   "person.graph.noRoute":
     "Chưa ai bên mình trao đổi với họ hay với ai ở công ty họ.",
   "person.graph.direct": "Ai quen họ",
-  "person.graph.directSub":
-    "Những đồng nghiệp đã tự mình trao đổi với contact này.",
   "person.graph.noDirect": "Chưa ai bên mình trao đổi với họ.",
   "person.graph.account": "Ở cùng công ty",
-  "person.graph.accountSub":
-    "Đồng nghiệp của họ, và ai bên mình thân nhất với từng người.",
   "person.graph.noAccount":
     "Không có contact nào khác được ghi nhận ở công ty họ.",
-  "person.graph.omitted": "Một phần bị ẩn vì bạn không có quyền xem.",
   "person.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "person.graph.withColleague": "với {name}",
   "person.graph.withContact": "với contact này",
@@ -6002,6 +6008,13 @@ export const vi = {
     "Chỉ là số đếm — nội dung tin nhắn vẫn nằm trên timeline.",
   "person.graph.untitledMessage": "Tin nhắn không có tiêu đề",
   "person.graph.dropped": "Còn {count} mục không hiển thị.",
+  "person.network.ringTitle": "Ai tiếp cận được người này",
+  "person.network.ringSub":
+    "Phía chúng ta và khách hàng này, theo độ ấm của quan hệ. Chọn một người để xem quan hệ đó dựa trên điều gì.",
+  "person.network.momentsTitle": "Điều gì đã thay đổi gần đây",
+  "person.network.momentsSub":
+    "Những chuyển động trong quan hệ này, lấy từ chính các tin nhắn.",
+  "person.network.noMoments": "Gần đây quan hệ này không có chuyển động nào.",
   "person.change.repliedAfterGap": "Họ hồi đáp sau {days} ngày im ắng.",
   "person.change.wentQuiet": "Không có gì xảy ra suốt {days} ngày.",
   "person.change.warmed": "Quan hệ đã chuyển từ {from} lên {to}.",

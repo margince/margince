@@ -956,6 +956,7 @@ export const en = {
   "tab.deals": "Deals",
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
+  "tab.network": "Network",
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",
@@ -2018,6 +2019,16 @@ export const en = {
   "deal.seats.title": "Who is on this deal",
   "deal.seats.empty": "No stakeholder is recorded on this deal",
   "deal.seats.ours": "{count} of ours carry it",
+  "deal.committee.title": "The buying committee",
+  "deal.committee.empty": "No stakeholder is recorded on this deal",
+  "deal.committee.engaged": "Talking",
+  "deal.committee.quiet": "No reply",
+  "deal.committee.unnamedSeat": "A stakeholder you cannot see",
+  "deal.committee.legendEngaged": "Talking with us",
+  "deal.committee.legendQuiet": "On the deal, not talking",
+  "deal.committee.legendGap": "Missing cover",
+  "deal.committee.threads":
+    "{engaged} of {total} on the deal are talking to us.",
   "deal.strip.money": "The money",
   "deal.strip.money.offer": "Offer {number} · {status}",
   "deal.strip.money.noOffer": "No offer written yet",
@@ -6076,15 +6087,9 @@ export const en = {
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
   "person.graph.direct": "Who knows them",
-  "person.graph.directSub":
-    "Colleagues who have corresponded with this contact themselves.",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
   "person.graph.account": "At the same company",
-  "person.graph.accountSub":
-    "Their colleagues, and who here is warmest with each.",
   "person.graph.noAccount": "No other contacts on record at their company.",
-  "person.graph.omitted":
-    "Part of this is hidden because you do not have the grant for it.",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
   "person.graph.withContact": "with this contact",
@@ -6094,6 +6099,13 @@ export const en = {
     "Counts only — the messages themselves stay on the timeline.",
   "person.graph.untitledMessage": "Message with no subject",
   "person.graph.dropped": "{count} more not shown.",
+  "person.network.ringTitle": "Who reaches them",
+  "person.network.ringSub":
+    "Our side and this account, by how warm the relationship is. Pick anyone to see what it is made of.",
+  "person.network.momentsTitle": "What changed lately",
+  "person.network.momentsSub":
+    "Movements in this relationship, from the messages themselves.",
+  "person.network.noMoments": "Nothing has moved in this relationship lately.",
   "person.change.repliedAfterGap": "They replied after {days} quiet days.",
   "person.change.wentQuiet": "Nothing has happened for {days} days.",
   "person.change.warmed": "The relationship moved from {from} to {to}.",
