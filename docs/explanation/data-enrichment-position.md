@@ -124,7 +124,7 @@ For anyone holding enriched data, two product consequences follow.
 
 First, Article 15(1)(g) gives the person a right to "any available information" about the source. Kaspr shows that a regulator will reject "public sources" when the company knows more. Margince therefore stores per-field provenance. That goes beyond the literal wording and makes the eventual data-subject access answer easy.
 
-Second, erasure has to stick. The law does not literally mandate a suppression list,[^20] but the next synchronization will otherwise resurrect the deleted contact. Then you are back in the same lawful-basis analysis with worse facts. The ICO recommends a suppression list. We ship one. The design is documented in [privacy-and-consent.md](privacy-and-consent.md).
+Second, erasure has to stick. The law does not literally mandate a suppression list,[^20] but the next synchronization will otherwise resurrect the deleted contact. Then you are back in the same lawful-basis analysis with worse facts. The ICO recommends a suppression list. We ship one.[^38]
 
 I understood the product line only after reading all three enrichment decisions: scale changes the facts.
 
@@ -202,7 +202,7 @@ Where does Margince itself sit?
 
 Squarely inside co-determination. I will not pretend otherwise.
 
-Margince captures connected mailboxes, including message bodies, because correspondence CRM is the product. The architecture is documented in [capture-connectors.md](capture-connectors.md) and [ingress-gate-and-auto-capture.md](ingress-gate-and-auto-capture.md). The [relationship graph](relationship-graph.md) uses that correspondence to calculate each colleague's warmth toward each *contact*. "Who here can open this door?" is a legitimate account question for a sales team.
+Margince captures connected mailboxes, including message bodies, because correspondence CRM is the product.[^39] The relationship graph uses that correspondence to calculate each colleague's warmth toward each *contact*.[^40] "Who here can open this door?" is a legitimate account question for a sales team.
 
 Both features are designed to be governed:
 
@@ -229,6 +229,8 @@ Each item below is rated on four axes: GDPR posture, Vietnam compatibility, plat
 
 **A1. Company enrichment from official sources.** Company data is the easy case. Data about the legal entity itself sits outside the GDPR under Recital 14: company name, legal form, VAT number and registered address.
 
+We will build these adapters on demand once the need arises. No worries, we will be quick.
+
 | Source | Data | Access | Limit |
 |---|---|---|---|
 | VIES[^35] | VAT validity, registered name and address in many member states | Free API; we store the consultation number as proof | Availability varies by state |
@@ -238,13 +240,10 @@ Each item below is rated on four axes: GDPR posture, Vietnam compatibility, plat
 | German Handelsregister | Register data, free since the 2022 DiRUG reform | Web, per-lookup | Portal caps queries and bans bulk |
 | Licensed aggregators (e.g. North Data) | Structured DACH register and financial data | Paid API | The clean bulk route |
 
-It stops being easy the moment the data names a person. A director, a sole trader, a named representative: that is personal data again. Yes, those names are published because the law requires it, and that gives us the best legal footing there is. The GDPR duties still apply anyway.
 
-The identifier spine is EUID, LEI, VAT ID and the Vietnamese MST.
+**A2. The counterparty's own website, read deeper.** Built already; the enhancements are in work.
 
-**A2. The counterparty's own website, read deeper.** Built already; the enhancements are in work (ticket #2855).
-
-Margince already reads company websites, as described in [company-context.md](company-context.md). The deeper read handles people named on those sites in exactly the shape this paper argues for. A stranger found on a team page is staged as a lead and remains staged until a human accepts. The system never auto-creates a new person.
+Margince already reads company websites.[^41] The deeper read handles people named on those sites in exactly the shape this paper argues for. A stranger found on a team page is staged as a lead and remains staged until a human accepts. The system never auto-creates a new person.
 
 When the published person unmistakably matches someone already recorded at that company, through an exact email match or a single high-confidence name match, Margince fills empty fields such as role, title and profile link. Every value is evidence-backed with the source stored on the row. The system never overwrites information entered by a human.
 
@@ -258,23 +257,23 @@ MX and DNS records, TLS certificate-transparency logs, and technology-stack fing
 
 The A1 caveat still applies. A personal name inside a certificate or domain record is personal data, so Margince keeps the stored signal at company level.
 
-**A4. First-party person capture.** Half built; the other half is in work (ticket #2856).
+**A4. First-party person capture.** Half built; the other half is in work.[^44]
 
 The contact sent you the details. Margince's capture works from that fact. Connected mailboxes are processed automatically. A nightly pass extracts only stated fields from email signatures: name, title and phone number, with nothing inferred. Workspace exclusion lists keep entire addresses and domains outside capture.
 
 The second half, in work now: vCard import and a per-mailbox switch for the signature pass, so an organisation can turn the granularity all the way down.
 
-First-party collection is the only person-data channel that scales cleanly. See [capture-connectors.md](capture-connectors.md) and [ingress-gate-and-auto-capture.md](ingress-gate-and-auto-capture.md).
+First-party collection is the only person-data channel that scales cleanly.[^39]
 
 **A5. LinkedIn as a link, plus the member's own export.** We store the LinkedIn profile URL as a clickable link. Margince never fetches the page server-side.
 
-The user reads the profile in their own browser and manually enters what they learned; a quick-capture form built for exactly that moment is in work (ticket #2857). LinkedIn also allows every member to download their own data. The flow in [import-your-linkedin-network.md](../how-to/import-your-linkedin-network.md) imports the member's `Connections.csv` in a deliberately limited form.
+The user reads the profile in their own browser and manually enters what they learned; a quick-capture form built for exactly that moment is in work. LinkedIn also allows every member to download their own data, and Margince imports the member's `Connections.csv` in a deliberately limited form.[^42]
 
 The imported connections become private graph substrate, "ghosts", used only for reach and warmth. They are visible only to the importer. They never become contact records and never create people.
 
 I do not claim that LinkedIn's terms permit anything beyond this private graph use. Margince therefore stops there. It does not create contacts and provides no parser for pasted profile text. Once software copies the page on the user's behalf, the scraping clause is back in play. We draw the line on the safe side.
 
-**A6. The "confirm your details" flow.** In work now (ticket #2858), bundled with the marketing-consent ask.
+**A6. The "confirm your details" flow.** In work now, bundled with the marketing-consent ask.[^45]
 
 The design: Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91. And the same email asks the contact to grant or decline marketing consent, with the answer landing on the consent proof log and the send itself logged in the record's history.
 
@@ -284,7 +283,7 @@ Once it ships, this flow actively reduces the risk of everything else on this pa
 
 **B1. Widening person lookup beyond the counterparty's own site.** B1 stays gated.
 
-The shipped A2 shape provides the correct chassis: staged leads, fill-only-empty behaviour, evidence on every field and per-field provenance through the write shape documented in [write-backbone.md](write-backbone.md). The lookup covers one company at a time. It uses sources from which the person published details for business contact. A human remains between the suggestion and the record.
+The shipped A2 shape provides the correct chassis: staged leads, fill-only-empty behaviour, evidence on every field and per-field provenance through the write shape.[^43] The lookup covers one company at a time. It uses sources from which the person published details for business contact. A human remains between the suggestion and the record.
 
 New sources beyond the company's own website could include speaker biographies, conference pages and Impressum contact lines belonging to third parties. Each one enters only under the same staging discipline, and every expansion needs its own written Article 6 balancing assessment. A generic statement that "single lookups are fine" is not enough.
 
@@ -410,3 +409,11 @@ Counsel still needs to close four Tier B questions: the final adoption status of
 [^35]: VIES VAT validation: https://ec.europa.eu/taxation_customs/vies/
 [^36]: GLEIF open data: https://www.gleif.org/en/about/open-data
 [^37]: Cognism compliance statements: https://www.cognism.com/compliance
+[^38]: The suppression-list and erasure design: docs/explanation/privacy-and-consent.md in this repository.
+[^39]: The capture architecture: docs/explanation/capture-connectors.md and docs/explanation/ingress-gate-and-auto-capture.md in this repository.
+[^40]: docs/explanation/relationship-graph.md in this repository.
+[^41]: docs/explanation/company-context.md in this repository. The A2 enhancements are ticket 2855 in the repository issue tracker.
+[^42]: docs/how-to/import-your-linkedin-network.md in this repository. The A5 quick-capture form is ticket 2857.
+[^43]: The write shape: docs/explanation/write-backbone.md in this repository.
+[^44]: Ticket 2856 in the repository issue tracker.
+[^45]: Ticket 2858 in the repository issue tracker.
