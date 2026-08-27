@@ -8,7 +8,6 @@ package compose
 // transport — the capture store owns the RBAC gate and the audited write.
 
 import (
-	"encoding/json"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -56,8 +55,7 @@ func (h ownDomainHandlers) CreateWorkspaceEmailDomain(w http.ResponseWriter, r *
 		return
 	}
 	var req crmcontracts.CreateWorkspaceEmailDomainRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	// Vetted here so a bad domain answers 422 naming what is wrong with it,

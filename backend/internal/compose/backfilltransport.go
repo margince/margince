@@ -182,7 +182,16 @@ func (h backfillHandlers) PreviewConnectorBackfill(w http.ResponseWriter, r *htt
 		return
 	}
 	var req crmcontracts.BackfillPreviewRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// The refusal is the DOMAIN's, not the decoder's: this endpoint takes one
+	// field and a body it cannot read is a caller who has not picked a window,
+	// which is what they need to be told. So the bound and the decode come from
+	// httperr and the answer stays here — a size refusal excepted, because
+	// "your request was too big" is not "pick a window".
+	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil {
+		if httperr.BodyTooLarge(err) {
+			httperr.Write(w, r, err)
+			return
+		}
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity, Code: "window_required",
 			Detail: "Pick a window: none, " + windowOffer + ".",
@@ -249,7 +258,16 @@ func (h backfillHandlers) StartConnectorBackfill(w http.ResponseWriter, r *http.
 		return
 	}
 	var req crmcontracts.StartBackfillRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	// The refusal is the DOMAIN's, not the decoder's: this endpoint takes one
+	// field and a body it cannot read is a caller who has not picked a window,
+	// which is what they need to be told. So the bound and the decode come from
+	// httperr and the answer stays here — a size refusal excepted, because
+	// "your request was too big" is not "pick a window".
+	if err := httperr.DecodeOrRefusal(w, r, &req); err != nil {
+		if httperr.BodyTooLarge(err) {
+			httperr.Write(w, r, err)
+			return
+		}
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusUnprocessableEntity, Code: "window_required",
 			Detail: "Pick a window: " + windowOffer + ".",

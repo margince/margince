@@ -11,7 +11,6 @@ package compose
 // RBAC gates, the normalization and the audit-only write.
 
 import (
-	"encoding/json"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -83,8 +82,7 @@ func (h consumerMailDomainHandlers) AddConsumerMailDomain(w http.ResponseWriter,
 		return
 	}
 	var req crmcontracts.AddConsumerMailDomainRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	// Vetted here so a bad domain answers 422 naming what is wrong with it,

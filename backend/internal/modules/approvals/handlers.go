@@ -124,8 +124,7 @@ func (h Handlers) GetApproval(w http.ResponseWriter, r *http.Request, id crmcont
 func (h Handlers) ApproveApproval(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.ApproveApprovalParams) {
 	var req crmcontracts.ApproveRequest
 	if r.Body != nil && r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			httperr.Write(w, r, httperr.Validation("body", "malformed_json", err.Error()))
+		if !httperr.Decode(w, r, &req) {
 			return
 		}
 	}
@@ -164,8 +163,7 @@ func (h Handlers) RejectApproval(w http.ResponseWriter, r *http.Request, id crmc
 		Reason *string `json:"reason"`
 	}
 	if r.Body != nil && r.ContentLength != 0 {
-		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			httperr.Write(w, r, httperr.Validation("body", "malformed_json", err.Error()))
+		if !httperr.Decode(w, r, &req) {
 			return
 		}
 	}

@@ -9,7 +9,6 @@ package compose
 // the audited write.
 
 import (
-	"encoding/json"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -39,8 +38,7 @@ func (h captureExclusionHandlers) ListCaptureExclusions(w http.ResponseWriter, r
 
 func (h captureExclusionHandlers) CreateCaptureExclusion(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.CreateCaptureExclusionRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	rule, err := h.store.Add(r.Context(), string(req.Scope), string(req.Kind), req.Value)

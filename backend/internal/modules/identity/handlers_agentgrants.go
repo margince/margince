@@ -18,7 +18,6 @@ package identity
 // the feature on at all.
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -127,8 +126,7 @@ func (h Handlers) SetMyAgentGrant(w http.ResponseWriter, r *http.Request, spec c
 		return
 	}
 	var req crmcontracts.SetMyAgentGrantRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "malformed_json", err.Error()))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 

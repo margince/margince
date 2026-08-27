@@ -9,7 +9,6 @@ package compose
 // per-setting validation, the base-currency freeze and the audit-only write.
 
 import (
-	"encoding/json"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -56,8 +55,7 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 		return
 	}
 	var req crmcontracts.UpdateInstallationSettingsRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		httperr.Write(w, r, httperr.Validation("body", "invalid_json", "request body is not valid JSON"))
+	if !httperr.Decode(w, r, &req) {
 		return
 	}
 	patch := identity.InstallationPatch{
