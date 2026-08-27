@@ -649,7 +649,14 @@
 }
 
 /* The grip on a column's trailing edge. Its hit area is wider than the line it
- * draws, so it can be grabbed without hunting for a 1px target. */
+ * lights, so it can be grabbed without hunting for a 1px target.
+ *
+ * It draws NOTHING at rest. The divider between two columns is the cell's own
+ * `border-right` above, and a second hairline inset 4px beside it read as a
+ * rendering fault: two parallel lines, different colours, different heights,
+ * on every column of every table. What the grip owns is the LIT state — the
+ * same edge, thickened and in the accent, while a reader is over it or moving
+ * it. */
 .lt-grip {
   position: absolute;
   top: 0;
@@ -662,21 +669,30 @@
   cursor: col-resize;
   touch-action: none;
 }
+/* Right on the divider, not beside it: the line the reader grabs is the line
+ * they were already looking at. */
 .lt-grip::after {
   content: "";
   position: absolute;
-  top: 25%;
-  right: 4px;
-  width: 1px;
-  height: 50%;
-  background: var(--borderStrong);
+  top: 0;
+  right: 0;
+  width: 2px;
+  height: 100%;
+  background: var(--accent);
+  opacity: 0;
 }
 .lt-grip:hover::after,
-.lt-grip:focus-visible::after {
-  top: 0;
-  height: 100%;
-  width: 2px;
-  background: var(--accent);
+.lt-grip:focus-visible::after,
+.lt-grip.is-dragging::after {
+  opacity: 1;
+}
+
+/* For the length of a drag the whole grid wears the gesture: nothing selects,
+ * and the resize cursor stays under a pointer that has travelled off the 10px
+ * grip. Without it a drag across the table highlighted every name it passed. */
+.lt-table.is-resizing {
+  user-select: none;
+  cursor: col-resize;
 }
 
 .lt-sort {
