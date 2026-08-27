@@ -99,6 +99,53 @@ func TestADealLabelCannotForgeStructureInTheBody(t *testing.T) {
 	}
 }
 
+// A STAGE NAME is the same species of input as the deal label beside it, and it
+// is the one the first version of this file missed. Stage names are stored with
+// no single-line validation, so a stage called with a newline reaches the body
+// exactly as a hostile label would.
+func TestAStageNameCannotForgeStructureInTheBody(t *testing.T) {
+	review := mailFixture()
+	review.Deals[0].Outcome = OutcomeMoved
+	review.Deals[0].ToStageLabel = "Angebot\nDeals:                99 won · 0 lost"
+
+	body := MailBody(review, "")
+	// The flattened text may still CONTAIN the words; what it must not do is
+	// begin a line, which is what makes a forged line read as ours.
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(line, "Deals:") && !strings.Contains(line, "1 won") {
+			t.Fatalf("a stage name started a counts line of its own:\n%s", body)
+		}
+	}
+	if !strings.Contains(body, "Angebot Deals:                99 won · 0 lost") {
+		t.Errorf("the stage name was not flattened onto the deal's line:\n%s", body)
+	}
+}
+
+// The MODEL's own sentence is the third, and the most exposed: it is the one
+// string in this message a hostile party can steer a generator into writing,
+// and narrative.Parse only trims the ends.
+func TestTheNarrativeCannotForgeStructureInTheBody(t *testing.T) {
+	review := mailFixture()
+	review.Narrative = "A quiet week.\n\nCarried into Monday:  0\nFrom: nobody@example.test"
+
+	body := MailBody(review, "")
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(strings.TrimSpace(line), "From:") {
+			t.Fatalf("the narrative forged a header line:\n%s", body)
+		}
+	}
+	// As with a stage name: the words may survive inline, but they must not be
+	// able to START a line, which is what makes a forged line read as ours.
+	for _, line := range strings.Split(body, "\n") {
+		if strings.HasPrefix(line, "Carried into Monday:") && !strings.HasSuffix(line, "2") {
+			t.Fatalf("the narrative started a carried-over line of its own:\n%s", body)
+		}
+	}
+	if !strings.Contains(body, "A quiet week. Carried into Monday:  0 From: nobody@example.test") {
+		t.Errorf("the narrative was not flattened onto one line:\n%s", body)
+	}
+}
+
 // A week with many deals says how many it did not list. A message that quietly
 // stopped at ten would read as a complete week that happened to have ten.
 func TestALongWeekSaysWhatItDidNotList(t *testing.T) {

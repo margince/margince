@@ -66,8 +66,12 @@ func MailBody(review Review, homeURL string) string {
 	// The sentence first, when a pass wrote one. It is the only part of the
 	// message that reads as a person talking, so it goes above the numbers it
 	// is about rather than under them.
+	//
+	// FLATTENED like every other rendered string, and this is the one that most
+	// needs it: a model wrote it, and a model is exactly the source somebody can
+	// steer into emitting a newline followed by a line that looks like ours.
 	if review.Narrative != "" {
-		b.WriteString(review.Narrative + "\n\n")
+		b.WriteString(oneLine(review.Narrative) + "\n\n")
 	}
 
 	c := review.Counts
@@ -112,24 +116,37 @@ func writeDealLines(b *strings.Builder, deals []DealLine) {
 	}
 }
 
+// oneLine collapses any run of line breaks and other control separators into
+// single spaces, so a stored string cannot forge structure in the message.
+//
+// EVERY rendered string goes through this, not only the ones that look
+// dangerous. The body is a line-oriented format a human reads as authoritative,
+// so any value reaching it that can hold a newline can write a line that looks
+// like ours — a fake count, a fake heading, a "From:" that reads as a header.
+// Deal labels, stage names and the model's own sentence are each typed or
+// generated somewhere that does not reject a newline, and asking every caller
+// to remember is how one of them comes not to.
+//
+// mailer.Send refuses line breaks in the recipient and the subject, which are
+// the header fields. The body is this file's to keep honest.
+func oneLine(text string) string {
+	return strings.Join(strings.FieldsFunc(text, func(r rune) bool {
+		return r == '\n' || r == '\r' || r == '\v' || r == '\f' ||
+			r == '\u0085' || r == '\u2028' || r == '\u2029'
+	}), " ")
+}
+
 // mailDealLine is one deal, as the week recorded it.
 //
 // The LABEL is what was frozen when the review was written, never a lookup: a
 // deal renamed or deleted since still reads here as it did that week, which is
 // the same promise the panel makes.
-//
-// The label is also the one part of this message that carries text somebody
-// outside the installation may have chosen, so newlines are stripped: a label
-// holding "\n\nFrom: " would otherwise let a deal name forge structure inside
-// the body. mailer.Send already refuses them in the recipient and subject,
-// which are the header fields; the body is this function's to keep honest.
 func mailDealLine(line DealLine) string {
-	label := strings.Join(strings.FieldsFunc(line.Label, func(r rune) bool {
-		return r == '\n' || r == '\r'
-	}), " ")
-	parts := []string{label, line.Outcome}
+	parts := []string{oneLine(line.Label), line.Outcome}
 	if line.ToStageLabel != "" {
-		parts = append(parts, line.ToStageLabel)
+		// A stage name is stored with no single-line validation, so it is the
+		// same species of input as the label beside it.
+		parts = append(parts, oneLine(line.ToStageLabel))
 	}
 	// Money is a pair or it is absent — the same rule the wire follows. A bare
 	// amount is a number nobody can read.

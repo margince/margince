@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -36,13 +37,20 @@ type countingMailer struct {
 	sends    []string
 	subjects []string
 	fail     error
+	// onSend runs inside the send, so a test can observe the world at the
+	// moment the relay is first dialled.
+	onSend func()
 }
 
 func (m *countingMailer) Send(_ context.Context, to, subject, _ string) error {
 	m.mu.Lock()
-	defer m.mu.Unlock()
 	m.sends = append(m.sends, to)
 	m.subjects = append(m.subjects, subject)
+	hook := m.onSend
+	m.mu.Unlock()
+	if hook != nil {
+		hook()
+	}
 	return m.fail
 }
 
@@ -51,6 +59,10 @@ func (m *countingMailer) count() int {
 	defer m.mu.Unlock()
 	return len(m.sends)
 }
+
+// weeklyMailClock is a Monday past the review hour, so the reps in the fixture
+// are due the week that just closed.
+var weeklyMailClock = time.Date(2026, 7, 6, 6, 30, 0, 0, time.UTC)
 
 // mailEnv is a workspace worker wired exactly as jobs_weekly.go wires it,
 // with the relay swapped for one that counts.
@@ -71,6 +83,8 @@ func setupWeeklyMail(t *testing.T) *mailEnv {
 		worker: &weeklyGenerateWorkspaceWorker{
 			engine: weekly.NewEngine(e.Pool),
 			pool:   e.Pool,
+			users:  identity.NewService(e.Pool),
+			now:    func() time.Time { return weeklyMailClock },
 			log:    slog.New(slog.NewTextHandler(io.Discard, nil)),
 			mail:   WeeklyMailConfig{Mailer: relay, PublicBaseURL: "https://crm.example.test"},
 		},
