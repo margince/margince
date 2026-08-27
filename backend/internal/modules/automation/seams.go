@@ -137,15 +137,16 @@ var ErrNoApprovalStaging = errors.New("automation: no approval staging configure
 // takes before writing (applyCreate): the engine fires a handler once per
 // enabled instance, the per-instance run claim keys on the automation id,
 // and so two instances of one starter with identical params both apply the
-// same create against one event. This claim keys on (handler, trigger
-// event, effect fingerprint) instead — the identical effect applies once,
+// same create against one occurrence. This claim keys on (handler,
+// occurrence key, effect fingerprint) instead — the identical effect applies once,
 // while genuinely different params (a different due date) fingerprint
 // apart and each still apply. Claim answers false when another firing
 // already holds the row. Backed by the module's own automation_effect_claim
 // table (NewEffectClaims); a seam so ApplyActions stays drivable without a
-// database in unit tests.
+// database in unit tests (effectclaims_test.go drives both fold and win
+// through a scripted implementation).
 type EffectClaims interface {
-	Claim(ctx context.Context, handler string, triggerEvent ids.UUID, fingerprint string) (bool, error)
+	Claim(ctx context.Context, handler, occurrenceKey, fingerprint string) (bool, error)
 }
 
 // ErrNoEffectClaims refuses an engine-driven create in a composition that

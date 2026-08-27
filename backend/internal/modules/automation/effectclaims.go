@@ -20,7 +20,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -37,16 +36,16 @@ func NewEffectClaims(db *database.DB) *EffectClaimStore {
 
 var _ EffectClaims = (*EffectClaimStore)(nil)
 
-// Claim inserts the (handler, trigger event, fingerprint) row; false means
+// Claim inserts the (handler, occurrence, fingerprint) row; false means
 // another firing already holds it and this create must fold.
-func (s *EffectClaimStore) Claim(ctx context.Context, handler string, triggerEvent ids.UUID, fingerprint string) (bool, error) {
+func (s *EffectClaimStore) Claim(ctx context.Context, handler, occurrenceKey, fingerprint string) (bool, error) {
 	claimed := false
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
-			INSERT INTO automation_effect_claim (handler, event_id, effect_fingerprint)
+			INSERT INTO automation_effect_claim (handler, occurrence_key, effect_fingerprint)
 			VALUES ($1, $2, $3)
-			ON CONFLICT (handler, event_id, effect_fingerprint) DO NOTHING`,
-			handler, triggerEvent, fingerprint)
+			ON CONFLICT (handler, occurrence_key, effect_fingerprint) DO NOTHING`,
+			handler, occurrenceKey, fingerprint)
 		if err != nil {
 			return err
 		}
@@ -60,8 +59,8 @@ func (s *EffectClaimStore) Claim(ctx context.Context, handler string, triggerEve
 // (eff.Handler set — engine_run.go stamps it before Apply) takes the
 // effect-level claim so the IDENTICAL create from a sibling instance's
 // firing folds instead of writing a second copy. A lost claim skips the
-// write and returns the action annotated deduplicated:true — the run row
-// then says the create was folded rather than silently claiming a write.
+// write and returns the action with Deduplicated set — the run row then
+// says the create was folded rather than silently claiming a write.
 // An effect applied outside the engine (Handler empty) has no sibling
 // firings to collide with and applies unclaimed, as it always did.
 func applyCreate(ctx context.Context, ex Executors, eff workflow.Effect, action workflow.Action) (workflow.Action, *workflow.StagedApprovalError, error) {
@@ -73,13 +72,12 @@ func applyCreate(ctx context.Context, ex Executors, eff workflow.Effect, action 
 		if err != nil {
 			return action, nil, err
 		}
-		claimed, err := ex.Claims.Claim(ctx, eff.Handler, eff.TriggerEventID, fingerprint)
+		claimed, err := ex.Claims.Claim(ctx, eff.Handler, eff.OccurrenceKey, fingerprint)
 		if err != nil {
 			return action, nil, err
 		}
 		if !claimed {
-			folded, err := markDeduplicated(action)
-			return folded, nil, err
+			return markDeduplicated(action), nil, nil
 		}
 	}
 	entity := action.Target.Type
@@ -111,22 +109,12 @@ func effectFingerprint(action workflow.Action) (string, error) {
 	return string(action.Kind) + "|" + string(action.Target.Type) + "|" + action.Target.ID.String() + "|" + hash, nil
 }
 
-// markDeduplicated annotates a create the claim folded, so the instance's
-// run row records that its planned write was applied by a sibling firing.
-func markDeduplicated(action workflow.Action) (workflow.Action, error) {
-	raw := action.Args
-	if len(raw) == 0 {
-		raw = json.RawMessage(`{}`)
-	}
-	var args map[string]any
-	if err := json.Unmarshal(raw, &args); err != nil {
-		return action, fmt.Errorf("automation: annotating a deduplicated %s action: %w", action.Kind, err)
-	}
-	args["deduplicated"] = true
-	annotated, err := json.Marshal(args)
-	if err != nil {
-		return action, fmt.Errorf("automation: encoding a deduplicated %s action: %w", action.Kind, err)
-	}
-	action.Args = annotated
-	return action, nil
+// markDeduplicated flags a create the claim folded, so the instance's run
+// row records that its planned write was performed by a sibling firing —
+// a typed field rather than a value smuggled into Args, so every reader
+// of the trace (runActionKinds included) can say so instead of reporting
+// a write that never happened.
+func markDeduplicated(action workflow.Action) workflow.Action {
+	action.Deduplicated = true
+	return action
 }

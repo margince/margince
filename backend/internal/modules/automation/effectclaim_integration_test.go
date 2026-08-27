@@ -93,6 +93,8 @@ func TestTwoIdenticalInstancesMintOneTask(t *testing.T) {
 			t.Errorf("run status = %q, want applied", status)
 		}
 		runs++
+		// jsonb::text prints a space after the colon; match both spellings
+		// so the assertion is about the flag, not Postgres's printer.
 		if strings.Contains(applied, `"deduplicated": true`) || strings.Contains(applied, `"deduplicated":true`) {
 			deduplicated++
 		}

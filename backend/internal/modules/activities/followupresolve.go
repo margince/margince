@@ -29,9 +29,20 @@ import (
 )
 
 // taskSourceSystem is activity.source as the automation engine's create
-// executor stamps it (the datasource provider writes the caller's Source
-// verbatim) — the selector for "a task the system minted".
+// executor stamps it (automation's systemSource — spelled again here
+// because a module cannot import a sibling's constant; the provenance
+// reservation that keeps clients from writing it names the same value,
+// provenance.ReservedSystemSource). Never trusted alone: source arrives
+// on the client create wire, so every selector below pairs it with
+// systemCapturedBy, which no client can write.
 const taskSourceSystem = "system"
+
+// systemCapturedBy is captured_by as the workflow engine's runs stamp it:
+// storekit.CapturedBy writes the authenticated principal's ID, and the
+// engine binds the system principal with ID "system" (automation's
+// HandleEvent). captured_by never comes from a request body, so it is the
+// unforgeable half of the "the system minted this task" predicate.
+const systemCapturedBy = "system"
 
 // FollowUpWorkflows returns the system handlers that complete open system
 // follow-up tasks when the follow-up demonstrably happened: a real
@@ -82,13 +93,8 @@ func (w followUpAutoResolve) Match(_ context.Context, ev workflow.Event) (bool, 
 			return false, fmt.Errorf("activities: decoding the captured activity kind: %w", err)
 		}
 	}
-	return captured.Kind != activityKindTask, nil
+	return captured.Kind != string(crmcontracts.ActivityKindTask), nil
 }
-
-// activityKindTask mirrors the contract's ActivityKind "task" value the
-// capture event carries — the one captured kind that is a plan rather
-// than a touch.
-const activityKindTask = "task"
 
 func (w followUpAutoResolve) Plan(_ context.Context, ev workflow.Event) (workflow.Effect, error) {
 	// The concrete task ids are Apply's query — the envelope does not
@@ -105,7 +111,7 @@ func (w followUpAutoResolve) Plan(_ context.Context, ev workflow.Event) (workflo
 }
 
 func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff workflow.Effect, _ *workflow.ApprovalToken) (workflow.RunResult, error) {
-	leads := []ids.UUID{ev.Entity.ID}
+	leads := []ids.LeadID{ids.From[ids.LeadKind](ev.Entity.ID)}
 	if w.leadsFromLinks {
 		var err error
 		leads, err = w.linkedLeads(ctx, ids.From[ids.ActivityKind](ev.Entity.ID))
@@ -119,7 +125,7 @@ func (w followUpAutoResolve) Apply(ctx context.Context, ev workflow.Event, eff w
 		if err != nil {
 			return workflow.RunResult{}, fmt.Errorf("resolving follow-ups on lead %s: %w", leadID, err)
 		}
-		completed += len(done)
+		completed += done
 	}
 	if completed == 0 {
 		return workflow.RunResult{}, nil
@@ -132,9 +138,12 @@ func (w followUpAutoResolve) IdempotencyKey(ev workflow.Event) string {
 }
 
 // linkedLeads answers which leads the captured activity touches — usually
-// none, and then the firing is a cheap no-op.
-func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.ActivityID) ([]ids.UUID, error) {
-	var leads []ids.UUID
+// none, and then the firing is a cheap no-op. The lead-score recompute in
+// people spells the same query over the same table; it is not shared
+// because a module cannot import a sibling, and the table (activity_link)
+// is this module's own — this side is the owner's copy.
+func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.ActivityID) ([]ids.LeadID, error) {
+	var leads []ids.LeadID
 	err := w.store.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT lead_id FROM activity_link WHERE activity_id = $1 AND lead_id IS NOT NULL`, activityID)
@@ -143,7 +152,7 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 		}
 		defer rows.Close()
 		for rows.Next() {
-			var id ids.UUID
+			var id ids.LeadID
 			if err := rows.Scan(&id); err != nil {
 				return err
 			}
@@ -160,15 +169,24 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // activity.updated event) exactly like a human ticking the box. A bulk
 // UPDATE would be invisible history. Replays are harmless: a completed
 // task no longer matches the open filter.
-func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.UUID) ([]ids.ActivityID, error) {
+//
+// "System-minted" is decided by source AND captured_by together: source
+// rides the client create wire (and is merely refused there, not
+// impossible), while captured_by is stamped from the authenticated
+// principal — a planted source alone hands nothing to this path. It
+// answers a COUNT rather than rows, so nothing about which records exist
+// leaves a call that takes no read gate of its own; each completion's
+// write is gated inside UpdateActivity.
+func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.LeadID) (int, error) {
 	var open []ids.ActivityID
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT a.id FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
 			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
+			  AND a.captured_by = $4
 			  AND a.is_done = false AND a.archived_at IS NULL
-			ORDER BY a.id`, leadID, activityKindTask, taskSourceSystem)
+			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), taskSourceSystem, systemCapturedBy)
 		if err != nil {
 			return err
 		}
@@ -183,13 +201,13 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.U
 		return rows.Err()
 	})
 	if err != nil {
-		return nil, err
+		return 0, err
 	}
 	done := true
 	for _, id := range open {
 		if _, err := s.UpdateActivity(ctx, id, UpdateActivityInput{IsDone: &done}); err != nil {
-			return nil, fmt.Errorf("completing system task %s: %w", id, err)
+			return 0, fmt.Errorf("completing system task %s: %w", id, err)
 		}
 	}
-	return open, nil
+	return len(open), nil
 }

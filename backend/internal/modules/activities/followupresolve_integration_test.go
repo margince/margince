@@ -84,14 +84,15 @@ func (e *resolveEnv) exec(t *testing.T, sql string, args ...any) {
 }
 
 // seedTask writes one open task linked to the lead, with the given
-// provenance — 'system' is the pre-claim engine's own shape, anything
-// else a human's.
-func (e *resolveEnv) seedTask(t *testing.T, source string) ids.UUID {
+// provenance pair — source 'system' + captured_by 'system' is the
+// engine's own shape; anything else is a person's row, whatever its
+// source claims.
+func (e *resolveEnv) seedTask(t *testing.T, source, capturedBy string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
 	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by)
-		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, 'system')`,
-		id, source)
+		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3)`,
+		id, source, capturedBy)
 	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, id, e.lead)
 	return id
 }
@@ -165,8 +166,12 @@ func capturedEvent(t *testing.T, activity ids.UUID, kind string) workflow.Event 
 func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	systemTask := e.seedTask(t, "system")
-	humanTask := e.seedTask(t, "web")
+	systemTask := e.seedTask(t, "system", "system")
+	humanTask := e.seedTask(t, "web", "human:"+e.rep.String())
+	// A task a caller PLANTED with source "system": captured_by names the
+	// person, because no client write can spell the system principal — and
+	// that is exactly why the resolver must leave it open.
+	forgedTask := e.seedTask(t, "system", "human:"+e.rep.String())
 
 	// The touch: a captured call, linked to the same lead.
 	call := ids.NewV7()
@@ -186,6 +191,9 @@ func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 	if e.isDone(t, humanTask) {
 		t.Error("the HUMAN's task was completed — the system claimed work a person may not consider done")
 	}
+	if e.isDone(t, forgedTask) {
+		t.Error("a task with a forged source 'system' was completed — captured_by, not source, decides what the system minted")
+	}
 	// Replay: nothing left to resolve, and nothing breaks.
 	replay := fire(ctx, t, h, capturedEvent(t, call, "call"))
 	if len(replay.Applied) != 0 {
@@ -196,7 +204,7 @@ func TestACapturedTouchCompletesTheSystemTaskAndLeavesTheHumans(t *testing.T) {
 func TestACapturedTaskResolvesNothing(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	systemTask := e.seedTask(t, "system")
+	systemTask := e.seedTask(t, "system", "system")
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "activity.captured")
@@ -211,7 +219,7 @@ func TestACapturedTaskResolvesNothing(t *testing.T) {
 func TestALeadLeavingTheOpenPoolCompletesItsSystemTasks(t *testing.T) {
 	e := setupResolve(t)
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
-	systemTask := e.seedTask(t, "system")
+	systemTask := e.seedTask(t, "system", "system")
 
 	ctx := e.systemCtx()
 	h := handlerFor(t, store, "lead.promoted")

@@ -9,8 +9,14 @@
 SET LOCAL lock_timeout = '3s';
 
 -- Identical open system tasks collapse to the earliest copy. Identity is
--- what a reader sees as "the same task": the words, the day it is due, and
--- the records it points at.
+-- the runtime claim's: the words, the exact due moment, and the records
+-- the task points at. due_at is compared EXACTLY, not by day — two stage
+-- moves on one afternoon mint two legitimately distinct follow-ups whose
+-- due moments differ by the seconds between the moves, and folding those
+-- would erase a task the runtime claim keeps. captured_by = 'system'
+-- rides both arms because source alone is client-writable: a task a
+-- caller planted with source 'system' is a person's row, and this repair
+-- must not archive a person's row.
 WITH task_links AS (
     SELECT l.activity_id,
            string_agg(
@@ -23,11 +29,11 @@ WITH task_links AS (
 ), copies AS (
     SELECT a.id,
            row_number() OVER (
-               PARTITION BY a.subject, date(a.due_at), coalesce(tl.link_identity, '')
+               PARTITION BY a.subject, a.due_at, coalesce(tl.link_identity, '')
                ORDER BY a.created_at, a.id) AS copy_rank
     FROM activity a
     LEFT JOIN task_links tl ON tl.activity_id = a.id
-    WHERE a.kind = 'task' AND a.source = 'system'
+    WHERE a.kind = 'task' AND a.source = 'system' AND a.captured_by = 'system'
       AND a.is_done = false AND a.archived_at IS NULL
 )
 UPDATE activity SET archived_at = now()
@@ -38,7 +44,7 @@ WHERE id IN (SELECT id FROM copies WHERE copy_rank > 1);
 -- so the reminder can only mislead. A task also linked to a lead that is
 -- still open keeps standing — that half of its job remains real.
 UPDATE activity a SET archived_at = now()
-WHERE a.kind = 'task' AND a.source = 'system'
+WHERE a.kind = 'task' AND a.source = 'system' AND a.captured_by = 'system'
   AND a.is_done = false AND a.archived_at IS NULL
   AND EXISTS (
         SELECT 1 FROM activity_link l

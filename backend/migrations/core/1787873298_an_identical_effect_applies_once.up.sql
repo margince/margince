@@ -14,11 +14,11 @@
 CREATE TABLE automation_effect_claim (
     id uuid DEFAULT uuidv7() NOT NULL,
     handler text NOT NULL,
-    event_id uuid NOT NULL,
+    occurrence_key text NOT NULL,
     effect_fingerprint text NOT NULL,
     created_at timestamptz DEFAULT now() NOT NULL,
     CONSTRAINT automation_effect_claim_pkey PRIMARY KEY (id),
-    CONSTRAINT automation_effect_claim_unique UNIQUE (handler, event_id, effect_fingerprint)
+    CONSTRAINT automation_effect_claim_unique UNIQUE (handler, occurrence_key, effect_fingerprint)
 );
 
 GRANT SELECT,INSERT,DELETE,UPDATE ON TABLE automation_effect_claim TO margince_app;
