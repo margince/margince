@@ -1230,13 +1230,14 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 
 // Defines values for AttentionLanesOmitted.
 const (
-	AttentionLanesOmittedAtRisk      AttentionLanesOmitted = "at_risk"
-	AttentionLanesOmittedCommitments AttentionLanesOmitted = "commitments"
-	AttentionLanesOmittedDoneForYou  AttentionLanesOmitted = "done_for_you"
-	AttentionLanesOmittedMeetings    AttentionLanesOmitted = "meetings"
-	AttentionLanesOmittedNeedsYou    AttentionLanesOmitted = "needs_you"
-	AttentionLanesOmittedPlanned     AttentionLanesOmitted = "planned"
-	AttentionLanesOmittedThisMorning AttentionLanesOmitted = "this_morning"
+	AttentionLanesOmittedAtRisk            AttentionLanesOmitted = "at_risk"
+	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
+	AttentionLanesOmittedDoneForYou        AttentionLanesOmitted = "done_for_you"
+	AttentionLanesOmittedMeetings          AttentionLanesOmitted = "meetings"
+	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
+	AttentionLanesOmittedPlanned           AttentionLanesOmitted = "planned"
+	AttentionLanesOmittedRelationshipDecay AttentionLanesOmitted = "relationship_decay"
+	AttentionLanesOmittedThisMorning       AttentionLanesOmitted = "this_morning"
 )
 
 // Valid indicates whether the value is a known member of the AttentionLanesOmitted enum.
@@ -1253,6 +1254,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedNeedsYou:
 		return true
 	case AttentionLanesOmittedPlanned:
+		return true
+	case AttentionLanesOmittedRelationshipDecay:
 		return true
 	case AttentionLanesOmittedThisMorning:
 		return true
@@ -1305,6 +1308,7 @@ const (
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
 	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
+	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
 	AttentionItemSourceTask              AttentionItemSource = "task"
 )
 
@@ -1322,6 +1326,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDedupeCandidate:
 		return true
 	case AttentionItemSourceMeeting:
+		return true
+	case AttentionItemSourceRelationshipDecay:
 		return true
 	case AttentionItemSourceTask:
 		return true
@@ -10494,16 +10500,16 @@ func (e VoiceBuildStatusCode) Valid() bool {
 
 // Defines values for VoiceCorpusPreviewRequestFormat.
 const (
-	VoiceCorpusPreviewRequestFormatText       VoiceCorpusPreviewRequestFormat = "text"
-	VoiceCorpusPreviewRequestFormatTranscript VoiceCorpusPreviewRequestFormat = "transcript"
+	Text       VoiceCorpusPreviewRequestFormat = "text"
+	Transcript VoiceCorpusPreviewRequestFormat = "transcript"
 )
 
 // Valid indicates whether the value is a known member of the VoiceCorpusPreviewRequestFormat enum.
 func (e VoiceCorpusPreviewRequestFormat) Valid() bool {
 	switch e {
-	case VoiceCorpusPreviewRequestFormatText:
+	case Text:
 		return true
-	case VoiceCorpusPreviewRequestFormatTranscript:
+	case Transcript:
 		return true
 	default:
 		return false
@@ -10881,22 +10887,22 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	DeadLettered WebhookDeliveryStatus = "dead_lettered"
-	Delivered    WebhookDeliveryStatus = "delivered"
-	Pending      WebhookDeliveryStatus = "pending"
-	Retrying     WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
+	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
+	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
+	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
 func (e WebhookDeliveryStatus) Valid() bool {
 	switch e {
-	case DeadLettered:
+	case WebhookDeliveryStatusDeadLettered:
 		return true
-	case Delivered:
+	case WebhookDeliveryStatusDelivered:
 		return true
-	case Pending:
+	case WebhookDeliveryStatusPending:
 		return true
-	case Retrying:
+	case WebhookDeliveryStatusRetrying:
 		return true
 	default:
 		return false
@@ -13570,6 +13576,23 @@ type Attention struct {
 	// Planned Work already agreed: overdue first, then due today.
 	Planned []AttentionItem `json:"planned"`
 
+	// RelationshipDecay The reader's OWN relationships that have gone silent, longest silence first —
+	// people they were in contact with and are not any more.
+	//
+	// A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
+	// a contact carrying no open deal never reaches that lane, and those are exactly
+	// the relationships that lapse unnoticed. `detail` carries the silence in days,
+	// from the same §4 derivation the contact's own page shows, so the two surfaces
+	// cannot come to disagree about when somebody went quiet.
+	//
+	// Only relationships this reader actually had: a contact nobody here ever spoke
+	// to has not gone quiet, and a lane that said otherwise would report every
+	// dormant record as a lapse.
+	//
+	// Absent — not empty — on an installation whose feed does not derive relationship
+	// changes.
+	RelationshipDecay *[]AttentionItem `json:"relationship_decay,omitempty"`
+
 	// ThisMorning The overnight brief's queue, best-ranked first — what the night found worth
 	// the rep's first hour.
 	//
@@ -13601,6 +13624,9 @@ type AttentionCounts struct {
 	Meetings *int `json:"meetings,omitempty"`
 	NeedsYou int  `json:"needs_you"`
 	Planned  int  `json:"planned"`
+
+	// RelationshipDecay How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in.
+	RelationshipDecay *int `json:"relationship_decay,omitempty"`
 
 	// ThisMorning Briefing items still unanswered in the rep's run for today.
 	ThisMorning int `json:"this_morning"`

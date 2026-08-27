@@ -204,6 +204,38 @@ type RiskyDeal struct {
 	ExpectedCloseDate *time.Time
 }
 
+// Decay is the reader's own relationships that have gone silent.
+//
+// A separate lane from AtRisk rather than more rows in it, because the two rest
+// on different records and warn about different things: AtRisk is a DEAL nobody
+// is moving, and this is a PERSON nobody is talking to. A contact carrying no
+// open deal never reaches that lane at all, and those are exactly the
+// relationships that lapse without anyone noticing.
+//
+// The seam behind it derives the silence through the same §4 change engine the
+// contact's own page reads, so there is one quiet rule in the product rather
+// than a second threshold spelled here.
+//
+// Optional exactly as the others are: nil means this feed does not derive
+// relationship changes, which is a different fact from a rep whose
+// relationships are all current.
+type Decay interface {
+	Lapsed(ctx context.Context) ([]QuietRelationship, error)
+}
+
+// QuietRelationship is one contact this reader has stopped talking to.
+type QuietRelationship struct {
+	PersonID ids.UUID
+	Name     string
+	// QuietDays is how long the silence has run, which is the number the card
+	// says out loud. It comes from the derivation rather than from the
+	// projection's own last_at, so the card and the contact's page agree.
+	QuietDays int
+	// LastAt is when they last spoke, so the card can date the silence rather
+	// than only measure it.
+	LastAt time.Time
+}
+
 // Meetings is today's booked meetings that have not happened yet.
 //
 // Optional as the other two are: nil means this feed does not read meetings,
@@ -236,7 +268,10 @@ type Service struct {
 	// array. The contract makes the lane optional for exactly that reason.
 	commitments Commitments
 	// atRisk is OPTIONAL for the reason commitments is: absent lane, not empty.
-	atRisk   AtRisk
+	atRisk AtRisk
+	// decay is OPTIONAL for the same reason, and says nothing about atRisk:
+	// an installation can warn about deals without deriving relationships.
+	decay    Decay
 	meetings Meetings
 	now      Clock
 }
@@ -244,11 +279,11 @@ type Service struct {
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, m Meetings, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, now Clock,
 ) *Service {
 	return &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r,
-		briefing: b, commitments: c, atRisk: k, meetings: m, now: now,
+		briefing: b, commitments: c, atRisk: k, decay: q, meetings: m, now: now,
 	}
 }
 

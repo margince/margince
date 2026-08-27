@@ -345,6 +345,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
 		attentionCommitments{store: people.NewStore(db)},
 		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
+		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},
 		now,
 	)

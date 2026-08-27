@@ -196,6 +196,12 @@ export const vi = {
   "day.atRisk": "Đang lặng đi",
   "day.atRisk.empty": "Không có thương vụ nào trôi đi.",
   "day.risk.quiet": "Không liên hệ trong {days} ngày.",
+  "day.decay": "Những mối quan hệ đang nguội dần",
+  "day.decay.empty":
+    "Bạn vẫn giữ liên lạc với tất cả những người từng trao đổi.",
+  "day.decay.quiet": "Đã {days} ngày hai bên không trao đổi.",
+  "day.decay.quietSince":
+    "Đã {days} ngày không trao đổi — lần cuối vào {date}.",
   "day.risk.closeOverdue": "Dự kiến chốt {date} — vẫn còn mở.",
   "day.commitments": "Bạn đã hứa",
   "day.commitments.empty": "Không có lời hứa nào đến hạn.",

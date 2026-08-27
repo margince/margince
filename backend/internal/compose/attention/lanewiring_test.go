@@ -10,7 +10,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
-// Each optional lane fills ITS OWN field. The three are wired through
+// Each optional lane fills ITS OWN field. The four are wired through
 // pointers-to-pointers into one response struct, which is exactly the shape
 // where a copy-paste slip puts the meetings into at_risk and nothing fails to
 // compile.
@@ -19,6 +19,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{rows: []Commitment{promise("a promise", readInstant)}},
 		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
+		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
 		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
 		fixedClock,
 	)
@@ -33,6 +34,7 @@ func TestEachOptionalLaneFillsItsOwnField(t *testing.T) {
 	}{
 		{"meetings", out.Meetings, "a meeting"},
 		{"at_risk", out.AtRisk, "a deal"},
+		{"relationship_decay", out.RelationshipDecay, "a contact"},
 		{"commitments", out.Commitments, "a promise"},
 	} {
 		if lane.items == nil || len(*lane.items) != 1 {
@@ -63,6 +65,7 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{},
 		&stubCommitments{rows: []Commitment{promise("a promise", readInstant)}},
 		stubAtRisk{rows: []RiskyDeal{{Name: "a deal", QuietDays: 20}}},
+		&stubDecay{rows: []QuietRelationship{{Name: "a contact", QuietDays: 63, LastAt: readInstant}}},
 		&stubMeetings{rows: []Meeting{{Subject: "a meeting", StartsAt: readInstant}}},
 		fixedClock,
 	)
@@ -72,6 +75,7 @@ func TestNoOptionalLaneOffersAnActionTheSurfaceCannotPerform(t *testing.T) {
 	}
 	for name, lane := range map[string]*[]crmcontracts.AttentionItem{
 		"meetings": out.Meetings, "at_risk": out.AtRisk, "commitments": out.Commitments,
+		"relationship_decay": out.RelationshipDecay,
 	} {
 		if lane == nil {
 			t.Fatalf("%s is absent, so this gate checked nothing", name)

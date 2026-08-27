@@ -190,6 +190,11 @@ export const de = {
   "day.atRisk": "Wird still",
   "day.atRisk.empty": "Kein Deal driftet ab.",
   "day.risk.quiet": "Seit {days} Tagen kein Kontakt.",
+  "day.decay": "Beziehungen, die einschlafen",
+  "day.decay.empty": "Sie sind mit allen in Kontakt, mit denen Sie es waren.",
+  "day.decay.quiet": "Seit {days} Tagen kein Austausch.",
+  "day.decay.quietSince":
+    "Seit {days} Tagen kein Austausch — zuletzt am {date}.",
   "day.risk.closeOverdue": "Abschluss war für {date} geplant — noch offen.",
   "day.commitments": "Du hast zugesagt",
   "day.commitments.empty": "Keine Zusagen werden f\u00e4llig.",

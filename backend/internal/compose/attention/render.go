@@ -304,6 +304,35 @@ func riskItem(deal RiskyDeal) crmcontracts.AttentionItem {
 	return item
 }
 
+// lapsedItem renders one relationship this reader has stopped talking to.
+//
+// The contact's NAME travels as the title because a person's name is a
+// sentence in every language, and the silence rides as the detail's own
+// number, the way the risk card carries its idle count — so the client writes
+// "quiet 63 days" and the server implies no window it did not apply.
+//
+// `occurred_at` is the last time they spoke. It is the fact the card dates
+// itself from, and it lets the lane be read as a chronology rather than only
+// as a list of numbers.
+//
+// It offers NO verb, exactly as the risk card does not. What to do about a
+// lapsed relationship is a judgement about that person, and a queue that
+// answered it here would be deciding rather than warning.
+func lapsedItem(quiet QuietRelationship) crmcontracts.AttentionItem {
+	name := quiet.Name
+	days := strconv.Itoa(quiet.QuietDays)
+	lastAt := quiet.LastAt
+	return crmcontracts.AttentionItem{
+		Id:         quiet.PersonID.String(),
+		Source:     crmcontracts.AttentionItemSource("relationship_decay"),
+		Title:      &name,
+		Detail:     &days,
+		Subject:    subjectOf("person", quiet.PersonID),
+		OccurredAt: &lastAt,
+		Actions:    []crmcontracts.AttentionItemActions{},
+	}
+}
+
 // meetingItem renders one appointment still ahead today.
 //
 // The subject IS the sentence a rep recognises — somebody wrote it when the

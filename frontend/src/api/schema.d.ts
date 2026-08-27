@@ -22637,10 +22637,28 @@ export interface components {
              *     Absent — not empty — on an installation whose feed does not read deals.
              */
             at_risk?: components["schemas"]["AttentionItem"][];
+            /**
+             * @description The reader's OWN relationships that have gone silent, longest silence first —
+             *     people they were in contact with and are not any more.
+             *
+             *     A fact about a PERSON rather than a deal, which is why it is not on `at_risk`:
+             *     a contact carrying no open deal never reaches that lane, and those are exactly
+             *     the relationships that lapse unnoticed. `detail` carries the silence in days,
+             *     from the same §4 derivation the contact's own page shows, so the two surfaces
+             *     cannot come to disagree about when somebody went quiet.
+             *
+             *     Only relationships this reader actually had: a contact nobody here ever spoke
+             *     to has not gone quiet, and a lane that said otherwise would report every
+             *     dormant record as a lapse.
+             *
+             *     Absent — not empty — on an installation whose feed does not derive relationship
+             *     changes.
+             */
+            relationship_decay?: components["schemas"]["AttentionItem"][];
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22661,6 +22679,8 @@ export interface components {
             at_risk?: number;
             /** @description How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in. */
             commitments?: number;
+            /** @description How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in. */
+            relationship_decay?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22675,7 +22695,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

@@ -28,6 +28,7 @@ export const FOCUS_SURFACE = {
   conversation_claim: "report",
   deal_at_risk: "report",
   meeting: "report",
+  relationship_decay: "report",
 } as const satisfies Record<AttentionItem["source"], FocusSurface>;
 
 export function focusSurfaceOf(source: AttentionItem["source"]): FocusSurface {
