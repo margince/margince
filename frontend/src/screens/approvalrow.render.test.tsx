@@ -40,6 +40,23 @@ function render(ui: ReactNode) {
   );
 }
 
+// How many times the row posted a decision, by verb. The negative tests wait
+// on these: an absence asserted before the request went out is an absence that
+// survives the interaction being deleted.
+function decisionCalls(fetched: ReturnType<typeof vi.fn>, verb: string) {
+  // The client hands fetch a Request, not a url string, so the path is read
+  // off the object rather than by stringifying the argument.
+  return fetched.mock.calls.filter(([input]) =>
+    input instanceof Request
+      ? new URL(input.url).pathname.endsWith(verb)
+      : String(input).endsWith(verb),
+  ).length;
+}
+const approveCalls = (f: ReturnType<typeof vi.fn>) =>
+  decisionCalls(f, "/approve");
+const rejectCalls = (f: ReturnType<typeof vi.fn>) =>
+  decisionCalls(f, "/reject");
+
 function closeDateApproval(overrides: Partial<Approval> = {}): Approval {
   return {
     id: "ap1",
@@ -86,30 +103,36 @@ describe("the offer to put an approved change back", () => {
   });
 
   // A rejection changed nothing, so there is nothing to put back and no offer.
+  //
+  // The absence is asserted only AFTER the reject call has actually gone out.
+  // Before it, the button is absent for the uninteresting reason that nothing
+  // has happened yet — an assertion that would survive the interaction being
+  // removed entirely, and therefore proves nothing about rejecting.
   it("stays silent after a rejection", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => jsonResponse({ id: "ap1", status: "rejected" })),
+    const fetched = vi.fn(async () =>
+      jsonResponse({ id: "ap1", status: "rejected" }),
     );
+    vi.stubGlobal("fetch", fetched);
     render(<ApprovalRow approval={closeDateApproval()} />);
 
     await userEvent.click(screen.getByRole("button", { name: "Reject" }));
     const confirm = await screen.findAllByRole("button", { name: "Reject" });
     await userEvent.click(confirm[confirm.length - 1]);
 
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Undo on the record" }),
-      ).toBeNull(),
-    );
+    await waitFor(() => expect(rejectCalls(fetched)).toBe(1));
+    expect(
+      screen.queryByRole("button", { name: "Undo on the record" }),
+    ).toBeNull();
   });
 
-  // A step-up names no record, so there is no history to send anyone to.
+  // A step-up names no record, so there is no history to send anyone to. Same
+  // rule as above: the approve call must have gone out before the absence means
+  // anything.
   it("stays silent when the approval names no record", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn(async () => jsonResponse({ id: "ap1", status: "approved" })),
+    const fetched = vi.fn(async () =>
+      jsonResponse({ id: "ap1", status: "approved" }),
     );
+    vi.stubGlobal("fetch", fetched);
     render(
       <ApprovalRow
         approval={closeDateApproval({
@@ -121,10 +144,9 @@ describe("the offer to put an approved change back", () => {
     );
 
     await userEvent.click(screen.getByRole("button", { name: "Accept" }));
-    await waitFor(() =>
-      expect(
-        screen.queryByRole("button", { name: "Undo on the record" }),
-      ).toBeNull(),
-    );
+    await waitFor(() => expect(approveCalls(fetched)).toBe(1));
+    expect(
+      screen.queryByRole("button", { name: "Undo on the record" }),
+    ).toBeNull();
   });
 });

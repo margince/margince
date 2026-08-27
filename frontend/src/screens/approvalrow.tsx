@@ -21,7 +21,7 @@ import {
   type DecisionStatusLabels,
   DecisionToolChip,
 } from "../design-system/decisioncard";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { type Toast, ToastRegion, useToast } from "../design-system/toast";
 import { AutonomyDot, confidenceLevel } from "../design-system/trust";
 import { formatCountdown, useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
@@ -168,9 +168,20 @@ export function ApprovalRow({
   decided,
   onAlreadyDecided,
   extraInvalidateKeys,
+  toast: hostToast,
 }: Readonly<{
   approval: Approval;
   decided?: boolean;
+  // The surface's own toast, where it has one. The undo offer is sticky and
+  // outlives this row: approving invalidates ["approvals"], which unmounts the
+  // row it was shown from, and a toast owned HERE would go with it. A screen
+  // that shows a queue therefore owns the toast and its region, and hands the
+  // controller down.
+  //
+  // Optional, because a surface may render one row and nothing else (the
+  // stories do). Then the row falls back to its own, which is correct for a
+  // row nothing is going to unmount.
+  toast?: Toast;
   // Lift the already-decided signal to a surface that survives this row's
   // unmount (the pending invalidation drops it). Optional so a surface can
   // reuse the row without a screen-level surface.
@@ -185,7 +196,8 @@ export function ApprovalRow({
   const viewerId = useViewerId();
   const queryClient = useQueryClient();
   const tierMap = useAgentTierMap();
-  const toast = useToast();
+  const ownToast = useToast();
+  const toast = hostToast ?? ownToast;
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState<Record<string, string>>({});
   const [rejecting, setRejecting] = useState(false);
@@ -403,10 +415,9 @@ export function ApprovalRow({
         />
       }
     >
-      {/* The row owns the region as well as the toast: useToast is local state,
-          so a caller that shows one without rendering a region shows nothing.
-          Every other consumer in the tree pairs the two the same way. */}
-      <ToastRegion toast={toast} />
+      {/* Only where the row owns the toast. A region for somebody else's
+          controller would be a second place the same message renders. */}
+      {!hostToast && <ToastRegion toast={ownToast} />}
       <ConfirmModal
         open={rejecting}
         onClose={() => setRejecting(false)}
