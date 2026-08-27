@@ -274,11 +274,11 @@ The imported connections become private graph substrate, "ghosts", used only for
 
 I do not claim that LinkedIn's terms permit anything beyond this private graph use. Margince therefore stops there. It does not create contacts and provides no parser for pasted profile text. Once software copies the page on the user's behalf, the scraping clause is back in play. We draw the line on the safe side.
 
-**A6. The "confirm your details" flow.** Build.
+**A6. The "confirm your details" flow.** Build. Nothing of this ships yet; it is the first Tier A item on the roadmap.
 
-Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91.
+The design: Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91.
 
-This flow actively reduces the risk of everything else on this page.
+Once built, this flow actively reduces the risk of everything else on this page.
 
 ### Tier B: build with controls, counsel signs off first
 
