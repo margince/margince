@@ -142,3 +142,97 @@ func TestAFeedWithNoRiskReaderSendsNoRiskLane(t *testing.T) {
 		t.Errorf("counts.at_risk = %v, want it absent too", out.Counts.AtRisk)
 	}
 }
+
+// A lapsed relationship carries the span, the person it is about, and when
+// they last spoke. All three, because the card is read as a chronology: the
+// number is what a rep acts on, the name is who to act on, and the date is
+// what makes the claim checkable against that contact's own timeline.
+func TestALapsedRelationshipCarriesItsSpanAndItsLastExchange(t *testing.T) {
+	person := ids.NewV7()
+	spoke := readInstant.AddDate(0, 0, -63)
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
+		&stubDecay{rows: []QuietRelationship{
+			{PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: spoke},
+		}},
+		nil,
+		fixedClock)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if out.RelationshipDecay == nil {
+		t.Fatal("the decay lane is absent, want one lapsed relationship")
+	}
+	item := (*out.RelationshipDecay)[0]
+	if item.Title == nil || *item.Title != "Dana Weiss" {
+		t.Errorf("title = %s, want the contact's name", stringOr(item.Title))
+	}
+	if item.Detail == nil || *item.Detail != "63" {
+		t.Errorf("detail = %s, want the derived silence in days", stringOr(item.Detail))
+	}
+	if item.OccurredAt == nil || !item.OccurredAt.Equal(spoke) {
+		t.Errorf("occurred_at = %v, want the last exchange %v", item.OccurredAt, spoke)
+	}
+	// The subject is the PERSON, not the edge: the card's one move is opening
+	// that contact, and a subject naming anything else sends the reader
+	// somewhere they cannot act.
+	if item.Subject == nil || item.Subject.Type != "person" {
+		t.Errorf("subject = %v, want the person the silence is about", item.Subject)
+	}
+	// No verb, exactly as the risk card offers none. What to do about a lapsed
+	// relationship is a judgement about that person; a lane answering it here
+	// would be deciding rather than warning.
+	if len(item.Actions) != 0 {
+		t.Errorf("actions = %v, want none — the lane warns, it does not decide", item.Actions)
+	}
+	if out.Counts.RelationshipDecay == nil || *out.Counts.RelationshipDecay != 1 {
+		t.Errorf("counts.relationship_decay = %v, want 1", out.Counts.RelationshipDecay)
+	}
+}
+
+// A withheld decay lane is NAMED. "You are in touch with everyone" and "you
+// may not read these relationships" are different answers, and reporting the
+// second as the first tells a rep their day is clear when it is not.
+func TestAWithheldDecayLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
+		&stubDecay{err: apperrors.ErrPermissionDenied},
+		nil,
+		fixedClock)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("a refused lane must not fail the read: %v", err)
+	}
+	if out.RelationshipDecay != nil {
+		t.Errorf("a withheld lane sent %v, want no lane", *out.RelationshipDecay)
+	}
+	var named bool
+	for _, lane := range *out.LanesOmitted {
+		if lane == "relationship_decay" {
+			named = true
+		}
+	}
+	if !named {
+		t.Errorf("lanes_omitted = %v, want it to name relationship_decay", *out.LanesOmitted)
+	}
+}
+
+// A feed with no decay reader sends no lane at all, the same absent-not-empty
+// rule the other optional lanes keep.
+func TestAFeedWithNoDecayReaderSendsNoDecayLane(t *testing.T) {
+	svc := NewService(
+		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
+		nil,
+		fixedClock)
+	out, err := svc.Assemble(context.Background())
+	if err != nil {
+		t.Fatalf("assembling: %v", err)
+	}
+	if out.RelationshipDecay != nil {
+		t.Errorf("relationship_decay = %v, want the lane absent", *out.RelationshipDecay)
+	}
+	if out.Counts.RelationshipDecay != nil {
+		t.Errorf("counts.relationship_decay = %v, want it absent too", out.Counts.RelationshipDecay)
+	}
+}

@@ -288,6 +288,15 @@ const audienceWorkspaceOnly = ` AND a.audience = 'workspace'`
 // departed colleague as a route in.
 const liveMemberJoin = `JOIN app_user u ON u.id = e.user_id AND u.status = 'active' AND u.archived_at IS NULL`
 
+// laterMemberJoin is the same rule asked about a SECOND edge in one statement:
+// has any live colleague spoken to this contact since. It is spelled out rather
+// than derived from liveMemberJoin because TestOnlyOneSpellingOfALiveMember
+// reads source text, and a predicate assembled at runtime is a predicate that
+// census cannot see — under-recognition being the one way that gate must not
+// break. Both spellings are ratified there by name, and it fails if either
+// stops naming both halves.
+const laterMemberJoin = `JOIN app_user lu ON lu.id = later.user_id AND lu.status = 'active' AND lu.archived_at IS NULL`
+
 // EdgesForPerson answers "who on our team knows this contact".
 //
 // It returns edges in LAST-CONTACT order and does NOT rank by warmth, because
@@ -373,51 +382,6 @@ func EdgesForPeople(ctx context.Context, tx pgx.Tx, people []ids.UUID) ([]Intera
 		 ORDER BY e.person_id, e.last_at DESC, e.user_id`, people)
 	if err != nil {
 		return nil, fmt.Errorf("search: reading who knows a contact set: %w", err)
-	}
-	defer rows.Close()
-	return scanEdges(rows)
-}
-
-// QuietEdgesForUser answers "which of MY relationships have gone silent",
-// oldest silence first.
-//
-// It is the CANDIDATE half of the decay lane and deliberately not the verdict.
-// The projection stores when a pair last spoke, so the reader's own quiet
-// relationships are one indexed range over idx_graph_edge_user — but whether a
-// silence is worth reporting is a §4 derivation over the contact's own
-// interactions, and that stays where it already lives. Answering it here would
-// be a second quiet rule, and the two would disagree in front of a rep.
-//
-// `quietBefore` is the caller's, derived from relstrength.QuietDays: the
-// threshold belongs to the derivation, and this read applies it rather than
-// holding an opinion about how long is too long.
-//
-// Established relationships only: a pair with no interaction on record has not
-// gone quiet, they were never loud, and admitting them turns every dormant
-// contact into an alert. The colleague filter is the live-member join every
-// other read of this table carries — a departed colleague's silences are not
-// the reader's work.
-func QuietEdgesForUser(
-	ctx context.Context,
-	tx pgx.Tx,
-	userID ids.UUID,
-	quietBefore time.Time,
-	limit int,
-) ([]InteractionEdge, error) {
-	if err := auth.Require(ctx, "person", principal.ActionRead); err != nil {
-		return nil, err
-	}
-	rows, err := tx.Query(ctx, `
-		SELECT e.user_id, e.person_id, e.last_at, e.last_inbound_at, e.last_outbound_at,
-		       e.count_90d, e.in_count_90d, e.out_count_90d, e.count_total
-		  FROM graph_interaction_edge e
-		  `+liveMemberJoin+`
-		  JOIN person p ON p.id = e.person_id AND p.archived_at IS NULL
-		 WHERE e.user_id = $1 AND e.last_at < $2 AND e.count_total > 0
-		 ORDER BY e.last_at ASC, e.person_id
-		 LIMIT $3`, userID, quietBefore, limit)
-	if err != nil {
-		return nil, fmt.Errorf("search: reading a colleague's quiet relationships: %w", err)
 	}
 	defer rows.Close()
 	return scanEdges(rows)

@@ -124,6 +124,12 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	returned := ids.NewV7()
 	oldestSpoke := time.Date(2026, 5, 12, 9, 0, 0, 0, time.UTC)
 	newerSpoke := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
+	// The projection and the derivation are given DIFFERENT last-touch instants
+	// on purpose. They genuinely differ in production — the projection folds
+	// only workspace-audience activity this rep took part in, the derivation
+	// folds the contact's qualifying interactions — so a test agreeing on one
+	// instant cannot tell which source the card read.
+	oldestDerived := time.Date(2026, 5, 20, 9, 0, 0, 0, time.UTC)
 
 	// The derivation answers in ITS order — here deliberately not the
 	// projection's — because the lane, not the derivation, owes the rep the
@@ -148,7 +154,9 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 			{
 				PersonID:    ids.From[ids.PersonKind](oldest),
 				DisplayName: "Dana Weiss",
-				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, Days: 63}},
+				Changes: []relstrength.Change{
+					{Kind: relstrength.ChangeWentQuiet, At: oldestDerived, Days: 63},
+				},
 			},
 		},
 	)
@@ -164,8 +172,11 @@ func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
 	if quiet[0].QuietDays != 63 {
 		t.Errorf("the card says %d days, want the derived 63", quiet[0].QuietDays)
 	}
-	if !quiet[0].LastAt.Equal(oldestSpoke) {
-		t.Errorf("the card dates the silence at %s, want the last exchange %s", quiet[0].LastAt, oldestSpoke)
+	// The derivation's instant too, and for the same reason: the card prints
+	// the span and the date in ONE sentence, so a date from the projection
+	// beside a span from the derivation reads as a contradiction to the rep.
+	if !quiet[0].LastAt.Equal(oldestDerived) {
+		t.Errorf("the card dates the silence at %s, want the derived %s", quiet[0].LastAt, oldestDerived)
 	}
 }
 

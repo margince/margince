@@ -139,15 +139,18 @@ type attentionDecay struct {
 }
 
 func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationship, error) {
-	actor, ok := principal.Actor(ctx)
-	if !ok || actor.UserID.IsZero() {
+	// The read refuses a principal with no human of its own, so this is the
+	// same refusal taken one step earlier: before a transaction is opened for
+	// a lane that cannot produce a row. It is not the security boundary — that
+	// lives in QuietEdgesForUser, where the reader is bound to the actor.
+	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {
 		return nil, apperrors.ErrPermissionDenied
 	}
 	now := d.now()
 	var lapsed []attention.QuietRelationship
 	err := database.WithWorkspaceTx(ctx, d.pool, func(tx pgx.Tx) error {
 		quiet, err := search.QuietEdgesForUser(
-			ctx, tx, actor.UserID,
+			ctx, tx,
 			now.AddDate(0, 0, -relstrength.QuietDays),
 			decayCandidateCap,
 		)
@@ -201,11 +204,20 @@ func quietRelationships(
 			if change.Kind != relstrength.ChangeWentQuiet {
 				continue
 			}
+			// BOTH halves of the sentence come from the derivation, never one
+			// from each source. The projection folds only workspace-audience
+			// activity and only this rep's own participation, while the
+			// derivation folds the contact's qualifying interactions, so their
+			// last-touch instants can differ. Taking the number from one and
+			// the date from the other renders "quiet 46 days — last on
+			// <120 days ago>": a card disagreeing with itself, and with the
+			// contact's own page. `change.At` is the touch `change.Days`
+			// counts from, so the two agree by construction.
 			lapsed = append(lapsed, attention.QuietRelationship{
 				PersonID:  row.PersonID.UUID,
 				Name:      row.DisplayName,
 				QuietDays: change.Days,
-				LastAt:    edge.LastAt,
+				LastAt:    change.At,
 			})
 			break
 		}

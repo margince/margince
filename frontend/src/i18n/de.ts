@@ -173,6 +173,8 @@ export const de = {
   "day.lead.promises": "Du hast {count} zugesagt — das geht vor.",
   "day.lead.meetings": "{count} heute im Kalender.",
   "day.lead.atRisk": "{count} werden still. Sonst wartet nichts auf dich.",
+  "day.lead.decay":
+    "Mit {count} hast du länger nicht gesprochen. Es wartet nichts auf dich.",
   "day.lead.morningOnly":
     "Nichts wartet auf dich — die Nacht hat {count} zum Anfangen herausgesucht.",
   "day.lead.ranOvernight":

@@ -175,6 +175,8 @@ export const en = {
   "day.lead.promises": "You promised {count} — those come first.",
   "day.lead.meetings": "{count} on the calendar today.",
   "day.lead.atRisk": "{count} going quiet. Nothing else is waiting on you.",
+  "day.lead.decay":
+    "{count} you have not spoken to in a while. Nothing is waiting on you.",
   "day.lead.morningOnly":
     "Nothing waiting on you — the night picked out {count} to start with.",
   "day.lead.ranOvernight": "Nothing needs you. Here is what ran overnight.",
