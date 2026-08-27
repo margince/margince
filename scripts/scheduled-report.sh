@@ -337,6 +337,65 @@ than as a verdict."\
     || unreported=1
 fi
 
+# The model lane, same two-findings shape and for the same reason. A missing
+# CLI, a stack that will not boot, a seed that fails, or a credential the MCP
+# endpoint rejects all arrive as `failure` — and "the assistant is answering
+# wrongly" is the one conclusion none of them support. LLM_OUTCOME is set by the
+# step from the runner's own "scenarios: N passed" line, which it prints only
+# once every scenario has actually been driven.
+if [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
+  report "the weekly model-driven use cases could not run" bug \
+"\`make e2e-llm\` failed on the weekly run of \`main\` WITHOUT driving the
+scenarios: $RUN_URL
+
+No scenario is known to be failing, and none is known to pass — the lane did not
+get far enough to say. Nothing here is evidence about the product.
+
+Likely causes, in the order they occur: ANTHROPIC_API_KEY is unset or rejected,
+the Claude CLI failed to install, the dev stack did not boot, or the fixture
+seed could not write. The last one is loud by design — \`create_or_die\` prints
+the server's response and stops — so the job log names it directly.
+
+One cause deserves naming because it cost a day the first time: a passport
+minted before a database rebuild is destroyed by it, and the assistant then
+reaches an MCP server it cannot authenticate to. That reads downstream as a
+model that chose to call nothing. \`mint_passport\` now probes /mcp and stops if
+it cannot connect, so this failure should arrive here as a lane failure rather
+than as six scenarios of apparently bad answers.
+
+Reproduce locally with \`MARGINCE_E2E_LLM=1 make e2e-llm\`."\
+    || unreported=1
+fi
+
+if [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
+  report "a use case is failing when driven by a real model" bug \
+"\`make e2e-llm\` drove all six use cases on \`main\` and at least one did not
+reach its pass rate: $RUN_URL
+
+**Read the transcripts before treating this as a regression.** They are attached
+to the run as \`e2e-llm-transcripts\` and kept 30 days. The verdict line says
+which scenario failed; only the transcript says what the assistant actually did,
+and the difference between those two has been the whole value of this lane.
+
+Each scenario runs three times and passes at two, so a single bad run is not
+this issue — it takes two. What that buys is that a real failure here is a
+behaviour, not a coin flip.
+
+Three things this is NOT, each of which has looked like a regression before:
+
+- a checker whose pattern is too narrow (case 6 once demanded \"September\"
+  spelled out while every run correctly wrote \"18 Sep 2025\"),
+- an assertion that forbids something correct (the same case once forbade
+  QUOTING a record it should quote),
+- a harness fault that leaves the assistant with no tools at all.
+
+The known standing failure is case 6: asked about past account-manager changes,
+the assistant cites the record correctly, quotes the post-mortem note correctly,
+and then repeats the note's wrong month in its own voice. If that is what the
+transcript shows, this issue is the existing finding rather than a new one."\
+    || unreported=1
+fi
+
 if [[ "$unreported" -ne 0 ]]; then
   echo "FAIL: at least one finding could not be filed — the run above names what was broken, but an issue for it does not exist" >&2
   exit 1
