@@ -1599,6 +1599,9 @@ export const vi = {
   "co.profileField.legal_name": "Tên pháp lý đã đăng ký",
   "co.profileField.registered_address": "Địa chỉ đăng ký",
   "co.profileField.register_vat": "Số đăng ký / mã số thuế",
+  "co.profileField.legal_form": "Loại hình pháp lý",
+  "co.profileField.register_court": "Tòa án đăng ký",
+  "co.profileField.register_number": "Số đăng ký doanh nghiệp",
   "co.profileField.industry": "Ngành",
   "co.profileField.history": "Lịch sử",
   "co.profile.title": "Hồ sơ công ty",
@@ -3550,6 +3553,15 @@ export const vi = {
   "ob.manual.register_vat": "Số đăng ký và mã số thuế/UID là gì?",
   "ob.manual.register_vatHint":
     "Nhập đúng như trên giấy tờ được cấp. Không có thì để trống.",
+  "ob.manual.legal_form": "Công ty thuộc loại hình pháp lý nào?",
+  "ob.manual.legal_formHint":
+    "Loại hình như ghi trong đăng ký, ví dụ GmbH, AG hoặc Ltd.",
+  "ob.manual.register_court": "Tòa án nào giữ hồ sơ đăng ký?",
+  "ob.manual.register_courtHint":
+    "Tòa án nêu trong thông báo pháp lý, ví dụ Amtsgericht Charlottenburg.",
+  "ob.manual.register_number": "Số đăng ký doanh nghiệp là gì?",
+  "ob.manual.register_numberHint":
+    "Chỉ riêng số đăng ký, ví dụ HRB 12345 B. Mã số thuế điền ở ô phía trên.",
   "ob.manual.industry": "Công ty thuộc ngành nào?",
   "ob.manual.industryHint": "Hãy chọn cách mô tả mà khách hàng nhận ra ngay.",
   "ob.manual.history":
@@ -3601,6 +3613,9 @@ export const vi = {
   "ob.field.legal_name": "Tên pháp lý đã đăng ký",
   "ob.field.registered_address": "Địa chỉ đăng ký",
   "ob.field.register_vat": "Số đăng ký / mã số thuế",
+  "ob.field.legal_form": "Loại hình pháp lý",
+  "ob.field.register_court": "Tòa án đăng ký",
+  "ob.field.register_number": "Số đăng ký doanh nghiệp",
   "ob.field.industry": "Ngành",
   "ob.field.history": "Lịch sử công ty",
 

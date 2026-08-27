@@ -2208,8 +2208,11 @@ const (
 	ColdStartFieldFieldHistory           ColdStartFieldField = "history"
 	ColdStartFieldFieldIcp               ColdStartFieldField = "icp"
 	ColdStartFieldFieldIndustry          ColdStartFieldField = "industry"
+	ColdStartFieldFieldLegalForm         ColdStartFieldField = "legal_form"
 	ColdStartFieldFieldLegalName         ColdStartFieldField = "legal_name"
 	ColdStartFieldFieldOfferSummary      ColdStartFieldField = "offer_summary"
+	ColdStartFieldFieldRegisterCourt     ColdStartFieldField = "register_court"
+	ColdStartFieldFieldRegisterNumber    ColdStartFieldField = "register_number"
 	ColdStartFieldFieldRegisterVat       ColdStartFieldField = "register_vat"
 	ColdStartFieldFieldRegisteredAddress ColdStartFieldField = "registered_address"
 	ColdStartFieldFieldSalesMotion       ColdStartFieldField = "sales_motion"
@@ -2238,9 +2241,15 @@ func (e ColdStartFieldField) Valid() bool {
 		return true
 	case ColdStartFieldFieldIndustry:
 		return true
+	case ColdStartFieldFieldLegalForm:
+		return true
 	case ColdStartFieldFieldLegalName:
 		return true
 	case ColdStartFieldFieldOfferSummary:
+		return true
+	case ColdStartFieldFieldRegisterCourt:
+		return true
+	case ColdStartFieldFieldRegisterNumber:
 		return true
 	case ColdStartFieldFieldRegisterVat:
 		return true
@@ -2496,8 +2505,11 @@ const (
 	CompanyProfileFieldFieldHistory           CompanyProfileFieldField = "history"
 	CompanyProfileFieldFieldIcp               CompanyProfileFieldField = "icp"
 	CompanyProfileFieldFieldIndustry          CompanyProfileFieldField = "industry"
+	CompanyProfileFieldFieldLegalForm         CompanyProfileFieldField = "legal_form"
 	CompanyProfileFieldFieldLegalName         CompanyProfileFieldField = "legal_name"
 	CompanyProfileFieldFieldOfferSummary      CompanyProfileFieldField = "offer_summary"
+	CompanyProfileFieldFieldRegisterCourt     CompanyProfileFieldField = "register_court"
+	CompanyProfileFieldFieldRegisterNumber    CompanyProfileFieldField = "register_number"
 	CompanyProfileFieldFieldRegisterVat       CompanyProfileFieldField = "register_vat"
 	CompanyProfileFieldFieldRegisteredAddress CompanyProfileFieldField = "registered_address"
 	CompanyProfileFieldFieldSalesMotion       CompanyProfileFieldField = "sales_motion"
@@ -2526,9 +2538,15 @@ func (e CompanyProfileFieldField) Valid() bool {
 		return true
 	case CompanyProfileFieldFieldIndustry:
 		return true
+	case CompanyProfileFieldFieldLegalForm:
+		return true
 	case CompanyProfileFieldFieldLegalName:
 		return true
 	case CompanyProfileFieldFieldOfferSummary:
+		return true
+	case CompanyProfileFieldFieldRegisterCourt:
+		return true
+	case CompanyProfileFieldFieldRegisterNumber:
 		return true
 	case CompanyProfileFieldFieldRegisterVat:
 		return true
@@ -2958,8 +2976,11 @@ const (
 	CompanySiteReadSuggestedChangeFieldHistory           CompanySiteReadSuggestedChangeField = "history"
 	CompanySiteReadSuggestedChangeFieldIcp               CompanySiteReadSuggestedChangeField = "icp"
 	CompanySiteReadSuggestedChangeFieldIndustry          CompanySiteReadSuggestedChangeField = "industry"
+	CompanySiteReadSuggestedChangeFieldLegalForm         CompanySiteReadSuggestedChangeField = "legal_form"
 	CompanySiteReadSuggestedChangeFieldLegalName         CompanySiteReadSuggestedChangeField = "legal_name"
 	CompanySiteReadSuggestedChangeFieldOfferSummary      CompanySiteReadSuggestedChangeField = "offer_summary"
+	CompanySiteReadSuggestedChangeFieldRegisterCourt     CompanySiteReadSuggestedChangeField = "register_court"
+	CompanySiteReadSuggestedChangeFieldRegisterNumber    CompanySiteReadSuggestedChangeField = "register_number"
 	CompanySiteReadSuggestedChangeFieldRegisterVat       CompanySiteReadSuggestedChangeField = "register_vat"
 	CompanySiteReadSuggestedChangeFieldRegisteredAddress CompanySiteReadSuggestedChangeField = "registered_address"
 	CompanySiteReadSuggestedChangeFieldSalesMotion       CompanySiteReadSuggestedChangeField = "sales_motion"
@@ -2988,9 +3009,15 @@ func (e CompanySiteReadSuggestedChangeField) Valid() bool {
 		return true
 	case CompanySiteReadSuggestedChangeFieldIndustry:
 		return true
+	case CompanySiteReadSuggestedChangeFieldLegalForm:
+		return true
 	case CompanySiteReadSuggestedChangeFieldLegalName:
 		return true
 	case CompanySiteReadSuggestedChangeFieldOfferSummary:
+		return true
+	case CompanySiteReadSuggestedChangeFieldRegisterCourt:
+		return true
+	case CompanySiteReadSuggestedChangeFieldRegisterNumber:
 		return true
 	case CompanySiteReadSuggestedChangeFieldRegisterVat:
 		return true
@@ -11037,8 +11064,11 @@ const (
 	ProfileFieldKeyHistory           ProfileFieldKey = "history"
 	ProfileFieldKeyIcp               ProfileFieldKey = "icp"
 	ProfileFieldKeyIndustry          ProfileFieldKey = "industry"
+	ProfileFieldKeyLegalForm         ProfileFieldKey = "legal_form"
 	ProfileFieldKeyLegalName         ProfileFieldKey = "legal_name"
 	ProfileFieldKeyOfferSummary      ProfileFieldKey = "offer_summary"
+	ProfileFieldKeyRegisterCourt     ProfileFieldKey = "register_court"
+	ProfileFieldKeyRegisterNumber    ProfileFieldKey = "register_number"
 	ProfileFieldKeyRegisterVat       ProfileFieldKey = "register_vat"
 	ProfileFieldKeyRegisteredAddress ProfileFieldKey = "registered_address"
 	ProfileFieldKeySalesMotion       ProfileFieldKey = "sales_motion"
@@ -11067,9 +11097,15 @@ func (e ProfileFieldKey) Valid() bool {
 		return true
 	case ProfileFieldKeyIndustry:
 		return true
+	case ProfileFieldKeyLegalForm:
+		return true
 	case ProfileFieldKeyLegalName:
 		return true
 	case ProfileFieldKeyOfferSummary:
+		return true
+	case ProfileFieldKeyRegisterCourt:
+		return true
+	case ProfileFieldKeyRegisterNumber:
 		return true
 	case ProfileFieldKeyRegisterVat:
 		return true
@@ -14885,6 +14921,9 @@ type CompanyProfile struct {
 	Icp      *string `json:"icp,omitempty"`
 	Industry *string `json:"industry,omitempty"`
 
+	// LegalForm The legal form as the imprint prints it (GmbH, AG, Ltd) — §5 DDG makes a German site state it.
+	LegalForm *string `json:"legal_form,omitempty"`
+
 	// LegalName The registered legal entity, when it differs from display_name.
 	LegalName *string `json:"legal_name,omitempty"`
 
@@ -14897,7 +14936,13 @@ type CompanyProfile struct {
 	// OrganizationId The anchor organization this profile belongs to.
 	OrganizationId openapi_types.UUID `json:"organization_id"`
 
-	// RegisterVat VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B).
+	// RegisterCourt The court holding the commercial register entry (e.g. Amtsgericht Charlottenburg).
+	RegisterCourt *string `json:"register_court,omitempty"`
+
+	// RegisterNumber The commercial register entry alone (e.g. HRB 12345 B) — a registry identity, unlike the VAT ID a tax authority issues.
+	RegisterNumber *string `json:"register_number,omitempty"`
+
+	// RegisterVat VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.
 	RegisterVat *string `json:"register_vat,omitempty"`
 
 	// RegisteredAddress The registered address as one formatted line.
@@ -14959,11 +15004,20 @@ type CompanyProfileInput struct {
 	Icp              *string `json:"icp,omitempty"`
 	Industry         *string `json:"industry,omitempty"`
 
+	// LegalForm The legal form as the imprint prints it (GmbH, AG, Ltd).
+	LegalForm *string `json:"legal_form,omitempty"`
+
 	// LegalName The registered legal entity.
 	LegalName    *string `json:"legal_name,omitempty"`
 	OfferSummary *string `json:"offer_summary,omitempty"`
 
-	// RegisterVat VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B).
+	// RegisterCourt The court holding the commercial register entry.
+	RegisterCourt *string `json:"register_court,omitempty"`
+
+	// RegisterNumber The commercial register entry alone (e.g. HRB 12345 B).
+	RegisterNumber *string `json:"register_number,omitempty"`
+
+	// RegisterVat VAT ID / commercial register entry (e.g. DE123456789, HRB 12345 B). Rows predate register_number and may hold either; a new read puts the VAT ID here and the register entry in register_number.
 	RegisterVat *string `json:"register_vat,omitempty"`
 
 	// RegisteredAddress The registered address as one formatted line.
@@ -19584,8 +19638,11 @@ type OnboardingCompanyDraft struct {
 	History           *string `json:"history,omitempty"`
 	Icp               *string `json:"icp,omitempty"`
 	Industry          *string `json:"industry,omitempty"`
+	LegalForm         *string `json:"legal_form,omitempty"`
 	LegalName         *string `json:"legal_name,omitempty"`
 	OfferSummary      *string `json:"offer_summary,omitempty"`
+	RegisterCourt     *string `json:"register_court,omitempty"`
+	RegisterNumber    *string `json:"register_number,omitempty"`
 	RegisterVat       *string `json:"register_vat,omitempty"`
 	RegisteredAddress *string `json:"registered_address,omitempty"`
 	SalesMotion       *string `json:"sales_motion,omitempty"`

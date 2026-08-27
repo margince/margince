@@ -17,6 +17,7 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import {
   type CompanyFieldName,
+  type CompanyForm,
   changeDraftField,
   EMPTY_DRAFT,
   MAX_SELECTED_FACTS,
@@ -37,6 +38,17 @@ import {
 // (portalled, Escape-closable, focus in and back out again).
 
 type CompanySiteReadFact = components["schemas"]["CompanySiteReadFact"];
+
+// A draft with nothing left to ask for. Derived from the empty form rather
+// than listed, so the case stays "every field is answered" as the company
+// gains fields, instead of quietly becoming "these seventeen are".
+function everyFieldFilled(): CompanyForm {
+  const values = { ...EMPTY_DRAFT.values };
+  for (const field of Object.keys(values) as CompanyFieldName[]) {
+    values[field] = "filled";
+  }
+  return values;
+}
 
 function fact(
   over: Partial<CompanySiteReadFact> & { value_key: string; value: string },
@@ -997,25 +1009,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
         }}
         draft={{
           ...EMPTY_DRAFT,
-          values: {
-            display_name: "filled",
-            website: "filled",
-            legal_name: "filled",
-            register_vat: "filled",
-            registered_address: "filled",
-            industry: "filled",
-            offer_summary: "filled",
-            icp: "filled",
-            value_proposition: "filled",
-            usp: "filled",
-            customer_pains: "filled",
-            desired_outcomes: "filled",
-            buying_center: "filled",
-            buying_intents: "filled",
-            common_objections: "filled",
-            sales_motion: "filled",
-            history: "filled",
-          },
+          values: everyFieldFilled(),
         }}
         answers={[]}
         selectedFactKeys={[]}
