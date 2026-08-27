@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { ComboBoxSuggestion } from "../design-system/combobox";
+import { stable } from "../format/collate";
 
 /**
  * Which models this installation can bind, for the two screens that bind one.
@@ -58,6 +59,10 @@ export function useAiModelCatalogue(enabled: boolean) {
  * the price sheet's — provider then model — and a reader scanning one provider's
  * models wants them alphabetical, which for a namespaced id also groups a
  * vendor's own family together.
+ *
+ * `stable`, not the reader's collation: a model id is a KEY the vendor minted,
+ * not a name in anybody's language, and two colleagues comparing the same list
+ * must see it in the same order.
  */
 export function suggestionsFor(
   catalogue: readonly ModelRate[] | undefined,
@@ -67,5 +72,5 @@ export function suggestionsFor(
   return (catalogue ?? [])
     .filter((r) => r.provider === provider && r.lane === lane)
     .map((r) => ({ value: r.model_id }))
-    .sort((a, b) => a.value.localeCompare(b.value));
+    .sort((a, b) => stable(a.value, b.value));
 }

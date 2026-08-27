@@ -15,6 +15,9 @@ import "time"
 // inherits (RateStore.writeModelRate).
 type Lane string
 
+// The two lanes a bound model can serve. The chat tiers and the embeddings
+// lane bind separately because retrieval has to keep working when the chat
+// budget is exhausted, and the model is a different one even on one vendor.
 const (
 	LaneChat       Lane = "chat"
 	LaneEmbeddings Lane = "embeddings"
