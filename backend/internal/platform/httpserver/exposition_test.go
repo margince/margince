@@ -86,6 +86,34 @@ func TestTheExpositionKeepsRefusingAfterTheFirstFailure(t *testing.T) {
 	}
 }
 
+// Every supplier, not only the expensive ones. printf goes quiet after a
+// refusal, but Go evaluates its arguments first, so a counter read still
+// happens unless the section that would print it is guarded. Cheap here — the
+// suppliers are atomic loads — and the point is the rule rather than the cost:
+// "nothing is measured for a scrape that has gone" is either true of all of
+// them or it is a claim a reader has to check one section at a time.
+func TestNoCounterIsReadForAScrapeThatHasAlreadyGone(t *testing.T) {
+	read := map[string]bool{}
+	w := &hangUp{ResponseWriter: httptest.NewRecorder()}
+
+	Metrics(nil, nil,
+		func() uint64 { read["published"] = true; return 0 },
+		nil, nil,
+		&OverlayMetrics{
+			SourceLag:     func(context.Context) (map[string]time.Duration, error) { return map[string]time.Duration{}, nil },
+			SyncedTotal:   func() uint64 { read["synced"] = true; return 0 },
+			ConflictTotal: func() uint64 { read["conflict"] = true; return 0 },
+			DeletedTotal:  func() uint64 { read["deleted"] = true; return 0 },
+		},
+	)(w, httptest.NewRequest(http.MethodGet, "/metrics", nil))
+
+	for _, supplier := range []string{"published", "synced", "conflict", "deleted"} {
+		if read[supplier] {
+			t.Errorf("the %s counter was read after the scrape's writer was already gone", supplier)
+		}
+	}
+}
+
 // A probe body is not an exposition, and it takes the same posture for a
 // smaller reason: there is nothing to log, but a half-written answer is still
 // not worth assembling.

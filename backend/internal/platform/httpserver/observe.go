@@ -327,9 +327,18 @@ func Metrics(pool *pgxpool.Pool, backlog func(context.Context) (int64, error), p
 			}
 		}
 
-		out.printf("# HELP margince_relay_published_total Outbox rows shipped to the bus since process start.\n")
-		out.printf("# TYPE margince_relay_published_total counter\n")
-		out.printf("margince_relay_published_total %d\n", published())
+		// Guarded like the sections around it, and for the same rule rather
+		// than for its cost: printf goes quiet after a refusal, but Go
+		// evaluates the argument first, so the supplier still runs. This one is
+		// an atomic load and the reads below it are too — the point is that
+		// "nothing is measured for a scrape that has gone" is either true of
+		// every supplier here or it is a claim a reader has to check one
+		// section at a time, which is the shape this file was in.
+		if !out.gone() {
+			out.printf("# HELP margince_relay_published_total Outbox rows shipped to the bus since process start.\n")
+			out.printf("# TYPE margince_relay_published_total counter\n")
+			out.printf("margince_relay_published_total %d\n", published())
+		}
 
 		// Omitted rather than zeroed when no pool was injected — the same
 		// "declared or absent" posture every other section here takes, and
@@ -421,6 +430,12 @@ func writeOverlayMetrics(ctx context.Context, out *exposition, overlay *OverlayM
 		}
 	} else {
 		slog.Error("metrics: overlay source-lag query failed", "err", err)
+	}
+	// The lag section may be what discovers the writer is gone. printf goes
+	// quiet from here, but the three counter suppliers below would still be
+	// called to build arguments for writes that go nowhere.
+	if out.gone() {
+		return
 	}
 
 	out.printf("# HELP margince_overlay_mirror_synced_total Mirror rows ingested (push+pull) since process start.\n")
