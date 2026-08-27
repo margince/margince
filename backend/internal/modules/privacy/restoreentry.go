@@ -63,9 +63,7 @@ func ReadRestoreOf(ctx context.Context, db *database.DB, entityType string, enti
 func queryRestoreOf(ctx context.Context, tx pgx.Tx, entityType string, entityID, undidID ids.UUID) (recordAuditRow, error) {
 	var row recordAuditRow
 	err := scanRecordAuditRow(tx.QueryRow(ctx, `
-		SELECT a.id, a.actor_type, a.actor_id, a.on_behalf_of, a.action, a.occurred_at,
-		       a.authorization_rule, a.before, a.after, a.passport_id,
-		       actor_user.display_name, obo.display_name, oc.client_name
+		SELECT`+recordAuditColumns+`
 		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
 		WHERE a.entity_type = $1 AND a.entity_id = $2
 		  AND a.evidence ->> $4 = $3::text
@@ -78,28 +76,4 @@ func queryRestoreOf(ctx context.Context, tx pgx.Tx, entityType string, entityID,
 		return recordAuditRow{}, fmt.Errorf("read the reversal's history line: %w", err)
 	}
 	return row, nil
-}
-
-// auditRowScanner is what both readers of this projection have in common: a
-// pgx.Row and a pgx.Rows both scan. One spelling of the column list and its
-// two jsonb decodes, because two would drift the moment a column is added to
-// one query and not the other.
-type auditRowScanner interface {
-	Scan(dest ...any) error
-}
-
-func scanRecordAuditRow(src auditRowScanner, r *recordAuditRow) error {
-	var beforeJSON, afterJSON []byte
-	if err := src.Scan(&r.id, &r.actorType, &r.actorID, &r.onBehalfOf, &r.action, &r.occurredAt,
-		&r.authorizationRule, &beforeJSON, &afterJSON, &r.passportID,
-		&r.actorDisplayName, &r.onBehalfOfName, &r.agentClientName); err != nil {
-		return err
-	}
-	if err := unmarshalJSONBMap(beforeJSON, &r.before); err != nil {
-		return fmt.Errorf("audit row %s before: %w", r.id, err)
-	}
-	if err := unmarshalJSONBMap(afterJSON, &r.after); err != nil {
-		return fmt.Errorf("audit row %s after: %w", r.id, err)
-	}
-	return nil
 }

@@ -41,36 +41,6 @@ const (
 // The audit row is aliased `a`; the caller supplies that alias and selects
 // `actor_user.display_name, obo.display_name` in that order.
 //
-// The actor join builds the prefixed key FROM app_user ('human:' || id) rather
-// than casting actor_id, so a non-uuid actor id (agent:*, connector:*, system)
-// simply resolves to no name instead of raising a cast error. A LEFT JOIN both
-// times, and matching app_user.id (a primary key) both times: a deactivated or
-// deleted member still has audit rows, no name is honest where an invented one
-// would not be, and neither join can duplicate or drop an audit row.
-const auditActorNameJoins = `
-		LEFT JOIN app_user actor_user
-		  ON a.actor_type = 'human' AND a.actor_id = 'human:' || actor_user.id::text
-		LEFT JOIN app_user obo ON obo.id = a.on_behalf_of`
-
-// agentClientNameJoin resolves the NAME of the tool a delegated change was
-// typed through — "Claude", "Cursor" — from the passport the row recorded.
-//
-// Three hops, all of them nullable, and each null means something different:
-// a passport minted by hand in Settings has no oauth_grant_id (a person made
-// it for themselves, and its own label is whatever they typed); a grant whose
-// client row was deleted resolves nothing; and a row with no passport at all
-// was not a delegated write. Every one of those falls back to the generic
-// "via an agent", which is why this is a LEFT JOIN chain and not a filter.
-//
-// The join is on client_id ALONE. oauth_client used to be keyed
-// (workspace_id, client_id) and this join said so; migration 1787109970 dropped
-// the workspace column from every credential table, so client_id is the key
-// now and naming the old one made every record-history read a 500.
-const agentClientNameJoin = `
-		LEFT JOIN passport p ON p.id = a.passport_id
-		LEFT JOIN oauth_grant g ON g.id = p.oauth_grant_id
-		LEFT JOIN oauth_client oc ON oc.client_id = g.client_id`
-
 // RecordHistoryFilter carries the validated query surface of
 // (GET /records/{entity_type}/{id}/history).
 type RecordHistoryFilter struct {
@@ -291,9 +261,7 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 	}
 	args = append(args, fetch)
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT a.id, a.actor_type, a.actor_id, a.on_behalf_of, a.action, a.occurred_at,
-		       a.authorization_rule, a.before, a.after, a.passport_id,
-		       actor_user.display_name, obo.display_name, oc.client_name
+		SELECT`+recordAuditColumns+`
 		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
 		WHERE %s
 		ORDER BY a.occurred_at DESC, a.id DESC
