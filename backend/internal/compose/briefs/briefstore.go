@@ -51,7 +51,12 @@ type BriefRun struct {
 	LocalDay         time.Time
 	CandidateCount   int
 	RevenueNormMinor int64
-	Items            []BriefRunItem
+	// Narrative is the overnight agent's sentence about the night, empty when
+	// no pass has written one — which AnnotatedAt is what distinguishes from a
+	// pass that ran and had nothing to say.
+	Narrative   string
+	AnnotatedAt *time.Time
+	Items       []BriefRunItem
 }
 
 // BriefRunItem is one persisted queue entry with its per-rep state.
@@ -65,6 +70,9 @@ type BriefRunItem struct {
 	State        string
 	StateAt      *time.Time
 	SnoozedUntil *time.Time
+	// Finding is what the overnight agent found about this deal, empty when no
+	// pass has annotated the run it belongs to.
+	Finding string
 }
 
 // SnapshotRun ranks and persists one brief run for the acting rep at the
@@ -242,10 +250,12 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 			return err
 		}
 		err = tx.QueryRow(ctx, `
-			SELECT id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor
+			SELECT id, user_id, generated_at, as_of, local_day, candidate_count, revenue_norm_minor,
+			       coalesce(narrative, ''), annotated_at
 			FROM brief_run
 			WHERE user_id = $1 AND local_day = $2`, userID, day).
-			Scan(&run.ID, &run.UserID, &run.GeneratedAt, &run.AsOf, &run.LocalDay, &run.CandidateCount, &run.RevenueNormMinor)
+			Scan(&run.ID, &run.UserID, &run.GeneratedAt, &run.AsOf, &run.LocalDay, &run.CandidateCount,
+				&run.RevenueNormMinor, &run.Narrative, &run.AnnotatedAt)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -288,7 +298,7 @@ func readRunItems(ctx context.Context, tx pgx.Tx, runID ids.UUID) ([]BriefRunIte
 		return nil, err
 	}
 	q := fmt.Sprintf(`
-		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, bi.evidence_ids, bi.state, bi.state_at, bi.snoozed_until
+		SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, bi.evidence_ids, bi.state, bi.state_at, bi.snoozed_until, coalesce(bi.finding, '')
 		FROM brief_item bi
 		JOIN deal d ON d.id = bi.deal_id
 		WHERE bi.brief_run_id = $%d AND bi.state <> 'snoozed'`, runPos)
@@ -379,14 +389,14 @@ func (e *BriefEngine) markItem(ctx context.Context, itemID ids.UUID, state strin
 	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var owner ids.UUID
 		row := tx.QueryRow(ctx, `
-			SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, bi.evidence_ids, bi.state, bi.state_at, bi.snoozed_until, br.user_id
+			SELECT bi.id, bi.deal_id, bi.rank, bi.composite, bi.feature_vector, bi.evidence_ids, bi.state, bi.state_at, bi.snoozed_until, coalesce(bi.finding, ''), br.user_id
 			FROM brief_item bi
 			JOIN brief_run br ON br.id = bi.brief_run_id
 			WHERE bi.id = $1
 			FOR UPDATE OF bi`, itemID)
 		var featuresRaw []byte
 		err := row.Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite, &featuresRaw,
-			&item.EvidenceIDs, &item.State, &item.StateAt, &item.SnoozedUntil, &owner)
+			&item.EvidenceIDs, &item.State, &item.StateAt, &item.SnoozedUntil, &item.Finding, &owner)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
 		}
@@ -467,7 +477,8 @@ func scanBriefItem(rows pgx.Rows) (BriefRunItem, error) {
 	var item BriefRunItem
 	var featuresRaw []byte
 	if err := rows.Scan(&item.ID, &item.DealID, &item.Rank, &item.Composite,
-		&featuresRaw, &item.EvidenceIDs, &item.State, &item.StateAt, &item.SnoozedUntil); err != nil {
+		&featuresRaw, &item.EvidenceIDs, &item.State, &item.StateAt, &item.SnoozedUntil,
+		&item.Finding); err != nil {
 		return BriefRunItem{}, err
 	}
 	if err := json.Unmarshal(featuresRaw, &item.Features); err != nil {

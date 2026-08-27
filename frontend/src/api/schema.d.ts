@@ -8713,6 +8713,41 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/brief/annotations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Write the overnight pass's findings onto the acting rep's own brief for today.
+         * @description The overnight `morning_brief` agent's write-back. Its goal has always asked for why each
+         *     deal is on the list, what changed, and one next move; this is where that answer lands, so
+         *     it reaches the person instead of staying in the run's raw result where nothing renders it.
+         *
+         *     SCOPED TO THE CALLER'S OWN CURRENT RUN, resolved server-side. The body carries no user id,
+         *     no run id and no local day, so there is no argument by which a caller could annotate
+         *     another rep's morning or an older run. It carries no rank and no item ordering either:
+         *     the queue's order stays the deterministic engine's, because a writer that could reorder
+         *     could promote a deal by asserting it belongs first rather than by evidence.
+         *
+         *     EVERY CITED EVIDENCE ID IS VERIFIED against what the run already recorded for that item.
+         *     A uuid that merely parses proves nothing, and one naming another rep's record would make
+         *     an ungrounded claim read as a grounded one — so an id outside the item's own evidence
+         *     refuses the whole write rather than being dropped silently.
+         *
+         *     Idempotent by replacement: a second pass is a correction, not an addition.
+         */
+        put: operations["annotateMorningBrief"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/brief/items/{itemId}/act": {
         parameters: {
             query?: never;
@@ -21578,6 +21613,19 @@ export interface components {
             revenue_norm_minor?: number;
             /** @description The ranked queue, best-first, capped at the honest-short target (7). */
             items: components["schemas"]["MorningBriefItem"][];
+            /**
+             * @description One sentence about the night, written by the overnight agent. Null when the pass
+             *     never ran, and ALSO null when it ran and honestly had nothing to say — `annotated_at`
+             *     is what tells those apart, which is why both fields exist.
+             */
+            narrative?: string | null;
+            /**
+             * Format: date-time
+             * @description When the overnight agent last wrote its findings, null when no pass has. A reader
+             *     showing a run with no narrative must consult this before saying "a quiet night":
+             *     without it, a model that never ran and a night with nothing in it look identical.
+             */
+            annotated_at?: string | null;
         };
         /**
          * @description One ranked queue entry: the §10.1 composite, its per-factor decomposition (no mystery
@@ -21612,6 +21660,50 @@ export interface components {
              * @description When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.
              */
             snoozed_until?: string | null;
+            /**
+             * @description What the overnight agent found about this deal — why it is on the list, what changed,
+             *     and the one next move. Null when no pass has annotated this run. It is agent-authored
+             *     prose and the surface marks it as such; the rank beside it stays the deterministic
+             *     engine's, which no annotation can change.
+             */
+            finding?: string | null;
+        };
+        /**
+         * @description One overnight pass's findings for the acting rep's own current run.
+         *
+         *     WHAT IS ABSENT IS THE DESIGN: no user id, no run id, no local day, no rank and no item
+         *     ordering. The run is resolved server-side from the acting principal and today's local
+         *     day, and the queue's order stays the deterministic engine's.
+         */
+        AnnotateBriefRequest: {
+            /**
+             * @description One sentence about the night as a whole. An empty string is a real answer — a quiet
+             *     night has no sentence — and is stored as null with the pass still stamped.
+             */
+            narrative?: string;
+            /** @description At most one finding per queued item; a repeated item id is refused. */
+            items: components["schemas"]["AnnotateBriefItem"][];
+        };
+        /** @description One finding about one queued deal. */
+        AnnotateBriefItem: {
+            /**
+             * Format: uuid
+             * @description A brief item belonging to the caller's own current run. Anything else refuses.
+             */
+            item_id: string;
+            /** @description The prose the rep reads beside the rank. */
+            finding: string;
+            /**
+             * @description What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
+             *     no sources", it is the verification being skipped, and it is the easy path — a model
+             *     that omits the field would get its prose onto the rep's screen unchecked, under the
+             *     same agent tag a grounded finding carries.
+             *
+             *     Every id is checked against the evidence the run already recorded for this item. An id
+             *     outside it refuses the whole write rather than being dropped, because a finding whose
+             *     citations were silently pruned still reads as grounded.
+             */
+            cited_evidence: string[];
         };
         /** @description Snooze a brief item until a future instant (A77/AC-home-6); it re-surfaces once the instant passes. */
         BriefSnoozeRequest: {
@@ -37423,6 +37515,40 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    annotateMorningBrief: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AnnotateBriefRequest"];
+            };
+        };
+        responses: {
+            /** @description The findings were written. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description The rep has no brief run today, so there is nothing to annotate. */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     markBriefItemActed: {

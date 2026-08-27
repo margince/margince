@@ -146,7 +146,16 @@ func exactOrgByDomain(ctx context.Context, tx pgx.Tx, domains []string, exclude 
 // true, which is the same answer coalesce would have produced.
 func fuzzyOrganization(ctx context.Context, tx pgx.Tx, c OrganizationCandidate) (OrganizationMatch, error) {
 	args := []any{c.ExcludeID}
-	arms := orgTrigramArms(&args, NormalizeOrgName(c.DisplayName), NormalizeOrgName(c.LegalName))
+	// The BRAND is searched on as well as the whole name. A market that writes
+	// its legal form into the name makes the two very different strings, and the
+	// score compares the brand: measured, "Perseroan Terbatas IBM" against a
+	// stored "IBM" scores 0.174 as whole strings, under both trigram limits, so
+	// the true duplicate was never returned for scoring at all. Searching the
+	// brand as well costs one more OR arm and finds it.
+	//
+	// searchAxes drops a value equal to one already there, so the common case —
+	// a name with no legal form to strip — adds no arms.
+	arms := orgTrigramArms(&args, searchAxes(c)...)
 	if len(arms) == 0 {
 		return OrganizationMatch{Decision: DecisionNoMatch}, nil
 	}
@@ -202,6 +211,25 @@ func fuzzyOrganization(ctx context.Context, tx pgx.Tx, c OrganizationCandidate) 
 		Confidence:     ranked[0].Confidence,
 		Ranked:         ranked,
 	}, nil
+}
+
+// searchAxes are the strings the candidate query searches on: each name as the
+// key spells it, and again as the score will compare it once a leading legal
+// form is stripped.
+//
+// Deduplicated, because for most names the two are the same string and a
+// repeated arm buys nothing but a longer query under the organization-name
+// write lock.
+func searchAxes(c OrganizationCandidate) []string {
+	var axes []string
+	for _, name := range []string{c.DisplayName, c.LegalName} {
+		for _, axis := range []string{NormalizeOrgName(name), orgNameForMatching(name)} {
+			if axis != "" && !slices.Contains(axes, axis) {
+				axes = append(axes, axis)
+			}
+		}
+	}
+	return axes
 }
 
 // orgTrigramArms builds one `<%` arm per (non-empty candidate axis × stored

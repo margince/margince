@@ -7,6 +7,7 @@ import type { components } from "../api/schema";
 import { ordinalNumber } from "../format/format";
 import { Badge, Button, Card, PendingBody } from "./atoms";
 import { Meter } from "./readings";
+import { ProvenanceTag } from "./trust";
 import "./briefitem.css";
 
 // BriefItemCard — one ranked entry of a Morning-Brief run, as the card the
@@ -194,6 +195,7 @@ export function BriefItemCard({
           <span className="brief-item-amount t-mono">{amount}</span>
         )}
       </div>
+      <BriefItemFinding item={item} />
       <BriefFactorVector
         item={item}
         labels={labels}
@@ -357,6 +359,26 @@ function BriefBar({
       <span className="brief-item-bar-value t-mono">
         {formatPercent(clamped)}
       </span>
+    </div>
+  );
+}
+
+// What the overnight agent found about this deal, above the meters rather than
+// below them: the finding is the ANSWER and the factor vector is the working,
+// and a reader who only reads the first line of a card should get the answer.
+//
+// It carries a ProvenanceTag because it is model-authored prose sitting beside
+// numbers a deterministic engine computed, and nothing else on the card would
+// tell those apart. Absent when no pass has annotated the run — the panel above
+// says whether a pass ran at all, so the card does not repeat it per item.
+function BriefItemFinding({ item }: Readonly<{ item: BriefItem }>) {
+  if (!item.finding) {
+    return null;
+  }
+  return (
+    <div className="brief-item-finding">
+      <ProvenanceTag provenance={{ kind: "agent" }} />
+      <p>{item.finding}</p>
     </div>
   );
 }

@@ -215,6 +215,7 @@ func fullRegistry(t *testing.T) *Registry {
 	RegisterImportTools(r, stubImports{})
 	RegisterListTool(r, nil, probeVocabulary{})
 	RegisterBriefTool(r, briefOf(0))
+	RegisterAnnotateBriefTool(r, func(context.Context, AnnotateBriefArgs) error { return nil })
 	RegisterApprovalTools(r, &fakeInbox{})
 	return r
 }

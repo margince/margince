@@ -299,6 +299,10 @@ func (stubs) GenerateMorningBrief(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GenerateMorningBrief")
 }
 
+func (stubs) AnnotateMorningBrief(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AnnotateMorningBrief")
+}
+
 func (stubs) MarkBriefItemActed(w nethttp.ResponseWriter, r *nethttp.Request, itemId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "MarkBriefItemActed")
 }

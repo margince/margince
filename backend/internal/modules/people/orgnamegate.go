@@ -37,10 +37,7 @@ package people
 // 1 (`exactOrgByDomain`), which returns before this tier is reached — a domain
 // is an exact key and needs no name evidence at all.
 
-import (
-	"strings"
-	"unicode"
-)
+import "strings"
 
 // orgNameStopwords are the words a company name shares with its whole market:
 // present in many names, evidence of identity in none.
@@ -184,27 +181,6 @@ const orgFuzzyTokenSimilarity = 0.90
 // them apart.
 const orgFuzzyTokenLengthSlack = 1
 
-// orgTokenSeparators split a name into words for THIS gate's purposes.
-//
-// Anything that is not a letter or a digit separates two words. Company names
-// arrive punctuated every way a writer can punctuate them — "ACME-Group",
-// "Rich-Media/Solutions", "Hewlett.Packard", "Capital.com", an en dash where a
-// hyphen was meant — and a fused token loses a real duplicate: "Acme Ltd" and
-// "ACME-Group Ltd" share the word "acme", but as one token "acme-group" it
-// matches nothing.
-//
-// A CLASS rather than a list, deliberately. An earlier version named six ASCII
-// characters and missed the period and the en dash, which is the shape of bug
-// that keeps being rediscovered one punctuation mark at a time.
-//
-// Deliberately NOT done inside NormalizeOrgName, which also produces exact
-// grouping keys (orgMatchKeys in linkedinimport.go, the promotion sweep's
-// buckets). Splitting there would make two DIFFERENT names equal as keys.
-// Splitting here changes only which words this gate compares.
-func orgTokenSeparators(r rune) bool {
-	return !unicode.IsLetter(r) && !unicode.IsDigit(r)
-}
-
 // distinctiveOrgTokens are a name's words with the market's shared vocabulary
 // removed.
 //
@@ -212,7 +188,7 @@ func orgTokenSeparators(r rune) bool {
 // three runes was wrong: it threw away "3M", whose two characters ARE the
 // company. A word is dropped for being generic, never for being short.
 func distinctiveOrgTokens(name string) []string {
-	fields := strings.FieldsFunc(orgNameForMatching(name), orgTokenSeparators)
+	fields := strings.FieldsFunc(orgNameForMatching(name), nameWordSeparators)
 	out := make([]string, 0, min(len(fields), orgGateTokenBudget))
 	for i, token := range fields {
 		// AN ARTICLE THAT WOULD LEAVE A ONE-WORD NAME IS NOT AN ARTICLE. English
@@ -297,7 +273,7 @@ func sameOrgToken(a, b string) bool {
 // The same separators the token split uses, so "E-Commerce" and "E Commerce"
 // take one path rather than two.
 func squashedOrgName(name string) string {
-	return strings.Join(strings.FieldsFunc(orgNameForMatching(name), orgTokenSeparators), "")
+	return strings.Join(strings.FieldsFunc(orgNameForMatching(name), nameWordSeparators), "")
 }
 
 // sharesADistinctiveWord is the gate itself: may these two names be scored?
@@ -323,8 +299,8 @@ func sharesADistinctiveWord(a, b string) bool {
 		return true
 	}
 	left, right := distinctiveOrgTokens(a), distinctiveOrgTokens(b)
-	_, leftVN := matchingFormOf(a)
-	_, rightVN := matchingFormOf(b)
+	_, leftMarket := matchingFormOf(a)
+	_, rightMarket := matchingFormOf(b)
 	// A name that reduced to NOTHING shares no word and stops here. Vietnamese
 	// names carry their legal form and trade vocabulary in front of the brand,
 	// so a name made only of those strips to empty (orgnameforms.go) — and two
@@ -346,10 +322,12 @@ func sharesADistinctiveWord(a, b string) bool {
 	// Phát" share the word "hoa" — and they are Vietnam's largest construction
 	// firm and its largest steelmaker.
 	//
-	// ASKED ONLY OF A VIETNAMESE COMPARISON, because only there is a shared word
-	// weak evidence. English builds a brand from words that are themselves rare,
-	// so one is enough, and demanding more loses real duplicates: "Amazon AWS"
-	// and "Amazon Web Services" share only "amazon" of two distinctive words.
+	// ASKED ONLY OF A SYLLABIC MARKET, because only there is one shared word weak
+	// evidence. Vietnamese builds a brand from two or three syllables drawn from
+	// a small common pool, so "Hòa Bình" and "Hòa Phát" share "hoa" and are two
+	// different companies. English builds a brand from words that are themselves
+	// rare, so one is enough there, and demanding more loses real duplicates:
+	// "Amazon AWS" and "Amazon Web Services" share only "amazon" of two words.
 	//
 	// EITHER side declaring the market is enough. A company does not stop being
 	// Vietnamese when someone types its bare brand — "Tân Hiệp Phát" carries no
@@ -358,10 +336,19 @@ func sharesADistinctiveWord(a, b string) bool {
 	// Strictly more than half, not at least: at half the two names disagree
 	// about as much as they agree, and the disagreement is the part that names
 	// the company.
-	if leftVN || rightVN {
+	if isSyllabicMarket(leftMarket) || isSyllabicMarket(rightMarket) {
 		return 2*shared > min(len(left), len(right))
 	}
 	return true
+}
+
+// onlyWord answers whether a name came down to a single word.
+func onlyWord(fields []string) bool { return len(fields) == 1 }
+
+// isSyllabicMarket answers whether a name's market builds its brands from a
+// small pool of shared syllables, where one word in common is a coincidence.
+func isSyllabicMarket(market *marketForms) bool {
+	return market != nil && market.syllabic
 }
 
 // sharedTokenCount is how many words of the shorter name appear in the longer.
@@ -380,6 +367,19 @@ func sharedTokenCount(left, right []string) int {
 	taken := make([]bool, len(longer))
 	shared := 0
 	for _, x := range shorter {
+		// A word that is ANOTHER MARKET'S legal form is that market's
+		// vocabulary rather than a brand, so two names sharing it have not said
+		// they are one company: "SIA Rimi Latvia" and "SIA Maxima Latvija" are
+		// two Latvian grocers, "AS Roma" and "AS Monaco" two football clubs.
+		//
+		// Discounted HERE rather than removed from the name, so it still reaches
+		// the score. And not discounted at all when it is the WHOLE of the
+		// shorter name: "PT Solutions" reduces to "pt" once "solutions" is gone
+		// as English market vocabulary, and it must still find "PT Solutions
+		// Physical Therapy" rather than becoming a name with no evidence in it.
+		if ambiguousFormWord[x] && !onlyWord(shorter) {
+			continue
+		}
 		for j, y := range longer {
 			if !taken[j] && sameOrgToken(x, y) {
 				taken[j] = true

@@ -2125,6 +2125,8 @@ export const de = {
     "Nur {count} Deals haben die Schwelle geschafft — die Liste wird nie aufgefüllt.",
   "home.overflow":
     "{shown} von {count} qualifizierten Deals — ehrlich kurz, oben die besten.",
+  "home.narrativeNoPass":
+    "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
   "home.quietRun":
     "Heute Morgen hat nichts die Schwelle geschafft. Keine erfundene Dringlichkeit — genieß die Ruhe.",
   "home.act": "Erledigt",

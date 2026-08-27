@@ -81,6 +81,26 @@ func TestVietnameseCompaniesResolveThroughTheLadder(t *testing.T) {
 			ascii.Decision, ascii.Confidence)
 	}
 
+	// A LONG LEGAL FORM MUST NOT HIDE A SHORT BRAND. The candidate query
+	// searches whole strings, and "Perseroan Terbatas IBM" against a stored
+	// "IBM" scores 0.174 that way — under the trigram limit, so the incumbent
+	// was never returned and the duplicate could not be found however well the
+	// scorer worked. The query searches the stripped brand as well for exactly
+	// this.
+	if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+		DisplayName: "IBM", Source: "manual",
+	}); err != nil {
+		t.Fatalf("seeding the short-brand incumbent: %v", err)
+	}
+	longForm := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{
+		DisplayName: "Perseroan Terbatas IBM",
+	})
+	if longForm.Decision != DecisionFuzzyReview {
+		t.Errorf("a name whose legal form dwarfs its brand got %s (confidence "+
+			"%.4f), want fuzzy_review — its own company is seeded",
+			longForm.Decision, longForm.Confidence)
+	}
+
 	// And tier 1 still outranks every name judgement: a shared domain is an
 	// exact key, whatever the two names look like.
 	withDomain, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{

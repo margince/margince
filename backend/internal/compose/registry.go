@@ -198,6 +198,10 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 	// outermost guard the other native-only engines do: "not available here"
 	// rather than an empty queue that reads as a quiet morning.
 	agents.RegisterBriefTool(registry, nativeOnlyBriefReader(sorMode, briefReader(pool)))
+	// The write half: the overnight agent puts what it found onto the run it
+	// just read. Same guard, same engine, and the engine owns every refusal —
+	// whose run, which items, which citations.
+	agents.RegisterAnnotateBriefTool(registry, nativeOnlyBriefAnnotator(sorMode, briefAnnotator(pool)))
 	// The intent tools ground on the graph walk; search_context rides the same
 	// retriever's ranked half, which is what the embed lane is for.
 	// The comms tools ride the same store paths as the HTTP transport.

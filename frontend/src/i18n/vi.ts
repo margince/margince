@@ -2107,6 +2107,8 @@ export const vi = {
     "Chỉ {count} deal vượt ngưỡng — danh sách không bao giờ được độn thêm.",
   "home.overflow":
     "{shown} trong {count} deal đạt ngưỡng — phần đầu ngắn gọn và trung thực.",
+  "home.narrativeNoPass":
+    "Hôm nay không có tóm tắt ban đêm — Margince chưa chạy lượt nào cho bản tin này. Thứ tự bên dưới vẫn là của hôm nay.",
   "home.quietRun":
     "Sáng nay không có gì vượt ngưỡng. Không bịa ra việc gấp — hãy tận hưởng sự yên tĩnh.",
   "home.act": "Đánh dấu xong",

@@ -354,23 +354,60 @@ func TestAllBoilerplateNamesDoNotMatchEachOther(t *testing.T) {
 // Reads the real tables, never a copy — a census over a copied list is the
 // shape that fails short and reports PASS.
 func TestPhraseTableEntriesMatchTheirOwnNormalization(t *testing.T) {
-	tables := map[string][][]string{
-		"vietnameseLegalFormPrefixes": vietnameseLegalFormPrefixes,
-		"vietnameseSectorFillers":     vietnameseSectorFillers,
+	if len(prefixMarkets) == 0 {
+		t.Fatal("no markets declared — the census would pass against nothing")
 	}
-	for name, table := range tables {
-		if len(table) == 0 {
-			t.Fatalf("%s is empty — the census would pass against nothing", name)
+	seen := 0
+	for _, market := range prefixMarkets {
+		groups := map[string][]orgFormMarker{
+			"prefixes":      market.prefixes,
+			"continuations": market.continuations,
+			"fillers":       market.fillers,
 		}
-		for _, phrase := range table {
-			if len(phrase) == 0 {
-				t.Errorf("%s carries an empty phrase, which matches every name", name)
+		if len(market.prefixes) == 0 {
+			t.Errorf("%s declares no prefix forms, so it can never fire", market.name)
+		}
+		for group, markers := range groups {
+			for _, marker := range markers {
+				seen++
+				if len(marker.tokens) == 0 {
+					t.Errorf("%s %s carries an empty form, which matches every name",
+						market.name, group)
+					continue
+				}
+				joined := strings.Join(marker.tokens, " ")
+				if got := NormalizeOrgName(foldDStroke(joined)); got != joined {
+					t.Errorf("%s %s entry %q normalizes to %q — written this way it "+
+						"can never match a real name", market.name, group, joined, got)
+				}
+			}
+		}
+	}
+	// The census walks the real tables, so it cannot fall behind them — but it
+	// could still walk an empty one and report PASS.
+	if seen < 60 {
+		t.Fatalf("only %d forms inspected across %d markets — the census is running "+
+			"short of the tables it is meant to hold", seen, len(prefixMarkets))
+	}
+}
+
+// A form that is not written the way a folded name is written can never fire,
+// and no other test would notice: the legal form simply stays in the name and
+// the false positives come back. This asks each market's tables to prove
+// themselves against a name that carries them.
+func TestEveryMarketStripsItsOwnForms(t *testing.T) {
+	for _, market := range prefixMarkets {
+		for _, marker := range market.prefixes {
+			// An ambiguous form needs corroboration, which a bare
+			// "<form> Brand" cannot give in Latin script. Those are proven by
+			// the per-market corpus instead.
+			if marker.ambiguous {
 				continue
 			}
-			joined := strings.Join(phrase, " ")
-			if got := NormalizeOrgName(foldDStroke(joined)); got != joined {
-				t.Errorf("%s entry %q normalizes to %q — written this way it can "+
-					"never match a real name", name, joined, got)
+			name := strings.Join(marker.tokens, " ") + " zzbrandzz"
+			if got := orgNameForMatching(name); got != "zzbrandzz" {
+				t.Errorf("%s: %q reduces to %q, want the brand alone — the form "+
+					"is not being recognized", market.name, name, got)
 			}
 		}
 	}
@@ -391,9 +428,15 @@ func TestWesternNamesAreUnchanged(t *testing.T) {
 		"Health Care", "Arvato Systems", "Bytesforce", "Salesforce",
 	}
 	for _, name := range western {
-		if got, want := orgNameForMatching(name), NormalizeOrgName(name); got != want {
-			t.Errorf("%q: matching normalization gives %q but the key gives %q — "+
-				"the Vietnamese strip reached a name it does not own",
+		// Compared as WORDS, not as one string: the matching form splits on
+		// punctuation so a legal form written "S.C." can be found, and the key
+		// does not. That difference is punctuation only, and no word of a
+		// Western name may be added, dropped or altered.
+		got := strings.FieldsFunc(orgNameForMatching(name), nameWordSeparators)
+		want := strings.FieldsFunc(NormalizeOrgName(name), nameWordSeparators)
+		if strings.Join(got, "\x00") != strings.Join(want, "\x00") {
+			t.Errorf("%q: matching normalization reads %v but the key reads %v — "+
+				"a prefix-market strip reached a name it does not own",
 				name, got, want)
 		}
 	}

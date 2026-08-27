@@ -13111,6 +13111,46 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  /brief/annotations:
+    put:
+      tags: [Brief]
+      operationId: annotateMorningBrief
+      summary: Write the overnight pass's findings onto the acting rep's own brief for today.
+      description: |
+        The overnight `morning_brief` agent's write-back. Its goal has always asked for why each
+        deal is on the list, what changed, and one next move; this is where that answer lands, so
+        it reaches the person instead of staying in the run's raw result where nothing renders it.
+
+        SCOPED TO THE CALLER'S OWN CURRENT RUN, resolved server-side. The body carries no user id,
+        no run id and no local day, so there is no argument by which a caller could annotate
+        another rep's morning or an older run. It carries no rank and no item ordering either:
+        the queue's order stays the deterministic engine's, because a writer that could reorder
+        could promote a deal by asserting it belongs first rather than by evidence.
+
+        EVERY CITED EVIDENCE ID IS VERIFIED against what the run already recorded for that item.
+        A uuid that merely parses proves nothing, and one naming another rep's record would make
+        an ungrounded claim read as a grounded one — so an id outside the item's own evidence
+        refuses the whole write rather than being dropped silently.
+
+        Idempotent by replacement: a second pass is a correction, not an addition.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnnotateBriefRequest' }
+      x-mcp-tool: { verb: annotate_brief, tier: auto_execute, scope: write }
+      responses:
+        '204':
+          description: The findings were written.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: The rep has no brief run today, so there is nothing to annotate.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /brief/items/{itemId}/act:
     parameters:
       - name: itemId
@@ -28665,6 +28705,19 @@ components:
           type: array
           items: { $ref: '#/components/schemas/MorningBriefItem' }
           description: The ranked queue, best-first, capped at the honest-short target (7).
+        narrative:
+          type: [string, 'null']
+          description: |
+            One sentence about the night, written by the overnight agent. Null when the pass
+            never ran, and ALSO null when it ran and honestly had nothing to say — `annotated_at`
+            is what tells those apart, which is why both fields exist.
+        annotated_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the overnight agent last wrote its findings, null when no pass has. A reader
+            showing a run with no narrative must consult this before saying "a quiet night":
+            without it, a model that never ran and a night with nothing in it look identical.
 
     MorningBriefItem:
       type: object
@@ -28687,6 +28740,62 @@ components:
         state: { type: string, enum: [new, acted, dismissed, snoozed], description: The acting rep's queue state for this item. }
         state_at: { type: [string, 'null'], format: date-time, description: When the rep acted/dismissed/snoozed; null while new. }
         snoozed_until: { type: [string, 'null'], format: date-time, description: 'When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.' }
+        finding:
+          type: [string, 'null']
+          description: |
+            What the overnight agent found about this deal — why it is on the list, what changed,
+            and the one next move. Null when no pass has annotated this run. It is agent-authored
+            prose and the surface marks it as such; the rank beside it stays the deterministic
+            engine's, which no annotation can change.
+
+    AnnotateBriefRequest:
+      type: object
+      description: |
+        One overnight pass's findings for the acting rep's own current run.
+
+        WHAT IS ABSENT IS THE DESIGN: no user id, no run id, no local day, no rank and no item
+        ordering. The run is resolved server-side from the acting principal and today's local
+        day, and the queue's order stays the deterministic engine's.
+      required: [items]
+      properties:
+        narrative:
+          type: string
+          maxLength: 600
+          description: |
+            One sentence about the night as a whole. An empty string is a real answer — a quiet
+            night has no sentence — and is stored as null with the pass still stamped.
+        items:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/AnnotateBriefItem' }
+          description: At most one finding per queued item; a repeated item id is refused.
+
+    AnnotateBriefItem:
+      type: object
+      description: One finding about one queued deal.
+      required: [item_id, finding, cited_evidence]
+      properties:
+        item_id:
+          type: string
+          format: uuid
+          description: A brief item belonging to the caller's own current run. Anything else refuses.
+        finding:
+          type: string
+          maxLength: 600
+          description: The prose the rep reads beside the rank.
+        cited_evidence:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+          description: |
+            What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
+            no sources", it is the verification being skipped, and it is the easy path — a model
+            that omits the field would get its prose onto the rep's screen unchecked, under the
+            same agent tag a grounded finding carries.
+
+            Every id is checked against the evidence the run already recorded for this item. An id
+            outside it refuses the whole write rather than being dropped, because a finding whose
+            citations were silently pruned still reads as grounded.
 
     BriefSnoozeRequest:
       type: object

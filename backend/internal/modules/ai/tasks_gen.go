@@ -75,7 +75,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "13ad74561cc40652b4c3b5352f3c14c24cc9da56b3e533e2a7b116f320232b44"
+const TaskContractHash = "66baaa70238cedc1df779e3175051cda491f92f787b316a0048a2ebd6bce55df"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -325,7 +325,7 @@ type Agent struct {
 
 var taskAgents = map[Task][]Agent{
 	TaskAgentLoop: {
-		{Name: "morning_brief", Tools: []string{"catch_me_up_on", "list_records", "read_record"}},
+		{Name: "morning_brief", Tools: []string{"annotate_brief", "catch_me_up_on", "list_records", "read_brief", "read_record"}},
 		{Name: "overnight_at_risk_sweep", Tools: []string{"at_risk_relationships", "catch_me_up_on", "list_records", "log_activity", "read_record", "review_commitments", "whats_slipping_this_week"}},
 	},
 }

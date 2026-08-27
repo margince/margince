@@ -27,6 +27,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -93,6 +94,12 @@ func nativeOnlyAgentTools(anchor ids.UUID) map[string]string {
 		// native tables. It takes no arguments: the queue a caller may read is
 		// the one belonging to the human they act for.
 		"read_brief": `{}`,
+		// The write half of the same brief. An overlay workspace has no native
+		// run to annotate, and the refusal has to land BEFORE the run lookup:
+		// a not-found here would read as "your brief has not been assembled
+		// yet" — a morning that is merely late rather than a capability this
+		// workspace does not have.
+		"annotate_brief": `{"narrative":"","items":[]}`,
 		// The open-promise review. Its rows are task ACTIVITIES, and a mirrored
 		// workspace's timeline holds no task projection — so unguarded it
 		// answers "nothing is outstanding" out of a table holding none of its
@@ -443,21 +450,29 @@ func TestNativeAgentToolsAreNotRefusedByTheSoRModeGuard(t *testing.T) {
 	// was added with its fixture and without its list entry, and that is exactly
 	// how it read.
 	//
-	// One tool answers not-found without an anchor, and it is named because
-	// nothing about its arguments could tell you: read_brief re-reads a
-	// persisted run and never ranks, so "none has been generated" is what it
-	// owes a rep with no assembled brief, rather than an empty queue that reads
-	// as a quiet morning.
-	const unanchoredNotFound = "read_brief"
+	// TWO tools answer not-found without an anchor, and both are named because
+	// nothing about their arguments could tell you. Both turn on the same fact:
+	// a brief RUN is persisted by the overnight pass, and this fixture assembles
+	// none.
+	//
+	// read_brief re-reads that run and never ranks, so "none has been generated"
+	// is what it owes a rep with no assembled brief rather than an empty queue
+	// that reads as a quiet morning. annotate_brief writes onto the same run,
+	// and inventing one would produce a brief carrying prose with no ranking
+	// behind it — so not-found is its served answer too.
+	unanchoredNotFound := []string{"read_brief", "annotate_brief"}
 
 	anchor := ids.NewV7()
 	fixtures := mergedFixtures(nativeOnlyAgentTools(anchor), providerRefusedRecordWrites(anchor))
-	if _, ok := fixtures[unanchoredNotFound]; !ok {
-		t.Fatalf("%s is no longer in the fixture set — the exception outlived the tool it names", unanchoredNotFound)
+	for _, name := range unanchoredNotFound {
+		if _, ok := fixtures[name]; !ok {
+			t.Fatalf("%s is no longer in the fixture set — the exception outlived the tool it names", name)
+		}
 	}
 	for name, args := range fixtures {
 		t.Run(name, func(t *testing.T) {
-			notFoundIsAnAnswer := name == unanchoredNotFound || strings.Contains(args, anchor.String())
+			notFoundIsAnAnswer := slices.Contains(unanchoredNotFound, name) ||
+				strings.Contains(args, anchor.String())
 			_, err := registry.Invoke(ctx, name, json.RawMessage(args))
 			if errors.Is(err, apperrors.ErrUnsupportedBySoR) {
 				t.Fatalf("%s refused a NATIVE workspace with unsupported_by_sor — the mode guard is inverted", name)

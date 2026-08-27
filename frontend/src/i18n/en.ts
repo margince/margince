@@ -2156,6 +2156,11 @@ export const en = {
     "Only {count} deals cleared the bar — the queue is never padded.",
   "home.overflow":
     "{shown} of {count} qualifying deals — the honest-short top slice.",
+  // The morning brief's own narrative. The "no pass" line is the honest degrade:
+  // a run nobody annotated and a night with nothing in it read identically as
+  // silence, so the screen says which one this is.
+  "home.narrativeNoPass":
+    "No overnight summary today — Margince did not run a pass on this brief. The ranking below is still today's.",
   "home.quietRun":
     "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
