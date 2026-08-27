@@ -115,6 +115,16 @@ function quietLead(
   if (drifting > 0) {
     return t("day.lead.atRisk", { count: formatNumber(drifting, locale) });
   }
+  // A lapsed relationship is the same shape of news as a drifting deal:
+  // nobody is waiting on the reader for it, and it is the thing that goes
+  // unnoticed precisely because nobody is. Counted here rather than left to
+  // the check below, because that check only catches a lane that was never
+  // READ — a lane read and holding three contacts would still have printed
+  // "clear" above them.
+  const lapsed = day.counts.relationship_decay ?? 0;
+  if (lapsed > 0) {
+    return t("day.lead.decay", { count: formatNumber(lapsed, locale) });
+  }
   // Before "clear", because the briefing lane is on this page: a line reading
   // "your day is clear" above two items the night picked out is the one thing
   // this line exists to prevent. It sits below decisions and planned work,

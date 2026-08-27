@@ -180,6 +180,8 @@ export const vi = {
   "day.lead.promises": "Bạn đã hứa {count} việc — những việc đó trước tiên.",
   "day.lead.meetings": "{count} cuộc họp trên lịch hôm nay.",
   "day.lead.atRisk": "{count} đang lặng đi. Không còn gì khác chờ bạn.",
+  "day.lead.decay":
+    "{count} bạn đã lâu không trao đổi. Không có gì đang chờ bạn.",
   "day.lead.morningOnly":
     "Không có gì chờ bạn — đêm qua đã chọn ra {count} việc để bắt đầu.",
   "day.lead.ranOvernight":

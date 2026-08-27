@@ -133,7 +133,7 @@ func visibleContactNames(ctx context.Context, tx pgx.Tx, people []ids.PersonID) 
 		return nil, err
 	}
 	rows, err := tx.Query(ctx, fmt.Sprintf(`
-		SELECT p.id, p.display_name FROM person p
+		SELECT p.id, p.full_name FROM person p
 		WHERE p.id = ANY($%d) AND p.archived_at IS NULL AND (%s)
 		ORDER BY p.id`, peoplePos, scope), args...)
 	if err != nil {
