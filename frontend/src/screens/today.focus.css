@@ -69,3 +69,15 @@
   margin: 0;
   color: var(--textMeta);
 }
+
+.focus-report {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  padding: var(--space-4) 0;
+}
+
+.focus-report-detail {
+  margin: 0;
+  color: var(--textMeta);
+}

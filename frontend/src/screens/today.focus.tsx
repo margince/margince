@@ -3,8 +3,11 @@ import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
 import { formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
+import { itemDetail, itemTitle } from "./attentionitemcopy";
+import { focusSurfaceOf } from "./attentionsource";
 import { problemMessageOf } from "./common";
 import { MergeDecision } from "./today.merge";
 import {
@@ -72,12 +75,34 @@ function AllClear({ decided }: Readonly<{ decided: number }>) {
   );
 }
 
+// An item this lane cannot decide, drawn as what it is.
+//
+// The lane is fed by producers, and a producer can put a source here that has
+// no decision behind it. Drawing that item plainly is the honest answer: the
+// reader sees what arrived and can move past it. The dishonest answer was to
+// assume it was a staged proposal and read `/approvals/{id}` with its id, which
+// answers 404 for anything that is not an approval and renders as a failed card.
+function ReportBody({ item }: Readonly<{ item: AttentionItem }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const detail = itemDetail(item, t, locale, viewerZone());
+  return (
+    <div className="focus-report">
+      <p className="t-body">{itemTitle(item, t)}</p>
+      {detail && <p className="t-caption focus-report-detail">{detail}</p>}
+    </div>
+  );
+}
+
 // One item's body, chosen by what the item IS.
 //
 // A duplicate is a choice between two records; a staged proposal is an accept
 // or a reject on one payload. They are different decisions and they get
 // different bodies — the failure this replaces was a single generic row that
 // could express neither, so both ended up as a link.
+//
+// The choice runs through FOCUS_SURFACE rather than a chain of ifs, so a source
+// the contract adds has to be given a body before the build passes.
 function FocusBody({
   item,
   onDone,
@@ -85,8 +110,13 @@ function FocusBody({
   const t = useT();
   const dispose = useDisposeDuplicate();
   const pending = dispose.isPending;
+  const surface = focusSurfaceOf(item.source);
 
-  if (item.source === "dedupe_candidate") {
+  if (surface === "report") {
+    return <ReportBody item={item} />;
+  }
+
+  if (surface === "merge") {
     return (
       <MergeDecision
         item={item}
@@ -116,10 +146,10 @@ function FocusBody({
     );
   }
 
-  // Everything else on this lane is a staged proposal, and the row that decides
-  // one already exists — the same component the record surfaces draw, carrying
-  // edit-then-approve and reject-with-reason. A second spelling of a decision
-  // is how one product comes to answer the same question two ways.
+  // A staged proposal, and the row that decides one already exists — the same
+  // component the record surfaces draw, carrying edit-then-approve and
+  // reject-with-reason. A second spelling of a decision is how one product comes
+  // to answer the same question two ways.
   //
   // The feed sends what a LANE needs — a sentence, a kind, a deadline — and the
   // row needs the whole proposal: the payload it edits, who staged it, what
