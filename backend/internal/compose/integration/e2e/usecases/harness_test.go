@@ -15,12 +15,18 @@ package usecases
 import (
 	"context"
 	"encoding/json"
+	"io"
+	"log/slog"
+	"os"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,6 +45,10 @@ const (
 // rather than spelled at each call site: a scenario that quietly asks for write
 // when it is testing a read is a test proving less than it claims.
 var scopesRead = []string{"read"}
+
+// scopesReadWrite is what a scenario that WRITES mints. Case 1 is the only
+// journey whose point is the write path.
+var scopesReadWrite = []string{"read", "write"}
 
 // scenario is one use case's world: the running app, the assistant's client,
 // and the two seats.
@@ -72,11 +82,60 @@ func boot(t *testing.T, scopes []string) *scenario {
 	})
 	apptest.BootstrapWorkspaceSession(t, e, "Use Cases", repEmail, repName)
 
+	return finishBoot(t, e, scopes)
+}
+
+// finishBoot names the seats and mints the assistant's credential, for both
+// boot variants.
+func finishBoot(t *testing.T, e *apptest.AppEnv, scopes []string) *scenario {
+	t.Helper()
 	s := &scenario{AppEnv: e}
 	s.Rep = seatIDFor(t, e, repEmail)
 	s.Colleague = seedColleague(t, e)
 	s.MCP = apptest.NewMCPClient(e, apptest.MCPBearerToken(t, e, "use-case assistant", scopes...))
 	return s
+}
+
+// bootWithTranscriptReading is boot plus the reading lane, for the one scenario
+// whose criterion is that a landed transcript gets read.
+//
+// An INSERT-ONLY runner: the api role never calls a model in-request — it
+// inserts the job and answers — so a job inserter is the whole dependency and
+// no model lane is wired anywhere. What this proves is that the reading is
+// QUEUED, which is the half that silently did not happen for as long as asking
+// was the only way in. Whether the model then reads good commitments out of it
+// is the weekly lane's question.
+func bootWithTranscriptReading(t *testing.T) *scenario {
+	t.Helper()
+	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
+	if appDSN == "" {
+		t.Fatal("MARGINCE_TEST_APP_DSN not set — run `make db-up` (integration tests fail loudly, they never skip)")
+	}
+	// A separate pool from the one the harness opens: the inserter needs SOME
+	// pool reaching the same Postgres, not the same object.
+	wirePool, err := database.NewPool(context.Background(), appDSN)
+	if err != nil {
+		t.Fatalf("opening the insert-only wiring pool: %v", err)
+	}
+	t.Cleanup(wirePool.Close)
+	inserter, err := jobs.NewInserter(wirePool, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("jobs.NewInserter: %v", err)
+	}
+
+	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
+		return []compose.Option{
+			compose.WithMCPConnector(),
+			compose.WithMCPResource(origin + "/mcp"),
+			compose.WithTranscriptRead(inserter),
+		}
+	})
+	// The landing enqueues in the same transaction as the run record, so the
+	// job schema has to exist before the FIRST write, not merely before a
+	// worker.
+	integration.ApplyRiverSchema(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Use Cases", repEmail, repName)
+	return finishBoot(t, e, scopesReadWrite)
 }
 
 // seatIDFor reads a seat's id by email. The bootstrap creates the admin seat
