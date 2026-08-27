@@ -88,6 +88,17 @@ var serviceLabelAllowlist = map[string]string{
 	"docs":         ServiceSupport,
 }
 
+// ServiceLabel is what a reader sees for a service key, and false when the key
+// names no service this package knows.
+//
+// Exported so a caller that remembered a key can re-derive the label rather
+// than storing it: a label reworded here then takes effect everywhere on the
+// next read, instead of surviving in whatever cached it.
+func ServiceLabel(key string) (string, bool) {
+	label, known := serviceLabels[key]
+	return label, known
+}
+
 // OperatedServices reads the services a domain's certificate hostnames reveal.
 //
 // Only the first label is consulted, and only against the allowlist above.
