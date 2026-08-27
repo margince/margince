@@ -47,6 +47,7 @@ const (
 	// cap, and only the root can see both.
 	SummaryBound       = 2000
 	DegradeReasonBound = 500
+	SubjectLabelBound  = 120
 )
 
 // Item is one occurrence, as facts. The reader's locale decides the words, so
@@ -59,6 +60,11 @@ type Item struct {
 	FinishedAt    *time.Time
 	DegradeReason *string
 	Summary       *string
+	// SubjectLabel is what the occurrence was about, named, as the SOURCE knew
+	// it when it emitted. Never re-resolved here: the stored snapshot is what
+	// that line was actually about, and this package has no source table to ask
+	// even if it wanted a fresher answer.
+	SubjectLabel *string
 }
 
 // StateStalled is derived at READ time and never stored.
@@ -106,7 +112,7 @@ const feedSQL = `
   SELECT true AS live, id, kind,
          CASE WHEN stale_after IS NOT NULL AND stale_after < now() THEN 'stalled' ELSE state END,
          COALESCE(started_at, queued_at), finished_at,
-         left(degrade_reason, $4), left(summary, $5)
+         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8)
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('queued','running')
@@ -118,7 +124,7 @@ UNION ALL
 (
   SELECT false AS live, id, kind, state,
          COALESCE(started_at, queued_at), finished_at,
-         left(degrade_reason, $4), left(summary, $5)
+         left(degrade_reason, $4), left(summary, $5), left(subject_label, $8)
     FROM ai_task_run
    WHERE actor_user_id = $1
      AND state IN ('done','degraded','failed')
@@ -156,7 +162,8 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 	}
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, txErr := tx.Query(ctx, feedSQL,
-			actor.UserID, startOfToday, recentBound, DegradeReasonBound, SummaryBound, liveBound, filter)
+			actor.UserID, startOfToday, recentBound, DegradeReasonBound, SummaryBound, liveBound, filter,
+			SubjectLabelBound)
 		if txErr != nil {
 			return txErr
 		}
@@ -166,7 +173,8 @@ func (s *Store) Mine(ctx context.Context, startOfToday time.Time, kinds []string
 			var item Item
 			var isLive bool
 			if scanErr := rows.Scan(&isLive, &item.ID, &item.Kind, &item.State,
-				&item.StartedAt, &item.FinishedAt, &item.DegradeReason, &item.Summary); scanErr != nil {
+				&item.StartedAt, &item.FinishedAt, &item.DegradeReason, &item.Summary,
+				&item.SubjectLabel); scanErr != nil {
 				return scanErr
 			}
 			if isLive {

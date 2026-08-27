@@ -5,6 +5,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/jackc/pgx/v5"
@@ -39,6 +40,10 @@ const ExtractionAITask = "document_extract"
 func emitExtractionActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, read ExtractionRead) error {
 	lease := int(ExtractionReadLease.Seconds())
 	task := ExtractionAITask
+	label, err := extractionSubjectLabel(ctx, tx, read.AttachmentID)
+	if err != nil {
+		return err
+	}
 	payload := crmcontracts.InternalEventAiTaskStateChanged{
 		Source: ExtractionActivitySource,
 		// The reading's own row id. One attachment is read many times over its
@@ -59,6 +64,13 @@ func emitExtractionActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, r
 		LeaseSeconds: &lease,
 		SubjectType:  ptrOrNil("attachment"),
 		SubjectId:    contractUUID(read.AttachmentID),
+		// What the reader calls the document, so the rail can say WHICH one it
+		// read. Resolved here rather than carried on ExtractionRead: every emit
+		// path in this package funnels through this function, and a label
+		// threaded through the eight loaders instead would go missing on
+		// whichever one a later author forgot — and a label-less event
+		// overwrites a labelled row through the projection's upsert.
+		SubjectLabel: ptrOrNil(label),
 		// StatusDetail is this module's own closed vocabulary on the failure
 		// path and a rep-facing sentence on the empty-but-correct one. It is
 		// never a provider's message — FinishExtractionRead's callers own that
@@ -73,6 +85,44 @@ func emitExtractionActivity(ctx context.Context, tx pgx.Tx, ledgerID ids.UUID, r
 		return fmt.Errorf("publish extraction reading activity: %w", err)
 	}
 	return nil
+}
+
+// subjectLabelBound is the contract's cap on the name, applied before the wire
+// rather than at it: the projection stores what it is handed, and a source that
+// hands over more than the column admits fails the write instead of the read.
+const subjectLabelBound = 120
+
+// extractionSubjectLabel is what the reader calls the document being read.
+//
+// COALESCE(title, filename) is the resolution the document surfaces already
+// use, and matching it is the point: the rail and the record must not call one
+// document two names. A document that has neither yields no label, and the rail
+// draws its generic sentence rather than an empty pair of quotes.
+// The empty string is the NO-NAME answer, and it is a real answer rather than a
+// missing one — which is why this returns a string and not a pointer. A
+// document with neither title nor filename, and a reading whose attachment is
+// already gone, both mean the same thing to the caller: emit the occurrence
+// without a name and let the reader's own generic sentence stand.
+func extractionSubjectLabel(ctx context.Context, tx pgx.Tx, attachment ids.UUID) (string, error) {
+	var label *string
+	err := tx.QueryRow(ctx, `
+		SELECT left(COALESCE(NULLIF(title, ''), NULLIF(filename, '')), $2)
+		  FROM attachment
+		 WHERE id = $1`, attachment, subjectLabelBound).Scan(&label)
+	if errors.Is(err, pgx.ErrNoRows) {
+		// The reading outliving its attachment is a real ordering, not a
+		// defect: an erasure can take the document while a reading of it is
+		// still settling. The occurrence is still true and still worth
+		// reporting, so it goes out unnamed.
+		return "", nil
+	}
+	if err != nil {
+		return "", fmt.Errorf("read extraction subject label: %w", err)
+	}
+	if label == nil {
+		return "", nil
+	}
+	return *label, nil
 }
 
 // logExtractionActivity writes the ledger row a state change needs when the

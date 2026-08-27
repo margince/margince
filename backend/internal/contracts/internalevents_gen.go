@@ -52,6 +52,11 @@ type InternalEventAiTaskStateChanged struct {
 	// SubjectId That record's id.
 	SubjectId *openapi_types.UUID `json:"subject_id,omitempty"`
 
+	// SubjectLabel What that record is CALLED, as the source knew it when it emitted. The projection may not ask: it reaches back into no source's tables, so a name it is not given is a name it does not have. The label travels for the same reason the lease does.
+	// Unlike degrade_reason this is RECORD DATA rather than server-authored prose, and that is admissible here for one reason — it is the reader's own record, already shown to them on the surface the occurrence came from. It is never a provider's text. Resolve it the way the product titles the thing elsewhere, so the rail and the record cannot call one document two names.
+	// A SNAPSHOT, never re-resolved on read: a record renamed afterwards keeps the old name on a settled line, which is what that line was actually about. The corollary is that it cannot be re-gated either, so a source emits a label only where the occurrence's own actor is the person the record was already displayed to.
+	SubjectLabel *string `json:"subject_label,omitempty"`
+
 	// SubjectType The kind of record the occurrence is about, when it is about one.
 	SubjectType *string `json:"subject_type,omitempty"`
 

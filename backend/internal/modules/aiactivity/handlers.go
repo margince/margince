@@ -158,6 +158,7 @@ func toWire(items []Item) []crmcontracts.AiActivityItem {
 			FinishedAt:    item.FinishedAt,
 			DegradeReason: item.DegradeReason,
 			Summary:       item.Summary,
+			SubjectLabel:  item.SubjectLabel,
 		})
 	}
 	return wire

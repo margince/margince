@@ -11,17 +11,31 @@ import {
   displayedKinds,
   displayedLines,
   lineFor,
+  NAMED_LINE,
 } from "./ai-activity-lines";
+
+/** Every message key either map names, which is the whole reachable set. */
+function namedKeys(): Set<string> {
+  return new Set<string>([
+    ...displayedLines().flatMap(([, byState]) => Object.values(byState)),
+    ...Object.values(NAMED_LINE).flatMap((byState) => Object.values(byState)),
+  ]);
+}
+
+/** The named variants, which are the only lines allowed a placeholder. */
+function namedVariantKeys(): Set<string> {
+  return new Set<string>(
+    Object.values(NAMED_LINE).flatMap((byState) => Object.values(byState)),
+  );
+}
 
 // A key the map names must exist in the catalog, and a translated
 // `agent.activity.` key nothing names is copy three translators paid for and
 // no reader can reach. Both directions are reported as lists, because a wiring
 // fix wants the whole set rather than the first thing that broke.
 describe("the activity copy set", () => {
-  it("is exactly the key set the map names", () => {
-    const named = new Set<string>(
-      displayedLines().flatMap(([, byState]) => Object.values(byState)),
-    );
+  it("is exactly the key set the maps name", () => {
+    const named = namedKeys();
     const inCatalog = Object.keys(en).filter((key) =>
       key.startsWith("agent.activity."),
     );
@@ -35,13 +49,34 @@ describe("the activity copy set", () => {
     ).toEqual([]);
   });
 
-  it("carries no placeholder — v1 lines are fixed literals", () => {
-    for (const [key, value] of Object.entries(en)) {
-      if (key.startsWith("agent.activity.")) {
+  // A placeholder is admissible in exactly one place: a NAMED variant, which
+  // exists to put the subject's own name in the sentence. Everywhere else these
+  // lines stay fixed literals, because a placeholder in a line nothing
+  // interpolates renders `{name}` at a reader.
+  //
+  // The named ones are held to `{name}` and nothing else, in every locale: a
+  // translator who invents a second placeholder writes a token no caller fills,
+  // and it reaches the rail verbatim.
+  it.each([
+    { locale: "en", catalog: en },
+    { locale: "de", catalog: de },
+    { locale: "vi", catalog: vi },
+  ])(
+    "places a placeholder only in a named variant ($locale)",
+    ({ catalog }) => {
+      const named = namedVariantKeys();
+      for (const [key, value] of Object.entries(catalog)) {
+        if (!key.startsWith("agent.activity.")) {
+          continue;
+        }
+        if (named.has(key)) {
+          expect(value.match(/\{[^}]*\}/g) ?? [], key).toEqual(["{name}"]);
+          continue;
+        }
         expect(value, key).not.toMatch(/\{/);
       }
-    }
-  });
+    },
+  );
 
   // The feature's most dangerous failure mode is telling someone a run
   // finished when it only got partway, so this is pinned in every locale it
@@ -54,8 +89,11 @@ describe("the activity copy set", () => {
   ])(
     "never says done or ready about a run that stopped early ($locale)",
     ({ catalog, done, ready }) => {
-      for (const [, byState] of displayedLines()) {
-        const key = byState.degraded;
+      const degradedKeys = [
+        ...displayedLines().map(([, byState]) => byState.degraded),
+        ...Object.values(NAMED_LINE).map((byState) => byState.degraded),
+      ];
+      for (const key of degradedKeys) {
         if (key === undefined) continue;
         const degraded = catalog[key as keyof typeof catalog].toLowerCase();
         for (const word of [...done, ...ready]) {
