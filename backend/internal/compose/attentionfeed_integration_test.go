@@ -26,8 +26,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/margince/margince/backend/internal/compose/attention"
-	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -36,28 +34,15 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// assembleFeed reads the whole feed through the real seams, at a chosen instant.
+// assembleFeed reads the whole feed at a chosen instant, through the wiring the
+// route itself serves.
 //
-// Built from newAttentionHandlers' own wiring rather than a second arrangement
-// of it: a test that assembled its own service would pass while the wiring the
-// product ships was broken.
+// newAttentionService is the production binding: arranging these seams here
+// instead would let a test keep passing while the shipped feed lost a lane,
+// which is exactly the gap the feed's stub-driven unit tests leave.
 func assembleFeed(ctx context.Context, t *testing.T, e *integration.Env, now time.Time) crmcontracts.Attention {
 	t.Helper()
-	db := InstallationDB(e.Pool)
-	svc := approvals.NewService(e.DB())
-	clock := func() time.Time { return now }
-	// The four required seams are real. The last three are optional by
-	// construction — nil means the installation does not serve that lane — and
-	// leaving them out keeps each test's subject to the lane it is about.
-	feed := attention.NewService(
-		attentionApprovals{svc: svc},
-		attentionDuplicates{store: people.NewStore(db)},
-		attentionTasks{store: activities.NewStore(db)},
-		attentionReceipts{svc: svc},
-		attentionBriefing{engine: briefs.NewBriefEngine(e.Pool, people.NewStore(db)), now: clock},
-		nil, nil, nil,
-		clock,
-	)
+	feed := newAttentionService(e.Pool, approvals.NewService(e.DB()), func() time.Time { return now })
 	day, err := feed.Assemble(ctx)
 	if err != nil {
 		t.Fatalf("assembling the day: %v", err)
@@ -246,12 +231,98 @@ func TestADepartedColleaguesDecisionIsNotReportedAsTheSystemsWork(t *testing.T) 
 	if _, err := svc.Decide(e.Admin(), id, true, nil); err != nil {
 		t.Fatalf("approving as a human: %v", err)
 	}
-	// The decider leaves. The foreign key empties decided_by on the row they
-	// decided, which is exactly the state the old predicate read as a receipt.
-	e.WsExec(t, `UPDATE approval SET decided_by = NULL WHERE id = $1`, id)
+	// The decider leaves. Deleting the app_user is what a real departure does,
+	// and approval_decided_by_fkey's ON DELETE SET NULL empties decided_by on
+	// every approval they decided — the state the old predicate read as a
+	// receipt. Driven through the deletion rather than by writing the NULL, so
+	// the test still means something if that foreign key is ever changed.
+	e.WsExec(t, `DELETE FROM app_user WHERE id = $1`, e.AdminUser)
+	var decider *ids.UUID
+	if err := e.Pool.QueryRow(e.Admin(), `SELECT decided_by FROM approval WHERE id = $1`, id).Scan(&decider); err != nil {
+		t.Fatalf("reading back the decider: %v", err)
+	}
+	if decider != nil {
+		t.Fatalf("deleting the decider left decided_by set: this test no longer reproduces a departure")
+	}
 
 	day := assembleFeed(e.Admin(), t, e, time.Now().UTC())
 	if got := sourcesOn(day.DoneForYou); len(got) != 0 {
 		t.Fatalf("the done-for-you lane = %v, want nothing: a person decided this", got)
 	}
+}
+
+// The lane's bound is the end of the day, and a task due exactly at it belongs
+// to tomorrow. Both sides of that boundary are pinned because it moved once: a
+// clause written `<=` put a promise due at tomorrow 00:00 on today's list, which
+// reports work late a day before it is.
+func TestATaskDueExactlyAtTheBoundaryBelongsToTomorrow(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Now().UTC()
+	endOfDay := now.Truncate(24 * time.Hour).Add(24 * time.Hour)
+	logTask(t, e, "Due a moment before midnight", endOfDay.Add(-time.Second), false)
+	logTask(t, e, "Due exactly at midnight", endOfDay, false)
+
+	day := assembleFeed(e.Admin(), t, e, now)
+	got := titlesOn(day.Planned)
+	if len(got) != 1 || got[0] != "Due a moment before midnight" {
+		t.Fatalf("the planned lane = %v, want only the task due before the day ends", got)
+	}
+}
+
+// A receipt decided minutes ago must not be hidden by approvals staged since.
+//
+// The page is ordered by when an approval was STAGED, while the lane's window
+// asks when it was DECIDED. Those disagree: a proposal staged last week and
+// decided this morning sorts below one staged this morning. Applying the window
+// after the page therefore discards rows the page spent its limit on and reports
+// a quiet night over work that just ran. The window is asked in SQL for exactly
+// this reason, and this seeds the shape that would otherwise starve.
+func TestARecentReceiptIsNotBuriedByNewerStagings(t *testing.T) {
+	e := integration.Setup(t)
+	now := time.Now().UTC()
+	person, err := e.People.CreatePerson(e.Admin(), people.CreatePersonInput{FullName: "Anna Weber"})
+	if err != nil {
+		t.Fatalf("creating the target: %v", err)
+	}
+	svc := approvals.NewService(e.DB())
+	// The receipt: staged first, so every later staging sorts above it, and
+	// marked as the system's own act decided just now.
+	old := stageFor(t, e, svc, person, "Filed a message under Riverty")
+	e.WsExec(t, `UPDATE approval
+		    SET status = 'approved', decided_by_system = true, decided_at = now(),
+		        created_at = now() - interval '7 days'
+		  WHERE id = $1`, old)
+	// Enough newer stagings, decided outside the window, to fill any page the
+	// lane would ask for.
+	for i := 0; i < doneLaneWidth+4; i++ {
+		id := stageFor(t, e, svc, person, fmt.Sprintf("An older act %d", i))
+		e.WsExec(t, `UPDATE approval
+			    SET status = 'approved', decided_by_system = true,
+			        decided_at = now() - interval '30 days'
+			  WHERE id = $1`, id)
+	}
+
+	day := assembleFeed(e.Admin(), t, e, now)
+	if got := titlesOn(day.DoneForYou); len(got) != 1 || got[0] != "Filed a message under Riverty" {
+		t.Fatalf("the done-for-you lane = %v, want this morning's act", got)
+	}
+}
+
+// stageFor stages one proposal against a person through the real service.
+func stageFor(t *testing.T, e *integration.Env, svc *approvals.Service,
+	person crmcontracts.Person, summary string,
+) ids.ApprovalID {
+	t.Helper()
+	id, err := svc.Stage(e.Admin(), approvals.StageInput{
+		Kind:           "send_email",
+		ProposedChange: json.RawMessage(`{"body":"the follow-up"}`),
+		DiffHash:       "receipt-" + ids.NewV7().String(),
+		Summary:        summary,
+		TargetType:     "person",
+		TargetID:       ids.UUID(person.Id),
+	})
+	if err != nil {
+		t.Fatalf("staging %q: %v", summary, err)
+	}
+	return id
 }

@@ -127,7 +127,16 @@ type ListInput struct {
 	// puts the limit on the wrong set, and a page full of ordinary decisions
 	// narrows to nothing while real receipts sit behind it.
 	DecidedBySystem *bool
-	Limit           int
+	// DecidedAfter keeps decisions made since an instant.
+	//
+	// It travels with DecidedBySystem for one reason: the page is ordered by
+	// created_at, and a receipt's window is about decided_at. Those disagree —
+	// an approval staged last week and decided this morning sorts BELOW one
+	// staged this morning and decided days ago — so a window applied after the
+	// page can discard everything the page held and hide the recent decision
+	// underneath. In SQL, the limit only ever counts rows inside the window.
+	DecidedAfter *time.Time
+	Limit        int
 	// Cursor continues a previous page: the opaque keyset token that page
 	// reported as next_cursor. Empty starts at the newest row.
 	Cursor string
@@ -280,6 +289,9 @@ func approvalWhere(in ListInput, from *keysetStart, arg func(any) int) string {
 	}
 	if in.DecidedBySystem != nil {
 		terms = append(terms, fmt.Sprintf("decided_by_system = $%d", arg(*in.DecidedBySystem)))
+	}
+	if in.DecidedAfter != nil {
+		terms = append(terms, fmt.Sprintf("decided_at > $%d", arg(*in.DecidedAfter)))
 	}
 	if from != nil {
 		terms = append(terms, fmt.Sprintf("(created_at, id) < ($%d, $%d)", arg(from.createdAt), arg(from.id)))

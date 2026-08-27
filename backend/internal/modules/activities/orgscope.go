@@ -256,8 +256,12 @@ func listActivitiesFilter(ctx context.Context, in ListActivitiesInput) (join str
 		where = append(where, clause)
 	}
 	if in.OpenAndDueBy != nil {
+		// Strictly before the instant, which is what deadline.Passed means and
+		// what this clause replaced. The bound the caller passes is the END of
+		// the day, so `<=` would put a task due at exactly tomorrow 00:00 on
+		// today's list — a promise reported late a day early.
 		where = append(where,
-			sprintf("a.kind = 'task' AND NOT a.is_done AND a.due_at IS NOT NULL AND a.due_at <= $%d",
+			sprintf("a.kind = 'task' AND NOT a.is_done AND a.due_at IS NOT NULL AND a.due_at < $%d",
 				arg(*in.OpenAndDueBy)))
 	}
 	if in.EntityType != nil && in.EntityID != nil {

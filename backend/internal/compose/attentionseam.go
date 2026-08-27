@@ -181,6 +181,14 @@ func (t attentionTasks) OpenForViewer(ctx context.Context, until time.Time, limi
 	}
 	open := make([]attention.Task, 0, len(rows))
 	for _, row := range rows {
+		// The filter above answers only dated rows, so this skip is unreachable
+		// today. It is here because the alternative to a skip is a nil deref
+		// that panics the WHOLE day's page, and the guarantee lives in a WHERE
+		// clause one package away — too far for the next reader of this loop to
+		// see it.
+		if row.DueAt == nil {
+			continue
+		}
 		due := *row.DueAt
 		open = append(open, attention.Task{
 			ID:      ids.UUID(row.Id),
@@ -222,18 +230,23 @@ func (r attentionReceipts) Recent(ctx context.Context, since time.Time, limit in
 		status := approvalStatusApproved
 		bySystem := true
 		rows, _, err := r.svc.ListWire(ctx, approvals.ListInput{
-			Status: &status, DecidedBySystem: &bySystem, Limit: scan,
+			Status: &status, DecidedBySystem: &bySystem, DecidedAfter: &since, Limit: scan,
 		})
 		return rows, err
 	})
 }
 
-// recentReceipts keeps the system-decided rows inside the lane's window.
+// recentReceipts turns the store's rows into the lane's cards.
 //
-// The read is bounded by the lane rather than widened past it: the store now
-// answers "approved AND decided by the system" itself, so the limit applies to
-// rows that qualify. The window test stays here because it is the lane's own
-// horizon rather than a property of the row.
+// The read is bounded by the lane rather than widened past it: the store answers
+// "approved, decided by the system, decided since" itself, so the limit applies
+// to rows that qualify. The window belongs in SQL with the rest — the page is
+// ordered by created_at while the window is about decided_at, so a window
+// applied afterwards can discard a whole page and hide a decision made minutes
+// ago beneath approvals staged more recently.
+//
+// The re-check below is not a second filter. It is what makes the deref of
+// DecidedAt safe in this package, where the SQL guaranteeing it is elsewhere.
 //
 // The page reader is a parameter so a test can answer exactly the width it was
 // asked for; nothing else varies it.
@@ -312,9 +325,19 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, e
 
 // newAttentionHandlers assembles the surface for the API role.
 func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.Handlers {
+	return attention.NewHandlers(newAttentionService(pool, svc, func() time.Time { return time.Now().UTC() }))
+}
+
+// newAttentionService binds every lane to the module that owns what it shows.
+//
+// Separate from the handler above so a test can assemble the day through the
+// SAME wiring the route serves. A test that arranged these seams itself would
+// keep passing while the shipped feed lost one — which is the failure the feed's
+// stub-driven unit tests already have, and the reason its producers went so long
+// without a test that reads them end to end.
+func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attention.Clock) *attention.Service {
 	db := InstallationDB(pool)
-	now := func() time.Time { return time.Now().UTC() }
-	return attention.NewHandlers(attention.NewService(
+	return attention.NewService(
 		attentionApprovals{svc: svc},
 		attentionDuplicates{store: people.NewStore(db)},
 		attentionTasks{store: activities.NewStore(db)},
@@ -324,7 +347,7 @@ func newAttentionHandlers(pool *pgxpool.Pool, svc *approvals.Service) attention.
 		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
 		attentionMeetings{store: activities.NewStore(db)},
 		now,
-	))
+	)
 }
 
 // The three faces a merge decision compares.
