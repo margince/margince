@@ -30,7 +30,7 @@ func TestVoiceLiveSmoke(t *testing.T) {
 	if spec == "" {
 		t.Fatal("set MARGINCE_VOICE_MODEL=provider:model (this smoke is manual-only)")
 	}
-	binding, err := aicert.ParseBinding(spec, os.Getenv("MARGINCE_VOICE_BASE_URL"))
+	binding, err := ai.ParseBinding(spec, os.Getenv("MARGINCE_VOICE_BASE_URL"))
 	if err != nil {
 		t.Fatal(err)
 	}

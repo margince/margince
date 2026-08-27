@@ -11,29 +11,10 @@ package aicert
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/config"
 )
-
-// ParseBinding reads a "provider:model" spec and the endpoint that goes with it.
-//
-// The split cuts at the FIRST colon and leaves the rest of the slug whole:
-// OpenRouter marks a served variant with its own colon suffix (":free",
-// ":batch", ":thinking"), and cutting at the last one would silently certify a
-// different variant from the one asked for.
-//
-// baseURL is carried rather than inferred. openai_compatible fails closed
-// without one — the endpoint belongs to the vendor, not the model — so a broker
-// run supplies it and a native vendor leaves it empty for the provider default.
-func ParseBinding(spec, baseURL string) (ai.ProviderConfig, error) {
-	provider, modelName, found := strings.Cut(spec, ":")
-	if !found || provider == "" || modelName == "" {
-		return ai.ProviderConfig{}, fmt.Errorf("aicert: a model binding wants provider:model, got %q", spec)
-	}
-	return ai.ProviderConfig{Provider: provider, Model: modelName, BaseURL: baseURL}, nil
-}
 
 // ladderForTask binds every tier in a task's ladder to the run's one binding.
 //
