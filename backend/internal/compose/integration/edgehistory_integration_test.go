@@ -206,7 +206,13 @@ func TestEdgeHistoryStopsAtTheAnchorsOwnScrubTombstone(t *testing.T) {
 	// the link's image carries the role and the dates.
 	e.SeedScrubTombstone(t, "organization", org, time.Now().Add(time.Hour).UTC())
 
-	for _, line := range summaries(edgeHistoryOf(t, e, "organization", org, nil)) {
+	// A page that came back EMPTY would satisfy the assertion below without the
+	// withholding being what emptied it, so the record's own rows are the control.
+	page := edgeHistoryOf(t, e, "organization", org, nil)
+	if len(page.Entries) == 0 {
+		t.Fatal("the organization's own rows are missing too — the whole page went, not just the edge")
+	}
+	for _, line := range summaries(page) {
 		if strings.Contains(line, "linked Ada Employed") {
 			t.Errorf("an edge row older than the anchor's own tombstone was served: %q", line)
 		}
@@ -226,7 +232,11 @@ func TestEdgeHistoryWithholdsAnErasedSubjectsEdgesFromTheOtherEnd(t *testing.T) 
 	// The employment image holds the erased subject's role and dates. Left
 	// readable on the COMPANY's history it would outlive the certificate that
 	// said it was gone.
-	for _, line := range summaries(edgeHistoryOf(t, e, "organization", org, nil)) {
+	page := edgeHistoryOf(t, e, "organization", org, nil)
+	if len(page.Entries) == 0 {
+		t.Fatal("the company's own rows are missing too — the whole page went, not just the erased subject's edge")
+	}
+	for _, line := range summaries(page) {
 		if strings.Contains(line, "Selma Subject") {
 			t.Errorf("an erased subject's employment row is still readable on the company: %q", line)
 		}
@@ -244,7 +254,11 @@ func TestEdgeHistoryWithholdsAnEdgeWhoseOtherEndCarriesAScrubTombstone(t *testin
 	// This is the erasure filter alone.
 	e.SeedScrubTombstone(t, "organization", org, time.Now().Add(time.Hour).UTC())
 
-	for _, line := range summaries(edgeHistoryOf(t, e, "person", person, nil)) {
+	page := edgeHistoryOf(t, e, "person", person, nil)
+	if len(page.Entries) == 0 {
+		t.Fatal("the person's own rows are missing too — the whole page went, not just the tombstoned end's edge")
+	}
+	for _, line := range summaries(page) {
 		if strings.Contains(line, "Employer GmbH") {
 			t.Errorf("the other end carries a scrub tombstone and its edge row was still served: %q", line)
 		}

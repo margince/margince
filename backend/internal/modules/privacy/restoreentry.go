@@ -87,8 +87,11 @@ func queryRestoreOf(ctx context.Context, tx pgx.Tx, entityType string, entityID,
 	// Newest first with a window of one: a record with several reversals of one
 	// entry has the newest as its current answer, which is the order the window
 	// already imposes.
-	err = scanEdgeAuditRow(tx.QueryRow(ctx,
-		recordHistoryWindowSQL(typePos, idPos, arg(1), conds, edgeCTE), args...), &row)
+	// Registered and rendered before the call that spreads args — see the same
+	// sequencing in queryRecordHistoryWindow.
+	fetchPos := arg(1)
+	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE)
+	err = scanEdgeAuditRow(tx.QueryRow(ctx, window, args...), &row)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return recordAuditRow{}, apperrors.ErrNotFound
 	}

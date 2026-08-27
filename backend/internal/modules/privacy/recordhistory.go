@@ -299,7 +299,14 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 	} else if err != nil {
 		return nil, err
 	}
-	rows, err := tx.Query(ctx, recordHistoryWindowSQL(typePos, idPos, arg(fetch), conds, edgeCTE), args...)
+	// The limit's placeholder is registered, and the statement rendered, BEFORE
+	// the call that spreads args. Go fixes evaluation order for a function's
+	// operands only in specific cases, so an arg() that appends inside the same
+	// call as `args...` may run after the slice is read — leaving the statement
+	// naming one more placeholder than the driver binds.
+	fetchPos := arg(fetch)
+	window := recordHistoryWindowSQL(typePos, idPos, fetchPos, conds, edgeCTE)
+	rows, err := tx.Query(ctx, window, args...)
 	if err != nil {
 		return nil, err
 	}
