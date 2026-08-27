@@ -66,9 +66,21 @@ echo
 echo "reconciled $declared label(s) from $SOURCE"
 
 # What the repository has and the file does not name. Reported, never removed.
+#
+# The listing is captured and CHECKED before the comparison. Inside a process
+# substitution its failure does not reach the enclosing command — `set -e` sees
+# only `comm`, which happily compares against nothing — so a `gh` that was rate
+# limited, unauthenticated or offline would report "nothing extra" and exit 0.
+# That is the worst answer this script can give: it is the reading somebody
+# would act on to conclude the repository holds exactly what the file names.
+if ! live="$(gh label list --limit 200 --json name --jq '.[].name')"; then
+  echo "FAIL: could not list this repository's labels, so the report below cannot be made."
+  echo "The reconcile above already ran; only the 'what is not in the file' half is missing."
+  exit 1
+fi
 extra="$(comm -13 \
   <(awk '/^- name: "/ { n = $0; sub(/^- name: "/, "", n); sub(/"$/, "", n); print n }' "$SOURCE" | sort) \
-  <(gh label list --limit 200 --json name --jq '.[].name' | sort))"
+  <(printf '%s\n' "$live" | sort))"
 if [[ -n "$extra" ]]; then
   echo
   echo "NOT IN $SOURCE, and left alone:"
