@@ -44,17 +44,37 @@ type providerConsumerEnv struct {
 // mode, and wires the consumer over the REAL cross-module binding.
 func setupProviderConsumer(t *testing.T, mode string) *providerConsumerEnv {
 	t.Helper()
+	// Before the database: this is a contradiction between the fixture and the
+	// provider's own cost table, and neither a schema nor a seeded row can
+	// change the answer.
+	seeded := []string{"professional_email", "linkedin_profile"}
+	requireAnAutomaticRunCanBuy(t, seeded)
+
 	e := Setup(t)
 	c := &providerConsumerEnv{env: e, enqueued: new(int), personID: seedSubject(t, e)}
 
+	// One PRICED category and one FREE one, and both halves are load-bearing.
+	// An automatic run may take only what the provider gives away, so a
+	// connection selecting nothing free never queues anything — and the two
+	// cases here that assert a run EXISTS are the only ones that reach that
+	// code, every other case in this file being refused earlier by the actor
+	// or the toggle. Those two are this file's positive control: without them
+	// the toggle could be wired to a constant false and every assertion here
+	// would still be green. The priced category stays because narrowing to the
+	// free set is the behaviour under test, and a connection carrying only free
+	// categories cannot tell narrowing from taking everything.
+	//
+	// Named once above and passed to both the INSERT and the guard, so the
+	// check reads the selection this connection actually carries rather than a
+	// second copy of it that can drift from it silently.
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO provider_connection
 			       (id, provider, status, mode, preset, categories, automatic_individual_create)
-			VALUES (gen_random_uuid(), 'surfe', 'connected', $1, 'full',
-			        ARRAY['professional_email'], true)
+			VALUES (gen_random_uuid(), 'surfe', 'connected', $1, 'full', $2, true)
 			ON CONFLICT (provider) DO UPDATE
-			   SET status = 'connected', mode = $1, automatic_individual_create = true`, mode)
+			   SET status = 'connected', mode = $1, categories = $2,
+			       automatic_individual_create = true`, mode, seeded)
 		return err
 	}); err != nil {
 		t.Fatal(err)
@@ -77,6 +97,33 @@ func setupProviderConsumer(t *testing.T, mode string) *providerConsumerEnv {
 		})
 	c.consumer = compose.NewPersonDataEnrich(e.Pool, bound, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	return c
+}
+
+// requireAnAutomaticRunCanBuy fails the fixture, not the case, when the seeded
+// connection has nothing an automatic run may take.
+//
+// What it protects is this file's positive control. The refusal is silent — a
+// skipped run, no error — so a fixture that drifts out of the provider's free
+// set presents as "the toggle bought nothing", which is indistinguishable from
+// the toggle being wired to a constant false. Free() is DERIVED from the cost
+// table, so a provider that starts charging for this category fails HERE,
+// naming the fixture, rather than in two cases that read as though a policy
+// broke.
+func requireAnAutomaticRunCanBuy(t *testing.T, selected []string) {
+	t.Helper()
+	free := map[provider.Category]bool{}
+	for _, c := range integrations.NewOfflineProvider(0, time.Now).Descriptor().Free() {
+		free[c] = true
+	}
+	for _, c := range selected {
+		if free[provider.Category(c)] {
+			return
+		}
+	}
+	t.Fatalf("the fixture connection selects %v, and this provider charges for all of "+
+		"them — an automatic run takes only free categories, so it would queue nothing "+
+		"and the two cases asserting a run exists would fail as though a toggle broke",
+		selected)
 }
 
 // humanCreated is what the relay delivers for a person a HUMAN typed — the
