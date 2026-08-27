@@ -404,11 +404,22 @@ func Metrics(pool *pgxpool.Pool, backlog func(context.Context) (int64, error), p
 // its own go_* collector, and two definitions of one series name is a worse
 // outcome than a prefix that says who wrote it.
 func writeRuntimeMetrics(out *exposition) {
-	var mem runtime.MemStats
-	runtime.ReadMemStats(&mem)
-
+	// The first family's header goes out BEFORE anything is measured, and it
+	// is the only probe available to this section: it is the exposition's
+	// first section, so nothing earlier can have discovered a dead writer.
+	//
+	// It buys the section's one expensive reading. ReadMemStats stops the
+	// world briefly, and a scrape whose reader hung up between the request and
+	// this line should not be charged for it — nor should the process, which
+	// pays that pause for every replica while nobody is reading.
 	out.printf("# HELP margince_process_goroutines Goroutines running in the scraped process.\n")
 	out.printf("# TYPE margince_process_goroutines gauge\n")
+	if out.gone() {
+		return
+	}
+
+	var mem runtime.MemStats
+	runtime.ReadMemStats(&mem)
 	out.printf("margince_process_goroutines %d\n", runtime.NumGoroutine())
 
 	out.printf("# HELP margince_process_heap_bytes Heap bytes allocated and in use by the scraped process.\n")

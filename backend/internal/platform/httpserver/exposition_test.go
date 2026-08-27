@@ -27,13 +27,17 @@ import (
 type hangUp struct {
 	http.ResponseWriter
 	writes int
+	// accepts is how many writes land before the reader is gone. One by
+	// default; the runtime section's own probe needs two, because its first
+	// two writes are the header it sends before measuring anything.
+	accepts int
 }
 
 var errClientGone = errors.New("connection reset by peer")
 
 func (h *hangUp) Write(p []byte) (int, error) {
 	h.writes++
-	if h.writes > 1 {
+	if h.writes > h.accepts {
 		return 0, errClientGone
 	}
 	return len(p), nil
@@ -41,7 +45,12 @@ func (h *hangUp) Write(p []byte) (int, error) {
 
 func TestNothingIsMeasuredForAScrapeThatHasAlreadyGone(t *testing.T) {
 	measured := map[string]bool{}
-	w := &hangUp{ResponseWriter: httptest.NewRecorder()}
+	// One write lands, so the runtime section's own header probe is what
+	// discovers the writer is gone — before it stops the world to read memory
+	// statistics nobody will receive. That saving is not observable from out
+	// here, so it is not asserted; what is asserted is that no section after
+	// it measures anything.
+	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 
 	Metrics(nil,
 		func(context.Context) (int64, error) { measured["backlog"] = true; return 0, nil },
@@ -72,7 +81,7 @@ func TestNothingIsMeasuredForAScrapeThatHasAlreadyGone(t *testing.T) {
 // The remembered error, not nil. A section that DOES check its writes would
 // otherwise be told each one succeeded and carry on assembling into nothing.
 func TestTheExpositionKeepsRefusingAfterTheFirstFailure(t *testing.T) {
-	out := &exposition{w: &hangUp{ResponseWriter: httptest.NewRecorder()}}
+	out := &exposition{w: &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}}
 
 	out.printf("first\n")
 	out.printf("second\n")
@@ -94,7 +103,7 @@ func TestTheExpositionKeepsRefusingAfterTheFirstFailure(t *testing.T) {
 // them or it is a claim a reader has to check one section at a time.
 func TestNoCounterIsReadForAScrapeThatHasAlreadyGone(t *testing.T) {
 	read := map[string]bool{}
-	w := &hangUp{ResponseWriter: httptest.NewRecorder()}
+	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 
 	Metrics(nil, nil,
 		func() uint64 { read["published"] = true; return 0 },
@@ -118,7 +127,7 @@ func TestNoCounterIsReadForAScrapeThatHasAlreadyGone(t *testing.T) {
 // smaller reason: there is nothing to log, but a half-written answer is still
 // not worth assembling.
 func TestReadyzStopsWritingWhenItsReaderHangsUp(t *testing.T) {
-	w := &hangUp{ResponseWriter: httptest.NewRecorder()}
+	w := &hangUp{ResponseWriter: httptest.NewRecorder(), accepts: 1}
 	resolved := false
 
 	Readyz("declared", func(context.Context) string { resolved = true; return "ready" })(
