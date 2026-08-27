@@ -30,6 +30,10 @@ const SIGNAL_KIND_LABELS: Record<string, MessageKey> = {
   commitment_made: "signal.kind.commitment_made",
   ghosted_thread: "signal.kind.ghosted_thread",
   project_gone_quiet: "signal.kind.project_gone_quiet",
+  funding: "signal.kind.funding",
+  leadership_change: "signal.kind.leadership_change",
+  expansion: "signal.kind.expansion",
+  product_launch: "signal.kind.product_launch",
   technical_change: "signal.kind.technical_change",
 };
 
