@@ -8,12 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"slices"
 	"strings"
 	"time"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/agentgrant"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -34,6 +36,15 @@ const SessionCookieName = "crm_session"
 // the contract plus the middleware that authenticates everything else.
 type Handlers struct {
 	svc *Service
+	// agentGrants writes the rep's standing answer for a scheduled agent, in
+	// the same transaction as the passport that answer commits. Nil is a
+	// deployment with no agent runner, where the endpoints answer 404 rather
+	// than offering a question nothing could act on.
+	agentGrants agentgrant.Store
+	// grantableAgents is the scheduled catalog, by name. It arrives with the
+	// store rather than being read here: the catalog is another module's, and
+	// the join that gives it its tool allowlist lives in compose.
+	grantableAgents []string
 	// resetMailer is the A74 outbound-email transport. Nil means the
 	// installation has no email channel: forgot-password is absent (its
 	// endpoint answers 501) and the capabilities probe reports
@@ -174,6 +185,16 @@ func (h Handlers) WithSorMode(resolve func(context.Context) (bool, error)) Handl
 // it from --public-base-url, never from a request, so the audience the
 // OAuth handshake protects can never be steered by an attacker-controlled
 // Host header.
+// WithAgentGrants binds the standing-grant store and the agents a rep may be
+// asked about. Without it, /me/agent-grants answers 404: a deployment with no
+// runner has no overnight work to authorize, and asking the rep to grant it
+// would be asking a question nothing could act on.
+func (h Handlers) WithAgentGrants(store agentgrant.Store, agents []string) Handlers {
+	h.agentGrants = store
+	h.grantableAgents = slices.Clone(agents)
+	return h
+}
+
 func (h Handlers) WithMCPResource(resource string) Handlers {
 	h.mcpResource = resource
 	return h

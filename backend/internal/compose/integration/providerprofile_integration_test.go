@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose/person360"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/integrations"
@@ -78,6 +79,24 @@ func completeOneRun(t *testing.T, e *Env, personID ids.UUID) string {
 	return runID
 }
 
+// sectionFor is the page's section for one named provider. It asserts through
+// the NAME rather than through a position, because the page carries one
+// section per provider and a positional read would pass while showing another
+// vendor's purchases under this one's heading.
+func sectionFor(t *testing.T, page crmcontracts.Person360, name string) crmcontracts.PersonProviderProfile {
+	t.Helper()
+	if page.ProviderProfiles == nil {
+		t.Fatal("the person page carries no provider sections at all")
+	}
+	for _, profile := range *page.ProviderProfiles {
+		if string(profile.Provider) == name {
+			return profile
+		}
+	}
+	t.Fatalf("the person page carries no section for %q", name)
+	return crmcontracts.PersonProviderProfile{}
+}
+
 // connectProvider puts the singleton connection into the connected state the
 // section reads.
 func connectProvider(t *testing.T, e *Env) {
@@ -121,10 +140,7 @@ func TestTheProviderSectionRendersWhatTheAdapterActuallyReturned(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	profile := page.ProviderProfile
-	if profile == nil {
-		t.Fatal("the person page carries no provider section at all")
-	}
+	profile := sectionFor(t, page, "surfe")
 	if profile.State != "completed" {
 		t.Errorf("the section state is %q, want completed", profile.State)
 	}
@@ -201,10 +217,7 @@ func TestDisconnectingLeavesThePurchasedDataVisibleAndCallsItStale(t *testing.T)
 	if err != nil {
 		t.Fatal(err)
 	}
-	profile := page.ProviderProfile
-	if profile == nil {
-		t.Fatal("the person page carries no provider section")
-	}
+	profile := sectionFor(t, page, "surfe")
 	if len(profile.Emails) == 0 {
 		t.Error("the purchased address vanished on disconnect: disconnecting is not deleting")
 	}

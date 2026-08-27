@@ -25,7 +25,7 @@ package deals
 // on any OTHER contract body is not covered.
 //
 // That gap is real and it is enumerated rather than hidden:
-// backend/requiredbodyids_test.go walks internal/contracts for every request body
+// backend/gates/requiredbodyids_test.go walks internal/contracts for every request body
 // carrying a required non-pointer UUID and requires each to be either probed here
 // or named as a known gap with a reason. A new one fails, so the list only shrinks.
 

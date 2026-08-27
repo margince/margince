@@ -45,7 +45,7 @@ var errResetConfirmationMismatch = errors.New("data reset: confirmation does not
 
 // resetDataResponse is the 200 body. The contract declares the shape inline
 // (no generated type), so it is spelled here — and
-// TestResetDataResponseMatchesTheContract (backend/resetwireshape_test.go)
+// TestResetDataResponseMatchesTheContract (backend/gates/resetwireshape_test.go)
 // derives the two field sets from the contract and this struct so they cannot
 // drift.
 type resetDataResponse struct {

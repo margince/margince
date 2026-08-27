@@ -27,7 +27,7 @@
 # defect one currency over: Intl follows CLDR, which records how a currency is
 # USED, and the server follows ISO 4217, which records what the standard
 # ASSIGNS. They disagree on ten codes, two of them ordinary spendable money.
-# backend/frontendminorunits_test.go holds the mirror in both directions.
+# backend/gates/frontendminorunits_test.go holds the mirror in both directions.
 #
 # WHAT THIS GATE IS NOT. A token scanner, not a proof. `scale := 100` and then a
 # divide by `scale` is a real instance it will not see, and so is any of it

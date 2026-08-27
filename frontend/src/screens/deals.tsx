@@ -123,6 +123,7 @@ import {
 } from "./listquery";
 import { LogActivity } from "./logactivity";
 import type { Project } from "./projects.form";
+import { invalidateRecord } from "./recordwritekeys";
 import { SaveViewAction, useSavedViewTabs } from "./savedviews";
 import { ShareAction } from "./share";
 import { groupChronology } from "./timelinegroups";
@@ -3640,7 +3641,16 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
               {tab === "files" && !overlay && <DealFiles dealId={deal.id} />}
               {tab === "files" && overlay && <OverlayUnavailable />}
               {tab === "history" && !overlay && (
-                <RecordHistoryTab kind="deal" id={deal.id} />
+                <RecordHistoryTab
+                  kind="deal"
+                  id={deal.id}
+                  currency={deal.currency}
+                  restore={{
+                    version: deal.version,
+                    onRestored: () =>
+                      invalidateRecord(queryClient, "deal", deal.id),
+                  }}
+                />
               )}
               {tab === "history" && overlay && <OverlayUnavailable />}
               {advance.isError && (

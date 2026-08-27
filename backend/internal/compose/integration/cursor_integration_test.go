@@ -20,7 +20,7 @@ package integration
 // that decodes the token itself, plus several that delegate to
 // storekit.DecodeCursor. The contract declares the Cursor parameter on far more
 // operations than are listed here, and what covers those is the static gate in
-// backend/cursorrefusal_test.go — it reads every refusal in the tree, where this
+// backend/gates/cursorrefusal_test.go — it reads every refusal in the tree, where this
 // suite reads the wire for the ones that got it wrong.
 //
 // Saying which is which matters: a list that claimed to enumerate the contract

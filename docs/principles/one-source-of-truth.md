@@ -82,7 +82,7 @@ helps.
 Two corollaries worth stating because both have been violated here:
 
 - **A module writes only the tables it owns**, declared in its `doc.go` and held
-  by `backend/tableownership_test.go`. A write into a sibling's table is a
+  by `backend/gates/tableownership_test.go`. A write into a sibling's table is a
   boundary crossing wearing a SQL statement's clothes.
 - **A gate keyed by package cannot see an intra-package duplicate.** The
   ownership test keys its waivers `<package>:<table>`, so every second writer

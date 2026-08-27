@@ -32,6 +32,7 @@ import {
 import { OvernightPanel, PositionPanel, WatchPanel } from "./home.rail";
 import { HomeReadingsStrip } from "./home.readings";
 import { TodaySection } from "./home.today";
+import { WeeklySection } from "./home.weekly";
 import "./home.css";
 
 // Home — the morning handover.
@@ -218,7 +219,13 @@ function HomeWork({
   // the reader's Deck/List choice, and the tally behind the cleared plate. Which
   // meant the one state the flip exists to reveal, "deck clear, N sent", could
   // never be reached by clearing the deck. Keys make React reorder instead.
-  return items.length > 0 ? [decisions, today] : [today, decisions];
+  // Last, always. The weekly is a retrospective — what a rep reads once, on
+  // Monday, after the work that is waiting on them today. Ordering it above
+  // either of those would put last week ahead of this morning.
+  const lastWeek = <WeeklySection key="weekly" />;
+  return items.length > 0
+    ? [decisions, today, lastWeek]
+    : [today, decisions, lastWeek];
 }
 
 /**
@@ -287,8 +294,15 @@ export function HomeScreen() {
 
   const approvals = approvalsQuery.data?.data ?? [];
   const items = useMemo(() => deckItems(approvals), [approvals]);
-  const deals = dealsQuery.data ?? [];
+  const deals = dealsQuery.data?.rows ?? [];
+  // Every count taken from this page is a floor: the read stops at one page,
+  // and `more` is what keeps the strip from reporting a bounded number as a
+  // total.
+  const beyondPage = dealsQuery.data?.more ?? false;
   const quiet = quietDeals(deals);
+  const quietReading = dealsQuery.isSuccess
+    ? { seen: quiet.length, more: beyondPage }
+    : null;
   const brief = briefQuery.data ?? null;
   const digest = digestQuery.data ?? null;
   const leader = topDeal(brief, deals);
@@ -318,7 +332,7 @@ export function HomeScreen() {
   const openReading =
     dealsQuery.isSuccess && pipelineQuery.isSuccess
       ? {
-          deals: openDeals(deals).length,
+          deals: { seen: openDeals(deals).length, more: beyondPage },
           currencies: pipelineQuery.data.rows.length,
         }
       : null;
@@ -334,7 +348,7 @@ export function HomeScreen() {
         decisions={decisionReadings}
         brief={briefGlance(briefQuery.isSuccess, brief, leader, locale)}
         overnight={overnightGlance(digestQuery.isSuccess, digest)}
-        stalled={dealsQuery.isSuccess ? quiet.length : null}
+        stalled={quietReading}
         onGoToDecisions={() => goToSection("home-decisions")}
         onGoToToday={() => goToSection("home-today")}
         onGoToDuplicates={() => navigate({ screen: "today" })}
@@ -344,7 +358,7 @@ export function HomeScreen() {
         decisions={decisionReadings}
         open={openReading}
         ranked={rankedReading}
-        quiet={dealsQuery.isSuccess ? quiet.length : null}
+        quiet={quietReading}
       />
       {/* Screen-level so it survives the deck re-rendering under it. */}
       {decidedNote}
@@ -369,7 +383,11 @@ export function HomeScreen() {
             <OvernightPanel />
             <PositionPanel />
             <section id="home-watch">
-              <WatchPanel deals={quiet} state={readState(dealsQuery)} />
+              <WatchPanel
+                deals={quiet}
+                more={beyondPage}
+                state={readState(dealsQuery)}
+              />
             </section>
           </>
         }

@@ -44,9 +44,17 @@ func (h Handlers) GetFieldHistory(w http.ResponseWriter, r *http.Request, params
 		return
 	}
 
+	auditIDs := make([]ids.UUID, 0, len(page.Entries))
+	for _, e := range page.Entries {
+		auditIDs = append(auditIDs, e.ID)
+	}
+	answers := h.undoabilityFor(r.Context(), entityType, ids.UUID(params.EntityId), auditIDs)
 	data := make([]crmcontracts.FieldHistoryEntry, 0, len(page.Entries))
 	for _, e := range page.Entries {
-		data = append(data, fieldHistoryEntryToWire(e))
+		wire := fieldHistoryEntryToWire(e)
+		answer, judged := answers[e.ID]
+		wire.Undoable = undoabilityToWire(answer, judged)
+		data = append(data, wire)
 	}
 	resp := crmcontracts.FieldHistoryListResponse{
 		Data: data,

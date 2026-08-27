@@ -5,7 +5,7 @@ source: hand_authored
 sanitized_by: hand_authored/claude-opus-5
 fixture:
   goal: Which of my deals are about to slip this week?
-  trigger_ref: morning_brief:2026-08-07
+  trigger_ref: morning_brief:2026-08-07:d48b383f3e8acec5d620c82b8c9b4202
   grounding:
     - source_id: user:0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e0a
       trust_tier: T1

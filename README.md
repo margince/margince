@@ -435,7 +435,7 @@ because getting it wrong once was expensive:
    both in one change. Then declare which side is the MIRROR and gate it
    in both directions — `values.MinorUnitExceptions()` against
    `frontend/src/format/minorunits.ts`, in
-   `backend/frontendminorunits_test.go`, which fails on a code present
+   `backend/gates/frontendminorunits_test.go`, which fails on a code present
    on one side only and on a digit count that differs. Two tables that
    happen to agree today is the state this replaces; note that the gate
    covers the shared TABLE, not the two suites' cases, and reads the

@@ -144,8 +144,8 @@ true on every event.
 the Go unit gates, and boot the sharded Postgres databases. `AGENTS.md`, `CLAUDE.md`,
 `frontend/AGENTS.md`, `frontend/CLAUDE.md` and `docs/**` are each read by a Go
 gate —
-`backend/rulebookdelegation_test.go`, `backend/rulebookdirection_test.go` and
-`backend/rulebooktally_test.go` — so an edit to any of them has to run a unit
+`backend/gates/rulebookdelegation_test.go`, `backend/gates/rulebookdirection_test.go` and
+`backend/gates/rulebooktally_test.go` — so an edit to any of them has to run a unit
 lane, and by no integration test, so it must not run the database lanes. The two shards move in lockstep with the
 `integration` fan-in, which asserts `success` from them: skipping one alone
 would report a documentation PR as a broken integration lane.

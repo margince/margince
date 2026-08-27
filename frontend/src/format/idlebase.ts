@@ -7,7 +7,7 @@
 // board that ages a deal differently from the list that filed it stalled.
 //
 // This module is a DECLARED MIRROR of the server's spelling, not a second
-// answer: `backend/frontendidlebase_test.go` reads the expression below and
+// answer: `backend/gates/frontendidlebase_test.go` reads the expression below and
 // the Go `idlebase.SQL` beside it, and fails when either side changes the
 // order alone.
 //

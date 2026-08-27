@@ -262,21 +262,30 @@ func (p *Provider) Update(ctx context.Context, in datasource.UpdateInput) (datas
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		v, err := p.store.UpdatePerson(ctx, ids.From[ids.PersonKind](in.Ref.ID), personUpdateInput(req, in.IfVersion))
+		update := personUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdatePerson(ctx, ids.From[ids.PersonKind](in.Ref.ID), update)
 		return ref(datasource.EntityPerson, v.Id), err
 	case datasource.EntityOrganization:
 		var req crmcontracts.UpdateOrganizationRequest
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		v, err := p.store.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](in.Ref.ID), organizationUpdateInput(req, in.IfVersion))
+		update := organizationUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdateOrganization(ctx, ids.From[ids.OrganizationKind](in.Ref.ID), update)
 		return ref(datasource.EntityOrganization, v.Id), err
 	case datasource.EntityLead:
 		var req LeadUpdateRequest
 		if err := datasource.StrictDecode(raw, &req); err != nil {
 			return datasource.EntityRef{}, err
 		}
-		v, err := p.store.UpdateLead(ctx, ids.From[ids.LeadKind](in.Ref.ID), leadUpdateInput(req, in.IfVersion))
+		update := leadUpdateInput(req, in.IfVersion)
+		update.Trail = in.Trail
+		update.Clear = in.Clear
+		v, err := p.store.UpdateLead(ctx, ids.From[ids.LeadKind](in.Ref.ID), update)
 		return ref(datasource.EntityLead, v.Id), err
 	case datasource.EntityRelationship:
 		var req crmcontracts.UpdateRelationshipRequest

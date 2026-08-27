@@ -57,7 +57,7 @@ it.
 **A new seam owes the whole shape.** Audit-only mutations do exist and are
 legitimate — installation configuration writes an audit row and no event,
 because the closed event catalog defines no type for it and inventing one
-build-side is forbidden. But they are *enumerated*: `backend/writeshape_test.go`
+build-side is forbidden. But they are *enumerated*: `backend/gates/writeshape_test.go`
 carries each one with the argument for why, and the gate refuses an audit-only
 function that is not on the list — as well as a listed one that no longer
 exists. So the rule for a new write path is: audit implies event, unless you can

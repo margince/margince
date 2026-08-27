@@ -18,6 +18,7 @@ import { attentionKey } from "./today.queries";
 // exist on the server.
 
 export type MorningBrief = components["schemas"]["MorningBrief"];
+export type WeeklyReview = components["schemas"]["WeeklyReview"];
 export type MorningBriefItem = components["schemas"]["MorningBriefItem"];
 export type MorningDigest = components["schemas"]["MorningDigest"];
 export type Deal = components["schemas"]["Deal"];
@@ -152,24 +153,37 @@ export function usePipelineValue(): UseQueryResult<PipelineReading> {
   });
 }
 
+/** One page of deals, and whether the list ended there. */
+export type HomeDeals = Readonly<{ rows: Deal[]; more: boolean }>;
+
+/** How many deals Home reads in one go. */
+const HOME_DEALS_PAGE = 100;
+
 /**
  * The deals page Home reads twice over: the quiet ones it lists, and the count
  * of open ones its readings strip reports.
  *
  * One query rather than two because there is no server-side "stalled" filter to
  * ask for — the flag arrives on the row and the filtering is ours.
+ *
+ * ONE page, and the page's own `has_more` travels with it. Following the cursor
+ * would cost an unbounded fan-out on the one screen that opens every morning,
+ * so the honest answer is the other one: every reading taken from these rows is
+ * a FLOOR past the page, and says so where it is drawn. A count that quietly
+ * stopped rising is the failure this repo cares about most — the same words, a
+ * smaller number, and nothing failing.
  */
-export function useHomeDeals(): UseQueryResult<Deal[]> {
+export function useHomeDeals(): UseQueryResult<HomeDeals> {
   return useQuery({
     queryKey: ["deals"],
-    queryFn: async (): Promise<Deal[]> => {
+    queryFn: async (): Promise<HomeDeals> => {
       const { data, error } = await api.GET("/deals", {
-        params: { query: { limit: 100 } },
+        params: { query: { limit: HOME_DEALS_PAGE } },
       });
       if (error) {
         throwProblem(error);
       }
-      return data.data;
+      return { rows: data.data, more: data.page?.has_more ?? false };
     },
   });
 }
@@ -267,6 +281,57 @@ export function useBriefItemMark() {
       // cache would leave the row on screen until the next refetch, which reads
       // exactly like a click that did nothing.
       void queryClient.invalidateQueries({ queryKey: attentionKey });
+    },
+  });
+}
+
+/**
+ * The rep's weekly retrospective — the most recent, or a named week.
+ *
+ * `404` is not a failure: a rep whose first Monday has not come round yet has
+ * no review, and that is a page saying so rather than an error.
+ */
+export function useWeeklyReview(
+  week?: string,
+): UseQueryResult<WeeklyReview | null> {
+  return useQuery({
+    queryKey: ["weekly-review", week ?? "latest"],
+    queryFn: async (): Promise<WeeklyReview | null> => {
+      const { data, error, response } = await api.GET(
+        "/weekly-reviews/latest",
+        {
+          params: { query: week === undefined ? {} : { week } },
+        },
+      );
+      if (response.status === 404) {
+        return null;
+      }
+      if (error) {
+        throwProblem(error);
+      }
+      // A payload that is not a review reads as no review, not as one with
+      // undefined fields. The panel formats local_week_start straight away, so
+      // a half-shaped answer would take Home's whole render down rather than
+      // drawing the honest "no review yet" state.
+      return data?.local_week_start === undefined ? null : data;
+    },
+  });
+}
+
+/** The weeks this rep has a review for — the archive's index. */
+export function useWeeklyReviewIndex(): UseQueryResult<readonly string[]> {
+  return useQuery({
+    queryKey: ["weekly-review-index"],
+    queryFn: async (): Promise<readonly string[]> => {
+      const { data, error } = await api.GET("/weekly-reviews");
+      if (error) {
+        throwProblem(error);
+      }
+      // Never undefined out of this hook. React Query refuses an undefined
+      // result, and a payload without the field is a server that answered
+      // something else — which must read as "no weeks", not as a crash that
+      // takes Home's whole render with it.
+      return data?.weeks ?? [];
     },
   });
 }

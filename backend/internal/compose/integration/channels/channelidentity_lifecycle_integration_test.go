@@ -8,7 +8,7 @@ package channels
 // person_channel_identity is a person satellite, so it owes every lifecycle
 // path its siblings ride: Art. 17 erasure (plus the suppression row that makes
 // the erasure stick), Art. 15 subject access, the retention anonymizer, the
-// merge relink, and the archive cascade. backend/satellite_lifecycle_test.go
+// merge relink, and the archive cascade. backend/gates/satellite_lifecycle_test.go
 // proves each path WRITES the table; this suite proves the writes do the right
 // thing on real rows, which is the half a source scan cannot see.
 //

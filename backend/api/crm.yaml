@@ -8212,6 +8212,86 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
+  # -------- /me/agent-grants (the rep's own standing overnight authority) --------
+  # A rep says once whether an agent may work as them overnight. The answer is
+  # THEIRS: the path is /me/..., the acting principal names the rep, and there is
+  # no user id anywhere in it — an admin cannot answer on somebody's behalf,
+  # which is the whole point of a standing grant being separate from the
+  # workspace setting that enables the feature at all.
+  /me/agent-grants:
+    get:
+      tags: [Agents]
+      operationId: listMyAgentGrants
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: The calling rep's own standing answers, one per scheduled agent.
+      description: |
+        Every scheduled agent this build runs, each carrying the rep's answer: granted,
+        declined, or never asked. Human-only — an agent reading whether it is allowed to
+        run, and by extension being able to ask, is the self-grant this model forbids.
+
+        `credential_usable` is read from the passport at request time rather than stored:
+        a passport expires at a moment nothing writes to the grant, so a stored copy would
+        say "granted" about a credential that stopped working hours ago. When it is false
+        against a granted answer, the rep agreed and has nothing to act with — the renewal
+        case, which the client must offer rather than silently showing the feature as on.
+      responses:
+        '200':
+          description: The rep's standing answers.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyAgentGrants' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /me/agent-grants/{spec}:
+    parameters:
+      - name: spec
+        in: path
+        required: true
+        schema: { $ref: '#/components/schemas/ScheduledAgentName' }
+        description: Which scheduled agent this answer is about.
+    put:
+      tags: [Agents]
+      operationId: setMyAgentGrant
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      x-agent-access: human-only
+      summary: The calling rep answers for one agent — granting or withdrawing.
+      description: |
+        Idempotent: re-answering replaces the previous answer, because a rep who declined
+        and later changes their mind is giving a NEW answer to the same question rather
+        than a second one.
+
+        GRANTING MINTS. What authorizes an overnight run is a passport, and the single
+        production mint binds `on_behalf_of` and `granted_by` to the same session user —
+        so granting mints the rep's own credential inside the same transaction as the
+        answer. A mint that committed beside a failed grant would be live authority
+        nothing points at; a grant beside a failed mint would claim an authority that does
+        not exist. The token is never returned: this passport is for the scheduler, not
+        for the caller, and re-disclosing it would put an agent credential on a screen.
+
+        WITHDRAWING REVOKES. The answer flips to declined and the passport it named is
+        revoked, so the authority actually ends rather than merely being unreferenced.
+        The declined row is kept on purpose — a rep who said no and a rep who was never
+        asked are indistinguishable from the passport table alone, and a product that
+        cannot tell them apart asks the declining rep again every night.
+
+        Human-only: an agent granting itself standing authority is the self-grant this
+        whole model exists to refuse.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/SetMyAgentGrantRequest' }
+      responses:
+        '200':
+          description: The rep's updated answer for this agent.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MyAgentGrant' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /capture/settings:
     get:
       tags: [Capture]
@@ -9257,7 +9337,10 @@ paths:
       description: |
         Every audit_log row for the record, rendered as a plain-language `summary` line
         naming the actor and, for agent actions, the granting human (`on_behalf_of_name`).
-        Chronological oldest-first (`occurred_at` ASC, `id` tiebreak) with keyset pagination.
+        Newest first (`occurred_at` DESC, `id` tiebreak) with keyset pagination — the same
+        order as `/field-history`, and the order a reader needs: a record's history answers
+        "what just happened", and the change somebody wants to put back is almost always the
+        last one.
         `before`/`after` are masked to the viewer's readable fields by omission — a field the
         caller cannot see is absent from the object, never present as `null`. The projection
         stops at the record's newest erasure scrub: rows at-or-before that tombstone are
@@ -9277,6 +9360,77 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /records/{entity_type}/{id}/history/{audit_id}/restore:
+    parameters:
+      - name: entity_type
+        in: path
+        required: true
+        schema: { type: string, enum: [person, organization, deal, lead, project, activity] }
+      - $ref: '#/components/parameters/Id'
+      - name: audit_id
+        in: path
+        required: true
+        schema: { type: string, format: uuid }
+        description: The history entry to put back. It must belong to the record named by the path; one that does not answers 404, never 403.
+    post:
+      tags: [Compliance]
+      operationId: restoreRecordChange
+      security: [ { cookieAuth: [] } ]   # human session only
+      x-agent-access: human-only
+      summary: Put one audited change back.
+      description: |
+        Re-applies the named history entry's before-image to the record, as an ordinary
+        update recorded with the `restore` verb and an `evidence.undid_audit_log_id` link
+        to the entry it reverses. There is no second write engine and no new table: the
+        write is the record's own update path, so every rule that path holds still holds.
+
+        **`If-Match` is REQUIRED here**, unlike every other mutating endpoint where it is
+        optional. A restore is decided from a history screen the person has been reading,
+        so the record may have moved under them between reading and pressing; last-write-wins
+        is not an acceptable default for a write whose entire premise is a prior state.
+
+        Whether an entry can be put back is COMPUTED, never stored, and it is evaluated
+        twice: advisorily on the history read, so the button is honest, and bindingly inside
+        this write's own transaction after the row lock, so the write cannot act on a
+        snapshot taken before it. The two agree on the SET of reasons; they may differ on
+        timing, which is why a `409` here can carry a reason the read did not show.
+
+        An agent may not call this. A restore is a human's authority, and reaching it
+        through an agent would let one launder a change it was not allowed to make directly.
+      parameters:
+        - name: If-Match
+          in: header
+          required: true
+          schema: { type: string }
+          description: >-
+            The last-seen record `version`, required. If the row's current version differs
+            the restore is rejected with `409 code: version_skew` and nothing is written —
+            re-read the record and its history, then decide again.
+      responses:
+        '200':
+          description: The change was put back. The body is the `restore` entry now in the record's history.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuditHistoryEntry' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: >-
+            The change cannot be put back. `code` is `version_skew` when the record moved
+            under the caller, and otherwise the `undoable.reason` the binding evaluation
+            returned — which may differ from what the read showed, because the read cannot
+            hold a lock.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+              examples:
+                skew:
+                  value: { type: 'https://errors.gradion.com/version_skew', title: Version conflict, status: 409, code: version_skew, detail: The record changed since your last read; re-read and decide again. }
+                superseded:
+                  value: { type: 'https://errors.gradion.com/superseded', title: Cannot be put back, status: 409, code: superseded, detail: 'amount_minor was changed after this entry.' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /records/{entity_type}/{id}/context:
@@ -12956,6 +13110,99 @@ paths:
               schema: { $ref: '#/components/schemas/MorningBrief' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /weekly-reviews:
+    get:
+      tags: [Brief]
+      operationId: listWeeklyReviews
+      summary: The weeks the acting rep has a review for, newest first.
+      description: |
+        The archive's index — a list of doors, not the reviews themselves. Reachable without a
+        nav entry of its own: the weekly is a view of the work Today already collects.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The weeks with a review, newest first.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyReviewIndex' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /weekly-reviews/latest:
+    get:
+      tags: [Brief]
+      operationId: getLatestWeeklyReview
+      summary: The acting rep's most recent weekly review, or a named week's.
+      description: |
+        Serves a review that was WRITTEN when its week closed; it never assembles one. A read
+        that could re-derive the week would answer differently depending on when it was asked —
+        the deal you closed on Friday reclassified in March because somebody edited its stage —
+        and a record of a past week that does that is not a record.
+
+        The deal lines are frozen: the label is what the deal was called that week, stored beside
+        its id rather than joined, so a rename does not rewrite history and a deletion does not
+        erase it. That is also why the weekly is its own aggregate rather than living on
+        `brief_item`, whose rows cascade away with their deal.
+      parameters:
+        - name: week
+          in: query
+          required: false
+          schema: { type: string, format: date }
+          description: The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
+      x-agent-access: human-only
+      responses:
+        '200':
+          description: The weekly review.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/WeeklyReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: The rep has no review for that week.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /brief/annotations:
+    put:
+      tags: [Brief]
+      operationId: annotateMorningBrief
+      summary: Write the overnight pass's findings onto the acting rep's own brief for today.
+      description: |
+        The overnight `morning_brief` agent's write-back. Its goal has always asked for why each
+        deal is on the list, what changed, and one next move; this is where that answer lands, so
+        it reaches the person instead of staying in the run's raw result where nothing renders it.
+
+        SCOPED TO THE CALLER'S OWN CURRENT RUN, resolved server-side. The body carries no user id,
+        no run id and no local day, so there is no argument by which a caller could annotate
+        another rep's morning or an older run. It carries no rank and no item ordering either:
+        the queue's order stays the deterministic engine's, because a writer that could reorder
+        could promote a deal by asserting it belongs first rather than by evidence.
+
+        EVERY CITED EVIDENCE ID IS VERIFIED against what the run already recorded for that item.
+        A uuid that merely parses proves nothing, and one naming another rep's record would make
+        an ungrounded claim read as a grounded one — so an id outside the item's own evidence
+        refuses the whole write rather than being dropped silently.
+
+        Idempotent by replacement: a second pass is a correction, not an addition.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AnnotateBriefRequest' }
+      x-mcp-tool: { verb: annotate_brief, tier: auto_execute, scope: write }
+      responses:
+        '204':
+          description: The findings were written.
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404':
+          description: The rep has no brief run today, so there is nothing to annotate.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
 
   /brief/items/{itemId}/act:
     parameters:
@@ -17731,8 +17978,16 @@ components:
 
     Provider:
       type: string
-      enum: [surfe]
-      description: Licensed provider adapter key; the domain/run contract remains provider-neutral.
+      pattern: '^[a-z][a-z0-9_]*$'
+      maxLength: 32
+      description: |
+        A licensed data provider registered in THIS installation; the domain/run contract
+        remains provider-neutral. Deliberately a pattern-constrained string rather than an
+        enum, for the reason `ProviderRef` gives for messaging transports: which providers
+        exist is a deployment fact — what this binary composed — so an enum would assert
+        that the legal set is identical everywhere, which is false. The registry refuses a
+        name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+        live set.
 
     ProviderConnectionStatus:
       type: string
@@ -18030,14 +18285,20 @@ components:
     PersonProviderProfile:
       type: object
       description: |
-        Separate “Provided by Surfe” snapshot for the Person360 response. Provider provenance is
-        not an underlying webpage citation; these values never silently overwrite canonical fields.
-      required: [state, categories_not_requested, emails, mobile_phones, job_history, departments, seniorities]
+        One connected provider's snapshot for the Person360 response, named by `provider`.
+        Provider provenance is not an underlying webpage citation; these values never silently
+        overwrite canonical fields. The reader sees one of these per connection, so every value
+        on the page says who was paid for it.
+      required: [provider, state, categories_not_requested, emails, mobile_phones, job_history, departments, seniorities]
       properties:
         state:
           type: string
           enum: [not_connected, not_eligible, never_run, queued, in_progress, completed, no_match, stale, invalid_credentials, insufficient_credits, rate_limited, provider_error, submission_unknown, completed_claims_unwritten]
-        provider: { $ref: '#/components/schemas/Provider' }
+        provider:
+          description: >-
+            Whose snapshot this is. Required: an entry in a list of providers that did not name
+            itself would leave the reader unable to tell who to ask, or who was already paid.
+          allOf: [{ $ref: '#/components/schemas/Provider' }]
         retrieved_at: { type: [string, 'null'], format: date-time }
         safe_status_code: { type: [string, 'null'] }
         categories_not_requested: { type: array, uniqueItems: true, items: { type: string } }
@@ -19968,13 +20229,19 @@ components:
             one row per project, work in motion first. Absent when the caller has no project
             grant, named in `sections_omitted` as `projects`.
           items: { $ref: '#/components/schemas/Organization360Project' }
-        provider_profile:
+        provider_profiles:
+          type: array
           description: >-
-            The purchased person-data snapshot (PO-EXT-9): what a connected provider
-            returned about this person, kept beside the canonical record and never
-            silently folded into it. Absent when the caller lacks the person grant,
-            named in `sections_omitted` as `provider_profile`.
-          allOf: [{ $ref: '#/components/schemas/PersonProviderProfile' }]
+            The purchased person-data snapshots (PO-EXT-9), one per CONNECTED provider:
+            what each returned about this person, kept beside the canonical record and
+            never silently folded into it. One entry per connection so a reader can see
+            who was paid for which value, and choose which provider to ask next; a
+            provider nobody has run yet is present with state `never_run` rather than
+            absent, because "we have not asked them" is the state the reader acts on.
+            Ordered by provider name so the sections do not reshuffle between reads.
+            Empty when no provider is connected. Absent when the caller lacks the person
+            grant, named in `sections_omitted` as `provider_profile`.
+          items: { $ref: '#/components/schemas/PersonProviderProfile' }
         relationship_changes:
           type: array
           description: >-
@@ -24695,7 +24962,7 @@ components:
         separately (oapi-codegen emits nothing for a top-level standalone string enum, so there
         are no generated Go constants to derive from), and a typo there is an ordinary runtime
         value, not a compile error. What keeps the two honest is a merge-blocking parity test,
-        `backend/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this
+        `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this
         enum alone changes what clients can express, never what the server enforces — change
         both, and the gate will say so if you do not.
       enum:
@@ -25097,6 +25364,8 @@ components:
         actor_id: { type: string }
         passport_id: { type: [string, 'null'], format: uuid, description: Agent Seat Passport that authorized the change; present for agent actors only. }
         evidence: { type: [object, 'null'], additionalProperties: true, description: Grounding evidence for an agent-authored change; present for agent actors only. }
+        undoable:
+          $ref: '#/components/schemas/Undoability'
 
     FieldHistoryListResponse:
       type: object
@@ -25243,6 +25512,44 @@ components:
         before: { type: [object, 'null'], additionalProperties: true }
         after: { type: [object, 'null'], additionalProperties: true }
         summary: { type: string }
+        undoable:
+          $ref: '#/components/schemas/Undoability'
+
+    Undoability:
+      type: object
+      description: |
+        Whether this history entry can be put back, and if not, why. COMPUTED per read,
+        never stored: a stored flag is a second copy of a question the audit spine already
+        answers, and it goes stale the moment anyone else writes.
+
+        Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+        `id` carry the same answer — a restore replays the row's whole filtered image, and
+        there is no per-field undo.
+
+        Three reasons — `not_restorable_by_this_path`, `record_archived` and
+        `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+        are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+        a read makes the button as honest as a read can, and the write is the authority.
+      required: [undoable]
+      properties:
+        undoable: { type: boolean }
+        reason:
+          type: [string, 'null']
+          description: >-
+            Present exactly when `undoable` is false. `superseded` means someone wrote one of
+            these fields after this entry — the product refuses rather than resolving an
+            ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the
+            entry would have to clear a field the record's own write path cannot clear, so it is
+            refused rather than reporting a success that changed nothing.
+          enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
+                 behind_erasure_boundary, already_undone, not_restorable_by_this_path,
+                 record_archived, null_unwritable_by_module, not_writable_by_caller, null]
+        detail:
+          type: [string, 'null']
+          description: >-
+            The fields a refusal names, where naming them is the better explanation — which
+            field was superseded, which one cannot be written back. Never the only thing a
+            reader renders; `reason` is what the product says.
 
     AuditHistoryListResponse:
       type: object
@@ -25431,6 +25738,62 @@ components:
           maxItems: 10
           items: { $ref: '#/components/schemas/AiActivityItem' }
           description: 'Occurrences that SETTLED since midnight in the server''s own timezone (not the reader''s, and not UTC unless the server runs on it), newest-settled first, at most 10.'
+    ScheduledAgentName:
+      type: string
+      enum: [morning_brief, overnight_at_risk_sweep]
+      description: |
+        A scheduled agent a rep can grant standing authority to. The set matches
+        runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
+        and this enum moves with it.
+    MyAgentGrantState:
+      type: string
+      enum: [granted, declined, never_asked]
+      description: |
+        The rep's answer. `never_asked` is not stored — it is the absence of a row, and it
+        is a distinct answer from `declined` on purpose: the product asks once, so it has
+        to tell "said no" apart from "has not been asked", or it asks the declining rep
+        again every night.
+    MyAgentGrant:
+      type: object
+      additionalProperties: false
+      required: [spec, state, credential_usable]
+      properties:
+        spec: { $ref: '#/components/schemas/ScheduledAgentName' }
+        state: { $ref: '#/components/schemas/MyAgentGrantState' }
+        credential_usable:
+          type: boolean
+          description: |
+            Whether the passport behind a granted answer is live RIGHT NOW — not revoked,
+            not expired. Read from the passport at request time, never stored, because it
+            changes at a moment nothing writes to the grant. False against `granted` is
+            the renewal case: the rep agreed and has nothing to act with.
+        decided_at:
+          type: string
+          format: date-time
+          description: When the rep last answered. Absent when they never were asked.
+      description: One rep's standing answer for one scheduled agent.
+    MyAgentGrants:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/MyAgentGrant' }
+          description: One entry per scheduled agent, including the ones never answered.
+    SetMyAgentGrantRequest:
+      type: object
+      additionalProperties: false
+      required: [granted]
+      properties:
+        granted:
+          type: boolean
+          description: |
+            True grants and mints the rep's own passport; false withdraws and revokes the
+            one it named. There is no field naming a user or a passport: the rep comes from
+            the session, and the credential is the server's to mint, so a caller cannot
+            answer for somebody else or point a grant at a credential they do not own.
+      description: The rep's answer for one scheduled agent.
     AiActivityKind:
       type: string
       enum:
@@ -28395,6 +28758,19 @@ components:
           type: array
           items: { $ref: '#/components/schemas/MorningBriefItem' }
           description: The ranked queue, best-first, capped at the honest-short target (7).
+        narrative:
+          type: [string, 'null']
+          description: |
+            One sentence about the night, written by the overnight agent. Null when the pass
+            never ran, and ALSO null when it ran and honestly had nothing to say — `annotated_at`
+            is what tells those apart, which is why both fields exist.
+        annotated_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When the overnight agent last wrote its findings, null when no pass has. A reader
+            showing a run with no narrative must consult this before saying "a quiet night":
+            without it, a model that never ran and a night with nothing in it look identical.
 
     MorningBriefItem:
       type: object
@@ -28417,6 +28793,171 @@ components:
         state: { type: string, enum: [new, acted, dismissed, snoozed], description: The acting rep's queue state for this item. }
         state_at: { type: [string, 'null'], format: date-time, description: When the rep acted/dismissed/snoozed; null while new. }
         snoozed_until: { type: [string, 'null'], format: date-time, description: 'When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.' }
+        lineage:
+          $ref: '#/components/schemas/MorningBriefItemLineage'
+        finding:
+          type: [string, 'null']
+          description: |
+            What the overnight agent found about this deal — why it is on the list, what changed,
+            and the one next move. Null when no pass has annotated this run. It is agent-authored
+            prose and the surface marks it as such; the rank beside it stays the deterministic
+            engine's, which no annotation can change.
+
+    MorningBriefItemLineage:
+      type: [object, 'null']
+      additionalProperties: false
+      description: |
+        Why this deal is back after the rep dismissed it. Absent on an item that was never
+        dismissed, which is the ordinary case.
+
+        The suppression rule holds a dismissed deal out of every later queue until a linked
+        activity occurs after the mark — so a deal that reappears is always one the rep waved
+        away and that has since moved. That is what makes the pair honest rather than a guess:
+        it is the rule that put the deal back, stated.
+      required: [dismissed_on, returned_with_activity_at]
+      properties:
+        dismissed_on:
+          type: string
+          format: date
+          description: |
+            The local day the rep dismissed this deal, in the installation reporting timezone —
+            the same zone `local_day` is stamped in, so "you dismissed it Tuesday" and "this is
+            Thursday's brief" are measured the same way. A date, not an instant: the sentence
+            names a day.
+        returned_with_activity_at:
+          type: string
+          format: date-time
+          description: |
+            When the activity that re-qualified the deal occurred. An instant, because it names a
+            specific event. It is the EARLIEST activity after the dismissal: a later one did not
+            bring the deal back, it arrived once the deal was already coming.
+
+    WeeklyReviewIndex:
+      type: object
+      additionalProperties: false
+      required: [weeks]
+      properties:
+        weeks:
+          type: array
+          items: { type: string, format: date }
+          description: The Monday of each week with a review, newest first.
+
+    WeeklyReview:
+      type: object
+      additionalProperties: false
+      description: |
+        One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
+        which is why they are stored rather than recomputed.
+      required: [id, local_week_start, generated_at, as_of, counts, deals]
+      properties:
+        id: { type: string, format: uuid }
+        local_week_start:
+          type: string
+          format: date
+          description: The Monday of the week under review, in the installation reporting timezone.
+        generated_at: { type: string, format: date-time, description: 'When the review was written.' }
+        as_of: { type: string, format: date-time, description: 'The instant the week was measured to.' }
+        counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
+        deals:
+          type: array
+          items: { $ref: '#/components/schemas/WeeklyReviewDeal' }
+          description: |
+            The deals the week is about, won and lost first. Capped for reading — the counts stay
+            complete, so a busy week reads "12 moved" beside the most recent of them rather than
+            a truncated number.
+
+    WeeklyReviewCounts:
+      type: object
+      additionalProperties: false
+      required: [tasks_due, tasks_done, tasks_carried_over, deals_moved, deals_won, deals_lost,
+                 proposals_accepted, proposals_rejected, brief_items_acted, brief_items_dismissed]
+      properties:
+        tasks_due: { type: integer, minimum: 0, description: 'Tasks assigned to this rep that fell due in the week.' }
+        tasks_done: { type: integer, minimum: 0, description: 'And were finished inside it.' }
+        tasks_carried_over: { type: integer, minimum: 0, description: 'Still open now and older than the week: work postponed at least twice.' }
+        deals_moved: { type: integer, minimum: 0, description: 'Deals that changed stage, excluding those that closed.' }
+        deals_won: { type: integer, minimum: 0 }
+        deals_lost: { type: integer, minimum: 0 }
+        proposals_accepted:
+          type: integer
+          minimum: 0
+          description: |
+            Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
+            `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
+            decisions nobody made.
+        proposals_rejected: { type: integer, minimum: 0, description: 'The same, rejected.' }
+        brief_items_acted: { type: integer, minimum: 0, description: 'Morning-brief items this rep acted on in the week.' }
+        brief_items_dismissed: { type: integer, minimum: 0, description: 'And dismissed.' }
+
+    WeeklyReviewDeal:
+      type: object
+      additionalProperties: false
+      description: |
+        One deal the week is about, FROZEN. Every word was written when the review was, so a deal
+        renamed, archived or deleted since leaves the line exactly as the week recorded it.
+      required: [deal_id, label, outcome, occurred_at]
+      properties:
+        deal_id:
+          type: string
+          format: uuid
+          description: 'The deal, for a link. It may no longer exist; the line stands either way.'
+        label: { type: string, description: 'What the deal was called that week.' }
+        outcome: { type: string, enum: [moved, won, lost] }
+        to_stage_label:
+          type: [string, 'null']
+          description: 'Where it moved to, as words: a renamed or deleted stage must not make an old review unreadable.'
+        amount_minor_at_close: { type: [integer, 'null'], format: int64 }
+        currency_at_close: { type: [string, 'null'] }
+        occurred_at: { type: string, format: date-time, description: 'When it closed or moved.' }
+
+    AnnotateBriefRequest:
+      type: object
+      description: |
+        One overnight pass's findings for the acting rep's own current run.
+
+        WHAT IS ABSENT IS THE DESIGN: no user id, no run id, no local day, no rank and no item
+        ordering. The run is resolved server-side from the acting principal and today's local
+        day, and the queue's order stays the deterministic engine's.
+      required: [items]
+      properties:
+        narrative:
+          type: string
+          maxLength: 600
+          description: |
+            One sentence about the night as a whole. An empty string is a real answer — a quiet
+            night has no sentence — and is stored as null with the pass still stamped.
+        items:
+          type: array
+          maxItems: 20
+          items: { $ref: '#/components/schemas/AnnotateBriefItem' }
+          description: At most one finding per queued item; a repeated item id is refused.
+
+    AnnotateBriefItem:
+      type: object
+      description: One finding about one queued deal.
+      required: [item_id, finding, cited_evidence]
+      properties:
+        item_id:
+          type: string
+          format: uuid
+          description: A brief item belonging to the caller's own current run. Anything else refuses.
+        finding:
+          type: string
+          maxLength: 600
+          description: The prose the rep reads beside the rank.
+        cited_evidence:
+          type: array
+          minItems: 1
+          items: { type: string, format: uuid }
+          description: |
+            What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
+            no sources", it is the verification being skipped, and it is the easy path — a model
+            that omits the field would get its prose onto the rep's screen unchecked, under the
+            same agent tag a grounded finding carries.
+
+            Every id is checked against the evidence the run already recorded for this item. An id
+            outside it refuses the whole write rather than being dropped, because a finding whose
+            citations were silently pruned still reads as grounded.
 
     BriefSnoozeRequest:
       type: object

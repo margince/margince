@@ -5,7 +5,7 @@
 // through the published surface, and may reach npm only through what its own
 // package declares.
 //
-// This is the frontend's answer to backend/extensions_arch_test.go, and it
+// This is the frontend's answer to backend/gates/extensions_arch_test.go, and it
 // carries more weight than that test does. On the Go side the compiler makes
 // internal/** unreachable for free and the test holds the remainder; a bundler
 // enforces nothing at all — it resolves whatever a path can reach — so on this

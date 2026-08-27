@@ -14,13 +14,14 @@
   margin-bottom: 0;
 }
 
+/* The field's NAME, in the reader's own language — so it is set as a label
+ * rather than as the identifier it used to be: a mono, upper-cased,
+ * letter-spaced treatment reads as a column name however the word is spelled,
+ * which is the thing this heading stopped being. */
 .fgroup-head {
-  font-family: var(--f-mono);
   font-size: 12px;
   font-weight: 600;
   color: var(--textMeta);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   margin-bottom: 8px;
 }
 
@@ -47,6 +48,49 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  font-size: 12px;
+  color: var(--textMeta);
+}
+
+/* The field detail under one entry's sentence. It is a reading block rather
+ * than a table: one row per field that moved, the name leading the diff, so a
+ * reader checking what a change did never has to leave the list it happened
+ * on. */
+.entry-fields {
+  list-style: none;
+  margin: var(--space-2) 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.entry-field {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+.entry-field-name {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--textMeta);
+}
+
+/* The verb on one entry, and the sentence a refused press comes back with.
+ * The refusal sits BESIDE the control rather than replacing it: the reader has
+ * to be able to read what happened while still looking at the row it happened
+ * on. */
+.entry-undo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
+}
+
+.entry-undo-refusal {
   font-size: 12px;
   color: var(--textMeta);
 }

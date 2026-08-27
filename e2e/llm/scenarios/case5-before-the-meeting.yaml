@@ -1,0 +1,49 @@
+# CASE 5 — Before the meeting.
+#
+# Two [M] criteria the Go suite cannot reach:
+#
+#   Criterion 1 — a briefing arrives without naming a record. The prompt says
+#   "Vietnam partner", which is not the account's name. Finding it is the test.
+#
+#   Criterion 5 — the unkept promise. Somebody said they would send something
+#   and there is no record it went. The fixture builds that gap deliberately;
+#   noticing it is the highest-value thing this case produces, and it needs a
+#   model to read across the timeline.
+#
+# The calendar half stays out. The prompt says "check my calendar" because the
+# real one did, and an assistant with no calendar connected should say so and
+# carry on rather than stopping.
+name: case5_before_the_meeting
+criteria: [1, 2, 5]
+
+prompt: |
+  Hey. Tomorrow I'm meeting, uh, finally, Vietnam partner. Could check in my
+  calendar. Can you prep me for the meeting? Check in the CRM.
+
+must_call:
+  - search_records
+may_call:
+  - prep_for_meeting
+  - account_coverage
+  - catch_me_up_on
+  - query_workspace
+  - read_record
+  - search_context
+  - who_knows
+
+must_mention:
+  # Criterion 1: it found the account from a description, not a name.
+  - "Vietnam Partner"
+  # Criterion 5: the promise nobody kept. The fixture logs an outbound message
+  # saying the list would be sent, and nothing after it.
+  - "Aufstellung|list|promised|zugesagt|never sent|no record|outstanding|follow up"
+  # Criterion 2's server half is already pinned; here it must NAME the people
+  # rather than describing seats.
+  - "Mai Nguyen"
+
+must_not_mention:
+  # An assistant that cannot see a calendar must say so, not invent a meeting.
+  - "I have scheduled|I've added the meeting"
+
+runs: 3
+pass_at: 2

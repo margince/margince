@@ -337,6 +337,16 @@ export function PersonPageV2({
               research: t(TAB_LABEL_KEYS.research),
               documents: t(TAB_LABEL_KEYS.documents),
             }}
+            // At least one connected provider has never been asked about this
+            // contact, so there is a lookup waiting behind the tab. ANY of them
+            // is enough: the reader still has somebody to ask, even if another
+            // provider already answered. A CANCELLED run reads as never_run
+            // too, and the dot coming back is right — nothing was bought.
+            marks={{
+              research: (view.data.provider_profiles ?? []).some(
+                (profile) => profile.state === "never_run",
+              ),
+            }}
           />
         </div>
 
@@ -387,7 +397,7 @@ export function PersonPageV2({
         <PersonResearchDrawer
           personId={id}
           personName={person.full_name}
-          providerProfile={view.data.provider_profile}
+          providerProfiles={view.data.provider_profiles}
           open={drawer === "research"}
           onClose={() => setDrawer(null)}
         />

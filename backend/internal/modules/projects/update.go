@@ -24,6 +24,12 @@ import (
 
 // UpdateProjectInput is one project partial update: every field optional.
 type UpdateProjectInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
+	// Trail names what the audit trail calls this write; zero is an update.
+	Trail         storekit.AuditTrail
 	Name          *string
 	OwnerID       *ids.UserID
 	Description   *string
@@ -59,7 +65,10 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 			return fmt.Errorf("read project before update: %w", err)
 		}
 
-		p := projectUpdatePatch(current, in)
+		p, err := projectUpdatePatch(current, in)
+		if err != nil {
+			return err
+		}
 		storekit.SetCustomFieldPatch(p, active, in.CustomFields, current.AdditionalProperties)
 		if p.Empty() {
 			out = current
@@ -74,7 +83,7 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 			return fmt.Errorf("apply project patch: %w", err)
 		}
 
-		auditID, err := storekit.Audit(ctx, tx, "update", projectObject, id.UUID, p.Before(), p.After())
+		auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, projectObject, id.UUID, p.Before(), p.After())
 		if err != nil {
 			return fmt.Errorf("audit project update: %w", err)
 		}
@@ -98,8 +107,20 @@ func (s *Store) UpdateProject(ctx context.Context, id ids.ProjectID, in UpdatePr
 // member may own a project — so the composite FK is the whole check; the
 // anchor company is not re-pointable here, because moving a project to
 // another company would silently orphan the deals that inherited it.
-func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) *storekit.Patch {
+// The date columns a project carries. Each is read by the patch builder, the
+// clearable set and the row read, and a literal repeated across the three is
+// how the three come to disagree about which column they mean.
+const (
+	startedAtColumn     = "started_at"
+	targetEndDateColumn = "target_end_date"
+	endedAtColumn       = "ended_at"
+)
+
+func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
+	if err := applyClears(p, in.Clear, clearableProjectColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.Name != nil {
 		p.Set("name", current.Name, *in.Name)
 	}
@@ -110,13 +131,75 @@ func projectUpdatePatch(current crmcontracts.Project, in UpdateProjectInput) *st
 		p.Set("description", current.Description, *in.Description)
 	}
 	if in.StartedAt != nil {
-		p.Set("started_at", current.StartedAt, *in.StartedAt)
+		p.Set(startedAtColumn, current.StartedAt, *in.StartedAt)
 	}
 	if in.TargetEndDate != nil {
-		p.Set("target_end_date", current.TargetEndDate, *in.TargetEndDate)
+		p.Set(targetEndDateColumn, current.TargetEndDate, *in.TargetEndDate)
 	}
 	if in.EndedAt != nil {
-		p.Set("ended_at", current.EndedAt, *in.EndedAt)
+		p.Set(endedAtColumn, current.EndedAt, *in.EndedAt)
 	}
-	return p
+	return p, nil
+}
+
+// clearable is one column a caller may set to NULL, and what the row holds
+// there now. The current value is carried so the audit image says what the
+// field was cleared FROM.
+//
+//craft:ignore naked-any the value is whichever type the column holds; the patch seam takes it as the audit image does
+type clearable struct {
+	column  string
+	current any
+}
+
+// NotClearableError refuses an explicit null on a field this record cannot set
+// to nothing. It maps to 422 through the FieldFault seam.
+//
+// Refusing matters: the caller sent a null on a field the contract declares
+// nullable, so ignoring it would answer 200 having changed nothing — a success
+// they cannot trust.
+type NotClearableError struct{ Field string }
+
+func (e *NotClearableError) Error() string {
+	return e.Field + " cannot be set to null on this record; omit the field to leave it unchanged"
+}
+
+// FieldFault names the field the caller tried to clear.
+func (e *NotClearableError) FieldFault() (field, code, message string) {
+	return e.Field, "field_not_clearable", e.Error()
+}
+
+// applyClears sets each named field to NULL, and refuses a name this store
+// cannot clear. A field the map does not hold is either not nullable or not
+// clearable through this path, and either way the honest answer is to say so
+// rather than accept the instruction and drop it.
+func applyClears(p *storekit.Patch, fields []string, columns map[string]clearable) error {
+	for _, field := range fields {
+		target, clearableHere := columns[field]
+		if !clearableHere {
+			return &NotClearableError{Field: field}
+		}
+		p.Set(target.column, target.current, nil)
+	}
+	return nil
+}
+
+// clearableProjectColumns names the wire fields a project restore may set to
+// NULL, against the column holding each.
+//
+// The KEY is a wire field name and the VALUE is a column: two vocabularies that
+// spell the same words here by coincidence. The keys stay literals because
+// clearablefields_test.go reads them as the declaration of what this store can
+// clear — a constant in their place is invisible to it, and the census then
+// under-reports rather than failing.
+//
+//nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns in the people module
+func clearableProjectColumns(current crmcontracts.Project) map[string]clearable {
+	return map[string]clearable{
+		"description":     {"description", current.Description},
+		"owner_id":        {"owner_id", current.OwnerId},
+		"started_at":      {startedAtColumn, current.StartedAt},
+		"target_end_date": {targetEndDateColumn, current.TargetEndDate},
+		"ended_at":        {endedAtColumn, current.EndedAt},
+	}
 }

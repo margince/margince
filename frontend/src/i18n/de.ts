@@ -52,8 +52,81 @@ export const de = {
   "history.actorAll": "Alle",
   "history.actorHuman": "Mensch",
   "history.actorAgent": "Agent",
-  "history.tabChanges": "Änderungen",
-  "history.tabFields": "Feldverlauf",
+  "history.tabChanges": "Nach Änderung",
+  "history.tabFields": "Nach Feld",
+  "history.undo.action": "Zurücksetzen",
+  "history.undo.busy": "Änderung wird zurückgesetzt…",
+  "history.undo.confirmTitle": "Diese Änderung zurücksetzen?",
+  "history.undo.confirmBody":
+    "{count} Felder kehren auf den Stand vor dieser Änderung zurück:",
+  "history.undo.versionSkew":
+    "Der Datensatz hat sich beim Lesen verändert. Der Verlauf wurde neu geladen — prüfen Sie die Änderung erneut, bevor Sie sie zurücksetzen.",
+  "history.undo.noBeforeImage":
+    "Diese Änderung hat nicht festgehalten, was der Datensatz vorher enthielt — es gibt nichts zurückzusetzen.",
+  "history.undo.notReplayable":
+    "Diese Art von Änderung wird nicht rückwärts abgespielt.",
+  "history.undo.unsupportedRecordType":
+    "Änderungen an dieser Art von Datensatz lassen sich nicht zurücksetzen.",
+  "history.undo.superseded":
+    "Jemand hat diese Felder seitdem geändert. Ein Zurücksetzen würde auch diese Entscheidung aufheben.",
+  "history.undo.behindErasureBoundary":
+    "Diese Änderung liegt hinter einer Löschung; ihr Inhalt wurde endgültig entfernt.",
+  "history.undo.alreadyUndone": "Diese Änderung wurde bereits zurückgesetzt.",
+  "history.undo.notRestorableByThisPath":
+    "Diese Felder werden nicht über den Weg geschrieben, den ein Zurücksetzen nimmt.",
+  "history.undo.recordArchived":
+    "Der Datensatz ist archiviert. Holen Sie ihn zuerst zurück, bevor Sie eine Änderung zurücksetzen.",
+  "history.undo.nullUnwritable":
+    "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann, und ist daher nicht möglich.",
+  "history.undo.notWritableByCaller":
+    "Sie haben keine Berechtigung, diese Felder zu schreiben.",
+  "history.field.address": "Adresse",
+  "history.field.amount_minor": "Wert",
+  "history.field.assignee_id": "Zuständig",
+  "history.field.body": "Notizen",
+  "history.field.candidate_org_key": "Zugeordnetes Unternehmen",
+  "history.field.company_name": "Firmenname",
+  "history.field.currency": "Währung",
+  "history.field.description": "Beschreibung",
+  "history.field.display_name": "Name",
+  "history.field.domains": "Domains",
+  "history.field.due_at": "Fällig",
+  "history.field.email": "E-Mail",
+  "history.field.ended_at": "Beendet",
+  "history.field.expected_close_date": "Voraussichtlicher Abschluss",
+  "history.field.first_name": "Vorname",
+  "history.field.forecast_category": "Forecast-Kategorie",
+  "history.field.full_name": "Name",
+  "history.field.fx_rate_date": "Datum des Wechselkurses",
+  "history.field.fx_rate_to_base": "Wechselkurs",
+  "history.field.industry": "Branche",
+  "history.field.is_done": "Erledigt",
+  "history.field.last_name": "Nachname",
+  "history.field.legal_name": "Rechtlicher Name",
+  "history.field.lifecycle": "Lebenszyklus",
+  "history.field.linkedin_url": "LinkedIn-URL",
+  "history.field.lost_reason": "Verlustgrund",
+  "history.field.name": "Name",
+  "history.field.occurred_at": "Zeitpunkt",
+  "history.field.organization_id": "Unternehmen",
+  "history.field.owner_id": "Verantwortlich",
+  "history.field.parent_org_id": "Muttergesellschaft",
+  "history.field.partner_attribution": "Partnerzuordnung",
+  "history.field.partner_org_id": "Partner",
+  "history.field.project_id": "Projekt",
+  "history.field.relationship_types": "Beziehungsarten",
+  "history.field.remind_at": "Erinnerung",
+  "history.field.score": "Score",
+  "history.field.score_override_reason": "Grund für die Score-Anpassung",
+  "history.field.size_band": "Größe",
+  "history.field.social": "Social-Profile",
+  "history.field.source": "Quelle",
+  "history.field.started_at": "Beginn",
+  "history.field.status": "Status",
+  "history.field.subject": "Betreff",
+  "history.field.target_end_date": "Geplantes Ende",
+  "history.field.title": "Position",
+  "history.field.wait_until": "Wartet bis",
 
   "confidence.high": "hoch",
   "confidence.med": "mittel",
@@ -821,7 +894,7 @@ export const de = {
   "tab.documents": "Dokumente",
   "tab.profile": "Profil",
   "tab.meetings": "Termine",
-  "tab.research": "Recherche",
+  "tab.research": "Daten & Tools",
   // Das Briefing nach den Fragen, die es beantwortet, und die Art jeder
   // Aussage — eine Einschätzung darf nicht wie ein Fakt wirken.
   "co.brief.nature.fact": "Fakt",
@@ -1639,6 +1712,7 @@ export const de = {
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
   "lead.bulkSelectRow": "{name} auswählen",
+  "lead.unnamed": "Lead ohne Namen",
   "lead.sla.breached": "Überfällig",
   "lead.sla.atRisk": "Bald fällig",
   "lead.sla.withinTarget": "Im Rahmen",
@@ -2052,6 +2126,26 @@ export const de = {
     "Nur {count} Deals haben die Schwelle geschafft — die Liste wird nie aufgefüllt.",
   "home.overflow":
     "{shown} von {count} qualifizierten Deals — ehrlich kurz, oben die besten.",
+  "home.narrativeNoPass":
+    "Heute keine Nacht-Zusammenfassung — Margince hat für diese Lage keinen Durchgang gemacht. Die Reihenfolge unten ist trotzdem die von heute.",
+  "home.panel.weekly": "Letzte Woche",
+  "home.weekly.weekOf": "Woche ab {day}",
+  "home.weekly.pickWeek": "Andere Woche öffnen",
+  "home.weekly.none":
+    "Noch kein Wochenrückblick — der erste wird am Montag nach deiner ersten vollen Woche geschrieben.",
+  "home.weekly.promised": "Zugesagt, erledigt",
+  "home.weekly.ofDue": "{done} von {due}",
+  "home.weekly.dealsWon": "Gewonnen",
+  "home.weekly.dealsLost": "Verloren",
+  "home.weekly.dealsMoved": "Bewegt",
+  "home.weekly.decided": "Von dir entschieden",
+  "home.weekly.acceptedRejected": "{accepted} ja · {rejected} nein",
+  "home.weekly.queueWorked": "Morgen-Liste",
+  "home.weekly.actedDismissed": "{acted} bearbeitet · {dismissed} weggeklickt",
+  "home.weekly.carriedOver": "Übernommen",
+  "home.weekly.outcome.moved": "bewegt",
+  "home.weekly.outcome.won": "gewonnen",
+  "home.weekly.outcome.lost": "verloren",
   "home.quietRun":
     "Heute Morgen hat nichts die Schwelle geschafft. Keine erfundene Dringlichkeit — genieß die Ruhe.",
   "home.act": "Erledigt",
@@ -2152,6 +2246,9 @@ export const de = {
   "home.deck.bundleMembers": "Die {count} Vorgänge anzeigen",
   "home.brief.rank": "Rang",
   "home.brief.composite": "Bewertung",
+  "home.brief.previouslyDismissed":
+    "Am {day} markiert — du hast es weggeklickt.",
+  "home.brief.returnedWith": "Zurück durch Aktivität am",
   "home.brief.resurfaces": "Zurück",
   "home.evidenceNone": "keine Belege erfasst",
   "home.snooze": "Zurückstellen",
@@ -3456,6 +3553,21 @@ export const de = {
     "Erweiterungen, die diese Installation mit einem gemeinsamen Zugang betreibt. Was du hier einstellst, gilt für alle.",
 
   "connectors.title": "Verbundene Postfächer",
+  // Die dauerhafte Nacht-Vollmacht der Nutzerin — eine Frage, gestellt beim
+  // Postfach-Verbinden im Onboarding und noch einmal in den Einstellungen.
+  "overnightGrant.title": "Vorbereitung über Nacht",
+  "overnightGrant.sub":
+    "Margince arbeitet nachts deine Deals durch und hat deinen Morgen fertig, wenn du kommst. Es handelt als du, sieht nur was du sehen darfst, und du kannst es jederzeit stoppen.",
+  "overnightGrant.label":
+    "Margince darf meinen Morgen-Überblick über Nacht vorbereiten",
+  "overnightGrant.help":
+    "Es liest deine Deals und E-Mails, um zu ordnen, was heute wichtig ist. Es verschickt nie etwas von allein — alles, was nach außen geht, wartet auf deine Freigabe.",
+  "overnightGrant.danger":
+    "ACHTUNG: Ohne diese Freigabe bleiben dein Morgen-Überblick, deine Arbeitsliste und dein Wochenrückblick leer. Das sind die Bildschirme, mit denen Margince startet — der größte Teil des Produkts wirkt dann, als würde er nicht funktionieren.",
+  "overnightGrant.saveFailed":
+    "Deine Antwort auf die Nacht-Frage konnte nicht gespeichert werden. Alles andere ist verbunden — stelle es unter Einstellungen → Verbindungen ein, sobald du drin bist.",
+  "overnightGrant.renew":
+    "Du hast zugestimmt, aber die Vollmacht, unter der Margince gearbeitet hat, ist abgelaufen. Schalte die Option aus und wieder ein, um sie zu erneuern — bis dahin wird dein Überblick nicht vorbereitet.",
   "mailSharing.title": "E-Mail-Freigabe",
   "mailSharing.sub":
     "Erfasste E-Mails sind für alle Kolleginnen und Kollegen lesbar, die den Kontakt sehen können. Standardmäßig eingeschaltet — das macht die Pipeline gemeinsam.",
@@ -6191,6 +6303,10 @@ export const de = {
   "provider.profile.claimsUnwritten":
     "Bezahlt, aber die Daten sind nie an diesem Datensatz angekommen. Niemand muss danach suchen — das hier ist die Lücke.",
   "provider.profile.enrichNow": "Kontakt nachschlagen",
+  "provider.profile.lookingUp": "Wir fragen den Anbieter. Das dauert kurz.",
+  "provider.profile.emptyTitle": "Für diesen Kontakt wurde noch nichts gekauft",
+  "provider.profile.emptyBody":
+    "Eine Abfrage holt bei {provider} Angaben zu diesem Kontakt — je nachdem, was für diese Verbindung eingekauft werden soll. Sie kostet {provider}-Credits, und was zurückkommt steht hier neben dem Datensatz; überschrieben wird nichts, was jemand aus dem Team eingetragen hat.",
   "provider.profile.emails": "E-Mail-Adressen",
   "provider.profile.emailType.provider": "{type}, so vom Anbieter bezeichnet",
   "provider.profile.emailType.requested":

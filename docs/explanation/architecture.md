@@ -64,7 +64,7 @@ package.
 
 The DAG is enforced three ways, and deliberately mechanically: depguard
 (golangci-lint), go-arch-lint, and the fitness tests in
-`backend/arch_test.go`, which derive their package and module lists from
+`backend/gates/arch_test.go`, which derive their package and module lists from
 the tree — a new module is enrolled in the rules the moment its
 directory exists, never by editing a list.
 
@@ -75,7 +75,7 @@ way the dependencies point; this says what lives at each level.
 
 The `backend/internal/{modules,platform,shared}` triad — the DAG is
 `shared → platform → modules → compose → cmd`, enforced three ways
-(depguard, go-arch-lint, `backend/arch_test.go` fitness tests):
+(depguard, go-arch-lint, `backend/gates/arch_test.go` fitness tests):
 
 - `internal/shared/` — Tier-0 leaves, stdlib-only (test-enforced):
   `kernel/{ids,events,provenance,principal}`, `apperrors` (the fixed
@@ -100,7 +100,7 @@ The `backend/internal/{modules,platform,shared}` triad — the DAG is
   never symmetry). **A module NEVER imports a sibling** — if capability A
   needs B, compose injects the edge. A module writes only the tables it
   owns, declared in its `doc.go` and gated by
-  `backend/tableownership_test.go`.
+  `backend/gates/tableownership_test.go`.
   Which module owns what — purpose, spine shape, owned tables and HTTP
   surface, plus the compose-owned tables and the notable subpackages — is
   the table in [docs/reference/modules.md](../reference/modules.md). Read

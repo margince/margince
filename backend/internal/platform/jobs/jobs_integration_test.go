@@ -54,7 +54,7 @@ func (noopWorker) Work(context.Context, *river.Job[noopArgs]) error { return nil
 //
 // The schema is brought to head once per test process (testdb.EnsureSchema) and
 // only the data is reset between tests (testdb.Reset) — the discipline
-// backend/integrationmigrateonce_test.go enforces module-wide. The app-role
+// backend/gates/integrationmigrateonce_test.go enforces module-wide. The app-role
 // reach this suite asserts rests on GRANT USAGE ON SCHEMA public TO
 // margince_app, which EnsureSchema issues itself when it rebuilds the schema
 // and a lane clone carries from core 0015 when EnsureSchema reuses one.

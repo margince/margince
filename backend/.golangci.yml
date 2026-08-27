@@ -123,7 +123,7 @@ linters:
         # sibling but your own subpackages are fine" without an N²
         # hand-maintained rule per module, and that list drifted. The
         # invariant is enforced mechanically instead — the tree-derived
-        # TestNoSiblingModuleImports in backend/arch_test.go enrolls a
+        # TestNoSiblingModuleImports in backend/gates/arch_test.go enrolls a
         # new module the moment its directory exists, and go-arch-lint
         # (.go-arch-lint.yml) gates the same DAG per component.
         modules-common:

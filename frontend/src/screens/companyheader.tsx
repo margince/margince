@@ -1,4 +1,4 @@
-import { useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Fragment, type ReactElement, useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -203,23 +203,45 @@ async function patchCompanyField(
 // than keeping a second copy: one inline organization edit and another that
 // silently invalidates a different set of caches is the drift this file
 // already exists to prevent within its own component.
+// Through useMutation rather than a bare async call, so the write is a
+// MUTATION as far as the query client is concerned. The policy that refreshes a
+// record's open history after any successful write hangs off the mutation
+// cache, and an inline edit that bypassed it left the history on screen showing
+// the state before the edit.
 export function useCompanyFieldPatch(org: Organization) {
   const queryClient = useQueryClient();
-  return async (body: UpdateOrganizationRequest) => {
-    await patchCompanyField(org, body);
-    await queryClient.invalidateQueries({ queryKey: ["organizations"] });
-    await queryClient.invalidateQueries({
-      queryKey: ["organization360", org.id],
-    });
-    // The header renders from the SINGLE-record query, and its version is the
-    // If-Match the next inline edit sends. Leaving it stale shows the old value
-    // after a successful save and makes the following edit fail on a version
-    // the server has already moved past.
-    await queryClient.invalidateQueries({
-      queryKey: ["organization", org.id],
-    });
-  };
+  const save = useMutation({
+    // The record travels WITH the body, for the reason the invalidation below
+    // exists: `org.version` is the If-Match this write pins and it moves on
+    // every successful write. Read out of the closure, two edits from one
+    // render would both send the version that predates the first, and the
+    // second would fail a conflict check it should pass.
+    mutationFn: ({ org: target, body }: CompanyFieldPress) =>
+      patchCompanyField(target, body),
+    onSuccess: async (_result, { org: target }) => {
+      await queryClient.invalidateQueries({ queryKey: ["organizations"] });
+      await queryClient.invalidateQueries({
+        queryKey: ["organization360", target.id],
+      });
+      // The header renders from the SINGLE-record query, and its version is the
+      // If-Match the next inline edit sends. Leaving it stale shows the old value
+      // after a successful save and makes the following edit fail on a version
+      // the server has already moved past.
+      await queryClient.invalidateQueries({
+        queryKey: ["organization", target.id],
+      });
+    },
+  });
+  return (body: UpdateOrganizationRequest) =>
+    save.mutateAsync({ org, body }).then(() => undefined);
 }
+
+// What one inline account edit carries: the record it is written against and
+// the field values, so neither is read out of the closure at click time.
+type CompanyFieldPress = Readonly<{
+  org: Organization;
+  body: UpdateOrganizationRequest;
+}>;
 
 // companyReadOnlyReason says why this record cannot be edited, when there is
 // something worth saying. Archived first: it is the one a reader can act on

@@ -17,6 +17,8 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/network"
+	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -53,7 +55,11 @@ func New(pool *pgxpool.Pool, log *slog.Logger, opts ...Option) http.Handler {
 	// (EnsureInstallation, A107/ADR-0061) — the HTTP surface only ever
 	// serves the already-bound singleton organization.
 	identitySvc := identity.NewService(pool)
-	authH := identity.NewHandlers(identitySvc)
+	// The standing-grant edge: identity mints the credential, agents/runner
+	// stores the answer, and neither may import the other. Both halves of one
+	// fact, committed in one transaction — agentgrantseam.go says why.
+	authH := identity.NewHandlers(identitySvc).
+		WithAgentGrants(agentGrantStore{store: runner.NewStore(InstallationDB(pool))}, grantableAgentNames())
 
 	// The transport directory, loaded on the REAL assembly path rather than in
 	// newServer: route-level tests construct that one directly with a pool that
@@ -120,7 +126,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// is what registers one.
 		integrationsHandlers: newIntegrationsHandlers(pool, nil, nil, nil),
 		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{people: people.NewStore(InstallationDB(pool))}),
-		privacyHandlers:      privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)),
+		// The reversal seam is wired at construction rather than as an option:
+		// undoability is part of what the history surface MEANS, and a server
+		// that served the history without it would render buttons that answer
+		// 404.
+		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the
@@ -131,6 +141,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// The Morning Brief always serves on the deterministic §10.1 floor;
 		// the L2 re-order is opt-in via WithBrief (the api role's model path).
 		Handlers:          briefs.NewHandlers(briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))),
+		weeklyHandlers:    weekly.NewHandlers(weekly.NewEngine(pool)),
 		Reads:             network.NewReads(pool, people.NewStore(InstallationDB(pool))),
 		orgRollupHandlers: orgRollupHandlers{pool: pool, now: time.Now},
 		strengthHandlers:  strengthHandlers{people: people.NewStore(InstallationDB(pool)), now: time.Now},

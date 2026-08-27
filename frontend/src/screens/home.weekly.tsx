@@ -1,0 +1,206 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+import { useState } from "react";
+import { useRecordZone } from "../app/recordzone";
+import { StatCard } from "../design-system/atoms";
+import { Panel, PanelBody } from "../design-system/panel";
+import { Select } from "../design-system/select";
+import { StatStrip } from "../design-system/statstrip";
+import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { formatDate, formatNumber } from "../format/format";
+import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
+import {
+  useWeeklyReview,
+  useWeeklyReviewIndex,
+  type WeeklyReview,
+} from "./home.queries";
+
+import "./home.weekly.css";
+
+// Derived from the review's own deal shape rather than reached for separately:
+// one import, and the outcome vocabulary cannot drift from the payload the
+// panel actually renders.
+type WeeklyReviewDealOutcome = WeeklyReview["deals"][number]["outcome"];
+
+// The week just gone, on Home.
+//
+// NO NAV ENTRY, deliberately. The product's own argument against one is in
+// nav.ts: Today is the single door to the work that waits on a person, and
+// three sidebar rows for one question read as three separate piles. A
+// retrospective of the week is a view of that same work, so it lives here and
+// past weeks open through the picker rather than through a second destination.
+//
+// It renders what was WRITTEN when the week closed. Nothing here recomputes:
+// a retrospective that changed when you reopened it would not be one.
+
+export function WeeklySection() {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  // undefined = the most recent. A chosen week is a different read, keyed
+  // separately, so moving between weeks does not overwrite the cache of either.
+  const [week, setWeek] = useState<string | undefined>(undefined);
+  const review = useWeeklyReview(week);
+  const index = useWeeklyReviewIndex();
+
+  return (
+    <section id="home-weekly" aria-label={t("home.panel.weekly")}>
+      <Panel
+        title={t("home.panel.weekly")}
+        sub={
+          review.data
+            ? t("home.weekly.weekOf", {
+                day: formatDate(
+                  review.data.local_week_start,
+                  locale,
+                  recordZone,
+                ),
+              })
+            : undefined
+        }
+        titleAction={
+          index.data && index.data.length > 1 ? (
+            <Select
+              aria-label={t("home.weekly.pickWeek")}
+              value={week ?? index.data[0]}
+              onChange={(next) => setWeek(next)}
+              options={index.data.map((start) => ({
+                value: start,
+                label: formatDate(start, locale, recordZone),
+              }))}
+            />
+          ) : undefined
+        }
+      >
+        <PanelBody>
+          <WeeklyBody review={review.data ?? null} state={readState(review)} />
+        </PanelBody>
+      </Panel>
+    </section>
+  );
+}
+
+/** The outcome as a word. A lookup rather than a template key, because a
+ *  template key built from wire data is an unchecked assertion: the contract's
+ *  enum can grow and the interpolation would ask for a message nobody wrote. */
+function outcomeWord(
+  t: (key: MessageKey) => string,
+  outcome: WeeklyReviewDealOutcome,
+): string {
+  switch (outcome) {
+    case "won":
+      return t("home.weekly.outcome.won");
+    case "lost":
+      return t("home.weekly.outcome.lost");
+    default:
+      return t("home.weekly.outcome.moved");
+  }
+}
+
+/** What one read says about itself, in the state vocabulary every section
+ *  draws from — the same three-way answer Home's other panels give. */
+function readState(
+  query: Readonly<{ isError: boolean; isPending: boolean }>,
+): SectionState {
+  if (query.isError) {
+    return "failed";
+  }
+  return query.isPending ? "loading" : "ready";
+}
+
+function WeeklyBody({
+  review,
+  state,
+}: Readonly<{ review: WeeklyReview | null; state: SectionState }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+
+  if (state !== "ready") {
+    return (
+      <SurfaceState
+        state={state}
+        emptyLabel={t("home.weekly.none")}
+        loadingLabel={t("home.panel.weekly")}
+      >
+        {null}
+      </SurfaceState>
+    );
+  }
+  if (review === null) {
+    // A rep whose first Monday has not come round yet. Saying so is the honest
+    // answer; a page of zeroes would claim a week that was measured and empty.
+    return (
+      <p className="home-weekly-none t-caption">{t("home.weekly.none")}</p>
+    );
+  }
+
+  const c = review.counts;
+  return (
+    <>
+      <StatStrip testId="weekly-strip">
+        <StatCard
+          label={t("home.weekly.promised")}
+          value={t("home.weekly.ofDue", {
+            done: formatNumber(c.tasks_done, locale),
+            due: formatNumber(c.tasks_due, locale),
+          })}
+        />
+        <StatCard
+          label={t("home.weekly.dealsWon")}
+          value={formatNumber(c.deals_won, locale)}
+        />
+        <StatCard
+          label={t("home.weekly.dealsLost")}
+          value={formatNumber(c.deals_lost, locale)}
+        />
+        <StatCard
+          label={t("home.weekly.dealsMoved")}
+          value={formatNumber(c.deals_moved, locale)}
+        />
+        <StatCard
+          label={t("home.weekly.decided")}
+          value={t("home.weekly.acceptedRejected", {
+            accepted: formatNumber(c.proposals_accepted, locale),
+            rejected: formatNumber(c.proposals_rejected, locale),
+          })}
+        />
+        <StatCard
+          label={t("home.weekly.queueWorked")}
+          value={t("home.weekly.actedDismissed", {
+            acted: formatNumber(c.brief_items_acted, locale),
+            dismissed: formatNumber(c.brief_items_dismissed, locale),
+          })}
+        />
+        <StatCard
+          label={t("home.weekly.carriedOver")}
+          value={formatNumber(c.tasks_carried_over, locale)}
+        />
+      </StatStrip>
+      {review.deals.length > 0 && (
+        <ul className="home-weekly-deals">
+          {review.deals.map((deal) => (
+            <li key={`${deal.deal_id}-${deal.occurred_at}`}>
+              {/* The LABEL, not a lookup. It was frozen when the review was
+                  written, so a deal renamed or deleted since still reads as it
+                  did that week. */}
+              <span className="home-weekly-deal-name">{deal.label}</span>
+              <span className="home-weekly-deal-outcome t-caption">
+                {outcomeWord(t, deal.outcome)}
+                {deal.to_stage_label ? ` · ${deal.to_stage_label}` : ""}
+              </span>
+              <time
+                className="home-weekly-deal-when t-caption"
+                dateTime={deal.occurred_at}
+              >
+                {formatDate(deal.occurred_at, locale, recordZone)}
+              </time>
+            </li>
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}

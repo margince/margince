@@ -77,7 +77,7 @@ db_admin() {
 #
 # The terms below make the demand a number the lane can state. They are read
 # back by TestTheLaneFitsInsideTheClusterItRunsAgainst
-# (backend/laneconnbudget_test.go), which fails `make check` when the committed
+# (backend/gates/laneconnbudget_test.go), which fails `make check` when the committed
 # max_connections in infra/docker-compose.dev.yml stops covering them — so the
 # arithmetic cannot drift the way it drifted to get here. That test asks THIS
 # function for the number rather than re-implementing the expression: two

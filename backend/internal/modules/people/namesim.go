@@ -8,7 +8,6 @@ import (
 	"unicode"
 
 	"golang.org/x/text/cases"
-	"golang.org/x/text/runes"
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 
@@ -32,6 +31,18 @@ var legalSuffixes = map[string]bool{
 	"inc": true, "llc": true, "ltd": true, "gmbh": true, "ag": true,
 	"sa": true, "sas": true, "bv": true, "oy": true, "plc": true,
 	"co": true, "corp": true, "kg": true, "ug": true,
+	// The markets that write the form in front ALSO write one behind, and a name
+	// carries whichever the writer used. Indonesia's listed companies end in
+	// "Tbk" and bracket the brand between it and a leading "PT"; Romania and
+	// Turkey put theirs at the end alone.
+	//
+	// EVERY ENTRY HERE MUST BE A WORD NO COMPANY IS CALLED, because this map
+	// feeds NormalizeOrgName, which is a stored grouping key: a word wrongly
+	// listed does not merely inflate a score, it files two unrelated companies
+	// under one key. Measured, "zoo" (the Polish "z o.o.") made "San Diego Zoo"
+	// and "San Diego" the same key, and "as" took the last word off "Trading
+	// As". Both are out; the Polish and Nordic forms are not worth that.
+	"srl": true, "sro": true, "tbk": true, "oyj": true, "sti": true,
 }
 
 // legalConnectives join the halves of a COMPOUND legal form: "GmbH & Co. KG"
@@ -54,14 +65,80 @@ var legalConnectives = map[string]bool{"&": true, "und": true, "and": true}
 // pair daily. A fresh Caser per call: cases.Caser is stateful and not
 // safe for concurrent use.
 func normalizeName(s string) string {
-	t := transform.Chain(norm.NFD, runes.Remove(runes.In(unicode.Mn)), norm.NFC)
-	unaccented, _, err := transform.String(t, s)
+	decomposed, _, err := transform.String(norm.NFD, s)
 	if err != nil {
 		// Decomposition failure means a malformed rune, not an outage:
 		// compare what we were given rather than dropping the candidate.
-		unaccented = s
+		decomposed = s
 	}
-	return strings.TrimSpace(cases.Fold().String(unaccented))
+	recomposed, _, err := transform.String(norm.NFC, dropAccents(decomposed))
+	if err != nil {
+		recomposed = decomposed
+	}
+	return strings.TrimSpace(cases.Fold().String(recomposed))
+}
+
+// combiningDiaeresis is the mark that turns Cyrillic "е" into "ё".
+const combiningDiaeresis = '\u0308'
+
+// dropAccents removes the combining marks that are ACCENTS — the ones a writer
+// adds to a letter and a reader can do without — and keeps the ones that are
+// letters in their own right.
+//
+// REMOVING EVERY Mn MARK WAS WRONG outside the alphabets this started with. In
+// Thai, Lao, Khmer and the Indic scripts a combining mark is a LETTER: the
+// vowels hang above and below the consonant instead of sitting beside it.
+// Measured, an unrestricted strip turned "เมืองไทย" into "เมองไทย" and
+// "កម្ពុជា" into "កមពជា", so every Thai and Khmer company name lost characters
+// before any comparison began — and two different names could fold together.
+//
+// The base letter decides, not the mark. NFD leaves a mark directly after the
+// letter it belongs to, so the base says which kind it is:
+//
+//   - Latin and Greek write ACCENTS, and those go. Müller/Mueller, Straße, Việt
+//     Nam and Οδυσσεύς all depend on it.
+//   - Hebrew and Arabic write VOCALIZATION — niqqud and harakat — which is
+//     optional and usually absent, so a pointed spelling must fold onto the
+//     plain one rather than becoming a second company.
+//   - Everything else writes LETTERS, and those stay.
+//
+// CYRILLIC IS NOT IN THAT LIST, and including it was wrong for the same reason
+// as Thai. Its marked letters are letters: "й" is not an accented "и" but the
+// character in every other Russian word, and stripping it turned "Мойка" into
+// "моика" and the Ukrainian "Київстар" into "киівстар". The one real accent
+// pair, "ё" against "е", is spelled out below because writers do treat those two
+// as interchangeable.
+func dropAccents(decomposed string) string {
+	var out strings.Builder
+	out.Grow(len(decomposed))
+	accented, diaeresisAfterYe := false, false
+	for _, r := range decomposed {
+		switch {
+		case unicode.Is(unicode.Mn, r):
+			if accented || (diaeresisAfterYe && r == combiningDiaeresis) {
+				diaeresisAfterYe = false
+				continue
+			}
+			diaeresisAfterYe = false
+		case unicode.Is(unicode.Latin, r), unicode.Is(unicode.Greek, r),
+			unicode.Is(unicode.Hebrew, r), unicode.Is(unicode.Arabic, r):
+			accented, diaeresisAfterYe = true, false
+		case r == 'е' || r == 'Е':
+			// Russian writes "ё" and "е" for one letter and a registry may hold
+			// either, so the DIAERESIS after this one is dropped. NFD has
+			// already split "ё" into "е" plus its mark by the time this runs.
+			//
+			// That mark and no other: "ӗ" is "е" with a BREVE and is a letter of
+			// Chuvash, so a rule of "any mark after е" folded "Ӗнер" and "Енер"
+			// into one name.
+			diaeresisAfterYe = true
+			accented = false
+		default:
+			accented, diaeresisAfterYe = false, false
+		}
+		out.WriteRune(r)
+	}
+	return out.String()
 }
 
 // NormalizePersonName is the person-name KEY: normalizeName's fold and
@@ -92,12 +169,12 @@ func NormalizeOrgName(s string) string {
 	fields := strings.Fields(normalizeName(strings.ReplaceAll(s, ",", " ")))
 	strippedOne := false
 	for len(fields) > 1 {
-		last := strings.Trim(fields[len(fields)-1], ".")
+		last := undottedForm(fields[len(fields)-1])
 		switch {
 		case legalSuffixes[last]:
 			strippedOne = true
 		case legalConnectives[last] && strippedOne && len(fields) > 2 &&
-			legalSuffixes[strings.Trim(fields[len(fields)-2], ".")]:
+			legalSuffixes[undottedForm(fields[len(fields)-2])]:
 			// A connective BETWEEN two legal forms — the "GmbH & Co. KG"
 			// case. Consumed only here, so a company whose name simply ends
 			// in "and" keeps it.
@@ -107,6 +184,25 @@ func NormalizeOrgName(s string) string {
 		fields = fields[:len(fields)-1]
 	}
 	return strings.Join(fields, " ")
+}
+
+// undottedForm is a trailing word with the dots a writer put inside it removed,
+// so a legal form spelled with them is the same form spelled without.
+//
+// "S.R.L." and "SRL" are one Romanian form, "A.Ş." and "AŞ" one Turkish form,
+// and a registry holds whichever the filer typed. Trimming only the FINAL dot
+// left "s.r.l." as a single token that matched no entry, so those names kept
+// their legal form and scored against every other company that kept the same
+// one.
+//
+// Only dots, and only for the lookup — the word itself is untouched when it
+// turns out not to be a legal form, so a name that really contains a dot keeps
+// it.
+func undottedForm(word string) string {
+	if !strings.Contains(word, ".") {
+		return word
+	}
+	return strings.ReplaceAll(word, ".", "")
 }
 
 // nameSimilarity is `name_sim`: Jaro-Winkler over normalized input,

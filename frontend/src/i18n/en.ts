@@ -56,8 +56,81 @@ export const en = {
   "history.actorAll": "All",
   "history.actorHuman": "Human",
   "history.actorAgent": "Agent",
-  "history.tabChanges": "Changes",
-  "history.tabFields": "Field history",
+  "history.tabChanges": "By change",
+  "history.tabFields": "By field",
+  "history.undo.action": "Put back",
+  "history.undo.busy": "Putting this change back…",
+  "history.undo.confirmTitle": "Put this change back?",
+  "history.undo.confirmBody":
+    "{count} fields go back to what they were before this change:",
+  "history.undo.versionSkew":
+    "The record moved while you were reading it. The history has been re-read — check the change again before putting it back.",
+  "history.undo.noBeforeImage":
+    "This change did not record what the record held before it, so there is nothing to put back.",
+  "history.undo.notReplayable":
+    "This kind of change is not replayed backwards.",
+  "history.undo.unsupportedRecordType":
+    "Changes to this kind of record cannot be put back.",
+  "history.undo.superseded":
+    "Somebody has changed these fields since. Putting this back would undo their decision as well.",
+  "history.undo.behindErasureBoundary":
+    "This change is behind an erasure, and what it held has been deleted for good.",
+  "history.undo.alreadyUndone": "This change has already been put back.",
+  "history.undo.notRestorableByThisPath":
+    "These fields are not written through the path a restore uses.",
+  "history.undo.recordArchived":
+    "The record is archived. Restore the record itself before putting a change back.",
+  "history.undo.nullUnwritable":
+    "Putting this back would have to clear a field this record cannot clear, so it cannot be put back.",
+  "history.undo.notWritableByCaller":
+    "You do not have permission to write these fields.",
+  "history.field.address": "Address",
+  "history.field.amount_minor": "Value",
+  "history.field.assignee_id": "Assignee",
+  "history.field.body": "Notes",
+  "history.field.candidate_org_key": "Matched company",
+  "history.field.company_name": "Company name",
+  "history.field.currency": "Currency",
+  "history.field.description": "Description",
+  "history.field.display_name": "Name",
+  "history.field.domains": "Domains",
+  "history.field.due_at": "Due",
+  "history.field.email": "Email",
+  "history.field.ended_at": "Ended",
+  "history.field.expected_close_date": "Expected close",
+  "history.field.first_name": "First name",
+  "history.field.forecast_category": "Forecast category",
+  "history.field.full_name": "Name",
+  "history.field.fx_rate_date": "FX rate date",
+  "history.field.fx_rate_to_base": "FX rate",
+  "history.field.industry": "Industry",
+  "history.field.is_done": "Done",
+  "history.field.last_name": "Last name",
+  "history.field.legal_name": "Legal name",
+  "history.field.lifecycle": "Lifecycle",
+  "history.field.linkedin_url": "LinkedIn URL",
+  "history.field.lost_reason": "Lost reason",
+  "history.field.name": "Name",
+  "history.field.occurred_at": "Occurred",
+  "history.field.organization_id": "Company",
+  "history.field.owner_id": "Owner",
+  "history.field.parent_org_id": "Parent company",
+  "history.field.partner_attribution": "Partner attribution",
+  "history.field.partner_org_id": "Partner",
+  "history.field.project_id": "Project",
+  "history.field.relationship_types": "Relationship types",
+  "history.field.remind_at": "Reminder",
+  "history.field.score": "Score",
+  "history.field.score_override_reason": "Score override reason",
+  "history.field.size_band": "Size",
+  "history.field.social": "Social profiles",
+  "history.field.source": "Source",
+  "history.field.started_at": "Started",
+  "history.field.status": "Status",
+  "history.field.subject": "Subject",
+  "history.field.target_end_date": "Target end",
+  "history.field.title": "Job title",
+  "history.field.wait_until": "Waiting until",
 
   "confidence.high": "high",
   "confidence.med": "medium",
@@ -863,7 +936,7 @@ export const en = {
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",
-  "tab.research": "Research",
+  "tab.research": "Data & tools",
   // The brief under the questions it answers, and what kind of claim each
   // sentence makes — a judgment must not read as a stored fact.
   "co.brief.nature.fact": "Fact",
@@ -1677,6 +1750,7 @@ export const en = {
   "lead.bulkFailed": "{count} not applied —",
   "lead.bulkFailedRow": "could not be saved",
   "lead.bulkSelectRow": "Select {name}",
+  "lead.unnamed": "Unnamed lead",
   "lead.sla.breached": "Overdue",
   "lead.sla.atRisk": "Due soon",
   "lead.sla.withinTarget": "On time",
@@ -2083,6 +2157,31 @@ export const en = {
     "Only {count} deals cleared the bar — the queue is never padded.",
   "home.overflow":
     "{shown} of {count} qualifying deals — the honest-short top slice.",
+  // The morning brief's own narrative. The "no pass" line is the honest degrade:
+  // a run nobody annotated and a night with nothing in it read identically as
+  // silence, so the screen says which one this is.
+  "home.narrativeNoPass":
+    "No overnight summary today — Margince did not run a pass on this brief. The ranking below is still today's.",
+  // The week just gone. No nav entry of its own: Today is the single door to
+  // the work that waits on a person, and this is a view of that same work.
+  "home.panel.weekly": "Last week",
+  "home.weekly.weekOf": "Week of {day}",
+  "home.weekly.pickWeek": "Open another week",
+  "home.weekly.none":
+    "No weekly review yet — the first one is written on the Monday after your first full week.",
+  "home.weekly.promised": "Promised, delivered",
+  "home.weekly.ofDue": "{done} of {due}",
+  "home.weekly.dealsWon": "Won",
+  "home.weekly.dealsLost": "Lost",
+  "home.weekly.dealsMoved": "Moved",
+  "home.weekly.decided": "You decided",
+  "home.weekly.acceptedRejected": "{accepted} yes · {rejected} no",
+  "home.weekly.queueWorked": "Morning queue",
+  "home.weekly.actedDismissed": "{acted} acted · {dismissed} dismissed",
+  "home.weekly.carriedOver": "Carried over",
+  "home.weekly.outcome.moved": "moved",
+  "home.weekly.outcome.won": "won",
+  "home.weekly.outcome.lost": "lost",
   "home.quietRun":
     "Nothing cleared the bar this morning. No invented urgency — enjoy the quiet.",
   "home.act": "Done",
@@ -2183,6 +2282,11 @@ export const en = {
   "home.deck.bundleMembers": "Show the {count} items",
   "home.brief.rank": "Rank",
   "home.brief.composite": "Score",
+  // A deal the rep dismissed, come back. The suppression rule holds a dismissed
+  // deal out until a linked activity arrives after the mark, so the sentence
+  // states that rule rather than guessing: it can only ever name an activity.
+  "home.brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
+  "home.brief.returnedWith": "It came back with activity on",
   "home.brief.resurfaces": "Back",
   "home.evidenceNone": "no evidence recorded",
   "home.snooze": "Snooze",
@@ -3479,6 +3583,22 @@ export const en = {
   // Connected inboxes (Settings → Connections): the "manage in Settings"
   // surface the onboarding copy promises.
   "connectors.title": "Connected inboxes",
+  // The rep's standing overnight authority — one question, asked beside the
+  // mailbox connect in onboarding and again in Settings. The danger line names
+  // the features that go empty, because "some things stop working" is not
+  // something a rep can weigh.
+  "overnightGrant.title": "Overnight preparation",
+  "overnightGrant.sub":
+    "Margince works through your deals while you sleep and has your morning ready when you arrive. It acts as you, sees only what you can see, and you can stop it at any time.",
+  "overnightGrant.label": "Let Margince prepare my morning brief overnight",
+  "overnightGrant.help":
+    "It reads your deals and mail to rank what needs you today. It never sends anything on its own — anything that leaves the building waits for your approval.",
+  "overnightGrant.danger":
+    "Without this, your morning brief, your worklist lanes and your weekly review stay empty. These are the screens Margince opens on, so most of the product will look like it is not working.",
+  "overnightGrant.saveFailed":
+    "Your answer to the overnight question could not be saved. Everything else is connected — set it under Settings → Connections when you are in.",
+  "overnightGrant.renew":
+    "You said yes, but the authority Margince was working under has expired. Turn this off and on again to renew it — until then your brief is not being prepared.",
   "mailSharing.title": "Email sharing",
   "mailSharing.sub":
     "Captured mail is readable by every colleague who can see the contact. On by default — it is what makes the pipeline shared.",
@@ -6238,6 +6358,10 @@ export const en = {
   "provider.profile.claimsUnwritten":
     "Paid for, but the details never reached this record. Nobody has to hunt for them — this is the gap.",
   "provider.profile.enrichNow": "Look this contact up",
+  "provider.profile.lookingUp": "Asking the provider. This takes a moment.",
+  "provider.profile.emptyTitle": "Nothing bought for this contact yet",
+  "provider.profile.emptyBody":
+    "A lookup asks {provider} about this contact, for whichever details this connection is set to buy. It spends {provider} credits, and what comes back sits here beside the record rather than overwriting anything a colleague typed.",
   "provider.profile.emails": "Email addresses",
   "provider.profile.emailType.provider": "{type}, as the provider labelled it",
   "provider.profile.emailType.requested":

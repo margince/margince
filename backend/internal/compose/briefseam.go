@@ -42,11 +42,36 @@ func briefReader(pool *pgxpool.Pool) agents.BriefReader {
 	}
 }
 
+// briefAnnotator writes the overnight pass's findings onto the acting rep's
+// own current run.
+//
+// It takes the same engine the reader takes, and the engine is where every
+// refusal lives: which run (the caller's own, today's), which items (that
+// run's), and which citations (that item's recorded evidence). None of it is
+// decided here, because a seam that re-derived any of it would be a second
+// answer to a question the store already answers.
+func briefAnnotator(pool *pgxpool.Pool) agents.BriefAnnotator {
+	engine := briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool)))
+	return func(ctx context.Context, in agents.AnnotateBriefArgs) error {
+		items := make([]briefs.ItemAnnotation, 0, len(in.Items))
+		for _, item := range in.Items {
+			items = append(items, briefs.ItemAnnotation{
+				ItemID:        item.ItemID,
+				Finding:       item.Finding,
+				CitedEvidence: item.CitedEvidence,
+			})
+		}
+		return engine.AnnotateCurrentRun(ctx,
+			briefs.Annotation{Narrative: in.Narrative, Items: items}, time.Now().UTC())
+	}
+}
+
 func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 	items := make([]agents.BriefItem, 0, len(run.Items))
 	for _, item := range run.Items {
 		items = append(items, agents.BriefItem{
 			ItemID: item.ID, DealID: item.DealID, Rank: item.Rank,
+			Lineage:   lineageForTool(item.Lineage),
 			Composite: item.Composite, Factors: agents.BriefFactors{
 				Winnability: item.Features.Winnability, Revenue: item.Features.Revenue,
 				Timing: item.Features.Timing, Momentum: item.Features.Momentum,
@@ -65,5 +90,17 @@ func briefRunToTool(run briefs.BriefRun) agents.ReadBriefResult {
 		BriefID: run.ID, GeneratedAt: run.GeneratedAt, AsOf: run.AsOf,
 		LocalDay:       run.LocalDay.Format(time.DateOnly),
 		CandidateCount: run.CandidateCount, Items: items,
+	}
+}
+
+// lineageForTool serves why a dismissed deal came back, absent when it never
+// was dismissed.
+func lineageForTool(lineage *briefs.ItemLineage) *agents.BriefItemLineage {
+	if lineage == nil {
+		return nil
+	}
+	return &agents.BriefItemLineage{
+		DismissedOn:  lineage.DismissedOn.Format(time.DateOnly),
+		ReturnedWith: lineage.ReturnedWith,
 	}
 }

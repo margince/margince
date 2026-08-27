@@ -157,7 +157,7 @@ func resolveAttachmentParent(ctx context.Context, tx pgx.Tx, id ids.UUID, action
 	if err := requireParentOrHide(ctx, entityType, action); err != nil {
 		return "", err
 	}
-	// This branch is WAIVED in backend/writeauthority_test.go under
+	// This branch is WAIVED in backend/gates/writeauthority_test.go under
 	// readAuthorityOnAWritePath:internal/modules/activities:ensureAttachmentParentVisible,
 	// because that gate walks the call graph and cannot see which arm a caller
 	// takes. The waiver excuses the FUNCTION, so it would keep passing if the

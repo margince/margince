@@ -39,7 +39,7 @@ import (
 // It does NOT make the wrong thing unreachable. RelationshipEndpointScope stays
 // exported, because the module that owns the relationship surface composes it
 // under gates taken at its own store entry points. What holds the rule is
-// backend/edgereaders_test.go: it requires the object gate at every read of the
+// backend/gates/edgereaders_test.go: it requires the object gate at every read of the
 // table, and accepts the row half alone only inside those owning packages. A
 // new compose read that takes the conjunction and never asks the gate fails
 // that census — which is the enforcement this function is the ergonomics of,
@@ -71,7 +71,7 @@ func EdgeReadScope(ctx context.Context, alias string, arg func(any) int) (string
 // all. It is for the assembler that has to decide whether a section exists
 // before it decides what is in it.
 //
-// It is deliberately NOT one of the spellings backend/edgereaders_test.go
+// It is deliberately NOT one of the spellings backend/gates/edgereaders_test.go
 // accepts as an edge read's gate. A statement admitted by this and bounded by
 // nothing would be gated on the object and unbounded on the row — the mirror of
 // the defect EdgeReadScope exists to prevent — so a read still has to reach the

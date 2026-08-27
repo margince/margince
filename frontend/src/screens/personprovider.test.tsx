@@ -1,0 +1,295 @@
+/** @vitest-environment jsdom */
+import { cleanup, render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
+import { afterEach, describe, expect, it } from "vitest";
+import type { components } from "../api/schema";
+import { PersonProviderSection } from "./personprovider";
+import {
+  completedProviderRun,
+  providerCompletedProfile,
+} from "./personprovider.fixtures";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+  StoryProviders,
+} from "./story-utils";
+
+// Buying contact data is the one thing on this page that spends money, and the
+// contact nobody has bought for is the case that has to work: a rep who turned
+// automatic lookups off reaches the provider ONLY through this panel, so a
+// verb they cannot find is a capability they do not have.
+
+type Profile = components["schemas"]["PersonProviderProfile"];
+
+afterEach(() => {
+  cleanup();
+});
+
+/** A contact nobody has looked up: EVERY bought field empty, not merely the
+ *  headline ones. The server has no run to fold values out of, so a fixture
+ *  that kept a location or a department would be a payload this state cannot
+ *  produce — and would quietly prove the plate on a profile that has data.
+ *
+ *  `provider` is set: a section belongs to one named vendor whether or not a
+ *  run exists, which is what lets the reader tell who they are about to pay. */
+function neverRun(): Profile {
+  return {
+    ...providerCompletedProfile,
+    state: "never_run",
+    provider: "surfe",
+    retrieved_at: null,
+    emails: [],
+    mobile_phones: [],
+    linkedin_url: null,
+    current_employment: undefined,
+    job_history: [],
+    location: null,
+    departments: [],
+    seniorities: [],
+    latest_run: undefined,
+    contributing_runs: undefined,
+    categories_not_requested: [],
+  };
+}
+
+function mount(profile: Profile, run: () => Response) {
+  const posted: unknown[] = [];
+  installFetchStub({
+    "GET /me": meRoute({ person: ["read", "update"] }),
+    "POST /people/p-1/enrichment-runs": (body) => {
+      posted.push(body);
+      return run();
+    },
+  });
+  render(
+    <StoryProviders>
+      <PersonProviderSection personId="p-1" profiles={[profile]} />
+    </StoryProviders>,
+  );
+  return posted;
+}
+
+const queuedRun = () =>
+  jsonResponse(
+    {
+      id: "run-9",
+      subject_kind: "person",
+      provider: "surfe",
+      trigger: "manual",
+      state: "queued",
+      claims_unwritten: false,
+      requested_categories: ["professional_email"],
+      connection_version: 1,
+      created_at: "2026-08-20T09:00:00Z",
+      updated_at: "2026-08-20T09:00:00Z",
+      completed_at: null,
+    },
+    202,
+  );
+
+describe("a contact nobody has bought data for", () => {
+  it("offers the lookup as a named plate rather than only a button in the header", async () => {
+    mount(neverRun(), queuedRun);
+
+    // The plate names what is missing AND what a lookup costs. Without it the
+    // panel is a blank body whose only verb sits in the header corner.
+    const title = await screen.findByText(
+      "Nothing bought for this contact yet",
+    );
+    expect(await screen.findByText(/It spends Surfe credits/)).toBeDefined();
+
+    // The verb lives INSIDE the plate, which is the whole point: a button that
+    // stayed in the header corner would satisfy every text assertion above
+    // while leaving the invitation exactly as easy to miss as before.
+    const plate = title.closest(".empty-instructional");
+    expect(plate).not.toBeNull();
+    expect(plate?.querySelector(".empty-action button")).not.toBeNull();
+  });
+
+  it("spends with the provider whose section the button sits in", async () => {
+    const user = userEvent.setup();
+    const posted = mount(neverRun(), queuedRun);
+
+    await user.click(
+      await screen.findByRole("button", { name: /Look this contact up/ }),
+    );
+
+    // One request, naming a provider. A body without one is refused by the
+    // contract, which is the failure a profile-derived name would cause here.
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({ provider: "surfe" });
+  });
+
+  it("shows the refusal when the lookup cannot even be queued", async () => {
+    const user = userEvent.setup();
+    mount(neverRun(), () =>
+      jsonResponse(
+        {
+          title: "No provider is connected",
+          status: 404,
+          detail: "Connect a data provider before looking a contact up.",
+        },
+        404,
+      ),
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /Look this contact up/ }),
+    );
+
+    // The server's own words, not a generic line: a refusal nobody can read is
+    // indistinguishable from a click that did nothing.
+    expect(
+      await screen.findByText(
+        "Connect a data provider before looking a contact up.",
+      ),
+    ).toBeDefined();
+  });
+});
+
+describe("a contact whose data was already bought", () => {
+  it("keeps the values and offers a re-run from the header", async () => {
+    mount(providerCompletedProfile, queuedRun);
+
+    // The purchased values themselves, not merely the absence of the plate: a
+    // panel that rendered nothing at all would pass a queryByText assertion
+    // and hide everything this section exists to show.
+    expect(
+      await screen.findByText(providerCompletedProfile.emails[0].value),
+    ).toBeDefined();
+    // The plate belongs to the empty case only — a panel with values that also
+    // said "nothing bought yet" would contradict what is under it.
+    expect(
+      screen.queryByText("Nothing bought for this contact yet"),
+    ).toBeNull();
+    expect(
+      await screen.findByRole("button", { name: /Look this contact up/ }),
+    ).toBeDefined();
+  });
+
+  // A merge cancels the losing side's queued run and relinks the claims both
+  // sides paid for, so the survivor can read never_run while holding
+  // purchases. Keying the plate on the state alone would cover them and
+  // invite a second lookup for data already on file.
+  it("shows purchases a cancelled run left behind instead of claiming nothing was bought", async () => {
+    mount({ ...providerCompletedProfile, state: "never_run" }, queuedRun);
+
+    expect(
+      await screen.findByText(providerCompletedProfile.emails[0].value),
+    ).toBeDefined();
+    expect(
+      screen.queryByText("Nothing bought for this contact yet"),
+    ).toBeNull();
+  });
+});
+
+describe("two providers connected", () => {
+  it("names each section and keeps one provider's values out of the other", async () => {
+    const bought = { ...providerCompletedProfile, provider: "surfe" as const };
+    const unasked = { ...neverRun(), provider: "acmedata" as const };
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /people/p-1/enrichment-runs/run-1": () =>
+        jsonResponse({ ...completedProviderRun, state: "completed" }),
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection personId="p-1" profiles={[bought, unasked]} />
+      </StoryProviders>,
+    );
+
+    // Each section says WHOSE it is. Without the name the reader cannot tell
+    // who sold them the address, nor who the button would spend with.
+    expect(await screen.findByText("Surfe")).toBeDefined();
+    expect(await screen.findByText("acmedata")).toBeDefined();
+
+    // The purchase belongs to the section of the provider that made it. A
+    // fold that mixed them would show this address under both headings.
+    const surfeSection = screen.getByText("Surfe").closest(".panel");
+    expect(surfeSection?.textContent?.includes(bought.emails[0].value)).toBe(
+      true,
+    );
+    const otherSection = screen.getByText("acmedata").closest(".panel");
+    expect(otherSection?.textContent?.includes(bought.emails[0].value)).toBe(
+      false,
+    );
+  });
+
+  it("offers a lookup per provider, so the reader chooses who to spend with", async () => {
+    const user = userEvent.setup();
+    const posted: unknown[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "POST /people/p-1/enrichment-runs": (body) => {
+        posted.push(body);
+        return queuedRun();
+      },
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection
+          personId="p-1"
+          profiles={[
+            { ...neverRun(), provider: "surfe" as const },
+            { ...neverRun(), provider: "acmedata" as const },
+          ]}
+        />
+      </StoryProviders>,
+    );
+
+    // The SECOND section's button spends with the second provider. One shared
+    // button, or a body that named the wrong provider, would buy from whoever
+    // happened to be first.
+    const buttons = await screen.findAllByRole("button", {
+      name: /Look this contact up/,
+    });
+    expect(buttons.length).toBe(2);
+    await user.click(buttons[1]);
+
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({ provider: "acmedata" });
+  });
+});
+
+// A lookup spends the installation's credits on a NAMED contact, and a run
+// charged to the wrong one succeeds — so nothing on screen reports it. Which
+// contact the request is about therefore travels with the click, as a mutation
+// variable, rather than being read out of whichever render armed the mutation.
+describe("which contact a lookup is charged to", () => {
+  it("posts for the contact the panel is showing, not the one it opened on", async () => {
+    const user = userEvent.setup();
+    const paths: string[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "POST /people/p-1/enrichment-runs": () => {
+        paths.push("p-1");
+        return queuedRun();
+      },
+      "POST /people/p-2/enrichment-runs": () => {
+        paths.push("p-2");
+        return queuedRun();
+      },
+    });
+    const { rerender } = render(
+      <StoryProviders>
+        <PersonProviderSection personId="p-1" profiles={[neverRun()]} />
+      </StoryProviders>,
+    );
+    await screen.findByRole("button", { name: /Look this contact up/ });
+
+    // The panel stays mounted across the change of subject: the record page
+    // keys its subtree by contact today, and this is the case that breaks the
+    // moment it stops.
+    rerender(
+      <StoryProviders>
+        <PersonProviderSection personId="p-2" profiles={[neverRun()]} />
+      </StoryProviders>,
+    );
+    await user.click(
+      await screen.findByRole("button", { name: /Look this contact up/ }),
+    );
+
+    await expect.poll(() => paths).toEqual(["p-2"]);
+  });
+});

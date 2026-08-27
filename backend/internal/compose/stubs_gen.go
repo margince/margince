@@ -299,6 +299,10 @@ func (stubs) GenerateMorningBrief(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "GenerateMorningBrief")
 }
 
+func (stubs) AnnotateMorningBrief(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "AnnotateMorningBrief")
+}
+
 func (stubs) MarkBriefItemActed(w nethttp.ResponseWriter, r *nethttp.Request, itemId openapi_types.UUID) {
 	httperr.NotImplemented(w, r, "MarkBriefItemActed")
 }
@@ -937,6 +941,14 @@ func (stubs) AddListMember(w nethttp.ResponseWriter, r *nethttp.Request, id crmc
 
 func (stubs) GetCurrentPrincipal(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetCurrentPrincipal")
+}
+
+func (stubs) ListMyAgentGrants(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListMyAgentGrants")
+}
+
+func (stubs) SetMyAgentGrant(w nethttp.ResponseWriter, r *nethttp.Request, spec crmcontracts.ScheduledAgentName) {
+	httperr.NotImplemented(w, r, "SetMyAgentGrant")
 }
 
 func (stubs) GetMyAiActivity(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetMyAiActivityParams) {
@@ -1587,6 +1599,10 @@ func (stubs) GetRecordHistory(w nethttp.ResponseWriter, r *nethttp.Request, enti
 	httperr.NotImplemented(w, r, "GetRecordHistory")
 }
 
+func (stubs) RestoreRecordChange(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, id crmcontracts.Id, auditId openapi_types.UUID, params crmcontracts.RestoreRecordChangeParams) {
+	httperr.NotImplemented(w, r, "RestoreRecordChange")
+}
+
 func (stubs) ClaimRecord(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.ClaimRecordParams) {
 	httperr.NotImplemented(w, r, "ClaimRecord")
 }
@@ -1937,4 +1953,12 @@ func (stubs) ReplayWebhookDelivery(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) RotateWebhookSecret(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "RotateWebhookSecret")
+}
+
+func (stubs) ListWeeklyReviews(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListWeeklyReviews")
+}
+
+func (stubs) GetLatestWeeklyReview(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetLatestWeeklyReviewParams) {
+	httperr.NotImplemented(w, r, "GetLatestWeeklyReview")
 }

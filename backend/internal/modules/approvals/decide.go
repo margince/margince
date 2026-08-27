@@ -277,6 +277,13 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		id, status, p.UserID, reason); err != nil {
 		return row{}, err
 	}
+	// The track record the autonomy ladder is earned on, counted in the same
+	// transaction as the decision it counts. A counter that could outlive a
+	// rolled-back approval would offer a rep autonomy on evidence of a decision
+	// they never made.
+	if err := countDecisionTx(ctx, tx, p.UserID, a.Kind, decisionOutcomeOf(approve, edited)); err != nil {
+		return row{}, err
+	}
 	auditID, err := s.audit(ctx, tx, p, action, id.UUID, auditEvidence)
 	if err != nil {
 		return row{}, err

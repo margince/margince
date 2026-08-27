@@ -5653,6 +5653,27 @@ func (e MorningDigestConnectorsStatus) Valid() bool {
 	}
 }
 
+// Defines values for MyAgentGrantState.
+const (
+	MyAgentGrantStateDeclined   MyAgentGrantState = "declined"
+	MyAgentGrantStateGranted    MyAgentGrantState = "granted"
+	MyAgentGrantStateNeverAsked MyAgentGrantState = "never_asked"
+)
+
+// Valid indicates whether the value is a known member of the MyAgentGrantState enum.
+func (e MyAgentGrantState) Valid() bool {
+	switch e {
+	case MyAgentGrantStateDeclined:
+		return true
+	case MyAgentGrantStateGranted:
+		return true
+	case MyAgentGrantStateNeverAsked:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OfferStatus.
 const (
 	OfferStatusAccepted   OfferStatus = "accepted"
@@ -8053,21 +8074,6 @@ func (e PromoteLeadRequestTrigger) Valid() bool {
 	}
 }
 
-// Defines values for Provider.
-const (
-	Surfe Provider = "surfe"
-)
-
-// Valid indicates whether the value is a known member of the Provider enum.
-func (e Provider) Valid() bool {
-	switch e {
-	case Surfe:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ProviderConnectionMode.
 const (
 	AutomaticOnCreate ProviderConnectionMode = "automatic_on_create"
@@ -8719,6 +8725,24 @@ func (e SavedViewResource) Valid() bool {
 	case SavedViewResourcePeople:
 		return true
 	case SavedViewResourceProjects:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ScheduledAgentName.
+const (
+	ScheduledAgentNameMorningBrief         ScheduledAgentName = "morning_brief"
+	ScheduledAgentNameOvernightAtRiskSweep ScheduledAgentName = "overnight_at_risk_sweep"
+)
+
+// Valid indicates whether the value is a known member of the ScheduledAgentName enum.
+func (e ScheduledAgentName) Valid() bool {
+	switch e {
+	case ScheduledAgentNameMorningBrief:
+		return true
+	case ScheduledAgentNameOvernightAtRiskSweep:
 		return true
 	default:
 		return false
@@ -9481,6 +9505,48 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 	case TranscriptReadStartedStatusQueued:
 		return true
 	case TranscriptReadStartedStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for UndoabilityReason.
+const (
+	UndoabilityReasonAlreadyUndone           UndoabilityReason = "already_undone"
+	UndoabilityReasonBehindErasureBoundary   UndoabilityReason = "behind_erasure_boundary"
+	UndoabilityReasonNoBeforeImage           UndoabilityReason = "no_before_image"
+	UndoabilityReasonNotAReplayableVerb      UndoabilityReason = "not_a_replayable_verb"
+	UndoabilityReasonNotRestorableByThisPath UndoabilityReason = "not_restorable_by_this_path"
+	UndoabilityReasonNotWritableByCaller     UndoabilityReason = "not_writable_by_caller"
+	UndoabilityReasonNullUnwritableByModule  UndoabilityReason = "null_unwritable_by_module"
+	UndoabilityReasonRecordArchived          UndoabilityReason = "record_archived"
+	UndoabilityReasonSuperseded              UndoabilityReason = "superseded"
+	UndoabilityReasonUnsupportedRecordType   UndoabilityReason = "unsupported_record_type"
+)
+
+// Valid indicates whether the value is a known member of the UndoabilityReason enum.
+func (e UndoabilityReason) Valid() bool {
+	switch e {
+	case UndoabilityReasonAlreadyUndone:
+		return true
+	case UndoabilityReasonBehindErasureBoundary:
+		return true
+	case UndoabilityReasonNoBeforeImage:
+		return true
+	case UndoabilityReasonNotAReplayableVerb:
+		return true
+	case UndoabilityReasonNotRestorableByThisPath:
+		return true
+	case UndoabilityReasonNotWritableByCaller:
+		return true
+	case UndoabilityReasonNullUnwritableByModule:
+		return true
+	case UndoabilityReasonRecordArchived:
+		return true
+	case UndoabilityReasonSuperseded:
+		return true
+	case UndoabilityReasonUnsupportedRecordType:
 		return true
 	default:
 		return false
@@ -10548,22 +10614,22 @@ func (e VoiceProfileVersionStatus) Valid() bool {
 
 // Defines values for WebhookDeliveryStatus.
 const (
-	DeadLettered WebhookDeliveryStatus = "dead_lettered"
-	Delivered    WebhookDeliveryStatus = "delivered"
-	Pending      WebhookDeliveryStatus = "pending"
-	Retrying     WebhookDeliveryStatus = "retrying"
+	WebhookDeliveryStatusDeadLettered WebhookDeliveryStatus = "dead_lettered"
+	WebhookDeliveryStatusDelivered    WebhookDeliveryStatus = "delivered"
+	WebhookDeliveryStatusPending      WebhookDeliveryStatus = "pending"
+	WebhookDeliveryStatusRetrying     WebhookDeliveryStatus = "retrying"
 )
 
 // Valid indicates whether the value is a known member of the WebhookDeliveryStatus enum.
 func (e WebhookDeliveryStatus) Valid() bool {
 	switch e {
-	case DeadLettered:
+	case WebhookDeliveryStatusDeadLettered:
 		return true
-	case Delivered:
+	case WebhookDeliveryStatusDelivered:
 		return true
-	case Pending:
+	case WebhookDeliveryStatusPending:
 		return true
-	case Retrying:
+	case WebhookDeliveryStatusRetrying:
 		return true
 	default:
 		return false
@@ -10582,6 +10648,27 @@ func (e WebhookSubscriptionState) Valid() bool {
 	case WebhookSubscriptionStateActive:
 		return true
 	case WebhookSubscriptionStatePaused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for WeeklyReviewDealOutcome.
+const (
+	WeeklyReviewDealOutcomeLost  WeeklyReviewDealOutcome = "lost"
+	WeeklyReviewDealOutcomeMoved WeeklyReviewDealOutcome = "moved"
+	WeeklyReviewDealOutcomeWon   WeeklyReviewDealOutcome = "won"
+)
+
+// Valid indicates whether the value is a known member of the WeeklyReviewDealOutcome enum.
+func (e WeeklyReviewDealOutcome) Valid() bool {
+	switch e {
+	case WeeklyReviewDealOutcomeLost:
+		return true
+	case WeeklyReviewDealOutcomeMoved:
+		return true
+	case WeeklyReviewDealOutcomeWon:
 		return true
 	default:
 		return false
@@ -12728,6 +12815,39 @@ type AiUsage struct {
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
 
+// AnnotateBriefItem One finding about one queued deal.
+type AnnotateBriefItem struct {
+	// CitedEvidence What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
+	// no sources", it is the verification being skipped, and it is the easy path — a model
+	// that omits the field would get its prose onto the rep's screen unchecked, under the
+	// same agent tag a grounded finding carries.
+	//
+	// Every id is checked against the evidence the run already recorded for this item. An id
+	// outside it refuses the whole write rather than being dropped, because a finding whose
+	// citations were silently pruned still reads as grounded.
+	CitedEvidence []openapi_types.UUID `json:"cited_evidence"`
+
+	// Finding The prose the rep reads beside the rank.
+	Finding string `json:"finding"`
+
+	// ItemId A brief item belonging to the caller's own current run. Anything else refuses.
+	ItemId openapi_types.UUID `json:"item_id"`
+}
+
+// AnnotateBriefRequest One overnight pass's findings for the acting rep's own current run.
+//
+// WHAT IS ABSENT IS THE DESIGN: no user id, no run id, no local day, no rank and no item
+// ordering. The run is resolved server-side from the acting principal and today's local
+// day, and the queue's order stays the deterministic engine's.
+type AnnotateBriefRequest struct {
+	// Items At most one finding per queued item; a repeated item id is refused.
+	Items []AnnotateBriefItem `json:"items"`
+
+	// Narrative One sentence about the night as a whole. An empty string is a real answer — a quiet
+	// night has no sentence — and is stored as null with the pass still stamped.
+	Narrative *string `json:"narrative,omitempty"`
+}
+
 // ApplyTagRequest defines model for ApplyTagRequest.
 type ApplyTagRequest struct {
 	EntityId   openapi_types.UUID        `json:"entity_id"`
@@ -13302,6 +13422,20 @@ type AuditHistoryEntry struct {
 	// OnBehalfOfName Resolved display name for on_behalf_of.
 	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
 	Summary        string  `json:"summary"`
+
+	// Undoable Whether this history entry can be put back, and if not, why. COMPUTED per read,
+	// never stored: a stored flag is a second copy of a question the audit spine already
+	// answers, and it goes stale the moment anyone else writes.
+	//
+	// Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+	// `id` carry the same answer — a restore replays the row's whole filtered image, and
+	// there is no per-field undo.
+	//
+	// Three reasons — `not_restorable_by_this_path`, `record_archived` and
+	// `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+	// are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+	// a read makes the button as honest as a read can, and the write is the authority.
+	Undoable *Undoability `json:"undoable,omitempty"`
 }
 
 // AuditHistoryEntryActorType defines model for AuditHistoryEntry.ActorType.
@@ -15518,7 +15652,13 @@ type CreateOrganizationRequestSizeBand string
 
 // CreatePersonEnrichmentRunRequest defines model for CreatePersonEnrichmentRunRequest.
 type CreatePersonEnrichmentRunRequest struct {
-	// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
+	// Provider A licensed data provider registered in THIS installation; the domain/run contract
+	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+	// exist is a deployment fact — what this binary composed — so an enum would assert
+	// that the legal set is identical everywhere, which is false. The registry refuses a
+	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+	// live set.
 	Provider Provider `json:"provider"`
 }
 
@@ -16781,6 +16921,20 @@ type FieldHistoryEntry struct {
 
 	// PassportId Agent Seat Passport that authorized the change; present for agent actors only.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
+
+	// Undoable Whether this history entry can be put back, and if not, why. COMPUTED per read,
+	// never stored: a stored flag is a second copy of a question the audit spine already
+	// answers, and it goes stale the moment anyone else writes.
+	//
+	// Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+	// `id` carry the same answer — a restore replays the row's whole filtered image, and
+	// there is no per-field undo.
+	//
+	// Three reasons — `not_restorable_by_this_path`, `record_archived` and
+	// `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+	// are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+	// a read makes the button as honest as a read can, and the write is the authority.
+	Undoable *Undoability `json:"undoable,omitempty"`
 }
 
 // FieldHistoryEntryActorType defines model for FieldHistoryEntry.ActorType.
@@ -18371,6 +18525,11 @@ type Money struct {
 // reproduces it. `candidate_count` is how many deals cleared the §10 honest-short bar;
 // `items` is the top slice (≤ 7) — genuinely shorter when fewer qualify, never padded.
 type MorningBrief struct {
+	// AnnotatedAt When the overnight agent last wrote its findings, null when no pass has. A reader
+	// showing a run with no narrative must consult this before saying "a quiet night":
+	// without it, a model that never ran and a night with nothing in it look identical.
+	AnnotatedAt *time.Time `json:"annotated_at,omitempty"`
+
 	// AsOf The data cutoff this brief reflects; the next run derives "changed overnight" from it.
 	AsOf time.Time `json:"as_of"`
 
@@ -18386,6 +18545,11 @@ type MorningBrief struct {
 
 	// LocalDay The morning this run is for, as a calendar date in the installation reporting timezone. A rep has exactly one run per local day, and the on-open read serves today's — never an older one dressed as today.
 	LocalDay *openapi_types.Date `json:"local_day,omitempty"`
+
+	// Narrative One sentence about the night, written by the overnight agent. Null when the pass
+	// never ran, and ALSO null when it ran and honestly had nothing to say — `annotated_at`
+	// is what tells those apart, which is why both fields exist.
+	Narrative *string `json:"narrative,omitempty"`
 
 	// RevenueNormMinor The workspace-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
@@ -18423,7 +18587,22 @@ type MorningBriefItem struct {
 
 	// FeatureVector The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it.
 	FeatureVector MorningBriefFeatureVector `json:"feature_vector"`
-	Id            openapi_types.UUID        `json:"id"`
+
+	// Finding What the overnight agent found about this deal — why it is on the list, what changed,
+	// and the one next move. Null when no pass has annotated this run. It is agent-authored
+	// prose and the surface marks it as such; the rank beside it stays the deterministic
+	// engine's, which no annotation can change.
+	Finding *string            `json:"finding,omitempty"`
+	Id      openapi_types.UUID `json:"id"`
+
+	// Lineage Why this deal is back after the rep dismissed it. Absent on an item that was never
+	// dismissed, which is the ordinary case.
+	//
+	// The suppression rule holds a dismissed deal out of every later queue until a linked
+	// activity occurs after the mark — so a deal that reappears is always one the rep waved
+	// away and that has since moved. That is what makes the pair honest rather than a guess:
+	// it is the rule that put the deal back, stated.
+	Lineage *MorningBriefItemLineage `json:"lineage,omitempty"`
 
 	// Rank Position in the queue (1 = top), after the L2 re-order.
 	Rank int `json:"rank"`
@@ -18440,6 +18619,26 @@ type MorningBriefItem struct {
 
 // MorningBriefItemState The acting rep's queue state for this item.
 type MorningBriefItemState string
+
+// MorningBriefItemLineage Why this deal is back after the rep dismissed it. Absent on an item that was never
+// dismissed, which is the ordinary case.
+//
+// The suppression rule holds a dismissed deal out of every later queue until a linked
+// activity occurs after the mark — so a deal that reappears is always one the rep waved
+// away and that has since moved. That is what makes the pair honest rather than a guess:
+// it is the rule that put the deal back, stated.
+type MorningBriefItemLineage struct {
+	// DismissedOn The local day the rep dismissed this deal, in the installation reporting timezone —
+	// the same zone `local_day` is stamped in, so "you dismissed it Tuesday" and "this is
+	// Thursday's brief" are measured the same way. A date, not an instant: the sentence
+	// names a day.
+	DismissedOn openapi_types.Date `json:"dismissed_on"`
+
+	// ReturnedWithActivityAt When the activity that re-qualified the deal occurred. An instant, because it names a
+	// specific event. It is the EARLIEST activity after the dismissal: a later one did not
+	// bring the deal back, it arrived once the deal was already coming.
+	ReturnedWithActivityAt time.Time `json:"returned_with_activity_at"`
+}
 
 // MorningDigest The CAP-DDL-6 payload: what capture did overnight and what awaits the human (CAP-WIRE-6).
 type MorningDigest struct {
@@ -18520,6 +18719,41 @@ type MorningDigestConnectorsProvider string
 
 // MorningDigestConnectorsStatus defines model for MorningDigest.Connectors.Status.
 type MorningDigestConnectorsStatus string
+
+// MyAgentGrant One rep's standing answer for one scheduled agent.
+type MyAgentGrant struct {
+	// CredentialUsable Whether the passport behind a granted answer is live RIGHT NOW — not revoked,
+	// not expired. Read from the passport at request time, never stored, because it
+	// changes at a moment nothing writes to the grant. False against `granted` is
+	// the renewal case: the rep agreed and has nothing to act with.
+	CredentialUsable bool `json:"credential_usable"`
+
+	// DecidedAt When the rep last answered. Absent when they never were asked.
+	DecidedAt *time.Time `json:"decided_at,omitempty"`
+
+	// Spec A scheduled agent a rep can grant standing authority to. The set matches
+	// runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
+	// and this enum moves with it.
+	Spec ScheduledAgentName `json:"spec"`
+
+	// State The rep's answer. `never_asked` is not stored — it is the absence of a row, and it
+	// is a distinct answer from `declined` on purpose: the product asks once, so it has
+	// to tell "said no" apart from "has not been asked", or it asks the declining rep
+	// again every night.
+	State MyAgentGrantState `json:"state"`
+}
+
+// MyAgentGrantState The rep's answer. `never_asked` is not stored — it is the absence of a row, and it
+// is a distinct answer from `declined` on purpose: the product asks once, so it has
+// to tell "said no" apart from "has not been asked", or it asks the declining rep
+// again every night.
+type MyAgentGrantState string
+
+// MyAgentGrants defines model for MyAgentGrants.
+type MyAgentGrants struct {
+	// Data One entry per scheduled agent, including the ones never answered.
+	Data []MyAgentGrant `json:"data"`
+}
 
 // Offer A versioned Angebot bound to one deal. Mirrors the `offer` table; totals are derived from the nested line items.
 type Offer struct {
@@ -20766,8 +21000,8 @@ type Person360 struct {
 	// Projects The unarchived projects this person is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`.
 	Projects *[]Organization360Project `json:"projects,omitempty"`
 
-	// ProviderProfile The purchased person-data snapshot (PO-EXT-9): what a connected provider returned about this person, kept beside the canonical record and never silently folded into it. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`.
-	ProviderProfile *PersonProviderProfile `json:"provider_profile,omitempty"`
+	// ProviderProfiles The purchased person-data snapshots (PO-EXT-9), one per CONNECTED provider: what each returned about this person, kept beside the canonical record and never silently folded into it. One entry per connection so a reader can see who was paid for which value, and choose which provider to ask next; a provider nobody has run yet is present with state `never_run` rather than absent, because "we have not asked them" is the state the reader acts on. Ordered by provider name so the sections do not reshuffle between reads. Empty when no provider is connected. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`.
+	ProviderProfiles *[]PersonProviderProfile `json:"provider_profiles,omitempty"`
 
 	// RelationshipChanges What CHANGED about this relationship, most consequential first — derived at read from the person's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold.
 	RelationshipChanges *[]PersonRelationshipChange `json:"relationship_changes,omitempty"`
@@ -21355,8 +21589,10 @@ type PersonProviderPhone struct {
 	Value      string   `json:"value"`
 }
 
-// PersonProviderProfile Separate “Provided by Surfe” snapshot for the Person360 response. Provider provenance is
-// not an underlying webpage citation; these values never silently overwrite canonical fields.
+// PersonProviderProfile One connected provider's snapshot for the Person360 response, named by `provider`.
+// Provider provenance is not an underlying webpage citation; these values never silently
+// overwrite canonical fields. The reader sees one of these per connection, so every value
+// on the page says who was paid for it.
 type PersonProviderProfile struct {
 	CategoriesNotRequested []string `json:"categories_not_requested"`
 	City                   *string  `json:"city,omitempty"`
@@ -21375,8 +21611,8 @@ type PersonProviderProfile struct {
 	Location          *string                    `json:"location,omitempty"`
 	MobilePhones      []PersonProviderPhone      `json:"mobile_phones"`
 
-	// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
-	Provider *Provider `json:"provider,omitempty"`
+	// Provider Whose snapshot this is. Required: an entry in a list of providers that did not name itself would leave the reader unable to tell who to ask, or who was already paid.
+	Provider Provider `json:"provider"`
 
 	// Region Geographic state/province as the provider returned it. Named `region` because
 	// `state` on this schema is the run lifecycle state above; a duplicate key here
@@ -21958,8 +22194,14 @@ type PromoteLeadResponse struct {
 	Person Person `json:"person"`
 }
 
-// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
-type Provider string
+// Provider A licensed data provider registered in THIS installation; the domain/run contract
+// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+// exist is a deployment fact — what this binary composed — so an enum would assert
+// that the legal set is identical everywhere, which is false. The registry refuses a
+// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+// live set.
+type Provider = string
 
 // ProviderCategorySelection Resolved per-category choices, keyed by the connected provider's declared category
 // vocabulary (its descriptor — for Surfe, PI-PARAM-7). A key the provider does not offer is
@@ -22032,7 +22274,13 @@ type ProviderConnection struct {
 	LastUsedAt           *time.Time `json:"last_used_at,omitempty"`
 	LastVerifiedAt       *time.Time `json:"last_verified_at,omitempty"`
 
-	// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
+	// Provider A licensed data provider registered in THIS installation; the domain/run contract
+	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+	// exist is a deployment fact — what this binary composed — so an enum would assert
+	// that the legal set is identical everywhere, which is false. The registry refuses a
+	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+	// live set.
 	Provider       Provider `json:"provider"`
 	SafeStatusCode *string  `json:"safe_status_code,omitempty"`
 
@@ -22127,7 +22375,13 @@ type ProviderRun struct {
 	// `provider_run` (PI-DDL-2), not by this schema.
 	PersonId *openapi_types.UUID `json:"person_id,omitempty"`
 
-	// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
+	// Provider A licensed data provider registered in THIS installation; the domain/run contract
+	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+	// exist is a deployment fact — what this binary composed — so an enum would assert
+	// that the legal set is identical everywhere, which is false. The registry refuses a
+	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+	// live set.
 	Provider            Provider `json:"provider"`
 	RequestedCategories []string `json:"requested_categories"`
 
@@ -22910,6 +23164,11 @@ type SavedViewListResponse struct {
 // SavedViewResource The list a saved view is over. One schema for the record, the create and update bodies and the list filter, so the four cannot drift.
 type SavedViewResource string
 
+// ScheduledAgentName A scheduled agent a rep can grant standing authority to. The set matches
+// runner.Catalog() — the catalog is code, so adding an agent is a reviewed change
+// and this enum moves with it.
+type ScheduledAgentName string
+
 // ScheduledSend One message waiting for its moment (ADR-0104/A155). It is not an activity and not a
 // delivery: nothing is on the timeline and nothing has been handed to a provider.
 type ScheduledSend struct {
@@ -23288,6 +23547,15 @@ type SetLeadManualSignalRequest struct {
 
 // SetLeadManualSignalRequestFactor defines model for SetLeadManualSignalRequest.Factor.
 type SetLeadManualSignalRequestFactor string
+
+// SetMyAgentGrantRequest The rep's answer for one scheduled agent.
+type SetMyAgentGrantRequest struct {
+	// Granted True grants and mints the rep's own passport; false withdraws and revokes the
+	// one it named. There is no field naming a user or a passport: the rep comes from
+	// the session, and the credential is the server's to mint, so a caller cannot
+	// answer for somebody else or point a grant at a credential they do not own.
+	Granted bool `json:"granted"`
+}
 
 // SetOverlayUserMapRequest defines model for SetOverlayUserMapRequest.
 type SetOverlayUserMapRequest struct {
@@ -23707,6 +23975,30 @@ type TransferProjectOwnershipResult struct {
 	// Transferred Live projects the caller could write that moved; archived and unwritable ones are not counted.
 	Transferred int `json:"transferred"`
 }
+
+// Undoability Whether this history entry can be put back, and if not, why. COMPUTED per read,
+// never stored: a stored flag is a second copy of a question the audit spine already
+// answers, and it goes stale the moment anyone else writes.
+//
+// Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+// `id` carry the same answer — a restore replays the row's whole filtered image, and
+// there is no per-field undo.
+//
+// Three reasons — `not_restorable_by_this_path`, `record_archived` and
+// `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+// are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+// a read makes the button as honest as a read can, and the write is the authority.
+type Undoability struct {
+	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
+	Detail *string `json:"detail,omitempty"`
+
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+	Reason   *UndoabilityReason `json:"reason,omitempty"`
+	Undoable bool               `json:"undoable"`
+}
+
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+type UndoabilityReason string
 
 // UpdateActivityRequest defines model for UpdateActivityRequest.
 type UpdateActivityRequest struct {
@@ -24597,6 +24889,86 @@ type WebhookSubscriptionListResponse struct {
 	// DeliveryEnabled Whether this deployment has a signing key configured. When false, subscriptions can be listed and inspected but create/rotate/replay are unavailable (they answer 503 webhooks_not_configured), so the UI renders a not-enabled state instead of controls that would only fail on click.
 	DeliveryEnabled bool     `json:"delivery_enabled"`
 	Page            PageInfo `json:"page"`
+}
+
+// WeeklyReview One rep's week, as it was measured when the week closed. Every count is as-of `as_of`,
+// which is why they are stored rather than recomputed.
+type WeeklyReview struct {
+	// AsOf The instant the week was measured to.
+	AsOf   time.Time          `json:"as_of"`
+	Counts WeeklyReviewCounts `json:"counts"`
+
+	// Deals The deals the week is about, won and lost first. Capped for reading — the counts stay
+	// complete, so a busy week reads "12 moved" beside the most recent of them rather than
+	// a truncated number.
+	Deals []WeeklyReviewDeal `json:"deals"`
+
+	// GeneratedAt When the review was written.
+	GeneratedAt time.Time          `json:"generated_at"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
+	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+}
+
+// WeeklyReviewCounts defines model for WeeklyReviewCounts.
+type WeeklyReviewCounts struct {
+	// BriefItemsActed Morning-brief items this rep acted on in the week.
+	BriefItemsActed int `json:"brief_items_acted"`
+
+	// BriefItemsDismissed And dismissed.
+	BriefItemsDismissed int `json:"brief_items_dismissed"`
+	DealsLost           int `json:"deals_lost"`
+
+	// DealsMoved Deals that changed stage, excluding those that closed.
+	DealsMoved int `json:"deals_moved"`
+	DealsWon   int `json:"deals_won"`
+
+	// ProposalsAccepted Approvals this rep decided. HUMAN decisions only — the expiry sweep also stamps
+	// `decided_at`, leaving `decided_by` null, and counting those would credit the rep with
+	// decisions nobody made.
+	ProposalsAccepted int `json:"proposals_accepted"`
+
+	// ProposalsRejected The same, rejected.
+	ProposalsRejected int `json:"proposals_rejected"`
+
+	// TasksCarriedOver Still open now and older than the week: work postponed at least twice.
+	TasksCarriedOver int `json:"tasks_carried_over"`
+
+	// TasksDone And were finished inside it.
+	TasksDone int `json:"tasks_done"`
+
+	// TasksDue Tasks assigned to this rep that fell due in the week.
+	TasksDue int `json:"tasks_due"`
+}
+
+// WeeklyReviewDeal One deal the week is about, FROZEN. Every word was written when the review was, so a deal
+// renamed, archived or deleted since leaves the line exactly as the week recorded it.
+type WeeklyReviewDeal struct {
+	AmountMinorAtClose *int64  `json:"amount_minor_at_close,omitempty"`
+	CurrencyAtClose    *string `json:"currency_at_close,omitempty"`
+
+	// DealId The deal, for a link. It may no longer exist; the line stands either way.
+	DealId openapi_types.UUID `json:"deal_id"`
+
+	// Label What the deal was called that week.
+	Label string `json:"label"`
+
+	// OccurredAt When it closed or moved.
+	OccurredAt time.Time               `json:"occurred_at"`
+	Outcome    WeeklyReviewDealOutcome `json:"outcome"`
+
+	// ToStageLabel Where it moved to, as words: a renamed or deleted stage must not make an old review unreadable.
+	ToStageLabel *string `json:"to_stage_label,omitempty"`
+}
+
+// WeeklyReviewDealOutcome defines model for WeeklyReviewDeal.Outcome.
+type WeeklyReviewDealOutcome string
+
+// WeeklyReviewIndex defines model for WeeklyReviewIndex.
+type WeeklyReviewIndex struct {
+	// Weeks The Monday of each week with a review, newest first.
+	Weeks []openapi_types.Date `json:"weeks"`
 }
 
 // WorkspaceEmailDomain defines model for WorkspaceEmailDomain.
@@ -28085,6 +28457,12 @@ type GetRecordHistoryParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// RestoreRecordChangeParams defines parameters for RestoreRecordChange.
+type RestoreRecordChangeParams struct {
+	// IfMatch The last-seen record `version`, required. If the row's current version differs the restore is rejected with `409 code: version_skew` and nothing is written — re-read the record and its history, then decide again.
+	IfMatch string `json:"If-Match"`
+}
+
 // ClaimRecordParams defines parameters for ClaimRecord.
 type ClaimRecordParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -28806,6 +29184,12 @@ type ListWebhookDeliveriesParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty"`
 }
 
+// GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
+type GetLatestWeeklyReviewParams struct {
+	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
+	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
+}
+
 // LogActivityJSONRequestBody defines body for LogActivity for application/json ContentType.
 type LogActivityJSONRequestBody = CreateActivityRequest
 
@@ -28892,6 +29276,9 @@ type PreviewAutomationJSONRequestBody = AutomationPreviewRequest
 
 // BookMeetingJSONRequestBody defines body for BookMeeting for application/json ContentType.
 type BookMeetingJSONRequestBody BookMeetingJSONBody
+
+// AnnotateMorningBriefJSONRequestBody defines body for AnnotateMorningBrief for application/json ContentType.
+type AnnotateMorningBriefJSONRequestBody = AnnotateBriefRequest
 
 // SnoozeBriefItemJSONRequestBody defines body for SnoozeBriefItem for application/json ContentType.
 type SnoozeBriefItemJSONRequestBody = BriefSnoozeRequest
@@ -29087,6 +29474,9 @@ type CreateListJSONRequestBody = CreateListRequest
 
 // AddListMemberJSONRequestBody defines body for AddListMember for application/json ContentType.
 type AddListMemberJSONRequestBody = AddListMemberRequest
+
+// SetMyAgentGrantJSONRequestBody defines body for SetMyAgentGrant for application/json ContentType.
+type SetMyAgentGrantJSONRequestBody = SetMyAgentGrantRequest
 
 // SaveMyEmailSignatureJSONRequestBody defines body for SaveMyEmailSignature for application/json ContentType.
 type SaveMyEmailSignatureJSONRequestBody = SaveEmailSignatureRequest
@@ -37247,6 +37637,9 @@ type ServerInterface interface {
 	// Assemble the acting rep's brief for today if the overnight pass has not already.
 	// (POST /brief)
 	GenerateMorningBrief(w http.ResponseWriter, r *http.Request)
+	// Write the overnight pass's findings onto the acting rep's own brief for today.
+	// (PUT /brief/annotations)
+	AnnotateMorningBrief(w http.ResponseWriter, r *http.Request)
 	// Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes.
 	// (POST /brief/items/{itemId}/act)
 	MarkBriefItemActed(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
@@ -37727,6 +38120,12 @@ type ServerInterface interface {
 	// Get the current authenticated principal (user or agent).
 	// (GET /me)
 	GetCurrentPrincipal(w http.ResponseWriter, r *http.Request)
+	// The calling rep's own standing answers, one per scheduled agent.
+	// (GET /me/agent-grants)
+	ListMyAgentGrants(w http.ResponseWriter, r *http.Request)
+	// The calling rep answers for one agent — granting or withdrawing.
+	// (PUT /me/agent-grants/{spec})
+	SetMyAgentGrant(w http.ResponseWriter, r *http.Request, spec ScheduledAgentName)
 	// What the AI is doing for THIS person, right now and lately.
 	// (GET /me/ai-activity)
 	GetMyAiActivity(w http.ResponseWriter, r *http.Request, params GetMyAiActivityParams)
@@ -38213,6 +38612,9 @@ type ServerInterface interface {
 	// Full audit history for one record, rendered as plain-language lines.
 	// (GET /records/{entity_type}/{id}/history)
 	GetRecordHistory(w http.ResponseWriter, r *http.Request, entityType string, id Id, params GetRecordHistoryParams)
+	// Put one audited change back.
+	// (POST /records/{entity_type}/{id}/history/{audit_id}/restore)
+	RestoreRecordChange(w http.ResponseWriter, r *http.Request, entityType string, id Id, auditId openapi_types.UUID, params RestoreRecordChangeParams)
 	// Take ownership of a customer record.
 	// (POST /records/{record_type}/{id}/claim)
 	ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams)
@@ -38477,6 +38879,12 @@ type ServerInterface interface {
 	// Rotate a subscription's signing secret (returns the new secret once).
 	// (POST /webhook-subscriptions/{id}/rotate-secret)
 	RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id)
+	// The weeks the acting rep has a review for, newest first.
+	// (GET /weekly-reviews)
+	ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
+	// The acting rep's most recent weekly review, or a named week's.
+	// (GET /weekly-reviews/latest)
+	GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams)
 }
 
 // Unimplemented server implementation that returns http.StatusNotImplemented for each endpoint.
@@ -38894,6 +39302,12 @@ func (_ Unimplemented) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 // Assemble the acting rep's brief for today if the overnight pass has not already.
 // (POST /brief)
 func (_ Unimplemented) GenerateMorningBrief(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Write the overnight pass's findings onto the acting rep's own brief for today.
+// (PUT /brief/annotations)
+func (_ Unimplemented) AnnotateMorningBrief(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -39854,6 +40268,18 @@ func (_ Unimplemented) AddListMember(w http.ResponseWriter, r *http.Request, id 
 // Get the current authenticated principal (user or agent).
 // (GET /me)
 func (_ Unimplemented) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The calling rep's own standing answers, one per scheduled agent.
+// (GET /me/agent-grants)
+func (_ Unimplemented) ListMyAgentGrants(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The calling rep answers for one agent — granting or withdrawing.
+// (PUT /me/agent-grants/{spec})
+func (_ Unimplemented) SetMyAgentGrant(w http.ResponseWriter, r *http.Request, spec ScheduledAgentName) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -40829,6 +41255,12 @@ func (_ Unimplemented) GetRecordHistory(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Put one audited change back.
+// (POST /records/{entity_type}/{id}/history/{audit_id}/restore)
+func (_ Unimplemented) RestoreRecordChange(w http.ResponseWriter, r *http.Request, entityType string, id Id, auditId openapi_types.UUID, params RestoreRecordChangeParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Take ownership of a customer record.
 // (POST /records/{record_type}/{id}/claim)
 func (_ Unimplemented) ClaimRecord(w http.ResponseWriter, r *http.Request, recordType string, id Id, params ClaimRecordParams) {
@@ -41354,6 +41786,18 @@ func (_ Unimplemented) ReplayWebhookDelivery(w http.ResponseWriter, r *http.Requ
 // Rotate a subscription's signing secret (returns the new secret once).
 // (POST /webhook-subscriptions/{id}/rotate-secret)
 func (_ Unimplemented) RotateWebhookSecret(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The weeks the acting rep has a review for, newest first.
+// (GET /weekly-reviews)
+func (_ Unimplemented) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The acting rep's most recent weekly review, or a named week's.
+// (GET /weekly-reviews/latest)
+func (_ Unimplemented) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request, params GetLatestWeeklyReviewParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -44256,6 +44700,28 @@ func (siw *ServerInterfaceWrapper) GenerateMorningBrief(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GenerateMorningBrief(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnnotateMorningBrief operation middleware
+func (siw *ServerInterfaceWrapper) AnnotateMorningBrief(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnnotateMorningBrief(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -51059,6 +51525,58 @@ func (siw *ServerInterfaceWrapper) GetCurrentPrincipal(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetCurrentPrincipal(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyAgentGrants operation middleware
+func (siw *ServerInterfaceWrapper) ListMyAgentGrants(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyAgentGrants(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SetMyAgentGrant operation middleware
+func (siw *ServerInterfaceWrapper) SetMyAgentGrant(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "spec" -------------
+	var spec ScheduledAgentName
+
+	err = runtime.BindStyledParameterWithOptions("simple", "spec", chi.URLParam(r, "spec"), &spec, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "spec", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SetMyAgentGrant(w, r, spec)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -58748,6 +59266,84 @@ func (siw *ServerInterfaceWrapper) GetRecordHistory(w http.ResponseWriter, r *ht
 	handler.ServeHTTP(w, r)
 }
 
+// RestoreRecordChange operation middleware
+func (siw *ServerInterfaceWrapper) RestoreRecordChange(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "entity_type" -------------
+	var entityType string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "entity_type", chi.URLParam(r, "entity_type"), &entityType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "entity_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "audit_id" -------------
+	var auditId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "audit_id", chi.URLParam(r, "audit_id"), &auditId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "audit_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params RestoreRecordChangeParams
+
+	headers := r.Header
+
+	// ------------- Required header parameter "If-Match" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("If-Match")]; found {
+		var IfMatch string
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "If-Match", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "If-Match", valueList[0], &IfMatch, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: true, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "If-Match", Err: err})
+			return
+		}
+
+		params.IfMatch = IfMatch
+
+	} else {
+		err := fmt.Errorf("Header parameter If-Match is required, but not found")
+		siw.ErrorHandlerFunc(w, r, &RequiredHeaderError{ParamName: "If-Match", Err: err})
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreRecordChange(w, r, entityType, id, auditId, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ClaimRecord operation middleware
 func (siw *ServerInterfaceWrapper) ClaimRecord(w http.ResponseWriter, r *http.Request) {
 
@@ -62855,6 +63451,69 @@ func (siw *ServerInterfaceWrapper) RotateWebhookSecret(w http.ResponseWriter, r 
 	handler.ServeHTTP(w, r)
 }
 
+// ListWeeklyReviews operation middleware
+func (siw *ServerInterfaceWrapper) ListWeeklyReviews(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListWeeklyReviews(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLatestWeeklyReview operation middleware
+func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestWeeklyReviewParams
+
+	// ------------- Optional query parameter "week" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "week", r.URL.Query(), &params.Week, runtime.BindQueryParameterOptions{Type: "string", Format: "date"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "week"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "week", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLatestWeeklyReview(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 type UnescapedCookieParamError struct {
 	ParamName string
 	Err       error
@@ -63174,6 +63833,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/brief", wrapper.GenerateMorningBrief)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/brief/annotations", wrapper.AnnotateMorningBrief)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/brief/items/{itemId}/act", wrapper.MarkBriefItemActed)
@@ -63654,6 +64316,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me", wrapper.GetCurrentPrincipal)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/agent-grants", wrapper.ListMyAgentGrants)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/me/agent-grants/{spec}", wrapper.SetMyAgentGrant)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/me/ai-activity", wrapper.GetMyAiActivity)
@@ -64142,6 +64810,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/records/{entity_type}/{id}/history", wrapper.GetRecordHistory)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/records/{entity_type}/{id}/history/{audit_id}/restore", wrapper.RestoreRecordChange)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/records/{record_type}/{id}/claim", wrapper.ClaimRecord)
 	})
 	r.Group(func(r chi.Router) {
@@ -64404,6 +65075,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/webhook-subscriptions/{id}/rotate-secret", wrapper.RotateWebhookSecret)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-reviews", wrapper.ListWeeklyReviews)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/weekly-reviews/latest", wrapper.GetLatestWeeklyReview)
 	})
 
 	return r

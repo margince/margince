@@ -14,6 +14,7 @@ import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
 import { HomeGlance } from "./home.glance";
 import type { Deal, MorningBrief } from "./home.queries";
@@ -641,6 +642,32 @@ describe("HomeScreen — a reading in flight is absent, not zero", () => {
     expect(screen.getByText("2 evidence rows")).toBeTruthy();
   });
 
+  // Home reads ONE page of deals. Past it every reading taken from those rows is
+  // a floor, and the failure this guards is the quiet one: the same words, a
+  // smaller number, and nothing failing.
+  it("reports a deal reading off a full page as a floor rather than a total", async () => {
+    stubApi({
+      "GET /deals": () =>
+        jsonResponse({
+          data: [fleetDeal, { ...fleetDeal, id: "d-2", stalled: true }],
+          page: { has_more: true },
+        }),
+    });
+    render(<HomeScreen />);
+
+    const strip = await screen.findByTestId("home-readings");
+    await waitFor(() =>
+      expect(within(strip).getByText("Open deals")).toBeTruthy(),
+    );
+    // Two open deals on the page and another page behind them: both the open
+    // count and the quiet count say so where the figure is read.
+    expect(within(strip).getByText("2+")).toBeTruthy();
+    expect(within(strip).getByText("1+")).toBeTruthy();
+    // And the panel that LISTS them says the list is part of one, rather than
+    // making the "nothing has gone quiet" claim it has no grounds for.
+    expect(screen.getByText("Showing part of the list")).toBeTruthy();
+  });
+
   // What "today" means is the reader's own calendar day, so this is the one case
   // that pins the clock rather than reading it.
   it("counts what stops waiting today in the reader's own day", async () => {
@@ -807,5 +834,165 @@ describe("HomeScreen — the ranked queue", () => {
     expect(until.getTime()).toBeGreaterThan(Date.now());
     expect(until).toEqual(new Date(2026, 6, 6, 8, 0, 0));
     expect(await screen.findByText("snoozed")).toBeTruthy();
+  });
+});
+
+// ── What the night said, and whether it spoke at all ──
+//
+// Three states, and the third is the one worth the tests. A brief with no
+// narrative means either "the pass ran and had nothing to say" or "no pass ran
+// at all" — and those read identically as silence. `annotated_at` is what
+// separates them, so a screen that showed nothing in both cases would tell a
+// rep the product had nothing to explain when in fact nobody looked.
+
+describe("HomeScreen — the sentence about the night", () => {
+  it("shows the narrative, marked as agent-authored", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({
+          ...run,
+          narrative: "Two replies overnight, one deal went quiet.",
+          annotated_at: "2026-07-05T05:35:00Z",
+        }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Two replies overnight, one deal went quiet.");
+    // The prose is model-authored and sits beside numbers a deterministic
+    // engine computed; nothing else on the panel would tell them apart.
+    expect(
+      screen.getAllByText(en["trust.agentUnnamed"]).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("says a pass did not run, rather than showing nothing", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({ ...run, narrative: null, annotated_at: null }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // The honest degrade the plan asks for: never a blank morning, never a
+    // silent one. A rep reading silence would conclude there was nothing to
+    // explain.
+    await screen.findByText(en["home.narrativeNoPass"]);
+  });
+
+  it("stays silent when a pass ran and had nothing to say", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({
+          ...run,
+          narrative: null,
+          annotated_at: "2026-07-05T05:35:00Z",
+        }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Fleet retrofit");
+    // A quiet night honestly has no sentence, and inventing one — or claiming
+    // no pass ran — would both be false.
+    expect(screen.queryByText(en["home.narrativeNoPass"])).toBeNull();
+  });
+
+  it("shows a per-item finding above the factor meters", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({
+          ...run,
+          annotated_at: "2026-07-05T05:35:00Z",
+          items: [
+            {
+              ...run.items[0],
+              finding: "He asked about the delivery date yesterday.",
+            },
+          ],
+        }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("He asked about the delivery date yesterday.");
+  });
+});
+
+// ── The week just gone ──
+
+describe("HomeScreen — the weekly retrospective", () => {
+  const review = {
+    id: "01a04000-0000-7000-8000-00000000000a",
+    local_week_start: "2026-06-29",
+    generated_at: "2026-07-06T06:00:00Z",
+    as_of: "2026-07-06T06:00:00Z",
+    counts: {
+      tasks_due: 5,
+      tasks_done: 4,
+      tasks_carried_over: 2,
+      deals_moved: 3,
+      deals_won: 1,
+      deals_lost: 1,
+      proposals_accepted: 7,
+      proposals_rejected: 2,
+      brief_items_acted: 6,
+      brief_items_dismissed: 3,
+    },
+    deals: [
+      {
+        deal_id: "01a04000-0000-7000-8000-00000000000b",
+        label: "Weber Rahmenvertrag",
+        outcome: "won",
+        occurred_at: "2026-07-02T14:00:00Z",
+      },
+    ],
+  };
+
+  it("shows the week's tallies and its frozen deal lines", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () => jsonResponse(review),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // The label is what the deal was CALLED that week, served from the frozen
+    // row rather than looked up — which is why it renders with no deal in the
+    // deals payload at all.
+    await screen.findByText("Weber Rahmenvertrag");
+    expect(screen.getByText(en["home.weekly.promised"])).toBeTruthy();
+  });
+
+  it("says there is no review yet rather than drawing a week of zeroes", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({ title: "Not Found" }, 404),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: [] }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // A page of zeroes would claim a week that was measured and empty.
+    await screen.findByText(en["home.weekly.none"]);
+  });
+
+  it("survives a payload that is not a review", async () => {
+    stubApi({
+      // The shape an unrouted read answers with: a list page, not a review.
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          data: [],
+          page: { next_cursor: null, has_more: false },
+        }),
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // The panel formats local_week_start immediately, so a half-shaped answer
+    // used to take Home's whole render down with it — the queue, the deck and
+    // everything else — rather than drawing one honest empty section.
+    await screen.findByText("Fleet retrofit");
   });
 });

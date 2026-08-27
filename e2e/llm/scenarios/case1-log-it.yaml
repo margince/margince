@@ -1,0 +1,53 @@
+# CASE 1 — Log it while it is fresh.
+#
+# Two [M] criteria:
+#
+#   Criterion 8 — promises made in the meeting come back as suggestions. The
+#   transcript states ONE commitment ("Ich schicke Ihnen die Preisliste bis
+#   Freitag") and discusses one topic WITHOUT one. Reporting both would mean the
+#   reader is listing everything it sees rather than what was promised.
+#
+#   Criterion 14 — the assistant says what is waiting. The 2026-08-25 run
+#   reported "nothing pending approval" while a held draft sat in the queue.
+#   Every write was correct and the report of it was not.
+#
+# The transcript arrives as TEXT in the prompt, which is the same boundary the
+# deck's hosts draw: Plaud is the assistant's business and the server cannot
+# tell a paste from an upload.
+name: case1_log_it
+criteria: [8, 14]
+
+prompt: |
+  Just left Kugellager-online. Met Matthias Ortner, went well, they want to move
+  forward. Here is the transcript from Plaud, put it all in the CRM:
+
+  Matthias: Danke für die Übersicht zu den Lieferzeiten.
+  Lars: Wie sieht es mit dem Thema Verpackung aus?
+  Lars: Ich schicke Ihnen die Preisliste bis Freitag.
+  Matthias: Passt, dann schauen wir uns das nächste Woche an.
+
+must_call:
+  - create_record
+  - log_activity
+may_call:
+  - resolve_entities
+  - search_records
+  - list_pipelines
+  - list_approvals
+  - read_record
+  - query_workspace
+
+must_mention:
+  # It created what the sentence named.
+  - "Kugellager"
+  - "Matthias Ortner"
+  # Criterion 8: the one stated commitment, not the topic beside it.
+  - "Preisliste|price list|pricing"
+
+must_not_mention:
+  # The packaging question was DISCUSSED and nobody promised anything about it.
+  # Reporting it as a commitment is the failure this transcript is shaped for.
+  - "committed to packaging|promised.{0,20}Verpackung|action item.{0,20}packaging"
+
+runs: 3
+pass_at: 2

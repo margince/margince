@@ -8,6 +8,7 @@ import {
   Field,
   OverflowMenu,
   Radio,
+  SegmentedControl,
   Textarea,
   TextInput,
   verticalPlacement,
@@ -312,4 +313,62 @@ it("leaves a table that fits its box out of the tab order", () => {
   expect(screen.queryByRole("region")).toBeNull();
   const box = container.querySelector(".table-scroll");
   expect(box?.getAttribute("tabindex")).toBeNull();
+});
+
+// A segmented option can carry a dot saying something waits behind it. The dot
+// is decorative by contract: it draws the eye, and the surface it points at
+// states the fact in words. A mark that carried the meaning alone would be
+// invisible to a screen reader and to a reader who cannot see the colour.
+const TABS = ["overview", "research"] as const;
+const TAB_LABELS = { overview: "Overview", research: "Data & tools" };
+
+it("marks only the options told to carry one", () => {
+  const { container } = render(
+    <SegmentedControl
+      options={TABS}
+      value="overview"
+      onChange={() => undefined}
+      labels={TAB_LABELS}
+      marks={{ research: true }}
+    />,
+  );
+  const marks = container.querySelectorAll(".segmented-mark");
+  expect(marks.length).toBe(1);
+  expect(
+    screen
+      .getByRole("button", { name: "Data & tools" })
+      .querySelector(".segmented-mark"),
+  ).not.toBeNull();
+});
+
+it("hides the mark from the accessibility tree", () => {
+  render(
+    <SegmentedControl
+      options={TABS}
+      value="overview"
+      onChange={() => undefined}
+      labels={TAB_LABELS}
+      marks={{ research: true }}
+    />,
+  );
+  // The attribute itself, not the accessible name it protects: the mark is an
+  // empty span, so a name assertion passes whether or not it is hidden and
+  // proves nothing about the contract this test is named for.
+  const mark = screen
+    .getByRole("button", { name: "Data & tools" })
+    .querySelector(".segmented-mark");
+  expect(mark?.getAttribute("aria-hidden")).toBe("true");
+  expect(screen.getByRole("button", { name: "Data & tools" })).toBeDefined();
+});
+
+it("draws no mark when no option carries one", () => {
+  const { container } = render(
+    <SegmentedControl
+      options={TABS}
+      value="overview"
+      onChange={() => undefined}
+      labels={TAB_LABELS}
+    />,
+  );
+  expect(container.querySelectorAll(".segmented-mark").length).toBe(0);
 });

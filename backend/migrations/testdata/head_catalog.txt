@@ -558,6 +558,29 @@ public.approval.target_version bigint gen=- def=-
 public.approval.trg_approval_updated CREATE TRIGGER trg_approval_updated BEFORE UPDATE ON public.approval FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.approval.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.approval.version bigint NOT NULL gen=- def=1
+public.approval_autonomy_policy acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.approval_autonomy_policy.approval_autonomy_policy_counts_nonnegative CHECK (((approved_clean >= 0) AND (approved_edited >= 0) AND (rejected >= 0)))
+public.approval_autonomy_policy.approval_autonomy_policy_kind_grammar CHECK (((kind ~ '^[a-z][a-z0-9_]*$'::text) AND (char_length(kind) <= 64)))
+public.approval_autonomy_policy.approval_autonomy_policy_mode_check CHECK ((mode = ANY (ARRAY['manual'::text, 'veto'::text, 'auto'::text])))
+public.approval_autonomy_policy.approval_autonomy_policy_pkey PRIMARY KEY (id)
+public.approval_autonomy_policy.approval_autonomy_policy_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.approval_autonomy_policy.approval_autonomy_policy_window_positive CHECK (((veto_window IS NULL) OR (veto_window > '00:00:00'::interval)))
+public.approval_autonomy_policy.approval_autonomy_policy_window_shape CHECK ((((mode = 'veto'::text) AND (veto_window IS NOT NULL)) OR ((mode <> 'veto'::text) AND (veto_window IS NULL))))
+public.approval_autonomy_policy.approved_clean integer NOT NULL gen=- def=0
+public.approval_autonomy_policy.approved_edited integer NOT NULL gen=- def=0
+public.approval_autonomy_policy.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.approval_autonomy_policy.demoted_at timestamp with time zone gen=- def=-
+public.approval_autonomy_policy.id uuid NOT NULL gen=- def=uuidv7()
+public.approval_autonomy_policy.kind text NOT NULL gen=- def=-
+public.approval_autonomy_policy.mode text NOT NULL gen=- def='manual'::text
+public.approval_autonomy_policy.promoted_at timestamp with time zone gen=- def=-
+public.approval_autonomy_policy.rejected integer NOT NULL gen=- def=0
+public.approval_autonomy_policy.trg_approval_autonomy_policy_updated CREATE TRIGGER trg_approval_autonomy_policy_updated BEFORE UPDATE ON public.approval_autonomy_policy FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.approval_autonomy_policy.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.approval_autonomy_policy.uq_approval_autonomy_policy_user_kind UNIQUE (user_id, kind)
+public.approval_autonomy_policy.user_id uuid NOT NULL gen=- def=-
+public.approval_autonomy_policy.veto_window interval gen=- def=-
+public.approval_autonomy_policy_pkey CREATE UNIQUE INDEX approval_autonomy_policy_pkey ON public.approval_autonomy_policy USING btree (id)
 public.approval_pkey CREATE UNIQUE INDEX approval_pkey ON public.approval USING btree (id)
 public.assert_deal_project_same_org() secdef=false cfg=- acl=- 
 BEGIN
@@ -709,6 +732,8 @@ public.booking_page_slug_key CREATE UNIQUE INDEX booking_page_slug_key ON public
 public.brief_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.brief_item.brief_item_composite_check CHECK (((composite >= (0)::double precision) AND (composite <= (1)::double precision)))
 public.brief_item.brief_item_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.brief_item.brief_item_finding_length CHECK (((finding IS NULL) OR (char_length(finding) <= 600)))
+public.brief_item.brief_item_lineage_whole CHECK (((returned_after_dismissal_on IS NULL) = (returned_with_activity_at IS NULL)))
 public.brief_item.brief_item_pkey PRIMARY KEY (id)
 public.brief_item.brief_item_rank_check CHECK ((rank >= 1))
 public.brief_item.brief_item_run_fkey FOREIGN KEY (brief_run_id) REFERENCES brief_run(id) ON DELETE CASCADE
@@ -720,8 +745,11 @@ public.brief_item.composite double precision NOT NULL gen=- def=-
 public.brief_item.deal_id uuid NOT NULL gen=- def=-
 public.brief_item.evidence_ids uuid[] NOT NULL gen=- def=-
 public.brief_item.feature_vector jsonb NOT NULL gen=- def=-
+public.brief_item.finding text gen=- def=-
 public.brief_item.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_item.rank integer NOT NULL gen=- def=-
+public.brief_item.returned_after_dismissal_on date gen=- def=-
+public.brief_item.returned_with_activity_at timestamp with time zone gen=- def=-
 public.brief_item.snoozed_until timestamp with time zone gen=- def=-
 public.brief_item.state text NOT NULL gen=- def='new'::text
 public.brief_item.state_at timestamp with time zone gen=- def=-
@@ -729,8 +757,11 @@ public.brief_item.uq_brief_item_run_deal UNIQUE (brief_run_id, deal_id)
 public.brief_item.uq_brief_item_run_rank UNIQUE (brief_run_id, rank)
 public.brief_item_pkey CREATE UNIQUE INDEX brief_item_pkey ON public.brief_item USING btree (id)
 public.brief_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.brief_run.annotated_at timestamp with time zone gen=- def=-
 public.brief_run.as_of timestamp with time zone NOT NULL gen=- def=-
 public.brief_run.brief_run_candidate_count_check CHECK ((candidate_count >= 0))
+public.brief_run.brief_run_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))
+public.brief_run.brief_run_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL)))
 public.brief_run.brief_run_pkey PRIMARY KEY (id)
 public.brief_run.brief_run_revenue_norm_minor_check CHECK ((revenue_norm_minor > 0))
 public.brief_run.brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -738,6 +769,7 @@ public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.brief_run.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_run.local_day date NOT NULL gen=- def=-
+public.brief_run.narrative text gen=- def=-
 public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
 public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
 public.brief_run.user_id uuid NOT NULL gen=- def=-
@@ -2046,6 +2078,8 @@ public.idx_voice_corpus_profile CREATE INDEX idx_voice_corpus_profile ON public.
 public.idx_webhook_delivery_by_subscription CREATE INDEX idx_webhook_delivery_by_subscription ON public.webhook_delivery USING btree (subscription_id, created_at DESC)
 public.idx_webhook_delivery_due CREATE INDEX idx_webhook_delivery_due ON public.webhook_delivery USING btree (next_retry_at) WHERE (status = 'retrying'::text)
 public.idx_webhook_subscription_live CREATE INDEX idx_webhook_subscription_live ON public.webhook_subscription USING btree (state) WHERE (archived_at IS NULL)
+public.idx_weekly_review_deal_review CREATE INDEX idx_weekly_review_deal_review ON public.weekly_review_deal USING btree (weekly_review_id, occurred_at DESC)
+public.idx_weekly_review_user CREATE INDEX idx_weekly_review_user ON public.weekly_review USING btree (user_id, local_week_start DESC)
 public.import_record_map acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.import_record_map.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_record_map.external_id text NOT NULL gen=- def=-
@@ -3190,7 +3224,7 @@ public.person_profile_field.value text NOT NULL gen=- def=-
 public.person_profile_field.version bigint NOT NULL gen=- def=1
 public.person_profile_field_pkey CREATE UNIQUE INDEX person_profile_field_pkey ON public.person_profile_field USING btree (id)
 public.person_provider_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.person_provider_claim.captured_by text NOT NULL gen=- def='connector:surfe'::text
+public.person_provider_claim.captured_by text NOT NULL gen=- def=-
 public.person_provider_claim.claim_key text NOT NULL gen=- def=-
 public.person_provider_claim.confidence numeric(5,4) gen=- def=-
 public.person_provider_claim.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -3200,13 +3234,12 @@ public.person_provider_claim.person_provider_claim_claim_key_check CHECK ((claim
 public.person_provider_claim.person_provider_claim_confidence_check CHECK (((confidence >= (0)::numeric) AND (confidence <= (1)::numeric)))
 public.person_provider_claim.person_provider_claim_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.person_provider_claim.person_provider_claim_pkey PRIMARY KEY (id)
-public.person_provider_claim.person_provider_claim_provider_check CHECK ((provider = 'surfe'::text))
 public.person_provider_claim.person_provider_claim_run_id_claim_key_key UNIQUE (run_id, claim_key)
 public.person_provider_claim.person_provider_claim_run_id_fkey FOREIGN KEY (run_id) REFERENCES provider_run(id) ON DELETE CASCADE
 public.person_provider_claim.provider text NOT NULL gen=- def=-
 public.person_provider_claim.retrieved_at timestamp with time zone NOT NULL gen=- def=-
 public.person_provider_claim.run_id uuid NOT NULL gen=- def=-
-public.person_provider_claim.source text NOT NULL gen=- def='surfe'::text
+public.person_provider_claim.source text NOT NULL gen=- def=-
 public.person_provider_claim.validation_status text gen=- def=-
 public.person_provider_claim.value_json jsonb NOT NULL gen=- def=-
 public.person_provider_claim_latest CREATE INDEX person_provider_claim_latest ON public.person_provider_claim USING btree (person_id, provider, retrieved_at DESC)
@@ -3350,7 +3383,6 @@ public.provider_connection.provider_connection_daily_run_limit_check CHECK ((dai
 public.provider_connection.provider_connection_disconnected_shape CHECK ((((status = 'disconnected'::text) AND (credential_ref IS NULL)) OR (status <> 'disconnected'::text)))
 public.provider_connection.provider_connection_mode_check CHECK ((mode = ANY (ARRAY['automatic_on_create'::text, 'on_demand'::text])))
 public.provider_connection.provider_connection_pkey PRIMARY KEY (id)
-public.provider_connection.provider_connection_provider_check CHECK ((provider = 'surfe'::text))
 public.provider_connection.provider_connection_provider_key UNIQUE (provider)
 public.provider_connection.provider_connection_refresh_after_days_check CHECK ((refresh_after_days > 0))
 public.provider_connection.provider_connection_status_check CHECK ((status = ANY (ARRAY['disconnected'::text, 'validating'::text, 'connected'::text, 'invalid_credentials'::text, 'insufficient_credits'::text, 'rate_limited'::text, 'provider_error'::text])))
@@ -3398,7 +3430,6 @@ public.provider_run.provider_run_claims_unwritten_shape CHECK (((NOT claims_unwr
 public.provider_run.provider_run_external_correlation_id_key UNIQUE (external_correlation_id)
 public.provider_run.provider_run_person_id_fkey FOREIGN KEY (person_id) REFERENCES person(id) ON DELETE CASCADE
 public.provider_run.provider_run_pkey PRIMARY KEY (id)
-public.provider_run.provider_run_provider_check CHECK ((provider = 'surfe'::text))
 public.provider_run.provider_run_requested_by_fkey FOREIGN KEY (requested_by) REFERENCES app_user(id)
 public.provider_run.provider_run_skip_reason_check CHECK (((skip_reason IS NULL) OR (skip_reason = ANY (ARRAY['budget_exhausted'::text, 'low_balance'::text, 'suppressed'::text, 'not_eligible'::text, 'duplicate_subject_candidate'::text, 'rate_limited'::text, 'already_fresh'::text]))))
 public.provider_run.provider_run_skip_reason_shape CHECK (((state = 'skipped'::text) = (skip_reason IS NOT NULL)))
@@ -4005,6 +4036,7 @@ public.uq_activity_source CREATE UNIQUE INDEX uq_activity_source ON public.activ
 public.uq_agent_standing_grant_user_spec CREATE UNIQUE INDEX uq_agent_standing_grant_user_spec ON public.agent_standing_grant USING btree (user_id, agent_spec)
 public.uq_ai_call_ws_id CREATE UNIQUE INDEX uq_ai_call_ws_id ON public.ai_call USING btree (id)
 public.uq_app_user_email CREATE UNIQUE INDEX uq_app_user_email ON public.app_user USING btree (lower(email))
+public.uq_approval_autonomy_policy_user_kind CREATE UNIQUE INDEX uq_approval_autonomy_policy_user_kind ON public.approval_autonomy_policy USING btree (user_id, kind)
 public.uq_attachment_extraction_inflight CREATE UNIQUE INDEX uq_attachment_extraction_inflight ON public.attachment_extraction USING btree (attachment_id) WHERE (status = ANY (ARRAY['queued'::text, 'running'::text]))
 public.uq_brief_item_run_deal CREATE UNIQUE INDEX uq_brief_item_run_deal ON public.brief_item USING btree (brief_run_id, deal_id)
 public.uq_brief_item_run_rank CREATE UNIQUE INDEX uq_brief_item_run_rank ON public.brief_item USING btree (brief_run_id, rank)
@@ -4081,6 +4113,7 @@ public.uq_voice_profile_delta_version CREATE UNIQUE INDEX uq_voice_profile_delta
 public.uq_voice_profile_user_live CREATE UNIQUE INDEX uq_voice_profile_user_live ON public.voice_profile USING btree (owner_id) WHERE ((scope = 'user'::text) AND (archived_at IS NULL))
 public.uq_voice_profile_version_number CREATE UNIQUE INDEX uq_voice_profile_version_number ON public.voice_profile_version USING btree (voice_profile_id, profile_version)
 public.uq_voice_profile_version_profile_number CREATE UNIQUE INDEX uq_voice_profile_version_profile_number ON public.voice_profile_version USING btree (voice_profile_id, profile_version)
+public.uq_weekly_review_user_week CREATE UNIQUE INDEX uq_weekly_review_user_week ON public.weekly_review USING btree (user_id, local_week_start)
 public.user_record_view acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.user_record_view.entity_id uuid NOT NULL gen=- def=-
 public.user_record_view.entity_type text NOT NULL gen=- def=-
@@ -4347,6 +4380,43 @@ public.webhook_subscription.webhook_subscription_pkey PRIMARY KEY (id)
 public.webhook_subscription.webhook_subscription_state_check CHECK ((state = ANY (ARRAY['active'::text, 'paused'::text])))
 public.webhook_subscription.webhook_subscription_target_url_check CHECK ((target_url ~ '^https://'::text))
 public.webhook_subscription_pkey CREATE UNIQUE INDEX webhook_subscription_pkey ON public.webhook_subscription USING btree (id)
+public.weekly_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_review.as_of timestamp with time zone NOT NULL gen=- def=-
+public.weekly_review.brief_items_acted integer NOT NULL gen=- def=0
+public.weekly_review.brief_items_dismissed integer NOT NULL gen=- def=0
+public.weekly_review.deals_lost integer NOT NULL gen=- def=0
+public.weekly_review.deals_moved integer NOT NULL gen=- def=0
+public.weekly_review.deals_won integer NOT NULL gen=- def=0
+public.weekly_review.generated_at timestamp with time zone NOT NULL gen=- def=now()
+public.weekly_review.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_review.local_week_start date NOT NULL gen=- def=-
+public.weekly_review.proposals_accepted integer NOT NULL gen=- def=0
+public.weekly_review.proposals_rejected integer NOT NULL gen=- def=0
+public.weekly_review.tasks_carried_over integer NOT NULL gen=- def=0
+public.weekly_review.tasks_done integer NOT NULL gen=- def=0
+public.weekly_review.tasks_due integer NOT NULL gen=- def=0
+public.weekly_review.uq_weekly_review_user_week UNIQUE (user_id, local_week_start)
+public.weekly_review.user_id uuid NOT NULL gen=- def=-
+public.weekly_review.weekly_review_counts_are_tallies CHECK (((tasks_due >= 0) AND (tasks_done >= 0) AND (tasks_carried_over >= 0) AND (deals_moved >= 0) AND (deals_won >= 0) AND (deals_lost >= 0) AND (proposals_accepted >= 0) AND (proposals_rejected >= 0) AND (brief_items_acted >= 0) AND (brief_items_dismissed >= 0)))
+public.weekly_review.weekly_review_pkey PRIMARY KEY (id)
+public.weekly_review.weekly_review_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.weekly_review_deal acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.weekly_review_deal.amount_minor_at_close bigint gen=- def=-
+public.weekly_review_deal.currency_at_close text gen=- def=-
+public.weekly_review_deal.deal_id uuid NOT NULL gen=- def=-
+public.weekly_review_deal.deal_label text NOT NULL gen=- def=-
+public.weekly_review_deal.id uuid NOT NULL gen=- def=uuidv7()
+public.weekly_review_deal.occurred_at timestamp with time zone NOT NULL gen=- def=-
+public.weekly_review_deal.outcome text NOT NULL gen=- def=-
+public.weekly_review_deal.to_stage_label text gen=- def=-
+public.weekly_review_deal.weekly_review_deal_label_present CHECK ((btrim(deal_label) <> ''::text))
+public.weekly_review_deal.weekly_review_deal_money_whole CHECK (((amount_minor_at_close IS NULL) = (currency_at_close IS NULL)))
+public.weekly_review_deal.weekly_review_deal_outcome_check CHECK ((outcome = ANY (ARRAY['moved'::text, 'won'::text, 'lost'::text])))
+public.weekly_review_deal.weekly_review_deal_pkey PRIMARY KEY (id)
+public.weekly_review_deal.weekly_review_deal_review_fkey FOREIGN KEY (weekly_review_id) REFERENCES weekly_review(id) ON DELETE CASCADE
+public.weekly_review_deal.weekly_review_id uuid NOT NULL gen=- def=-
+public.weekly_review_deal_pkey CREATE UNIQUE INDEX weekly_review_deal_pkey ON public.weekly_review_deal USING btree (id)
+public.weekly_review_pkey CREATE UNIQUE INDEX weekly_review_pkey ON public.weekly_review USING btree (id)
 public.workflow_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.workflow_run.applied jsonb gen=- def=-
 public.workflow_run.created_at timestamp with time zone NOT NULL gen=- def=now()

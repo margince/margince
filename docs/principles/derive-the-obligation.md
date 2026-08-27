@@ -112,7 +112,7 @@ Shipping the backend half alone would have uncancelled them and printed a
 hundred times the price on an outbound offer.
 
 So: land both sides in one change, then declare which side is the **mirror** and
-gate it in both directions. `backend/frontendminorunits_test.go` is the worked
+gate it in both directions. `backend/gates/frontendminorunits_test.go` is the worked
 example — it fails on a currency present in one side and not the other, and on a
 digit count that differs. What stays singular there is the table the two sides
 exchange; the suites keep their own cases.

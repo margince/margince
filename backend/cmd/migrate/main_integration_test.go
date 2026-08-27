@@ -286,7 +286,7 @@ func TestDBVerbsRequireAName(t *testing.T) {
 //
 // The seam that leaves — that run() actually calls composition.Extensions()
 // and hands the result here — is held by TestCompositionWiredOnlyFromCmd in
-// backend/extensions_arch_test.go, which REQUIRES cmd/migrate/main.go to
+// backend/gates/extensions_arch_test.go, which REQUIRES cmd/migrate/main.go to
 // import the composition module, plus Go's unused-import rule, which makes an
 // import that feeds nothing a compile error. Neither is a substitute for the
 // other: this test proves the namespaces are applied, the arch test proves

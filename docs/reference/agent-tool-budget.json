@@ -4,28 +4,32 @@
   "per_agent_listing_budget": 17000,
   "whole_catalog_floor": 21000,
   "catalog": {
-    "tools": 58,
-    "tokens": 18227,
-    "median_tool_tokens": 274,
-    "mean_tool_tokens": 313
+    "tools": 59,
+    "tokens": 18683,
+    "median_tool_tokens": 275,
+    "mean_tool_tokens": 316
   },
   "agents": [
     {
       "name": "morning_brief",
       "goal": "Assemble the Morning Brief for this workspace: enumerate open deals, read the ones with recent activity, and produce a ranked list (at most 7) of deals the team can win this week. For each: why it is on the list, what changed recently, and one recommended next move — every claim grounded in a record you actually read, citing its id. A quiet day yields a short list; never pad it.",
       "tools": [
+        "annotate_brief",
         "catch_me_up_on",
         "list_records",
+        "read_brief",
         "read_record"
       ],
-      "tokens": 992,
-      "percent_of_ceiling": 4,
-      "headroom_tokens": 16008,
+      "tokens": 1661,
+      "percent_of_ceiling": 6,
+      "headroom_tokens": 15339,
       "dangling_cross_references": [
+        "annotate_brief → log_activity",
         "catch_me_up_on → prep_for_meeting",
         "catch_me_up_on → search_records",
         "list_records → run_report",
-        "list_records → search_records"
+        "list_records → search_records",
+        "read_brief → whats_slipping_this_week"
       ],
       "temptation_weight": 5
     },
@@ -104,6 +108,10 @@
     {
       "name": "send_email",
       "tokens": 471
+    },
+    {
+      "name": "annotate_brief",
+      "tokens": 456
     },
     {
       "name": "progress_deal",

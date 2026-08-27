@@ -141,9 +141,19 @@ export function isRunning(state: ProviderProfileState): boolean {
 /** Whether an "enrich now" button should be offered. Not while one is
  *  running — a second click cannot buy a second answer, the live-run index
  *  refuses it — and not where no provider is connected, since there is
- *  nothing to ask. */
+ *  nothing to ask.
+ *
+ *  `stale` is refused for the same reason as `not_connected`, and the two are
+ *  one fact wearing two labels: stale IS the disconnected provider whose
+ *  purchases we retained. The section says so ("the provider is no longer
+ *  connected, so this cannot be refreshed"), and the server agrees — a run
+ *  needs a connected connection. A button beside that sentence is one the
+ *  server was always going to refuse. */
 export function canEnrichNow(state: ProviderProfileState): boolean {
   return (
-    state !== "not_connected" && state !== "not_eligible" && !isRunning(state)
+    state !== "not_connected" &&
+    state !== "not_eligible" &&
+    state !== "stale" &&
+    !isRunning(state)
   );
 }

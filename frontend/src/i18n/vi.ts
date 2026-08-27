@@ -60,8 +60,79 @@ export const vi = {
   "history.actorAll": "Tất cả",
   "history.actorHuman": "Người",
   "history.actorAgent": "Agent",
-  "history.tabChanges": "Thay đổi",
-  "history.tabFields": "Lịch sử trường",
+  "history.tabChanges": "Theo thay đổi",
+  "history.tabFields": "Theo trường",
+  "history.undo.action": "Hoàn tác",
+  "history.undo.busy": "Đang hoàn tác thay đổi…",
+  "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
+  "history.undo.confirmBody":
+    "{count} trường sẽ trở lại giá trị trước thay đổi này:",
+  "history.undo.versionSkew":
+    "Bản ghi đã thay đổi trong lúc bạn đang xem. Lịch sử vừa được tải lại — hãy kiểm tra lại thay đổi trước khi hoàn tác.",
+  "history.undo.noBeforeImage":
+    "Thay đổi này không ghi lại giá trị trước đó của bản ghi, nên không có gì để hoàn tác.",
+  "history.undo.notReplayable": "Loại thay đổi này không được phát ngược lại.",
+  "history.undo.unsupportedRecordType":
+    "Không thể hoàn tác thay đổi trên loại bản ghi này.",
+  "history.undo.superseded":
+    "Đã có người sửa các trường này sau đó. Hoàn tác sẽ xoá cả quyết định của họ.",
+  "history.undo.behindErasureBoundary":
+    "Thay đổi này nằm sau một lần xoá dữ liệu, nội dung của nó đã bị xoá vĩnh viễn.",
+  "history.undo.alreadyUndone": "Thay đổi này đã được hoàn tác.",
+  "history.undo.notRestorableByThisPath":
+    "Các trường này không được ghi qua đường mà thao tác hoàn tác đi.",
+  "history.undo.recordArchived":
+    "Bản ghi đang được lưu trữ. Hãy khôi phục bản ghi trước khi hoàn tác một thay đổi.",
+  "history.undo.nullUnwritable":
+    "Không thể hoàn tác vì thao tác này sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống.",
+  "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
+  "history.field.address": "Địa chỉ",
+  "history.field.amount_minor": "Giá trị",
+  "history.field.assignee_id": "Người phụ trách",
+  "history.field.body": "Ghi chú",
+  "history.field.candidate_org_key": "Công ty khớp",
+  "history.field.company_name": "Tên công ty",
+  "history.field.currency": "Tiền tệ",
+  "history.field.description": "Mô tả",
+  "history.field.display_name": "Tên hiển thị",
+  "history.field.domains": "Tên miền",
+  "history.field.due_at": "Hạn",
+  "history.field.email": "Email",
+  "history.field.ended_at": "Kết thúc",
+  "history.field.expected_close_date": "Ngày chốt dự kiến",
+  "history.field.first_name": "Tên",
+  "history.field.forecast_category": "Nhóm dự báo",
+  "history.field.full_name": "Họ và tên",
+  "history.field.fx_rate_date": "Ngày áp tỷ giá",
+  "history.field.fx_rate_to_base": "Tỷ giá",
+  "history.field.industry": "Ngành",
+  "history.field.is_done": "Đã xong",
+  "history.field.last_name": "Họ",
+  "history.field.legal_name": "Tên pháp lý",
+  "history.field.lifecycle": "Vòng đời",
+  "history.field.linkedin_url": "Đường dẫn LinkedIn",
+  "history.field.lost_reason": "Lý do thất bại",
+  "history.field.name": "Tên",
+  "history.field.occurred_at": "Thời điểm",
+  "history.field.organization_id": "Công ty",
+  "history.field.owner_id": "Người sở hữu",
+  "history.field.parent_org_id": "Công ty mẹ",
+  "history.field.partner_attribution": "Ghi nhận đối tác",
+  "history.field.partner_org_id": "Đối tác",
+  "history.field.project_id": "Dự án",
+  "history.field.relationship_types": "Loại quan hệ",
+  "history.field.remind_at": "Nhắc lúc",
+  "history.field.score": "Điểm",
+  "history.field.score_override_reason": "Lý do chỉnh điểm",
+  "history.field.size_band": "Quy mô",
+  "history.field.social": "Hồ sơ mạng xã hội",
+  "history.field.source": "Nguồn",
+  "history.field.started_at": "Bắt đầu",
+  "history.field.status": "Trạng thái",
+  "history.field.subject": "Tiêu đề",
+  "history.field.target_end_date": "Ngày kết thúc mục tiêu",
+  "history.field.title": "Chức danh",
+  "history.field.wait_until": "Chờ đến",
 
   "confidence.high": "cao",
   "confidence.med": "trung bình",
@@ -809,7 +880,7 @@ export const vi = {
   "tab.documents": "Tài liệu",
   "tab.profile": "Hồ sơ",
   "tab.meetings": "Cuộc họp",
-  "tab.research": "Nghiên cứu",
+  "tab.research": "Dữ liệu & công cụ",
   // The brief under the questions it answers, and what kind of claim each
   // sentence makes — a judgment must not read as a stored fact.
   "co.brief.nature.fact": "Dữ kiện",
@@ -1633,6 +1704,7 @@ export const vi = {
   "lead.bulkFailed": "{count} không áp dụng được —",
   "lead.bulkFailedRow": "không lưu được",
   "lead.bulkSelectRow": "Chọn {name}",
+  "lead.unnamed": "Khách hàng tiềm năng chưa có tên",
   "lead.sla.breached": "Quá hạn",
   "lead.sla.atRisk": "Sắp đến hạn",
   "lead.sla.withinTarget": "Đúng hạn",
@@ -2036,6 +2108,26 @@ export const vi = {
     "Chỉ {count} deal vượt ngưỡng — danh sách không bao giờ được độn thêm.",
   "home.overflow":
     "{shown} trong {count} deal đạt ngưỡng — phần đầu ngắn gọn và trung thực.",
+  "home.narrativeNoPass":
+    "Hôm nay không có tóm tắt ban đêm — Margince chưa chạy lượt nào cho bản tin này. Thứ tự bên dưới vẫn là của hôm nay.",
+  "home.panel.weekly": "Tuần trước",
+  "home.weekly.weekOf": "Tuần từ {day}",
+  "home.weekly.pickWeek": "Mở tuần khác",
+  "home.weekly.none":
+    "Chưa có bản đánh giá tuần — bản đầu tiên được viết vào thứ Hai sau tuần đầy đủ đầu tiên của bạn.",
+  "home.weekly.promised": "Đã hứa, đã xong",
+  "home.weekly.ofDue": "{done} trên {due}",
+  "home.weekly.dealsWon": "Thắng",
+  "home.weekly.dealsLost": "Thua",
+  "home.weekly.dealsMoved": "Đã chuyển",
+  "home.weekly.decided": "Bạn đã quyết",
+  "home.weekly.acceptedRejected": "{accepted} đồng ý · {rejected} từ chối",
+  "home.weekly.queueWorked": "Danh sách buổi sáng",
+  "home.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
+  "home.weekly.carriedOver": "Chuyển tiếp",
+  "home.weekly.outcome.moved": "đã chuyển",
+  "home.weekly.outcome.won": "thắng",
+  "home.weekly.outcome.lost": "thua",
   "home.quietRun":
     "Sáng nay không có gì vượt ngưỡng. Không bịa ra việc gấp — hãy tận hưởng sự yên tĩnh.",
   "home.act": "Đánh dấu xong",
@@ -2136,6 +2228,8 @@ export const vi = {
   "home.deck.bundleMembers": "Xem {count} mục",
   "home.brief.rank": "Hạng",
   "home.brief.composite": "Điểm",
+  "home.brief.previouslyDismissed": "Đã đánh dấu {day} — bạn đã bỏ qua.",
+  "home.brief.returnedWith": "Quay lại do hoạt động ngày",
   "home.brief.resurfaces": "Trở lại",
   "home.evidenceNone": "chưa ghi nhận bằng chứng",
   "home.snooze": "Tạm hoãn",
@@ -3426,6 +3520,21 @@ export const vi = {
     "Những tiện ích bản cài đặt này chạy bằng một thông tin đăng nhập dùng chung. Thiết lập ở đây áp dụng cho mọi người.",
 
   "connectors.title": "Hộp thư đã kết nối",
+  // Quyền thường trực cho công việc ban đêm — một câu hỏi, được hỏi khi kết
+  // nối hộp thư trong onboarding và một lần nữa trong phần cài đặt.
+  "overnightGrant.title": "Chuẩn bị qua đêm",
+  "overnightGrant.sub":
+    "Margince xem qua các thương vụ của bạn trong khi bạn ngủ và chuẩn bị sẵn buổi sáng cho bạn. Nó hành động với tư cách của bạn, chỉ thấy những gì bạn được thấy, và bạn có thể dừng bất cứ lúc nào.",
+  "overnightGrant.label":
+    "Cho phép Margince chuẩn bị bản tóm tắt buổi sáng qua đêm",
+  "overnightGrant.help":
+    "Nó đọc thương vụ và email của bạn để sắp xếp việc gì cần bạn hôm nay. Nó không bao giờ tự gửi gì — mọi thứ gửi ra ngoài đều chờ bạn phê duyệt.",
+  "overnightGrant.danger":
+    "NGUY HIỂM: Không có quyền này, bản tóm tắt buổi sáng, danh sách công việc và bản đánh giá tuần của bạn sẽ trống. Đó là những màn hình Margince mở đầu tiên — phần lớn sản phẩm sẽ trông như không hoạt động.",
+  "overnightGrant.saveFailed":
+    "Không lưu được câu trả lời của bạn cho câu hỏi ban đêm. Mọi thứ khác đã được kết nối — hãy đặt lại trong Cài đặt → Kết nối khi bạn vào.",
+  "overnightGrant.renew":
+    "Bạn đã đồng ý, nhưng quyền mà Margince đang dùng đã hết hạn. Tắt rồi bật lại tùy chọn này để gia hạn — cho đến lúc đó bản tóm tắt của bạn không được chuẩn bị.",
   "mailSharing.title": "Chia sẻ email",
   "mailSharing.sub":
     "Email được thu thập sẽ hiển thị với mọi đồng nghiệp có quyền xem liên hệ. Bật mặc định — đây là điều làm cho pipeline được chia sẻ.",
@@ -6129,6 +6238,10 @@ export const vi = {
   "provider.profile.claimsUnwritten":
     "Đã trả tiền, nhưng thông tin chưa bao giờ đến hồ sơ này. Không ai phải đi tìm — đây chính là chỗ thiếu.",
   "provider.profile.enrichNow": "Tra cứu liên hệ này",
+  "provider.profile.lookingUp": "Đang hỏi nhà cung cấp. Việc này mất một lát.",
+  "provider.profile.emptyTitle": "Chưa mua dữ liệu nào cho liên hệ này",
+  "provider.profile.emptyBody":
+    "Một lượt tra cứu sẽ hỏi {provider} về liên hệ này, lấy những thông tin mà kết nối này được đặt để mua. Việc đó tiêu tốn tín dụng {provider}, và những gì nhận được sẽ nằm cạnh hồ sơ chứ không ghi đè lên bất cứ điều gì đồng nghiệp đã nhập.",
   "provider.profile.emails": "Địa chỉ email",
   "provider.profile.emailType.provider": "{type}, theo nhãn của nhà cung cấp",
   "provider.profile.emailType.requested":

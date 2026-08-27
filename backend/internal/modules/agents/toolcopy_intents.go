@@ -157,6 +157,21 @@ var runReportCopy = toolCopy{
 		"names its catalog entry lists.",
 }
 
+var annotateBriefCopy = toolCopy{
+	Purpose: "Write what you found onto the morning brief you just read: one sentence about " +
+		"the night as a whole, and for each deal you looked at, why it is on the list, what " +
+		"changed, and the one next move you would make.",
+	Limits: "It writes onto that person's own brief for today and nothing else — it cannot be " +
+		"pointed at another person, another day, or a deal that is not already in their " +
+		"queue, and it cannot change the ranking. Every evidence id you cite must be one the " +
+		"brief already recorded for that item; citing anything else refuses the whole write, " +
+		"so cite from what read_brief gave you rather than from memory.",
+	Instead: "Use log_activity to record something that happened on a deal, which belongs on the " +
+		"record itself and outlives today's brief.",
+	Retain: "Calling it again replaces what you wrote before, so a second pass is a correction " +
+		"rather than an addition.",
+}
+
 var readBriefCopy = toolCopy{
 	Purpose: "Read the ranked queue the person you act for sees when they open their morning " +
 		"brief — the deals the workspace decided are worth their attention today, in order, " +

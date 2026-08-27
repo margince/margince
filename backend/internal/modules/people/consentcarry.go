@@ -109,7 +109,7 @@ type consentCarrySpec struct {
 // consentCarries is every carry this package performs. The three entry points
 // read their spec from here rather than each building its own.
 //
-// Held by: TestTheConsentCarryIsSpelledOnceInPeople (backend/oneconsentcarry_test.go)
+// Held by: TestTheConsentCarryIsSpelledOnceInPeople (backend/gates/oneconsentcarry_test.go)
 var consentCarries = map[consentCarryKind]consentCarrySpec{
 	consentCarryPersonMerge: {
 		name: "a person merge",

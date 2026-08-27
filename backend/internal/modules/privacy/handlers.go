@@ -31,6 +31,13 @@ type Handlers struct {
 	// injected seam: release IS an erasure, and a second spelling of one is
 	// how the two paths would come to destroy different things.
 	eraser *Eraser
+	// restorer puts one audited change back. It is nil until compose wires the
+	// seam, and the route refuses rather than half-serving without it.
+	restorer ChangeRestorer
+	// undoability says whether each history entry could be put back. Nil until
+	// compose wires it, and a page then reads as unevaluated rather than as
+	// undoable.
+	undoability UndoabilityReader
 }
 
 // NewHandlers wires the transport over the installation-bound pool and the

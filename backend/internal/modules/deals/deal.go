@@ -49,7 +49,7 @@ func ensureOpenBirthStage(ctx context.Context, tx pgx.Tx, stageID ids.StageID, p
 // the owner transition and deal.updated only for the other fields — both
 // on this request's correlation_id when they co-occur.
 func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crmcontracts.Deal, in UpdateDealInput, p *storekit.Patch) error {
-	auditID, err := storekit.Audit(ctx, tx, "update", "deal", id.UUID, p.Before(), p.After())
+	auditID, err := storekit.AuditWithTrail(ctx, tx, in.Trail, "deal", id.UUID, p.Before(), p.After())
 	if err != nil {
 		return fmt.Errorf("audit deal update: %w", err)
 	}
@@ -88,6 +88,9 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 // visible under the caller's row scope before it lands in the patch.
 func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal, in UpdateDealInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
+	if err := applyClears(p, in.Clear, clearableDealColumns(current)); err != nil {
+		return nil, err
+	}
 	if in.Name != nil {
 		p.Set(dealNameColumn, current.Name, *in.Name)
 	}

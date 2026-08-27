@@ -87,7 +87,9 @@ func (h Handlers) UpdateLead(w http.ResponseWriter, r *http.Request, id crmcontr
 		return
 	}
 
-	lead, err := h.store.UpdateLead(r.Context(), pathID[ids.LeadKind](id), leadUpdateInput(req, ifVersion))
+	update := leadUpdateInput(req, ifVersion)
+	update.Clear = httperr.ClearedFields(r)
+	lead, err := h.store.UpdateLead(r.Context(), pathID[ids.LeadKind](id), update)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return

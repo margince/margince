@@ -749,6 +749,36 @@ export const Toolbar: Story = {
   render: () => <ToolbarDemo />,
 };
 
+const RECORD_TABS = ["overview", "research", "documents"] as const;
+type RecordTab = (typeof RECORD_TABS)[number];
+const RECORD_TAB_LABELS: Record<RecordTab, string> = {
+  overview: "Overview",
+  research: "Data & tools",
+  documents: "Documents",
+};
+
+function MarkedTabsDemo() {
+  const [tab, setTab] = useState<RecordTab>("overview");
+  return (
+    <SegmentedControl
+      options={RECORD_TABS}
+      value={tab}
+      onChange={setTab}
+      labels={RECORD_TAB_LABELS}
+      label="Record sections"
+      marks={{ research: true }}
+    />
+  );
+}
+
+// A dot on an option says something waits behind it — a record tab whose
+// surface holds an action nobody has taken. It is `aria-hidden` and never the
+// only carrier of the fact: the surface it points at states it in words, or a
+// screen reader and a reader who cannot see the colour both learn nothing.
+export const MarkedOption: Story = {
+  render: () => <MarkedTabsDemo />,
+};
+
 type DemoDeal = {
   id: string;
   name: string;

@@ -1,7 +1,7 @@
 # Gate patterns — how to pick one
 
 A **gate** is a normal Go test that reads the source tree and fails your PR when
-a rule is broken. `backend/` has a lot of them (`ls backend/*_test.go | wc -l`
+a rule is broken. `backend/gates/` holds a lot of them (`ls backend/gates/*_test.go | wc -l`
 for today's count). They are not that many unrelated tests. They come in eight
 shapes, and each shape fails in its own predictable way.
 

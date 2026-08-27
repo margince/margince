@@ -93,6 +93,15 @@ GOWORK_COMPOSED := GOWORK=$(COMPOSITION_DIR)/go.work
 # what the caller exported.
 GOWORK_ROOT := GOWORK=$(abspath ../go.work)
 
+# The packages whose SUBJECTS live outside the package, so Go's test cache
+# cannot key them: the fitness gates in gates/ walk internal/modules/ and
+# introspect the schema, and the ai module's config gates read
+# ../config/margince*.yaml — one module up, invisible to this module's cache.
+# Both must run uncached or a stale green replays; `test` below both excludes
+# them from the cached wildcard and re-runs them, from this one list, so the
+# two cannot drift apart.
+UNCACHED_TEST_PKGS := ./gates ./internal/modules/ai/
+
 .DEFAULT_GOAL := help
 
 .PHONY: perfdoc help check build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report ai-probe test-db-up test-it test-integration-serial lint arch-lint vet gen gen-workflow mcp-apps-vocab drift composition check-composition test-extensions db-up db-init db-wait seed-reset seed-dev-db seed-demo migrate migrate-up migrate-down run psql redis-cli tidy dev infra-down infra-logs infra-reset clean vuln tools tools-go hooks
@@ -111,11 +120,32 @@ help: ## List targets with their descriptions (the default goal)
 # check-composition stay last and serial: gen REWRITES *_gen.go,
 # internal/contracts/ and build/composition/ in place — a
 # write-under-reader race for any pass still compiling them.
+#
+# Each phase reports how long it took (scripts/phase-timer.sh). The ledger has
+# ONE owner per run: the root `check-backend` exports PHASE_TIMER_OWNED and
+# prints the table itself, covering its gate fan-out and these four phases
+# together; run on its own (`make check-go`, or here directly) this target is
+# the owner instead and prints its own four. Without that, a standalone run
+# would leave its rows to be counted inside somebody else's table, and a
+# standalone run that FAILED would leave its open phase to abort the next one.
+#
+# A phase that fails is never closed, so a table only ever describes a run that
+# got to the end.
 check: ## The merge gate: everything a PR must pass
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh reset
+	@bash ../scripts/phase-timer.sh start "backend: build (host + windows)"
 	$(MAKE) build
+	@bash ../scripts/phase-timer.sh stop
+	@bash ../scripts/phase-timer.sh start "backend: vet/lint/arch-lint/test/test-extensions (-j4)"
 	$(MAKE) -j4 vet lint arch-lint test test-extensions
+	@bash ../scripts/phase-timer.sh stop
+	@bash ../scripts/phase-timer.sh start "backend: contract drift"
 	$(MAKE) drift
+	@bash ../scripts/phase-timer.sh stop
+	@bash ../scripts/phase-timer.sh start "backend: composition reproducibility"
 	$(MAKE) check-composition
+	@bash ../scripts/phase-timer.sh stop
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh report
 
 # gen-composition runs pinned to the ROOT workspace: the tool lives in
 # the separate backend/tools module, so a caller-exported GOWORK (off, or
@@ -185,24 +215,43 @@ vet: composition ## Run go vet over every package, untagged AND -tags 'integrati
 	# integration` alone would.
 	$(GOWORK_COMPOSED) $(GO) vet -tags 'integration bench' ./...
 
-test: composition ## Unit tests (the root fitness tests run uncached)
-	$(GOWORK_COMPOSED) $(GO) test ./...
+test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached
+	# ./... covers UNCACHED_TEST_PKGS too, and the result it computes for them
+	# is thrown away by the uncached pass seconds later. That wasted pass was
+	# the single biggest line in the gate: 316 s of a 648 s check-backend, all
+	# of it the root fitness package. Excluding them here is what makes every
+	# package run exactly once.
+	#
+	# The subtraction is asserted rather than assumed. A wildcard that stopped
+	# containing one of these — a package renamed, a build tag hiding it —
+	# would otherwise leave the exclusion silently matching nothing, which
+	# reads identically to a correct run and costs the 316 s back. `go list`
+	# on a name that no longer exists fails under `set -e` from the other side.
+	@set -e; \
+	  uncached="$$($(GOWORK_COMPOSED) $(GO) list $(UNCACHED_TEST_PKGS))"; \
+	  every="$$($(GOWORK_COMPOSED) $(GO) list ./...)"; \
+	  cached="$$(printf '%s\n' "$$every" | grep -Fxv "$$uncached")"; \
+	  want=$$(printf '%s\n' "$$uncached" | wc -l | tr -d ' '); \
+	  got=$$(( $$(printf '%s\n' "$$every" | wc -l) - $$(printf '%s\n' "$$cached" | wc -l) )); \
+	  if [ "$$got" -ne "$$want" ]; then \
+	    echo "test: excluding UNCACHED_TEST_PKGS dropped $$got of ./... but names $$want packages —" >&2; \
+	    echo "      the exclusion no longer matches what the uncached pass re-runs, so some package" >&2; \
+	    echo "      is about to run twice or not at all. Reconcile UNCACHED_TEST_PKGS with ./...." >&2; \
+	    exit 1; \
+	  fi; \
+	  echo "go test: $$(printf '%s\n' "$$cached" | wc -l | tr -d ' ') cached packages + $$want uncached"; \
+	  $(GOWORK_COMPOSED) $(GO) test $$cached
 	# The tool chain is its own module, so ./... above never reaches it —
 	# its tests (generator determinism, scaffold behavior) run here or
 	# nowhere.
 	$(GOWORK_COMPOSED) $(GO) test ./tools/...
-	# The root fitness tests scan files OUTSIDE their package (WalkDir
-	# over internal/modules, schema introspection), which Go's test
-	# cache cannot key — run them uncached so a new module can never
-	# ride a stale green.
-	$(GOWORK_COMPOSED) $(GO) test -count=1 .
-	# Same reason, one module up: the config gates read ../config/margince*.yaml
-	# and ../config/margince.schema.json, which live OUTSIDE this module and so
-	# are invisible to the cache. Editing the schema or a shipped config alone
-	# therefore replays the previous pass — verified: deleting the schema's
-	# provider restriction left the gate reporting ok (cached). CI is cold and
-	# never saw it; the engineer who broke it locally would not either.
-	$(GOWORK_COMPOSED) $(GO) test -count=1 ./internal/modules/ai/
+	# Uncached, for the reason UNCACHED_TEST_PKGS is declared: their subjects
+	# are files outside the package, so a green here can otherwise be replayed
+	# over a tree that has since changed. Verified once from the other end —
+	# deleting the config schema's provider restriction left the ai gate
+	# reporting `ok (cached)`. CI is cold and never saw it; the engineer who
+	# broke it locally would not either.
+	$(GOWORK_COMPOSED) $(GO) test -count=1 $(UNCACHED_TEST_PKGS)
 
 # -v is load-bearing, not chattiness: `go test` only names skipped tests in
 # verbose mode, and the zero-skip teeth below grep for them. A skip in this

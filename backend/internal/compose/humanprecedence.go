@@ -63,6 +63,13 @@ func unauditedHolder(table string) string {
 			  )`
 }
 
+// This is NOT superseded.go's question, and the two must not share a reader.
+// SupersededFields asks whether ANYONE wrote a key after a given audit row;
+// this asks which keys a HUMAN last wrote to a DIFFERENT value, with no cutoff.
+// Giving this one the other's actor-agnosticism or cutoff would make fewer
+// fields read as human-owned, so agent writes that stage for approval today
+// would auto-execute — a silent weakening of an agent-authority guardrail.
+//
 // HumanOwnedConflicts names the patch fields whose latest audited write
 // was human AND whose proposed value differs from that write's value —
 // plus, on a record a HUMAN created, every patch field with no audit

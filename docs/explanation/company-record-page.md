@@ -384,7 +384,7 @@ our-side edges — are [relationship-graph.md](relationship-graph.md).
 
 Three tables behind this page live in `compose` subpackages, and all three are
 written **without an audit row and without an outbox event** — the saved-view
-ruling, gated by `backend/tableownership_test.go`:
+ruling, gated by `backend/gates/tableownership_test.go`:
 
 | Table | Owner | What it is |
 |---|---|---|
@@ -428,7 +428,7 @@ list, approval, signal) and durably own no business entity. See
 | Logo row, provenance precedence, `LogoURL` | `backend/internal/modules/people/organizationlogo.go` |
 | Logo streaming handler | `backend/internal/modules/people/handlers_organization.go` |
 | Contract | `backend/api/crm.yaml` — `/organizations/{id}/{360,graph,brief,ask,view-ack,suggestions/dismiss,logo}` |
-| Table-ownership ruling | `backend/tableownership_test.go` |
+| Table-ownership ruling | `backend/gates/tableownership_test.go` |
 | The screen | `frontend/src/screens/organizations.tsx` (`CompanyScreen`) |
 | Data layer + right-rail cards | `frontend/src/screens/company360.tsx`, `company360.css` |
 | The connections card | `frontend/src/screens/connections.tsx` |

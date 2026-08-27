@@ -30,7 +30,7 @@ import (
 // own ceiling and should say so with its own constant and its own reason.
 //
 // Held by: TestTheCallerPredicateBudgetIsDeclaredOnce
-// (backend/onecallerpredicatebudget_test.go)
+// (backend/gates/onecallerpredicatebudget_test.go)
 const CallerPredicateBudget = 5 * time.Second
 
 // BoundStatement gives every statement that follows it in tx a wall-clock

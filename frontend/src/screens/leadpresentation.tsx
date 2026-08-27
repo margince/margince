@@ -11,6 +11,7 @@ import {
   PipelineBoard,
 } from "../design-system/composed";
 import { formatDateTime, formatNumber } from "../format/format";
+import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -135,7 +136,7 @@ function LeadCard({
       {...dragHandlers}
     >
       <span className="deal-name">
-        {lead.full_name ?? lead.email ?? t("nav.leads")}
+        {leadIdentityName(lead) || t("lead.unnamed")}
       </span>
       {lead.company_name && (
         <span className="deal-org">

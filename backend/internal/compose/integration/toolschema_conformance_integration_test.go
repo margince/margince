@@ -90,7 +90,7 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	// The brief is a persisted read-model, so the lane assembles one for this
 	// rep before reading it: read_brief never ranks, and an unassembled brief
 	// answers not-found rather than an empty queue.
-	snapshotBriefRun(ctx, t, e)
+	briefItem, briefEvidence := annotatable(t, snapshotBriefRun(ctx, t, e))
 
 	// One waiting proposal for the queue tools, staged through the engine that
 	// stages every other one. The verdict below is a REJECTION: it exercises the
@@ -101,6 +101,12 @@ func TestToolAnswersReachableWithoutApprovalSatisfyTheirSchemas(t *testing.T) {
 	calls := []struct{ tool, args string }{
 		{"list_pipelines", `{}`},
 		{"read_brief", `{}`},
+		// The night writing back onto the morning it just read. The narrative
+		// is the run-level half and the item names one the snapshot above
+		// ranked, so the call exercises both arms rather than the empty one.
+		{"annotate_brief", `{"narrative":"A quiet night.","items":[{"item_id":"` +
+			briefItem.String() + `","finding":"Nothing moved on this deal.","cited_evidence":["` +
+			briefEvidence.String() + `"]}]}`},
 		// Who the caller is, and who else they can hand work to. Both answer
 		// about the acting human rather than about a record, so the empty
 		// object is the whole input; list_colleagues also runs narrowed,
@@ -386,13 +392,37 @@ func TestTheConformanceCheckFailsAgainstAMisdeclaredSchema(t *testing.T) {
 	}
 }
 
+// annotatable names one item of the assembled brief for annotate_brief to
+// write onto, with one of the evidence ids that item already carries.
+//
+// Both halves come from the run rather than being minted here, because the tool
+// refuses a finding that cites evidence the item does not hold — that refusal is
+// the feature, so a fixture inventing an id would prove the sweep can dodge it.
+//
+// It fails rather than skipping when the run ranked nothing or ranked an item
+// with no evidence: either way the call would exercise a refusal, and this sweep
+// exists to certify the answer shape a real call produces.
+func annotatable(t *testing.T, run briefs.BriefRun) (item, evidence ids.UUID) {
+	t.Helper()
+	if len(run.Items) == 0 {
+		t.Fatal("the assembled brief ranked nothing, so annotate_brief has no item to write onto — " +
+			"seed a deal this rep owns that the ranker will pick up")
+	}
+	first := run.Items[0]
+	if len(first.EvidenceIDs) == 0 {
+		t.Fatal("the top brief item cites no evidence, so annotate_brief would refuse the finding — " +
+			"the ranker's evidence-or-omit rule should make this unreachable")
+	}
+	return first.ID, first.EvidenceIDs[0]
+}
+
 // snapshotBriefRun assembles one morning brief for the acting rep, the way the
 // human home surface does.
 //
 // read_brief re-reads a persisted run and never ranks — that is the contract's
 // own rule, not a limitation of this lane — so without a run the sweep would be
 // certifying a not-found instead of an answer.
-func snapshotBriefRun(ctx context.Context, t *testing.T, e *Env) {
+func snapshotBriefRun(ctx context.Context, t *testing.T, e *Env) briefs.BriefRun {
 	t.Helper()
 	engine := briefs.NewBriefEngine(e.Pool, people.NewStore(e.DB()))
 	// The reader's own instant, because brief_run is keyed by LOCAL DAY and
@@ -408,7 +438,9 @@ func snapshotBriefRun(ctx context.Context, t *testing.T, e *Env) {
 	// for. The two agree by asking the same question, not by holding one answer
 	// between them — so a reader that moves to an injected clock leaves this
 	// behind, silently and the same way. Follow it here when it does.
-	if _, err := engine.SnapshotRun(ctx, time.Now().UTC()); err != nil {
+	run, err := engine.SnapshotRun(ctx, time.Now().UTC())
+	if err != nil {
 		t.Fatalf("assembling a brief run for the acting rep: %v", err)
 	}
+	return run
 }

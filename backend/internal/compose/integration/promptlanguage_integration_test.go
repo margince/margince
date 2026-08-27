@@ -7,7 +7,7 @@ package integration
 
 // The base language reaches a real prompt.
 //
-// This is the half the static gate in backend/promptlanguage_test.go cannot
+// This is the half the static gate in backend/gates/promptlanguage_test.go cannot
 // prove. That gate reads syntax: it sees that a language rule is ATTACHED to a
 // request, never that the right language was resolved, and a prompt could
 // satisfy it while passing a variable that is always English. What decides the

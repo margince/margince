@@ -408,7 +408,7 @@ func readJSONFile(path, what string) (json.RawMessage, error) {
 
 // probeCompleter binds the site's task to the model that will answer it.
 //
-// The router itself is built by compose, not here: backend/arch_test.go pins
+// The router itself is built by compose, not here: backend/gates/arch_test.go pins
 // the model-path assembly seam to exactly two files, and a cmd/ process role
 // constructing its own would be a third gate.
 func probeCompleter(cfg aiTaskFlags, task ai.Task) (compose.TaskProbeCompleter, string, error) {

@@ -442,7 +442,7 @@ its kind, counts and failure class to every workspace's admin.
 
 ## 8. What holds it — the fitness tests
 
-Eleven root gates under `backend/`, all in package `backendarch`, all part of `make check`. Every
+Eleven gates under `backend/gates/`, all in package `gates`, all part of `make check`. Every
 gate that walks the tree carries a **floor** — a minimum number of things it must have inspected —
 because most of them are prohibitions, and a walker that silently matched nothing would otherwise
 read green. (The census carries its own, `declaredJobKindFloor`, beside the assembly it reads.)

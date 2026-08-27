@@ -19,9 +19,9 @@
 // environment → file → compiled defaults) is resolved by the caller, exactly as
 // before.
 //
-// backend/configseam_test.go derives the obligation from the tree rather than
-// from a list, so a new os.Getenv anywhere outside this package fails the build
-// instead of quietly reopening the gap.
+// scripts/check-env-reads.sh (`make env-reads`) derives the obligation from the
+// tree rather than from a list, so a new os.Getenv anywhere outside this package
+// fails the gate instead of quietly reopening the gap.
 package config
 
 import "os"
