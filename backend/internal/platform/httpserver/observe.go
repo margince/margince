@@ -219,24 +219,36 @@ func Readyz(aiState string, embedState func(context.Context) string, checks ...R
 	return func(w http.ResponseWriter, r *http.Request) {
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
+		// The probe body goes through the same writer the exposition does, for
+		// the same reason: the first refused write stops the rest. There is
+		// nothing to LOG here — a probe whose reader hung up has no channel
+		// left to report on, and the orchestrator's own timeout is what says
+		// so — but a half-written answer is still worth not assembling.
+		body := &exposition{w: w}
 		for _, c := range checks {
 			if err := c.Check(ctx); err != nil {
 				// The dependency name is enough for the orchestrator; the
 				// error text is for the server log, not the probe body.
 				slog.ErrorContext(r.Context(), "readiness check failed", "dependency", c.Name, "err", err)
 				w.WriteHeader(http.StatusServiceUnavailable)
-				_, _ = fmt.Fprintf(w, "unready: %s\n", c.Name)
+				body.printf("unready: %s\n", c.Name)
 				return
 			}
 		}
 		w.WriteHeader(http.StatusOK)
-		_, _ = fmt.Fprintln(w, "ready")
+		body.printf("ready\n")
 		// Each visibility line is written only by a role that wires the thing
 		// it reports. The worker wires neither, and an empty "ai: " line is
 		// noise an operator has to learn to ignore — worse than silence,
 		// because it reads as a role whose AI state could not be determined.
 		if aiState != "" {
-			_, _ = fmt.Fprintf(w, "ai: %s\n", aiState)
+			body.printf("ai: %s\n", aiState)
+		}
+		// Nothing is READ for a probe whose reader is gone, the same rule the
+		// exposition takes: embedState resolves a marker, and resolving one
+		// for a body that cannot be delivered is work with no reader.
+		if body.gone() {
+			return
 		}
 		// The embed line is written unconditionally, unlike the AI one: a nil
 		// embedState and a marker-read that already failed into "unknown" are
@@ -246,7 +258,7 @@ func Readyz(aiState string, embedState func(context.Context) string, checks ...R
 		if embedState != nil {
 			embed = embedState(ctx)
 		}
-		_, _ = fmt.Fprintf(w, "embed: %s\n", embed)
+		body.printf("embed: %s\n", embed)
 	}
 }
 
@@ -298,57 +310,78 @@ func Metrics(pool *pgxpool.Pool, backlog func(context.Context) (int64, error), p
 		ctx, cancel := context.WithTimeout(r.Context(), 2*time.Second)
 		defer cancel()
 		w.Header().Set("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+		out := &exposition{w: w}
 
 		// Always first, and never injected: this section measures the
 		// PROCESS answering the scrape, so it is the one part of the
 		// exposition that means something different on every target and
 		// cannot be assembled anywhere but here.
-		writeRuntimeMetrics(w)
+		writeRuntimeMetrics(out)
 
 		// The backlog is a fleet-wide reading of a shared table, so a role
 		// that would only duplicate another target's copy of it passes nil
 		// rather than querying — the same "declared or absent" posture the
 		// sections below take, and the reason a FAILED read writes nothing:
 		// a gauge reporting rows it did not count reads as a drained outbox.
-		if backlog != nil {
+		if backlog != nil && !out.gone() {
 			if n, err := backlog(ctx); err == nil {
-				_, _ = fmt.Fprintf(w, "# HELP margince_outbox_unpublished Committed outbox rows the relay has not shipped yet.\n")
-				_, _ = fmt.Fprintf(w, "# TYPE margince_outbox_unpublished gauge\n")
-				_, _ = fmt.Fprintf(w, "margince_outbox_unpublished %d\n", n)
+				out.printf("# HELP margince_outbox_unpublished Committed outbox rows the relay has not shipped yet.\n")
+				out.printf("# TYPE margince_outbox_unpublished gauge\n")
+				out.printf("margince_outbox_unpublished %d\n", n)
 			} else {
 				slog.ErrorContext(r.Context(), "metrics: outbox backlog query failed", "err", err)
 			}
 		}
 
-		_, _ = fmt.Fprintf(w, "# HELP margince_relay_published_total Outbox rows shipped to the bus since process start.\n")
-		_, _ = fmt.Fprintf(w, "# TYPE margince_relay_published_total counter\n")
-		_, _ = fmt.Fprintf(w, "margince_relay_published_total %d\n", published())
+		// Guarded like the sections around it, and for the same rule rather
+		// than for its cost: printf goes quiet after a refusal, but Go
+		// evaluates the argument first, so the supplier still runs. This one is
+		// an atomic load and the reads below it are too — the point is that
+		// "nothing is measured for a scrape that has gone" is either true of
+		// every supplier here or it is a claim a reader has to check one
+		// section at a time, which is the shape this file was in.
+		if !out.gone() {
+			out.printf("# HELP margince_relay_published_total Outbox rows shipped to the bus since process start.\n")
+			out.printf("# TYPE margince_relay_published_total counter\n")
+			out.printf("margince_relay_published_total %d\n", published())
+		}
 
 		// Omitted rather than zeroed when no pool was injected — the same
 		// "declared or absent" posture every other section here takes, and
 		// the reason a failed backlog read above writes nothing: a gauge
 		// reporting connections it did not measure reads as an idle pool.
-		if pool != nil {
+		if pool != nil && !out.gone() {
 			stat := pool.Stat()
-			_, _ = fmt.Fprintf(w, "# HELP margince_pgxpool_conns Connection pool state by class.\n")
-			_, _ = fmt.Fprintf(w, "# TYPE margince_pgxpool_conns gauge\n")
-			_, _ = fmt.Fprintf(w, "margince_pgxpool_conns{state=\"acquired\"} %d\n", stat.AcquiredConns())
-			_, _ = fmt.Fprintf(w, "margince_pgxpool_conns{state=\"idle\"} %d\n", stat.IdleConns())
-			_, _ = fmt.Fprintf(w, "margince_pgxpool_conns{state=\"total\"} %d\n", stat.TotalConns())
-			_, _ = fmt.Fprintf(w, "margince_pgxpool_conns{state=\"max\"} %d\n", stat.MaxConns())
+			out.printf("# HELP margince_pgxpool_conns Connection pool state by class.\n")
+			out.printf("# TYPE margince_pgxpool_conns gauge\n")
+			out.printf("margince_pgxpool_conns{state=\"acquired\"} %d\n", stat.AcquiredConns())
+			out.printf("margince_pgxpool_conns{state=\"idle\"} %d\n", stat.IdleConns())
+			out.printf("margince_pgxpool_conns{state=\"total\"} %d\n", stat.TotalConns())
+			out.printf("margince_pgxpool_conns{state=\"max\"} %d\n", stat.MaxConns())
 		}
 
-		if extra != nil {
-			extra(w)
+		if extra != nil && !out.gone() {
+			extra(out)
 		}
-		if jobStats != nil {
-			if err := jobStats(ctx, w); err != nil {
-				slog.ErrorContext(r.Context(), "metrics: writing the job section failed", "err", err)
-				return
+		if jobStats != nil && !out.gone() {
+			// Its error is a refused write, by the same contract every section
+			// here follows — a section that could not MEASURE writes nothing
+			// and returns nil. Recorded on the exposition rather than acted on
+			// here, so one place decides what a refused write means.
+			if err := jobStats(ctx, out); err != nil && out.err == nil {
+				out.err = err
 			}
 		}
-		if overlay != nil {
-			writeOverlayMetrics(r.Context(), w, overlay)
+		if overlay != nil && !out.gone() {
+			writeOverlayMetrics(r.Context(), out, overlay)
+		}
+		// Asked ONCE, about the whole exposition. A refused write means the
+		// scraper is already gone, so this cannot be answered to the caller —
+		// it is logged because a target that keeps failing to deliver its
+		// scrape looks, from Prometheus' side, exactly like a target that is
+		// down, and this line is the difference.
+		if out.err != nil {
+			slog.ErrorContext(r.Context(), "metrics: the exposition was not written in full; the scrape it belongs to is incomplete", "err", out.err)
 		}
 	}
 }
@@ -370,52 +403,69 @@ func Metrics(pool *pgxpool.Pool, backlog func(context.Context) (int64, error), p
 // this exposition is hand-rolled: if client_golang is ever adopted it brings
 // its own go_* collector, and two definitions of one series name is a worse
 // outcome than a prefix that says who wrote it.
-func writeRuntimeMetrics(w io.Writer) {
+func writeRuntimeMetrics(out *exposition) {
+	// The first family's header goes out BEFORE anything is measured, and it
+	// is the only probe available to this section: it is the exposition's
+	// first section, so nothing earlier can have discovered a dead writer.
+	//
+	// It buys the section's one expensive reading. ReadMemStats stops the
+	// world briefly, and a scrape whose reader hung up between the request and
+	// this line should not be charged for it — nor should the process, which
+	// pays that pause for every replica while nobody is reading.
+	out.printf("# HELP margince_process_goroutines Goroutines running in the scraped process.\n")
+	out.printf("# TYPE margince_process_goroutines gauge\n")
+	if out.gone() {
+		return
+	}
+
 	var mem runtime.MemStats
 	runtime.ReadMemStats(&mem)
+	out.printf("margince_process_goroutines %d\n", runtime.NumGoroutine())
 
-	_, _ = fmt.Fprintf(w, "# HELP margince_process_goroutines Goroutines running in the scraped process.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_process_goroutines gauge\n")
-	_, _ = fmt.Fprintf(w, "margince_process_goroutines %d\n", runtime.NumGoroutine())
+	out.printf("# HELP margince_process_heap_bytes Heap bytes allocated and in use by the scraped process.\n")
+	out.printf("# TYPE margince_process_heap_bytes gauge\n")
+	out.printf("margince_process_heap_bytes %d\n", mem.HeapAlloc)
 
-	_, _ = fmt.Fprintf(w, "# HELP margince_process_heap_bytes Heap bytes allocated and in use by the scraped process.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_process_heap_bytes gauge\n")
-	_, _ = fmt.Fprintf(w, "margince_process_heap_bytes %d\n", mem.HeapAlloc)
+	out.printf("# HELP margince_process_heap_sys_bytes Heap bytes obtained from the OS by the scraped process -- with heap_bytes, whether memory is in use or merely held.\n")
+	out.printf("# TYPE margince_process_heap_sys_bytes gauge\n")
+	out.printf("margince_process_heap_sys_bytes %d\n", mem.HeapSys)
 
-	_, _ = fmt.Fprintf(w, "# HELP margince_process_heap_sys_bytes Heap bytes obtained from the OS by the scraped process -- with heap_bytes, whether memory is in use or merely held.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_process_heap_sys_bytes gauge\n")
-	_, _ = fmt.Fprintf(w, "margince_process_heap_sys_bytes %d\n", mem.HeapSys)
-
-	_, _ = fmt.Fprintf(w, "# HELP margince_process_gc_cycles_total Completed GC cycles since the scraped process started.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_process_gc_cycles_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_process_gc_cycles_total %d\n", mem.NumGC)
+	out.printf("# HELP margince_process_gc_cycles_total Completed GC cycles since the scraped process started.\n")
+	out.printf("# TYPE margince_process_gc_cycles_total counter\n")
+	out.printf("margince_process_gc_cycles_total %d\n", mem.NumGC)
 }
 
 // writeOverlayMetrics renders the overlay sync-health section — split
 // out of Metrics so that function's own top-to-bottom read stays one
 // section per line, not buried behind a nested nil-check.
-func writeOverlayMetrics(ctx context.Context, w http.ResponseWriter, overlay *OverlayMetrics) {
+func writeOverlayMetrics(ctx context.Context, out *exposition, overlay *OverlayMetrics) {
 	if lag, err := overlay.SourceLag(ctx); err == nil {
-		_, _ = fmt.Fprintf(w, "# HELP margince_overlay_source_lag_seconds Seconds since the mirror's oldest last sync per object class (worst case across the fleet).\n")
-		_, _ = fmt.Fprintf(w, "# TYPE margince_overlay_source_lag_seconds gauge\n")
+		out.printf("# HELP margince_overlay_source_lag_seconds Seconds since the mirror's oldest last sync per object class (worst case across the fleet).\n")
+		out.printf("# TYPE margince_overlay_source_lag_seconds gauge\n")
 		for _, objectClass := range sortedKeys(lag) {
-			_, _ = fmt.Fprintf(w, "margince_overlay_source_lag_seconds{object_class=%q} %.0f\n", objectClass, lag[objectClass].Seconds())
+			out.printf("margince_overlay_source_lag_seconds{object_class=%q} %.0f\n", objectClass, lag[objectClass].Seconds())
 		}
 	} else {
 		slog.Error("metrics: overlay source-lag query failed", "err", err)
 	}
+	// The lag section may be what discovers the writer is gone. printf goes
+	// quiet from here, but the three counter suppliers below would still be
+	// called to build arguments for writes that go nowhere.
+	if out.gone() {
+		return
+	}
 
-	_, _ = fmt.Fprintf(w, "# HELP margince_overlay_mirror_synced_total Mirror rows ingested (push+pull) since process start.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_overlay_mirror_synced_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_overlay_mirror_synced_total %d\n", overlay.SyncedTotal())
+	out.printf("# HELP margince_overlay_mirror_synced_total Mirror rows ingested (push+pull) since process start.\n")
+	out.printf("# TYPE margince_overlay_mirror_synced_total counter\n")
+	out.printf("margince_overlay_mirror_synced_total %d\n", overlay.SyncedTotal())
 
-	_, _ = fmt.Fprintf(w, "# HELP margince_overlay_mirror_conflict_total mirror.conflict events emitted (incumbent-wins divergence) since process start.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_overlay_mirror_conflict_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_overlay_mirror_conflict_total %d\n", overlay.ConflictTotal())
+	out.printf("# HELP margince_overlay_mirror_conflict_total mirror.conflict events emitted (incumbent-wins divergence) since process start.\n")
+	out.printf("# TYPE margince_overlay_mirror_conflict_total counter\n")
+	out.printf("margince_overlay_mirror_conflict_total %d\n", overlay.ConflictTotal())
 
-	_, _ = fmt.Fprintf(w, "# HELP margince_overlay_mirror_deleted_total mirror.deleted events emitted (incumbent-deleted records purged from the mirror) since process start.\n")
-	_, _ = fmt.Fprintf(w, "# TYPE margince_overlay_mirror_deleted_total counter\n")
-	_, _ = fmt.Fprintf(w, "margince_overlay_mirror_deleted_total %d\n", overlay.DeletedTotal())
+	out.printf("# HELP margince_overlay_mirror_deleted_total mirror.deleted events emitted (incumbent-deleted records purged from the mirror) since process start.\n")
+	out.printf("# TYPE margince_overlay_mirror_deleted_total counter\n")
+	out.printf("margince_overlay_mirror_deleted_total %d\n", overlay.DeletedTotal())
 }
 
 // sortedKeys answers lag's object-class keys in a stable order — a
