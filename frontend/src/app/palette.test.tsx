@@ -297,12 +297,14 @@ describe("useBuiltinCommands", () => {
     expect(window.location.hash).toBe("#/scheduled");
   });
 
-  // The words a rep would actually type: they think "send later", which is the
-  // control they used, not "scheduled", which is what the page is called.
+  // The words a rep would actually type: they think of the CONTROL they used,
+  // not of the destination. The alias is that control's own label, so it is
+  // translated with it — English prose here would be words a German or
+  // Vietnamese reader would never type.
   it("finds it under the words the composer's control uses", async () => {
     const user = userEvent.setup();
     renderProbe();
-    await user.type(screen.getByRole("textbox"), "send later");
+    await user.type(screen.getByRole("textbox"), "Schedule send");
     await user.keyboard("{Enter}");
     expect(window.location.hash).toBe("#/scheduled");
   });

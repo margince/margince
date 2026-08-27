@@ -137,8 +137,14 @@ export function useBuiltinCommands(): Command[] {
         id: `screen:${SCHEDULED_SCREEN}`,
         label: t("nav.scheduled"),
         // The words a rep would type for it, which are not the words on the
-        // page: they think "send later", which is the control they used.
-        keywords: [SCHEDULED_SCREEN, "send later", "queue"],
+        // page: they think of the CONTROL they used, not the destination. So
+        // the alias is that control's own label — already translated, so it is
+        // the right words in each language rather than English prose a German
+        // or Vietnamese reader would never type.
+        //
+        // The route id rides along beside it for the reason every rail command
+        // above carries one: a stable English name that survives a relabel.
+        keywords: [SCHEDULED_SCREEN, t("compose.scheduleSend")],
         type: "screen",
         route: { screen: SCHEDULED_SCREEN },
       },
