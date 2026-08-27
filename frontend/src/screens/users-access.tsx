@@ -166,6 +166,14 @@ export function TeamsCard() {
       });
       if (error) throwProblem(error);
     },
+    // An Undo that fails has to say so. The message it was offered from is
+    // consumed the moment it is pressed, so a rejected restore would otherwise
+    // leave the reader watching a confirmation disappear and believing the team
+    // came back. Sticky, because a refusal is not a courtesy to withdraw after
+    // three and a half seconds.
+    onError: (error) => {
+      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+    },
     onSuccess: (_restored, { name }) => {
       qc.invalidateQueries({ queryKey: ["teams"] });
       toast.show(t("users.teamRestored", { name }));

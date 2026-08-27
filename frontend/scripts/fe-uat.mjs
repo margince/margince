@@ -52,8 +52,12 @@ function entryModule() {
     /<script\b([^>]*)>/gi,
   )) {
     const attributes = tag[1];
+    // Anchored on whitespace or the tag's start, NOT on a word boundary: `\b`
+    // sits happily between the hyphen and the `t` of `data-type`, so a tag
+    // carrying `data-type="module" data-src="…"` read as the entry module and
+    // excluded a file that is not one.
     const read = (name) =>
-      new RegExp(`\\b${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i").exec(
+      new RegExp(`(?:^|\\s)${name}\\s*=\\s*("([^"]*)"|'([^']*)')`, "i").exec(
         attributes,
       );
     const type = read("type");
