@@ -12515,12 +12515,24 @@ export interface components {
         ProviderSpend: {
             months: components["schemas"]["ProviderMonthlySpend"][];
         };
+        /** @description What one category costs, per credit pool. `free` is the whole worst case being nothing — a category free to REQUEST but carrying a charged fallback is not free, and calling it so would put a spend behind a control that promises none. */
+        ProviderCategoryCost: {
+            category: string;
+            /** @description Automatic enrichment buys exactly these; everything else waits for a human to press a button. */
+            free: boolean;
+            /** @description Credits charged per pool, worst case, the fallback included. Empty when free. */
+            cost: {
+                [key: string]: number;
+            };
+        };
         ProviderConnection: {
             provider: components["schemas"]["Provider"];
             status: components["schemas"]["ProviderConnectionStatus"];
             /** @description The only credential fact ever returned; no key prefix/suffix or vault reference. */
             credential_present: boolean;
             configuration: components["schemas"]["ProviderConfiguration"];
+            /** @description Every category this provider sells, with what each costs. Derived from the adapter's own cost table rather than listed anywhere, so a provider that starts charging for something it gave away stops reading as free the moment its descriptor says so. The settings card names the free ones as safe to enable, and a buy button states a price before anybody presses it. */
+            catalog?: components["schemas"]["ProviderCategoryCost"][];
             /** @description Named deployment/provider ceilings that make behavior stricter than the saved policy. */
             effective_constraints?: string[];
             credits: components["schemas"]["ProviderCredits"];
@@ -12549,6 +12561,8 @@ export interface components {
         };
         CreatePersonEnrichmentRunRequest: {
             provider: components["schemas"]["Provider"];
+            /** @description Narrow this ONE run to a subset of what the connection buys — how a reader purchases a single priced detail for one person without changing the setting for every future run. Omit for the connection's own selection. It can only narrow: a category the connection does not carry is refused with 422 rather than trimmed, because buying less than was asked for while answering as though nothing was wrong is a failure the caller cannot see, and an admin's selection is a ceiling a rep must not be able to raise. */
+            categories?: string[];
         };
         ProviderRun: {
             /** Format: uuid */

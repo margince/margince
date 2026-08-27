@@ -381,3 +381,120 @@ describe("a lookup that came back mostly empty", () => {
     expect(screen.queryByText(/asked for/)).toBeNull();
   });
 });
+
+describe("the details that cost credits", () => {
+  const catalog = [
+    { category: "linkedin_profile", free: true, cost: {} },
+    { category: "professional_email", free: false, cost: { email: 1 } },
+    { category: "mobile", free: false, cost: { mobile: 1 } },
+  ];
+
+  function mountWithCatalog(profile: Profile, run: () => Response) {
+    const posted: unknown[] = [];
+    installFetchStub({
+      "GET /me": meRoute({ person: ["read", "update"] }),
+      "GET /provider-connections": () =>
+        jsonResponse({
+          data: [
+            {
+              provider: "surfe",
+              status: "connected",
+              credential_present: true,
+              catalog,
+              configuration: {
+                categories: {
+                  linkedin_profile: true,
+                  professional_email: true,
+                  mobile: true,
+                },
+              },
+              credits: { pools: {} },
+              version: 1,
+              created_at: "2026-08-20T09:00:00Z",
+              updated_at: "2026-08-20T09:00:00Z",
+            },
+          ],
+        }),
+      "POST /people/p-1/enrichment-runs": (body) => {
+        posted.push(body);
+        return run();
+      },
+    });
+    render(
+      <StoryProviders>
+        <PersonProviderSection personId="p-1" profiles={[profile]} />
+      </StoryProviders>,
+    );
+    return posted;
+  }
+
+  it("offers each priced detail with its price on the button", async () => {
+    mountWithCatalog({ ...neverRun(), state: "completed" }, queuedRun);
+
+    // The price is ON the button: the decision is what to spend, and a button
+    // that hid its cost would ask somebody to agree to a number they cannot see.
+    expect(
+      await screen.findByRole("button", { name: /Buy work email · 1 credit/ }),
+    ).toBeDefined();
+    expect(
+      await screen.findByRole("button", {
+        name: /Buy mobile number · 1 credit/,
+      }),
+    ).toBeDefined();
+
+    // No button for a free category: it arrives without anybody pressing
+    // anything, which is the whole point of the split.
+    expect(screen.queryByRole("button", { name: /Buy LinkedIn/ })).toBeNull();
+  });
+
+  it("buys only the detail whose button was pressed", async () => {
+    const user = userEvent.setup();
+    const posted = mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /Buy work email/ }),
+    );
+
+    // One category, named. A press that sent the connection's whole selection
+    // would spend on the mobile too, which nobody asked for.
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({
+      provider: "surfe",
+      categories: ["professional_email"],
+    });
+  });
+
+  it("names the free categories when the plain lookup button is pressed", async () => {
+    const user = userEvent.setup();
+    const posted = mountWithCatalog(
+      { ...neverRun(), state: "completed" },
+      queuedRun,
+    );
+
+    await user.click(
+      await screen.findByRole("button", { name: /Look this contact up/ }),
+    );
+
+    // The FREE set, named. Sending no categories asks for the connection's
+    // whole selection, priced ones included — a button that spends without
+    // saying so, which is what the split exists to prevent.
+    await expect.poll(() => posted.length).toBe(1);
+    expect(posted[0]).toEqual({
+      provider: "surfe",
+      categories: ["linkedin_profile"],
+    });
+  });
+
+  it("does not offer to buy what the section already shows", async () => {
+    mountWithCatalog(providerCompletedProfile, queuedRun);
+
+    // The completed fixture already carries an address and a mobile. Offering
+    // to buy them again would spend credits on what is on screen.
+    await screen.findByText(providerCompletedProfile.emails[0].value);
+    expect(screen.queryByRole("button", { name: /Buy work email/ })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Buy mobile/ })).toBeNull();
+  });
+});

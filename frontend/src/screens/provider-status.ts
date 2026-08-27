@@ -1,8 +1,11 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { useQuery } from "@tanstack/react-query";
+import { api } from "../api/client";
 import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
+import { problemCode, throwProblem } from "./common";
 
 // The licensed-data-provider status vocabulary, in one place because two
 // surfaces render it: the Settings card says whether the connection works,
@@ -156,4 +159,47 @@ export function canEnrichNow(state: ProviderProfileState): boolean {
     state !== "stale" &&
     !isRunning(state)
   );
+}
+
+/** What a provider connection costs, per category, as both surfaces read it:
+ *  the settings card naming the free ones as safe to switch on, and a buy
+ *  button on the person page stating a price before anybody presses it. */
+export type ConnectionsResult = {
+  /** True when this build carries no adapter at all. Not an error: it is the
+   *  supported "no provider" configuration, and the card says so plainly
+   *  rather than showing a broken control (PI-AC-9). */
+  notConfigured: boolean;
+  connections: ProviderConnection[];
+};
+
+/** The connections, shared by the settings card and the person page.
+ *
+ *  HERE rather than in either screen: the person page needs the price catalog
+ *  to label a buy button, and a second copy of this read would be a second
+ *  answer to "what does this provider charge". */
+export function useProviderConnections() {
+  return useQuery({
+    queryKey: ["provider-connections"],
+    queryFn: async (): Promise<ConnectionsResult> => {
+      const { data, error, response } = await api.GET("/provider-connections");
+      // 501 is a deployment fact, not a failure — the same shape connectors.tsx
+      // uses for a connector nobody configured.
+      if (response.status === 501 && problemCode(error) === "not_implemented") {
+        return { notConfigured: true, connections: [] };
+      }
+      if (error || !response.ok) {
+        throwProblem(error);
+      }
+      return { notConfigured: false, connections: data?.data ?? [] };
+    },
+  });
+}
+
+/** What one category costs on this connection, or undefined when the provider
+ *  never declared it. */
+export function categoryCost(
+  connection: ProviderConnection | undefined,
+  category: string,
+): components["schemas"]["ProviderCategoryCost"] | undefined {
+  return connection?.catalog?.find((entry) => entry.category === category);
 }

@@ -95,8 +95,23 @@ func NewStore(db *database.DB, vault keyvault.Vault, reg *Registry, now func() t
 // Connection is one provider's connection as the surfaces read it. It carries
 // no credential material and no vault reference — only whether a key is
 // present at all.
+// CategoryCost is one category's price, as the settings card and a buy button
+// read it.
+type CategoryCost struct {
+	Category string
+	Free     bool
+	Cost     map[string]int
+}
+
 type Connection struct {
-	Provider          string
+	Provider string
+	// Catalog is what this provider sells, with what each entry costs.
+	//
+	// Held by: TestTheCatalogPricesEveryCategoryTheProviderDeclares
+	// (backend/internal/modules/integrations/catalog_test.go) — the entries are
+	// derived from the descriptor's own category list, so a provider that adds
+	// one cannot leave it unpriced on the settings card.
+	Catalog           []CategoryCost
 	Status            string
 	CredentialPresent bool
 	Mode              string
@@ -143,6 +158,10 @@ func (s *Store) List(ctx context.Context) ([]Connection, error) {
 			return err
 		}
 		for _, name := range s.registry.Names() {
+			d, err := s.registry.Descriptor(name)
+			if err != nil {
+				return err
+			}
 			if c, ok := rows[name]; ok {
 				// The card shows what the provider says is LEFT and what this
 				// installation SPENT side by side, so both arrive in one read
@@ -153,21 +172,22 @@ func (s *Store) List(ctx context.Context) ([]Connection, error) {
 					return err
 				}
 				c.Spend = spend
+				c.Catalog = catalogOf(d)
 				out = append(out, c)
 				continue
 			}
 			// Never connected: report the honest zero state rather than
 			// omitting the provider entirely.
-			d, err := s.registry.Descriptor(name)
-			if err != nil {
-				return err
-			}
 			out = append(out, Connection{
-				Provider:   name,
-				Status:     "disconnected",
-				Mode:       string(defaultMode),
-				Preset:     d.DefaultPreset,
-				Categories: categoryStrings(d.ResolvePreset(d.DefaultPreset, nil)),
+				Provider: name,
+				Status:   "disconnected",
+				Mode:     string(defaultMode),
+				Preset:   d.DefaultPreset,
+				// The free categories, not the descriptor's default preset:
+				// what an admin is first offered should be the set that costs
+				// them nothing, and the priced ones an explicit choice.
+				Categories: categoryStrings(d.Free()),
+				Catalog:    catalogOf(d),
 			})
 		}
 		return nil
@@ -260,6 +280,58 @@ func categoryStrings(cats []provider.Category) []string {
 	out := make([]string, 0, len(cats))
 	for _, c := range cats {
 		out = append(out, string(c))
+	}
+	return out
+}
+
+// catalogOf is what each category costs, derived from the descriptor so a
+// price and the fact of being free can never disagree.
+func catalogOf(d provider.Descriptor) []CategoryCost {
+	free := map[provider.Category]bool{}
+	for _, c := range d.Free() {
+		free[c] = true
+	}
+	out := make([]CategoryCost, 0, len(d.Categories))
+	for _, category := range d.Categories {
+		// Priced WITH its trigger where it has one. A cascade bills only when
+		// both its own category and the category it follows were requested,
+		// so pricing the fallback alone reads as free — which is exactly the
+		// understatement a button must not make about what it can spend.
+		cost, err := d.WorstCase(pricedWith(d, category))
+		if err != nil {
+			// An unmetered or subscription provider prices nothing per
+			// category; the whole catalog reads free, which it is.
+			cost = map[provider.Pool]int{}
+		}
+		priced := map[string]int{}
+		for pool, n := range cost {
+			if n > 0 {
+				priced[string(pool)] = n
+			}
+		}
+		out = append(out, CategoryCost{
+			Category: string(category),
+			Free:     free[category],
+			Cost:     priced,
+		})
+	}
+	return out
+}
+
+// pricedWith is the category set whose worst case is the true price of asking
+// for one category: itself, plus the trigger of any cascade it is the fallback
+// for.
+//
+// ONE hop. No adapter declares a cascade whose trigger is itself a fallback,
+// and a chain would need this to walk it — said here rather than built for,
+// because the descriptor that needed it would also be the one to prove what
+// walking should cost.
+func pricedWith(d provider.Descriptor, category provider.Category) []provider.Category {
+	out := []provider.Category{category}
+	for _, cascade := range d.Cascades {
+		if cascade.Category == category {
+			out = append(out, cascade.After)
+		}
 	}
 	return out
 }

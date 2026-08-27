@@ -32,8 +32,14 @@ type resolvedConfig struct {
 
 // resolveConfig turns an optional request body into a policy this provider
 // can honour. An omitted body is not an error: it resolves to
-// automatic-on-create with the descriptor's default preset (PI-AC-1), which
+// automatic-on-create over the categories that cost nothing (PI-AC-1), which
 // is what a customer who just connected a provider expects to happen.
+//
+// The FREE categories rather than the descriptor's default preset. A customer
+// who connects a provider has said they want its data, not that they want to
+// spend on every contact that arrives — and the automatic lane takes only the
+// free set anyway, so defaulting the selection wider would show a settings
+// card promising purchases the platform declines to make.
 func resolveConfig(desc provider.Descriptor, in *ConfigInput) (resolvedConfig, error) {
 	out := resolvedConfig{
 		Mode:            string(defaultMode),
@@ -41,7 +47,15 @@ func resolveConfig(desc provider.Descriptor, in *ConfigInput) (resolvedConfig, e
 		AutomaticCreate: true,
 		AutomaticImport: false,
 	}
-	out.Categories = categoryStrings(desc.ResolvePreset(desc.DefaultPreset, nil))
+	// A provider that gives nothing away falls back to its own default
+	// preset. The column requires at least one category, so an empty
+	// selection would be refused by the database with a constraint error
+	// rather than a sentence anybody can act on — and a connection nobody can
+	// make is worse than one whose first run costs a credit.
+	out.Categories = categoryStrings(desc.Free())
+	if len(out.Categories) == 0 {
+		out.Categories = categoryStrings(desc.ResolvePreset(desc.DefaultPreset, nil))
+	}
 
 	if in == nil {
 		return out, nil

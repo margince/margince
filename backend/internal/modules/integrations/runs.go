@@ -257,14 +257,22 @@ var errTriggerNotAdmitted = errors.New("integrations: this trigger is not admitt
 // refusal apart from a failure, and the alternative is comparing error text:
 // a predicate here means the sentinel can be reworded without silently
 // turning a swallowed configuration state into a logged error.
-func IsTriggerNotAdmitted(err error) bool { return errors.Is(err, errTriggerNotAdmitted) }
+func IsTriggerNotAdmitted(err error) bool {
+	// ErrNothingFreeToBuy is the same kind of answer: the saved policy leaves
+	// an automatic run nothing it may spend on, which is a configuration
+	// working rather than a failure to log.
+	return errors.Is(err, errTriggerNotAdmitted) || errors.Is(err, ErrNothingFreeToBuy)
+}
 
 // queueOne is the admission pipeline for one subject. Each refusal writes a
 // skipped run rather than nothing at all: a customer asking "why was this
 // person not enriched" deserves a row that answers, and a silent no-op cannot.
 func (s *Store) queueOne(ctx context.Context, tx pgx.Tx, desc provider.Descriptor, conn admittedConnection, in provider.QueueInput) (provider.Run, error) {
 	snapshot := freezeSnapshot(conn)
-	cats := categoriesFrom(conn.categories)
+	cats, err := runCategories(desc, conn, in)
+	if err != nil {
+		return provider.Run{}, err
+	}
 
 	// 1. Consent, suppression, objection, erasure. Before anything else,
 	//    because a subject we may not contact must not even be looked up.
@@ -430,6 +438,12 @@ func (s *Store) duplicateAlreadyBought(ctx context.Context, tx pgx.Tx, in provid
 
 // freezeSnapshot captures what this run is allowed to do, so a later settings
 // change cannot widen it (PI-AC-2).
+// The snapshot records the POLICY that admitted this run, not what the run
+// went on to ask for. The two differ now that a run can narrow: an automatic
+// run takes only the free categories and a button buys one, while the policy
+// says what the connection permitted at that moment. requested_categories on
+// the run row is the second question, and a reader reconciling a charge needs
+// both — what was allowed, and what was actually bought.
 func freezeSnapshot(c admittedConnection) provider.Snapshot {
 	return provider.Snapshot{
 		Mode:             c.mode,
@@ -441,10 +455,16 @@ func freezeSnapshot(c admittedConnection) provider.Snapshot {
 	}
 }
 
-// fingerprintOf hashes exactly what will be SENT plus what was asked for. Two
-// runs share a fingerprint when they would produce the same purchase, which is
-// what makes the live-run index a duplicate-spend guard rather than a
-// coincidence.
+// fingerprintOf hashes exactly what will be SENT plus what was asked for, so a
+// repeat of the SAME request finds the run already in flight rather than
+// buying the same answer twice.
+//
+// It does not catch two runs whose category sets overlap without matching:
+// they hash differently, both pass the live-run index, and both buy the
+// category they share. Guarding that needs a per-category claim rather than a
+// whole-set hash, which is a schema change — tracked as its own work, and said
+// here rather than left for the next reader to discover from a duplicate
+// charge.
 func fingerprintOf(id provider.PersonIdentifiers, cats []provider.Category) string {
 	names := make([]string, 0, len(cats))
 	for _, c := range cats {

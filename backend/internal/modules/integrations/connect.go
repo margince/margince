@@ -118,6 +118,10 @@ func (s *Store) Connect(ctx context.Context, in ConnectInput) (Connection, error
 			return err
 		}
 		out = conns[in.Provider]
+		// The price list rides every connection a caller sees, including the
+		// one they just made: the card that appears on connecting is exactly
+		// where somebody learns what the automatic half costs them.
+		out.Catalog = catalogOf(desc)
 		return nil
 	})
 	if err != nil {

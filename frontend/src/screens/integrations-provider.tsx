@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "./integrations-provider.css";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Plug, Trash2 } from "lucide-react";
 import { useState } from "react";
 import { api } from "../api/client";
@@ -27,14 +27,13 @@ import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
 import {
-  problemCode,
-  problemMessageOf,
-  QueryGate,
-  throwProblem,
-  useMe,
-} from "./common";
-import { connectionLabel, connectionTone } from "./provider-status";
+  type ConnectionsResult,
+  connectionLabel,
+  connectionTone,
+  useProviderConnections,
+} from "./provider-status";
 
 // The licensed-data-provider card (ADR-0101, PI-WIRE-1..5): connect a key,
 // decide whether new contacts are enriched automatically, and read what the
@@ -56,32 +55,6 @@ import { connectionLabel, connectionTone } from "./provider-status";
 // contact data, made a misclick the same size as a decision.
 
 type ProviderConnection = components["schemas"]["ProviderConnection"];
-
-type ConnectionsResult = {
-  /** True when this build carries no adapter at all. Not an error: it is the
-   *  supported "no provider" configuration, and the card says so plainly
-   *  rather than showing a broken control (PI-AC-9). */
-  notConfigured: boolean;
-  connections: ProviderConnection[];
-};
-
-function useProviderConnections() {
-  return useQuery({
-    queryKey: ["provider-connections"],
-    queryFn: async (): Promise<ConnectionsResult> => {
-      const { data, error, response } = await api.GET("/provider-connections");
-      // 501 is a deployment fact, not a failure — the same shape connectors.tsx
-      // uses for a connector nobody configured.
-      if (response.status === 501 && problemCode(error) === "not_implemented") {
-        return { notConfigured: true, connections: [] };
-      }
-      if (error || !response.ok) {
-        throwProblem(error);
-      }
-      return { notConfigured: false, connections: data?.data ?? [] };
-    },
-  });
-}
 
 export function ProviderCard() {
   const t = useT();
@@ -395,6 +368,7 @@ function PolicyRow({
   const disconnected = connection.status !== "connected";
   return (
     <>
+      <FreeTierNote catalog={connection.catalog ?? []} />
       <SettingRow
         label={t("provider.autoEnrich")}
         description={t("provider.autoEnrichHint")}
@@ -741,5 +715,31 @@ function CredentialRow({
         </Field>
       </ConfirmModal>
     </>
+  );
+}
+
+/** What automatic enrichment actually buys, said where an admin decides
+ *  whether to switch it on.
+ *
+ *  The two toggles below spend nothing: an automatic run takes only the
+ *  categories this provider gives away, and every priced one waits for a
+ *  human to press a button on one named contact. An admin who does not know
+ *  that reads "enrich automatically" as "spend automatically" and leaves the
+ *  switch off, which costs them the free half of the product.
+ */
+function FreeTierNote({
+  catalog,
+}: Readonly<{ catalog: components["schemas"]["ProviderCategoryCost"][] }>) {
+  const t = useT();
+  const free = catalog.filter((entry) => entry.free);
+  const priced = catalog.filter((entry) => !entry.free);
+  if (free.length === 0) {
+    return null;
+  }
+  return (
+    <Callout tone="info">
+      <p>{t("provider.freeTier.hint")}</p>
+      {priced.length > 0 && <p>{t("provider.pricedTier.hint")}</p>}
+    </Callout>
   );
 }
