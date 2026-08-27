@@ -26084,7 +26084,7 @@ components:
          cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search,
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, summarize, transcript, transcript_propose, voice_build,
-         corpus_ask]
+         corpus_ask, weekly_review]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -29140,6 +29140,22 @@ components:
           description: The Monday of the week under review, in the installation reporting timezone.
         generated_at: { type: string, format: date-time, description: 'When the review was written.' }
         as_of: { type: string, format: date-time, description: 'The instant the week was measured to.' }
+        narrative:
+          type: [string, 'null']
+          description: |
+            One or two sentences over the week's own counts and deal lines. Null when no pass
+            wrote one, and ALSO null when a pass ran and found the week unremarkable —
+            `narrated_at` is what tells those apart, which is why both fields exist.
+
+            It adds nothing: every fact it may state is already in the counts and the lines
+            beside it, which is what makes the whole lane safe to lose.
+        narrated_at:
+          type: [string, 'null']
+          format: date-time
+          description: |
+            When a narrative pass last ran, null when none has. A reader showing a review with
+            no sentence must consult this before saying "a quiet week": without it, a week
+            nobody narrated and a week with nothing to say look identical.
         counts: { $ref: '#/components/schemas/WeeklyReviewCounts' }
         deals:
           type: array

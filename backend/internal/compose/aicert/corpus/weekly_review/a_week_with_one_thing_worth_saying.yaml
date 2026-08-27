@@ -1,0 +1,44 @@
+name: the_sentence_leads_with_what_changed_not_with_a_count
+task: weekly_review
+site: narrative
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  week_start: "2026-06-29"
+  counts:
+    tasks_due: 6
+    tasks_done: 5
+    tasks_carried_over: 2
+    deals_moved: 2
+    deals_won: 1
+    deals_lost: 0
+    proposals_accepted: 8
+    proposals_rejected: 1
+    brief_items_acted: 7
+    brief_items_dismissed: 4
+  deals:
+    - label: "Weber Rahmenvertrag"
+      outcome: won
+    - label: "Stahlbau Krämer"
+      outcome: moved
+      stage: "Angebot"
+expect:
+  outcome: accepted
+  answer:
+    # The won deal is the week's headline: a colleague says that first, not
+    # "you completed five of six tasks".
+    must_mention: ["Weber", "won"]
+    # Nothing the summary does not carry. These are the shapes a model reaches
+    # for when it has run out of facts: a company it was never given, and a
+    # comparison to a week it cannot see.
+    # "lost" is the assertion that matters: a sentence naming Weber and calling
+    # it lost passes a bare name check while contradicting the week it was
+    # given, which is the exact shape of a plausible wrong answer.
+    must_not_mention: ["lost", "Siemens", "last week", "compared to"]
+  bands: { certified_min: 70, degraded_min: 50, floor: 40 }
+  rubric: >
+    One or two sentences. It must lead with the won deal by name, because that
+    is what most changed and what a colleague would say first. It may cite any
+    number the summary carries and must cite no other. It must not advise,
+    congratulate or scold, and must not compare the week to any other week —
+    the summary describes one week and carries nothing to compare it against.

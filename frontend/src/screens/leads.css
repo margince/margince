@@ -2,6 +2,62 @@
   min-width: 0;
 }
 
+/* The queue page's own stack: the segregation notice, the toast region and
+   the surface, with one interval between them. It is a stack rather than a
+   margin on each child so that a child which is not rendered — a dismissed
+   notice, an overlay with no toggle — leaves no gap behind it. */
+.lead-queue {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+/* The lead page's own small layouts. They were twenty-seven inline `style`
+   objects spelling the same three shapes — a column, a row, a bare list — and
+   a screen that spells its own geometry is a second author of the space scale.
+   Stated here, they take the tokens and nothing else. */
+.lead-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.lead-stack-tight {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.lead-line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+/* One factor of the score: its name, its points, and what decayed them.
+   Baseline-aligned rather than centred, so the mono figure sits on the same
+   line as the words beside it however tall the row grows. */
+.lead-factor {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+}
+
+/* A list of sentences, not of bullets: these are reasons a reader scans, and
+   a marker before each would make three of them look like a form. */
+.lead-plainlist {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* The score override's two fields and their verbs. Capped, because a score is
+   three digits and a full-width box for it invites a paragraph. */
+.lead-override {
+  max-width: 20rem;
+}
+
 .lead-email {
   min-width: 0;
   max-width: 100%;
@@ -41,12 +97,26 @@
 }
 
 .lead-ladder-sep {
-  color: var(--color-text-muted, inherit);
+  color: var(--textMeta);
   margin-right: var(--space-1);
 }
 
 .lead-ladder-step.is-filled > button:not(:disabled) {
-  font-weight: 600;
+  font-weight: var(--fw-semibold);
+}
+
+/* The two closures are set apart from the three open steps: they are not the
+   next rung, they are where the ladder ends, and a reader scanning for "what
+   do I do next" should not find them in the same run. */
+.lead-ladder-step.is-terminal {
+  margin-left: var(--space-2);
+}
+
+/* How the lead got to its step. Its own interval under the row, so the
+   sentence reads as an explanation of the ladder rather than as one more
+   thing in it. */
+.lead-ladder-how {
+  margin: var(--space-1) 0 0;
 }
 
 /* The qualify and disqualify dialogs: three blocks, each its own section. */

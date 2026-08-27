@@ -68,7 +68,7 @@ function access(rows: Participant[], mayManage = true) {
 }
 
 const meta: Meta<typeof DealRoomAccess> = {
-  title: "Screens/Deal Room/Access",
+  title: "Records/Deal room/Access",
   component: DealRoomAccess,
   parameters: { layout: "padded" },
 };

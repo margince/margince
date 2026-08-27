@@ -568,6 +568,12 @@ export function ListTable<Row>({
     live.current = next;
     setWidths(next);
   };
+  // Whether a column edge is being dragged right now. The table wears it so
+  // the whole grid stops selecting text and keeps the resize cursor under a
+  // pointer that has travelled off the grip: a drag that highlighted three
+  // rows of names on its way is the reader's answer to "did I grab the right
+  // thing", and the answer was no.
+  const [resizing, setResizing] = useState(false);
   // The rendered page is the table's own by default, and the caller's when it
   // offers one. It becomes the caller's on a screen that puts the page in the
   // ADDRESS — a reader who paged through a list, opened a record and pressed
@@ -1017,7 +1023,9 @@ export function ListTable<Row>({
           <div className="lt-freeze" aria-hidden="true" />
           <table
             ref={head}
-            className={`lt-table${dense ? " dense" : ""}`}
+            className={`lt-table${dense ? " dense" : ""}${
+              resizing ? " is-resizing" : ""
+            }`}
             role="table"
             // Handed over as a custom property rather than as `min-width`
             // itself: an inline width cannot be overridden by a stylesheet, and
@@ -1036,25 +1044,30 @@ export function ListTable<Row>({
             </colgroup>
             <thead role="rowgroup">
               <tr role="row">
-                {shown.map((column) => (
+                {shown.map((column, index) => (
                   <HeaderCell
                     key={column.key}
                     column={column}
                     sort={sort}
                     state={sort ? sortState(column, sort.value) : null}
                     className={cellClass(column)}
+                    resizable={index < shown.length - 1}
                     // Dragging an edge moves that edge. The other columns are
                     // pinned at what they currently measure first, so they stay
                     // where they are and the table itself grows or shrinks —
                     // rather than every column re-dividing the row because one
                     // of them changed.
-                    onResizeStart={() =>
-                      applyWidths({ ...measured(), ...live.current })
-                    }
+                    onResizeStart={() => {
+                      setResizing(true);
+                      applyWidths({ ...measured(), ...live.current });
+                    }}
                     onResize={(key, width) =>
                       applyWidths({ ...live.current, [key]: width })
                     }
-                    onResizeEnd={() => writeWidths(widthsKey, live.current)}
+                    onResizeEnd={() => {
+                      setResizing(false);
+                      writeWidths(widthsKey, live.current);
+                    }}
                   />
                 ))}
                 <td className="lt-slack" aria-hidden="true" />
@@ -1203,6 +1216,7 @@ function HeaderCell<Row>({
   sort,
   state,
   className,
+  resizable,
   onResizeStart,
   onResize,
   onResizeEnd,
@@ -1211,18 +1225,22 @@ function HeaderCell<Row>({
   sort?: SortControl;
   state: "asc" | "desc" | null;
   className?: string;
+  // False on the trailing column, which carries no divider for the grip to
+  // light (`th:nth-last-child(2)` clears it) and no neighbour to take the
+  // width from. A grip there drew a line against nothing.
+  resizable: boolean;
   onResizeStart: () => void;
   onResize: (key: string, width: number) => void;
   onResizeEnd: () => void;
 }>) {
   const t = useT();
-  const grip = (
+  const grip = resizable ? (
     <ResizeGrip
       onStart={onResizeStart}
       onResize={(next) => onResize(column.key, next)}
       onEnd={onResizeEnd}
     />
-  );
+  ) : null;
   if (!column.sort || !sort) {
     return (
       <th className={className} role="columnheader">
@@ -1271,6 +1289,13 @@ function HeaderCell<Row>({
 /**
  * The handle on a column's trailing edge, dragged with a pointer.
  *
+ * It draws nothing at rest. The line a reader sees between two columns is the
+ * cell's own `border-right`, already there for every column; a second line
+ * inset beside it read as a rendering fault rather than as an affordance. The
+ * grip lights THAT edge on hover, and keeps it lit for the length of a drag —
+ * `is-dragging` rather than `:hover`, because a pointer dragged past the
+ * neighbouring column is no longer over the element it is moving.
+ *
  * Deliberately hidden from assistive technology. A labelled control inside a
  * `th` joins that header's accessible name, so every column would announce as
  * "Value, resize the Value column" — the price of a keyboard affordance here is
@@ -1289,12 +1314,13 @@ function ResizeGrip({
 }>) {
   const drag = useRef<{ startX: number; startWidth: number } | null>(null);
   const self = useRef<HTMLSpanElement>(null);
+  const [dragging, setDragging] = useState(false);
   const cellWidth = (target: HTMLElement) =>
     target.closest("th")?.getBoundingClientRect().width ?? MIN_COLUMN_WIDTH;
 
   return (
     <span
-      className="lt-grip"
+      className={`lt-grip${dragging ? " is-dragging" : ""}`}
       ref={self}
       aria-hidden="true"
       // The grip lives inside the header button's cell; without this a drag or
@@ -1309,6 +1335,7 @@ function ResizeGrip({
           startX: event.clientX,
           startWidth: cellWidth(target),
         };
+        setDragging(true);
         onStart();
       }}
       onPointerMove={(event) => {
@@ -1324,10 +1351,23 @@ function ResizeGrip({
         );
       }}
       onPointerUp={(event) => {
-        const dragging = drag.current !== null;
+        const wasDragging = drag.current !== null;
         drag.current = null;
+        setDragging(false);
         event.currentTarget.releasePointerCapture(event.pointerId);
-        if (dragging) {
+        if (wasDragging) {
+          onEnd();
+        }
+      }}
+      // A pointer cancelled mid-drag (a system gesture, a lost capture) never
+      // raises pointerup. Without this the table would stay in its dragging
+      // dress with nothing moving it — the state the user is looking at has to
+      // end wherever the drag did.
+      onPointerCancel={() => {
+        const wasDragging = drag.current !== null;
+        drag.current = null;
+        setDragging(false);
+        if (wasDragging) {
           onEnd();
         }
       }}

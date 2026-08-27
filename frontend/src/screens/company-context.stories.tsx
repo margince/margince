@@ -21,7 +21,7 @@ import {
 // stubbed explicitly or every story below would render nothing.
 
 const meta: Meta = {
-  title: "Screens/Company context",
+  title: "Records/Company 360/Context",
   parameters: { layout: "padded" },
 };
 export default meta;

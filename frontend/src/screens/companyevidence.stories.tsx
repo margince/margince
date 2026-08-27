@@ -12,7 +12,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // below is reachable through the same route the real drawer would call.
 
 const meta: Meta = {
-  title: "Screens/Company evidence",
+  title: "Records/Company 360/Evidence",
   parameters: { layout: "padded" },
 };
 export default meta;

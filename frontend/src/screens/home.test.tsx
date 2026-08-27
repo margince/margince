@@ -996,3 +996,82 @@ describe("HomeScreen — the weekly retrospective", () => {
     await screen.findByText("Fleet retrofit");
   });
 });
+
+describe("HomeScreen — the week's sentence", () => {
+  const narrated = {
+    id: "01a04000-0000-7000-8000-00000000000a",
+    local_week_start: "2026-06-29",
+    generated_at: "2026-07-06T06:00:00Z",
+    as_of: "2026-07-06T06:00:00Z",
+    counts: {
+      tasks_due: 5,
+      tasks_done: 4,
+      tasks_carried_over: 2,
+      deals_moved: 3,
+      deals_won: 1,
+      deals_lost: 1,
+      proposals_accepted: 7,
+      proposals_rejected: 2,
+      brief_items_acted: 6,
+      brief_items_dismissed: 3,
+    },
+    deals: [],
+  };
+
+  it("shows the sentence, marked as agent-authored", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...narrated,
+          narrative: "Weber signed; two promises slipped to this week.",
+          narrated_at: "2026-07-06T06:01:00Z",
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Weber signed; two promises slipped to this week.");
+    // Model-authored prose sitting beside numbers a deterministic pass
+    // computed; nothing else on the panel would tell them apart.
+    expect(
+      screen.getAllByText(en["trust.agentUnnamed"]).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("says no pass ran, rather than showing nothing", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({ ...narrated, narrative: null, narrated_at: null }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // Never a blank week, never a silent one: the counts are still the week's,
+    // and a rep reading silence would conclude there was nothing to remark on.
+    await screen.findByText(en["home.weekly.noNarrative"]);
+  });
+
+  it("stays silent when a pass ran and had nothing to add", async () => {
+    stubApi({
+      "GET /weekly-reviews/latest": () =>
+        jsonResponse({
+          ...narrated,
+          narrative: null,
+          narrated_at: "2026-07-06T06:01:00Z",
+        }),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: ["2026-06-29"] }),
+      "GET /brief": () => jsonResponse(run),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText(en["home.weekly.promised"]);
+    // A pass that honestly found nothing is not a pass that never ran, and
+    // claiming otherwise would tell the rep their week was never looked at.
+    expect(screen.queryByText(en["home.weekly.noNarrative"])).toBeNull();
+  });
+});

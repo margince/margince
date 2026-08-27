@@ -55,8 +55,8 @@ export type BuildSceneProps = Readonly<{
 }>;
 
 // Custom properties travel through `style` so the CSS choreography derives
-// every delay from the ONE duration the caller set — the pattern
-// margince-core-feed.tsx already uses for its mote table.
+// every delay from the ONE duration the caller set: a second delay written in
+// the stylesheet would drift the moment that duration moves.
 type SceneVars = CSSProperties & Record<`--${string}`, string | number>;
 
 // Bar widths only: the ghosts are silhouettes of the app behind the wordmark,

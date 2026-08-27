@@ -150,19 +150,25 @@ install: fe-install tools hooks
 ##     a phase around them would be their sum counted twice. PHASE_TIMER_OWNED
 ##     tells it this target owns the ledger, so it adds its rows to this table
 ##     instead of resetting and printing one of its own — which is what it does
-##     when somebody runs it directly (`make check-go`).
+##     when somebody runs it directly (`make check-go`). This target reads the
+##     same variable for the same reason: under `make check` the frontend half
+##     still has rows to add, and a report here would print without them.
 check-backend:
-	@bash scripts/phase-timer.sh reset
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
 	@bash scripts/phase-timer.sh start "root script gates (x$(words $(ROOT_SCRIPT_GATES)), -j$(GATE_JOBS))"
 	$(MAKE) -j$(GATE_JOBS) $(ROOT_SCRIPT_GATES)
 	@bash scripts/phase-timer.sh stop
 	PHASE_TIMER_OWNED=1 $(MAKE) -C backend check
-	@bash scripts/phase-timer.sh report
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 
-## check — the full merge gate: backend + frontend
-## (`check = check-backend check-fe`). check-fe fails if the frontend deps are
-## missing, so run `make install` first.
-check: check-backend check-fe
+## check — the full merge gate: both halves. Spelled as recipe lines rather than
+## prerequisites because it owns the timing ledger, and a prerequisite would
+## record a phase before the reset. check-fe needs `make install` first.
+check:
+	@bash scripts/phase-timer.sh reset
+	@PHASE_TIMER_OWNED=1 $(MAKE) check-backend
+	@PHASE_TIMER_OWNED=1 $(MAKE) check-fe
+	@bash scripts/phase-timer.sh report
 
 ## check-q — quiet `make check`: the full log lands in .tmp/check.log and only an
 ## excerpt prints on failure (keeps a green run's output to one line).
@@ -254,11 +260,16 @@ build test test-v test-cover test-integration e2e-siteread e2e-ai e2e-ai-report 
 ## run `make install`, which installs them. The CI frontend job runs this too.
 check-fe: fe-typecheck-composed
 	@[ -d frontend/node_modules ] || { echo "check-fe: frontend/node_modules missing — run 'make install' (or 'make fe-install') first" >&2; exit 1; }
+	@bash scripts/phase-timer.sh start "frontend: core suite (ds-gates, drift, lint, unit, build)"
 	$(MAKE) frontend-check
+	@bash scripts/phase-timer.sh stop
 	# The unit screens' own suites. Ordered AFTER frontend-check on purpose: it
 	# is the composed lane, so it costs a composition, and there is no point
 	# paying for it when the core suite is already red.
+	@bash scripts/phase-timer.sh start "frontend: unit screens (composed workspace)"
 	$(MAKE) fe-test-ext
+	@bash scripts/phase-timer.sh stop
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh report
 ## fitness-jurisdiction — no country strings in core (alias for no-jurisdiction).
 fitness-jurisdiction: no-jurisdiction
 ## gen-types — regenerate the contract types (alias for gen).
@@ -567,6 +578,12 @@ fe-typecheck:
 ## "gate that quietly checks nothing" the CI workflow's own comments warn
 ## about. Part of `make check-fe`, so the merge gate covers both lanes.
 fe-typecheck-composed: composition
+	@# The frontend half's ledger is reset HERE rather than in check-fe, because
+	@# this is check-fe's prerequisite: it records its phase before check-fe's
+	@# recipe runs at all, so a reset there deleted the seconds just measured and
+	@# printed a table one row short.
+	@[ -n "$$PHASE_TIMER_OWNED" ] || bash scripts/phase-timer.sh reset
+	@bash scripts/phase-timer.sh start "frontend: composed typecheck"
 	@[ -f build/composition/frontend/extensions.gen.ts ] || { echo "fe-typecheck-composed: build/composition/frontend/extensions.gen.ts is missing after 'make composition' — the composed frontend lane has nothing to typecheck against" >&2; exit 1; }
 	@# The ROOT install first, and the order is load-bearing: the composed
 	@# workspace links react, react-dom, @tanstack/react-query and @types/react
@@ -597,6 +614,7 @@ fe-typecheck-composed: composition
 	# screen's test fixtures are checked by nothing, since vitest transpiles
 	# without typechecking.
 	cd frontend && pnpm exec tsc -p tsconfig.composed-tests.json
+	@bash scripts/phase-timer.sh stop
 
 ## frontend-e2e — the screen-acceptance harness (AC-<screen>-N + axe WCAG AA
 ## + PERF-1's held-read claim) against the built app over the seed mock.

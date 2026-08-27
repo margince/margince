@@ -609,6 +609,7 @@ const (
 	AiActivityKindTranscript                 AiActivityKind = "transcript"
 	AiActivityKindTranscriptPropose          AiActivityKind = "transcript_propose"
 	AiActivityKindVoiceBuild                 AiActivityKind = "voice_build"
+	AiActivityKindWeeklyReview               AiActivityKind = "weekly_review"
 )
 
 // Valid indicates whether the value is a known member of the AiActivityKind enum.
@@ -661,6 +662,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindTranscriptPropose:
 		return true
 	case AiActivityKindVoiceBuild:
+		return true
+	case AiActivityKindWeeklyReview:
 		return true
 	default:
 		return false
@@ -25067,6 +25070,19 @@ type WeeklyReview struct {
 
 	// LocalWeekStart The Monday of the week under review, in the installation reporting timezone.
 	LocalWeekStart openapi_types.Date `json:"local_week_start"`
+
+	// NarratedAt When a narrative pass last ran, null when none has. A reader showing a review with
+	// no sentence must consult this before saying "a quiet week": without it, a week
+	// nobody narrated and a week with nothing to say look identical.
+	NarratedAt *time.Time `json:"narrated_at,omitempty"`
+
+	// Narrative One or two sentences over the week's own counts and deal lines. Null when no pass
+	// wrote one, and ALSO null when a pass ran and found the week unremarkable —
+	// `narrated_at` is what tells those apart, which is why both fields exist.
+	//
+	// It adds nothing: every fact it may state is already in the counts and the lines
+	// beside it, which is what makes the whole lane safe to lose.
+	Narrative *string `json:"narrative,omitempty"`
 }
 
 // WeeklyReviewCounts defines model for WeeklyReviewCounts.

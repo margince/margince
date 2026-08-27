@@ -98,6 +98,13 @@ type ModelPath struct {
 	// routes attention over a whole backlog, this reads one conversation
 	// closely enough to say what was decided in it.
 	SignalExtract completer
+	// WeeklyReview turns a week's own counts and deal lines into the sentence
+	// a colleague would say about them. It ADDS nothing: every fact it may
+	// state is already in the deterministic review beside it, which is exactly
+	// what makes the lane safe to lose — a rep with no lane reads the same
+	// counts and the same lines, and the screen says the sentence is missing
+	// rather than pretending the week was unremarkable.
+	WeeklyReview completer
 	// TranscriptPropose is the S-E04.3 lane that reads a meeting transcript
 	// for the next steps it states. Separate from SignalExtract because the
 	// citable unit differs: that site cites the message an event was stated
@@ -246,6 +253,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		CaptureClassify:            brain(ai.TaskCaptureClassify),
 		CaptureCounterpartyVerdict: brain(ai.TaskCaptureCounterpartyVerdict),
 		SignalExtract:              brain(ai.TaskSignalExtract),
+		WeeklyReview:               brain(ai.TaskWeeklyReview),
 		TranscriptPropose:          brain(ai.TaskTranscriptPropose),
 		DocumentExtract:            brain(ai.TaskDocumentExtract),
 		Enrich:                     brain(ai.TaskEnrich),

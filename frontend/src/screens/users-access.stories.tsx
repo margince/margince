@@ -46,7 +46,7 @@ function story(teams: Record<string, unknown>[]) {
 }
 
 const meta: Meta<typeof TeamsCard> = {
-  title: "Settings/Admin settings/People and access/Teams",
+  title: "Settings/Admin settings/People & access/Teams",
   component: TeamsCard,
 };
 export default meta;

@@ -41,7 +41,7 @@ UAT guides call by name (`docs/target-minimum-setup.md §3`). `check-q`,
 | Target | What it does |
 |---|---|
 | `check` | **The merge gate.** Backend `make check` = build + vet + lint + arch-lint + test + drift. Root `make check` runs that **plus** the craft-doc floor, image pins, contract breaking-change (`oasdiff`), test-lane hygiene, and the file-length ratchet |
-| `check-backend` / `check-fe` | The two halves of the root gate, runnable alone: `check-backend` = backend `check` + the root script gates below (what CI's deterministic-gates job runs; it needs no frontend toolchain — `contract-frontend-drift` skips loudly without pnpm); `check-fe` = `frontend-check` with a loud fail if `frontend/node_modules` is missing |
+| `check-backend` / `check-fe` | The two halves of the root gate, runnable alone: `check-backend` = backend `check` + the root script gates below (what CI's deterministic-gates job runs; it needs no frontend toolchain — `contract-frontend-drift` skips loudly without pnpm); `check-fe` = the composed typecheck, `frontend-check`, and the unit screens' own suites (`fe-test-ext`), with a loud fail if `frontend/node_modules` is missing |
 | `build` | `go build ./...` |
 | `vet` | `go vet ./...` |
 | `test` | Unit tests; the fitness gates in `backend/gates/` (license header, write shape, architecture, enum sync, `audit_log` enum coherence, contract `$ref` resolution) run uncached |
@@ -88,6 +88,44 @@ root script gates (each is a small script; all merge-blocking, and `check-backen
 | `test-money-scale` | Points that gate at a throwaway tree and asserts its verdict on the unmodified repo plus twenty-nine planted cases: divide, multiply and remainder fire in **both** languages and at every power the detector accepts (10, 100, 1000, 10000), including an expression the formatter wrapped across lines and an upper-case identifier; a percentage and a progress-bar width do not; the waiver silences its own line and only that line, a marker inside a string literal waives nothing, a template interpolation is judged as the code it is while the string around it is not, and a grouped literal past any minor unit does not fire; and a `fires` case must see an actual scale finding, so the gate exiting non-zero for an unrelated reason cannot pass for a detection |
 | `test-migration-versions` | Points that gate at throwaway git repositories and asserts its verdict on ten planted cases: each of the four defects it names fires (collision, sorts-below, duplicate-in-tree, undeclared consolidation), and every branch of the baseline-reset declaration is exercised — admitted for a real consolidation, refused for a survivor at the base's version AND name, refused for a one-for-one rename that does not collapse, and refused for a real collision. Each case also asserts a string the gate's own output must contain, so a gate broken such that it exits non-zero for an unrelated reason cannot pass for a detection; setup and mutation failures fail the case rather than leaving a clean tree that passes; and the harness unsets the gate's own switch and git's environment, because CI sets the reset declaration on the same step this target runs on |
 | `pkg-freeze` | Published-surface freeze (EXT-P3): apidiff on every `backend/pkg` package vs the merge target (`origin/$GITHUB_BASE_REF` in CI; locally the extensions integration branch, else `origin/main`). **Advisory before the first v1+ release tag** — incompatible changes print, never block (the surface is design-fluid). **Enforcing from v1.0.0** — incompatible changes and removed packages fail; a ratified change is its exact apidiff finding line in `scripts/pkg-freeze-allowlist.txt`, bound to the merge-base sha it was ratified against (superseded entries license nothing and warn); removals are never allowlistable. Overrides: `PKG_FREEZE_MODE=advisory\|enforce`, `PKG_FREEZE_BASE=<ref>` |
+
+### Where the gate spends its time
+
+Every green `make check` ends with a table of its own phases, so the next person
+to optimize it starts from a reading of their machine rather than from a number
+in a comment. Both halves report: the backend's four phases and the gate
+fan-out, and the frontend's composed typecheck, core suite and unit screens.
+
+The distribution is lopsided, and it is worth knowing which end to pull. On a
+quiet laptop the frontend's five core legs measure ds-gates 12s, drift 3s, lint
+2s, **unit 75s**, build 3s — so `fe-unit` alone is about 79% of those 95s and
+everything else together is 20s. An optimization that does not touch the
+vitest suite is arguing over the remainder.
+
+### What has already been tried, and rejected
+
+Each of these looks obviously right and is not. They are recorded because the
+measurement is the expensive part, and re-deriving a "no" costs the same as
+deriving it the first time.
+
+- **`pool: threads` for vitest.** Reads as a large win under load and is a loss
+  on an idle machine: forks 73s vs threads 99s measured quiet, the sign opposite
+  to the contended reading that suggested it. It also shares one jsdom across a
+  worker's files, which two suites here depend on not happening (#2866). vitest
+  4's `forks` default is correct for this tree.
+- **Fanning `frontend-check`'s five legs out under `-j`.** Four of them begin
+  with `pnpm install --frozen-lockfile` into one `frontend/node_modules`;
+  concurrently they race the `.bin` symlink farm and leave the tree broken
+  (`ENOENT ... chmod`, exit 2). That CI runs these five as parallel *jobs* is not
+  evidence for it: a CI job has its own checkout, so the isolation the local run
+  needs is the one thing CI's green never tested. A working fan-out was worth
+  about 20s.
+- **Running `check-backend` and `check-fe` concurrently.** The backend's last two
+  phases (`drift`, `check-composition`) REWRITE `build/composition/` and
+  `*_gen.go` in place, and both frontend legs read `build/composition/`. This is
+  the write-under-reader race the backend `check` recipe already keeps its own
+  phases serial to avoid — running the halves together reintroduces it across a
+  wider surface.
 
 ## Occasional
 

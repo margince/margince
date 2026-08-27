@@ -68,21 +68,6 @@
 }
 
 /* ---------------------------------------------------------------------------
-   The tab strip (§5.4): seven tabs, URL-addressable, scrolling horizontally
-   on a narrow screen rather than wrapping — wrapped tabs read as two rows of
-   navigation, which is a different thing from one row that continues.
-   --------------------------------------------------------------------------- */
-.pe-tabs {
-  margin-bottom: var(--space-5);
-  overflow-x: auto;
-  scrollbar-width: none;
-}
-
-.pe-tabs::-webkit-scrollbar {
-  display: none;
-}
-
-/* ---------------------------------------------------------------------------
    Today with {first name} (§5.5): the panel the page opens on — the lead.
 
    It leads the stack rather than sharing a row: the moment is the page's
@@ -185,22 +170,6 @@
   .pe-today-actions {
     flex-direction: row;
   }
-}
-
-/* ---------------------------------------------------------------------------
-   The overview's own column: ONE vertical stack of same-shaped panels, the
-   company record's shape.
-
-   Not a two-column grid of half-width cards. Every panel here is read top to
-   bottom once rather than compared with the one beside it, and the brief is
-   prose — in a half-width column it gets a measure too narrow to read as
-   prose, which is the one thing that card has to do.
-   --------------------------------------------------------------------------- */
-.pe-overview-stack {
-  display: flex;
-  flex-direction: column;
-  gap: var(--space-4);
-  min-width: 0;
 }
 
 /* ---------------------------------------------------------------------------

@@ -16,7 +16,7 @@ import { StoryProviders } from "./story-utils";
 // yet. The middle one matters most, because "nothing matched" and "something
 // failed" look identical in a table that only knows how to be empty.
 const meta: Meta<typeof FilterResults> = {
-  title: "Screens/Filter results",
+  title: "Patterns/Filter results",
   component: FilterResults,
   parameters: { layout: "padded" },
   decorators: [

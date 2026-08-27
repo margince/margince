@@ -56,7 +56,7 @@ test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, th
 }) => {
   await page.goto("/#/leads/l-1");
   await page
-    .getByRole("button", { name: "Qualifizieren…", exact: true })
+    .getByRole("button", { name: "Qualifizieren", exact: true })
     .click();
   await expect(
     page.getByText("Die Übernahme legt einen neuen Kontakt an."),
@@ -64,7 +64,10 @@ test("AC-leaddetail-qualify: the dialog says what qualifying will do and why, th
   // The reason is derived, not asked for: the seeded lead has no captured
   // engagement, so it is the rep's own call.
   await expect(page.getByText("Grund: von dir qualifiziert.")).toBeVisible();
-  await page.getByTestId("lead-qualify-confirm").click();
+  await page
+    .getByRole("dialog")
+    .getByRole("button", { name: /^Qualifizieren/ })
+    .click();
   await expect(page).toHaveURL(/#\/leads\/l-1$/);
   await expect(page.getByText(/ist jetzt ein Kontakt:/)).toBeVisible();
 });

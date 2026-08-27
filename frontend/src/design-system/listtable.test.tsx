@@ -393,6 +393,59 @@ describe("column widths", () => {
     expect(widthOf(container, 0)).toBe("200px");
     expect(widthOf(container, 1)).toBe("110px");
   });
+
+  // The trailing column's divider is cleared by the stylesheet — there is no
+  // edge there to grab, and a grip drawn against nothing is the fault this
+  // pins. Every column BEFORE it keeps one.
+  it("puts a grip on every column edge except the trailing one", () => {
+    const { container } = render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    const headers = container.querySelectorAll(".lt-table thead th");
+    expect(headers).toHaveLength(columns.length);
+    for (const [index, header] of headers.entries()) {
+      expect(Boolean(header.querySelector(".lt-grip"))).toBe(
+        index < columns.length - 1,
+      );
+    }
+  });
+
+  // A drag that highlighted the rows it passed over answered "did I grab the
+  // right thing" with "no". The whole grid wears the gesture until it ends,
+  // and a cancelled pointer ends it as surely as a released one — otherwise
+  // the table stays dressed for a drag nothing is driving.
+  it("dresses the grid for the drag and undresses it when the drag ends", () => {
+    const { container } = render(
+      <ListTable
+        rows={testRows(1)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    const table = container.querySelector(".lt-table");
+    const grip = container.querySelector(".lt-grip");
+    if (!(table instanceof HTMLElement) || !(grip instanceof HTMLElement)) {
+      throw new Error("no resizable header rendered");
+    }
+    // jsdom has no pointer capture, so the grip's own calls need a stand-in.
+    grip.setPointerCapture = () => undefined;
+    grip.releasePointerCapture = () => undefined;
+
+    expect(table.className).not.toContain("is-resizing");
+    fireEvent.pointerDown(grip, { clientX: 100, pointerId: 1 });
+    expect(table.className).toContain("is-resizing");
+    expect(grip.className).toContain("is-dragging");
+
+    fireEvent.pointerCancel(grip, { pointerId: 1 });
+    expect(table.className).not.toContain("is-resizing");
+    expect(grip.className).not.toContain("is-dragging");
+  });
 });
 
 describe("the frozen column's edge", () => {

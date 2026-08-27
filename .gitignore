@@ -179,3 +179,8 @@ workspace/
 /backend/tools/contract-overlay/contract-overlay
 /backend/tools/contract-overlay/contract-overlay.exe
 /seed-demo
+
+# e2e-llm run artifacts. The lane writes a transcript per run (hundreds of KB
+# each) plus a small verdict file. They are evidence for the run that produced
+# them, not repository content — read them locally, do not carry them in git.
+e2e/llm/records/

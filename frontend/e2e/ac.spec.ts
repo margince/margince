@@ -77,6 +77,11 @@ const CORE_SCREENS = [
   "contacts",
   "companies",
   "deals",
+  // The lead queue. It was in neither sweep while it grew a bulk-selection
+  // bar, a board and a toolbar of its own — and it is the one record list
+  // whose primary surface a reader can swap under the same address, so the
+  // 390px pass has two layouts to find a horizontal scroll in rather than one.
+  "leads",
   "today",
   "reports",
   "settings",
@@ -1112,9 +1117,7 @@ test.describe("§3.8: 390px mobile", () => {
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
 
-    await page
-      .getByRole("button", { name: "Expand the agent panel" })
-      .click();
+    await page.getByRole("button", { name: "Expand the agent panel" }).click();
     const panel = page.locator(".arpanel");
     await expect(panel).toBeVisible();
     await settleAnimations(page);
@@ -1167,9 +1170,7 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe), the agent's panel at 390px in dark"
     await page.goto("/#/home");
     await page.waitForLoadState("networkidle");
     await expectShellRendered(page);
-    await page
-      .getByRole("button", { name: "Expand the agent panel" })
-      .click();
+    await page.getByRole("button", { name: "Expand the agent panel" }).click();
     await expect(page.locator(".arpanel")).toBeVisible();
     await settleAnimations(page);
     await expectNoAaViolations(page, "home — the agent's panel (390px, dark)");
@@ -1393,6 +1394,23 @@ test.describe("B-EP09.21: WCAG 2.2 AA (axe)", () => {
     await settleAnimations(page);
     await expectShellRendered(page);
     await expectNoAaViolations(page, "companies/o-brandt");
+  });
+
+  // The lead record (#/leads/<id>), for the same reason and on the same terms
+  // as the company one above: an id-bearing route CORE_SCREENS does not name.
+  // Unlike that one the harness answers this read properly, so the sweep
+  // reaches the loaded page — the readings strip, the ladder with its refused
+  // steps, the rail's folded score section and the details grid's hover-to-edit
+  // rows, which is where this page keeps its interactive controls.
+  test("no AA violations on #/leads/<id>", async ({ page }) => {
+    await page.goto("/#/leads/l-1");
+    await page.waitForLoadState("networkidle");
+    // The sweep is only meaningful once the record chrome is on screen: axe
+    // finds nothing to complain about in an empty shell.
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await settleAnimations(page);
+    await expectShellRendered(page);
+    await expectNoAaViolations(page, "leads/l-1");
   });
 });
 

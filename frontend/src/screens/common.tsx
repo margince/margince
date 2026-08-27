@@ -814,13 +814,6 @@ const SITE_READ_KIND_LABELS: Record<
   other: "deepread.kindOther",
 };
 
-export function siteReadKindLabel(
-  kind: components["schemas"]["SiteReadPage"]["kind"],
-  t: (key: MessageKey) => string,
-): string {
-  return t(SITE_READ_KIND_LABELS[kind]);
-}
-
 /**
  * The same vocabulary for a caller that already has a label of its own and only
  * wants a better one. An absent kind and "other" both answer undefined: they say

@@ -304,7 +304,7 @@ export const vi = {
   "record.edit": "Sửa",
   "record.save": "Lưu",
   "record.archive": "Lưu trữ",
-  "record.disqualify": "Loại…",
+  "record.disqualify": "Loại",
   "record.archiveConfirm":
     "Bạn chắc chứ? Thao tác này lưu trữ bản ghi — không có nút hoàn tác.",
   "record.archived": "Đã lưu trữ",
@@ -1690,7 +1690,7 @@ export const vi = {
     "Khách hàng tiềm năng được chờ bao lâu cho phản hồi đầu tiên sau khi được phân (hoặc tạo). Từ 15 phút đến 7 ngày.",
   "lead.boardCount": "{count} lead",
   "lead.duplicateFound": "Đã có lead với email hoặc hồ sơ LinkedIn này.",
-  "lead.promote": "Đủ điều kiện…",
+  "lead.promote": "Đủ điều kiện",
   "lead.promoteIneligible": "cần địa chỉ email và trạng thái đang mở",
   "lead.filterStatus": "Trạng thái",
   "lead.filterStatusAll": "Tất cả trạng thái",
@@ -1700,7 +1700,13 @@ export const vi = {
   "lead.bulkOwner": "Người phụ trách mới",
   "lead.bulkOwnerPick": "Chọn người phụ trách",
   "lead.bulkAssign": "Gán",
-  "lead.bulkDisqualify": "Loại",
+  "lead.bulkDisqualify": "Lo\u1ea1i",
+  "lead.bulkDisqualifyTitle_one":
+    "Lo\u1ea1i kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y?",
+  "lead.bulkDisqualifyTitle_other":
+    "Lo\u1ea1i {count} kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng?",
+  "lead.bulkDisqualifyBody":
+    "\u0110\u00f3ng v\u1edbi l\u00fd do \u201c{reason}\u201d. M\u1ed7i kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng v\u1eabn gi\u1eef h\u1ed3 s\u01a1 ri\u00eang, v\u00e0 kh\u00f4ng c\u00f3 m\u1ed9t b\u01b0\u1edbc n\u00e0o ho\u00e0n t\u00e1c t\u1ea5t c\u1ea3.",
   "lead.bulkFailed": "{count} không áp dụng được —",
   "lead.bulkFailedRow": "không lưu được",
   "lead.bulkSelectRow": "Chọn {name}",
@@ -1717,7 +1723,11 @@ export const vi = {
   "lead.filterScoreHot": "Từ 80",
   "lead.filterScoreWarm": "Từ 60",
   "lead.filterScoreCool": "Từ 40",
-  "lead.details": "Chi tiết",
+  "lead.details": "Chi ti\u1ebft",
+  "lead.ladder.title":
+    "Kh\u00e1ch h\u00e0ng ti\u1ec1m n\u0103ng n\u00e0y \u0111ang \u1edf \u0111\u00e2u",
+  "lead.railTitle":
+    "Ng\u01b0\u1eddi ph\u1ee5 tr\u00e1ch v\u00e0 \u0111i\u1ec3m",
   "lead.detailsUnset": "Chưa đặt",
   "lead.terminalReadOnly":
     "Khách hàng tiềm năng này đã đóng và không nhận thay đổi.",
@@ -1742,6 +1752,7 @@ export const vi = {
   "lead.demoteExplain":
     "Lead quay lại hàng đợi ở trạng thái “Đang xử lý”. Liên hệ do việc chuyển tạo ra sẽ được lưu trữ; liên hệ đã được gộp vào giữ nguyên. Không thể hoàn tác với liên hệ đang gắn với một deal.",
   "lead.demoteReason": "Lý do (được ghi vào nhật ký)",
+  "lead.demoteReasonRequired": "H\u00e3y n\u00eau l\u00fd do tr\u01b0\u1edbc.",
   "lead.demoteConfirm": "Hoàn tác",
   "lead.promotedOutcomePending": "Đang đọc kết quả của lần chuyển này…",
   "lead.promotedOutcomeUnavailable":
@@ -1794,7 +1805,7 @@ export const vi = {
   "lead.signalUnset": "Chưa nhập",
   "lead.signalClear": "Rút lại",
   "lead.signalBandPick": "Chọn giá trị",
-  "lead.signalMore": "Thêm…",
+  "lead.signalMore": "Thêm",
   "lead.signalProvenanceHint":
     "Nếu không thay đổi, câu trả lời được lưu là ước tính và không nêu độ tin cậy.",
   "lead.signalEvidenceQuality": "Thông tin này đáng tin đến mức nào?",
@@ -2122,6 +2133,8 @@ export const vi = {
   "home.weekly.dealsMoved": "Đã chuyển",
   "home.weekly.decided": "Bạn đã quyết",
   "home.weekly.acceptedRejected": "{accepted} đồng ý · {rejected} từ chối",
+  "home.weekly.noNarrative":
+    "Không có tóm tắt tuần này — Margince chưa chạy lượt nào. Các số liệu bên dưới vẫn là của tuần đó.",
   "home.weekly.queueWorked": "Danh sách buổi sáng",
   "home.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
   "home.weekly.carriedOver": "Chuyển tiếp",
@@ -2745,6 +2758,15 @@ export const vi = {
   // Tác nhân theo lịch đang làm gì cho người đọc này. "Tóm tắt buổi sáng" là
   // đúng cách gọi ở trang chủ; một lượt chạy dừng giữa đường không bao giờ
   // được nghe như đã hoàn tất.
+  "agent.activity.weeklyReview.queued": "Tuần của bạn đang chờ được tóm tắt.",
+  "agent.activity.weeklyReview.running": "Đang tóm tắt tuần của bạn…",
+  "agent.activity.weeklyReview.stalled":
+    "Việc tóm tắt tuần của bạn lâu hơn dự kiến.",
+  "agent.activity.weeklyReview.done": "Tuần của bạn đã có tóm tắt.",
+  "agent.activity.weeklyReview.degraded":
+    "Tuần của bạn đã được đo, không có tóm tắt — các số liệu vẫn đầy đủ.",
+  "agent.activity.weeklyReview.failed":
+    "Lần này không có tóm tắt tuần của bạn. Các số liệu vẫn là của tuần đó.",
   "agent.activity.morningBrief.queued":
     "Bản tóm tắt buổi sáng của bạn đã xếp hàng.",
   "agent.activity.morningBrief.running":

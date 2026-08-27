@@ -300,7 +300,7 @@ export const de = {
   "record.edit": "Bearbeiten",
   "record.save": "Speichern",
   "record.archive": "Archivieren",
-  "record.disqualify": "Disqualifizieren…",
+  "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
     "Bist du sicher? Das archiviert den Datensatz — es gibt keine Rückgängig-Funktion.",
   "record.archived": "Archiviert",
@@ -1697,7 +1697,7 @@ export const de = {
   "lead.boardCount": "{count} Leads",
   "lead.duplicateFound":
     "Ein Lead mit dieser E-Mail oder diesem LinkedIn-Profil existiert bereits.",
-  "lead.promote": "Qualifizieren…",
+  "lead.promote": "Qualifizieren",
   "lead.promoteIneligible":
     "braucht eine E-Mail-Adresse und einen offenen Status",
   "lead.filterStatus": "Status",
@@ -1709,6 +1709,10 @@ export const de = {
   "lead.bulkOwnerPick": "Verantwortlichen wählen",
   "lead.bulkAssign": "Zuweisen",
   "lead.bulkDisqualify": "Disqualifizieren",
+  "lead.bulkDisqualifyTitle_one": "Diesen Lead disqualifizieren?",
+  "lead.bulkDisqualifyTitle_other": "{count} Leads disqualifizieren?",
+  "lead.bulkDisqualifyBody":
+    "Geschlossen mit dem Grund \u201e{reason}\u201c. Jeder Lead beh\u00e4lt seinen eigenen Datensatz, und es gibt keinen einzelnen Schritt zur\u00fcck.",
   "lead.bulkFailed": "{count} nicht übernommen –",
   "lead.bulkFailedRow": "konnte nicht gespeichert werden",
   "lead.bulkSelectRow": "{name} auswählen",
@@ -1726,6 +1730,8 @@ export const de = {
   "lead.filterScoreWarm": "Ab 60",
   "lead.filterScoreCool": "Ab 40",
   "lead.details": "Details",
+  "lead.ladder.title": "Wo dieser Lead steht",
+  "lead.railTitle": "Zust\u00e4ndigkeit und Score",
   "lead.detailsUnset": "Nicht gesetzt",
   "lead.terminalReadOnly":
     "Dieser Lead ist abgeschlossen und nimmt keine Änderungen an.",
@@ -1750,6 +1756,7 @@ export const de = {
   "lead.demoteExplain":
     "Der Lead kehrt als „In Bearbeitung“ in die Liste zurück. Ein Kontakt, den die Übernahme angelegt hat, wird archiviert; ein Kontakt, mit dem zusammengeführt wurde, bleibt unverändert. Bei einem Kontakt an einem laufenden Deal ist die Rücknahme nicht möglich.",
   "lead.demoteReason": "Grund (wird im Protokoll festgehalten)",
+  "lead.demoteReasonRequired": "Bitte zuerst begr\u00fcnden.",
   "lead.demoteConfirm": "Rückgängig machen",
   "lead.promotedOutcomePending":
     "Wird gelesen, was diese Übernahme bewirkt hat …",
@@ -1803,7 +1810,7 @@ export const de = {
   "lead.signalUnset": "Nicht erfasst",
   "lead.signalClear": "Zurückziehen",
   "lead.signalBandPick": "Wert wählen",
-  "lead.signalMore": "Mehr …",
+  "lead.signalMore": "Mehr",
   "lead.signalProvenanceHint":
     "Unverändert wird eine Antwort als Schätzung ohne Konfidenzangabe festgehalten.",
   "lead.signalEvidenceQuality": "Wie verlässlich ist das?",
@@ -2140,6 +2147,8 @@ export const de = {
   "home.weekly.dealsMoved": "Bewegt",
   "home.weekly.decided": "Von dir entschieden",
   "home.weekly.acceptedRejected": "{accepted} ja · {rejected} nein",
+  "home.weekly.noNarrative":
+    "Keine Zusammenfassung dieser Woche — Margince hat keinen Durchgang gemacht. Die Zahlen unten sind trotzdem die der Woche.",
   "home.weekly.queueWorked": "Morgen-Liste",
   "home.weekly.actedDismissed": "{acted} bearbeitet · {dismissed} weggeklickt",
   "home.weekly.carriedOver": "Übernommen",
@@ -2771,6 +2780,16 @@ export const de = {
   // Was der geplante Agent gerade für diese Leserin tut. "Morgenbriefing" ist
   // dasselbe Wort wie auf der Startseite; ein abgebrochener Lauf darf nie
   // klingen, als wäre er fertig.
+  "agent.activity.weeklyReview.queued":
+    "Deine Woche wartet auf eine Zusammenfassung.",
+  "agent.activity.weeklyReview.running": "Deine Woche wird zusammengefasst…",
+  "agent.activity.weeklyReview.stalled":
+    "Die Zusammenfassung deiner Woche dauert länger als erwartet.",
+  "agent.activity.weeklyReview.done": "Deine Woche hat eine Zusammenfassung.",
+  "agent.activity.weeklyReview.degraded":
+    "Deine Woche ist ausgewertet, ohne Zusammenfassung — die Zahlen sind vollständig.",
+  "agent.activity.weeklyReview.failed":
+    "Diesmal keine Zusammenfassung deiner Woche. Die Zahlen sind trotzdem die der Woche.",
   "agent.activity.morningBrief.queued": "Dein Morgenbriefing ist eingereiht.",
   "agent.activity.morningBrief.running":
     "Ich stelle dein Morgenbriefing zusammen.",

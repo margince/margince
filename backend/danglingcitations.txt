@@ -267,7 +267,6 @@ frontend/src/screens/companyraildetails.tsx core 0203
 frontend/src/screens/embedreindex.stories.tsx migration 0115
 frontend/src/screens/embedreindex.test.tsx migration 0115
 frontend/src/screens/embedreindex.tsx migration 0115
-frontend/src/screens/leads.tsx migration 0038
 frontend/src/screens/persondrawers.tsx migration 0188
 frontend/src/screens/relationships.test.tsx migration 0007
 frontend/src/screens/relationships.tsx migration 0007

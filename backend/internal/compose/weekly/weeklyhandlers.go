@@ -62,6 +62,19 @@ func (h Handlers) GetLatestWeeklyReview(
 	httperr.WriteJSON(w, http.StatusOK, reviewToWire(review))
 }
 
+// nullableText serves empty prose as JSON null rather than "".
+//
+// The distinction is the contract's: null means no pass wrote one, and the
+// screen tells that apart from "a pass ran and had nothing to say" through
+// narrated_at. An empty string would be a third spelling of the same absence
+// that neither field documents.
+func nullableText(text string) *string {
+	if text == "" {
+		return nil
+	}
+	return &text
+}
+
 func reviewToWire(review Review) crmcontracts.WeeklyReview {
 	deals := make([]crmcontracts.WeeklyReviewDeal, 0, len(review.Deals))
 	for _, line := range review.Deals {
@@ -73,6 +86,8 @@ func reviewToWire(review Review) crmcontracts.WeeklyReview {
 		LocalWeekStart: openapi_types.Date{Time: review.LocalWeekStart},
 		GeneratedAt:    review.GeneratedAt,
 		AsOf:           review.AsOf,
+		Narrative:      nullableText(review.Narrative),
+		NarratedAt:     review.NarratedAt,
 		Counts: crmcontracts.WeeklyReviewCounts{
 			TasksDue: c.TasksDue, TasksDone: c.TasksDone,
 			TasksCarriedOver: c.TasksCarriedOver,

@@ -50,6 +50,8 @@ const (
 	TaskTranscriptPropose Task = "transcript_propose"
 	// TaskVoiceBuild is owner-requested or automatic durable Voice DNA candidate build; own-authored corpus only, CompanyContext none (ADR-0066). Three sites: the derive pass plus the two evaluation passes.
 	TaskVoiceBuild Task = "voice_build"
+	// TaskWeeklyReview is weekly_review/narrative — one or two sentences over a week's own counts and deal lines, for the rep reading them on Monday. It adds nothing: every fact it may state is already in the deterministic review beside it, which is what makes the whole thing safe to lose. A rep with no lane, an exhausted budget or a provider outage reads the same counts and the same lines, and the screen says which.
+	TaskWeeklyReview Task = "weekly_review"
 )
 
 // ExecutionMode distinguishes request-bound work from work carried by a
@@ -77,7 +79,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "0e9b2a4afcf1fde8b99acd7d31c6745185a2c45582f7a29ab2e1d684306698b0"
+const TaskContractHash = "30bbf30093d57ed4d15f5bb5a002889e0e49bac09ed3bc6dcd346854b1d7a42f"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -107,6 +109,7 @@ func AllTasks() []Task {
 		TaskTranscript,
 		TaskTranscriptPropose,
 		TaskVoiceBuild,
+		TaskWeeklyReview,
 	}
 }
 
@@ -136,6 +139,7 @@ var taskLadders = map[Task][]Tier{
 	TaskTranscript:                 {TierCheapCloud, TierPremium},
 	TaskTranscriptPropose:          {TierCheapCloud, TierPremium},
 	TaskVoiceBuild:                 {TierCheapCloud, TierPremium},
+	TaskWeeklyReview:               {TierCheapCloud, TierPremium},
 }
 
 // degradeTo is the one-tier-down move economy mode applies at 80–100%
@@ -174,6 +178,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskTranscript:                 ExecutionModeInteractive,
 	TaskTranscriptPropose:          ExecutionModeBackground,
 	TaskVoiceBuild:                 ExecutionModeBackground,
+	TaskWeeklyReview:               ExecutionModeBackground,
 }
 
 // knownTiers is the routing config's tier-name validation set: the
@@ -219,6 +224,7 @@ var taskStatus = map[Task]string{
 	TaskTranscript:                 "planned",
 	TaskTranscriptPropose:          "shipped",
 	TaskVoiceBuild:                 "shipped",
+	TaskWeeklyReview:               "shipped",
 }
 
 // Status returns the declared status, or "" for a task this table does
@@ -314,6 +320,9 @@ var taskSites = map[Task][]Site{
 		{Name: "eval_draft", Kind: "one_shot"},
 		{Name: "eval_scores", Kind: "one_shot"},
 	},
+	TaskWeeklyReview: {
+		{Name: "narrative", Kind: "one_shot"},
+	},
 }
 
 // SitesFor returns the task's declared sites in contract order. A
@@ -389,6 +398,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskTranscript:                 {TokenBudget: 0, Conditional: false},
 	TaskTranscriptPropose:          {TokenBudget: 0, Conditional: false},
 	TaskVoiceBuild:                 {TokenBudget: 0, Conditional: false},
+	TaskWeeklyReview:               {TokenBudget: 0, Conditional: false},
 }
 
 // CompanyContextFor returns the task's declared policy. The bool reports

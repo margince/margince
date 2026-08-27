@@ -227,6 +227,12 @@ describe("the kinds the rail asks for", () => {
       "offer_draft",
       "overnight_at_risk_sweep",
       "summarize",
+      // The weekly retrospective's sentence. It reaches one person's feed —
+      // the pass runs under that rep's own principal over their own week, so
+      // ResolveActor scopes the occurrence to them rather than to the
+      // workspace. And it fits: one occurrence per rep per week is the rarest
+      // thing on this rail, nowhere near `recent`'s cap of ten.
+      "weekly_review",
     ]);
   });
 });

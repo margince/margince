@@ -13,7 +13,7 @@ import { installFetchStub, jsonResponse } from "./story-utils";
 // mailbox on a running stack.
 
 const meta: Meta<typeof DealFiles> = {
-  title: "Screens/Deal files",
+  title: "Records/Deal/Files",
   component: DealFiles,
   parameters: { layout: "padded" },
 };

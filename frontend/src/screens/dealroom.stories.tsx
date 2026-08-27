@@ -15,7 +15,7 @@ import {
 // arranging a room, a buyer and a close on a running stack.
 
 const meta: Meta<typeof DealRoomAside> = {
-  title: "Screens/Deal Room aside",
+  title: "Records/Deal room/Aside",
   component: DealRoomAside,
   parameters: { layout: "padded" },
 };

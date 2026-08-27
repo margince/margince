@@ -70,6 +70,10 @@ trap cleanup EXIT
 # database between their own runs — they are the only ones whose second run
 # would see the first one's records.
 echo "==> booting the $SLUG stack (never :8080)"
+# A previous run that was interrupted leaves its api holding :18081, and
+# dev-fresh refuses rather than attaching to the wrong stack. Stopping this
+# slug first is safe whether or not anything is up, and it never touches :8080.
+(cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
 (cd "$ROOT" && make dev-fresh DEV_SLUG="$SLUG" >/dev/null)
 
 # shellcheck source=scripts/lib-devstate.sh
@@ -88,20 +92,51 @@ seed_everything
 # what makes this lane runnable without a tunnel: the assistant is a local
 # process talking to a local stack.
 COOKIES="$WORK/cookies"
-curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
-  -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
-  "$APP_BASE/v1/auth/login" >/dev/null
-
-PASSPORT="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
-  -d '{"label":"e2e-llm","scopes":["read","write"]}' \
-  "$APP_BASE/v1/passports" | python3 -c 'import json,sys; print(json.load(sys.stdin)["token"])')"
-[ -n "$PASSPORT" ] || { echo "could not mint a passport" >&2; exit 1; }
-
 MCP_CONFIG="$WORK/mcp.json"
-cat > "$MCP_CONFIG" <<JSON
-{"mcpServers":{"margince":{"type":"http","url":"$APP_BASE/mcp",
- "headers":{"Authorization":"Bearer $PASSPORT"}}}}
-JSON
+
+# mint_passport signs in and writes the MCP config.
+#
+# It is a FUNCTION and not a one-time step because dev-fresh drops and
+# recreates the database, which destroys the passport row with everything
+# else. Minting once at startup left every run after the first re-seed
+# presenting a token that no longer existed: the CLI reported
+# {"name":"margince","status":"failed"}, the assistant saw no tools at all,
+# and the checker read that as "the answer was not drawn from Margince" —
+# six scenarios failing for one expired credential.
+#
+# It also runs AFTER seeding, because the seed lifts the admin's first-login
+# hold, and a passport cannot be minted by an account that is still held.
+mint_passport() {
+  curl -sS -c "$COOKIES" -X POST -H 'Content-Type: application/json' \
+    -d '{"email":"admin@demo.test","password":"demo-password-123"}' \
+    "$APP_BASE/v1/auth/login" >/dev/null
+
+  PASSPORT="$(curl -sS -b "$COOKIES" -X POST -H 'Content-Type: application/json' \
+    -d '{"label":"e2e-llm","scopes":["read","write"]}' \
+    "$APP_BASE/v1/passports" | python3 -c 'import json,sys
+try: print(json.load(sys.stdin).get("token",""))
+except Exception: print("")')"
+  [ -n "$PASSPORT" ] || { echo "could not mint a passport" >&2; exit 1; }
+
+  python3 -c 'import json,sys
+cfg = {"mcpServers": {"margince": {"type": "http", "url": sys.argv[1] + "/mcp",
+       "headers": {"Authorization": "Bearer " + sys.argv[2]}}}}
+open(sys.argv[3], "w").write(json.dumps(cfg))' "$APP_BASE" "$PASSPORT" "$MCP_CONFIG"
+
+  # A config the CLI cannot connect with produces an assistant with no tools,
+  # which reads downstream as a model that chose not to call anything. Fail
+  # here instead, where the cause is still visible.
+  local probe
+  probe="$(curl -sS -o /dev/null -w '%{http_code}' -X POST "$APP_BASE/mcp" \
+    -H "Authorization: Bearer $PASSPORT" -H 'Content-Type: application/json' \
+    -H 'Accept: application/json, text/event-stream' \
+    -d '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"e2e-llm","version":"1"}}}')"
+  [ "$probe" = "200" ] || {
+    echo "the freshly minted passport cannot reach $APP_BASE/mcp (HTTP $probe)" >&2
+    exit 1
+  }
+}
+mint_passport
 
 # --- run one scenario once ---------------------------------------------------
 #
@@ -162,8 +197,15 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     case "$name" in
       case1_*|case2_*|case3_*)
         if [ "$i" -gt 1 ]; then
+          # dev-stop FIRST. dev-fresh refuses to boot over a port its own
+          # stack is already holding — "port :18081 already in use" — so
+          # calling it on the running stack killed the lane after case 1
+          # run 1 on the first real outing of this script.
+          (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
           (cd "$ROOT" && make dev-fresh DEV_SLUG="$SLUG" >/dev/null)
           seed_everything
+          # The rebuild took the passport row with the old database.
+          mint_passport
         fi
         ;;
     esac

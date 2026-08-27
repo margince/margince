@@ -18993,7 +18993,7 @@ export interface components {
          *     edits one.
          * @enum {string}
          */
-        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "brief_ranking" | "capture_classify" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask";
+        AiActivityKind: "morning_brief" | "overnight_at_risk_sweep" | "document_extract" | "brief_ranking" | "capture_classify" | "capture_counterparty_verdict" | "cert_judge" | "cold_start" | "deal_health" | "draft_reply" | "enrich" | "growth_fit" | "nl_search" | "offer_draft" | "rate_extract" | "signal_extract" | "site_extract" | "site_fact_extract" | "site_triage" | "summarize" | "transcript" | "transcript_propose" | "voice_build" | "corpus_ask" | "weekly_review";
         AiActivityItem: {
             /** Format: uuid */
             id: string;
@@ -21905,6 +21905,22 @@ export interface components {
              * @description The instant the week was measured to.
              */
             as_of: string;
+            /**
+             * @description One or two sentences over the week's own counts and deal lines. Null when no pass
+             *     wrote one, and ALSO null when a pass ran and found the week unremarkable —
+             *     `narrated_at` is what tells those apart, which is why both fields exist.
+             *
+             *     It adds nothing: every fact it may state is already in the counts and the lines
+             *     beside it, which is what makes the whole lane safe to lose.
+             */
+            narrative?: string | null;
+            /**
+             * Format: date-time
+             * @description When a narrative pass last ran, null when none has. A reader showing a review with
+             *     no sentence must consult this before saying "a quiet week": without it, a week
+             *     nobody narrated and a week with nothing to say look identical.
+             */
+            narrated_at?: string | null;
             counts: components["schemas"]["WeeklyReviewCounts"];
             /**
              * @description The deals the week is about, won and lost first. Capped for reading — the counts stay

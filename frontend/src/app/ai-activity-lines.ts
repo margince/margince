@@ -132,6 +132,17 @@ export const ACTIVITY_LINE: Readonly<
   cold_start: WATCHED_BY_THE_ASKER,
   corpus_ask: WATCHED_BY_THE_ASKER,
 
+  // The weekly retrospective's sentence. A per-rep occurrence a rep can see —
+  // it runs under their own principal over their own week — so it gets real
+  // copy rather than the system-sweep line.
+  weekly_review: {
+    queued: "agent.activity.weeklyReview.queued",
+    running: "agent.activity.weeklyReview.running",
+    stalled: "agent.activity.weeklyReview.stalled",
+    done: "agent.activity.weeklyReview.done",
+    degraded: "agent.activity.weeklyReview.degraded",
+    failed: "agent.activity.weeklyReview.failed",
+  },
   brief_ranking: SYSTEM_SWEEP,
   capture_classify: SYSTEM_SWEEP,
   capture_counterparty_verdict: SYSTEM_SWEEP,

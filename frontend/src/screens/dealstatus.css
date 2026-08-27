@@ -4,40 +4,6 @@
   color: var(--warn);
 }
 
-.deal360-verdict-head {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  margin-bottom: var(--space-2);
-}
-
-/* The call, as a word rather than a colour alone: a reader who cannot tell
-   the tints apart still reads "drifting". */
-.deal360-standing {
-  padding: var(--space-1) var(--space-2);
-  border-radius: var(--r-sm);
-  font-size: var(--fs-meta);
-  font-weight: var(--fw-semibold);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.deal360-live {
-  background: var(--successBg);
-  color: var(--success);
-}
-
-.deal360-drifting,
-.deal360-blocked {
-  background: var(--warnBg);
-  color: var(--warn);
-}
-
-.deal360-cold {
-  background: var(--dangerBg);
-  color: var(--danger);
-}
-
 .deal360-move-reason {
   margin: 0 0 var(--space-3);
 }

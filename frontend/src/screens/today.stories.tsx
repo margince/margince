@@ -59,7 +59,7 @@ function today(day: Attention, brief: MorningBrief = noBrief) {
 }
 
 const meta: Meta<typeof TodayScreen> = {
-  title: "Records/Today",
+  title: "Records/Today/Screen",
   component: TodayScreen,
   parameters: { layout: "fullscreen" },
 };

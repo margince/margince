@@ -80,7 +80,7 @@ function shell(routes: RouteMap) {
 }
 
 const meta: Meta<typeof OnboardingConversationScreen> = {
-  title: "Onboarding/Conversation shell",
+  title: "Onboarding/Conversation/Shell",
   component: OnboardingConversationScreen,
   parameters: { layout: "fullscreen" },
 };

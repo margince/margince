@@ -7,7 +7,7 @@ import { LeadManualSignals } from "./leadsignals";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 // The human half of the lead score: three plain questions a rep can answer in
-// one pass, and the provenance the wire still needs behind "More…".
+// one pass, and the provenance the wire still needs behind "More".
 //
 // The shape before this asked for Factor / Value / Evidence quality /
 // Confidence / Why as five equal fields, and opened by asking a rep to grade
@@ -78,7 +78,7 @@ export const ProvenanceOpen: Story = {
     return <Panel />;
   },
   play: async ({ canvasElement }) => {
-    await userEvent.click(await within(canvasElement).findByText("More…"));
+    await userEvent.click(await within(canvasElement).findByText("More"));
   },
 };
 

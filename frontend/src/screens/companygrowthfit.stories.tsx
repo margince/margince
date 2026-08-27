@@ -14,7 +14,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // changes what the panel is honestly allowed to say.
 
 const meta: Meta = {
-  title: "Screens/Company growth fit",
+  title: "Records/Company 360/Growth fit",
   parameters: { layout: "padded" },
 };
 export default meta;

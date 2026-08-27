@@ -35,7 +35,13 @@ export const LEAD_STATUS_FILTER_OPTIONS = [
   { value: "disqualified", label: "lead.statusDisqualified" },
 ] as const;
 
-function statusLabel(status: Lead["status"]): MessageKey | null {
+/**
+ * The catalogue key for a status, shared by the badge and the record page's
+ * readings strip. Exported because the strip states the SAME word the badge
+ * does — a second spelling here is how one lead comes to read "Qualified" in
+ * a pill and "promoted" in the slot beside it.
+ */
+export function leadStatusLabel(status: Lead["status"]): MessageKey | null {
   return (
     LEAD_STATUS_FILTER_OPTIONS.find((option) => option.value === status)
       ?.label ?? null
@@ -57,7 +63,7 @@ function statusTone(status: Lead["status"]): "accent" | "success" | undefined {
 
 export function StatusBadge({ status }: Readonly<{ status: Lead["status"] }>) {
   const t = useT();
-  const label = statusLabel(status);
+  const label = leadStatusLabel(status);
   return <Badge tone={statusTone(status)}>{label ? t(label) : status}</Badge>;
 }
 

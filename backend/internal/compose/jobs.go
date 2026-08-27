@@ -167,6 +167,10 @@ type JobRunnerConfig struct {
 	// the prose simply is not extracted. The kind registers either way, which
 	// is why nothing in api/jobs.yaml gates on this field.
 	SignalExtractBrain completer
+	// WeeklyReviewBrain writes the sentence over a week's counts. Nil is a
+	// role with no weekly_review lane: every rep still gets the measured
+	// review, without the remark.
+	WeeklyReviewBrain completer
 	// TranscriptProposeBrain is the lane a queued transcript reading runs on.
 	// Nil = no AI configured, and the kind registers anyway so the reading
 	// FAILS with a message the rep can see rather than sitting queued behind a
@@ -401,6 +405,12 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	addDeclaredWorker[GeocodeOrganizationArgs](reg, newGeocodeWorker(pool, cfg.Geocoder))
 	addDeclaredWorker[DocumentExtractArgs](reg, newDocumentExtractWorker(pool, cfg.DocumentExtractBrain, cfg.SendBlob, log))
 	addDeclaredWorker[VoiceBuildArgs](reg, newVoiceBuildWorker(pool, cfg.VoiceBrain, log))
+	// The weekly retrospective moved here when it grew a lane. It is
+	// database-only in its measuring half and stays registered whatever the
+	// role holds — only the sentence is absent without a lane — but a group
+	// documented as taking no config is the wrong place for something that
+	// reads one.
+	addWeeklyReviewJobs(reg, pool, log, cfg.WeeklyReviewBrain)
 	addDeclaredWorker[VoiceBuildRetryArgs](reg, &voiceBuildRetryWorker{store: ai.NewVoiceStore(InstallationDB(pool)), log: log})
 	// The reindex is a dispatcher plus a workspace worker, and neither is
 	// ticked: the api enqueues the dispatcher once per confirmed reindex
@@ -441,5 +451,4 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	})
 	addAIActivitySweepJobs(reg, pool, log)
 	addBriefGenerateJobs(reg, pool, log)
-	addWeeklyReviewJobs(reg, pool, log)
 }

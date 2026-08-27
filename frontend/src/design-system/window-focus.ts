@@ -18,10 +18,9 @@
  *
  * `document.hasFocus()` is read once per attach, to seed the state, and never
  * again. It is deliberately not polled: a poll answers only for the instant it
- * is asked, and the draw loop's rule is that a condition may park it only if the
- * END of that condition is announced by an event (see the loop in
- * margince-core-liquid.tsx). `focus` is that announcement; asking would be a
- * missed resume and a permanently frozen sphere.
+ * is asked, and a draw loop may park on a condition only if the END of that
+ * condition is announced by an event. `focus` is that announcement; asking
+ * would be a missed resume and a permanently frozen sphere.
  */
 
 /** Present on `<html>` exactly while the window does not have focus. */

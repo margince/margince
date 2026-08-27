@@ -193,6 +193,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		VerdictBrain:           modelPath.CaptureCounterpartyVerdict,
 		EnrichBrain:            modelPath.Enrich,
 		SignalExtractBrain:     modelPath.SignalExtract,
+		WeeklyReviewBrain:      modelPath.WeeklyReview,
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
 		DocumentExtractBrain:   modelPath.DocumentExtract,
 		OverlayVault:           configuredVault,

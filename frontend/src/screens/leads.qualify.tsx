@@ -1,17 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useId, useState } from "react";
+import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useInstallationSettings } from "../app/uploadlimit";
-import {
-  Button,
-  Checkbox,
-  Field,
-  Modal,
-  Textarea,
-  TextInput,
-} from "../design-system/atoms";
-import { Callout } from "../design-system/callout";
+import { Checkbox, Field, Textarea, TextInput } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { formatDate } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
@@ -156,7 +149,6 @@ export function QualifyDialog({
   const t = useT();
   const { locale } = useLocale();
   const zone = viewerZone();
-  const headingId = useId();
   const queryClient = useQueryClient();
   const preview = usePromotePreview(lead.id, open);
   const pipelines = usePipelinesForQualify(open);
@@ -244,14 +236,21 @@ export function QualifyDialog({
   const name = leadIdentityName(lead);
 
   return (
-    <Modal open={open} onClose={close} labelledBy={headingId}>
-      <h2
-        id={headingId}
-        className="t-h2"
-        style={{ marginBottom: "var(--space-3)" }}
-      >
-        {t("lead.qualify.title", { name })}
-      </h2>
+    <ConfirmModal
+      open={open}
+      onClose={close}
+      // Wide, because the body is a form the reader has to READ before an act
+      // that creates a contact and possibly a deal — not a yes/no box.
+      size="wide"
+      title={t("lead.qualify.title", { name })}
+      confirmLabel={
+        withDeal ? t("lead.qualify.confirmWithDeal") : t("lead.qualify.confirm")
+      }
+      confirmDisabled={amountInvalid || amountWaitsForCurrency}
+      onConfirm={submit}
+      pending={qualify.isPending}
+      error={qualify.isError ? problemMessageOf(qualify.error, t) : undefined}
+    >
       <div className="lead-qualify">
         <section className="lead-qualify-block">
           <h3 className="t-label">{t("lead.qualify.contact")}</h3>
@@ -344,38 +343,8 @@ export function QualifyDialog({
             )}
           </Field>
         </section>
-
-        {qualify.isError && (
-          <Callout tone="danger" live="alert">
-            {problemMessageOf(qualify.error, t)}
-          </Callout>
-        )}
-        <div
-          style={{
-            display: "flex",
-            gap: "var(--space-2)",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Button small onClick={close} disabled={qualify.isPending}>
-            {t("create.cancel")}
-          </Button>
-          <Button
-            small
-            variant="primary"
-            data-testid="lead-qualify-confirm"
-            disabled={
-              qualify.isPending || amountInvalid || amountWaitsForCurrency
-            }
-            onClick={submit}
-          >
-            {withDeal
-              ? t("lead.qualify.confirmWithDeal")
-              : t("lead.qualify.confirm")}
-          </Button>
-        </div>
       </div>
-    </Modal>
+    </ConfirmModal>
   );
 }
 

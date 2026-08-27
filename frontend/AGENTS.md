@@ -47,14 +47,14 @@ existed**, wrote a reasonable-looking component, and passed review on it. So:
   exactly how `SurfaceState` spent months importable only from `company360.tsx`
   while seven screens reached into it.
 - **If it genuinely is not there, add it there**, with a story, and update the
-  README table in the same commit. The README is the seam: a primitive nobody
-  can find gets rebuilt by the next person, and then there are two.
+  README table in the same commit — `catalog.test.ts` fails a shipped component
+  the table never names, a rich-text editor having already gone missing from it.
 
-Some of this is held deterministically — `make native-controls` (a vitest suite),
-plus the `check-ds-purity.sh`, `check-ds-spacing.sh` and `check-space-tokens.sh`
-script gates — but none of them can tell that the perfectly good
-component you just wrote already existed under a different name. That part is
-yours.
+Some of this is held deterministically — `make native-controls` and
+`catalog.test.ts` (vitest suites), plus the `check-ds-purity.sh`,
+`check-ds-spacing.sh` and `check-space-tokens.sh` script gates — but none can
+tell that the component you just wrote already existed under another name. The
+catalog gate keeps it findable; the grep is still yours.
 
 ### Indigo is a claim about provenance
 

@@ -4,10 +4,11 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { Button } from "../design-system/atoms";
+import { ConfirmModal } from "../design-system/confirmmodal";
 import { Select } from "../design-system/select";
 import { formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
-import { useLocale, useT } from "../i18n";
+import { useLocale, usePlural, useT } from "../i18n";
 import { ProblemError, problemMessageOf, throwProblem } from "./common";
 import { useRoster } from "./entityref";
 import { leadWriteKeys } from "./leadkeys";
@@ -29,6 +30,17 @@ export type BulkOutcome = { id: string; name: string; error?: string };
 export type BulkAction =
   | { kind: "assign"; ownerId: string; ownerName: string }
   | { kind: "disqualify"; reasonId: string };
+
+/**
+ * One bulk run: the verb, and the rows it applies to.
+ *
+ * The rows travel WITH the verb rather than being read off the `leads` prop
+ * inside the mutation. The press belongs to the render that drew the bar, so
+ * the selection it hands over is the one the reader could see — a `mutationFn`
+ * reaching for the prop runs against whichever render it closed over, and a
+ * selection that changed underneath would send writes for rows nobody chose.
+ */
+type BulkRun = { action: BulkAction; rows: readonly Lead[] };
 
 /**
  * Bulk verbs over selected leads: assign an owner, disqualify. Both are a
@@ -60,10 +72,15 @@ export function LeadBulkBar({
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const plural = usePlural();
   const queryClient = useQueryClient();
   const [ownerId, setOwnerId] = useState("");
   const roster = useRoster("user", true);
   const [reasonId, setReasonId] = useState("");
+  // The batch confirm's own open state. It is not part of the run's state:
+  // a refused batch leaves the bar showing what failed, with the dialog
+  // already gone.
+  const [confirming, setConfirming] = useState(false);
   const reasons = useLeadDisqualifyReasons();
   const [outcomes, setOutcomes] = useState<readonly BulkOutcome[]>([]);
 
@@ -95,11 +112,11 @@ export function LeadBulkBar({
   };
 
   const run = useMutation({
-    mutationFn: async (action: BulkAction): Promise<BulkOutcome[]> =>
+    mutationFn: async ({ action, rows }: BulkRun): Promise<BulkOutcome[]> =>
       // Sequential, not Promise.all: a bulk verb over a work queue is a
       // handful of rows, and a burst of concurrent writes against one
       // rep's own leads buys nothing but contention.
-      leads.reduce<Promise<BulkOutcome[]>>(async (acc, lead) => {
+      rows.reduce<Promise<BulkOutcome[]>>(async (acc, lead) => {
         const done = await acc;
         // The id, not the word: this name goes into a per-row outcome the
         // reader reads back afterwards, and two unnamed leads must be tellable
@@ -120,7 +137,7 @@ export function LeadBulkBar({
         }
         return done;
       }, Promise.resolve([])),
-    onSuccess: async (result, action) => {
+    onSuccess: async (result, { action }) => {
       // EVERY lead the run touched, refused ones included, and not only the
       // list.
       //
@@ -167,7 +184,11 @@ export function LeadBulkBar({
       .filter((entry) => entry.id === ownerId)
       .map((entry) => ("display_name" in entry ? entry.display_name : null))
       .find((name) => typeof name === "string") ?? ownerId;
-  const assign = () => run.mutate({ kind: "assign", ownerId, ownerName });
+  const assign = () =>
+    run.mutate({
+      action: { kind: "assign", ownerId, ownerName },
+      rows: leads,
+    });
   // The reason list is administered (Settings › Data model); only its ACTIVE
   // rows may be applied, and a payload that is not the contract's array is
   // read as nothing rather than crashing the bar that renders it.
@@ -177,7 +198,12 @@ export function LeadBulkBar({
   // The reason is read where the CLICK happens and travels as the mutation's
   // variable, so what reaches every row's DELETE is the reason that was on
   // screen when the reader pressed the verb.
-  const disqualify = () => run.mutate({ kind: "disqualify", reasonId });
+  const disqualify = () => {
+    setConfirming(false);
+    run.mutate({ action: { kind: "disqualify", reasonId }, rows: leads });
+  };
+  const reasonLabel =
+    activeReasons.find((reason) => reason.id === reasonId)?.label ?? "";
 
   const failed = outcomes.filter((o) => o.error);
   return (
@@ -224,12 +250,32 @@ export function LeadBulkBar({
         // dialog: a batch closed with no reason is exactly what the
         // administered list exists to prevent.
         reason={reasonId ? undefined : t("lead.disqualify.reasonRequired")}
-        onClick={disqualify}
+        onClick={() => setConfirming(true)}
       >
         {t("lead.bulkDisqualify")}
       </Button>
+      {/* Closing one lead opens a dialog; closing forty from a toolbar used to
+          fire on the press. The batch is the LESS reversible of the two — the
+          reader cannot see the rows they are about to close, only a count —
+          so it asks the same question, and names the reason it is about to
+          write on all of them. */}
+      <ConfirmModal
+        open={confirming}
+        onClose={() => setConfirming(false)}
+        title={plural("lead.bulkDisqualifyTitle", leads.length, {
+          count: formatNumber(leads.length, locale),
+        })}
+        confirmLabel={t("lead.bulkDisqualify")}
+        confirmVariant="danger"
+        onConfirm={disqualify}
+        pending={run.isPending}
+      >
+        <p className="t-small">
+          {t("lead.bulkDisqualifyBody", { reason: reasonLabel })}
+        </p>
+      </ConfirmModal>
       {failed.length > 0 && (
-        <span className="t-caption" style={{ color: "var(--danger)" }}>
+        <span className="t-caption t-danger">
           {t("lead.bulkFailed", {
             count: formatNumber(failed.length, locale),
           })}{" "}
