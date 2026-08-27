@@ -98,6 +98,12 @@ type laneOutcome struct {
 	Lane people.TechnicalLane
 	// Completed says the source answered. Only a completed lane reconciles.
 	Completed bool
+	// Refused marks a source that declined rather than failed — a site's
+	// robots.txt saying no. It COMPLETES the lane, because a refusal is a
+	// settled answer and the claims it would have supported must be cleared,
+	// but it earns the long backoff rather than the short one: asking again
+	// next week is polite, asking again in six hours is not.
+	Refused bool
 	// Err is why it did not, kept for the ledger rather than to fail the run:
 	// one lane failing must not cost the other two.
 	Err error
@@ -318,6 +324,7 @@ func (e *TechnicalEnricher) readHomepage(
 			// clears any technology rows a previous read left, because we no
 			// longer have permission to claim them.
 			outcome.Completed = true
+			outcome.Refused = true
 			return outcome
 		}
 		return laneOutcome{Lane: people.LaneHomepage, Err: err}

@@ -195,6 +195,7 @@ func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compo
 	}
 	return []compose.Option{
 		deepRead, compose.WithVoiceBuildEnqueue(inserter), compose.WithRateRefresh(inserter),
+		compose.WithTechnicalEnrich(inserter),
 		compose.WithTranscriptRead(inserter),
 		compose.WithDocumentRead(inserter),
 		compose.WithKnowledgeIngest(inserter),

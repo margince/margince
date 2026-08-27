@@ -1259,6 +1259,14 @@ func (stubs) DismissOrganizationSuggestion(w nethttp.ResponseWriter, r *nethttp.
 	httperr.NotImplemented(w, r, "DismissOrganizationSuggestion")
 }
 
+func (stubs) TechnicalEnrichCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "TechnicalEnrichCompany")
+}
+
+func (stubs) GetLatestTechnicalEnrich(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "GetLatestTechnicalEnrich")
+}
+
 func (stubs) AcknowledgeOrganizationView(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "AcknowledgeOrganizationView")
 }

@@ -37,6 +37,13 @@ func jobQueues() map[string]river.QueueConfig {
 		// itself. The pacer enforces the interval; this bound enforces the
 		// single thread. Neither alone is enough.
 		geocodeQueue: {MaxWorkers: geocodeMaxWorkers},
+		// ONE worker, for the geocode queue's reason rather than a performance
+		// one. A technical lookup asks three free public services, and the
+		// certificate log in particular is a single small service running on
+		// goodwill. The pacers in platform/dnsread and platform/certlog hold
+		// the intervals; this bound holds the single thread, because a second
+		// worker would be a second requester however carefully each paced.
+		technicalLookupQueue: {MaxWorkers: technicalLookupMaxWorkers},
 		// Overlay reconcile is SERIAL by design. overlaybudget.ConsumeSearch
 		// counts but does not pace, and its keys are per workspace, so it
 		// cannot bound a provider-level burst: a concurrent fan-out could

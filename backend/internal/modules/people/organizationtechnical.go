@@ -6,6 +6,7 @@ package people
 import (
 	"context"
 	"fmt"
+	"sort"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -45,12 +46,40 @@ const (
 	LaneHomepage TechnicalLane = "homepage"
 )
 
+// technicalLanes is every lane, so a reader asking "has this company been
+// fully looked at?" counts against the real set rather than a number written
+// down twice. Derived from laneFields, which is where a new lane is added.
+var technicalLanes = func() []TechnicalLane {
+	lanes := make([]TechnicalLane, 0, len(laneFields))
+	for lane := range laneFields {
+		lanes = append(lanes, lane)
+	}
+	sort.Slice(lanes, func(i, j int) bool { return lanes[i] < lanes[j] })
+	return lanes
+}()
+
 // laneFields names the fact fields each lane is authoritative for. A lane that
 // completed replaces exactly these; a lane that failed touches none of them.
 var laneFields = map[TechnicalLane][]string{
 	LaneDNS:      {FactMailProvider, FactEmailSecurity, FactHostingProvider},
 	LaneCertLog:  {FactOperatedService},
 	LaneHomepage: {FactTechnology},
+}
+
+// LaneOwningField reports which public source is authoritative for a fact
+// field, and the zero lane when none is.
+//
+// Derived from laneFields rather than restated, so a lane that gains a field
+// cannot end up with a caller still attributing that field to the old one.
+func LaneOwningField(field string) TechnicalLane {
+	for lane, fields := range laneFields {
+		for _, owned := range fields {
+			if owned == field {
+				return lane
+			}
+		}
+	}
+	return ""
 }
 
 // TechnicalObservation is one thing a lookup read about a company.

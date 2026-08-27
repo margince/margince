@@ -189,6 +189,17 @@ type JobRunnerConfig struct {
 	// companies whose address was written before this installation had a
 	// geocoder, and which no write will ever touch again.
 	Geocoding GeocodingConfig
+	// TechnicalEnricher reads what a company publicly runs, from its DNS
+	// records, its certificate history and its own homepage. Nil in a
+	// deployment that reads none of that — an offline demo, or one whose
+	// operator has not wired the outbound lanes — and the sweep registers
+	// nothing rather than queueing rows nobody can work.
+	TechnicalEnricher *TechnicalEnricher
+	// TechnicalEnrichment carries the refresh sweep's cadence. It is the pass
+	// that makes freshness real: a company's mail provider changes at the
+	// company, so nothing here is ever written when it does, and only coming
+	// back round observes it.
+	TechnicalEnrichment TechnicalEnrichmentConfig
 	// DocumentExtractBrain is the lane a queued document reading runs on. Nil =
 	// no AI configured, and the kind registers anyway so the reading FAILS with
 	// a message the rep can see rather than sitting queued behind a worker that
@@ -347,6 +358,7 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		addPrivacyRetentionJobs(reg, pool, cfg, log),
 		addWebhookRetryJobs(reg, pool, cfg),
 		addGeocodeBackfillJobs(reg, pool, cfg),
+		addTechnicalEnrichJobs(reg, pool, cfg),
 		addProviderRunJobs(reg, pool, cfg),
 		addAgentSchedulerJobs(reg, pool, cfg),
 		addSignalJobs(reg, pool, cfg, log),

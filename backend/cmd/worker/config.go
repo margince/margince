@@ -59,6 +59,8 @@ type workerConfig struct {
 	webhookKey           string
 	geocodeBaseURL       string
 	geocodeBackfill      time.Duration
+	certLogBaseURL       string
+	technicalBackfill    time.Duration
 	webhookRetryInterval time.Duration
 	deepReadMaxPages     int
 	deepReadMaxBytes     int
@@ -106,6 +108,11 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 			"seeded or imported database, or one configured after the fact. Nothing writes those "+
 			"addresses again, so without this pass they are never located. Runs on start; 0 turns "+
 			"the sweep off and leaves geocoding-on-write alone.")
+	fs.DurationVar(&cfg.technicalBackfill, "technical-backfill-interval", 6*time.Hour,
+		"how often to look for companies whose technical profile is missing or stale. Unlike "+
+			"geocoding there is no write to trigger on — a company's mail provider changes at the "+
+			"COMPANY — so this pass is the only thing that observes a move. Runs on start; 0 turns "+
+			"the sweep off and leaves the button working.")
 	env.String(fs, &cfg.gmailClientID, "gmail-client-id", "MARGINCE_GMAIL_CLIENT_ID", "", "Google OAuth client id for the Gmail capture connector; enables the background Gmail sync poll")
 	env.String(fs, &cfg.gmailClientSecret, "gmail-client-secret", "MARGINCE_GMAIL_CLIENT_SECRET", "", "Google OAuth client secret for the Gmail capture connector")
 	env.String(fs, &cfg.graphClientID, "graph-client-id", "MARGINCE_GRAPH_CLIENT_ID", "", "Microsoft (Entra) application id for the Outlook/M365 capture connector; enables its background sync poll")
@@ -142,6 +149,13 @@ func workerFlagSet() (*flag.FlagSet, *cliflags.Env, *workerConfig, error) {
 			"within_radius answers from. Empty leaves it off and every radius query unavailable. "+
 			"Use 'public' for OpenStreetMap's own service — POC only: its terms hold a recurring "+
 			"client to 4 requests a minute, so any real volume wants a self-hosted instance.")
+	env.String(fs, &cfg.certLogBaseURL, "certlog-base-url", "MARGINCE_CERTLOG_BASE_URL", "",
+		"certificate-transparency base URL; enables reading what a company publicly runs — its DNS "+
+			"records, its certificate history and one polite fetch of its own homepage. Empty "+
+			"leaves the whole lane off, which is honest for an installation that should make no "+
+			"outbound lookups. Use 'public' for crt.sh — it is free and needs no key, but it is one "+
+			"small service run on goodwill, so this reader paces itself to one query every five "+
+			"seconds and caches every answer.")
 	env.String(fs, &cfg.observeAddr, "observe-addr", "MARGINCE_OBSERVE_ADDR", "",
 		"address to serve this worker's /healthz, /readyz and /metrics on (e.g. 127.0.0.1:9101). Empty serves nothing. Process-local metrics only — the job-table and outbox gauges stay a single fleet-wide reading on the api.")
 	env.String(fs, &cfg.logLevel, "log-level", "MARGINCE_LOG_LEVEL", "info", "log level: debug|info|warn|error")

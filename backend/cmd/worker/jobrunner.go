@@ -19,10 +19,14 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/certlog"
+	"github.com/margince/margince/backend/internal/platform/dnsread"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/platform/overlaybudget"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 // gmailWatchConfig builds the Gmail push-watch maintenance config: the
@@ -193,6 +197,11 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// nothing, and better than answering from an empty table.
 		Geocoder:  geocoderFor(cfg.geocodeBaseURL),
 		Geocoding: compose.GeocodingConfig{BackfillInterval: cfg.geocodeBackfill},
+		// The technical lookup, when the operator turned it on. Nil leaves the
+		// sweep unregistered and the button answering 501 — declared absent
+		// rather than a lane that queues into a process that will not read.
+		TechnicalEnricher:   technicalEnricherFor(cfg, pool),
+		TechnicalEnrichment: compose.TechnicalEnrichmentConfig{BackfillInterval: cfg.technicalBackfill},
 		// The registry that resolves a staged delivery's mailbox: the SAME
 		// sweep registry the capture polls use, so the connector set that
 		// syncs a mailbox is the one that transmits from it.
@@ -286,7 +295,40 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 // variable is unset. Its terms hold a recurring client to four requests a
 // minute; an installation with real volume points this at its own instance.
 //
+// technicalEnricherFor builds the three-lane reader, or nil when this
+// deployment reads none of it.
+//
+// All three lanes are wired together or not at all: a partial enricher would
+// complete some lanes and never the others, and a lane that never completes
+// leaves its facts frozen at whatever the last full run saw — which reads on
+// the record exactly like a company that has not changed.
+//
 //nolint:ireturn // the PORT is the return type: nil means this deployment geocodes nothing, which a concrete type cannot express.
+func technicalEnricherFor(cfg workerConfig, pool *pgxpool.Pool) *compose.TechnicalEnricher {
+	if cfg.certLogBaseURL == "" {
+		return nil
+	}
+	baseURL := cfg.certLogBaseURL
+	if baseURL == "public" {
+		baseURL = certlog.PublicBaseURL
+	}
+	return compose.NewTechnicalEnricher(
+		dnsread.New(dnsread.NewPacer(dnsReadInterval)),
+		certlog.NewCrtSh(baseURL, nil),
+		webread.New(),
+		people.NewStore(compose.InstallationDB(pool)),
+		nil,
+	)
+}
+
+// dnsReadInterval paces this installation's resolver queries.
+//
+// Public resolvers are far more tolerant than a certificate log, so this is a
+// throughput floor rather than a policy one: fast enough that a company's
+// handful of lookups is not the slow part, slow enough that a fleet sweep is
+// not a burst anybody notices.
+const dnsReadInterval = 200 * time.Millisecond
+
 func geocoderFor(baseURL string) geocode.Client {
 	switch baseURL {
 	case "":

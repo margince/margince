@@ -100,6 +100,8 @@ func censusJobConfig() JobRunnerConfig {
 		ProviderRuns:           ProviderRunsConfig{Registry: censusProviderRegistry(), Vault: keyvault.NewMemory()},
 		PrivacyRetention:       PrivacyRetentionConfig{Interval: censusInterval},
 		Geocoding:              GeocodingConfig{BackfillInterval: censusInterval},
+		TechnicalEnricher:      &TechnicalEnricher{},
+		TechnicalEnrichment:    TechnicalEnrichmentConfig{BackfillInterval: censusInterval},
 		CloseDateInterval:      censusInterval,
 		ReconcileInterval:      censusInterval,
 		TimeScanInterval:       censusInterval,
