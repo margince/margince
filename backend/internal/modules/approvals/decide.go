@@ -200,6 +200,10 @@ func (s *Service) runDecisionEffect(ctx context.Context, id ids.ApprovalID, a ro
 // error would tell the human who approved the row the wrong thing about what
 // went wrong.
 func (s *Service) recordEffectFailure(ctx context.Context, id ids.ApprovalID, reader string, cause error) error {
+	// Detached from the request's cancellation: an effect that failed BECAUSE
+	// the request was cancelled or timed out is exactly a failure this mark
+	// exists to keep, and writing it through the dead context would lose it.
+	ctx = context.WithoutCancel(ctx)
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// The IS NULL arm is the CAS: two failures racing on one row keep the
 		// FIRST mark, because that is the one whose timestamp says when the

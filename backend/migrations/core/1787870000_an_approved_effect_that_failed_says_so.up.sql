@@ -14,9 +14,10 @@
 --
 -- effect_failed_at makes the row findable so a surface can carry it back to the
 -- person who approved it. effect_failure is the sentence a reader is shown:
--- written from the error the executor returned, and by the same rule every other
--- message this product shows a client — what went wrong and what to do, never a
--- stack, a SQL statement or a table name.
+-- written for the reader at the recording site, never copied from the error the
+-- executor returned, by the same rule every other message this product shows a
+-- client — what went wrong and what to do, never a stack, a SQL statement or a
+-- table name.
 SET LOCAL lock_timeout = '3s';
 
 ALTER TABLE approval
