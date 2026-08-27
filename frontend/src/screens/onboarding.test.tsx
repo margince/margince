@@ -18,10 +18,11 @@ import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import {
   CUSTOMER_FIELDS,
+  EMPTY_DRAFT,
   LEGAL_IDENTITY_FIELDS,
   OFFER_FIELDS,
-  onboardingDraftPayload,
   OnboardingScreen,
+  onboardingDraftPayload,
   SALES_FIELDS,
 } from "./onboarding";
 import { READ_POLL_MS } from "./onboarding-conversation/use-company-read";
@@ -709,12 +710,11 @@ describe("the onboarding draft payload", () => {
       ...CUSTOMER_FIELDS,
       ...SALES_FIELDS,
     ];
-    const blank = Object.fromEntries(collected.map((field) => [field, ""]));
-    // `website` is the address the read starts from rather than something the
-    // profile states, so it is the one form key the payload owes nothing for.
-    const serialized = Object.keys(
-      onboardingDraftPayload({ ...blank, website: "" }),
-    );
+    // EMPTY_DRAFT.values is the form's own blank shape, so this asks the
+    // question of the real type rather than of a literal assembled here.
+    // `website` rides along in it and is the one form key the payload owes
+    // nothing for: it is the address a read starts from, not a profile fact.
+    const serialized = Object.keys(onboardingDraftPayload(EMPTY_DRAFT.values));
 
     expect([...collected].sort()).toEqual(serialized.sort());
   });
