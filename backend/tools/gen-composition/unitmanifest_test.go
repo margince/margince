@@ -115,11 +115,11 @@ func TestDeriveUnitManifestIgnoresGoIgnoredFiles(t *testing.T) {
 
 const repoRoot = "../../.."
 
-// committedUnitVerbs merges the repository's real contracts with one unit's
-// real fragments and returns that unit's declared operations. It composes the
-// unit in ISOLATION (a one-element unit list) so a manifest assertion is not
-// coupled to whatever else happens to be enabled in the tree.
-func committedUnitVerbs(t *testing.T, unit extensionUnit) []declaredVerb {
+// committedUnitDeclarations merges the repository's real contracts with one
+// unit's real fragments and returns that unit's declared operations and jobs.
+// It composes the unit in ISOLATION (a one-element unit list) so a manifest
+// assertion is not coupled to whatever else happens to be enabled in the tree.
+func committedUnitDeclarations(t *testing.T, unit extensionUnit) ([]declaredVerb, []extension.JobDeclaration) {
 	t.Helper()
 	units := []extensionUnit{unit}
 	contracts, err := composedContracts(repoRoot, units)
@@ -130,7 +130,13 @@ func committedUnitVerbs(t *testing.T, unit extensionUnit) []declaredVerb {
 	if err != nil {
 		t.Fatal(err)
 	}
-	return verbs
+	// From the same composed contracts as the verbs, so the two halves of a
+	// manifest cannot be derived from different readings of one tree.
+	jobs, err := extensionJobs(units, contracts)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return verbs, jobs
 }
 
 func realVocabulary(t *testing.T) map[string]string {
@@ -169,11 +175,59 @@ func TestDeManifestMatchesItsDerivation(t *testing.T) {
 		`"name": "de"`, `"version": "1.0.0"`, `"risk_tiers": []`)
 }
 
-// TestCrmHelloManifestMatchesItsDerivation is the worked example: the
+// TestEveryFixtureManifestMatchesItsDerivation enrols the fixture tree the way
+// the real one is enrolled: by walking it.
+//
+// Units under extensions/ are held byte-identical by verifyUnitManifests, which
+// derives its list from os.ReadDir — so a unit added later is covered the day it
+// lands. scanExtensions never visits fixtures/extensions/, so that tree was held
+// by exactly one hand-named test, and a SECOND fixture shipping a manifest would
+// have had no byte-identity check at all: its committed file could disagree with
+// its declaration indefinitely, and the thing that would have caught it is a
+// test somebody has to remember to write (issue #1594).
+//
+// The content assertion below stays as its own case. What stops being a list is
+// the enrolment, not the claim about what a particular fixture publishes.
+func TestEveryFixtureManifestMatchesItsDerivation(t *testing.T) {
+	root := filepath.Join(repoRoot, "fixtures", "extensions")
+	entries, err := os.ReadDir(root)
+	if err != nil {
+		t.Fatalf("reading the fixture tree: %v", err)
+	}
+	found := 0
+	for _, entry := range entries {
+		if !entry.IsDir() {
+			continue
+		}
+		dir := filepath.Join(root, entry.Name())
+		if _, err := os.Stat(filepath.Join(dir, unitManifestFile)); err != nil {
+			// A fixture with no manifest has nothing to hold. Several exist on
+			// purpose — the bad-* units are shaped to be REFUSED, and a
+			// refused unit never gets one.
+			continue
+		}
+		found++
+		t.Run(entry.Name(), func(t *testing.T) {
+			assertCommittedManifest(t, dir, entry.Name())
+		})
+	}
+	// The walk has to have found the fixture that exists. A tree-derived
+	// enrolment that enrolled nothing reports the same green as one where every
+	// manifest agrees, which is the failure this replaced a list to avoid.
+	if found == 0 {
+		t.Fatal("no fixture unit ships a manifest, so this test held nothing — either the " +
+			"tree moved or the manifest file was renamed, and in both cases the check is off")
+	}
+}
+
+// TestCrmHelloManifestPublishesItsGovernedTool is the worked example: the
 // crm-hello fixture declares a jurisdiction pack (skipped) AND a governed
 // 🟡 tool, so its committed manifest carries exactly one risk-tier
 // request with its security descriptor and digest.
-func TestCrmHelloManifestMatchesItsDerivation(t *testing.T) {
+//
+// The byte-identity half is the walk above; this is the claim about what THIS
+// fixture publishes, which no walk can derive.
+func TestCrmHelloManifestPublishesItsGovernedTool(t *testing.T) {
 	assertCommittedManifest(t, filepath.Join(repoRoot, "fixtures", "extensions", "crm-hello"), "crm-hello",
 		`"id": "tool/hello_ping"`,
 		`"operation": "agent.tool.invoke"`,
@@ -188,10 +242,18 @@ func assertCommittedManifest(t *testing.T, dir, name string, wantSubstrings ...s
 	if err != nil {
 		t.Fatal(err)
 	}
-	// The verbs come from the MERGED contract, the same way `make gen` derives
-	// them, so this test binds the committed manifest to both halves of the
-	// declaration — the unit's Go file and its api/ fragment.
-	derived, err := deriveUnitManifest(unit, realVocabulary(t), committedUnitVerbs(t, unit), nil)
+	// The verbs AND the jobs come from the MERGED contract, the same way
+	// `make gen` derives them, so this binds the committed manifest to both
+	// halves of the declaration — the unit's Go file and its api/ fragment.
+	//
+	// Jobs were `nil` here, which was correct for the two units that had one of
+	// these tests and wrong for the tree: a fixture declaring a job derives a
+	// manifest missing its job/* risk-tier entries, so the CORRECT committed
+	// file would have failed against an incomplete derivation. Now that the
+	// enrolment is a walk, that is not a hypothetical about a unit somebody
+	// might add — it is what the next one does.
+	verbs, jobs := committedUnitDeclarations(t, unit)
+	derived, err := deriveUnitManifest(unit, realVocabulary(t), verbs, jobs)
 	if err != nil {
 		t.Fatal(err)
 	}
