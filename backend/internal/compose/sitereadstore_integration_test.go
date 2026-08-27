@@ -414,3 +414,67 @@ func TestASucceededReadCarriesNoDiagnosis(t *testing.T) {
 		t.Fatal("a failure was accepted with no sentence a human can act on")
 	}
 }
+
+// A reclaim hands the read to a new attempt, and the abandoned one may still
+// be running. Its terminal write must not land: the pages, facts and legal
+// entities it carries are the ones IT crawled, and the dossier now belongs to
+// somebody else. Running alone never told the two apart, because a reclaim
+// puts a running row back into running.
+func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
+	e := integration.Setup(t)
+	store := people.NewStore(e.DB())
+	human := e.As(e.Rep1, nil, integration.AdminPerms)
+	worker := siteReadWorkerCtx(e)
+	org := siteReadOrg(e.SeedOrg(t, "Acme", &e.Rep1))
+	read, _, err := store.StartSiteRead(human, org, "https://acme.example", "human:"+e.Rep1.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	stale, err := store.BeginSiteRead(worker, read.ID, 20*time.Minute)
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Age the lease past its own interval so the next Begin reclaims it.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(context.Background(), `UPDATE site_read
+			SET started_at = now() - interval '21 minutes' WHERE id = $1`, read.ID)
+		return err
+	}); err != nil {
+		t.Fatal(err)
+	}
+	live, err := store.BeginSiteRead(worker, read.ID, 20*time.Minute)
+	if err != nil {
+		t.Fatalf("reclaim: %v", err)
+	}
+	if live.ClaimedAt.Equal(stale.ClaimedAt) {
+		t.Fatalf("the reclaim stamped the same lease %v, so the two attempts are indistinguishable", live.ClaimedAt)
+	}
+
+	// The abandoned attempt comes back with a full report. It is refused.
+	if err := store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+		Status: "done", FactCount: 99, ClaimedAt: &stale.ClaimedAt,
+	}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("the abandoned attempt finished the read → %v, want ErrNotFound", err)
+	}
+	running, err := store.GetSiteRead(human, org, read.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if running.Status != "running" || running.FactCount == 99 {
+		t.Fatalf("after the refused write the read is %+v, want still running with none of the abandoned attempt's findings", running)
+	}
+
+	// The attempt that holds it still finishes.
+	if err := store.FinishSiteRead(worker, read.ID, people.FinishSiteReadInput{
+		Status: "done", FactCount: 3, ClaimedAt: &live.ClaimedAt,
+	}); err != nil {
+		t.Fatalf("the holding attempt finished → %v, want it recorded", err)
+	}
+	done, err := store.GetSiteRead(human, org, read.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if done.Status != "done" || done.FactCount != 3 {
+		t.Fatalf("finished read = %+v, want done with the holding attempt's three facts", done)
+	}
+}

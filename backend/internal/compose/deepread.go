@@ -353,8 +353,9 @@ func terminalCtx(ctx context.Context) (context.Context, context.CancelFunc) {
 	return context.WithTimeout(context.WithoutCancel(ctx), 15*time.Second)
 }
 
-func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, status string, readPages []crawlPage, crawl siteCrawl, factCount int, proposalIDs []ids.UUID, fields []people.DeepReadField, facts []people.DeepReadFact, found []people.SiteReadPerson, entities []people.SiteReadLegalEntity, warnings []string, proposalHash string) error {
+func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, claim people.SiteReadClaim, status string, readPages []crawlPage, crawl siteCrawl, factCount int, proposalIDs []ids.UUID, fields []people.DeepReadField, facts []people.DeepReadFact, found []people.SiteReadPerson, entities []people.SiteReadLegalEntity, warnings []string, proposalHash string) error {
 	in := people.FinishSiteReadInput{
+		ClaimedAt:     &claim.ClaimedAt,
 		Status:        status,
 		Pages:         make([]people.SiteReadPage, 0, len(readPages)),
 		Skipped:       make([]people.SiteReadSkip, 0, len(crawl.Skipped)),

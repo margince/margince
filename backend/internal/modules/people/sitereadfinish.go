@@ -40,6 +40,23 @@ type SiteReadClaim struct {
 // FinishSiteReadInput is the worker's completed crawl report.
 type FinishSiteReadInput struct {
 	Status string // done | partial | failed | cancelled
+	// ClaimedAt reserves this terminal write for the attempt that HOLDS the
+	// read: the lease BeginSiteRead handed it (SiteReadClaim.ClaimedAt). Set
+	// it and the CAS matches started_at as well as running, so a worker whose
+	// job was reclaimed after its deadline cannot record ITS pages, facts and
+	// legal entities over the attempt that now owns the dossier. Running alone
+	// never distinguished the two, because a reclaim puts a running row back
+	// into running under a new attempt.
+	//
+	// Nil closes whatever attempt holds the read, and the paths that record no
+	// FINDINGS pass nil deliberately: a failure and a cancellation say only
+	// that this read is over, and both must be able to close a dossier however
+	// it was claimed — a panic recovered at the job boundary may not have
+	// claimed at all, and a read nobody wants any more should not survive
+	// because the worker that abandoned it lost a race. What they must not do
+	// is stand in for a report, which is why the finding-carrying writes
+	// present the lease and these do not.
+	ClaimedAt *time.Time
 	// StatusCode and StatusDetail diagnose a FAILED read: the closed code an
 	// operator groups by, and the one sentence they read. Both are required
 	// when Status is "failed" and forbidden otherwise — a read that worked has
@@ -191,10 +208,11 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 			    draft_version = draft_version + 1, pages_read = $13, phase = NULL,
 			    first_grounded_at = CASE WHEN $14 THEN COALESCE(first_grounded_at, now()) ELSE first_grounded_at END,
 			    finished_at = now(), updated_at = now()
-			WHERE id = $1 AND status = 'running'`,
+			WHERE id = $1 AND status = 'running'
+			  AND ($19::timestamptz IS NULL OR started_at = $19)`,
 			readID, in.Status, pages, skipped, in.StoppedReason, in.FactCount, proposals,
 			profileFields, facts, people, warnings, in.ProposalHash, len(in.Pages), grounded, entities,
-			in.StatusCode, in.StatusDetail, in.NextAttemptAt)
+			in.StatusCode, in.StatusDetail, in.NextAttemptAt, in.ClaimedAt)
 		if err != nil {
 			return fmt.Errorf("finish site read: %w", err)
 		}
