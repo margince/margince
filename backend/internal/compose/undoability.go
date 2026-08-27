@@ -210,11 +210,15 @@ type Evaluator struct {
 	// Nil where no edge is served, which answers every edge row as unjudged
 	// rather than as undoable.
 	EdgeFacts func(ctx context.Context, tx pgx.Tx, edgeID ids.UUID) (people.EdgeFacts, error)
-	// EdgeWritable answers the authority an edge write asks for — the edge's own
-	// grant, and its ANCHOR's, which is not either endpoint the history page was
-	// read from. It returns the refusal unchanged so a caller that wants to
-	// surface it can.
-	EdgeWritable func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts) error
+	// EdgeWritable answers the authority the inverse of one edge change asks for
+	// — the edge's own grant, and its ANCHOR's, which is not either endpoint the
+	// history page was read from. It returns the refusal unchanged so a caller
+	// that wants to surface it can.
+	//
+	// entryAction is what the audited entry DID, because the inverse's verb
+	// follows it: reversing a create archives the link and asks the delete grant,
+	// where reversing an update asks update.
+	EdgeWritable func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts, entryAction string) error
 	// ExternallyGoverned reports whether this workspace's records live in an
 	// incumbent system rather than here. A reversal there is a write-back, and
 	// the write-back path records its own verb and its own evidence — so the

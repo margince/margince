@@ -45,7 +45,9 @@ type RecordHistoryFilter struct {
 // RecordHistoryEntry is one audit_log row rendered as a history line —
 // the whole-mutation view, one entry per row (field-history's per-field
 // projection is the sibling read). Before/After are the row's own field
-// images with the entity's mask applied by omission. Scrub tombstones and
+// images with the entity's mask applied by omission, and are absent on a row
+// about a LINK: those images hold the link's columns and not the record's, and
+// Edge is what a reader is given there instead. Scrub tombstones and
 // retention rows carry their operational tallies on audit_log.evidence, of
 // which this read projects the reversal link and never the blob; other meta
 // verbs' before/after payloads are served verbatim—workspace-operational
@@ -137,17 +139,20 @@ func recordHistoryEntry(row recordAuditRow, mask entityFieldMask) RecordHistoryE
 	before, after := applyFieldMask(row.before, mask), applyFieldMask(row.after, mask)
 	summary := composeRecordSummary(row.actorType, display, row.onBehalfOfName,
 		row.action, row.passportID != nil, row.agentClientName)
+	var edge *HistoryEdge
 	if row.edge != nil {
 		subject := recordSummarySubject(row.actorType, display, row.onBehalfOfName,
 			row.passportID != nil, row.agentClientName)
 		if line, phrased := edgeSummary(subject, row.action, *row.edge, after); phrased {
 			summary = line
 		}
-	}
-	var edge *HistoryEdge
-	if row.edge != nil {
 		rendered := historyEdgeOf(*row.edge)
 		edge = &rendered
+		// The images belong to the LINK — role, the dates, the primary flag — and
+		// the line above is where they are named as such. Carried onto the entry
+		// they are served as this RECORD's before/after, where a consumer reads
+		// them as changes to fields the record has never had.
+		before, after = nil, nil
 	}
 	return RecordHistoryEntry{
 		Edge:              edge,

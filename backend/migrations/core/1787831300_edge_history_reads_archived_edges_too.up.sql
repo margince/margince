@@ -12,6 +12,16 @@
 -- ANY end", which is five equality lookups unioned, not one ordered prefix.
 -- The write cost lands on linking and unlinking records, which no bulk path
 -- drives.
+--
+-- Not CONCURRENTLY: a migration runs in one transaction and CONCURRENTLY forbids
+-- that (see 1787650813 and 1787320004 on the same point), so each build holds a
+-- write-blocking SHARE lock for its duration. Stated rather than left to be
+-- found: these five are NON-partial, so unlike the scrub-boundary index each
+-- scans the whole of `relationship` rather than a predicate's slice of it. That
+-- is the bound worth knowing, and it is what makes it acceptable on THIS table:
+-- one row per link between two records, where audit_log holds one per mutation
+-- of every record there has ever been.
+--
 -- SET LOCAL lock_timeout bounds how long each CREATE INDEX waits to ACQUIRE its
 -- SHARE lock on `relationship`, not how long it holds it. The table is live and
 -- this file did not create it, so an unbounded wait would sit behind an open

@@ -94,20 +94,45 @@ func anchorIDOf(row relationshipRow, anchor string) (ids.UUID, error) {
 	return *id, nil
 }
 
-// RefuseEdgeWrite answers the OBJECT half of the authority an edge write asks
-// for, and writes nothing — so the button is honest before anyone presses it
-// rather than a 403 waiting to happen. The row half is the anchor's own
-// writability, which the caller asks through the gate every record read takes.
+// RefuseEdgeWrite answers the OBJECT half of the authority the inverse of one
+// audited edge change asks for, and writes nothing — so the button is honest
+// before anyone presses it rather than a 403 waiting to happen. The row half is
+// the anchor's own writability, which the caller asks through the gate every
+// record read takes.
+//
+// The verb follows the ENTRY and is not update for both: reversing a `create`
+// archives the link, and the archive above asks delete. Asking update for both
+// lights the button for every seat holding the seeded rep grid, which carries
+// create, read and update on `relationship` and no delete.
 //
 // Both grants, because an edge annotates its anchor: without the anchor's write
 // grant an edge write is an RBAC side door onto it, and that is the rule the
 // store's own entry points ask at their own entry.
-func (s *Store) RefuseEdgeWrite(ctx context.Context, kind string) error {
-	if err := auth.Require(ctx, "relationship", principal.ActionUpdate); err != nil {
+func (s *Store) RefuseEdgeWrite(ctx context.Context, kind, entryAction string) error {
+	action, err := edgeReversalGrant(entryAction)
+	if err != nil {
+		return err
+	}
+	if err := auth.Require(ctx, "relationship", action); err != nil {
 		return err
 	}
 	anchor, _ := relationshipAnchor(kind)
 	return auth.Require(ctx, anchor, principal.ActionUpdate)
+}
+
+// edgeReversalGrant names the grant the inverse of one audited edge change is
+// performed under. It reads the same pair ReverseEdge dispatches on, so the
+// authority asked in advance and the write that follows cannot name different
+// verbs for one entry.
+func edgeReversalGrant(entryAction string) (principal.Action, error) {
+	switch entryAction {
+	case edgeEntryCreate:
+		return principal.ActionDelete, nil
+	case edgeEntryUpdate:
+		return principal.ActionUpdate, nil
+	default:
+		return "", unreversibleEdgeAction(entryAction)
+	}
 }
 
 // ReverseEdgeInput is one audited edge change and the state its inverse must be
@@ -129,13 +154,27 @@ type ReverseEdgeInput struct {
 	Evidence map[string]any
 }
 
+// The two audited edge verbs this path reverses. Named because the dispatch that
+// performs an inverse and the grant that inverse is asked for must read the same
+// pair.
+const (
+	edgeEntryCreate = "create"
+	edgeEntryUpdate = "update"
+)
+
+// unreversibleEdgeAction is the fault both dispatches answer with, so a verb this
+// path does not reverse is described one way rather than two.
+func unreversibleEdgeAction(action string) error {
+	return fmt.Errorf("people: %q is not an edge change this path reverses", action)
+}
+
 // ReverseEdge performs the inverse of one audited edge change.
 func (s *Store) ReverseEdge(ctx context.Context, in ReverseEdgeInput) error {
 	switch in.Action {
-	case "create":
+	case edgeEntryCreate:
 		_, err := s.archiveRelationshipWithEvidence(ctx, in.EdgeID, &in.IfVersion, in.Evidence)
 		return err
-	case "update":
+	case edgeEntryUpdate:
 		patch, err := relationshipPatchFromImage(in.Before)
 		if err != nil {
 			return err
@@ -144,7 +183,7 @@ func (s *Store) ReverseEdge(ctx context.Context, in ReverseEdgeInput) error {
 		_, err = s.UpdateRelationship(ctx, in.EdgeID, patch)
 		return err
 	default:
-		return fmt.Errorf("people: %q is not an edge change this path reverses", in.Action)
+		return unreversibleEdgeAction(in.Action)
 	}
 }
 

@@ -129,9 +129,13 @@ func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string,
 // symmetric: an employment anchors the PERSON, so a seat holding
 // organization-write and not person-write is refused the button on the company's
 // page. Asking the record instead would light a button the write then refuses.
-func edgeIsWritableByCaller(edges *people.Store) func(context.Context, pgx.Tx, people.EdgeFacts) error {
-	return func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts) error {
-		if err := edges.RefuseEdgeWrite(ctx, facts.Kind); err != nil {
+//
+// The entry's action travels with it because the object grant the inverse asks
+// for is the people store's own to decide — reversing a create is an archive
+// there, and the archive asks delete.
+func edgeIsWritableByCaller(edges *people.Store) func(context.Context, pgx.Tx, people.EdgeFacts, string) error {
+	return func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts, entryAction string) error {
+		if err := edges.RefuseEdgeWrite(ctx, facts.Kind, entryAction); err != nil {
 			return err
 		}
 		return recordIsWritableByCaller(ctx, tx, facts.Anchor, facts.AnchorID)

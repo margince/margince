@@ -77,7 +77,7 @@ func (e Evaluator) evaluateEdge(ctx context.Context, tx pgx.Tx, row AuditRow) (U
 		return refuse(ReasonRecordArchived, ""), nil
 	}
 	if e.EdgeWritable != nil {
-		if err := e.EdgeWritable(ctx, tx, facts); err != nil {
+		if err := e.EdgeWritable(ctx, tx, facts, row.Action); err != nil {
 			if refusal, refused := edgeScopeRefusal(err); refused {
 				return refusal, nil
 			}

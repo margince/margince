@@ -201,6 +201,23 @@ func edgeBranchParts(anchor edgeEndpoint, claimed []edgeEndpoint, anchorPos, scr
 	// history line about a link to nothing would be worse than its absence.
 	conds = append(conds, scope, fmt.Sprintf("COALESCE(%s) IS NOT NULL", idList))
 
+	// ONE other end: the CASE arms and this COALESCE take the FIRST non-null
+	// column in edgeEndpoints order, so a row occupying two other ends is served
+	// as a link to whichever of them comes first in that slice.
+	//
+	// The shapes that make one other end true today are the per-kind CHECKs on
+	// `relationship`: rel_partner_shape, rel_project_stakeholder_shape and
+	// rel_project_company_shape each name their two columns and NULL every
+	// other. rel_employment_shape and rel_stakeholder_shape do NOT — neither
+	// nulls counterparty_org_id — and the create path takes the endpoints it is
+	// given, so a three-endpoint employment is admissible rather than impossible.
+	// Closing that is the write path's or the constraint's to do; what it costs
+	// here is a line that names one of the two other ends and not the other.
+	// It costs no disclosure: every endpoint column carries this branch's
+	// visibility and erasure conjunctions above whether or not the label arms
+	// reach it, which gates/edgeendpointcensus_test.go and
+	// TestEveryEdgeBranchGatesTheOtherEndsVisibilityAndErasure hold.
+
 	other = fmt.Sprintf(`CASE %s END AS other_type,
 			       COALESCE(%s) AS other_id,
 			       CASE %s END AS other_label`,

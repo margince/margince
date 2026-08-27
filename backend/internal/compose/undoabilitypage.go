@@ -111,9 +111,17 @@ func (p UndoabilityPage) recordFacts(ctx context.Context, tx pgx.Tx, entityType 
 }
 
 // pageRow is an AuditRow with the boundary answer the page query already found.
+//
+// behindErasure is nil for a LINK's row, and that absence is the answer rather
+// than a gap: the page query keys the boundary on the row's own
+// (entity_type, entity_id), which for a link is ('relationship', edge_id) — an
+// identity no write path in this tree records a scrub verb against. A boolean
+// there would read "never erased" for every link there has ever been. What
+// bounds a link is its ENDPOINTS' tombstones, and the one predicate that reads
+// them is the write's own port.
 type pageRow struct {
 	AuditRow
-	behindErasure bool
+	behindErasure *bool
 }
 
 // pageRows reads the page's audit rows in ONE query, carrying the erasure
@@ -144,7 +152,8 @@ func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType str
 
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.entity_type, a.entity_id, a.action, a.before, a.after, a.occurred_at,
-		       NOT (`+privacy.UnscrubbedImageSQL("a", verbsPlaceholder)+`) AS behind_erasure
+		       CASE WHEN a.entity_type = `+edgePlaceholder+` THEN NULL
+		            ELSE NOT (`+privacy.UnscrubbedImageSQL("a", verbsPlaceholder)+`) END AS behind_erasure
 		FROM audit_log a
 		WHERE a.id = ANY(`+rowsPlaceholder+`::uuid[])
 		  AND ((a.entity_type = `+typePlaceholder+` AND a.entity_id = `+idPlaceholder+`)
@@ -228,11 +237,15 @@ func auditSubjectsOf(rows []pageRow) (types []string, subjects []ids.UUID) {
 }
 
 // advisoryEvaluator is the page's evaluator: every port the WRITE binds, with
-// the four the page already holds facts for answered from those facts. Derived
+// the ones the page already holds facts for answered from those facts. Derived
 // from the binding evaluator rather than assembled beside it, so a port added
 // to the write is bound here without anyone remembering — which is how the page
 // came to omit ExternallyGoverned and light a restore button the write refuses.
 // Held by TestTheAdvisoryPathBindsEveryPortTheWriteBinds.
+//
+// The erasure boundary is the one fact a page cannot hold for every row: a
+// LINK's is its endpoints' and not its own (see pageRow), so an edge row keeps
+// the write's own port rather than a second reading of that rule here.
 func advisoryEvaluator(binding Evaluator, shared recordFacts, row pageRow, undone map[string]bool) Evaluator {
 	advisory := binding
 	advisory.Archived = func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) {
@@ -244,8 +257,10 @@ func advisoryEvaluator(binding Evaluator, shared recordFacts, row pageRow, undon
 		}
 		return errRecordNotWritable
 	}
-	advisory.BehindErasure = func(context.Context, pgx.Tx, AuditRow) (bool, error) {
-		return row.behindErasure, nil
+	if behind := row.behindErasure; behind != nil {
+		advisory.BehindErasure = func(context.Context, pgx.Tx, AuditRow) (bool, error) {
+			return *behind, nil
+		}
 	}
 	advisory.AlreadyUndone = func(_ context.Context, _ pgx.Tx, r AuditRow) (bool, error) {
 		return undone[r.ID.String()], nil

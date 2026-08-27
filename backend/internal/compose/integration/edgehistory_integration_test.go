@@ -17,13 +17,16 @@ package integration
 // one of those two properties or the paging that depends on them.
 
 import (
+	"errors"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // linkEmployment links a person to an organization through the people store's
@@ -93,6 +96,49 @@ func containsLine(lines []string, want string) bool {
 		}
 	}
 	return false
+}
+
+// A caller with NO `relationship` grant reads both windows built around the edge
+// CTE, and neither statement names a placeholder nobody binds.
+//
+// The links are absent rather than refused — a refusal would tell the caller the
+// record holds links — and the denial lands before the CTE registers an
+// argument. That the CTE itself binds nothing on the way to refusing is held
+// without a database by TestAnEdgelessCallerRegistersNoEdgeArguments. What only
+// real SQL answers is whether the two statements built AROUND it still bind what
+// they name: the history window, and the reversal read-back. A mismatch there is
+// not a wrong answer, it is every read of the record failing outright.
+func TestAnEdgelessCallerReadsBothWindowsWithoutAnUnboundPlaceholder(t *testing.T) {
+	e := Setup(t)
+	person := e.SeedPerson(t, "Ada Employed", nil)
+	org := e.SeedOrg(t, "Employer GmbH", nil)
+	linkEmployment(t, e, person, org, "cto")
+
+	edgeless := e.As(e.Rep1, nil, principal.Permissions{
+		Objects:  map[string]principal.ObjectGrant{"person": {Read: true}},
+		RowScope: principal.RowScopeAll,
+	})
+	page, err := privacy.ListRecordHistory(edgeless, e.DB(), privacy.RecordHistoryFilter{
+		EntityType: "person", EntityID: person,
+	})
+	if err != nil {
+		t.Fatalf("an edgeless caller reading the history window: %v", err)
+	}
+	if len(page.Entries) == 0 {
+		t.Error("the record's own rows went missing along with the edge branch")
+	}
+	for _, entry := range page.Entries {
+		if entry.Edge != nil {
+			t.Errorf("a caller holding no relationship grant was served the link line %q", entry.Summary)
+		}
+	}
+
+	// The reversal read-back renders the same CTE into its own statement. No
+	// restore was written here, so not-found is the right answer — and it is an
+	// answer only a statement that actually executed can give.
+	if _, err := privacy.ReadRestoreOf(edgeless, e.DB(), "person", person, ids.NewV7()); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("an edgeless caller reading the reversal line: %v, want the not-found of a statement that ran", err)
+	}
 }
 
 func TestEdgeHistoryShowsAnEmploymentOnBothEnds(t *testing.T) {

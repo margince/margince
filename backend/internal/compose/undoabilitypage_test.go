@@ -46,7 +46,11 @@ func TestTheAdvisoryPathAnswersFromThePageFacts(t *testing.T) {
 		}))
 	}
 
-	row := pageRow{AuditRow: AuditRow{ID: ids.MustParse("01950000-0000-7000-8000-00000000beef")}, behindErasure: true}
+	behindErasure := true
+	row := pageRow{
+		AuditRow:      AuditRow{ID: ids.MustParse("01950000-0000-7000-8000-00000000beef")},
+		behindErasure: &behindErasure,
+	}
 	shared := recordFacts{archived: true, writable: false}
 	undone := map[string]bool{row.ID.String(): true}
 	advisory := advisoryEvaluator(binding, shared, row, undone)

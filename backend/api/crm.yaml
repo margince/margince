@@ -26270,6 +26270,11 @@ components:
             `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an
             un-archive, which this path does not perform. The refusal says the link can be
             made again from the record's own screen, because that is true and actionable.
+            `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps
+            its records in an incumbent system, and EVERY change to a project's company link
+            whatever the verb — that kind takes write authority over the project row and a
+            project must keep at least one company, so a generic reverse would be a side door
+            around both rules. `detail` names the kind in the second case.
           enum: [no_before_image, not_a_replayable_verb, unsupported_record_type, superseded,
                  behind_erasure_boundary, already_undone, not_restorable_by_this_path,
                  record_archived, null_unwritable_by_module, not_writable_by_caller,

@@ -126,7 +126,7 @@ func TestReversingTheCreationOfARemovedLinkSaysTheLinkIsGone(t *testing.T) {
 // exist", which is the distinction the row-scope gate keeps hidden.
 func TestAnEdgeIsRefusedWhenItsAnchorIsNotTheCallersToWrite(t *testing.T) {
 	e := edgeEvaluator(employmentEdge())
-	e.EdgeWritable = func(context.Context, pgx.Tx, people.EdgeFacts) error {
+	e.EdgeWritable = func(context.Context, pgx.Tx, people.EdgeFacts, string) error {
 		return apperrors.ErrPermissionDenied
 	}
 	answer := judgeEdge(t, e, edgeRow("create", `null`, `{"kind":"employment","role":"cto"}`))
