@@ -61,7 +61,7 @@ async function bookAsVisitor({
 }
 
 const meta: Meta<typeof BookingScreen> = {
-  title: "Screens/Booking page",
+  title: "Signed out/Booking page",
   component: BookingScreen,
 };
 export default meta;

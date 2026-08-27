@@ -15,7 +15,7 @@ import { StoryProviders } from "./story-utils";
 // renders the screen without that shell, so the heading is absent here on
 // purpose rather than missing.
 const meta: Meta<typeof AskAiScreen> = {
-  title: "Intelligence/Ask Margince",
+  title: "Records/Ask Margince",
   component: AskAiScreen,
 };
 export default meta;

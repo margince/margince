@@ -22,7 +22,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // document nothing. That interaction is covered in filterbuilder.test.tsx, which
 // can reach the portal.
 const meta: Meta<typeof FilterBuilder> = {
-  title: "Screens/Filter builder",
+  title: "Patterns/Filter builder",
   component: FilterBuilder,
   parameters: { layout: "padded" },
 };

@@ -30,7 +30,7 @@ const client = new QueryClient({
 });
 
 const meta: Meta = {
-  title: "Onboarding/Conversation entries",
+  title: "Onboarding/Conversation/Entries",
   decorators: [
     (Story) => {
       installFetchStub({ "GET /me": meRoute({}) });

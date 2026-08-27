@@ -100,7 +100,7 @@ function story(hash: string, payload: unknown, status = 200) {
 }
 
 const meta: Meta<typeof OAuthConsent> = {
-  title: "Agents/Authorize access",
+  title: "Signed out/Authorize access",
   component: OAuthConsent,
 };
 export default meta;

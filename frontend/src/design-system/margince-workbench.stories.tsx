@@ -27,7 +27,7 @@ import {
  * these stories are about.
  */
 const meta = {
-  title: "Design System/Workbench",
+  title: "Design System/Margince workbench",
   component: MarginceWorkbench,
   parameters: { layout: "fullscreen" },
   decorators: [

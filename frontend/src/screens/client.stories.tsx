@@ -51,7 +51,7 @@ async function lookUpSender({ canvasElement }: { canvasElement: HTMLElement }) {
 }
 
 const meta: Meta<typeof ClientSurfaceScreen> = {
-  title: "Screens/Client surface",
+  title: "Records/Client surface",
   component: ClientSurfaceScreen,
 };
 export default meta;

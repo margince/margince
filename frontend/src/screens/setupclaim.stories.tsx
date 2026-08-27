@@ -21,7 +21,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * and a field to fix are three different next actions — so each is a story.
  */
 const meta: Meta<typeof SetupClaimScreen> = {
-  title: "Screens/Setup claim",
+  title: "Signed out/Setup claim",
   component: SetupClaimScreen,
   parameters: { layout: "fullscreen" },
   decorators: [

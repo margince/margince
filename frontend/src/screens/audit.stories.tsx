@@ -13,7 +13,7 @@ import { StoryProviders } from "./story-utils";
 // is a change to what an auditor reads before anything else, so every
 // attribution state gets a row rather than only the happy one.
 const meta: Meta = {
-  title: "Compliance/Audit attribution",
+  title: "Settings/Admin settings/Privacy & audit/Audit attribution",
   parameters: { layout: "padded" },
 };
 export default meta;

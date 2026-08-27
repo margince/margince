@@ -70,7 +70,7 @@ function room(routes: RouteMap, session = true) {
 }
 
 const meta: Meta<typeof BuyerRoomScreen> = {
-  title: "Signed out/Deal Room (buyer)",
+  title: "Signed out/Deal room (buyer)",
   component: BuyerRoomScreen,
 };
 export default meta;

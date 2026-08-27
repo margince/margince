@@ -36,7 +36,7 @@ import { BEHAVIOUR } from "./margince-core-motion";
  * catches two states having drifted into looking alike.
  */
 const meta = {
-  title: "Design System/Margince Core",
+  title: "Design System/Margince core",
   component: MarginceCoreScene,
   parameters: { layout: "centered" },
 } satisfies Meta<typeof MarginceCoreScene>;

@@ -21,7 +21,7 @@ type Deal = components["schemas"]["Deal"];
 type DealCoverage = components["schemas"]["DealCoverage"];
 
 const meta: Meta = {
-  title: "Records/Deal360",
+  title: "Records/Deal 360",
   parameters: { layout: "padded" },
 };
 export default meta;

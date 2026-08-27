@@ -18,7 +18,7 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 // settled below them. A rep with nothing scheduled reads ONE sentence rather
 // than three empty blocks, which is `NothingScheduled`.
 const meta: Meta = {
-  title: "Work/Scheduled messages",
+  title: "Records/Scheduled messages",
   parameters: { layout: "padded" },
 };
 export default meta;
