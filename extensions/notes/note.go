@@ -261,8 +261,8 @@ func addNote(ctx context.Context, rt extension.Runtime, in json.RawMessage) (jso
 		// reader of this insert needs, and a default states it somewhere else.
 		var scanErr error
 		n, scanErr = scanNote(tx.QueryRow(ctx,
-			`INSERT INTO `+noteTable+` (workspace_id, kind, body, author_user_id, author_is_agent)
-			 VALUES (`+callerWorkspace+`, $1, $2, $3::uuid, $4::boolean)
+			`INSERT INTO `+noteTable+` (kind, body, author_user_id, author_is_agent)
+			 VALUES ($1, $2, $3::uuid, $4::boolean)
 			 RETURNING `+noteColumns, string(kindNote), body, authorID, authorIsAgent).Scan)
 		if scanErr != nil {
 			return scanErr

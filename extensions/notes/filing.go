@@ -76,8 +76,8 @@ func fileNote(ctx context.Context, rt extension.Runtime, in json.RawMessage) (js
 		}
 		var scanErr error
 		n, scanErr = scanNote(tx.QueryRow(ctx,
-			`INSERT INTO `+noteTable+` (workspace_id, kind, body, author_user_id, author_is_agent, filed_activity_id)
-			 VALUES (`+callerWorkspace+`, $1, $2, $3::uuid, $4::boolean, $5::uuid)
+			`INSERT INTO `+noteTable+` (kind, body, author_user_id, author_is_agent, filed_activity_id)
+			 VALUES ($1, $2, $3::uuid, $4::boolean, $5::uuid)
 			 RETURNING `+noteColumns, string(kindNote), body, authorID, authorIsAgent, filed.Id).Scan)
 		if scanErr != nil {
 			return scanErr

@@ -26,8 +26,8 @@ actions:
   - target: $.paths['/ext/relay-probe/connect']
     update:
       # PUT, because connecting the same account twice is the same connection:
-      # the row is upserted on (workspace, member) and the token replaced. A
-      # POST would publish "create another one" for an operation that cannot.
+      # the row is upserted on the member and the token replaced. A POST would
+      # publish "create another one" for an operation that cannot.
       put:
         operationId: relayProbeConnect
         summary: Connect this member's Relay account and deposit their token.

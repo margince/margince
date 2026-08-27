@@ -24,12 +24,12 @@ func TestHeartbeatWritesOneRowNamingItsWorkspace(t *testing.T) {
 	if !strings.Contains(insert, "INSERT INTO "+noteTable) {
 		t.Errorf("the tick does not write the unit's own table:\n%s", insert)
 	}
-	// The fan-out made visible. The dispatcher enqueues one child per live
-	// workspace; on a single-workspace dev install that is one child, so a row
-	// naming no tenant would demonstrate the single-tenant case and leave the
-	// multi-tenant guarantee untested.
-	if strings.Count(insert, callerWorkspace) != 2 {
-		t.Errorf("the tick does not both scope and NAME its workspace:\n%s", insert)
+	// It names NO workspace, and that is an assertion rather than the absence
+	// of one. A unit table carries no tenant column and no policy keyed on one,
+	// so a statement reaching for app.workspace_id would be reading a GUC that
+	// fences nothing and writing a column that is not there.
+	if strings.Contains(insert, "workspace") {
+		t.Errorf("the tick still names a workspace:\n%s", insert)
 	}
 	if rt.tx.args[0][0] != string(kindHeartbeat) {
 		t.Errorf("the tick writes kind %v, want %q — the column is what marks the row as the job's", rt.tx.args[0][0], kindHeartbeat)

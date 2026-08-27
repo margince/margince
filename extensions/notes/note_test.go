@@ -140,8 +140,10 @@ func TestAddNoteStoresTheBodyAndReturnsTheStoredRow(t *testing.T) {
 		t.Errorf("the insert writes kind %v, want %q", rt.tx.args[0][0], kindNote)
 	}
 	sql := rt.tx.only(t)
-	if !strings.Contains(sql, callerWorkspace) {
-		t.Errorf("the insert does not name the invocation's workspace, so the policy's WITH CHECK would refuse it:\n%s", sql)
+	// No workspace, asserted rather than merely absent — see the tick's own
+	// version of this in heartbeat_test.go.
+	if strings.Contains(sql, "workspace") {
+		t.Errorf("the insert still names a workspace:\n%s", sql)
 	}
 	if !strings.Contains(sql, "RETURNING") {
 		t.Errorf("the insert reads its own row back in a second statement:\n%s", sql)
