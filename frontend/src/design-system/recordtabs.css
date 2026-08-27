@@ -27,6 +27,30 @@
   }
 }
 
+/* A record with a rail is the exception, and it has to be: the rail is a COLUMN
+   INSIDE the work container, so a strip that centres itself on the container
+   runs underneath it. On the contact page that put the rail's card over the
+   first tabs — a reader saw "Network" cut to "twork" and the two tabs before it
+   not at all, which reads as a broken menu rather than as a strip that
+   continues.
+
+   Inside a railed record the strip keeps its own column. The rules stop where
+   the reading column does, which is the narrower answer the fallback above
+   already takes when there is no container to measure. */
+.page-zones-main .recordtabs {
+  inline-size: auto;
+  margin-inline: 0;
+}
+
+/* And its tabs start at the column's own edge. The row centres itself in the
+   record measure so the first tab lands under the record's mark; inside a
+   column that measure is wider than the column, so centring pushed the first
+   tabs off the left of it and the strip opened part-way along. */
+.page-zones-main .recordtabs-row {
+  max-inline-size: none;
+  padding-inline: 0;
+}
+
 /* The tabs themselves keep the record's own column, so the first tab sits
    under the record's mark rather than against the window's edge. Only the
    RULES cross the page; the tabs belong to the document under them. */
