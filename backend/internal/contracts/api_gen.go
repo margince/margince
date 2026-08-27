@@ -15142,18 +15142,21 @@ type ConfirmDetails struct {
 	Phone          string                       `json:"phone"`
 
 	// Provenance Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.
-	Provenance []struct {
-		Field string `json:"field"`
-
-		// RecordedAt The date the value was recorded, as YYYY-MM-DD.
-		RecordedAt string `json:"recorded_at"`
-		Source     string `json:"source"`
-	} `json:"provenance"`
-	Title string `json:"title"`
+	Provenance []ConfirmFieldOrigin `json:"provenance"`
+	Title      string               `json:"title"`
 }
 
 // ConfirmDetailsMarketingState Their answer today, so somebody who already said yes is not asked as though they had not.
 type ConfirmDetailsMarketingState string
+
+// ConfirmFieldOrigin One line of where a held value came from, for the Art. 14 disclosure on the confirm page.
+type ConfirmFieldOrigin struct {
+	Field string `json:"field"`
+
+	// RecordedAt The date the value was recorded, as YYYY-MM-DD.
+	RecordedAt string `json:"recorded_at"`
+	Source     string `json:"source"`
+}
 
 // ConnectChannelRequest defines model for ConnectChannelRequest.
 type ConnectChannelRequest struct {

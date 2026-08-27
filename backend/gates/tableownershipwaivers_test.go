@@ -35,6 +35,7 @@ var crossStoreWrites = gatekit.Waive(map[string]string{
 	"internal/modules/people:person_consent:consentcarry.go:dropCollidingConsent":             "merge carries the survivor's consent state in the single transaction",
 	"internal/modules/people:person_consent:consentcarry.go:flipCarriedWithdrawals":           "merge carries the survivor's consent state in the single transaction",
 	"internal/modules/people:person_consent:consentcarry.go:repointCarriedConsent":            "merge carries the survivor's consent state in the single transaction",
+	"internal/modules/people:person_confirm_submission:mergerelink.go:relinkPersonReferences": "a person merge carries the merged-away contact's confirm-page submissions onto the survivor in the single merge transaction. What these rows hold is a request the workspace still owes an answer to — a correction the subject typed, or their asking to be removed — and the survivor's queue is the only place a rep will ever read one. Left on the retired record it hangs off a row no read returns, which is a data subject's request quietly dropped rather than refused",
 	"internal/modules/people:consent_event:consentcarry.go:carryConsent":                      "merge re-points the append-only consent proof log in the single transaction",
 	"internal/modules/people:consent_event:consentcarry.go:flipCarriedWithdrawals":            "merge re-points the append-only consent proof log in the single transaction",
 	// The outbound-send reconcile folds the provider's own captured echo of a

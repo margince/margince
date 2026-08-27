@@ -72,16 +72,29 @@ func (s *Store) SubmitConfirmation(ctx context.Context, token string, in Confirm
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		ref, err := s.spendConfirmTokenTx(ctx, tx, token)
+		// The SUBJECT first, before the token row, and the order is the whole
+		// point. Art. 17 erasure takes the person and then deletes this
+		// subject's confirm_token rows; a transaction taking the token first
+		// and the person second closes a cycle, and nothing in this tree
+		// retries a deadlock — when the eraser is the one that loses, an
+		// erasure fulfilment fails. Same ordering IssueDoubleOptIn takes, for
+		// the same reason.
+		//
+		// Naming the subject costs one extra read and buys the ordering: it
+		// takes no row lock, so it can say who this link belongs to without
+		// ordering anything.
+		personID, err := s.subjectOfConfirmTokenTx(ctx, tx, token)
 		if err != nil {
 			return err
 		}
-		// Held before anything is staged. Spending the token proved the link was
-		// live a statement ago, which is a snapshot: an erasure committing
-		// between that statement and these inserts would restore rows it had
-		// just deleted, leaving the subject's own words behind an erasure that
-		// certified them gone.
-		if err := auth.LockSubjectLive(ctx, tx, "person", ref.PersonID.UUID); err != nil {
+		if err := auth.LockSubjectLive(ctx, tx, "person", personID.UUID); err != nil {
+			return err
+		}
+		// Spent under the subject lock, which is what makes the link
+		// single-use: a concurrent submit blocks on the person row first, then
+		// finds the token consumed.
+		ref, err := s.spendConfirmTokenTx(ctx, tx, token)
+		if err != nil {
 			return err
 		}
 		for field, value := range in.Corrections {
@@ -119,6 +132,8 @@ func (s *Store) recordMarketingAnswerTx(ctx context.Context, tx pgx.Tx, ref Conf
 		// Earned, not asserted: this is set only after spendConfirmTokenTx
 		// consumed the link that proves the mailbox.
 		MailboxProof: MailboxProvenByConfirmLink,
+		// Earned, not asserted: this is set only after spendConfirmTokenTx
+		// consumed the link that proves the mailbox.
 	}
 	sub, state, err := admitRecord(ctx, input)
 	if err != nil {

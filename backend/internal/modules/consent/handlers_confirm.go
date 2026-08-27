@@ -78,17 +78,11 @@ func wireConfirmCard(card ConfirmCard) crmcontracts.ConfirmDetails {
 	if state == "" {
 		state = "unknown"
 	}
-	origins := make([]struct {
-		Field      string `json:"field"`
-		RecordedAt string `json:"recorded_at"`
-		Source     string `json:"source"`
-	}, 0, len(card.Provenance))
+	origins := make([]crmcontracts.ConfirmFieldOrigin, 0, len(card.Provenance))
 	for _, o := range card.Provenance {
-		origins = append(origins, struct {
-			Field      string `json:"field"`
-			RecordedAt string `json:"recorded_at"`
-			Source     string `json:"source"`
-		}{Field: o.Field, RecordedAt: o.RecordedAt, Source: o.Source})
+		origins = append(origins, crmcontracts.ConfirmFieldOrigin{
+			Field: o.Field, RecordedAt: o.RecordedAt, Source: o.Source,
+		})
 	}
 	return crmcontracts.ConfirmDetails{
 		FullName:       card.FullName,

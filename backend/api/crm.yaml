@@ -28251,13 +28251,16 @@ components:
         provenance:
           type: array
           description: 'Where each held value came from and when (Art. 14). Empty for a field nothing has stamped.'
-          items:
-            type: object
-            required: [field, source, recorded_at]
-            properties:
-              field:       { type: string }
-              source:      { type: string }
-              recorded_at: { type: string, description: 'The date the value was recorded, as YYYY-MM-DD.' }
+          items: { $ref: '#/components/schemas/ConfirmFieldOrigin' }
+
+    ConfirmFieldOrigin:
+      type: object
+      description: One line of where a held value came from, for the Art. 14 disclosure on the confirm page.
+      required: [field, source, recorded_at]
+      properties:
+        field:       { type: string }
+        source:      { type: string }
+        recorded_at: { type: string, description: 'The date the value was recorded, as YYYY-MM-DD.' }
 
     # ---- Automations (E15/ADR-0035, feedback/14) ----
     AutomationCatalogEntry:

@@ -37,9 +37,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// personIDKey is the audit-payload key naming the subject. A typo would make
-// that row unsearchable by the very field a later reader looks it up on, which
-// is why it is a constant rather than a literal at each payload.
+// personIDKey names the subject in an audit payload, and the wire path a
+// refusal about them points at. A typo in either would cost a reader the row
+// they were looking for, which is why it is a constant rather than a literal.
 const personIDKey = "person_id"
 
 // confirmTokenTTL bounds how long a link showing somebody their own record
@@ -53,6 +53,9 @@ const confirmTokenTTL = 14 * 24 * time.Hour
 type IssuedConfirm struct {
 	Token     string
 	ExpiresAt time.Time
+	// DeliveredTo is where the send path must post it. Returned rather than
+	// taken, so the mailbox the consent claim rests on is the subject's own.
+	DeliveredTo string
 }
 
 // ConfirmRef is a token's resolution: whose record it opens, the address the
@@ -64,21 +67,23 @@ type ConfirmRef struct {
 	DeliveredTo string
 }
 
-// IssueConfirmToken mints the single-use link for one person, recording the
-// address it is to be delivered to. Only the sha256 lands in the database, so a
+// IssueConfirmToken mints the single-use link for one person and returns the
+// address it must be delivered to. Only the sha256 lands in the database, so a
 // stolen table opens nobody's record.
+//
+// The address is DERIVED here rather than accepted from the caller, and that is
+// the security property rather than a convenience. A grant made through this
+// link completes with no confirmation mail, on the claim that the link reached
+// the subject's own mailbox — so a caller who could name the address could name
+// somebody else's, hand out the plaintext, and produce a consent that looks
+// defensible against a mailbox the subject never held. IssueDoubleOptIn is
+// structurally immune for the same reason: it takes no address at all.
 //
 // A fresh issuance supersedes any unspent prior token for the same person:
 // supersession is expiry, exactly as the double-opt-in path does it, so the
 // resolve path needs no extra state. Delivery of the plaintext is the caller's,
 // which is what keeps this store free of a mail dependency.
-func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID, deliveredTo string) (IssuedConfirm, error) {
-	if deliveredTo == "" {
-		return IssuedConfirm{}, &ValidationError{
-			Field:  "delivered_to",
-			Reason: "a confirm link is evidence of reaching one mailbox, so the address it is sent to is required",
-		}
-	}
+func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID) (IssuedConfirm, error) {
 	if err := auth.Require(ctx, "person", principal.ActionUpdate); err != nil {
 		return IssuedConfirm{}, err
 	}
@@ -94,6 +99,25 @@ func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID, de
 		// committing after an unheld probe would leave the installation posting
 		// it to somebody it had just been told to forget.
 		if err := auth.HoldWritableLive(ctx, tx, "person", personID.UUID); err != nil {
+			return err
+		}
+		// The subject's own live primary address, read the same way the card
+		// reads it. A person carrying none has no mailbox to prove, so there is
+		// nothing this link could evidence and it is refused rather than minted
+		// against an address nobody holds.
+		var deliveredTo string
+		err := tx.QueryRow(ctx, `
+			SELECT email FROM person_email
+			 WHERE person_id = $1 AND archived_at IS NULL
+			 ORDER BY is_primary DESC, created_at
+			 LIMIT 1`, personID).Scan(&deliveredTo)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return &ValidationError{
+				Field:  personIDKey,
+				Reason: "this contact carries no live email address, so there is no mailbox a confirm link could reach",
+			}
+		}
+		if err != nil {
 			return err
 		}
 		issued := s.now().UTC()
@@ -124,7 +148,7 @@ func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID, de
 		}); err != nil {
 			return err
 		}
-		out = IssuedConfirm{Token: token, ExpiresAt: expires}
+		out = IssuedConfirm{Token: token, ExpiresAt: expires, DeliveredTo: deliveredTo}
 		return nil
 	})
 	if err != nil {
@@ -134,8 +158,14 @@ func (s *Store) IssueConfirmToken(ctx context.Context, personID ids.PersonID, de
 }
 
 // ResolveConfirmToken answers whose record a confirm link opens. Unknown,
-// expired and already-spent read as absent, all three identically, so the
-// surface never becomes an oracle for which of the three it was.
+// expired, already-spent and belonging-to-an-archived-subject read as absent,
+// all four identically, so the surface never becomes an oracle for which it was.
+//
+// The liveness test is here rather than in the card read, so both verbs get it
+// from one statement. An ordinary archive does not delete these rows — only
+// Art. 17 erasure and the retention anonymizer do — so a rep archiving a contact
+// who holds a live link would otherwise leave the next click answering 500,
+// and a submit would burn the link before refusing.
 //
 // Resolution runs outside row-level security for the same reason the preference
 // resolver does: the surface it serves has no session, and the token IS the
@@ -148,9 +178,11 @@ func (s *Store) ResolveConfirmToken(ctx context.Context, token string) (ConfirmR
 	var ref ConfirmRef
 	err := database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		err := tx.QueryRow(ctx, `
-			UPDATE confirm_token SET opened_at = coalesce(opened_at, $2)
-			WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > $2
-			RETURNING person_id, id, delivered_to`,
+			UPDATE confirm_token ct SET opened_at = coalesce(ct.opened_at, $2)
+			WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
+			  AND EXISTS (SELECT 1 FROM person p
+			               WHERE p.id = ct.person_id AND p.archived_at IS NULL)
+			RETURNING ct.person_id, ct.id, ct.delivered_to`,
 			hashConfirmToken(token), s.now().UTC()).Scan(&ref.PersonID, &ref.TokenID, &ref.DeliveredTo)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return apperrors.ErrNotFound
@@ -163,6 +195,29 @@ func (s *Store) ResolveConfirmToken(ctx context.Context, token string) (ConfirmR
 	return ref, nil
 }
 
+// subjectOfConfirmTokenTx names whose link this is, without taking a row lock.
+//
+// A plain read, and that is what it is for: the submit has to know the subject
+// BEFORE it locks anything, because the subject row is the first lock its
+// transaction may take. Art. 17 erasure holds the person and then deletes these
+// token rows, so a transaction touching the token first would close a cycle.
+//
+// Naming the subject is not authorization. The spend below is what redeems the
+// link, and it runs under the subject lock this read makes possible.
+func (s *Store) subjectOfConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ids.PersonID, error) {
+	var personID ids.PersonID
+	err := tx.QueryRow(ctx, `
+		SELECT ct.person_id FROM confirm_token ct
+		 WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
+		   AND EXISTS (SELECT 1 FROM person p
+		                WHERE p.id = ct.person_id AND p.archived_at IS NULL)`,
+		hashConfirmToken(token), s.now().UTC()).Scan(&personID)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ids.PersonID{}, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)
+	}
+	return personID, err
+}
+
 // spendConfirmTokenTx marks the link used, inside the caller's transaction so
 // the submit it authorizes and the spending of it commit together. A token that
 // is no longer live refuses rather than being spent twice, which is what makes a
@@ -173,9 +228,11 @@ func (s *Store) ResolveConfirmToken(ctx context.Context, token string) (ConfirmR
 func (s *Store) spendConfirmTokenTx(ctx context.Context, tx pgx.Tx, token string) (ConfirmRef, error) {
 	var ref ConfirmRef
 	err := tx.QueryRow(ctx, `
-		UPDATE confirm_token SET consumed_at = $2
-		WHERE token_hash = $1 AND consumed_at IS NULL AND expires_at > $2
-		RETURNING person_id, id, delivered_to`,
+		UPDATE confirm_token ct SET consumed_at = $2
+		WHERE ct.token_hash = $1 AND ct.consumed_at IS NULL AND ct.expires_at > $2
+		  AND EXISTS (SELECT 1 FROM person p
+		               WHERE p.id = ct.person_id AND p.archived_at IS NULL)
+		RETURNING ct.person_id, ct.id, ct.delivered_to`,
 		hashConfirmToken(token), s.now().UTC()).Scan(&ref.PersonID, &ref.TokenID, &ref.DeliveredTo)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ConfirmRef{}, fmt.Errorf("confirm token: %w", apperrors.ErrNotFound)

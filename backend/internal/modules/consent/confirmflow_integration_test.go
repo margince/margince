@@ -19,6 +19,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -35,11 +37,26 @@ func seedMarketingPurpose(t *testing.T, e *channelConsentEnv) {
 	}
 }
 
+// seedSubjectAddress gives the subject the live address a confirm link is
+// delivered to. The mint derives it rather than taking it, so a person with no
+// address has no link.
+func seedSubjectAddress(t *testing.T, e *channelConsentEnv) {
+	t.Helper()
+	if _, err := e.owner.Exec(context.Background(),
+		`INSERT INTO person_email (person_id, email, is_primary, source, captured_by)
+		 VALUES ($1, $2, true, 'test', 'human:x')
+		 ON CONFLICT DO NOTHING`,
+		e.person, "subject-"+e.person.String()+"@example.test"); err != nil {
+		t.Fatalf("seed the subject's address: %v", err)
+	}
+}
+
 // issueLink mints a confirm link for the environment's person, the way the send
 // path will.
 func issueLink(t *testing.T, e *channelConsentEnv) IssuedConfirm {
 	t.Helper()
-	issued, err := e.store.IssueConfirmToken(e.ctx, e.person, "subject@example.test")
+	seedSubjectAddress(t, e)
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.person)
 	if err != nil {
 		t.Fatalf("mint a confirm link: %v", err)
 	}
@@ -50,12 +67,16 @@ func issueLink(t *testing.T, e *channelConsentEnv) IssuedConfirm {
 func marketingStateOf(t *testing.T, e *channelConsentEnv) string {
 	t.Helper()
 	var state string
-	if err := e.owner.QueryRow(context.Background(), `
-		SELECT coalesce(max(pc.state), '')
+	err := e.owner.QueryRow(context.Background(), `
+		SELECT pc.state
 		  FROM person_consent pc
 		  JOIN consent_purpose cp ON cp.id = pc.purpose_id
 		 WHERE pc.person_id = $1 AND cp.key = $2`,
-		e.person, PurposeMarketingEmail).Scan(&state); err != nil {
+		e.person, PurposeMarketingEmail).Scan(&state)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return ""
+	}
+	if err != nil {
 		t.Fatalf("read the marketing state: %v", err)
 	}
 	return state
@@ -342,5 +363,123 @@ func TestAFreshLinkRetiresTheOneBeforeIt(t *testing.T) {
 	}
 	if _, err := e.store.ResolveConfirmToken(e.ctx, second.Token); err != nil {
 		t.Errorf("the fresh link does not open: %v", err)
+	}
+}
+
+// Two submits racing on one link. The spend takes a row lock, so the loser
+// blocks and then finds the row consumed — but that is a claim about isolation
+// levels, and a claim about isolation is worth a test rather than an argument.
+// Exactly one may win, or the grant is replayable by opening two tabs.
+func TestTwoSubmitsRacingOnOneLinkLeaveOneWinner(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedMarketingPurpose(t, e)
+	link := issueLink(t, e)
+
+	answer := ConfirmSubmission{
+		MarketingChoice:  string(StateGranted),
+		MarketingWording: "News from time to time.",
+	}
+	results := make(chan error, 2)
+	for range 2 {
+		go func() { results <- e.store.SubmitConfirmation(e.ctx, link.Token, answer) }()
+	}
+	var won int
+	for range 2 {
+		if err := <-results; err == nil {
+			won++
+		}
+	}
+	if won != 1 {
+		t.Fatalf("%d of 2 racing submits succeeded, want exactly 1", won)
+	}
+
+	var proofRows int
+	if err := e.owner.QueryRow(context.Background(), `
+		SELECT count(*) FROM consent_event ce
+		  JOIN consent_purpose cp ON cp.id = ce.purpose_id
+		 WHERE ce.person_id = $1 AND cp.key = $2`,
+		e.person, PurposeMarketingEmail).Scan(&proofRows); err != nil {
+		t.Fatalf("count proof rows: %v", err)
+	}
+	if proofRows != 1 {
+		t.Errorf("%d proof rows, want 1 — one link is one answer", proofRows)
+	}
+}
+
+// A rep archives a contact who is holding a live link. Their next click must
+// read as absent like every other dead token, not as a server fault — and the
+// link must not be spendable, because a submit that burns the link and then
+// refuses costs the subject their one answer for a reason they cannot see.
+//
+// The archive path does not delete confirm_token (only erasure and the
+// retention anonymizer do), so liveness is the resolver's to check.
+func TestALinkHeldByAnArchivedSubjectReadsAsAbsent(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedMarketingPurpose(t, e)
+	link := issueLink(t, e)
+	archiveConsentSubject(t, e.owner, "person", e.person.UUID)
+
+	if _, err := e.store.ResolveConfirmToken(e.ctx, link.Token); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("resolve: %v, want not-found — an archived subject's link reads as absent", err)
+	}
+	if err := e.store.SubmitConfirmation(e.ctx, link.Token, ConfirmSubmission{}); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("submit: %v, want not-found", err)
+	}
+	var spent bool
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT consumed_at IS NOT NULL FROM confirm_token WHERE person_id = $1`,
+		e.person).Scan(&spent); err != nil {
+		t.Fatalf("read the token: %v", err)
+	}
+	if spent {
+		t.Error("a refused submit spent the link, so the subject cannot answer if they are restored")
+	}
+}
+
+// The mailbox the consent claim rests on is the subject's OWN, and the mint is
+// where that is settled: it reads the address rather than taking one. A caller
+// that could name the address could name somebody else's, hand out the
+// plaintext, and produce a grant that looks defensible against a mailbox the
+// subject never held.
+func TestAConfirmLinkIsAddressedToTheSubjectsOwnMailbox(t *testing.T) {
+	e := setupChannelConsent(t)
+	seedSubjectAddress(t, e)
+
+	issued, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	if err != nil {
+		t.Fatalf("mint: %v", err)
+	}
+	want := "subject-" + e.person.String() + "@example.test"
+	if issued.DeliveredTo != want {
+		t.Errorf("delivered_to = %q, want the subject's own address %q", issued.DeliveredTo, want)
+	}
+	var stored string
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT delivered_to FROM confirm_token WHERE person_id = $1`, e.person).Scan(&stored); err != nil {
+		t.Fatalf("read the token row: %v", err)
+	}
+	if stored != want {
+		t.Errorf("the row records %q, want %q — the address IS the evidence", stored, want)
+	}
+}
+
+// A contact with no live address has no mailbox to prove, so there is nothing a
+// link could evidence. Minting one anyway would produce a credential whose whole
+// justification is an address nobody holds.
+func TestAContactWithNoAddressGetsNoConfirmLink(t *testing.T) {
+	e := setupChannelConsent(t)
+
+	_, err := e.store.IssueConfirmToken(e.ctx, e.person)
+	var invalid *ValidationError
+	if !errors.As(err, &invalid) {
+		t.Fatalf("err = %v, want a validation error", err)
+	}
+	var minted int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT count(*) FROM confirm_token WHERE person_id = $1`, e.person).Scan(&minted); err != nil {
+		t.Fatalf("count tokens: %v", err)
+	}
+	if minted != 0 {
+		t.Errorf("%d token(s) minted for a contact with no address", minted)
 	}
 }

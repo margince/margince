@@ -20819,12 +20819,14 @@ export interface components {
              */
             marketing_state: "unknown" | "granted" | "withdrawn";
             /** @description Where each held value came from and when (Art. 14). Empty for a field nothing has stamped. */
-            provenance: {
-                field: string;
-                source: string;
-                /** @description The date the value was recorded, as YYYY-MM-DD. */
-                recorded_at: string;
-            }[];
+            provenance: components["schemas"]["ConfirmFieldOrigin"][];
+        };
+        /** @description One line of where a held value came from, for the Art. 14 disclosure on the confirm page. */
+        ConfirmFieldOrigin: {
+            field: string;
+            source: string;
+            /** @description The date the value was recorded, as YYYY-MM-DD. */
+            recorded_at: string;
         };
         /** @description An automation *type* in the closed starter library (E15/ADR-0035, feedback/14). */
         AutomationCatalogEntry: {

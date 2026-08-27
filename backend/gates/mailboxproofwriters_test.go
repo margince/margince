@@ -24,7 +24,6 @@ package gates
 
 import (
 	"go/ast"
-	"os"
 	"strings"
 	"testing"
 
@@ -37,6 +36,7 @@ import (
 // and not something a walk could work out.
 const (
 	theMailboxProofWriter     = "recordMarketingAnswerTx"
+	theMailboxProofSpender    = "SubmitConfirmation"
 	theMailboxProofWriterFile = "internal/modules/consent/confirmsubmit.go"
 )
 
@@ -47,10 +47,17 @@ func TestOnlyTheConfirmSubmitClaimsAProvenMailbox(t *testing.T) {
 		Subject: func(_ string, file *ast.File) bool { return assignsMailboxProof(file) },
 	}
 	var elsewhere []string
+	var permitted *ast.File
 	for _, f := range scope.Files(t) {
-		if f.Path != theMailboxProofWriterFile {
-			elsewhere = append(elsewhere, f.Path)
+		if f.Path == theMailboxProofWriterFile {
+			permitted = f.File
+			continue
 		}
+		elsewhere = append(elsewhere, f.Path)
+	}
+	if permitted == nil {
+		t.Fatalf("%s assigns no MailboxProof — either the claim moved and this gate now certifies "+
+			"nothing, or the field is unused and the type should go", theMailboxProofWriterFile)
 	}
 	if len(elsewhere) > 0 {
 		t.Errorf("MailboxProof is set outside %s:\n\t%s\n\n"+
@@ -60,10 +67,10 @@ func TestOnlyTheConfirmSubmitClaimsAProvenMailbox(t *testing.T) {
 			"a request body, which would grant marketing consent for anybody.",
 			theMailboxProofWriterFile, strings.Join(elsewhere, "\n\t"))
 	}
-	if !writerStillSpendsTheToken(t) {
-		t.Errorf("%s sets a MailboxProof without calling spendConfirmTokenTx's caller path — the proof "+
-			"is only true because the link was redeemed, so an assignment that no longer follows the "+
-			"spend is a claim with nothing behind it", theMailboxProofWriter)
+	if !writerStillSpendsTheToken(t, permitted) {
+		t.Errorf("%s no longer reaches %s from %s — the proof is only true because the link was "+
+			"redeemed, so an assignment the spend does not reach is a claim with nothing behind it",
+			theMailboxProofWriterFile, theMailboxProofWriter, theMailboxProofSpender)
 	}
 }
 
@@ -90,15 +97,63 @@ func assignsMailboxProof(file *ast.File) bool {
 	return found
 }
 
-// writerStillSpendsTheToken holds the other half: the one permitted writer is
-// permitted BECAUSE its transaction spent the link first. If the submit stops
-// spending, the assignment stops being earned — and this gate would otherwise
-// go on passing, since the file name never changed.
-func writerStillSpendsTheToken(t *testing.T) bool {
+// writerStillSpendsTheToken holds the other half: the assignment is earned
+// BECAUSE the transaction carrying it spent the link first.
+//
+// It walks rather than greps, and the difference is the whole value. A
+// substring search over the file passes on a leftover comment naming the spend,
+// and passes again if the assignment moves into a third function that the spend
+// never reaches — which is exactly the shape of the regression it exists to
+// catch. So it names the two functions and asserts the edge between them: the
+// assigning function is called by the spending one.
+func writerStillSpendsTheToken(t *testing.T, file *ast.File) bool {
 	t.Helper()
-	source, err := os.ReadFile(theMailboxProofWriterFile)
-	if err != nil {
-		t.Fatalf("read the one permitted writer: %v", err)
+	assignedIn := functionAssigningMailboxProof(file)
+	if assignedIn != theMailboxProofWriter {
+		t.Errorf("MailboxProof is assigned in %q, but this gate permits %q — either move the "+
+			"assignment back to the function that spends the link, or decide the permitted site "+
+			"anew and say here why the new one has earned the claim",
+			assignedIn, theMailboxProofWriter)
+		return false
 	}
-	return strings.Contains(string(source), "spendConfirmTokenTx")
+	return callsBoth(file, theMailboxProofSpender, theMailboxProofWriter)
+}
+
+// functionAssigningMailboxProof names the function that sets the field, or ""
+// when none does.
+func functionAssigningMailboxProof(file *ast.File) string {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Body == nil {
+			continue
+		}
+		if assignsMailboxProof(&ast.File{Decls: []ast.Decl{fn}}) {
+			return fn.Name.Name
+		}
+	}
+	return ""
+}
+
+// callsBoth reports whether the named caller calls the named callee — the edge
+// that makes the proof earned rather than asserted.
+func callsBoth(file *ast.File, caller, callee string) bool {
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != caller || fn.Body == nil {
+			continue
+		}
+		reaches := false
+		ast.Inspect(fn.Body, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
+			if sel, ok := call.Fun.(*ast.SelectorExpr); ok && sel.Sel.Name == callee {
+				reaches = true
+			}
+			return !reaches
+		})
+		return reaches
+	}
+	return false
 }

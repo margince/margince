@@ -14,6 +14,7 @@ package consent
 
 import (
 	"context"
+	"errors"
 
 	"github.com/jackc/pgx/v5"
 
@@ -110,12 +111,18 @@ func (s *Store) confirmCardFor(ctx context.Context, personID ids.PersonID) (Conf
 		if err != nil {
 			return err
 		}
-		return tx.QueryRow(ctx, `
-			SELECT coalesce(max(pc.state), '')
+		// No answer on record reads as empty rather than as an error: a person
+		// who has never been asked is the ordinary case on this page.
+		err = tx.QueryRow(ctx, `
+			SELECT pc.state
 			  FROM person_consent pc
 			  JOIN consent_purpose cp ON cp.id = pc.purpose_id
 			 WHERE pc.person_id = $1 AND cp.key = $2`,
 			personID, PurposeMarketingEmail).Scan(&card.Marketing)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		return err
 	})
 	return card, err
 }

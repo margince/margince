@@ -94,7 +94,34 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 			return false
 		}
 		fset := token.NewFileSet()
-		for _, file := range parsePackageDir(t, fset, dir) {
+		files := parsePackageDir(t, fset, dir)
+		// Which functions take a row lock at all — spelled themselves, or
+		// through anything they call. A helper holding the UPDATE is what makes
+		// its caller's ordering decisive, so the caller has to see it.
+		locking := map[string]bool{}
+		for _, file := range files {
+			for _, decl := range file.Decls {
+				fn, isFunc := decl.(*ast.FuncDecl)
+				if !isFunc || fn.Body == nil {
+					continue
+				}
+				if spellsAMutatingStatement(fn) {
+					locking[scrubKey(receiverTypeName(fn), fn.Name.Name)] = true
+				}
+			}
+		}
+		reachesLock := func(name string) bool {
+			if locking[name] {
+				return true
+			}
+			for spelling := range locking {
+				if reaches(graph, name, spelling) {
+					return true
+				}
+			}
+			return false
+		}
+		for _, file := range files {
 			for _, decl := range file.Decls {
 				fn, isFunc := decl.(*ast.FuncDecl)
 				// Keyed the way packageCallGraph keys it: a method is
@@ -110,7 +137,7 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 					continue
 				}
 				judged++
-				hold, lock := holdAndFirstLock(fn, recv, receiverVarName(fn), reachesHold)
+				hold, lock := holdAndFirstLock(fn, recv, receiverVarName(fn), reachesHold, reachesLock)
 				if hold == token.NoPos || lock == token.NoPos || lock >= hold {
 					continue
 				}
@@ -155,7 +182,10 @@ func TestTheSubjectLockIsTheFirstRowATransactionTakes(t *testing.T) {
 // counted as a lock, which is the direction that under-reports — stated rather
 // than hidden, because resolving it needs the callee's statements at the
 // caller's position and this walk has one file at a time.
-func holdAndFirstLock(fn *ast.FuncDecl, recvType, recvVar string, reachesHold func(string) bool) (hold, lock token.Pos) {
+func holdAndFirstLock(
+	fn *ast.FuncDecl, recvType, recvVar string,
+	reachesHold func(string) bool, reachesLock func(string) bool,
+) (hold, lock token.Pos) {
 	hold, lock = token.NoPos, token.NoPos
 	mark := func(at *token.Pos, pos token.Pos) {
 		if *at == token.NoPos || pos < *at {
@@ -175,12 +205,25 @@ func holdAndFirstLock(fn *ast.FuncDecl, recvType, recvVar string, reachesHold fu
 				// keys it: s.applySignatureField reaching the hold discharges
 				// it here, at the call.
 				if base, isIdent := fun.X.(*ast.Ident); isIdent && recvVar != "" &&
-					base.Name == recvVar && reachesHold(scrubKey(recvType, fun.Sel.Name)) {
-					mark(&hold, n.Pos())
+					base.Name == recvVar {
+					if reachesHold(scrubKey(recvType, fun.Sel.Name)) {
+						mark(&hold, n.Pos())
+					}
+					// And a helper that takes a row LOCKS at its call site.
+					// Without this the walk reads only the SQL a function
+					// spells itself, so moving one statement into a helper
+					// hides the ordering it decides — which is exactly how a
+					// token-then-subject inversion reached this tree.
+					if reachesLock(scrubKey(recvType, fun.Sel.Name)) {
+						mark(&lock, n.Pos())
+					}
 				}
 			case *ast.Ident:
 				if subjectHolds[fun.Name] || reachesHold(fun.Name) {
 					mark(&hold, n.Pos())
+				}
+				if reachesLock(fun.Name) {
+					mark(&lock, n.Pos())
 				}
 			}
 		case *ast.BasicLit:
@@ -198,4 +241,25 @@ func holdAndFirstLock(fn *ast.FuncDecl, recvType, recvVar string, reachesHold fu
 		return true
 	})
 	return hold, lock
+}
+
+// spellsAMutatingStatement reports whether a function contains SQL that takes a
+// row lock. Its own literals only — the transitive question is the call graph's.
+func spellsAMutatingStatement(fn *ast.FuncDecl) bool {
+	found := false
+	ast.Inspect(fn.Body, func(node ast.Node) bool {
+		lit, isLit := node.(*ast.BasicLit)
+		if !isLit || lit.Kind != token.STRING {
+			return !found
+		}
+		text, err := strconv.Unquote(lit.Value)
+		if err != nil {
+			return !found
+		}
+		if mutatingStatement.MatchString(text) {
+			found = true
+		}
+		return !found
+	})
+	return found
 }

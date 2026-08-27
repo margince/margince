@@ -57,7 +57,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 
-## Census (62)
+## Census (63)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -72,6 +72,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `catalogoptionsreaders_test.go` | H2 | Who may read a custom field's OPTIONS. |
 | `claimedspelling_test.go` | H3 | A constant whose doc comment says it is spelled once is making a checkable statement, and until now nothing checked it. |
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
+| `confirmcardfields_test.go` | H2 | The confirm page shows a data subject their own record, and only that. |
 | `consumerlanes_test.go` | H3 | Every consumer group the catalog declares is subscribed by some process role — or is a reserved placeholder that says so. |
 | `contractproducers_test.go` | H2 | A field the contract PROMISES and nobody WRITES is invisible. |
 | `contractrefs_test.go` | H3 | Contract $ref pre-flight as a fitness function. |
