@@ -1357,6 +1357,46 @@ export async function mockApi(
       // so `truncated` is the true answer rather than a flag nothing reads: the
       // screen says "showing N of 812", and a fixture whose count equalled its
       // page would let that sentence be wrong and still pass.
+      //
+      // ANSWERED FROM THE REQUEST, not from the path. A handler that returned
+      // these rows whatever was posted would let the preview assertions pass
+      // over a screen that sent the wrong resource, or a filter that was not
+      // the one the reader authored — the count on screen would be right and
+      // the thing it counted would be nobody's. So the body is read, and a
+      // request that does not match what the spec authored gets an honest empty
+      // answer instead of somebody else's rows.
+      type Leaf = { field?: string; op?: string; value?: unknown };
+      type Predicate = Leaf & { and?: Predicate[]; or?: Predicate[] };
+      const asked = (route.request().postDataJSON() ?? {}) as {
+        resource?: string;
+        filter?: Predicate;
+      };
+      // The root a builder sends is the group, not the clause: `encode`
+      // (segmentpredicate.ts) renders the tree, and its root is always a join.
+      // Flattened here rather than matched shape-for-shape, so the fixture
+      // answers the same filter however the reader nested it.
+      const leaves = (node: Predicate | undefined): Leaf[] =>
+        node === undefined
+          ? []
+          : node.and || node.or
+            ? [...(node.and ?? []), ...(node.or ?? [])].flatMap(leaves)
+            : [node];
+      const clauses = leaves(asked.filter);
+      const authored =
+        asked.resource === "organization" &&
+        clauses.length === 1 &&
+        clauses[0].field === "industry" &&
+        clauses[0].op === "eq" &&
+        clauses[0].value === "automotive";
+      if (!authored) {
+        return json({
+          resource: asked.resource ?? "organization",
+          match_count: 0,
+          columns: [],
+          rows: [],
+          truncated: false,
+        });
+      }
       return json({
         resource: "organization",
         match_count: 812,
