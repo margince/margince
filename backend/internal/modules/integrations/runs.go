@@ -243,6 +243,62 @@ func (s *Store) admit(ctx context.Context, tx pgx.Tx, name string, trigger provi
 	return c, nil
 }
 
+// runCategories is what THIS run asks for: the connection's own selection, or
+// the narrower set the caller named.
+//
+// A caller may only narrow. The connection is the ceiling an admin set, and a
+// category outside it is refused rather than trimmed — buying less than was
+// asked for while answering as though nothing was wrong is the failure a rep
+// cannot see, and spending on a category an admin switched off is the one they
+// must not be able to cause.
+func runCategories(desc provider.Descriptor, conn admittedConnection, in provider.QueueInput) ([]provider.Category, error) {
+	permitted := categoriesFrom(conn.categories)
+	if in.Trigger.Automatic() {
+		// Nobody weighed THIS purchase. An automatic run takes only what the
+		// provider gives away, so enrichment can run on every arrival without
+		// anybody deciding it was worth the money — a priced category is
+		// bought by a human pressing a button for one named person.
+		return intersect(permitted, desc.Free()), nil
+	}
+	requested := in.Categories
+	if len(requested) == 0 {
+		return permitted, nil
+	}
+	allowed := make(map[provider.Category]bool, len(permitted))
+	for _, c := range permitted {
+		allowed[c] = true
+	}
+	out := make([]provider.Category, 0, len(requested))
+	for _, c := range requested {
+		if !allowed[c] {
+			return nil, fmt.Errorf("%w: %q is not one this connection buys", ErrCategoryNotPermitted, c)
+		}
+		out = append(out, c)
+	}
+	return out, nil
+}
+
+// intersect keeps the order of the first argument, so what a run asks for
+// reads in the connection's own order rather than the descriptor's.
+func intersect(permitted, allowed []provider.Category) []provider.Category {
+	keep := make(map[provider.Category]bool, len(allowed))
+	for _, c := range allowed {
+		keep[c] = true
+	}
+	out := []provider.Category{}
+	for _, c := range permitted {
+		if keep[c] {
+			out = append(out, c)
+		}
+	}
+	return out
+}
+
+// ErrCategoryNotPermitted reports that a run asked for a category the
+// connection does not carry. A caller's mistake, not a provider condition: the
+// HTTP surface answers 422, because retrying it unchanged buys nothing.
+var ErrCategoryNotPermitted = errors.New("integrations: this connection does not buy that category")
+
 // errTriggerNotAdmitted reports that the saved policy does not run this
 // trigger. It is not an error the caller shows anybody: the person.created
 // consumer swallows it, because "auto-enrich is off" is the configuration
@@ -264,7 +320,10 @@ func IsTriggerNotAdmitted(err error) bool { return errors.Is(err, errTriggerNotA
 // person not enriched" deserves a row that answers, and a silent no-op cannot.
 func (s *Store) queueOne(ctx context.Context, tx pgx.Tx, desc provider.Descriptor, conn admittedConnection, in provider.QueueInput) (provider.Run, error) {
 	snapshot := freezeSnapshot(conn)
-	cats := categoriesFrom(conn.categories)
+	cats, err := runCategories(desc, conn, in)
+	if err != nil {
+		return provider.Run{}, err
+	}
 
 	// 1. Consent, suppression, objection, erasure. Before anything else,
 	//    because a subject we may not contact must not even be looked up.

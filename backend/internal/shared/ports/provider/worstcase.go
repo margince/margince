@@ -113,3 +113,44 @@ func PoolsInLockOrder(cost map[Pool]int) []Pool {
 	sort.Slice(pools, func(i, j int) bool { return pools[i] < pools[j] })
 	return pools
 }
+
+// Free reports the categories this provider charges nothing for, in the
+// descriptor's own declared order.
+//
+// DERIVED from the cost table rather than listed, so a provider that starts
+// charging for something it used to give away stops being advertised as free
+// the moment its descriptor says so. A second list would be a second answer to
+// "what does this cost", and the two would drift.
+//
+// What it buys: the free set is what automatic enrichment may spend on nobody's
+// explicit say-so. Everything a run can take without touching a credit pool can
+// be bought for every new contact and nobody has to weigh it, while the priced
+// categories stay behind a human pressing a button for one named person.
+//
+// A cascade's cost counts. A category that is free to request but triggers a
+// charged fallback is not free, and calling it so would put a spend behind a
+// switch labelled "costs nothing".
+func (d Descriptor) Free() []Category {
+	charged := map[Category]bool{}
+	for category, pools := range d.CostTable {
+		for _, n := range pools {
+			if n > 0 {
+				charged[category] = true
+			}
+		}
+	}
+	for _, cascade := range d.Cascades {
+		for _, n := range cascade.Cost {
+			if n > 0 {
+				charged[cascade.Category] = true
+			}
+		}
+	}
+	free := []Category{}
+	for _, category := range d.Categories {
+		if !charged[category] {
+			free = append(free, category)
+		}
+	}
+	return free
+}

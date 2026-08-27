@@ -65,6 +65,7 @@ func toProviderConnection(c integrations.Connection) crmcontracts.ProviderConnec
 		Spend: toProviderSpend(c.Spend),
 		// The ONLY credential fact that ever leaves: whether one is set.
 		CredentialPresent: c.CredentialPresent,
+		Catalog:           catalogWire(c.Catalog),
 		ConnectedAt:       c.ConnectedAt,
 		LastVerifiedAt:    c.LastVerifiedAt,
 		LastUsedAt:        c.LastUsedAt,
@@ -260,4 +261,23 @@ func mustUUID(s string) openapi_types.UUID {
 		return openapi_types.UUID{}
 	}
 	return openapi_types.UUID(parsed)
+}
+
+// catalogWire renders the category price list. Present on every connection,
+// including a disconnected one: an admin deciding whether to connect at all is
+// exactly who needs to know what it would cost.
+func catalogWire(catalog []integrations.CategoryCost) *[]crmcontracts.ProviderCategoryCost {
+	out := make([]crmcontracts.ProviderCategoryCost, 0, len(catalog))
+	for _, entry := range catalog {
+		cost := map[string]int{}
+		for pool, n := range entry.Cost {
+			cost[pool] = n
+		}
+		out = append(out, crmcontracts.ProviderCategoryCost{
+			Category: entry.Category,
+			Free:     entry.Free,
+			Cost:     cost,
+		})
+	}
+	return &out
 }

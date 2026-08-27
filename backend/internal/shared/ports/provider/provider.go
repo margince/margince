@@ -436,6 +436,21 @@ type QueueInput struct {
 	Provider    string
 	Trigger     Trigger
 	RequestedBy string
+	// Categories narrows this ONE run to a subset of what the connection
+	// permits. Empty means the connection's own selection, which is what every
+	// automatic trigger uses.
+	//
+	// It can only ever narrow. The connection is the ceiling an admin set, and
+	// a request naming a category outside it is refused rather than trimmed —
+	// a rep must not spend on something an admin switched off, and silently
+	// dropping it would buy less than the caller asked for while answering as
+	// though it had complied.
+	//
+	// What it is FOR: automatic enrichment takes the free categories on
+	// everybody, and a human presses a button to buy a priced one for a named
+	// person. Without a per-run set, that button could only change the setting
+	// for every future run too.
+	Categories []Category
 }
 
 // RunService is what a domain module sees. modules/integrations implements it.

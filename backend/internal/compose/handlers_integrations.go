@@ -164,6 +164,10 @@ func (h integrationsHandlers) CreatePersonEnrichmentRun(w http.ResponseWriter, r
 	run, err := h.runs.QueueRun(r.Context(), provider.QueueInput{
 		PersonID: id.String(),
 		Provider: string(body.Provider),
+		// What this ONE press buys. Absent means the connection's selection;
+		// named, it is how a reader purchases a single priced detail without
+		// changing what every future run spends.
+		Categories: requestedCategories(body.Categories),
 		// A person asking explicitly. Never fenced by the duplicate or
 		// freshness checks — they know something the timestamps do not.
 		Trigger: provider.TriggerManual,
@@ -189,12 +193,32 @@ func (h integrationsHandlers) GetPersonEnrichmentRun(w http.ResponseWriter, r *h
 	httperr.WriteJSON(w, http.StatusOK, toProviderRun(run))
 }
 
+// requestedCategories converts the wire's optional list into the port's.
+func requestedCategories(in *[]string) []provider.Category {
+	if in == nil {
+		return nil
+	}
+	out := make([]provider.Category, 0, len(*in))
+	for _, c := range *in {
+		out = append(out, provider.Category(c))
+	}
+	return out
+}
+
 // writeRunError maps the port's not-connected state onto a 404. It is a
 // supported configuration rather than a fault: asking for an enrichment when
 // no provider is connected is answered honestly, not with a 500.
 func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 	if errors.Is(err, provider.ErrNotConnected) {
 		httperr.Write(w, r, apperrors.ErrNotFound)
+		return
+	}
+	if errors.Is(err, integrations.ErrCategoryNotPermitted) {
+		// The caller's mistake, not a provider condition: retrying it
+		// unchanged buys nothing, so it is a 422 rather than a retryable
+		// failure.
+		httperr.Write(w, r, httperr.Validation("categories", "not_permitted",
+			"this connection does not buy that category"))
 		return
 	}
 	httperr.Write(w, r, err)

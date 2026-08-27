@@ -6450,6 +6450,14 @@ export const en = {
   // The receipt. Without it a lookup that returned one detail out of six read
   // exactly like one that returned all six, and nothing on the page said when
   // the answer arrived.
+  // The price rides the button because the decision IS the spend.
+  "provider.profile.buy": "Buy {category} · {credits} credit",
+  "provider.freeTier.label": "Buy the free details automatically",
+  "provider.freeTier.hint":
+    "LinkedIn profile, current role and work history cost no credits. Leave this on: every new contact gets them without anybody deciding.",
+  "provider.pricedTier.label": "Details that cost credits",
+  "provider.pricedTier.hint":
+    "Never bought automatically. Somebody presses a button on one contact, and the price is on the button.",
   "provider.profile.receiptAt": "Looked up {at}.",
   "provider.profile.receipt":
     "Looked up {at} · asked for {asked} details, got {answered} back.",

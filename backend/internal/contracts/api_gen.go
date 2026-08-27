@@ -15709,6 +15709,9 @@ type CreateOrganizationRequestSizeBand string
 
 // CreatePersonEnrichmentRunRequest defines model for CreatePersonEnrichmentRunRequest.
 type CreatePersonEnrichmentRunRequest struct {
+	// Categories Narrow this ONE run to a subset of what the connection buys — how a reader purchases a single priced detail for one person without changing the setting for every future run. Omit for the connection's own selection. It can only narrow: a category the connection does not carry is refused with 422 rather than trimmed, because buying less than was asked for while answering as though nothing was wrong is a failure the caller cannot see, and an admin's selection is a ceiling a rep must not be able to raise.
+	Categories *[]string `json:"categories,omitempty"`
+
 	// Provider A licensed data provider registered in THIS installation; the domain/run contract
 	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
 	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
@@ -22369,6 +22372,17 @@ type PromoteLeadResponse struct {
 // live set.
 type Provider = string
 
+// ProviderCategoryCost What one category costs, per credit pool. `free` is the whole worst case being nothing — a category free to REQUEST but carrying a charged fallback is not free, and calling it so would put a spend behind a control that promises none.
+type ProviderCategoryCost struct {
+	Category string `json:"category"`
+
+	// Cost Credits charged per pool, worst case, the fallback included. Empty when free.
+	Cost map[string]int `json:"cost"`
+
+	// Free Automatic enrichment buys exactly these; everything else waits for a human to press a button.
+	Free bool `json:"free"`
+}
+
 // ProviderCategorySelection Resolved per-category choices, keyed by the connected provider's declared category
 // vocabulary (its descriptor — for Surfe, PI-PARAM-7). A key the provider does not offer is
 // rejected; at least one selected category is required. Keys are not enumerated here because
@@ -22424,9 +22438,11 @@ type ProviderConfigurationPatch struct {
 
 // ProviderConnection defines model for ProviderConnection.
 type ProviderConnection struct {
-	Configuration ProviderConfiguration `json:"configuration"`
-	ConnectedAt   *time.Time            `json:"connected_at,omitempty"`
-	CreatedAt     time.Time             `json:"created_at"`
+	// Catalog Every category this provider sells, with what each costs. Derived from the adapter's own cost table rather than listed anywhere, so a provider that starts charging for something it gave away stops reading as free the moment its descriptor says so. The settings card names the free ones as safe to enable, and a buy button states a price before anybody presses it.
+	Catalog       *[]ProviderCategoryCost `json:"catalog,omitempty"`
+	Configuration ProviderConfiguration   `json:"configuration"`
+	ConnectedAt   *time.Time              `json:"connected_at,omitempty"`
+	CreatedAt     time.Time               `json:"created_at"`
 
 	// CredentialPresent The only credential fact ever returned; no key prefix/suffix or vault reference.
 	CredentialPresent bool `json:"credential_present"`

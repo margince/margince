@@ -95,8 +95,18 @@ func NewStore(db *database.DB, vault keyvault.Vault, reg *Registry, now func() t
 // Connection is one provider's connection as the surfaces read it. It carries
 // no credential material and no vault reference — only whether a key is
 // present at all.
+// CategoryCost is one category's price, as the settings card and a buy button
+// read it.
+type CategoryCost struct {
+	Category string
+	Free     bool
+	Cost     map[string]int
+}
+
 type Connection struct {
-	Provider          string
+	Provider string
+	// Catalog is every category this provider sells with what each costs.
+	Catalog           []CategoryCost
 	Status            string
 	CredentialPresent bool
 	Mode              string
@@ -143,6 +153,10 @@ func (s *Store) List(ctx context.Context) ([]Connection, error) {
 			return err
 		}
 		for _, name := range s.registry.Names() {
+			d, err := s.registry.Descriptor(name)
+			if err != nil {
+				return err
+			}
 			if c, ok := rows[name]; ok {
 				// The card shows what the provider says is LEFT and what this
 				// installation SPENT side by side, so both arrive in one read
@@ -153,21 +167,22 @@ func (s *Store) List(ctx context.Context) ([]Connection, error) {
 					return err
 				}
 				c.Spend = spend
+				c.Catalog = catalogOf(d)
 				out = append(out, c)
 				continue
 			}
 			// Never connected: report the honest zero state rather than
 			// omitting the provider entirely.
-			d, err := s.registry.Descriptor(name)
-			if err != nil {
-				return err
-			}
 			out = append(out, Connection{
-				Provider:   name,
-				Status:     "disconnected",
-				Mode:       string(defaultMode),
-				Preset:     d.DefaultPreset,
-				Categories: categoryStrings(d.ResolvePreset(d.DefaultPreset, nil)),
+				Provider: name,
+				Status:   "disconnected",
+				Mode:     string(defaultMode),
+				Preset:   d.DefaultPreset,
+				// The free categories, not the descriptor's default preset:
+				// what an admin is first offered should be the set that costs
+				// them nothing, and the priced ones an explicit choice.
+				Categories: categoryStrings(d.Free()),
+				Catalog:    catalogOf(d),
 			})
 		}
 		return nil
@@ -260,6 +275,38 @@ func categoryStrings(cats []provider.Category) []string {
 	out := make([]string, 0, len(cats))
 	for _, c := range cats {
 		out = append(out, string(c))
+	}
+	return out
+}
+
+// catalogOf is what each category costs, derived from the descriptor so a
+// price and the fact of being free can never disagree.
+func catalogOf(d provider.Descriptor) []CategoryCost {
+	free := map[provider.Category]bool{}
+	for _, c := range d.Free() {
+		free[c] = true
+	}
+	out := make([]CategoryCost, 0, len(d.Categories))
+	for _, category := range d.Categories {
+		// The WORST case, the fallback included: a price quoted before a
+		// cascade fires would understate what pressing the button can spend.
+		cost, err := d.WorstCase([]provider.Category{category})
+		if err != nil {
+			// An unmetered or subscription provider prices nothing per
+			// category; the whole catalog reads free, which it is.
+			cost = map[provider.Pool]int{}
+		}
+		priced := map[string]int{}
+		for pool, n := range cost {
+			if n > 0 {
+				priced[string(pool)] = n
+			}
+		}
+		out = append(out, CategoryCost{
+			Category: string(category),
+			Free:     free[category],
+			Cost:     priced,
+		})
 	}
 	return out
 }
