@@ -1391,6 +1391,10 @@ func (stubs) GetPersonConsentGuard(w nethttp.ResponseWriter, r *nethttp.Request,
 	httperr.NotImplemented(w, r, "GetPersonConsentGuard")
 }
 
+func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
+}
+
 func (stubs) DraftPersonEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DraftPersonEmail")
 }
