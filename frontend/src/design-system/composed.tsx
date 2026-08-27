@@ -1238,6 +1238,11 @@ export function TimelineRow({
             the first words of the subject. */}
         <span className="tl-head">
           <Badge>{t(TIMELINE_KIND_LABEL[entry.kind])}</Badge>
+          {/* What the record DID, for a row that is not an exchange: the badge
+              says this is a record entry, and this says what happened to it. */}
+          {entry.qualifier && (
+            <span className="tl-direction">{entry.qualifier}</span>
+          )}
           {/* Which way it went and who was at the other end, as one phrase.
               The direction alone is a fact about us; with the name it is a
               fact about the relationship, which is what the row is for. */}

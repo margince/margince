@@ -1871,6 +1871,7 @@
   font-size: var(--fs-meta);
   color: var(--textMeta);
   white-space: nowrap;
+  font-variant-numeric: tabular-nums;
 }
 
 .co-recent-empty {

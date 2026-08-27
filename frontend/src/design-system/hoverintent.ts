@@ -68,6 +68,12 @@ let lastY = 0;
 // first hover of a session that something had just closed under it.
 let lastClosedAt = Number.NEGATIVE_INFINITY;
 let openCount = 0;
+// Which instance's `timers` object last opened. A close is an answer to "is
+// MY panel still the one showing", not "did my own delay run out" — a
+// trigger can settle and hand the shared display to a neighbour while this
+// one's grace period is still ticking, and the stale timer firing afterward
+// must not reach back and blank what the neighbour just opened.
+let activeOwner: object | undefined;
 
 function trackPointer(event: PointerEvent): void {
   const now = event.timeStamp;
@@ -120,6 +126,7 @@ function watchPointer(): () => void {
       sampled = false;
       lastClosedAt = Number.NEGATIVE_INFINITY;
       openCount = 0;
+      activeOwner = undefined;
     }
   };
 }
@@ -171,6 +178,7 @@ export function useHoverIntent(
     if (!timers.current.open) {
       timers.current.open = true;
       openCount += 1;
+      activeOwner = timers.current;
       acts.current.onOpen();
     }
   }, [stopPoll]);
@@ -180,7 +188,13 @@ export function useHoverIntent(
       timers.current.open = false;
       openCount = Math.max(0, openCount - 1);
       lastClosedAt = performance.now();
-      acts.current.onClose();
+      // Read at fire time, not schedule time: a neighbour can have become the
+      // open one while this close was still waiting out its grace period, and
+      // this instance no longer speaks for what the reader is looking at.
+      if (activeOwner === timers.current) {
+        activeOwner = undefined;
+        acts.current.onClose();
+      }
     }
   }, []);
 
@@ -230,6 +244,9 @@ export function useHoverIntent(
         timers.current.open = false;
         openCount = Math.max(0, openCount - 1);
         lastClosedAt = performance.now();
+        if (activeOwner === timers.current) {
+          activeOwner = undefined;
+        }
       }
     },
     [stopPoll],

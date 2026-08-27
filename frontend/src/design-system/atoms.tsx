@@ -781,12 +781,15 @@ export function Field({
  * judgement.
  *
  * `basis` is the reading's receipt: the rows it was computed from, folded away
- * until a reader asks for them. It is a `Disclosure` — a native `details`, so
- * it opens to a click and to Enter and carries no state — rather than the
- * hover popover a mockup can afford, because a reading a keyboard cannot reach
- * is a reading half the readers do not have. `detail` still carries the
- * one-line basis either way: a reader who never opens this must not meet a
- * number with nothing behind it.
+ * until a reader asks for them. It is a `Popover` that opens to a settled
+ * pointer AND to a click or Enter — a row of readings is compared by moving
+ * across it, and asking for a click at every stop makes the comparison cost
+ * five presses, while a receipt only a pointer could open would be a reading
+ * half the readers do not have. It sits OVER the card rather than expanding
+ * it, so opening one does not move the readings beside it.
+ *
+ * `detail` still carries the one-line basis either way: a reader who never
+ * opens this must not meet a number with nothing behind it.
  */
 
 // The bar under a reading: segments a reader would count, or one track they
@@ -1302,6 +1305,22 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
+// The popover panel THIS dialog opened, or nothing.
+//
+// Found through the trigger rather than by looking for a panel: a panel is
+// portalled to the body, so it is not inside the dialog to be found there, and
+// a document-wide search would just as happily return one opened from the page
+// BEHIND the dialog — handing Tab to a layer the reader cannot see. The trigger
+// names its own panel through `aria-controls`, and the trigger IS in the
+// dialog, which is the only link between the two that survives the portal.
+function openPanelIn(dialog: HTMLElement | null): HTMLElement | null {
+  const trigger = dialog?.querySelector<HTMLElement>(
+    '[aria-expanded="true"][aria-controls]',
+  );
+  const panelId = trigger?.getAttribute("aria-controls");
+  return panelId ? document.getElementById(panelId) : null;
+}
+
 export function Modal({
   open,
   onClose,
@@ -1370,10 +1389,7 @@ export function Modal({
         // dialog the trap holds. While one is up it owns Tab: a trap that
         // pulled focus back into the dialog would make the panel's own
         // controls unreachable by keyboard, which is the whole panel.
-        const layer =
-          document.querySelector<HTMLElement>(".popover-panel") ??
-          dialog.current;
-        keepTabInside(event, layer);
+        keepTabInside(event, openPanelIn(dialog.current) ?? dialog.current);
       }
     };
     globalThis.addEventListener("keydown", onKey);

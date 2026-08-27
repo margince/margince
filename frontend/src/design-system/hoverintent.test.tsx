@@ -140,4 +140,38 @@ describe("useHoverIntent", () => {
     advance(100);
     expect(closed).toBe(1);
   });
+
+  it("does not let a late close reach a neighbour that has since opened", () => {
+    let neighborOpened = 0;
+    let neighborClosed = 0;
+    render(
+      <Trigger
+        onOpen={() => {
+          neighborOpened += 1;
+        }}
+        onClose={() => {
+          neighborClosed += 1;
+        }}
+      />,
+    );
+    const [first, second] = screen.getAllByRole("button");
+    fireEvent.pointerEnter(first);
+    advance(100);
+    expect(opened).toBe(1);
+    fireEvent.pointerLeave(first);
+    // Within the grace period, so the switching pair applies: the second
+    // trigger settles fast enough to become the open one before the first's
+    // delayed close fires. 110ms is above the module's switch ceiling.
+    fireEvent.pointerEnter(second);
+    advance(110);
+    expect(neighborOpened).toBe(1);
+    // The first trigger's close was scheduled before the switch and is still
+    // pending. It must not blank what the second trigger just opened. 180ms
+    // is the module's close grace period.
+    advance(180);
+    expect(closed).toBe(0);
+    expect(neighborClosed).toBe(0);
+    fireEvent.pointerLeave(first);
+    fireEvent.pointerLeave(second);
+  });
 });

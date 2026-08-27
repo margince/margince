@@ -1744,6 +1744,18 @@ function ScheduleDialog({
   const [month, setMonth] = useState(
     () => new Date(chosen.getFullYear(), chosen.getMonth(), 1),
   );
+  // Each opening starts from the current moment, not wherever the last
+  // opening left the calendar — a rep who paged to December and closed
+  // without choosing should not find December still showing next time.
+  // biome-ignore lint/correctness/useExhaustiveDependencies: trigger-only dep — this re-seeds the picker on open, not on every change to sendAt/now while it's already open.
+  useEffect(() => {
+    if (!open) return;
+    const start = momentOf(sendAt) ?? now;
+    setPicking(false);
+    setDay(isoDay(start));
+    setHour(start.getHours());
+    setMonth(new Date(start.getFullYear(), start.getMonth(), 1));
+  }, [open]);
   const picked = new Date(`${day}T${String(hour).padStart(2, "0")}:00`);
   return (
     <Modal open={open} onClose={onClose} labelledBy={headingId} size="wide">

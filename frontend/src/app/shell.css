@@ -1689,8 +1689,26 @@
   .app:has(> .pageaside-stub) {
     grid-template-columns: var(--railW) minmax(0, 1fr);
   }
-  .pageaside,
+  /* It lands under the work column rather than beside it, and it keeps its
+     content: hidden outright, the readings filed here would be gone on a
+     laptop with no way to ask for them — and the control that folds the column
+     would still be in the record's header, doing nothing a reader could see. */
+  .pageaside {
+    grid-column: 2 / -1;
+    block-size: auto;
+    max-block-size: none;
+    overflow-y: visible;
+    border-inline-start: 0;
+    border-block-start: 1px solid var(--borderSubtle);
+  }
+  /* The stub is the folded column's own edge, and there is no column beside
+     the work to fold at this width. */
   .pageaside-stub {
     display: none;
+  }
+  /* Sticky belongs to a column that scrolls on its own. Here the page scrolls,
+     and a head pinned to the viewport would sit over the rows below it. */
+  .pageaside-head {
+    position: static;
   }
 }

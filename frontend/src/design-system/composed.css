@@ -136,6 +136,12 @@
   align-items: center;
   gap: var(--space-3);
   margin-bottom: var(--space-1);
+  /* The verbs drop to their own row rather than squeezing the identity out of
+     the header. The controls column does not shrink, so on a narrow work
+     column every verb it gains takes its width from the name beside it — far
+     enough and the record's own name is nothing at all, which is a header that
+     has stopped naming its record. */
+  flex-wrap: wrap;
 }
 /* The company header carries a description, a chip row and a pulse line under
  * the name, which makes the identity block several times taller than the mark
@@ -161,7 +167,10 @@
    floor is otherwise its min-content width, so the name would set the
    identity block's width and push the controls column off the row. */
 .record-head .record-id {
-  flex: 1;
+  /* A floor, not just a share: `min-width: 0` alone lets the identity collapse
+     to zero beside a column that refuses to shrink. Below this it takes a row
+     of its own instead, which is the wrap above. */
+  flex: 1 1 16rem;
   min-width: 0;
 }
 /* The name and its one standing badge, on the SAME baseline — the badge
