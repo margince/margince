@@ -33,9 +33,6 @@ import (
 	"testing"
 )
 
-// repoRoot is where the rulebooks live, relative to this package.
-const repoRoot = ".."
-
 // importLine matches the one line a shim is allowed to contain.
 var importLine = regexp.MustCompile(`^@AGENTS\.md$`)
 
