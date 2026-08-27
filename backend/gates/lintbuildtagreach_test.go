@@ -379,29 +379,36 @@ func andConstraints(a, b constraint.Expr) constraint.Expr {
 	}
 }
 
-// knownPlatforms is the set of GOOS and GOARCH names Go recognises as filename
-// suffixes, asked of the TOOLCHAIN rather than written down here.
+// platformNames holds the GOOS and GOARCH names SEPARATELY, because Go's
+// filename suffixes are ordered and typed rather than "any two platform words".
+type platformNames struct {
+	goos   map[string]bool
+	goarch map[string]bool
+}
+
+// knownPlatforms asks the TOOLCHAIN for those names rather than writing them
+// down here.
 //
 // A literal list would be a second copy of something the Go release owns and
 // revises, and it would go stale in the silent direction: a suffix this gate did
 // not recognise is a file it reads as unconstrained, which is the census going
 // short again in exactly the place this function exists to fix.
-func knownPlatforms(t *testing.T) map[string]bool {
+func knownPlatforms(t *testing.T) platformNames {
 	t.Helper()
 	out, err := exec.Command("go", "tool", "dist", "list").Output()
 	if err != nil {
 		t.Fatalf("asking the toolchain for its GOOS/GOARCH names: %v", err)
 	}
-	known := map[string]bool{}
+	known := platformNames{goos: map[string]bool{}, goarch: map[string]bool{}}
 	for _, pair := range strings.Fields(string(out)) {
 		goos, goarch, found := strings.Cut(pair, "/")
 		if !found {
 			t.Fatalf("`go tool dist list` printed %q, which is not a GOOS/GOARCH pair", pair)
 		}
-		known[goos] = true
-		known[goarch] = true
+		known.goos[goos] = true
+		known.goarch[goarch] = true
 	}
-	if len(known) == 0 {
+	if len(known.goos) == 0 || len(known.goarch) == 0 {
 		t.Fatal("the toolchain named no platform at all, so every filename suffix below reads as unconstrained")
 	}
 	return known
@@ -410,21 +417,36 @@ func knownPlatforms(t *testing.T) map[string]bool {
 // filenameConstraint returns the constraint Go applies to a file for its NAME
 // alone — `x_windows.go`, `x_amd64.go`, `x_windows_amd64.go` — or nil.
 //
-// The suffixes are read from the end, at most two, because that is the shape Go
-// defines: an optional GOARCH preceded by an optional GOOS. `_test` is stripped
-// first, so `x_windows_test.go` is constrained exactly as `x_windows.go` is.
-func filenameConstraint(name string, platforms map[string]bool) constraint.Expr {
+// The two suffix positions are TYPED and ORDERED, not "any two platform words",
+// and reading them as interchangeable produces constraints Go never forms.
+// `x_linux_windows.go` is a windows file: `windows` is not a GOARCH, so Go takes
+// it as the GOOS and `linux` is part of the name. Treating both as platforms
+// yields `linux && windows`, which nothing satisfies — the gate would report a
+// file that builds fine as read by nothing. Over-recognition is the safer
+// direction to fail in and still the wrong answer.
+//
+// `_test` is stripped first, so `x_windows_test.go` is constrained exactly as
+// `x_windows.go` is. The first segment is the file's own name and is never read
+// as a platform, which is what stops a file called `windows.go` counting.
+func filenameConstraint(name string, platforms platformNames) constraint.Expr {
 	base := strings.TrimSuffix(name, ".go")
 	base = strings.TrimSuffix(base, "_test")
 	parts := strings.Split(base, "_")
-	// The first segment is the file's own name and is never a platform, which
-	// is what stops a file called `windows.go` reading as constrained.
-	var expr constraint.Expr
-	for i := len(parts) - 1; i >= 1 && len(parts)-i <= 2; i-- {
-		if !platforms[parts[i]] {
-			break
+	var goos, goarch string
+	switch n := len(parts); {
+	case n >= 2 && platforms.goarch[parts[n-1]]:
+		goarch = parts[n-1]
+		if n >= 3 && platforms.goos[parts[n-2]] {
+			goos = parts[n-2]
 		}
-		expr = andConstraints(expr, &constraint.TagExpr{Tag: parts[i]})
+	case n >= 2 && platforms.goos[parts[n-1]]:
+		goos = parts[n-1]
+	}
+	var expr constraint.Expr
+	for _, tag := range []string{goos, goarch} {
+		if tag != "" {
+			expr = andConstraints(expr, &constraint.TagExpr{Tag: tag})
+		}
 	}
 	return expr
 }
