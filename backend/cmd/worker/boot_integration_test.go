@@ -50,7 +50,7 @@ func TestABootFailureAfterALaneStartedStillJoinsIt(t *testing.T) {
 	// is the only interesting shape — a failure before any lane starts is
 	// trivially safe to return from.
 	lanes, err := startEventLanes(t.Context(), workerConfig{webhookKey: "not-a-valid-signing-key"},
-		pool, rdb, compose.ModelPath{}, laneLog, &announced)
+		pool, rdb, nil, compose.ModelPath{}, laneLog, &announced)
 	if err == nil {
 		t.Fatal("startEventLanes accepted a malformed webhook signing key — this test needs it to fail AFTER a lane was launched")
 	}

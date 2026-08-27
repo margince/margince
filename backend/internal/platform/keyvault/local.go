@@ -300,3 +300,34 @@ func refuseIfAnythingIsSealed(ctx context.Context, pool *pgxpool.Pool) error {
 		"key, outbound-mail password and license token. Restore the root key this installation "+
 		"sealed with; it is not recoverable from anywhere else", EnvRootKey)
 }
+
+// ForRole resolves the key vault ONCE, at a role's boot, for every lane in
+// that role to share.
+//
+// A process that resolves the vault in three places has three chances to
+// interpret one answer differently, and cmd/worker took them: the job lane
+// nil-ed its vault on the configured flag, the Surface-B runner lane passed
+// whatever FromEnv returned, and the credential backfill read the flag on its
+// own. Nothing diverged in practice — the flag and the nil say the same thing —
+// but "is a vault available?" had three answers in one process, and only the
+// coincidence that they agreed kept it from mattering.
+//
+// So the boolean does not leave this function. A caller holds a vault or holds
+// nil, and nil IS an unconfigured deployment: one value, one meaning, nothing
+// to keep in step. The equivalence FromEnv already guarantees is asserted here
+// rather than assumed, because a role that reads the nil is relying on it.
+//
+// role names the binary in the boot error, which is the only place it appears.
+//
+//nolint:ireturn // the seam has two providers behind one Vault; returning the interface is the design.
+func ForRole(ctx context.Context, role string, pool *pgxpool.Pool, env config.Lookup) (Vault, error) {
+	vault, configured, err := FromEnv(ctx, pool, env)
+	if err != nil {
+		return nil, fmt.Errorf("%s: keyvault: %w", role, err)
+	}
+	if !configured {
+		//nolint:nilnil // an absent vault IS the answer for a deployment that configured none, not a missing one. Reading it off the value is the whole point: the alternative is the flag beside it that three lanes kept interpreting separately.
+		return nil, nil
+	}
+	return vault, nil
+}

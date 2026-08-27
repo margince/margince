@@ -82,15 +82,13 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	}
 	config.WarnUndeclared(logger, cfg.unknownVars)
 
-	// Already proven to connect as a role row-level security binds — boot.go
-	// carries why that check belongs with the pool's own construction.
-	pool, err := boundPool(ctx, cfg.dsn)
+	pool, vault, err := openInstallation(ctx, cfg.dsn)
 	if err != nil {
 		return err
 	}
 	defer pool.Close()
 
-	deployCfg, license, err := bindInstallation(ctx, cfg, pool, logger)
+	deployCfg, license, err := bindInstallation(ctx, cfg, pool, vault, logger)
 	if err != nil {
 		return err
 	}
@@ -103,7 +101,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
-	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, compose.CaptureConfigFromDeploy(deployCfg.Capture, logger), pool, logger, stdout, license)
+	opts, schemaPool, closeSchemaPool, err := baseComposeOptions(ctx, cfg, compose.CaptureConfigFromDeploy(deployCfg.Capture, logger), pool, vault, logger, stdout, license)
 	if err != nil {
 		return err
 	}
@@ -112,7 +110,7 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	rdb, closeRedis := sharedRedisClient(cfg, logger)
 	defer closeRedis()
 
-	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, rdb, logger, stdout)
+	surfaceOpts, resetLane, err := declaredSurfaceOptions(ctx, cfg, deployCfg, pool, schemaPool, vault, rdb, logger, stdout)
 	if err != nil {
 		return err
 	}
@@ -164,6 +162,37 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 	// neither serves a binding the installation has replaced (compose/routingwatcher).
 	go compose.NewRoutingWatcher(pool, modelPath, config.FromOS, logger).Run(ctx)
 	return serveUntilSignal(ctx, cfg, apiHandler, stdout)
+}
+
+// openInstallation opens what this role reaches the installation THROUGH: the
+// database pool, and the one key vault every phase below reads secrets from.
+//
+// Together because the vault is a table in that pool, and apart from every
+// phase that uses them because both are settled before any phase runs. The pool
+// is already proven to connect as the role it must — boot.go carries why that
+// check belongs with the pool's own construction.
+//
+// The vault is resolved ONCE, here, and handed down — the license this
+// installation may have sealed, the connector-credential surface, the outbound
+// relay password each used to resolve their own, so one deployment fact was
+// read three times. A nil vault IS an unconfigured deployment; keyvault.ForRole
+// carries why nothing downstream is handed a flag beside it.
+//
+// The caller owns closing the pool it gets back. A vault that refuses the boot
+// closes it here instead, because there is no pool to return alongside an error.
+//
+//nolint:ireturn // the vault seam has two providers behind one Vault; returning the interface is the design, and this only carries what ForRole handed back.
+func openInstallation(ctx context.Context, dsn string) (*pgxpool.Pool, keyvault.Vault, error) {
+	pool, err := boundPool(ctx, dsn)
+	if err != nil {
+		return nil, nil, err
+	}
+	vault, err := keyvault.ForRole(ctx, "api", pool, config.FromOS)
+	if err != nil {
+		pool.Close()
+		return nil, nil, err
+	}
+	return pool, vault, nil
 }
 
 // validatePublicBaseURL refuses a base URL the connector cannot be reached at.
@@ -232,7 +261,7 @@ func validateBareOrigin(flagName, raw string) error {
 // uses. The returned close func releases whatever this stage opened
 // (currently only the schema pool) and is always safe to call, even when
 // nothing was opened.
-func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.CaptureConfig, pool *pgxpool.Pool, logger *slog.Logger, stdout io.Writer, license *licensecheck.Watcher) ([]compose.Option, *pgxpool.Pool, func(), error) {
+func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.CaptureConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger, stdout io.Writer, license *licensecheck.Watcher) ([]compose.Option, *pgxpool.Pool, func(), error) {
 	var opts []compose.Option
 	// The posture bindInstallation resolved, read at scrape time rather than
 	// copied in: a license lapses on a calendar, and the watcher behind this
@@ -283,7 +312,7 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("api: %w", err)
 	}
-	kvOpts, err := keyvaultOptions(ctx, pool, stdout, overlayBackfillLimit)
+	kvOpts, err := keyvaultOptions(pool, vault, stdout, overlayBackfillLimit)
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -318,16 +347,12 @@ func baseComposeOptions(ctx context.Context, cfg apiConfig, capCfg compose.Captu
 // canonical external base — with email enabled, a missing
 // --public-base-url is a boot error, never a link derived from a
 // request Host.
-func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, pool *pgxpool.Pool, publicBaseURL string, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
+func passwordResetOptions(ctx context.Context, deployCfg deployconfig.Config, pool *pgxpool.Pool, vault keyvault.Vault, publicBaseURL string, logger *slog.Logger, stdout io.Writer) ([]compose.Option, error) {
 	if !deployCfg.Email.Enabled {
 		return nil, nil
 	}
 	if publicBaseURL == "" {
 		return nil, errors.New("api: email.enabled requires --public-base-url/MARGINCE_PUBLIC_BASE_URL (the reset link's canonical base)")
-	}
-	vault, _, err := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if err != nil {
-		return nil, fmt.Errorf("api: keyvault: %w", err)
 	}
 	// The relay password is sealed into the vault on the boot that first sees
 	// it, and read back from there once the deployment stops declaring it.

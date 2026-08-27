@@ -134,7 +134,7 @@ func fileReleaseHandbook(ctx context.Context, pool *pgxpool.Pool, logger *slog.L
 //
 // Returns the loaded deployment config every later boot phase reads, and the
 // license watcher whose posture baseComposeOptions reports.
-func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, logger *slog.Logger) (deployconfig.Config, *licensecheck.Watcher, error) {
+func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger) (deployconfig.Config, *licensecheck.Watcher, error) {
 	deployCfg, err := deployconfig.Load(cfg.configPath, cfg.posture)
 	if err != nil {
 		return deployconfig.Config{}, nil, err
@@ -161,14 +161,10 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, lo
 	// production installation accepts one, and only a non-production one also
 	// runs on a license minted for a test.
 	//
-	// The vault is built here rather than taken from the later keyvaultOptions
-	// wiring, because an installation that has sealed its token and dropped the
-	// declaration reads it out of the vault: the license question cannot be
-	// answered before the vault exists.
-	vault, _, err := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if err != nil {
-		return deployconfig.Config{}, nil, fmt.Errorf("api: keyvault: %w", err)
-	}
+	// The vault reaches this phase from the boot rather than from the later
+	// keyvaultOptions wiring, because an installation that has sealed its token
+	// and dropped the declaration reads it out of the vault: the license
+	// question cannot be answered before the vault exists.
 	license, err := compose.EnsureLicense(ctx, logger, pool, vault, deployCfg, cfg.posture, config.FromOS)
 	if err != nil {
 		return deployconfig.Config{}, nil, err
@@ -193,7 +189,7 @@ func bindInstallation(ctx context.Context, cfg apiConfig, pool *pgxpool.Pool, lo
 // The reset lane comes back with the options because the endpoint is only half
 // of it: the other half is a listener this process runs for its own lifetime,
 // which run() starts once the handler exists.
-func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deployconfig.Config, pool, schemaPool *pgxpool.Pool, rdb *redis.Client, logger *slog.Logger, stdout io.Writer) ([]compose.Option, *resetLane, error) {
+func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deployconfig.Config, pool, schemaPool *pgxpool.Pool, vault keyvault.Vault, rdb *redis.Client, logger *slog.Logger, stdout io.Writer) ([]compose.Option, *resetLane, error) {
 	// The non-production admin data-reset endpoint (POST /v1/admin/reset-data):
 	// absent this deployment posture, or in production, ResetData answers its
 	// closed 404 default. schemaPool may be nil (no --schema-dsn configured);
@@ -240,7 +236,7 @@ func declaredSurfaceOptions(ctx context.Context, cfg apiConfig, deployCfg deploy
 		opts = append(opts, compose.WithMCPConnector())
 	}
 
-	passwordOpts, err := passwordResetOptions(ctx, deployCfg, pool, cfg.publicBaseURL, logger, stdout)
+	passwordOpts, err := passwordResetOptions(ctx, deployCfg, pool, vault, cfg.publicBaseURL, logger, stdout)
 	if err != nil {
 		return nil, nil, err
 	}

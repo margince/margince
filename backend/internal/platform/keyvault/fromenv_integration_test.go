@@ -16,6 +16,7 @@ package keyvault_test
 // treating a nil vault as "nothing was ever sealed".
 
 import (
+	"encoding/base64"
 	"strings"
 	"testing"
 
@@ -66,5 +67,48 @@ func TestSealedSecretsWithNoRootKeyRefuseTheBoot(t *testing.T) {
 		if !strings.Contains(err.Error(), want) {
 			t.Errorf("the refusal %q does not name %q", err, want)
 		}
+	}
+}
+
+// Every role now reads "this deployment has no vault" off the vault value
+// alone — ForRole hands back nil and the boolean stops there. That rests on
+// FromEnv's two answers agreeing, so the equivalence is asserted rather than
+// assumed, in both directions: a nil vault reported configured
+// wires a lane onto nothing, and a real vault reported unconfigured leaves
+// every sealed credential unreachable on a deployment that has one.
+//
+// Here rather than beside the unit tests because the configured direction needs
+// a pool — the local provider refuses to build without one.
+func TestForRoleHandsBackNilForExactlyAnUnconfiguredVault(t *testing.T) {
+	pool := singleConnPool(t)
+	configured := config.Static(map[string]string{
+		keyvault.EnvRootKey: base64.StdEncoding.EncodeToString(rootKey(t)),
+	})
+
+	for _, tc := range []struct {
+		name       string
+		env        config.Lookup
+		wantAVault bool
+	}{
+		{"no root key", config.Static(nil), false},
+		{"a root key", configured, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			vault, flag, err := keyvault.FromEnv(t.Context(), pool, tc.env)
+			if err != nil {
+				t.Fatalf("FromEnv: %v", err)
+			}
+			if flag != tc.wantAVault || (vault != nil) != tc.wantAVault {
+				t.Fatalf("FromEnv reported configured=%v vault!=nil=%v, want both %v",
+					flag, vault != nil, tc.wantAVault)
+			}
+			forRole, err := keyvault.ForRole(t.Context(), "role", pool, tc.env)
+			if err != nil {
+				t.Fatalf("ForRole: %v", err)
+			}
+			if (forRole != nil) != tc.wantAVault {
+				t.Fatalf("ForRole handed back vault!=nil=%v, want %v", forRole != nil, tc.wantAVault)
+			}
+		})
 	}
 }

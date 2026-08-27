@@ -40,17 +40,15 @@ import (
 //
 // A zero value mails nothing, which is what an installation that configured no
 // operator mail asked for.
+// The vault is the boot's, not one resolved here: a role has ONE, and a vault
+// this could not build would have refused the boot long before the weekly mail
+// was considered. What is left for this function to degrade over is the relay
+// credential inside it.
 func weeklyMailConfig(
 	ctx context.Context, cfg workerConfig, deployCfg deployconfig.Config,
-	pool *pgxpool.Pool, logger *slog.Logger,
+	pool *pgxpool.Pool, vault keyvault.Vault, logger *slog.Logger,
 ) compose.WeeklyMailConfig {
 	if !deployCfg.Email.Enabled {
-		return compose.WeeklyMailConfig{}
-	}
-	vault, _, err := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if err != nil {
-		logger.WarnContext(ctx, "no weekly mail: the key vault the relay credential is sealed in is unavailable",
-			"cause", err)
 		return compose.WeeklyMailConfig{}
 	}
 	password, err := compose.SealedSMTPPassword(ctx, pool, vault, deployCfg, config.FromOS, logger)
