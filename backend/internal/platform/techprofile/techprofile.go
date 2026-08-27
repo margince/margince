@@ -229,16 +229,3 @@ func dmarcPolicy(dmarcTXT []string) (dmarcLevel, bool) {
 	}
 	return dmarcLevel{}, false
 }
-
-// evidenceLimit caps a stored evidence string. A TXT record can be long and
-// the reader needs enough to recognize it, not all of it.
-const evidenceLimit = 200
-
-// truncate bounds one stored evidence string at evidenceLimit.
-func truncate(s string) string {
-	s = strings.TrimSpace(s)
-	if len(s) <= evidenceLimit {
-		return s
-	}
-	return s[:evidenceLimit] + "…"
-}
