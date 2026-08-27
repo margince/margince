@@ -160,6 +160,7 @@ var unrunnableCalls = map[string]unrunnableCall{
 	"updateWebhookSubscription": malformedRoutedID(http.MethodPatch, "/webhook-subscriptions"),
 	"scrapeCompany":             malformedRoutedID(http.MethodPost, "/organizations"),
 	"deepReadCompany":           malformedRoutedID(http.MethodPost, "/organizations"),
+	"technicalEnrichCompany":    malformedRoutedID(http.MethodPost, "/organizations"),
 	"mergePerson":               malformedRoutedID(http.MethodPost, "/people"),
 	"mergeOrganization":         malformedRoutedID(http.MethodPost, "/organizations"),
 

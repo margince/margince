@@ -120,6 +120,9 @@ func workspaceRefusalDrivers() map[string]func(context.Context) error {
 		GeocodeOrganizationArgs{}.Kind(): func(ctx context.Context) error {
 			return (&geocodeWorker{}).Work(ctx, &river.Job[GeocodeOrganizationArgs]{})
 		},
+		TechnicalEnrichOrganizationArgs{}.Kind(): func(ctx context.Context) error {
+			return (&technicalEnrichWorker{}).Work(ctx, &river.Job[TechnicalEnrichOrganizationArgs]{})
+		},
 		KnowledgeIngestArgs{}.Kind(): func(ctx context.Context) error {
 			return (&knowledgeIngestWorker{}).Work(ctx, &river.Job[KnowledgeIngestArgs]{})
 		},

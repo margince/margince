@@ -200,8 +200,9 @@ var bothDoorsFixtures = map[string]bothDoorsFixture{
 	"mergePerson":       mergeDoors("people", "person"),
 	"mergeOrganization": mergeDoors("organizations", "organization"),
 
-	"scrapeCompany":   enrichDoors("enrich", agents.EnrichDepthPage),
-	"deepReadCompany": enrichDoors("deep-read", agents.EnrichDepthSite),
+	"scrapeCompany":          enrichDoors("enrich", agents.EnrichDepthPage),
+	"deepReadCompany":        enrichDoors("deep-read", agents.EnrichDepthSite),
+	"technicalEnrichCompany": enrichDoors("technical-enrich", agents.EnrichDepthTechnical),
 
 	"promoteLead": {
 		rest: func(primary, _ ids.UUID) (*http.Request, []byte) {

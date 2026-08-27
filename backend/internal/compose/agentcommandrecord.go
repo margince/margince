@@ -73,6 +73,15 @@ func deepReadCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request
 	return enrichCall(deps, r, body, agents.EnrichDepthSite)
 }
 
+// technicalEnrichCompanyCommand decodes POST /v1/organizations/{id}/technical-enrich
+// — the public-records lookup. Its depth is STRUCTURAL, like its two siblings:
+// the route IS the depth, where the tool door reads a word.
+//
+//nolint:ireturn // a decoder's whole product is the erased command-and-resolver pair restCommands is typed by
+func technicalEnrichCompanyCommand(_ agentPolicy, deps restCommandDeps, r *http.Request, body []byte) (agents.GovernedCall, error) {
+	return enrichCall(deps, r, body, agents.EnrichDepthTechnical)
+}
+
 // enrichCall builds one enrich command at the depth its CALLER names.
 //
 // The depth is a parameter of this function, supplied by the two decoders

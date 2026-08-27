@@ -1,0 +1,220 @@
+[
+  {
+    "key": "shopware",
+    "label": "Shopware",
+    "generator": ["shopware"],
+    "headers": {"x-powered-by": ["shopware"]},
+    "cookies": ["session-", "sw-states", "sw-cache-hash"],
+    "scripts": ["/bundles/storefront/", "/bundles/administration/"],
+    "body": ["/bundles/storefront/"]
+  },
+  {
+    "key": "shopify",
+    "label": "Shopify",
+    "headers": {"x-shopify-stage": [""], "x-shopid": [""]},
+    "cookies": ["_shopify_y", "_shopify_s", "cart_currency"],
+    "scripts": ["cdn.shopify.com", "shopifycloud"],
+    "body": ["cdn.shopify.com", "Shopify.theme"]
+  },
+  {
+    "key": "woocommerce",
+    "label": "WooCommerce",
+    "generator": ["woocommerce"],
+    "cookies": ["woocommerce_cart_hash", "woocommerce_items_in_cart"],
+    "scripts": ["/plugins/woocommerce/"],
+    "body": ["/plugins/woocommerce/"]
+  },
+  {
+    "key": "magento",
+    "label": "Magento",
+    "cookies": ["mage-cache-storage", "mage-messages", "form_key"],
+    "scripts": ["/static/version", "mage/requirejs"],
+    "body": ["Magento_PageBuilder", "/static/frontend/"]
+  },
+  {
+    "key": "jtl_shop",
+    "label": "JTL-Shop",
+    "generator": ["jtl-shop", "jtl shop"],
+    "cookies": ["JTLSHOP"],
+    "body": ["/templates/Evo/", "jtl-shop"]
+  },
+  {
+    "key": "oxid",
+    "label": "OXID eShop",
+    "generator": ["oxid"],
+    "cookies": ["sid_key"],
+    "body": ["/out/azure/", "oxid-esales"]
+  },
+  {
+    "key": "wordpress",
+    "label": "WordPress",
+    "generator": ["wordpress"],
+    "headers": {"x-powered-by": ["wordpress"]},
+    "scripts": ["/wp-content/", "/wp-includes/"],
+    "body": ["/wp-content/", "/wp-json/"]
+  },
+  {
+    "key": "typo3",
+    "label": "TYPO3",
+    "generator": ["typo3"],
+    "cookies": ["fe_typo_user"],
+    "scripts": ["/typo3conf/", "/typo3temp/"],
+    "body": ["/typo3conf/", "/typo3temp/"]
+  },
+  {
+    "key": "joomla",
+    "label": "Joomla",
+    "generator": ["joomla"],
+    "scripts": ["/media/jui/", "/media/system/js/"],
+    "body": ["/components/com_content/"]
+  },
+  {
+    "key": "drupal",
+    "label": "Drupal",
+    "generator": ["drupal"],
+    "headers": {"x-generator": ["drupal"], "x-drupal-cache": [""]},
+    "body": ["/sites/default/files/", "drupal-settings-json"]
+  },
+  {
+    "key": "contao",
+    "label": "Contao",
+    "generator": ["contao"],
+    "body": ["/files/", "contao/"]
+  },
+  {
+    "key": "wix",
+    "label": "Wix",
+    "generator": ["wix.com"],
+    "headers": {"x-wix-request-id": [""]},
+    "body": ["static.parastorage.com", "wix.com"]
+  },
+  {
+    "key": "squarespace",
+    "label": "Squarespace",
+    "generator": ["squarespace"],
+    "body": ["static1.squarespace.com"]
+  },
+  {
+    "key": "webflow",
+    "label": "Webflow",
+    "generator": ["webflow"],
+    "body": ["assets.website-files.com", "webflow.js"]
+  },
+  {
+    "key": "hubspot_cms",
+    "label": "HubSpot CMS",
+    "generator": ["hubspot"],
+    "scripts": ["js.hs-scripts.com", "js.hsforms.net"],
+    "body": ["hs-scripts.com"]
+  },
+  {
+    "key": "google_analytics",
+    "label": "Google Analytics",
+    "scripts": ["googletagmanager.com/gtag/js", "google-analytics.com/analytics.js"],
+    "body": ["gtag('config'", "GoogleAnalyticsObject"]
+  },
+  {
+    "key": "google_tag_manager",
+    "label": "Google Tag Manager",
+    "scripts": ["googletagmanager.com/gtm.js"],
+    "body": ["googletagmanager.com/ns.html"]
+  },
+  {
+    "key": "matomo",
+    "label": "Matomo",
+    "scripts": ["matomo.js", "piwik.js"],
+    "body": ["_paq.push", "matomo.php"]
+  },
+  {
+    "key": "plausible",
+    "label": "Plausible Analytics",
+    "scripts": ["plausible.io/js/"],
+    "body": ["plausible.io/api/event"]
+  },
+  {
+    "key": "etracker",
+    "label": "etracker",
+    "scripts": ["static.etracker.com"],
+    "body": ["etracker.com/code/"]
+  },
+  {
+    "key": "hotjar",
+    "label": "Hotjar",
+    "scripts": ["static.hotjar.com"],
+    "body": ["hjSiteSettings", "hotjar.com"]
+  },
+  {
+    "key": "intercom",
+    "label": "Intercom",
+    "scripts": ["widget.intercom.io", "js.intercomcdn.com"],
+    "body": ["intercomSettings"]
+  },
+  {
+    "key": "tawk",
+    "label": "Tawk.to",
+    "scripts": ["embed.tawk.to"],
+    "body": ["Tawk_API"]
+  },
+  {
+    "key": "userlike",
+    "label": "Userlike",
+    "scripts": ["userlike-cdn-widgets", "userlike.com"],
+    "body": ["userlikeConfig"]
+  },
+  {
+    "key": "zendesk",
+    "label": "Zendesk",
+    "scripts": ["static.zdassets.com", "zendesk.com/embeddable"],
+    "body": ["zEmbed", "zdassets.com"]
+  },
+  {
+    "key": "cookiebot",
+    "label": "Cookiebot",
+    "scripts": ["consent.cookiebot.com"],
+    "body": ["Cookiebot"]
+  },
+  {
+    "key": "usercentrics",
+    "label": "Usercentrics",
+    "scripts": ["app.usercentrics.eu", "privacy-proxy.usercentrics.eu"],
+    "body": ["usercentrics"]
+  },
+  {
+    "key": "cloudflare",
+    "label": "Cloudflare",
+    "headers": {"cf-ray": [""], "server": ["cloudflare"]},
+    "body": ["/cdn-cgi/"]
+  },
+  {
+    "key": "nginx",
+    "label": "nginx",
+    "headers": {"server": ["nginx"]}
+  },
+  {
+    "key": "apache",
+    "label": "Apache",
+    "headers": {"server": ["apache"]}
+  },
+  {
+    "key": "iis",
+    "label": "Microsoft IIS",
+    "headers": {"server": ["microsoft-iis"]}
+  },
+  {
+    "key": "varnish",
+    "label": "Varnish",
+    "headers": {"via": ["varnish"], "x-varnish": [""]}
+  },
+  {
+    "key": "nextjs",
+    "label": "Next.js",
+    "headers": {"x-powered-by": ["next.js"]},
+    "body": ["/_next/static/", "__NEXT_DATA__"]
+  },
+  {
+    "key": "php",
+    "label": "PHP",
+    "headers": {"x-powered-by": ["php/"]},
+    "cookies": ["PHPSESSID"]
+  }
+]

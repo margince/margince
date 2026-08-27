@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "cd7f781896c39868ad3cc722651a6ecb38b98b6445a4ad8ef544784be18bb3d0"
+const JobContractHash = "856157ad3addd0f12f3ebd8e8663215f6e6307eaf4717bfb3d681086485dd8ad"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -680,6 +680,27 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"DeepReadBrain"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "MaxPages", Scalar: true, Reason: "this run's page ceiling, or zero for the deployment's own. The worker clamps it against the configured cap, so it can only ever narrow what an operator set, and a crawl budget states nothing about a subject."}, {Name: "OrganizationID"}, {Name: "RequestedBy"}, {Name: "SiteReadID"}, {Name: "Workspace"}},
 	},
+	"technical_enrich_backfill": {
+		Kind:         "technical_enrich_backfill",
+		GoType:       "TechnicalEnrichBackfillArgs",
+		Role:         Worker,
+		Queue:        "technical_lookup",
+		Timeout:      TimeoutPolicy{Fixed: 2 * time.Minute},
+		MaxAttempts:  3,
+		OptsOwner:    OptsArgs,
+		Cadence:      Cadence{OperatorField: "TechnicalEnrichment.BackfillInterval", ScheduleWhenPositive: "TechnicalEnrichment.BackfillInterval"},
+		Registration: Registration{When: []string{"TechnicalEnricher"}},
+	},
+	"technical_enrich_organization": {
+		Kind:         "technical_enrich_organization",
+		GoType:       "TechnicalEnrichOrganizationArgs",
+		Role:         Worker,
+		Queue:        "technical_lookup",
+		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"TechnicalEnricher"}, AbsentRegistersAnyway: true},
+		Args:         []ArgField{{Name: "OrganizationID"}, {Name: "Workspace"}},
+	},
 	"telegram_ingest": {
 		Kind:      "telegram_ingest",
 		GoType:    "TelegramIngestArgs",
@@ -811,6 +832,7 @@ var queues = map[string]int{
 	"overlay_reconcile": 1,
 	"privacy_retention": 2,
 	"rate_refresh":      2,
+	"technical_lookup":  1,
 	"transcript_read":   2,
 	"webhook_retry":     3,
 }

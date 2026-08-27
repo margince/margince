@@ -107,6 +107,16 @@ queues:
       be a second requester however carefully each paced itself. The pacer in
       platform/geocode enforces the interval; this bound enforces the
       single thread.
+  technical_lookup:
+    max_workers: 1
+    reason: >-
+      ONE worker, for the geocode queue's reason rather than a performance one.
+      A technical lookup asks three free public services — a resolver, a
+      certificate log, and a company's own site — and the certificate log in
+      particular is a single small service running on goodwill. The pacers in
+      platform/dnsread and platform/certlog hold the intervals; this bound
+      holds the single thread, because a second worker would be a second
+      requester however carefully each paced itself.
   rate_refresh:
     max_workers: 2
     reason: >-
@@ -1301,6 +1311,57 @@ kinds:
       outbound call of its own — the lookups happen in the per-company jobs it
       queues, each paced by the installation-wide requester. Two minutes is
       generous for that and bounded by the batch.
+
+  technical_enrich_organization:
+    role: worker
+    go_type: TechnicalEnrichOrganizationArgs
+    queue: technical_lookup
+    timeout: 4m
+    opts_owner: caller
+    registration: {when: [TechnicalEnricher], absent: registers_anyway}
+    args:
+      Workspace: id
+      OrganizationID: id
+    reason: >-
+      Three lanes for one company, and the ceiling is set by what the job can
+      WAIT for rather than by what it does. The certificate log is the long
+      pole: its pacer may hold the job for the full 5s interval before the
+      query is built, and crt.sh answers slowly enough under load that the
+      client allows 30s. DNS adds a handful of paced 5s-bounded lookups and the
+      homepage fetch another 10s, then the write follows — call it two minutes
+      of budget, and four is that with room.
+
+      The margin is load-bearing rather than generous, for the same reason the
+      geocode ceiling carries one: River applies this timeout by cancelling the
+      job's context, so a job that hit its ceiling looks exactly like a worker
+      that was shut down, and the ledger counts those differently.
+
+      The DOMAIN is deliberately not among the args. The job reads what the
+      company record holds when it runs; a copy in the args would be the stale
+      -lookup bug moved one layer out, and would also be a way to point the
+      lookup at a domain the record never carried.
+
+  technical_enrich_backfill:
+    role: worker
+    go_type: TechnicalEnrichBackfillArgs
+    queue: technical_lookup
+    timeout: 2m
+    max_attempts: 3
+    opts_owner: args
+    cadence: {operator: TechnicalEnrichment.BackfillInterval, schedule_when_positive: TechnicalEnrichment.BackfillInterval}
+    registration: {when: [TechnicalEnricher], absent: registers_nothing}
+    reason: >-
+      One indexed read and up to TechnicalEnrichBatch enqueues, with no
+      outbound call of its own — the lookups happen in the per-company jobs it
+      queues, each paced by the installation-wide requesters. Two minutes is
+      generous for that and bounded by the batch.
+
+      It exists as its own kind rather than as a flag on the per-company one
+      because this lane must reach rows no trigger can: a company recorded
+      before the deployment wired a resolver, and — unlike geocoding, which
+      fires on an address write — every company whose technical picture simply
+      went STALE. Freshness is the feature, so something has to come back
+      round, and only a scheduled pass does.
 
   transcript_propose:
     role: worker

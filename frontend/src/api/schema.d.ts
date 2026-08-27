@@ -1764,6 +1764,75 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/organizations/{id}/technical-enrich": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Read what the company publicly runs — mail system, website stack, operated services, hosting.
+         * @description Reads three free public sources for the domain ALREADY ON THE RECORD: DNS (MX for the
+         *     mail provider, TXT for the SPF/DMARC/DKIM posture, A/AAAA plus reverse lookup for the
+         *     hosting hint), certificate-transparency logs (subdomains, mapped to operated services),
+         *     and one polite fingerprint fetch of the company's own homepage through the same
+         *     robots-respecting reader the site read uses — no second crawler.
+         *
+         *     There is deliberately NO field for a domain: the lookup reads what the record already
+         *     holds and cannot be pointed at anything else, which is what keeps this path from
+         *     becoming a way to research companies the workspace has not recorded.
+         *
+         *     Company level ONLY. A certificate or a DNS record can carry a person's name; the
+         *     classifier passes through nothing but known service labels, so no personal name reaches
+         *     the record or the cache. That is what keeps this outside personal-data scope by
+         *     construction rather than by policy.
+         *
+         *     Asynchronous: answers 202 with the run to poll. Each source is a separate lane that
+         *     completes or fails on its own — a certificate log outage leaves what that lane last
+         *     wrote alone rather than reporting that the company operates no services.
+         */
+        post: operations["technicalEnrichCompany"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/organizations/{id}/technical-enrich/latest": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
+         * @description Per LANE rather than per run, because the three sources fail independently and a
+         *     single verdict would hide which of them is stale: an account can hold a mail provider
+         *     read this morning beside services last read a week ago because the certificate log has
+         *     been down since.
+         *
+         *     404 when the account has never been looked up, which is the honest difference between
+         *     "never tried" and "tried and found nothing".
+         */
+        get: operations["getLatestTechnicalEnrich"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/organizations/{id}/site-reads/latest": {
         parameters: {
             query?: never;
@@ -17927,7 +17996,7 @@ export interface components {
              *     (`entity_type: project`), attributed to the project's company.
              * @enum {string}
              */
-            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet" | "funding" | "leadership_change" | "expansion" | "product_launch";
+            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet" | "funding" | "leadership_change" | "expansion" | "product_launch" | "technical_change";
             /**
              * @description Where the raw signal came from.
              * @default derived
@@ -19674,7 +19743,7 @@ export interface components {
             field: "display_name" | "offer_summary" | "icp" | "value_proposition" | "usp" | "customer_pains" | "desired_outcomes" | "buying_center" | "buying_intents" | "common_objections" | "sales_motion" | "legal_name" | "registered_address" | "register_vat" | "industry" | "history";
             value: string;
             /** @enum {string} */
-            source: "human" | "site_read" | "connector" | "migration";
+            source: "human" | "site_read" | "connector" | "migration" | "technical_lookup";
             readonly captured_by: string;
             evidence_snippet?: string | null;
             /** Format: uri */
@@ -19704,11 +19773,11 @@ export interface components {
             /** @enum {string} */
             category: "company" | "offering" | "market" | "signal";
             /** @enum {string} */
-            field: "founded_year" | "employee_range" | "phone" | "contact_email" | "location" | "service" | "product" | "capability" | "served_industry" | "company_size" | "geography" | "language" | "certification" | "partner" | "named_customer" | "technology" | "quantified_outcome";
+            field: "founded_year" | "employee_range" | "phone" | "contact_email" | "location" | "service" | "product" | "capability" | "served_industry" | "company_size" | "geography" | "language" | "certification" | "partner" | "named_customer" | "technology" | "quantified_outcome" | "mail_provider" | "email_security" | "hosting_provider" | "operated_service";
             value: string;
             value_key: string;
             /** @enum {string} */
-            source: "human" | "site_read" | "connector" | "migration";
+            source: "human" | "site_read" | "connector" | "migration" | "technical_lookup";
             readonly captured_by: string;
             evidence_snippet?: string | null;
             /** Format: uri */
@@ -19800,7 +19869,7 @@ export interface components {
             classification: "new" | "machine_change" | "human_conflict" | "unchanged";
             current_value: string | null;
             /** @enum {string|null} */
-            current_source: "human" | "site_read" | "connector" | "migration" | null;
+            current_source: "human" | "site_read" | "connector" | "migration" | "technical_lookup" | null;
             proposed_value: string;
         };
         CompanySiteReadResolution: {
@@ -20114,6 +20183,57 @@ export interface components {
              * @enum {string}
              */
             status: "queued" | "deferred" | "running";
+        };
+        /** @description The 202 handle for a queued technical lookup. */
+        TechnicalEnrichStarted: {
+            /** Format: uuid */
+            organization_id: string;
+            /**
+             * @description The lookup this call asked for is on its way. One value, because that is all
+             *     the caller can be told honestly: River deduplicates by arguments, so pressing
+             *     the button while a lookup is already in flight JOINS it — and the insert does
+             *     not report which of the two happened. A `running` this endpoint could not tell
+             *     apart from `queued` would be a promise the handler cannot keep.
+             * @enum {string}
+             */
+            status: "queued";
+        };
+        /**
+         * @description What each public source last did for one account. Per lane rather than per run: the
+         *     three fail independently, so one verdict would hide which of them is stale.
+         */
+        TechnicalEnrichStatus: {
+            /** Format: uuid */
+            organization_id: string;
+            lanes: components["schemas"]["TechnicalEnrichLane"][];
+        };
+        /** @description What one public source last did. */
+        TechnicalEnrichLane: {
+            /**
+             * @description The public source: DNS records, certificate-transparency logs, or the company's own homepage.
+             * @enum {string}
+             */
+            lane: "dns" | "certlog" | "homepage";
+            /**
+             * @description What the last attempt did. `empty` is an authoritative nothing — the source answered
+             *     and the company publishes none of what this lane reads — while `failed` is a lookup
+             *     that did not complete, which changes nothing on the record. `refused` is the site's
+             *     robots.txt declining the homepage read.
+             * @enum {string|null}
+             */
+            outcome?: null | "applied" | "empty" | "failed" | "refused";
+            /** @description How many times this lane has been tried since it last succeeded. */
+            attempts: number;
+            /**
+             * Format: date-time
+             * @description When this source last answered. The observed-at behind every fact the lane owns.
+             */
+            last_success_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the scheduled pass will ask again, backed off after a failure.
+             */
+            next_attempt_at?: string | null;
         };
         /** @description One page the crawl fetched. */
         SiteReadPage: {
@@ -25690,6 +25810,76 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+        };
+    };
+    technicalEnrichCompany: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The lookup is queued; poll the run. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TechnicalEnrichStarted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The company record carries no domain, so there is nothing to look up. */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The process role wired no job runner — declared absent, never a silent no-op. */
+            501: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getLatestTechnicalEnrich: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What each source last did for this account. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TechnicalEnrichStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
         };
     };
     getLatestSiteRead: {
@@ -38066,7 +38256,7 @@ export interface operations {
                 /** @description Include soft-deleted (archived) rows. Default false. */
                 include_archived?: components["parameters"]["IncludeArchived"];
                 status?: "open" | "acknowledged" | "resolved" | "dismissed";
-                kind?: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other";
+                kind?: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet" | "funding" | "leadership_change" | "expansion" | "product_launch" | "technical_change";
                 resolution_state?: "resolved" | "low_confidence" | "unresolved" | "dropped";
                 /**
                  * @description Signals about one organization, matched two ways because a signal reaches an

@@ -46,12 +46,20 @@ import (
 // send a site read to the one-page path.
 type EnrichDepth string
 
-// The two depths, and the whole vocabulary: EnrichDepthPage reads one page and
-// answers with the proposal, EnrichDepthSite queues a multi-page crawl and
-// answers with the read's id and queue state.
+// The three depths, and the whole vocabulary: EnrichDepthPage reads one page
+// and answers with the proposal, EnrichDepthSite queues a multi-page crawl and
+// answers with the read's id and queue state, and EnrichDepthTechnical queues
+// the public-records lookup and answers the same way.
+//
+// Technical is a depth of this verb rather than a verb of its own because a
+// granting human deciding "may this agent make the product go and read about a
+// company?" is deciding one thing, and `enrich` is the cap that answers it. It
+// reads DIFFERENT sources — DNS, certificate logs, one homepage fingerprint —
+// but the authority question is identical.
 const (
-	EnrichDepthPage EnrichDepth = "page"
-	EnrichDepthSite EnrichDepth = "site"
+	EnrichDepthPage      EnrichDepth = "page"
+	EnrichDepthSite      EnrichDepth = "site"
+	EnrichDepthTechnical EnrichDepth = "technical"
 )
 
 // CompanyEnricher reads a company's website and stages what it found. depth is
@@ -89,13 +97,13 @@ func (t enrichCompany) Spec() mcp.ToolSpec {
 		// credential. TestUrlTakingOperationsAreNeverAutoExecuteForAgents is
 		// the gate that says so, and it is about egress, not about authority.
 		RequiredScope: principal.ScopeEnrich, Tier: mcp.TierConfirmationRequired, Egress: true,
-		OpenAPIOp: "scrapeCompany/deepReadCompany",
+		OpenAPIOp: "scrapeCompany/deepReadCompany/technicalEnrichCompany",
 		InputSchema: schema(`{"type":"object","required":["organization_id"],"properties":{
 			"organization_id":{"type":"string","format":"uuid","description":"The organization to enrich"},
 			"url":{"type":"string","format":"uri",
 				"description":"Absolute http(s) URL to read instead of the organization's own domain"},
-			"depth":{"type":"string","enum":["page","site"],"default":"page",
-				"description":"page reads one page and returns a staged proposal; site queues a multi-page crawl and returns its read id"},
+			"depth":{"type":"string","enum":["page","site","technical"],"default":"page",
+				"description":"page reads one page and returns a staged proposal; site queues a multi-page crawl and returns its read id; technical queues a lookup of what the company publicly runs (DNS, certificate logs, one homepage fingerprint) and returns its queue state"},
 			"approval_id":{"type":"string","format":"uuid","description":"Set on approved retry"}},
 			"additionalProperties":false}`),
 		// The other declared exception. This tool answers one of two different
@@ -157,9 +165,9 @@ func readEnrichArgs(in json.RawMessage) (enrichArgs, error) {
 	if args.Depth == "" {
 		args.Depth = EnrichDepthPage
 	}
-	if args.Depth != EnrichDepthPage && args.Depth != EnrichDepthSite {
-		return enrichArgs{}, &BadArgsError{Cause: fmt.Errorf("depth %q is not %q or %q",
-			args.Depth, EnrichDepthPage, EnrichDepthSite)}
+	if args.Depth != EnrichDepthPage && args.Depth != EnrichDepthSite && args.Depth != EnrichDepthTechnical {
+		return enrichArgs{}, &BadArgsError{Cause: fmt.Errorf("depth %q is not %q, %q or %q",
+			args.Depth, EnrichDepthPage, EnrichDepthSite, EnrichDepthTechnical)}
 	}
 	if err := requireEnrichURL(args.URL); err != nil {
 		return enrichArgs{}, err

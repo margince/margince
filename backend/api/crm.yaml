@@ -2716,6 +2716,79 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /organizations/{id}/technical-enrich:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Organizations, AI]
+      operationId: technicalEnrichCompany
+      summary: Read what the company publicly runs — mail system, website stack, operated services, hosting.
+      description: |
+        Reads three free public sources for the domain ALREADY ON THE RECORD: DNS (MX for the
+        mail provider, TXT for the SPF/DMARC/DKIM posture, A/AAAA plus reverse lookup for the
+        hosting hint), certificate-transparency logs (subdomains, mapped to operated services),
+        and one polite fingerprint fetch of the company's own homepage through the same
+        robots-respecting reader the site read uses — no second crawler.
+
+        There is deliberately NO field for a domain: the lookup reads what the record already
+        holds and cannot be pointed at anything else, which is what keeps this path from
+        becoming a way to research companies the workspace has not recorded.
+
+        Company level ONLY. A certificate or a DNS record can carry a person's name; the
+        classifier passes through nothing but known service labels, so no personal name reaches
+        the record or the cache. That is what keeps this outside personal-data scope by
+        construction rather than by policy.
+
+        Asynchronous: answers 202 with the run to poll. Each source is a separate lane that
+        completes or fails on its own — a certificate log outage leaves what that lane last
+        wrote alone rather than reporting that the company operates no services.
+      x-mcp-tool: { verb: enrich, record_type: organization, tier: confirmation_required, scope: enrich }
+      responses:
+        '202':
+          description: The lookup is queued; poll the run.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TechnicalEnrichStarted' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422':
+          description: The company record carries no domain, so there is nothing to look up.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '501':
+          description: The process role wired no job runner — declared absent, never a silent no-op.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
+  /organizations/{id}/technical-enrich/latest:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Organizations]
+      operationId: getLatestTechnicalEnrich
+      summary: What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
+      description: |
+        Per LANE rather than per run, because the three sources fail independently and a
+        single verdict would hide which of them is stale: an account can hold a mail provider
+        read this morning beside services last read a week ago because the certificate log has
+        been down since.
+
+        404 when the account has never been looked up, which is the honest difference between
+        "never tried" and "tried and found nothing".
+      x-mcp-tool: { verb: read_record, record_type: organization, tier: auto_execute, scope: read }
+      responses:
+        '200':
+          description: What each source last did for this account.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TechnicalEnrichStatus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
   /organizations/{id}/site-reads/latest:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -13017,7 +13090,10 @@ paths:
           schema: { type: string, enum: [open, acknowledged, resolved, dismissed] }
         - name: kind
           in: query
-          schema: { type: string, enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other] }
+          schema: { type: string, enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other,
+                          contract_ended, new_opportunity, commitment_made, ghosted_thread,
+                          project_gone_quiet, funding, leadership_change, expansion,
+                          product_launch, technical_change] }
         - name: resolution_state
           in: query
           schema: { type: string, enum: [resolved, low_confidence, unresolved, dropped] }
@@ -24751,7 +24827,8 @@ components:
           type: string
           enum: [stalled_deal, champion_left, reengagement, buying_intent, risk, other,
                  contract_ended, new_opportunity, commitment_made, ghosted_thread,
-                 project_gone_quiet, funding, leadership_change, expansion, product_launch]
+                 project_gone_quiet, funding, leadership_change, expansion, product_launch,
+                 technical_change]
           description: |
             The first six are what a human files by hand. The rest are what the producers
             raise (SIG-F-3): `contract_ended`, `new_opportunity` and `commitment_made` are read
@@ -26958,7 +27035,7 @@ components:
           description: The human who confirmed the claim. Server-stamped, never accepted from a request body.
         field: { type: string, enum: [display_name, offer_summary, icp, value_proposition, usp, customer_pains, desired_outcomes, buying_center, buying_intents, common_objections, sales_motion, legal_name, registered_address, register_vat, industry, history] }
         value: { type: string }
-        source: { type: string, enum: [human, site_read, connector, migration] }
+        source: { type: string, enum: [human, site_read, connector, migration, technical_lookup] }
         captured_by: { type: string, readOnly: true }
         evidence_snippet: { type: [string, 'null'] }
         source_url: { type: [string, 'null'], format: uri }
@@ -26990,10 +27067,10 @@ components:
             reader can open. Without it a fact-derived claim had to cite the organization, which
             told the reader where to look but not at what.
         category: { type: string, enum: [company, offering, market, signal] }
-        field: { type: string, enum: [founded_year, employee_range, phone, contact_email, location, service, product, capability, served_industry, company_size, geography, language, certification, partner, named_customer, technology, quantified_outcome] }
+        field: { type: string, enum: [founded_year, employee_range, phone, contact_email, location, service, product, capability, served_industry, company_size, geography, language, certification, partner, named_customer, technology, quantified_outcome, mail_provider, email_security, hosting_provider, operated_service] }
         value: { type: string }
         value_key: { type: string }
-        source: { type: string, enum: [human, site_read, connector, migration] }
+        source: { type: string, enum: [human, site_read, connector, migration, technical_lookup] }
         captured_by: { type: string, readOnly: true }
         evidence_snippet: { type: [string, 'null'] }
         source_url: { type: [string, 'null'], format: uri }
@@ -27104,7 +27181,7 @@ components:
         value_kind: { type: string, enum: [profile_field, fact] }
         classification: { type: string, enum: [new, machine_change, human_conflict, unchanged] }
         current_value: { type: [string, 'null'] }
-        current_source: { type: [string, 'null'], enum: [human, site_read, connector, migration, null] }
+        current_source: { type: [string, 'null'], enum: [human, site_read, connector, migration, technical_lookup, null] }
         proposed_value: { type: string }
 
     CompanySiteReadResolution:
@@ -27514,6 +27591,71 @@ components:
       properties:
         read_id: { type: string, format: uuid }
         status: { type: string, enum: [queued, deferred, running], description: 'The joined dossier state when a read is already in flight.' }
+
+    TechnicalEnrichStarted:
+      type: object
+      description: The 202 handle for a queued technical lookup.
+      required: [organization_id, status]
+      properties:
+        organization_id: { type: string, format: uuid }
+        status:
+          type: string
+          enum: [queued]
+          description: |
+            The lookup this call asked for is on its way. One value, because that is all
+            the caller can be told honestly: River deduplicates by arguments, so pressing
+            the button while a lookup is already in flight JOINS it — and the insert does
+            not report which of the two happened. A `running` this endpoint could not tell
+            apart from `queued` would be a promise the handler cannot keep.
+          # Pinned: without it the generator sees two enums sharing this member and
+          # drops the type prefix from the OTHER one, renaming VoiceBuildStatus's
+          # constants to a bare `Queued` that reads as nobody's.
+          x-enum-varnames: [TechnicalEnrichStartedStatusQueued]
+
+    TechnicalEnrichStatus:
+      type: object
+      description: |
+        What each public source last did for one account. Per lane rather than per run: the
+        three fail independently, so one verdict would hide which of them is stale.
+      required: [organization_id, lanes]
+      properties:
+        organization_id: { type: string, format: uuid }
+        lanes:
+          type: array
+          items: { $ref: '#/components/schemas/TechnicalEnrichLane' }
+
+    TechnicalEnrichLane:
+      type: object
+      description: What one public source last did.
+      required: [lane, attempts]
+      properties:
+        lane:
+          type: string
+          enum: [dns, certlog, homepage]
+          description: 'The public source: DNS records, certificate-transparency logs, or the company''s own homepage.'
+          # Pinned for the same reason as the status above: unprefixed, these
+          # generate a bare `Dns` and `Homepage` in the shared contracts package,
+          # which read as nobody's constants and collide with the next enum to
+          # use one of the words.
+          x-enum-varnames: [TechnicalEnrichLaneDNS, TechnicalEnrichLaneCertLog, TechnicalEnrichLaneHomepage]
+        outcome:
+          type: [string, 'null']
+          enum: [null, applied, empty, failed, refused]
+          description: |
+            What the last attempt did. `empty` is an authoritative nothing — the source answered
+            and the company publishes none of what this lane reads — while `failed` is a lookup
+            that did not complete, which changes nothing on the record. `refused` is the site's
+            robots.txt declining the homepage read.
+          x-enum-varnames: [TechnicalEnrichLaneOutcomeApplied, TechnicalEnrichLaneOutcomeEmpty, TechnicalEnrichLaneOutcomeFailed, TechnicalEnrichLaneOutcomeRefused]
+        attempts: { type: integer, description: 'How many times this lane has been tried since it last succeeded.' }
+        last_success_at:
+          type: [string, 'null']
+          format: date-time
+          description: 'When this source last answered. The observed-at behind every fact the lane owns.'
+        next_attempt_at:
+          type: [string, 'null']
+          format: date-time
+          description: 'When the scheduled pass will ask again, backed off after a failure.'
 
     SiteReadPage:
       type: object

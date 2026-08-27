@@ -1994,6 +1994,7 @@ public.idx_oli_offer CREATE INDEX idx_oli_offer ON public.offer_line_item USING 
 public.idx_org_class CREATE INDEX idx_org_class ON public.organization USING btree (classification) WHERE (archived_at IS NULL)
 public.idx_org_created_keyset CREATE INDEX idx_org_created_keyset ON public.organization USING btree (created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_org_domain_org CREATE INDEX idx_org_domain_org ON public.organization_domain USING btree (organization_id) WHERE (archived_at IS NULL)
+public.idx_org_fact_lookup CREATE INDEX idx_org_fact_lookup ON public.organization_fact USING btree (category, field, value_key)
 public.idx_org_last_activity_keyset CREATE INDEX idx_org_last_activity_keyset ON public.organization USING btree (last_activity_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_org_legal_name_trgm CREATE INDEX idx_org_legal_name_trgm ON public.organization USING gin (f_fold_apostrophes(lower(legal_name)) gin_trgm_ops)
 public.idx_org_lifecycle CREATE INDEX idx_org_lifecycle ON public.organization USING btree (lifecycle) WHERE (archived_at IS NULL)
@@ -2005,6 +2006,7 @@ public.idx_org_parent CREATE INDEX idx_org_parent ON public.organization USING b
 public.idx_org_rel_type_cascade CREATE INDEX idx_org_rel_type_cascade ON public.organization_relationship_type USING btree (organization_id)
 public.idx_org_rel_type_org CREATE INDEX idx_org_rel_type_org ON public.organization_relationship_type USING btree (organization_id) WHERE (archived_at IS NULL)
 public.idx_org_search CREATE INDEX idx_org_search ON public.organization USING gin (search_tsv)
+public.idx_org_technical_state_due CREATE INDEX idx_org_technical_state_due ON public.organization_technical_state USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_org_updated_keyset CREATE INDEX idx_org_updated_keyset ON public.organization USING btree (updated_at DESC NULLS LAST, created_at DESC, id DESC) WHERE (archived_at IS NULL)
 public.idx_organization_domain_disposition_due CREATE INDEX idx_organization_domain_disposition_due ON public.organization_domain_disposition USING btree (next_attempt_at) WHERE (next_attempt_at IS NOT NULL)
 public.idx_organization_geocoded CREATE INDEX idx_organization_geocoded ON public.organization USING btree (geocode_lat, geocode_lon) WHERE ((geocode_status = 'ok'::text) AND (archived_at IS NULL))
@@ -2082,6 +2084,7 @@ public.idx_taggable_entity CREATE INDEX idx_taggable_entity ON public.taggable U
 public.idx_taggable_tag CREATE INDEX idx_taggable_tag ON public.taggable USING btree (tag_id)
 public.idx_team_membership_team CREATE INDEX idx_team_membership_team ON public.team_membership USING btree (team_id)
 public.idx_team_membership_user CREATE INDEX idx_team_membership_user ON public.team_membership USING btree (user_id)
+public.idx_technical_lookup_cache_expiry CREATE INDEX idx_technical_lookup_cache_expiry ON public.technical_lookup_cache USING btree (expires_at)
 public.idx_transcript_read_latest CREATE INDEX idx_transcript_read_latest ON public.transcript_read USING btree (activity_id, created_at DESC)
 public.idx_voice_corpus_profile CREATE INDEX idx_voice_corpus_profile ON public.voice_corpus_source USING btree (voice_profile_id, created_at DESC)
 public.idx_webhook_delivery_by_subscription CREATE INDEX idx_webhook_delivery_by_subscription ON public.webhook_delivery USING btree (subscription_id, created_at DESC)
@@ -2841,16 +2844,17 @@ public.organization_fact.confidence real gen=- def=-
 public.organization_fact.evidence_snippet text gen=- def=-
 public.organization_fact.field text NOT NULL gen=- def=-
 public.organization_fact.id uuid NOT NULL gen=- def=uuidv7()
-public.organization_fact.org_fact_field_vocab CHECK ((((category = 'company'::text) AND (field = ANY (ARRAY['founded_year'::text, 'employee_range'::text, 'phone'::text, 'contact_email'::text, 'location'::text]))) OR ((category = 'offering'::text) AND (field = ANY (ARRAY['service'::text, 'product'::text, 'capability'::text]))) OR ((category = 'market'::text) AND (field = ANY (ARRAY['served_industry'::text, 'company_size'::text, 'geography'::text, 'language'::text]))) OR ((category = 'signal'::text) AND (field = ANY (ARRAY['certification'::text, 'partner'::text, 'named_customer'::text, 'technology'::text, 'quantified_outcome'::text])))))
+public.organization_fact.org_fact_field_vocab CHECK ((((category = 'company'::text) AND (field = ANY (ARRAY['founded_year'::text, 'employee_range'::text, 'phone'::text, 'contact_email'::text, 'location'::text]))) OR ((category = 'offering'::text) AND (field = ANY (ARRAY['service'::text, 'product'::text, 'capability'::text]))) OR ((category = 'market'::text) AND (field = ANY (ARRAY['served_industry'::text, 'company_size'::text, 'geography'::text, 'language'::text]))) OR ((category = 'signal'::text) AND (field = ANY (ARRAY['certification'::text, 'partner'::text, 'named_customer'::text, 'technology'::text, 'quantified_outcome'::text, 'mail_provider'::text, 'email_security'::text, 'hosting_provider'::text, 'operated_service'::text])))))
 public.organization_fact.org_fact_org_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
 public.organization_fact.org_fact_site_evidence CHECK (((source <> 'site_read'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (confidence IS NOT NULL))))
 public.organization_fact.org_fact_site_read_fkey FOREIGN KEY (site_read_id) REFERENCES site_read(id) ON DELETE SET NULL (site_read_id)
+public.organization_fact.org_fact_technical_evidence CHECK (((source <> 'technical_lookup'::text) OR ((evidence_snippet IS NOT NULL) AND (evidence_snippet <> ''::text) AND (source_url IS NOT NULL) AND (source_url <> ''::text) AND (retrieved_at IS NOT NULL))))
 public.organization_fact.org_fact_value_key_cardinality CHECK ((((category = 'company'::text) AND (field <> 'location'::text) AND (value_key = ''::text)) OR ((category = 'company'::text) AND (field = 'location'::text) AND (value_key <> ''::text)) OR ((category = ANY (ARRAY['offering'::text, 'market'::text, 'signal'::text])) AND (value_key <> ''::text))))
 public.organization_fact.org_fact_verified_pair CHECK (((verified_at IS NULL) = (verified_by IS NULL)))
 public.organization_fact.organization_fact_category_check CHECK ((category = ANY (ARRAY['company'::text, 'offering'::text, 'market'::text, 'signal'::text])))
 public.organization_fact.organization_fact_confidence_check CHECK (((confidence IS NULL) OR ((confidence >= (0)::double precision) AND (confidence <= (1)::double precision))))
 public.organization_fact.organization_fact_pkey PRIMARY KEY (id)
-public.organization_fact.organization_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text])))
+public.organization_fact.organization_fact_source_check CHECK ((source = ANY (ARRAY['human'::text, 'site_read'::text, 'connector'::text, 'migration'::text, 'technical_lookup'::text])))
 public.organization_fact.organization_id uuid NOT NULL gen=- def=-
 public.organization_fact.retrieved_at timestamp with time zone gen=- def=-
 public.organization_fact.site_read_id uuid gen=- def=-
@@ -2989,6 +2993,19 @@ public.organization_relationship_type.trg_organization_relationship_type_updated
 public.organization_relationship_type.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.organization_relationship_type.version bigint NOT NULL gen=- def=1
 public.organization_relationship_type_pkey CREATE UNIQUE INDEX organization_relationship_type_pkey ON public.organization_relationship_type USING btree (id)
+public.organization_technical_state acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.organization_technical_state.attempts integer NOT NULL gen=- def=0
+public.organization_technical_state.lane text NOT NULL gen=- def=-
+public.organization_technical_state.last_outcome text gen=- def=-
+public.organization_technical_state.last_success_at timestamp with time zone gen=- def=-
+public.organization_technical_state.next_attempt_at timestamp with time zone gen=- def=-
+public.organization_technical_state.organization_id uuid NOT NULL gen=- def=-
+public.organization_technical_state.organization_technical_state_lane_check CHECK ((lane = ANY (ARRAY['dns'::text, 'certlog'::text, 'homepage'::text])))
+public.organization_technical_state.organization_technical_state_organization_id_fkey FOREIGN KEY (organization_id) REFERENCES organization(id) ON DELETE CASCADE
+public.organization_technical_state.organization_technical_state_outcome_check CHECK (((last_outcome IS NULL) OR (last_outcome = ANY (ARRAY['applied'::text, 'empty'::text, 'failed'::text, 'refused'::text]))))
+public.organization_technical_state.organization_technical_state_pkey PRIMARY KEY (organization_id, lane)
+public.organization_technical_state.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.organization_technical_state_pkey CREATE UNIQUE INDEX organization_technical_state_pkey ON public.organization_technical_state USING btree (organization_id, lane)
 public.overlay_association acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.overlay_association.category text NOT NULL gen=- def=-
 public.overlay_association.direction text NOT NULL gen=- def=-
@@ -3821,7 +3838,7 @@ public.signal.resolved_person_id uuid gen=- def=-
 public.signal.severity text NOT NULL gen=- def='info'::text
 public.signal.signal_entity_pair CHECK (((entity_type IS NULL) = (entity_id IS NULL)))
 public.signal.signal_entity_type_check CHECK (((entity_type IS NULL) OR (entity_type = ANY (ARRAY['deal'::text, 'organization'::text, 'person'::text, 'project'::text]))))
-public.signal.signal_kind_check CHECK ((kind = ANY (ARRAY['stalled_deal'::text, 'champion_left'::text, 'reengagement'::text, 'buying_intent'::text, 'risk'::text, 'other'::text, 'contract_ended'::text, 'new_opportunity'::text, 'commitment_made'::text, 'ghosted_thread'::text, 'project_gone_quiet'::text, 'funding'::text, 'leadership_change'::text, 'expansion'::text, 'product_launch'::text])))
+public.signal.signal_kind_check CHECK ((kind = ANY (ARRAY['stalled_deal'::text, 'champion_left'::text, 'reengagement'::text, 'buying_intent'::text, 'risk'::text, 'other'::text, 'contract_ended'::text, 'new_opportunity'::text, 'commitment_made'::text, 'ghosted_thread'::text, 'project_gone_quiet'::text, 'funding'::text, 'leadership_change'::text, 'expansion'::text, 'product_launch'::text, 'technical_change'::text])))
 public.signal.signal_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE SET NULL (owner_id)
 public.signal.signal_owner_private_names_its_owner CHECK (((visibility <> 'owner'::text) OR (owner_id IS NOT NULL)))
 public.signal.signal_pkey PRIMARY KEY (id)
@@ -4032,6 +4049,16 @@ public.team_membership_pkey CREATE UNIQUE INDEX team_membership_pkey ON public.t
 public.team_membership_unique CREATE UNIQUE INDEX team_membership_unique ON public.team_membership USING btree (team_id, user_id)
 public.team_name_unique CREATE UNIQUE INDEX team_name_unique ON public.team USING btree (name)
 public.team_pkey CREATE UNIQUE INDEX team_pkey ON public.team USING btree (id)
+public.technical_lookup_cache acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.technical_lookup_cache.answer jsonb NOT NULL gen=- def=-
+public.technical_lookup_cache.expires_at timestamp with time zone NOT NULL gen=- def=-
+public.technical_lookup_cache.fetched_at timestamp with time zone NOT NULL gen=- def=now()
+public.technical_lookup_cache.found boolean NOT NULL gen=- def=-
+public.technical_lookup_cache.query text NOT NULL gen=- def=-
+public.technical_lookup_cache.record_kind text NOT NULL gen=- def=-
+public.technical_lookup_cache.technical_lookup_cache_kind_check CHECK ((record_kind = ANY (ARRAY['mx'::text, 'txt'::text, 'dmarc'::text, 'dkim'::text, 'address'::text, 'cname'::text, 'reverse'::text, 'certlog'::text])))
+public.technical_lookup_cache.technical_lookup_cache_pkey PRIMARY KEY (query, record_kind)
+public.technical_lookup_cache_pkey CREATE UNIQUE INDEX technical_lookup_cache_pkey ON public.technical_lookup_cache USING btree (query, record_kind)
 public.transcript_read acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.transcript_read.activity_id uuid NOT NULL gen=- def=-
 public.transcript_read.created_at timestamp with time zone NOT NULL gen=- def=now()

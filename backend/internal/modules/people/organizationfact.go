@@ -66,13 +66,41 @@ const (
 	FactNamedCustomer     = "named_customer"
 	FactTechnology        = "technology"
 	FactQuantifiedOutcome = "quantified_outcome"
+
+	// What a company publicly RUNS, read from its DNS records, its
+	// certificate history and its own homepage. Company-level by
+	// construction: every one of these describes the legal entity, and the
+	// classifiers that produce them pass no personal name through.
+	//
+	// FactTechnology above is deliberately shared with the site read rather
+	// than duplicated here — "this company runs Shopware" is one claim about
+	// the account whichever lane observed it.
+	FactMailProvider    = "mail_provider"
+	FactEmailSecurity   = "email_security"
+	FactHostingProvider = "hosting_provider"
+	FactOperatedService = "operated_service"
 )
 
 var OrganizationFactFields = map[string][]string{
 	factCategoryCompany:  {FactFoundedYear, FactEmployeeRange, FactPhone, FactContactEmail, FactLocation},
 	factCategoryOffering: {FactService, FactProduct, FactCapability},
 	factCategoryMarket:   {FactServedIndustry, FactCompanySize, FactGeography, FactLanguage},
-	factCategorySignal:   {FactCertification, FactPartner, FactNamedCustomer, FactTechnology, FactQuantifiedOutcome},
+	factCategorySignal: {
+		FactCertification, FactPartner, FactNamedCustomer, FactTechnology, FactQuantifiedOutcome,
+		FactMailProvider, FactEmailSecurity, FactHostingProvider, FactOperatedService,
+	},
+}
+
+// TechnicalFactFields names the fields a technical lookup writes.
+//
+// It exists so the surfaces that must partition facts — the record page
+// showing a technical profile beside the general evidence card, and the
+// reconciliation that replaces one lane's rows — agree on which fields those
+// are. Partitioning by SOURCE would look equivalent and be wrong: a human
+// correcting a machine-read value rewrites the row's source to `human`, and
+// the field it describes is technical either way.
+var TechnicalFactFields = []string{
+	FactMailProvider, FactEmailSecurity, FactHostingProvider, FactOperatedService, FactTechnology,
 }
 
 // OrganizationFactMultiValue names the fields that may carry several rows

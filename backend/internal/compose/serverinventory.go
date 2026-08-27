@@ -82,6 +82,7 @@ type Server struct {
 	companyHandlers
 	onboardingStateHandlers
 	siteReadHandlers
+	technicalHandlers
 	transcriptReadHandlers
 	// transcriptOnLanding starts a reading when a transcript is WRITTEN, not
 	// only when one is requested. Set by WithTranscriptRead; nil in a

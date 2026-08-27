@@ -28,6 +28,19 @@ const (
 	GeocodeProduct = "margince-geocode"
 	GeocodeHeader  = GeocodeProduct + "/" + version
 
+	// CertLogProduct identifies certificate-transparency queries. CT logs are
+	// shared public infrastructure run on goodwill, so a recurring reader
+	// identifies itself for the same reason the geocoder does: an operator who
+	// can name the client can ask it to slow down instead of blocking it.
+	//
+	// It is a SEPARATE token from the site reader even though both read the
+	// public web, because the two obey different rules. The site reader's name
+	// is matched against robots.txt groups a site wrote; a CT log has no
+	// robots.txt and no per-site policy, and folding the two would put the
+	// crawler's advertised identity on a request no site ever ruled on.
+	CertLogProduct = "margince-certlog"
+	CertLogHeader  = CertLogProduct + "/" + version
+
 	// WebhooksProduct identifies deliveries this product makes to a customer's
 	// endpoint, so their logs can attribute a call they did not expect.
 	WebhooksProduct = "margince-webhooks"

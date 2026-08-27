@@ -267,6 +267,11 @@ type fetched struct {
 	status      int
 	contentType string
 	finalURL    *url.URL
+	// header is the whole response header. Most callers want only the media
+	// type above; the fingerprint read wants the rest of it, and re-fetching
+	// the page to see headers the first fetch already received would spend a
+	// second request on a site that owes us nothing.
+	header http.Header
 }
 
 // getBytes is the shared capped GET. limit bounds the body read; a body over
@@ -296,6 +301,7 @@ func (f *Fetcher) getBytes(ctx context.Context, rawURL, accept string, limit int
 	return fetched{
 		body: body, status: resp.StatusCode,
 		contentType: resp.Header.Get("Content-Type"), finalURL: resp.Request.URL,
+		header: resp.Header,
 	}, nil
 }
 

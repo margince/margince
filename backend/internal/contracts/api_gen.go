@@ -2547,10 +2547,11 @@ func (e CompanyProfileFieldField) Valid() bool {
 
 // Defines values for CompanyProfileFieldSource.
 const (
-	CompanyProfileFieldSourceConnector CompanyProfileFieldSource = "connector"
-	CompanyProfileFieldSourceHuman     CompanyProfileFieldSource = "human"
-	CompanyProfileFieldSourceMigration CompanyProfileFieldSource = "migration"
-	CompanyProfileFieldSourceSiteRead  CompanyProfileFieldSource = "site_read"
+	CompanyProfileFieldSourceConnector       CompanyProfileFieldSource = "connector"
+	CompanyProfileFieldSourceHuman           CompanyProfileFieldSource = "human"
+	CompanyProfileFieldSourceMigration       CompanyProfileFieldSource = "migration"
+	CompanyProfileFieldSourceSiteRead        CompanyProfileFieldSource = "site_read"
+	CompanyProfileFieldSourceTechnicalLookup CompanyProfileFieldSource = "technical_lookup"
 )
 
 // Valid indicates whether the value is a known member of the CompanyProfileFieldSource enum.
@@ -2563,6 +2564,8 @@ func (e CompanyProfileFieldSource) Valid() bool {
 	case CompanyProfileFieldSourceMigration:
 		return true
 	case CompanyProfileFieldSourceSiteRead:
+		return true
+	case CompanyProfileFieldSourceTechnicalLookup:
 		return true
 	default:
 		return false
@@ -2703,10 +2706,11 @@ func (e CompanySiteReadComparisonClassification) Valid() bool {
 
 // Defines values for CompanySiteReadComparisonCurrentSource.
 const (
-	CompanySiteReadComparisonCurrentSourceConnector CompanySiteReadComparisonCurrentSource = "connector"
-	CompanySiteReadComparisonCurrentSourceHuman     CompanySiteReadComparisonCurrentSource = "human"
-	CompanySiteReadComparisonCurrentSourceMigration CompanySiteReadComparisonCurrentSource = "migration"
-	CompanySiteReadComparisonCurrentSourceSiteRead  CompanySiteReadComparisonCurrentSource = "site_read"
+	CompanySiteReadComparisonCurrentSourceConnector       CompanySiteReadComparisonCurrentSource = "connector"
+	CompanySiteReadComparisonCurrentSourceHuman           CompanySiteReadComparisonCurrentSource = "human"
+	CompanySiteReadComparisonCurrentSourceMigration       CompanySiteReadComparisonCurrentSource = "migration"
+	CompanySiteReadComparisonCurrentSourceSiteRead        CompanySiteReadComparisonCurrentSource = "site_read"
+	CompanySiteReadComparisonCurrentSourceTechnicalLookup CompanySiteReadComparisonCurrentSource = "technical_lookup"
 )
 
 // Valid indicates whether the value is a known member of the CompanySiteReadComparisonCurrentSource enum.
@@ -2719,6 +2723,8 @@ func (e CompanySiteReadComparisonCurrentSource) Valid() bool {
 	case CompanySiteReadComparisonCurrentSourceMigration:
 		return true
 	case CompanySiteReadComparisonCurrentSourceSiteRead:
+		return true
+	case CompanySiteReadComparisonCurrentSourceTechnicalLookup:
 		return true
 	default:
 		return false
@@ -6619,12 +6625,16 @@ const (
 	OrganizationFactFieldCertification     OrganizationFactField = "certification"
 	OrganizationFactFieldCompanySize       OrganizationFactField = "company_size"
 	OrganizationFactFieldContactEmail      OrganizationFactField = "contact_email"
+	OrganizationFactFieldEmailSecurity     OrganizationFactField = "email_security"
 	OrganizationFactFieldEmployeeRange     OrganizationFactField = "employee_range"
 	OrganizationFactFieldFoundedYear       OrganizationFactField = "founded_year"
 	OrganizationFactFieldGeography         OrganizationFactField = "geography"
+	OrganizationFactFieldHostingProvider   OrganizationFactField = "hosting_provider"
 	OrganizationFactFieldLanguage          OrganizationFactField = "language"
 	OrganizationFactFieldLocation          OrganizationFactField = "location"
+	OrganizationFactFieldMailProvider      OrganizationFactField = "mail_provider"
 	OrganizationFactFieldNamedCustomer     OrganizationFactField = "named_customer"
+	OrganizationFactFieldOperatedService   OrganizationFactField = "operated_service"
 	OrganizationFactFieldPartner           OrganizationFactField = "partner"
 	OrganizationFactFieldPhone             OrganizationFactField = "phone"
 	OrganizationFactFieldProduct           OrganizationFactField = "product"
@@ -6645,17 +6655,25 @@ func (e OrganizationFactField) Valid() bool {
 		return true
 	case OrganizationFactFieldContactEmail:
 		return true
+	case OrganizationFactFieldEmailSecurity:
+		return true
 	case OrganizationFactFieldEmployeeRange:
 		return true
 	case OrganizationFactFieldFoundedYear:
 		return true
 	case OrganizationFactFieldGeography:
 		return true
+	case OrganizationFactFieldHostingProvider:
+		return true
 	case OrganizationFactFieldLanguage:
 		return true
 	case OrganizationFactFieldLocation:
 		return true
+	case OrganizationFactFieldMailProvider:
+		return true
 	case OrganizationFactFieldNamedCustomer:
+		return true
+	case OrganizationFactFieldOperatedService:
 		return true
 	case OrganizationFactFieldPartner:
 		return true
@@ -6678,10 +6696,11 @@ func (e OrganizationFactField) Valid() bool {
 
 // Defines values for OrganizationFactSource.
 const (
-	OrganizationFactSourceConnector OrganizationFactSource = "connector"
-	OrganizationFactSourceHuman     OrganizationFactSource = "human"
-	OrganizationFactSourceMigration OrganizationFactSource = "migration"
-	OrganizationFactSourceSiteRead  OrganizationFactSource = "site_read"
+	OrganizationFactSourceConnector       OrganizationFactSource = "connector"
+	OrganizationFactSourceHuman           OrganizationFactSource = "human"
+	OrganizationFactSourceMigration       OrganizationFactSource = "migration"
+	OrganizationFactSourceSiteRead        OrganizationFactSource = "site_read"
+	OrganizationFactSourceTechnicalLookup OrganizationFactSource = "technical_lookup"
 )
 
 // Valid indicates whether the value is a known member of the OrganizationFactSource enum.
@@ -6694,6 +6713,8 @@ func (e OrganizationFactSource) Valid() bool {
 	case OrganizationFactSourceMigration:
 		return true
 	case OrganizationFactSourceSiteRead:
+		return true
+	case OrganizationFactSourceTechnicalLookup:
 		return true
 	default:
 		return false
@@ -9114,6 +9135,7 @@ const (
 	SignalKindReengagement     SignalKind = "reengagement"
 	SignalKindRisk             SignalKind = "risk"
 	SignalKindStalledDeal      SignalKind = "stalled_deal"
+	SignalKindTechnicalChange  SignalKind = "technical_change"
 )
 
 // Valid indicates whether the value is a known member of the SignalKind enum.
@@ -9148,6 +9170,8 @@ func (e SignalKind) Valid() bool {
 	case SignalKindRisk:
 		return true
 	case SignalKindStalledDeal:
+		return true
+	case SignalKindTechnicalChange:
 		return true
 	default:
 		return false
@@ -9598,6 +9622,66 @@ func (e TaggableEntityType) Valid() bool {
 	case TaggableEntityTypePerson:
 		return true
 	case TaggableEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TechnicalEnrichLaneLane.
+const (
+	TechnicalEnrichLaneCertLog  TechnicalEnrichLaneLane = "certlog"
+	TechnicalEnrichLaneDNS      TechnicalEnrichLaneLane = "dns"
+	TechnicalEnrichLaneHomepage TechnicalEnrichLaneLane = "homepage"
+)
+
+// Valid indicates whether the value is a known member of the TechnicalEnrichLaneLane enum.
+func (e TechnicalEnrichLaneLane) Valid() bool {
+	switch e {
+	case TechnicalEnrichLaneCertLog:
+		return true
+	case TechnicalEnrichLaneDNS:
+		return true
+	case TechnicalEnrichLaneHomepage:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TechnicalEnrichLaneOutcome.
+const (
+	TechnicalEnrichLaneOutcomeApplied TechnicalEnrichLaneOutcome = "applied"
+	TechnicalEnrichLaneOutcomeEmpty   TechnicalEnrichLaneOutcome = "empty"
+	TechnicalEnrichLaneOutcomeFailed  TechnicalEnrichLaneOutcome = "failed"
+	TechnicalEnrichLaneOutcomeRefused TechnicalEnrichLaneOutcome = "refused"
+)
+
+// Valid indicates whether the value is a known member of the TechnicalEnrichLaneOutcome enum.
+func (e TechnicalEnrichLaneOutcome) Valid() bool {
+	switch e {
+	case TechnicalEnrichLaneOutcomeApplied:
+		return true
+	case TechnicalEnrichLaneOutcomeEmpty:
+		return true
+	case TechnicalEnrichLaneOutcomeFailed:
+		return true
+	case TechnicalEnrichLaneOutcomeRefused:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for TechnicalEnrichStartedStatus.
+const (
+	TechnicalEnrichStartedStatusQueued TechnicalEnrichStartedStatus = "queued"
+)
+
+// Valid indicates whether the value is a known member of the TechnicalEnrichStartedStatus enum.
+func (e TechnicalEnrichStartedStatus) Valid() bool {
+	switch e {
+	case TechnicalEnrichStartedStatusQueued:
 		return true
 	default:
 		return false
@@ -12105,12 +12189,22 @@ func (e ListSignalsParamsStatus) Valid() bool {
 
 // Defines values for ListSignalsParamsKind.
 const (
-	ListSignalsParamsKindBuyingIntent ListSignalsParamsKind = "buying_intent"
-	ListSignalsParamsKindChampionLeft ListSignalsParamsKind = "champion_left"
-	ListSignalsParamsKindOther        ListSignalsParamsKind = "other"
-	ListSignalsParamsKindReengagement ListSignalsParamsKind = "reengagement"
-	ListSignalsParamsKindRisk         ListSignalsParamsKind = "risk"
-	ListSignalsParamsKindStalledDeal  ListSignalsParamsKind = "stalled_deal"
+	ListSignalsParamsKindBuyingIntent     ListSignalsParamsKind = "buying_intent"
+	ListSignalsParamsKindChampionLeft     ListSignalsParamsKind = "champion_left"
+	ListSignalsParamsKindCommitmentMade   ListSignalsParamsKind = "commitment_made"
+	ListSignalsParamsKindContractEnded    ListSignalsParamsKind = "contract_ended"
+	ListSignalsParamsKindExpansion        ListSignalsParamsKind = "expansion"
+	ListSignalsParamsKindFunding          ListSignalsParamsKind = "funding"
+	ListSignalsParamsKindGhostedThread    ListSignalsParamsKind = "ghosted_thread"
+	ListSignalsParamsKindLeadershipChange ListSignalsParamsKind = "leadership_change"
+	ListSignalsParamsKindNewOpportunity   ListSignalsParamsKind = "new_opportunity"
+	ListSignalsParamsKindOther            ListSignalsParamsKind = "other"
+	ListSignalsParamsKindProductLaunch    ListSignalsParamsKind = "product_launch"
+	ListSignalsParamsKindProjectGoneQuiet ListSignalsParamsKind = "project_gone_quiet"
+	ListSignalsParamsKindReengagement     ListSignalsParamsKind = "reengagement"
+	ListSignalsParamsKindRisk             ListSignalsParamsKind = "risk"
+	ListSignalsParamsKindStalledDeal      ListSignalsParamsKind = "stalled_deal"
+	ListSignalsParamsKindTechnicalChange  ListSignalsParamsKind = "technical_change"
 )
 
 // Valid indicates whether the value is a known member of the ListSignalsParamsKind enum.
@@ -12120,13 +12214,33 @@ func (e ListSignalsParamsKind) Valid() bool {
 		return true
 	case ListSignalsParamsKindChampionLeft:
 		return true
+	case ListSignalsParamsKindCommitmentMade:
+		return true
+	case ListSignalsParamsKindContractEnded:
+		return true
+	case ListSignalsParamsKindExpansion:
+		return true
+	case ListSignalsParamsKindFunding:
+		return true
+	case ListSignalsParamsKindGhostedThread:
+		return true
+	case ListSignalsParamsKindLeadershipChange:
+		return true
+	case ListSignalsParamsKindNewOpportunity:
+		return true
 	case ListSignalsParamsKindOther:
+		return true
+	case ListSignalsParamsKindProductLaunch:
+		return true
+	case ListSignalsParamsKindProjectGoneQuiet:
 		return true
 	case ListSignalsParamsKindReengagement:
 		return true
 	case ListSignalsParamsKindRisk:
 		return true
 	case ListSignalsParamsKindStalledDeal:
+		return true
+	case ListSignalsParamsKindTechnicalChange:
 		return true
 	default:
 		return false
@@ -24383,6 +24497,62 @@ type Team struct {
 type TeamListResponse struct {
 	Data []Team   `json:"data"`
 	Page PageInfo `json:"page"`
+}
+
+// TechnicalEnrichLane What one public source last did.
+type TechnicalEnrichLane struct {
+	// Attempts How many times this lane has been tried since it last succeeded.
+	Attempts int `json:"attempts"`
+
+	// Lane The public source: DNS records, certificate-transparency logs, or the company's own homepage.
+	Lane TechnicalEnrichLaneLane `json:"lane"`
+
+	// LastSuccessAt When this source last answered. The observed-at behind every fact the lane owns.
+	LastSuccessAt *time.Time `json:"last_success_at,omitempty"`
+
+	// NextAttemptAt When the scheduled pass will ask again, backed off after a failure.
+	NextAttemptAt *time.Time `json:"next_attempt_at,omitempty"`
+
+	// Outcome What the last attempt did. `empty` is an authoritative nothing — the source answered
+	// and the company publishes none of what this lane reads — while `failed` is a lookup
+	// that did not complete, which changes nothing on the record. `refused` is the site's
+	// robots.txt declining the homepage read.
+	Outcome *TechnicalEnrichLaneOutcome `json:"outcome,omitempty"`
+}
+
+// TechnicalEnrichLaneLane The public source: DNS records, certificate-transparency logs, or the company's own homepage.
+type TechnicalEnrichLaneLane string
+
+// TechnicalEnrichLaneOutcome What the last attempt did. `empty` is an authoritative nothing — the source answered
+// and the company publishes none of what this lane reads — while `failed` is a lookup
+// that did not complete, which changes nothing on the record. `refused` is the site's
+// robots.txt declining the homepage read.
+type TechnicalEnrichLaneOutcome string
+
+// TechnicalEnrichStarted The 202 handle for a queued technical lookup.
+type TechnicalEnrichStarted struct {
+	OrganizationId openapi_types.UUID `json:"organization_id"`
+
+	// Status The lookup this call asked for is on its way. One value, because that is all
+	// the caller can be told honestly: River deduplicates by arguments, so pressing
+	// the button while a lookup is already in flight JOINS it — and the insert does
+	// not report which of the two happened. A `running` this endpoint could not tell
+	// apart from `queued` would be a promise the handler cannot keep.
+	Status TechnicalEnrichStartedStatus `json:"status"`
+}
+
+// TechnicalEnrichStartedStatus The lookup this call asked for is on its way. One value, because that is all
+// the caller can be told honestly: River deduplicates by arguments, so pressing
+// the button while a lookup is already in flight JOINS it — and the insert does
+// not report which of the two happened. A `running` this endpoint could not tell
+// apart from `queued` would be a promise the handler cannot keep.
+type TechnicalEnrichStartedStatus string
+
+// TechnicalEnrichStatus What each public source last did for one account. Per lane rather than per run: the
+// three fail independently, so one verdict would hide which of them is stale.
+type TechnicalEnrichStatus struct {
+	Lanes          []TechnicalEnrichLane `json:"lanes"`
+	OrganizationId openapi_types.UUID    `json:"organization_id"`
 }
 
 // TranscriptReadReport What one reading of one transcript did. The three outcomes are kept apart on purpose: still reading, read it and it stated nothing, and could not read it are different answers, and collapsing the last two makes a correct empty result look like a broken feature.
@@ -38944,6 +39114,12 @@ type ServerInterface interface {
 	// Dismiss one next-step suggestion for the calling human.
 	// (POST /organizations/{id}/suggestions/dismiss)
 	DismissOrganizationSuggestion(w http.ResponseWriter, r *http.Request, id Id)
+	// Read what the company publicly runs — mail system, website stack, operated services, hosting.
+	// (POST /organizations/{id}/technical-enrich)
+	TechnicalEnrichCompany(w http.ResponseWriter, r *http.Request, id Id)
+	// What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
+	// (GET /organizations/{id}/technical-enrich/latest)
+	GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id)
 	// Record that the calling human has now seen this organization — the baseline `since_last_visit` counts from.
 	// (POST /organizations/{id}/view-ack)
 	AcknowledgeOrganizationView(w http.ResponseWriter, r *http.Request, id Id)
@@ -41371,6 +41547,18 @@ func (_ Unimplemented) GetOrganizationStrength(w http.ResponseWriter, r *http.Re
 // Dismiss one next-step suggestion for the calling human.
 // (POST /organizations/{id}/suggestions/dismiss)
 func (_ Unimplemented) DismissOrganizationSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read what the company publicly runs — mail system, website stack, operated services, hosting.
+// (POST /organizations/{id}/technical-enrich)
+func (_ Unimplemented) TechnicalEnrichCompany(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
+// (GET /organizations/{id}/technical-enrich/latest)
+func (_ Unimplemented) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -55950,6 +56138,74 @@ func (siw *ServerInterfaceWrapper) DismissOrganizationSuggestion(w http.Response
 	handler.ServeHTTP(w, r)
 }
 
+// TechnicalEnrichCompany operation middleware
+func (siw *ServerInterfaceWrapper) TechnicalEnrichCompany(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.TechnicalEnrichCompany(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetLatestTechnicalEnrich operation middleware
+func (siw *ServerInterfaceWrapper) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetLatestTechnicalEnrich(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // AcknowledgeOrganizationView operation middleware
 func (siw *ServerInterfaceWrapper) AcknowledgeOrganizationView(w http.ResponseWriter, r *http.Request) {
 
@@ -65697,6 +65953,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/suggestions/dismiss", wrapper.DismissOrganizationSuggestion)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/organizations/{id}/technical-enrich", wrapper.TechnicalEnrichCompany)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/organizations/{id}/technical-enrich/latest", wrapper.GetLatestTechnicalEnrich)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/organizations/{id}/view-ack", wrapper.AcknowledgeOrganizationView)
