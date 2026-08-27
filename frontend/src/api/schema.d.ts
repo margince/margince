@@ -12490,6 +12490,10 @@ export interface components {
             retrieved_at?: string | null;
             safe_status_code?: string | null;
             categories_not_requested: string[];
+            /** @description What the latest run actually PUT TO the provider. Usually every requested category, but not always: a fallback fires only when the category it follows comes back empty, and a category with a prerequisite is skipped when that prerequisite found nothing — Surfe asks for no mobile number when it found no email. Neither was sent, so neither is a question the provider declined to answer, and counting them would report a lookup nobody made. This is the honest denominator for "how much of what we asked came back". */
+            categories_asked?: string[];
+            /** @description What the latest run ASKED FOR and the provider returned nothing for. The counterpart to `categories_not_requested`, and a different fact: that list is "nobody bought it", this one is "we paid to ask and they had none". Without it a run that answered one category out of six renders as a success with five silently blank fields, and the reader cannot tell an empty purchase from a full one. Empty when every requested category came back with something. */
+            categories_without_answer?: string[];
             emails: components["schemas"]["PersonProviderEmail"][];
             mobile_phones: components["schemas"]["PersonProviderPhone"][];
             /** Format: uri */

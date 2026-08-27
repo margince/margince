@@ -21597,8 +21597,13 @@ type PersonProviderPhone struct {
 // overwrite canonical fields. The reader sees one of these per connection, so every value
 // on the page says who was paid for it.
 type PersonProviderProfile struct {
-	CategoriesNotRequested []string `json:"categories_not_requested"`
-	City                   *string  `json:"city,omitempty"`
+	// CategoriesAsked What the latest run actually PUT TO the provider. Usually every requested category, but not always: a fallback fires only when the category it follows comes back empty, and a category with a prerequisite is skipped when that prerequisite found nothing — Surfe asks for no mobile number when it found no email. Neither was sent, so neither is a question the provider declined to answer, and counting them would report a lookup nobody made. This is the honest denominator for "how much of what we asked came back".
+	CategoriesAsked        *[]string `json:"categories_asked,omitempty"`
+	CategoriesNotRequested []string  `json:"categories_not_requested"`
+
+	// CategoriesWithoutAnswer What the latest run ASKED FOR and the provider returned nothing for. The counterpart to `categories_not_requested`, and a different fact: that list is "nobody bought it", this one is "we paid to ask and they had none". Without it a run that answered one category out of six renders as a success with five silently blank fields, and the reader cannot tell an empty purchase from a full one. Empty when every requested category came back with something.
+	CategoriesWithoutAnswer *[]string `json:"categories_without_answer,omitempty"`
+	City                    *string   `json:"city,omitempty"`
 
 	// ContributingRuns Every retained completed run whose claims contribute to this snapshot. Normally the
 	// single latest run; after a merge it spans both sides so purchased values stay visible

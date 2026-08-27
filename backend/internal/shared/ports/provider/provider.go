@@ -143,6 +143,39 @@ type Descriptor struct {
 	Categories    []Category
 	Presets       map[string][]Category
 	DefaultPreset string
+
+	// Answers names the claim keys that satisfy each category: what a run has
+	// to come back with for that category to count as answered.
+	//
+	// Declared by the adapter because only it knows the correspondence. The
+	// two vocabularies are deliberately separate — a category is what you buy,
+	// a claim is what arrives — and they do not match name for name: Surfe's
+	// `professional_email` category is answered by the `professional_emails`
+	// claim, and a category may be answered by more than one key.
+	//
+	// What it buys the reader: a category requested and NOT among the answers
+	// is one the provider had nothing for, which is a different fact from one
+	// nobody asked for. Without this the page shows a run that answered one
+	// category out of six as a plain success with five blank fields.
+	//
+	// A category absent from this map is never reported as unanswered — an
+	// adapter that has not declared its correspondence stays silent rather
+	// than accusing a provider of withholding what it may well have sent.
+	Answers map[Category][]ClaimKey
+
+	// RequiresAnswerTo names, per category, another category that must come
+	// back with something or this one is never put to the provider at all.
+	//
+	// Surfe's is the worked case: it skips the mobile lookup entirely when it
+	// found no email, because a subject it cannot place has no number either
+	// and asking would spend a mobile credit on a lookup already known to have
+	// failed. The credit is saved, and no request is made.
+	//
+	// Declared so a reader is never told the provider "had nothing" for a
+	// question nobody asked. It is the mirror of Cascades, which name what
+	// runs only when something comes back EMPTY; this names what runs only
+	// when something comes back FULL.
+	RequiresAnswerTo map[Category]Category
 }
 
 // Credential is raw key material, alive only for the duration of one call.

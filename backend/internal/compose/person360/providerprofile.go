@@ -182,6 +182,12 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 		if s.providers != nil {
 			if desc, err := s.providers.Descriptor(name); err == nil {
 				profile.CategoriesNotRequested = categoriesNotRequested(desc, latest.requested)
+				if answerable(latest) {
+					delivered := deliveredKeys(latest.id, claims)
+					profile.CategoriesAsked = providerPtr(asked(desc, latest.requested, delivered))
+					profile.CategoriesWithoutAnswer = providerPtr(categoriesWithoutAnswer(
+						desc, latest.requested, delivered))
+				}
 			}
 		}
 	}
@@ -304,6 +310,7 @@ func contributingRuns(runs []providerRunRow) []crmcontracts.ProviderRun {
 // request. It is the page's answer to a blank field: "we never asked" is a
 // different fact from "we asked and they had nothing", and only this list
 // tells them apart.
+
 func categoriesNotRequested(desc provider.Descriptor, requested []string) []string {
 	asked := make(map[string]bool, len(requested))
 	for _, c := range requested {

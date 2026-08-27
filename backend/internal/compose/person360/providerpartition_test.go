@@ -21,6 +21,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
@@ -179,5 +180,221 @@ func TestAnImpairedConnectionSaysWhatIsWrongRatherThanReadingAsStale(t *testing.
 				t.Errorf("a %s connection reads as %q, want %q", tc.status, profiles[0].State, tc.want)
 			}
 		})
+	}
+}
+
+// A run that answered ONE category out of six is the case this reports. It
+// rendered as a plain success with five blank fields, and the reader could not
+// tell an empty purchase from a full one — the defect that prompted this.
+func TestASectionNamesTheCategoriesTheProviderHadNothingFor(t *testing.T) {
+	runID := ids.NewV7()
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "mobile", "current_employment"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"mobile":             {provider.ClaimMobilePhones},
+			"current_employment": {provider.ClaimCurrentEmployment},
+		},
+	}
+	// The provider answered the employment and nothing else.
+	claims := []storedClaim{{
+		key:   string(provider.ClaimCurrentEmployment),
+		runID: runID,
+	}}
+	requested := []string{"professional_email", "mobile", "current_employment"}
+
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, claims))
+
+	want := []string{"mobile", "professional_email"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want the two categories that came back empty (%v)", got, want)
+	}
+	for i, name := range want {
+		if got[i] != name {
+			t.Errorf("position %d is %q, want %q", i, got[i], name)
+		}
+	}
+}
+
+func TestACategoryAnsweredByAnOlderRunIsStillReportedSilentForTheLatest(t *testing.T) {
+	older, latest := ids.NewV7(), ids.NewV7()
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"mobile"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"mobile": {provider.ClaimMobilePhones},
+		},
+	}
+	// An earlier run bought a number; the latest run asked again and got none.
+	claims := []storedClaim{{key: string(provider.ClaimMobilePhones), runID: older}}
+
+	got := categoriesWithoutAnswer(desc, []string{"mobile"}, deliveredKeys(latest, claims))
+
+	// The reader is deciding whether the run they just paid for was worth it.
+	// Reading the union would call it answered on the strength of a purchase
+	// made before it, and hide that this run returned nothing.
+	if len(got) != 1 || got[0] != "mobile" {
+		t.Errorf("got %v, want mobile reported silent for the latest run", got)
+	}
+}
+
+func TestACategoryTheAdapterNeverMappedIsNotAccusedOfSilence(t *testing.T) {
+	runID := ids.NewV7()
+	// The adapter declared no correspondence for this category.
+	desc := provider.Descriptor{Categories: []provider.Category{"exotic"}}
+
+	got := categoriesWithoutAnswer(desc, []string{"exotic"}, deliveredKeys(runID, nil))
+
+	// Silence about the mapping is not evidence the provider withheld
+	// anything, and reporting it would blame a vendor for the adapter's gap.
+	if len(got) != 0 {
+		t.Errorf("got %v, want nothing reported for an undeclared category", got)
+	}
+}
+
+func TestAFallbackThatNeverFiredIsNotReportedAsUnanswered(t *testing.T) {
+	runID := ids.NewV7()
+	// Surfe's shape: the personal-email pass runs only when the professional
+	// one comes back empty.
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "personal_email"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"personal_email":     {provider.ClaimPersonalEmails},
+		},
+		Cascades: []provider.Cascade{{
+			Category: "personal_email",
+			After:    "professional_email",
+		}},
+	}
+	// The professional pass answered, so the fallback was never issued.
+	claims := []storedClaim{{
+		key:   string(provider.ClaimProfessionalEmails),
+		runID: runID,
+	}}
+	requested := []string{"professional_email", "personal_email"}
+
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, claims))
+
+	// Reporting the fallback would claim the provider was asked and had
+	// nothing, on a line whose whole job is saying what the money bought.
+	if len(got) != 0 {
+		t.Errorf("got %v, want nothing — the fallback was never sent", got)
+	}
+}
+
+func TestAFallbackThatDidFireIsReportedWhenItFoundNothing(t *testing.T) {
+	runID := ids.NewV7()
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "personal_email"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"personal_email":     {provider.ClaimPersonalEmails},
+		},
+		Cascades: []provider.Cascade{{
+			Category: "personal_email",
+			After:    "professional_email",
+		}},
+	}
+	requested := []string{"professional_email", "personal_email"}
+
+	// Neither answered: the professional pass came back empty, which is
+	// exactly what issues the fallback, and it found nothing either.
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, nil))
+
+	want := []string{"personal_email", "professional_email"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want both reported (%v)", got, want)
+	}
+	for i, name := range want {
+		if got[i] != name {
+			t.Errorf("position %d is %q, want %q", i, got[i], name)
+		}
+	}
+}
+
+func TestASkippedPrerequisiteMeansTheCategoryWasNeverAsked(t *testing.T) {
+	runID := ids.NewV7()
+	// Surfe sends SkipMobileEnrichmentIfNoEmailFound: a subject it cannot
+	// place by email is never asked for a number.
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "mobile"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"mobile":             {provider.ClaimMobilePhones},
+		},
+		RequiresAnswerTo: map[provider.Category]provider.Category{
+			"mobile": "professional_email",
+		},
+	}
+
+	// No email found, so no mobile lookup was ever issued.
+	got := categoriesWithoutAnswer(desc, []string{"professional_email", "mobile"},
+		deliveredKeys(runID, nil))
+
+	// The email is a real silence; the mobile is a question nobody asked.
+	if len(got) != 1 || got[0] != "professional_email" {
+		t.Errorf("got %v, want only professional_email — no mobile lookup was sent", got)
+	}
+}
+
+func TestOnlyACompletedRunWithItsClaimsWrittenSpeaksForTheProvider(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		run     providerRunRow
+		answers bool
+	}{
+		{"completed", providerRunRow{state: "completed"}, true},
+		{"still queued", providerRunRow{state: "queued"}, false},
+		{"in flight", providerRunRow{state: "in_progress"}, false},
+		{"skipped without calling", providerRunRow{state: "skipped"}, false},
+		{"failed", providerRunRow{state: "failed"}, false},
+		{"outcome never learned", providerRunRow{state: "submission_unknown"}, false},
+		// The provider DID answer and the hand-off dropped it. Reporting this
+		// as provider silence blames the vendor for our own defect.
+		{"claims never written", providerRunRow{state: "completed", claimsUnwritten: true}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if answerable(tc.run) != tc.answers {
+				t.Errorf("answerable(%s) = %v, want %v", tc.name, !tc.answers, tc.answers)
+			}
+		})
+	}
+}
+
+func TestTheAskedSetExcludesWhatWasNeverSent(t *testing.T) {
+	runID := ids.NewV7()
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "mobile", "personal_email"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"mobile":             {provider.ClaimMobilePhones},
+			"personal_email":     {provider.ClaimPersonalEmails},
+		},
+		Cascades: []provider.Cascade{{
+			Category: "personal_email",
+			After:    "professional_email",
+		}},
+		RequiresAnswerTo: map[provider.Category]provider.Category{
+			"mobile": "professional_email",
+		},
+	}
+	// The professional pass answered: the fallback never fired, and the mobile
+	// lookup was sent because its prerequisite was satisfied.
+	claims := []storedClaim{{key: string(provider.ClaimProfessionalEmails), runID: runID}}
+	requested := []string{"professional_email", "mobile", "personal_email"}
+
+	got := asked(desc, requested, deliveredKeys(runID, claims))
+
+	// Two questions reached the provider, not three. Counting the unfired
+	// fallback would report a lookup nobody made, and the receipt divides by
+	// this number.
+	want := []string{"mobile", "professional_email"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want %v — the fallback never fired", got, want)
+	}
+	for i, name := range want {
+		if got[i] != name {
+			t.Errorf("position %d is %q, want %q", i, got[i], name)
+		}
 	}
 }
