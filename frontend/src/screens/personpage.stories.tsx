@@ -729,10 +729,10 @@ export const PageStory: Story = { name: "Page", render: () => <Page /> };
 // invitation is VISIBLE from a page the reader is already on.
 const neverBought: View = {
   ...populated,
-  provider_profile: {
+  provider_profiles: [{
     ...providerCompletedProfile,
     state: "never_run",
-    provider: undefined,
+    provider: "surfe",
     retrieved_at: null,
     emails: [],
     mobile_phones: [],
@@ -745,7 +745,7 @@ const neverBought: View = {
     latest_run: undefined,
     contributing_runs: undefined,
     categories_not_requested: [],
-  },
+  }],
 };
 
 export const PageLookupWaiting: Story = {
@@ -1544,6 +1544,7 @@ export const Composer: Story = {
 // report on, which is a fact about the deployment and not a permission
 // boundary.
 const providerNotConnected: components["schemas"]["PersonProviderProfile"] = {
+  provider: "surfe",
   state: "not_connected",
   categories_not_requested: [],
   emails: [],
@@ -1569,7 +1570,7 @@ export const ResearchDrawer: Story = {
         <PersonResearchDrawer
           personId="p-1"
           personName="Dana Buyer"
-          providerProfile={providerNotConnected}
+          providerProfiles={[providerNotConnected]}
           open
           onClose={() => {}}
         />
@@ -1600,7 +1601,7 @@ export const ResearchDrawerProviderCompleted: Story = {
         <PersonResearchDrawer
           personId="p-1"
           personName="Dana Buyer"
-          providerProfile={providerCompletedProfile}
+          providerProfiles={[providerCompletedProfile]}
           open
           onClose={() => {}}
         />
@@ -1656,7 +1657,7 @@ export const ResearchDrawerProviderRunning: Story = {
         <PersonResearchDrawer
           personId="p-1"
           personName="Dana Buyer"
-          providerProfile={providerRunning}
+          providerProfiles={[providerRunning]}
           open
           onClose={() => {}}
         />
@@ -1707,7 +1708,7 @@ export const ResearchDrawerProviderError: Story = {
         <PersonResearchDrawer
           personId="p-1"
           personName="Dana Buyer"
-          providerProfile={providerError}
+          providerProfiles={[providerError]}
           open
           onClose={() => {}}
         />

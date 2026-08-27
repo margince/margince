@@ -36,36 +36,49 @@ type storedClaim struct {
 	provider    string
 }
 
-// foldClaims reads every retained claim for this person and folds it into the
-// profile. Ordered oldest-first so a later run's answer for the same category
+// storedClaims reads every retained claim for this person, across every
+// provider. Ordered oldest-first so a later run's answer for the same category
 // lands after an earlier one — the page shows both, and the newest reads last.
-func (s *Service) foldClaims(ctx context.Context, tx pgx.Tx, personID ids.PersonID, out *crmcontracts.PersonProviderProfile) error {
+//
+// One read for the whole page rather than one per provider: the sections
+// partition what this returns, and a query per section would ask the same
+// table N times for rows it already had.
+func (s *Service) storedClaims(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]storedClaim, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT claim_key, value_json, confidence, retrieved_at, provider
 		  FROM person_provider_claim
 		 WHERE person_id = $1
 		 ORDER BY retrieved_at`, personID)
 	if err != nil {
-		return fmt.Errorf("person360: reading the provider claims: %w", err)
+		return nil, fmt.Errorf("person360: reading the provider claims: %w", err)
 	}
 	defer rows.Close()
 	var claims []storedClaim
 	for rows.Next() {
 		var c storedClaim
 		if err := rows.Scan(&c.key, &c.value, &c.confidence, &c.retrievedAt, &c.provider); err != nil {
-			return fmt.Errorf("person360: scanning a provider claim: %w", err)
+			return nil, fmt.Errorf("person360: scanning a provider claim: %w", err)
 		}
 		claims = append(claims, c)
 	}
 	if err := rows.Err(); err != nil {
-		return fmt.Errorf("person360: reading the provider claims: %w", err)
+		return nil, fmt.Errorf("person360: reading the provider claims: %w", err)
 	}
+	return claims, nil
+}
+
+// foldClaims folds one provider's claims into that provider's snapshot.
+//
+// A claim whose value_json this build cannot decode is SKIPPED rather than
+// failing the page: the row is a vendor payload, and one unreadable purchase
+// must not take the record down with it. What is decodable still renders,
+// which is the honest half-answer.
+func foldClaims(claims []storedClaim, out *crmcontracts.PersonProviderProfile) {
 	for _, c := range claims {
 		if err := foldOne(c, out); err != nil {
-			return err
+			continue
 		}
 	}
-	return nil
 }
 
 // statableConfidence reports whether a score is one this contract can carry: a

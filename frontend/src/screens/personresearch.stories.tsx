@@ -60,7 +60,7 @@ const populated: View = {
   as_of: "2026-08-13T09:00:00Z",
   person,
   sections_omitted: [],
-  provider_profile: providerCompletedProfile,
+  provider_profiles: [providerCompletedProfile],
   profile_fields: profileFields,
 };
 
@@ -94,10 +94,10 @@ const neverBought: View = {
   as_of: "2026-08-13T09:00:00Z",
   person,
   sections_omitted: [],
-  provider_profile: {
+  provider_profiles: [{
     ...providerCompletedProfile,
     state: "never_run",
-    provider: undefined,
+    provider: "surfe",
     retrieved_at: null,
     emails: [],
     mobile_phones: [],
@@ -110,7 +110,7 @@ const neverBought: View = {
     latest_run: undefined,
     contributing_runs: undefined,
     categories_not_requested: [],
-  },
+  }],
   profile_fields: profileFields,
 };
 

@@ -8053,21 +8053,6 @@ func (e PromoteLeadRequestTrigger) Valid() bool {
 	}
 }
 
-// Defines values for Provider.
-const (
-	Surfe Provider = "surfe"
-)
-
-// Valid indicates whether the value is a known member of the Provider enum.
-func (e Provider) Valid() bool {
-	switch e {
-	case Surfe:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ProviderConnectionMode.
 const (
 	AutomaticOnCreate ProviderConnectionMode = "automatic_on_create"
@@ -15518,7 +15503,13 @@ type CreateOrganizationRequestSizeBand string
 
 // CreatePersonEnrichmentRunRequest defines model for CreatePersonEnrichmentRunRequest.
 type CreatePersonEnrichmentRunRequest struct {
-	// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
+	// Provider A licensed data provider registered in THIS installation; the domain/run contract
+	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+	// exist is a deployment fact — what this binary composed — so an enum would assert
+	// that the legal set is identical everywhere, which is false. The registry refuses a
+	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+	// live set.
 	Provider Provider `json:"provider"`
 }
 
@@ -20766,8 +20757,8 @@ type Person360 struct {
 	// Projects The unarchived projects this person is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`.
 	Projects *[]Organization360Project `json:"projects,omitempty"`
 
-	// ProviderProfile The purchased person-data snapshot (PO-EXT-9): what a connected provider returned about this person, kept beside the canonical record and never silently folded into it. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`.
-	ProviderProfile *PersonProviderProfile `json:"provider_profile,omitempty"`
+	// ProviderProfiles The purchased person-data snapshots (PO-EXT-9), one per CONNECTED provider: what each returned about this person, kept beside the canonical record and never silently folded into it. One entry per connection so a reader can see who was paid for which value, and choose which provider to ask next; a provider nobody has run yet is present with state `never_run` rather than absent, because "we have not asked them" is the state the reader acts on. Ordered by provider name so the sections do not reshuffle between reads. Empty when no provider is connected. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`.
+	ProviderProfiles *[]PersonProviderProfile `json:"provider_profiles,omitempty"`
 
 	// RelationshipChanges What CHANGED about this relationship, most consequential first — derived at read from the person's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold.
 	RelationshipChanges *[]PersonRelationshipChange `json:"relationship_changes,omitempty"`
@@ -21355,8 +21346,10 @@ type PersonProviderPhone struct {
 	Value      string   `json:"value"`
 }
 
-// PersonProviderProfile Separate “Provided by Surfe” snapshot for the Person360 response. Provider provenance is
-// not an underlying webpage citation; these values never silently overwrite canonical fields.
+// PersonProviderProfile One connected provider's snapshot for the Person360 response, named by `provider`.
+// Provider provenance is not an underlying webpage citation; these values never silently
+// overwrite canonical fields. The reader sees one of these per connection, so every value
+// on the page says who was paid for it.
 type PersonProviderProfile struct {
 	CategoriesNotRequested []string `json:"categories_not_requested"`
 	City                   *string  `json:"city,omitempty"`
@@ -21375,8 +21368,8 @@ type PersonProviderProfile struct {
 	Location          *string                    `json:"location,omitempty"`
 	MobilePhones      []PersonProviderPhone      `json:"mobile_phones"`
 
-	// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
-	Provider *Provider `json:"provider,omitempty"`
+	// Provider Whose snapshot this is. Required: an entry in a list of providers that did not name itself would leave the reader unable to tell who to ask, or who was already paid.
+	Provider Provider `json:"provider"`
 
 	// Region Geographic state/province as the provider returned it. Named `region` because
 	// `state` on this schema is the run lifecycle state above; a duplicate key here
@@ -21958,8 +21951,14 @@ type PromoteLeadResponse struct {
 	Person Person `json:"person"`
 }
 
-// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
-type Provider string
+// Provider A licensed data provider registered in THIS installation; the domain/run contract
+// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+// exist is a deployment fact — what this binary composed — so an enum would assert
+// that the legal set is identical everywhere, which is false. The registry refuses a
+// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+// live set.
+type Provider = string
 
 // ProviderCategorySelection Resolved per-category choices, keyed by the connected provider's declared category
 // vocabulary (its descriptor — for Surfe, PI-PARAM-7). A key the provider does not offer is
@@ -22032,7 +22031,13 @@ type ProviderConnection struct {
 	LastUsedAt           *time.Time `json:"last_used_at,omitempty"`
 	LastVerifiedAt       *time.Time `json:"last_verified_at,omitempty"`
 
-	// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
+	// Provider A licensed data provider registered in THIS installation; the domain/run contract
+	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+	// exist is a deployment fact — what this binary composed — so an enum would assert
+	// that the legal set is identical everywhere, which is false. The registry refuses a
+	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+	// live set.
 	Provider       Provider `json:"provider"`
 	SafeStatusCode *string  `json:"safe_status_code,omitempty"`
 
@@ -22127,7 +22132,13 @@ type ProviderRun struct {
 	// `provider_run` (PI-DDL-2), not by this schema.
 	PersonId *openapi_types.UUID `json:"person_id,omitempty"`
 
-	// Provider Licensed provider adapter key; the domain/run contract remains provider-neutral.
+	// Provider A licensed data provider registered in THIS installation; the domain/run contract
+	// remains provider-neutral. Deliberately a pattern-constrained string rather than an
+	// enum, for the reason `ProviderRef` gives for messaging transports: which providers
+	// exist is a deployment fact — what this binary composed — so an enum would assert
+	// that the legal set is identical everywhere, which is false. The registry refuses a
+	// name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+	// live set.
 	Provider            Provider `json:"provider"`
 	RequestedCategories []string `json:"requested_categories"`
 

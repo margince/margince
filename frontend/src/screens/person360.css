@@ -859,3 +859,12 @@
 .thin-log-first {
   margin-top: var(--space-3);
 }
+
+/* The bought-data panel's heading: the vendor's mark beside its name. Aligned
+   on the text baseline rather than centred, so the logo sits with the word
+   instead of floating above a heading that wraps on a narrow column. */
+.pe-provider-title {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+}

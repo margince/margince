@@ -878,7 +878,7 @@ export function PersonComposer({
 export function PersonResearchDrawer({
   personId,
   personName,
-  providerProfile,
+  providerProfiles,
   open,
   onClose,
 }: Readonly<{
@@ -887,7 +887,7 @@ export function PersonResearchDrawer({
   // What a licensed provider was PAID to tell us about this person
   // (ADR-0101). Passed in rather than fetched here: the page already holds
   // the assembled 360, and a second read could disagree with what it shows.
-  providerProfile?: components["schemas"]["PersonProviderProfile"];
+  providerProfiles?: components["schemas"]["PersonProviderProfile"][];
   open: boolean;
   onClose: () => void;
 }>) {
@@ -949,7 +949,7 @@ export function PersonResearchDrawer({
         {/* What was BOUGHT sits above what a public read found: it cost
             money, it is the firmer of the two, and a rep looking somebody up
             should see it before a page crawl's guesses. */}
-        <PersonProviderSection personId={personId} profile={providerProfile} />
+        <PersonProviderSection personId={personId} profiles={providerProfiles} />
 
         {run.isLoading && (
           <p className="pe-prose">{t("person.research.running")}</p>

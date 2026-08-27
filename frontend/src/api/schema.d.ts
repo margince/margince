@@ -12028,10 +12028,15 @@ export interface components {
             outbound_90d?: number;
         };
         /**
-         * @description Licensed provider adapter key; the domain/run contract remains provider-neutral.
-         * @enum {string}
+         * @description A licensed data provider registered in THIS installation; the domain/run contract
+         *     remains provider-neutral. Deliberately a pattern-constrained string rather than an
+         *     enum, for the reason `ProviderRef` gives for messaging transports: which providers
+         *     exist is a deployment fact — what this binary composed — so an enum would assert
+         *     that the legal set is identical everywhere, which is false. The registry refuses a
+         *     name no adapter is compiled for, and `GET /v1/provider-connections` resolves the
+         *     live set.
          */
-        Provider: "surfe";
+        Provider: string;
         /** @enum {string} */
         ProviderConnectionStatus: "disconnected" | "validating" | "connected" | "invalid_credentials" | "insufficient_credits" | "rate_limited" | "provider_error";
         /** @enum {string} */
@@ -12271,13 +12276,16 @@ export interface components {
             linkedin_url?: string | null;
         };
         /**
-         * @description Separate “Provided by Surfe” snapshot for the Person360 response. Provider provenance is
-         *     not an underlying webpage citation; these values never silently overwrite canonical fields.
+         * @description One connected provider's snapshot for the Person360 response, named by `provider`.
+         *     Provider provenance is not an underlying webpage citation; these values never silently
+         *     overwrite canonical fields. The reader sees one of these per connection, so every value
+         *     on the page says who was paid for it.
          */
         PersonProviderProfile: {
             /** @enum {string} */
             state: "not_connected" | "not_eligible" | "never_run" | "queued" | "in_progress" | "completed" | "no_match" | "stale" | "invalid_credentials" | "insufficient_credits" | "rate_limited" | "provider_error" | "submission_unknown" | "completed_claims_unwritten";
-            provider?: components["schemas"]["Provider"];
+            /** @description Whose snapshot this is. Required: an entry in a list of providers that did not name itself would leave the reader unable to tell who to ask, or who was already paid. */
+            provider: components["schemas"]["Provider"];
             /** Format: date-time */
             retrieved_at?: string | null;
             safe_status_code?: string | null;
@@ -13789,8 +13797,8 @@ export interface components {
             strength?: components["schemas"]["RelationshipStrength"];
             /** @description The unarchived projects this person is part of: the ones they hold a live stakeholder seat on, plus every project of the company they currently work for, one row per project, work in motion first. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Organization360Project"][];
-            /** @description The purchased person-data snapshot (PO-EXT-9): what a connected provider returned about this person, kept beside the canonical record and never silently folded into it. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`. */
-            provider_profile?: components["schemas"]["PersonProviderProfile"];
+            /** @description The purchased person-data snapshots (PO-EXT-9), one per CONNECTED provider: what each returned about this person, kept beside the canonical record and never silently folded into it. One entry per connection so a reader can see who was paid for which value, and choose which provider to ask next; a provider nobody has run yet is present with state `never_run` rather than absent, because "we have not asked them" is the state the reader acts on. Ordered by provider name so the sections do not reshuffle between reads. Empty when no provider is connected. Absent when the caller lacks the person grant, named in `sections_omitted` as `provider_profile`. */
+            provider_profiles?: components["schemas"]["PersonProviderProfile"][];
             /** @description What CHANGED about this relationship, most consequential first — derived at read from the person's own interactions, never stored. `strength` says what the relationship IS; this says what happened to it, which is what a reader acts on. Empty when nothing crossed a threshold. */
             relationship_changes?: components["schemas"]["PersonRelationshipChange"][];
             /** @description The ONE thing this contact needs today, selected server-side by the fixed ladder in `PersonMoment.rule` (ADR-0096 D2). Exactly one primary moment wins: a page that offers five reasons has told the reader to choose, which is the work the ladder exists to do. Deterministic and computed at read from captured data. Absent when the caller lacks a grant the ladder needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence. */
