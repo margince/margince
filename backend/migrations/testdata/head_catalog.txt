@@ -838,6 +838,7 @@ public.capture_connection.provider text NOT NULL gen=- def=-
 public.capture_connection.provider_scopes text[] gen=- def=-
 public.capture_connection.scopes text[] NOT NULL gen=- def='{}'::text[]
 public.capture_connection.share_acknowledged_at timestamp with time zone gen=- def=-
+public.capture_connection.signature_enrich_enabled boolean gen=- def=-
 public.capture_connection.status text NOT NULL gen=- def='disconnected'::text
 public.capture_connection.sync_cursor jsonb gen=- def=-
 public.capture_connection.uq_capture_connection_ws_id UNIQUE (id)

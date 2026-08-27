@@ -14059,6 +14059,19 @@ type CaptureSettings struct {
 	// the audience it has. Turning it off makes shared pipeline work hard; the setting exists
 	// for installations that accept that cost.
 	MailSharing bool `json:"mail_sharing"`
+
+	// SignatureEnrich The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
+	// number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
+	// a value the signature does not state is not written.
+	//
+	// A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
+	// never chose follows this. Distinct from the exclusion list, which keeps whole messages
+	// out of capture by address or domain and says nothing about reading a signature.
+	// Default is ON.
+	//
+	// "Workspace" here is the storage tenant, not the word the product shows a reader —
+	// the surface calls it the organization's default.
+	SignatureEnrich bool `json:"signature_enrich"`
 }
 
 // CaptureSourceEntry One capture provenance id that is not a transport, as the directory publishes it.
@@ -24254,6 +24267,9 @@ type UpdateCaptureSettingsRequest struct {
 
 	// MailSharing Toggle the workspace mail-sharing posture; affects mail captured from now on.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
+
+	// SignatureEnrich Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it.
+	SignatureEnrich *bool `json:"signature_enrich,omitempty"`
 }
 
 // UpdateContractRequest Partial. Status is absent by design — it moves through changeContractStatus.

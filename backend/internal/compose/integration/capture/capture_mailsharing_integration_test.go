@@ -63,7 +63,7 @@ func TestMailSharingOffHoldsNewMailToItsParticipants(t *testing.T) {
 	})
 	store := capturemod.NewSettings(compose.NewSettingsStore(e.Pool))
 	off := false
-	if _, err := store.Update(adminCtx, nil, &off); err != nil {
+	if _, err := store.Update(adminCtx, nil, &off, nil); err != nil {
 		t.Fatalf("switching mail sharing off: %v", err)
 	}
 

@@ -93,7 +93,16 @@ describe("CaptureSettingsCard", () => {
       screen.getByTestId<HTMLButtonElement>("capture-auto-enrich-toggle"),
     );
     expect(toggle.disabled).toBe(true);
-    expect(screen.getByText(/Only an admin or ops/)).toBeTruthy();
+    // Asserted through THIS toggle's own describedBy rather than by finding the
+    // sentence on the page: every switch on the card carries the same refusal,
+    // so a page-wide text match stopped telling them apart the moment there
+    // were two — and what matters is that the reason reaches a reader focused
+    // on the control they cannot use.
+    const reasonId = toggle.getAttribute("aria-describedby");
+    expect(reasonId).toBeTruthy();
+    expect(document.getElementById(reasonId ?? "")?.textContent).toMatch(
+      /Only an admin or ops/,
+    );
   });
 
   it("PATCHes the new value when admin toggles it off", async () => {

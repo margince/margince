@@ -349,7 +349,10 @@ type SignatureCandidate struct {
 // each time. The comparison is on occurred_at, not on the activity id — an
 // identity check would reopen the person the moment the mail it names is
 // archived, and the query would then pay to re-read an OLDER signature.
-func (s *Store) SignatureCandidates(ctx context.Context, limit int) ([]SignatureCandidate, error) {
+// defaultEnabled is the workspace answer for a mailbox that never made its own
+// choice, and the caller reads it from the capture settings rather than this
+// package — people owns neither the setting nor the connection.
+func (s *Store) SignatureCandidates(ctx context.Context, limit int, defaultEnabled bool) ([]SignatureCandidate, error) {
 	var out []SignatureCandidate
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
@@ -357,7 +360,7 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int) ([]Signature
 			FROM person p
 			LEFT JOIN person_email pe ON pe.person_id = p.id AND pe.is_primary AND pe.archived_at IS NULL
 			JOIN LATERAL (
-				SELECT a.id, a.body, a.occurred_at
+				SELECT a.id, a.body, a.occurred_at, a.captured_by
 				FROM activity_link al
 				JOIN activity a ON a.id = al.activity_id
 				WHERE al.person_id = p.id AND al.entity_type = 'person'
@@ -376,8 +379,26 @@ func (s *Store) SignatureCandidates(ctx context.Context, limit int) ([]Signature
 				               WHERE f.person_id = p.id AND f.field = 'org_name')
 			  )
 			  AND (st.last_activity_at IS NULL OR a.occurred_at > st.last_activity_at)
+			  -- The mailbox that captured THIS mail decides whether it may be
+			  -- read for a signature, and the test is here rather than in the
+			  -- Go loop so a switched-off mailbox never consumes a slot of the
+			  -- pass's own limit. Gated on the activity, not on p.captured_by:
+			  -- a person captured by one mailbox is regularly last written to
+			  -- from another, and it is the mail being read that matters.
+			  --
+			  -- The join is the provenance string capture stamps
+			  -- (connector:<provider>:<user id>); there is no foreign key. A row
+			  -- stamped with the bare connector:<name> form — no granting user
+			  -- bound — matches no connection and follows the workspace default,
+			  -- which is the same answer it had before this switch existed.
+			  AND COALESCE((
+				SELECT cc.signature_enrich_enabled
+				  FROM capture_connection cc
+				 WHERE ('connector:' || cc.provider || ':' || cc.user_id::text) = a.captured_by
+				   AND cc.archived_at IS NULL
+			  ), $2)
 			ORDER BY p.created_at
-			LIMIT $1`, limit)
+			LIMIT $1`, limit, defaultEnabled)
 		if err != nil {
 			return err
 		}

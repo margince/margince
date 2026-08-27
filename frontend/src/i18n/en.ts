@@ -5827,6 +5827,10 @@ export const en = {
   "captureSettings.autoEnrich.label": "Auto-enrich captured companies",
   "captureSettings.autoEnrich.help":
     "When on, each new company created from captured mail gets an automatic web dossier — its site is read and its profile filled in. Runs under a daily limit.",
+  "captureSettings.signatureEnrich.label":
+    "Read signatures for contact details",
+  "captureSettings.signatureEnrich.help":
+    "When on, a nightly pass lifts what a contact states under their own name in mail they sent you — a title, a phone number, a company. Nothing is inferred: a detail the signature does not state is not written. This is the organization's default; a mailbox that set its own switch keeps it.",
   "captureSettings.adminOnly": "Only an admin or ops can change this.",
 
   "ownDomains.companyTitle": "Company domains",

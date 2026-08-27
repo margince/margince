@@ -16793,7 +16793,7 @@ components:
       description: |
         The workspace-shared capture posture (ADR-0072/A118, CAP-PARAM-7). Read by every role,
         changed only by admin/ops.
-      required: [auto_enrich, mail_sharing]
+      required: [auto_enrich, mail_sharing, signature_enrich]
       properties:
         mail_sharing:
           type: boolean
@@ -16809,6 +16809,20 @@ components:
             When true, every organization with a primary domain and no dossier gets a governed
             web deep-read under a daily spend cap — however it was named. The anchor is
             excluded (cold start reads it). Default is ON (the testing posture).
+        signature_enrich:
+          type: boolean
+          description: |
+            The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
+            number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
+            a value the signature does not state is not written.
+
+            A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
+            never chose follows this. Distinct from the exclusion list, which keeps whole messages
+            out of capture by address or domain and says nothing about reading a signature.
+            Default is ON.
+
+            "Workspace" here is the storage tenant, not the word the product shows a reader —
+            the surface calls it the organization's default.
     InstallationSetup:
       type: object
       additionalProperties: false
@@ -16980,6 +16994,7 @@ components:
       properties:
         auto_enrich: { type: boolean, description: Toggle captured-organization auto-enrichment. }
         mail_sharing: { type: boolean, description: 'Toggle the workspace mail-sharing posture; affects mail captured from now on.' }
+        signature_enrich: { type: boolean, description: 'Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it.' }
 
     BlockedDomain:
       type: object

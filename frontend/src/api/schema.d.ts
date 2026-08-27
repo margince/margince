@@ -10992,6 +10992,20 @@ export interface components {
              *     excluded (cold start reads it). Default is ON (the testing posture).
              */
             auto_enrich: boolean;
+            /**
+             * @description The workspace DEFAULT for the nightly pass that lifts stated fields — a title, a phone
+             *     number, a company — out of the signature of mail a contact sent us. Nothing is inferred:
+             *     a value the signature does not state is not written.
+             *
+             *     A mailbox can override it (`CaptureConnection.signature_enrich_enabled`), and one that
+             *     never chose follows this. Distinct from the exclusion list, which keeps whole messages
+             *     out of capture by address or domain and says nothing about reading a signature.
+             *     Default is ON.
+             *
+             *     "Workspace" here is the storage tenant, not the word the product shows a reader —
+             *     the surface calls it the organization's default.
+             */
+            signature_enrich: boolean;
         };
         InstallationSetup: {
             /** @description True when no BLOCKING step is unconfigured. Computed here so a client never has to recompute the installation's own policy from the step list. */
@@ -11087,6 +11101,8 @@ export interface components {
             auto_enrich?: boolean;
             /** @description Toggle the workspace mail-sharing posture; affects mail captured from now on. */
             mail_sharing?: boolean;
+            /** @description Toggle the tenant-wide default for the nightly signature pass. A mailbox that set its own switch keeps it. */
+            signature_enrich?: boolean;
         };
         /**
          * @description One domain carrying a standing admission decision. `suppressed` refuses it a company —

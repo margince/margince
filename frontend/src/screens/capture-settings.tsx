@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
+import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
@@ -26,12 +27,18 @@ function useCaptureSettings() {
   });
 }
 
+type CaptureSettingsPatch =
+  components["schemas"]["UpdateCaptureSettingsRequest"];
+
 function useUpdateCaptureSettings() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async (autoEnrich: boolean) => {
+    // A sparse patch rather than one boolean: the card now carries two
+    // settings, and a mutation that could only send one would have to grow a
+    // second copy of itself the moment a third arrives.
+    mutationFn: async (patch: CaptureSettingsPatch) => {
       const { data, error } = await api.PATCH("/capture/settings", {
-        body: { auto_enrich: autoEnrich },
+        body: patch,
       });
       if (error) {
         throwProblem(error);
@@ -90,7 +97,30 @@ export function CaptureSettingsCard() {
                     }
                     checked={settings.auto_enrich}
                     disabled={!canManage || update.isPending}
-                    onChange={(next) => update.mutate(next)}
+                    onChange={(next) => update.mutate({ auto_enrich: next })}
+                  />
+                }
+              />
+              {/* The workspace DEFAULT, and the description says so: a mailbox
+                  that set its own switch keeps it, so this row is not the whole
+                  answer for every connection and must not read as though it
+                  were. */}
+              <SettingRow
+                label={t("captureSettings.signatureEnrich.label")}
+                description={t("captureSettings.signatureEnrich.help")}
+                control={
+                  <Switch
+                    testId="capture-signature-enrich-toggle"
+                    label={t("captureSettings.signatureEnrich.label")}
+                    labelHidden
+                    reason={
+                      canManage ? undefined : t("captureSettings.adminOnly")
+                    }
+                    checked={settings.signature_enrich}
+                    disabled={!canManage || update.isPending}
+                    onChange={(next) =>
+                      update.mutate({ signature_enrich: next })
+                    }
                   />
                 }
               />

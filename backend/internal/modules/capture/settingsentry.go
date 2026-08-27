@@ -67,10 +67,34 @@ var MailSharing = settings.Define[bool](
 	nil, // every bool is a valid posture; a validator here would be ceremony
 ).MachineryApplied() // the sink stamps each new email's audience from it
 
+// SignatureEnrich is the workspace DEFAULT for the nightly pass that lifts
+// stated fields out of an email signature — a title, a phone number, the
+// company somebody types under their own name.
+//
+// It is the default rather than the answer: `capture_connection.signature_enrich_enabled`
+// overrides it per mailbox, and a mailbox that never chose follows this. That
+// split is what a Betriebsvereinbarung negotiation asks for — an organization
+// can turn the whole workspace off, or leave it on and let one mailbox opt out,
+// without the two answers being the same knob.
+//
+// Distinct from the exclusion list, which is a different lever entirely: that
+// keeps whole MESSAGES out of capture by address or domain, and says nothing
+// about whether captured mail may be read for a signature.
+//
+// Default true: the pass reads only what a person put under their own name in
+// mail they sent us, which is the least-surprising enrichment in the product.
+var SignatureEnrich = settings.Define[bool](
+	"capture.signature_enrich",
+	captureSettingsObject,
+	"update",
+	true,
+	nil, // every bool is a valid posture, as for MailSharing above
+).MachineryApplied() // candidate selection reads it, per mailbox, in SQL
+
 // Definitions is capture's contribution to the settings registry. Compose
 // concatenates each module's list; a module that declares no settings has no
 // such function, so this is opt-in rather than an interface every module must
 // satisfy.
 func Definitions() []settings.Definition {
-	return []settings.Definition{AutoEnrich, MailSharing, GoogleAppSetting}
+	return []settings.Definition{AutoEnrich, MailSharing, SignatureEnrich, GoogleAppSetting}
 }
