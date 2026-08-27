@@ -18,6 +18,7 @@ import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select, type SelectOption } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem, useMe } from "./common";
@@ -551,6 +552,7 @@ function MemberRow({
     return qc.invalidateQueries({ queryKey: ["users-admin"] });
   };
   const onError = (e: Error) => setError(problemMessageOf(e, t));
+  const toast = useToast();
 
   const setRole = useMutation({
     mutationFn: async (role: Role) => {
@@ -562,7 +564,14 @@ function MemberRow({
         throwProblem(err);
       }
     },
-    onSuccess: refresh,
+    onSuccess: async () => {
+      await refresh();
+      // No Undo: reversing it means knowing which role they held before, and
+      // the roster this row redraws from has already been replaced by the time
+      // a reader could press it. A wrong role restored quietly is worse than
+      // no offer at all.
+      toast.show(t("users.roleSaved", { name: member.email }));
+    },
     onError,
   });
 
@@ -581,6 +590,11 @@ function MemberRow({
       // would announce the state this confirm just ended.
       await refresh();
       setConfirmOff(false);
+      // A true inverse, and both halves are already on this row: `reactivate`
+      // restores exactly what `deactivate` took away, with nothing to re-supply.
+      toast.show(t("users.deactivated", { name: member.email }), {
+        action: { label: t("common.undo"), onAct: () => reactivate.mutate() },
+      });
     },
     onError,
   });
@@ -594,7 +608,10 @@ function MemberRow({
         throwProblem(err);
       }
     },
-    onSuccess: refresh,
+    onSuccess: async () => {
+      await refresh();
+      toast.show(t("users.reactivated", { name: member.email }));
+    },
     onError,
   });
 

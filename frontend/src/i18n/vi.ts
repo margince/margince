@@ -295,6 +295,8 @@ export const vi = {
   "board.count": "{count} deal",
   "board.weighted": "trọng số {value}",
   "board.mixedCurrencies": "nhiều loại tiền tệ — không có tổng chung",
+  "dealfiles.hidden": "Đã ẩn khỏi giao dịch này",
+  "dealfiles.unhidden": "Đã hiện lại ở giao dịch này",
   "deal.stalled": "đình trệ",
   "deal.singleThreaded": "chỉ một đầu mối",
   "deal.staged": "chờ duyệt",
@@ -2723,6 +2725,9 @@ export const vi = {
   "unsaved.body":
     "Rời trang này bây giờ sẽ bỏ những gì bạn đã nhập. Hãy quay lại để lưu trước.",
   "unsaved.discard": "Bỏ thay đổi",
+  "settings.addedItem": "Đã thêm “{name}”",
+  "settings.removedItem": "Đã gỡ “{name}”",
+  "settings.removed": "Đã gỡ.",
   "settings.saved": "Đã lưu.",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
@@ -5293,6 +5298,11 @@ export const vi = {
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
     "Ai được sửa bản ghi của ai: thành viên một nhóm sửa được bản ghi của mọi thành viên trong nhóm. Khách hàng, liên hệ, lead và deal thì ai cũng đọc được.",
+  "users.deactivated": "Đã vô hiệu hóa {name}",
+  "users.reactivated": "Đã kích hoạt lại {name}",
+  "users.roleSaved": "Đã đổi vai trò cho {name}",
+  "users.teamArchived": "Đã lưu trữ nhóm “{name}”",
+  "users.teamRestored": "Đã khôi phục nhóm “{name}”",
   "users.archiveTeam": "Lưu trữ nhóm {name}",
   "users.newTeamLabel": "Nhóm mới",
   "users.newTeamOpen": "Nhóm mới",

@@ -291,6 +291,8 @@ export const de = {
   "board.count": "{count} Deals",
   "board.weighted": "gewichtet {value}",
   "board.mixedCurrencies": "mehrere Währungen — keine Gesamtsumme",
+  "dealfiles.hidden": "Von diesem Deal ausgeblendet",
+  "dealfiles.unhidden": "Wieder an diesem Deal sichtbar",
   "deal.stalled": "stockt",
   "deal.archived": "archiviert",
   "deal.singleThreaded": "nur ein Kontakt",
@@ -2745,6 +2747,9 @@ export const de = {
   "unsaved.body":
     "Wenn du die Seite jetzt verlässt, gehen deine Eingaben verloren. Geh zurück, um sie zuerst zu speichern.",
   "unsaved.discard": "Änderungen verwerfen",
+  "settings.addedItem": "„{name}“ hinzugefügt",
+  "settings.removedItem": "„{name}“ entfernt",
+  "settings.removed": "Entfernt.",
   "settings.saved": "Gespeichert.",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
@@ -5342,6 +5347,11 @@ export const de = {
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Wer welche Datensätze bearbeiten darf: Mitglieder eines Teams bearbeiten die Datensätze aller Teammitglieder. Lesen dürfen Kunden, Kontakte, Leads und Deals alle.",
+  "users.deactivated": "{name} deaktiviert",
+  "users.reactivated": "{name} reaktiviert",
+  "users.roleSaved": "Rolle für {name} geändert",
+  "users.teamArchived": "Team „{name}“ archiviert",
+  "users.teamRestored": "Team „{name}“ wiederhergestellt",
   "users.archiveTeam": "Team {name} archivieren",
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",

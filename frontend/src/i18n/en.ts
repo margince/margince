@@ -310,6 +310,8 @@ export const en = {
   "board.count": "{count} deals",
   "board.weighted": "weighted {value}",
   "board.mixedCurrencies": "several currencies — no single total",
+  "dealfiles.hidden": "Hidden from this deal",
+  "dealfiles.unhidden": "Shown on this deal again",
   "deal.stalled": "stalled",
   "deal.singleThreaded": "single-threaded",
   "deal.staged": "staged",
@@ -2785,6 +2787,9 @@ export const en = {
   "unsaved.body":
     "Leaving this page now discards what you have typed. Go back to save it first.",
   "unsaved.discard": "Discard changes",
+  "settings.addedItem": "“{name}” added",
+  "settings.removedItem": "“{name}” removed",
+  "settings.removed": "Removed.",
   "settings.saved": "Saved.",
   "settings.signature": "Email signature",
   "settings.signatureSub":
@@ -5392,6 +5397,11 @@ export const en = {
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Who may edit whose records: members of a team edit every teammate's records. Customers, contacts, leads and deals are readable by everyone.",
+  "users.deactivated": "{name} deactivated",
+  "users.reactivated": "{name} reactivated",
+  "users.roleSaved": "Role changed for {name}",
+  "users.teamArchived": "Team “{name}” archived",
+  "users.teamRestored": "Team “{name}” restored",
   "users.archiveTeam": "Archive team {name}",
   "users.newTeamLabel": "New team",
   "users.newTeamOpen": "New team",
