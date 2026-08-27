@@ -300,3 +300,36 @@ func callsNamed(expr ast.Expr, name string) bool {
 	}
 	return false
 }
+
+// fieldsOf names the fields the given struct declares, in source order.
+//
+// Derived rather than listed: a gate naming the fields it judges is a second
+// copy of the struct, and the copy is short from the moment a field is added —
+// silently, because the gate goes on passing over the fields it does know.
+func fieldsOf(t *testing.T, typeName string) []string {
+	t.Helper()
+	var fields []string
+	forEachModuleFile(t, func(_ string, _ *token.FileSet, file *ast.File) {
+		ast.Inspect(file, func(node ast.Node) bool {
+			spec, isSpec := node.(*ast.TypeSpec)
+			if !isSpec || spec.Name.Name != typeName {
+				return true
+			}
+			structure, isStruct := spec.Type.(*ast.StructType)
+			if !isStruct || structure.Fields == nil {
+				return true
+			}
+			for _, field := range structure.Fields.List {
+				for _, name := range field.Names {
+					fields = append(fields, name.Name)
+				}
+			}
+			return false
+		})
+	})
+	if len(fields) == 0 {
+		t.Fatalf("this module declares no struct %s with fields, so a gate judging its fields "+
+			"has nothing to judge", typeName)
+	}
+	return fields
+}

@@ -36,6 +36,9 @@ const provenanceField = "CapturedByKind"
 const filtersType = "listFilters"
 
 // provenanceOwner is the one spelling of the clause the field turns into.
+//
+// Held by: TestTheProvenanceClauseIsBuiltInOnePlace
+// (backend/internal/modules/people/provenancefilter_test.go)
 const provenanceOwner = "capturedByKindClause"
 
 func TestEveryListFiltersLiteralCarriesTheProvenanceFilter(t *testing.T) {
