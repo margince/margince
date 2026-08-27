@@ -485,33 +485,71 @@ func fieldsOf(t *testing.T, typeName string) []string {
 // A query held in a `const` and passed by name is not a rarer shape than an
 // inline literal; it is the shape a long query takes. A census that reads only
 // the literals inside a function body cannot see it, and what it cannot see
-// leaves the population entirely.
+// leaves the population entirely — which is not a lenient judgement, it is no
+// judgement.
+//
+// Resolved to a FIXED POINT rather than in traversal order. `const q = "UPDATE
+// " + table` is a valid declaration whether `table` is declared above it or
+// below, and a single pass leaves the second case unresolved — an ordering of
+// the source file deciding what a gate can see.
 func packageStrings(t *testing.T) map[string]string {
 	t.Helper()
-	known := map[string]string{}
+	pending := map[string]ast.Expr{}
 	for _, parsed := range moduleFiles(t) {
 		for _, decl := range parsed.file.Decls {
 			gen, isGen := decl.(*ast.GenDecl)
 			if !isGen || (gen.Tok != token.CONST && gen.Tok != token.VAR) {
 				continue
 			}
-			for _, spec := range gen.Specs {
-				value, isValue := spec.(*ast.ValueSpec)
-				if !isValue {
-					continue
-				}
-				for i, name := range value.Names {
-					if i >= len(value.Values) {
-						continue
-					}
-					if text, isText := staticText(value.Values[i], known); isText {
-						known[name.Name] = text
-					}
-				}
+			collectDeclaredStrings(gen, pending)
+		}
+	}
+	known := map[string]string{}
+	// Each round resolves only names whose dependencies resolved in an earlier
+	// one, so `known` grows strictly until a round adds nothing. It is bounded
+	// by `pending`, which is what makes that terminate — not the absence of
+	// cycles, which a package that compiles cannot contain anyway.
+	for progress := true; progress; {
+		progress = false
+		for name, expr := range pending {
+			if _, done := known[name]; done {
+				continue
+			}
+			if text, isText := staticText(expr, known); isText {
+				known[name] = text
+				progress = true
 			}
 		}
 	}
 	return known
+}
+
+// collectDeclaredStrings records each name in a const or var block against the
+// expression it takes its value from.
+//
+// A grouped const may omit its expression list and INHERIT the one above it —
+// `const ( a = "x"; b )` gives b the value of a. Skipping a spec with no values
+// drops that name silently, so the last expression list seen in the block is
+// carried forward, which is what the language does.
+func collectDeclaredStrings(gen *ast.GenDecl, into map[string]ast.Expr) {
+	var inherited []ast.Expr
+	for _, spec := range gen.Specs {
+		value, isValue := spec.(*ast.ValueSpec)
+		if !isValue {
+			continue
+		}
+		values := value.Values
+		if len(values) == 0 && gen.Tok == token.CONST {
+			values = inherited
+		} else if len(values) > 0 {
+			inherited = values
+		}
+		for i, name := range value.Names {
+			if i < len(values) {
+				into[name.Name] = values[i]
+			}
+		}
+	}
 }
 
 // staticText renders an expression that is a string known at parse time: a
