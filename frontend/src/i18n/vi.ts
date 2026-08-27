@@ -63,8 +63,11 @@ export const vi = {
   "history.tabChanges": "Theo thay đổi",
   "history.tabFields": "Theo trường",
   "history.undo.action": "Hoàn tác",
+  "history.undo.redo": "Làm lại",
   "history.undo.busy": "Đang hoàn tác thay đổi…",
   "history.undo.confirmTitle": "Hoàn tác thay đổi này?",
+  "history.undo.confirmEdgeBody":
+    "Thao tác này thay đổi liên kết với {other}. Các bản ghi vẫn còn; chỉ mối liên kết giữa chúng thay đổi.",
   "history.undo.confirmBody":
     "{count} trường sẽ trở lại giá trị trước thay đổi này:",
   "history.undo.versionSkew":
@@ -86,6 +89,23 @@ export const vi = {
   "history.undo.nullUnwritable":
     "Không thể hoàn tác vì thao tác này sẽ phải xoá trống một trường mà bản ghi này không thể xoá trống.",
   "history.undo.notWritableByCaller": "Bạn không có quyền ghi các trường này.",
+  "history.undo.edgeRelinkUnsupported":
+    "Chưa hỗ trợ phục hồi liên kết đã xoá — hãy thêm lại liên kết trên bản ghi này.",
+  "history.reversal.collapsed":
+    "Thay đổi của {actor}, đã được {undoer} hoàn tác",
+  "history.reversal.collapsedSelf":
+    "{actor} đã hoàn tác thay đổi của chính mình",
+  "history.reversal.partly":
+    "Thay đổi của {actor}, đã được {undoer} hoàn tác một phần",
+  "history.reversal.partlySelf":
+    "{actor} đã hoàn tác một phần thay đổi của chính mình",
+  "history.reversal.net": "kết quả: không thay đổi",
+  "history.reversal.stillChanged": "vẫn còn thay đổi",
+  "history.reversal.expand": "Hiện cả hai thay đổi",
+  "history.reversal.collapse": "Ẩn",
+  "history.reversal.undoneBy": "đã được {undoer} hoàn tác",
+  "history.reversal.unpaired": "hoàn tác một thay đổi trước đó",
+  "history.edge.marker": "Liên kết",
   "history.field.address": "Địa chỉ",
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",
@@ -192,6 +212,7 @@ export const vi = {
   "day.duplicate.person": "Hai liên hệ trông giống cùng một người",
   "day.duplicate.org": "Hai công ty trông giống cùng một công ty",
   "day.duplicate.lead": "Hai khách hàng tiềm năng trông giống nhau",
+  "day.duplicate.generic": "Hai bản ghi trông giống nhau",
   "day.duplicatesOpen": "Tổng cộng {count} cặp trùng lặp đang mở",
   "day.focus.progress": "Quyết định {position} trên {total}",
   "day.focus.clear": "Không còn gì để quyết định.",
@@ -288,6 +309,7 @@ export const vi = {
   "action.readCompany": "Đọc một công ty",
   "action.booking": "Trang đặt lịch",
 
+  "common.undo": "Hoàn tác",
   "common.close": "Đóng",
 
   "explain.open": "Giải thích con số này",
@@ -297,6 +319,8 @@ export const vi = {
   "board.count": "{count} deal",
   "board.weighted": "trọng số {value}",
   "board.mixedCurrencies": "nhiều loại tiền tệ — không có tổng chung",
+  "dealfiles.hidden": "Đã ẩn khỏi giao dịch này",
+  "dealfiles.unhidden": "Đã hiện lại ở giao dịch này",
   "deal.stalled": "đình trệ",
   "deal.singleThreaded": "chỉ một đầu mối",
   "deal.staged": "chờ duyệt",
@@ -306,6 +330,8 @@ export const vi = {
   "record.timeline": "Timeline",
   "record.edit": "Sửa",
   "record.save": "Lưu",
+  "record.saveDone": "Đã lưu “{name}”",
+  "record.archiveDone": "Đã lưu trữ “{name}”",
   "record.archive": "Lưu trữ",
   "record.disqualify": "Loại",
   "record.archiveConfirm":
@@ -490,6 +516,7 @@ export const vi = {
 
   "rel.add": "Thêm quan hệ",
   "rel.kind": "Loại",
+  "rel.saveDone": "Đã lưu mối quan hệ",
   "rel.role": "Vai trò",
   "rel.startedAt": "Bắt đầu",
   "rel.endedAt": "Kết thúc",
@@ -885,6 +912,7 @@ export const vi = {
   "tab.tasks": "Công việc",
   "tab.timeline": "Lịch sử",
   "tab.finance": "Tài chính",
+  "tab.network": "Mạng lưới",
   "tab.documents": "Tài liệu",
   "tab.profile": "Hồ sơ",
   "tab.meetings": "Cuộc họp",
@@ -1626,10 +1654,14 @@ export const vi = {
   "co.tags.noTags": "Chưa gắn tag nào.",
   "co.project.new": "Dự án mới",
   "co.deal.new": "Deal mới",
+  "co.tags.applied": "Đã thêm thẻ “{name}”",
+  "co.tags.alreadyThere": "“{name}” đã có ở công ty này",
+  "co.tags.removed": "Đã gỡ thẻ “{name}”",
   "co.tags.apply": "Thêm tag",
   "co.tags.pick": "Tên tag",
   "co.tags.overCap":
     "Số tag nhiều hơn mức danh sách này hiển thị được, nên một tag không xuất hiện ở đây vẫn có thể đã tồn tại. Hãy nhờ quản trị viên dọn bớt tag trước khi tạo tag mới.",
+  "co.lists.added": "Đã thêm vào “{name}”",
   "co.lists.add": "Thêm vào danh sách",
   "co.lists.pick": "Tên danh sách",
   "co.lists.overCap":
@@ -2006,6 +2038,16 @@ export const vi = {
   "deal.seats.title": "Ai tham gia giao dịch này",
   "deal.seats.empty": "Chưa ghi nhận ai trong giao dịch này",
   "deal.seats.ours": "{count} người bên mình phụ trách",
+  "deal.committee.title": "Nhóm ra quyết định mua",
+  "deal.committee.empty": "Chưa có ai được ghi nhận cho giao dịch này",
+  "deal.committee.engaged": "Đang trao đổi",
+  "deal.committee.quiet": "Chưa hồi đáp",
+  "deal.committee.unnamedSeat": "Một người tham gia bạn không xem được",
+  "deal.committee.legendEngaged": "Đang trao đổi với chúng ta",
+  "deal.committee.legendQuiet": "Có tham gia nhưng không trao đổi",
+  "deal.committee.legendGap": "Thiếu người phụ trách",
+  "deal.committee.threads":
+    "{engaged} trong {total} người tham gia đang trao đổi với chúng ta.",
   "deal.strip.money": "Số tiền",
   "deal.strip.money.offer": "Báo giá {number} · {status}",
   "deal.strip.money.noOffer": "Chưa có báo giá nào",
@@ -2796,6 +2838,9 @@ export const vi = {
   "unsaved.body":
     "Rời trang này bây giờ sẽ bỏ những gì bạn đã nhập. Hãy quay lại để lưu trước.",
   "unsaved.discard": "Bỏ thay đổi",
+  "settings.addedItem": "Đã thêm “{name}”",
+  "settings.removedItem": "Đã gỡ “{name}”",
+  "settings.removed": "Đã gỡ.",
   "settings.saved": "Đã lưu.",
   "settings.signature": "Chữ ký email",
   "settings.signatureSub":
@@ -4721,6 +4766,8 @@ export const vi = {
   "prefs.notSubscribed": "Chưa đăng ký — bạn không nhận gì cho mục đích này",
   "prefs.alwaysOn": "luôn bật",
   "prefs.lockedWhy": "Thư giao dịch — không thuộc diện từ chối nhận.",
+  "prefs.confirmationNeededWhy":
+    "Để bắt đầu nhận, hãy dùng liên kết xác nhận trong email của chúng tôi. Bạn có thể dừng nhận tại đây bất cứ lúc nào.",
   "prefs.notSaved": "Chưa lưu.",
   "prefs.savePending": "Đang chờ: {changes}.",
   "prefs.saveProof":
@@ -5364,6 +5411,11 @@ export const vi = {
   "users.teamsTitle": "Nhóm",
   "users.teamsSub":
     "Ai được sửa bản ghi của ai: thành viên một nhóm sửa được bản ghi của mọi thành viên trong nhóm. Khách hàng, liên hệ, lead và deal thì ai cũng đọc được.",
+  "users.deactivated": "Đã vô hiệu hóa {name}",
+  "users.reactivated": "Đã kích hoạt lại {name}",
+  "users.roleSaved": "Đã đổi vai trò cho {name}",
+  "users.teamArchived": "Đã lưu trữ nhóm “{name}”",
+  "users.teamRestored": "Đã khôi phục nhóm “{name}”",
   "users.archiveTeam": "Lưu trữ nhóm {name}",
   "users.newTeamLabel": "Nhóm mới",
   "users.newTeamOpen": "Nhóm mới",
@@ -5697,6 +5749,8 @@ export const vi = {
   "quotas.err.targetZero": "Chỉ tiêu này chưa có mục tiêu",
   "quotas.err.computeFailed": "Không tính được mức đạt",
   "quotas.err.ownerXorTeam": "Hãy chọn đúng một: người phụ trách hoặc nhóm.",
+  "quotas.saveDone": "Đã lưu chỉ tiêu",
+  "quotas.archiveDone": "Đã lưu trữ chỉ tiêu",
   "quotas.archive.title": "Lưu trữ chỉ tiêu",
   "quotas.archive.confirm":
     "Lưu trữ sẽ đưa chỉ tiêu này ra khỏi danh sách và ngừng theo dõi mức đạt. Chỉ tiêu đã lưu trữ thì không sửa được.",
@@ -5874,6 +5928,8 @@ export const vi = {
   "webhooks.field.eventTypes": "Loại sự kiện",
   "webhooks.field.state": "Trạng thái",
   "webhooks.edit": "Sửa",
+  "webhooks.saveDone": "Đã lưu webhook",
+  "webhooks.archiveDone": "Đã lưu trữ webhook",
   "webhooks.archive": "Lưu trữ",
   "webhooks.archiveConfirm":
     "Lưu trữ sẽ dừng mọi lượt gửi cho đăng ký này. Không thể hoàn tác.",
@@ -6018,15 +6074,10 @@ export const vi = {
   "person.graph.noRoute":
     "Chưa ai bên mình trao đổi với họ hay với ai ở công ty họ.",
   "person.graph.direct": "Ai quen họ",
-  "person.graph.directSub":
-    "Những đồng nghiệp đã tự mình trao đổi với contact này.",
   "person.graph.noDirect": "Chưa ai bên mình trao đổi với họ.",
   "person.graph.account": "Ở cùng công ty",
-  "person.graph.accountSub":
-    "Đồng nghiệp của họ, và ai bên mình thân nhất với từng người.",
   "person.graph.noAccount":
     "Không có contact nào khác được ghi nhận ở công ty họ.",
-  "person.graph.omitted": "Một phần bị ẩn vì bạn không có quyền xem.",
   "person.graph.noEdge": "Chưa ghi nhận trao đổi nào với {name}.",
   "person.graph.withColleague": "với {name}",
   "person.graph.withContact": "với contact này",
@@ -6036,6 +6087,13 @@ export const vi = {
     "Chỉ là số đếm — nội dung tin nhắn vẫn nằm trên timeline.",
   "person.graph.untitledMessage": "Tin nhắn không có tiêu đề",
   "person.graph.dropped": "Còn {count} mục không hiển thị.",
+  "person.network.ringTitle": "Ai tiếp cận được người này",
+  "person.network.ringSub":
+    "Phía chúng ta và khách hàng này, theo độ ấm của quan hệ. Chọn một người để xem quan hệ đó dựa trên điều gì.",
+  "person.network.momentsTitle": "Điều gì đã thay đổi gần đây",
+  "person.network.momentsSub":
+    "Những chuyển động trong quan hệ này, lấy từ chính các tin nhắn.",
+  "person.network.noMoments": "Gần đây quan hệ này không có chuyển động nào.",
   "person.change.repliedAfterGap": "Họ hồi đáp sau {days} ngày im ắng.",
   "person.change.wentQuiet": "Không có gì xảy ra suốt {days} ngày.",
   "person.change.warmed": "Quan hệ đã chuyển từ {from} lên {to}.",

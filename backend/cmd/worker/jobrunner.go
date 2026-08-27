@@ -19,7 +19,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/geocode"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -47,22 +46,18 @@ func gmailWatchConfig(cfg workerConfig, gmailWired bool) compose.GmailWatchConfi
 // drain — what the bare tickers lacked. The domain logic (Sweep/Reconcile)
 // is unchanged; only the scheduler is River now. The returned stop function
 // drains in-flight jobs on shutdown.
-func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, overlayBudget overlaybudget.Config, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, boundModels map[string]map[string]bool, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
+func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, vault keyvault.Vault, overlayBudget overlaybudget.Config, logger *slog.Logger, cfg workerConfig, modelPath compose.ModelPath, boundModels map[string]map[string]bool, lanes workerLanes, weeklyMail compose.WeeklyMailConfig, stdout io.Writer) (func(), error) {
 	// The sweep registry is always live — the standing IMAP connector needs
 	// no deployment config; gmail joins it when the OAuth app is configured.
 	// The vault holds every connection's sealed credential (the standing
-	// flavors resolve through it), so it initializes here regardless. The
-	// SAME vault is the credential custodian of the two pollers this role
-	// runs — the overlay reconcile (the only one that can resolve a connected
-	// workspace's sealed HubSpot token, overlay.DueOverlayConnections'
-	// CredentialRef) and the Telegram getUpdates poll (a bot's sealed token) —
-	// resolved once, shared; when it is not configured, configuredVault is nil
+	// flavors resolve through it), so it is wired here regardless. The SAME
+	// vault is the credential custodian of the two pollers this role runs — the
+	// overlay reconcile (the only one that can resolve a connected workspace's
+	// sealed HubSpot token, overlay.DueOverlayConnections' CredentialRef) and
+	// the Telegram getUpdates poll (a bot's sealed token) — and it is the
+	// boot's, not a second resolution of it; when none is configured it is nil,
 	// so an unconfigured deployment never fails worker boot over pollers it has
 	// no connected workspace to run anyway.
-	vault, vaultConfigured, verr := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if verr != nil {
-		return nil, fmt.Errorf("worker: keyvault: %w", verr)
-	}
 	// THIS is the role that pulls mailboxes, so the object store a captured
 	// file is written to has to reach the config the sync registry and the job
 	// lanes are built from. Wired in the api role alone, every inbound
@@ -78,10 +73,6 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 		Tenant:       cfg.graphTenant,
 	}, cfg.captureConfig, logger).WithSyncInterval(cfg.gmailSyncInterval)
 	watchCfg := gmailWatchConfig(cfg, cfg.gmailAppWired())
-	configuredVault := vault
-	if !vaultConfigured {
-		configuredVault = nil
-	}
 
 	// The extension tier's per-call Runtime, bound before the runner exists
 	// rather than beside the Surface-B lane that also binds it. This is the
@@ -93,9 +84,9 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 	// ever refuse is not a working job.
 	//
 	// Unconditional, and that is the point: a guard here would reintroduce
-	// exactly the shape that left the job lane unbound. `vault` is
-	// keyvault.FromEnv's, already nil where none is configured, and it is the
-	// same value startRunnerLane passes — so the two bindings are idempotent.
+	// exactly the shape that left the job lane unbound. `vault` is the boot's,
+	// already nil where none is configured, and it is the same value
+	// startRunnerLane passes — so the two bindings are idempotent.
 	compose.BindExtensionRuntime(pool, vault)
 	// The capture pipeline a unit's ingress lands through, bound in the same
 	// breath and on the same terms. THIS role is the one that matters: a record
@@ -110,30 +101,78 @@ func startJobRunner(ctx context.Context, pool *pgxpool.Pool, rdb *redis.Client, 
 	// attachment store rather than two that drift.
 	compose.BindExtensionCapture(pool, cfg.captureConfig)
 
-	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, configuredVault, lanes, rdb, overlayBudget, modelPath, boundModels, weeklyMail)
+	runner, err := newJobRunner(pool, logger, cfg, captureReg, watchCfg, vault, lanes, rdb, overlayBudget, modelPath, boundModels, weeklyMail)
 	if err != nil {
 		return nil, err
 	}
 	if err := runner.Start(ctx); err != nil {
 		return nil, err
 	}
-	_, _ = fmt.Fprintln(stdout, jobRunnerBanner(cfg, watchCfg, modelPath, configuredVault, lanes.runner))
-	return func() {
-		// The run context is already cancelled at shutdown, so give the
-		// drain its own bounded window.
-		stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), 30*time.Second)
-		defer cancel()
-		if err := runner.Stop(stopCtx); err != nil {
-			logger.Warn("stopping job runner", "err", err)
-		}
-	}, nil
+	_, _ = fmt.Fprintln(stdout, jobRunnerBanner(cfg, watchCfg, modelPath, vault, lanes.runner))
+	return func() { stopJobRunner(ctx, runner, logger) }, nil
+}
+
+// jobLane is the job runner as SHUTDOWN sees it: two ways to stop, one softer
+// than the other. Named as an interface so the escalation between them can be
+// driven by a test — a real drain overrun needs a job that will not finish,
+// which is the one thing a test cannot arrange without waiting for it.
+type jobLane interface {
+	Stop(ctx context.Context) error
+	StopAndCancel(ctx context.Context) error
+}
+
+// jobDrainWindow bounds the graceful drain: a job caught mid-flight by shutdown
+// gets this long to finish on its own terms.
+const jobDrainWindow = 30 * time.Second
+
+// jobCancelWindow bounds the wait AFTER the work contexts are cancelled. Short,
+// because nothing is being given time to finish here — only to notice it was
+// cancelled and return.
+const jobCancelWindow = 5 * time.Second
+
+// stopJobRunner ends the job lane before this process closes what the jobs
+// write through.
+//
+// The drain is bounded, and River's Stop RETURNS on that deadline rather than
+// enforcing it — in-flight job goroutines keep running. Shutdown does not wait
+// for them: run() closes the bus and then the pool as its deferred calls
+// unwind, so an overrun used to leave a job writing an overlay budget meter
+// into a closed Redis client, or reading through a closed pool. The failure
+// lands in whatever the job logs, at shutdown, where it reads as a symptom of
+// stopping rather than of a job that was never stopped.
+//
+// So an overrun escalates rather than proceeding. Cancelling the work contexts
+// and waiting again is what actually ends those goroutines; River marks a job
+// cancelled this way for retry, so the cost is a job that runs again, not one
+// that is lost.
+//
+// If even that overruns, the process closes its connections under live job
+// goroutines — the same shape as before, but named at Error with what will
+// fail, rather than left to be inferred from a downstream write's complaint.
+func stopJobRunner(ctx context.Context, lane jobLane, logger *slog.Logger) {
+	// The run context is already cancelled at shutdown, so give the
+	// drain its own bounded window.
+	stopCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), jobDrainWindow)
+	defer cancel()
+	drained := lane.Stop(stopCtx)
+	if drained == nil {
+		return
+	}
+	logger.Warn("the job drain did not finish inside its window; cancelling the jobs still in flight so they cannot outlive the bus and the pool this process is about to close",
+		"window", jobDrainWindow, "err", drained)
+	cancelCtx, cancelHard := context.WithTimeout(context.WithoutCancel(ctx), jobCancelWindow)
+	defer cancelHard()
+	if err := lane.StopAndCancel(cancelCtx); err != nil {
+		logger.Error("job goroutines are STILL running as this process closes the bus and the pool; whatever they write next fails against a closed client, and that failure will look like a shutdown problem rather than this one",
+			"window", jobCancelWindow, "err", err)
+	}
 }
 
 // newJobRunner declares every scheduled lane this role runs, and for each the
 // deployment condition that turns it on — or the omission that honestly leaves
 // it off. One declaration, so no lane can be enabled by one boot phase and
 // starved by another.
-func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, configuredVault keyvault.Vault, lanes workerLanes, rdb *redis.Client, overlayBudget overlaybudget.Config, modelPath compose.ModelPath, boundModels map[string]map[string]bool, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
+func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, captureReg *capture.Registry, watchCfg compose.GmailWatchConfig, vault keyvault.Vault, lanes workerLanes, rdb *redis.Client, overlayBudget overlaybudget.Config, modelPath compose.ModelPath, boundModels map[string]map[string]bool, weeklyMail compose.WeeklyMailConfig) (*jobs.Runner, error) {
 	// Firing a scheduled message stages its delivery and enqueues the dispatch
 	// job, through the SAME machinery an immediate send uses. Insert-only, like
 	// the api's: this role works what it inserts, and a stager built on the
@@ -175,7 +214,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// with no provider configured — nothing can reach a vendor at all
 		// (PI-AC-9). lanes.providers is nil unless MARGINCE_PROVIDER_SURFE
 		// named a mode.
-		ProviderRuns:  compose.ProviderRunsConfig{Registry: lanes.providers, Vault: configuredVault},
+		ProviderRuns:  compose.ProviderRunsConfig{Registry: lanes.providers, Vault: vault},
 		GmailRegistry: captureReg,
 		GmailWatch:    watchCfg,
 		// The Telegram ingest worker builds its Sink from this — the same
@@ -186,7 +225,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		// sealed token. Without a configured vault there is no token to unseal
 		// and the poller stays off by omission, the same posture the overlay
 		// poller takes one field below.
-		ChannelVault: configuredVault,
+		ChannelVault: vault,
 		// The classify + enrich passes run only where a model is
 		// configured; without one both are absent by omission.
 		ClassifyBrain:      modelPath.CaptureClassify,
@@ -199,7 +238,7 @@ func newJobRunner(pool *pgxpool.Pool, logger *slog.Logger, cfg workerConfig, cap
 		WeeklyMail:             weeklyMail,
 		TranscriptProposeBrain: modelPath.TranscriptPropose,
 		DocumentExtractBrain:   modelPath.DocumentExtract,
-		OverlayVault:           configuredVault,
+		OverlayVault:           vault,
 		OverlayInterval:        cfg.overlayInterval,
 		OverlayBackfillLimit:   cfg.overlayBackfillLimit,
 		// The poller's OVB meter records against the SAME Redis the relay

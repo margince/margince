@@ -13,15 +13,49 @@ const purposes: PurposeView[] = [
     label: "Deal & service messages",
     state: "granted",
     locked: true,
+    grant_needs_confirmation: false,
   },
   {
     key: "marketing_email",
     label: "Product updates",
     state: "granted",
     locked: false,
+    grant_needs_confirmation: false,
   },
-  { key: "events", label: "Events", state: "withdrawn", locked: false },
-  { key: "research", label: "Surveys", state: "unknown", locked: false },
+  {
+    key: "events",
+    label: "Events",
+    state: "withdrawn",
+    locked: false,
+    grant_needs_confirmation: false,
+  },
+  {
+    key: "research",
+    label: "Surveys",
+    state: "unknown",
+    locked: false,
+    grant_needs_confirmation: false,
+  },
+];
+
+// A purpose the server will only grant through a confirmation round-trip.
+// Withdrawing it here is honoured; granting it is refused, so the two
+// directions are asserted apart.
+const doiPurposes: PurposeView[] = [
+  {
+    key: "doi_newsletter",
+    label: "Newsletter",
+    state: "withdrawn",
+    locked: false,
+    grant_needs_confirmation: true,
+  },
+  {
+    key: "doi_granted",
+    label: "Already subscribed",
+    state: "granted",
+    locked: false,
+    grant_needs_confirmation: true,
+  },
 ];
 
 describe("display state", () => {
@@ -84,5 +118,21 @@ describe("choice building", () => {
 
   it("submits nothing when nothing moved", () => {
     expect(toChoices(purposes, initialDraft(purposes), wordingOf)).toEqual([]);
+  });
+});
+
+describe("a purpose needing a confirmation round-trip", () => {
+  // The defect this holds: the page offered the switch, the person turned it
+  // on, and the save came back 422 with nothing recorded.
+  it("never submits a grant the server refuses", () => {
+    const draft = { doi_newsletter: true, doi_granted: true };
+    expect(dirtyKeys(doiPurposes, draft)).toEqual([]);
+  });
+
+  // And the half that must keep working: an unsubscribe is honoured, so
+  // filtering the whole purpose would strip somebody's opt-out.
+  it("still submits a withdrawal", () => {
+    const draft = { doi_newsletter: false, doi_granted: false };
+    expect(dirtyKeys(doiPurposes, draft)).toEqual(["doi_granted"]);
   });
 });

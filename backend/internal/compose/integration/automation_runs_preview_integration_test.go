@@ -55,9 +55,9 @@ func createRouteLeadAutomation(t *testing.T, e *apptest.AppEnv) string {
 		ID  string `json:"id"`
 		Key string `json:"key"`
 	}
-	if status := e.Call(t, "POST", "/v1/automations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
 		"key": "assign_lead_owner", "name": "Router under observation",
-		"params": apptest.AnyMap{"owners": []string{"0198c0de-0000-7000-8000-000000000001"}, "cap_per_owner": 3},
+		"params": AnyMap{"owners": []string{"0198c0de-0000-7000-8000-000000000001"}, "cap_per_owner": 3},
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create automation → %d", status)
 	}
@@ -218,7 +218,7 @@ func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID
 	var lead struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/leads", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/leads", AnyMap{
 		"full_name": "Uma Unrouted", "source": "manual",
 	}, nil, &lead); status != http.StatusCreated {
 		t.Fatalf("create lead → %d", status)
@@ -242,7 +242,7 @@ func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID
 		Sample               *[]string `json:"sample"`
 		ExcludedByPermission *int      `json:"excluded_by_permission"`
 	}
-	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", apptest.AnyMap{}, nil, &preview); status != http.StatusOK {
+	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", AnyMap{}, nil, &preview); status != http.StatusOK {
 		t.Fatalf("preview → %d", status)
 	}
 	if preview.MatchesNow != 1 || preview.WindowDays != 30 {
@@ -264,7 +264,7 @@ func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID
 		MatchesNow int `json:"matches_now"`
 		WindowDays int `json:"window_days"`
 	}
-	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", AnyMap{
 		"key": "stage_change_create_task", "window_days": 7,
 	}, nil, &draft); status != http.StatusOK {
 		t.Fatalf("draft-override preview → %d", status)
@@ -274,14 +274,14 @@ func assertPreviewMeasuresWithoutWriting(t *testing.T, e *apptest.AppEnv, autoID
 	}
 
 	// The editor's preview 422s match its save 422s.
-	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", apptest.AnyMap{"key": "invented_type"}, nil, nil); status != 422 {
+	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", AnyMap{"key": "invented_type"}, nil, nil); status != 422 {
 		t.Fatalf("preview with a non-catalog key → %d, want 422", status)
 	}
-	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", apptest.AnyMap{"window_days": 0}, nil, nil); status != 422 {
+	if status := e.Call(t, "POST", "/v1/automations/"+autoID+"/preview", AnyMap{"window_days": 0}, nil, nil); status != 422 {
 		t.Fatalf("preview with a zero window → %d, want 422", status)
 	}
 	unknown := ids.NewV7().String()
-	if status := e.Call(t, "POST", "/v1/automations/"+unknown+"/preview", apptest.AnyMap{}, nil, nil); status != http.StatusNotFound {
+	if status := e.Call(t, "POST", "/v1/automations/"+unknown+"/preview", AnyMap{}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("preview on an unknown automation → %d, want 404 (existence-hiding, like Get)", status)
 	}
 

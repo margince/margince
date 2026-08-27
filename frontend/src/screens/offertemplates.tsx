@@ -166,6 +166,7 @@ export function OfferTemplatesAdmin() {
         {canUpdate && (
           <EditAction
             label={t("template.edit")}
+            savedMessage={(saved) => t("record.saveDone", { name: saved.name })}
             invalidate="offer-templates"
             recordKey="offer-template"
             record={{
@@ -185,6 +186,7 @@ export function OfferTemplatesAdmin() {
           <ArchiveAction
             label={t("template.archive")}
             confirmText={t("template.archiveConfirm")}
+            archivedMessage={t("record.archiveDone", { name: tpl.name })}
             invalidate="offer-templates"
             recordKey="offer-template"
             onArchived={() => list.refetch()}

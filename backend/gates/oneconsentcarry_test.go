@@ -85,7 +85,8 @@ func TestTheConsentCarryIsSpelledOnceInPeople(t *testing.T) {
 		Roots:   []string{"internal/modules/people"},
 		Subject: writesConsentState,
 		Exempt: gatekit.Waive(map[string]string{
-			"internal/modules/consent/store.go": "the consent module OWNS these tables and writes them for its own reasons — a preference-centre save, a double opt-in confirmation, a withdrawal a person asked for. None of those is a carry: they record what a subject decided, where a carry decides what happens to a decision when the record holding it retires. The two would not share an implementation even if they were in one package",
+			"internal/modules/consent/store.go":        "the consent module OWNS these tables and writes them for its own reasons — a preference-centre save, a double opt-in confirmation, a withdrawal a person asked for. None of those is a carry: they record what a subject decided, where a carry decides what happens to a decision when the record holding it retires. The two would not share an implementation even if they were in one package",
+			"internal/modules/consent/consentproof.go": "the paired state-and-proof write the consent module's own Record makes, split out of store.go for the file-length cap. Same reason as store.go beside it: recording a decision a subject made, never deciding what becomes of one when a record retires",
 		}),
 	}
 	inside := scope.Files(t)

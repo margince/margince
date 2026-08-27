@@ -581,6 +581,7 @@ export function RelationshipsTab({
                     <div style={{ display: "flex", gap: 6 }}>
                       <EditAction
                         label={t("record.edit")}
+                        savedMessage={t("rel.saveDone")}
                         fields={relationshipEditFields}
                         record={{
                           id: rel.id,

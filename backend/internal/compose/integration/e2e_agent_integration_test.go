@@ -32,7 +32,7 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 		PassportID string `json:"passport_id"`
 		Token      string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "e2e agent", "scopes": []string{"read"},
 	}, nil, &minted); status != 201 {
 		t.Fatalf("issue passport → %d", status)
@@ -83,7 +83,7 @@ func TestEndToEnd_passportBearerSurface(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Should not exist", "source": "mcp", "captured_by": "x",
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "scope_exceeds_grantor" {
@@ -117,7 +117,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "write agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != 201 {
 		t.Fatalf("issue passport → %d", status)
@@ -130,7 +130,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		ID         string `json:"id"`
 		CapturedBy string `json:"captured_by"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Governed Green Write", "source": "mcp", "captured_by": "human:forged",
 	}, bearer, &created); status != 201 {
 		t.Fatalf("write-scope 🟢 REST mutation → %d, want 201 (ADR-0055 admits governed agent writes)", status)
@@ -164,7 +164,7 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
 		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
 	}, bearer, &problem)
 	if status != 403 || problem.Code != "approval_required" {
@@ -184,22 +184,22 @@ func TestEndToEnd_agentWritesGovernedOnREST(t *testing.T) {
 	var denyBody struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, bearer, &denyBody); status != 403 || denyBody.Code != "permission_denied" {
+	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, bearer, &denyBody); status != 403 || denyBody.Code != "permission_denied" {
 		t.Fatalf("agent self-approval → %d %q, want 403 permission_denied", status, denyBody.Code)
 	}
 
 	// Human-only config surface rejects the agent whatever its scopes.
-	if status := e.Call(t, "POST", "/v1/pipelines", apptest.AnyMap{"name": "Shadow"}, bearer, &denyBody); status != 403 || denyBody.Code != "permission_denied" {
+	if status := e.Call(t, "POST", "/v1/pipelines", AnyMap{"name": "Shadow"}, bearer, &denyBody); status != 403 || denyBody.Code != "permission_denied" {
 		t.Fatalf("agent on human-only pipeline config → %d %q, want 403 permission_denied", status, denyBody.Code)
 	}
 
 	// A human approves; the agent repeats the IDENTICAL request with the
 	// approval token and the effect lands exactly once.
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, nil); status != 200 {
+	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != 200 {
 		t.Fatalf("human approve → %d", status)
 	}
 	withToken := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID}
-	body := apptest.AnyMap{
+	body := AnyMap{
 		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
 	}
 	// Past the gate is what the token buys. Where the create lands after that is
@@ -226,7 +226,7 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 	var created struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Full Seat Made", "source": "manual", "captured_by": "admin",
 	}, nil, &created); status != 201 {
 		t.Fatalf("full-seat create → %d", status)
@@ -244,12 +244,12 @@ func TestEndToEnd_readSeatCannotMutate(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Read Seat Blocked", "source": "manual", "captured_by": "admin",
 	}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
 		t.Fatalf("read-seat create → %d %q, want 403 seat_tier_insufficient", status, problem.Code)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "X"}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "X"}, nil, &problem); status != 403 || problem.Code != "seat_tier_insufficient" {
 		t.Fatalf("read-seat update → %d %q, want 403 seat_tier_insufficient", status, problem.Code)
 	}
 }

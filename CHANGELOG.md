@@ -11,6 +11,28 @@ numbers appear here when releases start.
 
 ### Changed
 
+- **BREAKING (metrics): the sweep gauges no longer carry a `_total` suffix.**
+  `margince_sweep_workspaces_total` is now `margince_sweep_workspaces`, and
+  `margince_sweep_units_total` is now `margince_sweep_units`. The two `_failed`
+  halves are unchanged. Any dashboard or alert reading the old names has to be
+  updated; nothing is aliased, because a series published under two names is a
+  worse surface than a rename with a note.
+
+  All four are levels — how many workspaces or units a fleet pass currently
+  covers, read out of `river_job` at scrape time, numbers that go DOWN — and
+  Prometheus reserves `_total` for monotonic counters. The `# TYPE` line always
+  said `gauge`; the NAME is what a dashboard author reads, and this one invited
+  `rate()` and `increase()` over a level, which render as plausible noise rather
+  than as an error.
+
+  Both pairs move together. Renaming one half would have left an operator
+  reading `margince_sweep_workspaces_total` beside `margince_sweep_units`,
+  which is a worse surface than the convention it satisfies.
+
+  A gate now holds the rule in both directions, over what the exposition writers
+  actually emit rather than over a list of names: a gauge may not carry the
+  suffix, and a counter must.
+
 - **The schema describes margince.yaml, not just the routing block.**
   `config/ai-routing.schema.json` is gone; `config/margince.schema.json` takes
   its place and covers the whole file — all fifteen sections — with the model

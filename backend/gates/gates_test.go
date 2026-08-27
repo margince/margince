@@ -30,6 +30,14 @@ import (
 // from the wrong directory finds nothing, and a census of nothing reports the
 // clean tree it never read. Refusing to run at all is the only outcome that
 // cannot be mistaken for a pass.
+// repoRoot is the repository, from the directory TestMain leaves this package
+// in. It is declared HERE, in the one file with no build constraint, rather than
+// beside the first gate that needed it: a const behind `//go:build !integration`
+// is invisible to `make lint`, which sets that tag — so every gate that used it
+// compiled under `go test` and failed to compile under the linter, in a file
+// that never mentioned the tag.
+const repoRoot = ".."
+
 func TestMain(m *testing.M) {
 	if err := os.Chdir(".."); err != nil {
 		fmt.Fprintf(os.Stderr, "gates: reaching the module root from the package directory: %v\n", err)

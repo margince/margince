@@ -110,9 +110,9 @@ not the fleet.
 | `margince_job_discarded` | `kind`, `workspace_id` | every attempt spent; will never run without intervention |
 | `margince_job_cancelled` | `kind`, `workspace_id` | stopped deliberately, attempts unspent — counted apart from discarded because the operator story differs, not because it is less dead. The sweep pair counts either as a workspace missed |
 | `margince_job_oldest_queued_age_seconds` | `queue`, `workspace_id` | how long the oldest runnable-and-unclaimed job has waited |
-| `margince_sweep_workspaces_total` | `sweep` | workspaces with a surviving child of that fleet pass |
+| `margince_sweep_workspaces` | `sweep` | workspaces with a surviving child of that fleet pass |
 | `margince_sweep_workspaces_failed` | `sweep` | those whose MOST RECENT child is discarded or cancelled |
-| `margince_sweep_units_total` | `sweep`, `unit` | the same reading one grain down, for the dispatchers that fan out per **connection** or per **build**: units with a surviving child |
+| `margince_sweep_units` | `sweep`, `unit` | the same reading one grain down, for the dispatchers that fan out per **connection** or per **build**: units with a surviving child |
 | `margince_sweep_units_failed` | `sweep`, `unit` | those whose MOST RECENT child is discarded or cancelled |
 
 The last two exist because the workspace pair counts each workspace once, and

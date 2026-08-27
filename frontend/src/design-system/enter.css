@@ -22,8 +22,9 @@
  * leaves NOTHING applied once the animation ends. A `forwards` fill would keep
  * a `transform` on every page block for the life of the screen, and a
  * transformed element is a containing block for anything `position: fixed`
- * inside it: the toast regions that live in the content column would anchor to
- * the card instead of the viewport, permanently.
+ * inside it, which would anchor that element to the card instead of to the
+ * viewport, permanently — and silently, since it only shows once a block that
+ * happens to contain one has arrived.
  *
  * No `will-change`, and no `contain`. Both buy a compositor layer this does not
  * need — opacity and transform are already compositor properties — and both
@@ -107,17 +108,6 @@
  * spends the whole arrival behind a parent that is itself only half there.
  */
 :is(.arrive-stack, .wrap) > .arrive-stack {
-  animation: none;
-}
-
-/*
- * A box with no flow of its own is not an arriving block. A toast region is
- * `position: fixed` and renders as a SIBLING of the page's cards (which is why
- * the layout rules in shell.css avoid `:only-child` around it): fading it in
- * with the page would delay a message that is by definition urgent, and moving
- * it would mean transforming a fixed box against a viewport it is anchored to.
- */
-:is(.arrive-stack, .wrap) > .toast-region {
   animation: none;
 }
 

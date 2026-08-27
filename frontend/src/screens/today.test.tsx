@@ -750,3 +750,90 @@ describe("what the night left on the worklist", () => {
     ).toBeTruthy();
   });
 });
+
+describe("a decision lane handed something it cannot decide", () => {
+  // The lane branched on duplicates and treated everything else as a staged
+  // proposal, reading /approvals/{id} with the item's own id. For an item that
+  // is not an approval that read answers 404, so the card rendered as a failed
+  // one — on the surface whose whole promise is that it can be finished.
+  //
+  // A producer putting an undecidable source on this lane is the case that
+  // shipped it, so the test drives exactly that and asserts two things: the
+  // reader gets the item's own words, and no approval was ever asked for.
+  it("draws the item instead of asking the approvals endpoint about it", async () => {
+    stub({
+      ...emptyDay,
+      needs_you: [
+        {
+          id: "task-1",
+          source: "task",
+          title: "Call the buyer back",
+          actions: [],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 1, planned: 0 },
+    });
+    renderToday();
+
+    expect(await screen.findByText("Call the buyer back")).toBeTruthy();
+    const asked = vi
+      .mocked(fetch)
+      .mock.calls.map(([input]) =>
+        String(input instanceof Request ? input.url : input),
+      );
+    expect(asked.some((url) => url.includes("/approvals/"))).toBe(false);
+  });
+
+  // A duplicate pair whose entity type the reader has no sentence for, drawn on
+  // a reporting lane — the rows that write the headline themselves. Naming the
+  // wrong noun is worse than naming none: the pair may be two deals, and calling
+  // them contacts sends the reader looking for something not on screen.
+  it("names an unfamiliar duplicate generically rather than calling it a contact", async () => {
+    stub({
+      ...emptyDay,
+      done_for_you: [
+        {
+          id: "dc-1",
+          source: "dedupe_candidate",
+          kind: "deal",
+          actions: [],
+        },
+      ],
+      counts: { this_morning: 0, needs_you: 0, planned: 0 },
+    });
+    renderToday();
+
+    expect(
+      await screen.findByText("Two records look like the same one"),
+    ).toBeTruthy();
+    expect(screen.queryByText(/Two contacts/)).toBeNull();
+  });
+});
+
+describe("pushing a decision to the back of the queue", () => {
+  // "Later" deferred the head of the LANE rather than the card on screen. The
+  // two are the same only until the first deferral, after which the lane's head
+  // is already at the back — so the second card's "Later" deferred something
+  // already deferred and the queue stopped moving. A reader who cannot pass the
+  // second card cannot reach the third.
+  it("advances past the second card too", async () => {
+    const user = userEvent.setup();
+    stub({
+      ...emptyDay,
+      needs_you: [
+        { id: "t-1", source: "task", title: "First promise", actions: [] },
+        { id: "t-2", source: "task", title: "Second promise", actions: [] },
+        { id: "t-3", source: "task", title: "Third promise", actions: [] },
+      ],
+      counts: { this_morning: 0, needs_you: 3, planned: 0 },
+    });
+    renderToday();
+
+    await screen.findByText("First promise");
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    expect(await screen.findByText("Second promise")).toBeTruthy();
+
+    await user.click(screen.getByRole("button", { name: "Later" }));
+    expect(await screen.findByText("Third promise")).toBeTruthy();
+  });
+});

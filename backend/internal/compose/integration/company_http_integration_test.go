@@ -71,8 +71,8 @@ func orAbsent(value *string) string {
 
 // wellFormedCompany is a submission every required field of which is filled —
 // the base a test perturbs one field of, so a 422 can only be about that field.
-func wellFormedCompany() apptest.AnyMap {
-	return apptest.AnyMap{
+func wellFormedCompany() AnyMap {
+	return AnyMap{
 		"display_name":  "Acme GmbH",
 		"offer_summary": "Revenue operations software",
 		"icp":           "RevOps at SaaS scale-ups",
@@ -314,7 +314,7 @@ func TestCompanyPutRefusesAnAgentPassport(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "read-back agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)

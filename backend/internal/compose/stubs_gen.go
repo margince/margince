@@ -1343,6 +1343,10 @@ func (stubs) QuickCapturePerson(w nethttp.ResponseWriter, r *nethttp.Request, pa
 	httperr.NotImplemented(w, r, "QuickCapturePerson")
 }
 
+func (stubs) ImportVCards(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ImportVCards")
+}
+
 func (stubs) ArchivePerson(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.ArchivePersonParams) {
 	httperr.NotImplemented(w, r, "ArchivePerson")
 }
@@ -1385,6 +1389,10 @@ func (stubs) IssueDoubleOptIn(w nethttp.ResponseWriter, r *nethttp.Request, id c
 
 func (stubs) GetPersonConsentGuard(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetPersonConsentGuard")
+}
+
+func (stubs) RecordQualifyingEvent(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RecordQualifyingEvent")
 }
 
 func (stubs) DraftPersonEmail(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

@@ -84,6 +84,10 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 		onBehalfOf := openapi_types.UUID(*e.OnBehalfOf)
 		out.OnBehalfOf = &onBehalfOf
 	}
+	if e.UndidAuditLogID != nil {
+		undid := openapi_types.UUID(*e.UndidAuditLogID)
+		out.UndidAuditLogId = &undid
+	}
 	if e.Before != nil {
 		before := e.Before
 		out.Before = &before
@@ -91,6 +95,14 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 	if e.After != nil {
 		after := e.After
 		out.After = &after
+	}
+	if e.Edge != nil {
+		out.Edge = &crmcontracts.HistoryEdge{
+			Kind:            e.Edge.Kind,
+			OtherEntityType: crmcontracts.HistoryEdgeOtherEntityType(e.Edge.OtherEntityType),
+			OtherEntityId:   openapi_types.UUID(e.Edge.OtherEntityID),
+			OtherLabel:      e.Edge.OtherLabel,
+		}
 	}
 	return out
 }

@@ -18,7 +18,7 @@ import {
   SettingList,
   SettingRow,
 } from "../design-system/settingrow";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { formatNumber, identifierNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
@@ -412,7 +412,6 @@ function PersonalityEditor({
               {error}
             </span>
           )}
-          <ToastRegion toast={toast} />
         </div>
       )}
     </div>

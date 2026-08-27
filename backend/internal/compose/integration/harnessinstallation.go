@@ -19,17 +19,18 @@ import (
 // seedInstallationIdentity writes the installation's own settings rows.
 func seedInstallationIdentity(ctx context.Context, t *testing.T, owner *pgx.Conn) {
 	t.Helper()
-	// The installation's identity as settings rows (ADR-0090/A135) — the other
-	// half of the same fact. This harness builds the installation by raw SQL,
-	// so bootstrap never seeded them and 0191's backfill ran before the
-	// workspace existed, while the readers resolve the SETTINGS, not the
-	// columns (issue #521). All of them, because bootstrap writes all of them:
-	// name, currency, language and zone are one act, and a fixture holding some
-	// of them is a state no installation is ever in.
+	// The installation's identity (ADR-0090/A135). This harness builds the
+	// installation by raw SQL, so bootstrap never seeded these and 0191's
+	// backfill ran before the workspace existed.
 	//
-	// They must match the columns above. A suite whose two copies disagree
-	// measures the drift rather than the behaviour under test — except where
-	// the disagreement IS the test, which is what basecurrencyseam does.
+	// All of them, because bootstrap writes all of them: name, currency,
+	// language and zone are one act, and a fixture holding some of them is a
+	// state no installation is ever in.
+	//
+	// These rows are the whole of it now. They used to have to match a copy on
+	// the workspace row, and a suite whose two copies disagreed measured the
+	// drift rather than the behaviour under test; the columns are gone, so
+	// there is one place to seed and one place to read.
 	if _, err := owner.Exec(ctx,
 		`INSERT INTO setting (key, value) VALUES
 			('installation.name', '"Authz"'::jsonb),

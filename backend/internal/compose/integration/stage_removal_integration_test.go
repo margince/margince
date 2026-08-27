@@ -48,7 +48,7 @@ func TestStageRemovalRefusesWhileDealsSitOnIt(t *testing.T) {
 	}
 
 	// Step 7: the terminal pair is out of the add/remove surface.
-	var refusal apptest.AnyMap
+	var refusal AnyMap
 	if status := e.Call(t, "DELETE", "/v1/stages/"+seeded.Won, nil, nil, &refusal); status != http.StatusUnprocessableEntity ||
 		refusal["code"] != "terminal_stage_not_removable" {
 		t.Fatalf("removing the won stage → %d %v, want 422 terminal_stage_not_removable", status, refusal)
@@ -76,7 +76,7 @@ func TestStageRemovalRefusesWhileDealsSitOnIt(t *testing.T) {
 
 	// Once the deal moves, the guard lifts.
 	if status := e.Call(t, "POST", "/v1/deals/"+dealID+"/advance",
-		apptest.AnyMap{"to_stage_id": stages[1].ID}, nil, nil); status != http.StatusOK {
+		AnyMap{"to_stage_id": stages[1].ID}, nil, nil); status != http.StatusOK {
 		t.Fatalf("advancing the deal off the occupied stage → %d, want 200", status)
 	}
 	if status := e.Call(t, "DELETE", "/v1/stages/"+occupied.ID, nil, nil, nil); status != http.StatusNoContent {
@@ -103,7 +103,7 @@ func TestStageRemovalTakesTheVersionGuard(t *testing.T) {
 	seeded := apptest.DiscoverSeededPipeline(t, e)
 	stages := readStages(t, e, seeded.PipelineID)
 
-	var problem apptest.AnyMap
+	var problem AnyMap
 	if status := e.Call(t, "DELETE", "/v1/stages/"+stages[0].ID, nil,
 		map[string]string{"If-Match": "999"}, &problem); status != http.StatusConflict ||
 		problem["code"] != "version_skew" {
@@ -131,8 +131,8 @@ func TestStageRemovalRenumbersWhateverLayoutItFinds(t *testing.T) {
 			ID string `json:"id"`
 		} `json:"stages"`
 	}
-	if status := e.Call(t, "POST", "/v1/pipelines", apptest.AnyMap{
-		"name": "Gapped", "stages": []apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/pipelines", AnyMap{
+		"name": "Gapped", "stages": []AnyMap{
 			{"name": "Scout", "position": 2},
 			{"name": "Pitch", "position": 5},
 			{"name": "Close", "position": 9},

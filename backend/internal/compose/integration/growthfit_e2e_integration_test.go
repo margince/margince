@@ -169,7 +169,7 @@ func createBareOrganization(t *testing.T, e *apptest.AppEnv) string {
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{
 		"display_name": "Voltaq Systems GmbH", "source": "ui",
 	}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create organization = %d, want 201", status)

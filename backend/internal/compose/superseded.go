@@ -99,7 +99,12 @@ func fieldsThatMovedSince(ctx context.Context, tx pgx.Tx, row AuditRow) ([]strin
 	if len(after) == 0 {
 		return nil, nil
 	}
-	if !servesRecordType(entityType) {
+	// The edge's own table, for an edge row. The image an edge write records is
+	// the LINK's columns, so the question "has this moved since" is asked of the
+	// relationship row and never of either record the link joins — whose fields
+	// the entry did not touch. The identifier is one of a closed set of literals
+	// and never reaches here from a request.
+	if !servesRecordType(entityType) && entityType != edgeEntityType {
 		return nil, fmt.Errorf("compose: %q is not a record type this path reads", entityType)
 	}
 	asked, err := coupledImage(after)

@@ -276,12 +276,12 @@ func writeSweepGauges(w io.Writer, sweeps []jobs.SweepPass) error {
 		return cmp.Compare(a.Kind, b.Kind)
 	})
 
-	if err := writeFamilyHeader(w, "margince_sweep_workspaces_total",
+	if err := writeFamilyHeader(w, "margince_sweep_workspaces",
 		"Workspaces with a surviving child of this fleet pass. Counted per workspace rather than per pass: a child still active from an earlier fan-out is deduplicated out of the current one and writes no new row, so no batch can be identified. A workspace whose only child aged out of River's job retention is absent rather than reported as zero."); err != nil {
 		return err
 	}
 	for _, s := range ordered {
-		if _, err := fmt.Fprintf(w, "margince_sweep_workspaces_total{sweep=%s} %d\n",
+		if _, err := fmt.Fprintf(w, "margince_sweep_workspaces{sweep=%s} %d\n",
 			label(s.Kind), s.Workspaces); err != nil {
 			return err
 		}
@@ -316,12 +316,12 @@ func writeSweepUnitGauges(w io.Writer, units []jobs.SweepUnit) error {
 		return cmp.Compare(a.Kind, b.Kind)
 	})
 
-	if err := writeFamilyHeader(w, "margince_sweep_units_total",
-		"Fan-out units with a surviving child of this fleet pass, for the dispatchers that fan out per connection or per build rather than per workspace. The unit label names the grain. Kinds that fan out per workspace are absent here and reported by margince_sweep_workspaces_total, which is the same measurement for them."); err != nil {
+	if err := writeFamilyHeader(w, "margince_sweep_units",
+		"Fan-out units with a surviving child of this fleet pass, for the dispatchers that fan out per connection or per build rather than per workspace. The unit label names the grain. Kinds that fan out per workspace are absent here and reported by margince_sweep_workspaces, which is the same measurement for them."); err != nil {
 		return err
 	}
 	for _, u := range ordered {
-		if _, err := fmt.Fprintf(w, "margince_sweep_units_total{sweep=%s,unit=%s} %d\n",
+		if _, err := fmt.Fprintf(w, "margince_sweep_units{sweep=%s,unit=%s} %d\n",
 			label(u.Kind), label(fanOutUnitName(u.Unit)), u.Units); err != nil {
 			return err
 		}

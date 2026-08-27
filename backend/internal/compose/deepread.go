@@ -243,6 +243,10 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 	// gets its face even on a read whose extraction later comes back empty or
 	// dies outright.
 	w.resolveLogo(ctx, args, claim, crawl)
+	// Beside the logo and for the same reasons: a side fetch on the same
+	// guarded egress, under its own deadline, whose failure is never the
+	// read's. A company that publishes no newsroom is the ordinary case.
+	w.readNewsroom(ctx, claim, crawl)
 
 	return w.reportRead(ctx, args, claim, crawl, extraction)
 }

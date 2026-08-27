@@ -88,7 +88,7 @@ func recordDealUpdate(ctx context.Context, tx pgx.Tx, id ids.DealID, current crm
 // visible under the caller's row scope before it lands in the patch.
 func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontracts.Deal, in UpdateDealInput) (*storekit.Patch, error) {
 	p := storekit.NewPatch()
-	if err := applyClears(p, in.Clear, clearableDealColumns(current)); err != nil {
+	if err := storekit.ApplyClears(p, in.Clear, clearableDealColumns(current)); err != nil {
 		return nil, err
 	}
 	if in.Name != nil {

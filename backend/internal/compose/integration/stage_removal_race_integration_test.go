@@ -32,12 +32,12 @@ import (
 	"errors"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -182,66 +182,29 @@ const (
 // on a message that carries the row's identity and changes with it.
 const lockNotAvailable = "55P03"
 
-// probeBudget bounds the wait for a racer that never takes its lock, and
-// probeInterval paces the looking. The pair is the one this repo already
-// settled on for waiting out a contended backend (the approvals package's
-// lock probe): a DURATION rather than a probe count, because a count is a
-// race between round-trip speed and how fast the racer arrives, and both move
-// with the lane's own load — and a paced poll, because an unpaced one competes
-// for the very lock manager it is observing.
+// waitUntilRowLockIsRefused waits until the contested row is held hard enough
+// to refuse this probe, which is what proves the racer reached it.
 //
-// Two call sites here, each able to spend the budget once, against the lane's
-// 600s per-package timeout: a run in which both miss reports what it found
-// instead of reading as a hung suite.
-const (
-	probeBudget   = 60 * time.Second
-	probeInterval = 25 * time.Millisecond
-)
-
-// waitUntilRowLockIsRefused returns once the row is locked hard enough to
-// refuse query, which is the direct evidence that the racer holds it. The two
-// ways that can fail to happen are different diagnoses and get different
-// sentences: the racer finished without ever locking (finishedEarly), or it is
-// still running and the lock never appeared (missed). Neither may pass — a
-// round that proved nothing must say so.
+// The look is the whole of this suite's contribution; the loop around it —
+// budget, pacing, and the rule that a probe which gave up says what the run
+// failed to prove — is testdb.WaitForContention, shared with the
+// pg_stat_activity probe that asks a different question in the same shape.
 func waitUntilRowLockIsRefused(
 	t *testing.T, query string, id ids.UUID, racerReturned <-chan struct{}, finishedEarly, missed string,
 ) {
 	t.Helper()
-	ctx, cancel := context.WithTimeout(context.Background(), probeBudget)
-	defer cancel()
 	conn := freshConnection(t)
-	pace := time.NewTicker(probeInterval)
-	defer pace.Stop()
-	for {
+	testdb.WaitForContention(t, racerReturned, finishedEarly, missed, func(ctx context.Context) (bool, error) {
 		// The probe's own lock is held for the statement and no longer, so a
 		// look taken before the racer arrives delays it by a round trip at
 		// most and never changes which side wins.
 		_, err := conn.Exec(ctx, query, id)
 		var pgErr *pgconn.PgError
-		switch {
-		case errors.As(err, &pgErr) && pgErr.Code == lockNotAvailable:
-			return
-		case err != nil && ctx.Err() == nil:
-			t.Fatalf("probing the contested row: %v", err)
+		if errors.As(err, &pgErr) && pgErr.Code == lockNotAvailable {
+			return true, nil
 		}
-		select {
-		case <-racerReturned:
-			t.Fatal(finishedEarly)
-		case <-ctx.Done():
-			// A racer that finishes as the budget expires leaves both channels
-			// ready, and select would pick between them arbitrarily — so the
-			// finished case is re-read here rather than reported as a miss it
-			// was not.
-			select {
-			case <-racerReturned:
-				t.Fatal(finishedEarly)
-			default:
-				t.Fatal(missed)
-			}
-		case <-pace.C:
-		}
-	}
+		return false, err
+	})
 }
 
 // holdRow pins one row until the returned release runs: a connection of this

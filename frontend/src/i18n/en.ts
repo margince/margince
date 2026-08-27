@@ -59,8 +59,11 @@ export const en = {
   "history.tabChanges": "By change",
   "history.tabFields": "By field",
   "history.undo.action": "Put back",
+  "history.undo.redo": "Redo",
   "history.undo.busy": "Putting this change back…",
   "history.undo.confirmTitle": "Put this change back?",
+  "history.undo.confirmEdgeBody":
+    "This changes the link with {other}. The records stay; only the connection between them changes.",
   "history.undo.confirmBody":
     "{count} fields go back to what they were before this change:",
   "history.undo.versionSkew":
@@ -84,6 +87,19 @@ export const en = {
     "Putting this back would have to clear a field this record cannot clear, so it cannot be put back.",
   "history.undo.notWritableByCaller":
     "You do not have permission to write these fields.",
+  "history.undo.edgeRelinkUnsupported":
+    "Putting a removed link back isn't supported yet — add it again on this record.",
+  "history.reversal.collapsed": "{actor}'s change, undone by {undoer}",
+  "history.reversal.collapsedSelf": "{actor} undid their own change",
+  "history.reversal.partly": "{actor}'s change, partly undone by {undoer}",
+  "history.reversal.partlySelf": "{actor} partly undid their own change",
+  "history.reversal.net": "net: unchanged",
+  "history.reversal.stillChanged": "still changed",
+  "history.reversal.expand": "Show both changes",
+  "history.reversal.collapse": "Hide",
+  "history.reversal.undoneBy": "undone by {undoer}",
+  "history.reversal.unpaired": "undoing an earlier change",
+  "history.edge.marker": "Link",
   "history.field.address": "Address",
   "history.field.amount_minor": "Value",
   "history.field.assignee_id": "Assignee",
@@ -190,6 +206,7 @@ export const en = {
   "day.duplicate.person": "Two contacts look like the same person",
   "day.duplicate.org": "Two companies look like the same one",
   "day.duplicate.lead": "Two leads look like the same one",
+  "day.duplicate.generic": "Two records look like the same one",
   "day.duplicatesOpen": "{count} duplicate pairs open in all",
   // The decision lane, one at a time: how far through the reader is, and the
   // cleared plate the whole surface is built to reach.
@@ -305,6 +322,7 @@ export const en = {
   "action.readCompany": "Read a company",
   "action.booking": "Booking page",
 
+  "common.undo": "Undo",
   "common.close": "Close",
 
   "explain.open": "Explain this number",
@@ -314,6 +332,8 @@ export const en = {
   "board.count": "{count} deals",
   "board.weighted": "weighted {value}",
   "board.mixedCurrencies": "several currencies — no single total",
+  "dealfiles.hidden": "Hidden from this deal",
+  "dealfiles.unhidden": "Shown on this deal again",
   "deal.stalled": "stalled",
   "deal.singleThreaded": "single-threaded",
   "deal.staged": "staged",
@@ -323,6 +343,8 @@ export const en = {
   "record.timeline": "Timeline",
   "record.edit": "Edit",
   "record.save": "Save",
+  "record.saveDone": "“{name}” saved",
+  "record.archiveDone": "“{name}” archived",
   "record.archive": "Archive",
   "record.disqualify": "Disqualify",
   "record.archiveConfirm":
@@ -506,6 +528,7 @@ export const en = {
 
   "rel.add": "Add relationship",
   "rel.kind": "Kind",
+  "rel.saveDone": "Relationship saved",
   "rel.role": "Role",
   "rel.startedAt": "Started",
   "rel.endedAt": "Ended",
@@ -943,6 +966,7 @@ export const en = {
   "tab.tasks": "Tasks",
   "tab.timeline": "History",
   "tab.finance": "Finance",
+  "tab.network": "Network",
   "tab.documents": "Documents",
   "tab.profile": "Profile",
   "tab.meetings": "Meetings",
@@ -1674,10 +1698,14 @@ export const en = {
   "co.tags.noTags": "No tags applied.",
   "co.project.new": "New project",
   "co.deal.new": "New deal",
+  "co.tags.applied": "Tag “{name}” added",
+  "co.tags.alreadyThere": "“{name}” is already on this company",
+  "co.tags.removed": "Tag “{name}” taken off",
   "co.tags.apply": "Add tag",
   "co.tags.pick": "Tag name",
   "co.tags.overCap":
     "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
+  "co.lists.added": "Added to “{name}”",
   "co.lists.add": "Add to list",
   "co.lists.pick": "List name",
   "co.lists.overCap":
@@ -2047,6 +2075,16 @@ export const en = {
   "deal.seats.title": "Who is on this deal",
   "deal.seats.empty": "No stakeholder is recorded on this deal",
   "deal.seats.ours": "{count} of ours carry it",
+  "deal.committee.title": "The buying committee",
+  "deal.committee.empty": "No stakeholder is recorded on this deal",
+  "deal.committee.engaged": "Talking",
+  "deal.committee.quiet": "No reply",
+  "deal.committee.unnamedSeat": "A stakeholder you cannot see",
+  "deal.committee.legendEngaged": "Talking with us",
+  "deal.committee.legendQuiet": "On the deal, not talking",
+  "deal.committee.legendGap": "Missing cover",
+  "deal.committee.threads":
+    "{engaged} of {total} on the deal are talking to us.",
   "deal.strip.money": "The money",
   "deal.strip.money.offer": "Offer {number} · {status}",
   "deal.strip.money.noOffer": "No offer written yet",
@@ -2860,6 +2898,9 @@ export const en = {
   "unsaved.body":
     "Leaving this page now discards what you have typed. Go back to save it first.",
   "unsaved.discard": "Discard changes",
+  "settings.addedItem": "“{name}” added",
+  "settings.removedItem": "“{name}” removed",
+  "settings.removed": "Removed.",
   "settings.saved": "Saved.",
   "settings.signature": "Email signature",
   "settings.signatureSub":
@@ -4828,6 +4869,8 @@ export const en = {
     "Not subscribed — you receive nothing for this purpose",
   "prefs.alwaysOn": "always on",
   "prefs.lockedWhy": "Transactional — exempt from opt-out.",
+  "prefs.confirmationNeededWhy":
+    "To start receiving this, use the confirmation link we email you. You can stop it here at any time.",
   "prefs.notSaved": "Not saved yet.",
   "prefs.savePending": "Pending: {changes}.",
   "prefs.saveProof":
@@ -5465,6 +5508,11 @@ export const en = {
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Who may edit whose records: members of a team edit every teammate's records. Customers, contacts, leads and deals are readable by everyone.",
+  "users.deactivated": "{name} deactivated",
+  "users.reactivated": "{name} reactivated",
+  "users.roleSaved": "Role changed for {name}",
+  "users.teamArchived": "Team “{name}” archived",
+  "users.teamRestored": "Team “{name}” restored",
   "users.archiveTeam": "Archive team {name}",
   "users.newTeamLabel": "New team",
   "users.newTeamOpen": "New team",
@@ -5795,6 +5843,8 @@ export const en = {
   "quotas.err.targetZero": "This quota has no target yet",
   "quotas.err.computeFailed": "Attainment couldn't be computed",
   "quotas.err.ownerXorTeam": "Choose exactly one of owner or team.",
+  "quotas.saveDone": "Quota saved",
+  "quotas.archiveDone": "Quota archived",
   "quotas.archive.title": "Archive quota",
   "quotas.archive.confirm":
     "Archiving drops this quota from the list and stops tracking its attainment. Archived quotas can't be edited.",
@@ -5972,6 +6022,8 @@ export const en = {
   "webhooks.field.eventTypes": "Event types",
   "webhooks.field.state": "State",
   "webhooks.edit": "Edit",
+  "webhooks.saveDone": "Webhook saved",
+  "webhooks.archiveDone": "Webhook archived",
   "webhooks.archive": "Archive",
   "webhooks.archiveConfirm":
     "Archiving stops all delivery for this subscription. This can't be undone.",
@@ -6116,15 +6168,9 @@ export const en = {
   "person.graph.noRoute":
     "Nobody here corresponds with them or with anyone at their company yet.",
   "person.graph.direct": "Who knows them",
-  "person.graph.directSub":
-    "Colleagues who have corresponded with this contact themselves.",
   "person.graph.noDirect": "Nobody here has corresponded with them.",
   "person.graph.account": "At the same company",
-  "person.graph.accountSub":
-    "Their colleagues, and who here is warmest with each.",
   "person.graph.noAccount": "No other contacts on record at their company.",
-  "person.graph.omitted":
-    "Part of this is hidden because you do not have the grant for it.",
   "person.graph.noEdge": "No recorded correspondence with {name}.",
   "person.graph.withColleague": "with {name}",
   "person.graph.withContact": "with this contact",
@@ -6134,6 +6180,13 @@ export const en = {
     "Counts only — the messages themselves stay on the timeline.",
   "person.graph.untitledMessage": "Message with no subject",
   "person.graph.dropped": "{count} more not shown.",
+  "person.network.ringTitle": "Who reaches them",
+  "person.network.ringSub":
+    "Our side and this account, by how warm the relationship is. Pick anyone to see what it is made of.",
+  "person.network.momentsTitle": "What changed lately",
+  "person.network.momentsSub":
+    "Movements in this relationship, from the messages themselves.",
+  "person.network.noMoments": "Nothing has moved in this relationship lately.",
   "person.change.repliedAfterGap": "They replied after {days} quiet days.",
   "person.change.wentQuiet": "Nothing has happened for {days} days.",
   "person.change.warmed": "The relationship moved from {from} to {to}.",

@@ -24,7 +24,7 @@ func setupCollections(t *testing.T) (*apptest.AppEnv, string) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "List Target"}, nil, &person); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "List Target"}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
 	return e, person.ID
@@ -36,19 +36,19 @@ func TestListsLifecycleAndMembership(t *testing.T) {
 	var list struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
 		"name": "Q3 Targets", "entity_type": "person",
 	}, nil, &list); status != http.StatusCreated {
 		t.Fatalf("create list → %d", status)
 	}
 	// A static list refuses a definition; a dynamic one demands it.
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
 		"name": "Broken", "entity_type": "person", "list_type": "dynamic",
 	}, nil, nil); status != 422 {
 		t.Fatalf("definition-less dynamic list → %d, want 422", status)
 	}
 
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
 		"entity_type": "person", "entity_id": personID,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("add member → %d", status)
@@ -56,19 +56,19 @@ func TestListsLifecycleAndMembership(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
 		"entity_type": "person", "entity_id": personID,
 	}, nil, &problem); status != http.StatusConflict {
 		t.Fatalf("duplicate member → %d, want 409", status)
 	}
 	// A wrong-typed member is refused before any probe.
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
 		"entity_type": "deal", "entity_id": personID,
 	}, nil, nil); status != 422 {
 		t.Fatalf("type-mismatched member → %d, want 422", status)
 	}
 	// A member reference outside visibility is absent (H1).
-	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists/"+list.ID+"/members", AnyMap{
 		"entity_type": "person", "entity_id": "00000000-0000-7000-8000-00000000dead",
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("invisible member target → %d, want 404", status)
@@ -102,20 +102,20 @@ func TestTagsLifecycleAndApplication(t *testing.T) {
 	var tag struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/tags", apptest.AnyMap{"name": "Champion", "color": "#ff6b00"}, nil, &tag); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/tags", AnyMap{"name": "Champion", "color": "#ff6b00"}, nil, &tag); status != http.StatusCreated {
 		t.Fatalf("create tag → %d", status)
 	}
 	// The name is unique case-insensitively.
-	if status := e.Call(t, "POST", "/v1/tags", apptest.AnyMap{"name": "champion"}, nil, nil); status != http.StatusConflict {
+	if status := e.Call(t, "POST", "/v1/tags", AnyMap{"name": "champion"}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("duplicate tag name → %d, want 409", status)
 	}
 
-	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", AnyMap{
 		"entity_type": "person", "entity_id": personID,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("apply tag → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", AnyMap{
 		"entity_type": "person", "entity_id": personID,
 	}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("re-apply → %d, want 409", status)
@@ -125,7 +125,7 @@ func TestTagsLifecycleAndApplication(t *testing.T) {
 		t.Fatalf("archive tag → %d", status)
 	}
 	// An archived tag reads as absent for new applications.
-	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/tags/"+tag.ID+"/apply", AnyMap{
 		"entity_type": "person", "entity_id": personID,
 	}, nil, nil); status != http.StatusNotFound {
 		t.Fatalf("apply on archived tag → %d, want 404", status)

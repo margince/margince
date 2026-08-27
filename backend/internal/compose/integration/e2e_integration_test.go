@@ -24,11 +24,11 @@ import (
 // If-Match version skew, then the versioned update. Returns the person id.
 func exercisePersonWriteInvariants(t *testing.T, e *apptest.AppEnv, adminUserID string) string {
 	t.Helper()
-	var person apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var person AnyMap
+	status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Grace Hopper",
 		"source":    "ui",
-		"emails":    []apptest.AnyMap{{"email": "grace@navy.mil", "is_primary": true}},
+		"emails":    []AnyMap{{"email": "grace@navy.mil", "is_primary": true}},
 	}, nil, &person)
 	if status != http.StatusCreated {
 		t.Fatalf("create person = %d %v", status, person)
@@ -38,28 +38,28 @@ func exercisePersonWriteInvariants(t *testing.T, e *apptest.AppEnv, adminUserID 
 		t.Errorf("captured_by = %v; the server must stamp the acting principal", person["captured_by"])
 	}
 
-	var dup apptest.AnyMap
-	status = e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	var dup AnyMap
+	status = e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Grace Clone",
 		"source":    "ui",
-		"emails":    []apptest.AnyMap{{"email": "grace@navy.mil"}},
+		"emails":    []AnyMap{{"email": "grace@navy.mil"}},
 	}, nil, &dup)
 	if status != http.StatusConflict {
 		t.Fatalf("duplicate email = %d, want 409", status)
 	}
-	if dup["details"].(apptest.AnyMap)["existing_id"] != personID {
+	if dup["details"].(AnyMap)["existing_id"] != personID {
 		t.Errorf("409 existing_id = %v, want %s", dup["details"], personID)
 	}
 
-	var conflict apptest.AnyMap
-	status = e.Call(t, "PATCH", "/v1/people/"+personID, apptest.AnyMap{"title": "Rear Admiral"},
+	var conflict AnyMap
+	status = e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{"title": "Rear Admiral"},
 		map[string]string{"If-Match": "42"}, &conflict)
 	if status != http.StatusConflict || conflict["code"] != "version_skew" {
 		t.Fatalf("stale If-Match = %d %v, want 409 version_skew", status, conflict)
 	}
 
-	var person2 apptest.AnyMap
-	status = e.Call(t, "PATCH", "/v1/people/"+personID, apptest.AnyMap{"title": "Rear Admiral"},
+	var person2 AnyMap
+	status = e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{"title": "Rear Admiral"},
 		map[string]string{"If-Match": "1"}, &person2)
 	if status != http.StatusOK || person2["version"].(float64) != 2 {
 		t.Fatalf("If-Match update = %d version %v, want 200 v2", status, person2["version"])
@@ -73,19 +73,19 @@ func exercisePersonWriteInvariants(t *testing.T, e *apptest.AppEnv, adminUserID 
 func exerciseActivityIdempotentCapture(t *testing.T, e *apptest.AppEnv, dealID string) {
 	t.Helper()
 	// --- activity: log against the deal, idempotent capture replay ---
-	var activity apptest.AnyMap
-	logReq := apptest.AnyMap{
+	var activity AnyMap
+	logReq := AnyMap{
 		"kind":          "email",
 		"subject":       "Signed!",
 		"source":        "email:msg-1",
 		"source_system": "gmail",
 		"source_id":     "msg-1",
-		"links":         []apptest.AnyMap{{"entity_type": "deal", "entity_id": dealID}},
+		"links":         []AnyMap{{"entity_type": "deal", "entity_id": dealID}},
 	}
 	if status := e.Call(t, "POST", "/v1/activities", logReq, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log activity = %d %v", status, activity)
 	}
-	var replay apptest.AnyMap
+	var replay AnyMap
 	if status := e.Call(t, "POST", "/v1/activities", logReq, nil, &replay); status != http.StatusOK {
 		t.Fatalf("capture replay = %d, want 200 (idempotent)", status)
 	}
@@ -99,23 +99,23 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	// The cookie authenticates /me.
-	var me apptest.AnyMap
+	var me AnyMap
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("/me status = %d", status)
 	}
-	if got := me["user"].(apptest.AnyMap)["email"]; got != "ada@example.com" {
+	if got := me["user"].(AnyMap)["email"]; got != "ada@example.com" {
 		t.Fatalf("/me email = %v", got)
 	}
 
 	stages := apptest.DiscoverSeededPipeline(t, e)
-	personID := exercisePersonWriteInvariants(t, e, me["user"].(apptest.AnyMap)["id"].(string))
+	personID := exercisePersonWriteInvariants(t, e, me["user"].(AnyMap)["id"].(string))
 	dealID := apptest.ExerciseDealToWon(t, e, stages)
 
 	exerciseActivityIdempotentCapture(t, e, dealID)
 
 	// --- lead: segregated, dedupes on email ---
-	var lead apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/leads", apptest.AnyMap{
+	var lead AnyMap
+	status := e.Call(t, "POST", "/v1/leads", AnyMap{
 		"full_name":    "Cold Prospect",
 		"email":        "cold@example.org",
 		"company_name": "Unknown AG",
@@ -124,7 +124,7 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 	if status != http.StatusCreated {
 		t.Fatalf("create lead = %d %v", status, lead)
 	}
-	status = e.Call(t, "POST", "/v1/leads", apptest.AnyMap{
+	status = e.Call(t, "POST", "/v1/leads", AnyMap{
 		"email":  "cold@example.org",
 		"source": "import:batch-2",
 	}, nil, nil)
@@ -133,7 +133,7 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 	}
 
 	// --- archive cascades and stays fetchable by id ---
-	var person apptest.AnyMap
+	var person AnyMap
 	if status := e.Call(t, "DELETE", "/v1/people/"+personID, nil, nil, &person); status != http.StatusOK {
 		t.Fatalf("archive person = %d", status)
 	}
@@ -141,7 +141,7 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 		t.Error("archived person carries no archived_at")
 	}
 	var people struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/people", nil, nil, &people); status != http.StatusOK {
 		t.Fatalf("list people = %d", status)
@@ -154,8 +154,8 @@ func TestEndToEnd_coreSalesFlow(t *testing.T) {
 
 	// --- the governance audit view reflects the session's own trail ---
 	var audit struct {
-		Data []apptest.AnyMap `json:"data"`
-		Page apptest.AnyMap   `json:"page"`
+		Data []AnyMap `json:"data"`
+		Page AnyMap   `json:"page"`
 	}
 	if status := e.Call(t, "GET", "/v1/audit-log?entity_type=person&action=archive", nil, nil, &audit); status != http.StatusOK {
 		t.Fatalf("audit log = %d", status)
@@ -176,8 +176,8 @@ func TestEndToEnd_authAndSurfaceBoundaries(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	// An unimplemented contract operation answers an explicit 501.
-	var problem apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/coldstart", apptest.AnyMap{"url": "https://example.com"}, nil, &problem); status != http.StatusNotImplemented {
+	var problem AnyMap
+	if status := e.Call(t, "POST", "/v1/coldstart", AnyMap{"url": "https://example.com"}, nil, &problem); status != http.StatusNotImplemented {
 		t.Fatalf("unimplemented op = %d %v, want 501", status, problem)
 	}
 
@@ -190,8 +190,8 @@ func TestEndToEnd_authAndSurfaceBoundaries(t *testing.T) {
 	}
 
 	// Login re-authenticates with fresh credentials.
-	var me apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/auth/login", apptest.AnyMap{
+	var me AnyMap
+	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
 		"email":    "ada@example.com",
 		"password": "correct-horse-battery",
 	}, nil, &me); status != http.StatusOK {
@@ -202,8 +202,8 @@ func TestEndToEnd_authAndSurfaceBoundaries(t *testing.T) {
 	}
 
 	// Wrong password is a 401 that does not say which half was wrong.
-	var authErr apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/auth/login", apptest.AnyMap{
+	var authErr AnyMap
+	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
 		"email":    "ada@example.com",
 		"password": "wrong",
 	}, nil, &authErr); status != http.StatusUnauthorized {
@@ -225,9 +225,9 @@ func TestAdvancingToLostWithoutAReasonIsRefused(t *testing.T) {
 	stages := apptest.DiscoverSeededPipeline(t, e)
 	dealID := apptest.CreateOpenDeal(t, e, stages)
 
-	var refusal apptest.AnyMap
+	var refusal AnyMap
 	status := e.Call(t, "POST", "/v1/deals/"+dealID+"/advance",
-		apptest.AnyMap{"to_stage_id": stages.Lost}, nil, &refusal)
+		AnyMap{"to_stage_id": stages.Lost}, nil, &refusal)
 	if status != http.StatusUnprocessableEntity {
 		t.Fatalf("advance to lost with no reason = %d %v, want 422 — the deal_lost_reason CHECK must refuse it", status, refusal)
 	}

@@ -45,6 +45,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	overlaymod "github.com/margince/margince/backend/internal/modules/overlay"
@@ -181,7 +182,7 @@ func assertOverlayOpsGatedInNativeMode(t *testing.T, e *apptest.AppEnv) {
 func connectOverlayToTheFakeIncumbent(t *testing.T, e *apptest.AppEnv) (adminID, wsID ids.UUID, wsIDStr string) {
 	t.Helper()
 	var conn map[string]any
-	if status := e.Call(t, "POST", "/v1/overlay/connection", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/overlay/connection", integration.AnyMap{
 		"incumbent":       "hubspot",
 		"region":          "eu1",
 		"privateAppToken": "fake-token-never-used",
@@ -189,11 +190,11 @@ func connectOverlayToTheFakeIncumbent(t *testing.T, e *apptest.AppEnv) (adminID,
 		t.Fatalf("connect overlay = %d %v", status, conn)
 	}
 
-	var me apptest.AnyMap
+	var me integration.AnyMap
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("/me status = %d", status)
 	}
-	adminID, err := ids.Parse(me["user"].(apptest.AnyMap)["id"].(string))
+	adminID, err := ids.Parse(me["user"].(integration.AnyMap)["id"].(string))
 	if err != nil {
 		t.Fatalf("parsing admin user id: %v", err)
 	}

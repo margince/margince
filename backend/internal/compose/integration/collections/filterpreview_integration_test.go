@@ -32,8 +32,8 @@ import (
 // the column name so a filter can name it.
 func seedPeopleWithTier(t *testing.T, e *apptest.AppEnv, gold, other int) string {
 	t.Helper()
-	var field apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+	var field integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/custom-fields", integration.AnyMap{
 		"object": "person", "label": "Preview Tier", "type": "text", "source": "ui",
 	}, nil, &field); status != http.StatusCreated {
 		t.Fatalf("create custom field: status=%d body=%v", status, field)
@@ -47,8 +47,8 @@ func seedPeopleWithTier(t *testing.T, e *apptest.AppEnv, gold, other int) string
 		if i >= gold {
 			tier = "silver"
 		}
-		var person apptest.AnyMap
-		if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+		var person integration.AnyMap
+		if status := e.Call(t, "POST", "/v1/people", integration.AnyMap{
 			"full_name": "Preview Subject", "source": "ui", column: tier,
 		}, nil, &person); status != http.StatusCreated {
 			t.Fatalf("create person %d: status=%d body=%v", i, status, person)
@@ -83,11 +83,11 @@ func ledgers(t *testing.T, e *apptest.AppEnv) ledgerCounts {
 }
 
 type previewBody struct {
-	Resource   string           `json:"resource"`
-	MatchCount int              `json:"match_count"`
-	Columns    []string         `json:"columns"`
-	Rows       []apptest.AnyMap `json:"rows"`
-	Truncated  bool             `json:"truncated"`
+	Resource   string               `json:"resource"`
+	MatchCount int                  `json:"match_count"`
+	Columns    []string             `json:"columns"`
+	Rows       []integration.AnyMap `json:"rows"`
+	Truncated  bool                 `json:"truncated"`
 }
 
 // The count counts everything and the page is bounded, which is the whole point:
@@ -99,9 +99,9 @@ func TestAFilterPreviewCountsEveryMatchAndReturnsABoundedPage(t *testing.T) {
 
 	limit := 3
 	var got previewBody
-	if status := e.Call(t, "POST", "/v1/filters/preview", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
 		"resource": "person",
-		"filter":   apptest.AnyMap{"field": column, "op": "eq", "value": "gold"},
+		"filter":   integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 		"limit":    limit,
 	}, nil, &got); status != http.StatusOK {
 		t.Fatalf("preview: status=%d body=%+v", status, got)
@@ -136,9 +136,9 @@ func TestAFilterPreviewThatFitsIsNotTruncated(t *testing.T) {
 	column := seedPeopleWithTier(t, e, 2, 1)
 
 	var got previewBody
-	if status := e.Call(t, "POST", "/v1/filters/preview", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
 		"resource": "person",
-		"filter":   apptest.AnyMap{"field": column, "op": "eq", "value": "gold"},
+		"filter":   integration.AnyMap{"field": column, "op": "eq", "value": "gold"},
 	}, nil, &got); status != http.StatusOK {
 		t.Fatalf("preview: status=%d body=%+v", status, got)
 	}
@@ -157,10 +157,10 @@ func TestAFilterPreviewDescribesTheSameSliceTheExportWrites(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	column := seedPeopleWithTier(t, e, 3, 2)
-	filter := apptest.AnyMap{"field": column, "op": "eq", "value": "gold"}
+	filter := integration.AnyMap{"field": column, "op": "eq", "value": "gold"}
 
 	var preview previewBody
-	if status := e.Call(t, "POST", "/v1/filters/preview", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
 		"resource": "person", "filter": filter, "limit": 100,
 	}, nil, &preview); status != http.StatusOK {
 		t.Fatalf("preview: status=%d body=%+v", status, preview)
@@ -169,10 +169,10 @@ func TestAFilterPreviewDescribesTheSameSliceTheExportWrites(t *testing.T) {
 	// The export renders JSON, so the harness decodes its envelope straight into
 	// the shape below — that envelope is the comparison's other half.
 	var exported struct {
-		Rows     []apptest.AnyMap `json:"rows"`
-		RowCount int              `json:"row_count"`
+		Rows     []integration.AnyMap `json:"rows"`
+		RowCount int                  `json:"row_count"`
 	}
-	if status := e.Call(t, "POST", "/v1/exports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/exports", integration.AnyMap{
 		"object": "person", "filter": filter, "format": "json",
 	}, nil, &exported); status != http.StatusOK {
 		t.Fatalf("export: status=%d", status)
@@ -219,12 +219,12 @@ func TestAFilterPreviewWritesNoLedgerRowWhereAnExportDoes(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithSchemaPool(integration.SchemaPool(t)))
 	e.BootstrapWorkspace(t)
 	column := seedPeopleWithTier(t, e, 2, 0)
-	filter := apptest.AnyMap{"field": column, "op": "eq", "value": "gold"}
+	filter := integration.AnyMap{"field": column, "op": "eq", "value": "gold"}
 
 	before := ledgers(t, e)
 	for range 3 {
 		var got previewBody
-		if status := e.Call(t, "POST", "/v1/filters/preview", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/filters/preview", integration.AnyMap{
 			"resource": "person", "filter": filter,
 		}, nil, &got); status != http.StatusOK {
 			t.Fatalf("preview: status=%d", status)
@@ -234,8 +234,8 @@ func TestAFilterPreviewWritesNoLedgerRowWhereAnExportDoes(t *testing.T) {
 		t.Errorf("three previews moved the ledgers %+v → %+v; a recount while somebody types must write nothing", before, after)
 	}
 
-	var exported apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/exports", apptest.AnyMap{
+	var exported integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/exports", integration.AnyMap{
 		"object": "person", "filter": filter, "format": "json",
 	}, nil, &exported); status != http.StatusOK {
 		t.Fatalf("export: status=%d", status)
@@ -263,23 +263,23 @@ func TestAFilterPreviewRefusalNamesTheOffendingInput(t *testing.T) {
 
 	for _, c := range []struct {
 		name  string
-		body  apptest.AnyMap
+		body  integration.AnyMap
 		field string
 	}{
-		{"a field the vocabulary does not admit", apptest.AnyMap{
+		{"a field the vocabulary does not admit", integration.AnyMap{
 			"resource": "person",
-			"filter":   apptest.AnyMap{"field": "not_a_column", "op": "eq", "value": "x"},
+			"filter":   integration.AnyMap{"field": "not_a_column", "op": "eq", "value": "x"},
 		}, "not_a_column"},
-		{"no filter at all", apptest.AnyMap{"resource": "person"}, "filter"},
-		{"a resource with no engine", apptest.AnyMap{
+		{"no filter at all", integration.AnyMap{"resource": "person"}, "filter"},
+		{"a resource with no engine", integration.AnyMap{
 			"resource": "activity",
-			"filter":   apptest.AnyMap{"field": "kind", "op": "eq", "value": "call"},
+			"filter":   integration.AnyMap{"field": "kind", "op": "eq", "value": "call"},
 		}, "resource"},
 		// The contract publishes 1..100; a value outside it is refused rather than
 		// quietly rewritten, so a caller learns their request was not honoured.
-		{"a limit past the published ceiling", apptest.AnyMap{
+		{"a limit past the published ceiling", integration.AnyMap{
 			"resource": "person",
-			"filter":   apptest.AnyMap{"field": "full_name", "op": "contains", "value": "a"},
+			"filter":   integration.AnyMap{"field": "full_name", "op": "contains", "value": "a"},
 			"limit":    limitTooLarge,
 		}, "limit"},
 	} {

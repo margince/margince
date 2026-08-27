@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
 import type { Approval } from "./approvals.queries";
@@ -18,9 +19,14 @@ import type { Approval } from "./approvals.queries";
 //
 // The toast is the only signpost to a reversal that already exists, so what
 // matters is that it APPEARS and that pressing it lands on the record whose
-// history holds the change. useToast is local state paired with its own
-// ToastRegion — a row showing a toast without rendering the region shows
-// nothing at all, and only a render proves it does.
+// history holds the change.
+//
+// The region is the application's, mounted once in `main.tsx`, so this harness
+// mounts it the same way. The row used to render its own when no surface handed
+// one down, which is what let a row shown on its own say anything at all; with
+// one region for the whole app that fallback — and the prop that fed it — is
+// gone, and a suite that renders the row alone has to supply the region the
+// shell would.
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -35,7 +41,12 @@ function render(ui: ReactNode) {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          {ui}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }

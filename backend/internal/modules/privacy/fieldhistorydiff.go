@@ -68,9 +68,14 @@ type auditDiffRow struct {
 	actorID    string
 	passportID *ids.UUID
 	evidence   map[string]any
-	occurredAt time.Time
-	before     map[string]any
-	after      map[string]any
+	// undidAuditLogID is read off evidence at scan time, where the row's other
+	// jsonb decodes report their failures. It travels separately because the
+	// image itself surfaces for agent actors only and the link must surface for
+	// every actor — a restore's actor is a human.
+	undidAuditLogID *ids.UUID
+	occurredAt      time.Time
+	before          map[string]any
+	after           map[string]any
 }
 
 // diffAuditRowFields projects one audit row into per-field entries:
@@ -135,17 +140,18 @@ func makeFieldHistoryEntry(row auditDiffRow, field string, oldValue, newValue *s
 		evidence = row.evidence
 	}
 	return FieldHistoryEntry{
-		ID:         row.id,
-		EntityType: row.entityType,
-		EntityID:   row.entityID,
-		Field:      field,
-		OldValue:   oldValue,
-		NewValue:   newValue,
-		ChangedAt:  row.occurredAt,
-		ActorType:  row.actorType,
-		ActorID:    row.actorID,
-		PassportID: passportID,
-		Evidence:   evidence,
+		ID:              row.id,
+		EntityType:      row.entityType,
+		EntityID:        row.entityID,
+		Field:           field,
+		OldValue:        oldValue,
+		NewValue:        newValue,
+		ChangedAt:       row.occurredAt,
+		ActorType:       row.actorType,
+		ActorID:         row.actorID,
+		PassportID:      passportID,
+		Evidence:        evidence,
+		UndidAuditLogID: row.undidAuditLogID,
 	}
 }
 

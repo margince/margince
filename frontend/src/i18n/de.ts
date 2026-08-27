@@ -55,8 +55,11 @@ export const de = {
   "history.tabChanges": "Nach Änderung",
   "history.tabFields": "Nach Feld",
   "history.undo.action": "Zurücksetzen",
+  "history.undo.redo": "Erneut anwenden",
   "history.undo.busy": "Änderung wird zurückgesetzt…",
   "history.undo.confirmTitle": "Diese Änderung zurücksetzen?",
+  "history.undo.confirmEdgeBody":
+    "Dies ändert die Verknüpfung mit {other}. Die Datensätze bleiben; nur die Verbindung zwischen ihnen ändert sich.",
   "history.undo.confirmBody":
     "{count} Felder kehren auf den Stand vor dieser Änderung zurück:",
   "history.undo.versionSkew":
@@ -80,6 +83,23 @@ export const de = {
     "Ein Zurücksetzen müsste ein Feld leeren, das dieser Datensatz nicht leeren kann, und ist daher nicht möglich.",
   "history.undo.notWritableByCaller":
     "Sie haben keine Berechtigung, diese Felder zu schreiben.",
+  "history.undo.edgeRelinkUnsupported":
+    "Eine entfernte Verknüpfung wiederherzustellen ist noch nicht möglich — legen Sie sie auf diesem Datensatz erneut an.",
+  "history.reversal.collapsed":
+    "Änderung von {actor}, zurückgesetzt von {undoer}",
+  "history.reversal.collapsedSelf":
+    "{actor} hat die eigene Änderung zurückgesetzt",
+  "history.reversal.partly":
+    "Änderung von {actor}, teilweise zurückgesetzt von {undoer}",
+  "history.reversal.partlySelf":
+    "{actor} hat die eigene Änderung teilweise zurückgesetzt",
+  "history.reversal.net": "Ergebnis: unverändert",
+  "history.reversal.stillChanged": "weiterhin geändert",
+  "history.reversal.expand": "Beide Änderungen anzeigen",
+  "history.reversal.collapse": "Ausblenden",
+  "history.reversal.undoneBy": "zurückgesetzt von {undoer}",
+  "history.reversal.unpaired": "setzt eine frühere Änderung zurück",
+  "history.edge.marker": "Verknüpfung",
   "history.field.address": "Adresse",
   "history.field.amount_minor": "Wert",
   "history.field.assignee_id": "Zuständig",
@@ -186,6 +206,7 @@ export const de = {
   "day.duplicate.person": "Zwei Kontakte sehen nach derselben Person aus",
   "day.duplicate.org": "Zwei Unternehmen sehen nach demselben aus",
   "day.duplicate.lead": "Zwei Leads sehen nach demselben aus",
+  "day.duplicate.generic": "Zwei Einträge sehen nach demselben aus",
   "day.duplicatesOpen": "{count} Dubletten-Paare insgesamt offen",
   "day.focus.progress": "Entscheidung {position} von {total}",
   "day.focus.clear": "Nichts mehr zu entscheiden.",
@@ -284,6 +305,7 @@ export const de = {
   "action.readCompany": "Firma einlesen",
   "action.booking": "Buchungsseite",
 
+  "common.undo": "Rückgängig",
   "common.close": "Schließen",
 
   "explain.open": "Diese Zahl erklären",
@@ -293,6 +315,8 @@ export const de = {
   "board.count": "{count} Deals",
   "board.weighted": "gewichtet {value}",
   "board.mixedCurrencies": "mehrere Währungen — keine Gesamtsumme",
+  "dealfiles.hidden": "Von diesem Deal ausgeblendet",
+  "dealfiles.unhidden": "Wieder an diesem Deal sichtbar",
   "deal.stalled": "stockt",
   "deal.archived": "archiviert",
   "deal.singleThreaded": "nur ein Kontakt",
@@ -302,6 +326,8 @@ export const de = {
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",
   "record.save": "Speichern",
+  "record.saveDone": "„{name}“ gespeichert",
+  "record.archiveDone": "„{name}“ archiviert",
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
@@ -488,6 +514,7 @@ export const de = {
 
   "rel.add": "Beziehung hinzufügen",
   "rel.kind": "Art",
+  "rel.saveDone": "Beziehung gespeichert",
   "rel.role": "Rolle",
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
@@ -899,6 +926,7 @@ export const de = {
   "tab.tasks": "Aufgaben",
   "tab.timeline": "Verlauf",
   "tab.finance": "Finanzen",
+  "tab.network": "Netzwerk",
   "tab.documents": "Dokumente",
   "tab.profile": "Profil",
   "tab.meetings": "Termine",
@@ -1633,10 +1661,14 @@ export const de = {
   "co.tags.noTags": "Keine Tags vergeben.",
   "co.project.new": "Neues Projekt",
   "co.deal.new": "Neuer Deal",
+  "co.tags.applied": "Tag „{name}“ hinzugefügt",
+  "co.tags.alreadyThere": "„{name}“ ist bereits an dieser Firma",
+  "co.tags.removed": "Tag „{name}“ entfernt",
   "co.tags.apply": "Tag hinzufügen",
   "co.tags.pick": "Tag-Name",
   "co.tags.overCap":
     "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
+  "co.lists.added": "Zu „{name}“ hinzugefügt",
   "co.lists.add": "Zu Liste hinzufügen",
   "co.lists.pick": "Listenname",
   "co.lists.overCap":
@@ -2013,6 +2045,16 @@ export const de = {
   "deal.seats.title": "Wer an diesem Deal beteiligt ist",
   "deal.seats.empty": "Für diesen Deal ist niemand erfasst",
   "deal.seats.ours": "{count} von uns tragen ihn",
+  "deal.committee.title": "Das Buying Center",
+  "deal.committee.empty": "Für diesen Deal ist niemand hinterlegt",
+  "deal.committee.engaged": "Im Austausch",
+  "deal.committee.quiet": "Keine Antwort",
+  "deal.committee.unnamedSeat": "Beteiligte Person, für Sie nicht sichtbar",
+  "deal.committee.legendEngaged": "Im Austausch mit uns",
+  "deal.committee.legendQuiet": "Am Deal beteiligt, aber still",
+  "deal.committee.legendGap": "Fehlende Abdeckung",
+  "deal.committee.threads":
+    "{engaged} von {total} Beteiligten sprechen mit uns.",
   "deal.strip.money": "Das Geld",
   "deal.strip.money.offer": "Angebot {number} · {status}",
   "deal.strip.money.noOffer": "Noch kein Angebot geschrieben",
@@ -2820,6 +2862,9 @@ export const de = {
   "unsaved.body":
     "Wenn du die Seite jetzt verlässt, gehen deine Eingaben verloren. Geh zurück, um sie zuerst zu speichern.",
   "unsaved.discard": "Änderungen verwerfen",
+  "settings.addedItem": "„{name}“ hinzugefügt",
+  "settings.removedItem": "„{name}“ entfernt",
+  "settings.removed": "Entfernt.",
   "settings.saved": "Gespeichert.",
   "settings.signature": "E-Mail-Signatur",
   "settings.signatureSub":
@@ -4760,6 +4805,8 @@ export const de = {
     "Nicht abonniert — du bekommst für diesen Zweck nichts",
   "prefs.alwaysOn": "immer an",
   "prefs.lockedWhy": "Transaktional — von der Abmeldung ausgenommen.",
+  "prefs.confirmationNeededWhy":
+    "Um dies zu erhalten, nutzen Sie den Bestätigungslink aus unserer E-Mail. Abbestellen können Sie hier jederzeit.",
   "prefs.notSaved": "Noch nicht gespeichert.",
   "prefs.savePending": "Ausstehend: {changes}.",
   "prefs.saveProof":
@@ -5414,6 +5461,11 @@ export const de = {
   "users.teamsTitle": "Teams",
   "users.teamsSub":
     "Wer welche Datensätze bearbeiten darf: Mitglieder eines Teams bearbeiten die Datensätze aller Teammitglieder. Lesen dürfen Kunden, Kontakte, Leads und Deals alle.",
+  "users.deactivated": "{name} deaktiviert",
+  "users.reactivated": "{name} reaktiviert",
+  "users.roleSaved": "Rolle für {name} geändert",
+  "users.teamArchived": "Team „{name}“ archiviert",
+  "users.teamRestored": "Team „{name}“ wiederhergestellt",
   "users.archiveTeam": "Team {name} archivieren",
   "users.newTeamLabel": "Neues Team",
   "users.newTeamOpen": "Neues Team",
@@ -5749,6 +5801,8 @@ export const de = {
   "quotas.err.targetZero": "Diese Quota hat noch kein Ziel",
   "quotas.err.computeFailed": "Zielerreichung konnte nicht berechnet werden",
   "quotas.err.ownerXorTeam": "Wählen Sie genau eines: Inhaber oder Team.",
+  "quotas.saveDone": "Quota gespeichert",
+  "quotas.archiveDone": "Quota archiviert",
   "quotas.archive.title": "Quota archivieren",
   "quotas.archive.confirm":
     "Das Archivieren entfernt diese Quota aus der Liste und stoppt die Verfolgung der Zielerreichung. Archivierte Quotas können nicht bearbeitet werden.",
@@ -5927,6 +5981,8 @@ export const de = {
   "webhooks.field.eventTypes": "Ereignistypen",
   "webhooks.field.state": "Status",
   "webhooks.edit": "Bearbeiten",
+  "webhooks.saveDone": "Webhook gespeichert",
+  "webhooks.archiveDone": "Webhook archiviert",
   "webhooks.archive": "Archivieren",
   "webhooks.archiveConfirm":
     "Das Archivieren stoppt jede Zustellung für dieses Abonnement. Dies kann nicht rückgängig gemacht werden.",
@@ -6071,16 +6127,10 @@ export const de = {
   "person.graph.noRoute":
     "Bisher steht hier niemand im Austausch mit ihnen oder mit jemandem in ihrem Unternehmen.",
   "person.graph.direct": "Wer sie kennt",
-  "person.graph.directSub":
-    "Kolleginnen und Kollegen, die selbst mit diesem Kontakt korrespondiert haben.",
   "person.graph.noDirect": "Hier hat niemand mit ihnen korrespondiert.",
   "person.graph.account": "Im selben Unternehmen",
-  "person.graph.accountSub":
-    "Ihre Kolleginnen und Kollegen \u2014 und wer hier zu jedem den w\u00e4rmsten Draht hat.",
   "person.graph.noAccount":
     "Keine weiteren Kontakte in diesem Unternehmen erfasst.",
-  "person.graph.omitted":
-    "Ein Teil davon ist ausgeblendet, weil die Berechtigung daf\u00fcr fehlt.",
   "person.graph.noEdge": "Keine erfasste Korrespondenz mit {name}.",
   "person.graph.withColleague": "mit {name}",
   "person.graph.withContact": "mit diesem Kontakt",
@@ -6090,6 +6140,14 @@ export const de = {
     "Nur Z\u00e4hlwerte \u2014 die Nachrichten selbst bleiben in der Chronik.",
   "person.graph.untitledMessage": "Nachricht ohne Betreff",
   "person.graph.dropped": "{count} weitere werden nicht angezeigt.",
+  "person.network.ringTitle": "Wer diese Person erreicht",
+  "person.network.ringSub":
+    "Unsere Seite und dieser Account, nach der Wärme der Beziehung. Wählen Sie jemanden aus, um zu sehen, worauf sie beruht.",
+  "person.network.momentsTitle": "Was sich zuletzt bewegt hat",
+  "person.network.momentsSub":
+    "Bewegungen in dieser Beziehung, aus den Nachrichten selbst.",
+  "person.network.noMoments":
+    "In dieser Beziehung hat sich zuletzt nichts bewegt.",
   "person.change.repliedAfterGap": "Antwort nach {days} stillen Tagen.",
   "person.change.wentQuiet": "Seit {days} Tagen ist nichts passiert.",
   "person.change.warmed": "Die Beziehung ist von {from} auf {to} gestiegen.",

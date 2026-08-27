@@ -260,3 +260,32 @@ func ConfigItems() []config.Item {
 	}
 	return items
 }
+
+// ParseBinding reads a "provider:model" spec and the endpoint that goes with it.
+//
+// It lives beside ProviderConfig because that is the only domain type it names,
+// and because its callers cannot share it anywhere lower: aicert sits under
+// compose, so a compose test cannot import it without a cycle, and the alternative
+// is two spellings of the first-colon rule below — the one thing here that must
+// not be copied.
+//
+// Exported with no production caller today, deliberately. Both callers are
+// by-hand lanes (`e2e_llm`, `voicelive`) that hand it an operator-supplied spec;
+// the rule is about how a binding is WRITTEN, so it belongs with the type
+// whichever lane reads one next.
+//
+// The split cuts at the FIRST colon and leaves the rest of the slug whole:
+// OpenRouter marks a served variant with its own colon suffix (":free",
+// ":batch", ":thinking"), and cutting at the last one would silently certify a
+// different variant from the one asked for.
+//
+// baseURL is carried rather than inferred. openai_compatible fails closed
+// without one — the endpoint belongs to the vendor, not the model — so a broker
+// run supplies it and a native vendor leaves it empty for the provider default.
+func ParseBinding(spec, baseURL string) (ProviderConfig, error) {
+	provider, modelName, found := strings.Cut(spec, ":")
+	if !found || provider == "" || modelName == "" {
+		return ProviderConfig{}, fmt.Errorf("ai: a model binding wants provider:model, got %q", spec)
+	}
+	return ProviderConfig{Provider: provider, Model: modelName, BaseURL: baseURL}, nil
+}

@@ -28,6 +28,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -82,22 +83,22 @@ type httpResult struct {
 // admission assertion needs: whether this credential gets in at all. An empty
 // bearer sends NO Authorization header — the unauthenticated shape a client
 // starts its discovery from, which is not the same as an empty credential.
-func listTools(e *apptest.AppEnv, t *testing.T, bearer string) httpResult {
+func listTools(t *testing.T, e *apptest.AppEnv, bearer string) httpResult {
 	t.Helper()
 	headers := map[string]string{"Content-Type": "application/json"}
 	if bearer != "" {
 		headers["Authorization"] = "Bearer " + bearer
 	}
-	return mcpRaw(e, t, http.MethodPost, "/mcp", `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`, headers)
+	return mcpRaw(t, e, http.MethodPost, "/mcp", `{"jsonrpc":"2.0","id":1,"method":"tools/list"}`, headers)
 }
 
 // getJSON dereferences a discovery document the way a client does and fails
 // on anything but a 200 with a JSON object.
 //
 //craft:ignore naked-any a discovery document is an open JSON object by RFC 8414/9728 — asserting on it means reading it untyped
-func getJSON(e *apptest.AppEnv, t *testing.T, path string) map[string]any {
+func getJSON(t *testing.T, e *apptest.AppEnv, path string) map[string]any {
 	t.Helper()
-	got := mcpRaw(e, t, http.MethodGet, path, "", nil)
+	got := mcpRaw(t, e, http.MethodGet, path, "", nil)
 	if got.StatusCode != http.StatusOK {
 		t.Fatalf("GET %s → %d %s", path, got.StatusCode, got.Body)
 	}
@@ -111,7 +112,7 @@ func getJSON(e *apptest.AppEnv, t *testing.T, path string) map[string]any {
 // raw issues one request against the harness origin and returns the whole
 // outcome. It never decodes: the connector suite asserts on status codes and
 // headers as often as on bodies, and a 404 has no JSON to decode.
-func mcpRaw(e *apptest.AppEnv, t *testing.T, method, path, payload string, headers map[string]string) httpResult {
+func mcpRaw(t *testing.T, e *apptest.AppEnv, method, path, payload string, headers map[string]string) httpResult {
 	t.Helper()
 	var body io.Reader
 	if payload != "" {
@@ -141,7 +142,7 @@ func mcpRaw(e *apptest.AppEnv, t *testing.T, method, path, payload string, heade
 // that URL is served here, and it points at this same issuer.
 func TestMCPIsServedAtTheAPIOriginWithDiscovery(t *testing.T) {
 	env := setupConnector(t)
-	resp := listTools(env.AppEnv, t, "")
+	resp := listTools(t, env.AppEnv, "")
 	if resp.StatusCode != http.StatusUnauthorized {
 		t.Fatalf("unauthenticated POST /mcp → %d, want 401", resp.StatusCode)
 	}
@@ -150,7 +151,7 @@ func TestMCPIsServedAtTheAPIOriginWithDiscovery(t *testing.T) {
 	if !strings.HasPrefix(metaURL, env.origin) {
 		t.Fatalf("resource_metadata = %q, want an absolute URL on %s", metaURL, env.origin)
 	}
-	doc := getJSON(env.AppEnv, t, strings.TrimPrefix(metaURL, env.origin))
+	doc := getJSON(t, env.AppEnv, strings.TrimPrefix(metaURL, env.origin))
 	if doc["resource"] != env.origin+"/mcp" {
 		t.Fatalf("resource = %v, want %s/mcp", doc["resource"], env.origin)
 	}
@@ -161,7 +162,7 @@ func TestMCPIsServedAtTheAPIOriginWithDiscovery(t *testing.T) {
 	if !ok || len(servers) != 1 || servers[0] != env.origin {
 		t.Fatalf("authorization_servers = %v, want [%s]", doc["authorization_servers"], env.origin)
 	}
-	asDoc := getJSON(env.AppEnv, t, "/.well-known/oauth-authorization-server")
+	asDoc := getJSON(t, env.AppEnv, "/.well-known/oauth-authorization-server")
 	if asDoc["issuer"] != env.origin || asDoc["token_endpoint"] != env.origin+"/oauth/token" {
 		t.Fatalf("authorization-server metadata = %v, want issuer+token endpoint on %s", asDoc, env.origin)
 	}
@@ -193,7 +194,7 @@ func TestMCPOnTheAPIServesTheAPIsOwnToolSurface(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := env.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := env.Call(t, "POST", "/v1/passports", integration.AnyMap{
 		"label": "connector client", "scopes": []string{"read"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport → %d", status)
@@ -216,7 +217,7 @@ func TestMCPOnTheAPIServesTheAPIsOwnToolSurface(t *testing.T) {
 		t.Fatal("the REST agent surface reports no tools, so there is nothing to compare the transport against")
 	}
 
-	got := listTools(env.AppEnv, t, minted.Token)
+	got := listTools(t, env.AppEnv, minted.Token)
 	if got.StatusCode != http.StatusOK {
 		t.Fatalf("authenticated POST /mcp → %d %s", got.StatusCode, got.Body)
 	}
@@ -277,7 +278,7 @@ func TestConnectorGateOffRemovesEveryConnectorRoute(t *testing.T) {
 	}
 	var want, wantFrom string
 	for _, p := range probes {
-		got := mcpRaw(e, t, p.method, p.path, p.payload, nil)
+		got := mcpRaw(t, e, p.method, p.path, p.payload, nil)
 		if got.StatusCode != http.StatusNotFound {
 			t.Fatalf("%s %s → %d, want 404: the gate must remove the route, not guard it",
 				p.method, p.path, got.StatusCode)
@@ -340,7 +341,7 @@ func (e *connectorEnv) rpc(t *testing.T, bearer, protocolVersion, payload string
 	if protocolVersion != "" {
 		headers["MCP-Protocol-Version"] = protocolVersion
 	}
-	got := mcpRaw(e.AppEnv, t, http.MethodPost, "/mcp", payload, headers)
+	got := mcpRaw(t, e.AppEnv, http.MethodPost, "/mcp", payload, headers)
 	if got.StatusCode != http.StatusOK {
 		t.Fatalf("POST /mcp %s → %d %s", payload, got.StatusCode, got.Body)
 	}

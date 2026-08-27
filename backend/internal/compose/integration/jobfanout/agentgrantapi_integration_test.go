@@ -19,7 +19,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
 // grantPath is the endpoint these tests answer on.
@@ -28,7 +28,7 @@ const grantPath = "/v1/me/agent-grants/morning_brief"
 // answerGrant puts one answer as the signed-in rep.
 func (re *runnerEnv) answerGrant(t *testing.T, granted bool) int {
 	t.Helper()
-	return re.Call(t, "PUT", grantPath, apptest.AnyMap{"granted": granted}, nil, nil)
+	return re.Call(t, "PUT", grantPath, integration.AnyMap{"granted": granted}, nil, nil)
 }
 
 func TestGrantingMintsTheRepsOwnCredentialAndNothingWider(t *testing.T) {
@@ -152,7 +152,7 @@ func TestTwoSimultaneousAnswersStillLeaveOneLiveCredential(t *testing.T) {
 		go func(slot int) {
 			defer wg.Done()
 			<-start
-			statuses[slot] = re.Call(t, "PUT", grantPath, apptest.AnyMap{"granted": true}, nil, nil)
+			statuses[slot] = re.Call(t, "PUT", grantPath, integration.AnyMap{"granted": true}, nil, nil)
 		}(i)
 	}
 	close(start)
@@ -178,7 +178,7 @@ func TestTwoSimultaneousAnswersStillLeaveOneLiveCredential(t *testing.T) {
 func TestAnUnknownAgentIsRefusedRatherThanGranted(t *testing.T) {
 	re := setupRunner(t)
 	status := re.Call(t, "PUT", "/v1/me/agent-grants/not_an_agent",
-		apptest.AnyMap{"granted": true}, nil, nil)
+		integration.AnyMap{"granted": true}, nil, nil)
 	// 422, not 200: minting a credential for an agent this build does not
 	// schedule is authority that can never be used and never be found.
 	if status != http.StatusUnprocessableEntity && status != http.StatusBadRequest {

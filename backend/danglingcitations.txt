@@ -156,8 +156,8 @@ backend/internal/modules/people/organizationlogo.go core 0217
 backend/internal/modules/people/relationshiperrors.go migration 0007
 backend/internal/modules/people/relationshiperrors.go migration 1787111736
 backend/internal/modules/people/sitereadfinish.go migration 0221
+backend/internal/modules/privacy/auditprojection.go migration 1787109970
 backend/internal/modules/privacy/erasure_approvals.go core 0244
-backend/internal/modules/privacy/recordhistory.go migration 1787109970
 backend/internal/modules/privacy/recordhistoryverbs.go migration 0287
 backend/internal/modules/privacy/retentionpolicystore.go core 0217
 backend/internal/modules/privacy/retentionrestricted.go migration 0291

@@ -177,8 +177,14 @@ func TestDispatcherRoutesAChannelDeliveryToMessageSender(t *testing.T) {
 // redelivered job must refuse to transmit rather than deliver a second copy to a
 // customer with nothing able to detect it.
 func TestChannelDeliveryParksOnAnUnknownOutcome(t *testing.T) {
+	// One fixture, a reply of its own per case. What isolates the two is the
+	// delivery ID, not an untouched store — each case dispatches, and a
+	// dispatch writes: the status, the park reason, the in-flight marker. Both
+	// halves read those back by the id they staged, so neither can see the
+	// other's row.
+	e := setupStore(t)
+
 	t.Run("the attempt that gets no answer parks rather than retrying", func(t *testing.T) {
-		e := setupStore(t)
 		id := e.stageReply(t)
 
 		unanswered := errors.New("telegram: sendMessage: context deadline exceeded")
@@ -219,7 +225,6 @@ func TestChannelDeliveryParksOnAnUnknownOutcome(t *testing.T) {
 	})
 
 	t.Run("a crashed attempt's marker stops the next one from transmitting", func(t *testing.T) {
-		e := setupStore(t)
 		id := e.stageReply(t)
 
 		// Exactly what a killed worker leaves behind: the marker committed

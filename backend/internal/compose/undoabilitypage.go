@@ -60,11 +60,13 @@ func (p UndoabilityPage) ForRecord(ctx context.Context, entityType string, entit
 		if err != nil {
 			return err
 		}
-		undone, err := p.liveReversals(ctx, tx, entityType, entityID)
+		rows, err := p.pageRows(ctx, tx, entityType, entityID, auditIDs)
 		if err != nil {
 			return err
 		}
-		rows, err := p.pageRows(ctx, tx, entityType, entityID, auditIDs)
+		// After the rows and derived from them: a page holds the record's own rows
+		// AND the rows of its links, and a link's reversal is recorded on the link.
+		undone, err := p.liveReversals(ctx, tx, rows)
 		if err != nil {
 			return err
 		}
@@ -109,15 +111,30 @@ func (p UndoabilityPage) recordFacts(ctx context.Context, tx pgx.Tx, entityType 
 }
 
 // pageRow is an AuditRow with the boundary answer the page query already found.
+//
+// behindErasure is nil for a LINK's row, and that absence is the answer rather
+// than a gap: the page query keys the boundary on the row's own
+// (entity_type, entity_id), which for a link is ('relationship', edge_id) — an
+// identity no write path in this tree records a scrub verb against. A boolean
+// there would read "never erased" for every link there has ever been. What
+// bounds a link is its ENDPOINTS' tombstones, and the one predicate that reads
+// them is the write's own port.
 type pageRow struct {
 	AuditRow
-	behindErasure bool
+	behindErasure *bool
 }
 
 // pageRows reads the page's audit rows in ONE query, carrying the erasure
 // boundary on each through privacy's OWN predicate. Restating that predicate
 // here is how two readers of one erasure come to disagree about where it sits,
 // and an Art. 17 boundary is not a rule where almost-the-same is survivable.
+//
+// A row is the record's own or a LINK's. Bound to the record's identity alone the
+// link rows come back unjudged, which the surface renders as a disabled button
+// with no reason — the shape this feature exists to remove. What bounds the rows
+// instead is the id list, which the history read computed from the page it had
+// just served past every one of its own gates; nothing about a row reaches the
+// caller from here, only a verdict about an entry they have already been shown.
 func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID, auditIDs []ids.UUID) ([]pageRow, error) {
 	// Derived, not typed. The verb list reaches privacy's predicate as a
 	// POSITION, so a hand-written placeholder here and the argument order
@@ -131,13 +148,16 @@ func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType str
 	idPlaceholder := arg(entityID)
 	verbsPlaceholder := arg(privacy.ScrubVerbs())
 	rowsPlaceholder := arg(auditIDs)
+	edgePlaceholder := arg(privacy.EdgeEntityType)
 
 	rows, err := tx.Query(ctx, `
 		SELECT a.id, a.entity_type, a.entity_id, a.action, a.before, a.after, a.occurred_at,
-		       NOT (`+privacy.UnscrubbedImageSQL("a", verbsPlaceholder)+`) AS behind_erasure
+		       CASE WHEN a.entity_type = `+edgePlaceholder+` THEN NULL
+		            ELSE NOT (`+privacy.UnscrubbedImageSQL("a", verbsPlaceholder)+`) END AS behind_erasure
 		FROM audit_log a
-		WHERE a.entity_type = `+typePlaceholder+` AND a.entity_id = `+idPlaceholder+`
-		  AND a.id = ANY(`+rowsPlaceholder+`::uuid[])`,
+		WHERE a.id = ANY(`+rowsPlaceholder+`::uuid[])
+		  AND ((a.entity_type = `+typePlaceholder+` AND a.entity_id = `+idPlaceholder+`)
+		       OR a.entity_type = `+edgePlaceholder+`)`,
 		args...)
 	if err != nil {
 		return nil, err
@@ -155,46 +175,77 @@ func (p UndoabilityPage) pageRows(ctx context.Context, tx pgx.Tx, entityType str
 	return out, rows.Err()
 }
 
-// liveReversals is the set of audit rows a live restore already reverses — one
-// query for the page, riding idx_audit_entity on the record's own rows. A
+// liveReversals is the set of audit rows a live restore already reverses. A
 // reversal that has itself been reversed is not live, which is what keeps the
 // trail navigable in both directions rather than a one-way ratchet.
-func (p UndoabilityPage) liveReversals(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.UUID) (map[string]bool, error) {
-	rows, err := tx.Query(ctx, `
+//
+// Keyed on the SUBJECTS the page's rows are about, not on the record: a link's
+// reversal lands on ('relationship', edge_id), so a query bound to the record
+// finds none of them — already_undone never fires on a link row, the collapsed
+// pair never forms for one, and the page goes on offering "Put back" on a link
+// somebody has already put back. One query still, riding idx_audit_entity once
+// per subject.
+func (p UndoabilityPage) liveReversals(ctx context.Context, tx pgx.Tx, rows []pageRow) (map[string]bool, error) {
+	types, subjects := auditSubjectsOf(rows)
+	if len(subjects) == 0 {
+		return map[string]bool{}, nil
+	}
+	found, err := tx.Query(ctx, `
 		SELECT undo.evidence ->> $3 FROM audit_log undo
-		WHERE undo.entity_type = $1 AND undo.entity_id = $2
-		  AND undo.evidence ->> $3 IS NOT NULL
+		JOIN unnest($1::text[], $2::uuid[]) AS subject(entity_type, entity_id)
+		  ON undo.entity_type = subject.entity_type AND undo.entity_id = subject.entity_id
+		WHERE undo.evidence ->> $3 IS NOT NULL
 		  AND NOT EXISTS (
 		    SELECT 1 FROM audit_log reundo
 		    WHERE reundo.entity_type = undo.entity_type
 		      AND reundo.entity_id = undo.entity_id
 		      AND reundo.evidence ->> $3 = undo.id::text)`,
-		entityType, entityID, privacy.UndidAuditLogID)
+		types, subjects, privacy.UndidAuditLogID)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer found.Close()
 	// A key present but JSON null reads as SQL NULL, which cannot scan into a
 	// string: the query filters it out above rather than failing the whole page
 	// over one malformed row. The sibling queries COMPARE this expression
 	// instead of scanning it, and a comparison against NULL is already false.
 	undone := map[string]bool{}
-	for rows.Next() {
+	for found.Next() {
 		var undid string
-		if err := rows.Scan(&undid); err != nil {
+		if err := found.Scan(&undid); err != nil {
 			return nil, err
 		}
 		undone[undid] = true
 	}
-	return undone, rows.Err()
+	return undone, found.Err()
+}
+
+// auditSubjectsOf is the distinct (entity_type, entity_id) pairs the page's rows
+// sit on: the record, and one per link it is an end of.
+func auditSubjectsOf(rows []pageRow) (types []string, subjects []ids.UUID) {
+	seen := make(map[string]bool, len(rows))
+	for _, row := range rows {
+		key := row.EntityType + ":" + row.EntityID.String()
+		if seen[key] {
+			continue
+		}
+		seen[key] = true
+		types = append(types, row.EntityType)
+		subjects = append(subjects, row.EntityID)
+	}
+	return types, subjects
 }
 
 // advisoryEvaluator is the page's evaluator: every port the WRITE binds, with
-// the four the page already holds facts for answered from those facts. Derived
+// the ones the page already holds facts for answered from those facts. Derived
 // from the binding evaluator rather than assembled beside it, so a port added
 // to the write is bound here without anyone remembering — which is how the page
 // came to omit ExternallyGoverned and light a restore button the write refuses.
 // Held by TestTheAdvisoryPathBindsEveryPortTheWriteBinds.
+//
+// The erasure boundary is the one fact a page cannot hold for every row: a
+// LINK's is its endpoints' and not its own (see pageRow), so an edge row keeps
+// the write's own port rather than a second reading of that rule here.
 func advisoryEvaluator(binding Evaluator, shared recordFacts, row pageRow, undone map[string]bool) Evaluator {
 	advisory := binding
 	advisory.Archived = func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) {
@@ -206,8 +257,10 @@ func advisoryEvaluator(binding Evaluator, shared recordFacts, row pageRow, undon
 		}
 		return errRecordNotWritable
 	}
-	advisory.BehindErasure = func(context.Context, pgx.Tx, AuditRow) (bool, error) {
-		return row.behindErasure, nil
+	if behind := row.behindErasure; behind != nil {
+		advisory.BehindErasure = func(context.Context, pgx.Tx, AuditRow) (bool, error) {
+			return *behind, nil
+		}
 	}
 	advisory.AlreadyUndone = func(_ context.Context, _ pgx.Tx, r AuditRow) (bool, error) {
 		return undone[r.ID.String()], nil
@@ -216,9 +269,16 @@ func advisoryEvaluator(binding Evaluator, shared recordFacts, row pageRow, undon
 }
 
 // judge asks the same branches the write binds, in the same order, with the
-// page-level facts already in hand. The ports answer from those facts rather
-// than querying, which is what makes the page flat in its size while leaving
-// ONE set of branches to keep correct.
+// page-level facts already in hand, which leaves ONE set of branches to keep
+// correct.
+//
+// The RECORD's facts are read once for the page. An EDGE row is not flat: each
+// one reads its own edge facts and its anchor's write authority, because those
+// are properties of the link rather than of the record whose page this is. The
+// cost is bounded by the page size, and it is the price of judging a link on the
+// same branches that will bind its write — an edge row judged from the record's
+// facts would light a button the write refuses, which is the shape this whole
+// surface exists to remove.
 func (p UndoabilityPage) judge(ctx context.Context, tx pgx.Tx, row pageRow,
 	shared recordFacts, undone map[string]bool,
 ) (privacy.UndoabilityAnswer, error) {

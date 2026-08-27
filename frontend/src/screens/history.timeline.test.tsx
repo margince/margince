@@ -1,6 +1,12 @@
-import { describe, expect, it } from "vitest";
+/** @vitest-environment jsdom */
+
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
+import { LocaleProvider } from "../i18n";
 import { changeTimeline } from "./history";
+
+afterEach(cleanup);
 
 // No record type reached by this list holds money today, so the context these
 // rows are rendered in is "no currency" — which is itself the case worth
@@ -94,6 +100,10 @@ describe("a money field in the changes list", () => {
     },
   ];
 
+  // RENDERED, not stringified. The scaling happens where the value meets the
+  // screen, so an element tree still carries the stored integer in its props —
+  // asserting over the tree would pass on a row that displays the raw figure.
+  // What the reader sees is the only thing worth pinning here.
   it("renders the amount scaled by its currency, never the stored integer", () => {
     const [row] = changeTimeline(
       amountChange,
@@ -101,10 +111,10 @@ describe("a money field in the changes list", () => {
       { currency: "EUR", locale: "en", zone: "UTC" },
       "field updated",
     );
-    const rendered = JSON.stringify(row.detail);
-    expect(rendered).not.toContain("150000");
-    expect(rendered).not.toContain("225000");
-    expect(rendered).toContain("1,500");
-    expect(rendered).toContain("2,250");
+    render(<LocaleProvider initial="en">{row.detail}</LocaleProvider>);
+    expect(screen.queryByText("150000")).toBeNull();
+    expect(screen.queryByText("225000")).toBeNull();
+    expect(screen.getByText(/1,500\.00/)).toBeTruthy();
+    expect(screen.getByText(/2,250\.00/)).toBeTruthy();
   });
 });

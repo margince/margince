@@ -46,7 +46,7 @@ func TestTheKeyIsWriteOnlyOverHTTP(t *testing.T) {
 	e := setupProviderKeyApp(t)
 
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/gemini",
-		apptest.AnyMap{"api_key": providerKeySecret}, nil, nil); code != 204 {
+		AnyMap{"api_key": providerKeySecret}, nil, nil); code != 204 {
 		t.Fatalf("PUT provider key = %d, want 204", code)
 	}
 
@@ -102,7 +102,7 @@ func TestTheListSaysWhichVendorsAreConfigured(t *testing.T) {
 	}
 
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/openai",
-		apptest.AnyMap{"api_key": "sk-openai"}, nil, nil); code != 204 {
+		AnyMap{"api_key": "sk-openai"}, nil, nil); code != 204 {
 		t.Fatal("PUT failed")
 	}
 	var after struct {
@@ -140,7 +140,7 @@ func TestRemovingOverHTTPIsIdempotent(t *testing.T) {
 	e := setupProviderKeyApp(t)
 
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/anthropic",
-		apptest.AnyMap{"api_key": "sk-anthropic"}, nil, nil); code != 204 {
+		AnyMap{"api_key": "sk-anthropic"}, nil, nil); code != 204 {
 		t.Fatal("PUT failed")
 	}
 	if code := e.Call(t, "DELETE", "/v1/ai/provider-keys/anthropic", nil, nil, nil); code != 204 {
@@ -156,13 +156,13 @@ func TestRemovingOverHTTPIsIdempotent(t *testing.T) {
 func TestAVendorThatTakesNoKeyIsRefusedOverHTTP(t *testing.T) {
 	e := setupProviderKeyApp(t)
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/ollama",
-		apptest.AnyMap{"api_key": "sk-local-needs-none"}, nil, nil); code != http.StatusUnprocessableEntity {
+		AnyMap{"api_key": "sk-local-needs-none"}, nil, nil); code != http.StatusUnprocessableEntity {
 		t.Errorf("PUT for a local provider = %d, want 422", code)
 	}
 	// An empty key is the caller's mistake too: removing a credential is
 	// DELETE, not a write of nothing.
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/gemini",
-		apptest.AnyMap{"api_key": "   "}, nil, nil); code != http.StatusUnprocessableEntity {
+		AnyMap{"api_key": "   "}, nil, nil); code != http.StatusUnprocessableEntity {
 		t.Errorf("PUT with a blank key = %d, want 422", code)
 	}
 	// And an OMITTED key, which is a different path from a blank one. Marking
@@ -173,7 +173,7 @@ func TestAVendorThatTakesNoKeyIsRefusedOverHTTP(t *testing.T) {
 	// thing standing between an absent field and a sealed zero-length key that
 	// would read as configured and authenticate nothing.
 	if code := e.Call(t, "PUT", "/v1/ai/provider-keys/gemini",
-		apptest.AnyMap{}, nil, nil); code != http.StatusUnprocessableEntity {
+		AnyMap{}, nil, nil); code != http.StatusUnprocessableEntity {
 		t.Errorf("PUT with no api_key at all = %d, want 422", code)
 	}
 }

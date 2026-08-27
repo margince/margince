@@ -39,8 +39,8 @@ func TestMalformedCursorAnswersMalformedCursorEverywhere(t *testing.T) {
 	apptest.BootstrapWorkspaceSession(t, e, "Cursor Probe", "admin@cursor.test", "Admin")
 
 	// /lists/{id}/members needs a real list to point at.
-	var list apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	var list AnyMap
+	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
 		"name": "Probe", "entity_type": "person",
 	}, nil, &list); status != http.StatusCreated {
 		t.Fatalf("create list = %d %v", status, list)

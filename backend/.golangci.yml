@@ -11,10 +11,19 @@ run:
   build-tags:
     - integration
     - livesmoke
-    # The by-hand benchmark lane (make bench-record / bench-capture). It needs
-    # this more than the others do: no scheduled job runs those files, so lint
-    # and `go vet -tags 'integration bench'` are the only passes that read them.
+    # The by-hand lanes: benchmarks (make bench-record / bench-capture), the
+    # LLM end-to-end lanes (make e2e-siteread / e2e-ai) and the voice smoke.
+    # These need it more than the others do — nothing scheduled compiles any of
+    # them, so this pass is the only thing in the merge gate that reads them at
+    # all, and a file under one of these tags can otherwise stop compiling with
+    # nothing to say so.
+    #
+    # gates/lintbuildtagreach_test.go fails when a build tag that gates a file
+    # in this tree is missing from this list. It does not write the list, and it
+    # does not remove an entry that has stopped being needed.
     - bench
+    - e2e_llm
+    - voicelive
 
 linters:
   default: standard

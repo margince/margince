@@ -8,7 +8,7 @@ import { useRecordZone } from "../app/recordzone";
 import { currentParams, useUrlParams } from "../app/urlstate";
 import { Badge, Button, SegmentedControl } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { formatDateAbbrev, formatNumber } from "../format/format";
 import { leadIdentityName } from "../format/leadname";
 import { viewerZone } from "../format/timezone";
@@ -302,7 +302,6 @@ function LeadsWorkbench({
           </Button>
         </Callout>
       )}
-      <ToastRegion toast={toast} />
       <ListTable
         emptyNote={mineEmptyNote({ t, state, viewerId, unit: "unit.leads" })}
         // The board renders INSIDE the surface, so the search, the chips and
@@ -486,28 +485,26 @@ function LeadsWorkbench({
                   action.ownerId !== viewerId &&
                   moved.length > 0
                 ) {
-                  // Sticky: this confirmation carries a verb, and a reader
-                  // reaching for it must not lose it mid-reach.
+                  // The verb goes through `action` rather than into the
+                  // message: the region draws it, so it is one control on one
+                  // ground rather than a `Button` hand-placed on the toast's
+                  // dark plate, and the region withdraws the message once it
+                  // has been pressed.
                   toast.show(
-                    <span>
-                      {t("lead.assignedAway", {
-                        names: moved.map((o) => o.name).join(", "),
-                        owner: action.ownerName,
-                      })}{" "}
-                      <Button
-                        small
-                        onClick={() => {
-                          toast.dismiss();
+                    t("lead.assignedAway", {
+                      names: moved.map((o) => o.name).join(", "),
+                      owner: action.ownerName,
+                    }),
+                    {
+                      action: {
+                        label: t("list.showAll"),
+                        onAct: () =>
                           state.setQuery((q) => {
                             const { owner_id: _mine, ...rest } = q.filters;
                             return { ...q, filters: rest };
-                          });
-                        }}
-                      >
-                        {t("list.showAll")}
-                      </Button>
-                    </span>,
-                    { sticky: true },
+                          }),
+                      },
+                    },
                   );
                 }
               }}

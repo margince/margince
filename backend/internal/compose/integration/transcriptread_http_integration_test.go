@@ -86,7 +86,7 @@ func logTranscript(t *testing.T, e *apptest.AppEnv, body string) string {
 	var activity struct {
 		ID string `json:"id"`
 	}
-	status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Rollout call", "body": body,
 		"source_system": "transcript", "source": "ui",
 	}, nil, &activity)
@@ -159,7 +159,7 @@ func TestAnActivityNobodyHasReadIsNotFoundRatherThanEmpty(t *testing.T) {
 	var activity struct {
 		ID string `json:"id"`
 	}
-	status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "meeting", "subject": "Rollout call", "body": transcriptText,
 		"source": "manual",
 	}, nil, &activity)
@@ -201,7 +201,7 @@ func TestTheDoorRefusesWhatHasNoLinesToCite(t *testing.T) {
 	var note struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "note", "subject": "An ordinary note", "body": "No transcript here.", "source": "ui",
 	}, nil, &note); status != http.StatusCreated {
 		t.Fatalf("logging the note → %d", status)

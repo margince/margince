@@ -30,7 +30,7 @@ type fxRateListDTO struct {
 	Data []fxRateDTO `json:"data"`
 }
 
-func baseCurrency(e *apptest.AppEnv, t *testing.T) string {
+func baseCurrency(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
 	var base string
 	if err := e.Owner.QueryRow(context.Background(),
@@ -46,7 +46,7 @@ func TestFxRatesOverHTTP(t *testing.T) {
 	today := time.Now().UTC().Format("2006-01-02")
 
 	from := "USD"
-	if baseCurrency(e, t) == "USD" {
+	if baseCurrency(t, e) == "USD" {
 		from = "GBP"
 	}
 

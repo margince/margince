@@ -86,6 +86,10 @@ func fieldHistoryEntryToWire(e FieldHistoryEntry) crmcontracts.FieldHistoryEntry
 		id := openapi_types.UUID(*e.PassportID)
 		out.PassportId = &id
 	}
+	if e.UndidAuditLogID != nil {
+		undid := openapi_types.UUID(*e.UndidAuditLogID)
+		out.UndidAuditLogId = &undid
+	}
 	if e.Evidence != nil {
 		evidence := e.Evidence
 		out.Evidence = &evidence

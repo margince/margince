@@ -66,6 +66,39 @@ func TestQuickCaptureWritesThePersonAndTheirEmployer(t *testing.T) {
 	}
 }
 
+// The browser hides the scheme, so what somebody copies out of the address bar
+// is `linkedin.com/in/jdoe`. Stored bare it is not an absolute URL, the
+// frontend's own webUrl refuses it, and the row is permanently unlinkable —
+// which defeats the profile-as-a-link work this path exists to feed.
+func TestQuickCaptureStoresAProfileURLTheProductCanLink(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+
+	bare := "linkedin.com/in/danabare"
+	out, err := e.store.QuickCapture(ctx, QuickCaptureInput{
+		FullName: "Dana Bare", ProfileURL: &bare,
+	})
+	if err != nil {
+		t.Fatalf("quick capture: %v", err)
+	}
+	if got := statedProfileURL(out.Person.Social); got != "https://linkedin.com/in/danabare" {
+		t.Errorf("stored profile url = %q, want the absolute form", got)
+	}
+
+	// A scheme the caller typed is kept: quietly upgrading http to https would
+	// claim a certificate nobody has seen.
+	insecure := "http://example.com/team/sam"
+	out, err = e.store.QuickCapture(ctx, QuickCaptureInput{
+		FullName: "Sam Insecure", ProfileURL: &insecure,
+	})
+	if err != nil {
+		t.Fatalf("quick capture: %v", err)
+	}
+	if got := statedProfileURL(out.Person.Social); got != insecure {
+		t.Errorf("stored profile url = %q, want %q unchanged", got, insecure)
+	}
+}
+
 func TestQuickCaptureAttachesAnExistingEmployer(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()

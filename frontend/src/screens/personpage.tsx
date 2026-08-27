@@ -38,6 +38,7 @@ import {
 } from "./persondrawers";
 import { PersonFilesTab } from "./personfiles";
 import { PersonMemory } from "./personmemory";
+import { PersonNetworkTab } from "./personnetwork";
 import { PersonRail } from "./personrail";
 import { PersonResearchTab } from "./personresearch";
 import { PersonStrip } from "./personstrip";
@@ -66,6 +67,7 @@ type PersonMomentAction = components["schemas"]["PersonMomentAction"];
 const TAB_LABEL_KEYS: Readonly<Record<PersonTab, MessageKey>> = {
   overview: "tab.overview",
   timeline: "tab.timeline",
+  network: "tab.network",
   deals: "tab.deals",
   meetings: "tab.meetings",
   research: "tab.research",
@@ -126,6 +128,8 @@ function PersonTabPanel({
           onBriefMeeting={onBriefMeeting}
         />
       );
+    case "network":
+      return <PersonNetworkTab personId={personId} view={view} />;
     case "deals":
       return <PersonDealsTab view={view} />;
     case "meetings":
@@ -324,6 +328,7 @@ export function PersonPageV2({
             labels={{
               overview: t(TAB_LABEL_KEYS.overview),
               timeline: t(TAB_LABEL_KEYS.timeline),
+              network: t(TAB_LABEL_KEYS.network),
               deals: t(TAB_LABEL_KEYS.deals),
               meetings: t(TAB_LABEL_KEYS.meetings),
               research: t(TAB_LABEL_KEYS.research),

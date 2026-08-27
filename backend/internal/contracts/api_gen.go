@@ -3129,22 +3129,22 @@ func (e ConsentPassportOptionScopes) Valid() bool {
 
 // Defines values for ConsentQualifyingEventKind.
 const (
-	ActiveDeal     ConsentQualifyingEventKind = "active_deal"
-	InPerson       ConsentQualifyingEventKind = "in_person"
-	InboundMessage ConsentQualifyingEventKind = "inbound_message"
-	Inquiry        ConsentQualifyingEventKind = "inquiry"
+	ConsentQualifyingEventKindActiveDeal     ConsentQualifyingEventKind = "active_deal"
+	ConsentQualifyingEventKindInPerson       ConsentQualifyingEventKind = "in_person"
+	ConsentQualifyingEventKindInboundMessage ConsentQualifyingEventKind = "inbound_message"
+	ConsentQualifyingEventKindInquiry        ConsentQualifyingEventKind = "inquiry"
 )
 
 // Valid indicates whether the value is a known member of the ConsentQualifyingEventKind enum.
 func (e ConsentQualifyingEventKind) Valid() bool {
 	switch e {
-	case ActiveDeal:
+	case ConsentQualifyingEventKindActiveDeal:
 		return true
-	case InPerson:
+	case ConsentQualifyingEventKindInPerson:
 		return true
-	case InboundMessage:
+	case ConsentQualifyingEventKindInboundMessage:
 		return true
-	case Inquiry:
+	case ConsentQualifyingEventKindInquiry:
 		return true
 	default:
 		return false
@@ -4972,6 +4972,30 @@ func (e HealthDimensionRating) Valid() bool {
 	}
 }
 
+// Defines values for HistoryEdgeOtherEntityType.
+const (
+	HistoryEdgeOtherEntityTypeDeal         HistoryEdgeOtherEntityType = "deal"
+	HistoryEdgeOtherEntityTypeOrganization HistoryEdgeOtherEntityType = "organization"
+	HistoryEdgeOtherEntityTypePerson       HistoryEdgeOtherEntityType = "person"
+	HistoryEdgeOtherEntityTypeProject      HistoryEdgeOtherEntityType = "project"
+)
+
+// Valid indicates whether the value is a known member of the HistoryEdgeOtherEntityType enum.
+func (e HistoryEdgeOtherEntityType) Valid() bool {
+	switch e {
+	case HistoryEdgeOtherEntityTypeDeal:
+		return true
+	case HistoryEdgeOtherEntityTypeOrganization:
+		return true
+	case HistoryEdgeOtherEntityTypePerson:
+		return true
+	case HistoryEdgeOtherEntityTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ImportObject.
 const (
 	ImportObjectLead         ImportObject = "lead"
@@ -5876,6 +5900,7 @@ func (e OnboardingCompanyMessageReplyRemainingRequiredFields) Valid() bool {
 const (
 	OnboardingCompanyLocaleDE OnboardingCompanyMessageRequestLocale = "de"
 	OnboardingCompanyLocaleEN OnboardingCompanyMessageRequestLocale = "en"
+	OnboardingCompanyLocaleVI OnboardingCompanyMessageRequestLocale = "vi"
 )
 
 // Valid indicates whether the value is a known member of the OnboardingCompanyMessageRequestLocale enum.
@@ -5884,6 +5909,8 @@ func (e OnboardingCompanyMessageRequestLocale) Valid() bool {
 	case OnboardingCompanyLocaleDE:
 		return true
 	case OnboardingCompanyLocaleEN:
+		return true
+	case OnboardingCompanyLocaleVI:
 		return true
 	default:
 		return false
@@ -8341,6 +8368,30 @@ func (e PutOnboardingStateRequestStep) Valid() bool {
 	}
 }
 
+// Defines values for QualifyingEventRecordKind.
+const (
+	QualifyingEventRecordKindActiveDeal     QualifyingEventRecordKind = "active_deal"
+	QualifyingEventRecordKindInPerson       QualifyingEventRecordKind = "in_person"
+	QualifyingEventRecordKindInboundMessage QualifyingEventRecordKind = "inbound_message"
+	QualifyingEventRecordKindInquiry        QualifyingEventRecordKind = "inquiry"
+)
+
+// Valid indicates whether the value is a known member of the QualifyingEventRecordKind enum.
+func (e QualifyingEventRecordKind) Valid() bool {
+	switch e {
+	case QualifyingEventRecordKindActiveDeal:
+		return true
+	case QualifyingEventRecordKindInPerson:
+		return true
+	case QualifyingEventRecordKindInboundMessage:
+		return true
+	case QualifyingEventRecordKindInquiry:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for QuotaAttainmentBand.
 const (
 	Accent QuotaAttainmentBand = "accent"
@@ -8461,6 +8512,21 @@ func (e RecordGrantSubjectType) Valid() bool {
 	case RecordGrantSubjectTypeTeam:
 		return true
 	case RecordGrantSubjectTypeUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for RecordQualifyingEventRequestKind.
+const (
+	InPerson RecordQualifyingEventRequestKind = "in_person"
+)
+
+// Valid indicates whether the value is a known member of the RecordQualifyingEventRequestKind enum.
+func (e RecordQualifyingEventRequestKind) Valid() bool {
+	switch e {
+	case InPerson:
 		return true
 	default:
 		return false
@@ -9037,9 +9103,13 @@ const (
 	SignalKindChampionLeft     SignalKind = "champion_left"
 	SignalKindCommitmentMade   SignalKind = "commitment_made"
 	SignalKindContractEnded    SignalKind = "contract_ended"
+	SignalKindExpansion        SignalKind = "expansion"
+	SignalKindFunding          SignalKind = "funding"
 	SignalKindGhostedThread    SignalKind = "ghosted_thread"
+	SignalKindLeadershipChange SignalKind = "leadership_change"
 	SignalKindNewOpportunity   SignalKind = "new_opportunity"
 	SignalKindOther            SignalKind = "other"
+	SignalKindProductLaunch    SignalKind = "product_launch"
 	SignalKindProjectGoneQuiet SignalKind = "project_gone_quiet"
 	SignalKindReengagement     SignalKind = "reengagement"
 	SignalKindRisk             SignalKind = "risk"
@@ -9057,11 +9127,19 @@ func (e SignalKind) Valid() bool {
 		return true
 	case SignalKindContractEnded:
 		return true
+	case SignalKindExpansion:
+		return true
+	case SignalKindFunding:
+		return true
 	case SignalKindGhostedThread:
+		return true
+	case SignalKindLeadershipChange:
 		return true
 	case SignalKindNewOpportunity:
 		return true
 	case SignalKindOther:
+		return true
+	case SignalKindProductLaunch:
 		return true
 	case SignalKindProjectGoneQuiet:
 		return true
@@ -9572,6 +9650,7 @@ func (e TranscriptReadStartedStatus) Valid() bool {
 const (
 	UndoabilityReasonAlreadyUndone           UndoabilityReason = "already_undone"
 	UndoabilityReasonBehindErasureBoundary   UndoabilityReason = "behind_erasure_boundary"
+	UndoabilityReasonEdgeRelinkUnsupported   UndoabilityReason = "edge_relink_unsupported"
 	UndoabilityReasonNoBeforeImage           UndoabilityReason = "no_before_image"
 	UndoabilityReasonNotAReplayableVerb      UndoabilityReason = "not_a_replayable_verb"
 	UndoabilityReasonNotRestorableByThisPath UndoabilityReason = "not_restorable_by_this_path"
@@ -9588,6 +9667,8 @@ func (e UndoabilityReason) Valid() bool {
 	case UndoabilityReasonAlreadyUndone:
 		return true
 	case UndoabilityReasonBehindErasureBoundary:
+		return true
+	case UndoabilityReasonEdgeRelinkUnsupported:
 		return true
 	case UndoabilityReasonNoBeforeImage:
 		return true
@@ -10153,6 +10234,30 @@ func (e UserStatus) Valid() bool {
 	case UserStatusDeactivated:
 		return true
 	case UserStatusSuspended:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for VCardImportResultOutcome.
+const (
+	VCardImportResultOutcomeCreated     VCardImportResultOutcome = "created"
+	VCardImportResultOutcomeNeedsReview VCardImportResultOutcome = "needs_review"
+	VCardImportResultOutcomeSkipped     VCardImportResultOutcome = "skipped"
+	VCardImportResultOutcomeUpdated     VCardImportResultOutcome = "updated"
+)
+
+// Valid indicates whether the value is a known member of the VCardImportResultOutcome enum.
+func (e VCardImportResultOutcome) Valid() bool {
+	switch e {
+	case VCardImportResultOutcomeCreated:
+		return true
+	case VCardImportResultOutcomeNeedsReview:
+		return true
+	case VCardImportResultOutcomeSkipped:
+		return true
+	case VCardImportResultOutcomeUpdated:
 		return true
 	default:
 		return false
@@ -11043,25 +11148,25 @@ func (e UploadAttachmentMultipartBodyEntityType) Valid() bool {
 
 // Defines values for ListAutomationRunsParamsOutcome.
 const (
-	Blocked           ListAutomationRunsParamsOutcome = "blocked"
-	Failed            ListAutomationRunsParamsOutcome = "failed"
-	Fired             ListAutomationRunsParamsOutcome = "fired"
-	QueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
-	Skipped           ListAutomationRunsParamsOutcome = "skipped"
+	ListAutomationRunsParamsOutcomeBlocked           ListAutomationRunsParamsOutcome = "blocked"
+	ListAutomationRunsParamsOutcomeFailed            ListAutomationRunsParamsOutcome = "failed"
+	ListAutomationRunsParamsOutcomeFired             ListAutomationRunsParamsOutcome = "fired"
+	ListAutomationRunsParamsOutcomeQueuedForApproval ListAutomationRunsParamsOutcome = "queued_for_approval"
+	ListAutomationRunsParamsOutcomeSkipped           ListAutomationRunsParamsOutcome = "skipped"
 )
 
 // Valid indicates whether the value is a known member of the ListAutomationRunsParamsOutcome enum.
 func (e ListAutomationRunsParamsOutcome) Valid() bool {
 	switch e {
-	case Blocked:
+	case ListAutomationRunsParamsOutcomeBlocked:
 		return true
-	case Failed:
+	case ListAutomationRunsParamsOutcomeFailed:
 		return true
-	case Fired:
+	case ListAutomationRunsParamsOutcomeFired:
 		return true
-	case QueuedForApproval:
+	case ListAutomationRunsParamsOutcomeQueuedForApproval:
 		return true
-	case Skipped:
+	case ListAutomationRunsParamsOutcomeSkipped:
 		return true
 	default:
 		return false
@@ -11492,6 +11597,7 @@ func (e ListListsParamsEntityType) Valid() bool {
 const (
 	OnboardingProposalLocaleDE GetOnboardingCompanyProposalParamsLocale = "de"
 	OnboardingProposalLocaleEN GetOnboardingCompanyProposalParamsLocale = "en"
+	OnboardingProposalLocaleVI GetOnboardingCompanyProposalParamsLocale = "vi"
 )
 
 // Valid indicates whether the value is a known member of the GetOnboardingCompanyProposalParamsLocale enum.
@@ -11500,6 +11606,8 @@ func (e GetOnboardingCompanyProposalParamsLocale) Valid() bool {
 	case OnboardingProposalLocaleDE:
 		return true
 	case OnboardingProposalLocaleEN:
+		return true
+	case OnboardingProposalLocaleVI:
 		return true
 	default:
 		return false
@@ -11532,31 +11640,31 @@ func (e ListOrganizationsParamsCapturedByKind) Valid() bool {
 
 // Defines values for ListOrganizationsParamsLifecycle.
 const (
-	ListOrganizationsParamsLifecycleCustomer       ListOrganizationsParamsLifecycle = "customer"
-	ListOrganizationsParamsLifecycleDisqualified   ListOrganizationsParamsLifecycle = "disqualified"
-	ListOrganizationsParamsLifecycleFormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
-	ListOrganizationsParamsLifecycleOpportunity    ListOrganizationsParamsLifecycle = "opportunity"
-	ListOrganizationsParamsLifecycleProspect       ListOrganizationsParamsLifecycle = "prospect"
-	ListOrganizationsParamsLifecycleTarget         ListOrganizationsParamsLifecycle = "target"
-	ListOrganizationsParamsLifecycleUnknown        ListOrganizationsParamsLifecycle = "unknown"
+	Customer       ListOrganizationsParamsLifecycle = "customer"
+	Disqualified   ListOrganizationsParamsLifecycle = "disqualified"
+	FormerCustomer ListOrganizationsParamsLifecycle = "former_customer"
+	Opportunity    ListOrganizationsParamsLifecycle = "opportunity"
+	Prospect       ListOrganizationsParamsLifecycle = "prospect"
+	Target         ListOrganizationsParamsLifecycle = "target"
+	Unknown        ListOrganizationsParamsLifecycle = "unknown"
 )
 
 // Valid indicates whether the value is a known member of the ListOrganizationsParamsLifecycle enum.
 func (e ListOrganizationsParamsLifecycle) Valid() bool {
 	switch e {
-	case ListOrganizationsParamsLifecycleCustomer:
+	case Customer:
 		return true
-	case ListOrganizationsParamsLifecycleDisqualified:
+	case Disqualified:
 		return true
-	case ListOrganizationsParamsLifecycleFormerCustomer:
+	case FormerCustomer:
 		return true
-	case ListOrganizationsParamsLifecycleOpportunity:
+	case Opportunity:
 		return true
-	case ListOrganizationsParamsLifecycleProspect:
+	case Prospect:
 		return true
-	case ListOrganizationsParamsLifecycleTarget:
+	case Target:
 		return true
-	case ListOrganizationsParamsLifecycleUnknown:
+	case Unknown:
 		return true
 	default:
 		return false
@@ -13473,8 +13581,25 @@ type AuditHistoryEntry struct {
 	AgentClient       *string                 `json:"agent_client,omitempty"`
 	AuthorizationRule *string                 `json:"authorization_rule,omitempty"`
 	Before            *map[string]interface{} `json:"before,omitempty"`
-	Id                openapi_types.UUID      `json:"id"`
-	OccurredAt        time.Time               `json:"occurred_at"`
+
+	// Edge Set when this history entry changed a LINK between two records rather than a field
+	// of this one, and null on every ordinary row.
+	//
+	// A link is recorded against the link itself, so both records it joins carry the same
+	// entry — each naming the other end. The other endpoint is named so the line can say
+	// WHAT was linked ("linked Northwind Logistics as employer"), and carries its id so a
+	// reader can navigate to it.
+	//
+	// A caller who cannot see the other endpoint does not receive the row AT ALL: it is
+	// absent rather than refused, because a refusal is proof the record exists.
+	//
+	// There is no field diff on an edge row. `role`, `started_at` and the primary-employer
+	// flag belong to the link, not to either record, and projecting them as a record's own
+	// fields would invent fields it does not have — which is also why edge entries never
+	// appear in `/field-history`.
+	Edge       *HistoryEdge       `json:"edge,omitempty"`
+	Id         openapi_types.UUID `json:"id"`
+	OccurredAt time.Time          `json:"occurred_at"`
 
 	// OnBehalfOf Granting human's user id for agent actions.
 	OnBehalfOf *openapi_types.UUID `json:"on_behalf_of,omitempty"`
@@ -13482,6 +13607,9 @@ type AuditHistoryEntry struct {
 	// OnBehalfOfName Resolved display name for on_behalf_of.
 	OnBehalfOfName *string `json:"on_behalf_of_name,omitempty"`
 	Summary        string  `json:"summary"`
+
+	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
+	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`
 
 	// Undoable Whether this history entry can be put back, and if not, why. COMPUTED per read,
 	// never stored: a stored flag is a second copy of a question the audit spine already
@@ -17007,6 +17135,9 @@ type FieldHistoryEntry struct {
 	// PassportId Agent Seat Passport that authorized the change; present for agent actors only.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
 
+	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
+	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`
+
 	// Undoable Whether this history entry can be put back, and if not, why. COMPUTED per read,
 	// never stored: a stored flag is a second copy of a question the audit spine already
 	// answers, and it goes stale the moment anyone else writes.
@@ -17310,6 +17441,34 @@ type HealthDimension struct {
 
 // HealthDimensionRating Three values, not a scale. A dimension that cannot be computed is ABSENT rather than rated `unknown`: absence is a fact about the reading, where a rating is a claim about the account.
 type HealthDimensionRating string
+
+// HistoryEdge Set when this history entry changed a LINK between two records rather than a field
+// of this one, and null on every ordinary row.
+//
+// A link is recorded against the link itself, so both records it joins carry the same
+// entry — each naming the other end. The other endpoint is named so the line can say
+// WHAT was linked ("linked Northwind Logistics as employer"), and carries its id so a
+// reader can navigate to it.
+//
+// A caller who cannot see the other endpoint does not receive the row AT ALL: it is
+// absent rather than refused, because a refusal is proof the record exists.
+//
+// There is no field diff on an edge row. `role`, `started_at` and the primary-employer
+// flag belong to the link, not to either record, and projecting them as a record's own
+// fields would invent fields it does not have — which is also why edge entries never
+// appear in `/field-history`.
+type HistoryEdge struct {
+	// Kind The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`.
+	Kind            string                     `json:"kind"`
+	OtherEntityId   openapi_types.UUID         `json:"other_entity_id"`
+	OtherEntityType HistoryEdgeOtherEntityType `json:"other_entity_type"`
+
+	// OtherLabel The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it.
+	OtherLabel *string `json:"other_label,omitempty"`
+}
+
+// HistoryEdgeOtherEntityType defines model for HistoryEdge.OtherEntityType.
+type HistoryEdgeOtherEntityType string
 
 // ImportColumn One column of the uploaded file, described well enough to map it without opening the file elsewhere.
 type ImportColumn struct {
@@ -21995,12 +22154,18 @@ type PostDealRoomCommentRequest struct {
 }
 
 // PreferenceCenter The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
-// with the recipient's current state and whether it is locked (transactional cannot be withdrawn
-// while a deal is live).
+// with the recipient's current state, whether it is locked (transactional cannot be withdrawn
+// while a deal is live), and whether granting it needs a confirmation round-trip this surface
+// cannot perform.
 type PreferenceCenter struct {
 	Purposes []struct {
-		Key   string `json:"key"`
-		Label string `json:"label"`
+		// GrantNeedsConfirmation A purpose requiring double opt-in. Withdrawing it here works; GRANTING it does not, because
+		// this surface's token is reusable and long-lived, so it cannot evidence one deliberate choice
+		// the way a confirmation round-trip does. A client must not offer the grant — the write refuses
+		// it with 422, and an offered switch that always fails is worse than an absent one.
+		GrantNeedsConfirmation bool   `json:"grant_needs_confirmation"`
+		Key                    string `json:"key"`
+		Label                  string `json:"label"`
 
 		// Locked A locked purpose (transactional) cannot be changed from this surface.
 		Locked bool                          `json:"locked"`
@@ -22689,6 +22854,16 @@ type QualifyDealRequest struct {
 	StageId    *openapi_types.UUID `json:"stage_id,omitempty"`
 }
 
+// QualifyingEventRecord A recorded exchange, as it now stands on the person.
+type QualifyingEventRecord struct {
+	Kind       QualifyingEventRecordKind `json:"kind"`
+	Note       *string                   `json:"note"`
+	OccurredAt time.Time                 `json:"occurred_at"`
+}
+
+// QualifyingEventRecordKind defines model for QualifyingEventRecord.Kind.
+type QualifyingEventRecordKind string
+
 // QuickCapturePersonRequest One person as a reader of their public profile can state them. Deliberately
 // flatter than CreatePersonRequest: one email and one phone rather than the
 // arrays, because a form optimized for typing has one box each.
@@ -22912,6 +23087,25 @@ type RecordGrantRecordType string
 
 // RecordGrantSubjectType defines model for RecordGrant.SubjectType.
 type RecordGrantSubjectType string
+
+// RecordQualifyingEventRequest One exchange that makes ordinary business correspondence lawful.
+type RecordQualifyingEventRequest struct {
+	// Kind Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
+	// active_deal — are DERIVED from records the product already holds, and a hand-written
+	// one would be a second, unbacked answer to a question the data already settles.
+	Kind RecordQualifyingEventRequestKind `json:"kind"`
+
+	// Note What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has.
+	Note string `json:"note"`
+
+	// OccurredAt When the exchange happened, not when it was typed in.
+	OccurredAt time.Time `json:"occurred_at"`
+}
+
+// RecordQualifyingEventRequestKind Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
+// active_deal — are DERIVED from records the product already holds, and a hand-written
+// one would be a second, unbacked answer to a question the data already settles.
+type RecordQualifyingEventRequestKind string
 
 // RecordViewAck The per-user "I have seen this record" baseline, after an acknowledgment.
 type RecordViewAck struct {
@@ -24240,12 +24434,12 @@ type Undoability struct {
 	// Detail The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says.
 	Detail *string `json:"detail,omitempty"`
 
-	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+	// Reason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
 	Reason   *UndoabilityReason `json:"reason,omitempty"`
 	Undoable bool               `json:"undoable"`
 }
 
-// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+// UndoabilityReason Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
 type UndoabilityReason string
 
 // UpdateActivityRequest defines model for UpdateActivityRequest.
@@ -24795,6 +24989,38 @@ type UserListResponse struct {
 	Data []User   `json:"data"`
 	Page PageInfo `json:"page"`
 }
+
+// VCardImportReport One entry per card in the file, in the order the file listed them.
+type VCardImportReport struct {
+	Results []VCardImportResult `json:"results"`
+}
+
+// VCardImportResult defines model for VCardImportResult.
+type VCardImportResult struct {
+	// FullName The name the card stated, so a reader can find the row it came from.
+	FullName string `json:"full_name"`
+
+	// Index The card's position in the file, from 0.
+	Index int `json:"index"`
+
+	// Outcome `created` — nobody matched, so the card became a person, their company and the edge
+	// between them. `updated` — an exact match, filled only where the record was empty.
+	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+	// `skipped` — the card states no name, so there is no person in it.
+	Outcome VCardImportResultOutcome `json:"outcome"`
+
+	// PersonId The person created or updated, or — for `needs_review` — the candidate the card resembles.
+	PersonId *openapi_types.UUID `json:"person_id,omitempty"`
+
+	// Reason Why a card was skipped, in words a reader can act on.
+	Reason *string `json:"reason,omitempty"`
+}
+
+// VCardImportResultOutcome `created` — nobody matched, so the card became a person, their company and the edge
+// between them. `updated` — an exact match, filled only where the record was empty.
+// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+// `skipped` — the card states no name, so there is no person in it.
+type VCardImportResultOutcome string
 
 // VoiceBuild defines model for VoiceBuild.
 type VoiceBuild struct {
@@ -28045,6 +28271,12 @@ type QuickCapturePersonParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// ImportVCardsMultipartBody defines parameters for ImportVCards.
+type ImportVCardsMultipartBody struct {
+	// File The .vcf file. RFC 6350, tolerating the 3.0 and 2.1 spellings real exporters emit.
+	File openapi_types.File `json:"file"`
+}
+
 // ArchivePersonParams defines parameters for ArchivePerson.
 type ArchivePersonParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -29897,6 +30129,9 @@ type CreatePersonJSONRequestBody = CreatePersonRequest
 // QuickCapturePersonJSONRequestBody defines body for QuickCapturePerson for application/json ContentType.
 type QuickCapturePersonJSONRequestBody = QuickCapturePersonRequest
 
+// ImportVCardsMultipartRequestBody defines body for ImportVCards for multipart/form-data ContentType.
+type ImportVCardsMultipartRequestBody ImportVCardsMultipartBody
+
 // UpdatePersonJSONRequestBody defines body for UpdatePerson for application/json ContentType.
 type UpdatePersonJSONRequestBody = UpdatePersonRequest
 
@@ -29908,6 +30143,9 @@ type RecordConsentJSONRequestBody = RecordConsentRequest
 
 // IssueDoubleOptInJSONRequestBody defines body for IssueDoubleOptIn for application/json ContentType.
 type IssueDoubleOptInJSONRequestBody IssueDoubleOptInJSONBody
+
+// RecordQualifyingEventJSONRequestBody defines body for RecordQualifyingEvent for application/json ContentType.
+type RecordQualifyingEventJSONRequestBody = RecordQualifyingEventRequest
 
 // DraftPersonEmailJSONRequestBody defines body for DraftPersonEmail for application/json ContentType.
 type DraftPersonEmailJSONRequestBody DraftPersonEmailJSONBody
@@ -38755,6 +38993,9 @@ type ServerInterface interface {
 	// Create a person, their employer and the employment edge in one write.
 	// (POST /people/quick-capture)
 	QuickCapturePerson(w http.ResponseWriter, r *http.Request, params QuickCapturePersonParams)
+	// Import a .vcf address-card file.
+	// (POST /people/vcard-import)
+	ImportVCards(w http.ResponseWriter, r *http.Request)
 	// Archive (soft-delete) a person.
 	// (DELETE /people/{id})
 	ArchivePerson(w http.ResponseWriter, r *http.Request, id Id, params ArchivePersonParams)
@@ -38788,6 +39029,9 @@ type ServerInterface interface {
 	// May we write to this person right now — per purpose and channel, with the reason.
 	// (GET /people/{id}/consent/guard)
 	GetPersonConsentGuard(w http.ResponseWriter, r *http.Request, id Id)
+	// Record the exchange that makes business correspondence lawful.
+	// (POST /people/{id}/consent/qualifying-events)
+	RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id)
 	// Draft an email to this person, grounded in their record.
 	// (POST /people/{id}/draft-email)
 	DraftPersonEmail(w http.ResponseWriter, r *http.Request, id Id)
@@ -41242,6 +41486,12 @@ func (_ Unimplemented) QuickCapturePerson(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Import a .vcf address-card file.
+// (POST /people/vcard-import)
+func (_ Unimplemented) ImportVCards(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Archive (soft-delete) a person.
 // (DELETE /people/{id})
 func (_ Unimplemented) ArchivePerson(w http.ResponseWriter, r *http.Request, id Id, params ArchivePersonParams) {
@@ -41305,6 +41555,12 @@ func (_ Unimplemented) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, 
 // May we write to this person right now — per purpose and channel, with the reason.
 // (GET /people/{id}/consent/guard)
 func (_ Unimplemented) GetPersonConsentGuard(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Record the exchange that makes business correspondence lawful.
+// (POST /people/{id}/consent/qualifying-events)
+func (_ Unimplemented) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -56489,6 +56745,28 @@ func (siw *ServerInterfaceWrapper) QuickCapturePerson(w http.ResponseWriter, r *
 	handler.ServeHTTP(w, r)
 }
 
+// ImportVCards operation middleware
+func (siw *ServerInterfaceWrapper) ImportVCards(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ImportVCards(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ArchivePerson operation middleware
 func (siw *ServerInterfaceWrapper) ArchivePerson(w http.ResponseWriter, r *http.Request) {
 
@@ -56949,6 +57227,38 @@ func (siw *ServerInterfaceWrapper) GetPersonConsentGuard(w http.ResponseWriter, 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetPersonConsentGuard(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RecordQualifyingEvent operation middleware
+func (siw *ServerInterfaceWrapper) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RecordQualifyingEvent(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -65438,6 +65748,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/people/quick-capture", wrapper.QuickCapturePerson)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/vcard-import", wrapper.ImportVCards)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/people/{id}", wrapper.ArchivePerson)
 	})
 	r.Group(func(r chi.Router) {
@@ -65469,6 +65782,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/people/{id}/consent/guard", wrapper.GetPersonConsentGuard)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/people/{id}/consent/qualifying-events", wrapper.RecordQualifyingEvent)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/people/{id}/draft-email", wrapper.DraftPersonEmail)

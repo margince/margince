@@ -73,11 +73,11 @@ func ExerciseDealToWon(t *testing.T, e *AppEnv, stages SeededStages) string {
 	t.Helper()
 	dealID := CreateOpenDeal(t, e, stages)
 
-	var deal AnyMap
+	var deal map[string]any
 	// The win gate (ADR-0109 §6): a won deal points at a signed agreement or
 	// says why it cannot, and a fixture has no contract in this database by
 	// construction — which is precisely what `imported` means.
-	status := e.Call(t, "POST", "/v1/deals/"+dealID+"/advance", AnyMap{
+	status := e.Call(t, "POST", "/v1/deals/"+dealID+"/advance", map[string]any{
 		"to_stage_id":                 stages.Won,
 		"won_without_contract_reason": "imported",
 	}, nil, &deal)
@@ -93,18 +93,18 @@ func ExerciseDealToWon(t *testing.T, e *AppEnv, stages SeededStages) string {
 // refusals around closing it, say — needs the state without the close.
 func CreateOpenDeal(t *testing.T, e *AppEnv, stages SeededStages) string {
 	t.Helper()
-	var org AnyMap
-	status := e.Call(t, "POST", "/v1/organizations", AnyMap{
+	var org map[string]any
+	status := e.Call(t, "POST", "/v1/organizations", map[string]any{
 		"display_name": "Acme GmbH",
 		"source":       "ui",
-		"domains":      []AnyMap{{"domain": "acme.example", "is_primary": true}},
+		"domains":      []map[string]any{{"domain": "acme.example", "is_primary": true}},
 	}, nil, &org)
 	if status != http.StatusCreated {
 		t.Fatalf("create org = %d %v", status, org)
 	}
 
-	var deal AnyMap
-	status = e.Call(t, "POST", "/v1/deals", AnyMap{
+	var deal map[string]any
+	status = e.Call(t, "POST", "/v1/deals", map[string]any{
 		"name":            "Acme rollout",
 		"amount_minor":    250_000_00,
 		"currency":        "EUR",

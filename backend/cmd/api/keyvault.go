@@ -4,7 +4,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"io"
 	"log/slog"
@@ -24,22 +23,18 @@ import (
 // configured. Without one the vault stays absent: every connector's connect
 // path (gmail, gcal, graph, imap all seal to the vault) refuses loudly rather
 // than nil-deref if ever invoked; the vault is required for any standing
-// connection. A key that is set but malformed is a boot error
-// (keyvault.FromEnv), never a silent fallback to something weaker.
-func keyvaultOptions(ctx context.Context, pool *pgxpool.Pool, stdout io.Writer, overlayBackfillLimit int) ([]compose.Option, error) {
-	vault, configured, err := keyvault.FromEnv(ctx, pool, config.FromOS)
-	if err != nil {
-		return nil, fmt.Errorf("api: keyvault: %w", err)
-	}
-	// Bound BEFORE the unconfigured return, and with whatever FromEnv gave:
-	// the extension tier's per-call Runtime needs the POOL for its
+// connection. A key that is set but malformed already failed the boot, never a
+// silent fallback to something weaker.
+func keyvaultOptions(pool *pgxpool.Pool, vault keyvault.Vault, stdout io.Writer, overlayBackfillLimit int) ([]compose.Option, error) {
+	// Bound BEFORE the unconfigured return, and with whatever the boot
+	// resolved: the extension tier's per-call Runtime needs the POOL for its
 	// workspace-pinned transactions whether or not a custodian exists, and a
 	// deployment with no keyvault should have its extension secrets refuse by
 	// name rather than have its extension database access silently disabled
-	// too. FromEnv returns a nil vault when unconfigured, which is the
-	// ErrNoCustodian posture the store already documents.
+	// too. A nil vault here is the ErrNoCustodian posture the store already
+	// documents.
 	compose.BindExtensionRuntime(pool, vault)
-	if !configured {
+	if vault == nil {
 		return nil, nil
 	}
 	_, _ = fmt.Fprintln(stdout, "api connector-credential vault enabled (keyvault configured)")

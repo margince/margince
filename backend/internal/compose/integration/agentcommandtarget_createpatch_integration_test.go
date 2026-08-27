@@ -36,7 +36,7 @@ func TestARestCreateStagesItsRecordTypeWithNoTargetID(t *testing.T) {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
 		"target_url": "https://example.test/hook", "event_types": []string{"organization.created"},
 	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
 		t.Fatalf("agent webhook-subscription create → %d %q, want 403 approval_required", status, problem.Code)
@@ -90,7 +90,7 @@ func TestARestPatchOutsideTheToolSchemaStagesTheRowWithID(t *testing.T) {
 			ID string `json:"id"`
 		} `json:"subscription"`
 	}
-	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
 		"target_url": "https://ok.example/hook", "event_types": []string{"deal.created"},
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create subscription → %d", status)
@@ -101,7 +101,7 @@ func TestARestPatchOutsideTheToolSchemaStagesTheRowWithID(t *testing.T) {
 		Detail string `json:"detail"`
 	}
 	if status := e.Call(t, "PATCH", "/v1/webhook-subscriptions/"+created.Subscription.ID,
-		apptest.AnyMap{"state": "paused"}, bearer, &problem); status != http.StatusForbidden ||
+		AnyMap{"state": "paused"}, bearer, &problem); status != http.StatusForbidden ||
 		problem.Code != "approval_required" {
 		t.Fatalf("agent subscription patch → %d %q, want 403 approval_required", status, problem.Code)
 	}
@@ -154,7 +154,7 @@ func TestARestCreateCustomFieldStagesRatherThanRefuses(t *testing.T) {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/custom-fields", AnyMap{
 		"object": "deal", "label": "Champion Score", "type": "text", "source": "ui",
 	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
 		t.Fatalf("agent custom field create → %d %q, want 403 approval_required — a hard refusal here is "+
@@ -202,7 +202,7 @@ func TestARestCreateWebhookSubscriptionStagesRatherThanRefuses(t *testing.T) {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/webhook-subscriptions", AnyMap{
 		"target_url": "https://ok.example/hook", "event_types": []string{"deal.created"},
 	}, bearer, &problem); status != http.StatusForbidden || problem.Code != "approval_required" {
 		t.Fatalf("agent webhook subscription create → %d %q, want 403 approval_required — a hard refusal "+

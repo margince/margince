@@ -58,9 +58,9 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := p.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := p.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": name,
-		"emails":    []apptest.AnyMap{{"email": email}},
+		"emails":    []AnyMap{{"email": email}},
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create %s → %d", email, status)
 	}
@@ -82,7 +82,7 @@ func (p *preflightEnv) seedConsentedRecipient(t *testing.T, name, email string) 
 	if transactional == "" {
 		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+person.ID+"/consent", apptest.AnyMap{
+	if status := p.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
 		"purpose_id": transactional, "new_state": "granted", "lawful_basis": "contract",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("grant consent for %s → %d", email, status)
@@ -133,7 +133,7 @@ func (p *preflightEnv) scheduleFor(t *testing.T, at time.Time) ids.UUID {
 		ID     string `json:"id"`
 		Status string `json:"status"`
 	}
-	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", apptest.AnyMap{
+	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Monday morning", "body": "Written the night before.",
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
 		"scheduled_at": at.UTC().Format(time.RFC3339),
@@ -253,7 +253,7 @@ func (p *preflightEnv) setTransactionalConsent(t *testing.T, state string) {
 	if transactional == "" {
 		t.Fatalf("bootstrap seeded no transactional purpose: %+v", purposes.Data)
 	}
-	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", apptest.AnyMap{
+	if status := p.Call(t, "POST", "/v1/people/"+p.personID+"/consent", AnyMap{
 		"purpose_id": transactional, "new_state": state, "lawful_basis": "consent",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("setting consent to %s → %d", state, status)
@@ -417,7 +417,7 @@ func (p *preflightEnv) rescheduleTo(t *testing.T, id ids.UUID, at time.Time) {
 		t.Fatalf("reading the scheduled send before moving it → %d", status)
 	}
 	status := p.Call(t, "PATCH", "/v1/scheduled-sends/"+id.String(),
-		apptest.AnyMap{
+		AnyMap{
 			"scheduled_at": at.UTC().Format(time.RFC3339),
 			"scheduled_tz": "Europe/Berlin",
 		},
@@ -573,7 +573,7 @@ func TestARepCanRetryAHeldMessageFromTheirInbox(t *testing.T) {
 
 	// The rep fixes the problem and clicks Accept.
 	p.grantTransactionalConsent(t)
-	if status := p.Call(t, "POST", "/v1/approvals/"+card.ID+"/approve", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := p.Call(t, "POST", "/v1/approvals/"+card.ID+"/approve", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("accepting the card → %d, want 200", status)
 	}
 
@@ -605,7 +605,7 @@ func TestARepCanAbandonAHeldMessageFromTheirInbox(t *testing.T) {
 	if !found {
 		t.Fatal("no card to reject — this test is about rejecting one")
 	}
-	if status := p.Call(t, "POST", "/v1/approvals/"+card.ID+"/reject", apptest.AnyMap{}, nil, nil); status != http.StatusOK {
+	if status := p.Call(t, "POST", "/v1/approvals/"+card.ID+"/reject", AnyMap{}, nil, nil); status != http.StatusOK {
 		t.Fatalf("rejecting the card → %d, want 200", status)
 	}
 
@@ -647,7 +647,7 @@ func TestARejectionThatCannotCancelLeavesTheCardRetryable(t *testing.T) {
 	p.forceStatus(t, id, activities.ScheduledStatusCancelled)
 
 	// The rejection must now fail as a whole rather than commit half of itself.
-	status := p.Call(t, "POST", "/v1/approvals/"+card.ID+"/reject", apptest.AnyMap{}, nil, nil)
+	status := p.Call(t, "POST", "/v1/approvals/"+card.ID+"/reject", AnyMap{}, nil, nil)
 	if status == http.StatusOK {
 		t.Fatal("the rejection reported success while its cancellation could not run — the card would be decided and the message left in the wrong state")
 	}

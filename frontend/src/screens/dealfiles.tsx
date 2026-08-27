@@ -9,6 +9,7 @@ import { Badge, Button, OverflowMenu } from "../design-system/atoms";
 import { ConfirmModal } from "../design-system/confirmmodal";
 import { Panel, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { useToast } from "../design-system/toast";
 import { formatDateAbbrev } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -259,6 +260,7 @@ function FileMenu({
 // and without hidden rows), since a hide moves a row from one to the other.
 function useFileVerbs(dealId: string, attachmentId: string) {
   const t = useT();
+  const toast = useToast();
   const queryClient = useQueryClient();
   // Both spellings of "the deal's files": this area's own key and the one the
   // Deal Room's picker reads, so a delete here never leaves a ghost there.
@@ -279,7 +281,16 @@ function useFileVerbs(dealId: string, attachmentId: string) {
         throwProblem(error, t);
       }
     },
-    onSuccess: refresh,
+    onSuccess: async () => {
+      await refresh();
+      // The one fully symmetric pair on this screen: `DELETE .../hide` puts the
+      // document back exactly as it was, with nothing to re-supply, so the
+      // Undo is the whole of the way back rather than a second write that
+      // approximates one.
+      toast.show(t("dealfiles.hidden"), {
+        action: { label: t("common.undo"), onAct: () => unhide.mutate() },
+      });
+    },
   });
   const unhide = useMutation({
     mutationFn: async () => {
@@ -293,7 +304,15 @@ function useFileVerbs(dealId: string, attachmentId: string) {
         throwProblem(error, t);
       }
     },
-    onSuccess: refresh,
+    // The same obligation the team restore carries, for the same reason: this
+    // is what the hide's Undo runs, and that message is consumed on the press.
+    onError: (error) => {
+      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+    },
+    onSuccess: async () => {
+      await refresh();
+      toast.show(t("dealfiles.unhidden"));
+    },
   });
   const remove = useMutation({
     mutationFn: async () => {

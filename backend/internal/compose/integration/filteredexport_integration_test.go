@@ -268,7 +268,7 @@ func lastSystemLog(t *testing.T, e *SearchEnv, action string) (gotAction string,
 func TestFilteredExportHTTPEndToEnd(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	if status := e.Call(t, "POST", "/v1/auth/login", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
 		"email": "ada@example.com", "password": "correct-horse-battery",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("login → %d", status)
@@ -276,9 +276,9 @@ func TestFilteredExportHTTPEndToEnd(t *testing.T) {
 
 	// A valid filter with no matching rows still returns a CSV (header row):
 	// the endpoint is wired and the open format is honest on an empty slice.
-	body, err := json.Marshal(apptest.AnyMap{
+	body, err := json.Marshal(AnyMap{
 		"object": "deal",
-		"filter": apptest.AnyMap{"field": "forecast_category", "op": "eq", "value": "commit"},
+		"filter": AnyMap{"field": "forecast_category", "op": "eq", "value": "commit"},
 		"format": "csv",
 	})
 	if err != nil {
@@ -316,9 +316,9 @@ func TestFilteredExportHTTPEndToEnd(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "POST", "/v1/exports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/exports", AnyMap{
 		"object": "deal",
-		"filter": apptest.AnyMap{"field": "amount_minor", "op": "eq", "value": 1},
+		"filter": AnyMap{"field": "amount_minor", "op": "eq", "value": 1},
 		"format": "csv",
 	}, nil, &problem); status != http.StatusUnprocessableEntity {
 		t.Fatalf("out-of-vocabulary filter → %d, want 422", status)
@@ -339,20 +339,20 @@ func TestFilteredExportHTTPEndToEnd(t *testing.T) {
 func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	if status := e.Call(t, "POST", "/v1/auth/login", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
 		"email": "ada@example.com", "password": "correct-horse-battery",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("login → %d", status)
 	}
 
-	commitFilter := apptest.AnyMap{"field": "forecast_category", "op": "eq", "value": "commit"}
+	commitFilter := AnyMap{"field": "forecast_category", "op": "eq", "value": "commit"}
 
 	var view struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/views", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/views", AnyMap{
 		"resource": "deals", "name": "Commit deals",
-		"query": apptest.AnyMap{"filter": commitFilter},
+		"query": AnyMap{"filter": commitFilter},
 	}, nil, &view); status != http.StatusCreated {
 		t.Fatalf("create saved view → %d, want 201", status)
 	}
@@ -360,7 +360,7 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 	var dynamic struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
 		"name": "Commit segment", "entity_type": "deal", "list_type": "dynamic",
 		"definition": commitFilter,
 	}, nil, &dynamic); status != http.StatusCreated {
@@ -370,7 +370,7 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 	var static struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/lists", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/lists", AnyMap{
 		"name": "Hand-picked deals", "entity_type": "deal", "list_type": "static",
 	}, nil, &static); status != http.StatusCreated {
 		t.Fatalf("create static list → %d, want 201", status)
@@ -379,9 +379,9 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 	var viewless struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/views", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/views", AnyMap{
 		"resource": "deals", "name": "Columns only",
-		"query": apptest.AnyMap{"columns": []string{"name"}},
+		"query": AnyMap{"columns": []string{"name"}},
 	}, nil, &viewless); status != http.StatusCreated {
 		t.Fatalf("create filterless view → %d, want 201", status)
 	}
@@ -392,9 +392,9 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 	var cleared struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/views", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/views", AnyMap{
 		"resource": "deals", "name": "Cleared filter",
-		"query": apptest.AnyMap{"columns": []string{"name"}, "filter": nil},
+		"query": AnyMap{"columns": []string{"name"}, "filter": nil},
 	}, nil, &cleared); status != http.StatusCreated {
 		t.Fatalf("create view with a null filter → %d, want 201 — the write surface reads null as cleared", status)
 	}
@@ -404,10 +404,10 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 	// which is what "one engine" has to mean here.
 	for _, c := range []struct {
 		name string
-		body apptest.AnyMap
+		body AnyMap
 	}{
-		{"by view_id", apptest.AnyMap{"view_id": view.ID, "format": "csv"}},
-		{"by list_id", apptest.AnyMap{"list_id": dynamic.ID, "format": "csv"}},
+		{"by view_id", AnyMap{"view_id": view.ID, "format": "csv"}},
+		{"by list_id", AnyMap{"list_id": dynamic.ID, "format": "csv"}},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			rows := exportCSV(t, e, c.body)
@@ -420,13 +420,13 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 	// The refusals, each naming the field the caller actually sent.
 	for _, c := range []struct {
 		name  string
-		body  apptest.AnyMap
+		body  AnyMap
 		field string
 	}{
-		{"a static list has members, not a filter", apptest.AnyMap{"list_id": static.ID, "format": "csv"}, "list_id"},
-		{"a view carrying no filter state", apptest.AnyMap{"view_id": viewless.ID, "format": "csv"}, "view_id"},
-		{"a view whose filter is explicitly null", apptest.AnyMap{"view_id": cleared.ID, "format": "csv"}, "view_id"},
-		{"a view_id that is not a uuid", apptest.AnyMap{"view_id": "not-a-uuid", "format": "csv"}, "view_id"},
+		{"a static list has members, not a filter", AnyMap{"list_id": static.ID, "format": "csv"}, "list_id"},
+		{"a view carrying no filter state", AnyMap{"view_id": viewless.ID, "format": "csv"}, "view_id"},
+		{"a view whose filter is explicitly null", AnyMap{"view_id": cleared.ID, "format": "csv"}, "view_id"},
+		{"a view_id that is not a uuid", AnyMap{"view_id": "not-a-uuid", "format": "csv"}, "view_id"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			// The per-field breakdown rides `details.errors` (httperr's
@@ -450,7 +450,7 @@ func TestFilteredExportFromASavedViewAndFromAList(t *testing.T) {
 
 // exportCSV posts an export and parses the CSV body, failing the test on any
 // non-200 or unparseable response.
-func exportCSV(t *testing.T, e *apptest.AppEnv, body apptest.AnyMap) [][]string {
+func exportCSV(t *testing.T, e *apptest.AppEnv, body AnyMap) [][]string {
 	t.Helper()
 	raw, err := json.Marshal(body)
 	if err != nil {

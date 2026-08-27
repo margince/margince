@@ -58,7 +58,7 @@ func (noopWorker) Work(context.Context, *river.Job[noopArgs]) error { return nil
 // reach this suite asserts rests on GRANT USAGE ON SCHEMA public TO
 // margince_app, which EnsureSchema issues itself when it rebuilds the schema
 // and a lane clone carries from core 0015 when EnsureSchema reuses one.
-func migratedAppPool(t *testing.T) (*jobs.Runner, *pgxpool.Pool) {
+func migratedAppPool(t *testing.T, register ...func(*river.Workers)) (*jobs.Runner, *pgxpool.Pool) {
 	t.Helper()
 	ownerDSN := os.Getenv("MARGINCE_TEST_DSN")
 	appDSN := os.Getenv("MARGINCE_TEST_APP_DSN")
@@ -102,6 +102,12 @@ func migratedAppPool(t *testing.T) (*jobs.Runner, *pgxpool.Pool) {
 
 	workers := river.NewWorkers()
 	river.AddWorker(workers, &noopWorker{})
+	// A caller that needs work of its own registers it here rather than
+	// rebuilding the chassis: the schema, the roles and the River migration
+	// above are what make this expensive, and none of them differ.
+	for _, add := range register {
+		add(workers)
+	}
 	r, err := jobs.New(appPool, jobs.Config{
 		Queues:  map[string]river.QueueConfig{river.QueueDefault: {MaxWorkers: 1}},
 		Workers: workers,

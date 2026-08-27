@@ -8,48 +8,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
-// clearable is one column a caller may set to NULL, and what the row holds
-// there now. The current value is carried so the audit image says what the
-// field was cleared FROM.
-//
-//craft:ignore naked-any the value is whichever type the column holds; the patch seam takes it as the audit image does
-type clearable struct {
-	column  string
-	current any
-}
-
-// NotClearableError refuses an explicit null on a field this record cannot set
-// to nothing. It maps to 422 through the FieldFault seam.
-//
-// Refusing matters: the caller sent a null on a field the contract declares
-// nullable, so ignoring it would answer 200 having changed nothing — a success
-// they cannot trust.
-type NotClearableError struct{ Field string }
-
-func (e *NotClearableError) Error() string {
-	return e.Field + " cannot be set to null on this record; omit the field to leave it unchanged"
-}
-
-// FieldFault names the field the caller tried to clear.
-func (e *NotClearableError) FieldFault() (field, code, message string) {
-	return e.Field, "field_not_clearable", e.Error()
-}
-
-// applyClears sets each named field to NULL, and refuses a name this store
-// cannot clear. A field the map does not hold is either not nullable or not
-// clearable through this path, and either way the honest answer is to say so
-// rather than accept the instruction and drop it.
-func applyClears(p *storekit.Patch, fields []string, columns map[string]clearable) error {
-	for _, field := range fields {
-		target, clearableHere := columns[field]
-		if !clearableHere {
-			return &NotClearableError{Field: field}
-		}
-		p.Set(target.column, target.current, nil)
-	}
-	return nil
-}
-
 // clearablePersonColumns maps the wire fields a person restore may set to NULL
 // onto the column holding each, with the row's current value for the audit
 // image. The column names are literals here and never come from a caller, so
@@ -59,12 +17,12 @@ func applyClears(p *storekit.Patch, fields []string, columns map[string]clearabl
 // rather than reporting a success it did not have.
 //
 //nolint:goconst // the map keys are wire field names and the values are COLUMN names; each is its own vocabulary, and the constants goconst names are filter params and report fields that spell the same words by coincidence
-func clearablePersonColumns(current crmcontracts.Person) map[string]clearable {
-	return map[string]clearable{
-		"first_name": {"first_name", current.FirstName},
-		"last_name":  {"last_name", current.LastName},
-		"title":      {"title", current.Title},
-		"owner_id":   {ownerIDColumn, current.OwnerId},
+func clearablePersonColumns(current crmcontracts.Person) map[string]storekit.Clearable {
+	return map[string]storekit.Clearable{
+		"first_name": {Column: "first_name", Current: current.FirstName},
+		"last_name":  {Column: "last_name", Current: current.LastName},
+		"title":      {Column: "title", Current: current.Title},
+		"owner_id":   {Column: ownerIDColumn, Current: current.OwnerId},
 	}
 }
 
@@ -74,15 +32,15 @@ func clearablePersonColumns(current crmcontracts.Person) map[string]clearable {
 // refuses rather than reporting a success it did not have.
 //
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
-func clearableOrganizationColumns(current crmcontracts.Organization) map[string]clearable {
-	return map[string]clearable{
-		"legal_name":    {"legal_name", current.LegalName},
-		"description":   {"description", current.Description},
-		"industry":      {"industry", current.Industry},
-		"size_band":     {"size_band", current.SizeBand},
-		"linkedin_url":  {"linkedin_url", current.LinkedinUrl},
-		"owner_id":      {ownerIDColumn, current.OwnerId},
-		"parent_org_id": {"parent_org_id", current.ParentOrgId},
+func clearableOrganizationColumns(current crmcontracts.Organization) map[string]storekit.Clearable {
+	return map[string]storekit.Clearable{
+		"legal_name":    {Column: "legal_name", Current: current.LegalName},
+		"description":   {Column: "description", Current: current.Description},
+		"industry":      {Column: "industry", Current: current.Industry},
+		"size_band":     {Column: "size_band", Current: current.SizeBand},
+		"linkedin_url":  {Column: "linkedin_url", Current: current.LinkedinUrl},
+		"owner_id":      {Column: ownerIDColumn, Current: current.OwnerId},
+		"parent_org_id": {Column: "parent_org_id", Current: current.ParentOrgId},
 	}
 }
 
@@ -93,12 +51,12 @@ func clearableOrganizationColumns(current crmcontracts.Organization) map[string]
 // a decision rather than a field edit).
 //
 //nolint:goconst // wire field names against column names, each its own vocabulary — see clearablePersonColumns
-func clearableLeadColumns(current crmcontracts.Lead) map[string]clearable {
-	return map[string]clearable{
-		"title":             {"title", current.Title},
-		"company_name":      {leadCompanyColumn, current.CompanyName},
-		"candidate_org_key": {"candidate_org_key", current.CandidateOrgKey},
-		"project_id":        {"project_id", current.ProjectId},
-		"owner_id":          {ownerIDColumn, current.OwnerId},
+func clearableLeadColumns(current crmcontracts.Lead) map[string]storekit.Clearable {
+	return map[string]storekit.Clearable{
+		"title":             {Column: "title", Current: current.Title},
+		"company_name":      {Column: leadCompanyColumn, Current: current.CompanyName},
+		"candidate_org_key": {Column: "candidate_org_key", Current: current.CandidateOrgKey},
+		"project_id":        {Column: "project_id", Current: current.ProjectId},
+		"owner_id":          {Column: ownerIDColumn, Current: current.OwnerId},
 	}
 }

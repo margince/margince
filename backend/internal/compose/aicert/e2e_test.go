@@ -45,13 +45,13 @@ func TestE2ECertify(t *testing.T) {
 	// The binding is stated outright. There is no routing file to inherit one
 	// from any more, and a certification record should name the model it
 	// measured rather than whatever a file on the runner's disk happened to say.
-	binding, err := aicert.ParseBinding(os.Getenv("MARGINCE_AICERT_MODEL"), os.Getenv("MARGINCE_AICERT_BASE_URL"))
+	binding, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_MODEL"), os.Getenv("MARGINCE_AICERT_BASE_URL"))
 	if err != nil {
 		t.Fatalf("MARGINCE_AICERT_MODEL: %v", err)
 	}
 	// The judge is a SECOND model on purpose: one grading itself is certified by
 	// construction. Run refuses the two being equal before a call is paid for.
-	judge, err := aicert.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), os.Getenv("MARGINCE_AICERT_JUDGE_BASE_URL"))
+	judge, err := ai.ParseBinding(os.Getenv("MARGINCE_AICERT_JUDGE_MODEL"), os.Getenv("MARGINCE_AICERT_JUDGE_BASE_URL"))
 	if err != nil {
 		t.Fatalf("MARGINCE_AICERT_JUDGE_MODEL: %v", err)
 	}

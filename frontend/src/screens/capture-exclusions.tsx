@@ -14,6 +14,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -48,6 +49,8 @@ function useExclusions() {
 }
 
 function useAddExclusion() {
+  const toast = useToast();
+  const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (body: { scope: Scope; kind: Kind; value: string }) => {
@@ -57,13 +60,16 @@ function useAddExclusion() {
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_written, added) => {
       queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });
+      toast.show(t("settings.addedItem", { name: added.value }));
     },
   });
 }
 
 function useRemoveExclusion() {
+  const toast = useToast();
+  const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -76,6 +82,8 @@ function useRemoveExclusion() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["capture-exclusions"] });
+      // The variable is the row id; see the note in consumer-mail-domains.
+      toast.show(t("settings.removed"));
     },
   });
 }

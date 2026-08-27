@@ -193,13 +193,29 @@ func isJSONBool(raw json.RawMessage) bool {
 // query numbers its arguments its own way, and a literal verb list here would
 // put the vocabulary in two places instead of one.
 func UnscrubbedImageSQL(alias, verbsPlaceholder string) string {
-	return fmt.Sprintf(`NOT EXISTS (
+	return "NOT EXISTS (" +
+		ScrubNewerThanRowSQL(alias+".entity_type", alias+".entity_id", alias, verbsPlaceholder) + ")"
+}
+
+// ScrubNewerThanRowSQL renders the boundary itself: a scrub of the record named
+// by typeExpr and idExpr, certified AFTER the audit row aliased as rowAlias.
+//
+// Exported and taken as expressions because the record whose erasure bounds a
+// row is not always the record the row sits on. A LINK's audit row sits on the
+// link, which no scrub verb is ever written against, and what an erasure of
+// either END certifies gone is the role and the dates that row carries — so that
+// reader supplies its own endpoint columns and the tuple comparison stays spelled
+// once. A second copy of these five lines is how the boundary comes to mean two
+// slightly different moments, and this is the one rule where almost-the-same
+// resurrects what was certified destroyed.
+func ScrubNewerThanRowSQL(typeExpr, idExpr, rowAlias, verbsPlaceholder string) string {
+	return fmt.Sprintf(`
 		  SELECT 1 FROM audit_log scrub
-		   WHERE scrub.entity_type = %[1]s.entity_type
-		     AND scrub.entity_id = %[1]s.entity_id
-		     AND scrub.action = ANY(%[2]s)
-		     AND (scrub.occurred_at, scrub.id) > (%[1]s.occurred_at, %[1]s.id))`,
-		alias, verbsPlaceholder)
+		   WHERE scrub.entity_type = %[1]s
+		     AND scrub.entity_id = %[2]s
+		     AND scrub.action = ANY(%[4]s)
+		     AND (scrub.occurred_at, scrub.id) > (%[3]s.occurred_at, %[3]s.id)`,
+		typeExpr, idExpr, rowAlias, verbsPlaceholder)
 }
 
 // ScrubVerbs are the verbs certifying a record's PII was scrubbed in place.

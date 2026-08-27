@@ -81,13 +81,13 @@ func TestARestoreVerbIsItselfReplayable(t *testing.T) {
 }
 
 // A type the history screens do not serve is refused by name rather than
-// half-served. relationship is a write shape with no history endpoint.
+// half-served. A custom field is audited and has no history screen of its own.
 func TestARecordTypeWithNoHistoryScreenIsRefusedByName(t *testing.T) {
 	row := personRow(`{"role":"cfo"}`)
-	row.EntityType = "relationship"
+	row.EntityType = "custom_field"
 	answer := evaluateWithoutTheTrail(t, Evaluator{}, row)
 	if answer.Reason != ReasonUnsupportedRecordType {
-		t.Errorf("relationship: reason = %q, want %q", answer.Reason, ReasonUnsupportedRecordType)
+		t.Errorf("custom_field: reason = %q, want %q", answer.Reason, ReasonUnsupportedRecordType)
 	}
 }
 
@@ -224,7 +224,7 @@ func TestAFieldHoldingAValueIsNotCleared(t *testing.T) {
 // Reason is empty exactly when Undoable. A refusal with no reason and an
 // undoable answer carrying one are both states the surface cannot render.
 func TestAnAnswerCarriesAReasonExactlyWhenItRefuses(t *testing.T) {
-	if answer := (undoable()); answer.Reason != "" {
+	if answer := undoable(); answer.Reason != "" {
 		t.Errorf("an undoable answer carries reason %q", answer.Reason)
 	}
 	for _, reason := range Reasons {
@@ -375,7 +375,8 @@ func TestAnEntryWhoseOnlyDifferenceIsAStampHasNothingToPutBack(t *testing.T) {
 // branch goes on to read the trail.
 func TestARealChangeIsRecognisedAsOne(t *testing.T) {
 	changed, err := recordsAChange(
-		json.RawMessage(`{"title":"CTO"}`), json.RawMessage(`{"title":"CEO"}`))
+		json.RawMessage(`{"title":"CTO"}`), json.RawMessage(`{"title":"CEO"}`),
+	)
 	if err != nil {
 		t.Fatalf("compare the images: %v", err)
 	}

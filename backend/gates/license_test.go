@@ -13,8 +13,6 @@ package gates
 // generator (and the drift gate), not by hand.
 
 import (
-	"io/fs"
-	"os"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -94,42 +92,12 @@ var licensedTrees = []licensedTree{
 func TestEveryHandWrittenGoFileCarriesTheLicenseHeader(t *testing.T) {
 	t.Parallel()
 	var missing []string
-	walk := func(root string) (int, error) {
-		checked := 0
-		err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil {
-				return err
-			}
-			// extensions/ now holds installed dependency trees (a unit's
-			// frontend layer is a workspace package). Nothing in one is
-			// hand-written, and walking it is thousands of files of pure cost.
-			if d.IsDir() && d.Name() == "node_modules" {
-				return fs.SkipDir
-			}
-			if d.IsDir() || !strings.HasSuffix(path, ".go") || !d.Type().IsRegular() {
-				return nil
-			}
-			b, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.go file from walking the trusted source tree
-			if err != nil {
-				return err
-			}
-			text := string(b)
-			if isGenerated(path, text) {
-				return nil
-			}
-			checked++
-			if !strings.HasPrefix(text, spdxHeader) {
-				missing = append(missing, filepath.ToSlash(path))
-			}
-			return nil
-		})
-		return checked, err
-	}
 	for _, tree := range licensedTrees {
-		checked, err := walk(tree.root)
-		if err != nil {
-			t.Fatalf("walking %s: %v", tree.root, err)
-		}
+		checked := walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
+			if !strings.HasPrefix(text, spdxHeader) {
+				missing = append(missing, path)
+			}
+		})
 		if tree.mustHaveFiles && checked == 0 {
 			t.Fatalf("%s yielded no hand-written Go file — a root that scans nothing passes exactly like a clean one", tree.root)
 		}

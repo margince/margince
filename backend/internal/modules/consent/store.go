@@ -304,100 +304,116 @@ func admitRecord(ctx context.Context, in RecordInput) (subject, ConsentState, er
 // person or, before promotion, a lead (E12.20). Re-asserting the
 // current state is idempotent: no second proof row, no second event.
 func (s *Store) Record(ctx context.Context, in RecordInput) (State, error) {
+	// Admitted before a connection is taken: a malformed subject or a caller
+	// without authority is refused without opening a transaction, which is what
+	// keeps a bad request off the pool. RecordTx does not repeat it — this is
+	// the one admission, and RecordTx documents that its callers have passed it.
 	sub, state, err := admitRecord(ctx, in)
 	if err != nil {
 		return State{}, err
 	}
+	var out State
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		out, err = s.recordAdmittedTx(ctx, tx, in, sub, state)
+		return err
+	})
+	return out, err
+}
+
+// recordAdmittedTx is the write itself, on input Record has already admitted —
+// so admission runs once per request and its authorization check is never
+// evaluated twice.
+func (s *Store) recordAdmittedTx(
+	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, state ConsentState,
+) (State, error) {
 	actor, _ := principal.Actor(ctx)
 
 	var out State
-	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Which row probe runs depends on WHAT is being recorded.
-		// A WITHDRAWAL stays recordable against an archived — including an
-		// Art. 17 anonymized — subject: suppression is what you most want still
-		// working once somebody has asked to be forgotten.
-		//
-		// A GRANT does not. Anonymize-in-place leaves the person row standing,
-		// so an erased subject would go on accruing person_consent,
-		// consent_event, audit and outbox rows — the accrual erasure destroys
-		// the emailed capabilities to stop. This closes it from the other end.
-		//
-		// "Permissive" is weaker than it sounds: EnsureWritable runs NO
-		// statement for an actor unbounded on the table, and every human is
-		// unbounded on `lead` — so that arm is ungated for a lead, and gated
-		// for a person only by capture privacy. Nothing outside tests sets
-		// LeadID, which is why that is a note not a finding (#2574).
-		//
-		// Exhaustive rather than defaulted: a state added to
-		// ParseRecordableState must come here and say whether it is a claim or
-		// a suppression, and is refused until it does.
-		var probe func(context.Context, pgx.Tx, string, ids.UUID) error
-		switch state {
-		case StateGranted:
-			probe = auth.EnsureWritableLive
-		case StateWithdrawn:
-			probe = auth.EnsureWritable
-		default:
-			// Not a bad request: ParseRecordableState already admitted this
-			// value, so arriving here means the vocabulary grew and this
-			// decision was not made. That is a defect in the code, and it
-			// refuses rather than guessing which probe the new state wants.
-			return fmt.Errorf("consent: %q is recordable but no row probe has been chosen for it — decide whether it is a lawful-basis claim (live subject only) or a suppression (any subject)", state)
-		}
-		if err := probe(ctx, tx, sub.entityType, sub.id); err != nil {
-			return err
-		}
-		purposeKey, requiresDOI, err := loadConsentPurpose(ctx, tx, in.PurposeID)
-		if err != nil {
-			return err
-		}
-		var current string
-		err = tx.QueryRow(ctx,
-			`SELECT state FROM person_consent WHERE `+sub.column+` = $1 AND purpose_id = $2`,
-			sub.id, in.PurposeID).Scan(&current)
-		if err != nil && !errors.Is(err, pgx.ErrNoRows) {
-			return err
-		}
-		if current == in.NewState {
-			out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current, LawfulBasis: in.LawfulBasis}
-			return nil // idempotent re-assertion: no proof row, no event, no fresh token demanded
-		}
-		if in.NeverOverrideExisting && current != "" {
-			out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current}
-			return nil // the decision on record stands; an anonymous capture cannot flip it
-		}
+	// Which row probe runs depends on WHAT is being recorded.
+	// A WITHDRAWAL stays recordable against an archived — including an
+	// Art. 17 anonymized — subject: suppression is what you most want still
+	// working once somebody has asked to be forgotten.
+	//
+	// A GRANT does not. Anonymize-in-place leaves the person row standing,
+	// so an erased subject would go on accruing person_consent,
+	// consent_event, audit and outbox rows — the accrual erasure destroys
+	// the emailed capabilities to stop. This closes it from the other end.
+	//
+	// "Permissive" is weaker than it sounds: EnsureWritable runs NO
+	// statement for an actor unbounded on the table, and every human is
+	// unbounded on `lead` — so that arm is ungated for a lead, and gated
+	// for a person only by capture privacy. Nothing outside tests sets
+	// LeadID, which is why that is a note not a finding (#2574).
+	//
+	// Exhaustive rather than defaulted: a state added to
+	// ParseRecordableState must come here and say whether it is a claim or
+	// a suppression, and is refused until it does.
+	var probe func(context.Context, pgx.Tx, string, ids.UUID) error
+	switch state {
+	case StateGranted:
+		probe = auth.EnsureWritableLive
+	case StateWithdrawn:
+		probe = auth.EnsureWritable
+	default:
+		// Not a bad request: ParseRecordableState already admitted this
+		// value, so arriving here means the vocabulary grew and this
+		// decision was not made. That is a defect in the code, and it
+		// refuses rather than guessing which probe the new state wants.
+		return State{}, fmt.Errorf("consent: %q is recordable but no row probe has been chosen for it — decide whether it is a lawful-basis claim (live subject only) or a suppression (any subject)", state)
+	}
+	if err := probe(ctx, tx, sub.entityType, sub.id); err != nil {
+		return State{}, err
+	}
+	purposeKey, requiresDOI, err := loadConsentPurpose(ctx, tx, in.PurposeID)
+	if err != nil {
+		return State{}, err
+	}
+	var current string
+	err = tx.QueryRow(ctx,
+		`SELECT state FROM person_consent WHERE `+sub.column+` = $1 AND purpose_id = $2`,
+		sub.id, in.PurposeID).Scan(&current)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return State{}, err
+	}
+	if current == in.NewState {
+		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current, LawfulBasis: in.LawfulBasis}
+		return out, nil // idempotent re-assertion: no proof row, no event, no fresh token demanded
+	}
+	if in.NeverOverrideExisting && current != "" {
+		out = State{PurposeID: in.PurposeID, PurposeKey: purposeKey, State: current}
+		return out, nil // the decision on record stands; an anonymous capture cannot flip it
+	}
 
-		doiConfirmedAt, err := s.resolveDOIConfirmation(ctx, tx, in, sub, requiresDOI)
-		if err != nil {
-			return err
-		}
+	doiConfirmedAt, err := s.resolveDOIConfirmation(ctx, tx, in, sub, requiresDOI)
+	if err != nil {
+		return State{}, err
+	}
 
-		capturedAt := s.now().UTC()
-		if err := upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, actor.ID); err != nil {
-			return err
-		}
+	capturedAt := s.now().UTC()
+	if err := upsertConsentWithProof(ctx, tx, in, sub, doiConfirmedAt, capturedAt, actor.ID); err != nil {
+		return State{}, err
+	}
 
-		action := "consent_grant"
-		if ConsentState(in.NewState) == StateWithdrawn {
-			action = "consent_withdraw"
-		}
-		auditID, err := storekit.Audit(ctx, tx, action, sub.entityType, sub.id, map[string]any{"state": stateOrUnknown(current)}, map[string]any{
-			"purpose": purposeKey, "state": in.NewState,
-		})
-		if err != nil {
-			return err
-		}
-		if err := storekit.EmitEventForEntity(ctx, tx, auditID, sub.entityType, sub.id,
-			consentChangedPayload(in.PurposeID, purposeKey, in.NewState)); err != nil {
-			return err
-		}
-		out = State{
-			PurposeID: in.PurposeID, PurposeKey: purposeKey, State: in.NewState,
-			LawfulBasis: in.LawfulBasis, DoubleOptInConfirmedAt: doiConfirmedAt, UpdatedAt: &capturedAt,
-		}
-		return nil
+	action := "consent_grant"
+	if ConsentState(in.NewState) == StateWithdrawn {
+		action = "consent_withdraw"
+	}
+	auditID, err := storekit.Audit(ctx, tx, action, sub.entityType, sub.id, map[string]any{"state": stateOrUnknown(current)}, map[string]any{
+		"purpose": purposeKey, "state": in.NewState,
 	})
-	return out, err
+	if err != nil {
+		return State{}, err
+	}
+	if err := storekit.EmitEventForEntity(ctx, tx, auditID, sub.entityType, sub.id,
+		consentChangedPayload(in.PurposeID, purposeKey, in.NewState)); err != nil {
+		return State{}, err
+	}
+	out = State{
+		PurposeID: in.PurposeID, PurposeKey: purposeKey, State: in.NewState,
+		LawfulBasis: in.LawfulBasis, DoubleOptInConfirmedAt: doiConfirmedAt, UpdatedAt: &capturedAt,
+	}
+	return out, nil
 }
 
 // consentChangedPayload builds the consent.changed wire payload — the
@@ -411,76 +427,6 @@ func consentChangedPayload(purposeID ids.PurposeID, purposeKey, newState string)
 		Purpose:   purposeKey,
 		NewState:  newState,
 	}
-}
-
-// loadConsentPurpose resolves the target purpose's key and DOI flag; an
-// unknown or archived purpose is 404.
-func loadConsentPurpose(ctx context.Context, tx pgx.Tx, purposeID ids.PurposeID) (key string, requiresDOI bool, err error) {
-	err = tx.QueryRow(ctx,
-		`SELECT key, requires_double_opt_in FROM consent_purpose WHERE id = $1 AND archived_at IS NULL`,
-		purposeID).Scan(&key, &requiresDOI)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return "", false, fmt.Errorf("purpose %s: %w", purposeID, apperrors.ErrNotFound)
-	}
-	if err != nil {
-		return "", false, err
-	}
-	return key, requiresDOI, nil
-}
-
-// resolveDOIConfirmation enforces the German email norm: a DOI purpose's
-// grant is only effective once the double-opt-in round-trip confirmed.
-// The token must be one this server issued (hash-matched, unconsumed,
-// unexpired) — consuming it here makes the confirmation single-use and
-// unfabricatable rather than stored half-true. Non-DOI paths return nil.
-// The DOI round-trip is person-keyed (consent_doi_token has no lead arm),
-// so a DOI grant on a lead subject is refused rather than recorded
-// unconfirmed — the lead promotes first, then confirms.
-func (s *Store) resolveDOIConfirmation(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, requiresDOI bool) (*time.Time, error) {
-	if ConsentState(in.NewState) != StateGranted || !requiresDOI {
-		return nil, nil
-	}
-	if sub.entityType != "person" {
-		return nil, &ValidationError{
-			// The subject, not the purpose: the purpose is fine and the caller
-			// cannot fix it. What they must change is which subject they named,
-			// which is the field consentSubject's own refusals already use.
-			Field:  "subject",
-			Reason: "a double opt-in purpose needs a person subject; promote the lead before granting it",
-		}
-	}
-	if in.DoubleOptInToken == nil || *in.DoubleOptInToken == "" {
-		return nil, &ValidationError{Field: "double_opt_in_token", Reason: "purpose requires a confirmed double opt-in"}
-	}
-	confirmed, err := s.consumeDOIToken(ctx, tx, in.PersonID, in.PurposeID, *in.DoubleOptInToken)
-	if err != nil {
-		return nil, err
-	}
-	return &confirmed, nil
-}
-
-// upsertConsentWithProof writes the state row and appends the immutable
-// proof row — one concept: the current state is always backed by an
-// append-only consent_event that says when, how, and by whom. The upsert
-// targets the subject arm's own unique key (person×purpose or
-// lead×purpose); the other arm's column stays NULL.
-func upsertConsentWithProof(ctx context.Context, tx pgx.Tx, in RecordInput, sub subject, doiConfirmedAt *time.Time, capturedAt time.Time, actorID string) error {
-	if _, err := tx.Exec(ctx, `
-		INSERT INTO person_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source)
-		VALUES ($1, $2, $3, $4, $5, $6)
-		ON CONFLICT (`+sub.column+`, purpose_id)
-		DO UPDATE SET state = EXCLUDED.state, lawful_basis = EXCLUDED.lawful_basis,
-		              captured_at = EXCLUDED.captured_at, source = EXCLUDED.source`,
-		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, capturedAt, in.Source); err != nil {
-		return err
-	}
-	_, err := tx.Exec(ctx, `
-		INSERT INTO consent_event (`+sub.column+`, purpose_id, new_state, lawful_basis, source,
-		                           policy_text, policy_version, double_opt_in_confirmed_at, captured_at, captured_by)
-		VALUES ($1, $2, $3, $4, coalesce($5, 'api'), coalesce($6, 'recorded via API'), coalesce($7, 'v1'), $8, $9, $10)`,
-		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, in.Source,
-		in.PolicyText, in.PolicyVersion, doiConfirmedAt, capturedAt, actorID)
-	return err
 }
 
 func stateOrUnknown(state string) string {

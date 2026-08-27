@@ -68,9 +68,9 @@ func TestOfferTemplatesHTTP(t *testing.T) {
 
 func assertOfferTemplateCreate201(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	var created apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/offer-templates", apptest.AnyMap{
-		"name": "HTTP Standard DE", "layout": apptest.AnyMap{"logo_url": "https://example.test/logo.png"},
+	var created AnyMap
+	status := e.Call(t, "POST", "/v1/offer-templates", AnyMap{
+		"name": "HTTP Standard DE", "layout": AnyMap{"logo_url": "https://example.test/logo.png"},
 	}, nil, &created)
 	if status != http.StatusCreated {
 		t.Fatalf("create = %d %v", status, created)
@@ -91,8 +91,8 @@ func assertOfferTemplateCreate201(t *testing.T, e *apptest.AppEnv) string {
 func assertOfferTemplateNameDuplicate409(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	var problem offerTemplateProblem
-	status := e.Call(t, "POST", "/v1/offer-templates", apptest.AnyMap{
-		"name": "HTTP Standard DE", "layout": apptest.AnyMap{},
+	status := e.Call(t, "POST", "/v1/offer-templates", AnyMap{
+		"name": "HTTP Standard DE", "layout": AnyMap{},
 	}, nil, &problem)
 	if status != http.StatusConflict || problem.Code != "offer_template_name_duplicate" {
 		t.Fatalf("duplicate name create = %d %+v, want 409 offer_template_name_duplicate", status, problem)
@@ -104,17 +104,17 @@ func assertOfferTemplateNameDuplicate409(t *testing.T, e *apptest.AppEnv) {
 
 func assertOfferTemplateDefaultConflict409(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	var firstDefault apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/offer-templates", apptest.AnyMap{
-		"name": "HTTP DE Default", "layout": apptest.AnyMap{}, "is_default": true,
+	var firstDefault AnyMap
+	status := e.Call(t, "POST", "/v1/offer-templates", AnyMap{
+		"name": "HTTP DE Default", "layout": AnyMap{}, "is_default": true,
 	}, nil, &firstDefault)
 	if status != http.StatusCreated {
 		t.Fatalf("seed default template = %d %v", status, firstDefault)
 	}
 
 	var problem offerTemplateProblem
-	status = e.Call(t, "POST", "/v1/offer-templates", apptest.AnyMap{
-		"name": "HTTP DE Default Two", "layout": apptest.AnyMap{}, "is_default": true,
+	status = e.Call(t, "POST", "/v1/offer-templates", AnyMap{
+		"name": "HTTP DE Default Two", "layout": AnyMap{}, "is_default": true,
 	}, nil, &problem)
 	if status != http.StatusConflict || problem.Code != "offer_template_default_conflict" {
 		t.Fatalf("default conflict create = %d %+v, want 409 offer_template_default_conflict", status, problem)
@@ -126,7 +126,7 @@ func assertOfferTemplateDefaultConflict409(t *testing.T, e *apptest.AppEnv) {
 
 func assertOfferTemplateGet(t *testing.T, e *apptest.AppEnv, id string) {
 	t.Helper()
-	var got apptest.AnyMap
+	var got AnyMap
 	if status := e.Call(t, "GET", "/v1/offer-templates/"+id, nil, nil, &got); status != http.StatusOK || got["id"] != id {
 		t.Fatalf("get = %d %+v, want 200 id=%s", status, got, id)
 	}
@@ -138,7 +138,7 @@ func assertOfferTemplateGet(t *testing.T, e *apptest.AppEnv, id string) {
 func assertOfferTemplateList(t *testing.T, e *apptest.AppEnv, seededID string) {
 	t.Helper()
 	var deList struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/offer-templates?locale=de-DE", nil, nil, &deList); status != http.StatusOK {
 		t.Fatalf("list locale=de-DE = %d", status)
@@ -159,18 +159,18 @@ func assertOfferTemplateList(t *testing.T, e *apptest.AppEnv, seededID string) {
 
 func assertOfferTemplateUpdate(t *testing.T, e *apptest.AppEnv, id string) {
 	t.Helper()
-	var updated apptest.AnyMap
-	status := e.Call(t, "PUT", "/v1/offer-templates/"+id, apptest.AnyMap{
+	var updated AnyMap
+	status := e.Call(t, "PUT", "/v1/offer-templates/"+id, AnyMap{
 		"name": "HTTP Standard DE v2", "locale": "de-DE", "is_default": false,
-		"layout": apptest.AnyMap{"footer_text": "v2"},
+		"layout": AnyMap{"footer_text": "v2"},
 	}, map[string]string{"If-Match": "1"}, &updated)
 	if status != http.StatusOK || updated["name"] != "HTTP Standard DE v2" || updated["version"].(float64) != 2 {
 		t.Fatalf("update = %d %+v, want 200 name=... version=2", status, updated)
 	}
 
 	var stale offerTemplateProblem
-	status = e.Call(t, "PUT", "/v1/offer-templates/"+id, apptest.AnyMap{
-		"name": "HTTP Standard DE v3", "locale": "de-DE", "is_default": false, "layout": apptest.AnyMap{},
+	status = e.Call(t, "PUT", "/v1/offer-templates/"+id, AnyMap{
+		"name": "HTTP Standard DE v3", "locale": "de-DE", "is_default": false, "layout": AnyMap{},
 	}, map[string]string{"If-Match": "1"}, &stale)
 	if status != http.StatusConflict || stale.Code != "version_skew" {
 		t.Fatalf("stale If-Match = %d %+v, want 409 version_skew", status, stale)
@@ -179,9 +179,9 @@ func assertOfferTemplateUpdate(t *testing.T, e *apptest.AppEnv, id string) {
 
 func assertOfferTemplateArchive(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
-	var created apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/offer-templates", apptest.AnyMap{
-		"name": "HTTP Archivable", "layout": apptest.AnyMap{},
+	var created AnyMap
+	status := e.Call(t, "POST", "/v1/offer-templates", AnyMap{
+		"name": "HTTP Archivable", "layout": AnyMap{},
 	}, nil, &created)
 	if status != http.StatusCreated {
 		t.Fatalf("create to archive = %d %v", status, created)
@@ -191,12 +191,12 @@ func assertOfferTemplateArchive(t *testing.T, e *apptest.AppEnv) {
 		t.Fatalf("create to archive response carries no id: %v", created)
 	}
 
-	var archived apptest.AnyMap
+	var archived AnyMap
 	status = e.Call(t, "DELETE", "/v1/offer-templates/"+id, nil, nil, &archived)
 	if status != http.StatusOK || archived["archived_at"] == nil || archived["id"] != id {
 		t.Fatalf("archive = %d %+v, want 200 + the full entity with archived_at set", status, archived)
 	}
-	var stillGettable apptest.AnyMap
+	var stillGettable AnyMap
 	if status := e.Call(t, "GET", "/v1/offer-templates/"+id, nil, nil, &stillGettable); status != http.StatusOK || stillGettable["archived_at"] == nil {
 		t.Fatalf("get archived template = %d %+v, want 200 with archived_at set", status, stillGettable)
 	}
@@ -213,7 +213,7 @@ func assertOfferTemplateMissingLayout422(t *testing.T, e *apptest.AppEnv) {
 			} `json:"errors"`
 		} `json:"details"`
 	}
-	status := e.Call(t, "POST", "/v1/offer-templates", apptest.AnyMap{"name": "No Layout"}, nil, &problem)
+	status := e.Call(t, "POST", "/v1/offer-templates", AnyMap{"name": "No Layout"}, nil, &problem)
 	if status != http.StatusUnprocessableEntity || problem.Code != "validation_error" {
 		t.Fatalf("missing layout = %d %+v, want 422 validation_error", status, problem)
 	}
@@ -236,10 +236,10 @@ func assertOfferTemplateMissingLayout422(t *testing.T, e *apptest.AppEnv) {
 func assertRenderOfferNotImplementedWithoutBlobstore(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	dealID := offerFixture(t, e)
-	var offer apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", apptest.AnyMap{
+	var offer AnyMap
+	status := e.Call(t, "POST", "/v1/deals/"+dealID+"/offers", AnyMap{
 		"currency": "EUR", "source": "manual",
-		"line_items": []apptest.AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
+		"line_items": []AnyMap{{"description": "Retainer", "quantity": 1, "unit_price_minor": 500000, "tax_rate": 19.0}},
 	}, nil, &offer)
 	if status != http.StatusCreated {
 		t.Fatalf("create offer for render = %d %v", status, offer)
@@ -248,7 +248,7 @@ func assertRenderOfferNotImplementedWithoutBlobstore(t *testing.T, e *apptest.Ap
 	if !ok {
 		t.Fatalf("create offer for render response carries no id: %v", offer)
 	}
-	status = e.Call(t, "POST", "/v1/offers/"+offerID+"/render", apptest.AnyMap{}, nil, nil)
+	status = e.Call(t, "POST", "/v1/offers/"+offerID+"/render", AnyMap{}, nil, nil)
 	if status != http.StatusNotImplemented {
 		t.Fatalf("renderOffer without a wired blobstore = %d, want 501", status)
 	}

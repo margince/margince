@@ -2,10 +2,12 @@ import { CheckCircle2 } from "lucide-react";
 import { Badge, Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import { type Toast, ToastRegion, useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
 import { ApprovalRow } from "./approvalrow";
+import { itemDetail, itemTitle } from "./attentionitemcopy";
+import { focusSurfaceOf } from "./attentionsource";
 import { problemMessageOf } from "./common";
 import { MergeDecision } from "./today.merge";
 import {
@@ -73,22 +75,48 @@ function AllClear({ decided }: Readonly<{ decided: number }>) {
   );
 }
 
+// An item this lane cannot decide, drawn as what it is.
+//
+// The lane is fed by producers, and a producer can put a source here that has
+// no decision behind it. Drawing that item plainly is the honest answer: the
+// reader sees what arrived and can move past it. The dishonest answer was to
+// assume it was a staged proposal and read `/approvals/{id}` with its id, which
+// answers 404 for anything that is not an approval and renders as a failed card.
+function ReportBody({ item }: Readonly<{ item: AttentionItem }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const detail = itemDetail(item, t, locale, viewerZone());
+  return (
+    <div className="focus-report">
+      <p className="t-body">{itemTitle(item, t)}</p>
+      {detail && <p className="t-caption focus-report-detail">{detail}</p>}
+    </div>
+  );
+}
+
 // One item's body, chosen by what the item IS.
 //
 // A duplicate is a choice between two records; a staged proposal is an accept
 // or a reject on one payload. They are different decisions and they get
 // different bodies — the failure this replaces was a single generic row that
 // could express neither, so both ended up as a link.
+//
+// The choice runs through FOCUS_SURFACE rather than a chain of ifs, so a source
+// the contract adds has to be given a body before the build passes.
 function FocusBody({
   item,
   onDone,
-  toast,
-}: Readonly<{ item: AttentionItem; onDone: () => void; toast: Toast }>) {
+}: Readonly<{ item: AttentionItem; onDone: () => void }>) {
   const t = useT();
   const dispose = useDisposeDuplicate();
   const pending = dispose.isPending;
+  const surface = focusSurfaceOf(item.source);
 
-  if (item.source === "dedupe_candidate") {
+  if (surface === "report") {
+    return <ReportBody item={item} />;
+  }
+
+  if (surface === "merge") {
     return (
       <MergeDecision
         item={item}
@@ -118,25 +146,24 @@ function FocusBody({
     );
   }
 
-  // Everything else on this lane is a staged proposal, and the row that decides
-  // one already exists — the same component the record surfaces draw, carrying
-  // edit-then-approve and reject-with-reason. A second spelling of a decision
-  // is how one product comes to answer the same question two ways.
+  // A staged proposal, and the row that decides one already exists — the same
+  // component the record surfaces draw, carrying edit-then-approve and
+  // reject-with-reason. A second spelling of a decision is how one product comes
+  // to answer the same question two ways.
   //
   // The feed sends what a LANE needs — a sentence, a kind, a deadline — and the
   // row needs the whole proposal: the payload it edits, who staged it, what
   // evidence stands behind it. So the card fetches the one approval it is
   // showing. One card is on screen, so this is one read, and it is the same
   // read the record page makes.
-  return <StagedDecision id={item.id} onDone={onDone} toast={toast} />;
+  return <StagedDecision id={item.id} onDone={onDone} />;
 }
 
 // One staged proposal, fetched whole because it is the one being decided.
 function StagedDecision({
   id,
   onDone,
-  toast,
-}: Readonly<{ id: string; onDone: () => void; toast: Toast }>) {
+}: Readonly<{ id: string; onDone: () => void }>) {
   const t = useT();
   const approval = useApproval(id);
   // A body that carries no `kind` is not a proposal this card can draw: the
@@ -174,7 +201,6 @@ function StagedDecision({
           // every proposal the reader answers normally.
           onAlreadyDecided={onDone}
           extraInvalidateKeys={[attentionKey]}
-          toast={toast}
         />
       )}
     </SurfaceState>
@@ -206,7 +232,6 @@ export function FocusLane({
   // card — that is how the queue advances — and a sticky offer owned by the
   // card would leave with it, which is the one message that must survive the
   // card it was shown from.
-  const toast = useToast();
   return (
     <Panel
       title={
@@ -223,7 +248,7 @@ export function FocusLane({
         ) : current ? (
           <div className="focus">
             <Progress done={decided} total={total} />
-            <FocusBody item={current} onDone={onDecided} toast={toast} />
+            <FocusBody item={current} onDone={onDecided} />
             {/* Later, not never. A queue whose only exits are terminal is one
                 a reader stops opening the moment it holds something they
                 cannot answer yet. */}
@@ -237,7 +262,6 @@ export function FocusLane({
           <AllClear decided={decided} />
         )}
       </PanelBody>
-      <ToastRegion toast={toast} />
     </Panel>
   );
 }

@@ -1,10 +1,19 @@
 /** @vitest-environment jsdom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { cleanup, render, screen } from "@testing-library/react";
+import {
+  cleanup,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { ListAction, TagAction } from "./companyactions";
 
 // How a typed tag name resolves to ONE tag. The interesting behaviour is the
@@ -46,7 +55,15 @@ function Wrapper({ children }: Readonly<{ children: ReactNode }>) {
   });
   return (
     <QueryClientProvider client={client}>
-      <LocaleProvider>{children}</LocaleProvider>
+      <LocaleProvider>
+        {/* The region is the shell's in the running app (`main.tsx`), so a
+            suite whose subject includes what an apply SAYS mounts it the same
+            way — the Undo this action offers lives inside it. */}
+        <ToastProvider>
+          {children}
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>
     </QueryClientProvider>
   );
 }
@@ -58,14 +75,15 @@ async function submitName(verb: string, action: ReactNode, name: string) {
   await user.click(screen.getByRole("button", { name: verb }));
   await user.type(screen.getByRole("textbox"), name);
   await user.click(screen.getByRole("button", { name: "Create" }));
+  return user;
 }
 
 async function addTagNamed(name: string) {
-  await submitName("Add tag", <TagAction orgId="o-1" />, name);
+  return submitName("Add tag", <TagAction orgId="o-1" />, name);
 }
 
 async function addToListNamed(name: string) {
-  await submitName("Add to list", <ListAction orgId="o-1" />, name);
+  return submitName("Add to list", <ListAction orgId="o-1" />, name);
 }
 
 afterEach(() => {
@@ -177,6 +195,63 @@ describe("Add tag resolves a typed name to one tag", () => {
     expect(calls.some((c) => c.path.includes("/apply"))).toBe(true);
     expect(screen.queryByText(/conflict/i)).toBeNull();
   });
+
+  // The way back, which is what makes this the one destructive-adjacent verb on
+  // the company page allowed to say Undo: `DELETE /tags/{id}/apply` is the
+  // contract's own inverse of the apply, idempotent and complete.
+  it("takes the tag back off through the Undo the confirmation carries", async () => {
+    const calls = stub((call) => {
+      if (call.path.endsWith("/tags") && call.method === "GET") {
+        return json({ data: [{ id: "t-1", name: "Landlord" }], page });
+      }
+      return json({ id: "tg-1" }, 201);
+    });
+
+    const user = await addTagNamed("Landlord");
+
+    const said = await screen.findByRole("status");
+    expect(said).toHaveTextContent(
+      en["co.tags.applied"].replace("{name}", "Landlord"),
+    );
+    await user.click(
+      within(said).getByRole("button", { name: en["common.undo"] }),
+    );
+
+    await waitFor(() =>
+      expect(calls.some((call) => call.method === "DELETE")).toBe(true),
+    );
+    expect(calls.at(-1)?.path).toContain("/tags/t-1/apply");
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      en["co.tags.removed"].replace("{name}", "Landlord"),
+    );
+  });
+
+  it("says so when taking the tag back off is refused", async () => {
+    // The message the Undo was offered from is consumed by the press, so a
+    // silent refusal leaves the reader watching a confirmation disappear and
+    // believing the tag came off.
+    const calls = stub((call) => {
+      if (call.path.endsWith("/tags") && call.method === "GET") {
+        return json({ data: [{ id: "t-1", name: "Landlord" }], page });
+      }
+      if (call.method === "DELETE") {
+        return json({ detail: "the tag is enforced by a rule" }, 409);
+      }
+      return json({ id: "tg-1" }, 201);
+    });
+
+    const user = await addTagNamed("Landlord");
+    await user.click(
+      within(await screen.findByRole("status")).getByRole("button", {
+        name: en["common.undo"],
+      }),
+    );
+
+    expect(
+      await screen.findByText("the tag is enforced by a rule"),
+    ).toBeTruthy();
+    expect(calls.some((call) => call.method === "DELETE")).toBe(true);
+  });
 });
 
 // The same shape one catalog over: `/lists` is bounded and cursorless too, and
@@ -203,6 +278,28 @@ describe("Add to list reads the same overflow signal", () => {
     expect(
       calls.some((c) => c.method === "POST" && c.path.endsWith("/lists")),
     ).toBe(false);
+  });
+
+  // The already-a-member arm: the same reading as the tag's 409, and it earns
+  // its own assertion because it is the one path here that reports success from
+  // a refusal status.
+  it("treats a company already on the list as the state that was asked for", async () => {
+    stub((call) => {
+      if (call.path.endsWith("/lists") && call.method === "GET") {
+        return json({
+          data: [{ id: "l-1", name: "Key accounts", list_type: "static" }],
+          page,
+        });
+      }
+      return json({ title: "conflict" }, 409);
+    });
+
+    await addToListNamed("Key accounts");
+
+    expect(await screen.findByRole("status")).toHaveTextContent(
+      en["co.lists.added"].replace("{name}", "Key accounts"),
+    );
+    expect(screen.queryByText(/conflict/i)).toBeNull();
   });
 
   it("creates the new list while the catalog fits inside its cap", async () => {

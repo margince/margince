@@ -22,8 +22,14 @@ import (
 )
 
 type historyEntry struct {
-	ID       string `json:"id"`
-	Action   string `json:"action"`
+	ID      string `json:"id"`
+	Action  string `json:"action"`
+	Summary string `json:"summary"`
+	// UndidAuditLogID is the entry this line REVERSES, which is how a reversal is
+	// told from a fresh change.
+	UndidAuditLogID *string `json:"undid_audit_log_id"`
+	// Edge is set exactly on the lines that changed a LINK rather than a field.
+	Edge     *historyEdge `json:"edge"`
 	Undoable struct {
 		Undoable bool    `json:"undoable"`
 		Reason   *string `json:"reason"`
@@ -32,6 +38,13 @@ type historyEntry struct {
 	Before   map[string]any `json:"before"`
 	After    map[string]any `json:"after"`
 	Evidence map[string]any `json:"evidence"`
+}
+
+type historyEdge struct {
+	Kind            string  `json:"kind"`
+	OtherEntityType string  `json:"other_entity_type"`
+	OtherEntityID   string  `json:"other_entity_id"`
+	OtherLabel      *string `json:"other_label"`
 }
 
 type historyPage struct {
@@ -97,11 +110,11 @@ func TestEndToEnd_anAuditedChangeGoesBack(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Greta Original", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Greta Original", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create person → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+		AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch person → %d", status)
 	}
 
@@ -141,11 +154,11 @@ func TestEndToEnd_anEntryAlreadyPutBackRefusesBySayingSo(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Greta Twice", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Greta Twice", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create person → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+		AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
 	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
@@ -173,14 +186,14 @@ func TestEndToEnd_aFieldWrittenAgainRefusesTheRestore(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Greta Superseded", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Greta Superseded", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("first patch → %d", status)
 	}
 	target := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "COO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "COO"}, nil, nil); status != 200 {
 		t.Fatalf("second patch → %d", status)
 	}
 
@@ -211,14 +224,14 @@ func TestEndToEnd_restoringNullIntoAColumnTheModuleCannotClearRefuses(t *testing
 		ID      string `json:"id"`
 		Version int64  `json:"version"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "task", "subject": "Call Greta",
 	}, nil, &activity); status != 201 {
 		t.Fatalf("create activity → %d", status)
 	}
 	// due_at was empty; setting it records a before-image holding null.
 	if status := e.Call(t, "PATCH", "/v1/activities/"+activity.ID,
-		apptest.AnyMap{"due_at": "2026-09-01T10:00:00Z"}, nil, nil); status != 200 {
+		AnyMap{"due_at": "2026-09-01T10:00:00Z"}, nil, nil); status != 200 {
 		t.Fatalf("set due_at → %d", status)
 	}
 
@@ -245,10 +258,10 @@ func TestEndToEnd_undoingAnUndoReopensTheOriginalEntry(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Greta Reundo", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Greta Reundo", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
 	original := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
@@ -282,10 +295,10 @@ func TestEndToEnd_aStaleVersionRefusesTheRestoreAndWritesNothing(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Greta Stale", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Greta Stale", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
 	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
@@ -293,7 +306,7 @@ func TestEndToEnd_aStaleVersionRefusesTheRestoreAndWritesNothing(t *testing.T) {
 
 	// Somebody else touches the record between reading and pressing.
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{"full_name": "Greta Moved"}, nil, nil); status != 200 {
+		AnyMap{"full_name": "Greta Moved"}, nil, nil); status != 200 {
 		t.Fatalf("concurrent patch → %d", status)
 	}
 	if status, _ := restore(t, e, "person", created.ID, entry.ID, stale); status != 409 {
@@ -315,13 +328,13 @@ func TestEndToEnd_anEntryFromAnotherRecordIsNotFound(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	var mine, theirs personRecord
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Greta Mine"}, nil, &mine); status != 201 {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Greta Mine"}, nil, &mine); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Greta Theirs", "title": "CTO"}, nil, &theirs); status != 201 {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Greta Theirs", "title": "CTO"}, nil, &theirs); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+theirs.ID, apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+theirs.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
 	other := theUpdateEntry(t, readHistory(t, e, "person", theirs.ID))
@@ -371,10 +384,10 @@ func TestEndToEnd_anArchivedRecordSaysSoRatherThanFailingLater(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Greta Archived", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Greta Archived", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
 	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
@@ -402,20 +415,20 @@ func TestEndToEnd_aRetiredCustomFieldRefusesByNamingIt(t *testing.T) {
 		ColumnName string `json:"column_name"`
 		Version    int64  `json:"version"`
 	}
-	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/custom-fields", AnyMap{
 		"object": "person", "label": "Budget", "type": "text", "source": "manual",
 	}, nil, &field); status != 201 {
 		t.Fatalf("create custom field → %d", status)
 	}
 
 	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Greta Custom", field.ColumnName: "first",
 	}, nil, &created); status != 201 {
 		t.Fatalf("create person → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{field.ColumnName: "second"}, nil, nil); status != 200 {
+		AnyMap{field.ColumnName: "second"}, nil, nil); status != 200 {
 		t.Fatalf("patch custom field → %d", status)
 	}
 	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
@@ -462,10 +475,10 @@ func TestEndToEnd_aRestoreWithoutAUsableIfMatchIsRefused(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Greta Precondition", "title": "CTO"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Greta Precondition", "title": "CTO"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{"title": "CEO"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{"title": "CEO"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
 	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
@@ -498,19 +511,19 @@ func TestEndToEnd_aRetireTheVersionGuardCannotSeeIsCaughtAtWriteTime(t *testing.
 		ID         string `json:"id"`
 		ColumnName string `json:"column_name"`
 	}
-	if status := e.Call(t, "POST", "/v1/custom-fields", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/custom-fields", AnyMap{
 		"object": "person", "label": "Budget", "type": "text", "source": "manual",
 	}, nil, &field); status != 201 {
 		t.Fatalf("create custom field → %d", status)
 	}
 	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Greta Dropped", field.ColumnName: "first",
 	}, nil, &created); status != 201 {
 		t.Fatalf("create person → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{field.ColumnName: "second"}, nil, nil); status != 200 {
+		AnyMap{field.ColumnName: "second"}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)
 	}
 	entry := theUpdateEntry(t, readHistory(t, e, "person", created.ID))
@@ -550,11 +563,11 @@ func TestEndToEnd_aFieldFilledInGoesBackToEmpty(t *testing.T) {
 	// Created with NO title, so the change below records a before-image of null.
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Greta Cleared"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Greta Cleared"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{"title": "Typed by mistake"}, nil, nil); status != 200 {
+		AnyMap{"title": "Typed by mistake"}, nil, nil); status != 200 {
 		t.Fatalf("fill the field → %d", status)
 	}
 
@@ -595,13 +608,13 @@ func TestEndToEnd_anActivityFieldFilledInRefusesBecauseItCannotBeCleared(t *test
 	var activity struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "task", "subject": "Call Greta",
 	}, nil, &activity); status != 201 {
 		t.Fatalf("create activity → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/activities/"+activity.ID,
-		apptest.AnyMap{"due_at": "2026-09-01T10:00:00Z"}, nil, nil); status != 200 {
+		AnyMap{"due_at": "2026-09-01T10:00:00Z"}, nil, nil); status != 200 {
 		t.Fatalf("set due_at → %d", status)
 	}
 
@@ -626,14 +639,14 @@ func TestEndToEnd_anAddressGoesBackAsOneField(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	var created personRecord
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Greta Address",
-		"address":   apptest.AnyMap{"city": "Hanoi", "line1": "1 First Street"},
+		"address":   AnyMap{"city": "Hanoi", "line1": "1 First Street"},
 	}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, apptest.AnyMap{
-		"address": apptest.AnyMap{"city": "Da Nang", "line1": "2 Second Street"},
+	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID, AnyMap{
+		"address": AnyMap{"city": "Da Nang", "line1": "2 Second Street"},
 	}, nil, nil); status != 200 {
 		t.Fatalf("change the address → %d", status)
 	}
@@ -676,12 +689,12 @@ func TestEndToEnd_severalChangesGoBackOneAtATime(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Walker", "title": "A"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Walker", "title": "A"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	for _, value := range []string{"B", "C"} {
 		if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-			apptest.AnyMap{"title": value}, nil, nil); status != 200 {
+			AnyMap{"title": value}, nil, nil); status != 200 {
 			t.Fatalf("set title %s → %d", value, status)
 		}
 	}
@@ -745,11 +758,11 @@ func TestEndToEnd_anExplicitNullClearsTheFieldRatherThanBeingIgnored(t *testing.
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Nullable", "title": "Head of Nothing"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Nullable", "title": "Head of Nothing"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{"title": nil}, nil, nil); status != 200 {
+		AnyMap{"title": nil}, nil, nil); status != 200 {
 		t.Fatalf("clear the title → %d", status)
 	}
 	if title := readPerson(t, e, created.ID).Title; title != nil && *title != "" {
@@ -760,11 +773,11 @@ func TestEndToEnd_anExplicitNullClearsTheFieldRatherThanBeingIgnored(t *testing.
 	// An absent field is still left alone — the whole point of telling the two
 	// apart. A patch of one field must not wipe the others.
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{"title": "Restored By Hand"}, nil, nil); status != 200 {
+		AnyMap{"title": "Restored By Hand"}, nil, nil); status != 200 {
 		t.Fatalf("set the title again → %d", status)
 	}
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{"first_name": "Nully"}, nil, nil); status != 200 {
+		AnyMap{"first_name": "Nully"}, nil, nil); status != 200 {
 		t.Fatalf("patch a different field → %d", status)
 	}
 	if title := readPerson(t, e, created.ID).Title; title == nil || *title != "Restored By Hand" {
@@ -780,13 +793,13 @@ func TestEndToEnd_aNullOnAnUnclearableFieldIsRefusedByName(t *testing.T) {
 
 	var created personRecord
 	if status := e.Call(t, "POST", "/v1/people",
-		apptest.AnyMap{"full_name": "Named Forever"}, nil, &created); status != 201 {
+		AnyMap{"full_name": "Named Forever"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	// full_name is not nullable in the contract and a record with no name is
 	// not a record anybody can find again.
 	if status := e.Call(t, "PATCH", "/v1/people/"+created.ID,
-		apptest.AnyMap{"full_name": nil}, nil, nil); status != 422 {
+		AnyMap{"full_name": nil}, nil, nil); status != 422 {
 		t.Errorf("clearing full_name → %d, want 422 naming the field", status)
 	}
 	if name := readPerson(t, e, created.ID).FullName; name != "Named Forever" {
@@ -810,14 +823,14 @@ func TestEndToEnd_anEntryTouchingAFieldHeldElsewhereIsStillUndoable(t *testing.T
 		Version int64  `json:"version"`
 	}
 	if status := e.Call(t, "POST", "/v1/organizations",
-		apptest.AnyMap{"display_name": "Held Elsewhere Ltd"}, nil, &created); status != 201 {
+		AnyMap{"display_name": "Held Elsewhere Ltd"}, nil, &created); status != 201 {
 		t.Fatalf("create → %d", status)
 	}
 	// domains and relationship_types live in their own tables; industry is an
 	// ordinary column, so the entry mixes both kinds.
-	if status := e.Call(t, "PATCH", "/v1/organizations/"+created.ID, apptest.AnyMap{
+	if status := e.Call(t, "PATCH", "/v1/organizations/"+created.ID, AnyMap{
 		"industry":           "Manufacturing",
-		"domains":            []apptest.AnyMap{{"domain": "held.test", "is_primary": true}},
+		"domains":            []AnyMap{{"domain": "held.test", "is_primary": true}},
 		"relationship_types": []string{"customer"},
 	}, nil, nil); status != 200 {
 		t.Fatalf("patch → %d", status)

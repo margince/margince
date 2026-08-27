@@ -17,24 +17,33 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // NewRestoreSeam assembles the reversal executor over the installation pool and
 // the update dispatcher, with the evaluator's ports bound to the real readers.
 func NewRestoreSeam(pool *pgxpool.Pool, dispatcher *Dispatcher) RestoreSeam {
+	// The edge's rules are the people module's, and so is its table. This seam
+	// reaches them through that module's own store rather than restating any of
+	// them, which is also why it owns no relationship SQL.
+	edges := people.NewStore(InstallationDB(pool))
 	return RestoreSeam{
 		pool:       pool,
 		dispatcher: dispatcher,
 		visible:    recordIsVisibleToCaller,
+		edges:      edges,
 		evaluator: Evaluator{
 			Archived:      recordIsArchived,
 			Writable:      recordIsWritableByCaller,
 			BehindErasure: rowIsBehindTheErasureBoundary,
 			AlreadyUndone: rowIsAlreadyUndone,
 			Unwritable:    valuesNoLongerWritable,
+			EdgeFacts:     edges.EdgeFactsForReverse,
+			EdgeWritable:  edgeIsWritableByCaller(edges),
 			ExternallyGoverned: func(ctx context.Context) (bool, error) {
 				return dispatcher.isOverlayUncached(ctx)
 			},
@@ -57,6 +66,31 @@ func recordIsArchived(ctx context.Context, tx pgx.Tx, entityType string, id ids.
 		return false, err
 	}
 	return archived, nil
+}
+
+// recordVersionUnmoved refuses a decision taken from a screen the record has
+// moved under. It is the route's REQUIRED If-Match, asked of the record whose
+// history was open — the record path gets the same guard from the update it
+// sends, and the edge path has to ask it here because its write lands on the
+// link and never on the record.
+//
+// The table name is the record type, which servesRecordType has already closed
+// to the six: no identifier reaches this statement from a request body.
+func recordVersionUnmoved(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, ifVersion int64) error {
+	if !servesRecordType(entityType) {
+		return fmt.Errorf("compose: undoability: %q is not a record type this path reads", entityType)
+	}
+	var version int64
+	err := tx.QueryRow(ctx,
+		`SELECT version FROM `+pgx.Identifier{entityType}.Sanitize()+` WHERE id = $1`,
+		id).Scan(&version)
+	if err != nil {
+		return err
+	}
+	if version != ifVersion {
+		return apperrors.ErrVersionSkew
+	}
+	return nil
 }
 
 // recordIsVisibleToCaller is the row-scope gate every read of this record
@@ -87,6 +121,27 @@ func recordIsWritableByCaller(ctx context.Context, tx pgx.Tx, entityType string,
 	return auth.EnsureWritable(ctx, tx, entityType, id)
 }
 
+// edgeIsWritableByCaller asks both halves of an edge write's authority: the
+// OBJECT grants the people store asks at its own entry, and the ROW scope on the
+// ANCHOR the edge annotates.
+//
+// The anchor and not the record whose history was open, and the two are not
+// symmetric: an employment anchors the PERSON, so a seat holding
+// organization-write and not person-write is refused the button on the company's
+// page. Asking the record instead would light a button the write then refuses.
+//
+// The entry's action travels with it because the object grant the inverse asks
+// for is the people store's own to decide — reversing a create is an archive
+// there, and the archive asks delete.
+func edgeIsWritableByCaller(edges *people.Store) func(context.Context, pgx.Tx, people.EdgeFacts, string) error {
+	return func(ctx context.Context, tx pgx.Tx, facts people.EdgeFacts, entryAction string) error {
+		if err := edges.RefuseEdgeWrite(ctx, facts.Kind, entryAction); err != nil {
+			return err
+		}
+		return recordIsWritableByCaller(ctx, tx, facts.Anchor, facts.AnchorID)
+	}
+}
+
 // entityTypeActivity is the record kind whose row-scope checks dispatch
 // differently, named rather than typed inline at the branch above.
 const entityTypeActivity = "activity"
@@ -95,7 +150,18 @@ const entityTypeActivity = "activity"
 // than restating it. An Art. 17 erasure is one of the few rules where a second
 // spelling that is merely ALMOST the same would resurrect what was certified
 // destroyed.
+//
+// A LINK's row takes privacy's edge predicate instead of this one, and the
+// difference is not a refinement. The boundary is keyed on the row's own
+// (entity_type, entity_id), which for a link is ('relationship', edge_id) — an
+// identity no write path in this tree ever records a scrub verb against. Asked
+// here, every link that has ever existed answers "never erased", so the branch
+// would be nominal and the refusal unreachable. What bounds a link's image is
+// the erasure of the records it joins.
 func rowIsBehindTheErasureBoundary(ctx context.Context, tx pgx.Tx, row AuditRow) (bool, error) {
+	if row.EntityType == edgeEntityType {
+		return privacy.EdgeBehindErasureBoundary(ctx, tx, row.ID)
+	}
 	// The placeholder is derived from the argument slice rather than typed:
 	// the verb list reaches privacy's predicate as a POSITION, and nothing
 	// checks that a hand-written one still matches the arguments beside it.

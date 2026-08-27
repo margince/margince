@@ -50,12 +50,19 @@ type PreferenceRef struct {
 }
 
 // PurposeChoice is one row of the preference center: the purpose, the
-// recipient's current state, and whether it is locked.
+// recipient's current state, and the two reasons this surface may not offer a
+// change — locked at all, or grantable only through a confirmation round-trip
+// it cannot perform.
 type PurposeChoice struct {
-	Key    string
-	Label  string
-	State  string
+	Key   string
+	Label string
+	State string
+	// Locked: no change at all from this surface.
 	Locked bool
+	// GrantNeedsConfirmation: withdrawing works, granting does not. Carried to
+	// the client so the switch is never OFFERED as a grant, because the write
+	// refuses it and a control that always fails is worse than an absent one.
+	GrantNeedsConfirmation bool
 }
 
 // preferenceTokenTTLDays is how long one preference link stays honoured
@@ -118,20 +125,43 @@ func (s *Store) PreferenceTokenForEmail(ctx context.Context, email string) (toke
 	}
 	email = strings.ToLower(strings.TrimSpace(email))
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
-		var personID ids.PersonID
-		lookup := tx.QueryRow(ctx, `
-			SELECT pe.person_id
+		// The SAME resolution the send gate applies (gate.go resolvePerson), and
+		// it has to be: this mints the unsubscribe credential for a send the
+		// gate has already authorized against one person, so a lookup that can
+		// name a different one puts that person's link in this recipient's
+		// mailbox.
+		//
+		// Only a LIVE address resolves. uq_person_email_dedupe is partial on
+		// archived_at IS NULL, so one string can sit archived on one person and
+		// live on another — and the archived arm belongs to nobody who currently
+		// holds it.
+		//
+		// Ambiguity refuses rather than picks, for the reason the gate gives:
+		// a bare LIMIT 1 over two live matches is a silent choice between two
+		// people made by row order. The dedupe index should make that
+		// impossible; this refuses anyway rather than trusting an invariant it
+		// does not check.
+		rows, err := tx.Query(ctx, `
+			SELECT DISTINCT pe.person_id
 			FROM person_email pe
 			JOIN person p ON p.id = pe.person_id AND p.archived_at IS NULL
-			WHERE lower(pe.email) = $1
-			  
-			LIMIT 1`, email).Scan(&personID)
-		if errors.Is(lookup, pgx.ErrNoRows) {
+			WHERE lower(pe.email) = $1 AND pe.archived_at IS NULL
+			LIMIT 2`, email)
+		if err != nil {
+			return err
+		}
+		matches, err := pgx.CollectRows(rows, pgx.RowTo[ids.PersonID])
+		if err != nil {
+			return err
+		}
+		if len(matches) == 0 {
 			return nil // not a known recipient in this workspace: no token, no header
 		}
-		if lookup != nil {
-			return lookup
+		if len(matches) > 1 {
+			return fmt.Errorf("consent: the recipient address is live on more than one person, so no unsubscribe link can name which: %w",
+				apperrors.ErrConflict)
 		}
+		personID := matches[0]
 		// The token this mints is a bearer credential over the recipient's
 		// consent record — it reads their per-purpose state, withdraws, and
 		// grants, all with no session. So the mint carries the SAME row-scope
@@ -249,8 +279,11 @@ func (s *Store) PublicPurposeStates(ctx context.Context, personID ids.PersonID) 
 		if err := auth.EnsureVisible(ctx, tx, "person", personID.UUID); err != nil {
 			return err
 		}
+		// requires_double_opt_in comes from the catalog rather than a constant:
+		// an operator may define their own DOI purpose, and a page that only
+		// knew about the seeded one would offer that switch and fail.
 		rows, err := tx.Query(ctx, `
-			SELECT cp.key, cp.label, coalesce(pc.state, 'unknown')
+			SELECT cp.key, cp.label, coalesce(pc.state, 'unknown'), cp.requires_double_opt_in
 			FROM consent_purpose cp
 			LEFT JOIN person_consent pc ON pc.purpose_id = cp.id AND pc.person_id = $1
 			WHERE cp.archived_at IS NULL
@@ -261,7 +294,7 @@ func (s *Store) PublicPurposeStates(ctx context.Context, personID ids.PersonID) 
 		defer rows.Close()
 		for rows.Next() {
 			var c PurposeChoice
-			if err := rows.Scan(&c.Key, &c.Label, &c.State); err != nil {
+			if err := rows.Scan(&c.Key, &c.Label, &c.State, &c.GrantNeedsConfirmation); err != nil {
 				return err
 			}
 			c.Locked = LockedPurpose(c.Key)

@@ -178,10 +178,11 @@ func wirePurposeChoices(choices []PurposeChoice) []map[string]any {
 	out := make([]map[string]any, 0, len(choices))
 	for _, c := range choices {
 		out = append(out, map[string]any{
-			"key":    c.Key,
-			"label":  c.Label,
-			"state":  c.State,
-			"locked": c.Locked,
+			"key":                      c.Key,
+			"label":                    c.Label,
+			"state":                    c.State,
+			"locked":                   c.Locked,
+			"grant_needs_confirmation": c.GrantNeedsConfirmation,
 		})
 	}
 	return out

@@ -15,7 +15,7 @@ edit its `//gate:kind` line, then regenerate from the backend directory:
 The eight shapes, what each is for, and how each one silently passes:
 [gate-patterns.md](gate-patterns.md).
 
-## Parity (34)
+## Parity (36)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -35,6 +35,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `enumsync_test.go` | H3 | The enum-vocabulary sync as a fitness function: where domain logic branches on a typed Go enum, its constant set must equal the schema's CHECK (col IN (...)) set for the column it mirrors. |
 | `filtervocabularyparity_test.go` | H3 | Two surfaces answer a filtered question: the list/segment compiler in `platform/database/storekit`, and the query compiler in `modules/search`. |
 | `frontendapprovalkinds_test.go` | H1 | Every kind a proposal can be staged under must have words a reader recognises, or the queue prints the wire enum at them. |
+| `frontendattentionsources_test.go` | H1 | Every source the Worklist can carry must have a body the decision lane knows how to draw, or the lane asks the wrong endpoint about it. |
 | `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice: the server builds it in SQL (internal/compose/reportperiod.go) because that is what a report is actually cut by, and the browser builds it in TypeScript (frontend/src/format/fiscalyear.ts) to show an admin what the setting they are about to save will produce. |
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the SAME timestamp, or a card ages differently from the list that filed the deal stalled. |
 | `frontendlaneparity_test.go` | H3 | The frontend gate is spelled once as `make check-fe` and run by CI as three parallel jobs. |
@@ -45,6 +46,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `languageset_test.go` | H3 | The languages the product speaks are declared in more than one place, and they have to agree. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale — 100 for EUR, 1000 for KWD, 1 for VND — is one fact, and the table that holds it lives in shared/kernel/values. |
 | `netguardparity_test.go` | H3 | The egress SSRF denylist exists twice, and this is where the two are held equal. |
+| `onboardinglocales_test.go` | H2 | The onboarding conversation speaks every language the product does. |
 | `outboundidentity_test.go` | H1 | A remote operator sees one name for this product and decides about it: blocks it, rate-limits it, allow-lists it, or writes a robots.txt group naming it. |
 | `overdueboundary_test.go` | H1 | "Is this late?" is one question about one record, and a reader can ask it of a list, a card, a brief or an agent tool. |
 | `pollcadenceparity_test.go` | H3 | A connector that POSTPONES a tick on an unreachable provider asks to run again after a fixed delay, and that delay has to EQUAL the cadence its dispatcher already ticks at — and has to survive the seam's ceiling on the way to the queue. |
@@ -54,7 +56,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `seeddemoargonparity_test.go` | H3 | seed-demo writes password hashes a REAL person then logs in against, and it cannot import the hashing package: that package sits behind a nested `internal`, and seed-demo is its own module besides. |
 | `sendattachmentcap_test.go` | H3 | The attachment-per-message cap as a fitness function. |
 
-## Census (58)
+## Census (61)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -75,6 +77,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
 | `docslinktargets_test.go` | H3 | Every relative link under docs/ points at a file that exists. |
+| `edgeendpointcensus_test.go` | H2 | Every end a link can have is an end that link's history is read from. |
 | `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
 | `envcontract_test.go` | H3 | Environment-variable contract fitness functions. |
 | `errtaxonomy_test.go` | H2 | Every error sentinel must have a verdict, on every surface. |
@@ -86,8 +89,10 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobcensus_test.go` | H3 | The census as a fitness function, in both directions. |
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for ONE workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
 | `license_test.go` | H3 | License-notice fitness function (business/12-license.md §5 "honest labeling", §8 "don't strip notices"): every hand-written Go file must carry the BUSL-1.1 SPDX header, and the obligation is derived from the tree rather than a checklist — a new file is enrolled the moment it exists. |
+| `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
 | `mcpfaultcoverage_test.go` | H2 | A module's typed refusal must be legible on EVERY surface that can reach it, not just the one it was written for. |
+| `metricsuffix_test.go` | H2 | A `\_total` suffix means COUNTER, in both directions. |
 | `migrationcitations_test.go` | H1 | No file acquires a citation of a migration version that does not exist. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the CALLER wrote is one number, declared in platform/database as CallerPredicateBudget. |
 | `oneconsentcarry_test.go` | H2 | The consent carry — what happens to a retiring record's consent when another record survives it — is spelled once inside the people module. |
@@ -163,7 +168,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |
 | `writeauthority_test.go` | H2 | The read/write asymmetry of a manual record grant, as a fitness function: a path that CHANGES a shareable record probes for write authority, not for visibility. |
 
-## Prohibition (21)
+## Prohibition (23)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -178,8 +183,10 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobfleetscan_test.go` | H2 | The fleet enumeration lives at ratified sites only. |
 | `jobregistrationban_test.go` | H2 | The forbidigo rule that bans a direct River registration, held to River's own API rather than to a remembered list of its spellings. |
 | `jobtestonly_test.go` | H2 | jobs.Config.TestOnly and compose.JobRunnerConfig.TestOnly carry River's flag of the same name, which disables machinery that is "useful in production, but which may be harmful to tests" — in the pinned river@v0.43.0, the maintenance services' staggered startup. |
+| `keyvaultonceperrole_test.go` | H2 | A role resolves its key vault ONCE. |
 | `logsecrets_test.go` | H2 | A credential reaches a log field only on the failure of the channel that was supposed to carry it. |
 | `modulepoolsharing_test.go` | H2 | Pool-sharing discipline for the module suites, as a fitness function. |
+| `promptexcerpt_test.go` | H2 | A prompt built from a crawled page is bounded by this product, not by the site. |
 | `promptfence_test.go` | H1 | Prompt-boundary fitness functions: no prompt may declare a data boundary the writer of that data can spell. |
 | `publicreferences_test.go` | H1 | This repository is public. |
 | `retentionscope_test.go` | H2 | retentionScopeBuilder is the fixture whose reach these gates bound, retentionScopeSink is the one call it may feed, and retentionScopeSinkOwner is the package that call must live in. |

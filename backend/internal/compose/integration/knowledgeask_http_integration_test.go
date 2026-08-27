@@ -40,18 +40,18 @@ func (unaskableEmbedder) Embed(context.Context, model.EmbedRequest) (model.Embed
 	return model.Embeddings{}, context.Canceled
 }
 
-func askCorpusOverHTTP(t *testing.T, e *apptest.AppEnv, corpusID, question string) (int, apptest.AnyMap) {
+func askCorpusOverHTTP(t *testing.T, e *apptest.AppEnv, corpusID, question string) (int, AnyMap) {
 	t.Helper()
-	var answer apptest.AnyMap
+	var answer AnyMap
 	status := e.Call(t, "POST", "/v1/knowledge/corpora/"+corpusID+"/ask",
-		apptest.AnyMap{"question": question}, nil, &answer)
+		AnyMap{"question": question}, nil, &answer)
 	return status, answer
 }
 
 func createCorpusOverHTTP(t *testing.T, e *apptest.AppEnv) string {
 	t.Helper()
-	var made apptest.AnyMap
-	status := e.Call(t, "POST", "/v1/knowledge/corpora", apptest.AnyMap{
+	var made AnyMap
+	status := e.Call(t, "POST", "/v1/knowledge/corpora", AnyMap{
 		"name":            "How-to",
 		"topic_statement": "How this product is operated.",
 	}, nil, &made)

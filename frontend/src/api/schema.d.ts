@@ -372,6 +372,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/vcard-import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Import a .vcf address-card file.
+         * @description A handed-over card is first-party data: the person gave it, which is what justifies
+         *     storing their contact details. A human presses this button, so the import WRITES
+         *     rather than staging — the same rule the site read applies from the other side, where
+         *     an automatic read proposes and a human click writes.
+         *
+         *     Three outcomes per card, reported in the order the file listed them. An exact email
+         *     match fills only the fields the record leaves empty, so a value a human typed is never
+         *     replaced by a card. No match creates the person, the company the card names, and the
+         *     employment edge between them. A card that merely RESEMBLES somebody is written nowhere
+         *     and returned as `needs_review` with the candidate it resembles: guessing there is how
+         *     one person becomes two records, and neither direction is recoverable by the reader who
+         *     imported the file.
+         *
+         *     A card the parser cannot read fails the whole request rather than being skipped —
+         *     an import that quietly drops a person is worse than one that refuses, because nobody
+         *     can notice who is missing.
+         *
+         *     The card does not prove marketing consent. It begins a business relationship; consent
+         *     is a separate, recorded act.
+         */
+        post: operations["importVCards"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/people/{id}": {
         parameters: {
             query?: never;
@@ -6951,6 +6989,44 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/people/{id}/consent/qualifying-events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record the exchange that makes business correspondence lawful.
+         * @description A qualifying event is what a `business_correspondence` verdict reads to answer whether
+         *     we may write to somebody at all (`getPersonConsentGuard`). Most arrive on their own —
+         *     an inbound message, an inquiry, an open deal are all derived from records the product
+         *     already holds. One cannot: **a card handed over in person**, which happened away from
+         *     every system and is a fact only the person who was there can state.
+         *
+         *     This is where they state it. `in_person` requires a `note` saying what happened, because
+         *     that note IS the evidence — there is no message to cite and no deal to point at, and a
+         *     recorded basis nobody can check is not accountability.
+         *
+         *     It does not grant marketing consent and never could: §7 UWG asks for express consent, and
+         *     a card is not one. What it settles is the narrower question of whether an ordinary business
+         *     email may be sent — which is the question the confirm-your-details flow has to answer
+         *     before it can send anything at all.
+         *
+         *     Human-only. An agent never asserts that a person met somebody.
+         */
+        post: operations["recordQualifyingEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/records/{record_type}/{id}/claim": {
         parameters: {
             query?: never;
@@ -12917,6 +12993,31 @@ export interface components {
              */
             organization_created: boolean;
         };
+        /** @description One entry per card in the file, in the order the file listed them. */
+        VCardImportReport: {
+            results: components["schemas"]["VCardImportResult"][];
+        };
+        VCardImportResult: {
+            /** @description The card's position in the file, from 0. */
+            index: number;
+            /** @description The name the card stated, so a reader can find the row it came from. */
+            full_name: string;
+            /**
+             * @description `created` — nobody matched, so the card became a person, their company and the edge
+             *     between them. `updated` — an exact match, filled only where the record was empty.
+             *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+             *     `skipped` — the card states no name, so there is no person in it.
+             * @enum {string}
+             */
+            outcome: "created" | "updated" | "needs_review" | "skipped";
+            /**
+             * Format: uuid
+             * @description The person created or updated, or — for `needs_review` — the candidate the card resembles.
+             */
+            person_id?: string | null;
+            /** @description Why a card was skipped, in words a reader can act on. */
+            reason?: string | null;
+        };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdatePersonRequest: {
             full_name?: string;
@@ -17826,7 +17927,7 @@ export interface components {
              *     (`entity_type: project`), attributed to the project's company.
              * @enum {string}
              */
-            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet";
+            kind: "stalled_deal" | "champion_left" | "reengagement" | "buying_intent" | "risk" | "other" | "contract_ended" | "new_opportunity" | "commitment_made" | "ghosted_thread" | "project_gone_quiet" | "funding" | "leadership_change" | "expansion" | "product_launch";
             /**
              * @description Where the raw signal came from.
              * @default derived
@@ -17889,6 +17990,31 @@ export interface components {
             /** @enum {string|null} */
             source_type?: "activity" | "deal" | "signal" | "relationship" | "page" | null;
             source_id?: string | null;
+        };
+        /** @description One exchange that makes ordinary business correspondence lawful. */
+        RecordQualifyingEventRequest: {
+            /**
+             * @description Only `in_person` is accepted here. The other three kinds — inbound_message, inquiry,
+             *     active_deal — are DERIVED from records the product already holds, and a hand-written
+             *     one would be a second, unbacked answer to a question the data already settles.
+             * @enum {string}
+             */
+            kind: "in_person";
+            /** @description What happened, in the words of whoever was there. Required — it is the only evidence an in-person exchange has. */
+            note: string;
+            /**
+             * Format: date-time
+             * @description When the exchange happened, not when it was typed in.
+             */
+            occurred_at: string;
+        };
+        /** @description A recorded exchange, as it now stands on the person. */
+        QualifyingEventRecord: {
+            /** @enum {string} */
+            kind: "inbound_message" | "inquiry" | "active_deal" | "in_person";
+            note: string | null;
+            /** Format: date-time */
+            occurred_at: string;
         };
         CreateSignalRequest: {
             /** @enum {string} */
@@ -18788,6 +18914,11 @@ export interface components {
             evidence?: {
                 [key: string]: unknown;
             } | null;
+            /**
+             * Format: uuid
+             * @description The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
+             */
+            undid_audit_log_id?: string | null;
             undoable?: components["schemas"]["Undoability"];
         };
         FieldHistoryListResponse: {
@@ -18916,8 +19047,41 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             summary: string;
+            /**
+             * Format: uuid
+             * @description The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
+             */
+            undid_audit_log_id?: string | null;
+            edge?: components["schemas"]["HistoryEdge"];
             undoable?: components["schemas"]["Undoability"];
         };
+        /**
+         * @description Set when this history entry changed a LINK between two records rather than a field
+         *     of this one, and null on every ordinary row.
+         *
+         *     A link is recorded against the link itself, so both records it joins carry the same
+         *     entry — each naming the other end. The other endpoint is named so the line can say
+         *     WHAT was linked ("linked Northwind Logistics as employer"), and carries its id so a
+         *     reader can navigate to it.
+         *
+         *     A caller who cannot see the other endpoint does not receive the row AT ALL: it is
+         *     absent rather than refused, because a refusal is proof the record exists.
+         *
+         *     There is no field diff on an edge row. `role`, `started_at` and the primary-employer
+         *     flag belong to the link, not to either record, and projecting them as a record's own
+         *     fields would invent fields it does not have — which is also why edge entries never
+         *     appear in `/field-history`.
+         */
+        HistoryEdge: {
+            /** @description The relationship kind, e.g. `employment`, `co_sell_with`, `deal_stakeholder`. */
+            kind: string;
+            /** @enum {string} */
+            other_entity_type: "person" | "organization" | "deal" | "project";
+            /** Format: uuid */
+            other_entity_id: string;
+            /** @description The other endpoint's display name, resolved by the read. Null when the row no longer resolves — the line then names the link without claiming a name for it. */
+            other_label?: string | null;
+        } | null;
         /**
          * @description Whether this history entry can be put back, and if not, why. COMPUTED per read,
          *     never stored: a stored flag is a second copy of a question the audit spine already
@@ -18935,10 +19099,10 @@ export interface components {
         Undoability: {
             undoable: boolean;
             /**
-             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing. `edge_relink_unsupported` means the entry REMOVED a link: putting one back is an un-archive, which this path does not perform. The refusal says the link can be made again from the record's own screen, because that is true and actionable. `not_restorable_by_this_path` covers two shapes: a record whose workspace keeps its records in an incumbent system, and EVERY change to a project's company link whatever the verb — that kind takes write authority over the project row and a project must keep at least one company, so a generic reverse would be a side door around both rules. `detail` names the kind in the second case.
              * @enum {string|null}
              */
-            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | null;
+            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | "edge_relink_unsupported" | null;
             /** @description The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says. */
             detail?: string | null;
         };
@@ -19740,7 +19904,7 @@ export interface components {
         OnboardingCompanyMessageRequest: {
             message: string;
             /** @enum {string} */
-            locale: "en" | "de";
+            locale: "en" | "de" | "vi";
             /**
              * @description Which onboarding act the conversation is in; omitted means company.
              * @default company
@@ -20564,8 +20728,9 @@ export interface components {
         };
         /**
          * @description The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
-         *     with the recipient's current state and whether it is locked (transactional cannot be withdrawn
-         *     while a deal is live).
+         *     with the recipient's current state, whether it is locked (transactional cannot be withdrawn
+         *     while a deal is live), and whether granting it needs a confirmation round-trip this surface
+         *     cannot perform.
          */
         PreferenceCenter: {
             purposes: {
@@ -20575,6 +20740,13 @@ export interface components {
                 state: "unknown" | "granted" | "withdrawn";
                 /** @description A locked purpose (transactional) cannot be changed from this surface. */
                 locked: boolean;
+                /**
+                 * @description A purpose requiring double opt-in. Withdrawing it here works; GRANTING it does not, because
+                 *     this surface's token is reusable and long-lived, so it cannot evidence one deliberate choice
+                 *     the way a confirmation round-trip does. A client must not offer the grant — the write refuses
+                 *     it with 422, and an offered switch that always fails is worse than an absent one.
+                 */
+                grant_needs_confirmation: boolean;
             }[];
         };
         /** @description An automation *type* in the closed starter library (E15/ADR-0035, feedback/14). */
@@ -23629,6 +23801,39 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    importVCards: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "multipart/form-data": {
+                    /**
+                     * Format: binary
+                     * @description The .vcf file. RFC 6350, tolerating the 3.0 and 2.1 spellings real exporters emit.
+                     */
+                    file: string;
+                };
+            };
+        };
+        responses: {
+            /** @description What became of each card in the file. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VCardImportReport"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -31459,7 +31664,7 @@ export interface operations {
         parameters: {
             query?: {
                 /** @description Language for the open questions' copy; option values are locale-invariant. */
-                locale?: "en" | "de";
+                locale?: "en" | "de" | "vi";
             };
             header?: never;
             path?: never;
@@ -34543,6 +34748,37 @@ export interface operations {
                     };
                 };
             };
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    recordQualifyingEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordQualifyingEventRequest"];
+            };
+        };
+        responses: {
+            /** @description Recorded. The person's business-correspondence verdict now reads it. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QualifyingEventRecord"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };

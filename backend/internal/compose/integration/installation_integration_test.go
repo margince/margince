@@ -148,7 +148,7 @@ func TestBootstrapSeedsFollowTheDeploymentConfiguration(t *testing.T) {
 
 	// The configured currency is asserted with the other two settings below —
 	// they are one act of bootstrap and one place to read it back.
-	if status := e.Call(t, "POST", "/v1/auth/login", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/auth/login", AnyMap{
 		"email": "ops@configured.test", "password": "correct-horse-battery",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("configured admin login → %d", status)

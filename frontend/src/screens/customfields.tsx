@@ -27,7 +27,7 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import { AutonomyDot } from "../design-system/trust";
 import { useT } from "../i18n";
 import { AuditEntryLine } from "./audit";
@@ -80,7 +80,6 @@ export function FieldBuilder({
   pending,
   onSubmit,
   onCancel,
-  onToast,
 }: Readonly<{
   object: CfObject;
   pending: boolean;
@@ -89,8 +88,8 @@ export function FieldBuilder({
   // its secondary verb is what closes that dialog rather than what empties the
   // inputs: a form that is discarded on close has nothing to reset to.
   onCancel: () => void;
-  onToast: (msg: string) => void;
 }>) {
+  const toast = useToast();
   const t = useT();
   const [label, setLabel] = useState("");
   const [type, setType] = useState<CfType>("text");
@@ -114,7 +113,9 @@ export function FieldBuilder({
     // A picklist without an option is not a picklist — the last row is a floor,
     // not a delete target, so the intent is surfaced as a toast, not swallowed.
     if (options.length <= 1) {
-      onToast(t("cf.lastOptionBlocked"));
+      // `mark: false`: this is a refusal, and the completion dot beside it said
+      // the opposite of what the sentence says.
+      toast.show(t("cf.lastOptionBlocked"), { mark: false });
       return;
     }
     setOptions((current) => current.filter((_, i) => i !== idx));
@@ -854,8 +855,6 @@ export function CustomFieldsAdmin() {
         )}
       </PanelBody>
 
-      <ToastRegion toast={toast} />
-
       {/* Mounted only while it is open, so a half-typed label is gone the next
           time the dialog opens rather than waiting there under an object
           nobody re-chose.
@@ -881,7 +880,6 @@ export function CustomFieldsAdmin() {
             pending={create.isPending}
             onSubmit={(draft) => create.mutate(draft)}
             onCancel={() => setAdding(false)}
-            onToast={toast.show}
           />
         </Modal>
       )}

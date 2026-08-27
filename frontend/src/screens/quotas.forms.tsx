@@ -347,6 +347,7 @@ export function EditTargetAction({
   return (
     <EditAction<Quota>
       label={label}
+      savedMessage={t("quotas.saveDone")}
       fields={[
         {
           key: "period_start",
@@ -427,6 +428,7 @@ export function ArchiveQuotaAction({
     <ArchiveAction<Quota>
       label={t("quotas.archive.title")}
       confirmText={t("quotas.archive.confirm")}
+      archivedMessage={t("quotas.archiveDone")}
       archive={async () => {
         const { data, error } = await api.DELETE("/quotas/{id}", {
           params: { path: { id: quota.id } },

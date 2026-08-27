@@ -13,6 +13,7 @@ import {
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { useToast } from "../design-system/toast";
 import { stable } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, usePlural, useT } from "../i18n";
@@ -115,12 +116,31 @@ function AccessSummary({ access }: Readonly<{ access: AccessPreview }>) {
   );
 }
 
+// The name a team confirmation says, off the roster this card already holds.
+// A team whose row has gone before the lookup runs falls back to its id rather
+// than to an empty quote, which reads as a team with no name at all.
+// Taken off the hook's own result rather than exported from `entityref`: the
+// roster's element type is that hook's to state, and a second name for it here
+// is a second thing to keep in step.
+type RosterEntry = NonNullable<ReturnType<typeof useRoster>["data"]>[number];
+
+function teamName(
+  entries: readonly RosterEntry[] | undefined,
+  id: string,
+): string {
+  const found = entries?.find((entry) => entry.id === id);
+  // The roster is a union of people and teams under one cache key, so the
+  // narrowing is real rather than ceremonial — a `name` is what makes it a team.
+  return found && "name" in found ? found.name : id;
+}
+
 // The teams card: the workspace's teams, and the verbs that change them.
 // Membership is what resolves who may EDIT whose records now that customer
 // identity is readable by every seat, so this is where that is administered.
 
 export function TeamsCard() {
   const t = useT();
+  const toast = useToast();
   const plural = usePlural();
   const { locale } = useLocale();
   const qc = useQueryClient();
@@ -130,6 +150,35 @@ export function TeamsCard() {
   // endpoint's cursor to the end.
   const teams = useRoster("team", true);
   const teamsPartial = useRosterPartial("team", true);
+  // The one archive in this product with a way back: a team is archived by
+  // PATCHing a flag, so the same endpoint restores it. Everything else called
+  // "archive" here is a DELETE the contract offers no inverse for.
+  // It takes the NAME as well as the id, rather than looking the name up again
+  // on the way back. The archive that offered this Undo invalidated ["teams"],
+  // so by the time a reader presses it the archived row may already be gone
+  // from the roster — and a lookup that misses falls back to a uuid, which is
+  // the one thing a confirmation must not call a team.
+  const restore = useMutation({
+    mutationFn: async ({ id }: { id: string; name: string }) => {
+      const { error } = await api.PATCH("/teams/{id}", {
+        params: { path: { id } },
+        body: { archived: false },
+      });
+      if (error) throwProblem(error);
+    },
+    // An Undo that fails has to say so. The message it was offered from is
+    // consumed the moment it is pressed, so a rejected restore would otherwise
+    // leave the reader watching a confirmation disappear and believing the team
+    // came back. Sticky, because a refusal is not a courtesy to withdraw after
+    // three and a half seconds.
+    onError: (error) => {
+      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+    },
+    onSuccess: (_restored, { name }) => {
+      qc.invalidateQueries({ queryKey: ["teams"] });
+      toast.show(t("users.teamRestored", { name }));
+    },
+  });
   const archive = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await api.PATCH("/teams/{id}", {
@@ -138,7 +187,18 @@ export function TeamsCard() {
       });
       if (error) throwProblem(error);
     },
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["teams"] }),
+    onSuccess: (_archived, id) => {
+      // The name is read BEFORE the roster refetch lands, or the row it comes
+      // from is already gone by the time the sentence is built.
+      const name = teamName(teams.data, id);
+      qc.invalidateQueries({ queryKey: ["teams"] });
+      toast.show(t("users.teamArchived", { name }), {
+        action: {
+          label: t("common.undo"),
+          onAct: () => restore.mutate({ id, name }),
+        },
+      });
+    },
   });
   return (
     // The create verb sits on the title's own line, which is where a card-level

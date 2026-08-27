@@ -96,7 +96,7 @@ and follow up on Friday.</v>
 func createVoiceProfile(t *testing.T, e *apptest.AppEnv) voiceProfileWire {
 	t.Helper()
 	var created voiceProfileWire
-	if status := e.Call(t, "POST", "/v1/voice-profiles", apptest.AnyMap{}, nil, &created); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/voice-profiles", AnyMap{}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create → %d", status)
 	}
 	if created.Status != "collecting" || created.Maturity != "collecting" || created.ProfileVersion != 0 || created.OwnerID == nil {
@@ -112,17 +112,17 @@ func TestVoiceProfileLifecycle(t *testing.T) {
 	base := "/v1/voice-profiles/" + created.ID
 
 	// One live personal profile per user: a second create conflicts.
-	if status := e.Call(t, "POST", "/v1/voice-profiles", apptest.AnyMap{}, nil, nil); status != http.StatusConflict {
+	if status := e.Call(t, "POST", "/v1/voice-profiles", AnyMap{}, nil, nil); status != http.StatusConflict {
 		t.Fatalf("second create → %d, want 409", status)
 	}
 
 	// The human-authored half edits under If-Match; skew is refused.
-	if status := e.Call(t, "PATCH", base, apptest.AnyMap{"personality_md": "Direct, warm, no filler."},
+	if status := e.Call(t, "PATCH", base, AnyMap{"personality_md": "Direct, warm, no filler."},
 		map[string]string{"If-Match": "99"}, nil); status != http.StatusConflict {
 		t.Fatalf("stale If-Match → %d, want 409", status)
 	}
 	var edited voiceProfileWire
-	if status := e.Call(t, "PATCH", base, apptest.AnyMap{"personality_md": "Direct, warm, no filler."},
+	if status := e.Call(t, "PATCH", base, AnyMap{"personality_md": "Direct, warm, no filler."},
 		map[string]string{"If-Match": "1"}, &edited); status != http.StatusOK {
 		t.Fatalf("personality edit → %d", status)
 	}
@@ -143,7 +143,7 @@ func TestVoiceProfileLifecycle(t *testing.T) {
 }
 
 // ingest posts one corpus source and asserts the 201.
-func ingest(t *testing.T, e *apptest.AppEnv, base string, body apptest.AnyMap) voiceIngestResponse {
+func ingest(t *testing.T, e *apptest.AppEnv, base string, body AnyMap) voiceIngestResponse {
 	t.Helper()
 	kind, _ := body["kind"].(string)
 	if _, ok := body["register"]; !ok {
@@ -169,7 +169,7 @@ func TestVoiceCorpusIngestAndMeter(t *testing.T) {
 	base := "/v1/voice-profiles/" + created.ID
 
 	// A pasted post: social register, words counted.
-	post := ingest(t, e, base, apptest.AnyMap{
+	post := ingest(t, e, base, AnyMap{
 		"kind": "linkedin", "source_label": "LinkedIn posts", "source_ref": "post-2026-06",
 		"content": "Shipping beats planning. We shipped the audit story this week and it landed.",
 	})
@@ -182,7 +182,7 @@ func TestVoiceCorpusIngestAndMeter(t *testing.T) {
 
 	// A both-sided transcript: spoken register by default, and ONLY the
 	// owner's 20 words enter — zero other-party text (§B1.2).
-	transcript := ingest(t, e, base, apptest.AnyMap{
+	transcript := ingest(t, e, base, AnyMap{
 		"kind": "transcript", "source_label": "Discovery call", "source_ref": "call-77",
 		"format": "transcript", "speaker_label": "Ada Admin", "content": voiceTestVTT,
 	})
@@ -195,7 +195,7 @@ func TestVoiceCorpusIngestAndMeter(t *testing.T) {
 
 	// Idempotency: re-ingesting source_ref post-2026-06 replaces the row
 	// — same source count, new word count, no double-counted meter.
-	reingested := ingest(t, e, base, apptest.AnyMap{
+	reingested := ingest(t, e, base, AnyMap{
 		"kind": "linkedin", "source_label": "LinkedIn posts", "source_ref": "post-2026-06",
 		"content": "Five clean words replace thirteen.",
 	})
@@ -208,7 +208,7 @@ func TestVoiceCorpusIngestAndMeter(t *testing.T) {
 
 	// A rich enough source moves the band; the boundary logic itself is
 	// unit-tested — here the wire meter reflects the stored corpus.
-	bulk := ingest(t, e, base, apptest.AnyMap{
+	bulk := ingest(t, e, base, AnyMap{
 		"kind": "document", "source_label": "Blog archive", "source_ref": "blog-dump",
 		"content": strings.Repeat("wort ", 8500),
 	})
@@ -218,7 +218,7 @@ func TestVoiceCorpusIngestAndMeter(t *testing.T) {
 
 	// Excluding a source pulls it from the meter (manifest opt-out).
 	var excluded voiceIngestResponse
-	if status := e.Call(t, "PATCH", base+"/sources/"+bulk.Source.ID, apptest.AnyMap{
+	if status := e.Call(t, "PATCH", base+"/sources/"+bulk.Source.ID, AnyMap{
 		"included": false,
 	}, nil, &excluded); status != http.StatusOK {
 		t.Fatalf("exclude → %d", status)
@@ -247,20 +247,20 @@ func TestVoiceBuildQueuesOnlyAtTheProvisionalThreshold(t *testing.T) {
 	created := createVoiceProfile(t, e)
 	base := "/v1/voice-profiles/" + created.ID
 
-	ingest(t, e, base, apptest.AnyMap{
+	ingest(t, e, base, AnyMap{
 		"kind": "document", "source_label": "Working sample", "source_ref": "threshold",
 		"content": strings.Repeat("word ", 799),
 	})
-	if status := e.Call(t, "POST", base+"/builds", apptest.AnyMap{"reason": "onboarding"}, nil, nil); status != http.StatusUnprocessableEntity {
+	if status := e.Call(t, "POST", base+"/builds", AnyMap{"reason": "onboarding"}, nil, nil); status != http.StatusUnprocessableEntity {
 		t.Fatalf("build below 800 words → %d, want 422", status)
 	}
 
-	ingest(t, e, base, apptest.AnyMap{
+	ingest(t, e, base, AnyMap{
 		"kind": "document", "source_label": "Working sample", "source_ref": "threshold",
 		"content": strings.Repeat("word ", 800),
 	})
 	var queued voiceBuildWire
-	if status := e.Call(t, "POST", base+"/builds", apptest.AnyMap{"reason": "onboarding"}, nil, &queued); status != http.StatusAccepted {
+	if status := e.Call(t, "POST", base+"/builds", AnyMap{"reason": "onboarding"}, nil, &queued); status != http.StatusAccepted {
 		t.Fatalf("build at 800 words → %d, want 202", status)
 	}
 	if queued.ProfileID != created.ID || queued.Status != "queued" || queued.SourceCount != 1 || queued.SourceHash == "" || queued.ResultVersion != nil {
@@ -268,7 +268,7 @@ func TestVoiceBuildQueuesOnlyAtTheProvisionalThreshold(t *testing.T) {
 	}
 
 	var replay voiceBuildWire
-	if status := e.Call(t, "POST", base+"/builds", apptest.AnyMap{"reason": "manual"}, nil, &replay); status != http.StatusAccepted {
+	if status := e.Call(t, "POST", base+"/builds", AnyMap{"reason": "manual"}, nil, &replay); status != http.StatusAccepted {
 		t.Fatalf("active-build replay → %d, want 202", status)
 	}
 	if replay.ID != queued.ID {
@@ -297,7 +297,7 @@ func TestVoiceBinaryDocumentIngestIsRefusedWith422(t *testing.T) {
 			Code   string `json:"code"`
 			Detail string `json:"detail"`
 		}
-		if status := e.Call(t, "POST", "/v1/voice-profiles/"+created.ID+"/sources", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/voice-profiles/"+created.ID+"/sources", AnyMap{
 			"kind": "document", "register": "long_form", "source_label": "office upload", "source_ref": "bin-" + format,
 			"format": format, "content": "opaque binary payload",
 		}, nil, &problem); status != http.StatusUnprocessableEntity {
@@ -328,7 +328,7 @@ func TestVoiceTranscriptIngestRequiresTheOwnersSpeakerLabel(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	created := createVoiceProfile(t, e)
 
-	if status := e.Call(t, "POST", "/v1/voice-profiles/"+created.ID+"/sources", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/voice-profiles/"+created.ID+"/sources", AnyMap{
 		"kind": "transcript", "register": "spoken", "source_label": "Unattributed", "source_ref": "call-78",
 		"format": "transcript", "content": voiceTestVTT,
 	}, nil, nil); status != 422 {
@@ -346,14 +346,14 @@ func TestVoiceProfileMutationsRejectAgents(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "voice prober", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("mint → %d", status)
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	if status := e.Call(t, "POST", "/v1/voice-profiles", apptest.AnyMap{}, bearer, nil); status != http.StatusForbidden {
+	if status := e.Call(t, "POST", "/v1/voice-profiles", AnyMap{}, bearer, nil); status != http.StatusForbidden {
 		t.Fatalf("agent create voice profile → %d, want 403", status)
 	}
 }
@@ -369,7 +369,7 @@ func TestVoiceProfileIsInvisibleAcrossTenants(t *testing.T) {
 	e.BootstrapWorkspace(t)
 
 	var created voiceProfileWire
-	if status := e.Call(t, "POST", "/v1/voice-profiles", apptest.AnyMap{}, nil, &created); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/voice-profiles", AnyMap{}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create → %d", status)
 	}
 

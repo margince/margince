@@ -10,12 +10,16 @@
 version: "2"
 
 run:
-  # The baseline lints only untagged code; this pass also covers the
-  # integration, livesmoke and bench lanes so new test-harness code is gated too.
+  # This pass carries the same tags as the baseline, so new code in a by-hand
+  # lane is gated too. gates/lintbuildtagreach_test.go fails when a tag that
+  # gates a file in this tree is missing from EITHER list, because a tag added to
+  # one config alone leaves half the linters blind.
   build-tags:
     - integration
     - livesmoke
     - bench
+    - e2e_llm
+    - voicelive
 
 issues:
   # Only findings introduced after the merge-base with origin/main fail.

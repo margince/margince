@@ -18,7 +18,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -62,6 +64,16 @@ func relationshipIdentityImage(rel relationshipRow) map[string]any {
 // narrowed to what actually moved, so a role edit does not present the kind
 // and the dates as changes nobody made.
 func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, before map[string]any, rel relationshipRow) error {
+	return emitRelationshipChangeWithEvidence(ctx, tx, action, before, rel, nil)
+}
+
+// emitRelationshipChangeWithEvidence is the same write shape carrying context
+// ABOUT the mutation. Evidence is never a field image — the reversal path names
+// the entry it put back there, which is what lets a reader pair the two lines
+// instead of counting an undo as a fresh change.
+func emitRelationshipChangeWithEvidence(ctx context.Context, tx pgx.Tx, action string,
+	before map[string]any, rel relationshipRow, evidence map[string]any,
+) error {
 	anchorObject, _ := relationshipAnchor(rel.Kind)
 	var anchorID ids.UUID
 	switch anchorObject {
@@ -78,7 +90,7 @@ func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, befor
 	if !storekit.AbsentImage(before) {
 		before, after = storekit.ChangedColumns(before, relationshipFieldImage(rel))
 	}
-	auditID, err := storekit.Audit(ctx, tx, action, "relationship", rel.ID, before, after)
+	auditID, err := storekit.AuditWithEvidence(ctx, tx, action, "relationship", rel.ID, before, after, evidence)
 	if err != nil {
 		return err
 	}
@@ -86,4 +98,26 @@ func emitRelationshipChange(ctx context.Context, tx pgx.Tx, action string, befor
 		"delta": map[string]any{"relationship": map[string]any{"id": rel.ID, "kind": rel.Kind, "action": action}},
 	}
 	return storekit.EmitEvent(ctx, tx, auditID, anchorID, relationshipUpdatedPayload(anchorObject, changedFields))
+}
+
+// relationshipUpdatedPayload builds the anchor's .updated event for a
+// relationship mutation — the same changed_fields delta wrapped in
+// whichever of the three anchors' published OPEN envelopes this edge
+// points at. All three (deal.updated, person.updated,
+// organization.updated) are OPEN envelopes with an identical
+// changed_fields shape, so the only real work here is picking the right
+// generated struct for the anchor.
+//
+//nolint:ireturn // dispatches to one of PublicEventDeal/Project/Person/OrganizationUpdated by anchorObject; tested directly via the interface in person_organization_payload_test.go
+func relationshipUpdatedPayload(anchorObject string, changedFields map[string]any) events.Payload {
+	switch anchorObject {
+	case anchorDeal:
+		return crmcontracts.PublicEventDealUpdated{ChangedFields: changedFields}
+	case projectObjectName:
+		return crmcontracts.PublicEventProjectUpdated{ChangedFields: changedFields}
+	case anchorPerson:
+		return crmcontracts.PublicEventPersonUpdated{ChangedFields: changedFields}
+	default: // organization
+		return crmcontracts.PublicEventOrganizationUpdated{ChangedFields: changedFields}
+	}
 }

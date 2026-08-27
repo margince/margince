@@ -9,43 +9,28 @@ package integration
 // task 4): customfields_vocab_integration_test.go proves the cf_
 // vocabulary's day-one behavior; this file reaches the storekit
 // listquery.go branches only a less common shape exercises — the
-// default-sort cursor continuation, a genuinely malformed (non-decoding)
-// token, a cursor reused under a DIFFERENT custom sort (not just the
-// default), the NULL-tail-to-NULL-tail continuation, a descending
-// custom sort's own cursor walk, and the two core vocabulary kinds the
-// day-one suite never sorts or filters by (owner_id's uuid, created_at's
-// timestamptz) plus the currency/date/boolean filter-value refusals.
+// default-sort cursor continuation, the NULL-tail-to-NULL-tail
+// continuation, a descending custom sort's own cursor walk, the two core
+// vocabulary kinds the day-one suite never sorts by (owner_id's uuid,
+// created_at's timestamptz), and the currency/date equality matches.
+//
+// Every one of those WALKS REAL ROWS, and that is now the whole membership
+// rule for this file. The refusals that used to sit here — an error message's
+// wording, an undecodable token, a cursor reused under the opposite
+// direction, three filter values that do not parse — are decided before any
+// query runs, and they are asserted in storekit's own suite where the
+// functions deciding them live. Reaching them through a composed app and a
+// migrated Postgres proved nothing about them that a unit test does not, and
+// it made a branch sweep on a platform package read as compose's work.
 
 import (
-	"errors"
-	"strings"
 	"testing"
-	"time"
 
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/people"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// TestCustomFieldVocab_SortErrorMessageIsActionable: SortError.Error()
-// names both the offending field and the machine code, not just the
-// bare code — the message a log line or a debugging session actually
-// reads.
-func TestCustomFieldVocab_SortErrorMessageIsActionable(t *testing.T) {
-	f := setupCFV(t)
-	bogus := "not_a_real_field"
-	_, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &bogus})
-	var sortErr *storekit.SortError
-	if !errors.As(err, &sortErr) {
-		t.Fatalf("err = %v, want SortError", err)
-	}
-	msg := sortErr.Error()
-	if !strings.Contains(msg, bogus) || !strings.Contains(msg, storekit.CodeSortFieldNotAllowed) {
-		t.Fatalf("Error() = %q, want it to name the field and the code", msg)
-	}
-}
 
 // TestCustomFieldVocab_DefaultSortPaginatesWithCursor: the DEFAULT sort
 // (-created_at,id, no explicit Sort) also keyset-paginates through its
@@ -77,46 +62,6 @@ func TestCustomFieldVocab_DefaultSortPaginatesWithCursor(t *testing.T) {
 	}
 	if len(page2) != 1 || page2[0].Id != first.Id || info2.HasMore {
 		t.Fatalf("page 2 = %+v (more=%v), want [first] with no more", page2, info2.HasMore)
-	}
-}
-
-// TestCustomFieldVocab_MalformedTokenAnswersDecodeError: a cursor string
-// that does not even base64url-decode is the same client fault as one
-// whose sort key mismatches its column's type — refused before the query
-// ever runs, never a 500.
-func TestCustomFieldVocab_MalformedTokenAnswersDecodeError(t *testing.T) {
-	f := setupCFV(t)
-	garbage := "not-a-valid-base64url-token!!"
-	_, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Cursor: &garbage})
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
-		t.Fatalf("err = %v, want MalformedCursorError", err)
-	}
-}
-
-// TestCustomFieldVocab_CursorMintedUnderOneCustomSortRefusedUnderAnother:
-// a token minted under a cf_-sorted list is refused not only when reused
-// on the default list (already covered), but also when reused under a
-// DIFFERENT custom sort — same field, opposite direction — since the
-// keyset tuple it carries cannot continue that ordering either.
-func TestCustomFieldVocab_CursorMintedUnderOneCustomSortRefusedUnderAnother(t *testing.T) {
-	f := setupDealCFV(t)
-	score := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Score", Type: customfields.TypeNumber, Source: "ui"})
-	f.seedScoredDeal(t, "A", map[string]any{score: float64(1)})
-	f.seedScoredDeal(t, "B", map[string]any{score: float64(2)})
-
-	one := 1
-	asc := score
-	_, page := f.listDealIDs(t, deals.ListDealsInput{Sort: &asc, Limit: &one})
-	if !page.HasMore || page.NextCursor == "" {
-		t.Fatalf("expected a sorted next-page cursor, got %+v", page)
-	}
-
-	desc := "-" + score
-	_, _, err := f.store.ListDeals(f.ctx, deals.ListDealsInput{Sort: &desc, Cursor: &page.NextCursor})
-	var mismatch *storekit.CursorSortMismatchError
-	if !errors.As(err, &mismatch) {
-		t.Fatalf("cursor reused under the opposite direction err = %v, want CursorSortMismatchError", err)
 	}
 }
 
@@ -183,13 +128,17 @@ func TestCustomFieldVocab_DescendingSortPaginatesStably(t *testing.T) {
 	assertIDOrder(t, walked, want, "descending paginated walk")
 }
 
-// TestCustomFieldVocab_FilterByCurrencyDateAndBooleanInvalidValues:
-// FilterEqualityPerType already proves text/number/boolean equality;
-// this proves the currency and date equality matches, plus the
-// invalid-value 422 for currency, date, and boolean — each exercises a
-// vocabulary kind branch FilterEqualityPerType and
-// MalformedFilterValueRefused (number-only) never reach.
-func TestCustomFieldVocab_FilterByCurrencyDateAndBooleanInvalidValues(t *testing.T) {
+// TestCustomFieldVocab_FilterByCurrencyDateEquality: FilterEqualityPerType
+// already proves text/number/boolean equality; this proves the currency and
+// date matches, each a vocabulary kind branch it never reaches.
+//
+// The three invalid-value refusals that used to sit beside these are in
+// storekit's own suite (TestCustomFilterClauses_MalformedValueRefused, which
+// covers all four kinds). They never reached a row: CustomFilterClauses
+// refuses the value while assembling the clause, so asserting it here proved
+// the refusal happens somewhere upstream of a query — which was already known
+// and did not need a migrated Postgres to say.
+func TestCustomFieldVocab_FilterByCurrencyDateEquality(t *testing.T) {
 	f := setupDealCFV(t)
 	eur := "EUR"
 	budget := f.defineDealField(t, customfields.FieldSpec{Object: "deal", Label: "Budget", Type: customfields.TypeCurrency, Currency: &eur, Source: "ui"})
@@ -208,20 +157,6 @@ func TestCustomFieldVocab_FilterByCurrencyDateAndBooleanInvalidValues(t *testing
 		assertIDOrder(t, got, []ids.UUID{match}, "date equality")
 	})
 
-	invalid := map[string]map[string]string{
-		"currency invalid value": {budget: "not-a-number"},
-		"date invalid value":     {renewal: "not-a-date"},
-		"boolean invalid value":  {strategic: "yes"},
-	}
-	for name, filters := range invalid {
-		t.Run(name, func(t *testing.T) {
-			_, _, err := f.store.ListDeals(f.ctx, deals.ListDealsInput{CustomFilters: filters})
-			var pred *storekit.PredicateError
-			if !errors.As(err, &pred) || pred.Code != storekit.CodeFilterValueInvalid {
-				t.Fatalf("err = %v, want PredicateError %s", err, storekit.CodeFilterValueInvalid)
-			}
-		})
-	}
 }
 
 // TestCustomFieldVocab_SortByOwnerIDWithCursor: owner_id is the one core
@@ -294,25 +229,5 @@ func TestCustomFieldVocab_SortByCreatedAtWithCursor(t *testing.T) {
 	}
 	if len(page2) != 1 || page2[0].Id != second.Id || info2.HasMore {
 		t.Fatalf("page 2 = %+v (more=%v), want [second] with no more", page2, info2.HasMore)
-	}
-}
-
-// TestCustomFieldVocab_MalformedTimestampCursorKeyIsClientFault: a
-// crafted cursor sorted by a timestamptz core field whose key does not
-// parse under ANY of parsesAsTimestamptz's layouts is a malformed
-// cursor at the store — proving the timestamp branch's failure path
-// (parsesAsKind's other branches already prove theirs via the number
-// suite's CraftedCursorKeyIsClientFault).
-func TestCustomFieldVocab_MalformedTimestampCursorKeyIsClientFault(t *testing.T) {
-	f := setupCFV(t)
-	badKey := "not-a-timestamp"
-	crafted := CraftCursor(t, storekit.Cursor{
-		CreatedAt: time.Now().UTC(), ID: ids.NewV7(), SortField: "created_at", SortKey: &badKey,
-	})
-	sortField := "created_at"
-	_, _, err := f.store.ListPeople(f.ctx, people.ListPeopleInput{Sort: &sortField, Cursor: &crafted})
-	var malformed *storekit.MalformedCursorError
-	if !errors.As(err, &malformed) {
-		t.Fatalf("crafted timestamp sort key err = %v, want MalformedCursorError", err)
 	}
 }

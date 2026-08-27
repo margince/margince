@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 )
@@ -32,8 +33,8 @@ func TestConnectStandsUpAnOverlayTheIncumbentWouldNotAnswer(t *testing.T) {
 	e := apptest.SetupAppWithOptions(t, compose.WithKeyvault(keyvault.NewMemory()))
 	e.BootstrapWorkspace(t)
 
-	var conn apptest.AnyMap
-	if status := e.Call(t, "POST", "/v1/overlay/connection", apptest.AnyMap{
+	var conn integration.AnyMap
+	if status := e.Call(t, "POST", "/v1/overlay/connection", integration.AnyMap{
 		"incumbent": "hubspot", "region": "eu1", "privateAppToken": "fake-token-never-used",
 	}, nil, &conn); status != http.StatusCreated {
 		t.Fatalf("connect overlay = %d %v — a connect must survive an incumbent that will not answer", status, conn)

@@ -90,16 +90,11 @@ func declaredReasons() []string {
 // because all three of the others read the list rather than the branches.
 func TestEveryReasonABranchReturnsIsListed(t *testing.T) {
 	t.Parallel()
-	body, err := parser.ParseFile(token.NewFileSet(),
-		filepath.Join("internal", "compose", "undoability.go"), nil, 0)
-	if err != nil {
-		t.Fatalf("parse the evaluator: %v", err)
-	}
 	listed := map[string]bool{}
 	for _, reason := range declaredReasons() {
 		listed["Reason"+reasonConstantName(reason)] = true
 	}
-	returned := reasonsReturnedUnderAModeGuard(body)
+	returned := reasonsReturnedUnderAModeGuard(theEvaluatorsSources(t))
 	if len(returned.anywhere) == 0 {
 		t.Fatal("no refuse() call found in the evaluator; the walk is broken, not the tree")
 	}
@@ -185,12 +180,7 @@ func readFrontendReasonCopy(t *testing.T) string {
 // modes run the same branches, and this is the assertion that they do.
 func TestBothEvaluationModesCanReturnTheSameReasons(t *testing.T) {
 	t.Parallel()
-	body, err := parser.ParseFile(token.NewFileSet(),
-		filepath.Join("internal", "compose", "undoability.go"), nil, 0)
-	if err != nil {
-		t.Fatalf("parse the evaluator: %v", err)
-	}
-	returned := reasonsReturnedUnderAModeGuard(body)
+	returned := reasonsReturnedUnderAModeGuard(theEvaluatorsSources(t))
 	for _, reason := range declaredReasons() {
 		name := "Reason" + reasonConstantName(reason)
 		if !returned.anywhere[name] {
@@ -222,7 +212,41 @@ type reasonsReturned struct {
 	unguarded map[string]bool
 }
 
-func reasonsReturnedUnderAModeGuard(file *ast.File) reasonsReturned {
+// theEvaluatorsSources parses every hand-written file of package compose.
+//
+// The corpus is the PACKAGE and not one file, because the evaluator's branches
+// are not one file's: the edge arm lives beside the edge reversal it judges, and
+// a census reading undoability.go alone reported PASS while a whole branch set
+// was invisible to it — under-recognition, which is the one way a gate must not
+// break, because a smaller tree still produces a green run and no assertion to
+// notice. Any file may hold a refuse() call and every one of them is read.
+func theEvaluatorsSources(t *testing.T) []*ast.File {
+	t.Helper()
+	dir := filepath.Join("internal", "compose")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatalf("read the evaluator's package: %v", err)
+	}
+	fset := token.NewFileSet()
+	var files []*ast.File
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		file, err := parser.ParseFile(fset, filepath.Join(dir, name), nil, 0)
+		if err != nil {
+			t.Fatalf("parse %s: %v", name, err)
+		}
+		files = append(files, file)
+	}
+	if len(files) == 0 {
+		t.Fatal("no sources parsed for package compose; the corpus is empty, not the tree")
+	}
+	return files
+}
+
+func reasonsReturnedUnderAModeGuard(files []*ast.File) reasonsReturned {
 	found := reasonsReturned{
 		anywhere:       map[string]bool{},
 		underModeGuard: map[string]bool{},
@@ -260,7 +284,9 @@ func reasonsReturnedUnderAModeGuard(file *ast.File) reasonsReturned {
 		}
 		return true
 	}
-	ast.Inspect(file, walk)
+	for _, file := range files {
+		ast.Inspect(file, walk)
+	}
 	// Both sets are collected in full and the difference taken here, never
 	// cleared as the walk goes: a reason returned unguarded EARLY and again
 	// inside a mode-guarded branch later would otherwise keep the flag its

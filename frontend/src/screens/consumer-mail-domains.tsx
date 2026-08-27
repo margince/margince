@@ -16,6 +16,7 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { useToast } from "../design-system/toast";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -78,6 +79,8 @@ function useConsumerMailDomains() {
 }
 
 function useAddConsumerMailDomain() {
+  const toast = useToast();
+  const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (entry: { domain: string; kind: Kind }) => {
@@ -89,15 +92,18 @@ function useAddConsumerMailDomain() {
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_written, added) => {
       void queryClient.invalidateQueries({
         queryKey: ["consumer-mail-domains"],
       });
+      toast.show(t("settings.addedItem", { name: added.domain }));
     },
   });
 }
 
 function useRemoveConsumerMailDomain() {
+  const toast = useToast();
+  const t = useT();
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -113,6 +119,9 @@ function useRemoveConsumerMailDomain() {
       void queryClient.invalidateQueries({
         queryKey: ["consumer-mail-domains"],
       });
+      // The variable here is the row id, not the domain — nothing to name it
+      // by without a second read, and a lookup for one word is not worth one.
+      toast.show(t("settings.removed"));
     },
   });
 }

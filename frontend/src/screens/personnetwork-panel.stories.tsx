@@ -3,7 +3,8 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
-import { PersonGraphPanel } from "./persongraph";
+import type { components } from "../api/schema";
+import { PersonNetworkTab } from "./personnetwork";
 import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
 
 /**
@@ -17,13 +18,13 @@ import { installFetchStub, jsonResponse, StoryProviders } from "./story-utils";
  * nodes "are real buttons and selecting one drives a live detail region", and
  * they did work — they simply did not look like anything.
  */
-const meta: Meta<typeof PersonGraphPanel> = {
+const meta: Meta<typeof PersonNetworkTab> = {
   title: "Records/Person record/Relationship graph",
-  component: PersonGraphPanel,
+  component: PersonNetworkTab,
   parameters: { layout: "padded" },
 };
 export default meta;
-type Story = StoryObj<typeof PersonGraphPanel>;
+type Story = StoryObj<typeof PersonNetworkTab>;
 
 const graph = {
   person_id: "p-1",
@@ -82,6 +83,24 @@ const graph = {
   },
 };
 
+// The 360 the moments card reads. Only the fields it touches are set; the
+// contract's own type keeps the fixture honest about their shapes.
+const movedLately: Pick<
+  components["schemas"]["Person360"],
+  "relationship_changes" | "sections_omitted"
+> = {
+  relationship_changes: [
+    { kind: "replied_after_gap", at: "2026-08-20T09:00:00Z", days: 41 },
+    {
+      kind: "warmed",
+      at: "2026-08-25T09:00:00Z",
+      from_bucket: "weak",
+      to_bucket: "strong",
+    },
+  ],
+  sections_omitted: [],
+};
+
 function stub(body: unknown) {
   installFetchStub({ "GET /people/p-1/graph": () => jsonResponse(body) });
 }
@@ -92,7 +111,7 @@ export const Routed: Story = {
     stub(graph);
     return (
       <StoryProviders>
-        <PersonGraphPanel personId="p-1" />
+        <PersonNetworkTab personId="p-1" />
       </StoryProviders>
     );
   },
@@ -108,7 +127,7 @@ export const NodeSelected: Story = {
     stub(graph);
     return (
       <StoryProviders>
-        <PersonGraphPanel personId="p-1" />
+        <PersonNetworkTab personId="p-1" />
       </StoryProviders>
     );
   },
@@ -140,7 +159,7 @@ export const NoRoute: Story = {
     });
     return (
       <StoryProviders>
-        <PersonGraphPanel personId="p-1" />
+        <PersonNetworkTab personId="p-1" />
       </StoryProviders>
     );
   },
@@ -157,7 +176,59 @@ export const RoutedDark: Story = {
     stub(graph);
     return (
       <StoryProviders>
-        <PersonGraphPanel personId="p-1" />
+        <PersonNetworkTab personId="p-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * An arm the reader may not see. Withheld is not empty: the account group says
+ * "you cannot see this" INSTEAD of "there is nobody", because a withheld arm
+ * arrives with no nodes and the two sentences together state an absence the
+ * server never claimed.
+ */
+export const AccountWithheld: Story = {
+  render: () => {
+    stub({
+      ...graph,
+      nodes: graph.nodes.filter((node) => node.group !== "account"),
+      edges: graph.edges.filter((edge) => !edge.to.startsWith("person:p-2")),
+      groups_omitted: ["account"],
+    });
+    return (
+      <StoryProviders>
+        <PersonNetworkTab personId="p-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * Nodes were dropped. Silent truncation reads as "this is everyone", which is
+ * the one thing a graph must never imply falsely.
+ */
+export const Truncated: Story = {
+  render: () => {
+    stub({ ...graph, dropped_count: { direct: 3, account: 12 } });
+    return (
+      <StoryProviders>
+        <PersonNetworkTab personId="p-1" />
+      </StoryProviders>
+    );
+  },
+};
+
+/**
+ * With the 360 in hand the tab closes with what MOVED. Without it — the old
+ * contacts screen — the card is absent rather than claiming nothing has.
+ */
+export const WithMoments: Story = {
+  render: () => {
+    stub(graph);
+    return (
+      <StoryProviders>
+        <PersonNetworkTab personId="p-1" view={movedLately} />
       </StoryProviders>
     );
   },

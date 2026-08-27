@@ -37,14 +37,14 @@ func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": "Greta Human"}, nil, &person); status != 201 {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": "Greta Human"}, nil, &person); status != 201 {
 		t.Fatalf("human create → %d", status)
 	}
 
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "precedence agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != 201 {
 		t.Fatalf("issue passport → %d", status)
@@ -53,12 +53,12 @@ func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
 
 	// A field no human ever wrote updates 🟢 — the reversible-and-logged
 	// path stays open.
-	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, apptest.AnyMap{"title": "CTO"}, bearer, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, AnyMap{"title": "CTO"}, bearer, nil); status != 200 {
 		t.Fatalf("agent patch of a never-human field → %d, want 200 (🟢)", status)
 	}
 	// A field the AGENT last wrote stays 🟢 too — precedence protects
 	// people, not machines.
-	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, apptest.AnyMap{"title": "VP Engineering"}, bearer, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, AnyMap{"title": "VP Engineering"}, bearer, nil); status != 200 {
 		t.Fatalf("agent re-patch of its own field → %d, want 200 (🟢)", status)
 	}
 
@@ -67,7 +67,7 @@ func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
 		Code   string `json:"code"`
 		Detail string `json:"detail"`
 	}
-	status := e.Call(t, "PATCH", "/v1/people/"+person.ID, apptest.AnyMap{"full_name": "Greta Machine"}, bearer, &problem)
+	status := e.Call(t, "PATCH", "/v1/people/"+person.ID, AnyMap{"full_name": "Greta Machine"}, bearer, &problem)
 	if status != 403 || problem.Code != "approval_required" {
 		t.Fatalf("agent overwrite of a human field → %d %q, want 403 approval_required", status, problem.Code)
 	}
@@ -80,11 +80,11 @@ func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
 	approvalID := ExtractStagedApprovalID(t, problem.Detail)
 
 	// A human decision releases it; the identical retry lands the patch.
-	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", apptest.AnyMap{}, nil, nil); status != 200 {
+	if status := e.Call(t, "POST", "/v1/approvals/"+approvalID+"/approve", AnyMap{}, nil, nil); status != 200 {
 		t.Fatalf("human approve → %d", status)
 	}
 	withToken := map[string]string{"Authorization": "Bearer " + minted.Token, "X-Approval-Token": approvalID}
-	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, apptest.AnyMap{"full_name": "Greta Machine"}, withToken, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, AnyMap{"full_name": "Greta Machine"}, withToken, nil); status != 200 {
 		t.Fatalf("approved retry → %d, want the patch to execute", status)
 	}
 	if status := e.Call(t, "GET", "/v1/people/"+person.ID, nil, bearer, &current); status != 200 || current.FullName != "Greta Machine" {
@@ -94,7 +94,7 @@ func TestEndToEnd_humanEditPrecedenceOnAgentUpdate(t *testing.T) {
 	// The redemption was consumed exactly once: the identical retry with
 	// the same token changes nothing further.
 	before := current.FullName
-	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, apptest.AnyMap{"full_name": "Greta Machine"}, withToken, &problem); status != 403 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+person.ID, AnyMap{"full_name": "Greta Machine"}, withToken, &problem); status != 403 {
 		t.Fatalf("re-redeeming a consumed approval → %d, want 403", status)
 	}
 	if status := e.Call(t, "GET", "/v1/people/"+person.ID, nil, bearer, &current); status != 200 || current.FullName != before {
@@ -120,13 +120,13 @@ func TestEndToEnd_caseVariantKeyCannotBypassPrecedence(t *testing.T) {
 	var lead struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/leads", apptest.AnyMap{"full_name": "Otto Human"}, nil, &lead); status != 201 {
+	if status := e.Call(t, "POST", "/v1/leads", AnyMap{"full_name": "Otto Human"}, nil, &lead); status != 201 {
 		t.Fatalf("human create lead → %d", status)
 	}
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "variant agent", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != 201 {
 		t.Fatalf("issue passport → %d", status)
@@ -138,7 +138,7 @@ func TestEndToEnd_caseVariantKeyCannotBypassPrecedence(t *testing.T) {
 	var patched struct {
 		FullName string `json:"full_name"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/leads/"+lead.ID, apptest.AnyMap{"FULL_NAME": "Otto Machine"}, bearer, &patched); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/leads/"+lead.ID, AnyMap{"FULL_NAME": "Otto Machine"}, bearer, &patched); status != 200 {
 		t.Fatalf("case-variant patch → %d, want 200 (dropped, not written)", status)
 	}
 	if patched.FullName != "Otto Human" {
@@ -161,13 +161,13 @@ func stagePersonAndAgent(t *testing.T, e *apptest.AppEnv, fullName, label string
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{"full_name": fullName}, nil, &person); status != 201 {
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{"full_name": fullName}, nil, &person); status != 201 {
 		t.Fatalf("human create → %d", status)
 	}
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": label, "scopes": []string{"read", "write"},
 	}, nil, &minted); status != 201 {
 		t.Fatalf("issue passport → %d", status)
@@ -213,7 +213,7 @@ func TestEndToEnd_perFieldSplitOnAgentRESTUpdate(t *testing.T) {
 	personID, agentToken := stagePersonAndAgent(t, e, "Petra Human", "split agent")
 	// The human TYPES the title in an update: the per-field audit image
 	// makes title human-owned alongside the created full_name.
-	if status := e.Call(t, "PATCH", "/v1/people/"+personID, apptest.AnyMap{"title": "Founder"}, nil, nil); status != 200 {
+	if status := e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{"title": "Founder"}, nil, nil); status != 200 {
 		t.Fatalf("human title patch → %d", status)
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + agentToken}
@@ -230,7 +230,7 @@ func TestEndToEnd_perFieldSplitOnAgentRESTUpdate(t *testing.T) {
 			Message    string          `json:"message"`
 		} `json:"staged_approval"`
 	}
-	status := e.Call(t, "PATCH", "/v1/people/"+personID, apptest.AnyMap{
+	status := e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{
 		"first_name": "Petra", "full_name": "Petra Machine", "title": "CEO",
 	}, bearer, &split)
 	if status != 200 {
@@ -246,7 +246,7 @@ func TestEndToEnd_perFieldSplitOnAgentRESTUpdate(t *testing.T) {
 
 	// A human approves; the agent replays ONLY the staged fields with the
 	// token — the sub-patch is what the approval is bound to.
-	if status := e.Call(t, "POST", "/v1/approvals/"+split.StagedApproval.ApprovalID+"/approve", apptest.AnyMap{}, nil, nil); status != 200 {
+	if status := e.Call(t, "POST", "/v1/approvals/"+split.StagedApproval.ApprovalID+"/approve", AnyMap{}, nil, nil); status != 200 {
 		t.Fatalf("human approve → %d", status)
 	}
 	withToken := map[string]string{"Authorization": "Bearer " + agentToken, "X-Approval-Token": split.StagedApproval.ApprovalID}
@@ -256,11 +256,11 @@ func TestEndToEnd_perFieldSplitOnAgentRESTUpdate(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+personID, apptest.AnyMap{"full_name": "Petra Impostor", "title": "CEO"}, withToken, &problem); status != 403 || problem.Code != "approval_token_invalid" {
+	if status := e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{"full_name": "Petra Impostor", "title": "CEO"}, withToken, &problem); status != 403 || problem.Code != "approval_token_invalid" {
 		t.Fatalf("tampered replay → %d %q, want 403 approval_token_invalid", status, problem.Code)
 	}
 
-	var replay apptest.AnyMap
+	var replay AnyMap
 	if err := json.Unmarshal(split.StagedApproval.Replay, &replay); err != nil {
 		t.Fatalf("staged replay body is not an object: %v", err)
 	}
@@ -292,12 +292,12 @@ func TestEndToEnd_rejectedSplitWritesNothing(t *testing.T) {
 			ApprovalID string `json:"approval_id"`
 		} `json:"staged_approval"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+personID, apptest.AnyMap{
+	if status := e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{
 		"first_name": "Rita", "full_name": "Rita Machine",
 	}, bearer, &split); status != 200 || split.StagedApproval.ApprovalID == "" {
 		t.Fatalf("mixed patch → %d %+v, want 200 with a staged approval", status, split)
 	}
-	if status := e.Call(t, "POST", "/v1/approvals/"+split.StagedApproval.ApprovalID+"/reject", apptest.AnyMap{"reason": "keep my spelling"}, nil, nil); status != 200 {
+	if status := e.Call(t, "POST", "/v1/approvals/"+split.StagedApproval.ApprovalID+"/reject", AnyMap{"reason": "keep my spelling"}, nil, nil); status != 200 {
 		t.Fatalf("human reject → %d", status)
 	}
 
@@ -305,7 +305,7 @@ func TestEndToEnd_rejectedSplitWritesNothing(t *testing.T) {
 	var problem struct {
 		Code string `json:"code"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/people/"+personID, apptest.AnyMap{"full_name": "Rita Machine"}, withToken, &problem); status != 403 || problem.Code != "approval_token_invalid" {
+	if status := e.Call(t, "PATCH", "/v1/people/"+personID, AnyMap{"full_name": "Rita Machine"}, withToken, &problem); status != 403 || problem.Code != "approval_token_invalid" {
 		t.Fatalf("replaying a rejected staging → %d %q, want 403 approval_token_invalid", status, problem.Code)
 	}
 	var current struct {
@@ -418,7 +418,7 @@ func TestEndToEnd_perFieldSplitOnMCPUpdate(t *testing.T) {
 	}
 
 	// A human approves; the replay redeems and lands exactly the field.
-	if status := e.Call(t, "POST", "/v1/approvals/"+result.StagedApproval.ApprovalID+"/approve", apptest.AnyMap{}, nil, nil); status != 200 {
+	if status := e.Call(t, "POST", "/v1/approvals/"+result.StagedApproval.ApprovalID+"/approve", AnyMap{}, nil, nil); status != 200 {
 		t.Fatalf("human approve → %d", status)
 	}
 	if _, err := invoke("update_record", replay); err != nil {

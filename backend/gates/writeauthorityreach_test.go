@@ -58,6 +58,15 @@ var writesWithoutARowProbe = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:archiveDeal":     "the deal half of the same retention pass: a deal past its window is archived because of when it closed, not because somebody asked",
 	"internal/modules/deals:SweepWorkspace":    "the close-date hygiene pass reads every open deal in the workspace and corrects or stages the ones whose expected close has gone stale. It runs as the workspace's own system principal with no human behind it, and narrowing it to one seat's rows would leave every other rep's forecast uncorrected while the sweep reported success",
 
+	// The shared fill, probed by BOTH of its callers rather than by itself.
+	// ApplySitePersonFields takes EnsureWritableLive and SKIPS an out-of-scope
+	// match (staging a lead instead); the vCard import takes the same probe and
+	// REPORTS the skip on that card's own row of the report. The two answers
+	// are different because the surfaces are — a site read must not abort a
+	// whole page over one employee, and an import must not silently omit a
+	// card — and a probe inside the shared writer could only give one of them.
+	"internal/modules/people:fillSitePersonFields": "the fill both the site read and the vCard import share, reached only past each caller's own auth.EnsureWritableLive on the matched person. The probe is in the callers because what a refusal MEANS differs between them: the site read skips to staging, the import reports the card as skipped. A probe here would have to pick one of those answers for both",
+
 	// Capture. A colleague's mail must reach the record it is about, which is
 	// the case the access model deliberately keeps open: Rep B emailing Rep A's
 	// company still captures, links, and enriches what the message evidences.

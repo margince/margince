@@ -109,8 +109,7 @@ func TestARestoreLandsEveryFieldItSends(t *testing.T) {
 	// patch travels as a JSON body and a key the mapper ignores is accepted and
 	// forgotten. A test that assembles UpdatePersonInput itself never reaches
 	// that step and would pass with the drop in place.
-	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool))
+	seam := restoreSeamFor(e)
 	if _, err := seam.Restore(ctx, "person", id, auditID, version); err != nil {
 		t.Fatalf("put it back through the executor: %v", err)
 	}
@@ -158,8 +157,7 @@ func TestARestoreOfARecordOutsideTheCallersScopeIsNotFound(t *testing.T) {
 	// test: a caller who may not see the record must be answered 404, and never
 	// a refusal — a refusal is proof the record exists, and a caller who can
 	// tell the two apart can tell a hidden record from an absent one.
-	seam := NewRestoreSeam(e.Pool, NewDispatcher(NewProvider(e.Pool),
-		NewOverlayProvider(e.Pool, failClosedOverlayMeter(), nil), e.Pool))
+	seam := restoreSeamFor(e)
 	seam.visible = func(context.Context, pgx.Tx, string, ids.UUID) error {
 		return apperrors.ErrNotFound
 	}

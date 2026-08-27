@@ -817,6 +817,7 @@ function SubscriptionRow({
             {canEdit && (
               <EditAction
                 label={t("webhooks.edit")}
+                savedMessage={t("webhooks.saveDone")}
                 invalidate="webhook-subscriptions"
                 recordKey="webhook-subscription"
                 record={{ ...subscription }}
@@ -842,6 +843,7 @@ function SubscriptionRow({
                   <ArchiveAction
                     label={t("webhooks.archive")}
                     confirmText={t("webhooks.archiveConfirm")}
+                    archivedMessage={t("webhooks.archiveDone")}
                     invalidate="webhook-subscriptions"
                     recordKey="webhook-subscription"
                     onArchived={() => {}}

@@ -10,6 +10,8 @@ import (
 	"sort"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func strPtr(s string) *string { return &s }
@@ -283,6 +285,32 @@ func TestRecordHistoryEntryMasksBothPayloadSidesByOmission(t *testing.T) {
 	entry = recordHistoryEntry(row, defaultFieldMasks["person"])
 	if entry.Before["iban"] != "DE01" || entry.After["iban"] != "DE02" {
 		t.Errorf("empty default mask must pass the payload through: before %v after %v", entry.Before, entry.After)
+	}
+}
+
+// A LINK's own columns are not the RECORD's before/after. The edge query selects
+// both images because the SUMMARY is phrased from them, and a consumer handed
+// them on a person's entry reads `role` and `started_at` as changes to the
+// person. Both halves are asserted: the line still names the other end, and the
+// entry carries no field diff for a record that never held those fields.
+func TestAnEdgeEntryCarriesNoRecordFieldImages(t *testing.T) {
+	row := recordAuditRow{
+		actorType: actorTypeHuman, actorID: "human:x", action: actionCreate,
+		after: map[string]any{"role": "cto", "is_current_primary": true},
+		edge: &edgeSubject{
+			kind: "employment", otherType: "organization",
+			otherID: ids.NewV7(), otherLabel: strPtr("Employer GmbH"),
+		},
+	}
+
+	entry := recordHistoryEntry(row, defaultFieldMasks["person"])
+	if entry.Before != nil || entry.After != nil {
+		t.Errorf("an edge entry carries before=%v after=%v; those are the LINK's columns, and on the "+
+			"record's own entry they read as fields the record never had", entry.Before, entry.After)
+	}
+	if !strings.Contains(entry.Summary, "Employer GmbH") {
+		t.Errorf("the edge line is %q; the images are what phrases it, so withholding them from the "+
+			"entry must not withhold them from the summary", entry.Summary)
 	}
 }
 

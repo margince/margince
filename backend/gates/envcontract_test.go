@@ -53,7 +53,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
 	"maps"
 	"os"
 	"path/filepath"
@@ -92,42 +91,6 @@ const (
 // operator.
 var deploySurfaceRoots = []string{"../scripts", "../infra", "../.github/workflows"}
 
-// walkTextFiles reads every file under root and hands each to visit. The trees
-// swept here are small and text-only; a read error fails the test rather than
-// narrowing the sweep in silence.
-func walkTextFiles(t *testing.T, root string, visit func(path, text string)) {
-	t.Helper()
-	err := filepath.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		// A unit's frontend layer is a pnpm workspace package, so extensions/
-		// now contains an installed dependency tree — thousands of files this
-		// sweep has no business reading, and symlinked DIRECTORIES that are not
-		// IsDir() and so reach the ReadFile below as "is a directory".
-		if d.IsDir() && d.Name() == "node_modules" {
-			return fs.SkipDir
-		}
-		if d.IsDir() {
-			return nil
-		}
-		// Belt and braces for the same reason: a symlink is not a regular file,
-		// and this sweep reads text a human wrote.
-		if !d.Type().IsRegular() {
-			return nil
-		}
-		b, err := os.ReadFile(path) // #nosec G304 G122 -- path comes from walking a fixed root inside the trusted source tree
-		if err != nil {
-			return err
-		}
-		visit(filepath.ToSlash(path), string(b))
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walking %s: %v", root, err)
-	}
-}
-
 // envVarsReadByGoCode maps each MARGINCE_* name a Go string literal spells to
 // the first file spelling it. The trees are the ones the license sweep covers
 // (licensedTrees, license_test.go): extensions/ and fixtures/ are separate
@@ -138,10 +101,7 @@ func envVarsReadByGoCode(t *testing.T) map[string]string {
 	t.Helper()
 	sites := map[string]string{}
 	for _, tree := range licensedTrees {
-		walkTextFiles(t, tree.root, func(path, text string) {
-			if !strings.HasSuffix(path, ".go") || isGenerated(path, text) {
-				return
-			}
+		walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
 			for _, m := range quotedEnvVarName.FindAllStringSubmatch(text, -1) {
 				if _, seen := sites[m[1]]; !seen {
 					sites[m[1]] = path
@@ -388,8 +348,10 @@ func declaredConfigDefaults(t *testing.T) []configItemDefault {
 	var out []configItemDefault
 	fset := token.NewFileSet()
 	for _, tree := range licensedTrees {
-		walkTextFiles(t, tree.root, func(path, text string) {
-			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || isGenerated(path, text) {
+		walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
+			// Non-test only here: a config-item default declared in a suite is
+			// a fixture, not something an operator can set.
+			if strings.HasSuffix(path, "_test.go") {
 				return
 			}
 			file, err := parser.ParseFile(fset, path, text, 0)
@@ -507,10 +469,7 @@ func envNameConstants(t *testing.T) map[string]string {
 	consts := map[string]string{}
 	fset := token.NewFileSet()
 	for _, tree := range licensedTrees {
-		walkTextFiles(t, tree.root, func(path, text string) {
-			if !strings.HasSuffix(path, ".go") || isGenerated(path, text) {
-				return
-			}
+		walkHandWrittenGoFiles(t, tree.root, func(path, text string) {
 			file, err := parser.ParseFile(fset, path, text, 0)
 			if err != nil {
 				t.Fatalf("parsing %s: %v", path, err)

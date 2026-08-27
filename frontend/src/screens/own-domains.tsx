@@ -11,6 +11,7 @@ import { Button, EmptyState, Modal, TextInput } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -47,6 +48,8 @@ function useOwnDomains() {
 
 function useAddOwnDomain() {
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const t = useT();
   return useMutation({
     mutationFn: async (domain: string) => {
       const { data, error } = await api.POST("/capture/email-domains", {
@@ -57,14 +60,17 @@ function useAddOwnDomain() {
       }
       return data;
     },
-    onSuccess: () => {
+    onSuccess: (_written, domain) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });
+      toast.show(t("settings.addedItem", { name: domain }));
     },
   });
 }
 
 function useRemoveOwnDomain() {
   const queryClient = useQueryClient();
+  const toast = useToast();
+  const t = useT();
   return useMutation({
     mutationFn: async (domain: string) => {
       const { error } = await api.DELETE("/capture/email-domains/{domain}", {
@@ -74,8 +80,9 @@ function useRemoveOwnDomain() {
         throwProblem(error);
       }
     },
-    onSuccess: () => {
+    onSuccess: (_written, domain) => {
       queryClient.invalidateQueries({ queryKey: ["workspace-email-domains"] });
+      toast.show(t("settings.removedItem", { name: domain }));
     },
   });
 }

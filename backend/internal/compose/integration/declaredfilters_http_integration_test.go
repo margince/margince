@@ -64,7 +64,7 @@ func onlyRecord(t *testing.T, e *apptest.AppEnv, path, want, what string) {
 }
 
 // createdRecord posts one record and returns its id.
-func createdRecord(t *testing.T, e *apptest.AppEnv, path string, body apptest.AnyMap) string {
+func createdRecord(t *testing.T, e *apptest.AppEnv, path string, body AnyMap) string {
 	t.Helper()
 	var created struct {
 		ID string `json:"id"`
@@ -79,10 +79,10 @@ func TestThePersonListNarrowsByTagOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	tagged := createdRecord(t, e, "/v1/people", apptest.AnyMap{"full_name": "Tagged Person"})
-	createdRecord(t, e, "/v1/people", apptest.AnyMap{"full_name": "Untagged Person"})
-	tag := createdRecord(t, e, "/v1/tags", apptest.AnyMap{"name": "VIP"})
-	if status := e.Call(t, "POST", "/v1/tags/"+tag+"/apply", apptest.AnyMap{
+	tagged := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Tagged Person"})
+	createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Untagged Person"})
+	tag := createdRecord(t, e, "/v1/tags", AnyMap{"name": "VIP"})
+	if status := e.Call(t, "POST", "/v1/tags/"+tag+"/apply", AnyMap{
 		"entity_type": "person", "entity_id": tagged,
 	}, nil, nil); status != http.StatusCreated {
 		t.Fatalf("applying the tag = %d, want 201", status)
@@ -96,11 +96,11 @@ func TestTheOrganizationListNarrowsByDomainOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	held := createdRecord(t, e, "/v1/organizations", apptest.AnyMap{
-		"display_name": "Acme", "domains": []apptest.AnyMap{{"domain": "acme.example", "is_primary": true}},
+	held := createdRecord(t, e, "/v1/organizations", AnyMap{
+		"display_name": "Acme", "domains": []AnyMap{{"domain": "acme.example", "is_primary": true}},
 	})
-	createdRecord(t, e, "/v1/organizations", apptest.AnyMap{
-		"display_name": "Other", "domains": []apptest.AnyMap{{"domain": "other.example", "is_primary": true}},
+	createdRecord(t, e, "/v1/organizations", AnyMap{
+		"display_name": "Other", "domains": []AnyMap{{"domain": "other.example", "is_primary": true}},
 	})
 
 	onlyRecord(t, e, "/v1/organizations?domain=acme.example", held, "the account that lists the domain")
@@ -119,11 +119,11 @@ func TestTheActivityListNarrowsByAssigneeOnTheWire(t *testing.T) {
 	if status := e.Call(t, "GET", "/v1/me", nil, nil, &me); status != http.StatusOK {
 		t.Fatalf("GET /v1/me = %d, want 200", status)
 	}
-	mine := createdRecord(t, e, "/v1/activities", apptest.AnyMap{
+	mine := createdRecord(t, e, "/v1/activities", AnyMap{
 		"kind": "task", "subject": "Call the buyer", "due_at": "2026-09-01T09:00:00Z", "assignee_id": me.User.ID,
 	})
 	// An unassigned task is the row a dropped filter hands back alongside it.
-	createdRecord(t, e, "/v1/activities", apptest.AnyMap{"kind": "task", "subject": "Nobody's"})
+	createdRecord(t, e, "/v1/activities", AnyMap{"kind": "task", "subject": "Nobody's"})
 
 	onlyRecord(t, e, "/v1/activities?assignee_id="+me.User.ID, mine, "the open task that person holds")
 }
@@ -132,7 +132,7 @@ func TestThePipelineListAnswersIncludeArchivedOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	retired := createdRecord(t, e, "/v1/pipelines", apptest.AnyMap{"name": "Retired"})
+	retired := createdRecord(t, e, "/v1/pipelines", AnyMap{"name": "Retired"})
 	// Aged through the database because no wire operation archives a pipeline.
 	// The parameter is about rows in this state, and the state is reachable in
 	// a deployment's data whether or not an endpoint mints it.
@@ -187,8 +187,8 @@ func TestThePersonListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	owner := callerUserID(t, e)
 
-	createdRecord(t, e, "/v1/people", apptest.AnyMap{"full_name": "Owned Person", "owner_id": owner})
-	unowned := createdRecord(t, e, "/v1/people", apptest.AnyMap{"full_name": "Unowned Person"})
+	createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Owned Person", "owner_id": owner})
+	unowned := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Unowned Person"})
 	disownOverDB(t, e, "person", unowned)
 
 	// Unassigned is a fact with its own queue, not an absence: a list that
@@ -202,8 +202,8 @@ func TestTheLeadListNarrowsToTheUnownedQueueOnTheWire(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	owner := callerUserID(t, e)
 
-	createdRecord(t, e, "/v1/leads", apptest.AnyMap{"full_name": "Owned Lead", "email": "owned@lead.test", "owner_id": owner})
-	unowned := createdRecord(t, e, "/v1/leads", apptest.AnyMap{"full_name": "Unowned Lead", "email": "unowned@lead.test"})
+	createdRecord(t, e, "/v1/leads", AnyMap{"full_name": "Owned Lead", "email": "owned@lead.test", "owner_id": owner})
+	unowned := createdRecord(t, e, "/v1/leads", AnyMap{"full_name": "Unowned Lead", "email": "unowned@lead.test"})
 	disownOverDB(t, e, "lead", unowned)
 
 	// The same dial the person and company lists answer (DM-VOCAB-OWN-1): a
@@ -233,21 +233,21 @@ func TestTheActivityListNarrowsByProjectOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	org := createdRecord(t, e, "/v1/organizations", apptest.AnyMap{"display_name": "Acme"})
-	person := createdRecord(t, e, "/v1/people", apptest.AnyMap{"full_name": "Dana Buyer"})
+	org := createdRecord(t, e, "/v1/organizations", AnyMap{"display_name": "Acme"})
+	person := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Dana Buyer"})
 	project := func(name string) string {
-		return createdRecord(t, e, "/v1/projects", apptest.AnyMap{
+		return createdRecord(t, e, "/v1/projects", AnyMap{
 			"name": name, "organization_id": org, "source": "manual",
 		})
 	}
 	erp, migration := project("ERP rollout"), project("Datacentre migration")
 
 	mail := func(subject string, within string) string {
-		links := []apptest.AnyMap{{"entity_type": "person", "entity_id": person}}
+		links := []AnyMap{{"entity_type": "person", "entity_id": person}}
 		if within != "" {
-			links = append(links, apptest.AnyMap{"entity_type": "project", "entity_id": within})
+			links = append(links, AnyMap{"entity_type": "project", "entity_id": within})
 		}
-		return createdRecord(t, e, "/v1/activities", apptest.AnyMap{
+		return createdRecord(t, e, "/v1/activities", AnyMap{
 			"kind": "email", "subject": subject, "direction": "inbound", "links": links,
 		})
 	}
@@ -280,11 +280,11 @@ func TestTheActivityListNarrowsByDateRangeOnTheWire(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	person := createdRecord(t, e, "/v1/people", apptest.AnyMap{"full_name": "Dana Buyer"})
+	person := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Dana Buyer"})
 	mail := func(subject, occurredAt string) string {
-		return createdRecord(t, e, "/v1/activities", apptest.AnyMap{
+		return createdRecord(t, e, "/v1/activities", AnyMap{
 			"kind": "email", "subject": subject, "direction": "inbound", "occurred_at": occurredAt,
-			"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": person}},
+			"links": []AnyMap{{"entity_type": "person", "entity_id": person}},
 		})
 	}
 	day1 := mail("Monday", "2026-03-02T10:00:00Z")
@@ -332,13 +332,13 @@ func TestThePerson360TimelineCursorContinuesIntoTheActivityList(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
 
-	person := createdRecord(t, e, "/v1/people", apptest.AnyMap{"full_name": "Dana Buyer"})
+	person := createdRecord(t, e, "/v1/people", AnyMap{"full_name": "Dana Buyer"})
 	const total = 27
 	for i := range total {
-		id := createdRecord(t, e, "/v1/activities", apptest.AnyMap{
+		id := createdRecord(t, e, "/v1/activities", AnyMap{
 			"kind": "email", "subject": fmt.Sprintf("Mail %02d", i), "direction": "inbound",
 			"occurred_at": fmt.Sprintf("2026-03-%02dT10:00:00Z", i+1),
-			"links":       []apptest.AnyMap{{"entity_type": "person", "entity_id": person}},
+			"links":       []AnyMap{{"entity_type": "person", "entity_id": person}},
 		})
 		// The thread key is capture's to write, never the API's, so it is
 		// stamped the way capture leaves it.

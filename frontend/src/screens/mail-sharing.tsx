@@ -7,6 +7,7 @@ import { Callout } from "../design-system/callout";
 import { Panel, PanelBody } from "../design-system/panel";
 import { SettingList, SettingRow } from "../design-system/settingrow";
 import { Switch } from "../design-system/switch";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { problemMessageOf, QueryGate, throwProblem } from "./common";
 
@@ -33,6 +34,7 @@ function useMailSharing() {
 
 export function MailSharingCard() {
   const t = useT();
+  const toast = useToast();
   const canManage = useCanWrite("capture_settings", "update");
   const query = useMailSharing();
   const queryClient = useQueryClient();
@@ -51,6 +53,7 @@ export function MailSharingCard() {
     onSuccess: (data) => {
       queryClient.setQueryData(["capture-settings"], data);
       setPending(null);
+      toast.show(t("settings.saved"));
     },
   });
 

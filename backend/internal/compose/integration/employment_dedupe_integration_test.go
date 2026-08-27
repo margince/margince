@@ -17,14 +17,12 @@ package integration
 import (
 	"net/http"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // employment posts one edge and returns the status plus what the store made of
 // it — the created id, whether it landed primary, and the refusal detail when
 // it did not land at all.
-func (e *relEnv) employment(t *testing.T, orgID string, body apptest.AnyMap) (status int, id string, primary bool, detail string) {
+func (e *relEnv) employment(t *testing.T, orgID string, body AnyMap) (status int, id string, primary bool, detail string) {
 	t.Helper()
 	body["kind"] = "employment"
 	body["person_id"] = e.personID
@@ -45,7 +43,7 @@ func (e *relEnv) secondOrg(t *testing.T, name string) string {
 	var org struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/organizations", apptest.AnyMap{"display_name": name}, nil, &org); status != http.StatusCreated {
+	if status := e.Call(t, "POST", "/v1/organizations", AnyMap{"display_name": name}, nil, &org); status != http.StatusCreated {
 		t.Fatalf("create %s → %d", name, status)
 	}
 	return org.ID
@@ -54,14 +52,14 @@ func (e *relEnv) secondOrg(t *testing.T, name string) string {
 func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, first, _, _ := e.employment(t, e.orgID, apptest.AnyMap{"role": "cto"})
+	status, first, _, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated {
 		t.Fatalf("first employment → %d", status)
 	}
 
 	// The same pair again. Before uq_rel_employment both rows landed, and the
 	// account then counted the person twice.
-	status, _, _, detail := e.employment(t, e.orgID, apptest.AnyMap{"role": "cto"})
+	status, _, _, detail := e.employment(t, e.orgID, AnyMap{"role": "cto"})
 	if status != http.StatusConflict {
 		t.Fatalf("duplicate employment → %d, want 409", status)
 	}
@@ -72,7 +70,7 @@ func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
 
 	// The role is not part of the key: the same person cannot hold the same job
 	// twice under two titles either.
-	if status, _, _, _ := e.employment(t, e.orgID, apptest.AnyMap{"role": "ceo"}); status != http.StatusConflict {
+	if status, _, _, _ := e.employment(t, e.orgID, AnyMap{"role": "ceo"}); status != http.StatusConflict {
 		t.Errorf("duplicate under a different role → %d, want 409", status)
 	}
 
@@ -83,13 +81,13 @@ func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
 		IsCurrentPrimary bool `json:"is_current_primary"`
 	}
 	if status := e.Call(t, "PATCH", "/v1/relationships/"+first,
-		apptest.AnyMap{"ended_at": "2026-01-31"}, nil, &ended); status != http.StatusOK {
+		AnyMap{"ended_at": "2026-01-31"}, nil, &ended); status != http.StatusOK {
 		t.Fatalf("ending the first employment → %d", status)
 	}
 	if ended.IsCurrentPrimary {
 		t.Error("a job the person has left is still flagged as their CURRENT primary employer")
 	}
-	status, _, primary, _ := e.employment(t, e.orgID, apptest.AnyMap{"role": "cto"})
+	status, _, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated {
 		t.Errorf("re-employment after leaving → %d, want 201: a former employer may hire someone back", status)
 	}
@@ -104,7 +102,7 @@ func TestASecondCurrentEmploymentAtTheSameCompanyIsRefused(t *testing.T) {
 func TestAnEndedEmploymentCannotBeMadeTheCurrentPrimaryOne(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, edge, _, _ := e.employment(t, e.orgID, apptest.AnyMap{
+	status, edge, _, _ := e.employment(t, e.orgID, AnyMap{
 		"started_at": "2019-01-01", "ended_at": "2021-06-30",
 	})
 	if status != http.StatusCreated {
@@ -114,7 +112,7 @@ func TestAnEndedEmploymentCannotBeMadeTheCurrentPrimaryOne(t *testing.T) {
 		IsCurrentPrimary bool `json:"is_current_primary"`
 	}
 	if status := e.Call(t, "PATCH", "/v1/relationships/"+edge,
-		apptest.AnyMap{"is_current_primary": true}, nil, &patched); status != http.StatusOK {
+		AnyMap{"is_current_primary": true}, nil, &patched); status != http.StatusOK {
 		t.Fatalf("patching the flag onto an ended employment → %d", status)
 	}
 	if patched.IsCurrentPrimary {
@@ -128,7 +126,7 @@ func TestAPersonsOnlyCurrentEmploymentIsTheirPrimaryOne(t *testing.T) {
 	// Nobody asked for primary. is_current_primary defaults to false, so before
 	// this rule the person ended up employed by exactly one company and having
 	// no primary employer — a state every reader of the column has to guess at.
-	status, _, primary, _ := e.employment(t, e.orgID, apptest.AnyMap{"role": "cto"})
+	status, _, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated {
 		t.Fatalf("first employment → %d", status)
 	}
@@ -139,7 +137,7 @@ func TestAPersonsOnlyCurrentEmploymentIsTheirPrimaryOne(t *testing.T) {
 	// A SECOND concurrent job is not promoted. Which of two employers is the
 	// primary one is a fact about the person that the second insert does not
 	// carry, and guessing it would overwrite the answer the first one gave.
-	if status, _, primary, _ := e.employment(t, e.secondOrg(t, "Moonlight Ltd"), apptest.AnyMap{}); status != http.StatusCreated || primary {
+	if status, _, primary, _ := e.employment(t, e.secondOrg(t, "Moonlight Ltd"), AnyMap{}); status != http.StatusCreated || primary {
 		t.Errorf("second concurrent employment → %d primary=%t, want 201 and not primary", status, primary)
 	}
 }
@@ -150,7 +148,7 @@ func TestAPersonsOnlyCurrentEmploymentIsTheirPrimaryOne(t *testing.T) {
 func TestAnExplicitlyUnsetPrimaryFlagIsHonouredOnTheOnlyEmployment(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, first, primary, _ := e.employment(t, e.orgID, apptest.AnyMap{
+	status, first, primary, _ := e.employment(t, e.orgID, AnyMap{
 		"role": "cto", "is_current_primary": false,
 	})
 	if status != http.StatusCreated {
@@ -162,7 +160,7 @@ func TestAnExplicitlyUnsetPrimaryFlagIsHonouredOnTheOnlyEmployment(t *testing.T)
 
 	// The choice sticks. Nothing later re-derives it, so the person keeps the
 	// employer they recorded and no primary flag until somebody says otherwise.
-	if status := e.Call(t, "PATCH", "/v1/relationships/"+first, apptest.AnyMap{"role": "ceo"}, nil, nil); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/relationships/"+first, AnyMap{"role": "ceo"}, nil, nil); status != http.StatusOK {
 		t.Fatalf("patching an unrelated field → %d", status)
 	}
 	if e.isPrimary(t, first) {
@@ -198,7 +196,7 @@ func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
 	// notice period rather than a re-statement of what the row already said. A row
 	// that starts with the future date and is then patched to the same value never
 	// crosses the boundary this test is about.
-	status, edge, primary, _ := e.employment(t, e.orgID, apptest.AnyMap{"role": "cto"})
+	status, edge, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated {
 		t.Fatalf("employment → %d", status)
 	}
@@ -211,7 +209,7 @@ func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
 		IsCurrentPrimary bool `json:"is_current_primary"`
 	}
 	if got := e.Call(t, "PATCH", "/v1/relationships/"+edge,
-		apptest.AnyMap{"ended_at": future}, nil, &noticed); got != http.StatusOK {
+		AnyMap{"ended_at": future}, nil, &noticed); got != http.StatusOK {
 		t.Fatalf("recording the notice → %d", got)
 	}
 	if !noticed.IsCurrentPrimary {
@@ -220,7 +218,7 @@ func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
 
 	// And a fresh employment created ALREADY in notice keeps it too, which is the
 	// other door onto the same rule.
-	if status, _, alreadyNoticed, _ := e.employment(t, e.secondOrg(t, "Backfilled GmbH"), apptest.AnyMap{
+	if status, _, alreadyNoticed, _ := e.employment(t, e.secondOrg(t, "Backfilled GmbH"), AnyMap{
 		"ended_at": future,
 	}); status != http.StatusCreated || alreadyNoticed {
 		// Not primary: this person already holds a current employment, so the
@@ -242,12 +240,12 @@ func TestANoticePeriodDoesNotEndSomebodysEmployment(t *testing.T) {
 func TestMakingANoticePeriodEmploymentThePrimaryOneReplacesTheIncumbent(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, incumbent, primary, _ := e.employment(t, e.orgID, apptest.AnyMap{"role": "cto"})
+	status, incumbent, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated || !primary {
 		t.Fatalf("the job they hold → %d primary=%t", status, primary)
 	}
 	// A second job, ending in ninety days, not primary yet.
-	status, notice, _, _ := e.employment(t, e.secondOrg(t, "Leaving Soon GmbH"), apptest.AnyMap{
+	status, notice, _, _ := e.employment(t, e.secondOrg(t, "Leaving Soon GmbH"), AnyMap{
 		"ended_at": e.dbDate(t, 90),
 	})
 	if status != http.StatusCreated {
@@ -260,7 +258,7 @@ func TestMakingANoticePeriodEmploymentThePrimaryOneReplacesTheIncumbent(t *testi
 		IsCurrentPrimary bool `json:"is_current_primary"`
 	}
 	if got := e.Call(t, "PATCH", "/v1/relationships/"+notice,
-		apptest.AnyMap{"is_current_primary": true}, nil, &patched); got != http.StatusOK {
+		AnyMap{"is_current_primary": true}, nil, &patched); got != http.StatusOK {
 		t.Fatalf("promoting the notice-period employment → %d, want 200 (a 409 here is the two-primaries bug)", got)
 	}
 	if !patched.IsCurrentPrimary {
@@ -283,7 +281,7 @@ func TestAnEmploymentPastItsLastDayStopsCountingAtTheAccount(t *testing.T) {
 	e := setupRelationships(t)
 
 	// Written as a notice period, so the flag is legitimately TRUE on the row.
-	status, edge, primary, _ := e.employment(t, e.orgID, apptest.AnyMap{
+	status, edge, primary, _ := e.employment(t, e.orgID, AnyMap{
 		"ended_at": e.dbDate(t, 30),
 	})
 	if status != http.StatusCreated || !primary {
@@ -369,7 +367,7 @@ func TestTheBoundaryBetweenNoticeAndDepartureIsTodayItself(t *testing.T) {
 	} {
 		t.Run(day.name, func(t *testing.T) {
 			env := setupRelationships(t)
-			status, _, primary, _ := env.employment(t, env.orgID, apptest.AnyMap{
+			status, _, primary, _ := env.employment(t, env.orgID, AnyMap{
 				"ended_at": env.dbDate(t, day.offset),
 			})
 			if status != http.StatusCreated {
@@ -388,7 +386,7 @@ func TestTheBoundaryBetweenNoticeAndDepartureIsTodayItself(t *testing.T) {
 func TestAnAlreadyEndedEmploymentIsNeverPromoted(t *testing.T) {
 	e := setupRelationships(t)
 
-	status, current, primary, _ := e.employment(t, e.orgID, apptest.AnyMap{"role": "cto"})
+	status, current, primary, _ := e.employment(t, e.orgID, AnyMap{"role": "cto"})
 	if status != http.StatusCreated || !primary {
 		t.Fatalf("the job they actually hold → %d primary=%t, want 201 and primary", status, primary)
 	}
@@ -396,7 +394,7 @@ func TestAnAlreadyEndedEmploymentIsNeverPromoted(t *testing.T) {
 	// Backfilled WITH the flag asked for. The row does not take it, and the
 	// demotion that would have cleared the incumbent never runs — so the
 	// employer they actually have keeps the flag instead of the job they left.
-	status, _, primary, _ = e.employment(t, e.secondOrg(t, "Former Employer GmbH"), apptest.AnyMap{
+	status, _, primary, _ = e.employment(t, e.secondOrg(t, "Former Employer GmbH"), AnyMap{
 		"started_at": "2019-01-01", "ended_at": "2021-06-30", "is_current_primary": true,
 	})
 	if status != http.StatusCreated {

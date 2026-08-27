@@ -133,10 +133,44 @@ func (h Handlers) IssueDoubleOptIn(w http.ResponseWriter, r *http.Request, id cr
 	}{Token: issued.Token, ExpiresAt: issued.ExpiresAt})
 }
 
+// RecordQualifyingEvent serves POST /people/{id}/consent/qualifying-events: the
+// one lawful basis nothing can derive, written down by the person who was
+// there. The store owns the rules; this is wire-only.
+func (h Handlers) RecordQualifyingEvent(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+	var req crmcontracts.RecordQualifyingEventRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	recorded, err := h.store.RecordQualifyingEvent(r.Context(), pathID[ids.PersonKind](id), RecordQualifyingEventInput{
+		Kind:       string(req.Kind),
+		Note:       req.Note,
+		OccurredAt: req.OccurredAt,
+	})
+	if err != nil {
+		writeConsentErr(w, r, err)
+		return
+	}
+	out := crmcontracts.QualifyingEventRecord{
+		Kind:       crmcontracts.QualifyingEventRecordKind(recorded.Kind),
+		OccurredAt: recorded.OccurredAt,
+	}
+	if recorded.Note != "" {
+		note := recorded.Note
+		out.Note = &note
+	}
+	httperr.WriteJSON(w, http.StatusCreated, out)
+}
+
 func writeConsentErr(w http.ResponseWriter, r *http.Request, err error) {
 	var invalid *ValidationError
 	if errors.As(err, &invalid) {
 		httperr.Write(w, r, httperr.Validation(invalid.Field, "invalid", invalid.Reason))
+		return
+	}
+	var badEvent *InvalidQualifyingEventError
+	if errors.As(err, &badEvent) {
+		field, code, message := badEvent.FieldFault()
+		httperr.Write(w, r, httperr.Validation(field, code, message))
 		return
 	}
 	httperr.Write(w, r, err)

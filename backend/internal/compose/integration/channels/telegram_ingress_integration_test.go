@@ -25,6 +25,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
@@ -120,7 +121,7 @@ func TestAC_TG_3_UnknownSenderBecomesOwnerlessWorkspaceVisiblePerson(t *testing.
 	var owned struct {
 		ID string `json:"id"`
 	}
-	if status := c.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := c.Call(t, "POST", "/v1/people", integration.AnyMap{
 		"full_name": "Private To The Admin", "owner_id": c.admin,
 	}, nil, &owned); status != 201 {
 		t.Fatalf("seeding the private control person → %d", status)

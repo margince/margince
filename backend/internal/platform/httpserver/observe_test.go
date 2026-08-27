@@ -50,7 +50,7 @@ func TestBearerTokenReadsOneSchemeForEveryTransport(t *testing.T) {
 // operators, so each family's line is asserted explicitly.
 func TestWriteOverlayMetricsRendersEveryCounter(t *testing.T) {
 	rec := httptest.NewRecorder()
-	writeOverlayMetrics(context.Background(), rec, &OverlayMetrics{
+	writeOverlayMetrics(context.Background(), &exposition{w: rec}, &OverlayMetrics{
 		SourceLag: func(context.Context) (map[string]time.Duration, error) {
 			return map[string]time.Duration{"person": 90 * time.Second}, nil
 		},

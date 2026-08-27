@@ -439,6 +439,11 @@ func TestAbsorbRefusesARowThatIsNotThisMessagesEcho(t *testing.T) {
 		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
+			// A fixture of its own: every case seeds a survivor under the same
+			// minted identity and the reconcile SEARCHES for its echo, so an
+			// earlier case's bystander is a candidate for a later case's
+			// survivor. The refusals here would then be refusals about a
+			// different row than the one the case is named for.
 			e := setupSend(t)
 			survivor := e.seedSentEmail(t, mintedIdentity)
 			bystander := e.seedEcho(t, tc.seed)

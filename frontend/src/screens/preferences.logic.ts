@@ -20,12 +20,21 @@ export function initialDraft(purposes: PurposeView[]): Draft {
   return draft;
 }
 
-// Locked purposes are excluded unconditionally: the server refuses them
-// (preference.go:206) and the toggle is disabled, so a draft that claims one
-// moved is noise, never a pending change.
+// Locked purposes are excluded unconditionally: the server refuses them and the
+// toggle is disabled, so a draft that claims one moved is noise, never a pending
+// change.
+//
+// A double-opt-in purpose is excluded only in the GRANT direction, and for a
+// different reason: the server refuses that write too, but the withdrawal
+// beside it is honoured. Filtering the whole purpose would strip somebody's
+// unsubscribe; filtering neither would submit a choice that 422s and lose the
+// rest of the save with it.
 export function dirtyKeys(purposes: PurposeView[], draft: Draft): string[] {
   return purposes
     .filter((purpose) => !purpose.locked)
+    .filter(
+      (purpose) => !(purpose.grant_needs_confirmation && draft[purpose.key]),
+    )
     .filter((purpose) => draft[purpose.key] !== displayOn(purpose.state))
     .map((purpose) => purpose.key);
 }

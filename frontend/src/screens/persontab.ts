@@ -10,16 +10,23 @@ import type { Route } from "../app/router";
 // typed on `PersonTab`, so the next rename fails to compile instead.
 
 /**
- * The six tabs, in the concept's order (§5.4). URL-addressable, so a tab
+ * The seven tabs, in the concept's order (§5.4). URL-addressable, so a tab
  * survives a reload and can be linked to.
  *
  * Activity and History are ONE tab, as they are on the account page: what was
  * said to a contact and what was changed about them are one chronology to the
  * person reading them, and the filter above the list is what separates them.
+ *
+ * Network sits next to Timeline because the two answer neighbouring questions:
+ * the timeline is what passed between us and this contact, the network is who
+ * else that reaches. It is a tab rather than an overview card because its
+ * answer is a working surface — a reader interrogates the routes and the
+ * seats — and the overview stack is a glance.
  */
 export const PERSON_TABS = [
   "overview",
   "timeline",
+  "network",
   "deals",
   "meetings",
   "research",

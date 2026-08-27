@@ -154,8 +154,8 @@ func TestTheWorkerMetricsAreProcessLocalAndReServeNoFleetGauge(t *testing.T) {
 	for _, family := range []string{
 		"margince_job_queue_depth",
 		"margince_job_declared_info",
-		"margince_sweep_workspaces_total",
-		"margince_sweep_units_total",
+		"margince_sweep_workspaces",
+		"margince_sweep_units",
 		"margince_outbox_unpublished",
 	} {
 		if strings.Contains(body, family) {

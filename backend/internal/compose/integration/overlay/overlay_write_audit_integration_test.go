@@ -24,6 +24,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
@@ -103,7 +104,7 @@ func TestOverlayUpdateWritesTheAuditTrail(t *testing.T) {
 	id := firstListedID(t, e.AppEnv, "/v1/deals")
 
 	var deal crmcontracts.Deal
-	if status := e.Call(t, "PATCH", "/v1/deals/"+id, apptest.AnyMap{"name": "Acme Renewal — Q3"}, nil, &deal); status != http.StatusOK {
+	if status := e.Call(t, "PATCH", "/v1/deals/"+id, integration.AnyMap{"name": "Acme Renewal — Q3"}, nil, &deal); status != http.StatusOK {
 		t.Fatalf("PATCH /v1/deals/%s = %d", id, status)
 	}
 

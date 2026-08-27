@@ -29,7 +29,7 @@ import {
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { TimelineFilterBar } from "../design-system/timelinefilterbar";
-import { ToastRegion, useToast } from "../design-system/toast";
+import { useToast } from "../design-system/toast";
 import {
   formatDateAbbrev,
   formatDecimal,
@@ -1432,9 +1432,12 @@ function LeadActions({
           disqualified lead and, since ADR-0119/A170, a promoted one — and the
           band above names which, so these controls point at that one
           sentence rather than guessing at it. */}
-      <EditAction
+      <EditAction<Lead>
         disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
         label={t("record.edit")}
+        savedMessage={(saved) =>
+          t("record.saveDone", { name: saved.full_name ?? "" })
+        }
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
         fields={[...leadEditFields, ...cf.formFields]}
         record={{
@@ -1715,7 +1718,6 @@ function LeadRecord({
         />
       }
     >
-      <ToastRegion toast={toast} />
       {tab === "overview" && (
         <LeadOverviewPane
           lead={lead}

@@ -17,7 +17,6 @@ import {
 import type { TimelineEntry } from "../design-system/composed";
 import {
   EvidenceChip,
-  FieldDiff,
   PassportChip,
   ProvenanceTag,
   toEvidence,
@@ -37,8 +36,9 @@ import {
   groupByField,
   provenanceOfEntry,
 } from "./history.logic";
+import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
-import { type HistoryValueCtx, historyValue } from "./historyvalues";
+import type { HistoryValueCtx } from "./historyvalues";
 import "./history.css";
 
 // The per-field old→new diff view (B-EP09.x): every field-change row the
@@ -136,9 +136,11 @@ function FieldGroupSection({
       <ul>
         {group.changes.map((change) => (
           <li key={change.id} className="change">
-            <FieldDiff
-              oldValue={historyValue(group.field, change.old_value, valueCtx)}
-              newValue={historyValue(group.field, change.new_value, valueCtx)}
+            <HistoryFieldDiff
+              field={group.field}
+              oldValue={change.old_value}
+              newValue={change.new_value}
+              values={valueCtx}
             />
             <span className="tl-meta">
               {formatDateTime(change.changed_at, locale, recordZone)}
@@ -325,8 +327,8 @@ export function changeTimeline(
   // The record's own value context. A minor-unit column is an integer count of
   // units its currency defines, a timestamp is only readable at the record's
   // zone, and a bare id is only readable through the resolver — the reason
-  // this goes through historyValue rather than to the diff directly, on every
-  // field, whether or not the record type happens to hold each shape today.
+  // every diff goes through HistoryFieldDiff rather than to FieldDiff itself,
+  // on every field, whether or not the record type holds each shape today.
   valueCtx: HistoryValueCtx,
   // What the record DID, in the reader's words. Handed in rather than read
   // from the catalog here, because this adapter takes every other word it
@@ -353,9 +355,11 @@ export function changeTimeline(
     // per-field view — the reader kept the claim and lost the proof.
     via: <ChangeGrounding change={change} />,
     detail: (
-      <FieldDiff
-        oldValue={historyValue(change.field, change.old_value, valueCtx)}
-        newValue={historyValue(change.field, change.new_value, valueCtx)}
+      <HistoryFieldDiff
+        field={change.field}
+        oldValue={change.old_value}
+        newValue={change.new_value}
+        values={valueCtx}
       />
     ),
   }));

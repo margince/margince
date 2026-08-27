@@ -147,7 +147,7 @@ func TestARestSingleRecordReadChargesOne(t *testing.T) {
 	var created struct {
 		ID ids.UUID `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Single Read",
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("seeding the person → %d", status)
@@ -207,7 +207,7 @@ func TestEveryCounterTheRestDoorRefusesOnIsChargedOnIt(t *testing.T) {
 		}
 	})
 	onWrite := advance(func() {
-		if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/people", AnyMap{
 			"full_name": "Charged By The Gate",
 		}, bearer, nil); status != http.StatusCreated {
 			t.Fatalf("the agent write → %d, want 201", status)
@@ -263,7 +263,7 @@ func passportWithID(t *testing.T, e *apptest.AppEnv, label string, scopes ...str
 		ID    ids.UUID `json:"passport_id"`
 		Token string   `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": label, "scopes": scopes,
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("issue passport %q → %d", label, status)
@@ -279,7 +279,7 @@ func passportWithID(t *testing.T, e *apptest.AppEnv, label string, scopes ...str
 func seedPeople(t *testing.T, e *apptest.AppEnv, n int) {
 	t.Helper()
 	for i := range n {
-		if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+		if status := e.Call(t, "POST", "/v1/people", AnyMap{
 			"full_name": "Metered Person " + string(rune('A'+i)),
 		}, nil, nil); status != http.StatusCreated {
 			t.Fatalf("seeding person %d → %d", i, status)

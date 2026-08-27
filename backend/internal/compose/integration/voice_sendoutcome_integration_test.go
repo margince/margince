@@ -68,9 +68,9 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	var person struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/people", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people", AnyMap{
 		"full_name": "Draft Reader",
-		"emails":    []apptest.AnyMap{{"email": "reader@buyer.test"}},
+		"emails":    []AnyMap{{"email": "reader@buyer.test"}},
 	}, nil, &person); status != http.StatusCreated {
 		t.Fatalf("create person → %d", status)
 	}
@@ -80,12 +80,12 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	var purpose struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/consent-purposes", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/consent-purposes", AnyMap{
 		"key": "newsletter", "label": "Newsletter", "requires_double_opt_in": false,
 	}, nil, &purpose); status != http.StatusCreated {
 		t.Fatalf("create consent purpose → %d", status)
 	}
-	if status := e.Call(t, "POST", "/v1/people/"+person.ID+"/consent", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/people/"+person.ID+"/consent", AnyMap{
 		"purpose_id": purpose.ID, "new_state": "granted", "lawful_basis": "consent",
 	}, nil, nil); status != http.StatusOK {
 		t.Fatalf("record consent → %d", status)
@@ -93,9 +93,9 @@ func setupVoiceSend(t *testing.T) *voiceSendEnv {
 	var activity struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities", AnyMap{
 		"kind": "email", "subject": "Pricing question", "direction": "inbound",
-		"links": []apptest.AnyMap{{"entity_type": "person", "entity_id": person.ID}},
+		"links": []AnyMap{{"entity_type": "person", "entity_id": person.ID}},
 	}, nil, &activity); status != http.StatusCreated {
 		t.Fatalf("log anchor activity → %d", status)
 	}
@@ -167,7 +167,7 @@ func (e *voiceSendEnv) send(t *testing.T, ref, body string) ids.UUID {
 	var sent struct {
 		ID string `json:"id"`
 	}
-	if status := e.Call(t, "POST", "/v1/activities/"+e.activityID+"/send-email", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/activities/"+e.activityID+"/send-email", AnyMap{
 		"to": []string{"reader@buyer.test"}, "subject": "Pricing",
 		"body": body, "consent_purpose": "newsletter", "draft_ref": ref,
 	}, nil, &sent); status != http.StatusAccepted {

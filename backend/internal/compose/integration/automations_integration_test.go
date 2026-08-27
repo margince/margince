@@ -29,14 +29,14 @@ func TestAutomationCatalogAndCRUD(t *testing.T) {
 
 	// Enable under a stale If-Match is refused; the current version wins.
 	stale := map[string]string{"If-Match": "99"}
-	if status := e.Call(t, "PATCH", "/v1/automations/"+createdID, apptest.AnyMap{"status": "enabled"}, stale, nil); status != http.StatusConflict {
+	if status := e.Call(t, "PATCH", "/v1/automations/"+createdID, AnyMap{"status": "enabled"}, stale, nil); status != http.StatusConflict {
 		t.Fatalf("stale If-Match → %d, want 409 version_skew", status)
 	}
 	var updated struct {
 		Status  string `json:"status"`
 		Version int    `json:"version"`
 	}
-	if status := e.Call(t, "PATCH", "/v1/automations/"+createdID, apptest.AnyMap{"status": "enabled"},
+	if status := e.Call(t, "PATCH", "/v1/automations/"+createdID, AnyMap{"status": "enabled"},
 		map[string]string{"If-Match": "1"}, &updated); status != http.StatusOK {
 		t.Fatalf("enable → %d", status)
 	}
@@ -54,7 +54,7 @@ func TestAutomationCatalogAndCRUD(t *testing.T) {
 
 	// Config is an audited fact end to end.
 	var audit struct {
-		Data []apptest.AnyMap `json:"data"`
+		Data []AnyMap `json:"data"`
 	}
 	if status := e.Call(t, "GET", "/v1/audit-log?entity_type=automation", nil, nil, &audit); status != http.StatusOK {
 		t.Fatalf("audit read → %d", status)
@@ -128,18 +128,18 @@ func assertBootstrapSeededStartersEnabled(t *testing.T, e *apptest.AppEnv) {
 func assertAutomationCreateValidatesParams(t *testing.T, e *apptest.AppEnv) {
 	t.Helper()
 	// An unknown catalog key and out-of-schema params are 422s.
-	if status := e.Call(t, "POST", "/v1/automations", apptest.AnyMap{
-		"key": "invented_type", "name": "Nope", "params": apptest.AnyMap{},
+	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
+		"key": "invented_type", "name": "Nope", "params": AnyMap{},
 	}, nil, nil); status != 422 {
 		t.Fatalf("unknown key → %d, want 422", status)
 	}
-	if status := e.Call(t, "POST", "/v1/automations", apptest.AnyMap{
-		"key": "assign_lead_owner", "name": "Bad params", "params": apptest.AnyMap{"cap_per_owner": "soon"},
+	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
+		"key": "assign_lead_owner", "name": "Bad params", "params": AnyMap{"cap_per_owner": "soon"},
 	}, nil, nil); status != 422 {
 		t.Fatalf("mistyped param → %d, want 422", status)
 	}
-	if status := e.Call(t, "POST", "/v1/automations", apptest.AnyMap{
-		"key": "assign_lead_owner", "name": "Rogue knob", "params": apptest.AnyMap{"rule_body": "if x then y"},
+	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
+		"key": "assign_lead_owner", "name": "Rogue knob", "params": AnyMap{"rule_body": "if x then y"},
 	}, nil, nil); status != 422 {
 		t.Fatalf("out-of-schema param → %d, want 422 (the anti-DSL guard)", status)
 	}
@@ -156,9 +156,9 @@ func createPausedAutomation(t *testing.T, e *apptest.AppEnv) string {
 		Params  map[string]any `json:"params"`
 		Version int            `json:"version"`
 	}
-	if status := e.Call(t, "POST", "/v1/automations", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
 		"key": "assign_lead_owner", "name": "Slow-lane routing",
-		"params": apptest.AnyMap{"owners": []string{"0198c0de-0000-7000-8000-000000000001"}, "cap_per_owner": 3},
+		"params": AnyMap{"owners": []string{"0198c0de-0000-7000-8000-000000000001"}, "cap_per_owner": 3},
 	}, nil, &created); status != http.StatusCreated {
 		t.Fatalf("create → %d", status)
 	}
@@ -187,15 +187,15 @@ func TestAutomationConfigRejectsAgents(t *testing.T) {
 	var minted struct {
 		Token string `json:"token"`
 	}
-	if status := e.Call(t, "POST", "/v1/passports", apptest.AnyMap{
+	if status := e.Call(t, "POST", "/v1/passports", AnyMap{
 		"label": "automation prober", "scopes": []string{"read", "write"},
 	}, nil, &minted); status != http.StatusCreated {
 		t.Fatalf("mint → %d", status)
 	}
 	bearer := map[string]string{"Authorization": "Bearer " + minted.Token}
 
-	if status := e.Call(t, "POST", "/v1/automations", apptest.AnyMap{
-		"key": "assign_lead_owner", "name": "Agent-made", "params": apptest.AnyMap{},
+	if status := e.Call(t, "POST", "/v1/automations", AnyMap{
+		"key": "assign_lead_owner", "name": "Agent-made", "params": AnyMap{},
 	}, bearer, nil); status != http.StatusForbidden {
 		t.Fatalf("agent create automation → %d, want 403", status)
 	}
