@@ -5,14 +5,15 @@ package activities
 
 // Every column of the activity projection lands in its OWN field.
 //
-// Five neighbours are string-ish and nullable — meeting_status, source_system,
-// source_id, source, captured_by — so transposing any two of them scans
-// cleanly and puts the wrong value on the wire. Nothing errors. A record
-// simply says its source is a meeting status.
+// Five string-ish neighbours can transpose without an error — meeting_status,
+// source_system, source_id, source, captured_by — and they are not the only
+// pair that can. Two booleans (is_done, bulk_mail_attested) and seven
+// timestamps are as interchangeable to a scan as two strings, and a swap among
+// them is just as silent.
 //
-// The scan is driven by a row that hands each column a sentinel naming the
-// column it came from, so a swap is not "some string in some field" but a
-// named mismatch.
+// So every destination is filled from its POSITION in the projection, and every
+// field the scan materializes is asserted against the column it is declared
+// for. A value that could be any column's is a value this test cannot judge.
 
 import (
 	"testing"
@@ -23,15 +24,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// sentinelRow answers each destination with a value derived from its POSITION
-// in the projection, so what a field ends up holding names where it came from.
-//
-// It writes through the destination pointers the projection handed it, which
-// is the same path pgx takes — a row that filled a struct by name would prove
-// nothing about an order nobody stated.
+// epoch anchors the timestamp sentinels. Each column gets epoch plus its own
+// index, so two timestamps are never the same instant.
+var epoch = time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+
+// sentinelRow answers each destination with a value derived from its position,
+// writing through the pointers the projection handed it — the same path pgx
+// takes. A row that filled a struct by name would prove nothing about an order
+// nobody stated.
 type sentinelRow struct {
 	t     *testing.T
 	names []string
+	// bools counts the boolean destinations as they arrive, so consecutive
+	// ones alternate. Two booleans set to the same value are indistinguishable
+	// after a swap, which is exactly the case this row exists to catch.
+	bools int
 }
 
 func (r *sentinelRow) Scan(dest ...any) error {
@@ -41,18 +48,18 @@ func (r *sentinelRow) Scan(dest ...any) error {
 			len(dest), len(r.names))
 	}
 	for i, d := range dest {
-		fill(r.t, d, r.names[i])
+		r.fill(d, r.names[i], i)
 	}
 	return nil
 }
 
-// fill writes a value that carries `name` where the type allows it, and
-// something valid where it does not. Only the string-ish columns can be
-// silently transposed, so only they need to be distinguishable.
+// fill writes a value that identifies the column it was written for: the name
+// itself where a string will hold one, the index where a number or an instant
+// will, and an alternating value for a boolean, which has only two.
 //
 //craft:ignore naked-any a scan destination is exactly what pgx.Row.Scan takes, and the whole subject here is which concrete pointer arrives in which position — naming a type would be naming the answer this switch exists to discover.
-func fill(t *testing.T, dest any, name string) {
-	t.Helper()
+func (r *sentinelRow) fill(dest any, name string, index int) {
+	r.t.Helper()
 	switch d := dest.(type) {
 	case *string:
 		*d = name
@@ -60,54 +67,70 @@ func fill(t *testing.T, dest any, name string) {
 		v := name
 		*d = &v
 	case *ids.UUID:
-		*d = ids.NewV7()
+		*d = uuidFor(index)
 	case **ids.UUID:
-		v := ids.NewV7()
+		v := uuidFor(index)
 		*d = &v
 	case *time.Time:
-		*d = time.Unix(0, 0).UTC()
+		*d = epoch.Add(time.Duration(index) * time.Hour)
 	case **time.Time:
-		v := time.Unix(0, 0).UTC()
+		v := epoch.Add(time.Duration(index) * time.Hour)
 		*d = &v
 	case *bool:
-		// content_available true, so nothing is withheld and every field the
-		// audience test would blank stays readable for the comparison below.
-		*d = true
+		// Alternating, starting true: content_available is the FIRST boolean
+		// scanned in declaration order only by accident, so it is asserted
+		// below rather than assumed — and the point here is that no two
+		// booleans in this row hold the same value.
+		*d = r.bools%2 == 0
+		r.bools++
 	case **bool:
-		v := true
+		v := r.bools%2 == 0
+		r.bools++
 		*d = &v
 	case *int64:
-		*d = 1
+		*d = int64(index)
 	case **int:
-		v := 1
+		v := index
 		*d = &v
 	case **int64:
-		v := int64(1)
+		v := int64(index)
 		*d = &v
 	default:
-		t.Fatalf("the projection declares a destination this row cannot fill for %s: %T", name, dest)
+		r.t.Fatalf("the projection declares a destination this row cannot fill for %s: %T", name, dest)
 	}
+}
+
+// uuidFor is a distinct, reproducible id per column position.
+func uuidFor(index int) ids.UUID {
+	var u ids.UUID
+	u[15] = byte(index + 1)
+	return u
 }
 
 var _ pgx.Row = (*sentinelRow)(nil)
 
 func TestEveryProjectedColumnLandsInItsOwnField(t *testing.T) {
 	names := make([]string, len(activityProjection))
+	index := map[string]int{}
 	for i, c := range activityProjection {
 		names[i] = c.sql
 		if names[i] == "" {
 			names[i] = "content_available"
 		}
+		index[names[i]] = i
 	}
-
 	got, err := scanActivity(&sentinelRow{t: t, names: names})
 	if err != nil {
 		t.Fatalf("scanActivity: %v", err)
 	}
+	// content_available decides whether the content columns reach the caller
+	// at all, so a run where it landed false would blank half the fields below
+	// and report the blanking as a transposition.
+	if got.ContentState == nil || string(*got.ContentState) != "available" {
+		t.Fatalf("content_available did not scan as true (content_state %v) — every content "+
+			"assertion below would then be reading the withholding, not the scan", got.ContentState)
+	}
 
-	// Only the string-carrying columns can transpose without an error, so
-	// those are the ones worth naming. Each is asserted against the column it
-	// is declared for, not against a position.
 	for _, want := range []struct {
 		column string
 		got    *string
@@ -116,41 +139,134 @@ func TestEveryProjectedColumnLandsInItsOwnField(t *testing.T) {
 		{"a.body", got.Body},
 		{"a.source_system", got.SourceSystem},
 		{"a.source_id", got.SourceId},
+		{"a.captured_by", got.CapturedBy},
 		{"a.channel_provider", got.ChannelProvider},
 		{"a.thread_key", got.ThreadKey},
-		{"a.captured_by", got.CapturedBy},
+	} {
+		assertString(t, want.column, want.got)
+	}
+	if got.Source != "a.source" {
+		t.Errorf("a.source landed in a field holding %q", got.Source)
+	}
+
+	// The typed enums come off string columns and are the other half of the
+	// same hazard: a swap reads as a valid-looking wrong value.
+	assertString(t, "a.direction", stringOf(got.Direction))
+	assertString(t, "a.meeting_status", stringOf(got.MeetingStatus))
+	assertString(t, "a.capture_label", stringOf(got.CaptureLabel))
+	assertString(t, "a.audience", stringOf(got.Audience))
+	if string(got.Kind) != "a.kind" {
+		t.Errorf("a.kind landed as %q", got.Kind)
+	}
+
+	// The instants. Seven of them, all *time.Time or time.Time, and any two
+	// are as interchangeable to a scan as any two strings.
+	for _, want := range []struct {
+		column string
+		got    *time.Time
+	}{
+		{"a.occurred_at", &got.OccurredAt},
+		{"a.due_at", got.DueAt},
+		{"a.remind_at", got.RemindAt},
+		{"a.done_at", got.DoneAt},
+		{"a.created_at", &got.CreatedAt},
+		{"a.updated_at", &got.UpdatedAt},
+		{"a.archived_at", got.ArchivedAt},
 	} {
 		if want.got == nil {
 			t.Errorf("%s scanned into nothing", want.column)
 			continue
 		}
-		if *want.got != want.column {
-			t.Errorf("%s landed in a field holding %q — two destinations are transposed, and a "+
-				"transposition among these scans cleanly and puts the wrong value on the wire",
-				want.column, *want.got)
+		if at := epoch.Add(time.Duration(index[want.column]) * time.Hour); !want.got.Equal(at) {
+			t.Errorf("%s holds %v, want %v — two timestamp destinations are transposed",
+				want.column, want.got, at)
 		}
 	}
-	// Source is a plain string on the record rather than a pointer.
-	if got.Source != "a.source" {
-		t.Errorf("a.source landed in a field holding %q", got.Source)
+
+	// The ids.
+	if ids.UUID(got.Id) != uuidFor(index["a.id"]) {
+		t.Errorf("a.id holds %v", got.Id)
 	}
-	// The typed enums come off the same string columns and are the other half
-	// of the same hazard: a swap here reads as a valid-looking wrong value.
-	if got.Direction == nil || string(*got.Direction) != "a.direction" {
-		t.Errorf("a.direction landed as %v", got.Direction)
+	if got.AssigneeId == nil || ids.UUID(*got.AssigneeId) != uuidFor(index["a.assignee_id"]) {
+		t.Errorf("a.assignee_id holds %v", got.AssigneeId)
 	}
-	if got.MeetingStatus == nil || string(*got.MeetingStatus) != "a.meeting_status" {
-		t.Errorf("a.meeting_status landed as %v", got.MeetingStatus)
+
+	// The numbers.
+	if got.DurationSeconds == nil || *got.DurationSeconds != index["a.duration_seconds"] {
+		t.Errorf("a.duration_seconds holds %v", got.DurationSeconds)
 	}
-	if got.CaptureLabel == nil || string(*got.CaptureLabel) != "a.capture_label" {
-		t.Errorf("a.capture_label landed as %v", got.CaptureLabel)
+	if got.Version == nil || int(*got.Version) != index["a.version"] {
+		t.Errorf("a.version holds %v", got.Version)
 	}
-	if string(got.Kind) != "a.kind" {
-		t.Errorf("a.kind landed as %q", got.Kind)
+
+	// The booleans, which carry the least information of anything here — two
+	// values across three columns — and are therefore the easiest to transpose
+	// undetected. They alternate in the row above so that no two hold the same
+	// answer.
+	assertBool(t, "a.is_done", got.IsDone, boolFor(index["a.is_done"]))
+	assertBool(t, "a.bulk_mail_attested", got.BulkMailAttested, boolFor(index["a.bulk_mail_attested"]))
+}
+
+// boolFor answers what the row wrote for the boolean at this column, by
+// counting the booleans that precede it in declaration order. Derived rather
+// than written down, so the two stay in step when a column moves.
+func boolFor(at int) bool {
+	seen := 0
+	for i, c := range activityProjection {
+		if i >= at {
+			break
+		}
+		if isBoolColumn(c.sql) {
+			seen++
+		}
 	}
-	if got.Audience == nil || string(*got.Audience) != "a.audience" {
-		t.Errorf("a.audience landed as %v", got.Audience)
+	return seen%2 == 0
+}
+
+// isBoolColumn names the projection's boolean columns. A list, because the
+// destination's type is only knowable at scan time and this has to answer
+// before one exists.
+func isBoolColumn(sql string) bool {
+	switch sql {
+	case "a.is_done", "a.bulk_mail_attested", "":
+		return true
 	}
+	return false
+}
+
+func assertBool(t *testing.T, column string, got *bool, want bool) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s scanned into nothing", column)
+		return
+	}
+	if *got != want {
+		t.Errorf("%s holds %t, want %t — two boolean destinations are transposed, and a boolean "+
+			"carries the least information of anything here, so a swap is the easiest to miss",
+			column, *got, want)
+	}
+}
+
+func assertString(t *testing.T, column string, got *string) {
+	t.Helper()
+	if got == nil {
+		t.Errorf("%s scanned into nothing", column)
+		return
+	}
+	if *got != column {
+		t.Errorf("%s landed in a field holding %q — two destinations are transposed, and a "+
+			"transposition among these scans cleanly and puts the wrong value on the wire",
+			column, *got)
+	}
+}
+
+// stringOf reads a typed-enum pointer back as the string it was scanned from.
+func stringOf[T ~string](v *T) *string {
+	if v == nil {
+		return nil
+	}
+	s := string(*v)
+	return &s
 }
 
 // The select list and the destinations come from one declaration, so their
