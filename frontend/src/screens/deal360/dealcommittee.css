@@ -1,0 +1,117 @@
+/* The buying-committee map. Two columns of seats — ours and theirs — with the
+   engagement between them drawn across the middle. Every colour is a token, so
+   the map follows the theme the rest of the page follows. */
+
+.dc-map {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* A thread from our side to a seat. Drawn only where a seat is engaged: an
+   unengaged seat is a name on a list, and a line to one would claim a
+   conversation that never happened. */
+.dc-thread {
+  stroke: var(--accent);
+  stroke-width: 2;
+}
+
+.dc-seat {
+  stroke: var(--bgCard);
+  stroke-width: 1.5;
+}
+
+.dc-seat-engaged {
+  fill: var(--accent);
+}
+
+/* A seat with a name and no two-way exchange. Hollow, because the gap is the
+   point: a reader must be able to count the unengaged seats at a glance. */
+.dc-seat-quiet {
+  fill: var(--bgCard);
+  stroke: var(--borderStrong);
+  stroke-width: 2;
+}
+
+.dc-seat-ours {
+  fill: var(--aiText);
+}
+
+/* The ghost seat: a role the coverage rules say is MISSING. Dashed and empty,
+   because absence is the insight this map exists to carry. */
+.dc-ghost {
+  fill: none;
+  stroke: var(--warn);
+  stroke-width: 2;
+  stroke-dasharray: 3 3;
+}
+
+.dc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--textMeta);
+  font-size: var(--fs-meta);
+}
+
+.dc-legend li {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.dc-swatch {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.dc-swatch-engaged {
+  background: var(--accent);
+}
+
+.dc-swatch-quiet {
+  background: var(--bgCard);
+  border: 2px solid var(--borderStrong);
+}
+
+.dc-swatch-gap {
+  border: 2px dashed var(--warn);
+}
+
+.dc-risks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dc-seats {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: var(--space-2);
+}
+
+.dc-seat-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  font-size: var(--fs-sm);
+}
+
+.dc-seat-name {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.dc-role {
+  color: var(--textMeta);
+}
