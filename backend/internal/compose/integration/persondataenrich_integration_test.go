@@ -48,13 +48,21 @@ func setupProviderConsumer(t *testing.T, mode string) *providerConsumerEnv {
 	c := &providerConsumerEnv{env: e, enqueued: new(int), personID: seedSubject(t, e)}
 
 	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		// BOTH halves of the split: a priced category and a free one. An
+		// automatic run takes only what the provider gives away, so a
+		// selection of professional_email alone leaves it nothing to ask for
+		// and the consumer swallows the trigger as the configuration state it
+		// is — which every "no run exists" case here would then pass for a
+		// reason that has nothing to do with what it asserts.
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO provider_connection
 			       (id, provider, status, mode, preset, categories, automatic_individual_create)
 			VALUES (gen_random_uuid(), 'surfe', 'connected', $1, 'full',
-			        ARRAY['professional_email'], true)
+			        ARRAY['professional_email', 'linkedin_profile'], true)
 			ON CONFLICT (provider) DO UPDATE
-			   SET status = 'connected', mode = $1, automatic_individual_create = true`, mode)
+			   SET status = 'connected', mode = $1,
+			       categories = ARRAY['professional_email', 'linkedin_profile'],
+			       automatic_individual_create = true`, mode)
 		return err
 	}); err != nil {
 		t.Fatal(err)
