@@ -113,6 +113,9 @@ func (p *OfflineProvider) Descriptor() provider.Descriptor {
 			"current_employment": {provider.ClaimCurrentEmployment},
 			"job_history":        {provider.ClaimJobHistory},
 		},
+		RequiresAnswerTo: map[provider.Category]provider.Category{
+			"mobile": "professional_email",
+		},
 	}
 }
 

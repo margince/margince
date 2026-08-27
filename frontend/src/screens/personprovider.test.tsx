@@ -353,6 +353,18 @@ describe("a lookup that came back mostly empty", () => {
     expect(line.textContent).not.toContain("current role");
   });
 
+  it("gives only the date when the server did not say what went unanswered", async () => {
+    const unknown = { ...mostlyEmpty(), categories_without_answer: undefined };
+    mount(unknown, queuedRun);
+
+    // An older backend, or an adapter that never declared which claim answers
+    // which category. The date is a fact; a count derived from a missing list
+    // would invent "everything came back", which is the exact reading this
+    // line exists to prevent.
+    expect(await screen.findByText(/Looked up 27 Aug 2026\./)).toBeDefined();
+    expect(screen.queryByText(/asked for/)).toBeNull();
+  });
+
   it("keeps the receipt off a section nobody has run", async () => {
     mount(neverRun(), queuedRun);
 

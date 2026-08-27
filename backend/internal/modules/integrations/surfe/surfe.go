@@ -186,6 +186,11 @@ func (a *Adapter) Descriptor() provider.Descriptor {
 			categoryCurrentEmployment: {provider.ClaimCurrentEmployment},
 			categoryJobHistory:        {provider.ClaimJobHistory},
 		},
+		// Submit sends SkipMobileEnrichmentIfNoEmailFound, so a subject the
+		// vendor could not place is never asked for a number.
+		RequiresAnswerTo: map[provider.Category]provider.Category{
+			categoryMobile: categoryProfessionalEmail,
+		},
 	}
 }
 

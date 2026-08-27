@@ -6386,10 +6386,11 @@ export const en = {
   // The receipt. Without it a lookup that returned one detail out of six read
   // exactly like one that returned all six, and nothing on the page said when
   // the answer arrived.
+  "provider.profile.receiptAt": "Looked up {at}.",
   "provider.profile.receipt":
     "Looked up {at} · asked for {asked} details, got {answered} back.",
   "provider.profile.noAnswer":
-    "Asked for and not found: {categories}. The provider was paid to look and had nothing for this contact.",
+    "Asked for and not found: {categories}. The provider was asked and had nothing for this contact.",
   // The provider's own vocabulary, in words a reader knows. Not translated
   // one-for-one from the key: these are what a rep would call the thing.
   "provider.category.professionalEmail": "work email",

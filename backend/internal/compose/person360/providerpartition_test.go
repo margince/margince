@@ -250,3 +250,113 @@ func TestACategoryTheAdapterNeverMappedIsNotAccusedOfSilence(t *testing.T) {
 		t.Errorf("got %v, want nothing reported for an undeclared category", got)
 	}
 }
+
+func TestAFallbackThatNeverFiredIsNotReportedAsUnanswered(t *testing.T) {
+	runID := ids.NewV7()
+	// Surfe's shape: the personal-email pass runs only when the professional
+	// one comes back empty.
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "personal_email"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"personal_email":     {provider.ClaimPersonalEmails},
+		},
+		Cascades: []provider.Cascade{{
+			Category: "personal_email",
+			After:    "professional_email",
+		}},
+	}
+	// The professional pass answered, so the fallback was never issued.
+	claims := []storedClaim{{
+		key:   string(provider.ClaimProfessionalEmails),
+		runID: runID,
+	}}
+	requested := []string{"professional_email", "personal_email"}
+
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, claims))
+
+	// Reporting the fallback would claim the provider was asked and had
+	// nothing, on a line whose whole job is saying what the money bought.
+	if len(got) != 0 {
+		t.Errorf("got %v, want nothing — the fallback was never sent", got)
+	}
+}
+
+func TestAFallbackThatDidFireIsReportedWhenItFoundNothing(t *testing.T) {
+	runID := ids.NewV7()
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "personal_email"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"personal_email":     {provider.ClaimPersonalEmails},
+		},
+		Cascades: []provider.Cascade{{
+			Category: "personal_email",
+			After:    "professional_email",
+		}},
+	}
+	requested := []string{"professional_email", "personal_email"}
+
+	// Neither answered: the professional pass came back empty, which is
+	// exactly what issues the fallback, and it found nothing either.
+	got := categoriesWithoutAnswer(desc, requested, deliveredKeys(runID, nil))
+
+	want := []string{"personal_email", "professional_email"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v, want both reported (%v)", got, want)
+	}
+	for i, name := range want {
+		if got[i] != name {
+			t.Errorf("position %d is %q, want %q", i, got[i], name)
+		}
+	}
+}
+
+func TestASkippedPrerequisiteMeansTheCategoryWasNeverAsked(t *testing.T) {
+	runID := ids.NewV7()
+	// Surfe sends SkipMobileEnrichmentIfNoEmailFound: a subject it cannot
+	// place by email is never asked for a number.
+	desc := provider.Descriptor{
+		Categories: []provider.Category{"professional_email", "mobile"},
+		Answers: map[provider.Category][]provider.ClaimKey{
+			"professional_email": {provider.ClaimProfessionalEmails},
+			"mobile":             {provider.ClaimMobilePhones},
+		},
+		RequiresAnswerTo: map[provider.Category]provider.Category{
+			"mobile": "professional_email",
+		},
+	}
+
+	// No email found, so no mobile lookup was ever issued.
+	got := categoriesWithoutAnswer(desc, []string{"professional_email", "mobile"},
+		deliveredKeys(runID, nil))
+
+	// The email is a real silence; the mobile is a question nobody asked.
+	if len(got) != 1 || got[0] != "professional_email" {
+		t.Errorf("got %v, want only professional_email — no mobile lookup was sent", got)
+	}
+}
+
+func TestOnlyACompletedRunWithItsClaimsWrittenSpeaksForTheProvider(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		run     providerRunRow
+		answers bool
+	}{
+		{"completed", providerRunRow{state: "completed"}, true},
+		{"still queued", providerRunRow{state: "queued"}, false},
+		{"in flight", providerRunRow{state: "in_progress"}, false},
+		{"skipped without calling", providerRunRow{state: "skipped"}, false},
+		{"failed", providerRunRow{state: "failed"}, false},
+		{"outcome never learned", providerRunRow{state: "submission_unknown"}, false},
+		// The provider DID answer and the hand-off dropped it. Reporting this
+		// as provider silence blames the vendor for our own defect.
+		{"claims never written", providerRunRow{state: "completed", claimsUnwritten: true}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if answerable(tc.run) != tc.answers {
+				t.Errorf("answerable(%s) = %v, want %v", tc.name, !tc.answers, tc.answers)
+			}
+		})
+	}
+}

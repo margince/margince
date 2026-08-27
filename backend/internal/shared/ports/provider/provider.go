@@ -162,6 +162,20 @@ type Descriptor struct {
 	// adapter that has not declared its correspondence stays silent rather
 	// than accusing a provider of withholding what it may well have sent.
 	Answers map[Category][]ClaimKey
+
+	// RequiresAnswerTo names, per category, another category that must come
+	// back with something or this one is never put to the provider at all.
+	//
+	// Surfe's is the worked case: it skips the mobile lookup entirely when it
+	// found no email, because a subject it cannot place has no number either
+	// and asking would spend a mobile credit on a lookup already known to have
+	// failed. The credit is saved, and no request is made.
+	//
+	// Declared so a reader is never told the provider "had nothing" for a
+	// question nobody asked. It is the mirror of Cascades, which name what
+	// runs only when something comes back EMPTY; this names what runs only
+	// when something comes back FULL.
+	RequiresAnswerTo map[Category]Category
 }
 
 // Credential is raw key material, alive only for the duration of one call.

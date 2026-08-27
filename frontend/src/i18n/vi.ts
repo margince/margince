@@ -6267,10 +6267,11 @@ export const vi = {
   "provider.profile.seniorities": "Cấp bậc",
   "provider.profile.notRequested":
     "Không hỏi tới: {categories}. Chỗ trống ở đây nghĩa là không ai mua, chứ không phải nhà cung cấp không có.",
+  "provider.profile.receiptAt": "Tra cứu ngày {at}.",
   "provider.profile.receipt":
     "Tra cứu ngày {at} · đã hỏi {asked} thông tin, nhận về {answered}.",
   "provider.profile.noAnswer":
-    "Đã hỏi nhưng không tìm thấy: {categories}. Nhà cung cấp được trả tiền để tra và không có gì về liên hệ này.",
+    "Đã hỏi nhưng không tìm thấy: {categories}. Nhà cung cấp đã được hỏi và không có gì về liên hệ này.",
   "provider.category.professionalEmail": "email công việc",
   "provider.category.personalEmail": "email cá nhân",
   "provider.category.mobile": "số di động",

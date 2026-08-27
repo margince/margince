@@ -216,14 +216,25 @@ function RunReceipt({ profile }: Readonly<{ profile: Profile }>) {
   if (!run || !profile.retrieved_at) {
     return null;
   }
+  const at = formatDateAbbrev(profile.retrieved_at, locale, recordZone);
+  const silent = profile.categories_without_answer;
+  if (!silent) {
+    // The server did not say what went unanswered — an older backend, or an
+    // adapter that never declared which claim answers which category. The date
+    // is still a fact; a count derived from a missing list would be an
+    // invention, and inventing "everything came back" is the exact reading
+    // this line exists to prevent.
+    return (
+      <p className="t-caption">{t("provider.profile.receiptAt", { at })}</p>
+    );
+  }
   const asked = run.requested_categories.length;
-  const silent = profile.categories_without_answer?.length ?? 0;
   return (
     <p className="t-caption">
       {t("provider.profile.receipt", {
-        at: formatDateAbbrev(profile.retrieved_at, locale, recordZone),
+        at,
         asked: formatNumber(asked, locale),
-        answered: formatNumber(asked - silent, locale),
+        answered: formatNumber(asked - silent.length, locale),
       })}
     </p>
   );

@@ -182,8 +182,10 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 		if s.providers != nil {
 			if desc, err := s.providers.Descriptor(name); err == nil {
 				profile.CategoriesNotRequested = categoriesNotRequested(desc, latest.requested)
-				profile.CategoriesWithoutAnswer = providerPtr(categoriesWithoutAnswer(
-					desc, latest.requested, deliveredKeys(latest.id, claims)))
+				if answerable(latest) {
+					profile.CategoriesWithoutAnswer = providerPtr(categoriesWithoutAnswer(
+						desc, latest.requested, deliveredKeys(latest.id, claims)))
+				}
 			}
 		}
 	}
@@ -306,52 +308,6 @@ func contributingRuns(runs []providerRunRow) []crmcontracts.ProviderRun {
 // request. It is the page's answer to a blank field: "we never asked" is a
 // different fact from "we asked and they had nothing", and only this list
 // tells them apart.
-// categoriesWithoutAnswer is what the latest run PAID to ask for and the
-// provider returned nothing for.
-//
-// The counterpart to categoriesNotRequested, and the half that was missing: a
-// blank field could mean nobody bought it or that the vendor had none, and only
-// naming both tells them apart. A run that answered one category out of six
-// rendered as a plain success with five silent blanks, which is how an empty
-// purchase looked exactly like a full one.
-//
-// Read from the claims THIS run delivered rather than from the profile's folded
-// values: the fold is a union over every retained run, so an older run's answer
-// would mask what the latest one failed to return.
-func categoriesWithoutAnswer(desc provider.Descriptor, requested []string, delivered map[string]bool) []string {
-	out := []string{}
-	for _, name := range requested {
-		keys, declared := desc.Answers[provider.Category(name)]
-		if !declared {
-			// The adapter never said what answers this category, so nothing
-			// here can conclude the provider withheld it.
-			continue
-		}
-		answered := false
-		for _, key := range keys {
-			if delivered[string(key)] {
-				answered = true
-				break
-			}
-		}
-		if !answered {
-			out = append(out, name)
-		}
-	}
-	sort.Strings(out)
-	return out
-}
-
-// deliveredKeys is the set of claim keys one run actually produced.
-func deliveredKeys(runID ids.UUID, claims []storedClaim) map[string]bool {
-	delivered := map[string]bool{}
-	for _, c := range claims {
-		if c.runID == runID {
-			delivered[c.key] = true
-		}
-	}
-	return delivered
-}
 
 func categoriesNotRequested(desc provider.Descriptor, requested []string) []string {
 	asked := make(map[string]bool, len(requested))
