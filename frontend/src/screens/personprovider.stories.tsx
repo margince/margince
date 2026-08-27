@@ -114,12 +114,21 @@ export const NoMatch: Story = {
   ),
 };
 
-/** Nothing has been bought yet. The values are absent because none was asked
- *  for, which is the one state where an empty card is the true report. */
+/**
+ * Nothing has been bought yet, which is the state a contact sits in until
+ * somebody asks. The card carries the plate that NAMES the lookup rather than
+ * an empty body with a quiet button in the header: a reader who came here to
+ * buy data should not have to find the verb.
+ *
+ * `provider` is absent on purpose. The server fills it from the newest run, so
+ * a contact nobody has looked up carries no provider name — a fixture that set
+ * one would prove the button works in a case that cannot happen.
+ */
 export const NeverRun: Story = {
   render: section(
     profile({
       state: "never_run",
+      provider: undefined,
       retrieved_at: null,
       emails: [],
       mobile_phones: [],
@@ -127,7 +136,37 @@ export const NeverRun: Story = {
       current_employment: undefined,
       job_history: [],
       latest_run: undefined,
+      contributing_runs: undefined,
+      categories_not_requested: [],
     }),
+  ),
+};
+
+/**
+ * The first lookup on a contact, in German. The plate carries the whole
+ * explanation of what a lookup spends and where the answer lands, so it is the
+ * copy most worth reading in a second language.
+ */
+export const NeverRunGerman: Story = {
+  render: () => (
+    <StoryProviders locale="de">
+      <PersonProviderSection
+        personId="p-1"
+        profile={profile({
+          state: "never_run",
+          provider: undefined,
+          retrieved_at: null,
+          emails: [],
+          mobile_phones: [],
+          linkedin_url: null,
+          current_employment: undefined,
+          job_history: [],
+          latest_run: undefined,
+          contributing_runs: undefined,
+          categories_not_requested: [],
+        })}
+      />
+    </StoryProviders>
   ),
 };
 
