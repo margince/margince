@@ -1203,6 +1203,9 @@ const PROFILE_FIELD_LABELS: Record<string, MessageKey> = {
   legal_name: "co.profileField.legal_name",
   registered_address: "co.profileField.registered_address",
   register_vat: "co.profileField.register_vat",
+  legal_form: "co.profileField.legal_form",
+  register_court: "co.profileField.register_court",
+  register_number: "co.profileField.register_number",
   industry: "co.profileField.industry",
   history: "co.profileField.history",
 };

@@ -43,6 +43,24 @@ const MANUAL_QUESTIONS: readonly ManualQuestion[] = [
     hint: "ob.manual.register_vatHint",
   },
   {
+    field: "legal_form",
+    chapter: "ob.manualChapterLegal",
+    prompt: "ob.manual.legal_form",
+    hint: "ob.manual.legal_formHint",
+  },
+  {
+    field: "register_court",
+    chapter: "ob.manualChapterLegal",
+    prompt: "ob.manual.register_court",
+    hint: "ob.manual.register_courtHint",
+  },
+  {
+    field: "register_number",
+    chapter: "ob.manualChapterLegal",
+    prompt: "ob.manual.register_number",
+    hint: "ob.manual.register_numberHint",
+  },
+  {
     field: "display_name",
     chapter: "ob.manualChapterLegal",
     prompt: "ob.manual.display_name",

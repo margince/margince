@@ -864,11 +864,12 @@ describe("CompanyConfirmCard as a triage surface", () => {
     });
     // display_name is required and empty — the one field that actually
     // blocks confirm, and the only count this section's badge carries.
-    // registered_address, register_vat, industry and history are merely
-    // empty-and-optional (legal_name alone is settled) — worth a look,
-    // never an obstacle, and never given a count of their own to add to it.
+    // registered_address, register_vat, legal_form, register_court,
+    // register_number, industry and history are merely empty-and-optional
+    // (legal_name alone is settled) — worth a look, never an obstacle, and
+    // never given a count of their own to add to it.
     expect(within(identityLink).getByText("1")).toBeInTheDocument();
-    expect(within(identityLink).queryByText("4")).toBeNull();
+    expect(within(identityLink).queryByText("7")).toBeNull();
     expect(screen.queryByText("What the squares mean")).not.toBeInTheDocument();
   });
 
@@ -883,11 +884,13 @@ describe("CompanyConfirmCard as a triage surface", () => {
     if (section === null) {
       throw new Error("expected the identity section's list item to exist");
     }
-    // Same 5 fields the badge counts (legal_name alone is settled and so
-    // named nowhere here), same order the rows themselves use: the gap
-    // outranks the merely-empty fields that follow it. Only the visible
-    // label counts here — the tier rides along as sr-only text on the same
-    // button and is covered by its own test.
+    // The section holds 8 outstanding fields (legal_name alone is settled and
+    // so named nowhere here), and the nav names the first NAV_NAMED_LIMIT of
+    // them in the order the rows themselves use: the gap outranks the merely-
+    // empty fields that follow it. register_number, industry and history fall
+    // past that limit and are carried by the overflow count instead. Only the
+    // visible label counts here — the tier rides along as sr-only text on the
+    // same button and is covered by its own test.
     const named = within(section)
       .getAllByRole("button")
       .filter((button) => button !== identityLink)
@@ -897,8 +900,8 @@ describe("CompanyConfirmCard as a triage surface", () => {
       "Company name",
       "Registered address",
       "Register / VAT ID",
-      "Industry",
-      "Company history",
+      "Legal form",
+      "Register court",
     ]);
   });
 
@@ -922,10 +925,10 @@ describe("CompanyConfirmCard as a triage surface", () => {
     );
 
     const advisoryItem = within(nav).getByRole("button", {
-      name: /Industry.*Worth a check/,
+      name: /Register court.*Worth a check/,
     });
     expect(advisoryItem.querySelector("span:not(.sr-only)")).toHaveTextContent(
-      "Industry",
+      "Register court",
     );
     expect(advisoryItem.querySelector(".sr-only")).toHaveTextContent(
       "Worth a check",
@@ -964,14 +967,16 @@ describe("CompanyConfirmCard as a triage surface", () => {
     renderTriage(["icp"]);
 
     const nav = screen.getByRole("navigation", { name: "Jump to a section" });
-    await user.click(within(nav).getByRole("button", { name: /^Industry/ }));
+    await user.click(
+      within(nav).getByRole("button", { name: /^Register court/ }),
+    );
 
     // The jump exists so the reader can fill the field, so it lands on the
     // control rather than the row that holds it.
     const focused = document.activeElement;
     expect(focused?.closest("[data-finding-id]")).toHaveAttribute(
       "data-finding-id",
-      "industry",
+      "register_court",
     );
     expect(focused?.tagName).toMatch(/^(INPUT|TEXTAREA)$/);
   });
@@ -1273,10 +1278,11 @@ describe("CompanyConfirmCard as a triage surface", () => {
 
     // The blocking badge and the row's own mark are the same predicate read
     // twice: filling the one required field can only drop both together.
-    // The advisory list is a different predicate entirely — untouched by
-    // this edit — and must not move just because the blocking badge did.
+    // The section holds more outstanding fields than the nav names, so the
+    // freed slot is taken by the next advisory field rather than left empty —
+    // the list stays full at NAV_NAMED_LIMIT, one row of it no longer blocking.
     expect(within(identityLink).queryByText("1")).not.toBeInTheDocument();
-    expect(advisoryItems()).toHaveLength(4);
+    expect(advisoryItems()).toHaveLength(5);
     expect(
       within(row).queryByText("required, still empty"),
     ).not.toBeInTheDocument();

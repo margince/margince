@@ -331,6 +331,9 @@ async function completeManualInterview() {
   await answerManual("Gradion GmbH");
   await answerManual("Hauptstrasse 1, 10115 Berlin");
   await answerManual("HRB 12345 · DE123456789");
+  await answerManual("GmbH");
+  await answerManual("Amtsgericht Charlottenburg");
+  await answerManual("HRB 12345 B");
   await answerManual("Gradion");
   await answerManual("Revenue software for manufacturers");
   await answerManual("Mid-market manufacturers");
@@ -630,6 +633,11 @@ describe("the mandatory company minimum", () => {
     await chooseManual();
 
     expect(screen.getByText("Your legal organization")).toBeTruthy();
+    // Past the six optional legal facts to display_name, the one question in
+    // this chapter that blocks the interview until it is answered.
+    await skipManual();
+    await skipManual();
+    await skipManual();
     await skipManual();
     await skipManual();
     await skipManual();
