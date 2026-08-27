@@ -148,6 +148,10 @@ tags:
     description: >-
       Where a generated claim came from. Every sentence these surfaces write carries the records
       it was written from, and this is what a reader gets when they open one.
+  - name: Knowledge
+    description: >-
+      Workspace-uploaded document corpora and the grounded ask over them — answers
+      built only from what was filed, or a refusal that says which of the two it is.
   - name: Overlay
     description: The HubSpot mirror overlay — incumbent connection, mirror sync health, budget, and the read→overlay flip.
 
@@ -15526,6 +15530,267 @@ paths:
         '409': { $ref: '#/components/responses/VersionConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  # =========================================================================
+  #   /knowledge   (document corpora and the ask over them — a help bot whose
+  #   ONLY source is what this workspace uploaded)
+  # =========================================================================
+  /knowledge/corpora:
+    get:
+      tags: [Knowledge]
+      operationId: listCorpora
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The document corpora this workspace has defined.
+      responses:
+        '200':
+          description: The corpora.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeCorpusList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+    post:
+      tags: [Knowledge]
+      operationId: createCorpus
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Define a document corpus.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, topic_statement]
+              properties:
+                name: { type: string, maxLength: 200 }
+                description: { type: [string, 'null'], maxLength: 2000 }
+                topic_statement: { type: string, maxLength: 500 }
+                min_similarity: { type: number, format: double, minimum: 0, maximum: 1 }
+                default_ask: { type: boolean }
+      responses:
+        '201':
+          description: The corpus.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /knowledge/corpora/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Knowledge]
+      operationId: readCorpus
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: One corpus and how much of it is searchable.
+      responses:
+        '200':
+          description: The corpus.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Knowledge]
+      operationId: updateCorpus
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Edit a corpus — its words, its floor, or which one the palette asks.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, maxLength: 200 }
+                # NOT nullable on the patch, unlike the response, and the
+                # asymmetry is deliberate. A merge-PATCH cannot tell an explicit
+                # null from an absent key once it is decoded — both arrive as a
+                # nil pointer — so offering one here would be a request the
+                # server accepts, answers 200 to, and ignores. Send an empty
+                # string to clear it; the read renders empty and absent the same
+                # way, because to a reader they are the same thing.
+                description: { type: string, maxLength: 2000 }
+                topic_statement: { type: string, maxLength: 500 }
+                min_similarity: { type: number, format: double, minimum: 0, maximum: 1 }
+                default_ask: { type: boolean }
+      responses:
+        '200':
+          description: The corpus.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Knowledge]
+      operationId: archiveCorpus
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Archive a corpus and everything filed in it.
+      description: >-
+        Cascades in one transaction: every live document archives, their chunks are
+        stamped, and any in-flight ingest self-cancels on its next state re-read.
+      responses:
+        '204': { description: Archived. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /knowledge/corpora/{id}/documents:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Knowledge]
+      operationId: uploadCorpusDocument
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Add a document to this corpus.
+      description: >-
+        Accepts only files whose bytes are their own text — text/plain, text/markdown,
+        text/csv, application/json. Anything else is refused naming what is accepted;
+        there is no parser in this product, and a PDF arriving as an empty corpus is
+        worse than a PDF refused. Ingest is asynchronous: the document lands `queued`
+        and its progress is read back from this path's GET.
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file: { type: string, format: binary }
+      responses:
+        '202':
+          description: Accepted for ingest.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeDocument' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '413': { $ref: '#/components/responses/PayloadTooLarge' }
+        '415': { $ref: '#/components/responses/UnsupportedMediaType' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    get:
+      tags: [Knowledge]
+      operationId: listCorpusDocuments
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: The documents filed in this corpus, and how far each one's ingest got.
+      description: >-
+        The corpus's coverage counts say how much of it is searchable; this says which
+        files those counts are made of. Every document is listed whatever state its
+        ingest reached, and a failed one carries `ingest_detail` — a corpus that is
+        quietly short of a file nobody can name answers worse than one that is empty,
+        because it still answers.
+      responses:
+        '200':
+          description: The documents.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeDocumentList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /knowledge/documents/{id}:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Knowledge]
+      operationId: downloadCorpusDocument
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Download a document's own bytes.
+      description: >-
+        What a CITATION POINTS AT. An answer names the document a sentence rests on,
+        quotes it, and says which line the quote begins on; without a way to open the
+        file the reader cannot see the quote in place, and a citation nobody can follow
+        is a citation in name only.
+
+        Gated on `knowledge_document:read`, which every seeded role holds, because the
+        person who received the answer is the person who needs to check it.
+      responses:
+        '200':
+          description: The file bytes; Content-Disposition names the file.
+          content:
+            application/octet-stream:
+              schema: { type: string, format: binary }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Knowledge]
+      operationId: deleteCorpusDocument
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Delete a document, its chunks, its vectors and its stored file.
+      description: >-
+        A hard delete, not an archive. The stored object goes with the row: an
+        embedding of the text is that text in another shape, and a blob left behind
+        would make the deletion decorative.
+      responses:
+        '204': { description: Deleted. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /knowledge/corpora/{id}/ask:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Knowledge, AI]
+      operationId: askCorpus
+      x-agent-access: human-only
+      security: [{ cookieAuth: [] }]
+      summary: Ask this corpus a question, answered only from its documents.
+      description: |
+        Free text, unlike `POST /organizations/{id}/ask` — and what earns the text box
+        is the bound: "everything" here is one finite corpus, so the retrieval can prove
+        what it did not find.
+
+        Four outcomes and they are not interchangeable. `not_covered` says the corpus
+        does not answer this question. `not_ready` says the corpus is not finished
+        ingesting or is re-embedding, which is a statement about the corpus and never
+        about the question. `retrieval_unavailable` says no embed lane is bound, so
+        nothing was searched.
+
+        The answer is a list of CLAIMS, each carrying the passage it rests on and a
+        verbatim quote from it. A claim whose quote is not found in the retrieved text
+        is dropped; an answer with no surviving claim is `not_covered`.
+
+        Read-only: no record field changes, and nothing is sent.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                question: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        '200':
+          description: The answer, or the refusal — `outcome` says which.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeAnswer' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
 components:
 
   securitySchemes:
@@ -15839,6 +16104,22 @@ components:
           examples:
             notFound:
               value: { type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found. }
+    PayloadTooLarge:
+      description: 'The uploaded body exceeds the ceiling this installation grants the route (`code: payload_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid.'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            tooLarge:
+              value: { type: 'https://errors.gradion.com/payload_too_large', title: Payload too large, status: 413, code: payload_too_large, detail: The upload exceeds this installation's ceiling for this route. }
+    UnsupportedMediaType:
+      description: 'The uploaded file is not of a type this route can read (`code: unsupported_media_type`). The refusal NAMES what is accepted: a bare rejection leaves the caller nothing to act on, and the alternative — accepting the bytes and ingesting nothing from them — reads to them exactly like success.'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            unsupported:
+              value: { type: 'https://errors.gradion.com/unsupported_media_type', title: Unsupported media type, status: 415, code: unsupported_media_type, detail: This file type cannot be read; the accepted types are named in the operation. }
     RetentionHeld:
       description: 'The record is held under a statutory retention obligation and cannot be changed (`code: locked`).'
       content:
@@ -24994,7 +25275,8 @@ components:
          computed_field, quota, offer_template, overlay_connection, embedding_reindex,
          webhook_subscription, fx_rate, ai_model_rate, capture_settings, project,
          channel_connection, import_run, installation_settings, finance, integrations,
-         retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room]
+         retention_policy, capture_trace, license, contract, ai_routing, commission, deal_room,
+         knowledge_corpus, knowledge_document]
 
     RbacAction:
       type: string
@@ -25333,7 +25615,7 @@ components:
           # `close` freezes content while access continues, and `pause`/`resume`
           # suspend reads without touching a single credential. `hold`/`release`
           # and `expire` are retention and scheduling verbs and would read as those.
-          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke]
+          enum: [create, update, archive, merge, promote, demote, disqualify, restore, export, erase, anonymize, assign, advance_stage, advance_phase, send_email, consent_grant, consent_withdraw, approve, reject, record_share, record_unshare, activity_relink, import, import_undo, reset_data, password_link_issued, connect, disconnect, schedule, reschedule, cancel, release, hold, expire, resolve, restrict, pin, accrue, pay, publish, pause, resume, close, invite, revoke, delete]
         entity_type: { type: string }
         entity_id: { type: string, format: uuid, description: Every audit_log row names the record it mutated (NOT NULL since 0075). }
         before:
@@ -25825,7 +26107,7 @@ components:
          cold_start, deal_health, draft_reply, enrich, growth_fit, nl_search,
          offer_draft, rate_extract, signal_extract, site_extract, site_fact_extract,
          site_triage, summarize, transcript, transcript_propose, voice_build,
-         weekly_review]
+         corpus_ask, weekly_review]
       description: |
         What kind of AI work an occurrence is. Every AI task this build can run reports here,
         because a task that reports nothing is AI work the product performed and then denied.
@@ -29407,3 +29689,161 @@ components:
           type: integer
           format: int64
           description: This deal's counted amount toward closed_won_minor (base currency, minor units).
+
+    # ---- Knowledge: document corpora and the grounded ask over them ----------
+
+    KnowledgeCorpus:
+      type: object
+      required: [id, name, topic_statement, min_similarity, default_ask, coverage, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 200 }
+        description: { type: [string, 'null'], maxLength: 2000 }
+        topic_statement:
+          type: string
+          maxLength: 500
+          description: >-
+            What this corpus covers, in the workspace's own words. Quoted back in
+            the refusal when a question falls below the grounding floor, so it is
+            read by a person at their least patient moment — write it as a
+            sentence, not a label.
+        min_similarity:
+          type: number
+          format: double
+          minimum: 0
+          maximum: 1
+          description: The grounding floor. Below it a question is refused before any model call.
+        default_ask:
+          type: boolean
+          description: The corpus the command palette's ask lands on. At most one per workspace.
+        reindexing:
+          type: boolean
+          description: A re-embed is in flight; every ask answers not_ready until it finishes.
+        coverage: { $ref: '#/components/schemas/KnowledgeCoverage' }
+        created_at: { type: string, format: date-time }
+
+    KnowledgeCorpusList:
+      type: object
+      description: >-
+        Every corpus, unpaged. A workspace defines these by hand, in ones and
+        twos, and the screen shows all of them — a cursor here would be a
+        promise with no producer behind it.
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/KnowledgeCorpus' }
+    KnowledgeDocumentList:
+      type: object
+      description: Every document filed in one corpus, whatever state its ingest reached.
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/KnowledgeDocument' }
+    KnowledgeCoverage:
+      type: object
+      required: [chunks_total, chunks_embedded, documents_total]
+      properties:
+        chunks_total: { type: integer }
+        chunks_embedded: { type: integer }
+        documents_total: { type: integer }
+
+    KnowledgeDocument:
+      type: object
+      required: [id, corpus_id, filename, content_type, byte_size, ingest_status, created_at]
+      properties:
+        id: { type: string, format: uuid }
+        corpus_id: { type: string, format: uuid }
+        filename: { type: string }
+        content_type: { type: string }
+        byte_size: { type: integer, format: int64 }
+        ingest_status:
+          type: string
+          enum: [queued, running, done, failed]
+          # Pinned for the same reason as KnowledgeAnswer.outcome: Queued/Running/
+          # Done/Failed are names the whole contract package would have to live
+          # with, and their prefixing today depends on an unrelated collision.
+          x-enum-varnames:
+            [KnowledgeDocumentIngestStatusQueued, KnowledgeDocumentIngestStatusRunning, KnowledgeDocumentIngestStatusDone, KnowledgeDocumentIngestStatusFailed]
+        ingest_detail:
+          type: [string, 'null']
+          description: Why it failed, in words the uploader can act on. Null unless failed.
+        chunk_count: { type: integer }
+        created_at: { type: string, format: date-time }
+
+    KnowledgeAnswerCorpus:
+      type: object
+      required: [id, name, topic_statement]
+      description: >-
+        The corpus as an ANSWER needs it: enough to name what was searched and to
+        quote the topic statement back in a refusal, and nothing else. It is not
+        KnowledgeCorpus, because that one carries coverage — which the answer already
+        reports at its own top level — and an answer shipping the same counts down two
+        paths is two components rendering different numbers on one screen with nothing
+        to fail when they disagree. The settings a corpus is administered by
+        (min_similarity, default_ask, reindexing) are no business of a reply.
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        topic_statement: { type: string }
+
+    KnowledgeClaim:
+      type: object
+      required: [chunk_id, document_id, document_name, quote]
+      properties:
+        text:
+          type: [string, 'null']
+          description: >-
+            One sentence of the answer. Absent when generated_by is deterministic —
+            then the quote stands on its own and no prose was written.
+        chunk_id: { type: string, format: uuid }
+        document_id: { type: string, format: uuid }
+        document_name: { type: string }
+        line:
+          type: integer
+          minimum: 1
+          description: >-
+            The 1-based line of the document where this quote begins, so a reader can
+            open the file and land on it. Absent when the quote could not be located
+            in the passage's own text — a line number pointing at the wrong line is
+            worse than none.
+        column:
+          type: integer
+          minimum: 1
+          description: >-
+            The 1-based column on that line, counted in CHARACTERS rather than bytes:
+            it is read by a person counting across a line, not by a program seeking in
+            a file. Absent whenever `line` is.
+        quote:
+          type: string
+          description: >-
+            A verbatim span from the retrieved passages, whitespace-collapsed and
+            matched before this claim was allowed to exist.
+
+    KnowledgeAnswer:
+      type: object
+      required: [outcome, corpus, coverage, generated_by]
+      properties:
+        outcome:
+          type: string
+          enum: [answered, not_covered, not_ready, retrieval_unavailable]
+          # Pins the generated Go constant names. Unpinned, these four land as a
+          # bare Answered/NotCovered/NotReady/RetrievalUnavailable in the package
+          # every contract type shares — identifiers far too generic to carry
+          # there, and ones the generator only prefixes when something else
+          # happens to collide with them.
+          x-enum-varnames:
+            [KnowledgeAnswerOutcomeAnswered, KnowledgeAnswerOutcomeNotCovered, KnowledgeAnswerOutcomeNotReady, KnowledgeAnswerOutcomeRetrievalUnavailable]
+          description: >-
+            The four are not interchangeable. not_covered is a statement about the
+            QUESTION; not_ready is a statement about the corpus; retrieval_unavailable
+            says no embed lane is bound, so nothing was searched at all. Collapsing
+            them is the failure this endpoint exists to avoid.
+        claims:
+          type: array
+          items: { $ref: '#/components/schemas/KnowledgeClaim' }
+          description: The answer IS this list, in order. Empty unless outcome is answered.
+        corpus: { $ref: '#/components/schemas/KnowledgeAnswerCorpus' }
+        coverage: { $ref: '#/components/schemas/KnowledgeCoverage' }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }

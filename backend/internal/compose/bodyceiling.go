@@ -32,9 +32,10 @@ import (
 // the contract, so a new upload route cannot be added without appearing here.
 func uploadCeilings(limits deployconfig.UploadLimits) map[string]int64 {
 	return map[string]int64{
-		"/v1/attachments":             limits.Attachment,     // uploadAttachment
-		"/v1/imports/sources":         limits.CSVImport,      // uploadImportSource
-		"/v1/me/linkedin-connections": limits.LinkedInImport, // importLinkedInConnections
+		"/v1/attachments":                      limits.Attachment,        // uploadAttachment
+		"/v1/imports/sources":                  limits.CSVImport,         // uploadImportSource
+		"/v1/me/linkedin-connections":          limits.LinkedInImport,    // importLinkedInConnections
+		"/v1/knowledge/corpora/{id}/documents": limits.KnowledgeDocument, // uploadCorpusDocument
 	}
 }
 

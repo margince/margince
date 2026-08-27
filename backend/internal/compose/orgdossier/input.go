@@ -32,7 +32,7 @@ import (
 // no per-reader field mask on a company's values — the only masks in the tree
 // are over field HISTORY, and that map is empty — so there is no mask here to
 // launder and none to honour. Row scope is enforced; field scope does not exist
-// yet. See gradionhq/margince#4.
+// yet. See margince/margince#4.
 type Facts interface {
 	ListOrganizationProfileFields(ctx context.Context, id ids.OrganizationID) ([]crmcontracts.CompanyProfileField, error)
 	ListOrganizationFacts(ctx context.Context, id ids.OrganizationID) ([]crmcontracts.OrganizationFact, error)

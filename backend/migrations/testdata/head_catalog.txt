@@ -666,7 +666,7 @@ public.audit_log.action text NOT NULL gen=- def=-
 public.audit_log.actor_id text NOT NULL gen=- def=-
 public.audit_log.actor_type text NOT NULL gen=- def=-
 public.audit_log.after jsonb gen=- def=-
-public.audit_log.audit_log_action_check CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'archive'::text, 'merge'::text, 'promote'::text, 'restore'::text, 'export'::text, 'erase'::text, 'assign'::text, 'advance_stage'::text, 'advance_phase'::text, 'approve'::text, 'reject'::text, 'consent_grant'::text, 'consent_withdraw'::text, 'activity_relink'::text, 'record_share'::text, 'record_unshare'::text, 'resolve'::text, 'demote'::text, 'import'::text, 'import_undo'::text, 'disqualify'::text, 'anonymize'::text, 'send_email'::text, 'reset_data'::text, 'password_link_issued'::text, 'connect'::text, 'disconnect'::text, 'schedule'::text, 'reschedule'::text, 'cancel'::text, 'release'::text, 'hold'::text, 'expire'::text, 'restrict'::text, 'pin'::text, 'accrue'::text, 'pay'::text, 'publish'::text, 'pause'::text, 'resume'::text, 'close'::text, 'invite'::text, 'revoke'::text])))
+public.audit_log.audit_log_action_check CHECK ((action = ANY (ARRAY['create'::text, 'update'::text, 'archive'::text, 'merge'::text, 'promote'::text, 'restore'::text, 'export'::text, 'erase'::text, 'assign'::text, 'advance_stage'::text, 'advance_phase'::text, 'approve'::text, 'reject'::text, 'consent_grant'::text, 'consent_withdraw'::text, 'activity_relink'::text, 'record_share'::text, 'record_unshare'::text, 'resolve'::text, 'demote'::text, 'import'::text, 'import_undo'::text, 'disqualify'::text, 'anonymize'::text, 'send_email'::text, 'reset_data'::text, 'password_link_issued'::text, 'connect'::text, 'disconnect'::text, 'schedule'::text, 'reschedule'::text, 'cancel'::text, 'release'::text, 'hold'::text, 'expire'::text, 'restrict'::text, 'pin'::text, 'accrue'::text, 'pay'::text, 'publish'::text, 'pause'::text, 'resume'::text, 'close'::text, 'invite'::text, 'revoke'::text, 'delete'::text])))
 public.audit_log.audit_log_actor_type_check CHECK ((actor_type = ANY (ARRAY['human'::text, 'agent'::text, 'connector'::text, 'system'::text, 'buyer'::text])))
 public.audit_log.audit_log_on_behalf_of_fkey FOREIGN KEY (on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL (on_behalf_of)
 public.audit_log.audit_log_pkey PRIMARY KEY (id)
@@ -2125,6 +2125,72 @@ public.incumbent_connection_pkey CREATE UNIQUE INDEX incumbent_connection_pkey O
 public.incumbent_connection_singleton CREATE UNIQUE INDEX incumbent_connection_singleton ON public.incumbent_connection USING btree ((true))
 public.ix_deal_room_engagement_participant CREATE INDEX ix_deal_room_engagement_participant ON public.deal_room_engagement USING btree (participant_id, occurred_at DESC)
 public.ix_deal_room_engagement_room CREATE INDEX ix_deal_room_engagement_room ON public.deal_room_engagement USING btree (room_id, occurred_at DESC)
+public.knowledge_chunk acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.knowledge_chunk.archived_at timestamp with time zone gen=- def=-
+public.knowledge_chunk.chunk_hash text NOT NULL gen=- def=-
+public.knowledge_chunk.chunk_ix integer NOT NULL gen=- def=-
+public.knowledge_chunk.corpus_id uuid NOT NULL gen=- def=-
+public.knowledge_chunk.document_id uuid NOT NULL gen=- def=-
+public.knowledge_chunk.embed_identity text gen=- def=-
+public.knowledge_chunk.embedded_at timestamp with time zone gen=- def=-
+public.knowledge_chunk.embedding vector gen=- def=-
+public.knowledge_chunk.id uuid NOT NULL gen=- def=uuidv7()
+public.knowledge_chunk.knowledge_chunk_document_fk FOREIGN KEY (document_id) REFERENCES knowledge_document(id) ON DELETE CASCADE
+public.knowledge_chunk.knowledge_chunk_embed_pairing CHECK (((embed_identity IS NULL) = (embedding IS NULL)))
+public.knowledge_chunk.knowledge_chunk_pkey PRIMARY KEY (id)
+public.knowledge_chunk.knowledge_chunk_start_line_positive CHECK (((start_line IS NULL) OR (start_line > 0)))
+public.knowledge_chunk.start_line integer gen=- def=-
+public.knowledge_chunk.text text NOT NULL gen=- def=-
+public.knowledge_chunk_one_per_span CREATE UNIQUE INDEX knowledge_chunk_one_per_span ON public.knowledge_chunk USING btree (document_id, chunk_ix)
+public.knowledge_chunk_pkey CREATE UNIQUE INDEX knowledge_chunk_pkey ON public.knowledge_chunk USING btree (id)
+public.knowledge_chunk_retrieval CREATE INDEX knowledge_chunk_retrieval ON public.knowledge_chunk USING btree (corpus_id, embed_identity) WHERE (archived_at IS NULL)
+public.knowledge_corpus acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.knowledge_corpus.archived_at timestamp with time zone gen=- def=-
+public.knowledge_corpus.captured_by text NOT NULL gen=- def=-
+public.knowledge_corpus.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.knowledge_corpus.default_ask boolean NOT NULL gen=- def=false
+public.knowledge_corpus.description text gen=- def=-
+public.knowledge_corpus.id uuid NOT NULL gen=- def=uuidv7()
+public.knowledge_corpus.knowledge_corpus_managed_source_known CHECK (((managed_source IS NULL) OR (managed_source = 'handbook'::text)))
+public.knowledge_corpus.knowledge_corpus_min_similarity_range CHECK (((min_similarity >= (0)::double precision) AND (min_similarity <= (1)::double precision)))
+public.knowledge_corpus.knowledge_corpus_pkey PRIMARY KEY (id)
+public.knowledge_corpus.knowledge_corpus_touch CREATE TRIGGER knowledge_corpus_touch BEFORE UPDATE ON public.knowledge_corpus FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.knowledge_corpus.managed_source text gen=- def=-
+public.knowledge_corpus.min_similarity double precision NOT NULL gen=- def=0.35
+public.knowledge_corpus.name text NOT NULL gen=- def=-
+public.knowledge_corpus.reindexing boolean NOT NULL gen=- def=false
+public.knowledge_corpus.topic_statement text NOT NULL gen=- def=-
+public.knowledge_corpus.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.knowledge_corpus_one_default CREATE UNIQUE INDEX knowledge_corpus_one_default ON public.knowledge_corpus USING btree (default_ask) WHERE (default_ask AND (archived_at IS NULL))
+public.knowledge_corpus_one_per_managed_source CREATE UNIQUE INDEX knowledge_corpus_one_per_managed_source ON public.knowledge_corpus USING btree (managed_source) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))
+public.knowledge_corpus_pkey CREATE UNIQUE INDEX knowledge_corpus_pkey ON public.knowledge_corpus USING btree (id)
+public.knowledge_document acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.knowledge_document.archived_at timestamp with time zone gen=- def=-
+public.knowledge_document.byte_size bigint NOT NULL gen=- def=-
+public.knowledge_document.captured_by text NOT NULL gen=- def=-
+public.knowledge_document.checksum text NOT NULL gen=- def=-
+public.knowledge_document.chunk_count integer NOT NULL gen=- def=0
+public.knowledge_document.content_type text NOT NULL gen=- def=-
+public.knowledge_document.corpus_id uuid NOT NULL gen=- def=-
+public.knowledge_document.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.knowledge_document.filename text NOT NULL gen=- def=-
+public.knowledge_document.id uuid NOT NULL gen=- def=uuidv7()
+public.knowledge_document.ingest_detail text gen=- def=-
+public.knowledge_document.ingest_started_at timestamp with time zone gen=- def=-
+public.knowledge_document.ingest_status text NOT NULL gen=- def='queued'::text
+public.knowledge_document.knowledge_document_corpus_fk FOREIGN KEY (corpus_id) REFERENCES knowledge_corpus(id) ON DELETE RESTRICT
+public.knowledge_document.knowledge_document_detail_shape CHECK (((ingest_status = 'failed'::text) = (ingest_detail IS NOT NULL)))
+public.knowledge_document.knowledge_document_managed_source_known CHECK (((managed_source IS NULL) OR (managed_source = 'handbook'::text)))
+public.knowledge_document.knowledge_document_pkey PRIMARY KEY (id)
+public.knowledge_document.knowledge_document_status_check CHECK ((ingest_status = ANY (ARRAY['queued'::text, 'running'::text, 'done'::text, 'failed'::text])))
+public.knowledge_document.knowledge_document_touch CREATE TRIGGER knowledge_document_touch BEFORE UPDATE ON public.knowledge_document FOR EACH ROW EXECUTE FUNCTION set_updated_at()
+public.knowledge_document.managed_source text gen=- def=-
+public.knowledge_document.storage_key text NOT NULL gen=- def=-
+public.knowledge_document.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.knowledge_document_by_corpus CREATE INDEX knowledge_document_by_corpus ON public.knowledge_document USING btree (corpus_id, archived_at)
+public.knowledge_document_one_per_content CREATE UNIQUE INDEX knowledge_document_one_per_content ON public.knowledge_document USING btree (corpus_id, checksum) WHERE (archived_at IS NULL)
+public.knowledge_document_one_per_managed_page CREATE UNIQUE INDEX knowledge_document_one_per_managed_page ON public.knowledge_document USING btree (corpus_id, filename) WHERE ((managed_source IS NOT NULL) AND (archived_at IS NULL))
+public.knowledge_document_pkey CREATE UNIQUE INDEX knowledge_document_pkey ON public.knowledge_document USING btree (id)
 public.last_activity_of_deal(did uuid) secdef=false cfg=- acl=- 
   SELECT max(a.occurred_at)
     FROM activity_link l

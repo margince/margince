@@ -20,14 +20,10 @@ import (
 	"github.com/riverqueue/river"
 	"github.com/riverqueue/river/rivertype"
 
-	"github.com/margince/margince/backend/internal/compose/briefs"
-	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
 	"github.com/margince/margince/backend/internal/modules/identity"
-	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/geocode"
@@ -420,6 +416,7 @@ func addModelLaneJobs(reg *jobRegistry, pool *pgxpool.Pool, cfg JobRunnerConfig,
 	// ticked: the api enqueues the dispatcher once per confirmed reindex
 	// (jobs_embedreindex.go).
 	addEmbedReindexJobs(reg, pool, cfg.Embedder)
+	addKnowledgeIngestJobs(reg, pool, cfg.Blobstore, cfg.Embedder, log)
 	// Both refreshes read a source the deployment configures. An unconfigured
 	// one — a nil brain, an empty url, no pricing sources — leaves the worker
 	// registered and its producer proposing nothing, which is the honest
@@ -454,39 +451,4 @@ func addDatabaseOnlySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Lo
 	})
 	addAIActivitySweepJobs(reg, pool, log)
 	addBriefGenerateJobs(reg, pool, log)
-}
-
-// addBriefGenerateJobs registers the overnight Morning-Brief assembly. Its own
-// function because the workspace worker needs the brief engine and the identity
-// service, neither of which the group's other members carry.
-//
-// The engine is built WITHOUT WithL2Ranker, and that is the declared posture
-// rather than an omission: this role holds no brief_ranking model lane, so the
-// overnight run is the deterministic composite order. The model re-order stays
-// what the api role adds on a rep's explicit refresh.
-func addBriefGenerateJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
-	addDeclaredWorker[BriefGenerateArgs](reg, &briefGenerateWorker{pool: pool})
-	addDeclaredWorker[BriefGenerateWorkspaceArgs](reg, &briefGenerateWorkspaceWorker{
-		engine: briefs.NewBriefEngine(pool, people.NewStore(InstallationDB(pool))),
-		pool:   pool,
-		users:  identity.NewService(pool),
-		now:    time.Now,
-		log:    log,
-	})
-}
-
-// addAIActivitySweepJobs registers the AI-activity projection's two passes. It
-// is its own function rather than four more lines above because both workers
-// need a store the group's other members do not, and the compiler's closed args
-// set forces one addDeclaredWorker per kind anyway.
-func addAIActivitySweepJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger) {
-	db := InstallationDB(pool)
-	addDeclaredWorker[AIActivityReconcileArgs](reg, &aiActivityReconcileWorker{
-		activities: activities.NewStore(db), identity: identity.NewService(pool),
-		now: time.Now, log: log,
-	})
-	addDeclaredWorker[AIActivityRetentionArgs](reg, &aiActivityRetentionWorker{
-		projection: aiactivity.NewStore(db), identity: identity.NewService(pool),
-		now: time.Now, log: log,
-	})
 }

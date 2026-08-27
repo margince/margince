@@ -590,6 +590,7 @@ const (
 	AiActivityKindCaptureCounterpartyVerdict AiActivityKind = "capture_counterparty_verdict"
 	AiActivityKindCertJudge                  AiActivityKind = "cert_judge"
 	AiActivityKindColdStart                  AiActivityKind = "cold_start"
+	AiActivityKindCorpusAsk                  AiActivityKind = "corpus_ask"
 	AiActivityKindDealHealth                 AiActivityKind = "deal_health"
 	AiActivityKindDocumentExtract            AiActivityKind = "document_extract"
 	AiActivityKindDraftReply                 AiActivityKind = "draft_reply"
@@ -623,6 +624,8 @@ func (e AiActivityKind) Valid() bool {
 	case AiActivityKindCertJudge:
 		return true
 	case AiActivityKindColdStart:
+		return true
+	case AiActivityKindCorpusAsk:
 		return true
 	case AiActivityKindDealHealth:
 		return true
@@ -1454,6 +1457,7 @@ const (
 	AuditLogEntryActionConsentGrant       AuditLogEntryAction = "consent_grant"
 	AuditLogEntryActionConsentWithdraw    AuditLogEntryAction = "consent_withdraw"
 	AuditLogEntryActionCreate             AuditLogEntryAction = "create"
+	AuditLogEntryActionDelete             AuditLogEntryAction = "delete"
 	AuditLogEntryActionDemote             AuditLogEntryAction = "demote"
 	AuditLogEntryActionDisconnect         AuditLogEntryAction = "disconnect"
 	AuditLogEntryActionDisqualify         AuditLogEntryAction = "disqualify"
@@ -1517,6 +1521,8 @@ func (e AuditLogEntryAction) Valid() bool {
 	case AuditLogEntryActionConsentWithdraw:
 		return true
 	case AuditLogEntryActionCreate:
+		return true
+	case AuditLogEntryActionDelete:
 		return true
 	case AuditLogEntryActionDemote:
 		return true
@@ -5254,6 +5260,54 @@ func (e JobFailureState) Valid() bool {
 	case JobFailureStateDiscarded:
 		return true
 	case JobFailureStateRetryable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for KnowledgeAnswerOutcome.
+const (
+	KnowledgeAnswerOutcomeAnswered             KnowledgeAnswerOutcome = "answered"
+	KnowledgeAnswerOutcomeNotCovered           KnowledgeAnswerOutcome = "not_covered"
+	KnowledgeAnswerOutcomeNotReady             KnowledgeAnswerOutcome = "not_ready"
+	KnowledgeAnswerOutcomeRetrievalUnavailable KnowledgeAnswerOutcome = "retrieval_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the KnowledgeAnswerOutcome enum.
+func (e KnowledgeAnswerOutcome) Valid() bool {
+	switch e {
+	case KnowledgeAnswerOutcomeAnswered:
+		return true
+	case KnowledgeAnswerOutcomeNotCovered:
+		return true
+	case KnowledgeAnswerOutcomeNotReady:
+		return true
+	case KnowledgeAnswerOutcomeRetrievalUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for KnowledgeDocumentIngestStatus.
+const (
+	KnowledgeDocumentIngestStatusDone    KnowledgeDocumentIngestStatus = "done"
+	KnowledgeDocumentIngestStatusFailed  KnowledgeDocumentIngestStatus = "failed"
+	KnowledgeDocumentIngestStatusQueued  KnowledgeDocumentIngestStatus = "queued"
+	KnowledgeDocumentIngestStatusRunning KnowledgeDocumentIngestStatus = "running"
+)
+
+// Valid indicates whether the value is a known member of the KnowledgeDocumentIngestStatus enum.
+func (e KnowledgeDocumentIngestStatus) Valid() bool {
+	switch e {
+	case KnowledgeDocumentIngestStatusDone:
+		return true
+	case KnowledgeDocumentIngestStatusFailed:
+		return true
+	case KnowledgeDocumentIngestStatusQueued:
+		return true
+	case KnowledgeDocumentIngestStatusRunning:
 		return true
 	default:
 		return false
@@ -17844,6 +17898,110 @@ type JobKindHealth struct {
 	Waiting int `json:"waiting"`
 }
 
+// KnowledgeAnswer defines model for KnowledgeAnswer.
+type KnowledgeAnswer struct {
+	// Claims The answer IS this list, in order. Empty unless outcome is answered.
+	Claims *[]KnowledgeClaim `json:"claims,omitempty"`
+
+	// Corpus The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply.
+	Corpus   KnowledgeAnswerCorpus `json:"corpus"`
+	Coverage KnowledgeCoverage     `json:"coverage"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured
+	// or the workspace's AI budget is exhausted. Never silently interchangeable: a
+	// reader deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// Outcome The four are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all. Collapsing them is the failure this endpoint exists to avoid.
+	Outcome KnowledgeAnswerOutcome `json:"outcome"`
+}
+
+// KnowledgeAnswerOutcome The four are not interchangeable. not_covered is a statement about the QUESTION; not_ready is a statement about the corpus; retrieval_unavailable says no embed lane is bound, so nothing was searched at all. Collapsing them is the failure this endpoint exists to avoid.
+type KnowledgeAnswerOutcome string
+
+// KnowledgeAnswerCorpus The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply.
+type KnowledgeAnswerCorpus struct {
+	Id             openapi_types.UUID `json:"id"`
+	Name           string             `json:"name"`
+	TopicStatement string             `json:"topic_statement"`
+}
+
+// KnowledgeClaim defines model for KnowledgeClaim.
+type KnowledgeClaim struct {
+	ChunkId openapi_types.UUID `json:"chunk_id"`
+
+	// Column The 1-based column on that line, counted in CHARACTERS rather than bytes: it is read by a person counting across a line, not by a program seeking in a file. Absent whenever `line` is.
+	Column       *int               `json:"column,omitempty"`
+	DocumentId   openapi_types.UUID `json:"document_id"`
+	DocumentName string             `json:"document_name"`
+
+	// Line The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none.
+	Line *int `json:"line,omitempty"`
+
+	// Quote A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist.
+	Quote string `json:"quote"`
+
+	// Text One sentence of the answer. Absent when generated_by is deterministic — then the quote stands on its own and no prose was written.
+	Text *string `json:"text,omitempty"`
+}
+
+// KnowledgeCorpus defines model for KnowledgeCorpus.
+type KnowledgeCorpus struct {
+	Coverage  KnowledgeCoverage `json:"coverage"`
+	CreatedAt time.Time         `json:"created_at"`
+
+	// DefaultAsk The corpus the command palette's ask lands on. At most one per workspace.
+	DefaultAsk  bool               `json:"default_ask"`
+	Description *string            `json:"description,omitempty"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// MinSimilarity The grounding floor. Below it a question is refused before any model call.
+	MinSimilarity float64 `json:"min_similarity"`
+	Name          string  `json:"name"`
+
+	// Reindexing A re-embed is in flight; every ask answers not_ready until it finishes.
+	Reindexing *bool `json:"reindexing,omitempty"`
+
+	// TopicStatement What this corpus covers, in the workspace's own words. Quoted back in the refusal when a question falls below the grounding floor, so it is read by a person at their least patient moment — write it as a sentence, not a label.
+	TopicStatement string `json:"topic_statement"`
+}
+
+// KnowledgeCorpusList Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it.
+type KnowledgeCorpusList struct {
+	Items []KnowledgeCorpus `json:"items"`
+}
+
+// KnowledgeCoverage defines model for KnowledgeCoverage.
+type KnowledgeCoverage struct {
+	ChunksEmbedded int `json:"chunks_embedded"`
+	ChunksTotal    int `json:"chunks_total"`
+	DocumentsTotal int `json:"documents_total"`
+}
+
+// KnowledgeDocument defines model for KnowledgeDocument.
+type KnowledgeDocument struct {
+	ByteSize    int64              `json:"byte_size"`
+	ChunkCount  *int               `json:"chunk_count,omitempty"`
+	ContentType string             `json:"content_type"`
+	CorpusId    openapi_types.UUID `json:"corpus_id"`
+	CreatedAt   time.Time          `json:"created_at"`
+	Filename    string             `json:"filename"`
+	Id          openapi_types.UUID `json:"id"`
+
+	// IngestDetail Why it failed, in words the uploader can act on. Null unless failed.
+	IngestDetail *string                       `json:"ingest_detail,omitempty"`
+	IngestStatus KnowledgeDocumentIngestStatus `json:"ingest_status"`
+}
+
+// KnowledgeDocumentIngestStatus defines model for KnowledgeDocument.IngestStatus.
+type KnowledgeDocumentIngestStatus string
+
+// KnowledgeDocumentList Every document filed in one corpus, whatever state its ingest reached.
+type KnowledgeDocumentList struct {
+	Items []KnowledgeDocument `json:"items"`
+}
+
 // Lead A thin, segregated prospect. Mirrors the `lead` table. NO organization FK.
 type Lead struct {
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
@@ -25088,6 +25246,9 @@ type NotFound = Problem
 // PasswordChangeRequired RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type PasswordChangeRequired = Problem
 
+// PayloadTooLarge RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type PayloadTooLarge = Problem
+
 // PermissionDenied RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type PermissionDenied = Problem
 
@@ -25096,6 +25257,9 @@ type RetentionHeld = Problem
 
 // Unauthorized RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type Unauthorized = Problem
+
+// UnsupportedMediaType RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type UnsupportedMediaType = Problem
 
 // ValidationError RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type ValidationError = Problem
@@ -26511,6 +26675,34 @@ type UploadImportSourceMultipartBody struct {
 	// match — so a file of duplicates produces a review queue, not a silent
 	// merge.
 	Object ImportObject `json:"object"`
+}
+
+// CreateCorpusJSONBody defines parameters for CreateCorpus.
+type CreateCorpusJSONBody struct {
+	DefaultAsk     *bool    `json:"default_ask,omitempty"`
+	Description    *string  `json:"description,omitempty"`
+	MinSimilarity  *float64 `json:"min_similarity,omitempty"`
+	Name           string   `json:"name"`
+	TopicStatement string   `json:"topic_statement"`
+}
+
+// UpdateCorpusJSONBody defines parameters for UpdateCorpus.
+type UpdateCorpusJSONBody struct {
+	DefaultAsk     *bool    `json:"default_ask,omitempty"`
+	Description    *string  `json:"description,omitempty"`
+	MinSimilarity  *float64 `json:"min_similarity,omitempty"`
+	Name           *string  `json:"name,omitempty"`
+	TopicStatement *string  `json:"topic_statement,omitempty"`
+}
+
+// AskCorpusJSONBody defines parameters for AskCorpus.
+type AskCorpusJSONBody struct {
+	Question string `json:"question"`
+}
+
+// UploadCorpusDocumentMultipartBody defines parameters for UploadCorpusDocument.
+type UploadCorpusDocumentMultipartBody struct {
+	File openapi_types.File `json:"file"`
 }
 
 // CreateLeadDisqualifyReasonParams defines parameters for CreateLeadDisqualifyReason.
@@ -29456,6 +29648,18 @@ type SetGoogleAppJSONRequestBody = GoogleAppInput
 
 // UpdateInstallationSettingsJSONRequestBody defines body for UpdateInstallationSettings for application/json ContentType.
 type UpdateInstallationSettingsJSONRequestBody = UpdateInstallationSettingsRequest
+
+// CreateCorpusJSONRequestBody defines body for CreateCorpus for application/json ContentType.
+type CreateCorpusJSONRequestBody CreateCorpusJSONBody
+
+// UpdateCorpusJSONRequestBody defines body for UpdateCorpus for application/json ContentType.
+type UpdateCorpusJSONRequestBody UpdateCorpusJSONBody
+
+// AskCorpusJSONRequestBody defines body for AskCorpus for application/json ContentType.
+type AskCorpusJSONRequestBody AskCorpusJSONBody
+
+// UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
+type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
 
 // CreateLeadDisqualifyReasonJSONRequestBody defines body for CreateLeadDisqualifyReason for application/json ContentType.
 type CreateLeadDisqualifyReasonJSONRequestBody = CreateLeadDisqualifyReasonRequest
@@ -38054,6 +38258,36 @@ type ServerInterface interface {
 	// What this installation still has to be configured with before it can be used.
 	// (GET /installation/setup)
 	GetInstallationSetup(w http.ResponseWriter, r *http.Request)
+	// The document corpora this workspace has defined.
+	// (GET /knowledge/corpora)
+	ListCorpora(w http.ResponseWriter, r *http.Request)
+	// Define a document corpus.
+	// (POST /knowledge/corpora)
+	CreateCorpus(w http.ResponseWriter, r *http.Request)
+	// Archive a corpus and everything filed in it.
+	// (DELETE /knowledge/corpora/{id})
+	ArchiveCorpus(w http.ResponseWriter, r *http.Request, id Id)
+	// One corpus and how much of it is searchable.
+	// (GET /knowledge/corpora/{id})
+	ReadCorpus(w http.ResponseWriter, r *http.Request, id Id)
+	// Edit a corpus — its words, its floor, or which one the palette asks.
+	// (PATCH /knowledge/corpora/{id})
+	UpdateCorpus(w http.ResponseWriter, r *http.Request, id Id)
+	// Ask this corpus a question, answered only from its documents.
+	// (POST /knowledge/corpora/{id}/ask)
+	AskCorpus(w http.ResponseWriter, r *http.Request, id Id)
+	// The documents filed in this corpus, and how far each one's ingest got.
+	// (GET /knowledge/corpora/{id}/documents)
+	ListCorpusDocuments(w http.ResponseWriter, r *http.Request, id Id)
+	// Add a document to this corpus.
+	// (POST /knowledge/corpora/{id}/documents)
+	UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Delete a document, its chunks, its vectors and its stored file.
+	// (DELETE /knowledge/documents/{id})
+	DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Download a document's own bytes.
+	// (GET /knowledge/documents/{id})
+	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
 	// List disqualification reasons, active and inactive, in display order.
 	// (GET /lead-disqualify-reasons)
 	ListLeadDisqualifyReasons(w http.ResponseWriter, r *http.Request)
@@ -40115,6 +40349,66 @@ func (_ Unimplemented) UpdateInstallationSettings(w http.ResponseWriter, r *http
 // What this installation still has to be configured with before it can be used.
 // (GET /installation/setup)
 func (_ Unimplemented) GetInstallationSetup(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The document corpora this workspace has defined.
+// (GET /knowledge/corpora)
+func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Define a document corpus.
+// (POST /knowledge/corpora)
+func (_ Unimplemented) CreateCorpus(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive a corpus and everything filed in it.
+// (DELETE /knowledge/corpora/{id})
+func (_ Unimplemented) ArchiveCorpus(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// One corpus and how much of it is searchable.
+// (GET /knowledge/corpora/{id})
+func (_ Unimplemented) ReadCorpus(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Edit a corpus — its words, its floor, or which one the palette asks.
+// (PATCH /knowledge/corpora/{id})
+func (_ Unimplemented) UpdateCorpus(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Ask this corpus a question, answered only from its documents.
+// (POST /knowledge/corpora/{id}/ask)
+func (_ Unimplemented) AskCorpus(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The documents filed in this corpus, and how far each one's ingest got.
+// (GET /knowledge/corpora/{id}/documents)
+func (_ Unimplemented) ListCorpusDocuments(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Add a document to this corpus.
+// (POST /knowledge/corpora/{id}/documents)
+func (_ Unimplemented) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Delete a document, its chunks, its vectors and its stored file.
+// (DELETE /knowledge/documents/{id})
+func (_ Unimplemented) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Download a document's own bytes.
+// (GET /knowledge/documents/{id})
+func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -50167,6 +50461,302 @@ func (siw *ServerInterfaceWrapper) GetInstallationSetup(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetInstallationSetup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCorpora operation middleware
+func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCorpora(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// CreateCorpus operation middleware
+func (siw *ServerInterfaceWrapper) CreateCorpus(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.CreateCorpus(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveCorpus operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveCorpus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveCorpus(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReadCorpus operation middleware
+func (siw *ServerInterfaceWrapper) ReadCorpus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReadCorpus(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UpdateCorpus operation middleware
+func (siw *ServerInterfaceWrapper) UpdateCorpus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UpdateCorpus(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AskCorpus operation middleware
+func (siw *ServerInterfaceWrapper) AskCorpus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AskCorpus(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListCorpusDocuments operation middleware
+func (siw *ServerInterfaceWrapper) ListCorpusDocuments(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListCorpusDocuments(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// UploadCorpusDocument operation middleware
+func (siw *ServerInterfaceWrapper) UploadCorpusDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.UploadCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DeleteCorpusDocument operation middleware
+func (siw *ServerInterfaceWrapper) DeleteCorpusDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DeleteCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadCorpusDocument operation middleware
+func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadCorpusDocument(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -64250,6 +64840,36 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/installation/setup", wrapper.GetInstallationSetup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/knowledge/corpora", wrapper.ListCorpora)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/knowledge/corpora", wrapper.CreateCorpus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/knowledge/corpora/{id}", wrapper.ArchiveCorpus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/knowledge/corpora/{id}", wrapper.ReadCorpus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/knowledge/corpora/{id}", wrapper.UpdateCorpus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/knowledge/corpora/{id}/ask", wrapper.AskCorpus)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/knowledge/corpora/{id}/documents", wrapper.ListCorpusDocuments)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/knowledge/corpora/{id}/documents", wrapper.UploadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/knowledge/documents/{id}", wrapper.DeleteCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-disqualify-reasons", wrapper.ListLeadDisqualifyReasons)

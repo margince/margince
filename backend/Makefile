@@ -543,7 +543,7 @@ arch-lint: ## Import-boundary lint (go-arch-lint over .go-arch-lint.yml)
 # build/composition/ beside the merged contracts (frontend/extensions.gen.ts
 # today, the composed client types and docs as their slices land) — the same
 # split Task 11's tsconfig alias makes for TypeScript.
-gen: mcp-apps-vocab ## Regenerate everything derived from the contract
+gen: mcp-apps-vocab handbook-embed ## Regenerate everything derived from the contract
 	$(GOWORK_ROOT) $(GO) run ./tools/gen-composition
 	$(GOWORK_ROOT) $(GO) generate ./internal/contracts
 	$(GOWORK_ROOT) $(GO) generate ./pkg/extension/crm
@@ -560,12 +560,17 @@ drift: gen ## Fail when any generated file drifted from the contract
 	# gen regenerates the committed per-unit manifests too (via composition);
 	# without them here a stale or hand-edited extensions/<name>/manifest.generated.json
 	# would be silently healed by the mutating gen step instead of failing.
-	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json
+	git diff --exit-code -- '*_gen.go' internal/contracts/ ../config/margince.schema.json '../extensions/*/manifest.generated.json' internal/modules/agents/apps/forbidden.json 'internal/modules/knowledge/handbook/*.md'
 	# git diff ignores UNTRACKED files, so a new (or gen-recreated after a
 	# committed deletion) manifest that was never `git add`ed would slip past
 	# the diff above — fail explicitly when a generated manifest is uncommitted.
 	@u="$$(git ls-files --others --exclude-standard -- '../extensions/*/manifest.generated.json')"; \
 		[ -z "$$u" ] || { echo "drift: uncommitted generated manifest(s):" >&2; echo "$$u" >&2; exit 1; }
+	# Same blind spot, same guard: a handbook page copied in by handbook-embed
+	# and never `git add`ed is untracked, so the diff above sees nothing while
+	# the binary would ship a page no reviewer read.
+	@u="$$(git ls-files --others --exclude-standard -- 'internal/modules/knowledge/handbook/*.md')"; \
+		[ -z "$$u" ] || { echo "drift: uncommitted embedded handbook page(s):" >&2; echo "$$u" >&2; exit 1; }
 
 # The MCP App admission vocabulary is AUTHORED in frontend/src/mcp-apps, where
 # the build-time validator imports it, and copied here because go:embed cannot
@@ -576,6 +581,20 @@ drift: gen ## Fail when any generated file drifted from the contract
 # drifting, and `drift` fails a stale one.
 mcp-apps-vocab: ## Copy the MCP App admission vocabulary in from the frontend
 	cp ../frontend/src/mcp-apps/forbidden.json internal/modules/agents/apps/forbidden.json
+
+# The operator handbook is AUTHORED in docs/handbook and copied here for the
+# same reason as the vocabulary above: go:embed cannot reach outside its own
+# package directory. The copy is committed and shipped inside the binary,
+# because this is the corpus every installation has and object storage is
+# optional — a handbook that arrived by upload would be missing from exactly the
+# installations with nothing else to ask.
+#
+# rsync --delete, not cp: a page RENAMED or removed in docs/ must disappear
+# here too. A plain copy leaves the old page embedded, and an installation would
+# keep answering out of a page the handbook no longer has.
+# TestTheEmbeddedHandbookMatchesTheDocs fails in both directions.
+handbook-embed: ## Copy the operator handbook in from docs/handbook
+	rsync -a --delete --include='*.md' --exclude='*' ../docs/handbook/ internal/modules/knowledge/handbook/
 
 # Scaffolding, not generation: gen-workflow writes a write-once handler +
 # test stub for a developer to fill in (AC-W1) and is never part of

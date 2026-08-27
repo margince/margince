@@ -139,6 +139,7 @@ type Server struct {
 	accountDraftHandlers
 	financeHandlers
 	integrationsHandlers
+	knowledgeHandlers
 	// The personal agent-activity read: what the scheduled agent is doing for
 	// the caller now, and what it settled for them today. It lives in compose
 	// because it reads the agents module's run tables without importing a

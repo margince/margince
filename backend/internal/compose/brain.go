@@ -69,6 +69,12 @@ type ModelPath struct {
 	// proposed from the deal's own timeline. Its floor is the generic "agree
 	// the next step" task, so a role without this lane still answers the card.
 	DealHealth completer
+	// CorpusAsk writes the prose for one bounded document corpus asked in free
+	// text. Its floor is the retrieved passages themselves, quoted with their
+	// citations and no summary over them — which is a genuinely useful answer
+	// rather than a degraded one, because the grounded part of a grounded
+	// answer was never the prose.
+	CorpusAsk completer
 	// GrowthFit judges how well one company fits what we sell. It is the only
 	// company-view lane whose absence changes the ANSWER rather than the prose:
 	// its floor abstains, because grading is not a restatement of recorded
@@ -240,6 +246,7 @@ func modelPathForRouter(router *ai.Router, companyContext *companyContextProvide
 		BriefRanking:               brain(ai.TaskBriefRanking),
 		Summarize:                  brain(ai.TaskSummarize),
 		DealHealth:                 brain(ai.TaskDealHealth),
+		CorpusAsk:                  brain(ai.TaskCorpusAsk),
 		GrowthFit:                  brain(ai.TaskGrowthFit),
 		DraftReply:                 brain(ai.TaskDraftReply),
 		OfferDraft:                 brain(ai.TaskOfferDraft),

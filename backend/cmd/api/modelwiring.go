@@ -197,6 +197,8 @@ func jobEnqueueOptions(pool *pgxpool.Pool, logger *slog.Logger, modelPath *compo
 		deepRead, compose.WithVoiceBuildEnqueue(inserter), compose.WithRateRefresh(inserter),
 		compose.WithTranscriptRead(inserter),
 		compose.WithDocumentRead(inserter),
+		compose.WithKnowledgeIngest(inserter),
+		knowledgeAskOption(modelPath, logger),
 		// An address that lands queues a coordinate lookup. The api role only
 		// ENQUEUES — the provider lives on the worker (JobRunnerConfig.Geocoder)
 		// — and that split is what keeps the single-requester rule enforceable:
@@ -223,4 +225,19 @@ func embedReindexOption(pool *pgxpool.Pool, modelPath *compose.ModelPath, logger
 		router = modelPath.Router()
 	}
 	return compose.WithEmbedReindex(router, inserter), nil
+}
+
+// knowledgeAskOption wires the corpus ask over whatever this role resolved: the
+// retrieval embed lane, and the chat lane that writes the prose over it.
+//
+// Both may be absent and neither absence is an error. With no embed lane the
+// ask reports retrieval_unavailable — nothing was searched — and with no chat
+// lane it answers the retrieved passages themselves. The option is always
+// applied, because the endpoint's 501 is for an installation that composed no
+// retrieval AT ALL, not for one whose lanes are unconfigured.
+func knowledgeAskOption(modelPath *compose.ModelPath, log *slog.Logger) compose.Option {
+	if modelPath == nil {
+		return compose.WithCorpusAsk(nil, nil, log)
+	}
+	return compose.WithCorpusAsk(modelPath.Embedder, modelPath.CorpusAsk, log)
 }

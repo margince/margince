@@ -18,6 +18,8 @@ const (
 	TaskCertJudge Task = "cert_judge"
 	// TaskColdStart is Four sites, not one: three conversational onboarding lanes plus the evidence-extraction pass the read-back rides. The extraction site is the consequential one and had no name before ADR-0074.
 	TaskColdStart Task = "cold_start"
+	// TaskCorpusAsk is corpus_ask — one bounded document corpus, asked in free text and answered only from what the workspace filed in it. Everything a REFUSAL rests on is decided before this task is reached: readiness, the embed binding, and the grounding floor are settled deterministically, so the model is asked only when passages already cleared the floor. Its whole job is prose, and its answer is a list of claims each carrying a citation and a verbatim quote checked against the retrieved text — a claim whose quote is not found is dropped, and an answer with no surviving claim is not_covered. The ladder leads premium as a PREFERENCE and not a contract, because the guardrail is verbatim quoting and cheaper tiers paraphrase; a demoted rung is not trusted, it is checked like any other and falls back only if it actually fails. A missing chat lane, or a reply the guardrail refuses, degrades to the retrieved passages themselves with generated_by saying deterministic — deal_health's rule, for deal_health's reason, and honest because the grounded part of a grounded answer was never the prose. Over budget is NOT a separate outcome: an interactive task is never refused on budget, it is pinned to the on-box rung and asked, and whichever answer survives the quote check is what generated_by reports. What is invariant, and what the test asserts, is narrower: an over-budget ask never refuses and never spends a cloud rung.
+	TaskCorpusAsk Task = "corpus_ask"
 	// TaskDealHealth is deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its health factors with the sentence behind each, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever.
 	TaskDealHealth Task = "deal_health"
 	// TaskDocumentExtract is read ONE attached document — a scanned form, an invoice, an order confirmation — for the four deal facts a human may then accept onto the deal (records-depth RD-PARAM-N-3), each carrying the quote it was read from. premium-only BY CONTRACT for site_extract's reason and one of its own: a rung that cannot carry the document is not a degraded answer to this question, it is a different question, so there is no rung to degrade to. no_payload BY CONTRACT: a scanned contract or invoice is exactly the content that must never reach ai_call_payload, whatever the deployment's capture posture says. A reading takes seconds and can fail, so it is a durable record its surface polls (records-depth RD-DDL-4), never work done inside the request that asks for it.
@@ -77,7 +79,7 @@ const (
 // TaskContractHash is the sha256 of api/ai-tasks.yaml at generation
 // time: a build fingerprint the cert runner can compare against a
 // freshly hashed contract file to catch a stale generated table.
-const TaskContractHash = "1f902b4ff645634d1ac303ff457ee7ad1ad1642be29bc169ed0ead2228c25e78"
+const TaskContractHash = "30bbf30093d57ed4d15f5bb5a002889e0e49bac09ed3bc6dcd346854b1d7a42f"
 
 // AllTasks returns every contract task, sorted — the completeness
 // check a certification run walks to prove it covers every routed
@@ -90,6 +92,7 @@ func AllTasks() []Task {
 		TaskCaptureCounterpartyVerdict,
 		TaskCertJudge,
 		TaskColdStart,
+		TaskCorpusAsk,
 		TaskDealHealth,
 		TaskDocumentExtract,
 		TaskDraftReply,
@@ -119,6 +122,7 @@ var taskLadders = map[Task][]Tier{
 	TaskCaptureCounterpartyVerdict: {TierLocalSmall, TierCheapCloud},
 	TaskCertJudge:                  {TierPremium, TierCheapCloud},
 	TaskColdStart:                  {TierCheapCloud, TierPremium},
+	TaskCorpusAsk:                  {TierPremium},
 	TaskDealHealth:                 {TierCheapCloud, TierPremium},
 	TaskDocumentExtract:            {TierPremium},
 	TaskDraftReply:                 {TierCheapCloud, TierPremium},
@@ -157,6 +161,7 @@ var taskExecutionModes = map[Task]ExecutionMode{
 	TaskCaptureCounterpartyVerdict: ExecutionModeBackground,
 	TaskCertJudge:                  ExecutionModeBackground,
 	TaskColdStart:                  ExecutionModeInteractive,
+	TaskCorpusAsk:                  ExecutionModeInteractive,
 	TaskDealHealth:                 ExecutionModeInteractive,
 	TaskDocumentExtract:            ExecutionModeBackground,
 	TaskDraftReply:                 ExecutionModeInteractive,
@@ -202,6 +207,7 @@ var taskStatus = map[Task]string{
 	TaskCaptureCounterpartyVerdict: "shipped",
 	TaskCertJudge:                  "shipped",
 	TaskColdStart:                  "shipped",
+	TaskCorpusAsk:                  "shipped",
 	TaskDealHealth:                 "shipped",
 	TaskDocumentExtract:            "shipped",
 	TaskDraftReply:                 "shipped",
@@ -261,6 +267,9 @@ var taskSites = map[Task][]Site{
 		{Name: "sitereadmessage", Kind: "multi_turn"},
 		{Name: "acts", Kind: "multi_turn"},
 		{Name: "field_extract", Kind: "one_shot"},
+	},
+	TaskCorpusAsk: {
+		{Name: "corpus_ask", Kind: "one_shot"},
 	},
 	TaskDealHealth: {
 		{Name: "deal_status", Kind: "one_shot"},
@@ -372,6 +381,7 @@ var taskCompanyContext = map[Task]CompanyContextPolicy{
 	TaskCaptureCounterpartyVerdict: {TokenBudget: 0, Conditional: false},
 	TaskCertJudge:                  {TokenBudget: 0, Conditional: false},
 	TaskColdStart:                  {TokenBudget: 0, Conditional: false},
+	TaskCorpusAsk:                  {TokenBudget: 0, Conditional: false},
 	TaskDealHealth:                 {TokenBudget: 0, Conditional: false},
 	TaskDocumentExtract:            {TokenBudget: 0, Conditional: false},
 	TaskDraftReply:                 {Scopes: []string{"positioning", "sales", "proof", "market"}, TokenBudget: 1400, Conditional: false},

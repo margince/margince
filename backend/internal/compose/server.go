@@ -30,6 +30,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/finance"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/knowledge"
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -150,6 +151,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// api role's WithSchemaPool rebuilds this over the real pool.
 		customfieldsHandlers: customfields.NewHandlers(pool, nil),
 		quotasHandlers:       quotas.NewHandlers(InstallationDB(pool), identity.BaseCurrencyOf),
+		knowledgeHandlers:    knowledgeHandlers{module: knowledge.NewHandlers(InstallationDB(pool)).WithUploadLimit(limits.KnowledgeDocument)},
 		// The personal agent-activity read. Plain time.Now, NOT time.Now().UTC():
 		// the store bounds "today" at midnight in the clock's own location, and a
 		// UTC clock would name the wrong day on a non-UTC installation for the

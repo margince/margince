@@ -2694,7 +2694,6 @@ export const vi = {
   "explain.sources": "Các dòng nguồn",
 
   "ai.sub": "mang Agent của riêng bạn — được quản trị bằng hợp đồng hai bậc",
-  "ai.carriedQuestion": "Câu hỏi của bạn",
   "ai.tiers": "Một Agent được phép làm gì",
   "ai.tierAutoExecute": "Đọc và soạn nháp chạy ngay.",
   "ai.tierAutoExecuteDetail":
@@ -4845,6 +4844,60 @@ export const vi = {
   "settings.tab.capture": "Thu thập",
   "settings.tab.data-model": "Mô hình dữ liệu",
   "settings.tab.ai": "AI",
+  "settings.tab.knowledge": "Tri thức",
+  "corpusAsk.title": "Hỏi tài liệu của bạn",
+  "corpusAsk.sub":
+    "Một câu hỏi bằng lời của bạn, chỉ được trả lời từ một bộ tài liệu mà tổ chức này đã nộp. Điều bộ đó không bao gồm sẽ bị từ chối thay vì đoán, và mỗi câu đều dẫn đoạn văn mà nó dựa vào.",
+  "corpusAsk.whichSet": "Bộ nào",
+  "corpusAsk.question": "Câu hỏi của bạn",
+  "corpusAsk.submit": "Hỏi",
+  "corpusAsk.byModel": "Được viết từ các đoạn bên dưới",
+  "corpusAsk.atLine": "dòng {line}, cột {column}",
+  "corpusAsk.byPassages": "Chính các đoạn văn — không ai viết bản tóm tắt",
+  "corpusAsk.notReady":
+    "Bộ này chưa đọc xong — {embedded} trên {total} đoạn có thể tìm kiếm. Câu hỏi của bạn không có gì sai; hãy thử lại sau ít phút.",
+  "corpusAsk.retrievalUnavailable":
+    "Không có gì được tìm: bản cài đặt này chưa cấu hình chỉ mục tìm kiếm, nên không thể xem tài liệu. Đây là vấn đề cài đặt, không phải do câu hỏi của bạn.",
+  "corpusAsk.notCovered.title": "Bộ này không bao gồm",
+  "corpusAsk.notCovered.body":
+    "{name} đã được tìm toàn bộ và không có gì đủ gần để trả lời. Bộ này bao gồm:",
+  "knowledge.title": "Bộ tài liệu",
+  "knowledge.sub":
+    "Những tập văn bản mà tổ chức này có thể được hỏi. Câu trả lời chỉ đến từ những gì đã nộp ở đây; câu hỏi nằm ngoài phạm vi sẽ bị từ chối thay vì đoán.",
+  "knowledge.withheld": "Bạn không được xem có những bộ tài liệu nào.",
+  "knowledge.coverage":
+    "{documents} tài liệu · {embedded} trên {total} đoạn có thể tìm kiếm",
+  "knowledge.reindexing":
+    "Bộ này đang được đọc lại sau khi cách lập chỉ mục văn bản thay đổi. Câu hỏi sẽ báo chưa sẵn sàng cho đến khi xong; không mất gì cả.",
+  "knowledge.showDocuments": "Hiện tài liệu",
+  "knowledge.hideDocuments": "Ẩn tài liệu",
+  "knowledge.documents": "Tài liệu",
+  "knowledge.noDocuments": "Chưa nộp gì ở đây.",
+  "knowledge.archive": "Lưu trữ bộ",
+  "knowledge.archiveConfirm.title": "Lưu trữ bộ tài liệu này?",
+  "knowledge.archiveConfirm.body":
+    "Bộ này và mọi thứ trong đó sẽ không còn tìm kiếm được. Không có gì bị hủy.",
+  "knowledge.deleteDocument": "Xóa",
+  "knowledge.deleteConfirm.title": "Xóa tài liệu này?",
+  "knowledge.deleteConfirm.body":
+    "Tệp, văn bản rút ra từ nó và chỉ mục tìm kiếm dựng trên nó đều bị hủy. Không thể hoàn tác.",
+  "knowledge.ingest.queued": "Đang chờ đọc",
+  "knowledge.ingest.running": "Đang đọc",
+  "knowledge.ingest.done": "Tìm kiếm được",
+  "knowledge.ingest.failed": "Không đọc được",
+  "knowledge.upload.label": "Thêm tài liệu",
+  "knowledge.upload.hint":
+    "Văn bản thuần, Markdown, CSV hoặc JSON. Ở đây không có bộ đọc PDF hay Word; tệp như vậy sẽ bị từ chối thay vì nộp rỗng.",
+  "knowledge.upload.empty": "Kéo tệp văn bản vào đây, hoặc chọn một tệp",
+  "knowledge.upload.submit_other": "Thêm {count} tài liệu",
+  "knowledge.upload.refused": "{filename} chưa được thêm: {message}",
+  "knowledge.upload.submit_one": "Thêm tài liệu",
+  "knowledge.new.title": "Bộ tài liệu mới",
+  "knowledge.new.name": "Tên",
+  "knowledge.new.topic": "Bộ này bao gồm những gì",
+  "knowledge.new.topicHint":
+    "Viết một câu, đừng viết nhãn. Câu này được trích lại cho người hỏi điều bộ này không bao gồm — họ đọc nó vào lúc kém kiên nhẫn nhất.",
+  "knowledge.new.submit": "Tạo bộ",
   "settings.tab.privacy": "Quyền riêng tư & kiểm toán",
   "settings.tab.capture-activity": "Hoạt động thu thập",
   "captureActivity.title": "Hoạt động thu thập",

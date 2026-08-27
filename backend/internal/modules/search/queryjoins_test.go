@@ -667,7 +667,13 @@ func TestAJoinEdgeIsGatedOnTheObjectThatGovernsTheEdge(t *testing.T) {
 // may not import a sibling to check — so the list is read off its source, the
 // same way the join-table census reads the migrations.
 func TestEveryJoinTableThatIsAnRBACObjectDeclaresIt(t *testing.T) {
-	body, err := os.ReadFile(filepath.Join("..", "identity", "internal", "policy", "policy.go"))
+	// The whole PACKAGE DIRECTORY, not one file in it. Both derivations below
+	// live in identity's policy package, but which file each sits in is that
+	// package's business: splitting one file in two under the size ceiling is a
+	// refactor, and it must not decide whether this gate can see its subject.
+	// Reading a single named file makes the gate fail — or, worse, half-read —
+	// on a move that changed nothing it governs.
+	body, err := policyPackageSource(filepath.Join("..", "identity", "internal", "policy"))
 	if err != nil {
 		t.Fatalf("reading identity's object list: %v", err)
 	}
@@ -709,4 +715,32 @@ func TestEveryJoinTableThatIsAnRBACObjectDeclaresIt(t *testing.T) {
 				"grant no role can hold", join.table, join.object)
 		}
 	}
+}
+
+// policyPackageSource concatenates every non-test source file in a package
+// directory, so a declaration this gate derives from is found wherever in the
+// package it lives. An empty read is an error rather than an empty answer: a
+// gate that reads nothing and reports PASS has failed in the one direction
+// nothing notices.
+func policyPackageSource(dir string) ([]byte, error) {
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		return nil, fmt.Errorf("reading %s: %w", dir, err)
+	}
+	var source []byte
+	for _, entry := range entries {
+		name := entry.Name()
+		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			continue
+		}
+		body, err := os.ReadFile(filepath.Join(dir, name))
+		if err != nil {
+			return nil, fmt.Errorf("reading %s: %w", name, err)
+		}
+		source = append(source, body...)
+	}
+	if len(source) == 0 {
+		return nil, fmt.Errorf("no non-test source in %s; the package this gate derives from has moved", dir)
+	}
+	return source, nil
 }

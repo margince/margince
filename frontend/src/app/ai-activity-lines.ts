@@ -130,6 +130,7 @@ export const ACTIVITY_LINE: Readonly<
 
   growth_fit: WATCHED_BY_THE_ASKER,
   cold_start: WATCHED_BY_THE_ASKER,
+  corpus_ask: WATCHED_BY_THE_ASKER,
 
   // The weekly retrospective's sentence. A per-rep occurrence a rep can see —
   // it runs under their own principal over their own week — so it gets real

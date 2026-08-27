@@ -670,6 +670,23 @@ kinds:
       JobRunnerConfig field), because an unbound lane seeds no binding marker
       and there is nothing to heal a row against.
 
+  knowledge_ingest:
+    role: worker
+    go_type: KnowledgeIngestArgs
+    queue: ai_capture
+    timeout:
+      value: 15m
+      reason: >-
+        Bounded by the per-corpus passage ceiling rather than by the file: the
+        work is chunking plus a batched embed walk, and the corpus ceiling is the
+        most any one document can contribute. A document that cannot finish
+        inside that is a document the ceiling should have refused.
+    opts_owner: caller
+    cadence: on_demand
+    args:
+      Workspace: id
+      DocumentID: id
+
   embed_reindex:
     role: worker
     go_type: EmbedReindexArgs

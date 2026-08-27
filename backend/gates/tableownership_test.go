@@ -333,7 +333,12 @@ var tableOwners = map[string]string{
 	// customfields (the governed add-field engine's catalog)
 	"custom_field": "internal/modules/customfields",
 	// quotas (RD-T06: owner-XOR-team revenue targets)
-	"quota":                "internal/modules/quotas",
+	"quota": "internal/modules/quotas",
+	// knowledge (the asked document corpus; the chunk is a derived artifact of
+	// its document and carries no audit identity of its own)
+	"knowledge_corpus":     "internal/modules/knowledge",
+	"knowledge_document":   "internal/modules/knowledge",
+	"knowledge_chunk":      "internal/modules/knowledge",
 	"webhook_subscription": "internal/modules/webhooks",
 	"webhook_delivery":     "internal/modules/webhooks",
 	// comms (outbound delivery machinery; the activity row is the

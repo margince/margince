@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/platform/agentquota"
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/deployconfig"
 	"github.com/margince/margince/backend/internal/platform/events"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -44,6 +45,46 @@ import (
 // need the installation's workspace to exist, and both must land before the server
 // is assembled, which loads the transport directory from the rows the second one
 // writes.
+// boundPool opens the api's pool and proves it connects as a role row-level
+// security binds, before anything can read or write through it.
+//
+// One function because the two must not be separable: a pool connecting as the
+// wrong role serves every tenant's rows to every request, and nothing later in
+// the boot would say so. A caller that could obtain the pool without the
+// assertion is a caller that will eventually do exactly that.
+//
+// The pool is closed on a failed assertion rather than handed back for the
+// caller to close, so a boot that stops here leaves no connections behind.
+func boundPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
+	pool, err := database.NewPool(ctx, dsn)
+	if err != nil {
+		return nil, err
+	}
+	if err := compose.AssertRuntimeRole(ctx, pool); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	return pool, nil
+}
+
+// recordBootFacts settles everything this installation must know about the
+// running binary before it serves: the release and composition it is, then the
+// handbook it carries.
+//
+// The handbook goes LAST, and that ordering is not the caller's to choose: it
+// enqueues ingest work, so it belongs after the composition the job wiring is
+// read from. It also cannot fail the boot, which is why it is called for effect
+// here and the error handling lives with the phase itself.
+func recordBootFacts(
+	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, extensions []extension.Extension,
+) error {
+	if err := recordBootLedger(ctx, pool, logger, extensions); err != nil {
+		return err
+	}
+	fileReleaseHandbook(ctx, pool, logger)
+	return nil
+}
+
 func recordBootLedger(
 	ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger, extensions []extension.Extension,
 ) error {
@@ -54,6 +95,32 @@ func recordBootLedger(
 		return err
 	}
 	return compose.RecordComposition(ctx, pool, logger, extensions)
+}
+
+// fileReleaseHandbook puts this release's operator handbook into the corpus the
+// product answers questions from.
+//
+// Its own phase rather than a line in recordBootLedger, because it is the one
+// boot write that ENQUEUES work: it needs an insert-only River client, and the
+// ledger phase runs before any job wiring exists.
+//
+// IT RETURNS NOTHING, and that is the decision rather than a shortcut. The
+// handbook is help content: an installation that cannot file it should still
+// serve every record, pipeline and approval it holds. Failing the boot here
+// would take a whole CRM down over a documentation corpus — and the operator
+// would then have no running process to ask why. Swallowing the error at the
+// CALL SITE would put that judgement where the next reader of run() cannot see
+// it, so the phase owns it and says so in the log.
+func fileReleaseHandbook(ctx context.Context, pool *pgxpool.Pool, logger *slog.Logger) {
+	inserter, err := jobs.NewInserter(pool, logger)
+	if err != nil {
+		logger.Error("this release's handbook was not filed: no job inserter to queue its ingests; "+
+			"the rest of the product is unaffected", "error", err)
+		return
+	}
+	if err := compose.ReconcileHandbookCorpus(ctx, pool, logger, inserter); err != nil {
+		logger.Error("this release's handbook was not filed; the rest of the product is unaffected", "error", err)
+	}
 }
 
 // bindInstallation settles what this installation IS before anything serves:

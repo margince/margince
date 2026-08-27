@@ -2716,7 +2716,6 @@ export const de = {
   "explain.sources": "Quellzeilen",
 
   "ai.sub": "bring deinen eigenen Agenten mit — geregelt über die zwei Stufen",
-  "ai.carriedQuestion": "Deine Frage",
   "ai.tiers": "Was ein Agent darf",
   "ai.tierAutoExecute": "Lesen & Entwerfen läuft sofort.",
   "ai.tierAutoExecuteDetail":
@@ -4886,6 +4885,62 @@ export const de = {
   "settings.tab.capture": "Erfassung",
   "settings.tab.data-model": "Datenmodell",
   "settings.tab.ai": "KI",
+  "settings.tab.knowledge": "Wissen",
+  "corpusAsk.title": "Ihre Dokumente fragen",
+  "corpusAsk.sub":
+    "Eine Frage in eigenen Worten, beantwortet ausschließlich aus einer Dokumentensammlung dieser Organisation. Was die Sammlung nicht abdeckt, wird abgelehnt statt geraten, und jeder Satz nennt die Textstelle, auf der er beruht.",
+  "corpusAsk.whichSet": "Welche Sammlung",
+  "corpusAsk.question": "Ihre Frage",
+  "corpusAsk.submit": "Fragen",
+  "corpusAsk.byModel": "Aus den Textstellen unten geschrieben",
+  "corpusAsk.atLine": "Zeile {line}, Spalte {column}",
+  "corpusAsk.byPassages":
+    "Die Textstellen selbst — niemand hat eine Zusammenfassung geschrieben",
+  "corpusAsk.notReady":
+    "Diese Sammlung ist noch nicht fertig eingelesen — {embedded} von {total} Abschnitten sind durchsuchbar. An Ihrer Frage liegt es nicht; versuchen Sie es gleich noch einmal.",
+  "corpusAsk.retrievalUnavailable":
+    "Es wurde nichts durchsucht: in dieser Installation ist kein Suchindex eingerichtet, die Dokumente konnten also nicht angesehen werden. Das ist eine Frage der Einrichtung und liegt nicht an Ihrer Frage.",
+  "corpusAsk.notCovered.title": "Von dieser Sammlung nicht abgedeckt",
+  "corpusAsk.notCovered.body":
+    "{name} wurde vollständig durchsucht und enthält nichts, was nah genug daran wäre. Die Sammlung deckt ab:",
+  "knowledge.title": "Dokumentensammlungen",
+  "knowledge.sub":
+    "Textbestände, zu denen diese Organisation befragt werden kann. Eine Antwort stammt ausschließlich aus dem, was hier abgelegt ist; eine Frage, die sie nicht abdecken, wird abgelehnt statt geraten.",
+  "knowledge.withheld":
+    "Welche Dokumentensammlungen es gibt, dürfen Sie nicht sehen.",
+  "knowledge.coverage":
+    "{documents} Dokumente · {embedded} von {total} Abschnitten durchsuchbar",
+  "knowledge.reindexing":
+    "Diese Sammlung wird nach einer Änderung der Textindizierung neu gelesen. Eine Frage meldet bis dahin, dass sie nicht bereit ist; verloren ist nichts.",
+  "knowledge.showDocuments": "Dokumente anzeigen",
+  "knowledge.hideDocuments": "Dokumente ausblenden",
+  "knowledge.documents": "Dokumente",
+  "knowledge.noDocuments": "Hier ist noch nichts abgelegt.",
+  "knowledge.archive": "Sammlung archivieren",
+  "knowledge.archiveConfirm.title": "Diese Dokumentensammlung archivieren?",
+  "knowledge.archiveConfirm.body":
+    "Die Sammlung und alles darin sind nicht mehr durchsuchbar. Zerstört wird nichts.",
+  "knowledge.deleteDocument": "Löschen",
+  "knowledge.deleteConfirm.title": "Dieses Dokument löschen?",
+  "knowledge.deleteConfirm.body":
+    "Die Datei, der daraus gewonnene Text und der darauf aufgebaute Suchindex werden zerstört. Das lässt sich nicht rückgängig machen.",
+  "knowledge.ingest.queued": "Wartet auf Verarbeitung",
+  "knowledge.ingest.running": "Wird gelesen",
+  "knowledge.ingest.done": "Durchsuchbar",
+  "knowledge.ingest.failed": "Konnte nicht gelesen werden",
+  "knowledge.upload.label": "Dokument hinzufügen",
+  "knowledge.upload.hint":
+    "Reiner Text, Markdown, CSV oder JSON. Für PDFs oder Word-Dateien gibt es hier keinen Leser; sie werden abgelehnt statt leer abgelegt.",
+  "knowledge.upload.empty": "Textdatei hierher ziehen oder auswählen",
+  "knowledge.upload.submit_other": "{count} Dokumente hinzufügen",
+  "knowledge.upload.refused": "{filename} wurde nicht hinzugefügt: {message}",
+  "knowledge.upload.submit_one": "Dokument hinzufügen",
+  "knowledge.new.title": "Neue Dokumentensammlung",
+  "knowledge.new.name": "Name",
+  "knowledge.new.topic": "Was diese Sammlung abdeckt",
+  "knowledge.new.topicHint":
+    "Schreiben Sie einen Satz, kein Schlagwort. Er wird demjenigen zitiert, dessen Frage diese Sammlung nicht abdeckt — also im ungeduldigsten Moment gelesen.",
+  "knowledge.new.submit": "Sammlung anlegen",
   "settings.tab.privacy": "Datenschutz & Audit",
   "settings.tab.capture-activity": "Erfassungsaktivität",
   "captureActivity.title": "Erfassungsaktivität",
