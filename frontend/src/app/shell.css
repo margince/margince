@@ -1142,18 +1142,23 @@
     grid-template-rows: 1fr;
   }
   /* The bar is fixed over the foot of the content, so every sticky element
-     inside the content column has to stand clear of it. The shell publishes
-     that offset because the shell is what knows the bar is there — a deck tray
-     or a record action bar guessing at its own breakpoint is how the tray came
-     to hide behind the nav between 641px and 700px. */
-  .app {
+     has to stand clear of it. The shell publishes that offset because the shell
+     is what knows the bar is there — a deck tray or a record action bar
+     guessing at its own breakpoint is how the tray came to hide behind the nav
+     between 641px and 700px.
+
+     Published on the ROOT rather than on `.app`, and that is load-bearing: the
+     toast region is portalled to the body, so a value declared on `.app` is one
+     it cannot inherit — it read the root fallback instead and went back to
+     covering the bar, which is the defect the token exists to prevent. Anything
+     else portalled out of the shell would have inherited the same wrong answer.
+
+     Rail-less surfaces draw no bar (login, onboarding, booking, the client
+     frame), and there a sticky element stands on the plain ledge — which is
+     already what the root declares in tokens.css, so the `:has()` states the
+     one case that differs instead of stating both and keeping them in step. */
+  :root:has(.app:not(.railless)) {
     --stickyBottomInset: var(--phoneNavClearance);
-  }
-  /* Rail-less surfaces draw no bar (login, onboarding, booking, the client
-     frame), so a sticky element there stands on the plain ledge. The same
-     exception the .scroll padding below makes, for the same reason. */
-  .app.railless {
-    --stickyBottomInset: var(--space-2);
   }
   .rail,
   .rail.expanded,
