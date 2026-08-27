@@ -21,6 +21,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -39,6 +41,15 @@ type sentinelRow struct {
 	// ones alternate. Two booleans set to the same value are indistinguishable
 	// after a swap, which is exactly the case this row exists to catch.
 	bools int
+	// flip inverts that alternation. Three booleans and two values means one
+	// pair must collide in any single run — is_done and content_available did
+	// — so the scan runs twice with the parity reversed, and a pair that
+	// matched in one run differs in the other.
+	flip bool
+	// last is content_available's position. It is forced true in BOTH runs:
+	// false there withholds the content columns, so a run that flipped it
+	// would report the withholding as a transposition rather than testing one.
+	last int
 }
 
 func (r *sentinelRow) Scan(dest ...any) error {
@@ -77,15 +88,9 @@ func (r *sentinelRow) fill(dest any, name string, index int) {
 		v := epoch.Add(time.Duration(index) * time.Hour)
 		*d = &v
 	case *bool:
-		// Alternating, starting true: content_available is the FIRST boolean
-		// scanned in declaration order only by accident, so it is asserted
-		// below rather than assumed — and the point here is that no two
-		// booleans in this row hold the same value.
-		*d = r.bools%2 == 0
-		r.bools++
+		*d = r.boolAt(index)
 	case **bool:
-		v := r.bools%2 == 0
-		r.bools++
+		v := r.boolAt(index)
 		*d = &v
 	case *int64:
 		*d = int64(index)
@@ -98,6 +103,17 @@ func (r *sentinelRow) fill(dest any, name string, index int) {
 	default:
 		r.t.Fatalf("the projection declares a destination this row cannot fill for %s: %T", name, dest)
 	}
+}
+
+// boolAt answers the boolean this column gets: alternating in arrival order,
+// inverted on the second run, and always true for content_available.
+func (r *sentinelRow) boolAt(index int) bool {
+	v := r.bools%2 == 0
+	r.bools++
+	if index == r.last {
+		return true
+	}
+	return v != r.flip
 }
 
 // uuidFor is a distinct, reproducible id per column position.
@@ -119,16 +135,43 @@ func TestEveryProjectedColumnLandsInItsOwnField(t *testing.T) {
 		}
 		index[names[i]] = i
 	}
-	got, err := scanActivity(&sentinelRow{t: t, names: names})
-	if err != nil {
-		t.Fatalf("scanActivity: %v", err)
+	// content_available is the projection's last column, and this test relies
+	// on that to keep it true in both runs. Asserted rather than assumed: a
+	// column appended after it would make the forcing silently miss.
+	if index["content_available"] != len(activityProjection)-1 {
+		t.Fatalf("content_available is column %d of %d — it is expected last, and the boolean "+
+			"sentinel forces it by position", index["content_available"], len(activityProjection))
 	}
+
+	// TWICE, with the boolean parity reversed. Three booleans share two values,
+	// so one pair collides in any single run — is_done and content_available
+	// did, which made swapping their destinations invisible. Reversing the
+	// parity separates whichever pair matched.
+	for _, flip := range []bool{false, true} {
+		t.Run(map[bool]string{false: "as declared", true: "with the booleans reversed"}[flip], func(t *testing.T) {
+			row := &sentinelRow{t: t, names: names, flip: flip, last: index["content_available"]}
+			got, err := scanActivity(row)
+			if err != nil {
+				t.Fatalf("scanActivity: %v", err)
+			}
+			assertProjection(t, got, index, flip)
+		})
+	}
+}
+
+// assertProjection checks every field the scan materializes against the column
+// it is declared for.
+func assertProjection(t *testing.T, got crmcontracts.Activity, index map[string]int, flip bool) {
+	t.Helper()
 	// content_available decides whether the content columns reach the caller
 	// at all, so a run where it landed false would blank half the fields below
 	// and report the blanking as a transposition.
-	if got.ContentState == nil || string(*got.ContentState) != "available" {
-		t.Fatalf("content_available did not scan as true (content_state %v) — every content "+
-			"assertion below would then be reading the withholding, not the scan", got.ContentState)
+	if got.ContentState == nil {
+		t.Fatal("content_state was never set — the scan did not reach the audience arm")
+	}
+	if string(*got.ContentState) != "available" {
+		t.Fatalf("content_available did not scan as true (content_state %q) — every content "+
+			"assertion below would then be reading the withholding, not the scan", *got.ContentState)
 	}
 
 	for _, want := range []struct {
@@ -159,8 +202,8 @@ func TestEveryProjectedColumnLandsInItsOwnField(t *testing.T) {
 		t.Errorf("a.kind landed as %q", got.Kind)
 	}
 
-	// The instants. Seven of them, all *time.Time or time.Time, and any two
-	// are as interchangeable to a scan as any two strings.
+	// The instants. Seven of them, and any two are as interchangeable to a
+	// scan as any two strings.
 	for _, want := range []struct {
 		column string
 		got    *time.Time
@@ -199,12 +242,10 @@ func TestEveryProjectedColumnLandsInItsOwnField(t *testing.T) {
 		t.Errorf("a.version holds %v", got.Version)
 	}
 
-	// The booleans, which carry the least information of anything here — two
-	// values across three columns — and are therefore the easiest to transpose
-	// undetected. They alternate in the row above so that no two hold the same
-	// answer.
-	assertBool(t, "a.is_done", got.IsDone, boolFor(index["a.is_done"]))
-	assertBool(t, "a.bulk_mail_attested", got.BulkMailAttested, boolFor(index["a.bulk_mail_attested"]))
+	// The booleans, which carry the least information of anything here and are
+	// therefore the easiest to transpose undetected.
+	assertBool(t, "a.is_done", got.IsDone, boolFor(index["a.is_done"]) != flip)
+	assertBool(t, "a.bulk_mail_attested", got.BulkMailAttested, boolFor(index["a.bulk_mail_attested"]) != flip)
 }
 
 // boolFor answers what the row wrote for the boolean at this column, by
