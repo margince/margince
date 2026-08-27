@@ -101,6 +101,34 @@ func TestVietnameseCompaniesResolveThroughTheLadder(t *testing.T) {
 			longForm.Decision, longForm.Confidence)
 	}
 
+	// A SCRIPT WITH NO SPACES, through the real ladder. These names arrive as one
+	// token, so before the character-level path existed the candidate query and
+	// the gate had nothing to work with and every pair — including a company
+	// against itself — came back no_match.
+	for _, name := range []string{"株式会社トヨタ自動車", "주식회사 삼성전자"} {
+		if _, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
+			DisplayName: name, Source: "manual",
+		}); err != nil {
+			t.Fatalf("seeding %q: %v", name, err)
+		}
+	}
+	for _, name := range []string{"トヨタ自動車", "삼성전자"} {
+		m := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{DisplayName: name})
+		if m.Decision != DecisionFuzzyReview {
+			t.Errorf("%q got %s (confidence %.4f), want fuzzy_review — its own "+
+				"company is seeded under its registered name",
+				name, m.Decision, m.Confidence)
+		}
+	}
+	unrelated := e.dedupeOrgInTx(ctx, t, OrganizationCandidate{
+		DisplayName: "주식회사 현대자동차",
+	})
+	if unrelated.Decision != DecisionNoMatch {
+		t.Errorf("Hyundai collided with Samsung (decision %s, confidence %.4f) — "+
+			"they share only the words for \"joint-stock company\"",
+			unrelated.Decision, unrelated.Confidence)
+	}
+
 	// And tier 1 still outranks every name judgement: a shared domain is an
 	// exact key, whatever the two names look like.
 	withDomain, err := e.store.CreateOrganization(ctx, CreateOrganizationInput{
