@@ -27,6 +27,12 @@ import (
 // UpdateDealInput is one deal partial update: every field is optional, and
 // CustomFields carries the request body's extra top-level keys.
 type UpdateDealInput struct {
+	// Clear names the wire fields to set to NULL. A JSON null cannot say so —
+	// it decodes to a nil pointer and reads as "not supplied" — so the
+	// reversal path names them here instead.
+	Clear []string
+	// Trail names what the audit trail calls this write; zero is an update.
+	Trail                 storekit.AuditTrail
 	Name                  *string
 	AmountMinor           *int64
 	Currency              *string

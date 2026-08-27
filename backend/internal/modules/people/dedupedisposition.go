@@ -205,6 +205,25 @@ func (s *Store) reopenDedupeCandidate(ctx context.Context, id ids.UUID) error {
 }
 
 func reopenDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
+	// The disposition being lifted is read under the row's own lock, because the
+	// audit row has to name it: a reversal that cannot say which disposition it
+	// lifted is a reversal nobody can check afterwards. The lock is what makes
+	// reading it in a separate statement honest — without it the value could be
+	// whatever the next writer had already put there, and the audit row would
+	// describe two transactions as one.
+	var was string
+	err := tx.QueryRow(ctx, `
+		SELECT disposition FROM dedupe_candidate WHERE id = $1 FOR UPDATE`, id).Scan(&was)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("people: re-opening dedupe candidate %s: %w", id, apperrors.ErrNotFound)
+	}
+	if err != nil {
+		return fmt.Errorf("people: reading the disposition to lift: %w", err)
+	}
+	if was == dispositionOpen {
+		// Already open (a concurrent undo) — the desired state holds.
+		return nil
+	}
 	tag, err := tx.Exec(ctx, `
 		UPDATE dedupe_candidate SET disposition = 'open', disposed_by = NULL, disposed_at = NULL
 		WHERE id = $1 AND disposition <> 'open'`, id)
@@ -212,11 +231,10 @@ func reopenDedupeCandidateTx(ctx context.Context, tx pgx.Tx, id ids.UUID) error 
 		return fmt.Errorf("people: re-opening dedupe candidate: %w", err)
 	}
 	if tag.RowsAffected() == 0 {
-		// Already open (a concurrent undo) — the desired state holds.
 		return nil
 	}
 	_, err = storekit.Audit(ctx, tx, "restore", auditEntityDedupe, id,
-		nil, map[string]any{auditKeyDisposition: dispositionOpen})
+		map[string]any{auditKeyDisposition: was}, map[string]any{auditKeyDisposition: dispositionOpen})
 	return err
 }
 

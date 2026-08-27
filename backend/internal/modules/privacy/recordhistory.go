@@ -209,9 +209,14 @@ type RecordHistoryEntry struct {
 	AgentClient *string
 }
 
-// RecordHistoryPage is one keyset window of the timeline, chronological
-// (oldest first — the reading order of a story, unlike field-history's
-// newest-first diff feed).
+// RecordHistoryPage is one keyset window of the timeline, NEWEST first — the
+// same order as field-history's diff feed, and the order the surface needs.
+//
+// A record's history is read to answer "what just happened", and the change a
+// person wants to put back is almost always the last one. Oldest-first buried
+// it at the bottom of the page and put the reader's own edit furthest from
+// them; it also meant page one held the oldest twenty rows, so no amount of
+// reversing at the surface could fix the order.
 type RecordHistoryPage struct {
 	Entries    []RecordHistoryEntry
 	NextCursor string
@@ -354,9 +359,9 @@ func ListRecordHistory(ctx context.Context, db *database.DB, f RecordHistoryFilt
 	return page, nil
 }
 
-// queryRecordHistoryWindow fetches one chronological keyset window of the
-// record's audit spine, with both display names resolved in SQL by the
-// shared auditActorNameJoins.
+// queryRecordHistoryWindow fetches one keyset window of the record's audit
+// spine, newest first, with both display names resolved in SQL by the shared
+// auditActorNameJoins.
 //
 // Neither join carries a workspace predicate, and does not need one: both
 // match app_user.id, a global primary key, so a uuid can only ever resolve
@@ -380,7 +385,9 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 		args = append(args, boundary.occurredAt, boundary.id)
 	}
 	if useCursor {
-		conds = append(conds, fmt.Sprintf("(a.occurred_at, a.id) > ($%d, $%d)", len(args)+1, len(args)+2))
+		// The page walks BACKWARDS in time, so the keyset takes what is older
+		// than the cursor. A `>` here would page away from the reader.
+		conds = append(conds, fmt.Sprintf("(a.occurred_at, a.id) < ($%d, $%d)", len(args)+1, len(args)+2))
 		args = append(args, cursor.CreatedAt, cursor.ID)
 	}
 	args = append(args, fetch)
@@ -390,7 +397,7 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 		       actor_user.display_name, obo.display_name, oc.client_name
 		FROM audit_log a`+auditActorNameJoins+agentClientNameJoin+`
 		WHERE %s
-		ORDER BY a.occurred_at ASC, a.id ASC
+		ORDER BY a.occurred_at DESC, a.id DESC
 		LIMIT $%d`, strings.Join(conds, " AND "), len(args)), args...)
 	if err != nil {
 		return nil, err
@@ -400,17 +407,8 @@ func queryRecordHistoryWindow(ctx context.Context, tx pgx.Tx, f RecordHistoryFil
 	var out []recordAuditRow
 	for rows.Next() {
 		var r recordAuditRow
-		var beforeJSON, afterJSON []byte
-		if err := rows.Scan(&r.id, &r.actorType, &r.actorID, &r.onBehalfOf, &r.action, &r.occurredAt,
-			&r.authorizationRule, &beforeJSON, &afterJSON, &r.passportID,
-			&r.actorDisplayName, &r.onBehalfOfName, &r.agentClientName); err != nil {
+		if err := scanRecordAuditRow(rows, &r); err != nil {
 			return nil, err
-		}
-		if err := unmarshalJSONBMap(beforeJSON, &r.before); err != nil {
-			return nil, fmt.Errorf("audit row %s before: %w", r.id, err)
-		}
-		if err := unmarshalJSONBMap(afterJSON, &r.after); err != nil {
-			return nil, fmt.Errorf("audit row %s after: %w", r.id, err)
 		}
 		out = append(out, r)
 	}

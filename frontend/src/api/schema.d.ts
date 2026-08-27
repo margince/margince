@@ -6366,7 +6366,10 @@ export interface paths {
          * Full audit history for one record, rendered as plain-language lines.
          * @description Every audit_log row for the record, rendered as a plain-language `summary` line
          *     naming the actor and, for agent actions, the granting human (`on_behalf_of_name`).
-         *     Chronological oldest-first (`occurred_at` ASC, `id` tiebreak) with keyset pagination.
+         *     Newest first (`occurred_at` DESC, `id` tiebreak) with keyset pagination — the same
+         *     order as `/field-history`, and the order a reader needs: a record's history answers
+         *     "what just happened", and the change somebody wants to put back is almost always the
+         *     last one.
          *     `before`/`after` are masked to the viewer's readable fields by omission — a field the
          *     caller cannot see is absent from the object, never present as `null`. The projection
          *     stops at the record's newest erasure scrub: rows at-or-before that tombstone are
@@ -6378,6 +6381,49 @@ export interface paths {
         get: operations["getRecordHistory"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/records/{entity_type}/{id}/history/{audit_id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The history entry to put back. It must belong to the record named by the path; one that does not answers 404, never 403. */
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Put one audited change back.
+         * @description Re-applies the named history entry's before-image to the record, as an ordinary
+         *     update recorded with the `restore` verb and an `evidence.undid_audit_log_id` link
+         *     to the entry it reverses. There is no second write engine and no new table: the
+         *     write is the record's own update path, so every rule that path holds still holds.
+         *
+         *     **`If-Match` is REQUIRED here**, unlike every other mutating endpoint where it is
+         *     optional. A restore is decided from a history screen the person has been reading,
+         *     so the record may have moved under them between reading and pressing; last-write-wins
+         *     is not an acceptable default for a write whose entire premise is a prior state.
+         *
+         *     Whether an entry can be put back is COMPUTED, never stored, and it is evaluated
+         *     twice: advisorily on the history read, so the button is honest, and bindingly inside
+         *     this write's own transaction after the row lock, so the write cannot act on a
+         *     snapshot taken before it. The two agree on the SET of reasons; they may differ on
+         *     timing, which is why a `409` here can carry a reason the read did not show.
+         *
+         *     An agent may not call this. A restore is a human's authority, and reaching it
+         *     through an agent would let one launder a change it was not allowed to make directly.
+         */
+        post: operations["restoreRecordChange"];
         delete?: never;
         options?: never;
         head?: never;
@@ -18395,6 +18441,7 @@ export interface components {
             evidence?: {
                 [key: string]: unknown;
             } | null;
+            undoable?: components["schemas"]["Undoability"];
         };
         FieldHistoryListResponse: {
             data: components["schemas"]["FieldHistoryEntry"][];
@@ -18522,6 +18569,31 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             summary: string;
+            undoable?: components["schemas"]["Undoability"];
+        };
+        /**
+         * @description Whether this history entry can be put back, and if not, why. COMPUTED per read,
+         *     never stored: a stored flag is a second copy of a question the audit spine already
+         *     answers, and it goes stale the moment anyone else writes.
+         *
+         *     Undoability is a property of the audit ROW, so `FieldHistoryEntry` values sharing an
+         *     `id` carry the same answer — a restore replays the row's whole filtered image, and
+         *     there is no per-field undo.
+         *
+         *     Three reasons — `not_restorable_by_this_path`, `record_archived` and
+         *     `null_unwritable_by_module` — depend on state the write path owns, so on a read they
+         *     are best-effort and on the restore itself they bind. That asymmetry is deliberate:
+         *     a read makes the button as honest as a read can, and the write is the authority.
+         */
+        Undoability: {
+            undoable: boolean;
+            /**
+             * @description Present exactly when `undoable` is false. `superseded` means someone wrote one of these fields after this entry — the product refuses rather than resolving an ambiguity nobody asked it to. `null_unwritable_by_module` means restoring the entry would have to clear a field the record's own write path cannot clear, so it is refused rather than reporting a success that changed nothing.
+             * @enum {string|null}
+             */
+            reason?: "no_before_image" | "not_a_replayable_verb" | "unsupported_record_type" | "superseded" | "behind_erasure_boundary" | "already_undone" | "not_restorable_by_this_path" | "record_archived" | "null_unwritable_by_module" | "not_writable_by_caller" | null;
+            /** @description The fields a refusal names, where naming them is the better explanation — which field was superseded, which one cannot be written back. Never the only thing a reader renders; `reason` is what the product says. */
+            detail?: string | null;
         };
         AuditHistoryListResponse: {
             data: components["schemas"]["AuditHistoryEntry"][];
@@ -32881,6 +32953,48 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreRecordChange: {
+        parameters: {
+            query?: never;
+            header: {
+                /** @description The last-seen record `version`, required. If the row's current version differs the restore is rejected with `409 code: version_skew` and nothing is written — re-read the record and its history, then decide again. */
+                "If-Match": string;
+            };
+            path: {
+                entity_type: "person" | "organization" | "deal" | "lead" | "project" | "activity";
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                /** @description The history entry to put back. It must belong to the record named by the path; one that does not answers 404, never 403. */
+                audit_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The change was put back. The body is the `restore` entry now in the record's history. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AuditHistoryEntry"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description The change cannot be put back. `code` is `version_skew` when the record moved under the caller, and otherwise the `undoable.reason` the binding evaluation returned — which may differ from what the read showed, because the read cannot hold a lock. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };

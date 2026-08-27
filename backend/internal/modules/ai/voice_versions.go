@@ -316,7 +316,11 @@ func (s *VoiceStore) RollbackVersion(ctx context.Context, profileID ids.UUID, so
 		}); err != nil {
 			return err
 		}
-		auditID, err := storekit.Audit(ctx, tx, "restore", "voice_profile_version", result.ID, nil,
+		// AuditEvent, not Audit: the row this names is the version the rollback
+		// just inserted, so there is no prior state of it to record. What the
+		// after image carries is which artifact went live and which one it
+		// displaced — an occurrence, not a field diff.
+		auditID, err := storekit.AuditEvent(ctx, tx, "restore", "voice_profile_version", result.ID,
 			map[string]any{voiceKeyProfileVersion: result.ProfileVersion, "predecessor_version": profile.ProfileVersion})
 		if err != nil {
 			return err

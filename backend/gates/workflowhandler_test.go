@@ -51,7 +51,7 @@ var writeMethodNames = map[string]bool{
 	"Create": true, "Update": true, "Delete": true,
 	"Exec":  true,
 	"Stage": true, "AddMember": true, "Notify": true,
-	"Audit": true, "AuditWithEvidence": true,
+	"Audit": true, "AuditWithEvidence": true, "AuditWithTrail": true,
 	"AuditEvent": true, "AuditEventWithEvidence": true,
 	"Emit": true,
 }

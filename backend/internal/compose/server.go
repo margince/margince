@@ -125,7 +125,11 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// is what registers one.
 		integrationsHandlers: newIntegrationsHandlers(pool, nil, nil, nil),
 		signalsHandlers:      signals.NewHandlers(InstallationDB(pool), signalStrength{people: people.NewStore(InstallationDB(pool))}),
-		privacyHandlers:      privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)),
+		// The reversal seam is wired at construction rather than as an option:
+		// undoability is part of what the history surface MEANS, and a server
+		// that served the history without it would render buttons that answer
+		// 404.
+		privacyHandlers: privacy.NewHandlers(InstallationDB(pool), NewSettingsStore(pool)),
 		// The fieldcatalog seam lets renewal_reminder's preview validate a
 		// draft/stored (object, date_field) pair against the workspace's own
 		// live custom-field catalog before ever building SQL around it — the

@@ -99,6 +99,7 @@ export {
 } from "./leadpresentation";
 
 import { leadKey, leadScoreKey, leadWriteKeys } from "./leadkeys";
+import { invalidateRecord } from "./recordwritekeys";
 
 export { LeadsScreen } from "./leads.list";
 
@@ -1715,7 +1716,15 @@ export function LeadScreen({ id }: Readonly<{ id: string }>) {
               }}
             />
             {tab === "history" && !overlay && (
-              <RecordHistoryTab kind="lead" id={lead.id} />
+              <RecordHistoryTab
+                kind="lead"
+                id={lead.id}
+                restore={{
+                  version: lead.version,
+                  onRestored: () =>
+                    invalidateRecord(queryClient, "lead", lead.id),
+                }}
+              />
             )}
             {tab === "history" && overlay && <OverlayUnavailable />}
           </RecordView>

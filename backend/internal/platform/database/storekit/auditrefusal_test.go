@@ -103,3 +103,21 @@ func TestTheEvidenceDoorRefusesOnTheSameTerms(t *testing.T) {
 		t.Errorf("the refusal came too late; the row was already sent: %s", tx.execSQL)
 	}
 }
+
+// A restore is update-shaped: it replaces field values a record already held.
+// Binding the rule to the literal "update" alone would make the reversal verb
+// the one way to write a field change that cannot say what it changed from.
+func TestARestoreWithNoBeforeImageIsRefusedToo(t *testing.T) {
+	tx := &fakeTx{}
+	_, err := Audit(auditingContext(), tx, string(VerbRestore), "person", ids.NewV7(), nil,
+		map[string]any{"full_name": "Greta Machine"})
+	if err == nil {
+		t.Fatal("a restore with no before-image was accepted")
+	}
+	if tx.execSQL != "" {
+		t.Errorf("the refusal came too late; the row was already sent: %s", tx.execSQL)
+	}
+	if !strings.Contains(err.Error(), "before") {
+		t.Errorf("the refusal does not name what is missing: %v", err)
+	}
+}

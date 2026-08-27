@@ -7,7 +7,12 @@
 // are to refuse the write or to read the row again. Neither of them is a header
 // this function can invent, so there is no shape of this call that returns an
 // empty precondition.
-export function ifMatch(version: number): { header: Record<string, string> } {
+// The header spelled as the contract declares it, not as a bag of strings: an
+// endpoint that REQUIRES the precondition takes no widened record, and the
+// error belongs at the call site rather than one cast further in.
+export function ifMatch(version: number): {
+  header: { "If-Match": string };
+} {
   return { header: { "If-Match": String(version) } };
 }
 

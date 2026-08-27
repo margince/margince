@@ -1599,6 +1599,10 @@ func (stubs) GetRecordHistory(w nethttp.ResponseWriter, r *nethttp.Request, enti
 	httperr.NotImplemented(w, r, "GetRecordHistory")
 }
 
+func (stubs) RestoreRecordChange(w nethttp.ResponseWriter, r *nethttp.Request, entityType string, id crmcontracts.Id, auditId openapi_types.UUID, params crmcontracts.RestoreRecordChangeParams) {
+	httperr.NotImplemented(w, r, "RestoreRecordChange")
+}
+
 func (stubs) ClaimRecord(w nethttp.ResponseWriter, r *nethttp.Request, recordType string, id crmcontracts.Id, params crmcontracts.ClaimRecordParams) {
 	httperr.NotImplemented(w, r, "ClaimRecord")
 }

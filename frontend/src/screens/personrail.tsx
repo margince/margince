@@ -186,18 +186,40 @@ async function patchPersonField(
 // person's own fields from (the identity line, the strip, this rail), so it
 // is what gets refetched; personBrief comes with it because a changed name
 // or title can change what the brief's own sentences say about this person.
+// Through useMutation rather than a bare async call, so the write is a
+// MUTATION as far as the query client is concerned. The policy that refreshes
+// a record's open history after any successful write hangs off the mutation
+// cache, and an inline edit that bypassed it left the history on screen showing
+// the state before the edit — with no list of "writes that change a history"
+// able to catch it, because that list is every write.
 function usePersonFieldPatch(person: Person) {
   const queryClient = useQueryClient();
-  return async (body: UpdatePersonRequest) => {
-    await patchPersonField(person, body);
-    await queryClient.invalidateQueries({
-      queryKey: ["person360", person.id],
-    });
-    await queryClient.invalidateQueries({
-      queryKey: ["personBrief", person.id],
-    });
-  };
+  const save = useMutation({
+    // The record travels WITH the body. `person.version` is the If-Match this
+    // write pins, and it moves on every successful write — two edits from one
+    // render would otherwise both send the version that predates the first,
+    // and the second would fail a conflict check it should pass.
+    mutationFn: ({ person: target, body }: PersonFieldPress) =>
+      patchPersonField(target, body),
+    onSuccess: async (_result, { person: target }) => {
+      await queryClient.invalidateQueries({
+        queryKey: ["person360", target.id],
+      });
+      await queryClient.invalidateQueries({
+        queryKey: ["personBrief", target.id],
+      });
+    },
+  });
+  return (body: UpdatePersonRequest) =>
+    save.mutateAsync({ person, body }).then(() => undefined);
 }
+
+// What one inline person edit carries: the record it is written against and
+// the field values, so neither is read out of the closure at click time.
+type PersonFieldPress = Readonly<{
+  person: Person;
+  body: UpdatePersonRequest;
+}>;
 
 // usePersonReadOnlyReason says why this record cannot be edited, when there
 // is something worth saying — the same two reasons companyheader.tsx's own

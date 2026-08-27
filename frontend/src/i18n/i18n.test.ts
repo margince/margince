@@ -150,6 +150,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "person.memory.email",
   "person.memory.channelEmail",
   "person.rail.email",
+  "history.field.email",
   "settings.voice.register.email",
   "product.sku",
   "compose.cc",

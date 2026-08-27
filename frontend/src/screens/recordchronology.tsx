@@ -6,7 +6,7 @@ import { activityTimeline } from "../design-system/activitytimeline";
 import { EmptyState, SegmentedControl, Skeleton } from "../design-system/atoms";
 import type { TimelineEntry } from "../design-system/composed";
 import type { RecordTimeline } from "../design-system/recordtimeline";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { coldFieldLabel, LoadMoreButton, useViewerId } from "./common";
 import { changeTimeline, useFieldHistory } from "./history";
@@ -110,6 +110,7 @@ export function useRecordChronology({
   activitiesHaveMore,
   loadMore,
   renderActions,
+  currency,
 }: Readonly<{
   kind: EntityKind;
   recordId: string;
@@ -121,8 +122,13 @@ export function useRecordChronology({
   loadMore?: RecordTimeline;
   // The per-row verbs (Reply, Relink). Absent on a surface that offers none.
   renderActions?: (activity: Activity) => ReactNode;
+  // The record's currency, for a minor-unit field in the changes list. Absent
+  // on a record type that holds no money — the formatter says so rather than
+  // printing a bare integer under a currency it was never denominated in.
+  currency?: string | null;
 }>): RecordChronology {
   const t = useT();
+  const { locale } = useLocale();
   const viewerId = useViewerId();
   const wantsChanges = filter !== "activities";
   const changes = useFieldHistory(kind, recordId, { enabled: wantsChanges });
@@ -131,6 +137,7 @@ export function useRecordChronology({
   const changeEntries = changeTimeline(
     changeRows,
     (field) => coldFieldLabel(field, t),
+    { currency, locale },
     viewerId,
   );
   const loading = wantsChanges && changes.isPending;

@@ -130,7 +130,7 @@ var modulesThatWriteNoHistory = gatekit.Waive(map[string]string{
 // gates have to agree about what "audits" means, or the same code satisfies one
 // and not the other.
 var auditWriters = map[string]bool{
-	"Audit": true, "AuditWithEvidence": true,
+	"Audit": true, "AuditWithEvidence": true, "AuditWithTrail": true,
 	"AuditEvent": true, "AuditEventWithEvidence": true,
 }
 
