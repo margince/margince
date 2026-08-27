@@ -96,6 +96,44 @@ func TestAFindingCitedOnlyToTheMenuIsDropped(t *testing.T) {
 	}
 }
 
+// The menu repeats the site's own vocabulary, so a phrase can sit in BOTH the
+// navigation and the page's prose. A finding cited to the page's own words is a
+// finding however many times the header also says them — dropping on the chrome
+// match alone would take real evidence with it, which is the over-trimming this
+// whole lane is written to avoid.
+//
+// Against the rule itself rather than through a crawl: the boilerplate
+// measurement has its own thresholds, and a fixture tuned to trip them would be
+// asserting those instead of this.
+func TestOnlyEvidenceTheProseDoesNotAlsoCarryIsChrome(t *testing.T) {
+	blocks := []string{normalizeEvidence(theMenu)}
+	prose := normalizeEvidence(
+		"Contact Us at hello@example.test and we will answer within one working day.")
+
+	for _, tc := range []struct {
+		name    string
+		snippet string
+		prose   string
+		chrome  bool
+	}{
+		// In the menu and nowhere else: furniture.
+		{"a switcher label", "English Deutsch Tiếng Việt", "", true},
+		// In the menu AND in the page's own sentence: the page's own words.
+		{"a phrase the page also states", "Contact Us", prose, false},
+		// The same phrase on a page that does not state it is furniture again,
+		// which is what makes the exemption about the PAGE rather than the word.
+		{"the same phrase on a page that does not", "Contact Us", "", true},
+		// Not in the menu at all.
+		{"the page's own prose", "hello@example.test", prose, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := isChromeEvidence(tc.snippet, blocks, tc.prose); got != tc.chrome {
+				t.Errorf("isChromeEvidence(%q) = %t, want %t", tc.snippet, got, tc.chrome)
+			}
+		})
+	}
+}
+
 // A crawl this cannot measure keeps everything. A missing finding is harder to
 // notice than a noisy one, so the failure direction is deliberate.
 func TestACrawlWithNoMeasurableChromeKeepsEveryFinding(t *testing.T) {

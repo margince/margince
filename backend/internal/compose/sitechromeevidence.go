@@ -54,7 +54,7 @@ const (
 // failing open, because a missing finding is harder to notice than a noisy
 // one.
 func suppressChromeEvidence(pages []crawlPage, results []pageFactsResult) ([]pageFactsResult, []droppedFinding) {
-	_, blocks := stripSharedPrefixBlocks(pages)
+	trimmed, blocks := stripSharedPrefixBlocks(pages)
 	if len(blocks) == 0 {
 		return results, nil
 	}
@@ -67,14 +67,24 @@ func suppressChromeEvidence(pages []crawlPage, results []pageFactsResult) ([]pag
 	if len(normalized) == 0 {
 		return results, nil
 	}
+	// What each page still says once its furniture is off. A snippet found in
+	// the chrome AND in the page's own words is the page's own words: menus
+	// repeat the site's vocabulary, so "Contact Us" or a company's name appears
+	// in both, and dropping on the chrome match alone would take real evidence
+	// with it. Over-trimming is the failure this whole lane is written to avoid.
+	own := make(map[string]string, len(trimmed))
+	for _, page := range trimmed {
+		own[page.URL] = normalizeEvidence(page.Text)
+	}
 
 	var dropped []droppedFinding
 	kept := make([]pageFactsResult, len(results))
 	for i, result := range results {
 		out := result
+		prose := own[result.url]
 		out.facts = nil
 		for _, fact := range result.facts {
-			if isChromeEvidence(fact.EvidenceSnippet, normalized) {
+			if isChromeEvidence(fact.EvidenceSnippet, normalized, prose) {
 				dropped = append(dropped, droppedFinding{
 					Lane: chromeEvidenceLane, Field: fact.Field, Value: fact.Value,
 					EvidenceSnippet: fact.EvidenceSnippet,
@@ -86,7 +96,7 @@ func suppressChromeEvidence(pages []crawlPage, results []pageFactsResult) ([]pag
 		}
 		out.people = nil
 		for _, person := range result.people {
-			if isChromeEvidence(person.EvidenceSnippet, normalized) {
+			if isChromeEvidence(person.EvidenceSnippet, normalized, prose) {
 				dropped = append(dropped, droppedFinding{
 					Lane: chromeEvidenceLane, Field: chromeEvidencePersonField, Value: person.Name,
 					EvidenceSnippet: person.EvidenceSnippet,
@@ -98,7 +108,7 @@ func suppressChromeEvidence(pages []crawlPage, results []pageFactsResult) ([]pag
 		}
 		out.entities = nil
 		for _, entity := range result.entities {
-			if isChromeEvidence(entity.EvidenceSnippet, normalized) {
+			if isChromeEvidence(entity.EvidenceSnippet, normalized, prose) {
 				dropped = append(dropped, droppedFinding{
 					Lane: chromeEvidenceLane, Field: chromeEvidenceEntityField, Value: entity.Name,
 					EvidenceSnippet: entity.EvidenceSnippet,
@@ -113,7 +123,16 @@ func suppressChromeEvidence(pages []crawlPage, results []pageFactsResult) ([]pag
 	return kept, dropped
 }
 
-// isChromeEvidence reports whether this snippet lies inside a chrome block.
+// isChromeEvidence reports whether this snippet is furniture and ONLY
+// furniture: inside a chrome block, and absent from what the page itself still
+// says once that block is off.
+//
+// Both halves are load-bearing. A menu repeats the site's own vocabulary, so
+// text can sit in the navigation AND in the prose — "Contact Us", a company's
+// name, a product's — and a finding cited to the page's own words is a finding
+// however many times the header also says them. Dropping on the chrome match
+// alone would take real evidence with it, which is the over-trimming this lane
+// is written to avoid: a missing fact is harder to notice than a noisy one.
 //
 // Containment, not equality: the model cites a PASSAGE, and the passage
 // segmentation may cut the menu into several — so a snippet is chrome when the
@@ -122,15 +141,17 @@ func suppressChromeEvidence(pages []crawlPage, results []pageFactsResult) ([]pag
 // An empty snippet is not chrome. A finding with no evidence at all is the
 // citation gate's business, and answering it here would make this the reason a
 // reader is told when it was not.
-func isChromeEvidence(snippet string, blocks []string) bool {
+func isChromeEvidence(snippet string, blocks []string, prose string) bool {
 	normalized := normalizeEvidence(snippet)
 	if normalized == "" {
 		return false
 	}
+	inChrome := false
 	for _, block := range blocks {
 		if strings.Contains(block, normalized) {
-			return true
+			inChrome = true
+			break
 		}
 	}
-	return false
+	return inChrome && !strings.Contains(prose, normalized)
 }
