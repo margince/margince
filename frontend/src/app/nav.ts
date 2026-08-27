@@ -33,6 +33,7 @@ export type {
   NavTrailLevel,
 } from "./subnav";
 export {
+  entryLabel,
   navEntryHref,
   navEntryRoute,
   navLevelHref,
@@ -248,7 +249,7 @@ function forkItems(
   return customNavItems(group).map((screen) => ({
     id: screen.key,
     prefix: [CUSTOM_SCREEN],
-    labelKey: screen.nav.labelKey,
+    label: screen.nav.label,
     icon: screen.nav.icon,
   }));
 }

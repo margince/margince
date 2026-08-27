@@ -27,8 +27,37 @@ export const screen: CustomScreen = {
   component: WarrantyScreen,
   // Optional. Without it the screen is reachable by address and by anything
   // that links to it, which is what a surface opened FROM somewhere wants.
-  nav: { group: "records", labelKey: "nav.warranty", icon: ShieldCheck },
+  nav: {
+    group: "records",
+    label: { en: "Warranty", de: "Garantie" },
+    icon: ShieldCheck,
+  },
 };
+```
+
+## Words
+
+A label is **your own words**, shipped beside your screen:
+
+```ts
+label: { en: "Warranty", de: "Garantie" }
+```
+
+English is required, every other locale is optional, and a locale you do not
+carry falls back to it. That is the honest shape: this product ships three
+languages and your fork may not, so there is always something to render and
+never a rail row showing a key.
+
+It is a fork-local catalogue on purpose. `MessageKey` only accepts keys from
+`src/i18n/en.ts`, so minting one for your own noun means editing `en.ts`,
+`de.ts` and `vi.ts` — three upstream files, for the one string that names a
+row, which is exactly the conflict this directory exists to avoid.
+
+Where your screen IS one of this product's nouns seen differently, name the key
+instead and get every language it already has:
+
+```ts
+label: "nav.contacts"
 ```
 
 The address is **`#/x/warranty`**. The `x` segment is the hash-route spelling

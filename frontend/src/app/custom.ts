@@ -1,5 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ComponentType } from "react";
+import type { Locale } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 
 // The fork seam for UI, mirroring the one the backend already has.
@@ -35,6 +36,41 @@ import type { MessageKey } from "../i18n/en";
 // missing from the dispatch.
 
 /**
+ * What a fork screen is called, in the reader's language.
+ *
+ * Two arms, and the second is what makes this seam whole. A `MessageKey` reuses
+ * a word the product already has — right for a screen that IS one of the
+ * product's nouns seen differently. But a fork's own noun has no key, and
+ * minting one means editing `i18n/en.ts`, `de.ts` and `vi.ts`: three upstream
+ * files, for the one string that names a row. That is the conflict this whole
+ * directory exists to avoid, so a fork ships its words WITH its screen instead.
+ *
+ * English is required and the rest are optional, which is the honest shape: the
+ * product ships three languages and a fork may not, so there is always
+ * something to render and never a locale that renders a key. A fork adds
+ * locales as it has them, in its own file, at no cost to anyone.
+ */
+export type CustomLabel =
+  | MessageKey
+  | Readonly<Partial<Record<Locale, string>> & { en: string }>;
+
+/**
+ * The words a fork label resolves to for one reader.
+ *
+ * A key goes through `t` like any other; a fork's own record is read directly,
+ * falling back to English for a locale it does not carry. Discriminated on
+ * `typeof`, which is exact here: a `MessageKey` is a string literal and the
+ * record is never one.
+ */
+export function resolveCustomLabel(
+  label: CustomLabel,
+  locale: Locale,
+  t: (key: MessageKey) => string,
+): string {
+  return typeof label === "string" ? t(label) : (label[locale] ?? label.en);
+}
+
+/**
  * One screen a fork adds, as its directory declares it.
  *
  * `nav` and `palette` are optional and mean different things by their absence:
@@ -65,7 +101,7 @@ export type CustomScreen = {
      * than an addition to this one.
      */
     group: "records" | "work" | "intelligence";
-    labelKey: MessageKey;
+    label: CustomLabel;
     icon: LucideIcon;
   };
   /**
@@ -73,7 +109,7 @@ export type CustomScreen = {
    * questions — the rail is where things live, the palette is what you can do —
    * and a screen can honestly want one without the other.
    */
-  palette?: { labelKey: MessageKey };
+  palette?: { label: CustomLabel };
 };
 
 /**

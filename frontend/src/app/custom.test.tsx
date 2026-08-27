@@ -2,6 +2,7 @@ import { existsSync, readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Users } from "lucide-react";
 import { describe, expect, it } from "vitest";
+import type { MessageKey } from "../i18n/en";
 import {
   CUSTOM_SCREEN,
   type CustomNavScreen,
@@ -12,6 +13,7 @@ import {
   customPaletteScreens,
   customScreens,
   findCustomScreen,
+  resolveCustomLabel,
 } from "./custom";
 import { isScreen, parseHash } from "./router";
 import { navEntryHref } from "./subnav";
@@ -76,8 +78,14 @@ describe("a fork's screen reaches the rail, the palette and the router", () => {
   const warranty: CustomNavScreen & CustomPaletteScreen = {
     key: "warranty",
     component: () => null,
-    nav: { group: "records", labelKey: "nav.contacts", icon: Users },
-    palette: { labelKey: "nav.contacts" },
+    // The fork's OWN words, which is the case the seam exists for: `warranty`
+    // is not a noun this product has, so there is no key to reuse.
+    nav: {
+      group: "records",
+      label: { en: "Warranty", de: "Garantie" },
+      icon: Users,
+    },
+    palette: { label: { en: "Warranty" } },
   };
   // A second screen that wants NEITHER, which is what proves the two lists are
   // read from their own fields rather than from "is this a fork screen".
@@ -104,6 +112,30 @@ describe("a fork's screen reaches the rail, the palette and the router", () => {
     expect(customPaletteScreens(forked)).toEqual([warranty]);
   });
 
+  // The half that makes the seam whole. A fork screen's label cannot be a
+  // MessageKey — `warranty` is not a noun this product has — and minting one
+  // would mean editing i18n/en.ts, de.ts and vi.ts: three upstream files, for
+  // the one string that names a row. So the words ship WITH the screen.
+  it("reads its own words, in the reader's language, falling back to English", () => {
+    const t = (key: MessageKey) => `translated:${key}`;
+    expect(resolveCustomLabel(warranty.nav.label, "de", t)).toBe("Garantie");
+    expect(resolveCustomLabel(warranty.nav.label, "en", t)).toBe("Warranty");
+    // Vietnamese is a locale this fork does not carry. English rather than a
+    // blank or the key: there is always something to render, and a fork that
+    // ships one language must not put a hole in a rail.
+    expect(resolveCustomLabel(warranty.nav.label, "vi", t)).toBe("Warranty");
+  });
+
+  // And the other arm, which is why this is a union rather than a record: a
+  // fork screen that IS one of the product's nouns seen differently reuses the
+  // word the product already has, in every language it already has it.
+  it("reuses an upstream key when the fork names one", () => {
+    const t = (key: MessageKey) => `translated:${key}`;
+    expect(resolveCustomLabel("nav.contacts", "de", t)).toBe(
+      "translated:nav.contacts",
+    );
+  });
+
   it("is addressed at the segment its rail row builds", () => {
     // The round trip, not either half: the rail builds `path + prefix + id` and
     // the router parses the same string back, and a prefix and a parser that
@@ -111,7 +143,7 @@ describe("a fork's screen reaches the rail, the palette and the router", () => {
     const href = navEntryHref([], {
       id: warranty.key,
       prefix: [CUSTOM_SCREEN],
-      labelKey: warranty.nav.labelKey,
+      label: warranty.nav.label,
       icon: warranty.nav.icon,
     });
     expect(href).toBe("#/x/warranty");

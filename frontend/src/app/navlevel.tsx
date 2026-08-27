@@ -17,6 +17,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
+  entryLabel,
   type NavCounts,
   type NavLevelEntry,
   type NavLevelGroup,
@@ -208,7 +209,7 @@ function NavLevelRow({
   // One label, feeding the row text, the aria-label and the collapsed-rail
   // tooltip below — the three read the same string, so a row can never
   // announce one name and show another.
-  const label = t(entry.labelKey);
+  const label = entryLabel(entry, locale, t);
   const active = level.activeId === entry.id;
   const key = navTipKey(level, entry.id);
   // The rail's tips wait for the pointer to settle like every other popover.

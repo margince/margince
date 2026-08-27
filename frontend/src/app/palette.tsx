@@ -2,13 +2,17 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { CornerDownLeft, Search, Sparkles } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import {
   settingsAddress,
   useSettingsEntryVisibility,
 } from "../screens/settings";
-import { CUSTOM_SCREEN, customPaletteScreens } from "./custom";
+import {
+  CUSTOM_SCREEN,
+  customPaletteScreens,
+  resolveCustomLabel,
+} from "./custom";
 import { ENTITY, ENTITY_KINDS, type EntityKind } from "./entity";
 import { NAV } from "./nav";
 import { navigate, type Route } from "./router";
@@ -37,6 +41,7 @@ type AdminEntry = "data-model" | "ai";
 
 export function useBuiltinCommands(): Command[] {
   const t = useT();
+  const { locale } = useLocale();
   // Without the company rollout probe: the palette offers no shortcut to General,
   // and that probe is a network read this hook would otherwise fire on every
   // screen (see useSettingsEntryVisibility).
@@ -61,7 +66,7 @@ export function useBuiltinCommands(): Command[] {
     // Empty upstream, like every other arm of this seam.
     const forkScreens: Command[] = customPaletteScreens().map((screen) => ({
       id: `screen:${CUSTOM_SCREEN}/${screen.key}`,
-      label: t(screen.palette.labelKey),
+      label: resolveCustomLabel(screen.palette.label, locale, t),
       keywords: [screen.key],
       type: "screen",
       route: { screen: CUSTOM_SCREEN, id: screen.key },
@@ -121,7 +126,7 @@ export function useBuiltinCommands(): Command[] {
       (shortcut) => visible[shortcut.entry],
     );
     return [...screens, ...forkScreens, ...actions, ...settingsScreens];
-  }, [t, visible]);
+  }, [t, visible, locale]);
 }
 
 // The record kinds a search hit can route to (activity is a valid

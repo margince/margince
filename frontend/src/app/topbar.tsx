@@ -1,11 +1,11 @@
 import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
 import { Breadcrumb, type Crumb } from "../design-system/breadcrumb";
-import { useT } from "../i18n";
+import { useLocale, useT } from "../i18n";
 import { SETTINGS_SCREEN } from "../screens/settings";
 import { AccountMenu } from "./account";
 import { SCREEN_ENTITY } from "./entity";
 import { EXTENSION_SCREEN, findExtension } from "./extensions";
-import { NAV, type NavSection } from "./nav";
+import { entryLabel, NAV, type NavSection } from "./nav";
 import {
   OFF_RAIL_TITLE_KEYS,
   resolveTitle,
@@ -47,6 +47,7 @@ function collapseHotkeyLabel(platform: string): string {
  */
 function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
   const t = useT();
+  const { locale } = useLocale();
   const navItem = NAV.find((item) => item.screen === route.screen);
   // A record kind, and only then: an id segment that names no record is a
   // screen's own state — the settings tab, for one — and the page is still the
@@ -88,7 +89,7 @@ function useCrumbs(route: Route, section?: NavSection): readonly Crumb[] {
         label: t(inSection.section.titleKey),
         href: routeHash({ screen: route.screen }),
       },
-      { label: t(inSection.entry.labelKey) },
+      { label: entryLabel(inSection.entry, locale, t) },
     ];
   }
   return [{ label: resolveTitle(route.screen, navItem?.labelKey, t) }];
