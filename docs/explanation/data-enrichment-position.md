@@ -249,11 +249,15 @@ Margince also parses the Impressum, whose publication German law *mandates* unde
 
 Crawling stays polite and respects robots.txt. The existing rule also remains: a human click can write directly; an automatic read stages the suggestion.
 
-**A3. Technical enrichment.** We build this on demand once a customer needs it. It is quick work.
+**A3. Technical enrichment.** One click on the company record tells you what the company runs.[^46]
 
-MX and DNS records, TLS certificate-transparency logs, and technology-stack fingerprints from the company's public pages are company-level signals. They work the same way in Hamburg and Da Nang.
+Every company with a website and email leaves public technical traces, because the internet does not work otherwise. Which system receives their mail: Google Workspace, Microsoft 365, or their own server. What their website is built with: shop system, CMS, marketing tools. Which services they operate, visible through their subdomains: a webshop, a customer portal, a careers page. And where they host.
 
-The A1 caveat still applies. A personal name inside a certificate or domain record is personal data, so Margince keeps the stored signal at company level.
+Margince reads those traces and writes them onto the company record. Your rep sees the company's size class, how modern their IT is and what they operate before the first call. And you can filter on it: every account with a webshop, every account on Microsoft 365, every account that just opened a careers page.
+
+Two honest limits. You only see what faces the public internet; the ERP behind the firewall stays invisible unless a subdomain betrays it. And the picture goes stale, so it refreshes like every other enrichment.
+
+Legally this is the cleanest item on the page. All of it describes the company, never a person, so neither the GDPR nor Vietnam's consent rules are engaged, and no platform terms are involved: DNS and certificate logs exist to be queried. It works the same way in Hamburg and Da Nang. One guardrail: a personal name occasionally appears inside a certificate or domain record, so Margince stores signals at company level only.
 
 **A4. First-party person capture.** Built.[^44]
 
@@ -415,3 +419,4 @@ Counsel still needs to close four Tier B questions: the final adoption status of
 [^43]: The write shape: docs/explanation/write-backbone.md in this repository.
 [^44]: Ticket 2856 in the repository issue tracker.
 [^45]: Ticket 2858 in the repository issue tracker.
+[^46]: Ticket 2888 in the repository issue tracker.
