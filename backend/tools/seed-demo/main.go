@@ -192,8 +192,12 @@ func seedWhatNeedsSQLAfterCompanies(dsn, dataset string, client *client, demo de
 	// The inbox goes on LAST: the connector generates from the accounts,
 	// people and deals this run has just written, so a mailbox connected
 	// before them would generate from an empty installation.
-	_, err := seedCommsConnections(dsn, demo, mode)
-	return err
+	if _, err := seedCommsConnections(dsn, demo, mode); err != nil {
+		return err
+	}
+	// And the worklist passes after even that, because they read how long a
+	// deal has been quiet and the correspondence above is what makes it quiet.
+	return requestNightlyWorklistPasses(dsn, mode)
 }
 
 // seedWhatNeedsCompanies runs the SQL-and-in-process phases that need the
