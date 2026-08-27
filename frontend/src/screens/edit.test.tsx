@@ -50,6 +50,7 @@ describe("edit record flow", () => {
         update={vi.fn(async () => record)}
         invalidate="people"
         recordKey="person"
+        savedMessage="Saved."
       />,
     );
     await userEvent.click(screen.getByTestId("edit-record"));
@@ -68,6 +69,7 @@ describe("edit record flow", () => {
         update={update}
         invalidate="people"
         recordKey="person"
+        savedMessage="Saved."
       />,
     );
     await userEvent.click(screen.getByTestId("edit-record"));
@@ -146,6 +148,7 @@ describe("edit record flow", () => {
         update={update}
         invalidate="people"
         recordKey="person"
+        savedMessage="Saved."
       />,
     );
     await userEvent.click(screen.getByTestId("edit-record"));
@@ -165,6 +168,7 @@ describe("edit record flow", () => {
         update={update}
         invalidate="people"
         recordKey="person"
+        savedMessage="Saved."
       />,
     );
     await userEvent.click(screen.getByTestId("edit-record"));

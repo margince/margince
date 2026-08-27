@@ -573,6 +573,9 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                     person.archived_at ? archivedReasonId : undefined
                   }
                   label={t("record.edit")}
+                  savedMessage={t("record.saveDone", {
+                    name: person.full_name,
+                  })}
                   notice={overlay ? t("overlay.partialWriteBack") : undefined}
                   fields={[...personEditFields, ...cf.formFields]}
                   record={{
@@ -647,6 +650,9 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
                   }
                   label={t("record.archive")}
                   confirmText={t("record.archiveConfirm")}
+                  archivedMessage={t("record.archiveDone", {
+                    name: person.full_name,
+                  })}
                   archive={async () => {
                     const { data, error } = await api.DELETE("/people/{id}", {
                       params: { path: { id } },

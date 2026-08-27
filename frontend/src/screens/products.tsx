@@ -216,6 +216,7 @@ export function ProductsAdmin() {
         {canUpdate && (
           <EditAction
             label={t("product.edit")}
+            savedMessage={t("record.saveDone", { name: p.name })}
             invalidate="products"
             recordKey="product"
             record={{
@@ -230,6 +231,7 @@ export function ProductsAdmin() {
           <ArchiveAction
             label={t("product.archive")}
             confirmText={t("product.archiveConfirm")}
+            archivedMessage={t("record.archiveDone", { name: p.name })}
             invalidate="products"
             recordKey="product"
             onArchived={() => list.refetch()}

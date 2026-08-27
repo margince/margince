@@ -1,10 +1,11 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useToast } from "../design-system/toast";
 import { toMinorUnits } from "../format/minorunits";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { throwProblem } from "./common";
+import { problemMessageOf, throwProblem } from "./common";
 import { CreateAction, type CreateField } from "./create";
 
 // What a rep can START from the company page.
@@ -248,9 +249,32 @@ async function resolveTagId(
  */
 export function TagAction({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
+  const toast = useToast();
+  const queryClient = useQueryClient();
+
+  // `DELETE /tags/{id}/apply` is the contract's own words for this: "Undo for
+  // applyTag ... Idempotent". It is the cleanest inverse pair the API has, and
+  // one of the few places in this product where an Undo has something real
+  // behind it — most destructive verbs here are archives with no restore.
+  //
+  // It reports its own refusal rather than failing quietly. A reader watched
+  // the confirmation go and would otherwise believe the tag came off.
+  const takeTagOff = async (tagId: string, name: string) => {
+    const { error } = await api.DELETE("/tags/{id}/apply", {
+      params: { path: { id: tagId } },
+      body: { entity_type: "organization", entity_id: orgId },
+    });
+    if (error) {
+      toast.show(problemMessageOf(error, t), { mark: false, sticky: true });
+      return;
+    }
+    queryClient.invalidateQueries({ queryKey: ["organization360"] });
+    toast.show(t("co.tags.removed", { name }));
+  };
 
   const addTag = async (values: Record<string, string>) => {
-    const tagId = await resolveTagId(values.name.trim(), t);
+    const name = values.name.trim();
+    const tagId = await resolveTagId(name, t);
     const { data, error, response } = await api.POST("/tags/{id}/apply", {
       params: { path: { id: tagId } },
       body: { entity_type: "organization", entity_id: orgId },
@@ -258,12 +282,25 @@ export function TagAction({ orgId }: Readonly<{ orgId: string }>) {
     // Already on this company is the state the rep asked for, so it is not an
     // error to report at them. The server says 409 because the row exists;
     // what the rep wanted was the tag present, and it is.
+    //
+    // It carries NO Undo, and the distinction is the point: this press did not
+    // put the tag there, so taking it off would reverse a decision somebody
+    // else made — which is not what the word means.
     if (response.status === 409) {
+      toast.show(t("co.tags.alreadyThere", { name }), { mark: false });
       return { id: orgId };
     }
     if (error) {
       throwProblem(error, t);
     }
+    toast.show(t("co.tags.applied", { name }), {
+      action: {
+        label: t("common.undo"),
+        onAct: () => {
+          void takeTagOff(tagId, name);
+        },
+      },
+    });
     return { id: data.id };
   };
 
@@ -289,6 +326,7 @@ export function TagAction({ orgId }: Readonly<{ orgId: string }>) {
  */
 export function ListAction({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
+  const toast = useToast();
 
   const addToList = async (values: Record<string, string>) => {
     const name = values.name.trim();
@@ -336,11 +374,16 @@ export function ListAction({ orgId }: Readonly<{ orgId: string }>) {
     });
     // Already a member is the asked-for state, not a failure. See TagAction.
     if (response.status === 409) {
+      toast.show(t("co.lists.added", { name }), { mark: false });
       return { id: orgId };
     }
     if (error) {
       throwProblem(error, t);
     }
+    // No Undo, unlike the tag beside it: list membership has no removal in the
+    // contract, and an Undo with nothing behind it teaches a reader to stop
+    // looking for the real way back.
+    toast.show(t("co.lists.added", { name }));
     return { id: data.id };
   };
 

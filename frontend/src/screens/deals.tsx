@@ -2811,6 +2811,7 @@ function DealActions({
       <EditAction
         disabledReasonId={refusedByArchive}
         label={t("deal.edit")}
+        savedMessage={t("record.saveDone", { name: deal.name })}
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
         fields={[
           ...dealEditFields(t, {
@@ -2874,6 +2875,7 @@ function DealActions({
           disabledReasonId={refusedByArchive}
           label={t("deal.archive")}
           confirmText={t("deal.archiveConfirm")}
+          archivedMessage={t("record.archiveDone", { name: deal.name })}
           archive={async () => {
             const { data, error } = await api.DELETE("/deals/{id}", {
               params: { path: { id: deal.id } },

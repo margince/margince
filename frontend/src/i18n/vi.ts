@@ -285,6 +285,7 @@ export const vi = {
   "action.readCompany": "Đọc một công ty",
   "action.booking": "Trang đặt lịch",
 
+  "common.undo": "Hoàn tác",
   "common.close": "Đóng",
 
   "explain.open": "Giải thích con số này",
@@ -303,6 +304,8 @@ export const vi = {
   "record.timeline": "Timeline",
   "record.edit": "Sửa",
   "record.save": "Lưu",
+  "record.saveDone": "Đã lưu “{name}”",
+  "record.archiveDone": "Đã lưu trữ “{name}”",
   "record.archive": "Lưu trữ",
   "record.disqualify": "Loại",
   "record.archiveConfirm":
@@ -487,6 +490,7 @@ export const vi = {
 
   "rel.add": "Thêm quan hệ",
   "rel.kind": "Loại",
+  "rel.saveDone": "Đã lưu mối quan hệ",
   "rel.role": "Vai trò",
   "rel.startedAt": "Bắt đầu",
   "rel.endedAt": "Kết thúc",
@@ -1586,10 +1590,14 @@ export const vi = {
   "co.tags.noLists": "Không thuộc danh sách nào.",
   "co.tags.noTags": "Chưa gắn tag nào.",
   "co.deal.new": "Deal mới",
+  "co.tags.applied": "Đã thêm thẻ “{name}”",
+  "co.tags.alreadyThere": "“{name}” đã có ở công ty này",
+  "co.tags.removed": "Đã gỡ thẻ “{name}”",
   "co.tags.apply": "Thêm tag",
   "co.tags.pick": "Tên tag",
   "co.tags.overCap":
     "Số tag nhiều hơn mức danh sách này hiển thị được, nên một tag không xuất hiện ở đây vẫn có thể đã tồn tại. Hãy nhờ quản trị viên dọn bớt tag trước khi tạo tag mới.",
+  "co.lists.added": "Đã thêm vào “{name}”",
   "co.lists.add": "Thêm vào danh sách",
   "co.lists.pick": "Tên danh sách",
   "co.lists.overCap":
@@ -5618,6 +5626,8 @@ export const vi = {
   "quotas.err.targetZero": "Chỉ tiêu này chưa có mục tiêu",
   "quotas.err.computeFailed": "Không tính được mức đạt",
   "quotas.err.ownerXorTeam": "Hãy chọn đúng một: người phụ trách hoặc nhóm.",
+  "quotas.saveDone": "Đã lưu chỉ tiêu",
+  "quotas.archiveDone": "Đã lưu trữ chỉ tiêu",
   "quotas.archive.title": "Lưu trữ chỉ tiêu",
   "quotas.archive.confirm":
     "Lưu trữ sẽ đưa chỉ tiêu này ra khỏi danh sách và ngừng theo dõi mức đạt. Chỉ tiêu đã lưu trữ thì không sửa được.",
@@ -5795,6 +5805,8 @@ export const vi = {
   "webhooks.field.eventTypes": "Loại sự kiện",
   "webhooks.field.state": "Trạng thái",
   "webhooks.edit": "Sửa",
+  "webhooks.saveDone": "Đã lưu webhook",
+  "webhooks.archiveDone": "Đã lưu trữ webhook",
   "webhooks.archive": "Lưu trữ",
   "webhooks.archiveConfirm":
     "Lưu trữ sẽ dừng mọi lượt gửi cho đăng ký này. Không thể hoàn tác.",

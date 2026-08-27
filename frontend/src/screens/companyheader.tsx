@@ -519,6 +519,7 @@ function CompanyEditAction({
     <EditAction
       disabledReasonId={disabledReasonId}
       label={t("record.edit")}
+      savedMessage={t("record.saveDone", { name: org.display_name })}
       notice={overlay ? t("overlay.partialWriteBack") : undefined}
       fields={[
         ...companyEditFields(owners, Boolean(org.owner_id), t),
@@ -681,6 +682,7 @@ export function CompanyActionBadges({
           disabledReasonId={refusedByState}
           label={t("record.archive")}
           confirmText={t("record.archiveConfirm")}
+          archivedMessage={t("record.archiveDone", { name: org.display_name })}
           archive={async () => {
             const { data, error } = await api.DELETE("/organizations/{id}", {
               params: { path: { id: org.id } },

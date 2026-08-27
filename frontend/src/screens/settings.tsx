@@ -2301,6 +2301,7 @@ function StageRow({
         {canEdit && (
           <EditAction
             label={t("stage.edit")}
+            savedMessage={t("record.saveDone", { name: stage.name })}
             invalidate="pipelines"
             recordKey="stage"
             record={{
@@ -2369,6 +2370,7 @@ function PipelineRow({
               <>
                 <EditAction
                   label={t("pipeline.edit")}
+                  savedMessage={t("record.saveDone", { name: pipeline.name })}
                   invalidate="pipelines"
                   recordKey="pipeline"
                   record={{

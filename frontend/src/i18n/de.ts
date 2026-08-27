@@ -281,6 +281,7 @@ export const de = {
   "action.readCompany": "Firma einlesen",
   "action.booking": "Buchungsseite",
 
+  "common.undo": "Rückgängig",
   "common.close": "Schließen",
 
   "explain.open": "Diese Zahl erklären",
@@ -299,6 +300,8 @@ export const de = {
   "record.timeline": "Verlauf",
   "record.edit": "Bearbeiten",
   "record.save": "Speichern",
+  "record.saveDone": "„{name}“ gespeichert",
+  "record.archiveDone": "„{name}“ archiviert",
   "record.archive": "Archivieren",
   "record.disqualify": "Disqualifizieren",
   "record.archiveConfirm":
@@ -485,6 +488,7 @@ export const de = {
 
   "rel.add": "Beziehung hinzufügen",
   "rel.kind": "Art",
+  "rel.saveDone": "Beziehung gespeichert",
   "rel.role": "Rolle",
   "rel.startedAt": "Beginn",
   "rel.endedAt": "Ende",
@@ -1593,10 +1597,14 @@ export const de = {
   "co.tags.noLists": "Auf keiner Liste.",
   "co.tags.noTags": "Keine Tags vergeben.",
   "co.deal.new": "Neuer Deal",
+  "co.tags.applied": "Tag „{name}“ hinzugefügt",
+  "co.tags.alreadyThere": "„{name}“ ist bereits an dieser Firma",
+  "co.tags.removed": "Tag „{name}“ entfernt",
   "co.tags.apply": "Tag hinzufügen",
   "co.tags.pick": "Tag-Name",
   "co.tags.overCap":
     "Es gibt mehr Tags, als diese Liste zeigen kann; ein Tag, der hier fehlt, kann trotzdem existieren. Bitten Sie eine Administratorin oder einen Administrator, die Tags aufzuräumen, bevor ein neuer angelegt wird.",
+  "co.lists.added": "Zu „{name}“ hinzugefügt",
   "co.lists.add": "Zu Liste hinzufügen",
   "co.lists.pick": "Listenname",
   "co.lists.overCap":
@@ -5669,6 +5677,8 @@ export const de = {
   "quotas.err.targetZero": "Diese Quota hat noch kein Ziel",
   "quotas.err.computeFailed": "Zielerreichung konnte nicht berechnet werden",
   "quotas.err.ownerXorTeam": "Wählen Sie genau eines: Inhaber oder Team.",
+  "quotas.saveDone": "Quota gespeichert",
+  "quotas.archiveDone": "Quota archiviert",
   "quotas.archive.title": "Quota archivieren",
   "quotas.archive.confirm":
     "Das Archivieren entfernt diese Quota aus der Liste und stoppt die Verfolgung der Zielerreichung. Archivierte Quotas können nicht bearbeitet werden.",
@@ -5847,6 +5857,8 @@ export const de = {
   "webhooks.field.eventTypes": "Ereignistypen",
   "webhooks.field.state": "Status",
   "webhooks.edit": "Bearbeiten",
+  "webhooks.saveDone": "Webhook gespeichert",
+  "webhooks.archiveDone": "Webhook archiviert",
   "webhooks.archive": "Archivieren",
   "webhooks.archiveConfirm":
     "Das Archivieren stoppt jede Zustellung für dieses Abonnement. Dies kann nicht rückgängig gemacht werden.",

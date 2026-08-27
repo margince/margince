@@ -1435,6 +1435,7 @@ function LeadActions({
       <EditAction
         disabledReasonId={lead.archived_at ? terminalReasonId : undefined}
         label={t("record.edit")}
+        savedMessage={t("record.saveDone", { name: lead.full_name ?? "" })}
         notice={overlay ? t("overlay.partialWriteBack") : undefined}
         fields={[...leadEditFields, ...cf.formFields]}
         record={{

@@ -4,6 +4,7 @@ import { useId, useState } from "react";
 import type { Route } from "../app/router";
 import { Modal } from "../design-system/atoms";
 import { IconAction } from "../design-system/iconaction";
+import { useToast } from "../design-system/toast";
 import { useT } from "../i18n";
 import { derivedRecordKeys } from "./activitykeys";
 import {
@@ -39,6 +40,7 @@ export function useUpdateRecord<Updated extends { id: string }>({
   invalidate,
   recordKey,
   recordId,
+  savedMessage,
   onDone,
 }: Readonly<{
   update: (
@@ -50,9 +52,15 @@ export function useUpdateRecord<Updated extends { id: string }>({
   // The id of the record being edited, known up front unlike a create: used
   // only to name the agent rail's line, never the transport.
   recordId?: string;
+  // What the reader is told once it has landed, already translated. REQUIRED:
+  // the dialog closing is the caller dismissing its own form, not the server
+  // agreeing to anything, and an edit that changes a field the reader cannot
+  // see behind the dialog left them with no evidence either way.
+  savedMessage: string;
   onDone: () => void;
 }>) {
   const queryClient = useQueryClient();
+  const toast = useToast();
   const head = EDIT_MUTATION_HEAD[recordKey];
   return useMutation({
     mutationKey:
@@ -75,6 +83,7 @@ export function useUpdateRecord<Updated extends { id: string }>({
         queryClient.invalidateQueries({ queryKey });
       }
       onDone();
+      toast.show(savedMessage);
     },
   });
 }
@@ -247,6 +256,7 @@ export function EditAction<Updated extends { id: string }>({
   update,
   invalidate,
   recordKey,
+  savedMessage,
   resolveExisting,
   disabledReasonId,
 }: Readonly<{
@@ -268,6 +278,8 @@ export function EditAction<Updated extends { id: string }>({
   ) => Promise<Updated>;
   invalidate: string;
   recordKey: string;
+  // What the reader is told once it has landed. See `useUpdateRecord`.
+  savedMessage: string;
   // Symmetric with CreateAction's dedupe link — edit rarely collides, but the
   // API stays uniform for the screens that adopt it.
   resolveExisting?: (code: string, id: string) => Route;
@@ -279,6 +291,7 @@ export function EditAction<Updated extends { id: string }>({
     invalidate,
     recordKey,
     recordId: record.id,
+    savedMessage,
     onDone: () => setEditing(false),
   });
   const existing =

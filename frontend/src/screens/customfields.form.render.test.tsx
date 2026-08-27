@@ -87,6 +87,7 @@ describe("custom fields on the record edit form", () => {
         update={update}
         invalidate="deals"
         recordKey="deal"
+        savedMessage="Saved."
       />,
     );
     await userEvent.click(screen.getByTestId("edit-record"));
@@ -118,6 +119,7 @@ describe("custom fields on the record edit form", () => {
         update={vi.fn(async () => ({ id: "d1" }))}
         invalidate="deals"
         recordKey="deal"
+        savedMessage="Saved."
       />,
     );
     await userEvent.click(screen.getByTestId("edit-record"));

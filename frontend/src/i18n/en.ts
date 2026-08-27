@@ -300,6 +300,7 @@ export const en = {
   "action.readCompany": "Read a company",
   "action.booking": "Booking page",
 
+  "common.undo": "Undo",
   "common.close": "Close",
 
   "explain.open": "Explain this number",
@@ -318,6 +319,8 @@ export const en = {
   "record.timeline": "Timeline",
   "record.edit": "Edit",
   "record.save": "Save",
+  "record.saveDone": "“{name}” saved",
+  "record.archiveDone": "“{name}” archived",
   "record.archive": "Archive",
   "record.disqualify": "Disqualify",
   "record.archiveConfirm":
@@ -501,6 +504,7 @@ export const en = {
 
   "rel.add": "Add relationship",
   "rel.kind": "Kind",
+  "rel.saveDone": "Relationship saved",
   "rel.role": "Role",
   "rel.startedAt": "Started",
   "rel.endedAt": "Ended",
@@ -1633,10 +1637,14 @@ export const en = {
   "co.tags.noLists": "Not on any list.",
   "co.tags.noTags": "No tags applied.",
   "co.deal.new": "New deal",
+  "co.tags.applied": "Tag “{name}” added",
+  "co.tags.alreadyThere": "“{name}” is already on this company",
+  "co.tags.removed": "Tag “{name}” taken off",
   "co.tags.apply": "Add tag",
   "co.tags.pick": "Tag name",
   "co.tags.overCap":
     "There are more tags than this list can show, so a tag missing from it may still exist. Ask an admin to prune the tags before adding a new one.",
+  "co.lists.added": "Added to “{name}”",
   "co.lists.add": "Add to list",
   "co.lists.pick": "List name",
   "co.lists.overCap":
@@ -5714,6 +5722,8 @@ export const en = {
   "quotas.err.targetZero": "This quota has no target yet",
   "quotas.err.computeFailed": "Attainment couldn't be computed",
   "quotas.err.ownerXorTeam": "Choose exactly one of owner or team.",
+  "quotas.saveDone": "Quota saved",
+  "quotas.archiveDone": "Quota archived",
   "quotas.archive.title": "Archive quota",
   "quotas.archive.confirm":
     "Archiving drops this quota from the list and stops tracking its attainment. Archived quotas can't be edited.",
@@ -5891,6 +5901,8 @@ export const en = {
   "webhooks.field.eventTypes": "Event types",
   "webhooks.field.state": "State",
   "webhooks.edit": "Edit",
+  "webhooks.saveDone": "Webhook saved",
+  "webhooks.archiveDone": "Webhook archived",
   "webhooks.archive": "Archive",
   "webhooks.archiveConfirm":
     "Archiving stops all delivery for this subscription. This can't be undone.",
