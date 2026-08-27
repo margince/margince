@@ -96,6 +96,9 @@ type weeklyGenerateWorkspaceWorker struct {
 	// only the sentence is absent, and the screen says so rather than
 	// pretending the week was unremarkable.
 	narrator completer
+	// mail is the outbound channel, off by omission the same way. An
+	// installation with no operator relay measures every week and mails none.
+	mail WeeklyMailConfig
 }
 
 func (w *weeklyGenerateWorkspaceWorker) Work(
@@ -133,11 +136,40 @@ func (w *weeklyGenerateWorkspaceWorker) measureWorkspace(
 	if err != nil {
 		return err
 	}
+	// TWO PASSES, and the order is the protection rather than a tidiness.
+	//
+	// Measuring is database-only and fast; mailing dials a relay that may
+	// stall for its whole budget. Interleaved, one unreachable relay spends the
+	// workspace's ten minutes on the first dozen reps and every rep after them
+	// loses THE REVIEW — not their mail, the counts and the deal lines
+	// themselves. And a rep skipped that way may never be measured at all: the
+	// candidate query only ever asks about the week that just closed, so a
+	// missed week is gone once the next Monday arrives.
+	//
+	// So every due rep is measured first, and nothing outbound happens until
+	// the last of them has their week written.
 	var failures []error
+	mailable := make([]mailableReview, 0, len(due))
 	for _, userID := range due {
-		if err := w.measureFor(sysCtx, wsID, userID, now); err != nil {
+		ready, err := w.measureFor(sysCtx, wsID, userID, now)
+		if err != nil {
 			failures = append(failures, fmt.Errorf("weekly review for user %s: %w", userID, err))
+			continue
 		}
+		if ready.reviewID != ids.Nil {
+			mailable = append(mailable, ready)
+		}
+	}
+	// The mail second, on whatever deadline is left. A relay that eats the
+	// remainder now costs reps their MESSAGE, which the claim leaves unspent
+	// for a later tick to retry — the review itself is already committed.
+	for _, ready := range mailable {
+		// The rep's authority on the JOB's live context: her principal decides
+		// what may be read and sent, the running job decides how long there is
+		// to do it and when to stop.
+		sendCtx := principal.WithCorrelationID(
+			principal.WithActor(ctx, ready.rep), ids.NewV7())
+		w.mailWeekly(sendCtx, ready.reviewID, now)
 	}
 	if len(failures) > 0 {
 		return fmt.Errorf("weekly_review_generate_workspace: %d of %d reps: %w",
@@ -154,19 +186,20 @@ func (w *weeklyGenerateWorkspaceWorker) measureWorkspace(
 // from separate reads they can describe an authority she never held.
 func (w *weeklyGenerateWorkspaceWorker) measureFor(
 	ctx context.Context, wsID, userID ids.UUID, now time.Time,
-) error {
+) (mailableReview, error) {
 	rbac, seat, err := w.users.EffectiveAuthority(ctx, wsID, userID)
 	if err != nil {
-		return fmt.Errorf("resolving the rep's authority: %w", err)
+		return mailableReview{}, fmt.Errorf("resolving the rep's authority: %w", err)
 	}
-	repCtx := principal.WithActor(ctx, principal.Principal{
+	repPrincipal := principal.Principal{
 		Type:        principal.PrincipalHuman,
 		ID:          "human:" + userID.String(),
 		UserID:      userID,
 		SeatType:    seat,
 		TeamIDs:     rbac.TeamIDs,
 		Permissions: rbac.Permissions,
-	})
+	}
+	repCtx := principal.WithActor(ctx, repPrincipal)
 	repCtx = principal.WithCorrelationID(repCtx, ids.NewV7())
 	review, created, err := w.engine.AssembleFor(repCtx, now)
 	if err != nil {
@@ -177,9 +210,9 @@ func (w *weeklyGenerateWorkspaceWorker) measureFor(
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			w.log.InfoContext(ctx, "no weekly review for a seat whose role does not grant reading deals",
 				"user", userID, "workspace", wsID)
-			return nil
+			return mailableReview{}, nil
 		}
-		return err
+		return mailableReview{}, err
 	}
 	// The sentence, after the review is committed and never as part of it. A
 	// model that is slow, absent or wrong must not be able to cost the rep the
@@ -197,7 +230,29 @@ func (w *weeklyGenerateWorkspaceWorker) measureFor(
 		w.narrate(repCtx, review, now)
 	}
 	_ = created
-	return nil
+	// HANDED BACK rather than mailed here. The caller runs every send after
+	// the last rep is measured — see measureWorkspace for why interleaving
+	// them costs later reps their review.
+	//
+	// It carries the id and not the review: mailWeekly re-reads the row inside
+	// its own claim, because the narration above wrote to that same row and
+	// mailing the in-memory copy would post a week whose sentence had just
+	// been written and was not in it.
+	return mailableReview{rep: repPrincipal, reviewID: review.ID}, nil
+}
+
+// mailableReview is one measured week waiting for its message, with the
+// authority it must be claimed and sent under.
+//
+// It carries the PRINCIPAL and not a context. The mail runs under the rep's own
+// authority, like every other read of her data — the enumeration's system
+// principal must not be what claims and sends her week — but the deadline and
+// the cancellation belong to the job that is still running. Storing the whole
+// context would freeze both, so a worker shutting down would go on dialling a
+// relay for a job nobody is waiting for.
+type mailableReview struct {
+	rep      principal.Principal
+	reviewID ids.UUID
 }
 
 // narrate asks the model for the week's sentence and stores it, or records

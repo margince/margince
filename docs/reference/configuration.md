@@ -290,6 +290,27 @@ recorded on the timeline, answers `202`, and then sits `pending` in
 `comms_outbound` indefinitely with no reason string, because nothing has yet
 tried and failed. Run a worker, or accept that mail is queued and not sent.
 
+**The weekly retrospective's mail leaves from here too, and it needs `email` in
+the deployment file.** The api role has always resolved the relay because the
+mail it sends answers a request — a password reset, a Deal Room invitation. The
+weekly review is the first message this product sends that nobody asked for in
+the moment, and it is written by an unattended job, so the worker resolves the
+same relay and the same sealed `email.smtp.password` for itself. A worker booted
+without `email.enabled` measures every rep's week and mails none; the review is
+on Home either way, and the boot line says which posture this process is in.
+
+**One attempt per rep per week, and the column says so.** `weekly_review.mail_attempted_at`
+is written *before* the relay is dialled, so every later tick of the six-hourly
+pass finds the attempt spent and sends nothing. That bounds duplicates at the
+cost of losing the message on any post-claim failure — a crash, a refused
+envelope, a connection dropped mid-body. The name is deliberate: SMTP returns no
+receipt this installation records, so nothing here observed a delivery, and a
+column called `sent_at` would claim one. When the relay refuses, the cause lands
+in `weekly_review.mail_error` beside the stamp, so a missing weekly is
+answerable from the row rather than only from a log nobody kept. Set
+`--public-base-url` on the worker as well, or the message goes out without its
+link back to Home.
+
 **A failed outbound webhook is never re-attempted without this process either.**
 Both roles run the `cg:webhooks` consumer when `--webhook-key` is set, so an
 api-only deployment still makes each delivery's FIRST attempt — but the retry

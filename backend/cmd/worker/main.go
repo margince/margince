@@ -158,8 +158,13 @@ func run(ctx context.Context, args []string, stdout io.Writer) error {
 		return err
 	}
 
+	// The operator relay, resolved in THIS role. Unattended work runs here, so
+	// the weekly retrospective's mail has no request to arrive on.
+	weeklyMail := weeklyMailConfig(ctx, cfg, deployCfg, pool, logger)
+	_, _ = fmt.Fprintln(stdout, weeklyMailBanner(weeklyMail))
+
 	stopJobs, err := startJobRunner(ctx, pool, rdb, compose.OverlayBudgetConfig(deployCfg.EffectiveOverlayBudget()),
-		logger, cfg, modelPath, boundModels, lanes, stdout)
+		logger, cfg, modelPath, boundModels, lanes, weeklyMail, stdout)
 	if err != nil {
 		return err
 	}

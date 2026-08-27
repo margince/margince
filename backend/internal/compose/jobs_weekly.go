@@ -24,7 +24,7 @@ import (
 // function for the same reason the brief's is: the workspace worker needs the
 // weekly engine and the identity service, neither of which the group's other
 // members carry.
-func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, narrator completer) {
+func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger, narrator completer, mail WeeklyMailConfig) {
 	addDeclaredWorker[WeeklyReviewGenerateArgs](reg, &weeklyGenerateWorker{pool: pool})
 	addDeclaredWorker[WeeklyReviewGenerateWorkspaceArgs](reg, &weeklyGenerateWorkspaceWorker{
 		engine:   weekly.NewEngine(pool),
@@ -33,5 +33,6 @@ func addWeeklyReviewJobs(reg *jobRegistry, pool *pgxpool.Pool, log *slog.Logger,
 		now:      time.Now,
 		log:      log,
 		narrator: narrator,
+		mail:     mail,
 	})
 }
