@@ -58,7 +58,7 @@ func (w *siteDeepReadWorker) runTriage(ctx context.Context, args SiteDeepReadArg
 		// company with a broken site, so the decision falls to the sender's name.
 		w.log.WarnContext(ctx, "domain triage: the seed page could not be read",
 			"read", args.SiteReadID.String(), "domain", domain, "err", err)
-		return w.resolveUnreachable(ctx, args, domain, siteReadWireStatusFailed, triageWarningNothingRead)
+		return w.resolveUnreachable(ctx, args, claim, domain, siteReadWireStatusFailed, triageWarningNothingRead)
 	}
 
 	verdict, err := w.classifySeed(ctx, seed)
@@ -75,7 +75,7 @@ func (w *siteDeepReadWorker) runTriage(ctx context.Context, args SiteDeepReadArg
 	if verdict.Aborts() {
 		// The whole point of classifying first: one page read, no crawl, no
 		// extraction, no company invented.
-		return w.settleTriage(ctx, args, domain, triageStatusFor(verdict.Kind),
+		return w.settleTriage(ctx, args, claim, domain, triageStatusFor(verdict.Kind),
 			people.DomainSourceSiteRead, triageEvidence(verdict), siteReadWireStatusCancelled, triageWarningNotACompany, nil)
 	}
 
@@ -93,7 +93,7 @@ func (w *siteDeepReadWorker) triageWithoutLooking(ctx context.Context, args Site
 		return w.fail(ctx, args.SiteReadID,
 			fmt.Errorf("site deep read %s: %q is not a triageable seed", args.SiteReadID, claim.SeedURL))
 	}
-	return w.resolveUnreachable(ctx, args, domain, siteReadWireStatusCancelled, triageWarningNotAllowed)
+	return w.resolveUnreachable(ctx, args, claim, domain, siteReadWireStatusCancelled, triageWarningNotAllowed)
 }
 
 // readAndResolveTriage runs the full read for a domain the seed page did not
@@ -111,7 +111,7 @@ func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, args Site
 		}
 		w.log.WarnContext(ctx, "domain triage: the crawl failed",
 			"read", args.SiteReadID.String(), "domain", domain, "err", err)
-		return w.resolveUnreachable(ctx, args, domain, siteReadWireStatusFailed, triageWarningNothingRead)
+		return w.resolveUnreachable(ctx, args, claim, domain, siteReadWireStatusFailed, triageWarningNothingRead)
 	}
 	if deferred, deferErr := w.deferForBudget(ctx, args.SiteReadID, extraction.err); deferred {
 		return deferErr
@@ -136,14 +136,14 @@ func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, args Site
 	if stated == "" && len(extraction.merged.entities) == 0 {
 		// The site read fine and identified nobody. Nothing went wrong, so this
 		// is not a failure — it is an answer the crawl could not supply.
-		return w.resolveUnreachable(ctx, args, domain, siteReadWireStatusCancelled, triageWarningNoCompany)
+		return w.resolveUnreachable(ctx, args, claim, domain, siteReadWireStatusCancelled, triageWarningNoCompany)
 	}
 
 	status := siteReadWireStatusDone
 	if crawl.Stopped != nil || extraction.err != nil {
 		status = siteReadWireStatusPartial
 	}
-	return w.settleTriage(ctx, args, domain, people.DomainCompany, people.DomainSourceSiteRead,
+	return w.settleTriage(ctx, args, claim, domain, people.DomainCompany, people.DomainSourceSiteRead,
 		triageCompanyEvidence(stated, len(extraction.merged.entities)), status, "",
 		&triagePayload{
 			DossierName: stated,
@@ -165,7 +165,7 @@ func (w *siteDeepReadWorker) readAndResolveTriage(ctx context.Context, args Site
 // operator — recording either as `failed` would send somebody investigating a
 // read that did what it was told. Each caller therefore names its own terminal
 // status and the sentence that goes on the dossier.
-func (w *siteDeepReadWorker) resolveUnreachable(ctx context.Context, args SiteDeepReadArgs, domain, status, warning string) error {
+func (w *siteDeepReadWorker) resolveUnreachable(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, domain, status, warning string) error {
 	res, err := w.people.ResolveUnreadableDomainTriage(ctx, people.ResolveDomainTriageInput{
 		Domain: domain, Evidence: warning, ReadID: args.SiteReadID,
 		SeedURL: people.TriageSeedURL(domain),
@@ -176,7 +176,7 @@ func (w *siteDeepReadWorker) resolveUnreachable(ctx context.Context, args SiteDe
 	}
 	w.log.InfoContext(ctx, "domain triage settled without a site", "domain", domain,
 		"organization_created", res.OrgCreated, "employment_edges", res.EdgesPlanted, "why", warning)
-	return w.finishTriageRead(ctx, args, status, warning, nil)
+	return w.finishTriageRead(ctx, args, claim, status, warning, nil)
 }
 
 // triagePayload is what a company verdict has to hand to the resolve: the name
@@ -198,7 +198,7 @@ type triagePayload struct {
 // first because it is what the ensure ladder reads: a dossier marked done
 // beside an unanswered question would leave every later message from the domain
 // re-asking it.
-func (w *siteDeepReadWorker) settleTriage(ctx context.Context, args SiteDeepReadArgs, domain, status, source, evidence, readStatus, warning string, payload *triagePayload) error {
+func (w *siteDeepReadWorker) settleTriage(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, domain, status, source, evidence, readStatus, warning string, payload *triagePayload) error {
 	in := people.ResolveDomainTriageInput{
 		Domain: domain, Status: status, Source: source, Evidence: evidence, ReadID: args.SiteReadID,
 	}
@@ -215,33 +215,35 @@ func (w *siteDeepReadWorker) settleTriage(ctx context.Context, args SiteDeepRead
 	if payload == nil || res.OrganizationID == nil {
 		// Nothing was created, so there is nothing to stage people onto and no
 		// dossier to report against a company.
-		return w.finishTriageRead(ctx, args, readStatus, warning, payload)
+		return w.finishTriageRead(ctx, args, claim, readStatus, warning, payload)
 	}
 	// Site people stage as leads onto the organization the verdict just made —
 	// strangers stay staged (NEVER-8), exactly as on the auto-enrich lane.
-	claim := people.SiteReadClaim{OrganizationID: &res.OrganizationID.UUID, SeedURL: payload.SeedURL}
+	// A claim shaped for the logo lane, naming the company the verdict just
+	// made — not this read's own claim, which the terminal write is reserved to.
+	logoClaim := people.SiteReadClaim{OrganizationID: &res.OrganizationID.UUID, SeedURL: payload.SeedURL}
 	// The logo, on the same terms as every other company (A55): a 🟢 display
 	// asset read off the seed page's own markup. Nothing else would ever give
 	// these organizations one — the auto-enrich sweep only offers rows with no
 	// finished read, and a triage company already has one — so skipping it here
 	// means faceless forever.
-	w.resolveLogo(ctx, args, claim, payload.Crawl)
+	w.resolveLogo(ctx, args, logoClaim, payload.Crawl)
 	// One verdict, one bundle, one transaction: the people this triage published
 	// were all asked about by the same act, and reach the inbox as one question.
 	if _, err := w.stageSiteLeads(ctx, args.SiteReadID, claim, payload.People, ids.NewV7()); err != nil {
 		w.log.WarnContext(ctx, "domain triage: staging the site's people failed",
 			"read", args.SiteReadID.String(), "err", err)
 	}
-	return w.finishTriageRead(ctx, args, readStatus, warning, payload)
+	return w.finishTriageRead(ctx, args, claim, readStatus, warning, payload)
 }
 
 // finishTriageRead records the dossier's terminal state and the sentence that
 // explains it, so a human reading the row learns why it ended without going to
 // the logs.
-func (w *siteDeepReadWorker) finishTriageRead(ctx context.Context, args SiteDeepReadArgs, status, warning string, payload *triagePayload) error {
+func (w *siteDeepReadWorker) finishTriageRead(ctx context.Context, args SiteDeepReadArgs, claim people.SiteReadClaim, status, warning string, payload *triagePayload) error {
 	tctx, cancel := terminalCtx(ctx)
 	defer cancel()
-	in := people.FinishSiteReadInput{Status: status}
+	in := people.FinishSiteReadInput{Status: status, ClaimedAt: &claim.ClaimedAt}
 	if warning != "" {
 		in.Warnings = []string{warning}
 	}

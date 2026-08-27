@@ -221,11 +221,9 @@ That negotiation is winnable because the product gives the works council somethi
 
 The product policy now becomes very simple.
 
-Part of Tier A ships today. The rest is in work, with the ticket number next to each item. We release quickly, so "in work" means weeks, not months, and it may already be shipped by the time you read this. We refuse all five Tier C models.
-
 Each item below is rated on four axes: GDPR posture, Vietnam compatibility, platform-contract exposure and works-council temperature.
 
-### Tier A: build freely
+### Tier A: Building or already built
 
 **A1. Company enrichment from official sources.** Company data is the easy case. Data about the legal entity itself sits outside the GDPR under Recital 14: company name, legal form, VAT number and registered address.
 
@@ -241,78 +239,84 @@ We will build these adapters on demand once the need arises. No worries, we will
 | Licensed aggregators (e.g. North Data) | Structured DACH register and financial data | Paid API | The clean bulk route |
 
 
-**A2. The counterparty's own website, read deeper.** Built already; the enhancements are in work.
+**A2. The counterparty's own website, read deeper.** Built.
 
 Margince already reads company websites.[^41] The deeper read handles people named on those sites in exactly the shape this paper argues for. A stranger found on a team page is staged as a lead and remains staged until a human accepts. The system never auto-creates a new person.
 
 When the published person unmistakably matches someone already recorded at that company, through an exact email match or a single high-confidence name match, Margince fills empty fields such as role, title and profile link. Every value is evidence-backed with the source stored on the row. The system never overwrites information entered by a human.
 
-The enhancements under way: parse the Impressum, whose publication German law *mandates* under Section 5 DDG, and consume newsroom RSS feeds for company events. We store the signal and a link, never a cached copy of the full text.
+Margince also parses the Impressum, whose publication German law *mandates* under Section 5 DDG, and consumes newsroom RSS feeds for company events. We store the signal and a link, never a cached copy of the full text.
 
 Crawling stays polite and respects robots.txt. The existing rule also remains: a human click can write directly; an automatic read stages the suggestion.
 
-**A3. Technical enrichment.** Not built yet: none of this is in the tree today.
+**A3. Technical enrichment.** One click on the company record tells you what the company runs.[^46]
 
-MX and DNS records, TLS certificate-transparency logs, and technology-stack fingerprints from the company's public pages are company-level signals. They work the same way in Hamburg and Da Nang.
+Every company with a website and email leaves public technical traces, because the internet does not work otherwise. Which system receives their mail: Google Workspace, Microsoft 365, or their own server. What their website is built with: shop system, CMS, marketing tools. Which services they operate, visible through their subdomains: a webshop, a customer portal, a careers page. And where they host.
 
-The A1 caveat still applies. A personal name inside a certificate or domain record is personal data, so Margince keeps the stored signal at company level.
+Margince reads those traces and writes them onto the company record. Your rep sees the company's size class, how modern their IT is and what they operate before the first call. And you can filter on it: every account with a webshop, every account on Microsoft 365, every account that just opened a careers page.
 
-**A4. First-party person capture.** Half built; the other half is in work.[^44]
+Two honest limits. You only see what faces the public internet; the ERP behind the firewall stays invisible unless a subdomain betrays it. And the picture goes stale, so it refreshes like every other enrichment.
 
-The contact sent you the details. Margince's capture works from that fact. Connected mailboxes are processed automatically. A nightly pass extracts only stated fields from email signatures: name, title and phone number, with nothing inferred. Workspace exclusion lists keep entire addresses and domains outside capture.
+Legally this is the cleanest item on the page. All of it describes the company, never a person, so neither the GDPR nor Vietnam's consent rules are engaged, and no platform terms are involved: DNS and certificate logs exist to be queried. It works the same way in Hamburg and Da Nang. One guardrail: a personal name occasionally appears inside a certificate or domain record, so Margince stores signals at company level only.
 
-The second half, in work now: vCard import and a per-mailbox switch for the signature pass, so an organisation can turn the granularity all the way down.
+**A4. First-party person capture.** Built.[^44]
 
-First-party collection is the only person-data channel that scales cleanly.[^39]
+When a contact sends you their details, Margince uses them. An email arrives with a signature: we read name, title and phone number out of it and enrich the person's record automatically. Someone sends a vCard: we import it into the record the same way. Only what the contact actually wrote, nothing guessed, nothing inferred.
+
+The legal basis could not be simpler: the contact sent this data to you themselves.
+
+Two controls sit on top. Exclusion lists keep chosen addresses and whole domains out of capture entirely, and every mailbox has its own switch for the signature pass, so an organisation can turn the granularity all the way down.
+
+Data the contact hands you is the only person-data channel that scales cleanly.[^39]
 
 **A5. LinkedIn as a link, plus the member's own export.** We store the LinkedIn profile URL as a clickable link. Margince never fetches the page server-side.
 
-The user reads the profile in their own browser and manually enters what they learned; a quick-capture form built for exactly that moment is in work. LinkedIn also allows every member to download their own data, and Margince imports the member's `Connections.csv` in a deliberately limited form.[^42]
+The user reads the profile in their own browser and enters what they learned into a quick-capture form built for exactly that moment. LinkedIn also allows every member to download their own data, and Margince imports the member's `Connections.csv` in a deliberately limited form.[^42]
 
 The imported connections become private graph substrate, "ghosts", used only for reach and warmth. They are visible only to the importer. They never become contact records and never create people.
 
 I do not claim that LinkedIn's terms permit anything beyond this private graph use. Margince therefore stops there. It does not create contacts and provides no parser for pasted profile text. Once software copies the page on the user's behalf, the scraping clause is back in play. We draw the line on the safe side.
 
-**A6. The "confirm your details" flow.** In work now, bundled with the marketing-consent ask.[^45]
+**A6. The "confirm your details" flow.** Bundled with the marketing-consent ask.[^45]
 
-The design: Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91. And the same email asks the contact to grant or decline marketing consent, with the answer landing on the consent proof log and the send itself logged in the record's history.
+Margince sends the contact a link through which they can view and correct their own card. The same flow delivers the Article 14 transparency notice and gives the contact an Article 16 accuracy mechanism. Because the consent is verifiable, it also meets the standard in Vietnam's Law 91. And the same email asks the contact to grant or decline marketing consent, with the answer landing on the consent proof log and the send itself logged in the record's history.
 
-Once it ships, this flow actively reduces the risk of everything else on this page.
+This flow actively reduces the risk of everything else on this page.
 
-### Tier B: build with controls, counsel signs off first
+### Tier B: could be built, is not being built
 
-**B1. Widening person lookup beyond the counterparty's own site.** B1 stays gated.
+Three ideas live here. All three are legal in principle. None of them is planned. We only touch this section if a customer need forces one item, and then a lawyer reviews that one item before we write code. Nobody reviews the whole section. It is a fence around future ideas, not a backlog.
 
-The shipped A2 shape provides the correct chassis: staged leads, fill-only-empty behaviour, evidence on every field and per-field provenance through the write shape.[^43] The lookup covers one company at a time. It uses sources from which the person published details for business contact. A human remains between the suggestion and the record.
+**B1. Reading about a person on other websites.** Today Margince reads only the counterparty's own company website. B1 would go further: also read conference pages, speaker bios and contact lines on other companies' sites where the same person shows up.
 
-New sources beyond the company's own website could include speaker biographies, conference pages and Impressum contact lines belonging to third parties. Each one enters only under the same staging discipline, and every expansion needs its own written Article 6 balancing assessment. A generic statement that "single lookups are fine" is not enough.
+The machinery for it exists already. Found people land as suggestions, never directly in the records, a human accepts or rejects them, and every field says where it came from.[^43] One company at a time, sources where the person published the details for business contact.
 
-Before Margince widens anything, these missing controls must ship:
+But the moment we collect person data from pages beyond the person's own employer site, GDPR asks for more. Five things we would have to build first:
 
-- an Article 14 notice generated and delivered with the first outreach, or within one month after a staged lead is accepted;
-- a justified retention rule with refresh-or-delete, beginning from CNIL's three-year benchmark;
-- an erasure suppression list checked before a new read can re-stage a deleted person;
-- respect for visibility restrictions wherever a platform provides them, because that is precisely where Kaspr lost;
-- exclusion of Vietnamese subjects, who are routed to A6.
+- Tell the person. When someone we found this way gets stored, they must get a short notice, with the first email or within a month at the latest.
+- An expiry date on the data. Roughly three years, then re-check or delete.
+- A memory of deletions. A person who asked to be deleted must not come back through the next read.
+- Respect "visible to members only" and similar settings on the source. Kaspr got fined exactly for ignoring those.
+- Leave Vietnamese people out. For them only the confirm-your-details flow in A6 is clean.
 
-**B2. Article 14 notice automation as a customer feature.** The CRM generates, sends and logs the notification that our customer owes whenever contact data was not collected from the subject. Objection handling connects directly to the suppression list.
+And for every new source someone would have to write down, before switching it on, why our interest in the data outweighs the person's interest in being left alone. That is the "balancing test" GDPR demands. "Single lookups are fine" as a blanket sentence is not one.
 
-I have not found this feature at any vendor. I think I know why. Their model cannot survive transparency. Ours is built around it.
+**B2. Margince sends the legal notice for our customer.** GDPR says: if you store someone whose data did not come from that person directly, you must tell them. Almost no company does it. B2 would make Margince do it for the customer: write the message, send it, log it, and if the person objects, put them on the do-not-contact list automatically.
 
-The notice text does not ship until counsel has reviewed it market by market.
+I have not found this feature at any vendor. I think I know why. Their model cannot survive the person finding out. Ours is built around exactly that.
 
-**B3. Licensed notified-database providers.** Providers such as Cognism[^37] and Dealfront operate what they call a "notified database". They claim Article 6(1)(f) based on a documented balancing test and say they discharge Article 14 by emailing the data subjects.
+The only reason this sits in B: the wording of that message must be checked by a lawyer for each market before it ever goes out.
 
-Those are provider assertions. No regulator has certified the model. The customer remains an independent controller with duties of its own.
+**B3. Buying contact data from providers like Cognism[^37] or Dealfront.** These vendors sell person data and say they are GDPR-compliant because they informed the people in their database. That claim is theirs. No regulator has confirmed it, and our customer stays legally responsible either way.
 
-In Margince, anything a licensed provider asserts about a person lands as a claim row (`person_provider_claim`) separate from the contact record, with the purchasing run attached. A delete-data action removes the local claims and scrubs the run metadata.
+If we ever connected such a provider, their data would not mix into the contact records. It lands in a separate claim area next to the record, marked as bought, with the purchase logged, deletable in one action. That part exists.
 
-Two controls still do not exist:
+Two parts do not exist yet:
 
-- automatic purge when a provider is disconnected;
-- downstream plumbing for erasure signals received from the provider.
+- when the provider is disconnected, their data deletes itself;
+- when the provider tells us a person asked for deletion, that deletion reaches our customer's records.
 
-Both belong on the same counsel checklist as the provider contract. Until they exist, B3 remains a gated integration. It is never available for Vietnamese subjects because Article 7(6) prohibits the trade itself.
+Both go on the table together with the provider contract, if that day ever comes. And never for Vietnamese people: Vietnamese law flatly forbids trading personal data.
 
 ### Tier C: refuse
 
@@ -417,3 +421,4 @@ Counsel still needs to close four Tier B questions: the final adoption status of
 [^43]: The write shape: docs/explanation/write-backbone.md in this repository.
 [^44]: Ticket 2856 in the repository issue tracker.
 [^45]: Ticket 2858 in the repository issue tracker.
+[^46]: Ticket 2888 in the repository issue tracker.

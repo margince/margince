@@ -145,6 +145,52 @@ bisecting is the honest first move rather than assuming the newest commit."\
     || unreported=1
 fi
 
+# The mobile budget splits the same two ways and for the same reason. Its
+# discriminator is the spec's own log line rather than a failure message: the
+# spec prints `perfbench [fast-3g/390px]: … p95=…` and THEN asserts, so the line
+# is present exactly when a number was measured.
+if [[ "${MOBILE_RESULT:-}" = "failure" ]] && [[ "${MOBILE_OUTCOME:-}" != "breach" ]]; then
+  report "the weekly MOBILE-AC-2 run could not complete" bug \
+"\`make bench-mobile-check\` failed on the weekly run of \`main\` WITHOUT reaching a
+budget verdict: $RUN_URL
+
+No p95 was measured, so nothing is known about PERF-1's perceived budget either
+way. The step separates the two outcomes precisely so this issue does not claim
+a regression that was never measured.
+
+Likely causes, in the order they occur: \`pnpm install --frozen-lockfile\` found
+the lockfile out of date, \`pnpm build\` failed, the Chromium download failed, or
+the preview server on :4317 never came up.
+
+Reproduce with \`make bench-mobile-check\`. The published budgets page is
+untouched either way: this lane clears MARGINCE_BENCH_RECORD."\
+    || unreported=1
+fi
+
+if [[ "${MOBILE_OUTCOME:-}" = "breach" ]]; then
+  report "PERF-1's perceived budget is breaching on main" bug \
+"\`make bench-mobile-check\` measured a p95 over the 300 ms perceived budget on
+the weekly run of \`main\`: $RUN_URL
+
+The measured number is in the job log, on the \`perfbench [fast-3g/390px]\` line.
+Read it before bisecting: this is a THROTTLED measurement (Fast-3G, 390px), and
+it is the harder of the two conditions on purpose — a budget that holds here
+holds on a fast link by construction, so a breach here is not yet a breach a
+user meets.
+
+Runner contention is the alternative explanation and is worth ruling out first,
+because it is what took this budget off the acceptance lane: that assertion was
+a single unthrottled wall-clock sample sitting at 1027 ms against 1000 ms, and
+it measured the machine. This lane runs 20 samples against 4.6x headroom, so
+contention should not reach it — if it does, the honest answer is to take the
+lane out again rather than to widen the budget it exists to hold.
+
+No record was written — this lane clears \`MARGINCE_BENCH_RECORD\`, so the
+published page still shows the last number a human measured. Publish a new one
+with \`make bench-mobile\` only once the breach is understood."\
+    || unreported=1
+fi
+
 if [[ "${CLOCK_RESULT:-}" = "failure" ]]; then
   report "the frontend suite's verdict depends on the calendar" bug \
 "\`make fe-clock-drift\` failed on the scheduled run of \`main\`: $RUN_URL
@@ -334,6 +380,65 @@ ${MAIN_SUSPECTS:-_no suspect range was computed for this run._}
 
 Until it is fixed, treat the quality gate's reading for \`main\` as stale rather
 than as a verdict."\
+    || unreported=1
+fi
+
+# The model lane, same two-findings shape and for the same reason. A missing
+# CLI, a stack that will not boot, a seed that fails, or a credential the MCP
+# endpoint rejects all arrive as `failure` — and "the assistant is answering
+# wrongly" is the one conclusion none of them support. LLM_OUTCOME is set by the
+# step from the runner's own "scenarios: N passed" line, which it prints only
+# once every scenario has actually been driven.
+if [[ "${LLM_RESULT:-}" = "failure" ]] && [[ "${LLM_OUTCOME:-}" != "scenario-failed" ]]; then
+  report "the weekly model-driven use cases could not run" bug \
+"\`make e2e-llm\` failed on the weekly run of \`main\` WITHOUT driving the
+scenarios: $RUN_URL
+
+No scenario is known to be failing, and none is known to pass — the lane did not
+get far enough to say. Nothing here is evidence about the product.
+
+Likely causes, in the order they occur: ANTHROPIC_API_KEY is unset or rejected,
+the Claude CLI failed to install, the dev stack did not boot, or the fixture
+seed could not write. The last one is loud by design — \`create_or_die\` prints
+the server's response and stops — so the job log names it directly.
+
+One cause deserves naming because it cost a day the first time: a passport
+minted before a database rebuild is destroyed by it, and the assistant then
+reaches an MCP server it cannot authenticate to. That reads downstream as a
+model that chose to call nothing. \`mint_passport\` now probes /mcp and stops if
+it cannot connect, so this failure should arrive here as a lane failure rather
+than as six scenarios of apparently bad answers.
+
+Reproduce locally with \`MARGINCE_E2E_LLM=1 make e2e-llm\`."\
+    || unreported=1
+fi
+
+if [[ "${LLM_OUTCOME:-}" = "scenario-failed" ]]; then
+  report "a use case is failing when driven by a real model" bug \
+"\`make e2e-llm\` drove all six use cases on \`main\` and at least one did not
+reach its pass rate: $RUN_URL
+
+**Read the transcripts before treating this as a regression.** They are attached
+to the run as \`e2e-llm-transcripts\` and kept 30 days. The verdict line says
+which scenario failed; only the transcript says what the assistant actually did,
+and the difference between those two has been the whole value of this lane.
+
+Each scenario runs three times and passes at two, so a single bad run is not
+this issue — it takes two. What that buys is that a real failure here is a
+behaviour, not a coin flip.
+
+Three things this is NOT, each of which has looked like a regression before:
+
+- a checker whose pattern is too narrow (case 6 once demanded \"September\"
+  spelled out while every run correctly wrote \"18 Sep 2025\"),
+- an assertion that forbids something correct (the same case once forbade
+  QUOTING a record it should quote),
+- a harness fault that leaves the assistant with no tools at all.
+
+The known standing failure is case 6: asked about past account-manager changes,
+the assistant cites the record correctly, quotes the post-mortem note correctly,
+and then repeats the note's wrong month in its own voice. If that is what the
+transcript shows, this issue is the existing finding rather than a new one."\
     || unreported=1
 fi
 

@@ -556,12 +556,13 @@ func TestDeepReadFinishSurvivesACancelledWorkContext(t *testing.T) {
 	// The dossier is picked up (queued → running), then the work context dies
 	// — exactly the shape the live incident hit mid-extraction.
 	workCtx, cancel := context.WithCancel(deepReadWorkerCtx(context.Background(), args))
-	if _, err := worker.people.BeginSiteRead(workCtx, read.ID, worker.reclaimAfter()); err != nil {
+	claim, err := worker.people.BeginSiteRead(workCtx, read.ID, worker.reclaimAfter())
+	if err != nil {
 		t.Fatalf("begin: %v", err)
 	}
 	cancel()
 
-	if err := worker.finish(workCtx, read.ID, "partial", nil, siteCrawl{}, 0, nil, nil, nil, nil, nil, nil, ""); err != nil {
+	if err := worker.finish(workCtx, read.ID, claim, "partial", nil, siteCrawl{}, 0, nil, nil, nil, nil, nil, nil, ""); err != nil {
 		t.Fatalf("finish under a cancelled work context: %v", err)
 	}
 

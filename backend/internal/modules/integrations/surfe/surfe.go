@@ -174,6 +174,23 @@ func (a *Adapter) Descriptor() provider.Descriptor {
 			},
 		},
 		DefaultPreset: "full",
+		// Which claim answers which purchase. Spelled here because the
+		// correspondence is Surfe's: the category is what the run asks for and
+		// the claim is what `claimsFor` produces from the vendor's reply, and
+		// the two names differ where one purchase yields a list.
+		Answers: map[provider.Category][]provider.ClaimKey{
+			categoryProfessionalEmail: {provider.ClaimProfessionalEmails},
+			categoryPersonalEmail:     {provider.ClaimPersonalEmails},
+			categoryMobile:            {provider.ClaimMobilePhones},
+			categoryLinkedInProfile:   {provider.ClaimLinkedInProfile},
+			categoryCurrentEmployment: {provider.ClaimCurrentEmployment},
+			categoryJobHistory:        {provider.ClaimJobHistory},
+		},
+		// Submit sends SkipMobileEnrichmentIfNoEmailFound, so a subject the
+		// vendor could not place is never asked for a number.
+		RequiresAnswerTo: map[provider.Category]provider.Category{
+			categoryMobile: categoryProfessionalEmail,
+		},
 	}
 }
 

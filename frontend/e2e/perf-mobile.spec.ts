@@ -109,9 +109,26 @@ test("MOBILE-AC-2: record open holds the 300ms perceived budget on Fast-3G at 39
   // Written BEFORE the assertion, deliberately: a breach is the run whose
   // number a reader most wants to see, and recording afterwards would leave
   // the published page green while the run went red.
-  writeRecord(samples, measured);
+  if (recordingEnabled()) {
+    writeRecord(samples, measured);
+  }
   expect(measured).toBeLessThan(PERCEIVED_BUDGET_MS);
 });
+
+/**
+ * Whether this run publishes its numbers, read from the same variable the Go
+ * bench suites read (`RecordingEnabled`, backend/internal/compose/integration/
+ * perfrecord.go). One spelling across both languages, because the rule is one
+ * rule: a record is a human's to publish, and a scheduled job is exactly the
+ * machine that must not write one.
+ *
+ * `=== "1"` rather than "set and non-empty", so a target can CLEAR the variable
+ * to mean it — `MARGINCE_BENCH_RECORD=` in a check target has to beat whatever
+ * an earlier by-hand run left exported in the caller's shell.
+ */
+function recordingEnabled(): boolean {
+  return process.env.MARGINCE_BENCH_RECORD === "1";
+}
 
 /**
  * Leave this run's numbers where the published page reads them.

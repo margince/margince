@@ -85,6 +85,45 @@ expect() {
 	fi
 }
 
+# expect_llm <name> <LLM_OUTCOME> <expected-title>
+#
+# The model lane splits one job result into two findings, and the split is the
+# part worth testing: a lane that could not run must NEVER file "a use case is
+# failing when driven by a real model". That issue sends somebody reading
+# transcripts for a defect that does not exist, which is the exact failure this
+# lane keeps re-learning — its first local run had a dead passport presenting
+# itself as six scenarios of bad answers.
+expect_llm() {
+	local name="$1" outcome="$2" want_title="$3" out status got
+	export ACTION_LOG="$stub_dir/actions"
+	: >"$ACTION_LOG"
+	set +e
+	out="$(OPEN_TITLES="" GH_TOKEN=stub REPO=owner/repo RUN_URL=https://example.test/run/1 \
+		LLM_RESULT=failure LLM_OUTCOME="$outcome" \
+		"$root/scripts/scheduled-report.sh" 2>&1)"
+	status=$?
+	set -e
+	got="$(paste -sd, - <"$ACTION_LOG")"
+
+	if [ "$status" -ne 0 ] || [ "$got" != "create $want_title" ]; then
+		echo "FAIL: $name"
+		echo "  exit    want 0 got $status"
+		echo "  actions want 'create $want_title' got '$got'"
+		printf '  output: %s\n' "$out" | head -5
+		failures=$((failures + 1))
+		return
+	fi
+	echo "ok: $name"
+}
+
+LLM_LANE_TITLE="the weekly model-driven use cases could not run"
+LLM_CASE_TITLE="a use case is failing when driven by a real model"
+
+expect_llm "a model lane that never drove a scenario is not reported as a bad answer" \
+	"lane-failed" "$LLM_LANE_TITLE"
+expect_llm "a scenario that drove and failed is reported as the use case failing" \
+	"scenario-failed" "$LLM_CASE_TITLE"
+
 # A tracker of `n` open issues, none of them the reported one, newest first.
 noise() {
 	local n="$1" i

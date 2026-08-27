@@ -29,8 +29,12 @@ import (
 
 // storedClaim is one row as the fold reads it.
 type storedClaim struct {
-	key         string
-	value       []byte
+	key   string
+	value []byte
+	// runID is which run delivered this claim. Read so the section can say
+	// what the LATEST run failed to return: the fold is a union over every
+	// retained run, so an older answer would otherwise mask a newer silence.
+	runID       ids.UUID
 	confidence  *float64
 	retrievedAt time.Time
 	provider    string
@@ -45,7 +49,7 @@ type storedClaim struct {
 // table N times for rows it already had.
 func (s *Service) storedClaims(ctx context.Context, tx pgx.Tx, personID ids.PersonID) ([]storedClaim, error) {
 	rows, err := tx.Query(ctx, `
-		SELECT claim_key, value_json, confidence, retrieved_at, provider
+		SELECT claim_key, value_json, run_id, confidence, retrieved_at, provider
 		  FROM person_provider_claim
 		 WHERE person_id = $1
 		 ORDER BY retrieved_at`, personID)
@@ -56,7 +60,7 @@ func (s *Service) storedClaims(ctx context.Context, tx pgx.Tx, personID ids.Pers
 	var claims []storedClaim
 	for rows.Next() {
 		var c storedClaim
-		if err := rows.Scan(&c.key, &c.value, &c.confidence, &c.retrievedAt, &c.provider); err != nil {
+		if err := rows.Scan(&c.key, &c.value, &c.runID, &c.confidence, &c.retrievedAt, &c.provider); err != nil {
 			return nil, fmt.Errorf("person360: scanning a provider claim: %w", err)
 		}
 		claims = append(claims, c)

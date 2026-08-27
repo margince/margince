@@ -5,6 +5,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Search } from "lucide-react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Callout } from "../design-system/callout";
 import { EvidenceMark } from "../design-system/evidencemark";
@@ -14,8 +15,9 @@ import {
   ProviderMark,
   providerBrandName,
 } from "../design-system/provider-mark";
-import { formatNumber } from "../format/format";
+import { formatDateAbbrev, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { problemMessageOf, throwProblem } from "./common";
 import {
   canEnrichNow,
@@ -199,12 +201,57 @@ function RunWatch({
   return null;
 }
 
+/** The receipt: when this was bought, what was asked for, how much of it came
+ *  back.
+ *
+ *  The section showed values and nothing about the transaction, so a reader
+ *  could not answer "did my lookup do anything" — a run that returned one
+ *  category out of six looked exactly like one that returned all six, and a
+ *  value bought months ago looked exactly like one bought a minute ago. */
+function RunReceipt({ profile }: Readonly<{ profile: Profile }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const run = profile.latest_run;
+  if (!run || !profile.retrieved_at) {
+    return null;
+  }
+  const at = formatDateAbbrev(profile.retrieved_at, locale, recordZone);
+  const silent = profile.categories_without_answer;
+  if (!silent) {
+    // The server did not say what went unanswered — an older backend, or an
+    // adapter that never declared which claim answers which category. The date
+    // is still a fact; a count derived from a missing list would be an
+    // invention, and inventing "everything came back" is the exact reading
+    // this line exists to prevent.
+    return (
+      <p className="t-caption">{t("provider.profile.receiptAt", { at })}</p>
+    );
+  }
+  // What was actually PUT TO the provider, not everything requested: a
+  // fallback that never fired and a category skipped for want of its
+  // prerequisite were never sent, and counting them as answered would inflate
+  // the very figure this line exists to be honest about.
+  const asked =
+    profile.categories_asked?.length ?? run.requested_categories.length;
+  return (
+    <p className="t-caption">
+      {t("provider.profile.receipt", {
+        at,
+        asked: formatNumber(asked, locale),
+        answered: formatNumber(asked - silent.length, locale),
+      })}
+    </p>
+  );
+}
+
 function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
   const t = useT();
   const { locale } = useLocale();
   const source = boughtFrom(profile);
   return (
     <>
+      <RunReceipt profile={profile} />
       {profile.emails.length > 0 && (
         <div>
           <Eyebrow as="h4">{t("provider.profile.emails")}</Eyebrow>
@@ -309,18 +356,63 @@ function ProviderValues({ profile }: Readonly<{ profile: Profile }>) {
           />
         </div>
       )}
+      {(profile.categories_without_answer?.length ?? 0) > 0 && (
+        // What was PAID for and came back empty. The other half of the same
+        // question as the line below, and the half that was missing: a run
+        // answering one category out of six rendered as a plain success with
+        // five silent blanks, and the reader could not tell an empty purchase
+        // from a full one.
+        <p className="t-caption">
+          {t("provider.profile.noAnswer", {
+            categories: categoryNames(
+              profile.categories_without_answer ?? [],
+              t,
+            ),
+          })}
+        </p>
+      )}
       {profile.categories_not_requested.length > 0 && (
         // The difference between "we asked and they had nothing" and "we
         // never asked". Without this line a blank field reads as the first
         // when it is often the second.
         <p className="t-caption">
           {t("provider.profile.notRequested", {
-            categories: profile.categories_not_requested.join(", "),
+            categories: categoryNames(profile.categories_not_requested, t),
           })}
         </p>
       )}
     </>
   );
+}
+
+/** The categories a provider names, as words a reader knows.
+ *
+ *  The wire carries the provider's own vocabulary (`professional_email`,
+ *  `linkedin_profile`), which is a key rather than a phrase — printed raw it
+ *  puts `linkedin_profile, current_employment` in front of a rep.
+ *
+ *  A category this build has no word for keeps the provider's own: the
+ *  vocabulary belongs to the provider, so an installation can declare one this
+ *  frontend has never seen, and showing their word beats showing nothing. */
+const CATEGORY_LABELS: Record<string, MessageKey> = {
+  professional_email: "provider.category.professionalEmail",
+  personal_email: "provider.category.personalEmail",
+  mobile: "provider.category.mobile",
+  linkedin_profile: "provider.category.linkedin",
+  current_employment: "provider.category.currentEmployment",
+  job_history: "provider.category.jobHistory",
+};
+
+function categoryNames(
+  categories: readonly string[],
+  t: (key: MessageKey) => string,
+): string {
+  return categories
+    .map((category) => {
+      const label = CATEGORY_LABELS[category];
+      return label ? t(label) : category;
+    })
+    .join(", ");
 }
 
 /** The lookup itself, hoisted so the header button and the first-run plate

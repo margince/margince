@@ -47,7 +47,7 @@ func (w *siteDeepReadWorker) reportRead(ctx context.Context, args SiteDeepReadAr
 	}
 	// Zero surviving findings is an honest empty read — done, fact_count 0,
 	// no proposal — not an error: the site simply evidenced nothing.
-	return w.finish(ctx, args.SiteReadID, status, readPages, crawl, factCount, proposalIDs,
+	return w.finish(ctx, args.SiteReadID, claim, status, readPages, crawl, factCount, proposalIDs,
 		draftFields, extraction.merged.facts, draftPeople, draftEntities,
 		warnings, proposalHash)
 }
