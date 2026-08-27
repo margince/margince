@@ -6332,10 +6332,8 @@ export const vi = {
   "provider.profile.notRequested":
     "Không hỏi tới: {categories}. Chỗ trống ở đây nghĩa là không ai mua, chứ không phải nhà cung cấp không có.",
   "provider.profile.buy": "Mua {category} · {credits} tín dụng",
-  "provider.freeTier.label": "Tự động lấy các thông tin miễn phí",
   "provider.freeTier.hint":
     "Hồ sơ LinkedIn, vai trò hiện tại và quá trình làm việc không tốn tín dụng. Nên bật: mọi liên hệ mới đều có chúng mà không ai phải quyết định.",
-  "provider.pricedTier.label": "Thông tin tốn tín dụng",
   "provider.pricedTier.hint":
     "Không bao giờ mua tự động. Ai đó bấm nút trên một liên hệ cụ thể, và giá hiện ngay trên nút.",
   "provider.profile.receiptAt": "Tra cứu ngày {at}.",

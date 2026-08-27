@@ -6396,10 +6396,8 @@ export const de = {
   "provider.profile.notRequested":
     "Nicht angefragt: {categories}. Eine Lücke heißt hier, dass niemand danach gekauft hat — nicht, dass der Anbieter nichts hatte.",
   "provider.profile.buy": "{category} kaufen · {credits} Credit",
-  "provider.freeTier.label": "Kostenlose Angaben automatisch holen",
   "provider.freeTier.hint":
     "LinkedIn-Profil, aktuelle Rolle und Werdegang kosten keine Credits. Am besten anlassen: jeder neue Kontakt bekommt sie, ohne dass jemand entscheiden muss.",
-  "provider.pricedTier.label": "Angaben, die Credits kosten",
   "provider.pricedTier.hint":
     "Werden nie automatisch gekauft. Jemand drückt bei einem einzelnen Kontakt auf den Knopf, und der Preis steht darauf.",
   "provider.profile.receiptAt": "Abgefragt am {at}.",

@@ -105,7 +105,12 @@ type CategoryCost struct {
 
 type Connection struct {
 	Provider string
-	// Catalog is every category this provider sells with what each costs.
+	// Catalog is what this provider sells, with what each entry costs.
+	//
+	// Held by: TestTheCatalogPricesEveryCategoryTheProviderDeclares
+	// (backend/internal/modules/integrations/catalog_test.go) — the entries are
+	// derived from the descriptor's own category list, so a provider that adds
+	// one cannot leave it unpriced on the settings card.
 	Catalog           []CategoryCost
 	Status            string
 	CredentialPresent bool
