@@ -28117,20 +28117,28 @@ components:
       type: object
       description: |
         The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
-        with the recipient's current state and whether it is locked (transactional cannot be withdrawn
-        while a deal is live).
+        with the recipient's current state, whether it is locked (transactional cannot be withdrawn
+        while a deal is live), and whether granting it needs a confirmation round-trip this surface
+        cannot perform.
       required: [purposes]
       properties:
         purposes:
           type: array
           items:
             type: object
-            required: [key, label, state, locked]
+            required: [key, label, state, locked, grant_needs_confirmation]
             properties:
               key:    { type: string }
               label:  { type: string }
               state:  { type: string, enum: [unknown, granted, withdrawn] }
               locked: { type: boolean, description: A locked purpose (transactional) cannot be changed from this surface. }
+              grant_needs_confirmation:
+                type: boolean
+                description: |
+                  A purpose requiring double opt-in. Withdrawing it here works; GRANTING it does not, because
+                  this surface's token is reusable and long-lived, so it cannot evidence one deliberate choice
+                  the way a confirmation round-trip does. A client must not offer the grant — the write refuses
+                  it with 422, and an offered switch that always fails is worse than an absent one.
 
     # ---- Automations (E15/ADR-0035, feedback/14) ----
     AutomationCatalogEntry:

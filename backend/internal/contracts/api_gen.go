@@ -22151,12 +22151,18 @@ type PostDealRoomCommentRequest struct {
 }
 
 // PreferenceCenter The buyer-facing preference center's per-purpose view (B-E11.32): each tracked consent purpose
-// with the recipient's current state and whether it is locked (transactional cannot be withdrawn
-// while a deal is live).
+// with the recipient's current state, whether it is locked (transactional cannot be withdrawn
+// while a deal is live), and whether granting it needs a confirmation round-trip this surface
+// cannot perform.
 type PreferenceCenter struct {
 	Purposes []struct {
-		Key   string `json:"key"`
-		Label string `json:"label"`
+		// GrantNeedsConfirmation A purpose requiring double opt-in. Withdrawing it here works; GRANTING it does not, because
+		// this surface's token is reusable and long-lived, so it cannot evidence one deliberate choice
+		// the way a confirmation round-trip does. A client must not offer the grant — the write refuses
+		// it with 422, and an offered switch that always fails is worse than an absent one.
+		GrantNeedsConfirmation bool   `json:"grant_needs_confirmation"`
+		Key                    string `json:"key"`
+		Label                  string `json:"label"`
 
 		// Locked A locked purpose (transactional) cannot be changed from this surface.
 		Locked bool                          `json:"locked"`

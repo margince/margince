@@ -411,6 +411,12 @@ function PreferenceRow({
   // conditions just combine below rather than this prop overriding that one.
   disabled: boolean;
 }>) {
+  // A double-opt-in purpose can be turned OFF here but never ON: the write
+  // refuses the grant, because this page's token is reusable and long-lived,
+  // so it cannot evidence one deliberate choice the way a confirmation
+  // round-trip does. Offering a switch that always fails is worse than not
+  // offering it, so the grant is withheld while the withdrawal stays.
+  const grantBlocked = purpose.grant_needs_confirmation && !on;
   return (
     <li className="pref-row">
       <div className="pref-row-main">
@@ -430,13 +436,18 @@ function PreferenceRow({
         {purpose.locked && (
           <p className="t-caption pref-locked-why">{t("prefs.lockedWhy")}</p>
         )}
+        {grantBlocked && (
+          <p className="t-caption pref-locked-why">
+            {t("prefs.confirmationNeededWhy")}
+          </p>
+        )}
       </div>
       <button
         type="button"
         role="switch"
         aria-checked={on}
         aria-label={purpose.label}
-        disabled={purpose.locked || disabled}
+        disabled={purpose.locked || grantBlocked || disabled}
         className={`pref-toggle${on ? " on" : ""}`}
         onClick={onToggle}
       >

@@ -4713,6 +4713,8 @@ export const de = {
     "Nicht abonniert — du bekommst für diesen Zweck nichts",
   "prefs.alwaysOn": "immer an",
   "prefs.lockedWhy": "Transaktional — von der Abmeldung ausgenommen.",
+  "prefs.confirmationNeededWhy":
+    "Um dies zu erhalten, nutzen Sie den Bestätigungslink aus unserer E-Mail. Abbestellen können Sie hier jederzeit.",
   "prefs.notSaved": "Noch nicht gespeichert.",
   "prefs.savePending": "Ausstehend: {changes}.",
   "prefs.saveProof":

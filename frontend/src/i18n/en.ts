@@ -4776,6 +4776,8 @@ export const en = {
     "Not subscribed — you receive nothing for this purpose",
   "prefs.alwaysOn": "always on",
   "prefs.lockedWhy": "Transactional — exempt from opt-out.",
+  "prefs.confirmationNeededWhy":
+    "To start receiving this, use the confirmation link we email you. You can stop it here at any time.",
   "prefs.notSaved": "Not saved yet.",
   "prefs.savePending": "Pending: {changes}.",
   "prefs.saveProof":
