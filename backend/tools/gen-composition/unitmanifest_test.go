@@ -204,10 +204,18 @@ func TestEveryFixtureManifestMatchesItsDerivation(t *testing.T) {
 			return nil
 		}
 		if _, err := os.Stat(filepath.Join(dir, unitManifestFile)); err != nil {
-			// A directory with no manifest has nothing to hold. Several exist
-			// on purpose — the bad-* units are shaped to be REFUSED, and a
-			// refused unit never gets one.
-			return nil
+			// ABSENT is the only reason to skip. A directory with no manifest
+			// has nothing to hold, and several exist on purpose — the bad-*
+			// units are shaped to be REFUSED, and a refused unit never gets
+			// one.
+			//
+			// Any OTHER error is propagated, because skipping on it would leave
+			// a committed manifest unverified while another fixture keeps the
+			// count above zero — a green run over a file nothing read.
+			if os.IsNotExist(err) {
+				return nil
+			}
+			return err
 		}
 		found++
 		// The unit's name is its own directory's, whatever the depth: that is
