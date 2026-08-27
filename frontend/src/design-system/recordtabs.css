@@ -27,17 +27,21 @@
   }
 }
 
-/* A record with a rail is the exception, and it has to be: the rail is a COLUMN
-   INSIDE the work container, so a strip that centres itself on the container
-   runs underneath it. On the contact page that put the rail's card over the
-   first tabs — a reader saw "Network" cut to "twork" and the two tabs before it
-   not at all, which reads as a broken menu rather than as a strip that
-   continues.
+/* A record with a RAIL is the exception, and it has to be: the rail is a
+   column INSIDE the work container, so a strip that centres itself on the
+   container runs underneath it, and the rail's cards are drawn over the tabs.
 
-   Inside a railed record the strip keeps its own column. The rules stop where
-   the reading column does, which is the narrower answer the fallback above
-   already takes when there is no container to measure. */
-.page-zones-main .recordtabs {
+   Scoped to the two shapes that place a column to the LEFT of the work column,
+   because a breakout centred on the container reaches leftward by half its
+   overhang and those are the only shapes with anything there to collide with.
+   An `aside` is to the RIGHT: the strip still crosses that track, which is
+   the full-width seam the rules are for and is left as it was.
+
+   Inside these two the strip keeps its own column: the rules stop where the
+   reading column does, which is the narrower answer the fallback above already
+   takes when there is no container to measure. */
+.page-zones-rail .recordtabs,
+.page-zones-both .recordtabs {
   inline-size: auto;
   margin-inline: 0;
 }
@@ -46,7 +50,8 @@
    record measure so the first tab lands under the record's mark; inside a
    column that measure is wider than the column, so centring pushed the first
    tabs off the left of it and the strip opened part-way along. */
-.page-zones-main .recordtabs-row {
+.page-zones-rail .recordtabs-row,
+.page-zones-both .recordtabs-row {
   max-inline-size: none;
   padding-inline: 0;
 }
