@@ -1,12 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import {
-  type RefObject,
-  useEffect,
-  useLayoutEffect,
-  useState,
-} from "react";
+import { type RefObject, useEffect, useLayoutEffect, useState } from "react";
 
 /**
  * Anchoring, dismissal and scroll-into-view for a portalled listbox popup.

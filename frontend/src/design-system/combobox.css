@@ -1,0 +1,87 @@
+/* The combo box — a text field that also offers, and its portalled list.
+ *
+ * The field itself reads `.input` (atoms.css): a box you type into is the same
+ * field on screen whether or not it has a list behind it, so the surface is
+ * declared once there and only what the toggle needs lives here.
+ *
+ * The popup is `position: fixed` and portalled to the body, so nothing in this
+ * sheet may assume a positioned ancestor: every coordinate arrives as an inline
+ * style from combobox.tsx, measured against the viewport. */
+
+.combobox {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+/* Room for the chevron so a long model id ends before the toggle rather than
+   underneath it. */
+.combobox-input {
+  width: 100%;
+  padding-right: calc(var(--space-5) + var(--space-1));
+}
+.combobox-toggle {
+  position: absolute;
+  right: var(--space-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--textMeta);
+  cursor: pointer;
+}
+
+.combobox-popup {
+  position: fixed;
+  z-index: 70;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background: var(--bgElevated);
+  border: 1px solid var(--borderStrong);
+  border-radius: var(--r-sm);
+  box-shadow: var(--shadow-pop);
+  padding: var(--space-1);
+}
+.combobox-list {
+  display: flex;
+  flex-direction: column;
+}
+.combobox-option {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding: 7px 9px;
+  border-radius: 6px;
+  font-family: var(--f-body);
+  font-size: 13.5px;
+  color: var(--textPrimary);
+  cursor: pointer;
+}
+/* A model id is a machine name and reads as one — the same face the routing
+   document spells it in, so the list and the field agree. */
+.combobox-option-value {
+  font-family: var(--f-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.combobox-option-hint {
+  flex: none;
+  color: var(--textMeta);
+  font-size: 12px;
+}
+/* Where the keyboard is, and what a pointer is hovering — one state, because
+   the popup tracks one active option through `aria-activedescendant` whichever
+   input moved it. */
+.combobox-option.is-active {
+  background: var(--bgHover);
+}
+.combobox-option[aria-selected="true"] {
+  color: var(--accentText);
+  font-weight: 500;
+}
+.combobox-option[aria-selected="true"].is-active {
+  background: var(--accentLight);
+}
