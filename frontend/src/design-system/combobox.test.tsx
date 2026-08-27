@@ -170,6 +170,45 @@ describe("ComboBox", () => {
     ).toHaveLength(MODELS.length);
   });
 
+  // A list left hanging over the page under a control nobody is focused on,
+  // still claiming aria-expanded. The pointer path closes it on an outside
+  // press; the keyboard path has to close it on the way out.
+  it("closes the list when focus leaves the field", async () => {
+    const user = userEvent.setup();
+    render(
+      <>
+        <Harness />
+        <button type="button">Somewhere else</button>
+      </>,
+    );
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+
+    await user.tab();
+
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+    expect(box).toHaveAttribute("aria-expanded", "false");
+  });
+
+  // The chevron is a pointer affordance ON the field, not a way out of it: a
+  // press that stole focus would close the list on the way to opening it.
+  it("keeps focus in the field when the chevron opens the list", async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    const box = screen.getByRole("combobox", { name: "Model" });
+    await user.click(box);
+    await user.keyboard("{Escape}");
+    expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { hidden: true }));
+
+    expect(screen.getByRole("listbox")).toBeInTheDocument();
+    expect(box).toHaveFocus();
+  });
+
   it("refuses every interaction when disabled", async () => {
     const user = userEvent.setup();
     render(

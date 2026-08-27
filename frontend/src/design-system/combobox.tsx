@@ -192,12 +192,23 @@ export function ComboBox(props: ComboBoxProps) {
             setActive(-1);
           }}
           onFocus={() => setOpen(true)}
+          // A list left hanging over the page under a control nobody is
+          // focused on, still claiming aria-expanded, is what a keyboard reader
+          // gets otherwise: the outside-press dismissal never fires for them.
+          // Safe as a plain close because nothing in the popup takes focus —
+          // the options are activedescendant rows and the chevron refuses the
+          // press that would move it.
+          onBlur={close}
           onKeyDown={onKeyDown}
         />
         {offers && (
           <button
             type="button"
             className="combobox-toggle"
+            // The press must not move focus off the input: blur closes the
+            // list, so a chevron that took focus would close it on the way to
+            // opening it.
+            onMouseDown={(event) => event.preventDefault()}
             // The list is reachable from the input's own keyboard grammar, so
             // this is a pointer affordance rather than a second tab stop — one
             // control, one place in the tab order.
