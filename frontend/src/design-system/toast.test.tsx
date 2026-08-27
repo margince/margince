@@ -59,6 +59,30 @@ function Harness(props: React.ComponentProps<typeof Triggers>) {
   );
 }
 
+// A confirmation whose BODY carries a control, which is what several callers
+// actually show — a name is worth linking to from the sentence that names it.
+function Bodied() {
+  const toast = useToast();
+  return (
+    <Button
+      onClick={() =>
+        toast.show(
+          <span>
+            Jonas Petersen is now a contact:{" "}
+            {/* biome-ignore lint/a11y/useValidAnchor: a stand-in for the
+                record link the real caller renders; where it points is not
+                what this suite is about. */}
+            <a href="#/contacts/p-1">Jana Brandt</a>
+          </span>,
+          { sticky: true },
+        )
+      }
+    >
+      show a link
+    </Button>
+  );
+}
+
 const show = (props: Partial<React.ComponentProps<typeof Triggers>> = {}) =>
   render(<Harness message="Saved." {...props} />);
 
@@ -240,6 +264,26 @@ describe("the clock a reader can stop", () => {
     act(() => press("Close").focus());
     wait(30_000);
     expect(screen.getByRole("status")).toHaveTextContent("Saved.");
+  });
+
+  it("puts the message down on Escape from a control the MESSAGE owns", async () => {
+    // The gap this closes: Escape used to be wired to the toast's own two
+    // buttons, so a message carrying focusable content of its own — the
+    // lead-qualified confirmation puts a link to the new contact in its body —
+    // was a toast whose documented way out did nothing from inside it.
+    const acting = steppedClock();
+    render(
+      <LocaleProvider initial="en">
+        <ToastProvider>
+          <Bodied />
+          <ToastRegion />
+        </ToastProvider>
+      </LocaleProvider>,
+    );
+    await acting.click(press("show a link"));
+    act(() => screen.getByRole("link", { name: "Jana Brandt" }).focus());
+    await acting.keyboard("{Escape}");
+    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("puts the message down on Escape", async () => {

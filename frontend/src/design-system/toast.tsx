@@ -197,6 +197,38 @@ export function ToastRegion() {
   // fall out of the comparison instead of needing an effect to undo it.
   const [heldMessage, setHeldMessage] = useState<ToastMessage | null>(null);
   const held = shown !== null && heldMessage === shown;
+  // The node in STATE rather than in a ref, so the effect below can depend on
+  // the thing it actually attaches to. A ref is invisible to the dependency
+  // array: the region is mounted and unmounted as messages come and go, and an
+  // effect that could not see that ran once against a node that did not exist
+  // yet and never again.
+  const [region, setRegion] = useState<HTMLDivElement | null>(null);
+
+  // Escape belongs to the REGION, and it is attached to the node rather than
+  // written as a JSX handler on a static element.
+  //
+  // It was on the two buttons, which was wrong for a reason a caller found
+  // before a reader did: the MESSAGE can carry focusable content of its own —
+  // the lead-qualified confirmation puts a link to the new contact in its body
+  // — and a reader who tabbed to that link was inside a toast whose documented
+  // way out did nothing. What "focus is inside it" means is the region, so the
+  // region is what listens.
+  useEffect(() => {
+    if (region === null) {
+      return;
+    }
+    const putDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      // The toast is not a dialog, but it is the innermost thing holding focus,
+      // and a screen behind it may listen for the same key.
+      event.stopPropagation();
+      dismiss();
+    };
+    region.addEventListener("keydown", putDown);
+    return () => region.removeEventListener("keydown", putDown);
+  }, [dismiss, region]);
 
   useEffect(() => {
     if (shown === null || shown.sticky || held) {
@@ -218,6 +250,7 @@ export function ToastRegion() {
   const act = shown.action;
   return createPortal(
     <div
+      ref={setRegion}
       className="toast-region"
       onPointerEnter={() => setHeldMessage(shown)}
       onPointerLeave={() => setHeldMessage(null)}
@@ -237,7 +270,6 @@ export function ToastRegion() {
               act.onAct();
               dismiss();
             }}
-            onKeyDown={putDownOnEscape(dismiss)}
           >
             {act.label}
           </button>
@@ -248,7 +280,6 @@ export function ToastRegion() {
             className="toast-dismiss"
             aria-label={t("common.close")}
             onClick={dismiss}
-            onKeyDown={putDownOnEscape(dismiss)}
           >
             <X size={14} aria-hidden />
           </button>
@@ -257,26 +288,4 @@ export function ToastRegion() {
     </div>,
     document.body,
   );
-}
-
-/**
- * Escape puts the message down, and it is wired to the CONTROLS rather than to
- * the box around them.
- *
- * The two buttons are the only focusable things a toast has, so "focus is inside
- * the message" and "focus is on one of these" name the same set — and a key
- * handler belongs on something a reader can actually reach. A handler on the
- * region would also be a handler on a box a pointer can be over while focus is
- * somewhere else entirely, which is a different question than the one Escape is
- * answering.
- */
-function putDownOnEscape(dismiss: () => void) {
-  return (event: React.KeyboardEvent) => {
-    if (event.key === "Escape") {
-      // The toast is not a dialog, but it is the innermost thing holding focus,
-      // and a screen behind it may be listening for the same key.
-      event.stopPropagation();
-      dismiss();
-    }
-  };
 }

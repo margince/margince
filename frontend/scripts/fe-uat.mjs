@@ -30,6 +30,26 @@ const staticDir = join(repoRoot, "frontend/storybook-static");
 const outDir = join(repoRoot, ".tmp/fe-uat");
 const allowMissing = process.argv.includes("--allow-missing");
 
+// The document's OWN entry module is not a component: it exports nothing and
+// renders the application into the DOM, so there is no story that could cover
+// it and requiring one is the same false gate the `.d.ts` skip above avoids.
+//
+// Read out of `index.html` rather than named here, for the reason the rulebook
+// gives about a gate that hard-codes part of its subject: spelled as a literal,
+// renaming the entry would silently stop excluding anything, and the next
+// author would meet this failure with no clue why. Derived, it follows the
+// rename. Absent or unparseable, nothing is excluded and the gate stays strict.
+function entryModule() {
+  const html = join(repoRoot, "frontend/index.html");
+  if (!existsSync(html)) return null;
+  const src = /<script[^>]*\btype="module"[^>]*\bsrc="([^"]+)"/.exec(
+    readFileSync(html, "utf8"),
+  );
+  return src ? "frontend" + src[1] : null;
+}
+
+const documentEntry = entryModule();
+
 // git without a shell — args split on spaces (a range like "<sha>..HEAD" is one arg).
 function git(args) {
   const r = spawnSync("git", args.split(" "), { cwd: repoRoot });
@@ -161,6 +181,7 @@ for (const f of changed) {
   // API types (src/api/schema.d.ts) regenerate on any contract change, so
   // requiring a story for them is a false gate. Skip them.
   if (f.endsWith(".d.ts")) continue;
+  if (f === documentEntry) continue;
   if (/\.stories\.[tj]sx?$/.test(f)) {
     storyFiles.add(f);
   } else if (
