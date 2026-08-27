@@ -3,7 +3,7 @@
 
 //gate:kind census H2
 
-package backendarch
+package gates
 
 // The fields a restore says it can clear are the fields the stores clear.
 //

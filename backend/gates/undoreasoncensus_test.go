@@ -3,7 +3,7 @@
 
 //gate:kind census H2
 
-package backendarch
+package gates
 
 // One refusal set, three spellings.
 //
