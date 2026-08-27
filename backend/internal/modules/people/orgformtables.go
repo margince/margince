@@ -59,6 +59,10 @@ type marketForms struct {
 	// that legalSuffixes cannot reach: that map is keyed on whitespace-split
 	// words, and Thai writes none inside a name.
 	suffixes []string
+	// suffixRuns are trailing forms of SEVERAL words, which legalSuffixes also
+	// cannot reach for the same reason — it decides one word at a time and can
+	// never see that "sp z o o" is one form.
+	suffixRuns [][]string
 	// syllabic marks a market whose brands are built from a small pool of
 	// shared syllables, where ONE word in common is not evidence of identity.
 	// Vietnamese "Hòa Bình" and "Hòa Phát" share "hoa" and are the country's
@@ -273,8 +277,18 @@ var baltics = marketForms{
 // "commercial company", it carries no information, and it goes unconditionally.
 // The forms themselves trail the name and are handled by the suffix strip.
 var romania = marketForms{
-	name:     "romania",
-	prefixes: unambiguous([]string{"s", "c"}, []string{"sc"}),
+	name: "romania",
+	// The Romanian form at the END is what proves the bare "SC" at the front:
+	// "SC Dacia SRL" is a Romanian company, "SC Johnson" is not.
+	closers: []string{"srl", "sa", "sca", "snc", "pfa"},
+	// "S.C." dotted is unmistakable — no company writes its brand that way.
+	// Bare "SC" is not: SC Johnson is a real company, and stripping it left
+	// "johnson", which then met "Johnson Controls" at 0.89. So the undotted
+	// spelling is ambiguous and needs the name to agree, exactly like "PT".
+	prefixes: append(
+		unambiguous([]string{"s", "c"}),
+		ambiguous([]string{"sc"})...,
+	),
 }
 
 // Turkey and Poland write short dotted forms. After folding the dots become
@@ -285,14 +299,28 @@ var turkeyAndPoland = marketForms{
 		[]string{"sp", "z", "o", "o"},
 		[]string{"spolka", "z", "ograniczona", "odpowiedzialnoscia"},
 	),
+	// "Sp. z o.o." TRAILS the name far more often than it leads it, and it
+	// cannot go in legalSuffixes: that map is consulted one word at a time, and
+	// this form is four words after the dots become separators. Removed here as
+	// a run, longest first, so "Alfa Sp. z o.o." reduces to "alfa" rather than
+	// sharing four trailing words with every other Polish company.
+	suffixRuns: [][]string{
+		{"sp", "z", "o", "o"},
+		{"spolka", "z", "ograniczona", "odpowiedzialnoscia"},
+		{"ltd", "sti"},
+	},
 }
 
 // Arabic names open with شركة (sharikat, "company"), and Persian with شرکت.
 // Neither collides with anything in another script.
 var arabic = marketForms{
 	name: "arabic",
+	// Written as they FOLD, not as they are typed. Arabic vocalization and the
+	// hamza carriers are removed by the normalization above, so "مؤسسة" arrives
+	// as "موسسة" — an entry spelled the typed way would never fire, which the
+	// census in orgnameforms_test.go fails the build over.
 	prefixes: unambiguous(
-		[]string{"شركة"}, []string{"شركه"}, []string{"مؤسسة"}, []string{"شرکت"},
+		[]string{"شركة"}, []string{"شركه"}, []string{"موسسة"}, []string{"شرکت"},
 	),
 }
 
@@ -315,4 +343,7 @@ var thailand = marketForms{
 var hebrew = marketForms{
 	name:     "hebrew",
 	prefixes: unambiguous([]string{"חברת"}),
+	// בע"מ is the trailing form on nearly every Israeli company, and the
+	// gershayim inside it becomes a separator, so it arrives as two words.
+	suffixRuns: [][]string{{"בע", "מ"}},
 }

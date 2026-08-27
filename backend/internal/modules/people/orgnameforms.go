@@ -141,6 +141,36 @@ func stripTrailingWords(fields []string, suffixes []string) []string {
 	return fields
 }
 
+// stripTrailingRuns removes a multi-word trailing form, longest first, for as
+// long as one matches. Never down to nothing, the same rule the other strips
+// follow.
+func stripTrailingRuns(fields []string, runs [][]string) []string {
+	for {
+		longest := 0
+		for _, run := range runs {
+			if len(run) > longest && len(run) < len(fields) &&
+				closesWithRun(fields, run) {
+				longest = len(run)
+			}
+		}
+		if longest == 0 {
+			return fields
+		}
+		fields = fields[:len(fields)-longest]
+	}
+}
+
+// closesWithRun answers whether the name ends in exactly this run of words.
+func closesWithRun(fields, run []string) bool {
+	tail := fields[len(fields)-len(run):]
+	for i, word := range run {
+		if tail[i] != word {
+			return false
+		}
+	}
+	return true
+}
+
 // opensWith answers whether the name opens with exactly this form.
 func opensWith(fields, tokens []string) bool {
 	for i, word := range tokens {
@@ -245,13 +275,20 @@ func matchingFormOf(s string) (string, *marketForms) {
 		market := &prefixMarkets[i]
 		stripped := stripLeadingMarkers(fields, market.prefixes,
 			corroboratedMarket(s, fields, *market))
-		if len(stripped) == len(fields) {
-			continue
+		if len(stripped) < len(fields) {
+			stripped = stripLeadingMarkers(stripped, market.continuations, true)
+			stripped = stripLeadingMarkers(stripped, market.fillers, true)
 		}
-		stripped = stripLeadingMarkers(stripped, market.continuations, true)
-		stripped = stripLeadingMarkers(stripped, market.fillers, true)
+		// The trailing forms are consulted whether or not a leading one
+		// matched, because most of them do not come in pairs: "Alfa Sp. z o.o."
+		// carries the Polish form at the end and nothing at the front, and a
+		// name that reached the suffix strip only through a prefix would keep
+		// it and share four trailing words with every other Polish company.
 		stripped = stripTrailingWords(stripped, market.suffixes)
-		return strings.Join(stripped, " "), market
+		stripped = stripTrailingRuns(stripped, market.suffixRuns)
+		if len(stripped) < len(fields) {
+			return strings.Join(stripped, " "), market
+		}
 	}
 	return strings.Join(fields, " "), nil
 }

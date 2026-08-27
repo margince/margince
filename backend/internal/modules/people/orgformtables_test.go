@@ -72,7 +72,7 @@ var marketCorpus = []marketCompany{
 
 	// Arabic. The script itself is the corroboration.
 	{name: "شركة الراجحي", brand: "الراجحي", group: "rajhi"},
-	{name: "شركة الأهلي", brand: "الأهلي", group: "ahli"},
+	{name: "شركة الأهلي", brand: "الاهلي", group: "ahli"},
 	{name: "مؤسسة الفيصل", brand: "الفيصل", group: "faisal"},
 
 	// Thailand. The vowels here are combining marks, and an unrestricted

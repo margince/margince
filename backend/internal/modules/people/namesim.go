@@ -31,13 +31,18 @@ var legalSuffixes = map[string]bool{
 	"inc": true, "llc": true, "ltd": true, "gmbh": true, "ag": true,
 	"sa": true, "sas": true, "bv": true, "oy": true, "plc": true,
 	"co": true, "corp": true, "kg": true, "ug": true,
-	// The markets that write the form in front ALSO write one behind, and a
-	// name carries whichever the writer used. Indonesia's listed companies end
-	// in "Tbk" and bracket the brand between it and a leading "PT"; Romania,
-	// Poland and Turkey put theirs at the end alone. Their prefix halves live in
-	// orgformtables.go — these are the same forms seen from the other side.
-	"srl": true, "sro": true, "tbk": true, "as": true, "oyj": true,
-	"doo": true, "dd": true, "zoo": true, "sti": true,
+	// The markets that write the form in front ALSO write one behind, and a name
+	// carries whichever the writer used. Indonesia's listed companies end in
+	// "Tbk" and bracket the brand between it and a leading "PT"; Romania and
+	// Turkey put theirs at the end alone.
+	//
+	// EVERY ENTRY HERE MUST BE A WORD NO COMPANY IS CALLED, because this map
+	// feeds NormalizeOrgName, which is a stored grouping key: a word wrongly
+	// listed does not merely inflate a score, it files two unrelated companies
+	// under one key. Measured, "zoo" (the Polish "z o.o.") made "San Diego Zoo"
+	// and "San Diego" the same key, and "as" took the last word off "Trading
+	// As". Both are out; the Polish and Nordic forms are not worth that.
+	"srl": true, "sro": true, "tbk": true, "oyj": true, "sti": true,
 }
 
 // legalConnectives join the halves of a COMPOUND legal form: "GmbH & Co. KG"
@@ -73,6 +78,9 @@ func normalizeName(s string) string {
 	return strings.TrimSpace(cases.Fold().String(recomposed))
 }
 
+// combiningDiaeresis is the mark that turns Cyrillic "е" into "ё".
+const combiningDiaeresis = '\u0308'
+
 // dropAccents removes the combining marks that are ACCENTS — the ones a writer
 // adds to a letter and a reader can do without — and keeps the ones that are
 // letters in their own right.
@@ -84,11 +92,15 @@ func normalizeName(s string) string {
 // "កម្ពុជា" into "កមពជា", so every Thai and Khmer company name lost characters
 // before any comparison began — and two different names could fold together.
 //
-// The base letter decides, not the mark. NFD leaves an accent directly after the
-// letter it belongs to, so a mark following Latin or Greek is an accent and
-// goes; a mark following anything else is part of its letter and stays. Every
-// case this normalization exists for is unchanged: Müller/Mueller, Straße, Việt
-// Nam, Οδυσσεύς.
+// The base letter decides, not the mark. NFD leaves a mark directly after the
+// letter it belongs to, so the base says which kind it is:
+//
+//   - Latin and Greek write ACCENTS, and those go. Müller/Mueller, Straße, Việt
+//     Nam and Οδυσσεύς all depend on it.
+//   - Hebrew and Arabic write VOCALIZATION — niqqud and harakat — which is
+//     optional and usually absent, so a pointed spelling must fold onto the
+//     plain one rather than becoming a second company.
+//   - Everything else writes LETTERS, and those stay.
 //
 // CYRILLIC IS NOT IN THAT LIST, and including it was wrong for the same reason
 // as Thai. Its marked letters are letters: "й" is not an accented "и" but the
@@ -99,22 +111,30 @@ func normalizeName(s string) string {
 func dropAccents(decomposed string) string {
 	var out strings.Builder
 	out.Grow(len(decomposed))
-	accented := false
+	accented, diaeresisAfterYe := false, false
 	for _, r := range decomposed {
 		switch {
 		case unicode.Is(unicode.Mn, r):
-			if accented {
+			if accented || (diaeresisAfterYe && r == combiningDiaeresis) {
+				diaeresisAfterYe = false
 				continue
 			}
-		case unicode.Is(unicode.Latin, r), unicode.Is(unicode.Greek, r):
-			accented = true
+			diaeresisAfterYe = false
+		case unicode.Is(unicode.Latin, r), unicode.Is(unicode.Greek, r),
+			unicode.Is(unicode.Hebrew, r), unicode.Is(unicode.Arabic, r):
+			accented, diaeresisAfterYe = true, false
 		case r == 'е' || r == 'Е':
 			// Russian writes "ё" and "е" for one letter and a registry may hold
-			// either, so the diaeresis after this one IS dropped. NFD has already
-			// split "ё" into "е" plus its mark by the time this runs.
-			accented = true
-		default:
+			// either, so the DIAERESIS after this one is dropped. NFD has
+			// already split "ё" into "е" plus its mark by the time this runs.
+			//
+			// That mark and no other: "ӗ" is "е" with a BREVE and is a letter of
+			// Chuvash, so a rule of "any mark after е" folded "Ӗнер" and "Енер"
+			// into one name.
+			diaeresisAfterYe = true
 			accented = false
+		default:
+			accented, diaeresisAfterYe = false, false
 		}
 		out.WriteRune(r)
 	}
