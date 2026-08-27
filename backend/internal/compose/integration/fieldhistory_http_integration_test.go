@@ -111,14 +111,7 @@ func seedAgentFieldHistoryRow(t *testing.T, e *Env, entityType string, entityID,
 	evidence, before, after map[string]any, occurredAt time.Time,
 ) ids.UUID {
 	t.Helper()
-	beforeJSON, err := json.Marshal(before)
-	if err != nil {
-		t.Fatalf("marshal before: %v", err)
-	}
-	afterJSON, err := json.Marshal(after)
-	if err != nil {
-		t.Fatalf("marshal after: %v", err)
-	}
+	beforeJSON, afterJSON := auditImageJSON(t, before), auditImageJSON(t, after)
 	evidenceJSON, err := json.Marshal(evidence)
 	if err != nil {
 		t.Fatalf("marshal evidence: %v", err)

@@ -38,21 +38,34 @@ import (
 // before/after are marshaled to jsonb bytes explicitly: pgx does not
 // accept a bare map[string]any for a jsonb column without a registered
 // type, the same reason storekit.Audit marshals before binding.
+// auditImageJSON renders an audit image for a raw INSERT, answering nil bytes
+// — SQL NULL — for an image that says nothing.
+//
+// json.Marshal of a nil map is the four bytes `null`, and that is not the same
+// column value: every "there was no prior state" query is `WHERE before IS
+// NULL`, and the scalar is not null. storekit.AbsentImage settles this for
+// every production writer; a fixture writing the row itself goes around that
+// door, so it has to answer the same way.
+func auditImageJSON(t *testing.T, image map[string]any) []byte {
+	t.Helper()
+	if image == nil {
+		return nil
+	}
+	rendered, err := json.Marshal(image)
+	if err != nil {
+		t.Fatalf("marshal audit image: %v", err)
+	}
+	return rendered
+}
+
 func seedAuditActionRow(t *testing.T, e *Env, action, entityType string, entityID ids.UUID,
 	actorType string, before, after map[string]any, occurredAt time.Time,
 ) ids.UUID {
 	t.Helper()
-	beforeJSON, err := json.Marshal(before)
-	if err != nil {
-		t.Fatalf("marshal before: %v", err)
-	}
-	afterJSON, err := json.Marshal(after)
-	if err != nil {
-		t.Fatalf("marshal after: %v", err)
-	}
+	beforeJSON, afterJSON := auditImageJSON(t, before), auditImageJSON(t, after)
 	rowID := ids.NewV7()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, action,
 			                        entity_type, entity_id, before, after, occurred_at)
