@@ -1305,7 +1305,7 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
   return <kbd className="kbd">{children}</kbd>;
 }
 
-// The popover panel THIS dialog opened, if Tab has anywhere to go in it.
+// The popover panel THIS dialog opened that Tab belongs to, or nothing.
 //
 // Found through the trigger rather than by looking for a panel: a panel is
 // portalled to the body, so it is not inside the dialog to be found there, and
@@ -1314,16 +1314,29 @@ export function Kbd({ children }: Readonly<{ children: ReactNode }>) {
 // names its own panel through `aria-controls`, and the trigger IS in the
 // dialog, which is the only link between the two that survives the portal.
 //
+// Two can be open at once, so DOM order is not the answer. A popover shuts on
+// a mousedown outside itself, but a hover-opened receipt is opened by a
+// settling pointer and fires no such press — it can rise beside a panel a
+// click already opened. The one holding focus is the one the reader is in;
+// the other is a panel they are merely near.
+//
 // A panel with no tab stops is not one: a `StatCard` receipt is frequently
 // prose, and a trap holding a container it cannot move focus within answers
 // every Tab by swallowing it. Falling back to the dialog leaves the panel on
 // screen and the reader still able to walk what is behind it.
 function openPanelIn(dialog: HTMLElement | null): HTMLElement | null {
-  const trigger = dialog?.querySelector<HTMLElement>(
-    '[aria-expanded="true"][aria-controls]',
-  );
-  const panelId = trigger?.getAttribute("aria-controls");
-  const panel = panelId ? document.getElementById(panelId) : null;
+  const panels = [
+    ...(dialog?.querySelectorAll<HTMLElement>(
+      '[aria-expanded="true"][aria-controls]',
+    ) ?? []),
+  ]
+    .map((trigger) =>
+      document.getElementById(trigger.getAttribute("aria-controls") ?? ""),
+    )
+    .filter((panel): panel is HTMLElement => panel !== null);
+  const active = document.activeElement;
+  const held = panels.find((panel) => panel.contains(active));
+  const panel = held ?? panels[0];
   return panel && focusableWithin(panel).length > 0 ? panel : null;
 }
 
