@@ -15,6 +15,7 @@ package jobfanout
 import (
 	"context"
 	"net/http"
+	"slices"
 	"sync"
 	"testing"
 
@@ -49,11 +50,25 @@ func TestGrantingMintsTheRepsOwnCredentialAndNothingWider(t *testing.T) {
 	if !selfBound {
 		t.Error("the minted passport does not act for the user who granted it")
 	}
-	// morning_brief reads and ranks; it writes nothing. `write` is
-	// all-or-nothing across twelve verbs, so granting it here would hand a
-	// nightly agent archive_record for the sake of a summary.
-	if len(scopes) != 1 || scopes[0] != "read" {
-		t.Errorf("the overnight credential carries %v, want read alone", scopes)
+	// WHICH scopes is not asserted here. Whether the set funds the agent's
+	// declared tools is a question about the tool specs, and
+	// TestEveryGrantFundsTheToolsItsAgentDeclares (backend/agentgrantscopes_test.go)
+	// derives it from them — this test carried `read` alone, and one PR later
+	// the agent gained annotate_brief and the copy was simply wrong.
+	//
+	// What THIS test can prove and that one cannot is that a real mint over
+	// real Postgres produces a non-empty scope set at all: a credential with no
+	// scopes funds nothing and would degrade every run.
+	if len(scopes) == 0 {
+		t.Error("the minted passport carries no scopes, so every run degrades before its first step")
+	}
+	// And never wider than the agent could possibly need: send and enrich reach
+	// outside the workspace, and no scheduled agent declares a tool requiring
+	// either.
+	for _, tooWide := range []string{"send", "enrich"} {
+		if slices.Contains(scopes, tooWide) {
+			t.Errorf("the overnight credential carries %q, which no declared tool requires", tooWide)
+		}
 	}
 }
 

@@ -115,6 +115,36 @@ func (h Handlers) SnoozeBriefItem(w http.ResponseWriter, r *http.Request, itemID
 	httperr.WriteJSON(w, http.StatusOK, briefItemToWire(item))
 }
 
+// AnnotateMorningBrief writes the overnight pass's findings onto the acting
+// rep's own current run.
+//
+// 204 rather than the annotated run: the caller is the agent that just wrote
+// it, and handing the prose straight back is how a loop reads its own output as
+// new information and talks itself into a second pass. The person reads it
+// through GET /brief like everything else.
+func (h Handlers) AnnotateMorningBrief(w http.ResponseWriter, r *http.Request) {
+	var req crmcontracts.AnnotateBriefRequest
+	if !httperr.Decode(w, r, &req) {
+		return
+	}
+	ann := Annotation{Items: make([]ItemAnnotation, 0, len(req.Items))}
+	if req.Narrative != nil {
+		ann.Narrative = *req.Narrative
+	}
+	for _, item := range req.Items {
+		one := ItemAnnotation{ItemID: ids.UUID(item.ItemId), Finding: item.Finding}
+		for _, cited := range item.CitedEvidence {
+			one.CitedEvidence = append(one.CitedEvidence, ids.UUID(cited))
+		}
+		ann.Items = append(ann.Items, one)
+	}
+	if err := h.engine.AnnotateCurrentRun(r.Context(), ann, time.Now().UTC()); err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func briefRunToWire(run BriefRun) crmcontracts.MorningBrief {
 	items := make([]crmcontracts.MorningBriefItem, 0, len(run.Items))
 	for _, item := range run.Items {
@@ -129,8 +159,23 @@ func briefRunToWire(run BriefRun) crmcontracts.MorningBrief {
 		LocalDay:         &day,
 		CandidateCount:   run.CandidateCount,
 		RevenueNormMinor: &norm,
+		Narrative:        nullableText(run.Narrative),
+		AnnotatedAt:      run.AnnotatedAt,
 		Items:            items,
 	}
+}
+
+// nullableText serves empty prose as JSON null rather than "".
+//
+// The distinction is the contract's: null means no pass wrote one, and the
+// screen tells that apart from "a pass ran and had nothing to say" through
+// annotated_at. An empty string on the wire would be a third spelling of the
+// same absence that neither field documents.
+func nullableText(text string) *string {
+	if text == "" {
+		return nil
+	}
+	return &text
 }
 
 func briefItemToWire(item BriefRunItem) crmcontracts.MorningBriefItem {
@@ -154,5 +199,6 @@ func briefItemToWire(item BriefRunItem) crmcontracts.MorningBriefItem {
 		State:        crmcontracts.MorningBriefItemState(item.State),
 		StateAt:      item.StateAt,
 		SnoozedUntil: item.SnoozedUntil,
+		Finding:      nullableText(item.Finding),
 	}
 }

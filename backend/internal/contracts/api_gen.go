@@ -12752,6 +12752,39 @@ type AiUsage struct {
 // AiUsageBudgetBand < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
 type AiUsageBudgetBand string
 
+// AnnotateBriefItem One finding about one queued deal.
+type AnnotateBriefItem struct {
+	// CitedEvidence What this finding rests on. REQUIRED and non-empty: an empty list is not "a claim with
+	// no sources", it is the verification being skipped, and it is the easy path — a model
+	// that omits the field would get its prose onto the rep's screen unchecked, under the
+	// same agent tag a grounded finding carries.
+	//
+	// Every id is checked against the evidence the run already recorded for this item. An id
+	// outside it refuses the whole write rather than being dropped, because a finding whose
+	// citations were silently pruned still reads as grounded.
+	CitedEvidence []openapi_types.UUID `json:"cited_evidence"`
+
+	// Finding The prose the rep reads beside the rank.
+	Finding string `json:"finding"`
+
+	// ItemId A brief item belonging to the caller's own current run. Anything else refuses.
+	ItemId openapi_types.UUID `json:"item_id"`
+}
+
+// AnnotateBriefRequest One overnight pass's findings for the acting rep's own current run.
+//
+// WHAT IS ABSENT IS THE DESIGN: no user id, no run id, no local day, no rank and no item
+// ordering. The run is resolved server-side from the acting principal and today's local
+// day, and the queue's order stays the deterministic engine's.
+type AnnotateBriefRequest struct {
+	// Items At most one finding per queued item; a repeated item id is refused.
+	Items []AnnotateBriefItem `json:"items"`
+
+	// Narrative One sentence about the night as a whole. An empty string is a real answer — a quiet
+	// night has no sentence — and is stored as null with the pass still stamped.
+	Narrative *string `json:"narrative,omitempty"`
+}
+
 // ApplyTagRequest defines model for ApplyTagRequest.
 type ApplyTagRequest struct {
 	EntityId   openapi_types.UUID        `json:"entity_id"`
@@ -18401,6 +18434,11 @@ type Money struct {
 // reproduces it. `candidate_count` is how many deals cleared the §10 honest-short bar;
 // `items` is the top slice (≤ 7) — genuinely shorter when fewer qualify, never padded.
 type MorningBrief struct {
+	// AnnotatedAt When the overnight agent last wrote its findings, null when no pass has. A reader
+	// showing a run with no narrative must consult this before saying "a quiet night":
+	// without it, a model that never ran and a night with nothing in it look identical.
+	AnnotatedAt *time.Time `json:"annotated_at,omitempty"`
+
 	// AsOf The data cutoff this brief reflects; the next run derives "changed overnight" from it.
 	AsOf time.Time `json:"as_of"`
 
@@ -18416,6 +18454,11 @@ type MorningBrief struct {
 
 	// LocalDay The morning this run is for, as a calendar date in the installation reporting timezone. A rep has exactly one run per local day, and the on-open read serves today's — never an older one dressed as today.
 	LocalDay *openapi_types.Date `json:"local_day,omitempty"`
+
+	// Narrative One sentence about the night, written by the overnight agent. Null when the pass
+	// never ran, and ALSO null when it ran and honestly had nothing to say — `annotated_at`
+	// is what tells those apart, which is why both fields exist.
+	Narrative *string `json:"narrative,omitempty"`
 
 	// RevenueNormMinor The workspace-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
@@ -18453,7 +18496,13 @@ type MorningBriefItem struct {
 
 	// FeatureVector The §10.1 factor decomposition, each normalized 0..1 — the composite reconciles to it.
 	FeatureVector MorningBriefFeatureVector `json:"feature_vector"`
-	Id            openapi_types.UUID        `json:"id"`
+
+	// Finding What the overnight agent found about this deal — why it is on the list, what changed,
+	// and the one next move. Null when no pass has annotated this run. It is agent-authored
+	// prose and the surface marks it as such; the rank beside it stays the deterministic
+	// engine's, which no annotation can change.
+	Finding *string            `json:"finding,omitempty"`
+	Id      openapi_types.UUID `json:"id"`
 
 	// Rank Position in the queue (1 = top), after the L2 re-order.
 	Rank int `json:"rank"`
@@ -28992,6 +29041,9 @@ type PreviewAutomationJSONRequestBody = AutomationPreviewRequest
 // BookMeetingJSONRequestBody defines body for BookMeeting for application/json ContentType.
 type BookMeetingJSONRequestBody BookMeetingJSONBody
 
+// AnnotateMorningBriefJSONRequestBody defines body for AnnotateMorningBrief for application/json ContentType.
+type AnnotateMorningBriefJSONRequestBody = AnnotateBriefRequest
+
 // SnoozeBriefItemJSONRequestBody defines body for SnoozeBriefItem for application/json ContentType.
 type SnoozeBriefItemJSONRequestBody = BriefSnoozeRequest
 
@@ -37349,6 +37401,9 @@ type ServerInterface interface {
 	// Assemble the acting rep's brief for today if the overnight pass has not already.
 	// (POST /brief)
 	GenerateMorningBrief(w http.ResponseWriter, r *http.Request)
+	// Write the overnight pass's findings onto the acting rep's own brief for today.
+	// (PUT /brief/annotations)
+	AnnotateMorningBrief(w http.ResponseWriter, r *http.Request)
 	// Mark a brief item acted (B-E05.13) — the deal drops from the next run until it materially changes.
 	// (POST /brief/items/{itemId}/act)
 	MarkBriefItemActed(w http.ResponseWriter, r *http.Request, itemId openapi_types.UUID)
@@ -39002,6 +39057,12 @@ func (_ Unimplemented) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 // Assemble the acting rep's brief for today if the overnight pass has not already.
 // (POST /brief)
 func (_ Unimplemented) GenerateMorningBrief(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Write the overnight pass's findings onto the acting rep's own brief for today.
+// (PUT /brief/annotations)
+func (_ Unimplemented) AnnotateMorningBrief(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -44376,6 +44437,28 @@ func (siw *ServerInterfaceWrapper) GenerateMorningBrief(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GenerateMorningBrief(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// AnnotateMorningBrief operation middleware
+func (siw *ServerInterfaceWrapper) AnnotateMorningBrief(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.AnnotateMorningBrief(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -63346,6 +63429,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/brief", wrapper.GenerateMorningBrief)
+	})
+	r.Group(func(r chi.Router) {
+		r.Put(options.BaseURL+"/brief/annotations", wrapper.AnnotateMorningBrief)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/brief/items/{itemId}/act", wrapper.MarkBriefItemActed)

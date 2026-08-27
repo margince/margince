@@ -384,3 +384,20 @@ func nativeOnlyBriefReader(mode overlayModeChecker, read agents.BriefReader) age
 		return read(ctx)
 	}
 }
+
+// nativeOnlyBriefAnnotator guards annotate_brief, the writer's twin of the
+// reader above: an overlay workspace keeps its deals in the incumbent, so there
+// is no native run to annotate and the honest answer is "not available here"
+// rather than a not-found that reads as a missing morning.
+func nativeOnlyBriefAnnotator(mode overlayModeChecker, annotate agents.BriefAnnotator) agents.BriefAnnotator {
+	return func(ctx context.Context, in agents.AnnotateBriefArgs) error {
+		overlay, err := mode.isOverlayUncached(ctx)
+		if err != nil {
+			return err
+		}
+		if overlay {
+			return apperrors.ErrUnsupportedBySoR
+		}
+		return annotate(ctx, in)
+	}
+}

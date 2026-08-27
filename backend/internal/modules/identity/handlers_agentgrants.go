@@ -52,8 +52,11 @@ const overnightPassportLabel = "overnight brief"
 //
 // Held by: TestEveryGrantFundsTheToolsItsAgentDeclares (backend/gates/agentgrantscopes_test.go)
 var grantScopes = map[string][]string{
-	// Reads deals and activities, ranks them, writes nothing.
-	"morning_brief": {"read"},
+	// Reads deals and activities, ranks them, and writes its findings back onto
+	// the run through annotate_brief — which is a write, so the credential has
+	// to fund one. Without it every run degrades before the first step and the
+	// rep gets a ranked queue with no sentence saying why anything is on it.
+	"morning_brief": {"read", "write"},
 	// Reads the same, and logs ONE note activity per at-risk deal — which is
 	// log_activity, which requires write.
 	"overnight_at_risk_sweep": {"read", "write"},

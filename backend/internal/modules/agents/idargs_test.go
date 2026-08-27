@@ -282,6 +282,7 @@ func idProbeDispatcher(t *testing.T) *Dispatcher {
 	RegisterBriefTool(r, func(context.Context) (ReadBriefResult, error) {
 		return ReadBriefResult{}, errSeamReached
 	})
+	RegisterAnnotateBriefTool(r, func(context.Context, AnnotateBriefArgs) error { return nil })
 	RegisterApprovalTools(r, seamProbeInbox{})
 	return NewDispatcher(r, bindAuthenticated, "margince-crm", "test").
 		WithLogger(slog.New(slog.NewTextHandler(io.Discard, nil)))

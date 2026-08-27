@@ -14,6 +14,7 @@ import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
 import { MONEY_ABSENT } from "../format/format";
 import { LocaleProvider } from "../i18n";
+import { en } from "../i18n/en";
 import { HomeScreen } from "./home";
 import { HomeGlance } from "./home.glance";
 import type { Deal, MorningBrief } from "./home.queries";
@@ -807,5 +808,87 @@ describe("HomeScreen — the ranked queue", () => {
     expect(until.getTime()).toBeGreaterThan(Date.now());
     expect(until).toEqual(new Date(2026, 6, 6, 8, 0, 0));
     expect(await screen.findByText("snoozed")).toBeTruthy();
+  });
+});
+
+// ── What the night said, and whether it spoke at all ──
+//
+// Three states, and the third is the one worth the tests. A brief with no
+// narrative means either "the pass ran and had nothing to say" or "no pass ran
+// at all" — and those read identically as silence. `annotated_at` is what
+// separates them, so a screen that showed nothing in both cases would tell a
+// rep the product had nothing to explain when in fact nobody looked.
+
+describe("HomeScreen — the sentence about the night", () => {
+  it("shows the narrative, marked as agent-authored", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({
+          ...run,
+          narrative: "Two replies overnight, one deal went quiet.",
+          annotated_at: "2026-07-05T05:35:00Z",
+        }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Two replies overnight, one deal went quiet.");
+    // The prose is model-authored and sits beside numbers a deterministic
+    // engine computed; nothing else on the panel would tell them apart.
+    expect(
+      screen.getAllByText(en["trust.agentUnnamed"]).length,
+    ).toBeGreaterThan(0);
+  });
+
+  it("says a pass did not run, rather than showing nothing", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({ ...run, narrative: null, annotated_at: null }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    // The honest degrade the plan asks for: never a blank morning, never a
+    // silent one. A rep reading silence would conclude there was nothing to
+    // explain.
+    await screen.findByText(en["home.narrativeNoPass"]);
+  });
+
+  it("stays silent when a pass ran and had nothing to say", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({
+          ...run,
+          narrative: null,
+          annotated_at: "2026-07-05T05:35:00Z",
+        }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("Fleet retrofit");
+    // A quiet night honestly has no sentence, and inventing one — or claiming
+    // no pass ran — would both be false.
+    expect(screen.queryByText(en["home.narrativeNoPass"])).toBeNull();
+  });
+
+  it("shows a per-item finding above the factor meters", async () => {
+    stubApi({
+      "GET /brief": () =>
+        jsonResponse({
+          ...run,
+          annotated_at: "2026-07-05T05:35:00Z",
+          items: [
+            {
+              ...run.items[0],
+              finding: "He asked about the delivery date yesterday.",
+            },
+          ],
+        }),
+      "GET /deals": () => jsonResponse({ data: [fleetDeal] }),
+    });
+    render(<HomeScreen />);
+
+    await screen.findByText("He asked about the delivery date yesterday.");
   });
 });

@@ -709,6 +709,7 @@ public.booking_page_slug_key CREATE UNIQUE INDEX booking_page_slug_key ON public
 public.brief_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.brief_item.brief_item_composite_check CHECK (((composite >= (0)::double precision) AND (composite <= (1)::double precision)))
 public.brief_item.brief_item_deal_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
+public.brief_item.brief_item_finding_length CHECK (((finding IS NULL) OR (char_length(finding) <= 600)))
 public.brief_item.brief_item_pkey PRIMARY KEY (id)
 public.brief_item.brief_item_rank_check CHECK ((rank >= 1))
 public.brief_item.brief_item_run_fkey FOREIGN KEY (brief_run_id) REFERENCES brief_run(id) ON DELETE CASCADE
@@ -720,6 +721,7 @@ public.brief_item.composite double precision NOT NULL gen=- def=-
 public.brief_item.deal_id uuid NOT NULL gen=- def=-
 public.brief_item.evidence_ids uuid[] NOT NULL gen=- def=-
 public.brief_item.feature_vector jsonb NOT NULL gen=- def=-
+public.brief_item.finding text gen=- def=-
 public.brief_item.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_item.rank integer NOT NULL gen=- def=-
 public.brief_item.snoozed_until timestamp with time zone gen=- def=-
@@ -729,8 +731,11 @@ public.brief_item.uq_brief_item_run_deal UNIQUE (brief_run_id, deal_id)
 public.brief_item.uq_brief_item_run_rank UNIQUE (brief_run_id, rank)
 public.brief_item_pkey CREATE UNIQUE INDEX brief_item_pkey ON public.brief_item USING btree (id)
 public.brief_run acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.brief_run.annotated_at timestamp with time zone gen=- def=-
 public.brief_run.as_of timestamp with time zone NOT NULL gen=- def=-
 public.brief_run.brief_run_candidate_count_check CHECK ((candidate_count >= 0))
+public.brief_run.brief_run_narrative_length CHECK (((narrative IS NULL) OR (char_length(narrative) <= 600)))
+public.brief_run.brief_run_narrative_needs_a_pass CHECK (((narrative IS NULL) OR (annotated_at IS NOT NULL)))
 public.brief_run.brief_run_pkey PRIMARY KEY (id)
 public.brief_run.brief_run_revenue_norm_minor_check CHECK ((revenue_norm_minor > 0))
 public.brief_run.brief_run_user_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
@@ -738,6 +743,7 @@ public.brief_run.candidate_count integer NOT NULL gen=- def=-
 public.brief_run.generated_at timestamp with time zone NOT NULL gen=- def=now()
 public.brief_run.id uuid NOT NULL gen=- def=uuidv7()
 public.brief_run.local_day date NOT NULL gen=- def=-
+public.brief_run.narrative text gen=- def=-
 public.brief_run.revenue_norm_minor bigint NOT NULL gen=- def=-
 public.brief_run.uq_brief_run_user_day UNIQUE (user_id, local_day)
 public.brief_run.user_id uuid NOT NULL gen=- def=-
