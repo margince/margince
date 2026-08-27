@@ -62,21 +62,24 @@ var constraintDoors = map[string]bool{
 // storekitDoor reports a call to one of those doors THROUGH this file's storekit
 // import, under whatever name the file gave it.
 func storekitDoor(file *ast.File, expr ast.Expr) bool {
-	sel, ok := expr.(*ast.SelectorExpr)
-	if !ok || !constraintDoors[sel.Sel.Name] {
-		return false
-	}
 	qualifier, dotImported := gatekit.ImportedAs(file, storekitPkg)
-	receiver, ok := sel.X.(*ast.Ident)
-	if !ok {
-		return false
+	switch fun := expr.(type) {
+	case *ast.Ident:
+		// A DOT-IMPORT puts the door in scope bare, so the call is a plain
+		// identifier with no receiver at all. This arm used to sit after an
+		// early return that required a selector, which made it unreachable —
+		// the comment claimed the case and the code skipped it, which is worse
+		// than not claiming it: a dot-importing file was excluded from the
+		// sweep entirely, and every leak in it passed.
+		return dotImported && constraintDoors[fun.Name]
+	case *ast.SelectorExpr:
+		if !constraintDoors[fun.Sel.Name] {
+			return false
+		}
+		receiver, ok := fun.X.(*ast.Ident)
+		return ok && qualifier != "" && receiver.Name == qualifier
 	}
-	// A dot-import puts the door in scope bare, and there is no receiver to
-	// check — the selector itself is then the whole reference.
-	if dotImported {
-		return true
-	}
-	return qualifier != "" && receiver.Name == qualifier
+	return false
 }
 
 // The formatters a leak would travel through. A name reaching one of these is
@@ -308,6 +311,24 @@ import (
 func f(err error) error {
 	var constraint, ok = storekit.CheckViolation(err)
 	if ok {
+		return fmt.Errorf("violates %s", constraint)
+	}
+	return err
+}`,
+			reads: true,
+			leaks: 1,
+		},
+		// A dot-import: the door is in scope bare, so the call is an identifier
+		// with no receiver. Nothing in this tree does it, which is exactly how
+		// the arm handling it stayed unreachable without anything noticing.
+		"storekit dot-imported, leaked": {
+			source: `package p
+import (
+	"fmt"
+	. "github.com/margince/margince/backend/internal/platform/database/storekit"
+)
+func f(err error) error {
+	if constraint, ok := CheckViolation(err); ok {
 		return fmt.Errorf("violates %s", constraint)
 	}
 	return err
