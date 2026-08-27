@@ -190,6 +190,11 @@ export const en = {
   "day.atRisk": "Going quiet",
   "day.atRisk.empty": "No deal is drifting.",
   "day.risk.quiet": "No contact for {days} days.",
+  "day.decay": "Relationships going quiet",
+  "day.decay.empty": "You are in touch with everyone you were.",
+  "day.decay.quiet": "You have not spoken in {days} days.",
+  "day.decay.quietSince":
+    "You have not spoken in {days} days — last on {date}.",
   "day.risk.closeOverdue": "Expected to close {date} — still open.",
   "day.commitments": "You promised",
   "day.commitments.empty": "No promises coming due.",

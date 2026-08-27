@@ -48,6 +48,50 @@ function duplicateNoun(
   return "generic";
 }
 
+// A lapsed relationship says how long the silence has run and when it started.
+// Both, because the number is what a rep acts on and the date is what makes it
+// checkable against the contact's own timeline.
+function decayDetail(
+  item: AttentionItem,
+  t: T,
+  locale: Locale,
+  zone: string,
+): string | null {
+  if (!item.detail) {
+    return null;
+  }
+  const days = formatNumber(Number(item.detail), locale);
+  return item.occurred_at
+    ? t("day.decay.quietSince", {
+        days,
+        date: formatDateTime(item.occurred_at, locale, zone),
+      })
+    : t("day.decay.quiet", { days });
+}
+
+// A risk card's sentence is written HERE, not sent: the server has no language,
+// and "quiet 19 days" versus "the close date passed" read differently in each of
+// the three. `kind` names the ground and `detail` carries the number the server
+// actually measured, so the line can never imply a patience nobody applied.
+function riskDetail(
+  item: AttentionItem,
+  t: T,
+  locale: Locale,
+  zone: string,
+): string | null {
+  if (item.kind === "close_overdue" && item.due_at) {
+    return t("day.risk.closeOverdue", {
+      date: formatDateTime(item.due_at, locale, zone),
+    });
+  }
+  if (item.detail) {
+    return t("day.risk.quiet", {
+      days: formatNumber(Number(item.detail), locale),
+    });
+  }
+  return null;
+}
+
 // The supporting line under a headline: how sure the detector was, or when this
 // is due, or when it happened. At most one — a card that stacked all three
 // would make the reader read three things to learn one.
@@ -57,23 +101,11 @@ export function itemDetail(
   locale: Locale,
   zone: string,
 ): string | null {
-  // A risk card's sentence is written HERE, not sent: the server has no
-  // language, and "quiet 19 days" versus "the close date passed" read
-  // differently in each of the three. `kind` names the ground and `detail`
-  // carries the number the server actually measured, so the line can never
-  // imply a patience nobody applied.
+  if (item.source === "relationship_decay") {
+    return decayDetail(item, t, locale, zone);
+  }
   if (item.source === "deal_at_risk") {
-    if (item.kind === "close_overdue" && item.due_at) {
-      return t("day.risk.closeOverdue", {
-        date: formatDateTime(item.due_at, locale, zone),
-      });
-    }
-    if (item.detail) {
-      return t("day.risk.quiet", {
-        days: formatNumber(Number(item.detail), locale),
-      });
-    }
-    return null;
+    return riskDetail(item, t, locale, zone);
   }
   // A promise is the one item whose supporting line carries TWO facts, and it
   // needs both: the words it was read from are what make the claim checkable,

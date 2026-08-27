@@ -10,7 +10,10 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // The receipt lane makes a claim about WHO acted, and the claim is the whole
@@ -104,4 +107,74 @@ func (s *stubApprovalPage) list(limit int) ([]crmcontracts.Approval, error) {
 		limit = len(s.rows)
 	}
 	return s.rows[:limit], nil
+}
+
+// The decay lane's CANDIDATES come from the projection's own threshold, and its
+// VERDICT comes from the §4 derivation. Keeping the two apart is the whole
+// design: the projection knows when a pair last spoke and nothing about why,
+// so a candidate whose derivation says something else — they replied, the band
+// moved — is not a lapsed relationship however old its last row is.
+//
+// Reported otherwise, the lane would contradict the contact's own page about
+// the same relationship, which is the one thing two surfaces reading one engine
+// must never do.
+func TestOnlyADerivedSilenceReachesTheDecayLane(t *testing.T) {
+	oldest := ids.NewV7()
+	newer := ids.NewV7()
+	returned := ids.NewV7()
+	oldestSpoke := time.Date(2026, 5, 12, 9, 0, 0, 0, time.UTC)
+	newerSpoke := time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)
+
+	// The derivation answers in ITS order — here deliberately not the
+	// projection's — because the lane, not the derivation, owes the rep the
+	// oldest silence on top.
+	quiet := quietRelationships(
+		[]search.InteractionEdge{
+			{PersonID: oldest, LastAt: oldestSpoke},
+			{PersonID: newer, LastAt: newerSpoke},
+			{PersonID: returned, LastAt: newerSpoke},
+		},
+		[]people.PersonChanges{
+			{
+				PersonID:    ids.From[ids.PersonKind](returned),
+				DisplayName: "Tomas Berg",
+				Changes:     []relstrength.Change{{Kind: relstrength.ChangeRepliedAfterGap, Days: 41}},
+			},
+			{
+				PersonID:    ids.From[ids.PersonKind](newer),
+				DisplayName: "Ines Sommer",
+				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, Days: 41}},
+			},
+			{
+				PersonID:    ids.From[ids.PersonKind](oldest),
+				DisplayName: "Dana Weiss",
+				Changes:     []relstrength.Change{{Kind: relstrength.ChangeWentQuiet, Days: 63}},
+			},
+		},
+	)
+
+	if len(quiet) != 2 {
+		t.Fatalf("the lane carries %d relationships, want the two derived silences", len(quiet))
+	}
+	if quiet[0].Name != "Dana Weiss" || quiet[1].Name != "Ines Sommer" {
+		t.Errorf("the lane reads %q then %q, want the oldest silence first", quiet[0].Name, quiet[1].Name)
+	}
+	// The DERIVATION's span, not the projection's: the card says this number out
+	// loud, and the contact's own page says the same one.
+	if quiet[0].QuietDays != 63 {
+		t.Errorf("the card says %d days, want the derived 63", quiet[0].QuietDays)
+	}
+	if !quiet[0].LastAt.Equal(oldestSpoke) {
+		t.Errorf("the card dates the silence at %s, want the last exchange %s", quiet[0].LastAt, oldestSpoke)
+	}
+}
+
+// A contact the caller may not read never reaches the derivation, so the lane
+// simply has nothing to say about them — no row, and no empty-handed entry that
+// would disclose the pair exists.
+func TestTheDecayLaneReportsNothingItCannotDerive(t *testing.T) {
+	edge := search.InteractionEdge{PersonID: ids.NewV7(), LastAt: time.Date(2026, 6, 1, 9, 0, 0, 0, time.UTC)}
+	if quiet := quietRelationships([]search.InteractionEdge{edge}, nil); len(quiet) != 0 {
+		t.Errorf("the lane invented %d relationships from an empty derivation", len(quiet))
+	}
 }

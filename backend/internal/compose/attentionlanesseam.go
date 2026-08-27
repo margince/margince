@@ -3,7 +3,7 @@
 
 package compose
 
-// The three OPTIONAL attention lanes, bound to the engines that already own
+// The four OPTIONAL attention lanes, bound to the engines that already own
 // what they read.
 //
 // Each is a binding rather than an implementation, which is the point: the
@@ -18,15 +18,21 @@ import (
 	"sort"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	"github.com/margince/margince/backend/internal/compose/attention"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 )
 
 // attentionCommitments reads the acting rep's own promises through the people
@@ -103,6 +109,108 @@ func idleDaysOf(deal agents.SlippingDeal, now time.Time) int {
 		return 0
 	}
 	return days
+}
+
+// decayCandidateCap bounds the candidate set the decay lane derives.
+//
+// It is a bound on WORK, not a display cap: the projection answers "whose
+// silence is oldest" cheaply over an index, and the §4 derivation that follows
+// costs a pass over each candidate's interactions. Capping between the two is
+// what keeps the lane from becoming the walk over every person that the change
+// engine warns against, and the oldest silences are the ones worth the passes.
+const decayCandidateCap = 40
+
+// attentionDecay reads the acting rep's own lapsed relationships.
+//
+// TWO steps, and the order is the design. The projection narrows to the
+// reader's own edges that have been silent past the §4 threshold — one indexed
+// range rather than a sweep. Only then does the people module derive what
+// actually changed about those few, through the SAME engine the contact's own
+// page reads, so the lane and that page cannot come to disagree about when
+// somebody went quiet.
+//
+// A principal with no human behind it holds no relationships of its own, which
+// is a refusal rather than an empty lane: the feed omits and NAMES it instead
+// of reporting a clear day. Same rule the commitments lane keeps.
+type attentionDecay struct {
+	pool  *pgxpool.Pool
+	store *people.Store
+	now   func() time.Time
+}
+
+func (d attentionDecay) Lapsed(ctx context.Context) ([]attention.QuietRelationship, error) {
+	actor, ok := principal.Actor(ctx)
+	if !ok || actor.UserID.IsZero() {
+		return nil, apperrors.ErrPermissionDenied
+	}
+	now := d.now()
+	var lapsed []attention.QuietRelationship
+	err := database.WithWorkspaceTx(ctx, d.pool, func(tx pgx.Tx) error {
+		quiet, err := search.QuietEdgesForUser(
+			ctx, tx, actor.UserID,
+			now.AddDate(0, 0, -relstrength.QuietDays),
+			decayCandidateCap,
+		)
+		if err != nil {
+			return err
+		}
+		candidates := make([]ids.PersonID, 0, len(quiet))
+		for _, edge := range quiet {
+			candidates = append(candidates, ids.From[ids.PersonKind](edge.PersonID))
+		}
+		changed, err := d.store.RelationshipChangesForPeople(ctx, tx, candidates, now)
+		if err != nil {
+			return err
+		}
+		lapsed = quietRelationships(quiet, changed)
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return lapsed, nil
+}
+
+// quietRelationships keeps only the contacts the DERIVATION calls quiet.
+//
+// The projection's threshold admitted the candidates; this is the verdict. A
+// candidate whose derived changes say something else — they replied, the band
+// moved — is not on this lane, because the lane's sentence would then be a
+// second opinion about a relationship the contact's own page describes
+// differently.
+//
+// The walk follows the EDGES, not the derivations: the projection handed the
+// candidates over oldest silence first, the derivation returns them in its own
+// order, and the lane owes the rep the projection's — the longest-lapsed
+// contact on top.
+func quietRelationships(
+	quiet []search.InteractionEdge,
+	changed []people.PersonChanges,
+) []attention.QuietRelationship {
+	byPerson := make(map[ids.UUID]people.PersonChanges, len(changed))
+	for _, row := range changed {
+		byPerson[row.PersonID.UUID] = row
+	}
+	lapsed := make([]attention.QuietRelationship, 0, len(changed))
+	for _, edge := range quiet {
+		row, ok := byPerson[edge.PersonID]
+		if !ok {
+			continue
+		}
+		for _, change := range row.Changes {
+			if change.Kind != relstrength.ChangeWentQuiet {
+				continue
+			}
+			lapsed = append(lapsed, attention.QuietRelationship{
+				PersonID:  row.PersonID.UUID,
+				Name:      row.DisplayName,
+				QuietDays: change.Days,
+				LastAt:    edge.LastAt,
+			})
+			break
+		}
+	}
+	return lapsed
 }
 
 // attentionMeetings reads today's remaining meetings through the activities
