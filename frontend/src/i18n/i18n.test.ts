@@ -20,16 +20,26 @@ import { vi as viCatalog } from "./vi";
 // name" from "missed translation" at a glance — an addition to any group
 // must be defensible on the same grounds as its neighbours.
 const KEPT_IN_ENGLISH = new Set<string>([
-  // The product name of the buyer surface, and a title that is only the
-  // deal's own name in a placeholder. "Company 360" is the same kind of
-  // thing: the record page's own name, beside deal360.title which the
-  // product already keeps in English for the sibling record.
+  // The product name of the buyer surface.
   "room.card.title",
-  "deal360.title",
-  "co.360.title",
+  // Two placeholders and a dash. Every word in the line comes from elsewhere —
+  // the dimension's own label and the sentence the server wrote — so there is
+  // nothing here for a locale to translate.
+  "co.strip.healthSummary.because",
+  // The record's own name beside the numeral that names its reading. There is
+  // no word in it to translate — a locale that changed it would be changing
+  // the account's name.
+  "co.360.subject",
   // Vietnamese uses "Email" for the noun; German has its own spelling and
   // carries it. Only the vi value matches English, and it is the right word.
   "dealmail.title",
+  // Same word, same reason: the exchange kind on the account's recent list.
+  "co.recent.kind.email",
+  // And on the record's chronology, for the same reason again.
+  "timeline.kind.email",
+  // And on the thread across the top of a record, third spelling of the same
+  // noun.
+  "co.spine.kind.email",
   // Google's own field names. An admin reads these off the Google Cloud
   // console, which shows them in English whatever the reader's locale, so
   // translating them here would have the form ask for something the page they
@@ -63,11 +73,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "home.pct",
   // Pure punctuation layouts: every word in them is a placeholder, so there is
   // nothing to translate and a "translation" could only reorder the slots.
-  "today.exchange.subjectWhen",
-  // Two names and a separator: every word is a placeholder and the only
-  // literal is punctuation.
-  "today.route.headline",
-  // Two phase names and an arrow: the same shape.
+  // Two phase names and an arrow.
   "project.history.moved",
   "home.digestPhaseChange",
   // An em dash standing in for a figure nobody can compute yet. A glyph, not a
