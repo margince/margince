@@ -48,7 +48,11 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-const httperrPkg = "github.com/margince/margince/backend/internal/platform/httperr"
+const (
+	netHTTPPkg      = "net/http"
+	encodingJSONPkg = "encoding/json"
+	ioPkg           = "io"
+)
 
 // The package that owns the bound. Its own reader is the one every other file
 // is required to reach, so it cannot be required to reach itself.
@@ -95,7 +99,7 @@ func fileTouchesRequestBody(_ string, file *ast.File) bool {
 		if !ok || fn.Body == nil {
 			continue
 		}
-		if request := requestParam(fn); request != "" && touchesBodyOf(fn.Body, request) {
+		if requests := requestParams(file, fn); len(requests) > 0 && touchesBodyOf(fn.Body, requests) {
 			return true
 		}
 	}
@@ -111,34 +115,57 @@ func fileTouchesRequestBody(_ string, file *ast.File) bool {
 // sent — a matcher on `.Body` alone reported both, plus every test harness that
 // builds a request to send. What this rule is about is the one body that
 // arrives from outside and whose size the sender chooses.
-func requestParam(fn *ast.FuncDecl) string {
+func requestParams(file *ast.File, fn *ast.FuncDecl) []string {
 	if fn.Type.Params == nil {
-		return ""
+		return nil
 	}
+	qualifier, dotImported := gatekit.ImportedAs(file, netHTTPPkg)
+	var names []string
 	for _, field := range fn.Type.Params.List {
 		star, ok := field.Type.(*ast.StarExpr)
 		if !ok {
 			continue
 		}
-		sel, ok := star.X.(*ast.SelectorExpr)
-		if !ok || sel.Sel.Name != "Request" {
+		if !isHTTPRequestType(star.X, qualifier, dotImported) {
 			continue
 		}
-		pkg, ok := sel.X.(*ast.Ident)
-		if !ok || pkg.Name != "http" {
-			continue
-		}
-		if len(field.Names) > 0 && field.Names[0].Name != "_" {
-			return field.Names[0].Name
+		// EVERY name in the field, not the first. `func h(w http.ResponseWriter,
+		// r, next *http.Request)` declares two, and a matcher taking only
+		// `field.Names[0]` would read one of them and let the other through.
+		for _, name := range field.Names {
+			if name.Name != "_" {
+				names = append(names, name.Name)
+			}
 		}
 	}
-	return ""
+	return names
 }
 
-func touchesBodyOf(body *ast.BlockStmt, request string) bool {
+// isHTTPRequestType matches `http.Request` under the name this file gave
+// net/http, or the bare `Request` a dot-import puts in scope.
+//
+// Resolved from the IMPORT PATH rather than from the identifier `http`. An
+// alias — `stdhttp "net/http"` — would otherwise slip every handler in the file
+// past this gate, and the alias is not exotic: a file importing two packages
+// that both end in `http` has to rename one.
+func isHTTPRequestType(expr ast.Expr, qualifier string, dotImported bool) bool {
+	switch t := expr.(type) {
+	case *ast.Ident:
+		return dotImported && t.Name == "Request"
+	case *ast.SelectorExpr:
+		if t.Sel.Name != "Request" {
+			return false
+		}
+		pkg, ok := t.X.(*ast.Ident)
+		return ok && qualifier != "" && pkg.Name == qualifier
+	}
+	return false
+}
+
+func touchesBodyOf(body *ast.BlockStmt, requests []string) bool {
 	found := false
 	ast.Inspect(body, func(n ast.Node) bool {
-		if isBodyOf(n, request) {
+		if isBodyOfAny(n, requests) {
 			found = true
 		}
 		return true
@@ -155,8 +182,8 @@ func rawBodyDecodesIn(parsed gatekit.ParsedFile) []string {
 		if !ok || fn.Body == nil {
 			continue
 		}
-		request := requestParam(fn)
-		if request == "" {
+		requests := requestParams(parsed.File, fn)
+		if len(requests) == 0 {
 			continue
 		}
 		// A function that has already replaced the body with a bounded reader
@@ -164,7 +191,7 @@ func rawBodyDecodesIn(parsed gatekit.ParsedFile) []string {
 		// The overlay webhook does exactly that and says why: MaxBytesReader
 		// rather than a bare LimitReader, so an over-cap batch answers 413
 		// instead of being truncated and then rejected as a bad signature.
-		if boundsItsOwnBody(fn.Body, request) {
+		if boundsItsOwnBody(fn.Body, requests) {
 			continue
 		}
 		ast.Inspect(fn.Body, func(n ast.Node) bool {
@@ -188,7 +215,7 @@ func rawBodyDecodesIn(parsed gatekit.ParsedFile) []string {
 			// TRUNCATE rather than refuse, which is right for a peek that falls
 			// back and wrong for a decode, and the handler behind them still
 			// answers the oversized body itself.
-			shape := forbiddenBodyRead(call, request)
+			shape := forbiddenBodyRead(parsed.File, call, requests)
 			if shape == "" {
 				return true
 			}
@@ -199,28 +226,36 @@ func rawBodyDecodesIn(parsed gatekit.ParsedFile) []string {
 	return dedupeSites(sites)
 }
 
-// isBodyOf matches `<request>.Body` for the name this function gave its
+// isBodyOfAny matches `<request>.Body` for ANY name this function gave an
 // *http.Request, and nothing else.
-func isBodyOf(n ast.Node, request string) bool {
+func isBodyOfAny(n ast.Node, requests []string) bool {
 	sel, ok := n.(*ast.SelectorExpr)
 	if !ok || sel.Sel.Name != "Body" {
 		return false
 	}
 	ident, ok := sel.X.(*ast.Ident)
-	return ok && ident.Name == request
+	if !ok {
+		return false
+	}
+	for _, request := range requests {
+		if ident.Name == request {
+			return true
+		}
+	}
+	return false
 }
 
 // boundsItsOwnBody reports `<request>.Body = http.MaxBytesReader(…)` anywhere in
 // this function — the one way a handler may take the bound into its own hands,
 // and it can only ever TIGHTEN what the chassis already granted.
-func boundsItsOwnBody(body *ast.BlockStmt, request string) bool {
+func boundsItsOwnBody(body *ast.BlockStmt, requests []string) bool {
 	bounded := false
 	ast.Inspect(body, func(n ast.Node) bool {
 		assign, ok := n.(*ast.AssignStmt)
 		if !ok || len(assign.Lhs) != 1 || len(assign.Rhs) != 1 {
 			return true
 		}
-		if !isBodyOf(assign.Lhs[0], request) {
+		if !isBodyOfAny(assign.Lhs[0], requests) {
 			return true
 		}
 		call, ok := assign.Rhs[0].(*ast.CallExpr)
@@ -236,23 +271,39 @@ func boundsItsOwnBody(body *ast.BlockStmt, request string) bool {
 }
 
 // forbiddenBodyRead names the shape if this call is one of the two, or "".
-func forbiddenBodyRead(call *ast.CallExpr, request string) string {
-	sel, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok {
+//
+// Both are resolved through the file's own imports. `codec "encoding/json"` and
+// `reader "io"` are legal and would otherwise walk straight past a matcher
+// keyed on the identifiers `json` and `io` — which is the same hole the request
+// type had, one layer along.
+func forbiddenBodyRead(file *ast.File, call *ast.CallExpr, requests []string) string {
+	if len(call.Args) == 0 || !isBodyOfAny(call.Args[0], requests) {
 		return ""
 	}
-	pkg, ok := sel.X.(*ast.Ident)
-	if !ok {
-		return ""
-	}
-	takesBody := len(call.Args) > 0 && isBodyOf(call.Args[0], request)
-	switch {
-	case pkg.Name == "json" && sel.Sel.Name == "NewDecoder" && takesBody:
+	if callsPackageFunc(file, call.Fun, encodingJSONPkg, "NewDecoder") {
 		return "json.NewDecoder"
-	case pkg.Name == "io" && sel.Sel.Name == "ReadAll" && takesBody:
+	}
+	if callsPackageFunc(file, call.Fun, ioPkg, "ReadAll") {
 		return "io.ReadAll with no limiter"
 	}
 	return ""
+}
+
+// callsPackageFunc reports a call to importPath.name under whatever name this
+// file gave that import, dot-imports included.
+func callsPackageFunc(file *ast.File, fun ast.Expr, importPath, name string) bool {
+	qualifier, dotImported := gatekit.ImportedAs(file, importPath)
+	switch f := fun.(type) {
+	case *ast.Ident:
+		return dotImported && f.Name == name
+	case *ast.SelectorExpr:
+		if f.Sel.Name != name {
+			return false
+		}
+		pkg, ok := f.X.(*ast.Ident)
+		return ok && qualifier != "" && pkg.Name == qualifier
+	}
+	return false
 }
 
 func dedupeSites(items []string) []string {
@@ -342,6 +393,75 @@ import ("io"; "net/http")
 const peek = 4096
 func h(w http.ResponseWriter, r *http.Request) {
 	_, _ = io.ReadAll(io.LimitReader(r.Body, peek))
+}`,
+			leaks: 0,
+		},
+		// Every one of these renames something the matcher used to key on by
+		// spelling. None is exotic — a file importing two packages that both
+		// end in `http` has to rename one — and each would have walked a whole
+		// file past the gate.
+		"net/http under an alias": {
+			source: `package p
+import (
+	"encoding/json"
+	stdhttp "net/http"
+)
+func h(w stdhttp.ResponseWriter, r *stdhttp.Request) {
+	var req struct{ A string }
+	_ = json.NewDecoder(r.Body).Decode(&req)
+}`,
+			leaks: 1,
+		},
+		"encoding/json under an alias": {
+			source: `package p
+import (
+	codec "encoding/json"
+	"net/http"
+)
+func h(w http.ResponseWriter, r *http.Request) {
+	var req struct{ A string }
+	_ = codec.NewDecoder(r.Body).Decode(&req)
+}`,
+			leaks: 1,
+		},
+		"io under an alias": {
+			source: `package p
+import (
+	reader "io"
+	"net/http"
+)
+func h(w http.ResponseWriter, r *http.Request) {
+	_, _ = reader.ReadAll(r.Body)
+}`,
+			leaks: 1,
+		},
+		// A grouped parameter declares two names in one field, and the matcher
+		// took only the first — so a read through the second was invisible.
+		"the second of two request parameters": {
+			source: `package p
+import (
+	"encoding/json"
+	"net/http"
+)
+func h(w http.ResponseWriter, first, second *http.Request) {
+	var req struct{ A string }
+	_ = json.NewDecoder(second.Body).Decode(&req)
+}`,
+			leaks: 1,
+		},
+		// And the other direction, which is what makes resolving the import
+		// load-bearing rather than decorative: a same-named function from a
+		// DIFFERENT package. `bounded.ReadAll` is somebody's own helper that
+		// already applies a cap, and a matcher keyed on the name alone would
+		// report it as an unbounded read.
+		"a same-named helper from another package": {
+			source: `package p
+import (
+	"net/http"
+	"example.test/bounded"
+)
+func h(w http.ResponseWriter, r *http.Request) {
+	_, _ = bounded.ReadAll(r.Body)
 }`,
 			leaks: 0,
 		},
