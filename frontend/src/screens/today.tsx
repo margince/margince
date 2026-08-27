@@ -11,11 +11,11 @@ import { useState } from "react";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { SurfaceState } from "../design-system/surfacestate";
-import { formatDateTime, formatNumber } from "../format/format";
+import { formatNumber } from "../format/format";
 import { useNow } from "../format/now";
 import { viewerZone } from "../format/timezone";
 import { type Locale, useLocale, useT } from "../i18n";
-import { approvalKindLabel } from "./approvalkind";
+import { itemDetail, itemTitle } from "./attentionitemcopy";
 import { BriefQueueItem } from "./briefqueue";
 import {
   useBriefItemMark,
@@ -140,89 +140,6 @@ function quietLead(
     return t("day.lead.clearOfWhatWasRead");
   }
   return t("day.lead.clear");
-}
-
-// One item's headline.
-//
-// The server sends a sentence when it HAS one — an approval summary is composed
-// at staging time out of the proposal's own facts. It deliberately sends none
-// for a duplicate pair, because that sentence would have to be invented and the
-// server has no language to invent it in. So the client writes that one, in the
-// reader's.
-function itemTitle(item: AttentionItem, t: ReturnType<typeof useT>): string {
-  if (item.title) {
-    return item.title;
-  }
-  if (item.source === "dedupe_candidate") {
-    return t(`day.duplicate.${duplicateNoun(item.kind)}` as const);
-  }
-  return item.kind ? approvalKindLabel(item.kind, t) : t("day.item.untitled");
-}
-
-// Which noun a duplicate pair is about. An unrecognised entity type falls back
-// to the generic line rather than printing the wire word at a reader.
-function duplicateNoun(kind: string | undefined): "person" | "org" | "lead" {
-  if (kind === "organization") {
-    return "org";
-  }
-  if (kind === "lead") {
-    return "lead";
-  }
-  return "person";
-}
-
-// The supporting line under a headline: how sure the detector was, or when this
-// is due, or when it happened. At most one — a card that stacked all three
-// would make the reader read three things to learn one.
-function itemDetail(
-  item: AttentionItem,
-  t: ReturnType<typeof useT>,
-  locale: Locale,
-  zone: string,
-): string | null {
-  // A risk card's sentence is written HERE, not sent: the server has no
-  // language, and "quiet 19 days" versus "the close date passed" read
-  // differently in each of the three. `kind` names the ground and `detail`
-  // carries the number the server actually measured, so the line can never
-  // imply a patience nobody applied.
-  if (item.source === "deal_at_risk") {
-    if (item.kind === "close_overdue" && item.due_at) {
-      return t("day.risk.closeOverdue", {
-        date: formatDateTime(item.due_at, locale, zone),
-      });
-    }
-    if (item.detail) {
-      return t("day.risk.quiet", {
-        days: formatNumber(Number(item.detail), locale),
-      });
-    }
-    return null;
-  }
-  // A promise is the one item whose supporting line carries TWO facts, and it
-  // needs both: the words it was read from are what make the claim checkable,
-  // and the deadline is why it is on today's page at all. Showing only the
-  // quote would drop the date the lane is ordered by.
-  if (item.source === "conversation_claim" && item.detail && item.due_at) {
-    return t("day.commitment.detail", {
-      quote: item.detail,
-      due: formatDateTime(item.due_at, locale, zone),
-    });
-  }
-  if (item.detail) {
-    return item.detail;
-  }
-  if (item.confidence != null) {
-    return t("day.match", {
-      percent: formatNumber(Math.round(item.confidence * 100), locale),
-    });
-  }
-  if (item.occurred_at) {
-    return formatDateTime(item.occurred_at, locale, zone);
-  }
-  if (item.due_at) {
-    return formatDateTime(item.due_at, locale, zone);
-  }
-  return null;
 }
 
 // One row of the two REPORTING lanes — today's agreed work, and what already

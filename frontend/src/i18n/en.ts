@@ -203,6 +203,7 @@ export const en = {
   "day.duplicate.person": "Two contacts look like the same person",
   "day.duplicate.org": "Two companies look like the same one",
   "day.duplicate.lead": "Two leads look like the same one",
+  "day.duplicate.generic": "Two records look like the same one",
   "day.duplicatesOpen": "{count} duplicate pairs open in all",
   // The decision lane, one at a time: how far through the reader is, and the
   // cleared plate the whole surface is built to reach.

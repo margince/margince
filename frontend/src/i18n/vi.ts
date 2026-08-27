@@ -211,6 +211,7 @@ export const vi = {
   "day.duplicate.person": "Hai liên hệ trông giống cùng một người",
   "day.duplicate.org": "Hai công ty trông giống cùng một công ty",
   "day.duplicate.lead": "Hai khách hàng tiềm năng trông giống nhau",
+  "day.duplicate.generic": "Hai bản ghi trông giống nhau",
   "day.duplicatesOpen": "Tổng cộng {count} cặp trùng lặp đang mở",
   "day.focus.progress": "Quyết định {position} trên {total}",
   "day.focus.clear": "Không còn gì để quyết định.",

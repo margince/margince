@@ -205,6 +205,7 @@ export const de = {
   "day.duplicate.person": "Zwei Kontakte sehen nach derselben Person aus",
   "day.duplicate.org": "Zwei Unternehmen sehen nach demselben aus",
   "day.duplicate.lead": "Zwei Leads sehen nach demselben aus",
+  "day.duplicate.generic": "Zwei Einträge sehen nach demselben aus",
   "day.duplicatesOpen": "{count} Dubletten-Paare insgesamt offen",
   "day.focus.progress": "Entscheidung {position} von {total}",
   "day.focus.clear": "Nichts mehr zu entscheiden.",
