@@ -1,0 +1,130 @@
+# The label taxonomy, and the only copy of it that anything derives from.
+#
+# It was written down in three places — the long-form reference, the rulebook's
+# digest of it, and the repository's own labels, which is the only one that does
+# anything. Nothing connected them, so adding an area, renaming one or retiring
+# one meant remembering all three, and two of the three were prose: an agent
+# reads a list naming a label that does not exist, files with it, and
+# `gh issue create` fails — or reads one that omits a label that does exist and
+# picks a worse-fitting area (issue #1508).
+#
+# This file is the source. `docs/reference/issue-labels.md` is checked against it
+# offline by backend/gates/issuelabels_test.go, and `.github/workflows/labels.yml`
+# reconciles the repository's own labels from it — so the third copy stops being
+# a copy and becomes an output.
+#
+# Colour carries meaning within an axis and none between them. Every `area:` is
+# one colour on purpose: an area is a place, not a severity, and colouring
+# fifteen of them differently would put a visual ranking on a set that has none.
+# The four priorities are a ramp, red down to grey, because they ARE ranked.
+
+# ---------------------------------------------------------------------------
+# Priority — a claim about severity, never about a schedule.
+# ---------------------------------------------------------------------------
+- name: "priority: critical"
+  color: "B60205"
+  description: "Drop everything: data loss, reachable breach, CI red, or unusable on a default install"
+- name: "priority: high"
+  color: "D93F0B"
+  description: "A real user or operator hits it on a live path, or it blocks another workstream"
+- name: "priority: normal"
+  color: "bce9a5"
+  description: "Real but narrow, guarded or latent; hygiene, test-lane work, polish"
+- name: "priority: low"
+  color: "C5D0D8"
+  description: "A want, not a defect - or needs a product/spec decision first. No date"
+
+# ---------------------------------------------------------------------------
+# Area — where the fix lives. Exactly one, so a filter never double-counts.
+# ---------------------------------------------------------------------------
+- name: "area: agents-mcp"
+  color: "BFD4F2"
+  description: "Tool surface, governed calls, approvals and staging, passports, certification"
+- name: "area: ai-models"
+  color: "BFD4F2"
+  description: "Model adapters, wire formats, cost, prompts, drafting"
+- name: "area: authz"
+  color: "BFD4F2"
+  description: "RBAC, row-scope, record grants, seats, shares"
+- name: "area: capture"
+  color: "BFD4F2"
+  description: "Mail and chat ingestion, activities, attachments, threads, LinkedIn ghosts"
+- name: "area: ci-tests"
+  color: "BFD4F2"
+  description: "Test lanes, flakes, harness, gates, coverage"
+- name: "area: contract-api"
+  color: "BFD4F2"
+  description: "OpenAPI contract, HTTP conventions, error mapping, versioning"
+- name: "area: deals"
+  color: "BFD4F2"
+  description: "Deals, pipeline, stages, leads, offers"
+- name: "area: extensions"
+  color: "BFD4F2"
+  description: "The extension tier (ADR-0069): units, the published pkg surface, composition"
+- name: "area: finance"
+  color: "BFD4F2"
+  description: "Invoices, payments, FX, contracts"
+- name: "area: frontend"
+  color: "BFD4F2"
+  description: "SPA, design system, screens, Storybook, i18n"
+- name: "area: overlay"
+  color: "BFD4F2"
+  description: "External system-of-record mirror, HubSpot, flip and import"
+- name: "area: platform"
+  color: "BFD4F2"
+  description: "Database, migrations, events and outbox, config, boot, workers, Docker and deploy"
+- name: "area: privacy"
+  color: "BFD4F2"
+  description: "Erasure, retention, consent"
+- name: "area: records"
+  color: "BFD4F2"
+  description: "People, organizations, employment, custom fields, merge and dedupe"
+- name: "area: reports"
+  color: "BFD4F2"
+  description: "Reporting, saved views, filters, export"
+
+# ---------------------------------------------------------------------------
+# Status — an issue that is not yet workable.
+# ---------------------------------------------------------------------------
+- name: "status: needs-decision"
+  color: "FBCA04"
+  description: "Unactionable until someone rules on it - 'decide or decline X'"
+
+# ---------------------------------------------------------------------------
+# Provenance — why the issue exists, which is the one thing nobody can
+# reconstruct later. Additive and independent of the three axes above.
+# ---------------------------------------------------------------------------
+- name: "bug"
+  color: "d73a4a"
+  description: "Something isn't working"
+- name: "enhancement"
+  color: "a2eeef"
+  description: "New feature or request"
+- name: "security"
+  color: "af2a01"
+  description: "Security related changes"
+- name: "capability-gap"
+  color: "0E8A16"
+  description: "Missing capability found in the 2026-08 requirements verification pass"
+- name: "fast-track-debt"
+  color: "6E5494"
+  description: "Shipped fast under time pressure; known issue deferred for team cleanup"
+
+# ---------------------------------------------------------------------------
+# GitHub's own defaults, kept because they are what a drive-by contributor and
+# Dependabot reach for. They are NOT part of the taxonomy the reference page
+# documents, and the gate below knows it: it asks the page to account for every
+# label in the four sections above and no others.
+# ---------------------------------------------------------------------------
+- name: "documentation"
+  color: "0075ca"
+  description: "Improvements or additions to documentation"
+- name: "good first issue"
+  color: "7057ff"
+  description: "Good for newcomers"
+- name: "help wanted"
+  color: "008672"
+  description: "Extra attention is needed"
+- name: "dependencies"
+  color: "ededed"
+  description: ""
