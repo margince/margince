@@ -252,6 +252,11 @@ func TestARecordWithNoScrubKeepsEveryImage(t *testing.T) {
 func TestEveryScrubVerbMovesTheBoundary(t *testing.T) {
 	for _, verb := range []string{"erase", "anonymize", "restrict"} {
 		t.Run(verb, func(t *testing.T) {
+			// A fixture of its own: each case writes a scrub row for the SAME
+			// subject, and the assertion is that the pre-scrub image is no
+			// longer readable. Shared, the second case would be reading an
+			// image the first case had already put behind a boundary — green
+			// for a verb that does nothing.
 			e := setupAuditBoundary(t)
 			edit := e.auditRow(t, "update", boundaryEarlier,
 				`{"full_name":"Sara Subject"}`, `{"full_name":"Sara Renamed"}`)

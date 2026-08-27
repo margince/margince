@@ -410,9 +410,17 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 		{"lead", "/v1/leads", "9304", map[string]any{"full_name": "Grace Lead"}, integration.AnyMap{"full_name": "Grace Lead 2"}, "full_name", "Grace Lead 2"},
 		{"activity", "/v1/activities", "9305", map[string]any{"kind": "call", "subject": "Intro Call"}, integration.AnyMap{"subject": "Intro Call 2"}, "subject", "Intro Call 2"},
 	}
+	// One fixture for the five update cases: each seeds a different type at a
+	// different path, so firstListedID below still names exactly the record
+	// that case seeded.
+	//
+	// The archive loop keeps a fixture of its own, and that is not tidiness:
+	// it seeds a SECOND person and a second organization, and firstListedID
+	// cannot say which of two records at one path it means.
+	updateEnv := setupOverlayWrite(t)
 	for _, tc := range updates {
 		t.Run("update/"+tc.entityType, func(t *testing.T) {
-			e := setupOverlayWrite(t)
+			e := updateEnv
 			e.seed(t, tc.entityType, tc.externalID, tc.seedFields)
 			id := firstListedID(t, e.AppEnv, tc.path)
 
@@ -431,9 +439,10 @@ func TestOverlayWriteShadowsRoundTripEveryMirroredType(t *testing.T) {
 		{"organization", "/v1/organizations", "9312", map[string]any{"display_name": "Beta Org"}, "display_name", "Beta Org"},
 		{"deal", "/v1/deals", "9313", map[string]any{"name": "Small Deal"}, "name", "Small Deal"},
 	}
+	archiveEnv := setupOverlayWrite(t)
 	for _, tc := range archives {
 		t.Run("archive/"+tc.entityType, func(t *testing.T) {
-			e := setupOverlayWrite(t)
+			e := archiveEnv
 			e.seed(t, tc.entityType, tc.externalID, tc.seedFields)
 			id := firstListedID(t, e.AppEnv, tc.path)
 
