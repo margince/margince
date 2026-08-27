@@ -224,10 +224,6 @@ const pinnedZones: { file: string; why: string }[] = [
     why: "Pins an audit line to the organization's clock by reading it from a zone whose calendar day is already the next one — a claim that needs both the zone pretended in and the day compared against.",
   },
   {
-    file: "screens/book.stories.tsx",
-    why: "Renders the slot labels the booking screen shows, which needs a zone the story chose rather than the storybook host's.",
-  },
-  {
     file: "screens/company-context.test.tsx",
     why: "The signed-in `me` fixture carries the reader's own `timezone` — a settings value arriving on the wire, not a zone this screen picks.",
   },

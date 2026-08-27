@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { formatDateTime } from "../format/format";
+import { viewerZone } from "../format/timezone";
 import { BookingScreen } from "./book";
 import {
   installFetchStub,
@@ -37,12 +38,20 @@ const nothingFree = { slots: [], truncated: false };
 const PUBLIC_AVAILABILITY = `GET /public/booking/${HOST_SLUG}/availability`;
 const PUBLIC_BOOK = `POST /public/booking/${HOST_SLUG}`;
 
-// The slot button's accessible name IS its formatted label, so the play()
-// lookup formats the same instant with the same locale and zone the component
-// uses. Whitespace is normalized because the accessible-name matcher collapses
-// it, and Intl separators are not always the plain space it collapses to.
+// The slot button's accessible name IS its formatted label, so the play() lookup
+// formats the same instant with the same locale and zone the component uses.
+//
+// The zone comes from `viewerZone()` — the SAME call book.tsx renders through —
+// rather than being named here. It was written as "Europe/Berlin", which is a
+// zone the machine that wrote it happened to be in: the lookup then asked for
+// 11:00 while a runner in UTC drew 09:00, and the story failed for a reason
+// that had nothing to do with the screen. A story may not depend on where the
+// machine running it thinks it is.
+//
+// Whitespace is normalized because the accessible-name matcher collapses it,
+// and Intl separators are not always the plain space it collapses to.
 function slotButtonName(slot: { start: string }): string {
-  return formatDateTime(slot.start, "en", "Europe/Berlin").replace(/\s+/g, " ");
+  return formatDateTime(slot.start, "en", viewerZone()).replace(/\s+/g, " ");
 }
 
 async function bookAsVisitor({
