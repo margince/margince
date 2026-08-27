@@ -51,17 +51,47 @@ function isFallbackOperator(kind: ts.SyntaxKind): boolean {
   );
 }
 
+/** An expression with its parentheses taken off. A reader's brackets are not a
+ *  different rule, and a scan that stopped at one would read
+ *  `lead.full_name ?? (lead.email || "")` as a chain of two terms whose second
+ *  is nothing it recognises. */
+function unwrap(expression: ts.Expression): ts.Expression {
+  return ts.isParenthesizedExpression(expression)
+    ? unwrap(expression.expression)
+    : expression;
+}
+
 /** The operands of one fallback chain, left to right. `a ?? b ?? c` parses as
  *  `(a ?? b) ?? c`, so the chain has to be flattened before the ORDER of the
- *  two fields can be read — and the order is the whole distinction between this
- *  rule and the address-first one. */
+ *  fields can be read — and the order is the whole distinction between this
+ *  rule and the address-first one. BOTH sides are flattened: `??` groups to the
+ *  left on its own, but nothing stops an author from writing the nesting out. */
 function chainOperands(node: ts.BinaryExpression): ts.Expression[] {
-  const left = node.left;
-  const head =
-    ts.isBinaryExpression(left) && isFallbackOperator(left.operatorToken.kind)
-      ? chainOperands(left)
-      : [left];
-  return [...head, node.right];
+  return [node.left, node.right].flatMap((side) => {
+    const inner = unwrap(side);
+    return ts.isBinaryExpression(inner) &&
+      isFallbackOperator(inner.operatorToken.kind)
+      ? chainOperands(inner)
+      : [inner];
+  });
+}
+
+/** Whether this chain is the whole of its own expression. An inner link is
+ *  already one of the outer chain's operands, so reporting it again would name
+ *  one fallback twice — and the parentheses have to be climbed through, or a
+ *  bracketed inner chain reads as its own. */
+function isOutermostChain(node: ts.BinaryExpression): boolean {
+  let child: ts.Node = node;
+  let parent: ts.Node = node.parent;
+  while (ts.isParenthesizedExpression(parent)) {
+    child = parent;
+    parent = parent.parent;
+  }
+  return !(
+    ts.isBinaryExpression(parent) &&
+    isFallbackOperator(parent.operatorToken.kind) &&
+    (parent.left === child || parent.right === child)
+  );
 }
 
 /** One term of a chain: WHOSE field it reads, and which. The receiver is half
@@ -106,23 +136,24 @@ function fallbacksIn(fileName: string, text: string): string[] {
     if (
       ts.isBinaryExpression(node) &&
       isFallbackOperator(node.operatorToken.kind) &&
-      // The OUTERMOST link of the chain only: an inner one would report the
-      // same fallback a second time under a different line.
-      !(
-        ts.isBinaryExpression(node.parent) &&
-        isFallbackOperator(node.parent.operatorToken.kind) &&
-        node.parent.left === node
-      )
+      isOutermostChain(node)
     ) {
       const terms = chainOperands(node).map(fieldRead);
-      const name = terms.findIndex((term) => term?.field === "full_name");
-      const address = terms.findIndex(
+      // EVERY name in the chain is asked, not the first one: an
+      // organization-first label puts somebody else's `full_name` ahead of the
+      // lead's, and a scan that stopped at the first would look for the
+      // address under the wrong receiver and find nothing.
+      const named = terms.some(
         (term, at) =>
-          at > name &&
-          term?.field === "email" &&
-          term.receiver === terms[name]?.receiver,
+          term?.field === "full_name" &&
+          terms
+            .slice(at + 1)
+            .some(
+              (later) =>
+                later?.field === "email" && later.receiver === term.receiver,
+            ),
       );
-      if (name >= 0 && address > name) {
+      if (named) {
         found.push(
           `${fileName}:${source.getLineAndCharacterOfPosition(node.getStart()).line + 1}`,
         );
@@ -228,6 +259,19 @@ describe("what a lead is called", () => {
       "two different receivers, which is not one record being named",
       "const name = person.full_name ?? lead.email;",
       0,
+    ],
+    [
+      // The reader's own brackets, which change nothing about the rule.
+      "a bracketed tail, where the address sits inside its own chain",
+      'const name = lead.full_name ?? (lead.email || "");',
+      1,
+    ],
+    [
+      // Somebody else's name first. A scan reading only the first `full_name`
+      // looks for the address under THAT receiver and reports nothing.
+      "another record's name ahead of the lead's own",
+      "const name = person.full_name ?? lead.full_name ?? lead.email;",
+      1,
     ],
   ];
 
