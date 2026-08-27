@@ -70,15 +70,18 @@ func (s *scenario) createFromCard(t *testing.T, fields map[string]any) createdFr
 }
 
 // cardFields is the card as tool arguments.
-func cardFields(name, email, phone string) map[string]any {
-	fields := map[string]any{"full_name": name, "title": cardTitle}
-	if email != "" {
-		fields["emails"] = []map[string]any{{"email": email, "is_primary": true}}
+//
+// Only the ADDRESS varies between the cards this case sends, and that is the
+// scenario rather than a convenience: one human, two cards, the same name and
+// the same company switchboard printed on both. The address is what makes the
+// two lanes differ — an email is a real key and a switchboard is not.
+func cardFields(email string) map[string]any {
+	return map[string]any{
+		"full_name": cardName,
+		"title":     cardTitle,
+		"emails":    []map[string]any{{"email": email, "is_primary": true}},
+		"phones":    []map[string]any{{"phone": cardPhone, "is_primary": true}},
 	}
-	if phone != "" {
-		fields["phones"] = []map[string]any{{"phone": phone, "is_primary": true}}
-	}
-	return fields
 }
 
 // TestCase2TheSamePersonIsNotCreatedTwice pins criteria 1 and 2.
@@ -92,13 +95,13 @@ func cardFields(name, email, phone string) map[string]any {
 func TestCase2TheSamePersonIsNotCreatedTwice(t *testing.T) {
 	s := boot(t, scopesReadWrite)
 
-	first := s.createFromCard(t, cardFields(cardName, cardEmail, cardPhone))
+	first := s.createFromCard(t, cardFields(cardEmail))
 	if first.ID.IsZero() {
 		t.Fatalf("case 2: the first card did not create a person")
 	}
 
 	refusal := s.MCP.CallRefused(t, "create_record", map[string]any{
-		"record_type": "person", "fields": cardFields(cardName, cardEmail, cardPhone),
+		"record_type": "person", "fields": cardFields(cardEmail),
 	})
 	if !strings.Contains(strings.ToLower(refusal), "already exists") {
 		t.Fatalf("case 2 criterion 1: a second card for the same address was not refused as a "+
@@ -127,11 +130,11 @@ func TestCase2TheSamePersonIsNotCreatedTwice(t *testing.T) {
 func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 	s := boot(t, scopesReadWrite)
 
-	first := s.createFromCard(t, cardFields(cardName, cardEmail, cardPhone))
+	first := s.createFromCard(t, cardFields(cardEmail))
 
 	// The same human, a second card, a different address — and the company
 	// switchboard both cards print.
-	second := s.createFromCard(t, cardFields(cardName, "lucy.vo@terralogic-vn.test", cardPhone))
+	second := s.createFromCard(t, cardFields("lucy.vo@terralogic-vn.test"))
 	if second.ID.IsZero() {
 		t.Fatalf("case 2 criterion 3: a card sharing only a switchboard number was refused; a " +
 			"shared number is not a shared identity and refusing loses a real contact")
@@ -172,7 +175,7 @@ func TestCase2ASharedPhoneLandsAndIsFiledForReview(t *testing.T) {
 // business card.
 func TestCase2ATagIsAppliedByNameInOneStep(t *testing.T) {
 	s := boot(t, scopesReadWrite)
-	person := s.createFromCard(t, cardFields(cardName, cardEmail, cardPhone))
+	person := s.createFromCard(t, cardFields(cardEmail))
 
 	const newWord = "Tech Sauce Bangkok 2026"
 	got := s.MCP.CallOK(t, "apply_tag", map[string]any{

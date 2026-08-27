@@ -143,8 +143,10 @@ const transcriptMarker = "transcript"
 //
 // None of the three existed before. If the assistant reports success and only
 // some of them are there, the case has failed — and the employment edge must be
-// written ONCE, because an early run left the person's page listing the company
-// twice.
+// written a single time, because an early run left the person's page listing
+// the company twice.
+//
+// Held by: this test's own employment-edge count, below.
 func TestCase1TheCompanyThePersonAndTheDealAllExistAfterwards(t *testing.T) {
 	s := boot(t, scopesReadWrite)
 	m := s.logTheMeeting(t)

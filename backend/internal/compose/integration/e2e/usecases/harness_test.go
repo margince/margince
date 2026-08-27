@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -136,6 +137,36 @@ func bootWithTranscriptReading(t *testing.T) *scenario {
 	integration.ApplyRiverSchema(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Use Cases", repEmail, repName)
 	return finishBoot(t, e, scopesReadWrite)
+}
+
+// bootWithImports is boot plus an in-memory blob store, for the one scenario
+// that imports a file.
+//
+// The store is not optional decoration: profiling an import STORES the bytes,
+// and both the dry run and the commit reopen the stored source — a composition
+// without one refuses the profile outright. In memory rather than MinIO,
+// because what is under test is the import's arithmetic and not object storage.
+func bootWithImports(t *testing.T) *scenario {
+	t.Helper()
+	e := apptest.SetupAppWithOriginOptions(t, func(origin string) []compose.Option {
+		return []compose.Option{
+			compose.WithMCPConnector(),
+			compose.WithMCPResource(origin + "/mcp"),
+			compose.WithBlobstore(blobstore.NewMemory()),
+		}
+	})
+	apptest.BootstrapWorkspaceSession(t, e, "Use Cases", repEmail, repName)
+	return finishBoot(t, e, scopesReadWrite)
+}
+
+// queryRow runs one scalar query inside the workspace.
+//
+//craft:ignore naked-any the destination is pgx Scan's own — the caller supplies the concrete type
+func queryRow(t *testing.T, s *scenario, sql string, out any, args ...any) error {
+	t.Helper()
+	return apptest.InWorkspace(s.AppEnv, t, func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(), sql, args...).Scan(out)
+	})
 }
 
 // seatIDFor reads a seat's id by email. The bootstrap creates the admin seat
