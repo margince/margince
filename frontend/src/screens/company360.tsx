@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Sparkles } from "lucide-react";
 import { type ReactNode, useEffect, useId, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
@@ -19,6 +20,7 @@ import { type TimelineEntry, TimelineRow } from "../design-system/composed";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Eyebrow } from "../design-system/eyebrow";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Popover } from "../design-system/popover";
 import {
   liveProjects,
   type PickableProject,
@@ -27,7 +29,6 @@ import {
   useSoleProjectDefault,
 } from "../design-system/projectpicker";
 import { Select } from "../design-system/select";
-import { StatStrip } from "../design-system/statstrip";
 import {
   omitted,
   SurfaceState,
@@ -50,13 +51,14 @@ import {
   useFinanceSummary,
   useViewerId,
 } from "./common";
+import type { CompanyTab } from "./companytab";
 import "./company360.css";
 import { activityTimeline } from "../design-system/activitytimeline";
+import { FactList } from "../design-system/factlist";
 import {
-  HEALTH_RANK,
+  HEALTH_DIMENSION_LABEL,
   HEALTH_RATING_LABEL,
-  type HealthRating,
-  usePaymentHealth,
+  useAccountStanding,
 } from "./companylookups";
 import {
   routesTo,
@@ -1552,6 +1554,9 @@ export function AskSection({
  * stays gone while the situation holds and comes back when it changes.
  */
 type Health = NonNullable<Organization360["health"]>;
+// One rated dimension of the account's health: the rating, and the sentence it
+// was read from. Named here because three readings carry it as their basis.
+type HealthDimension = NonNullable<Health["relationship"]>;
 
 /**
  * HealthCard is how the relationship stands, in the parts a reader can act on
@@ -1569,32 +1574,6 @@ type Health = NonNullable<Organization360["health"]>;
 // The rating vocabulary, worst first. The ORDER is the worst-of rule: a
 // verdict is the lowest-ranked rating among the dimensions that have one
 // (PO-AC-N-11).
-/**
- * The account's health as its named dimensions and one verdict over them.
- *
- * `overall` is the WORST rating present, never an average: an average lets a
- * strong relationship hide a payment problem, and payment problems are the ones
- * a rep must not miss. It is also a sentence a reader can check — "at risk,
- * because payment is at risk" — where a composite number is not.
- *
- * A dimension with no rating is not in the verdict, and the card says how many
- * it was computed from. Three-of-three and one-of-three are different claims.
- */
-export function worstOf(
-  dimensions: ReadonlyArray<{ rating?: string } | undefined>,
-): { overall?: HealthRating; rated: number } {
-  const present = dimensions
-    .map((dimension) => dimension?.rating)
-    .filter((rating): rating is HealthRating =>
-      HEALTH_RANK.includes(rating as HealthRating),
-    );
-  if (present.length === 0) {
-    return { rated: 0 };
-  }
-  const worst = HEALTH_RANK.find((rating) => present.includes(rating));
-  return { overall: worst, rated: present.length };
-}
-
 export type StateStrip = NonNullable<Organization360["state_strip"]>;
 
 // Whose move it is, in words. Exported (and no longer rendered by this file
@@ -1667,13 +1646,15 @@ const UNASSESSED_READING: MessageKey = "co.strip.notAssessed";
 export function StateStrip({
   orgId,
   view,
-  lifecycleLabel,
-  relationshipLabels,
+  onOpenTab,
 }: Readonly<{
   orgId: string;
   view?: Organization360;
-  lifecycleLabel: (value: string) => string;
-  relationshipLabels: (values: readonly string[]) => string;
+  // The tab each reading is a reading OF. Optional, because a surface that
+  // draws these outside the record page (the storybook, a mirror) has no tab
+  // strip to send anybody to — and a door with nowhere behind it is not drawn
+  // rather than drawn dead.
+  onOpenTab?: (tab: CompanyTab) => void;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -1698,7 +1679,6 @@ export function StateStrip({
     }
     return null;
   }
-  const types = strip.account.relationship_types ?? [];
   // A CURRENT customer only. A former one has invoices in its past, but "do
   // they pay us, and on time?" is not the question their page is opened with,
   // and leading with a money reading on an account that has stopped buying
@@ -1709,75 +1689,61 @@ export function StateStrip({
   // is readable rather than guessable — and guessing is how a grant boundary
   // gets reported as an account nobody has assessed.
   const healthWithheld = view != null && omitted(view, "health");
-  const lifecycle = lifecycleLabel(strip.account.lifecycle);
-  const relationships =
-    types.length > 0 ? relationshipLabels(types) : undefined;
   return (
-    // The region's name, and the page rhythm under it, are the SCREEN's to set;
-    // the plate inside is the shared primitive's. Keeping them in two elements
-    // is what lets the strip be StatStrip unchanged — a screen that reached into
-    // the primitive for a margin or a label is how this row became a second copy
-    // of it in the first place.
+    // Four free-standing cards, not the StatStrip plate. A strip is read ACROSS
+    // as one comparison, which is what a row of unlike readings — a stage, a
+    // date, a sum of money — actually wanted. These four are not unlike: they
+    // are one verdict and the three dimensions it is computed from, and each is
+    // a door into the tab that holds the detail. Cards read one at a time,
+    // which is how a reader uses them.
+    //
+    // The region's name and the page rhythm are the SCREEN's to set; the tiles
+    // inside are the shared primitive's, unreached-into.
     <section className="co-readings" aria-label={t("co.strip.title")}>
-      <StatStrip testId="company-strip">
-        {/* Stage, pipeline, relationship and health are the account's own
-            standing, and every lifecycle gets them — a customer is not asked
-            to give up knowing whether the relationship is healthy or what is
-            open with them just because it also has money to report. */}
-        <StatCard
-          label={t("co.strip.account")}
-          value={lifecycle}
-          // The relationship types qualify the lifecycle; they do not restate
-          // it. An account whose lifecycle is "customer" and whose types also
-          // say "customer" was drawing the same word twice in one slot, which
-          // reads as a second reading that happens to agree rather than as one
-          // reading with nothing to add.
-          detail={relationships === lifecycle ? undefined : relationships}
+      <div className="co-readings-grid" data-testid="company-strip">
+        {/* The verdict first, then what it is made of. Stage and expected close
+            left the row with the plate: the lifecycle is read on the record's
+            own name badge and the close date on the deal that carries it, and
+            a reading in two places is one the reader has to reconcile. */}
+        <AccountHealthStat
+          health={view?.health}
+          orgId={orgId}
+          locale={locale}
+          withheld={healthWithheld}
+          t={t}
         />
         <PipelineCard
           commercial={strip.commercial}
+          dimension={view?.health?.commercial}
           locale={locale}
           recordZone={recordZone}
+          onOpen={onOpenTab && (() => onOpenTab("deals"))}
           t={t}
         />
-        {/* Expected close is a prospect's question — how soon a deal not yet
-            won might land — and stays out of a customer's row, where a money
-            reading already answers what is coming from them. The two are
-            exclusive, which is what keeps the row at five slots on every
-            account: StatStrip counts the children it is handed, so a row that
-            sometimes drew a sixth would fold at a different width from one
-            click away. */}
-        {!customer && (
-          <CloseDateStat
-            commercial={strip.commercial}
-            locale={locale}
-            recordZone={recordZone}
-            t={t}
-          />
-        )}
+        {/* Money is a reading every account gets now, not only a customer: on
+            one we have never billed it says so, which is a fact about the
+            account, where an absent fourth card is a hole the reader has to
+            interpret. */}
+        <MoneyStat
+          orgId={orgId}
+          locale={locale}
+          customer={customer}
+          dimension={view?.health?.payment}
+          onOpen={onOpenTab && (() => onOpenTab("finance"))}
+          t={t}
+        />
+        {/* Whose move it is and the worst open signal both live in the daily
+            brief's context band (companytoday.tsx), off the same `engagement`
+            and `signal` fields — so these cards carry the account's STANDING
+            and the brief carries what is DATED. */}
         <HealthStat
           health={view?.health}
           locale={locale}
           withheld={healthWithheld}
+          onOpen={onOpenTab && (() => onOpenTab("people"))}
           t={t}
         />
-        {/* Whose move it is and the worst open signal both moved to the daily
-            brief's context band (companytoday.tsx) — the brief reads the same
-            `engagement` and `signal` fields this strip used to, so the strip
-            carries the account's STANDING state and the brief carries what is
-            DATED. A reading in both places is one the reader has to reconcile,
-            which is what made this page a mishmash in the first place. */}
-        <HealthSummaryStat
-          health={view?.health}
-          locale={locale}
-          orgId={orgId}
-          withheld={healthWithheld}
-          t={t}
-        />
-        {/* Money closes the row, and only for a customer: everyone else has no
-            invoices to ask about. */}
-        {customer && <MoneyStat orgId={orgId} locale={locale} t={t} />}
-      </StatStrip>
+      </div>
     </section>
   );
 }
@@ -1885,16 +1851,60 @@ function financeDetailKey({
 function MoneyStat({
   orgId,
   locale,
+  customer,
+  dimension,
+  onOpen,
   t,
 }: Readonly<{
   orgId: string;
   locale: Locale;
+  // A CURRENT customer. Everyone else has never been invoiced, and the card
+  // says exactly that rather than reporting a finance connection that has
+  // nothing to do with them.
+  customer: boolean;
+  // The payment health reading, shown as this card's basis so the verdict a
+  // reader meets on the health card can be checked against the money it was
+  // read from, on the card that holds the money.
+  dimension?: HealthDimension;
+  onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
+  // The door out of this reading, handed to every shape it takes: a
+  // withheld reading and a priced one are the same reading, and only one
+  // of them offering the tab would make the way out look like a property
+  // of the figure.
+  const door = { openLabel: t("co.strip.open.finance"), onOpen };
   // The SAME query the finance card and the payment health dimension run, so
   // every money reading on one page agrees and all but the first cost no
   // request.
   const { data, isPending, isError, error } = useFinanceSummary(orgId);
+  const basis = dimension ? (
+    <FactList
+      facts={[
+        {
+          key: "payment",
+          term: t(HEALTH_DIMENSION_LABEL.payment),
+          value: t(HEALTH_RATING_LABEL[dimension.rating]),
+          note: dimension.reason,
+        },
+      ]}
+    />
+  ) : undefined;
+  // Never invoiced is a fact about the ACCOUNT, and it outranks every state the
+  // finance connection could be in: a prospect on an installation with no
+  // accounting connected must not be told to go and connect one, and a
+  // prospect on an installation that HAS one must not read as though we had
+  // billed them and got nothing.
+  if (!customer) {
+    return (
+      <StatCard
+        {...door}
+        label={t("co.strip.finance")}
+        value={t("co.strip.financeUnknown")}
+        detail={t("co.strip.fin.notACustomer")}
+      />
+    );
+  }
   // A refusal is not a failure and neither is a setup gap. A reader whose role
   // cannot see finance told to "connect your accounting" is sent to a settings
   // page to fix a permission — the one thing they cannot fix from there.
@@ -1908,6 +1918,7 @@ function MoneyStat({
   if (!amount || amount.amount_minor == null || !amount.currency) {
     return (
       <StatCard
+        {...door}
         label={t("co.strip.finance")}
         value={t("co.strip.financeUnknown")}
         detail={t(
@@ -1918,11 +1929,14 @@ function MoneyStat({
             state: data?.state,
           }),
         )}
+        basisLabel={basis ? t("co.strip.basis.reading") : undefined}
+        basis={basis}
       />
     );
   }
   return (
     <StatCard
+      {...door}
       label={t("co.strip.netInvoiced")}
       value={formatMoneyCompact(amount.amount_minor, amount.currency, locale)}
       // The provider name goes in the detail line rather than beside the label:
@@ -1964,6 +1978,8 @@ function MoneyStat({
             data?.provider ||
             undefined
       }
+      basisLabel={basis ? t("co.strip.basis.reading") : undefined}
+      basis={basis}
     />
   );
 }
@@ -2001,22 +2017,55 @@ type StripCommercial = NonNullable<
 // worth nothing, where the truth is the page cannot price it.
 function PipelineCard({
   commercial,
+  dimension,
   locale,
   recordZone,
+  onOpen,
   t,
 }: Readonly<{
   commercial?: StripCommercial | null;
+  // The commercial health reading, shown as this card's basis so the verdict
+  // on the health card can be checked against the deals it was read from, on
+  // the card that holds those deals.
+  dimension?: HealthDimension;
   locale: Locale;
   recordZone: string;
+  onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
+  // The door out of this reading, handed to every shape it takes: a
+  // withheld reading and a priced one are the same reading, and only one
+  // of them offering the tab would make the way out look like a property
+  // of the figure.
+  const door = { openLabel: t("co.strip.open.deals"), onOpen };
+  const basis = dimension ? (
+    <FactList
+      facts={[
+        {
+          key: "commercial",
+          term: t(HEALTH_DIMENSION_LABEL.commercial),
+          value: t(HEALTH_RATING_LABEL[dimension.rating]),
+          note: dimension.reason,
+        },
+      ]}
+    />
+  ) : undefined;
+  const basisProps = {
+    basisLabel: basis ? t("co.strip.basis.reading") : undefined,
+    basis,
+  };
   if (!commercial) {
     // A null `commercial` is the contract's way of saying the caller has no
     // deal grant, so this is the READER's boundary and not an account with
     // nothing running. "No open deals" here would be the business conclusion a
     // rep acts on, invented out of a permission.
     return (
-      <StatCard label={t("co.strip.pipeline")} value={t(WITHHELD_READING)} />
+      <StatCard
+        {...door}
+        label={t("co.strip.pipeline")}
+        value={t(WITHHELD_READING)}
+        {...basisProps}
+      />
     );
   }
   // No open deals is not an unpriced pipeline. Saying "no convertible amount"
@@ -2025,8 +2074,10 @@ function PipelineCard({
   if (commercial.open_count === 0) {
     return (
       <StatCard
+        {...door}
         label={t("co.strip.pipeline")}
         value={t("co.strip.noOpenDeals")}
+        {...basisProps}
       />
     );
   }
@@ -2045,12 +2096,14 @@ function PipelineCard({
     // to know the pipeline was never priced at all.
     return (
       <StatCard
+        {...door}
         label={t("co.strip.pipeline")}
         value={t("co.strip.openDeals", {
           count: formatNumber(commercial.open_count, locale),
         })}
         detail={join(t("co.strip.unpriced"), stalled)}
         tone={stalled ? "warn" : undefined}
+        {...basisProps}
       />
     );
   }
@@ -2069,6 +2122,7 @@ function PipelineCard({
       : undefined;
   return (
     <StatCard
+      {...door}
       label={t("co.strip.pipeline")}
       value={formatMoney(value, currency, locale)}
       tone={stalled ? "warn" : undefined}
@@ -2084,6 +2138,7 @@ function PipelineCard({
         converted,
         stalled,
       )}
+      {...basisProps}
     />
   );
 }
@@ -2093,46 +2148,6 @@ function PipelineCard({
 // missing exactly when it matters.
 function join(...parts: (string | undefined)[]): string {
   return parts.filter(Boolean).join(" · ");
-}
-
-// When the next open deal is expected to close. A prospect's page is asked
-// "when?", and the answer is a date on a record rather than an assessment.
-function CloseDateStat({
-  commercial,
-  locale,
-  recordZone,
-  t,
-}: Readonly<{
-  commercial?: StripCommercial | null;
-  locale: Locale;
-  recordZone: string;
-  t: ReturnType<typeof useT>;
-}>) {
-  // Three readings, not one blank. Withheld deals are the reader's boundary;
-  // an open deal that names no expected close is a gap in the RECORD, which is
-  // something a rep can go and fill in; and a date is a date.
-  if (!commercial) {
-    return (
-      <StatCard
-        label={t("co.strip.expectedClose")}
-        value={t(WITHHELD_READING)}
-      />
-    );
-  }
-  if (!commercial.next_close_on) {
-    return (
-      <StatCard
-        label={t("co.strip.expectedClose")}
-        value={t("co.next.undated")}
-      />
-    );
-  }
-  return (
-    <StatCard
-      label={t("co.strip.expectedClose")}
-      value={formatDate(commercial.next_close_on, locale, recordZone)}
-    />
-  );
 }
 
 // Health as a STATUS with its reason, never a 0-100 verdict (§4.2). The card
@@ -2148,19 +2163,43 @@ function HealthStat({
   health,
   locale,
   withheld,
+  onOpen,
   t,
 }: Readonly<{
   health?: Health;
   locale: Locale;
   withheld: boolean;
+  onOpen?: () => void;
   t: ReturnType<typeof useT>;
 }>) {
+  // The door out of this reading, handed to every shape it takes: a
+  // withheld reading and a priced one are the same reading, and only one
+  // of them offering the tab would make the way out look like a property
+  // of the figure.
+  const door = { openLabel: t("co.strip.open.people"), onOpen };
+  const dimension = health?.relationship;
+  const basisProps = {
+    basisLabel: dimension ? t("co.strip.basis.reading") : undefined,
+    basis: dimension ? (
+      <FactList
+        facts={[
+          {
+            key: "relationship",
+            term: t(HEALTH_DIMENSION_LABEL.relationship),
+            value: t(HEALTH_RATING_LABEL[dimension.rating]),
+            note: dimension.reason,
+          },
+        ]}
+      />
+    ) : undefined,
+  };
   if (!health) {
     // No health section at all. Withheld says so; anything else has simply not
     // been assessed. Neither is "they have never written" — that is a claim
     // about the account this read has no basis for.
     return (
       <StatCard
+        {...door}
         label={t("co.strip.health")}
         value={t(withheld ? WITHHELD_READING : UNASSESSED_READING)}
       />
@@ -2170,21 +2209,25 @@ function HealthStat({
   if (days == null) {
     return (
       <StatCard
+        {...door}
         label={t("co.strip.health")}
         value={t("co.strip.noInboundEver")}
         tone="warn"
+        {...basisProps}
       />
     );
   }
   if (days > HEALTH_QUIET_DAYS) {
     return (
       <StatCard
+        {...door}
         label={t("co.strip.health")}
         value={t("co.strip.healthQuiet")}
         tone="warn"
         detail={t("co.health.sinceInbound", {
           days: formatNumber(days, locale),
         })}
+        {...basisProps}
       />
     );
   }
@@ -2195,8 +2238,10 @@ function HealthStat({
   if (share == null) {
     return (
       <StatCard
+        {...door}
         label={t("co.strip.health")}
         value={t("co.strip.healthActive")}
+        {...basisProps}
       />
     );
   }
@@ -2204,6 +2249,7 @@ function HealthStat({
   const oneSided = share < 0.34 || share > 0.66;
   return (
     <StatCard
+      {...door}
       label={t("co.strip.health")}
       value={
         oneSided ? t("co.strip.healthOneSided") : t("co.strip.healthBalanced")
@@ -2212,6 +2258,7 @@ function HealthStat({
       detail={t("co.strip.replyShare", {
         percent: formatNumber(percent, locale),
       })}
+      {...basisProps}
     />
   );
 }
@@ -2221,17 +2268,53 @@ function HealthStat({
 // and it is deliberately the same span the dormant engagement state uses.
 const HEALTH_QUIET_DAYS = 30;
 
-// HealthSummaryStat is the row's fourth slot: the rated dimensions' worst
-// verdict, and how many of the possible three were rated at all — the same
-// `worstOf` verdict HealthCard's rail breakdown reaches, read here as one
-// figure rather than the rail's per-dimension list.
+// AccountHealthStat leads the readings: the rated dimensions' worst verdict,
+// how many of the possible three were rated at all, and — behind a disclosure —
+// the three themselves with the sentence each was read from.
+//
+// The verdict and its constituents in ONE card rather than four: the three
+// cards beside this one answer "what is the deals/money/relationship picture",
+// which is a different question from "is this account healthy". Splitting the
+// verdict from what computes it is what left a reader holding a summary they
+// could not check.
 //
 // With nothing rated it says so and keeps its denominator. It must not borrow a
 // verdict `worstOf` itself declined to give, and it must not carry a tone: a
 // grey slot with no words reads as a reading that failed to load, where "not
 // assessed, 0 of 3 rated" says which reading is missing and how far off a
 // verdict the account is.
-function HealthSummaryStat({
+// The sharpest thing wrong with the account, named and explained: "Payment —
+// three invoices are past due, the oldest by 18 days".
+//
+// ONE dimension, not all of them. A card is read at a glance, and three
+// sentences stacked in a caption is a paragraph the reader skips — the receipt
+// behind the card still lists every dimension with its own reason. A dimension
+// rated at risk with nothing written about it is skipped rather than named with
+// silence after it, which reads as a card that failed to finish its sentence.
+function worstReason(
+  dimensions: readonly {
+    key: "relationship" | "commercial" | "payment";
+    dimension?: { rating: string; reason?: string | null };
+  }[],
+  t: ReturnType<typeof useT>,
+): ReactNode {
+  const worst = dimensions.find(
+    (entry) => entry.dimension?.rating === "at_risk" && entry.dimension.reason,
+  );
+  if (!worst?.dimension?.reason) {
+    return null;
+  }
+  return (
+    <span>
+      {t("co.strip.healthSummary.because", {
+        dimension: t(HEALTH_DIMENSION_LABEL[worst.key]),
+        reason: worst.dimension.reason,
+      })}
+    </span>
+  );
+}
+
+function AccountHealthStat({
   health,
   locale,
   orgId,
@@ -2244,12 +2327,31 @@ function HealthSummaryStat({
   withheld: boolean;
   t: ReturnType<typeof useT>;
 }>) {
-  const payment = usePaymentHealth(orgId);
-  const { overall, rated } = worstOf([
-    health?.relationship,
-    health?.commercial,
-    payment,
-  ]);
+  const { overall, rated, payment } = useAccountStanding(orgId, health);
+  const dimensions = [
+    { key: "relationship", dimension: health?.relationship },
+    { key: "commercial", dimension: health?.commercial },
+    { key: "payment", dimension: payment },
+  ] as const;
+  // Only the dimensions that were actually rated. An unrated one is not a
+  // failing one, and listing it as a blank row would invite exactly that
+  // reading — `worstOf`'s denominator above already says how many are missing.
+  //
+  // `flatMap` rather than `filter` so the absent case is dropped where the type
+  // can see it: a filter leaves the caller holding an optional it then has to
+  // assert away, and an assertion is a claim the compiler stopped checking.
+  const basisFacts = dimensions.flatMap(({ key, dimension }) =>
+    dimension
+      ? [
+          {
+            key,
+            term: t(HEALTH_DIMENSION_LABEL[key]),
+            value: t(HEALTH_RATING_LABEL[dimension.rating]),
+            note: dimension.reason,
+          },
+        ]
+      : [],
+  );
   if (!overall) {
     return (
       <StatCard
@@ -2269,8 +2371,8 @@ function HealthSummaryStat({
   // "3 of 3 rated" and "1 of 3 rated" are different claims about how much is
   // known, and a figure that only speaks up when things are bad would let a
   // thin reading pass for a complete one.
-  const failing = [health?.relationship, health?.commercial, payment].filter(
-    (dimension) => dimension?.rating === "at_risk",
+  const failing = dimensions.filter(
+    (entry) => entry.dimension?.rating === "at_risk",
   ).length;
   return (
     <StatCard
@@ -2278,15 +2380,42 @@ function HealthSummaryStat({
       value={t(HEALTH_RATING_LABEL[overall])}
       tone={overall === "at_risk" ? "warn" : undefined}
       dot={overall === "at_risk"}
+      // One segment per dimension, filled for the ones that are not at risk.
+      // The denominator is what was RATED, not the three that exist: a bar out
+      // of three on an account with one rating would draw two empty segments
+      // that read as two failures.
+      meter={{ filled: rated - failing, total: rated }}
+      // How much is failing, and WHY. The count alone made a reader open the
+      // receipt to learn the one thing the card exists to tell them; the
+      // server already writes a sentence per dimension, and the worst one is
+      // the answer to "why at risk".
       detail={
-        failing > 0
-          ? t("co.strip.healthSummary.failingOf", {
-              failing: formatNumber(failing, locale),
-              rated: formatNumber(rated, locale),
-            })
-          : t("co.strip.healthSummary.of", {
-              rated: formatNumber(rated, locale),
-            })
+        <>
+          {/* The count line is dropped where it would only restate the verdict:
+              on the one rated dimension that IS the verdict, "1 of 1 at risk"
+              says what the word above it already said. Every other shape keeps
+              it — "1 of 3 at risk" and "3 of 3 at risk" are different accounts,
+              and "1 of 3 rated" is a thin reading saying so. */}
+          {!(failing === 1 && rated === 1) && (
+            <span>
+              {failing > 0
+                ? t("co.strip.healthSummary.failingOf", {
+                    failing: formatNumber(failing, locale),
+                    rated: formatNumber(rated, locale),
+                  })
+                : t("co.strip.healthSummary.of", {
+                    rated: formatNumber(rated, locale),
+                  })}
+            </span>
+          )}
+          {worstReason(dimensions, t)}
+        </>
+      }
+      basisLabel={
+        basisFacts.length > 0 ? t("co.strip.basis.health") : undefined
+      }
+      basis={
+        basisFacts.length > 0 ? <FactList facts={basisFacts} /> : undefined
       }
     />
   );
@@ -2305,6 +2434,33 @@ const SUGGESTION_ACTION_LABELS: Record<SuggestionAction["kind"], MessageKey> = {
 // SuggestionActionButton exists so the action is narrowed ONCE, at the call
 // site, rather than re-narrowed inside a callback where TypeScript has already
 // lost it.
+
+/**
+ * The names this page already holds, for citations the server could not name.
+ *
+ * The writer names a record when it had the name at hand and leaves it out
+ * otherwise; nothing invents one. But an account's own 360 is HOLDING its
+ * people and its deals, and printing "contact" beside a reason while the
+ * roster three sections down says the person's name is the page failing to
+ * read itself. Only records this view actually carries — anything else answers
+ * undefined and falls back to the kind.
+ */
+export function recordNamesIn(view?: Organization360) {
+  const names = new Map<string, string>();
+  for (const person of view?.people?.data ?? []) {
+    names.set(`person:${person.person_id}`, person.full_name);
+  }
+  for (const deal of view?.deals?.data ?? []) {
+    names.set(`deal:${deal.deal_id}`, deal.name);
+  }
+  const org = view?.organization;
+  if (org) {
+    names.set(`organization:${org.id}`, org.display_name);
+  }
+  return (entityType: string, entityId: string) =>
+    names.get(`${entityType}:${entityId}`);
+}
+
 function SuggestionActionButton({
   action,
   onPerform,
@@ -2313,8 +2469,17 @@ function SuggestionActionButton({
   onPerform: (action: SuggestionAction) => void;
 }>) {
   const t = useT();
+  // Only the draft is the agent's own work. Opening a deal and adding a task
+  // are things the reader does, and painting them indigo would spend the one
+  // mark that means "a machine wrote this" on two clicks where nothing did.
+  const byMargince = action.kind === "draft_reply";
   return (
-    <Button small onClick={() => onPerform(action)}>
+    <Button
+      small
+      variant={byMargince ? "ai" : "primary"}
+      onClick={() => onPerform(action)}
+    >
+      {byMargince && <Sparkles aria-hidden="true" />}
       {t(SUGGESTION_ACTION_LABELS[action.kind])}
     </Button>
   );
@@ -2409,6 +2574,7 @@ export function useSuggestionsBody({
   });
 
   const suggestions: Suggestion[] = view?.suggestions ?? [];
+  const nameOf = recordNamesIn(view);
   const dropped = view?.suggestions_dropped;
   const state = sectionState(
     view,
@@ -2443,35 +2609,43 @@ export function useSuggestionsBody({
   const rows = suggestions.map((suggestion) => (
     <PanelRow key={suggestion.fingerprint} className="co-move">
       <span className="co-move-body">
+        {/* Who found this, and when. The mark says a machine did — the same
+            indigo the card's own band carries, because it is the same claim
+            about authorship rather than a second kind of importance. */}
+        <span className="co-move-by">
+          <Sparkles aria-hidden="true" className="co-move-spark" />
+          {t("co.suggest.found")}
+          {suggestion.due_at && (
+            <span className="t-mono co-move-when">
+              {formatDate(suggestion.due_at, locale, recordZone)}
+            </span>
+          )}
+        </span>
         {/* The ASK, at the row's loudest weight: what the rule wants done.
             Falls back to the kind only when the rule named no title of
             its own. */}
         <span className="co-move-ask">
           {suggestion.title ?? t(`co.suggest.kind.${suggestion.kind}`)}
         </span>
-        {/* The WHY, under the ask and quieter: the reason is the
-            suggestion, and the rest of the row is chrome around it. */}
-        <span className="co-move-why">{suggestion.reason}</span>
-        <span className="co-move-do">
-          {/* WHAT the advice rests on, then WHEN — in that order, because
-              the record it read is what a reader checks first and the date
-              only means anything once they know which record it belongs
-              to. */}
-          <span className="co-move-cites">
-            <Citations
-              evidence={suggestion.evidence}
-              onOpenRecord={onOpenRecord}
-            />
-            {/* The date the EVIDENCE carries — when the thread went
-                quiet, when the deal last moved. Never a deadline the
-                system chose, which is why a rule firing on an absence
-                shows none. */}
-            {suggestion.due_at && (
-              <span className="co-row-meta">
-                {formatDate(suggestion.due_at, locale, recordZone)}
-              </span>
-            )}
+        {/* The WHY, under the ask and quieter: the reason is the suggestion,
+            and the rest of the row is chrome around it.
+
+            It is also the handle on what the advice rests on. The records the
+            rule fired on used to sit beside it as a row of chips, which put
+            the working on screen for every reader whether or not they were
+            questioning the advice; behind the reason they are one glance away
+            for the reader who is, and out of the way of the one who is not. */}
+        <Popover className="co-move-why" onHover label={suggestion.reason}>
+          <span className="co-move-basis-head t-eyebrow">
+            {t("co.suggest.basedOn")}
           </span>
+          <Citations
+            evidence={suggestion.evidence}
+            nameOf={nameOf}
+            onOpenRecord={onOpenRecord}
+          />
+        </Popover>
+        <span className="co-move-do">
           <span className="co-move-actions">
             {/* What performing the advice means, named by the server. A
                 rule that could not name one carries null and this

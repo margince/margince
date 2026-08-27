@@ -21,7 +21,7 @@ import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Badge } from "../design-system/atoms";
 import { Eyebrow } from "../design-system/eyebrow";
-import { Panel, PanelBody, PanelRow } from "../design-system/panel";
+import { Panel, PanelBody } from "../design-system/panel";
 import {
   omitted,
   SurfaceState,
@@ -62,6 +62,7 @@ export function CompanyWorkCard({
   loading = false,
   onOpenRecord,
   bare = false,
+  verbs,
 }: Readonly<{
   view?: Organization360;
   // The composite read's own pending flag — see sectionState's own doc.
@@ -75,6 +76,10 @@ export function CompanyWorkCard({
   // account among four, and a card inside a card is two borders around one
   // list.
   bare?: boolean;
+  // What opens a new piece of work, one verb per group. Handed in rather than
+  // built here: whether this reader may write, and what a create costs to
+  // mount, are the page's questions — this card knows only where the verbs go.
+  verbs?: { deal?: ReactNode; project?: ReactNode };
 }>) {
   const t = useT();
   const deals = view?.deals;
@@ -100,6 +105,8 @@ export function CompanyWorkCard({
         level={bare ? "h4" : "h3"}
         state={dealState}
         emptyLabel={t("co.work.noDeals")}
+        emptyDetail={t("co.work.noDealsDetail")}
+        action={verbs?.deal}
       >
         {(deals?.data ?? []).map((deal) => (
           <DealLine key={deal.deal_id} deal={deal} />
@@ -110,6 +117,8 @@ export function CompanyWorkCard({
         level={bare ? "h4" : "h3"}
         state={projectState}
         emptyLabel={t("co.work.noProjects")}
+        emptyDetail={t("co.work.noProjectsDetail")}
+        action={verbs?.project}
       >
         {liveWork(projects).map((project) => (
           <ProjectLine
@@ -284,6 +293,8 @@ function WorkGroup({
   level,
   state,
   emptyLabel,
+  emptyDetail,
+  action,
   children,
 }: Readonly<{
   label: string;
@@ -294,29 +305,64 @@ function WorkGroup({
   level: "h3" | "h4";
   state: ReturnType<typeof sectionState>;
   emptyLabel: string;
+  // What this kind of work IS, said only where there is none of it. A group
+  // with rows in it needs no definition; a reader looking at an empty one is
+  // deciding whether to start something, and that is the moment the sentence
+  // is worth its line.
+  emptyDetail: string;
+  // The verb that opens one. Absent on a record nobody may write to, and on a
+  // group whose read did not come back — a create offered over a failed read
+  // is a write into a section the page cannot show.
+  action?: ReactNode;
   children: ReactNode;
 }>) {
+  // The head is drawn in EVERY state, so the group's own verb keeps one place
+  // on the card. Moved into the empty plate it changed position with the
+  // content — a reader who has just read one group looks for the next verb
+  // where the last one was.
+  const head = (
+    <PanelBody className="co-work-head">
+      <Eyebrow as={level}>{label}</Eyebrow>
+      {action}
+    </PanelBody>
+  );
   if (state === "ready") {
     return (
       <>
-        <PanelBody className="co-work-head">
-          <Eyebrow as={level}>{label}</Eyebrow>
-        </PanelBody>
-        {children}
+        {head}
+        {/* A grid of items rather than a stack of rows. Each piece of work is
+            a thing a reader picks up and decides about, and a row that has to
+            carry a name, a figure, a stage, a date and a sentence has nowhere
+            to put five facts except side by side in one line. */}
+        <div className="co-work-items">{children}</div>
       </>
     );
   }
   return (
-    <PanelBody>
-      <SurfaceState
-        label={label}
-        labelLevel={level}
-        state={state}
-        emptyLabel={emptyLabel}
-      >
-        {null}
-      </SurfaceState>
-    </PanelBody>
+    <>
+      {head}
+      <PanelBody>
+        {/* An empty group gets a PLATE rather than a line of grey text. There
+            being no deal on an account is a state a reader has to decide
+            about, and drawn as one quiet sentence it reads as a section that
+            failed to load. The dashes say the space is waiting to be filled;
+            the verb that fills it is in the head above, where every other
+            group keeps its own.
+
+            No label on the state itself either way: the head carries it, and
+            a section that names itself twice reads as two sections. */}
+        {state === "empty" ? (
+          <div className="co-work-empty">
+            <p className="co-work-empty-title">{emptyLabel}</p>
+            <p className="co-work-empty-note">{emptyDetail}</p>
+          </div>
+        ) : (
+          <SurfaceState state={state} emptyLabel={emptyLabel}>
+            {null}
+          </SurfaceState>
+        )}
+      </PanelBody>
+    </>
   );
 }
 
@@ -354,26 +400,31 @@ function DealLine({ deal }: Readonly<{ deal: WorkDeal }>) {
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
+  const status = deal.attention ? (
+    <AttentionLine attention={deal.attention} />
+  ) : (
+    deal.stalled && <StatusLine>{t("co.work.stalled")}</StatusLine>
+  );
   return (
-    <PanelRow className="co-row">
+    <article className="co-work-item">
       <button
         type="button"
-        className="co-rowlink"
+        className="co-rowlink co-work-item-name"
         onClick={() => navigate({ screen: "deals", id: deal.deal_id })}
       >
         {deal.name}
       </button>
+      {deal.amount?.amount_minor != null && (
+        <p className="co-work-figure">
+          {formatMoneyOrAbsent(
+            deal.amount.amount_minor,
+            deal.amount.currency,
+            locale,
+          )}
+        </p>
+      )}
       <span className="co-row-meta">
         <span>{deal.stage_name ?? t("co.deals.noStage")}</span>
-        {deal.amount?.amount_minor != null && (
-          <span className="t-mono">
-            {formatMoneyOrAbsent(
-              deal.amount.amount_minor,
-              deal.amount.currency,
-              locale,
-            )}
-          </span>
-        )}
         {deal.expected_close_date && (
           <span>
             {t("co.work.closes", {
@@ -382,15 +433,13 @@ function DealLine({ deal }: Readonly<{ deal: WorkDeal }>) {
           </span>
         )}
       </span>
-      {/* One status clause per row, in the order that decides which one it is:
-          an overdue task beats a stall, because a stall is the absence of a
-          reason and an overdue task IS one. */}
-      {deal.attention ? (
-        <AttentionLine attention={deal.attention} />
-      ) : (
-        deal.stalled && <StatusLine>{t("co.work.stalled")}</StatusLine>
-      )}
-    </PanelRow>
+      {/* One status clause per item, in the order that decides which one it
+          is: an overdue task beats a stall, because a stall is the absence of
+          a reason and an overdue task IS one. It is also the only colour the
+          item carries — a card where every line is coloured has no colour
+          left for the line that needs it. */}
+      {status ? <div className="co-work-item-foot">{status}</div> : null}
+    </article>
   );
 }
 
@@ -404,11 +453,30 @@ function ProjectLine({
   const t = useT();
   const { locale } = useLocale();
   const zone = useRecordZone();
+  const status = project.attention ? (
+    <AttentionLine attention={project.attention} onOpenRecord={onOpenRecord} />
+  ) : (
+    project.quiet && (
+      <StatusLine>
+        {/* Two sentences, because a project nobody has EVER filed against has
+            no "since" to name. The server measures its quiet from the day it
+            was opened, and the payload carries no created_at — so a single
+            template would print "since never". */}
+        {project.last_activity_at
+          ? t("co.work.quiet", {
+              when: relativeDays(project.last_activity_at, t, locale),
+            })
+          : t("co.work.neverTouched")}
+      </StatusLine>
+    )
+  );
+  // No figure line at all: a project carries no money, and an empty slot where
+  // a figure goes reads as a figure that failed to load.
   return (
-    <PanelRow className="co-row">
+    <article className="co-work-item">
       <button
         type="button"
-        className="co-rowlink"
+        className="co-rowlink co-work-item-name"
         onClick={() => navigate({ screen: "projects", id: project.project_id })}
       >
         {project.key ?? project.name}
@@ -423,27 +491,8 @@ function ProjectLine({
           </span>
         )}
       </span>
-      {project.attention ? (
-        <AttentionLine
-          attention={project.attention}
-          onOpenRecord={onOpenRecord}
-        />
-      ) : (
-        project.quiet && (
-          <StatusLine>
-            {/* Two sentences, because a project nobody has EVER filed against
-                has no "since" to name. The server measures its quiet from the
-                day it was opened, and the payload carries no created_at — so
-                a single template would print "since never". */}
-            {project.last_activity_at
-              ? t("co.work.quiet", {
-                  when: relativeDays(project.last_activity_at, t, locale),
-                })
-              : t("co.work.neverTouched")}
-          </StatusLine>
-        )
-      )}
-    </PanelRow>
+      {status ? <div className="co-work-item-foot">{status}</div> : null}
+    </article>
   );
 }
 

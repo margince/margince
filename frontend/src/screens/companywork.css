@@ -1,8 +1,16 @@
 /* The work card's own two shapes: a group's subhead, and a row's status
    clause on its own line under the row's facts. */
 
+/* A GROUP's label inside the work section — deals, then projects. One level in
+   from a section's own label, so the two groups read as parts of one reading
+   rather than as two more sections of the card. */
 .co-work-head {
-  padding-bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  padding-top: var(--space-4);
+  padding-bottom: var(--space-2);
 }
 
 /* Its own line, full row width, so a sentence wraps as a sentence rather than
@@ -24,4 +32,118 @@
   flex-wrap: wrap;
   gap: var(--space-2);
   color: var(--textMeta);
+}
+
+/* The pieces of work, as a grid of items rather than a stack of rows.
+   auto-fill so a group with one deal draws one item at the column width
+   instead of stretching it across the card, and min(100%, 20rem) so a narrow
+   card falls to one column rather than overflowing. */
+.co-work-items {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 20rem), 1fr));
+  gap: var(--space-3);
+  /* The floor matters: without it the last item butts into the next section's
+     label and the two read as one block. */
+  padding: 0 var(--space-5) var(--space-2);
+}
+
+/* A card, and the whole of it opens the record. Bare, the items ran together
+   into one column of text a reader had to parse for where one deal ended and
+   the next began; a tint and a hairline are what say "these are three things".
+   Quieter than the card around them — a fill rather than a shadow, so a box
+   inside a box does not read as a second card floating on the first. */
+.co-work-item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+  padding: var(--space-3) var(--space-4);
+  border: 1px solid var(--borderSubtle);
+  border-radius: var(--r-sm);
+  background: var(--bgCard);
+  font-size: var(--fs-sm);
+  color: var(--textPrimary);
+}
+
+.co-work-item:hover {
+  background: var(--bgHover);
+}
+
+/* The name is the card's ONE control, and its hit area is the whole card: a
+   grid of cards where only the first line answers a click is a grid that
+   ignores most of the pointer aimed at it. A pseudo-element rather than a
+   wrapping anchor, because the attention line below carries links of its own
+   and a control inside a control is neither. */
+.co-work-item-name {
+  font-weight: var(--fw-medium);
+  text-align: left;
+}
+
+.co-work-item-name::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+/* The money, in the display face: it is the one fact a reader compares across
+   items, and comparing it means finding it in the same place every time. */
+.co-work-figure {
+  margin: 0;
+  font-family: var(--f-display);
+  font-size: var(--fs-h3);
+  font-weight: var(--fw-medium);
+  letter-spacing: var(--tracking-display);
+  color: var(--textPrimary);
+}
+
+/* The reason this item wants a person, under a hairline. Dividing two pieces
+   of the item's CONTENT, so the rule is the item's own width rather than the
+   card's. */
+/* Above the card's own hit area, so the records this line names stay
+   reachable: the name's overlay covers everything under it otherwise. */
+.co-work-item-foot {
+  position: relative;
+  margin-top: var(--space-2);
+  padding-top: var(--space-2);
+  border-top: 1px solid var(--borderSubtle);
+}
+
+/* AN EMPTY GROUP, as a plate rather than a sentence.
+   The dashed edge is what says the space is WAITING rather than broken: a
+   solid card holding one grey line reads as a section whose content failed to
+   arrive, and this group's emptiness is a fact about the account. Its verb is
+   not in here — it stays in the group's own head, so a reader who has just
+   pressed one finds the next where the last one was. */
+.co-work-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  align-items: center;
+  text-align: center;
+  padding: var(--space-5) var(--space-4);
+  border: 1px dashed var(--borderSubtle);
+  border-radius: var(--r-md);
+  background: var(--bgHover);
+}
+
+.co-work-empty-title {
+  margin: 0;
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-medium);
+  color: var(--textContent);
+}
+
+/* What this kind of work is FOR, under the line saying there is none of it.
+   Held to a measure: a definition set across the full card width reads as body
+   copy the reader has to work through, and this one is meant to be taken in a
+   glance. */
+.co-work-empty-note {
+  margin: 0;
+  max-inline-size: 46ch;
+  font-size: var(--fs-meta);
+  line-height: 1.5;
+  color: var(--textMeta);
+  text-wrap: pretty;
 }

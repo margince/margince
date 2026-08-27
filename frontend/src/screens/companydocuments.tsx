@@ -5,6 +5,7 @@ import type { components } from "../api/schema";
 import { useCanWrite } from "../app/capability";
 import { useRecordZone } from "../app/recordzone";
 import { Badge, Button, EmptyState } from "../design-system/atoms";
+import { FilterPills } from "../design-system/filterpills";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
 import { formatDateTime, formatNumber } from "../format/format";
@@ -227,21 +228,23 @@ export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
       />
       {present && (
         <PanelBody className="docs-filters">
-          <FilterChip
-            label={t("docs.category.all")}
-            count={live.length}
-            pressed={category === ""}
-            onPress={() => setCategory("")}
+          {/* The counts are honest here because the read is unfiltered: the
+              page holds every document and cuts them itself, so "Legal 0" is
+              a fact rather than a claim made from a request that never asked
+              about the other kinds. */}
+          <FilterPills
+            label={t("docs.filterLabel")}
+            value={category}
+            onChange={setCategory}
+            pills={[
+              { value: "", label: t("docs.category.all"), count: live.length },
+              ...FILTER_CATEGORIES.map((key) => ({
+                value: key,
+                label: t(CATEGORY_LABELS[key]),
+                count: live.filter((doc) => doc.category === key).length,
+              })),
+            ]}
           />
-          {FILTER_CATEGORIES.map((key) => (
-            <FilterChip
-              key={key}
-              label={t(CATEGORY_LABELS[key])}
-              count={live.filter((doc) => doc.category === key).length}
-              pressed={category === key}
-              onPress={() => setCategory(category === key ? "" : key)}
-            />
-          ))}
         </PanelBody>
       )}
       {present ? (
@@ -276,30 +279,6 @@ export function CompanyDocumentsCard({ orgId }: Readonly<{ orgId: string }>) {
         </PanelBody>
       )}
     </Panel>
-  );
-}
-
-// One category, with how many documents are behind it. The count is what makes
-// the chip a decision rather than a gamble: a reader presses "Legal" knowing
-// whether there is one file there or none, and a kind with nothing in it says
-// so instead of leading to an empty list.
-function FilterChip({
-  label,
-  count,
-  pressed,
-  onPress,
-}: Readonly<{
-  label: string;
-  count: number;
-  pressed: boolean;
-  onPress: () => void;
-}>) {
-  const { locale } = useLocale();
-  return (
-    <Button small aria-pressed={pressed} onClick={onPress}>
-      {label}
-      <span className="rec-chip-count">{formatNumber(count, locale)}</span>
-    </Button>
   );
 }
 

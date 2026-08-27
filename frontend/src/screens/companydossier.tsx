@@ -40,10 +40,15 @@ export function DossierPanel({
   orgId,
   enabled,
   onOpenRecord,
+  nameOf,
 }: Readonly<{
   orgId: string;
   enabled: boolean;
   onOpenRecord?: (entityType: string, entityId: string) => void;
+  // The account's own names for the records this prose cites, from the page
+  // that already holds them. The writer names what it had at hand; this is how
+  // "contact" becomes the contact.
+  nameOf?: (entityType: string, entityId: string) => string | undefined;
 }>) {
   const t = useT();
   const { locale } = useLocale();
@@ -148,12 +153,25 @@ export function DossierPanel({
           // directly under its line — the wall of "fact" relocated rather
           // than removed. The sections still ORDER the prose; the receipts
           // gather once, under all of it.
+          //
+          // The prose has ONE piece of shape, and it is not a heading: the
+          // block's own read opens it, set apart from the lines under it. A
+          // heading names a container and says less than the sentences in it;
+          // a leading claim IS a sentence, and it is the one a reader takes
+          // away.
           <SentenceList
+            nameOf={nameOf}
             sentences={readable.sections.flatMap(
               (section) => section.sentences,
             )}
             onOpenRecord={onOpenRecord}
             citations="collected"
+            // The block's own read leads it. The facts underneath are already
+            // on the cards above, so what this block ADDS is what Margince
+            // makes of them — and four sentences at one volume have no shape
+            // to scan. A dossier the fallback assembled judges nothing and
+            // leads with its first line instead.
+            leadWithJudgement
           />
         )}
         {rewrite.error && (

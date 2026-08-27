@@ -3,6 +3,7 @@ import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useFinanceSummary } from "./common";
+import type { Grounding } from "./record360";
 
 // A leaf for the small lookup tables the company page and its rail both need
 // to draw the same enums the same way. Neither company360.tsx nor
@@ -83,9 +84,38 @@ export function relationshipBadges(
 ): RelationshipType[] {
   const standing = t(LIFECYCLE_LABELS[org.lifecycle ?? "unknown"]);
   return (org.relationship_types ?? []).filter(
-    (relType) => t(RELATIONSHIP_TYPE_LABELS[relType]) !== standing,
+    (relType) =>
+      t(RELATIONSHIP_TYPE_LABELS[relType]) !== standing &&
+      !spokenFor(relType, org.lifecycle),
   );
 }
+
+/**
+ * Whether the lifecycle already says what this type says, in its own tense.
+ *
+ * The label comparison above catches the word repeated exactly. It cannot
+ * catch the tense: an account that has stopped buying is a FORMER customer and
+ * still carries the `customer` type, because that is what it was — and printed
+ * together they read as "Former customer" and "Customer" on one line, which is
+ * not two facts but one fact and its own contradiction.
+ */
+function spokenFor(
+  relType: RelationshipType,
+  lifecycle: Organization["lifecycle"],
+): boolean {
+  return lifecycle
+    ? (LIFECYCLE_SPEAKS_FOR[relType]?.includes(lifecycle) ?? false)
+    : false;
+}
+
+// The types a lifecycle speaks for, in any of its tenses. By KEY rather than by
+// label, because the two words differ on purpose and only the enum says they
+// are the same relationship.
+const LIFECYCLE_SPEAKS_FOR: Partial<
+  Record<RelationshipType, readonly string[]>
+> = {
+  customer: ["customer", "former_customer"],
+};
 
 // The seven wire size bands, same sharing reason as LIFECYCLE_OPTIONS above.
 export const SIZE_BAND_OPTIONS = [
@@ -171,3 +201,94 @@ export function usePaymentHealth(orgId?: string) {
         : t("co.health.payment.onTime"),
   };
 }
+
+/**
+ * The account's health as its named dimensions and one verdict over them.
+ *
+ * `overall` is the WORST rating present, never an average: an average lets a
+ * strong relationship hide a payment problem, and payment problems are the ones
+ * a rep must not miss. It is also a sentence a reader can check — "at risk,
+ * because payment is at risk" — where a composite number is not.
+ *
+ * A dimension with no rating is not in the verdict, and the card says how many
+ * it was computed from. Three-of-three and one-of-three are different claims.
+ */
+export function worstOf(
+  dimensions: ReadonlyArray<{ rating?: string } | undefined>,
+): { overall?: HealthRating; rated: number } {
+  const present = dimensions
+    .map((dimension) => dimension?.rating)
+    .filter((rating): rating is HealthRating =>
+      HEALTH_RANK.includes(rating as HealthRating),
+    );
+  if (present.length === 0) {
+    return { rated: 0 };
+  }
+  const worst = HEALTH_RANK.find((rating) => present.includes(rating));
+  return { overall: worst, rated: present.length };
+}
+
+/**
+ * The account's standing: the health verdict as the word a reader sees, the
+ * tone that word is drawn in, and how many of the three dimensions it was read
+ * from.
+ *
+ * ONE spelling, because two surfaces state it — the readings row's health card
+ * and the 360's own verdict head. Computed twice they would agree until one of
+ * them learned about payment and the other did not, and the page would then
+ * carry two answers to "how is this account".
+ *
+ * `label` is absent when nothing was rated. A head that said "unknown" would
+ * be the card inventing a call it was not given.
+ */
+export function useAccountStanding(
+  orgId: string,
+  health?: {
+    relationship?: { rating: HealthRating; reason: string };
+    commercial?: { rating: HealthRating; reason: string };
+  },
+): {
+  overall?: HealthRating;
+  rated: number;
+  payment?: { rating: HealthRating; reason: string };
+  restsOn: Grounding[];
+} {
+  const t = useT();
+  const payment = usePaymentHealth(orgId);
+  const dimensions = [
+    { key: "relationship" as const, health: health?.relationship },
+    { key: "commercial" as const, health: health?.commercial },
+    { key: "payment" as const, health: payment },
+  ];
+  const { overall, rated } = worstOf(
+    dimensions.map((dimension) => dimension.health),
+  );
+  // Only the dimensions that were actually rated: an unrated dimension did not
+  // contribute to the call, so listing it under "what this rests on" would
+  // claim a reading nobody took.
+  const restsOn = dimensions.flatMap((dimension) =>
+    dimension.health
+      ? [
+          {
+            key: dimension.key,
+            quote: dimension.health.reason,
+            from: t(HEALTH_DIMENSION_LABEL[dimension.key]),
+          },
+        ]
+      : [],
+  );
+  return { overall, rated, payment, restsOn };
+}
+
+// The tone the standing pill is drawn in. `strong` is the all-clear and
+// `at_risk` is the alarm; `good` sits between them and takes the warn tint
+// rather than the calm one, because "good" here means "not failing yet" and a
+// green pill over it reads as nothing to do.
+export const HEALTH_STANDING_TONE: Record<
+  HealthRating,
+  "calm" | "warn" | "danger"
+> = {
+  strong: "calm",
+  good: "warn",
+  at_risk: "danger",
+};

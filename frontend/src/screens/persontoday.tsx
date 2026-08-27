@@ -1,19 +1,18 @@
-import {
-  AlertTriangle,
-  CalendarDays,
-  CheckSquare,
-  FileText,
-  Send,
-  Sparkles,
-  Users,
-} from "lucide-react";
+import { CalendarDays, CheckSquare, FileText, Send, Users } from "lucide-react";
 import type { ReactNode } from "react";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { Panel, PanelBody } from "../design-system/panel";
 import { formatNumber } from "../format/format";
 import { type Locale, useLocale, usePlural, useT } from "../i18n";
+import type { MessageKey } from "../i18n/en";
 import { interactionIcon } from "./interactionchrome";
+import {
+  BriefTitle,
+  type Grounding,
+  type StandingTone,
+  VerdictHead,
+} from "./record360";
 
 // "Today with {first name}" (concept §5.5, ADR-0096 D2).
 //
@@ -29,6 +28,46 @@ import { interactionIcon } from "./interactionchrome";
 
 type PersonMoment = components["schemas"]["PersonMoment"];
 type PersonMomentAction = components["schemas"]["PersonMomentAction"];
+
+// The rule that fired, in one word over the sentence it produced.
+//
+// The server picks exactly one rule from a fixed ladder, so the word is the
+// server's judgement rather than this page's reading of a headline. Named
+// rather than left implicit: "Gone quiet" and "Promise overdue" lead to
+// different moves, and a reader who sees only the sentence has to infer which
+// kind of thing they are looking at.
+const MOMENT_RULE_LABEL = {
+  meeting_prep: "person.moment.rule.meeting_prep",
+  re_engaged: "person.moment.rule.re_engaged",
+  job_change: "person.moment.rule.job_change",
+  overdue_promise: "person.moment.rule.overdue_promise",
+  gone_quiet: "person.moment.rule.gone_quiet",
+  role_change: "person.moment.rule.role_change",
+  public_signal: "person.moment.rule.public_signal",
+  missing_next_step: "person.moment.rule.missing_next_step",
+  thin_relationship: "person.moment.rule.thin_relationship",
+  nothing_needed: "person.moment.rule.nothing_needed",
+} as const satisfies Record<PersonMoment["rule"], MessageKey>;
+
+const MOMENT_EVIDENCE_LABEL = {
+  activity: "person.moment.evidence.activity",
+  task: "person.moment.evidence.task",
+  relationship_change: "person.moment.evidence.relationship_change",
+} as const satisfies Record<
+  components["schemas"]["PersonMomentEvidence"]["type"],
+  MessageKey
+>;
+
+// The standing's colour. Two rules mean somebody is being kept waiting and
+// read as warnings; the quiet success state reads as settled rather than as
+// something nobody has judged. Everything else is a live thread — a fact about
+// the relationship that wants a move rather than a verdict on it.
+function standingTone(rule: PersonMoment["rule"]): StandingTone {
+  if (rule === "gone_quiet" || rule === "overdue_promise") {
+    return "warn";
+  }
+  return rule === "nothing_needed" ? "calm" : "accent";
+}
 
 export function PersonToday({
   moment,
@@ -48,22 +87,23 @@ export function PersonToday({
   const warn =
     moment.rule === "gone_quiet" || moment.rule === "overdue_promise";
   const secondary = moment.secondary_actions ?? [];
+  // What the moment rests on, in the shape every claim on a record states it:
+  // the label a reader can act on, and the kind of record it was read from.
+  // Same disclosure as the account's call, because it is the same promise —
+  // nothing a machine says here is unsourced.
+  const restsOn: Grounding[] = moment.evidence.map((item) => ({
+    key: `${item.type}-${item.id ?? item.label}`,
+    quote: item.label,
+    from: t(MOMENT_EVIDENCE_LABEL[item.type]),
+  }));
   return (
-    // The page's lead panel: the same titled-card shape as every panel under
-    // it, tinted so it reads as the thing to DO rather than one more thing to
-    // read — the company record's lead panel in the person's own words.
+    // The record's 360 card, in the person's own words: the same head every
+    // written reading carries, tinted as the machine's work rather than as one
+    // more thing to read.
     <Panel
-      tone={warn ? "warn" : "accent"}
-      title={
-        <>
-          {warn ? (
-            <AlertTriangle size={16} aria-hidden="true" />
-          ) : (
-            <Sparkles size={16} aria-hidden="true" />
-          )}
-          {t("person.today.heading", { name: firstName })}
-        </>
-      }
+      tone="ai"
+      className="co-lead"
+      title={<BriefTitle name={firstName} />}
       footer={
         <div className="pe-today-foot">
           <span>
@@ -84,10 +124,17 @@ export function PersonToday({
         </div>
       }
     >
+      {/* The call, then what it is standing on — the same head the account's
+          own reading carries, so a rep who reads both records reads them the
+          same way. */}
+      <VerdictHead
+        label={t(MOMENT_RULE_LABEL[moment.rule])}
+        tone={standingTone(moment.rule)}
+        because={moment.headline}
+        restsOn={restsOn}
+      />
       <PanelBody className="pe-today-lead">
         <div>
-          <h3 className="pe-today-headline">{moment.headline}</h3>
-
           <ul className="pe-today-evidence">
             {moment.evidence.map((item) => (
               <li key={`${item.type}-${item.id ?? item.label}`}>

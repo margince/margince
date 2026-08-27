@@ -150,6 +150,7 @@ function Rail({ view }: Readonly<{ view: View }>) {
           loading={false}
           withPeople
           composerOpen={false}
+          onTab={() => {}}
         />
       </div>
     </StoryProviders>

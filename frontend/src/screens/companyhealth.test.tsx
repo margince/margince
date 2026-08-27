@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it } from "vitest";
-import { worstOf } from "./company360";
+import { worstOf } from "./companylookups";
 
 // The health verdict is the WORST dimension, never an average (PO-AC-N-11,
 // ADR-0095/A146).

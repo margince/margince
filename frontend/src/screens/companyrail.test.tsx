@@ -46,6 +46,11 @@ const org = {
 
 const emptyPage = { has_more: false, next_cursor: null };
 
+// No test in this file asserts on where a header link sends the reader —
+// that is organizations.test.tsx's own claim, since the callback only makes
+// sense wired to the real tab strip it switches.
+const onTab = () => {};
+
 // Built loosely and cast once here, matching company360.test.tsx's own
 // fixture: a hand-typed 360 payload restates the generated schema by hand,
 // and the two would silently drift the moment the contract grows a field
@@ -56,6 +61,12 @@ function view(overrides: Record<string, unknown> = {}): Organization360 {
     organization: org,
     sections_omitted: [],
     people: { data: [], page: emptyPage },
+    deals: {
+      data: [],
+      page: emptyPage,
+      won_lifetime: { amount_minor: 0, currency: null },
+      lost_count: 0,
+    },
     tags: [],
     list_memberships: [],
     ...overrides,
@@ -131,6 +142,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen
+        onTab={onTab}
       />,
     );
     expect(screen.queryByText("Details")).not.toBeInTheDocument();
@@ -145,6 +157,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     expect(screen.getByText("Brandt Automotive GmbH")).toBeInTheDocument();
@@ -181,6 +194,7 @@ describe("CompanyRail", () => {
         loading={false}
         withPeople
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     // Every row's LABEL still draws: an absent field is a fact about the
@@ -229,6 +243,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     // The value is already set, which is exactly the case that used to render
@@ -288,6 +303,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     await waitFor(() =>
@@ -350,6 +366,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     await waitFor(() =>
@@ -399,6 +416,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     await userEvent.click(
@@ -452,6 +470,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     await userEvent.click(
@@ -507,6 +526,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     await userEvent.click(
@@ -551,6 +571,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     await userEvent.click(
@@ -569,114 +590,33 @@ describe("CompanyRail", () => {
     );
   });
 
-  it("shows the account's rating in the Health summary rather than a count", () => {
-    stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          health: {
-            relationship: { rating: "good", reason: "Replying steadily." },
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-      />,
-    );
-    expect(screen.getByText("Good")).toBeInTheDocument();
-    expect(screen.getByText("Relationship")).toBeInTheDocument();
-    expect(screen.getByText("Replying steadily.")).toBeInTheDocument();
-  });
-
-  it("counts one contact and one commitment in the singular", () => {
-    stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          health: {
-            relationship: { rating: "good", reason: "Replying steadily." },
-            active_contacts: 1,
-            open_commitments: 1,
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-      />,
-    );
-    expect(
-      screen.getByText("1 person here has ever interacted"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("1 open commitment")).toBeInTheDocument();
-  });
-
-  it("counts more than one contact in the plural", () => {
-    stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          health: {
-            relationship: { rating: "good", reason: "Replying steadily." },
-            active_contacts: 3,
-            open_commitments: 2,
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-      />,
-    );
-    expect(
-      screen.getByText("3 people here have ever interacted"),
-    ).toBeInTheDocument();
-    expect(screen.getByText("2 open commitments")).toBeInTheDocument();
-  });
-
-  // Zero contacts reads as a plural in English, so the count-of-one branch
-  // must not be reached by "not one".
-  it("counts no contacts in the plural", () => {
-    stub();
-    render(
-      <CompanyRail
-        orgId="o-1"
-        view={view({
-          health: {
-            relationship: { rating: "good", reason: "Replying steadily." },
-            active_contacts: 0,
-          },
-        })}
-        loading={false}
-        withPeople
-        composerOpen={false}
-      />,
-    );
-    expect(
-      screen.getByText("0 people here have ever interacted"),
-    ).toBeInTheDocument();
-  });
-
   it("marks a withheld section restricted instead of drawing it empty", () => {
     stub();
     render(
       <CompanyRail
         orgId="o-1"
-        view={view({ sections_omitted: ["health", "people"] })}
+        view={view({ sections_omitted: ["people"] })}
         loading={false}
         withPeople
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     expect(
       screen.getAllByText("Hidden — your role cannot read this").length,
     ).toBeGreaterThan(0);
-    // A withheld section carries no count badge: a "0" beside it would read
-    // as a confirmed empty account rather than as a permission boundary.
-    const peopleSummary = screen.getByText("People").closest("summary");
-    expect(peopleSummary).not.toBeNull();
-    expect(peopleSummary && within(peopleSummary).queryByText("0")).toBeNull();
+    // A withheld section carries no header link: a count would have nothing
+    // true to show, and an "Add" would offer to write into a section the
+    // reader cannot even see. Scoped to People's own panel — Deals is
+    // unrelated and legitimately shows its own "Add" for its own empty read.
+    const peoplePanel = screen
+      .getByRole("heading", { name: "Their key people" })
+      .closest<HTMLElement>(".panel");
+    expect(peoplePanel).not.toBeNull();
+    expect(
+      peoplePanel &&
+        within(peoplePanel).queryByRole("button", { name: /All \d|^Add$/ }),
+    ).toBeNull();
   });
 
   it("draws one row per contact, naming the colleagues already in touch with them", () => {
@@ -718,6 +658,7 @@ describe("CompanyRail", () => {
         loading={false}
         withPeople
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     expect(screen.getByText("Dana Buyer")).toBeInTheDocument();
@@ -732,26 +673,137 @@ describe("CompanyRail", () => {
     ).toBe("#/contacts/p-1");
   });
 
-  it("draws a signal row with its severity dot, kind, summary and date", async () => {
+  it("draws one row per deal, with its amount and a stage · close-date note", () => {
+    stub();
+    render(
+      <CompanyRail
+        orgId="o-1"
+        view={view({
+          deals: {
+            data: [
+              {
+                deal_id: "d-1",
+                name: "Fleet renewal",
+                status: "open",
+                stage_name: "Negotiation",
+                amount: { amount_minor: 480_000, currency: "EUR" },
+                expected_close_date: "2026-07-01",
+                stalled: false,
+              },
+              {
+                deal_id: "d-2",
+                name: "Spare parts contract",
+                status: "open",
+                stage_name: "Discovery",
+                amount: { amount_minor: null, currency: null },
+                expected_close_date: null,
+                stalled: false,
+              },
+            ],
+            page: emptyPage,
+            won_lifetime: { amount_minor: 0, currency: null },
+            lost_count: 0,
+          },
+        })}
+        loading={false}
+        withPeople
+        composerOpen={false}
+        onTab={onTab}
+      />,
+    );
+    expect(screen.getByText("Fleet renewal")).toBeInTheDocument();
+    expect(screen.getByText("€4,800.00")).toBeInTheDocument();
+    expect(
+      screen.getByText("Negotiation · closes 01/07/2026"),
+    ).toBeInTheDocument();
+    expect(screen.getByText("Discovery · no close date")).toBeInTheDocument();
+    expect(
+      screen.getByRole("link", { name: "Fleet renewal" }).getAttribute("href"),
+    ).toBe("#/deals/d-1");
+  });
+
+  it("prefixes the note with the deal's own attention ahead of a bare stall flag", () => {
+    stub();
+    render(
+      <CompanyRail
+        orgId="o-1"
+        view={view({
+          deals: {
+            data: [
+              {
+                deal_id: "d-1",
+                name: "Fleet renewal",
+                status: "open",
+                stage_name: "Negotiation",
+                amount: { amount_minor: 480_000, currency: "EUR" },
+                expected_close_date: null,
+                stalled: true,
+                attention: {
+                  kind: "overdue_task",
+                  title: "Send updated quote",
+                  who: "Mira Voss",
+                  due_at: "2026-05-01T00:00:00Z",
+                },
+              },
+            ],
+            page: emptyPage,
+            won_lifetime: { amount_minor: 0, currency: null },
+            lost_count: 0,
+          },
+        })}
+        loading={false}
+        withPeople
+        composerOpen={false}
+        onTab={onTab}
+      />,
+    );
+    expect(
+      screen.getByText("Overdue · Negotiation · no close date"),
+    ).toBeInTheDocument();
+  });
+
+  it("switches to the Deals tab from the header's own All-N link", async () => {
+    const spy = vi.fn();
+    stub();
+    render(
+      <CompanyRail
+        orgId="o-1"
+        view={view({
+          deals: {
+            data: [
+              {
+                deal_id: "d-1",
+                name: "Fleet renewal",
+                status: "open",
+                stage_name: "Negotiation",
+                stalled: false,
+              },
+            ],
+            page: emptyPage,
+            won_lifetime: { amount_minor: 0, currency: null },
+            lost_count: 0,
+          },
+        })}
+        loading={false}
+        withPeople
+        composerOpen={false}
+        onTab={spy}
+      />,
+    );
+    await userEvent.click(screen.getByRole("button", { name: "All 1" }));
+    expect(spy).toHaveBeenCalledWith("deals");
+  });
+
+  it("offers to create the account's first deal when it has never had one", async () => {
     stub({
-      "/signals": () =>
+      "/pipelines": () =>
         jsonResponse({
           data: [
             {
-              id: "s-1",
-              workspace_id: "w",
-              kind: "risk",
-              source_channel: "derived",
-              resolution_state: "resolved",
-              severity: "urgent",
-              summary: "No reply in three weeks.",
-              evidence: [],
-              status: "open",
-              detected_at: "2026-06-01T00:00:00Z",
-              source: "manual",
-              captured_by: "human:u1",
-              created_at: "2026-06-01T00:00:00Z",
-              updated_at: "2026-06-01T00:00:00Z",
+              id: "pl-1",
+              name: "Default",
+              is_default: true,
+              stages: [{ id: "s-1", name: "Discovery", semantic: "open" }],
             },
           ],
           page: emptyPage,
@@ -761,15 +813,79 @@ describe("CompanyRail", () => {
       <CompanyRail
         orgId="o-1"
         view={view()}
-        withPeople
         loading={false}
+        withPeople
         composerOpen={false}
+        onTab={onTab}
       />,
     );
-    await waitFor(() =>
-      expect(screen.getByText("No reply in three weeks.")).toBeInTheDocument(),
+    expect(
+      screen.getByText("No deals on this account yet."),
+    ).toBeInTheDocument();
+    expect(
+      await screen.findByRole("button", { name: "New deal" }),
+    ).toBeInTheDocument();
+    // Both Deals and People are empty in this fixture, so each carries its
+    // own "Add" header link — scoped to Deals's own panel rather than a bare
+    // getByRole, which would find two.
+    const dealsPanel = screen
+      .getByRole("heading", { name: "Active deals" })
+      .closest<HTMLElement>(".panel");
+    expect(dealsPanel).not.toBeNull();
+    expect(
+      dealsPanel && within(dealsPanel).getByRole("button", { name: "Add" }),
+    ).toBeInTheDocument();
+  });
+
+  it("reads a closed-only pipeline as nothing open rather than never started", () => {
+    stub();
+    render(
+      <CompanyRail
+        orgId="o-1"
+        view={view({
+          deals: {
+            data: [],
+            page: emptyPage,
+            won_lifetime: { amount_minor: 250_000, currency: "EUR" },
+            lost_count: 1,
+          },
+        })}
+        loading={false}
+        withPeople
+        composerOpen={false}
+        onTab={onTab}
+      />,
     );
-    expect(screen.getByText("Risk")).toBeInTheDocument();
+    expect(
+      screen.getByText("Nothing open — only closed history."),
+    ).toBeInTheDocument();
+    // No first-deal verb here — the account has already had deals, it is
+    // between two of them rather than never having started.
+    expect(
+      screen.queryByRole("button", { name: "New deal" }),
+    ).not.toBeInTheDocument();
+  });
+
+  it("offers to add the account's first contact when it has none", async () => {
+    const spy = vi.fn();
+    stub();
+    render(
+      <CompanyRail
+        orgId="o-1"
+        view={view()}
+        loading={false}
+        withPeople
+        composerOpen={false}
+        onTab={spy}
+      />,
+    );
+    expect(
+      screen.getByText("No contacts yet. Nobody to write to."),
+    ).toBeInTheDocument();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Add a contact" }),
+    );
+    expect(spy).toHaveBeenCalledWith("people");
   });
 
   it("shows tags and list memberships as their own badges, counted together", () => {
@@ -791,6 +907,7 @@ describe("CompanyRail", () => {
         loading={false}
         withPeople
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     expect(screen.getByText("Key account")).toBeInTheDocument();
@@ -806,6 +923,7 @@ describe("CompanyRail", () => {
         withPeople
         loading={false}
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     // Both halves answered `empty` (view()'s tags/list_memberships default to
@@ -829,6 +947,7 @@ describe("CompanyRail", () => {
         loading={false}
         withPeople
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     // The values themselves still draw (this suite's own empty-badges test
@@ -860,6 +979,7 @@ describe("CompanyRail", () => {
         loading={true}
         withPeople
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     // The skeleton placeholder, not the "could not be loaded" sentence.
@@ -880,6 +1000,7 @@ describe("CompanyRail", () => {
         loading={false}
         withPeople
         composerOpen={false}
+        onTab={onTab}
       />,
     );
     // The SAME undefined `view` as the loading test above, but with

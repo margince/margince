@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
+import { PageAsideProvider, PageAsideRegion } from "../app/pageaside";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import {
@@ -236,13 +237,23 @@ afterEach(() => {
   briefBody = EMPTY_BRIEF;
 });
 
+// The page's context column is the SHELL's, not the record's: the record fills
+// it through a portal. So this render carries the real region rather than a
+// stand-in — a test that supplied its own column would prove nothing about the
+// one the product draws, and the record's context cards would have nowhere to
+// land.
 function render(ui: ReactNode) {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <PageAsideProvider>
+          {ui}
+          <PageAsideRegion />
+        </PageAsideProvider>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }
@@ -312,7 +323,9 @@ describe("company view — withheld sections", () => {
     stub(view({ deals: undefined, sections_omitted: ["deals"] }));
     renderCompany();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Deals/ }),
+    );
     const heading = await screen.findByRole("heading", { name: "Deals" });
     const deals = heading.closest("section");
     if (!deals) {
@@ -332,7 +345,9 @@ describe("company view — withheld sections", () => {
     stub(view());
     renderCompany();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Deals/ }),
+    );
     const heading = await screen.findByRole("heading", { name: "Deals" });
     const deals = heading.closest("section");
     if (!deals) {
@@ -392,55 +407,81 @@ describe("company view — withheld sections", () => {
     ).toBeTruthy();
   });
 
-  it("says how it stands is hidden rather than drawing no card", async () => {
+  it("says the health verdict is hidden rather than drawing no card", async () => {
     // Health drew nothing on a withheld section, on an account with nothing
     // rated yet, and on one with nothing to report alike. The first two are
     // facts about the READ; only the third is a fact about the account, and a
     // reader who meets no card at all takes it for the third.
-    stub(view({ health: undefined, sections_omitted: ["health"] }));
+    stub(
+      view({
+        health: undefined,
+        sections_omitted: ["health"],
+        state_strip: {
+          account: { lifecycle: "prospect", relationship_types: [] },
+        },
+      }),
+    );
     renderCompany();
 
-    const rail = await screen.findByRole("complementary", { name: "Context" });
-    expect(
-      within(rail).getByText("Hidden — your role cannot read this"),
-    ).toBeTruthy();
+    const strip = await screen.findByRole("region", {
+      name: "Where this account stands",
+    });
+    const health = within(strip).getByText("Health").closest(".stat-card");
+    if (!(health instanceof HTMLElement)) {
+      throw new Error("the health verdict card has no wrapper");
+    }
+    expect(within(health).getByText("Not shown")).toBeTruthy();
   });
 
   it("says there is no health reading yet, distinct from hidden", async () => {
     // `health` came back as an object with nothing rated — e.g. an account
     // that has never exchanged mail — which must read as "there is none",
     // never as the withheld notice above.
-    stub(view({ health: {} }));
+    stub(
+      view({
+        health: {},
+        state_strip: {
+          account: { lifecycle: "prospect", relationship_types: [] },
+        },
+      }),
+    );
     renderCompany();
 
-    const rail = await screen.findByRole("complementary", { name: "Context" });
-    const health = within(rail).getByText("How it stands").closest("section");
-    if (!health) {
-      throw new Error("the health card has no section wrapper");
+    const strip = await screen.findByRole("region", {
+      name: "Where this account stands",
+    });
+    const health = within(strip).getByText("Health").closest(".stat-card");
+    if (!(health instanceof HTMLElement)) {
+      throw new Error("the health verdict card has no wrapper");
     }
-    expect(
-      within(health).getByText("No health reading on this account yet."),
-    ).toBeTruthy();
-    expect(
-      within(health).queryByText("Hidden — your role cannot read this"),
-    ).toBeNull();
+    expect(within(health).getByText("Not assessed")).toBeTruthy();
+    expect(within(health).getByText("0 of 3 rated")).toBeTruthy();
+    expect(within(health).queryByText("Not shown")).toBeNull();
   });
 
-  it("rates how it stands once a dimension has something to say", async () => {
-    stub(view({ health: { days_since_last_inbound: 3, active_contacts: 2 } }));
+  it("rates the relationship reading once there is a signal to read", async () => {
+    stub(
+      view({
+        health: { days_since_last_inbound: 3, active_contacts: 2 },
+        state_strip: {
+          account: { lifecycle: "prospect", relationship_types: [] },
+        },
+      }),
+    );
     renderCompany();
 
-    const rail = await screen.findByRole("complementary", { name: "Context" });
-    const health = within(rail).getByText("How it stands").closest("section");
-    if (!health) {
-      throw new Error("the health card has no section wrapper");
+    const strip = await screen.findByRole("region", {
+      name: "Where this account stands",
+    });
+    const relationship = within(strip)
+      .getByText("Relationship")
+      .closest(".stat-card");
+    if (!(relationship instanceof HTMLElement)) {
+      throw new Error("the relationship card has no wrapper");
     }
-    expect(within(health).getByText("They last wrote 3 days ago")).toBeTruthy();
+    expect(within(relationship).getByText("In conversation")).toBeTruthy();
     expect(
-      within(health).queryByText("No health reading on this account yet."),
-    ).toBeNull();
-    expect(
-      within(health).queryByText("Hidden — your role cannot read this"),
+      within(relationship).queryByText("They have never written"),
     ).toBeNull();
   });
 });
@@ -452,14 +493,24 @@ describe("company view — the verbs that change a section", () => {
     stub(view());
     renderCompany();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Deals/ }),
+    );
+    const heading = await screen.findByRole("heading", { name: "Deals" });
+    const deals = heading.closest("section");
+    if (!deals) {
+      throw new Error("the deals card has no section wrapper");
+    }
     expect(
-      await screen.findByText("No open deal on this account."),
+      within(deals).getByText("No open deal on this account."),
     ).toBeTruthy();
     // Awaited: the verb appears once the pipeline read resolves, because a
-    // deal needs somewhere to land before the page offers to open one.
+    // deal needs somewhere to land before the page offers to open one. Scoped
+    // to the tab body: the rail's own Deals panel is on the same empty
+    // account, so it offers the same verb and a page-wide query would be
+    // ambiguous between the two.
     expect(
-      await screen.findByRole("button", { name: "New deal" }),
+      await within(deals).findByRole("button", { name: "New deal" }),
     ).toBeTruthy();
   });
 
@@ -471,17 +522,19 @@ describe("company view — the verbs that change a section", () => {
     );
     renderCompany();
 
-    // The overview's own cards say it too, about the same missing grant, but
-    // they UNMOUNT when the tab opens — this page swaps its body rather than
-    // layering over it. So everything counted after the click is the deals
-    // tab's own answer, and the count is pinned EXACTLY rather than as "at
-    // least one": a floor would pass on a tab that rendered nothing while
-    // some other surface still spoke.
-    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
+    // Four surfaces read the same missing grant: the header's own fact strip
+    // (Open pipeline, In flight), the rail's Deals panel — which rides on the
+    // page's own mount and never unmounts across a tab switch — and the Deals
+    // tab body itself. The count is pinned EXACTLY rather than as "at least
+    // one": a floor would pass on a tab that rendered nothing while some other
+    // surface still spoke.
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Deals/ }),
+    );
     await waitFor(() =>
       expect(
         screen.queryAllByText("Hidden — your role cannot read this"),
-      ).toHaveLength(3),
+      ).toHaveLength(4),
     );
     // And the empty state it did NOT draw: "no open deal" is a claim about
     // the account that this payload cannot support.
@@ -553,7 +606,7 @@ describe("company view — consent is per purpose", () => {
     // Consent is the roster's own detail, not the rail's glance: it lives on
     // the People tab now, where ContactRow still draws the full chip set.
     await userEvent.click(
-      await screen.findByRole("button", { name: "People" }),
+      await screen.findByRole("button", { name: /^People/ }),
     );
 
     await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
@@ -592,7 +645,7 @@ describe("company view — consent is per purpose", () => {
     );
     renderCompany();
     await userEvent.click(
-      await screen.findByRole("button", { name: "People" }),
+      await screen.findByRole("button", { name: /^People/ }),
     );
 
     await waitFor(() => expect(screen.getByText("May contact")).toBeTruthy());
@@ -778,23 +831,37 @@ describe("company view — a section still loading is not one that failed", () =
     renderCompany();
 
     await screen.findByText("Brandt Automotive GmbH");
-    // The Company 360 card holds every reading of the account, Commercial
-    // among them under its own subhead, so the card is the wrapper the
-    // skeleton and the settled figure both belong to.
-    const heading = screen.getByRole("heading", { name: /Company 360/ });
-    const panel = heading.closest("section");
-    if (!panel) {
-      throw new Error("the Company 360 card has no section wrapper");
-    }
-    await waitFor(() => expect(panel.querySelector(".skeleton")).toBeTruthy());
-    expect(within(panel).queryByText(/Could not be loaded/)).toBeNull();
+    // The day's brief is its own card, named by its own subhead, so that is
+    // the wrapper the skeleton and the settled answer both belong to. The
+    // call card above it draws nothing while the read is pending: a card
+    // stating a verdict has none to state yet.
+    // Found again after every settle rather than held: the pending read draws
+    // one card and the settled one draws the call above it, so a node captured
+    // while the skeleton was up is a different card by the time the answer
+    // arrives.
+    const brief = () => {
+      const panel = screen
+        .getByRole("heading", { name: "What needs a person today" })
+        .closest("section");
+      if (!panel) {
+        throw new Error("the day's brief has no section wrapper");
+      }
+      return panel;
+    };
+    await waitFor(() =>
+      expect(brief().querySelector(".skeleton")).toBeTruthy(),
+    );
+    expect(within(brief()).queryByText(/Could not be loaded/)).toBeNull();
 
     resolve360?.();
-    await waitFor(() => expect(panel.querySelector(".skeleton")).toBeNull());
+    await waitFor(() => expect(brief().querySelector(".skeleton")).toBeNull());
+    // The settled read on an account with nothing needing a person today —
+    // the honest answer the brief gives once it has actually read the account,
+    // never the failure text a still-loading read would be mistaken for.
     expect(
-      within(panel).getByText("No open deal on this account."),
+      within(brief()).getByText("Nothing here needs you today."),
     ).toBeTruthy();
-    expect(within(panel).queryByText(/Could not be loaded/)).toBeNull();
+    expect(within(brief()).queryByText(/Could not be loaded/)).toBeNull();
   });
 });
 
@@ -828,7 +895,9 @@ describe("company view — a failed read is not an empty account", () => {
     stub(view({ deals: undefined }));
     renderCompany();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Deals/ }),
+    );
     const heading = await screen.findByRole("heading", { name: "Deals" });
     const deals = heading.closest("section");
     if (!deals) {
@@ -906,7 +975,9 @@ describe("company view — figures that outlive the list they sit under", () => 
     );
     renderCompany();
 
-    await userEvent.click(await screen.findByRole("button", { name: "Deals" }));
+    await userEvent.click(
+      await screen.findByRole("button", { name: /^Deals/ }),
+    );
     // No OPEN deal is true and is said. The account still won €120,000 —
     // hiding that because today's pipeline is empty loses a real fact.
     expect(
@@ -947,9 +1018,68 @@ describe("company view — the citations under a finding", () => {
     });
     stub(three60);
     renderSuggestions(three60);
+    // The chips live behind the reason the rule fired, where a reader who
+    // doubts the advice goes to check it.
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "You reached out 13 days ago and nobody has come back.",
+        ),
+      ).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByText("You reached out 13 days ago and nobody has come back."),
+    );
     // Not "activityactivityactivity": one chip that says how many.
-    await waitFor(() => expect(screen.getByText("3 activities")).toBeTruthy());
+    expect(screen.getByText("3 activities")).toBeTruthy();
     expect(screen.queryAllByText("activity")).toHaveLength(0);
+  });
+
+  // Josh's rule, and the page's own: a citation reads as the record's NAME
+  // wherever the page holds one. The server names what its writer had at hand;
+  // this account's 360 holds the rest.
+  it("names the record from the account's own roster when the citation does not", async () => {
+    const three60 = view({
+      people: {
+        data: [
+          {
+            person_id: "p-9",
+            full_name: "Frédéric de Gombert",
+            deal_roles: [],
+            consent: {},
+            strength: {
+              score: 0,
+              bucket: "dormant" as const,
+              factors: {
+                recency: 0,
+                frequency: 0,
+                reciprocity: 0,
+                direction: 0,
+              },
+            },
+          },
+        ],
+        page: { has_more: false },
+      },
+      suggestions: [suggestion([{ entity_type: "person", entity_id: "p-9" }])],
+    });
+    stub(three60);
+    renderSuggestions(three60);
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "You reached out 13 days ago and nobody has come back.",
+        ),
+      ).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByText("You reached out 13 days ago and nobody has come back."),
+    );
+
+    expect(
+      screen.getByRole("button", { name: "Frédéric de Gombert" }),
+    ).toBeTruthy();
+    expect(screen.queryByText("contact")).toBeNull();
   });
 
   it("counts one record cited twice as one source", async () => {
@@ -963,7 +1093,17 @@ describe("company view — the citations under a finding", () => {
     });
     stub(three60);
     renderSuggestions(three60);
-    await waitFor(() => expect(screen.getByText("activity")).toBeTruthy());
+    await waitFor(() =>
+      expect(
+        screen.getByText(
+          "You reached out 13 days ago and nobody has come back.",
+        ),
+      ).toBeTruthy(),
+    );
+    await userEvent.click(
+      screen.getByText("You reached out 13 days ago and nobody has come back."),
+    );
+    expect(screen.getByText("activity")).toBeTruthy();
     expect(screen.queryByText("2 activities")).toBeNull();
   });
 
@@ -1226,7 +1366,7 @@ describe("company view — naming the buying committee", () => {
     // Set role stays on the People tab's own roster now: the rail's glance
     // draws no write verbs.
     await userEvent.click(
-      await screen.findByRole("button", { name: "People" }),
+      await screen.findByRole("button", { name: /^People/ }),
     );
 
     const set = await screen.findByRole("button", { name: "Set role" });
@@ -1278,7 +1418,7 @@ describe("company view — naming the buying committee", () => {
     );
     renderCompany();
     await userEvent.click(
-      await screen.findByRole("button", { name: "People" }),
+      await screen.findByRole("button", { name: /^People/ }),
     );
 
     await screen.findByRole("link", { name: "Christian Hagemeyer" });
@@ -1325,7 +1465,7 @@ describe("company view — a buying role names the deal it is on", () => {
     // The stakeholder-role badge is ContactRow's, drawn on the People tab's
     // own roster; the rail's glance no longer carries it.
     await userEvent.click(
-      await screen.findByRole("button", { name: "People" }),
+      await screen.findByRole("button", { name: /^People/ }),
     );
 
     await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
@@ -1355,7 +1495,7 @@ describe("company view — a buying role names the deal it is on", () => {
     );
     renderCompany();
     await userEvent.click(
-      await screen.findByRole("button", { name: "People" }),
+      await screen.findByRole("button", { name: /^People/ }),
     );
 
     await waitFor(() => expect(screen.getByText("Dana Buyer")).toBeTruthy());
@@ -1392,7 +1532,7 @@ describe("company view — a recorded role reaches the screen", () => {
     const fetched = stub(withOneOpenDeal);
     renderCompany();
     await userEvent.click(
-      await screen.findByRole("button", { name: "People" }),
+      await screen.findByRole("button", { name: /^People/ }),
     );
 
     await userEvent.click(
@@ -1476,7 +1616,7 @@ it("does not offer a role the contact already holds on that deal", async () => {
     }),
   );
   renderCompany();
-  await userEvent.click(await screen.findByRole("button", { name: "People" }));
+  await userEvent.click(await screen.findByRole("button", { name: /^People/ }));
 
   await userEvent.click(
     await screen.findByRole("button", { name: "Set role" }),
@@ -1500,10 +1640,10 @@ describe("company view — Partner is not a permanent tab", () => {
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
-    // Overview, People and History belong to every account. Partner is a form
+    // 360, People and History belong to every account. Partner is a form
     // about a commercial arrangement almost none of them have.
     expect(screen.getByRole("button", { name: "Overview" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "People" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: /^People/ })).toBeTruthy();
     expect(screen.getByRole("button", { name: "History" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Partner" })).toBeNull();
   });
@@ -1572,7 +1712,7 @@ describe("company view — the visit baseline", () => {
 });
 
 describe("company view — where the account stands, and what it is to us", () => {
-  it("shows where the account stands and every relationship type, as separate things", async () => {
+  it("shows where the account stands, and the types it does not already say", async () => {
     // Not "partner": that type also raises the Partner tab, and the badge and
     // the tab would then share a label, which tells the test nothing.
     // The SAME override goes into both reads the page makes — the composite
@@ -1605,7 +1745,14 @@ describe("company view — where the account stands, and what it is to us", () =
     for (const control of controls) {
       expect(control.textContent).toContain("Former customer");
     }
-    expect(screen.getByText("Customer")).toBeTruthy();
+    // A type the lifecycle already speaks for is NOT drawn beside it. This
+    // account is a former customer and still carries the `customer` type,
+    // because that is what it was — printed together they read as "Former
+    // customer" and "Customer" on one line, which is not two facts but one
+    // fact and its own contradiction.
+    expect(screen.queryByText("Customer")).toBeNull();
+    // Supplier survives: the lifecycle has nothing to say about it, so it is
+    // a second fact rather than a second tense of the first.
     expect(screen.getByText("Supplier")).toBeTruthy();
   });
 
@@ -1872,9 +2019,11 @@ describe("company view — the KPI row never invents a figure", () => {
   });
 
   // §4.2 gives customers and prospects different questions. A customer's page
-  // is asked how the relationship stands; a prospect's is asked when the deal
-  // lands. Showing one set to both makes half the row noise.
-  it("asks a prospect when the deal closes, and a customer how it is going", async () => {
+  // is asked how it is going with them; a prospect's money card says it has
+  // never been billed rather than borrowing a customer's figure. Both rows
+  // still carry the account's own standing — relationship and health — which
+  // is not a question the lifecycle gets to withhold.
+  it("reads never billed on a prospect, and the money itself on a customer", async () => {
     stub(
       view({
         state_strip: {
@@ -1886,7 +2035,6 @@ describe("company view — the KPI row never invents a figure", () => {
             converted_count: 0,
             open_pipeline_minor_base: 100000,
             base_currency: "EUR",
-            next_close_on: "2026-09-30",
           },
         },
       }),
@@ -1895,13 +2043,9 @@ describe("company view — the KPI row never invents a figure", () => {
     let strip = await screen.findByRole("region", {
       name: "Where this account stands",
     });
-    expect(within(strip).getByText("Expected close")).toBeTruthy();
-    // The money reading is the slot expected close takes the place of, so it is
-    // the absence that proves the swap. Relationship and health are on BOTH
-    // rows — a prospect is not asked to give up knowing how the relationship
-    // stands — so their presence proves nothing about the lifecycle.
-    expect(within(strip).queryByText("Net invoiced · 12 mo")).toBeNull();
-    expect(within(strip).queryByText("Finance")).toBeNull();
+    expect(within(strip).getByText("Not a customer yet")).toBeTruthy();
+    // Relationship and health are on BOTH rows — a prospect is not asked to
+    // give up knowing how the relationship stands.
     expect(within(strip).getByText("Relationship")).toBeTruthy();
 
     cleanup();
@@ -1917,7 +2061,6 @@ describe("company view — the KPI row never invents a figure", () => {
             converted_count: 0,
             open_pipeline_minor_base: 100000,
             base_currency: "EUR",
-            next_close_on: "2026-09-30",
           },
         },
       }),
@@ -1928,7 +2071,7 @@ describe("company view — the KPI row never invents a figure", () => {
     });
     expect(within(strip).getByText("Relationship")).toBeTruthy();
     expect(within(strip).getByText("Gone quiet")).toBeTruthy();
-    expect(within(strip).queryByText("Expected close")).toBeNull();
+    expect(within(strip).queryByText("Not a customer yet")).toBeNull();
   });
 });
 
@@ -1967,7 +2110,6 @@ describe("company view — the state strip", () => {
     const strip = screen.getByRole("region", {
       name: "Where this account stands",
     });
-    expect(within(strip).getByText("Former customer")).toBeTruthy();
     expect(within(strip).getByText("2 open")).toBeTruthy();
     expect(strip.textContent).toContain("1 stalled");
     // Whose move it is reads the SAME `engagement` field, now in the daily
@@ -2030,7 +2172,7 @@ describe("company view — advice you can act on", () => {
     renderSuggestions(three60);
     await screen.findByText(/nobody has come back/);
 
-    expect(screen.getByRole("button", { name: "Draft a reply" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Create draft" })).toBeTruthy();
     // The second rule named no action, so it advises without a control. A
     // button that does nothing teaches the reader to stop pressing them.
     expect(
@@ -2124,7 +2266,7 @@ describe("company view — the account's own tabs", () => {
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
-    await userEvent.click(screen.getByRole("button", { name: "People" }));
+    await userEvent.click(screen.getByRole("button", { name: /^People/ }));
     // ONCE. The tab is the roster in full, and the rail's summary of it stands
     // down while the tab is open — the same names twice, side by side, is a
     // list a reader has to reconcile with itself.
@@ -2138,7 +2280,7 @@ describe("company view — the account's own tabs", () => {
 
     // An account with no partner programme still gets all four: Partner is
     // the only conditional tab.
-    for (const name of ["Overview", "People", "History", "Documents"]) {
+    for (const name of ["Overview", /^People/, "History", "Documents"]) {
       expect(screen.getByRole("button", { name })).toBeTruthy();
     }
     expect(screen.queryByRole("button", { name: "Partner" })).toBeNull();
@@ -2205,7 +2347,7 @@ describe("company view — the way in to one contact", () => {
     // Route in stays on the People tab's own roster; the rail's glance draws
     // no way to ask who here already talks to a contact.
     await userEvent.click(
-      await screen.findByRole("button", { name: "People" }),
+      await screen.findByRole("button", { name: /^People/ }),
     );
     await userEvent.click(
       screen.getAllByRole("button", { name: "Route in" })[0],
@@ -2443,7 +2585,7 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     await strip();
-    expect((await screen.findAllByText(/186,420/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/186\.4k/)).length).toBeGreaterThan(0);
     expect(
       (await screen.findAllByText(/Last synced a while ago/)).length,
     ).toBeGreaterThan(0);
@@ -2460,7 +2602,7 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     await strip();
-    expect((await screen.findAllByText(/186,420/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/186\.4k/)).length).toBeGreaterThan(0);
     expect(
       (await screen.findAllByText(/Last sync failed/)).length,
     ).toBeGreaterThan(0);
@@ -2490,7 +2632,7 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     await strip();
-    expect((await screen.findAllByText(/186,420/)).length).toBeGreaterThan(0);
+    expect((await screen.findAllByText(/186\.4k/)).length).toBeGreaterThan(0);
     expect((await screen.findAllByText("datev")).length).toBeGreaterThan(0);
   });
 });
@@ -2551,9 +2693,9 @@ describe("the money slot says its reason once and borrows no figure", () => {
 
   // The team lead's two mandated shapes: a customer whose finance connection
   // cannot answer, and one whose connection can. Both must still carry the
-  // account's own standing (stage, pipeline, relationship, health) — the
-  // defect this whole suite exists for was the standing readings disappearing
-  // behind the money, not the money itself.
+  // account's own standing (pipeline, relationship, health) — the defect this
+  // whole suite exists for was the standing readings disappearing behind the
+  // money, not the money itself.
   // A relationship dimension and a live reply balance are enough to draw
   // both HealthStat ("Relationship") and HealthSummaryStat ("Health") with real
   // verdicts rather than their unassessed readings, which is what makes the
@@ -2592,14 +2734,16 @@ describe("the money slot says its reason once and borrows no figure", () => {
       ).toBe(1),
     );
 
-    expect(within(region).getByText("Stage")).toBeTruthy();
     expect(within(region).getByText("Open pipeline")).toBeTruthy();
-    expect(within(region).getByText("Relationship")).toBeTruthy();
+    // The card's own label rather than any match: the health verdict's basis
+    // disclosure names "Relationship" a second time as one of its dimensions.
+    expect(
+      within(region).getByText("Relationship", {
+        selector: ".stat-card-label",
+      }),
+    ).toBeTruthy();
     expect(within(region).getByText("Health")).toBeTruthy();
     expect(within(region).getByText("Finance")).toBeTruthy();
-    // A prospect's question, not a customer's: there is already a money
-    // reading answering what is coming from them.
-    expect(within(region).queryByText("Expected close")).toBeNull();
   });
 
   it("shows the real figure beside the same standing readings", async () => {
@@ -2615,9 +2759,14 @@ describe("the money slot says its reason once and borrows no figure", () => {
     const region = await strip();
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
-    expect(within(region).getByText("Stage")).toBeTruthy();
     expect(within(region).getByText("Open pipeline")).toBeTruthy();
-    expect(within(region).getByText("Relationship")).toBeTruthy();
+    // The card's own label rather than any match: the health verdict's basis
+    // disclosure names "Relationship" a second time as one of its dimensions.
+    expect(
+      within(region).getByText("Relationship", {
+        selector: ".stat-card-label",
+      }),
+    ).toBeTruthy();
     expect(within(region).getByText("Health")).toBeTruthy();
     expect(within(region).getByText("Net invoiced · 12 mo")).toBeTruthy();
     expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();

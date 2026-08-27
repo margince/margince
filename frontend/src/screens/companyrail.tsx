@@ -3,28 +3,24 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
 import { routeHash } from "../app/router";
-import { Avatar, Badge, Disclosure } from "../design-system/atoms";
+import { Avatar, Button, Disclosure } from "../design-system/atoms";
 import { AvatarStack } from "../design-system/avatarstack";
 import { EvidenceMark } from "../design-system/evidencemark";
 import { Panel, PanelBody, PanelRow } from "../design-system/panel";
-import { Meter } from "../design-system/readings";
 import {
   type SectionState,
   SurfaceState,
   sectionState,
 } from "../design-system/surfacestate";
-import { useTruncationTooltip } from "../design-system/tooltip";
-import { formatDate, formatNumber } from "../format/format";
-import { useLocale, usePlural, useT } from "../i18n";
-import { problemCodeOf, throwProblem } from "./common";
-import { worstOf } from "./company360";
 import {
-  HEALTH_DIMENSION_LABEL,
-  HEALTH_RANK,
-  HEALTH_RATING_LABEL,
-  type HealthRating,
-  usePaymentHealth,
-} from "./companylookups";
+  formatDate,
+  formatMoneyOrAbsent,
+  formatNumber,
+} from "../format/format";
+import { useLocale, useT } from "../i18n";
+import { problemCodeOf, throwProblem } from "./common";
+import { NewDealAction } from "./companyactions";
+import { useCompanyReadOnlyReason } from "./companyheader";
 import { DetailsGrid } from "./companyraildetails";
 import { SectionSummary, sectionAnswered } from "./companyrailshared";
 import { TagsSection } from "./companyrailtags";
@@ -42,16 +38,17 @@ import "./company360.css";
 // so it takes the wider of the two rail shares (page-zones-rail: 3fr/7fr)
 // rather than the narrower `aside` share a right-hand column would get.
 //
-// Drawn as ONE panel, a details grid at the top then a collapsible section
-// per governed 360 slice, rather than the stack of separate cards the page
-// used to draw: a hairline between two facts about the same account reads
-// as one story with headings, where a gap between two cards reads as two
-// stories that happen to sit beside each other.
+// Drawn as SIX separate panels, each answering one question about the
+// account — its open deals, its people, its facts, its lists and tags — in
+// the order a reader works down the column, rather than the disclosures the
+// rail used to fold into one card: a hairline inside a panel reads as one
+// story about that panel's own subject, and a panel's own edge is what tells
+// a reader they have moved on to a different one.
 //
-// Every section here is ALSO a slice of the one composite read the page
-// already made, except the signals, which run their own query exactly as
-// they did before: signals are a separately governed surface, not a 360
-// section.
+// Health moved to the readings row above the tabs, so it is not repeated
+// here — two copies of the same verdict is a value the reader has to
+// reconcile. "Our team on this account" and "Leads from this company" are
+// not drawn: neither has a field or an endpoint behind it yet.
 //
 // The rail is not rendered while the composer is open. That is the page's
 // decision rather than this component's: the drawer opens over the page as
@@ -61,6 +58,7 @@ import "./company360.css";
 type Organization = components["schemas"]["Organization"];
 type Organization360 = components["schemas"]["Organization360"];
 type Contact = components["schemas"]["Organization360Contact"];
+type Deal = components["schemas"]["Organization360Deal"];
 type Signal = components["schemas"]["Signal"];
 
 export function CompanyRail({
@@ -70,6 +68,7 @@ export function CompanyRail({
   loading,
   withPeople,
   composerOpen,
+  onTab,
 }: Readonly<{
   orgId: string;
   // The page's own resolved record, read regardless of how the composite
@@ -79,7 +78,7 @@ export function CompanyRail({
   org?: Organization;
   view?: Organization360;
   // The composite read `view` comes off is still in flight. Threaded to the
-  // sections that read `view` straight (Health, People, Tags) so their
+  // sections that read `view` straight (Deals, People, Tags) so their
   // `sectionState` calls can tell "still loading" apart from "the read
   // failed" — both hand a section an undefined `view`, and without this flag
   // every one of them reads the failed state for as long as the read runs,
@@ -91,6 +90,10 @@ export function CompanyRail({
   // rather than narrowing: squeezed to a third of its width it is a column of
   // broken cards, and no mockup draws the two side by side.
   composerOpen: boolean;
+  // Where each panel's header link goes: Deals/People switch the record's own
+  // tab strip, Details opens Profile. One callback rather than three, because
+  // every use is the same verb aimed at a different tab.
+  onTab: (tab: "deals" | "people" | "profile") => void;
 }>) {
   const t = useT();
   if (composerOpen) {
@@ -101,179 +104,168 @@ export function CompanyRail({
     // second labelled region inside it would give a reader two names for one
     // column.
     <div className="co-rail">
-      <Panel title={t("co.details.title")}>
+      <DealsSection view={view} loading={loading} onTab={onTab} />
+      {withPeople && (
+        <PeopleSection view={view} loading={loading} onTab={onTab} />
+      )}
+      <Panel
+        title={t("co.details.title")}
+        titleAction={
+          // "All fields", not "Profile": the Profile TAB carries that name a
+          // few pixels away, and two controls with one accessible name in one
+          // view is a dead end for anyone moving by name rather than by sight.
+          // It also reads as the sibling cards' "All N" does — this card shows
+          // a few of the account's fields, the tab shows every one.
+          <Button small variant="ghost" onClick={() => onTab("profile")}>
+            {t("co.rail.details.all")}
+          </Button>
+        }
+      >
         <PanelBody>
           <DetailsGrid organization={view?.organization ?? org} />
         </PanelBody>
-        <HealthSection view={view} orgId={orgId} loading={loading} />
-        {withPeople && <PeopleSection view={view} loading={loading} />}
-        <SignalsSection orgId={orgId} />
-        <TagsSection view={view} orgId={orgId} loading={loading} />
       </Panel>
-    </div>
-  );
-}
-
-// The meter's tone follows the same low-is-bad reading the badges elsewhere
-// on this page use: "strong" is left untoned (flat) so the gradient does not
-// paint a good reading as a warning creeping in.
-const HEALTH_METER_TONE: Partial<Record<HealthRating, "warn" | "danger">> = {
-  at_risk: "danger",
-  good: "warn",
-};
-
-const HEALTH_BADGE_TONE: Record<HealthRating, "danger" | "warn" | "success"> = {
-  at_risk: "danger",
-  good: "warn",
-  strong: "success",
-};
-
-// One named dimension: the label, the sentence the rating was read from, and
-// the rating as a bar under both. The reason is server-written prose of no
-// bounded length in a rail this narrow, so it truncates and its tooltip carries
-// the rest — which is also why this is a component and not markup inlined in
-// the map below: the tooltip is a hook, and there is one per dimension.
-function HealthMeter({
-  label,
-  rating,
-  reason,
-}: Readonly<{ label: string; rating: HealthRating; reason?: string }>) {
-  const tip = useTruncationTooltip<HTMLSpanElement>(reason ?? "");
-  return (
-    <div className="co-health-meter">
-      <span className="co-health-meter-head">
-        <span className="t-caption">{label}</span>
-        <span className="co-health-meter-reason" ref={tip.ref} {...tip.trigger}>
-          {reason}
-          {tip.tip}
-        </span>
-      </span>
-      {/* dense: the bar reads as this label's own bar, so the dimension is two
-          lines tall rather than three. */}
-      <Meter
-        value={HEALTH_RANK.indexOf(rating) + 1}
-        max={HEALTH_RANK.length}
-        tone={HEALTH_METER_TONE[rating]}
-        flat={!(rating in HEALTH_METER_TONE)}
-        dense
-        label={label}
-      />
+      <TagsSection view={view} orgId={orgId} loading={loading} />
     </div>
   );
 }
 
 /**
- * HealthSection is the account's health as one verdict over three named
- * dimensions, each drawn as a meter rather than the badge-and-sentence row
- * HealthCard used: the shape this rail's other sections do not have, since
- * a rating is not a count.
+ * DealsSection is the account's open pipeline: one row per deal, its stage
+ * and expected close beside it, the deal's own reason for needing attention
+ * ahead of everything else about it. `view.deals.data` is already open-only
+ * (the 360's own contract — closed deals are reported through `won_lifetime`
+ * and `lost_count`, never listed), so this draws every row it is handed
+ * rather than filtering on `status` a second time.
  */
-function HealthSection({
+function DealsSection({
   view,
-  orgId,
   loading,
-}: Readonly<{ view?: Organization360; orgId?: string; loading: boolean }>) {
-  const plural = usePlural();
+  onTab,
+}: Readonly<{
+  view?: Organization360;
+  loading: boolean;
+  onTab: (tab: "deals") => void;
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  const health = view?.health;
-  const payment = usePaymentHealth(orgId);
-  const { overall, rated } = worstOf([
-    health?.relationship,
-    health?.commercial,
-    payment,
-  ]);
-  const lines: string[] = [];
-  if (health?.days_since_last_inbound != null) {
-    lines.push(
-      t("co.health.sinceInbound", {
-        days: formatNumber(health.days_since_last_inbound, locale),
-      }),
-    );
-  }
-  if (health?.reply_balance != null) {
-    lines.push(
-      t("co.health.replyBalance", {
-        percent: formatNumber(Math.round(health.reply_balance * 100), locale),
-      }),
-    );
-  }
-  if (health?.active_contacts != null) {
-    lines.push(
-      plural("co.health.activeContacts", health.active_contacts, {
-        count: formatNumber(health.active_contacts, locale),
-      }),
-    );
-  }
-  if (health?.open_commitments != null && health.open_commitments > 0) {
-    lines.push(
-      plural("co.health.openCommitments", health.open_commitments, {
-        count: formatNumber(health.open_commitments, locale),
-      }),
-    );
-  }
+  const deals = view?.deals;
+  const rows = deals?.data ?? [];
   const state = sectionState(
     view,
-    "health",
-    Boolean(health),
-    lines.length + rated,
+    "deals",
+    Boolean(deals),
+    rows.length,
     loading,
   );
-  const dimensions = [
-    ["relationship", health?.relationship],
-    ["commercial", health?.commercial],
-    ["payment", payment],
-  ] as const;
+  const answered = sectionAnswered(state);
+  // Closed history vs. never having had a deal: the two empty accounts read
+  // differently — one has simply not started, the other has already been
+  // through a cycle and stands between two of them.
+  const hasClosedHistory = Boolean(
+    deals &&
+      ((deals.won_lifetime?.amount_minor ?? 0) > 0 || deals.lost_count > 0),
+  );
   return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={
-        <span className="co-sect-summary">
-          {t("co.health.title")}
-          {overall && (
-            <Badge tone={HEALTH_BADGE_TONE[overall]}>
-              {t(HEALTH_RATING_LABEL[overall])}
-            </Badge>
-          )}
-        </span>
+    <Panel
+      title={t("co.rail.deals.title")}
+      titleAction={
+        answered ? (
+          <Button small variant="ghost" onClick={() => onTab("deals")}>
+            {rows.length > 0
+              ? t("co.rail.all", { count: formatNumber(rows.length, locale) })
+              : t("co.rail.add")}
+          </Button>
+        ) : undefined
       }
     >
       {state === "ready" ? (
-        <PanelBody>
-          {dimensions.map(([name, dimension]) =>
-            dimension?.rating ? (
-              <HealthMeter
-                key={name}
-                label={t(HEALTH_DIMENSION_LABEL[name])}
-                rating={dimension.rating}
-                reason={dimension.reason}
-              />
-            ) : null,
-          )}
-          {lines.length > 0 && (
-            <div className="co-health-lines">
-              {lines.map((line) => (
-                <p className="co-row-meta" key={line}>
-                  {line}
-                </p>
-              ))}
-            </div>
-          )}
-          {health?.single_threaded && (
-            <p className="co-row-meta">
-              <Badge tone="warn">{t("co.health.singleThreaded")}</Badge>
-            </p>
-          )}
-        </PanelBody>
+        rows.map((deal) => <DealRailRow key={deal.deal_id} deal={deal} />)
       ) : (
         <PanelBody>
-          <SurfaceState state={state} emptyLabel={t("co.health.empty")}>
+          <SurfaceState
+            state={state}
+            emptyLabel={
+              hasClosedHistory
+                ? t("co.rail.deals.emptyClosedOnly")
+                : t("co.rail.deals.empty")
+            }
+          >
             {null}
           </SurfaceState>
+          {state === "empty" && !hasClosedHistory && view?.organization && (
+            <DealsCreateVerb organization={view.organization} />
+          )}
         </PanelBody>
       )}
-    </Disclosure>
+    </Panel>
+  );
+}
+
+// The create-deal verb, gated on writability the same way TagsSection's own
+// add-tag/add-to-list verbs are: `useCompanyReadOnlyReason` needs a resolved
+// Organization, so this is its own component mounted only once one exists,
+// rather than a conditional hook call inside DealsSection itself.
+function DealsCreateVerb({
+  organization,
+}: Readonly<{ organization: Organization }>) {
+  const readOnlyReason = useCompanyReadOnlyReason(organization);
+  if (readOnlyReason) {
+    return null;
+  }
+  return (
+    <div className="co-card-actions">
+      <NewDealAction
+        orgId={organization.id}
+        orgName={organization.display_name}
+      />
+    </div>
+  );
+}
+
+// One flag a deal can carry ahead of its stage and close date: an overdue
+// task beats a stall, because a stall is the absence of a reason and an
+// overdue task IS one — the same precedence the work list draws its own
+// attention line by.
+function dealFlag(deal: Deal, t: ReturnType<typeof useT>): string | undefined {
+  if (deal.attention) {
+    return deal.attention.kind === "overdue_task"
+      ? t("co.rail.deals.attentionOverdue")
+      : t("co.rail.deals.attentionCommitment");
+  }
+  return deal.stalled ? t("deal.stalled") : undefined;
+}
+
+function DealRailRow({ deal }: Readonly<{ deal: Deal }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const closes = deal.expected_close_date
+    ? t("co.work.closes", {
+        date: formatDate(deal.expected_close_date, locale, recordZone),
+      })
+    : t("co.rail.deals.noCloseDate");
+  const flag = dealFlag(deal, t);
+  const note = [flag, deal.stage_name ?? t("co.deals.noStage"), closes]
+    .filter(Boolean)
+    .join(" · ");
+  return (
+    <PanelRow className="co-row">
+      <a
+        className="co-rowlink co-rowcover"
+        href={routeHash({ screen: "deals", id: deal.deal_id })}
+      >
+        {deal.name}
+      </a>
+      <span className="t-mono">
+        {formatMoneyOrAbsent(
+          deal.amount?.amount_minor,
+          deal.amount?.currency,
+          locale,
+        )}
+      </span>
+      <p className="co-row-meta">{note}</p>
+    </PanelRow>
   );
 }
 
@@ -286,8 +278,14 @@ function HealthSection({
 function PeopleSection({
   view,
   loading,
-}: Readonly<{ view?: Organization360; loading: boolean }>) {
+  onTab,
+}: Readonly<{
+  view?: Organization360;
+  loading: boolean;
+  onTab: (tab: "people") => void;
+}>) {
   const t = useT();
+  const { locale } = useLocale();
   const contacts = [...(view?.people?.data ?? [])].sort(byReach);
   const state = sectionState(
     view,
@@ -296,15 +294,20 @@ function PeopleSection({
     contacts.length,
     loading,
   );
+  const answered = sectionAnswered(state);
   return (
-    <Disclosure
-      className="co-sect"
-      open
-      summary={
-        <SectionSummary
-          title={t("co.people.title")}
-          count={sectionAnswered(state) ? contacts.length : undefined}
-        />
+    <Panel
+      title={t("co.rail.people.title")}
+      titleAction={
+        answered ? (
+          <Button small variant="ghost" onClick={() => onTab("people")}>
+            {contacts.length > 0
+              ? t("co.rail.all", {
+                  count: formatNumber(contacts.length, locale),
+                })
+              : t("co.rail.add")}
+          </Button>
+        ) : undefined
       }
     >
       {state === "ready" ? (
@@ -315,12 +318,19 @@ function PeopleSection({
         ))
       ) : (
         <PanelBody>
-          <SurfaceState state={state} emptyLabel={t("co.people.empty")}>
+          <SurfaceState state={state} emptyLabel={t("co.rail.people.empty")}>
             {null}
           </SurfaceState>
+          {state === "empty" && (
+            <div className="co-card-actions">
+              <Button small variant="ghost" onClick={() => onTab("people")}>
+                {t("co.rail.people.add")}
+              </Button>
+            </div>
+          )}
         </PanelBody>
       )}
-    </Disclosure>
+    </Panel>
   );
 }
 
@@ -382,8 +392,13 @@ function PersonRow({ contact }: Readonly<{ contact: Contact }>) {
  * withheld/failed handling SignalsCard used. Signals are a separately
  * governed surface, not a 360 section, so this runs its own query rather
  * than reading a slice of `view`.
+ *
+ * No longer mounted by CompanyRail — signals moved out of the rail to sit
+ * beside the account's other readings — but exported rather than deleted so
+ * that new home can mount it without a second implementation of the same
+ * read.
  */
-function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
+export function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
@@ -460,6 +475,7 @@ function SignalsSection({ orgId }: Readonly<{ orgId: string }>) {
           <SurfaceState
             state={state}
             emptyLabel={t("co.signals.empty")}
+            emptyDetail={t("co.signals.emptyDetail")}
             detail={
               state === "failed" ? { onRetry: () => void query.refetch() } : {}
             }

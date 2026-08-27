@@ -12,6 +12,7 @@ import { problemMessageOf, QueryStates, throwProblem } from "./common";
 import { useDealSignals } from "./dealsignals";
 import { PersonMeetingBrief } from "./persondrawers";
 import {
+  BriefTitle,
   SentenceList,
   SignalStrip,
   type StandingTone,
@@ -86,7 +87,10 @@ export function useDealStatusCard(dealId: string) {
   });
 }
 
-export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
+export function DealStatusCardPanel({
+  dealId,
+  dealName,
+}: Readonly<{ dealId: string; dealName: string }>) {
   const t = useT();
   const queryClient = useQueryClient();
   const status = useDealStatusCard(dealId);
@@ -105,7 +109,10 @@ export function DealStatusCardPanel({ dealId }: Readonly<{ dealId: string }>) {
       queryClient.setQueryData(["deal-status", dealId], data),
   });
   return (
-    <Panel title={t("deal360.title")} sub={t("deal360.sub")} tone="accent">
+    // The head every written reading carries: a machine read this record, and
+    // here is the record it read. The old title named the CARD ("Deal360") and
+    // left the claim to a subtitle, which is the one line a scanner skips.
+    <Panel title={<BriefTitle name={dealName} />} tone="ai" className="co-lead">
       <QueryStates query={status} pendingLines={6}>
         {status.data?.story ? (
           <Briefing

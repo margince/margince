@@ -76,6 +76,7 @@ export function PersonTimelineTab({
   onBriefMeeting?: (activityId: string) => void;
 }>) {
   const t = useT();
+  const { locale } = useLocale();
   const queryClient = useQueryClient();
   const recordZone = useRecordZone();
   const [filter, setFilter] = useChronologyFilter(personId);
@@ -90,9 +91,19 @@ export function PersonTimelineTab({
     kind: "person",
     recordId: personId,
     filter,
+    // A narrowed read is a question about what was said, so the record's own
+    // edits stand down: they are not meetings, and not what the reader asked.
+    narrowed: hasTimelineFilters(filters),
     activities: timeline.activities,
     activitiesHaveMore: timeline.hasNextPage,
     loadMore: timeline,
+    // No name resolver yet: a uuid in a change row still renders untouched
+    // rather than guessed at, which is the correct fallback while nothing
+    // here resolves people/org ids to names.
+    // What a stored value needs to be read as what it MEANS: this record holds
+    // no money of its own, so the currency is absent and a minor-unit column
+    // says so rather than printing a bare integer.
+    values: { currency: null, locale, zone: recordZone },
     renderActions: (activity) => (
       <TimelineActions
         activity={activity}
@@ -160,10 +171,24 @@ export function PersonTimelineTab({
                 : { onRetry: chronology.changes.refetch }
             }
           >
-            <GroupedTimelineList
-              groups={groupChronology(chronology.entries, timeline.hasNextPage)}
-              zone={recordZone}
-            />
+            <>
+              {/* Half the chronology is missing and the other half is right
+                  here. Taking the exchanges away because the change feed fell
+                  over would serve nobody, and leaving the reader to take a
+                  partial record for a complete one is the failure this line
+                  exists to prevent. Above the rows, because a caveat under a
+                  list is read after the list it qualifies. */}
+              {chronology.changesUnread && (
+                <p className="t-caption">{t("state.failed")}</p>
+              )}
+              <GroupedTimelineList
+                groups={groupChronology(
+                  chronology.entries,
+                  timeline.hasNextPage,
+                )}
+                zone={recordZone}
+              />
+            </>
           </SurfaceState>
         )}
       </PanelBody>
@@ -200,11 +225,32 @@ function timelineState(
         );
     return base === "ready" && chronology.truncated ? "partial" : base;
   }
+  // The whole chronology holds the activities half, so a grant that withheld
+  // that section withholds part of THIS cut too — and a withheld half drawn as
+  // an empty list is the one thing a section may never do. Answered BEFORE the
+  // changes read lands, because the withholding is already known: waiting on a
+  // second feed to say what the first one already said draws a skeleton over a
+  // boundary the reader could have been told about at once. Once change rows
+  // arrive it is partial rather than withheld — some of the record is here, and
+  // the rest is missing rather than absent.
+  if (
+    filter === "all" &&
+    view &&
+    (view.sections_omitted ?? []).includes("activities")
+  ) {
+    return chronology.entries.length === 0 ? "withheld" : "partial";
+  }
   if (chronology.loading) {
     return "loading";
   }
   if (chronology.failed) {
     return "failed";
+  }
+  // A capped list that says nothing reads as the whole history — a reader
+  // looking at the oldest of 25 rows would take it for the day the
+  // relationship began. True on the combined cut as much as on the narrow one.
+  if (chronology.truncated) {
+    return "partial";
   }
   return chronology.entries.length === 0 ? "empty" : "ready";
 }
