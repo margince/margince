@@ -27,9 +27,11 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -44,6 +46,11 @@ type Review struct {
 	AsOf           time.Time
 	Counts         Counts
 	Deals          []DealLine
+	// Narrative is the sentence a model wrote about the week, empty when none
+	// did. NarratedAt is what tells "no pass ran" from "a pass ran and found
+	// the week unremarkable" — the two read identically as silence otherwise.
+	Narrative  string
+	NarratedAt *time.Time
 }
 
 // Counts are the week's tallies. Every one is as-of the review's AsOf, which
@@ -125,7 +132,8 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 			       tasks_due, tasks_done, tasks_carried_over,
 			       deals_moved, deals_won, deals_lost,
 			       proposals_accepted, proposals_rejected,
-			       brief_items_acted, brief_items_dismissed
+			       brief_items_acted, brief_items_dismissed,
+			       coalesce(narrative, ''), narrated_at
 			  FROM weekly_review
 			 WHERE user_id = $1 AND ($2::date IS NULL OR local_week_start = $2)
 			 ORDER BY local_week_start DESC
@@ -136,7 +144,8 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 			&c.TasksDue, &c.TasksDone, &c.TasksCarriedOver,
 			&c.DealsMoved, &c.DealsWon, &c.DealsLost,
 			&c.ProposalsAccepted, &c.ProposalsRejected,
-			&c.BriefItemsActed, &c.BriefItemsDismissed); {
+			&c.BriefItemsActed, &c.BriefItemsDismissed,
+			&review.Narrative, &review.NarratedAt); {
 		case errors.Is(err, pgx.ErrNoRows):
 			return apperrors.ErrNotFound
 		case err != nil:
@@ -251,4 +260,68 @@ func insertReview(ctx context.Context, tx pgx.Tx, review Review) (ids.UUID, bool
 		return ids.Nil, false, err
 	}
 	return id, true, nil
+}
+
+// Narrate writes the week's sentence onto an existing review.
+//
+// A SECOND WRITE onto a row the deterministic pass already committed, never
+// part of assembling it. The counts and the deal lines are the review; this is
+// what a colleague would say about them, and it must be able to fail without
+// costing the rep any of it.
+//
+// Idempotent by replacement: a later pass over the same week is a correction,
+// not an addition. The stamp moves with it.
+//
+// Empty prose stores as NULL with the stamp still written — the CHECK admits
+// that deliberately, so a pass that ran and found the week unremarkable is
+// distinguishable from one that never ran.
+func (e *Engine) Narrate(ctx context.Context, reviewID ids.UUID, sentence string, now time.Time) error {
+	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
+		return err
+	}
+	userID, err := reviewUser(ctx)
+	if err != nil {
+		return err
+	}
+	// Bounded HERE as well as in the parser, because this is the writer: a
+	// caller that reaches Narrate without going through narrative.Parse would
+	// otherwise learn the ceiling from a driver error at 06:00 on a Monday.
+	// Runes, because the column counts characters — a German sentence full of
+	// umlauts is fewer characters than bytes.
+	if n := len([]rune(sentence)); n > narrative.MaxNarrativeRunes {
+		return httperr.Validation("narrative", "too_long",
+			fmt.Sprintf("the sentence is %d characters, over the %d the column holds",
+				n, narrative.MaxNarrativeRunes))
+	}
+	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		var before *string
+		var beforeStamp *time.Time
+		// The owner check is the row scope: a review belongs to the rep whose
+		// week it was, and the id alone must not reach anybody else's.
+		row := tx.QueryRow(ctx, `
+			SELECT narrative, narrated_at FROM weekly_review
+			 WHERE id = $1 AND user_id = $2
+			 FOR UPDATE`, reviewID, userID)
+		switch err := row.Scan(&before, &beforeStamp); {
+		case errors.Is(err, pgx.ErrNoRows):
+			return apperrors.ErrNotFound
+		case err != nil:
+			return err
+		}
+
+		stamp := now.UTC()
+		var stored *string
+		if sentence != "" {
+			stored = &sentence
+		}
+		if _, err := tx.Exec(ctx,
+			`UPDATE weekly_review SET narrative = $2, narrated_at = $3 WHERE id = $1`,
+			reviewID, stored, stamp); err != nil {
+			return err
+		}
+		_, err := storekit.Audit(ctx, tx, "update", "weekly_review", reviewID,
+			map[string]any{"narrative": before, "narrated_at": beforeStamp},
+			map[string]any{"narrative": stored, "narrated_at": stamp})
+		return err
+	})
 }

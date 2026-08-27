@@ -185,6 +185,15 @@ tasks:
     company_context: none
     doc: "deal_status — the deal page's one written card: where the deal stands, what could lose it, and why the recommended move is the right one. The model reads the deal's own facts (its fields, its health factors with the sentence behind each, its timeline, its open tasks and its Deal Room conversation — all assembled under the CALLER's row scope, with a withheld row contributing its date but not its words) and writes the sentences. The VERB never moves: which action the card offers is decided by rules from records and handed to the model in recommended_move, so a reader clicking Draft the reply reaches the mail the rules picked. A missing lane, an over-budget call or a reply the grounding filter refuses degrades to the same card composed deterministically, with generated_by saying so. The card is CACHED per reader on a fingerprint of its input plus the prompt and routing versions, so a deal nobody touched costs one call ever."
 
+  weekly_review:
+    ladder: [cheap_cloud, premium]
+    execution_mode: background
+    on_budget_exhausted: queue
+    status: shipped
+    sites: [narrative]
+    company_context: none
+    doc: "weekly_review/narrative — one or two sentences over a week's own counts and deal lines, for the rep reading them on Monday. It adds nothing: every fact it may state is already in the deterministic review beside it, which is what makes the whole thing safe to lose. A rep with no lane, an exhausted budget or a provider outage reads the same counts and the same lines, and the screen says which."
+
   brief_ranking:
     ladder: [premium, cheap_cloud]
     execution_mode: background

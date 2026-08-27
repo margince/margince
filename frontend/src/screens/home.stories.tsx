@@ -17,7 +17,7 @@ import {
   report,
   singles,
 } from "./home.fixtures";
-import type { MorningBrief, MorningDigest } from "./home.queries";
+import type { MorningBrief, MorningDigest, WeeklyReview } from "./home.queries";
 import {
   installFetchStub,
   jsonResponse,
@@ -60,6 +60,10 @@ type Frame = {
   /** The nightly digest, or null for the 404 an installation answers before its
    *  first run. */
   digest?: MorningDigest | null;
+  /** The week just gone, or null for the 404 a rep sees before their first
+   *  full week. Its two null-narrative states are the ones worth a screenshot:
+   *  a week nobody narrated, and a week a pass found unremarkable. */
+  weekly?: WeeklyReview | null;
   /** What the pipeline report answers. A refusal is a state of its own. */
   pipeline?: () => Response;
   /** Extra routes a frame's own play() needs. */
@@ -77,6 +81,7 @@ function home({
   approvals,
   brief,
   digest: overnight = digest,
+  weekly = narratedWeek,
   pipeline = () => report(pipelineRows),
   extra = {},
 }: Frame) {
@@ -101,6 +106,9 @@ function home({
       },
       "GET /brief": () =>
         brief ? jsonResponse(brief) : jsonResponse(NOT_FOUND, 404),
+      "GET /weekly-reviews": () => jsonResponse({ weeks: [WEEK_START] }),
+      "GET /weekly-reviews/latest": () =>
+        weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
       "GET /digest": () =>
         overnight ? jsonResponse(overnight) : jsonResponse(NOT_FOUND, 404),
       "GET /deals": () =>
@@ -247,6 +255,59 @@ export const ConnectorUnhealthy: Story = {
 // this page fans out to five independent reads: the pipeline says the figure
 // could not be loaded — a refusal, not an absence — and the deck, the queue, the
 // digest and the quiet list are untouched beside it.
+const WEEK_START = "2026-06-29";
+
+/** A week with its sentence — the ordinary Monday. */
+const narratedWeek: WeeklyReview = {
+  id: "01a04000-0000-7000-8000-00000000000a",
+  local_week_start: WEEK_START,
+  generated_at: "2026-07-06T06:00:00Z",
+  as_of: "2026-07-06T06:00:00Z",
+  narrative: "Weber signed on Thursday; two promises slipped into this week.",
+  narrated_at: "2026-07-06T06:01:00Z",
+  counts: {
+    tasks_due: 6,
+    tasks_done: 4,
+    tasks_carried_over: 2,
+    deals_moved: 3,
+    deals_won: 1,
+    deals_lost: 1,
+    proposals_accepted: 8,
+    proposals_rejected: 2,
+    brief_items_acted: 7,
+    brief_items_dismissed: 4,
+  },
+  deals: [
+    {
+      deal_id: "01a04000-0000-7000-8000-00000000000b",
+      label: "Weber Rahmenvertrag",
+      outcome: "won",
+      occurred_at: "2026-07-02T14:00:00Z",
+    },
+  ],
+};
+
+/** The honest degrade: the week was measured and nobody narrated it. The
+ *  numbers are all there, and the panel says the sentence is missing rather
+ *  than letting the reader conclude there was nothing to say. */
+export const WeeklyWithoutItsSentence: Story = {
+  render: home({
+    approvals: [],
+    brief: ranked,
+    weekly: { ...narratedWeek, narrative: null, narrated_at: null },
+  }),
+};
+
+/** A pass that ran and found the week unremarkable. No sentence and no notice
+ *  — the stamp is what makes this different from the state above. */
+export const WeeklyQuietlyNarrated: Story = {
+  render: home({
+    approvals: [],
+    brief: ranked,
+    weekly: { ...narratedWeek, narrative: null },
+  }),
+};
+
 export const OnePanelRefused: Story = {
   render: home({
     approvals: [...singles],

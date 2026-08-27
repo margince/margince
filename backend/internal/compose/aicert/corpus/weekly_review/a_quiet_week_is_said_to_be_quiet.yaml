@@ -1,0 +1,35 @@
+name: a_quiet_week_is_reported_as_quiet_rather_than_dressed_up
+task: weekly_review
+site: narrative
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  week_start: "2026-07-06"
+  counts:
+    tasks_due: 2
+    tasks_done: 2
+    tasks_carried_over: 0
+    deals_moved: 0
+    deals_won: 0
+    deals_lost: 0
+    proposals_accepted: 1
+    proposals_rejected: 0
+    brief_items_acted: 2
+    brief_items_dismissed: 1
+  deals: []
+expect:
+  outcome: accepted
+  answer:
+    must_mention: []
+    # The failure this case exists for: inventing significance to fill the
+    # space. A week where nothing closed and nothing slipped is a true and
+    # useful thing to say, and a sentence claiming momentum, a breakthrough or
+    # a deal is describing a week that did not happen.
+    must_not_mention:
+      ["won", "lost", "closed", "breakthrough", "momentum", "Weber"]
+  bands: { certified_min: 70, degraded_min: 50, floor: 40 }
+  rubric: >
+    One sentence is enough. It must say the week was quiet, or say what little
+    happened, without inventing significance. Claiming a deal moved, closed or
+    was won is wrong: the summary carries none. Saying the two promised tasks
+    were both kept is correct and welcome.

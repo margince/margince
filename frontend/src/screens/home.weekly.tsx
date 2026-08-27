@@ -8,6 +8,7 @@ import { Panel, PanelBody } from "../design-system/panel";
 import { Select } from "../design-system/select";
 import { StatStrip } from "../design-system/statstrip";
 import { type SectionState, SurfaceState } from "../design-system/surfacestate";
+import { ProvenanceTag } from "../design-system/trust";
 import { formatDate, formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -82,6 +83,39 @@ export function WeeklySection() {
   );
 }
 
+/**
+ * The sentence about the week, above its numbers.
+ *
+ * THREE STATES, and the third is the one worth the code. A review with no
+ * sentence can mean a pass ran and found the week unremarkable, or that no pass
+ * ran at all — no model bound, an exhausted budget, a provider outage. Those
+ * read identically as silence, so `narrated_at` separates them and the panel
+ * says which.
+ *
+ * Saying nothing in the third case would be the dishonest option: the rep would
+ * read a week with no remark and conclude there was nothing to remark on, when
+ * in fact nobody looked.
+ */
+function WeeklyNarrative({ review }: Readonly<{ review: WeeklyReview }>) {
+  const t = useT();
+  if (!review.narrated_at) {
+    return (
+      <p className="home-weekly-narrative home-weekly-narrative-absent t-caption">
+        {t("home.weekly.noNarrative")}
+      </p>
+    );
+  }
+  if (!review.narrative) {
+    return null;
+  }
+  return (
+    <div className="home-weekly-narrative">
+      <ProvenanceTag provenance={{ kind: "agent" }} />
+      <p>{review.narrative}</p>
+    </div>
+  );
+}
+
 /** The outcome as a word. A lookup rather than a template key, because a
  *  template key built from wire data is an unchecked assertion: the contract's
  *  enum can grow and the interpolation would ask for a message nobody wrote. */
@@ -140,6 +174,7 @@ function WeeklyBody({
   const c = review.counts;
   return (
     <>
+      <WeeklyNarrative review={review} />
       <StatStrip testId="weekly-strip">
         <StatCard
           label={t("home.weekly.promised")}

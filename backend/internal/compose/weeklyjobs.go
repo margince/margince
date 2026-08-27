@@ -25,6 +25,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/briefs"
 	"github.com/margince/margince/backend/internal/compose/weekly"
+	"github.com/margince/margince/backend/internal/compose/weekly/narrative"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -32,6 +33,20 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// narrateBudget bounds ONE rep's sentence, and it is the deterministic half's
+// protection rather than the model's.
+//
+// A single model call is allowed 300 seconds and the lane has two rungs, so an
+// unreachable provider costs ten minutes for one rep — the whole workspace
+// job's deadline (api/jobs.yaml). The reps after them would then go unmeasured,
+// which inverts the entire design: the counts and the deal lines are the
+// review, and the sentence is a remark that must never be able to cost them.
+//
+// Forty seconds is generous for two sentences over a dozen numbers and short
+// enough that a wedged provider costs one rep their remark rather than a team
+// their retrospective.
+const narrateBudget = 40 * time.Second
 
 // reviewHour is the local hour on Monday from which a rep's week is measured.
 //
@@ -76,6 +91,11 @@ type weeklyGenerateWorkspaceWorker struct {
 	users  *identity.Service
 	now    func() time.Time
 	log    *slog.Logger
+	// narrator writes the week's sentence. NIL IS THE WIRING: a role with no
+	// weekly_review lane still measures every rep's week and still writes it —
+	// only the sentence is absent, and the screen says so rather than
+	// pretending the week was unremarkable.
+	narrator completer
 }
 
 func (w *weeklyGenerateWorkspaceWorker) Work(
@@ -148,7 +168,8 @@ func (w *weeklyGenerateWorkspaceWorker) measureFor(
 		Permissions: rbac.Permissions,
 	})
 	repCtx = principal.WithCorrelationID(repCtx, ids.NewV7())
-	if _, _, err := w.engine.AssembleFor(repCtx, now); err != nil {
+	review, created, err := w.engine.AssembleFor(repCtx, now)
+	if err != nil {
 		// A seat whose role grants no deal read has no week to measure, and
 		// that is a configuration rather than a fault: failing the job would
 		// make one such seat cost the whole workspace its retrospectives, and
@@ -160,7 +181,84 @@ func (w *weeklyGenerateWorkspaceWorker) measureFor(
 		}
 		return err
 	}
+	// The sentence, after the review is committed and never as part of it. A
+	// model that is slow, absent or wrong must not be able to cost the rep the
+	// counts and the deal lines — those are the review, and this is a remark
+	// about them.
+	//
+	// RETRIED, not written once. A review can land un-narrated for reasons that
+	// pass: the role had no lane, the budget was spent, the provider was down,
+	// the reply would not parse. Narrating only on the pass that CREATED the
+	// row would make every one of those permanent — the dispatcher ticks again
+	// within the week, finds the row already there, and never looks at it
+	// again. So a later tick narrates a week that has no stamp, and leaves one
+	// that has alone: re-narrating would rewrite a sentence the rep has read.
+	if review.NarratedAt == nil {
+		w.narrate(repCtx, review, now)
+	}
+	_ = created
 	return nil
+}
+
+// narrate asks the model for the week's sentence and stores it, or records
+// that no sentence was written.
+//
+// It returns nothing. Every failure here is a week that reads without its
+// remark, which is a complete review — so the failure is loud in the log and
+// silent to the reader, and never the job's.
+func (w *weeklyGenerateWorkspaceWorker) narrate(ctx context.Context, review weekly.Review, now time.Time) {
+	if w.narrator == nil {
+		// No lane in this role. Not an error and not worth a line every
+		// Monday: the deterministic review is the product either way.
+		return
+	}
+	in := narrative.Input{
+		WeekStart: review.LocalWeekStart.Format(time.DateOnly),
+		Counts: narrative.Counts{
+			TasksDue: review.Counts.TasksDue, TasksDone: review.Counts.TasksDone,
+			TasksCarriedOver: review.Counts.TasksCarriedOver,
+			DealsMoved:       review.Counts.DealsMoved,
+			DealsWon:         review.Counts.DealsWon, DealsLost: review.Counts.DealsLost,
+			ProposalsAccepted:   review.Counts.ProposalsAccepted,
+			ProposalsRejected:   review.Counts.ProposalsRejected,
+			BriefItemsActed:     review.Counts.BriefItemsActed,
+			BriefItemsDismissed: review.Counts.BriefItemsDismissed,
+		},
+	}
+	for _, line := range review.Deals {
+		in.Deals = append(in.Deals, narrative.Deal{
+			Label: line.Label, Outcome: line.Outcome, Stage: line.ToStageLabel,
+		})
+	}
+
+	lang := identity.BaseLanguageForPrompt(ctx, w.pool)
+	// Bounded per rep. See narrateBudget: without this one wedged provider
+	// spends the whole workspace deadline on the first rep and every rep after
+	// them loses the review itself, not just the remark.
+	bounded, cancel := context.WithTimeout(ctx, narrateBudget)
+	defer cancel()
+	reply, err := w.narrator.Complete(bounded, narrative.Request(in, lang))
+	if err != nil {
+		w.log.WarnContext(ctx, "the weekly review has no sentence: the model call did not land",
+			"week", review.LocalWeekStart.Format(time.DateOnly), "cause", err)
+		return
+	}
+	sentence, err := narrative.Parse(reply.Text)
+	if err != nil {
+		w.log.WarnContext(ctx, "the weekly review has no sentence: the reply was refused",
+			"week", review.LocalWeekStart.Format(time.DateOnly), "cause", err)
+		return
+	}
+	// Written even when empty. The stamp is what tells the screen a pass ran
+	// and found the week unremarkable, which is a different answer from no
+	// pass at all.
+	// The STORE runs on the caller's context, not the bounded one: the model
+	// call is what needs a leash, and a write cancelled by the model's own
+	// deadline would lose a sentence the model successfully produced.
+	if err := w.engine.Narrate(ctx, review.ID, sentence, now); err != nil {
+		w.log.WarnContext(ctx, "the weekly review's sentence could not be stored",
+			"week", review.LocalWeekStart.Format(time.DateOnly), "cause", err)
+	}
 }
 
 // repsDueTheirReview lists the workspace's active full-seat humans whose local
@@ -213,8 +311,8 @@ func (w *weeklyGenerateWorkspaceWorker) repsDueTheirReview(
 	return due, err
 }
 
-// repsWithoutAReviewFor is the candidate query: every seat that should have a
-// review for the closed week and does not yet.
+// repsWithoutAReviewFor is the candidate query: every seat whose review for the
+// closed week is missing or unnarrated.
 //
 // The anti-join is an optimisation, not the correctness —
 // uq_weekly_review_user_week is what makes a second review impossible, and a
@@ -226,9 +324,19 @@ func repsWithoutAReviewFor(ctx context.Context, tx pgx.Tx, week time.Time) ([]id
 		WHERE `+identity.LiveMemberSQL("u")+`
 		  AND u.is_agent = false
 		  AND u.seat_type = 'full'
+		  -- A rep is due while they have no review for the week, OR have one
+		  -- that nobody has narrated. The second arm is the retry: a review
+		  -- can land un-narrated because the role had no lane, the budget was
+		  -- spent or the provider was down, and without it every one of those
+		  -- would be permanent — the next tick finds the row and looks away.
+		  --
+		  -- AssembleFor is idempotent (uq_weekly_review_user_week), so a rep
+		  -- admitted by the second arm re-reads their own review rather than
+		  -- writing a second.
 		  AND NOT EXISTS (
 			SELECT 1 FROM weekly_review wr
-			WHERE wr.user_id = u.id AND wr.local_week_start = $1)
+			WHERE wr.user_id = u.id AND wr.local_week_start = $1
+			  AND wr.narrated_at IS NOT NULL)
 		ORDER BY u.id`, week)
 	if err != nil {
 		return nil, err

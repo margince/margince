@@ -2133,6 +2133,8 @@ export const vi = {
   "home.weekly.dealsMoved": "Đã chuyển",
   "home.weekly.decided": "Bạn đã quyết",
   "home.weekly.acceptedRejected": "{accepted} đồng ý · {rejected} từ chối",
+  "home.weekly.noNarrative":
+    "Không có tóm tắt tuần này — Margince chưa chạy lượt nào. Các số liệu bên dưới vẫn là của tuần đó.",
   "home.weekly.queueWorked": "Danh sách buổi sáng",
   "home.weekly.actedDismissed": "{acted} đã xử lý · {dismissed} đã bỏ qua",
   "home.weekly.carriedOver": "Chuyển tiếp",
@@ -2757,6 +2759,15 @@ export const vi = {
   // Tác nhân theo lịch đang làm gì cho người đọc này. "Tóm tắt buổi sáng" là
   // đúng cách gọi ở trang chủ; một lượt chạy dừng giữa đường không bao giờ
   // được nghe như đã hoàn tất.
+  "agent.activity.weeklyReview.queued": "Tuần của bạn đang chờ được tóm tắt.",
+  "agent.activity.weeklyReview.running": "Đang tóm tắt tuần của bạn…",
+  "agent.activity.weeklyReview.stalled":
+    "Việc tóm tắt tuần của bạn lâu hơn dự kiến.",
+  "agent.activity.weeklyReview.done": "Tuần của bạn đã có tóm tắt.",
+  "agent.activity.weeklyReview.degraded":
+    "Tuần của bạn đã được đo, không có tóm tắt — các số liệu vẫn đầy đủ.",
+  "agent.activity.weeklyReview.failed":
+    "Lần này không có tóm tắt tuần của bạn. Các số liệu vẫn là của tuần đó.",
   "agent.activity.morningBrief.queued":
     "Bản tóm tắt buổi sáng của bạn đã xếp hàng.",
   "agent.activity.morningBrief.running":

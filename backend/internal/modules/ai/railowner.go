@@ -67,6 +67,7 @@ var railOwners = map[Task]string{
 	TaskCaptureClassify:            SourceRouter,
 	TaskCaptureCounterpartyVerdict: SourceRouter,
 	TaskCertJudge:                  SourceRouter,
+	TaskWeeklyReview:               SourceRouter,
 	TaskColdStart:                  SourceRouter,
 	TaskDealHealth:                 SourceRouter,
 	TaskDraftReply:                 SourceRouter,
