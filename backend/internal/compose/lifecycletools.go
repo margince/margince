@@ -151,7 +151,7 @@ func (c companyEnricher) EnrichCompany(
 		// The override is deliberately NOT passed on: this depth reads the
 		// domain the record holds and has no way to be pointed elsewhere,
 		// which is the guardrail that keeps it from becoming company discovery.
-		started, err := c.srv.technicalHandlers.startTechnicalEnrich(ctx, orgID)
+		started, err := c.srv.startTechnicalEnrich(ctx, orgID)
 		if err != nil {
 			return nil, err
 		}
