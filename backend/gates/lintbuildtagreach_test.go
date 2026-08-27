@@ -13,17 +13,30 @@ package gates
 // that matter are the tagged lanes, where a single YAML list decides whether
 // anything reads them at all.
 //
-// That is not a hypothetical failure mode. It is how a file reached this tree
-// calling a function it does not import: no pass carried its tag, so nothing
-// ever type-checked it, and it read exactly like every file that compiles.
+// A file whose tag no pass carries can call a function it does not import and
+// never be told. Nothing type-checks it, and it reads on disk exactly like every
+// file that compiles.
 //
-// The subject is the CONSTRAINT, not the tags in it. Asking only whether each
-// tag appears somewhere is a weaker question that passes on the case worth
-// catching: `//go:build integration && !bench` names two tags both lint configs
-// carry, and is compiled by neither — because those configs set `bench` too,
-// which makes the second half false. Tag-presence says covered; nothing reads
-// it. So each constraint is EVALUATED against each pass's assignment, which is
-// also the only reading that gets negation and `||` right.
+// THREE questions are asked, and none implies the others.
+//
+// Is the file COMPILED at all? A no means a type error in it never surfaces.
+// This is about the whole CONSTRAINT rather than the tags in it: `bench &&
+// !integration` names two tags both lint configs carry and is admitted by no
+// pass, because those configs set `integration` too and the integration lane
+// does not set `bench`. So each constraint is EVALUATED against each pass's
+// assignment, which is also the only reading that gets negation and `||` right.
+//
+// Is it ANALYSED by anything? Compiling is not analysing, and the distinction is
+// load-bearing rather than pedantic: `make test-integration` compiles the tagged
+// tree and runs neither `go vet` nor golangci over it. So `integration &&
+// !bench` is compiled and read by no linter — a file the shards build and vet
+// never sees. Splitting the two is what makes that fail here rather than pass.
+//
+// Is it linted by BOTH configs? That one IS about the tags, because the two
+// configs run different linter sets and a file only one of them reads keeps half
+// the linters. Equal-satisfaction between the two configs would be the tidier
+// spelling and a weaker one: it agrees when a tag is missing from both, which is
+// exactly how 853 integration-tagged files could lose every linter at once.
 //
 // The second obligation is govet, and it exists because `make vet` runs
 // untagged only. Switching govet off in .golangci.yml — or leaving it enabled
@@ -50,20 +63,38 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// treeRoot is the whole repository, deliberately wider than the trees the lint
-// passes read. A constraint gating a file anywhere here is one something ought
-// to compile, and erring wide can only report a file that has no reader — never
-// hide one.
-const treeRoot = ".."
+// skipForeignTree reports whether a directory holds something other than this
+// repository's own source: dependencies somebody else wrote, a nested checkout,
+// or a tool's output. Every gate that walks this tree asks the same question, so
+// it is asked in one place — a second list drifts, and the half that goes stale
+// is the half that silently widens or narrows a census.
+//
+// Worktrees are the entry that earns this: this repository is worked in several
+// at once by design, and one placed inside the tree is a whole second checkout
+// whose files answer no question about this branch.
+func skipForeignTree(name string) bool {
+	switch name {
+	case "node_modules", ".git", ".tmp", "worktrees", ".claude", "dist", "coverage":
+		return true
+	}
+	return false
+}
 
-// generatedTree is skipped by PATH rather than by directory name. `build` is an
-// ordinary package name, and skipping every directory called that would drop a
-// real one — `internal/build/…` — out of the census silently, which is the
-// direction a census must never fail in. Only the repository's own generated
-// composition tree is meant: it is git-ignored and holds a second copy of files
-// already counted, so including it makes the census depend on whether anyone
-// has run `make composition`.
-var generatedTree = filepath.Join(treeRoot, "build")
+// generatedTrees are skipped by PATH rather than by directory name. `build` is
+// an ordinary package name, and skipping every directory called that would drop
+// a real package out of the census silently — the direction a census must never
+// fail in.
+//
+// These three and no more, matching what .gitignore anchors: it names them
+// individually and says why, so that an unrelated future /build asset is never
+// hidden. A name-based skip here would hide precisely what that anchoring went
+// out of its way to keep visible. Each holds generated copies of files already
+// counted, present or absent depending on whether anyone has run the generator.
+var generatedTrees = []string{
+	filepath.Join(repoRoot, "build", "composition"),
+	filepath.Join(repoRoot, "build", "composition-frontend"),
+	filepath.Join(repoRoot, "build", "desktop"),
+}
 
 // compilingPass is one assignment: the build tags set, and the GOOS the pass
 // runs at. GOOS matters because Go satisfies a `//go:build windows` constraint
@@ -73,6 +104,10 @@ type compilingPass struct {
 	name string
 	goos string
 	tags []string
+	// analyses reports whether this pass runs a linter over what it compiles.
+	// A pass that only builds still answers the type-error question, which is
+	// why it is counted at all.
+	analyses bool
 }
 
 // satisfies reports whether this pass compiles a file carrying expr.
@@ -106,7 +141,11 @@ func (p compilingPass) satisfies(expr constraint.Expr) bool {
 }
 
 // mergeGatePasses are the assignments under which the merge gate compiles this
-// tree. A constraint satisfied by none of them describes a file nothing reads.
+// tree. A constraint satisfied by none of them describes a file nothing builds.
+//
+// `analyses` marks the passes that also run a linter over what they compile.
+// The integration shards do not: they build the tagged tree to run its tests,
+// which surfaces a type error and no vet finding.
 //
 // The two golangci rows take their tags from the configs themselves, because
 // that list is the one that drifts. The rest are named with the recipe they
@@ -119,8 +158,13 @@ func (p compilingPass) satisfies(expr constraint.Expr) bool {
 func mergeGatePasses(t *testing.T) []compilingPass {
 	t.Helper()
 	passes := []compilingPass{
-		{name: "untagged (`make build`, `make vet`, `make test`)", goos: "linux"},
-		{name: "the windows/amd64 cross-compile (`make build`)", goos: "windows"},
+		{name: "untagged (`make build`, `make vet`, `make test`, and `make lint-modules` over every module outside backend/)", goos: "linux", analyses: true},
+		// `go build` never compiles a _test.go, so this row covers non-test
+		// files only. It is listed anyway because a windows-only production
+		// file would otherwise report as unread when that cross-compile does
+		// read it; a windows-only TEST file is genuinely unread, and the
+		// narrower claim is the one this row is allowed to make.
+		{name: "the windows/amd64 cross-compile of non-test files (`make build`)", goos: "windows"},
 		{name: "the integration shards (`make test-integration`)", goos: "linux", tags: []string{"integration"}},
 	}
 	for _, path := range lintConfigs {
@@ -128,7 +172,7 @@ func mergeGatePasses(t *testing.T) []compilingPass {
 		if len(carried) == 0 {
 			t.Errorf("%s carries no build tag at all, so every tagged file in the tree is invisible to it", path)
 		}
-		passes = append(passes, compilingPass{name: path + " (`make lint`)", goos: "linux", tags: carried})
+		passes = append(passes, compilingPass{name: path + " (`make lint`)", goos: "linux", tags: carried, analyses: true})
 	}
 	return passes
 }
@@ -149,19 +193,33 @@ func TestEveryBuildConstraintIsCompiledBySomePass(t *testing.T) {
 	}
 
 	names := make([]string, 0, len(passes))
+	analysing := make([]compilingPass, 0, len(passes))
 	for _, p := range passes {
 		names = append(names, p.name)
+		if p.analyses {
+			analysing = append(analysing, p)
+		}
 	}
 	for _, f := range constrained {
-		if slices.ContainsFunc(passes, func(p compilingPass) bool { return p.satisfies(f.expr) }) {
+		compiled := slices.ContainsFunc(passes, func(p compilingPass) bool { return p.satisfies(f.expr) })
+		read := slices.ContainsFunc(analysing, func(p compilingPass) bool { return p.satisfies(f.expr) })
+		if compiled && read {
 			continue
 		}
 		if unreadFiles.Waived(t, f.path) {
 			continue
 		}
+		if compiled {
+			t.Errorf("%s is compiled but ANALYSED by nothing: its constraint `%s` is satisfied only by a pass "+
+				"that builds without linting, so a type error in it surfaces and a vet, gosec or depguard finding "+
+				"never does. Add the tag to both golangci configs, or ratify the file in unreadFiles with what "+
+				"leaving it unanalysed costs", f.path, f.expr.String())
+			continue
+		}
 		t.Errorf("%s is compiled by no pass the merge gate runs: its constraint `%s` is false under every one of "+
 			"%s. Add the tag to both golangci configs so `make lint` reads it, or ratify the file in unreadFiles "+
-			"with what leaving it unread costs", f.path, f.expr.String(), strings.Join(names, ", "))
+			"with what leaving it unread costs — which is the answer for `ignore`, the standard spelling for a "+
+			"file meant to be `go run` and never built", f.path, f.expr.String(), strings.Join(names, ", "))
 	}
 }
 
@@ -207,7 +265,7 @@ func TestEveryTagIsCarriedByBothLintConfigs(t *testing.T) {
 // rather than from a -tags list. No golangci entry could carry them, so each
 // says what that costs instead.
 var platformSelectedTags = gatekit.Waive(map[string]string{
-	"windows": "GOOS, so a build-tags entry would not reach it — golangci runs at the host GOOS. The windows-only files are read by the windows/amd64 cross-compile in `make build`, which is why that pass is in the always-on gate rather than the desktop lane",
+	"windows": "GOOS, so a build-tags entry would not reach it — golangci runs at the host GOOS. Every windows mention in this tree today is a NEGATION (`!windows`), which the Linux passes satisfy; a windows-ONLY file would be read by the `make build` cross-compile if it were production code and by nothing at all if it were a test, since `go build` skips _test.go",
 	"darwin":  "GOOS, so a build-tags entry would not reach it. Every darwin mention in this tree today is a NEGATION (`!darwin`), which the Linux passes satisfy — a darwin-ONLY file would be compiled on a maintainer's machine and by nothing in the merge gate, and this entry is what stops that reading as covered",
 })
 
@@ -231,8 +289,16 @@ func collectTags(expr constraint.Expr, into map[string]bool) {
 	}
 }
 
+// govetDisables ratifies each govet analyzer a config switches off, with what
+// losing it costs across every tagged file.
+var govetDisables = gatekit.Waive(map[string]string{
+	"fieldalignment": "a memory-layout micro-optimisation, not a correctness check: it reports struct field ORDER, and acting on it trades legible grouping for bytes this product never counts",
+	"shadow":         "high-noise on idiomatic Go — every `err :=` inside a block trips it — and the cases that are real bugs are reported by revive's early-return and by errcheck, so the coverage lost is the false-positive half",
+})
+
 func TestBothLintConfigsRunGovet(t *testing.T) {
 	t.Parallel()
+	defer govetDisables.AssertAllMatched(t)
 	// `make vet` covers the untagged tree only, so these two passes are where
 	// the vet analyzers reach a tagged file. Losing govet here is silent: the
 	// lint pass still runs, still reports, and still passes.
@@ -247,9 +313,9 @@ func TestBothLintConfigsRunGovet(t *testing.T) {
 				"untagged and stops there", path)
 			continue
 		}
-		// Enabled and then emptied is the same outcome reached by a different
-		// door, and it reads as enabled to anything that checks only the linter
-		// list. `disable-all` alongside an explicit `enable` set is a deliberate
+		// Enabled and then emptied is the same outcome by a different door, and
+		// it reads as enabled to anything that checks only the linter list.
+		// `disable-all` alongside an explicit `enable` set is a deliberate
 		// narrowing the config may make; alongside nothing it leaves govet
 		// running zero analyzers.
 		govet := cfg.Linters.Settings.Govet
@@ -257,6 +323,24 @@ func TestBothLintConfigsRunGovet(t *testing.T) {
 			t.Errorf("%s enables govet and then disables every analyzer it has, so the vet suite reaches no "+
 				"tagged file: drop linters.settings.govet.disable-all, or name the analyzers to keep under "+
 				"linters.settings.govet.enable", path)
+		}
+		// The narrower door, and the one already ajar: `disable` removes named
+		// analyzers while the linter still reports as enabled. Deleting `printf`
+		// here would take it from every tagged file in the tree at once, which
+		// is the coverage the removed `go vet -tags` pass used to backstop.
+		//
+		// The check is a RATIFIED set rather than a copy of go vet's default
+		// analyzer list. Restating that list here would be a second copy of
+		// something the toolchain owns and revises, and it would go stale
+		// silently; requiring a reason per entry costs one line and says why
+		// each absence is affordable.
+		for _, analyzer := range govet.Disable {
+			if govetDisables.Waived(t, analyzer) {
+				continue
+			}
+			t.Errorf("%s disables the govet analyzer %q, and `make vet` runs untagged only — so that check is "+
+				"gone from every tagged file in the tree. Ratify it in govetDisables with what losing it costs, "+
+				"or stop disabling it", path, analyzer)
 		}
 	}
 }
@@ -268,22 +352,29 @@ type constrainedFile struct {
 	expr constraint.Expr
 }
 
-// constrainedFiles returns every file under treeRoot whose header carries a
+// constrainedFiles returns every file under repoRoot whose header carries a
 // build constraint, paired with the PARSED constraint — the constraint is what
 // this gate judges, and reducing it to the tags it names loses the negation and
 // the operators that decide which passes admit the file.
 func constrainedFiles(t *testing.T) []constrainedFile {
 	t.Helper()
 	var found []constrainedFile
-	err := filepath.WalkDir(treeRoot, func(path string, d fs.DirEntry, err error) error {
+	err := filepath.WalkDir(repoRoot, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
 		if d.IsDir() {
-			// node_modules and .git hold no hand-written Go and are thousands
-			// of files of pure walk cost; the generated tree is skipped by
-			// path, for the reason stated on generatedTree.
-			if d.Name() == "node_modules" || d.Name() == ".git" || filepath.Clean(path) == filepath.Clean(generatedTree) {
+			// Foreign trees first — a linked worktree under .claude/ or a
+			// scratch file under .tmp/ is ANOTHER checkout's source, and
+			// reporting one of its files here prints a remedy that cannot be
+			// followed because the file is not in this tree. The generated
+			// trees are then skipped by path, for the reason on generatedTrees.
+			if skipForeignTree(d.Name()) {
+				return fs.SkipDir
+			}
+			if slices.ContainsFunc(generatedTrees, func(t string) bool {
+				return filepath.Clean(path) == filepath.Clean(t)
+			}) {
 				return fs.SkipDir
 			}
 			return nil
@@ -291,7 +382,10 @@ func constrainedFiles(t *testing.T) []constrainedFile {
 		if !strings.HasSuffix(path, ".go") || !d.Type().IsRegular() {
 			return nil
 		}
-		b, err := os.ReadFile(path) // #nosec G304 G122 -- path is a *.go file from walking the trusted source tree
+		// path comes from walking this repository's own source tree, never from
+		// input. (No #nosec token: both configs exclude gosec on _test.go, so
+		// one here would suppress a linter that does not run.)
+		b, err := os.ReadFile(path)
 		if err != nil {
 			return err
 		}
@@ -318,7 +412,7 @@ func constrainedFiles(t *testing.T) []constrainedFile {
 		return nil
 	})
 	if err != nil {
-		t.Fatalf("walking %s: %v", treeRoot, err)
+		t.Fatalf("walking %s: %v", repoRoot, err)
 	}
 	return found
 }

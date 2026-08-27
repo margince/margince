@@ -207,6 +207,7 @@ type golangciConfig struct {
 				//nolint:tagliatelle // golangci-lint's key, not ours to case.
 				DisableAll bool     `yaml:"disable-all"`
 				Enable     []string `yaml:"enable"`
+				Disable    []string `yaml:"disable"`
 			} `yaml:"govet"`
 			Forbidigo struct {
 				//nolint:tagliatelle // golangci-lint's key, not ours to case.
@@ -265,40 +266,6 @@ func TestForbidigoIsEnabledInExactlyOneConfig(t *testing.T) {
 	default:
 		t.Errorf("forbidigo is enabled in %s. Two passes with two pattern sets make an in-source forbidigo waiver unusable tree-wide: whichever set a directive was written for, the other reports it as an unused directive through nolintlint. Enable it in one config and let the other inherit nothing.",
 			strings.Join(enabling, " and "))
-	}
-}
-
-// TestTheOwningConfigLintsTheTaggedLanes — forbidigo now lives in one config,
-// and that config must see the same files the other one did. The strict pass
-// declares the integration and livesmoke tags, so before the move it was the
-// only thing linting the tagged harnesses; a baseline that compiled untagged
-// files only would leave them covered by NOTHING, which is where an http.Error
-// or a stray fmt.Print goes unnoticed for longest.
-func TestTheOwningConfigLintsTheTaggedLanes(t *testing.T) {
-	t.Parallel()
-	// The owner is DERIVED, not named: this holds whichever config enables
-	// forbidigo to the tags, so moving ownership moves the obligation with it
-	// rather than leaving this passing about a config that no longer runs the
-	// linter. TestForbidigoIsEnabledInExactlyOneConfig is what makes "the"
-	// owner well defined.
-	owner := ""
-	for _, name := range lintConfigs {
-		if slices.Contains(readGolangciConfig(t, name).Linters.Enable, "forbidigo") {
-			owner = name
-			break
-		}
-	}
-	if owner == "" {
-		t.Fatal("no config enables forbidigo, so there is no owner to hold to anything")
-	}
-	tags := readGolangciConfig(t, owner).Run.BuildTags
-	// `bench` carries a sharper version of the same obligation: the by-hand
-	// benchmark lane is run by NO scheduled job, so lint and `go vet -tags
-	// 'integration bench'` are the only passes that ever compile those files.
-	for _, tag := range []string{"integration", "livesmoke", "bench"} {
-		if !slices.Contains(tags, tag) {
-			t.Errorf("%s owns forbidigo but does not declare the %q build tag, so the %s-only files are linted by nothing", owner, tag, tag)
-		}
 	}
 }
 

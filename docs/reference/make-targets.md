@@ -160,8 +160,8 @@ gating a merge on them, which is why each prints p50/p95/p99 beside its budget
 instead of only passing or failing. `bench-mobile` below is the frontend half of
 the same posture.
 
-They are still **type-checked** on every `make check`: `go vet -tags 'integration
-bench'` and both golangci passes carry the tag. That is load-bearing rather than
+They are still **type-checked** on every `make check`: both golangci passes carry
+the tag, and `gates/lintbuildtagreach_test.go` fails if either stops. That is load-bearing rather than
 tidiness — nothing scheduled compiles these files, so without it a renamed helper
 would break them silently and nobody would find out until the next person ran a
 benchmark by hand and had to debug the harness instead of reading a number.

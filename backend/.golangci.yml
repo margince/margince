@@ -18,8 +18,9 @@ run:
     # all, and a file under one of these tags can otherwise stop compiling with
     # nothing to say so.
     #
-    # The list is derived rather than curated: gates/lintbuildtagreach_test.go
-    # fails when a build tag anywhere in the tree is absent from it.
+    # gates/lintbuildtagreach_test.go fails when a build tag that gates a file
+    # in this tree is missing from this list. It does not write the list, and it
+    # does not remove an entry that has stopped being needed.
     - bench
     - e2e_llm
     - voicelive

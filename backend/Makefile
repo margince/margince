@@ -202,9 +202,8 @@ vet: composition ## Run go vet over every package, untagged (composed workspace)
 	# gates/lintbuildtagreach_test.go, because losing either is silent — the
 	# lint pass still runs, still reports, and still passes.
 	#
-	# This pass is not redundant with it, which is why it stays. golangci runs
-	# WITH those tags, so a file guarded `//go:build !integration` is excluded
-	# there and read here and nowhere else.
+	# golangci runs WITH those tags, so a file guarded `//go:build !integration`
+	# is excluded there and read here and nowhere else.
 	$(GOWORK_COMPOSED) $(GO) vet ./...
 
 test: composition ## Unit tests — every package exactly once, UNCACHED_TEST_PKGS uncached

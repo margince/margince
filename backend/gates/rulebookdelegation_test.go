@@ -40,14 +40,14 @@ const repoRoot = ".."
 var importLine = regexp.MustCompile(`^@AGENTS\.md$`)
 
 // skipRulebookDir keeps the walk to the rulebooks this repository ships.
-// Worktrees hold whole checkouts of their own, including their own copies of
-// these files; node_modules holds other people's.
+//
+// The foreign-tree half is shared with every other gate that walks this
+// repository (skipForeignTree). `build` is this gate's own addition and belongs
+// only here: a generated tree can hold an AGENTS.md that is not a rulebook this
+// repository ships, whereas a directory named `build` can perfectly well be a
+// real Go package — so a gate walking SOURCE must not skip it by name.
 func skipRulebookDir(name string) bool {
-	switch name {
-	case "node_modules", ".git", ".tmp", "worktrees", "build", "dist", "coverage":
-		return true
-	}
-	return false
+	return skipForeignTree(name) || name == "build"
 }
 
 // rulebookDirs returns every directory holding an AGENTS.md.
