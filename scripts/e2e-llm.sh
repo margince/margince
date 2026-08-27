@@ -70,6 +70,10 @@ trap cleanup EXIT
 # database between their own runs — they are the only ones whose second run
 # would see the first one's records.
 echo "==> booting the $SLUG stack (never :8080)"
+# A previous run that was interrupted leaves its api holding :18081, and
+# dev-fresh refuses rather than attaching to the wrong stack. Stopping this
+# slug first is safe whether or not anything is up, and it never touches :8080.
+(cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
 (cd "$ROOT" && make dev-fresh DEV_SLUG="$SLUG" >/dev/null)
 
 # shellcheck source=scripts/lib-devstate.sh
@@ -162,6 +166,11 @@ for scenario in "$SCENARIO_DIR"/*.yaml; do
     case "$name" in
       case1_*|case2_*|case3_*)
         if [ "$i" -gt 1 ]; then
+          # dev-stop FIRST. dev-fresh refuses to boot over a port its own
+          # stack is already holding — "port :18081 already in use" — so
+          # calling it on the running stack killed the lane after case 1
+          # run 1 on the first real outing of this script.
+          (cd "$ROOT" && make dev-stop DEV_SLUG="$SLUG" >/dev/null 2>&1) || true
           (cd "$ROOT" && make dev-fresh DEV_SLUG="$SLUG" >/dev/null)
           seed_everything
         fi
