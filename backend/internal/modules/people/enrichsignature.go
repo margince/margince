@@ -121,7 +121,7 @@ func (s *Store) ApplySignatureFields(ctx context.Context, personID ids.PersonID,
 		// that name (storekit.AuditWithEvidence).
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", entityPerson, personID.UUID,
 			before, after, map[string]any{
-				auditKeySource: enrichSource, auditKeyFields: appliedFields, "source_ref": sourceRef,
+				auditKeySource: enrichSource, auditKeyFields: appliedFields, auditKeySourceRef: sourceRef,
 			})
 		if err != nil {
 			return err

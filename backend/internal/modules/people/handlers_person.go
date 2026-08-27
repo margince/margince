@@ -4,6 +4,8 @@
 package people
 
 import (
+	"context"
+	"log/slog"
 	"net/http"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -76,6 +78,76 @@ func (h Handlers) CreatePerson(w http.ResponseWriter, r *http.Request, _ crmcont
 	}
 	w.Header().Set("Location", "/v1/people/"+person.Id.String())
 	httperr.WriteJSON(w, http.StatusCreated, person)
+}
+
+// ImportVCards serves POST /people/vcard-import: the parse, the write, and the
+// per-card report.
+//
+// The upload itself is read here rather than in compose because the whole
+// operation is this module's — there is no cross-module assembly to do, and a
+// handler split across two packages for the sake of a multipart form would put
+// half of one endpoint where nobody looks for it. The ceiling the parse runs
+// under is granted to this route in compose.uploadCeilings.
+func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
+	// upload:route /v1/people/vcard-import — the ceiling this parse runs under
+	// is granted to that path in compose.uploadCeilings, and
+	// TestEveryMultipartParseNamesItsRoute holds the two together. What is
+	// bounded HERE is only how much of the parse stays resident before it
+	// spills to disk.
+	//nolint:gosec // G120 wants a bound, and the bound is the chassis's own MaxBytesReader on this route: this argument is the spill threshold, deliberately far below the ceiling.
+	if err := r.ParseMultipartForm(vcardSpillBytes); err != nil {
+		httperr.Write(w, r, httperr.Validation("file", "unreadable",
+			"Send the .vcf file as a multipart form field named `file`."))
+		return
+	}
+	file, _, err := r.FormFile("file")
+	if err != nil {
+		httperr.Write(w, r, httperr.Validation("file", "missing", "Attach the .vcf file to import as `file`."))
+		return
+	}
+	defer func(ctx context.Context) {
+		if cerr := file.Close(); cerr != nil {
+			slog.WarnContext(ctx, "closing the uploaded vCard part", "err", cerr)
+		}
+	}(r.Context())
+
+	entries, err := ParseVCards(file)
+	if err != nil {
+		// The parser's own words, not a generic refusal: it says which shape it
+		// could not read, which is what a reader with a forty-card file needs
+		// in order to find the row rather than re-export the file.
+		httperr.Write(w, r, httperr.Validation("file", "unreadable", err.Error()))
+		return
+	}
+	results, err := h.store.ImportVCards(r.Context(), entries)
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, crmcontracts.VCardImportReport{
+		Results: toContractVCardResults(results),
+	})
+}
+
+func toContractVCardResults(results []VCardResult) []crmcontracts.VCardImportResult {
+	out := make([]crmcontracts.VCardImportResult, 0, len(results))
+	for _, result := range results {
+		item := crmcontracts.VCardImportResult{
+			Index:    result.Index,
+			FullName: result.FullName,
+			Outcome:  crmcontracts.VCardImportResultOutcome(result.Outcome),
+		}
+		if result.PersonID != nil {
+			id := openapi_types.UUID(result.PersonID.UUID)
+			item.PersonId = &id
+		}
+		if result.Reason != "" {
+			reason := result.Reason
+			item.Reason = &reason
+		}
+		out = append(out, item)
+	}
+	return out
 }
 
 // QuickCapturePerson serves POST /people/quick-capture: the person, their employer
