@@ -132,6 +132,7 @@ func collectClearableMaps(file *ast.File, into map[string][]string, unreadable m
 }
 
 func TestTheFieldsARestoreClearsAreTheFieldsTheStoresClear(t *testing.T) {
+	t.Parallel()
 	fromStores := storeClearableFields(t)
 	if len(fromStores) == 0 {
 		t.Fatal("no clearable-column map found in any module; the walk is broken, not the tree — " +

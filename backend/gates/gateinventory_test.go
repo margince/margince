@@ -152,8 +152,12 @@ func TestEveryGateDeclaresItsShape(t *testing.T) {
 	}
 }
 
+// Deliberately NOT parallel, and named in parallelExempt for the reason: under
+// -update-gate-inventory this REWRITES gateInventoryPage, which the gates that
+// walk ../docs read. os.WriteFile truncates, so a concurrent reader can see
+// half a page and report a broken link or a wrong length. Sequential orders the
+// write after every such read, including ones not written yet.
 func TestTheGateInventoryPageIsCurrent(t *testing.T) {
-	t.Parallel()
 	gates, _ := readGateDeclarations(t)
 	if len(gates) < gateFloor {
 		t.Fatalf("refusing to judge the page against %d gate(s); see TestEveryGateDeclaresItsShape",
@@ -249,18 +253,13 @@ func parseGateFile(t *testing.T, path string, source []byte) *ast.File {
 // of one is not a gate.
 func declaresATest(file *ast.File) bool {
 	for _, decl := range file.Decls {
-		fn, ok := decl.(*ast.FuncDecl)
-		if !ok || fn.Recv != nil || !strings.HasPrefix(fn.Name.Name, "Test") {
-			continue
+		// isGateTest (parallelgates_test.go) is the one spelling of "this
+		// declaration is one of the package's gates", TestMain carve-out
+		// included — a file holding only TestMain judges nothing, so it owes no
+		// //gate:kind declaration and belongs on no row of the page.
+		if fn, ok := decl.(*ast.FuncDecl); ok && isGateTest(fn) {
+			return true
 		}
-		// TestMain is the package's entry point and not one of its tests — Go
-		// itself runs it INSTEAD of the tests and hands them to it. A file that
-		// holds only TestMain judges nothing, so it owes no //gate:kind
-		// declaration and belongs on no row of the page.
-		if fn.Name.Name == "TestMain" {
-			continue
-		}
-		return true
 	}
 	return false
 }
