@@ -184,11 +184,8 @@ change rather than guessing from the package name.
   generalizes: [docs/how-to/apply-migrations.md](docs/how-to/apply-migrations.md).
 - **The `database.WithWorkspaceTx` contract** — every tenant query goes through
   it; there is no raw-pool path for tenant data. Held by
-  `scripts/check-rls-store-path.sh`. **No table carries row-level security** —
-  not core, and not an extension's. A unit table declares no `workspace_id` and
-  no policy, and `backend/tools/extmigrategate` refuses one that does: an
-  installation holds a single workspace, so the predicate separated nothing.
-  Per-unit isolation is a database ROLE, not a column.
+  `scripts/check-rls-store-path.sh`. No table carries row-level security: a unit
+  table declares no `workspace_id` and no policy; `extmigrategate` refuses one.
 - **`internal/shared/apperrors`** — a fixed sentinel registry. Extend it only
   alongside the error contract it implements, never for one call site.
 
