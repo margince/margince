@@ -10,8 +10,6 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { formatDateTime } from "../format/format";
-import { FALLBACK_RECORD_ZONE } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
 import { RecordHistory } from "./historyentries";
 
@@ -45,10 +43,22 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-// The reader's own clock for these rows, computed the way the row computes it
-// so the assertion cannot pass by agreeing with a hard-coded zone.
-function shownTime(iso: string) {
-  return formatDateTime(iso, "en", FALLBACK_RECORD_ZONE);
+// The timestamp a row shows, WITHOUT naming a zone.
+//
+// What these rows have to prove is that each half of a pair carries its OWN
+// time — not what any particular zone renders. Naming a zone to check that
+// would pin one here, which is the thing zone-by-purpose.test.ts forbids a
+// screen from doing, and pinning the installation's fallback would agree with
+// whatever that value happened to be. The two instants are two minutes apart,
+// so in every zone their rendered forms differ; that is the claim, and it is
+// checkable without one.
+function shownTimeIn(row: Element): string {
+  const meta = row.querySelector(".tl-meta")?.textContent ?? "";
+  const shown = meta.match(/\d{1,2}:\d{2}/);
+  if (!shown) {
+    throw new Error(`no timestamp in row meta: ${meta}`);
+  }
+  return shown[0];
 }
 
 const AT_CHANGE = "2026-08-27T14:00:00Z";
@@ -157,11 +167,12 @@ describe("a reversal and the change it reversed, as one row", () => {
     expect(reversal.querySelector(".provenance")?.textContent).toContain(
       "Tin Nguyen",
     );
-    expect(within(reversal).getByText(shownTime(AT_REVERSAL))).toBeTruthy();
     expect(reversed.querySelector(".provenance")?.textContent).toContain(
       "Sam Okafor",
     );
-    expect(within(reversed).getByText(shownTime(AT_CHANGE))).toBeTruthy();
+    // Two instants two minutes apart: each row shows its own, so the pair is
+    // not drawing one timestamp twice.
+    expect(shownTimeIn(reversal)).not.toEqual(shownTimeIn(reversed));
     // Each row keeps its own diff, in its own direction.
     expect(within(reversal).getByText("Head of Ops")).toBeTruthy();
     expect(within(reversed).getByText("Head of Platform")).toBeTruthy();

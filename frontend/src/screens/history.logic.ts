@@ -191,8 +191,20 @@ const DERIVED_COLUMNS: ReadonlySet<string> = new Set([
 ]);
 
 export function entryFieldChanges(
-  entry: Pick<AuditHistoryEntry, "before" | "after">,
+  entry: Pick<AuditHistoryEntry, "before" | "after" | "edge">,
 ): EntryFieldChange[] {
+  // An entry that changed a LINK has no fields of THIS record. Its images are
+  // the link's own columns — role, started_at, the primary flag — and drawing
+  // them here would tell a reader somebody edited fields the record does not
+  // have, under labels that do not exist for them.
+  //
+  // The rule lives here rather than at each call site because every reader of a
+  // change list asks the same question: the row, the collapsed pair's face, and
+  // the net a pair reports all go through this function, and a call site that
+  // forgot would show the link's columns on one surface and not another.
+  if (entry.edge) {
+    return [];
+  }
   const before = entry.before ?? {};
   const after = entry.after ?? {};
   const fields: string[] = [];

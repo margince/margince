@@ -97,6 +97,7 @@ export const de = {
   "history.reversal.collapse": "Ausblenden",
   "history.reversal.undoneBy": "zurückgesetzt von {undoer}",
   "history.reversal.unpaired": "setzt eine frühere Änderung zurück",
+  "history.edge.marker": "Verknüpfung",
   "history.field.address": "Adresse",
   "history.field.amount_minor": "Wert",
   "history.field.assignee_id": "Zuständig",

@@ -103,6 +103,7 @@ export const vi = {
   "history.reversal.collapse": "Ẩn",
   "history.reversal.undoneBy": "đã được {undoer} hoàn tác",
   "history.reversal.unpaired": "hoàn tác một thay đổi trước đó",
+  "history.edge.marker": "Liên kết",
   "history.field.address": "Địa chỉ",
   "history.field.amount_minor": "Giá trị",
   "history.field.assignee_id": "Người phụ trách",

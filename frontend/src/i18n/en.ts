@@ -97,6 +97,7 @@ export const en = {
   "history.reversal.collapse": "Hide",
   "history.reversal.undoneBy": "undone by {undoer}",
   "history.reversal.unpaired": "undoing an earlier change",
+  "history.edge.marker": "Link",
   "history.field.address": "Address",
   "history.field.amount_minor": "Value",
   "history.field.assignee_id": "Assignee",

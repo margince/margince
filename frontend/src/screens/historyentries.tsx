@@ -30,6 +30,7 @@ import {
   entryFieldChanges,
   provenanceOfEntry,
 } from "./history.logic";
+import { HistoryEdgeDetail } from "./historyedge";
 import { HistoryFieldDiff } from "./historyfielddiff";
 import { historyFieldLabel } from "./historyfieldlabels";
 import { historyRows } from "./historyreversal";
@@ -337,6 +338,10 @@ function HistoryEntryRow({
 }>) {
   const viewerId = useViewerId();
   const recordZone = useRecordZone();
+  // An edge entry's images are the LINK's columns, not this record's, so it has
+  // no field changes to draw or to name in a confirm — the sentence the read
+  // wrote and the edge block below are the whole of what this row says.
+  const edge = entry.edge;
   const changes = entryFieldChanges(entry);
   return (
     <li>
@@ -359,7 +364,11 @@ function HistoryEntryRow({
           />
           {note && <span className="entry-note">{note}</span>}
         </span>
-        <EntryFieldDetail changes={changes} currency={currency} />
+        {edge ? (
+          <HistoryEdgeDetail edge={edge} />
+        ) : (
+          <EntryFieldDetail changes={changes} currency={currency} />
+        )}
         {restore && (
           <UndoButton
             entry={entry}
