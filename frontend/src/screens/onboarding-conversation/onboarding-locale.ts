@@ -19,7 +19,7 @@ export type OnboardingLocale =
 // follows. A `readonly OnboardingLocale[]` list cannot say that — a subset
 // satisfies it happily, and the new language would keep falling back to
 // English forever with nothing failing.
-const PROMPTED = { en: true, de: true } satisfies Record<
+const PROMPTED = { en: true, de: true, vi: true } satisfies Record<
   OnboardingLocale,
   true
 >;
