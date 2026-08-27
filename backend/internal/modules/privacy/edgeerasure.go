@@ -62,7 +62,8 @@ func EdgeBehindErasureBoundary(ctx context.Context, tx pgx.Tx, auditID ids.UUID)
 		// bound. A NULL endpoint column matches no scrub row, which is how a kind
 		// that does not occupy this column answers.
 		ends = append(ends, "EXISTS ("+ScrubNewerThanRowSQL(
-			"'"+endpoint.entityType+"'", "r."+endpoint.column, "a", verbs)+")")
+			"'"+endpoint.entityType+"'", "r."+endpoint.column, "a", verbs,
+		)+")")
 	}
 
 	var behind bool

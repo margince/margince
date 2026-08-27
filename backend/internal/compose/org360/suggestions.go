@@ -96,7 +96,8 @@ func (a *assembly) readSuggestions() error {
 	if !in.advisable() {
 		return fmt.Errorf(
 			"suggestions are read from the timeline and the pipeline, and this caller may read neither: %w",
-			apperrors.ErrPermissionDenied)
+			apperrors.ErrPermissionDenied,
+		)
 	}
 	found, dropped, err := a.svc.suggestionsFor(a.ctx, a.tx, a.orgID, a.now, in)
 	if err != nil {
@@ -383,7 +384,8 @@ func lifecycleConflict(
 		Kind: suggestConflict,
 		Reason: fmt.Sprintf(
 			"Their correspondence says the contract ended, but this account is still filed as %s.",
-			in.lifecycle),
+			in.lifecycle,
+		),
 		// Keyed on the STAGE as well as the account, so correcting the stage
 		// retires this rather than leaving a dismissal in force over a record
 		// that has since been fixed.

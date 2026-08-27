@@ -70,7 +70,8 @@ func declaringCrawl() siteCrawl {
 func readTheOnboardingSite(t *testing.T, e *integration.Env, w *siteDeepReadWorker) SiteDeepReadArgs {
 	t.Helper()
 	read, joined, err := e.People.StartOnboardingSiteRead(
-		e.As(e.Rep1, nil, integration.AdminPerms), seedURL, "human:"+e.Rep1.String(), nil)
+		e.As(e.Rep1, nil, integration.AdminPerms), seedURL, "human:"+e.Rep1.String(), nil,
+	)
 	if err != nil {
 		t.Fatalf("start the onboarding read: %v", err)
 	}
@@ -489,7 +490,8 @@ func (b *recordingBlobstore) account() (stored, outstanding []string) {
 func claimedOnboardingRead(t *testing.T, e *integration.Env) (SiteDeepReadArgs, people.SiteReadClaim) {
 	t.Helper()
 	read, _, err := e.People.StartOnboardingSiteRead(
-		e.As(e.Rep1, nil, integration.AdminPerms), seedURL, "human:"+e.Rep1.String(), nil)
+		e.As(e.Rep1, nil, integration.AdminPerms), seedURL, "human:"+e.Rep1.String(), nil,
+	)
 	if err != nil {
 		t.Fatalf("start the onboarding read: %v", err)
 	}

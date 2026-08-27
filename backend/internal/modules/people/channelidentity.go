@@ -134,7 +134,8 @@ func (s *Store) SetChannelIdentityBlocked(ctx context.Context, tx pgx.Tx, ci con
 	if botID == "" || updateID <= 0 {
 		return fmt.Errorf(
 			"people: a reachability change needs the bot that received it and that bot's update id, got bot %q and update %d",
-			botID, updateID)
+			botID, updateID,
+		)
 	}
 	// At most one row can come back: the partial unique index admits one live
 	// binding per (workspace, provider, channel_user_id).

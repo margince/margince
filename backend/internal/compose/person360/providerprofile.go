@@ -186,7 +186,8 @@ func (s *Service) profileFor(name string, status string, runs []providerRunRow, 
 					delivered := deliveredKeys(latest.id, claims)
 					profile.CategoriesAsked = providerPtr(asked(desc, latest.requested, delivered))
 					profile.CategoriesWithoutAnswer = providerPtr(categoriesWithoutAnswer(
-						desc, latest.requested, delivered))
+						desc, latest.requested, delivered,
+					))
 				}
 			}
 		}

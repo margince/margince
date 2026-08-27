@@ -109,17 +109,20 @@ func (voiceEvalDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.P
 	var floor float64
 	if err := json.Unmarshal(expected, &floor); err != nil {
 		return nil, fmt.Errorf(
-			"%s: the expected answer is not a stylometric floor in [0,1]: %w", voiceEvalDraftSite, err)
+			"%s: the expected answer is not a stylometric floor in [0,1]: %w", voiceEvalDraftSite, err,
+		)
 	}
 	switch {
 	case floor <= 0:
 		return nil, fmt.Errorf(
 			"%s: the scenario expects a floor of %g, which every draft clears — including one with nothing in "+
-				"common with the corpus — so it asserts nothing", voiceEvalDraftSite, floor)
+				"common with the corpus — so it asserts nothing", voiceEvalDraftSite, floor,
+		)
 	case floor > 1:
 		return nil, fmt.Errorf(
 			"%s: the scenario expects a floor of %g, and stylometric proximity is at most 1",
-			voiceEvalDraftSite, floor)
+			voiceEvalDraftSite, floor,
+		)
 	}
 	return &voiceEvalDraftCase{
 		personality: f.Personality,
@@ -145,32 +148,39 @@ func refuseUnevaluableCandidate(f voiceEvalDraftFixture) error {
 	case strings.TrimSpace(f.VoiceProfileMD) == "":
 		return fmt.Errorf(
 			"%s: the fixture's candidate carries no derived voice profile, and only a built one is ever evaluated",
-			voiceEvalDraftSite)
+			voiceEvalDraftSite,
+		)
 	case len(f.Exemplars) > 2:
 		return fmt.Errorf(
 			"%s: the fixture supplies %d verbatim examples, and a build keeps at most 2",
-			voiceEvalDraftSite, len(f.Exemplars))
+			voiceEvalDraftSite, len(f.Exemplars),
+		)
 	case f.Stats.WordCount < ai.StarterVoiceWords:
 		return fmt.Errorf(
 			"%s: the fixture's corpus is %d own-authored words, and a build needs at least %d",
-			voiceEvalDraftSite, f.Stats.WordCount, ai.StarterVoiceWords)
+			voiceEvalDraftSite, f.Stats.WordCount, ai.StarterVoiceWords,
+		)
 	case strings.TrimSpace(f.HeldOut.Register) == "":
 		return fmt.Errorf(
 			"%s: the fixture's held-out sample names no register, and the drafting task is asked in one",
-			voiceEvalDraftSite)
+			voiceEvalDraftSite,
+		)
 	case evalSampleOpening(ai.VoiceSample{Text: f.HeldOut.Text}) == "":
 		return fmt.Errorf(
-			"%s: the fixture's held-out sample is empty, so the draft has nothing to reply to", voiceEvalDraftSite)
+			"%s: the fixture's held-out sample is empty, so the draft has nothing to reply to", voiceEvalDraftSite,
+		)
 	case f.Repeat < 0 || f.Repeat >= voiceEvalRepeatsPerPrompt:
 		return fmt.Errorf(
 			"%s: the fixture is repeat %d, and the evaluation repeats each held-out prompt %d times",
-			voiceEvalDraftSite, f.Repeat, voiceEvalRepeatsPerPrompt)
+			voiceEvalDraftSite, f.Repeat, voiceEvalRepeatsPerPrompt,
+		)
 	}
 	for _, exemplar := range f.Exemplars {
 		if strings.TrimSpace(exemplar.Text) == "" {
 			return fmt.Errorf(
 				"%s: the fixture supplies a verbatim example with no text, which the selector never keeps",
-				voiceEvalDraftSite)
+				voiceEvalDraftSite,
+			)
 		}
 	}
 	return nil

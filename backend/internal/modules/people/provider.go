@@ -140,7 +140,8 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		// which would answer an unfiltered page and read as "no matches".
 		if text != nil && *text != "" {
 			return nil, "", false, fmt.Errorf(
-				"people: partner has no text index; narrow by partner_role or cert_status, or search organization instead")
+				"people: partner has no text index; narrow by partner_role or cert_status, or search organization instead",
+			)
 		}
 		in := ListPartnersInput{Limit: &limit}
 		if cursor != nil {

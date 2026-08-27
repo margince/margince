@@ -70,7 +70,8 @@ func (weeklyNarrativeCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	var want weeklyNarrativeExpectation
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"weekly_review/narrative: the expected answer is not a must/must-not pair: %w", err)
+			"weekly_review/narrative: the expected answer is not a must/must-not pair: %w", err,
+		)
 	}
 	if len(want.MustMention) == 0 && len(want.MustNotMention) == 0 {
 		// A case that asserts nothing scores every reply as correct, which is

@@ -86,9 +86,11 @@ func scanRecordAuditRow(src auditRowScanner, r *recordAuditRow) error {
 func scanRecordAuditRowWith(src auditRowScanner, r *recordAuditRow, trailing ...any) error {
 	var beforeJSON, afterJSON []byte
 	var reversalLink *string
-	dests := []any{&r.id, &r.actorType, &r.actorID, &r.onBehalfOf, &r.action, &r.occurredAt,
+	dests := []any{
+		&r.id, &r.actorType, &r.actorID, &r.onBehalfOf, &r.action, &r.occurredAt,
 		&r.authorizationRule, &beforeJSON, &afterJSON, &r.passportID,
-		&r.actorDisplayName, &r.onBehalfOfName, &r.agentClientName, &reversalLink}
+		&r.actorDisplayName, &r.onBehalfOfName, &r.agentClientName, &reversalLink,
+	}
 	if err := src.Scan(append(dests, trailing...)...); err != nil {
 		return err
 	}

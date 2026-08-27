@@ -146,7 +146,8 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 			httperr.Write(w, r, fmt.Errorf(
 				"the approval released this record at version %d and the tier gate read it at %d — it moved "+
 					"between the two, so neither is the version that was judged; re-read it and retry: %w",
-				redemption.pin, admitted, apperrors.ErrVersionSkew))
+				redemption.pin, admitted, apperrors.ErrVersionSkew,
+			))
 			return false
 		}
 		r.Header.Set(ifMatchHeader, strconv.FormatInt(redemption.pin, 10))
@@ -184,7 +185,8 @@ func pinAutoExecutedWrite(w http.ResponseWriter, r *http.Request, redemption tok
 		}
 		httperr.Write(w, r, fmt.Errorf(
 			"If-Match %s is not the version this record was read at (%d) — re-read it and retry: %w",
-			caller, admitted, apperrors.ErrVersionSkew))
+			caller, admitted, apperrors.ErrVersionSkew,
+		))
 		return false
 	}
 	r.Header.Set(ifMatchHeader, strconv.FormatInt(admitted, 10))

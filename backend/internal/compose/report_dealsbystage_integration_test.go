@@ -173,7 +173,8 @@ func TestDealsByStageFiltersByOrganizationID(t *testing.T) {
 
 	result := e.runReport(e.Admin(), t, "deals-by-stage", fmt.Sprintf(
 		`{"group_by":["stage_id"],"aggregates":[{"fn":"count","as":"deals"},{"fn":"sum","field":"amount_minor","as":"amount_minor_sum"}],"filters":{"organization_id":%q}}`,
-		orgA.String()))
+		orgA.String(),
+	))
 	row := dealsByStageRow(t, result, e.stages[60].String())
 	if got := wireInt(t, row, "deals"); got != 1 {
 		t.Fatalf("deals = %d, want 1 (only org A's deal)", got)

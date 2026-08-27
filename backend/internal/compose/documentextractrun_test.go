@@ -101,7 +101,8 @@ func groundedDocumentReply() string {
 		statedField("name", "Order form", "ORDER FORM"),
 		statedField(modelFieldAmount, "148500.00", "Contract value: EUR 148,500.00"),
 		statedField("currency", "EUR", "Contract value: EUR 148,500.00"),
-		"")
+		"",
+	)
 }
 
 // The ordinary case: a text document, four fields asked for, three grounded.

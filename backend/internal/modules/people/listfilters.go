@@ -58,7 +58,8 @@ var organizationListFilters = storekit.FilterSet[ListOrganizationsInput]{
 	filterLifecycle: storekit.FilterWord(func(in *ListOrganizationsInput, v *string) { in.Lifecycle = v }),
 	filterOwnerID:   storekit.FilterID(func(in *ListOrganizationsInput, id *ids.UserID) { in.OwnerID = id }),
 	filterRelationshipType: storekit.FilterWord(
-		func(in *ListOrganizationsInput, v *string) { in.RelationshipType = v }),
+		func(in *ListOrganizationsInput, v *string) { in.RelationshipType = v },
+	),
 }
 
 // Partner lists by role and certification, the two dials GET /partners already

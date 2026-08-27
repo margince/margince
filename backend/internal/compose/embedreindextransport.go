@@ -108,7 +108,8 @@ func embedReindexRunningDetail(force bool, lastProgress time.Duration) string {
 	}
 	return fmt.Sprintf(
 		"a fleet-wide reindex is already running and last reported progress %s ago; a forced takeover needs %s without progress, so let it finish or retry once it has stopped moving",
-		humanProgressAge(lastProgress), humanStaleWindow(reembedStaleAfter))
+		humanProgressAge(lastProgress), humanStaleWindow(reembedStaleAfter),
+	)
 }
 
 // reembedClaimFor mints the claim one confirm makes, and decides whether that

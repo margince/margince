@@ -222,7 +222,8 @@ func (m modelCostRefresh) reduceCatalog(body string, src pricingSource) (string,
 	if !bindsProvider && len(m.bound) > 0 {
 		return "", fmt.Errorf(
 			"extract: rates.model_pricing names provider %q, which ai-routing.yaml does not bind (it binds %s) — the two must use the same spelling",
-			src.Provider, strings.Join(boundProviderNames(m.bound), ", "))
+			src.Provider, strings.Join(boundProviderNames(m.bound), ", "),
+		)
 	}
 	reduced, kept, ok := catalogPassages(body, wanted)
 	switch {
@@ -236,7 +237,8 @@ func (m modelCostRefresh) reduceCatalog(body string, src pricingSource) (string,
 		// their prices silently stale forever.
 		return "", fmt.Errorf(
 			"extract: none of the %d model(s) bound on %s appears in its catalog — check the ids in ai-routing.yaml against the vendor's own spelling",
-			len(wanted), src.Provider)
+			len(wanted), src.Provider,
+		)
 	case kept < len(wanted):
 		m.log.Warn("model-cost refresh: some bound models are absent from the catalog",
 			"provider", src.Provider, "bound", len(wanted), "found", kept)

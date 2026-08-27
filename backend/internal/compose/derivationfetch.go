@@ -53,7 +53,8 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 
 		rowsSQL, rowsArgs, err := bindReportTokens(ctx, tx, fmt.Sprintf(
 			"SELECT %s FROM %s WHERE %s ORDER BY t.id LIMIT %d",
-			strings.Join(plan.selects, ", "), spec.fromClause(), whereSQL, reportRowLimit), args)
+			strings.Join(plan.selects, ", "), spec.fromClause(), whereSQL, reportRowLimit,
+		), args)
 		if err != nil {
 			return err
 		}
@@ -74,7 +75,8 @@ func (e *reportEngine) fetchDerivation(ctx context.Context, report string, spec 
 		// cannot shadow the total.
 		aggSQL, aggArgs, err := bindReportTokens(ctx, tx, fmt.Sprintf(
 			"SELECT count(*), %s FROM %s WHERE %s",
-			strings.Join(plan.aggSelects, ", "), spec.fromClause(), whereSQL), args)
+			strings.Join(plan.aggSelects, ", "), spec.fromClause(), whereSQL,
+		), args)
 		if err != nil {
 			return err
 		}

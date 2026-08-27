@@ -89,7 +89,8 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 	var want []signalExtractExpectation
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"signal_extract/thread_events: the expected answer is not a list of events: %w", err)
+			"signal_extract/thread_events: the expected answer is not a list of events: %w", err,
+		)
 	}
 	if err := refuseUnreachableEvents(want, len(messages)); err != nil {
 		return nil, err
@@ -113,23 +114,27 @@ func (signalExtractCases) Prepare(fixture, expected json.RawMessage) (aitasks.Pr
 func refuseUnreadableThread(messages signalExtractFixture) error {
 	if len(messages) == 0 {
 		return errors.New(
-			"signal_extract/thread_events: the fixture supplies no message, so there is no conversation to read")
+			"signal_extract/thread_events: the fixture supplies no message, so there is no conversation to read",
+		)
 	}
 	if len(messages) > extractThreadMessages {
 		return fmt.Errorf(
 			"signal_extract/thread_events: the fixture carries %d messages, but one call reads at most %d",
-			len(messages), extractThreadMessages)
+			len(messages), extractThreadMessages,
+		)
 	}
 	for i, message := range messages {
 		if n := utf8.RuneCountInString(message.Body); n > extractBodyLimit {
 			return fmt.Errorf(
 				"signal_extract/thread_events: message %d carries a body of %d characters, but the read truncates every body to %d",
-				i+1, n, extractBodyLimit)
+				i+1, n, extractBodyLimit,
+			)
 		}
 		if message.Direction != "inbound" && message.Direction != "outbound" && message.Direction != "" {
 			return fmt.Errorf(
 				"signal_extract/thread_events: message %d is directed %q, and a captured email is inbound or outbound",
-				i+1, message.Direction)
+				i+1, message.Direction,
+			)
 		}
 	}
 	return nil
@@ -143,18 +148,21 @@ func refuseUnreachableEvents(want []signalExtractExpectation, messages int) erro
 	if len(want) > extractMaxEvents {
 		return fmt.Errorf(
 			"signal_extract/thread_events: the scenario expects %d events, but this site reports at most %d",
-			len(want), extractMaxEvents)
+			len(want), extractMaxEvents,
+		)
 	}
 	for i, event := range want {
 		if _, ok := extractKinds[event.Kind]; !ok {
 			return fmt.Errorf(
 				"signal_extract/thread_events: expectation %d names kind %q, which this site never records",
-				i+1, event.Kind)
+				i+1, event.Kind,
+			)
 		}
 		if event.Message < 1 || event.Message > messages {
 			return fmt.Errorf(
 				"signal_extract/thread_events: expectation %d cites message %d, and the conversation has %d",
-				i+1, event.Message, messages)
+				i+1, event.Message, messages,
+			)
 		}
 	}
 	return nil

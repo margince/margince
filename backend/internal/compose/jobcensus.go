@@ -126,7 +126,8 @@ func bothGeneratedHalvesCameFromOneContract() []string {
 	}
 	return []string{fmt.Sprintf(
 		"the generated halves came from different revisions of api/jobs.yaml (platform/jobs carries %s, compose carries %s) — run `make gen`",
-		jobs.JobContractHash, jobContractHash)}
+		jobs.JobContractHash, jobContractHash,
+	)}
 }
 
 // everyDeclaredKindIsWiredAndBack is the totality both ways. A declared kind
@@ -148,7 +149,8 @@ func (c *JobCensus) everyDeclaredKindIsWiredAndBack() []string {
 	}
 	if declared < declaredJobKindFloor {
 		findings = append(findings, fmt.Sprintf(
-			"the contract declares only %d kinds, expected at least %d — every check below iterates the declaration, so a census over an empty one reports nothing and reads clean", declared, declaredJobKindFloor))
+			"the contract declares only %d kinds, expected at least %d — every check below iterates the declaration, so a census over an empty one reports nothing and reads clean", declared, declaredJobKindFloor,
+		))
 	}
 	for _, kind := range slices.Sorted(maps.Keys(c.wired)) {
 		if _, ok := jobs.SpecFor(kind); !ok {
@@ -168,7 +170,8 @@ func (c *JobCensus) everyKindIsWorkedByItsDeclaredArgsType() []string {
 	findings := misfiledKinds(c.wired)
 	if len(c.wired) < declaredJobKindFloor {
 		findings = append(findings, fmt.Sprintf(
-			"only %d registrations were paired against their declared go_type, expected at least %d — the census wired almost nothing and this check would pass by asking nobody", len(c.wired), declaredJobKindFloor))
+			"only %d registrations were paired against their declared go_type, expected at least %d — the census wired almost nothing and this check would pass by asking nobody", len(c.wired), declaredJobKindFloor,
+		))
 	}
 	return findings
 }
@@ -213,13 +216,15 @@ func (c *JobCensus) everyDerivedTimeoutStillEqualsItsConstant() []string {
 		value, known := constants[name]
 		if !known {
 			findings = append(findings, fmt.Sprintf(
-				"%s declares a timeout derived from %s, which derivedTimeoutConstants does not resolve — add it there, or the declaration tracks nothing", kind, name))
+				"%s declares a timeout derived from %s, which derivedTimeoutConstants does not resolve — add it there, or the declaration tracks nothing", kind, name,
+			))
 			continue
 		}
 		resolved[name] = true
 		if value != spec.Timeout.Fixed {
 			findings = append(findings, fmt.Sprintf(
-				"%s declares %v derived from %s, which is now %v — River is handed the declared value, so update api/jobs.yaml and run `make gen`", kind, spec.Timeout.Fixed, name, value))
+				"%s declares %v derived from %s, which is now %v — River is handed the declared value, so update api/jobs.yaml and run `make gen`", kind, spec.Timeout.Fixed, name, value,
+			))
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(constants)) {
@@ -289,7 +294,8 @@ func (c *JobCensus) everyArgsOwnedKindInsertsOnItsDeclaredQueue() []string {
 		withOpts, owns := entry.args.(river.JobArgsWithInsertOpts)
 		if !owns {
 			findings = append(findings, fmt.Sprintf(
-				"%s declares opts_owner: args but %s has no InsertOpts() — nothing then owns its queue or its uniqueness, and River takes its own defaults", kind, spec.GoType))
+				"%s declares opts_owner: args but %s has no InsertOpts() — nothing then owns its queue or its uniqueness, and River takes its own defaults", kind, spec.GoType,
+			))
 			continue
 		}
 		checked++
@@ -299,7 +305,8 @@ func (c *JobCensus) everyArgsOwnedKindInsertsOnItsDeclaredQueue() []string {
 		}
 		if queue != spec.Queue {
 			findings = append(findings, fmt.Sprintf(
-				"%s declares queue %q but its own InsertOpts() inserts on %q — the declaration is what the fleet surfaces publish, and this kind's rows would not be there", kind, spec.Queue, queue))
+				"%s declares queue %q but its own InsertOpts() inserts on %q — the declaration is what the fleet surfaces publish, and this kind's rows would not be there", kind, spec.Queue, queue,
+			))
 		}
 	}
 	if checked == 0 {
@@ -330,11 +337,13 @@ func (c *JobCensus) noArgsTypeAnswersToASecondKind() []string {
 		}
 		findings = append(findings, fmt.Sprintf(
 			"%s also answers to %s through KindAliases — River registers a worker under every one of them, and api/jobs.yaml cannot declare a second kind for one args struct; rename by adding the new kind with its own args type and draining the old one",
-			kind, strings.Join(aliased.KindAliases(), ", ")))
+			kind, strings.Join(aliased.KindAliases(), ", "),
+		))
 	}
 	if inspected < declaredJobKindFloor {
 		findings = append(findings, fmt.Sprintf(
-			"only %d registered args types were inspected for kind aliases, expected at least %d — the walk matched almost nothing and this check would pass by asking nobody", inspected, declaredJobKindFloor))
+			"only %d registered args types were inspected for kind aliases, expected at least %d — the walk matched almost nothing and this check would pass by asking nobody", inspected, declaredJobKindFloor,
+		))
 	}
 	return findings
 }

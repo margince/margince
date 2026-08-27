@@ -60,7 +60,8 @@ func listRelationshipsInTx(ctx context.Context, tx pgx.Tx, in ListRelationshipsI
 	}
 	rows, err := tx.Query(ctx, storekit.SQLf(
 		`SELECT %s FROM relationship r WHERE %s ORDER BY r.id LIMIT $%d`,
-		aliased(relationshipColumns, "r"), strings.Join(where, " AND "), arg(limit+1)), args...)
+		aliased(relationshipColumns, "r"), strings.Join(where, " AND "), arg(limit+1),
+	), args...)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}

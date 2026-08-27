@@ -240,7 +240,8 @@ func setupGoogleAppWithEnvApp(t *testing.T) *apptest.AppEnv {
 	if err != nil {
 		t.Fatalf("building the local vault: %v", err)
 	}
-	e := apptest.SetupAppWithOptions(t,
+	e := apptest.SetupAppWithOptions(
+		t,
 		compose.WithKeyvault(vault),
 		compose.WithGmailCapture(compose.GmailConfig{
 			ClientID:      "env-client.apps.googleusercontent.com",

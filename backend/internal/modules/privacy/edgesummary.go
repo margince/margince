@@ -46,10 +46,10 @@ type edgePhrase struct {
 // action absent here falls back to the record phrasing, which is honest if
 // clumsy — the alternative is a line that claims to know what happened.
 var edgePhrases = map[auditVerbKey]edgePhrase{
-	{action: "create", entityType: EdgeEntityType}: {
+	{action: actionCreate, entityType: EdgeEntityType}: {
 		template: "%s linked %s as %s", detail: edgeRoleOrKind,
 	},
-	{action: "update", entityType: EdgeEntityType}: {
+	{action: actionUpdate, entityType: EdgeEntityType}: {
 		template: "%s changed %s's %s", detail: edgeChangedFields,
 	},
 	{action: actionArchive, entityType: EdgeEntityType}: {

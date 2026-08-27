@@ -86,7 +86,8 @@ func (orgBriefCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepare
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"summarize/org_brief: the expected answer is not a list of record labels the brief must cite: %w", err)
+			"summarize/org_brief: the expected answer is not a list of record labels the brief must cite: %w", err,
+		)
 	}
 	in, label, err := orgBriefInput(f)
 	if err != nil {
@@ -168,7 +169,8 @@ func refuseUngroundableBrief(want []string, label map[string]string) error {
 	for _, name := range want {
 		if _, ok := label[name]; !ok {
 			return fmt.Errorf(
-				"the scenario expects %q, which the fixture does not supply, so the reply could never cite it", name)
+				"the scenario expects %q, which the fixture does not supply, so the reply could never cite it", name,
+			)
 		}
 	}
 	return nil

@@ -142,7 +142,8 @@ func (e *voiceSendEnv) readVoiceSignal(t *testing.T, signal ids.UUID) voiceSigna
 	if err := e.owner.QueryRow(context.Background(), `
 		SELECT outcome, similarity::double precision, version
 		FROM voice_learning_signal WHERE id = $1`, signal).Scan(
-		&row.outcome, &row.similarity, &row.version); err != nil {
+		&row.outcome, &row.similarity, &row.version,
+	); err != nil {
 		t.Fatalf("reading the learning signal: %v", err)
 	}
 	return row

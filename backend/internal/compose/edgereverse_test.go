@@ -173,7 +173,8 @@ func TestReversingAnEntryThatFilledALinkFieldInIsRefusedByName(t *testing.T) {
 // edge patch permanently un-undoable.
 func TestReversingAnOrdinaryLinkChangeIsNotRefusedAsUnclearable(t *testing.T) {
 	unclearable, err := edgeFieldsNoPatchCanClear(
-		json.RawMessage(`{"role":"cto"}`), json.RawMessage(`{"role":"coo"}`))
+		json.RawMessage(`{"role":"cto"}`), json.RawMessage(`{"role":"coo"}`),
+	)
 	if err != nil {
 		t.Fatalf("judging the image: %v", err)
 	}

@@ -128,7 +128,8 @@ func TestASlowToolCallOutlivesTheServersWriteDeadline(t *testing.T) {
 
 	req, err := http.NewRequest(http.MethodPost, strict.URL+"/mcp", strings.NewReader(
 		`{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"draft_email",`+
-			`"arguments":{"activity_id":"`+thread.ID+`","intent":"answer the renewal question"}}}`))
+			`"arguments":{"activity_id":"`+thread.ID+`","intent":"answer the renewal question"}}}`,
+	))
 	if err != nil {
 		t.Fatal(err)
 	}

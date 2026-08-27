@@ -30,6 +30,7 @@ import (
 func WithChannelSurface() Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.channelHandlers = capture.NewChannelHandlers(
-			capture.NewChannelStore(InstallationDB(pool), nil, telegram.NewAPI(nil, ""), s.log))
+			capture.NewChannelStore(InstallationDB(pool), nil, telegram.NewAPI(nil, ""), s.log),
+		)
 	}
 }

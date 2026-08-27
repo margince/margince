@@ -189,7 +189,8 @@ func operationalMux(srv Server, pool *pgxpool.Pool, log *slog.Logger, identitySv
 	// stored plaintext"). Redacting it would cost the access log the one
 	// thing that identifies which booking page was hit, and buy nothing.
 	mux.Handle("/v1/", httpserver.Correlate(
-		httpserver.AccessLog(log, authH.Middleware(publicEdge), publicPreferencesPrefix)))
+		httpserver.AccessLog(log, authH.Middleware(publicEdge), publicPreferencesPrefix),
+	))
 	// The remote MCP connector, mounted as ONE group behind the deployment
 	// gate: the A2 transport, the A2 authorization server (ADR-0013) and
 	// both discovery documents. They belong together because RFC 9728

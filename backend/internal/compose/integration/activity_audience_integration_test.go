@@ -83,8 +83,10 @@ func TestLimitingAnActivityWithholdsItsContentFromEveryoneButItsAudience(t *test
 	}
 
 	// Naming the colleague lets them in; re-opening lets everyone in.
-	if _, err := e.Activities.SetAudience(author, id, activities.SetAudienceInput{Audience: "selected",
-		Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: e.Rep3}}}); err != nil {
+	if _, err := e.Activities.SetAudience(author, id, activities.SetAudienceInput{
+		Audience: "selected",
+		Members:  []activities.AudienceMember{{SubjectType: "user", SubjectID: e.Rep3}},
+	}); err != nil {
 		t.Fatalf("selecting the colleague: %v", err)
 	}
 	if got, err := e.Activities.GetActivity(colleague, id, storekit.LiveOnly); err != nil || got.Subject == nil {

@@ -51,7 +51,8 @@ func TestErasingARecipientEmptiesAndStopsTheirScheduledMail(t *testing.T) {
 		t.Fatalf("person id %q: %v", p.personID, err)
 	}
 	if err := privacy.NewEraser(compose.InstallationDB(p.Pool)).ErasePerson(
-		p.privacyAdmin(t), personID, "art-17"); err != nil {
+		p.privacyAdmin(t), personID, "art-17",
+	); err != nil {
 		t.Fatalf("erasing the recipient: %v", err)
 	}
 
@@ -96,7 +97,8 @@ func TestASubjectAccessExportCarriesTheMailNobodyHasSentYet(t *testing.T) {
 		t.Fatalf("person id %q: %v", p.personID, err)
 	}
 	pkg, err := privacy.AssembleSAR(
-		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.PersonKind](personID))
+		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.PersonKind](personID),
+	)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}
@@ -168,7 +170,8 @@ func TestABlindCopiedSubjectSeesTheirOwnMailAndNobodyElsesAddress(t *testing.T) 
 		t.Fatalf("person id %q: %v", p.personID, err)
 	}
 	pkg, err := privacy.AssembleSAR(
-		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.PersonKind](personID))
+		p.privacyAdmin(t), compose.InstallationDB(p.Pool), ids.From[ids.PersonKind](personID),
+	)
 	if err != nil {
 		t.Fatalf("AssembleSAR: %v", err)
 	}

@@ -305,7 +305,8 @@ func mcpCall(t *testing.T, method, extraParams, name string, views *apps.Provide
 		// records is the narrowed catalogue a caller is really served.
 		agents.WithResourceProvider(composeResources(
 			mcpResourceProviders(agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})),
-				search.NewQuerySchemaResource(queryVocabulary(nil)), views)...)),
+				search.NewQuerySchemaResource(queryVocabulary(nil)), views)...,
+		)),
 		// A tool names its view only where the deployment HOLDS that document,
 		// which is the same promise the protocol makes: a `_meta.ui.resourceUri`
 		// pointing at a document the server will not serve is a dangling

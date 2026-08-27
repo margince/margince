@@ -255,7 +255,8 @@ func (g *graphAssembly) addPersonNode(edge graphPersonEdge) {
 	if strength, ok := g.strengths[edge.personID]; ok {
 		score := strength.Strength
 		bucket := crmcontracts.OrganizationGraphNodeStrengthBucket(
-			people.StrengthBucketToWire(strength.Bucket))
+			people.StrengthBucketToWire(strength.Bucket),
+		)
 		node.Strength = &score
 		node.StrengthBucket = &bucket
 	}

@@ -49,7 +49,7 @@ func edgeReaderContext(edgeGrant bool) context.Context {
 
 // renderEdgeCTE renders the CTE for one anchor kind and answers it with the
 // arguments it registered.
-func renderEdgeCTE(t *testing.T, ctx context.Context, entityType string) (string, []any, error) {
+func renderEdgeCTE(ctx context.Context, t *testing.T, entityType string) (string, []any, error) {
 	t.Helper()
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
@@ -63,7 +63,7 @@ func TestAnEdgelessCallerRegistersNoEdgeArguments(t *testing.T) {
 	// keeps the arguments it had already bound. If the denial arrived AFTER an
 	// argument was registered, the record's own query would carry a placeholder
 	// nothing supplies and every history read would 500.
-	cte, args, err := renderEdgeCTE(t, edgeReaderContext(false), "person")
+	cte, args, err := renderEdgeCTE(edgeReaderContext(false), t, "person")
 	if !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Fatalf("a caller with no edge grant: err = %v, want permission denied", err)
 	}
@@ -80,7 +80,7 @@ func TestAKindThatOccupiesNoEndpointColumnHasNoEdgeBranch(t *testing.T) {
 	// A lead and an activity are never an end of a link. That is absence, not a
 	// refusal and not an error, and it must cost no query.
 	for _, entityType := range []string{"lead", entityTypeActivity} {
-		cte, args, err := renderEdgeCTE(t, edgeReaderContext(true), entityType)
+		cte, args, err := renderEdgeCTE(edgeReaderContext(true), t, entityType)
 		if err != nil || cte != "" {
 			t.Errorf("%s: cte = %q, err = %v, want no edge branch at all", entityType, cte, err)
 		}
@@ -93,7 +93,7 @@ func TestAKindThatOccupiesNoEndpointColumnHasNoEdgeBranch(t *testing.T) {
 func TestEveryEdgeBranchGatesTheOtherEndsVisibilityAndErasure(t *testing.T) {
 	// The organization anchor is the one with TWO anchor columns, so it renders
 	// the most branches and is where a missing gate is most likely to hide.
-	cte, args, err := renderEdgeCTE(t, edgeReaderContext(true), "organization")
+	cte, args, err := renderEdgeCTE(edgeReaderContext(true), t, "organization")
 	if err != nil {
 		t.Fatalf("rendering the organization anchor's CTE: %v", err)
 	}
@@ -133,7 +133,7 @@ func TestTheEdgeBranchesAreDisjointAndSargable(t *testing.T) {
 	// relationship must be the anchor's equality — a second one (a column required
 	// to be null) is an access path the planner will take on a table where that
 	// column usually is null.
-	cte, _, err := renderEdgeCTE(t, edgeReaderContext(true), "organization")
+	cte, _, err := renderEdgeCTE(edgeReaderContext(true), t, "organization")
 	if err != nil {
 		t.Fatalf("rendering the organization anchor's CTE: %v", err)
 	}

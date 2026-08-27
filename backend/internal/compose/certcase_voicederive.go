@@ -98,12 +98,14 @@ func (voiceDeriveCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"%s: the expected answer is not a list of corpus sample ids: %w", voiceDeriveSite, err)
+			"%s: the expected answer is not a list of corpus sample ids: %w", voiceDeriveSite, err,
+		)
 	}
 	if len(want) == 0 {
 		return nil, fmt.Errorf(
 			"%s: the scenario names no sample the profile must ground itself in, so it asserts nothing",
-			voiceDeriveSite)
+			voiceDeriveSite,
+		)
 	}
 	if err := refuseUngroundableVoiceExpectation(want, f.Samples); err != nil {
 		return nil, err
@@ -132,26 +134,31 @@ func refuseUnbuildableCorpus(samples []ai.VoiceSample) error {
 		case strings.TrimSpace(sample.ID) == "":
 			return fmt.Errorf(
 				"%s: the fixture supplies a sample with no id, and the prompt's list of valid ids is the only "+
-					"vocabulary a citation has", voiceDeriveSite)
+					"vocabulary a citation has", voiceDeriveSite,
+			)
 		case seen[sample.ID]:
 			return fmt.Errorf(
-				"%s: the fixture supplies sample %q twice, and a citation names one source", voiceDeriveSite, sample.ID)
+				"%s: the fixture supplies sample %q twice, and a citation names one source", voiceDeriveSite, sample.ID,
+			)
 		case strings.TrimSpace(sample.Text) == "":
 			return fmt.Errorf(
 				"%s: sample %q carries no text, and a source with no content is never stored",
-				voiceDeriveSite, sample.ID)
+				voiceDeriveSite, sample.ID,
+			)
 		case sample.WordCount != ai.WordCount(sample.Text):
 			return fmt.Errorf(
 				"%s: sample %q declares %d words and carries %d, and the selector budgets the prompt on the "+
 					"declared count — the two disagreeing sends a corpus this one never would",
-				voiceDeriveSite, sample.ID, sample.WordCount, ai.WordCount(sample.Text))
+				voiceDeriveSite, sample.ID, sample.WordCount, ai.WordCount(sample.Text),
+			)
 		}
 		seen[sample.ID] = true
 	}
 	if words := ai.AnalyzeVoice(samples).WordCount; words < ai.StarterVoiceWords {
 		return fmt.Errorf(
 			"%s: the fixture's corpus is %d own-authored words, and a build needs at least %d before it calls a model",
-			voiceDeriveSite, words, ai.StarterVoiceWords)
+			voiceDeriveSite, words, ai.StarterVoiceWords,
+		)
 	}
 	return nil
 }
@@ -176,11 +183,13 @@ func refuseUngroundableVoiceExpectation(want []string, samples []ai.VoiceSample)
 		case supplied[id]:
 			return fmt.Errorf(
 				"%s: the scenario expects the profile to ground itself in sample %q, and the prompt's word cap "+
-					"drops that sample from the corpus this call is shown", voiceDeriveSite, id)
+					"drops that sample from the corpus this call is shown", voiceDeriveSite, id,
+			)
 		default:
 			return fmt.Errorf(
 				"%s: the scenario expects the profile to ground itself in sample %q, which the fixture never supplies",
-				voiceDeriveSite, id)
+				voiceDeriveSite, id,
+			)
 		}
 	}
 	return nil
@@ -271,7 +280,8 @@ func (r *voiceDeriveRecorder) Complete(ctx context.Context, req model.Request) (
 // I/O, so it needs nothing from the run's context.
 func (c *voiceDeriveCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 	artifact, err := ai.DeriveVoice(
-		context.Background(), voiceDeriveReplay{reply: trace.Output}, c.personality, c.sourceHash, c.samples)
+		context.Background(), voiceDeriveReplay{reply: trace.Output}, c.personality, c.sourceHash, c.samples,
+	)
 	if err != nil {
 		return aitasks.Outcome{Result: aitasks.OutcomeInvalid, Detail: err.Error()}
 	}
@@ -294,7 +304,8 @@ func (c *voiceDeriveCase) Evaluate(trace aitasks.Trace) aitasks.Outcome {
 			Result: aitasks.OutcomeWrongAnswer,
 			Detail: fmt.Sprintf(
 				"the derived profile grounds no signature move in %s, which the scenario expects it to draw on; "+
-					"it cites %s", strings.Join(missing, ", "), voiceDeriveCitations(cited)),
+					"it cites %s", strings.Join(missing, ", "), voiceDeriveCitations(cited),
+			),
 		}
 	}
 	return aitasks.Outcome{

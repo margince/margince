@@ -254,7 +254,8 @@ func TestCompanyMessageCaseRefusesAnExpectationItCannotRead(t *testing.T) {
 		json.RawMessage(`{"kind":"correction","proposed_changes":{"display_name":"Acme Robotics"}}`),
 	} {
 		_, err := onboardingCompanyMessageCases{}.Prepare(
-			companyMessageFixtureJSON(t, companyMessageFixture()), expected)
+			companyMessageFixtureJSON(t, companyMessageFixture()), expected,
+		)
 		if err == nil {
 			t.Fatalf("a scenario expecting %s prepared", expected)
 		}

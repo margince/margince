@@ -60,7 +60,8 @@ const notepadPayload = `{"stored":true}`
 func declaredStatusVerb() extension.Verb {
 	v := unitVerb("demo", "key_status", extension.TierAutoExecute, extension.ScopeRead)
 	v.OutputSchema = json.RawMessage(
-		`{"type":"object","additionalProperties":false,"required":["stored"],"properties":{"stored":{"type":"boolean"}}}`)
+		`{"type":"object","additionalProperties":false,"required":["stored"],"properties":{"stored":{"type":"boolean"}}}`,
+	)
 	return v
 }
 

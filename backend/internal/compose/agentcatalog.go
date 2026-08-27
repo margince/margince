@@ -63,7 +63,8 @@ func joinScheduledAgents(specs []runner.AgentSpec, declared []ai.Agent) ([]runne
 			return nil, fmt.Errorf(
 				"agent %q is scheduled but the contract declares no tools for it — add it under "+
 					"agent_loop's agents{} in api/ai-tasks.yaml, or the run is narrowed by its passport alone",
-				spec.Name)
+				spec.Name,
+			)
 		}
 		spec.Tools = slices.Clone(tools)
 		assembled = append(assembled, spec)
@@ -72,7 +73,8 @@ func joinScheduledAgents(specs []runner.AgentSpec, declared []ai.Agent) ([]runne
 	for name := range unclaimed {
 		return nil, fmt.Errorf(
 			"the contract declares tools for agent %q, which the runner catalog does not schedule — "+
-				"an allowlist nothing runs is a rule nobody obeys", name)
+				"an allowlist nothing runs is a rule nobody obeys", name,
+		)
 	}
 	return assembled, nil
 }

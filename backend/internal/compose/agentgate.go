@@ -157,7 +157,8 @@ func refusedAsHumanOnly(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	httperr.Write(w, r, fmt.Errorf(
-		"agent gate: %s is %s: %w", pol.Op, pol.Access, apperrors.ErrPermissionDenied))
+		"agent gate: %s is %s: %w", pol.Op, pol.Access, apperrors.ErrPermissionDenied,
+	))
 	return true
 }
 
@@ -175,7 +176,8 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 	pol, known := agentPolicies[r.Method+" "+pattern]
 	if !known {
 		httperr.Write(w, r, fmt.Errorf(
-			"agent gate: %s %s carries no autonomy tier: %w", r.Method, pattern, apperrors.ErrPermissionDenied))
+			"agent gate: %s %s carries no autonomy tier: %w", r.Method, pattern, apperrors.ErrPermissionDenied,
+		))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
 	if pol.Access != accessTool {
@@ -184,7 +186,8 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 		// session/bootstrap machinery: an agent principal is rejected
 		// outright, whatever its scope or seat.
 		httperr.Write(w, r, fmt.Errorf(
-			"agent gate: %s is %s: %w", pol.Op, pol.Access, apperrors.ErrPermissionDenied))
+			"agent gate: %s is %s: %w", pol.Op, pol.Access, apperrors.ErrPermissionDenied,
+		))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
 	spec, registered, ok := operationSpec(pol, reg)
@@ -197,7 +200,8 @@ func prepareAgentGate(w http.ResponseWriter, r *http.Request, reg *agents.Regist
 			reason = "declares an agent tool the registry does not serve"
 		}
 		httperr.Write(w, r, fmt.Errorf(
-			"agent gate: %s %s: %w", pol.Op, reason, apperrors.ErrPermissionDenied))
+			"agent gate: %s %s: %w", pol.Op, reason, apperrors.ErrPermissionDenied,
+		))
 		return mcp.ToolSpec{}, nil, agentPolicy{}, nil, false
 	}
 	body, err := io.ReadAll(io.LimitReader(r.Body, maxGatedBody+1))
@@ -342,7 +346,8 @@ func tierInput(ctx context.Context, spec mcp.ToolSpec, pol agentPolicy, deps res
 		if !described {
 			return mcp.TierResolverInput{}, fmt.Errorf(
 				"agent gate: %s decodes into no governed call, so nothing can say whether it needs a human: %w",
-				pol.Op, apperrors.ErrPermissionDenied)
+				pol.Op, apperrors.ErrPermissionDenied,
+			)
 		}
 		call, err := decode(pol, deps, r, body)
 		if err != nil {

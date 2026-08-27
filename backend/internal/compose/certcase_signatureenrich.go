@@ -79,7 +79,8 @@ func (signatureEnrichCases) Prepare(fixture, expected json.RawMessage) (aitasks.
 	lines := signatureBlock(f.Body)
 	if lines == "" {
 		return nil, errors.New(
-			"enrich/signature: the fixture's mail leaves no signature block, and the pass calls no model without one")
+			"enrich/signature: the fixture's mail leaves no signature block, and the pass calls no model without one",
+		)
 	}
 	var want map[string]string
 	if err := json.Unmarshal(expected, &want); err != nil {
@@ -117,10 +118,12 @@ func refuseUnenrichableExpectation(want map[string]string) error {
 		switch {
 		case !enrichFieldNames[name]:
 			return fmt.Errorf(
-				"enrich/signature: the scenario expects %q, which this prompt never offers the model", name)
+				"enrich/signature: the scenario expects %q, which this prompt never offers the model", name,
+			)
 		case strings.TrimSpace(want[name]) == "":
 			return fmt.Errorf(
-				"enrich/signature: the scenario expects an empty value for %q, which the gate drops", name)
+				"enrich/signature: the scenario expects an empty value for %q, which the gate drops", name,
+			)
 		}
 	}
 	return nil

@@ -169,7 +169,8 @@ func TestClassifyCaseSeparatesTheThreeThingsAReplyCanBe(t *testing.T) {
 			name: "one message answered twice and the other not at all",
 			answer: func(requested []string) string {
 				return classifyReplyText(
-					classifyVerdictFor(requested[0], "commitment"), classifyVerdictFor(requested[0], "noise"))
+					classifyVerdictFor(requested[0], "commitment"), classifyVerdictFor(requested[0], "noise"),
+				)
 			},
 			wantResult: aitasks.OutcomeInvalid,
 			wantDetail: "appears twice",

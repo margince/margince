@@ -87,7 +87,8 @@ func TestADealCanBeCreatedFromNothingButTheToolSurface(t *testing.T) {
 
 	created, err := registry.Invoke(ctx, "create_record", json.RawMessage(
 		`{"record_type":"deal","fields":{"name":"Pipeline discovery","pipeline_id":"`+
-			pipeline.ID.String()+`","stage_id":"`+open.String()+`","currency":"EUR","amount_minor":250000}}`))
+			pipeline.ID.String()+`","stage_id":"`+open.String()+`","currency":"EUR","amount_minor":250000}}`,
+	))
 	if err != nil {
 		t.Fatalf("create_record deal with ids obtained from list_pipelines: %v", err)
 	}
@@ -158,7 +159,8 @@ func TestADealCanBeAdvancedToAStageObtainedFromTheToolSurface(t *testing.T) {
 	}
 
 	advanced, err := registry.Invoke(ctx, "advance_deal", json.RawMessage(
-		`{"deal_id":"`+dealID.String()+`","to_stage_id":"`+target.String()+`"}`))
+		`{"deal_id":"`+dealID.String()+`","to_stage_id":"`+target.String()+`"}`,
+	))
 	if err != nil {
 		t.Fatalf("advance_deal onto an open stage from list_pipelines: %v", err)
 	}

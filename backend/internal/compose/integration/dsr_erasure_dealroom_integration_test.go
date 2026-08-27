@@ -186,7 +186,8 @@ func TestErasingASubjectTombstonesTheSeatSoTheAuditLogStopsAtIt(t *testing.T) {
 
 	if err := privacy.NewEraser(e.DB()).ErasePerson(
 		e.As(e.AdminUser, nil, roomErasureAdmin), seeded.person.UUID,
-		"an erasure request from the subject"); err != nil {
+		"an erasure request from the subject",
+	); err != nil {
 		t.Fatalf("erasing the subject: %v", err)
 	}
 

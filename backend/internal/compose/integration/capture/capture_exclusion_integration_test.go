@@ -40,7 +40,8 @@ func TestAnExclusionKeepsAMessageOutBeforeAnythingIsStored(t *testing.T) {
 		t.Fatalf("workspace rule: %v", err)
 	}
 
-	sync(t,
+	sync(
+		t,
 		email("partner@home.example", "Partner", captureOwner, "m-x1@mid.example", ""),
 		email("hr@mail.payroll.example", "Payroll", captureOwner, "m-x2@mid.example", ""),
 		email("dana@acme.example", "Dana Buyer", captureOwner, "x3@acme.example", ""),

@@ -254,7 +254,8 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 	if !ok || p.UserID == (ids.UUID{}) {
 		return ids.UserID{}, fmt.Errorf(
 			"the visit baseline and suggestion dismissals are both per-user, and this call carries no user: %w",
-			apperrors.ErrPermissionDenied)
+			apperrors.ErrPermissionDenied,
+		)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
 }

@@ -133,7 +133,7 @@ type ReverseEdgeInput struct {
 func (s *Store) ReverseEdge(ctx context.Context, in ReverseEdgeInput) error {
 	switch in.Action {
 	case "create":
-		_, err := s.archiveRelationship(ctx, in.EdgeID, &in.IfVersion, in.Evidence)
+		_, err := s.archiveRelationshipWithEvidence(ctx, in.EdgeID, &in.IfVersion, in.Evidence)
 		return err
 	case "update":
 		patch, err := relationshipPatchFromImage(in.Before)
@@ -181,7 +181,7 @@ func relationshipPatchFromImage(image map[string]any) (UpdateRelationshipInput, 
 func imageString(image map[string]any, key string) (*string, error) {
 	raw, present := image[key]
 	if !present || raw == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // an absent key is a field the entry did not hold, which is what a nil *string means on every update input in this tree
 	}
 	text, isString := raw.(string)
 	if !isString {
@@ -193,7 +193,7 @@ func imageString(image map[string]any, key string) (*string, error) {
 func imageBool(image map[string]any, key string) (*bool, error) {
 	raw, present := image[key]
 	if !present || raw == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // same as imageString: absent means the entry did not hold this field
 	}
 	flag, isBool := raw.(bool)
 	if !isBool {

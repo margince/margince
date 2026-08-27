@@ -89,12 +89,14 @@ func (corpusAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 	}
 	if len(f.Passages) == 0 {
 		return nil, fmt.Errorf(
-			"corpus_ask/corpus_ask: the fixture supplies no passages, and production never asks the lane without them")
+			"corpus_ask/corpus_ask: the fixture supplies no passages, and production never asks the lane without them",
+		)
 	}
 	var want []string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"corpus_ask/corpus_ask: the expected answer is not a list of passage labels the reply must cite: %w", err)
+			"corpus_ask/corpus_ask: the expected answer is not a list of passage labels the reply must cite: %w", err,
+		)
 	}
 	passages, label, err := corpusAskPassages(f)
 	if err != nil {
@@ -103,7 +105,8 @@ func (corpusAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 	for _, name := range want {
 		if _, known := label[name]; !known {
 			return nil, fmt.Errorf(
-				"corpus_ask/corpus_ask: the expected answer names passage %q, which the fixture does not supply — an unreachable expectation grades every reply wrong", name)
+				"corpus_ask/corpus_ask: the expected answer names passage %q, which the fixture does not supply — an unreachable expectation grades every reply wrong", name,
+			)
 		}
 	}
 	forbidden := map[string]string{}
@@ -115,7 +118,8 @@ func (corpusAskCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepar
 	for _, name := range want {
 		if _, banned := forbidden[label[name]]; banned {
 			return nil, fmt.Errorf(
-				"corpus_ask/corpus_ask: passage %q is both expected and marked wrong — the scenario asks for two opposite things", name)
+				"corpus_ask/corpus_ask: passage %q is both expected and marked wrong — the scenario asks for two opposite things", name,
+			)
 		}
 	}
 	return &corpusAskCase{question: f.Question, passages: passages, label: label, expected: want, forbidden: forbidden}, nil

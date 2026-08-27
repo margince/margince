@@ -36,7 +36,8 @@ const (
 // all. Off by default: a fresh installation should not open on a list where
 // every lead reads "overdue".
 var FirstResponseEnabled = settings.Define[bool](
-	"people.first_response_enabled", leadVocabularyObject, "update", false, nil)
+	"people.first_response_enabled", leadVocabularyObject, "update", false, nil,
+)
 
 // FirstResponseTargetMinutes is how long a lead may wait for its first
 // genuine response once its clock starts.
@@ -48,7 +49,8 @@ var FirstResponseTargetMinutes = settings.Define[int](
 			return fmt.Errorf("the target is %d..%d minutes", firstResponseMinMinutes, firstResponseMaxMinutes)
 		}
 		return nil
-	})
+	},
+)
 
 // Definitions is people's contribution to the settings registry; compose
 // concatenates each module's list.

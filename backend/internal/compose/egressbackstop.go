@@ -70,7 +70,8 @@ func refuseUngovernedAgentEgress(ctx context.Context, verb overlay.WriteVerb, et
 	}
 	return fmt.Errorf(
 		"an agent cannot write %s into this workspace's external system of record: %w",
-		et, apperrors.ErrUnsupportedBySoR)
+		et, apperrors.ErrUnsupportedBySoR,
+	)
 }
 
 // isAgentPrincipal reports whether ctx acts under a passport rather than a

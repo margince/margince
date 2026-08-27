@@ -514,7 +514,8 @@ func (channelAnchor) Read(_ context.Context, ref datasource.EntityRef) (datasour
 // send instead of staging it — reported as this lane's own failure rather than
 // as a nil-seam panic somewhere inside a handler.
 var errBothDoorsExecuted = errors.New(
-	"the comms seam executed in a lane that only compares what the two doors stage")
+	"the comms seam executed in a lane that only compares what the two doors stage",
+)
 
 // bothDoorsComms is the comms and scheduling seam with no send machinery behind
 // it. Every EXECUTOR method refuses; the one method that is not an executor —

@@ -53,7 +53,8 @@ func TestSiteProfileCaseRefusesAnExplicitExpectationWithAnUnknownKey(t *testing.
 // so it is named at Prepare rather than measured as a permanent zero.
 func TestSiteProfileCaseRefusesAFieldItBothExpectsAndForbids(t *testing.T) {
 	_, err := siteProfileCases{}.Prepare(siteProfileFixtureJSON(t), json.RawMessage(
-		`{"grounded":{"legal_name":"Acme Robotics GmbH"},"not_grounded":["legal_name"]}`))
+		`{"grounded":{"legal_name":"Acme Robotics GmbH"},"not_grounded":["legal_name"]}`,
+	))
 	if err == nil {
 		t.Fatal("an expectation requiring and forbidding one field prepared")
 	}

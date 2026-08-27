@@ -39,23 +39,27 @@ func (c *JobCensus) everyDeclaredQueueIsBuiltWithItsDeclaredBound() []string {
 		config, exists := built[name]
 		if !exists {
 			findings = append(findings, fmt.Sprintf(
-				"queue %q is declared but jobQueues() builds no such pool — a fan-out child is inserted on its DECLARED queue, so its rows would sit runnable with no client working them; build it, or retire the declaration", name))
+				"queue %q is declared but jobQueues() builds no such pool — a fan-out child is inserted on its DECLARED queue, so its rows would sit runnable with no client working them; build it, or retire the declaration", name,
+			))
 			continue
 		}
 		if config.MaxWorkers != declared[name] {
 			findings = append(findings, fmt.Sprintf(
-				"queue %q declares max_workers %d but jobQueues() builds %d — the file is what operators read; move the number in both places", name, declared[name], config.MaxWorkers))
+				"queue %q declares max_workers %d but jobQueues() builds %d — the file is what operators read; move the number in both places", name, declared[name], config.MaxWorkers,
+			))
 		}
 	}
 	for _, name := range slices.Sorted(maps.Keys(built)) {
 		if _, ok := declared[name]; !ok {
 			findings = append(findings, fmt.Sprintf(
-				"queue %q is built but api/jobs.yaml declares no such entry — a pool with no stated posture is a tuning knob; declare it with its reason and run `make gen`", name))
+				"queue %q is built but api/jobs.yaml declares no such entry — a pool with no stated posture is a tuning knob; declare it with its reason and run `make gen`", name,
+			))
 		}
 	}
 	if len(declared) < declaredQueueFloor {
 		findings = append(findings, fmt.Sprintf(
-			"the contract declares only %d queues, expected at least %d — both walks above read that table, so a census over an empty one reports nothing and reads clean", len(declared), declaredQueueFloor))
+			"the contract declares only %d queues, expected at least %d — both walks above read that table, so a census over an empty one reports nothing and reads clean", len(declared), declaredQueueFloor,
+		))
 	}
 	return findings
 }

@@ -66,7 +66,8 @@ func changeInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now tim
 	// The earlier fold's own last-interaction is the last one BEFORE asOf, not
 	// the overall one — inheriting today's recency would make every band look
 	// unchanged and the whole derivation silent.
-	if err := tx.QueryRow(ctx, `
+	if err := tx.QueryRow(
+		ctx, `
 		SELECT max(a.occurred_at),
 		       count(*) FILTER (WHERE a.occurred_at >= $2),
 		       count(*) FILTER (WHERE a.occurred_at >= $2 AND a.direction = 'inbound'),
@@ -96,7 +97,8 @@ func changeInputs(ctx context.Context, tx pgx.Tx, personID ids.PersonID, now tim
 	}
 	// The far side of the silence their reply broke. A separate statement
 	// because it is bounded by a value the first one returns.
-	if err := tx.QueryRow(ctx, `
+	if err := tx.QueryRow(
+		ctx, `
 		SELECT max(a.occurred_at)
 		  FROM activity a
 		  JOIN activity_link l ON l.activity_id = a.id AND l.person_id = $1

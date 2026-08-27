@@ -116,7 +116,8 @@ func (c commsAdapter) DraftAccountEmail(
 	if len(links) == 0 {
 		return "", "", &agents.BadArgsError{Cause: errors.New(
 			"links must name at least one record this conversation is filed under; " +
-				"a first message has no thread to inherit them from")}
+				"a first message has no thread to inherit them from",
+		)}
 	}
 	// Deterministic only, for now. activities.EmailDrafter (the routed model
 	// lane) takes an anchor by signature — DraftEmail(ctx, anchor, intent) —

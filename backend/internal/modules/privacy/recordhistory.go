@@ -29,6 +29,8 @@ const (
 	actorTypeSystem    = "system"
 	actorTypeConnector = "connector"
 	actionArchive      = "archive"
+	actionCreate       = "create"
+	actionUpdate       = "update"
 )
 
 // RecordHistoryFilter carries the validated query surface of

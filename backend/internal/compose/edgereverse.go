@@ -22,13 +22,13 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/modules/people"
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-
-	"github.com/jackc/pgx/v5"
 )
 
 // edgeEntityType is privacy's spelling of the audit spine's entity_type for an
@@ -73,7 +73,8 @@ type EdgeReverser interface {
 func (s RestoreSeam) reverseEdge(ctx context.Context, entityType string, id ids.UUID, row AuditRow, ifVersion int64) (privacy.RecordHistoryEntry, error) {
 	if s.edges == nil {
 		return privacy.RecordHistoryEntry{}, fmt.Errorf(
-			"compose: no edge writer is wired, so entry %s cannot be put back", row.ID)
+			"compose: no edge writer is wired, so entry %s cannot be put back", row.ID,
+		)
 	}
 	facts, answer, err := s.decideEdge(ctx, entityType, id, row, ifVersion)
 	if err != nil {
@@ -180,7 +181,7 @@ func (s RestoreSeam) decideEdge(ctx context.Context, entityType string, id ids.U
 // so is the decode of each value: what travels from here is the image, unread.
 func edgeImage(raw json.RawMessage) (map[string]any, error) {
 	if len(raw) == 0 {
-		return nil, nil
+		return nil, nil //nolint:nilnil // a create has no before-image: "no image" IS the answer, and the caller reads an empty patch from it
 	}
 	var image map[string]any
 	if err := json.Unmarshal(raw, &image); err != nil {

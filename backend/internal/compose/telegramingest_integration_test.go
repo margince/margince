@@ -117,7 +117,8 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var sourceID string
 	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
+		return tx.QueryRow(
+			ctx,
 			`SELECT source_id FROM activity WHERE source_system = 'telegram'`,
 		).Scan(&sourceID)
 	})

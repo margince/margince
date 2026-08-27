@@ -175,7 +175,8 @@ func TestVoiceEvalDraftCaseSendsTheVariationItWasGiven(t *testing.T) {
 	seen := map[string]bool{}
 	for repeat := 0; repeat < voiceEvalRepeatsPerPrompt; repeat++ {
 		prepared, err := voiceEvalDraftCases{}.Prepare(
-			voiceEvalDraftFixtureAt(t, repeat), voiceEvalDraftFloor(t, voiceEvalClearedFloor))
+			voiceEvalDraftFixtureAt(t, repeat), voiceEvalDraftFloor(t, voiceEvalClearedFloor),
+		)
 		if err != nil {
 			t.Fatalf("preparing repeat %d: %v", repeat, err)
 		}
@@ -267,7 +268,8 @@ func TestVoiceEvalDraftCaseRunsWhatProductionRuns(t *testing.T) {
 			}
 			for repeat, sent := range production {
 				prepared, err := voiceEvalDraftCases{}.Prepare(
-					voiceEvalDraftFixtureAt(t, repeat), voiceEvalDraftFloor(t, voiceEvalClearedFloor))
+					voiceEvalDraftFixtureAt(t, repeat), voiceEvalDraftFloor(t, voiceEvalClearedFloor),
+				)
 				if err != nil {
 					t.Fatalf("preparing repeat %d: %v", repeat, err)
 				}

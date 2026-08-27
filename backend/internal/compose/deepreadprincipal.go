@@ -31,7 +31,8 @@ import (
 // the worker writes is attributed on the payload's word.
 func deepReadWorkerCtx(ctx context.Context, args SiteDeepReadArgs) context.Context {
 	return withClaimedRequester(
-		principal.WithWorkspaceID(ctx, args.Workspace), args.RequestedBy, args.SiteReadID)
+		principal.WithWorkspaceID(ctx, args.Workspace), args.RequestedBy, args.SiteReadID,
+	)
 }
 
 // withClaimedRequester stamps the principal every store write is attributed to.

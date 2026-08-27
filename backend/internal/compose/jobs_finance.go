@@ -198,7 +198,8 @@ func (w *financeSyncWorker) providerFor(
 	if name != finance.OfflineProviderName {
 		return nil, false, fmt.Errorf(
 			"finance: no reader for provider %q — this build ships only %q",
-			name, finance.OfflineProviderName)
+			name, finance.OfflineProviderName,
+		)
 	}
 	return finance.NewOfflineProvider(workspace.String(), customers), true, nil
 }

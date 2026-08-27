@@ -326,7 +326,8 @@ func TestAnActivityThatCarriesNoTranscriptCannotBeRead(t *testing.T) {
 	}
 
 	_, _, err = e.Activities.StartTranscriptReadQueued(
-		e.ctx, ids.From[ids.ActivityKind](ids.UUID(note.Id)), "human:"+e.Rep1.String(), nil)
+		e.ctx, ids.From[ids.ActivityKind](ids.UUID(note.Id)), "human:"+e.Rep1.String(), nil,
+	)
 	if err == nil {
 		t.Fatal("an activity with no transcript has no lines to cite and must be refused")
 	}
@@ -454,7 +455,8 @@ func TestATranscriptTooLongForOneReadingIsRefusedAtTheDoor(t *testing.T) {
 	}
 
 	_, _, err = e.Activities.StartTranscriptReadQueued(
-		e.ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)), "human:"+e.Rep1.String(), nil)
+		e.ctx, ids.From[ids.ActivityKind](ids.UUID(activity.Id)), "human:"+e.Rep1.String(), nil,
+	)
 	if err == nil {
 		t.Fatal("a transcript past the reading bound must be refused here, not after a queued job fails minutes later")
 	}

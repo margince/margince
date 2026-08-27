@@ -165,7 +165,8 @@ func TestColdStartPreviewAnswersTheHonest422WhenNothingCanBeQuoted(t *testing.T)
 	// the no-guess gate drops them all.
 	hallucinating := func(t *testing.T) *coldStartEngine {
 		fake := ai.NewFakeClient().Script(
-			`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"a claim the source never makes","confidence":0.9}]}`)
+			`{"fields":[{"field":"icp","value":"guessed","evidence_snippet":"a claim the source never makes","confidence":0.9}]}`,
+		)
 		return &coldStartEngine{extract: evidenceExtractor{
 			fetch: stubPage(page),
 			brain: fakeModelPath(t, fake).ColdStart,

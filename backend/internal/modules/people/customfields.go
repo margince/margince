@@ -94,7 +94,8 @@ func (s *Store) activeCustomColumns(ctx context.Context, object string, action p
 // back created, missing what the caller sent, with nothing saying why. The
 // store-opened entry point beside it carries custom fields exactly as before.
 var ErrCustomFieldsNeedTheStoresOwnTransaction = errors.New(
-	"people: a caller-opened create cannot carry custom fields — the store-opened entry point reads the catalog before it opens its transaction")
+	"people: a caller-opened create cannot carry custom fields — the store-opened entry point reads the catalog before it opens its transaction",
+)
 
 // refuseCustomFields is the guard every caller-opened create runs first.
 func refuseCustomFields(fields map[string]any) error {

@@ -242,7 +242,8 @@ func refuseMixedRelease(mine, installation string) error {
 			"the deployment supplied two different releases. "+
 			"Deploy every role (api, web, worker) at one release and restart; "+
 			"this role will not run half of one release beside half of another",
-		mine, installation)
+		mine, installation,
+	)
 }
 
 // lastObservedRelease reads the release THIS installation's api recorded most

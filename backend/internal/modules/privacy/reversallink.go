@@ -32,7 +32,7 @@ const reversalLinkColumn = `a.evidence ->> '` + UndidAuditLogID + `'`
 func reversalLinkFromEvidence(evidence map[string]any) (*ids.UUID, error) {
 	raw, present := evidence[UndidAuditLogID]
 	if !present || raw == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // almost every row reversed nothing: "no link" IS the answer, not a fault
 	}
 	text, isString := raw.(string)
 	if !isString {
@@ -46,7 +46,7 @@ func reversalLinkFromEvidence(evidence map[string]any) (*ids.UUID, error) {
 // null, so one nil pointer covers both shapes of "this row reversed nothing".
 func reversalLinkFromColumn(projected *string) (*ids.UUID, error) {
 	if projected == nil {
-		return nil, nil
+		return nil, nil //nolint:nilnil // SQL NULL here means the row reversed nothing, which is the common case
 	}
 	return parseReversalLink(*projected)
 }

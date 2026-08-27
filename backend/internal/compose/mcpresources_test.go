@@ -176,7 +176,8 @@ func TestAFailingProviderStopsTheWalkRatherThanBecomingANotFound(t *testing.T) {
 func TestARoleWithNoViewProviderComposesTheRestAndServesIt(t *testing.T) {
 	vocabulary := stubProvider{documents: map[string]string{"margince://schema/query": "{}"}}
 	composed := composeResources(mcpResourceProviders(
-		agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})), vocabulary, nil)...)
+		agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})), vocabulary, nil,
+	)...)
 	if composed == nil {
 		t.Fatal("a role with no views composed no resource surface at all")
 	}

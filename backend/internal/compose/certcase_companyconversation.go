@@ -62,7 +62,8 @@ func decodeCompanyConversationScenario[T companyReadMessageFixture |
 func refuseUnsendableCompanyMessage(site, message string) error {
 	if strings.TrimSpace(message) == "" {
 		return fmt.Errorf(
-			"%s: the fixture carries no message, and this conversation answers one or nothing at all", site)
+			"%s: the fixture carries no message, and this conversation answers one or nothing at all", site,
+		)
 	}
 	if n := len([]rune(strings.TrimSpace(message))); n > companyReadMessageMaxRunes {
 		return fmt.Errorf(
@@ -127,14 +128,16 @@ func readCompanyConversationExpectation(
 	}
 	if !companyConversationKindValid(want.Kind) {
 		return want, fmt.Errorf(
-			"%s: the scenario expects the response kind %q, which the reply schema does not offer", site, want.Kind)
+			"%s: the scenario expects the response kind %q, which the reply schema does not offer", site, want.Kind,
+		)
 	}
 	if len(want.Changes) == 0 {
 		return want, nil
 	}
 	if want.Kind != companyConversationRecommendation && want.Kind != companyConversationCorrection {
 		return want, fmt.Errorf(
-			"%s: the scenario expects changes under the kind %q, which may not propose changes", site, want.Kind)
+			"%s: the scenario expects changes under the kind %q, which may not propose changes", site, want.Kind,
+		)
 	}
 	if len(want.Changes) > companyReadChangeLimit {
 		return want, fmt.Errorf(
@@ -155,7 +158,8 @@ func readCompanyConversationExpectation(
 func refuseUnreachableCompanyChange(site, field, value string, gate companyReadGate) error {
 	if !crmcontracts.CompanySiteReadSuggestedChangeField(field).Valid() {
 		return fmt.Errorf(
-			"%s: the scenario expects a change to %q, an unsupported field for this conversation", site, field)
+			"%s: the scenario expects a change to %q, an unsupported field for this conversation", site, field,
+		)
 	}
 	if strings.TrimSpace(value) == "" {
 		return fmt.Errorf("%s: the scenario expects a change to %q with no value to compare", site, field)

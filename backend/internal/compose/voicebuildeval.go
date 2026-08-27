@@ -224,7 +224,8 @@ func readVoiceEvalDraft(text string) (voiceEvalDraftReply, error) {
 	var draft replyDraft
 	if err := json.Unmarshal([]byte(ai.Unfence(text)), &draft); err != nil {
 		return voiceEvalDraftReply{}, fmt.Errorf(
-			`compose: voice evaluation draft is not {"subject":"...","body":"..."}: %w`, err)
+			`compose: voice evaluation draft is not {"subject":"...","body":"..."}: %w`, err,
+		)
 	}
 	if strings.TrimSpace(draft.Subject) == "" || strings.TrimSpace(draft.Body) == "" {
 		return voiceEvalDraftReply{}, errors.New("compose: voice evaluation draft has an empty subject or body")
@@ -299,7 +300,8 @@ func evaluateVoiceCandidate(ctx context.Context, brain completer, artifact ai.Vo
 // carries — which is why readVoiceJudgeScores checks it.
 var voiceEvalJudgeSchema = json.RawMessage(
 	`{"type":"object","additionalProperties":false,"required":["scores"],` +
-		`"properties":{"scores":{"type":"array","items":{"type":"number","minimum":0,"maximum":1}}}}`)
+		`"properties":{"scores":{"type":"array","items":{"type":"number","minimum":0,"maximum":1}}}}`,
+)
 
 // voiceEvalJudgeRequest is ONE judging call: the held-out original and every
 // repeat drafted against it, each inside the marker this call's system prompt

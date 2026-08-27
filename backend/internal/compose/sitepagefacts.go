@@ -206,10 +206,12 @@ func pageFactsSchema(menu pageMenu, snippetIDs []string) json.RawMessage {
 				"Copy the page's own words that give THIS person THIS role, " +
 					"from the role to the name or the name to the role, exactly as printed " +
 					"and with nothing left out in between. If the page never puts the two " +
-					"together, omit the person."),
+					"together, omit the person.",
+			),
 			"w": schema.String().Describe(
 				"Every OTHER person printed inside q, separated by '; '. " +
-					"Empty string when q names nobody else. Copy each name exactly as printed."),
+					"Empty string when q names nobody else. Copy each name exactly as printed.",
+			),
 			"m": schema.String().Describe("An email ONLY if this page prints it verbatim."),
 			"l": schema.String().Describe("A LinkedIn URL ONLY if this page prints it verbatim."),
 			"e": schema.Enum(snippetIDs...).Describe("The passage id naming the person."),

@@ -463,7 +463,8 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 			Kind: "meeting", Subject: strPtr("Board compensation review"),
 			OccurredAt: &when, Source: "manual",
 			Links: []activities.ActivityLinkInput{{EntityType: "person", EntityID: ours}},
-		})
+		},
+	)
 	if err != nil {
 		t.Fatalf("log the earlier meeting: %v", err)
 	}
@@ -471,7 +472,8 @@ func TestMeetingBriefRecallsNoSubjectItMayNotRead(t *testing.T) {
 	seatInRoom(t, owner, e.WS, ids.UUID(hidden.Id), ours)
 	if _, err := e.Activities.SetAudience(
 		e.As(e.Rep3, []ids.UUID{e.Team2}, activityLifecyclePerms),
-		hiddenID, activities.SetAudienceInput{Audience: "participants"}); err != nil {
+		hiddenID, activities.SetAudienceInput{Audience: "participants"},
+	); err != nil {
 		t.Fatalf("limit the earlier meeting: %v", err)
 	}
 

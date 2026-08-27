@@ -113,13 +113,15 @@ func refuseUnreadableBatch(messages captureClassifyFixture) error {
 	if len(messages) > classifyBatchSize {
 		return fmt.Errorf(
 			"capture_classify/classify: the fixture carries %d messages, but one call labels at most %d",
-			len(messages), classifyBatchSize)
+			len(messages), classifyBatchSize,
+		)
 	}
 	for i, m := range messages {
 		if n := utf8.RuneCountInString(m.Body); n > classifyBodyLimit {
 			return fmt.Errorf(
 				"capture_classify/classify: message %d carries a body of %d characters, but the backlog read truncates every body to %d",
-				i+1, n, classifyBodyLimit)
+				i+1, n, classifyBodyLimit,
+			)
 		}
 	}
 	return nil
@@ -134,13 +136,15 @@ func refuseUnreachableLabels(want []string, messages int) error {
 	if len(want) != messages {
 		return fmt.Errorf(
 			"capture_classify/classify: the scenario expects %d labels for %d messages, and this site answers one label per message",
-			len(want), messages)
+			len(want), messages,
+		)
 	}
 	for i, label := range want {
 		if !classifyLabels[label] {
 			return fmt.Errorf(
 				"capture_classify/classify: the scenario expects %q for message %d, which is not commitment|meeting|noise",
-				label, i+1)
+				label, i+1,
+			)
 		}
 	}
 	return nil
@@ -216,7 +220,8 @@ func (c *captureClassifyCase) disagreements(payload classifyPayload) []string {
 	for i, m := range c.batch {
 		if answered := labeled[m.ID.String()]; answered != c.expected[i] {
 			out = append(out, fmt.Sprintf(
-				"message %d is labeled %q where the scenario expects %q", i+1, answered, c.expected[i]))
+				"message %d is labeled %q where the scenario expects %q", i+1, answered, c.expected[i],
+			))
 		}
 	}
 	return out

@@ -159,7 +159,8 @@ func TestEvidenceTrimsAQuotationLongerThanTheApprovalsCapAccepts(t *testing.T) {
 	long := strings.Repeat("y", approvals.MaxEvidenceSnippet*2)
 	evidence := stepEvidence(
 		proposedStep{Summary: "s", Owner: "o", SourceLines: []int{1}, Confidence: 1},
-		[]string{long}, ids.New[ids.ActivityKind]())
+		[]string{long}, ids.New[ids.ActivityKind](),
+	)
 	if len(evidence.Snippet) > approvals.MaxEvidenceSnippet {
 		t.Errorf("a long cited line must be trimmed here rather than refused at staging, got %d bytes", len(evidence.Snippet))
 	}

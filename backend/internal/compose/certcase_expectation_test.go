@@ -95,7 +95,8 @@ func TestExpectationDisagreementsForgivesPresentationAndNothingElse(t *testing.T
 		t.Run(tc.name, func(t *testing.T) {
 			got := expectationDisagreements(
 				map[string]string{"value_proposition": tc.expectation},
-				map[string]string{"value_proposition": tc.grounded})
+				map[string]string{"value_proposition": tc.grounded},
+			)
 			if agreed := len(got) == 0; agreed != tc.wantAgreed {
 				t.Errorf("agreed = %v, want %v (%q)", agreed, tc.wantAgreed, got)
 			}
@@ -135,7 +136,8 @@ func TestGroundedValuesKeysTheGateResultByFieldName(t *testing.T) {
 func TestGroundedValuesOfNothingDisagreesWithEveryExpectation(t *testing.T) {
 	got := expectationDisagreements(
 		map[string]string{"legal_name": "Acme Robotics GmbH", "industry": "robotics"},
-		groundedValues(nil))
+		groundedValues(nil),
+	)
 	if len(got) != 2 {
 		t.Fatalf("disagreements = %q, want one per expected field", got)
 	}

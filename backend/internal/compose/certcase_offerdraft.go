@@ -140,13 +140,15 @@ func (offerDraftCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prepa
 	if len(expected) == 0 {
 		return nil, fmt.Errorf(
 			"%s: the scenario carries no expected answer — write `answer: {}` to assert that this deal grounds no line",
-			offerDraftSite)
+			offerDraftSite,
+		)
 	}
 	var want map[string]offerDraftExpectedLine
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
 			"%s: the expected answer is not a map of context source id to the line it grounds: %w",
-			offerDraftSite, err)
+			offerDraftSite, err,
+		)
 	}
 	dealContext := make([]dealContextItem, 0, len(f.ContextItems))
 	for _, item := range f.ContextItems {
@@ -182,12 +184,14 @@ func refuseUndraftableDeal(f offerDraftFixture) error {
 	if strings.TrimSpace(f.Currency) == "" {
 		return fmt.Errorf(
 			"%s: the fixture names no currency, and the ladder reads a price in the offer's own denomination",
-			offerDraftSite)
+			offerDraftSite,
+		)
 	}
 	if len(f.ContextItems) > offerDraftContextItems || len(f.RateCard) > offerDraftCatalogItems {
 		return fmt.Errorf(
 			"%s: the fixture supplies %d context items and %d products, and this call is handed at most %d and %d",
-			offerDraftSite, len(f.ContextItems), len(f.RateCard), offerDraftContextItems, offerDraftCatalogItems)
+			offerDraftSite, len(f.ContextItems), len(f.RateCard), offerDraftContextItems, offerDraftCatalogItems,
+		)
 	}
 	seen := make(map[string]bool, len(f.ContextItems))
 	for _, item := range f.ContextItems {
@@ -195,11 +199,13 @@ func refuseUndraftableDeal(f offerDraftFixture) error {
 		case strings.TrimSpace(item.SourceID) == "" || strings.TrimSpace(item.Snippet) == "":
 			return fmt.Errorf(
 				"%s: the fixture supplies a context item without both an id and its text, and the assembly drops one",
-				offerDraftSite)
+				offerDraftSite,
+			)
 		case seen[item.SourceID]:
 			return fmt.Errorf(
 				"%s: two context items share the id %q, and a citation names one source",
-				offerDraftSite, item.SourceID)
+				offerDraftSite, item.SourceID,
+			)
 		}
 		seen[item.SourceID] = true
 	}
@@ -207,7 +213,8 @@ func refuseUndraftableDeal(f offerDraftFixture) error {
 		if strings.TrimSpace(product.Name) == "" || strings.TrimSpace(product.Currency) == "" {
 			return fmt.Errorf(
 				"%s: the fixture supplies a rate-card entry without a name or a currency, which no stored product is",
-				offerDraftSite)
+				offerDraftSite,
+			)
 		}
 	}
 	return nil
@@ -239,15 +246,18 @@ func refuseUnstageableExpectation(
 		case !known:
 			return fmt.Errorf(
 				"%s: the scenario expects a line citing %q, which the fixture never captures",
-				offerDraftSite, sourceID)
+				offerDraftSite, sourceID,
+			)
 		case !line.PriceGrounded && line.UnitPriceMinor != 0:
 			return fmt.Errorf(
 				"%s: the scenario expects %q priced %d and ungrounded, and the ladder prices every ungrounded line at zero",
-				offerDraftSite, sourceID, line.UnitPriceMinor)
+				offerDraftSite, sourceID, line.UnitPriceMinor,
+			)
 		case line.PriceGrounded && !groundablePrice(line.UnitPriceMinor, snippet, catalog, currency):
 			return fmt.Errorf(
 				"%s: the scenario expects %q grounded at %d, which neither the cited context states nor any %s "+
-					"rate-card product charges", offerDraftSite, sourceID, line.UnitPriceMinor, currency)
+					"rate-card product charges", offerDraftSite, sourceID, line.UnitPriceMinor, currency,
+			)
 		}
 	}
 	return nil
@@ -423,11 +433,13 @@ func (c *offerDraftCase) gate(candidates []offerLineCandidate) ([]deals.StagedOf
 		// The gate's only I/O is the rate-card lookup, which this case serves from
 		// the fixture's own products, so it needs nothing from the run's context.
 		lines, err := c.drafter.groundOfferLines(
-			context.Background(), candidates[i:i+1], c.dealContext, c.currency)
+			context.Background(), candidates[i:i+1], c.dealContext, c.currency,
+		)
 		switch {
 		case err != nil:
 			return nil, nil, fmt.Errorf(
-				"the rate-card lookup faulted on %s: %w", offerLineName(candidates[i], i), err)
+				"the rate-card lookup faulted on %s: %w", offerLineName(candidates[i], i), err,
+			)
 		case len(lines) == 0:
 			refusals = append(refusals, "the gate refused "+offerLineName(candidates[i], i))
 		default:

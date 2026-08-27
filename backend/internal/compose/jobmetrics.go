@@ -358,7 +358,8 @@ func writeUnrecognisedStateGauge(w io.Writer, series map[stateKey]int64) error {
 		return cmp.Or(
 			cmp.Compare(a.state, b.state),
 			cmp.Compare(a.queue, b.queue),
-			cmp.Compare(a.workspace, b.workspace))
+			cmp.Compare(a.workspace, b.workspace),
+		)
 	})
 	for _, k := range keys {
 		if _, err := fmt.Fprintf(w, "%s{state=%s,queue=%s,workspace_id=%s} %d\n",

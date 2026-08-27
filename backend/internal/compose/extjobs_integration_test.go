@@ -448,7 +448,8 @@ func TestConfirmFirstJobIsRefusedAtBoot(t *testing.T) {
 		[]extension.Extension{{Name: decl.Unit, Version: "0.1.0", Jobs: []extension.Job{{
 			Name: decl.Job, Handle: func(context.Context, extension.Runtime) error { return nil },
 		}}}},
-		nil, []extension.JobDeclaration{decl})
+		nil, []extension.JobDeclaration{decl},
+	)
 	if err == nil {
 		t.Fatal("the boot accepted a confirm-first job — a tick nobody can be asked about must not be registered")
 	}
@@ -473,7 +474,8 @@ func TestEgressScopedJobIsRefusedAtBoot(t *testing.T) {
 				[]extension.Extension{{Name: decl.Unit, Version: "0.1.0", Jobs: []extension.Job{{
 					Name: decl.Job, Handle: func(context.Context, extension.Runtime) error { return nil },
 				}}}},
-				nil, []extension.JobDeclaration{decl})
+				nil, []extension.JobDeclaration{decl},
+			)
 			if err == nil {
 				t.Fatalf("the boot accepted a %s-scoped job — a scheduled pass may not leave the workspace", scope)
 			}

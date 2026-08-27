@@ -77,7 +77,8 @@ func TestEnsureTransmittableAdmitsAFileTheSenderCanStillRead(t *testing.T) {
 
 	authority := compose.NewSendAttachmentAuthority(e.Pool, blob)
 	ok, reason, err := authority.EnsureTransmittable(
-		sendWorkerCtx(e.WS), ids.From[ids.UserKind](e.Rep1), []ids.UUID{ids.UUID(att.Id)})
+		sendWorkerCtx(e.WS), ids.From[ids.UserKind](e.Rep1), []ids.UUID{ids.UUID(att.Id)},
+	)
 	if err != nil {
 		t.Fatalf("EnsureTransmittable: %v", err)
 	}
@@ -112,7 +113,8 @@ func TestEnsureTransmittableRefusesAFileTheSenderCanNoLongerSee(t *testing.T) {
 
 	authority := compose.NewSendAttachmentAuthority(e.Pool, blob)
 	ok, reason, err := authority.EnsureTransmittable(
-		sendWorkerCtx(e.WS), ids.From[ids.UserKind](e.Rep3), []ids.UUID{ids.UUID(att.Id)})
+		sendWorkerCtx(e.WS), ids.From[ids.UserKind](e.Rep3), []ids.UUID{ids.UUID(att.Id)},
+	)
 	if err != nil {
 		t.Fatalf("EnsureTransmittable: %v", err)
 	}
@@ -137,7 +139,8 @@ func TestEnsureTransmittableRefusesAFileTheSenderCanNoLongerSee(t *testing.T) {
 		t.Fatalf("seeding the sender's own attachment: %v", err)
 	}
 	okOwn, ownReason, err := authority.EnsureTransmittable(
-		sendWorkerCtx(e.WS), ids.From[ids.UserKind](e.Rep3), []ids.UUID{ids.UUID(ownAtt.Id)})
+		sendWorkerCtx(e.WS), ids.From[ids.UserKind](e.Rep3), []ids.UUID{ids.UUID(ownAtt.Id)},
+	)
 	if err != nil {
 		t.Fatalf("EnsureTransmittable on the sender's own file: %v", err)
 	}
@@ -172,12 +175,14 @@ func TestEnsureTransmittableRefusesAnUnknownFileIndistinguishablyFromAnInvisible
 	authority := compose.NewSendAttachmentAuthority(e.Pool, blob)
 	sender := ids.From[ids.UserKind](e.Rep3)
 	okInvisible, invisible, err := authority.EnsureTransmittable(
-		sendWorkerCtx(e.WS), sender, []ids.UUID{ids.UUID(att.Id)})
+		sendWorkerCtx(e.WS), sender, []ids.UUID{ids.UUID(att.Id)},
+	)
 	if err != nil {
 		t.Fatalf("EnsureTransmittable on an invisible file: %v", err)
 	}
 	okUnknown, unknown, err := authority.EnsureTransmittable(
-		sendWorkerCtx(e.WS), sender, []ids.UUID{ids.NewV7()})
+		sendWorkerCtx(e.WS), sender, []ids.UUID{ids.NewV7()},
+	)
 	if err != nil {
 		t.Fatalf("EnsureTransmittable on an unknown id: %v", err)
 	}
@@ -205,7 +210,8 @@ func TestEnsureTransmittableFaultsRatherThanRefusingWithoutAWorkspace(t *testing
 
 	authority := compose.NewSendAttachmentAuthority(e.Pool, blob)
 	_, _, err := authority.EnsureTransmittable(
-		context.Background(), ids.From[ids.UserKind](e.Rep1), []ids.UUID{ids.NewV7()})
+		context.Background(), ids.From[ids.UserKind](e.Rep1), []ids.UUID{ids.NewV7()},
+	)
 
 	if err == nil {
 		t.Fatal("a send outside workspace context answered instead of faulting; the dispatcher would park rather than retry")

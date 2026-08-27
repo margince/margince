@@ -94,7 +94,8 @@ func setupProviderConsumer(t *testing.T, mode string) *providerConsumerEnv {
 		func(context.Context, pgx.Tx, string, string) error {
 			*c.enqueued++
 			return nil
-		})
+		},
+	)
 	c.consumer = compose.NewPersonDataEnrich(e.Pool, bound, slog.New(slog.NewTextHandler(os.Stderr, nil)))
 	return c
 }

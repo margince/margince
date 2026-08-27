@@ -86,7 +86,8 @@ func mirrorExportScope(ctx context.Context, classCol, idCol string, arg func(any
 		`EXISTS (SELECT 1 FROM mirror_visibility mv
 		 WHERE mv.object_class = %s AND mv.external_id = %s
 		   AND mv.mirror_user_id = $%d AND mv.can_see)`,
-		classCol, idCol, arg(actor.UserID)), nil
+		classCol, idCol, arg(actor.UserID),
+	), nil
 }
 
 // personChildExportScope scopes a person child row by its parent
@@ -103,7 +104,8 @@ func personChildExportScope(ctx context.Context, alias string, arg func(any) int
 	predicate := auth.VisiblePredicate(actor, "person", arg)
 	return fmt.Sprintf(
 		`EXISTS (SELECT 1 FROM person pp WHERE pp.id = %s.person_id AND pp.archived_at IS NULL AND %s)`,
-		alias, predicate("pp")), nil
+		alias, predicate("pp"),
+	), nil
 }
 
 // relationshipExportScope mirrors the relationship list's
@@ -123,6 +125,9 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 	// above claims cannot happen. gates/edgeendpointcensus_test.go holds this
 	// list against the table's own shape constraints.
 	var clauses []string
+	//nolint:goconst // these are TABLE names reaching a SQL predicate; the constant goconst
+	// names is agentRecordType, a different vocabulary that spells the same word, and binding
+	// this list to it would assert a correspondence that does not hold
 	for _, endpoint := range []struct{ column, table string }{
 		{"person_id", "person"},
 		{"organization_id", "organization"},
@@ -134,7 +139,8 @@ func relationshipExportScope(ctx context.Context, alias string, arg func(any) in
 		clauses = append(clauses, fmt.Sprintf(
 			`(%[1]s.%[2]s IS NULL OR EXISTS (
 			   SELECT 1 FROM %[3]s ep WHERE ep.id = %[1]s.%[2]s AND ep.archived_at IS NULL AND %[4]s))`,
-			alias, endpoint.column, endpoint.table, predicate("ep")))
+			alias, endpoint.column, endpoint.table, predicate("ep"),
+		))
 	}
 	return "(" + strings.Join(clauses, " AND ") + ")", nil
 }
@@ -162,7 +168,8 @@ func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any
 		predicate := auth.VisiblePredicate(actor, e.table, arg)
 		parts = append(parts, fmt.Sprintf(
 			`(%s = '%s' AND EXISTS (SELECT 1 FROM %s ep WHERE ep.id = %s AND %s))`,
-			typeCol, e.kind, e.table, idCol, predicate("ep")))
+			typeCol, e.kind, e.table, idCol, predicate("ep"),
+		))
 	}
 	// Activities have no owner; they inherit visibility from their links.
 	activityClause, err := auth.ActivityContentClause(ctx, "av", arg)
@@ -171,7 +178,8 @@ func polymorphicVisible(ctx context.Context, typeCol, idCol string, arg func(any
 	}
 	parts = append(parts, fmt.Sprintf(
 		`(%s = 'activity' AND EXISTS (SELECT 1 FROM activity av WHERE av.id = %s AND %s))`,
-		typeCol, idCol, activityClause))
+		typeCol, idCol, activityClause,
+	))
 	return "(" + strings.Join(parts, " OR ") + ")", nil
 }
 

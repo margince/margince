@@ -50,10 +50,12 @@ func diagnoseCrawlFailure(cause error) (code, detail string) {
 			if status.Status == http.StatusForbidden || status.Status == http.StatusTooManyRequests {
 				return people.SiteReadFailureBotBlocked, fmt.Sprintf(
 					"The site answered %d — bot protection or rate limiting refused the read. Another attempt is scheduled.",
-					status.Status)
+					status.Status,
+				)
 			}
 			return people.SiteReadFailureServerError, fmt.Sprintf(
-				"The site answered %d. Another attempt is scheduled.", status.Status)
+				"The site answered %d. Another attempt is scheduled.", status.Status,
+			)
 		}
 		return people.SiteReadFailureClientError, fmt.Sprintf("The site answered %d for its own front page.", status.Status)
 	}

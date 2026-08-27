@@ -101,7 +101,8 @@ func (companyReadMessageCases) Prepare(fixture, expected json.RawMessage) (aitas
 	history, err := companyReadConversation(&f.History)
 	if err != nil {
 		return nil, fmt.Errorf(
-			"%s: the fixture's history is not one the transport accepts: %w", siteReadMessageSite, err)
+			"%s: the fixture's history is not one the transport accepts: %w", siteReadMessageSite, err,
+		)
 	}
 	message := strings.TrimSpace(f.Message)
 	gate := newCompanyReadGate(message, history, f.Evidence)

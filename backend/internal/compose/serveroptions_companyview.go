@@ -83,7 +83,8 @@ func WithCompanyDossier(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.orgDossierSvc = orgdossier.NewService(pool, s.peopleStore, brain, routingVersion, time.Now)
 		s.orgDossierHandlers = orgdossier.NewHandlers(
-			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
+			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay,
+		)
 	}
 }
 
@@ -104,9 +105,11 @@ func WithCompanyDossier(brain completer, routingVersion string) Option {
 func WithGrowthFit(brain completer, routingVersion string) Option {
 	return func(s *Server, pool *pgxpool.Pool) {
 		s.orgGrowthFitSvc = orgdossier.NewGrowthFitService(
-			pool, s.peopleStore, offeringConfirmed(s.peopleStore), brain, routingVersion, time.Now)
+			pool, s.peopleStore, offeringConfirmed(s.peopleStore), brain, routingVersion, time.Now,
+		)
 		s.orgDossierHandlers = orgdossier.NewHandlers(
-			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay)
+			s.orgDossierSvc, s.orgGrowthFitSvc, s.sorDispatch.isOverlay,
+		)
 	}
 }
 
@@ -124,7 +127,8 @@ func WithMeetingBriefWriter(brain completer) Option {
 			return
 		}
 		s.meetingBriefHandlers = meetingbrief.NewHandlers(
-			s.meetingBriefSvc.WithLane(brain), s.sorDispatch.isOverlay)
+			s.meetingBriefSvc.WithLane(brain), s.sorDispatch.isOverlay,
+		)
 	}
 }
 

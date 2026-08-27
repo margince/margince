@@ -126,7 +126,8 @@ func (s *Store) ensureChannelCounterpartyTx(ctx context.Context, tx pgx.Tx, in E
 	// is partial on archived_at IS NULL, so nothing in the database refuses that
 	// second binding — and the erasure writes by person_id, so the rival it
 	// never named keeps the erased human's account and name for good.
-	if err := storekit.LockSubjectKeys(ctx, tx,
+	if err := storekit.LockSubjectKeys(
+		ctx, tx,
 		[]storekit.ChannelIdentityKey{
 			{Provider: in.Identity.Provider, ChannelUserID: in.Identity.ChannelUserID},
 		},

@@ -287,12 +287,12 @@ func (s *Store) RefuseArchiveRelationship(ctx context.Context, id ids.UUID) erro
 // back for the reason the statement's RETURNING never had to think about: the
 // row this reads is the one just archived.
 func (s *Store) ArchiveRelationship(ctx context.Context, id ids.UUID, ifVersion *int64) (relationshipRow, error) {
-	return s.archiveRelationship(ctx, id, ifVersion, nil)
+	return s.archiveRelationshipWithEvidence(ctx, id, ifVersion, nil)
 }
 
 // archiveRelationship is the archive carrying audit evidence — the reversal path
 // names the entry it put back, and every other caller records none.
-func (s *Store) archiveRelationship(ctx context.Context, id ids.UUID, ifVersion *int64,
+func (s *Store) archiveRelationshipWithEvidence(ctx context.Context, id ids.UUID, ifVersion *int64,
 	evidence map[string]any,
 ) (relationshipRow, error) {
 	if err := auth.Require(ctx, "relationship", principal.ActionDelete); err != nil {

@@ -55,7 +55,8 @@ func seedReplyThread(t *testing.T, e *Env, direction string, parties ...replyPar
 
 func TestAReplyIsAddressedToTheCounterpartyWhoWroteIn(t *testing.T) {
 	e := Setup(t)
-	anchor := seedReplyThread(t, e, "inbound",
+	anchor := seedReplyThread(
+		t, e, "inbound",
 		replyParty{role: "from", address: "anna@example.com"},
 		replyParty{role: "to", address: "rep@ourcompany.test", ours: true},
 	)
@@ -73,7 +74,8 @@ func TestAReplyIsAddressedToTheCounterpartyWhoWroteIn(t *testing.T) {
 // sender is us, and the person to answer is the ADDRESSEE.
 func TestAReplyToOurOwnOutboundGoesToTheAddresseeNotOurselves(t *testing.T) {
 	e := Setup(t)
-	anchor := seedReplyThread(t, e, "outbound",
+	anchor := seedReplyThread(
+		t, e, "outbound",
 		replyParty{role: "from", address: "rep@ourcompany.test", ours: true},
 		replyParty{role: "to", address: "anna@example.com"},
 	)
@@ -106,7 +108,8 @@ func TestAParticipantWithNoAddressFallsBackToThePrimaryEmail(t *testing.T) {
 		INSERT INTO person_email (person_id, email, is_primary, position, source, captured_by)
 		VALUES ($1, 'anna@work.example.com', true, 1, 'test', 'human:seed')`, person)
 
-	anchor := seedReplyThread(t, e, "inbound",
+	anchor := seedReplyThread(
+		t, e, "inbound",
 		replyParty{role: "from", person: &person},
 	)
 
@@ -124,7 +127,8 @@ func TestAParticipantWithNoAddressFallsBackToThePrimaryEmail(t *testing.T) {
 // send and arrives there as "no recipients", which reads as a different bug.
 func TestAThreadWithNoCounterpartyRefusesRatherThanGuessing(t *testing.T) {
 	e := Setup(t)
-	anchor := seedReplyThread(t, e, "outbound",
+	anchor := seedReplyThread(
+		t, e, "outbound",
 		replyParty{role: "from", address: "rep@ourcompany.test", ours: true},
 	)
 

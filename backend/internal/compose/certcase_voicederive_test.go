@@ -391,7 +391,8 @@ func TestVoiceDeriveCaseRunsWhatProductionRuns(t *testing.T) {
 			}
 			brain := &replyBrainStub{response: model.Response{Text: tc.reply}}
 			artifact, productionErr := ai.DeriveVoice(
-				context.Background(), brain, fixture.Personality, hash, fixture.Samples)
+				context.Background(), brain, fixture.Personality, hash, fixture.Samples,
+			)
 
 			outcome, trace := runVoiceDeriveCase(t, fixture, voiceDeriveExpectationJSON(t, "S1"), tc.reply)
 

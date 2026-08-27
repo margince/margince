@@ -63,7 +63,7 @@ func TestReversingALinkBehindAnEndsErasureBoundaryRefusesByName(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Selma Subject", nil)
 	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org, "cto")
+	edge := seedEmploymentEdge(t, e, person, org)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	e.SeedScrubTombstone(t, "person", person, time.Now().Add(time.Hour).UTC())
@@ -88,7 +88,7 @@ func TestReversingALinkBehindTheOtherEndsErasureBoundaryRefusesByName(t *testing
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
 	org := e.SeedOrg(t, "Erased Holdings GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org, "cto")
+	edge := seedEmploymentEdge(t, e, person, org)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	// On the ORGANIZATION, read from the ORGANIZATION: the anchor's own boundary,
@@ -113,7 +113,7 @@ func TestALinkWrittenAfterAnEndsErasureIsStillReversible(t *testing.T) {
 	org := e.SeedOrg(t, "Employer GmbH", nil)
 	e.SeedScrubTombstone(t, "person", person, time.Now().Add(-time.Hour).UTC())
 
-	edge := seedEmploymentEdge(t, e, person, org, "cto")
+	edge := seedEmploymentEdge(t, e, person, org)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 	if _, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,
 		currentVersion(t, e, "person", person)); err != nil {
@@ -144,7 +144,7 @@ func TestALinkInAnOverlayGovernedWorkspaceIsStillReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
 	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org, "cto")
+	edge := seedEmploymentEdge(t, e, person, org)
 	title := "COO"
 	if _, err := e.People.UpdatePerson(e.Admin(), ids.From[ids.PersonKind](person),
 		people.UpdatePersonInput{Title: &title, Source: "manual"}); err != nil {
@@ -179,7 +179,7 @@ func TestReplayingALinksPreErasureImageIsRefusedByName(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Selma Subject", nil)
 	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org, "cto")
+	edge := seedEmploymentEdge(t, e, person, org)
 	changed := "coo"
 	if _, err := e.People.UpdateRelationship(e.Admin(), edge,
 		people.UpdateRelationshipInput{Role: &changed}); err != nil {

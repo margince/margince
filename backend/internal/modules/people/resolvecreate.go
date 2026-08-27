@@ -160,7 +160,8 @@ func refusedPersonCreate(ctx context.Context, tx pgx.Tx, match PersonResolution,
 	// whose row it was.
 	return fmt.Errorf(
 		"people: an exact %q collision already claims this identity: %w",
-		match.MatchedLane, apperrors.ErrConflict)
+		match.MatchedLane, apperrors.ErrConflict,
+	)
 }
 
 // OrgSpec is every column an organization create writes, across all four
@@ -201,7 +202,8 @@ func refusedOrgCreate(ctx context.Context, tx pgx.Tx, match OrganizationMatch, s
 	if len(spec.Domains) == 0 {
 		return fmt.Errorf(
 			"people: an exact domain collision already claims this identity: %w",
-			apperrors.ErrConflict)
+			apperrors.ErrConflict,
+		)
 	}
 	dup := &DuplicateDomainError{Domain: spec.Domains[0].Domain}
 	visible, err := auth.VisibleTo(ctx, tx, entityOrganization, match.OrganizationID.UUID)

@@ -114,7 +114,8 @@ func parseBundle(bundle []byte) (bundleContents, error) {
 	}
 	if manifest.CanonicalDataResidesIn == "" {
 		return bundleContents{}, fmt.Errorf(
-			"reconstruction: this bundle carries no mirror snapshot — only a PRE-FLIP overlay bundle rebuilds an estate: %w", apperrors.ErrConflict)
+			"reconstruction: this bundle carries no mirror snapshot — only a PRE-FLIP overlay bundle rebuilds an estate: %w", apperrors.ErrConflict,
+		)
 	}
 
 	src := bundleFlipSource{rows: map[string][]migration.Row{}}
@@ -299,7 +300,8 @@ func bundleMirrorRow(raw map[string]any) (migration.Row, string, error) {
 		// is the whole diagnosis, so that is all this says.
 		return migration.Row{}, "", fmt.Errorf(
 			"reconstruction: a mirror row is missing its identity (object_class present: %t, external_id present: %t)",
-			class != "", ext != "")
+			class != "", ext != "",
+		)
 	}
 	row := migration.Row{ExternalID: ext}
 	if fields, ok := raw["fields"].(map[string]any); ok {

@@ -164,7 +164,8 @@ func TestSitePageFactsCaseAcceptsWhatItGroundsAndTheScenarioExpects(t *testing.T
 			reply: sitePageFactsReply(
 				sitePageFactsClaim(people.FactService, "Kubernetes Migration — managed clusters",
 					sitePageFactsCatalogID(t, "Kubernetes Migration")),
-				sitePageFactsAuditClaim(t, "Cloud Cost Audit — a four-week review")),
+				sitePageFactsAuditClaim(t, "Cloud Cost Audit — a four-week review"),
+			),
 		},
 	})
 }

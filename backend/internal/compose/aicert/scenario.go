@@ -201,17 +201,20 @@ func validateScenario(sc Scenario, path string, census *aitasks.Registry) error 
 	if sc.Site == "" {
 		return fmt.Errorf(
 			"aicert: %s: names no site — a scenario certifies ONE invocation site, so `site:` carries the variant the task contract declares",
-			path)
+			path,
+		)
 	}
 	if _, registered := census.Lookup(ai.Task(sc.Task), sc.Site); !registered {
 		return fmt.Errorf(
 			"aicert: %s: site %s/%s is not registered by this build (fix the site name, or register the site in NewTaskCensus)",
-			path, sc.Task, sc.Site)
+			path, sc.Task, sc.Site,
+		)
 	}
 	if len(sc.Fixture) == 0 {
 		return fmt.Errorf(
 			"aicert: %s: carries no fixture — the corpus holds the data production is GIVEN, and the site's own code builds the request from it",
-			path)
+			path,
+		)
 	}
 	if err := validateOutcome(sc.Expect.Outcome, path); err != nil {
 		return err

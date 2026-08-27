@@ -117,7 +117,8 @@ func (s RestoreSeam) readRow(ctx context.Context, entityType string, id, auditID
 		if !served {
 			return apperrors.ErrNotFound
 		}
-		return tx.QueryRow(ctx, `
+		return tx.QueryRow(
+			ctx, `
 			SELECT id, entity_type, entity_id, action, before, after, occurred_at
 			FROM audit_log
 			WHERE id = $1`, auditID,

@@ -39,8 +39,15 @@ import (
 // store's own write path — the one that stamps the audit row under test. A
 // hand-rolled INSERT would prove nothing about production: the action, the
 // entity_type and the image on that row are exactly what the admission reads.
-func seedEmploymentEdge(t *testing.T, e *integration.Env, person, org ids.UUID, role string) ids.UUID {
+//
+// seededEdgeRole is the role every edge here is created with. A constant rather
+// than a parameter: no case varies it, and a parameter would suggest the
+// admission cares what the role says when it does not.
+const seededEdgeRole = "cto"
+
+func seedEmploymentEdge(t *testing.T, e *integration.Env, person, org ids.UUID) ids.UUID {
 	t.Helper()
+	role := seededEdgeRole
 	personID, orgID := ids.From[ids.PersonKind](person), ids.From[ids.OrganizationKind](org)
 	edge, err := e.People.CreateRelationship(e.Admin(), people.CreateRelationshipInput{
 		Kind: "employment", PersonID: &personID, OrganizationID: &orgID,
@@ -99,7 +106,7 @@ func TestALinkWhoseOtherEndTheCallerCannotSeeIsNotReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
 	org := e.SeedOrg(t, "Secret Holdings GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org, "cto")
+	edge := seedEmploymentEdge(t, e, person, org)
 	// Captured privately by Rep1. Capture privacy does not yield to
 	// row_scope=all, so even the admin reading the person cannot see the company.
 	e.MakeCapturePrivate(t, "organization", org, e.Rep1)
@@ -120,7 +127,7 @@ func TestALinkWhoseOtherEndWasErasedIsNotReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Selma Subject", nil)
 	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org, "cto")
+	edge := seedEmploymentEdge(t, e, person, org)
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 
 	if err := privacy.NewEraser(e.DB()).ErasePerson(e.Admin(),
@@ -165,7 +172,7 @@ func TestALinkTheCallerCanSeeIsReversible(t *testing.T) {
 	e := integration.Setup(t)
 	person := e.SeedPerson(t, "Ada Employed", nil)
 	org := e.SeedOrg(t, "Employer GmbH", nil)
-	edge := seedEmploymentEdge(t, e, person, org, "cto")
+	edge := seedEmploymentEdge(t, e, person, org)
 
 	auditID := latestAuditRowID(t, e, edgeEntityType, edge, "create")
 	entry, err := restoreSeamFor(e).Restore(e.Admin(), "person", person, auditID,

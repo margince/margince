@@ -48,10 +48,15 @@ const EdgeEntityType = "relationship"
 //
 // Two columns point at `organization`, which is what makes this a slice and not
 // a map — and is also the case that a single-anchor design drops.
+// entityTypeOrganization is named because TWO endpoint columns point at it, and
+// a slice of literals would spell the same table twice with nothing holding the
+// two spellings together.
+const entityTypeOrganization = "organization"
+
 var edgeEndpoints = []edgeEndpoint{
 	{column: "person_id", entityType: "person", labelColumn: "full_name"},
-	{column: "organization_id", entityType: "organization", labelColumn: "display_name"},
-	{column: "counterparty_org_id", entityType: "organization", labelColumn: "display_name"},
+	{column: "organization_id", entityType: entityTypeOrganization, labelColumn: "display_name"},
+	{column: "counterparty_org_id", entityType: entityTypeOrganization, labelColumn: "display_name"},
 	{column: "deal_id", entityType: "deal", labelColumn: "name"},
 	{column: "project_id", entityType: "project", labelColumn: "name"},
 }
@@ -188,7 +193,8 @@ func edgeBranchParts(anchor edgeEndpoint, claimed []edgeEndpoint, anchorPos, scr
 		conds = append(conds, fmt.Sprintf(
 			`NOT EXISTS (SELECT 1 FROM audit_log scrub
 			     WHERE scrub.entity_type = '%s' AND scrub.entity_id = r.%s
-			       AND scrub.action = ANY($%d))`, endpoint.entityType, endpoint.column, scrubPos))
+			       AND scrub.action = ANY($%d))`, endpoint.entityType, endpoint.column, scrubPos,
+		))
 	}
 	idList := strings.Join(otherIDs, ", ")
 	// An edge with no end but the anchor is a row no kind's shape admits, and a
@@ -206,9 +212,11 @@ func edgeBranchParts(anchor edgeEndpoint, claimed []edgeEndpoint, anchorPos, scr
 // after the shared audit projection. The record's own branch selects nulls in
 // the same positions, because a union has one column list and a record row was
 // not about a link.
-const edgeSubjectColumns = `e.edge_kind, e.other_type, e.other_id, e.other_label`
-const noEdgeSubjectColumns = `NULL::text AS edge_kind, NULL::text AS other_type,
+const (
+	edgeSubjectColumns   = `e.edge_kind, e.other_type, e.other_id, e.other_label`
+	noEdgeSubjectColumns = `NULL::text AS edge_kind, NULL::text AS other_type,
 			NULL::uuid AS other_id, NULL::text AS other_label`
+)
 
 // scanEdgeAuditRow decodes one window row: the shared audit projection, then the
 // edge subject when the row came from the edge branch.

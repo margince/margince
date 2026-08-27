@@ -129,7 +129,6 @@ func TestCallbackRequiresMatchingCSRFCookie(t *testing.T) {
 	if !oauth.exchanged {
 		t.Fatal("a matching nonce cookie should let the flow reach the token exchange")
 	}
-
 }
 
 func TestGmailConfigGating(t *testing.T) {
@@ -333,7 +332,8 @@ func TestAStoredAppInstallationRefusesConnectRatherThanSigningBlankCredentials(t
 		t.Run(string(provider), func(t *testing.T) {
 			rec := httptest.NewRecorder()
 			s.ConnectConnector(
-				rec, httptest.NewRequest(http.MethodPost, "/v1/connectors/"+string(provider)+"/connect", nil), provider)
+				rec, httptest.NewRequest(http.MethodPost, "/v1/connectors/"+string(provider)+"/connect", nil), provider,
+			)
 			if rec.Code != http.StatusNotImplemented {
 				t.Fatalf("connect on a stored-app installation = %d, want 501: anything else means the request got PAST the gate that should have refused it, "+
 					"and on a real request with a signed-in human that is a redirect to Google carrying an empty client id", rec.Code)

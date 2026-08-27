@@ -206,7 +206,8 @@ func TestCustomerReplyNamesTheChannelItArrivedOn(t *testing.T) {
 	}
 	var channel, contactID string
 	if err := apptest.InWorkspace(c.AppEnv, t, func(tx pgx.Tx) error {
-		return tx.QueryRow(context.Background(), `
+		return tx.QueryRow(
+			context.Background(), `
 			SELECT envelope->'payload'->>'channel',
 			       coalesce(envelope->'payload'->>'contact_id', '')
 			FROM event_outbox WHERE envelope->>'type' = 'engagement.reply'`,

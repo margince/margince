@@ -75,7 +75,8 @@ func voiceJudgeReply(scores ...string) string {
 func runVoiceEvalScoresCase(t *testing.T, expected json.RawMessage, reply string) (aitasks.Outcome, aitasks.Trace) {
 	t.Helper()
 	prepared, err := voiceEvalScoresCases{}.Prepare(
-		voiceEvalScoresFixtureOf(t, voiceJudgeAuthorSample, voiceJudgeDrafts(t)), expected)
+		voiceEvalScoresFixtureOf(t, voiceJudgeAuthorSample, voiceJudgeDrafts(t)), expected,
+	)
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
@@ -224,7 +225,8 @@ func TestVoiceEvalScoresCaseRefusesAnUnreachableExpectation(t *testing.T) {
 				drafts = voiceJudgeDrafts(t)
 			}
 			_, err := voiceEvalScoresCases{}.Prepare(
-				voiceEvalScoresFixtureOf(t, voiceJudgeAuthorSample, drafts), tc.expected)
+				voiceEvalScoresFixtureOf(t, voiceJudgeAuthorSample, drafts), tc.expected,
+			)
 			if err == nil {
 				t.Fatal("an unreachable expectation prepared")
 			}
@@ -262,7 +264,8 @@ func TestVoiceEvalScoresCaseRefusesAFixtureTheEvaluationCouldNotRun(t *testing.T
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			_, err := voiceEvalScoresCases{}.Prepare(
-				voiceEvalScoresFixtureOf(t, tc.sample, tc.drafts), voiceEvalScoresRanking(t, 1, 2))
+				voiceEvalScoresFixtureOf(t, tc.sample, tc.drafts), voiceEvalScoresRanking(t, 1, 2),
+			)
 			if err == nil {
 				t.Fatal("a fixture the evaluation could not run prepared")
 			}

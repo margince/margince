@@ -172,7 +172,8 @@ func (n yamlNumber) representable(path string) error {
 		if _, err := strconv.ParseInt(text, 10, 64); err != nil {
 			return fmt.Errorf(
 				"aicert: %s is the integer %s, which is wider than the corpus format can carry back unchanged — quote it as a string if the scenario needs it verbatim",
-				strings.TrimPrefix(path, "."), text)
+				strings.TrimPrefix(path, "."), text,
+			)
 		}
 		return nil
 	}
@@ -194,7 +195,8 @@ func (n yamlNumber) representable(path string) error {
 	if written.Cmp(readBack) != 0 {
 		return fmt.Errorf(
 			"aicert: %s is the number %s, whose precision exceeds what the corpus format carries back (it would load as %s) — quote it as a string if the scenario needs it verbatim",
-			strings.TrimPrefix(path, "."), text, loaded)
+			strings.TrimPrefix(path, "."), text, loaded,
+		)
 	}
 	return nil
 }

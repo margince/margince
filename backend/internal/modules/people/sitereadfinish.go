@@ -132,7 +132,8 @@ func validateSiteReadOutcome(in FinishSiteReadInput) error {
 		if in.StatusCode != "" || in.StatusDetail != "" || in.NextAttemptAt != nil {
 			return fmt.Errorf(
 				"people: a %s site read carries no diagnosis (status_code/status_detail/next_attempt_at are for a failure)",
-				in.Status)
+				in.Status,
+			)
 		}
 		return nil
 	}

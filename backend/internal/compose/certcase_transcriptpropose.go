@@ -84,7 +84,8 @@ func (transcriptProposeCases) Prepare(fixture, expected json.RawMessage) (aitask
 	var want []transcriptProposeExpectation
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"transcript_propose/next_steps: the expected answer is not a list of next steps: %w", err)
+			"transcript_propose/next_steps: the expected answer is not a list of next steps: %w", err,
+		)
 	}
 	if err := refuseUnreachableSteps(want, len(lines)); err != nil {
 		return nil, err
@@ -99,7 +100,8 @@ func (transcriptProposeCases) Prepare(fixture, expected json.RawMessage) (aitask
 func refuseUnreadableTranscript(lines transcriptProposeFixture) error {
 	if len(lines) == 0 {
 		return errors.New(
-			"transcript_propose/next_steps: the fixture supplies no line, so there is no transcript to read")
+			"transcript_propose/next_steps: the fixture supplies no line, so there is no transcript to read",
+		)
 	}
 	if err := activities.WithinReadingBounds(lines); err != nil {
 		return fmt.Errorf("transcript_propose/next_steps: %w", err)
@@ -108,7 +110,8 @@ func refuseUnreadableTranscript(lines transcriptProposeFixture) error {
 		if strings.TrimSpace(line) == "" {
 			return fmt.Errorf(
 				"transcript_propose/next_steps: line %d is blank, and a proposal citing it would quote nothing as its evidence",
-				i+1)
+				i+1,
+			)
 		}
 	}
 	return nil
@@ -122,13 +125,15 @@ func refuseUnreachableSteps(want []transcriptProposeExpectation, lineCount int) 
 	if len(want) > maxTranscriptProposals {
 		return fmt.Errorf(
 			"transcript_propose/next_steps: the scenario expects %d next steps, but this site proposes at most %d",
-			len(want), maxTranscriptProposals)
+			len(want), maxTranscriptProposals,
+		)
 	}
 	for i, step := range want {
 		if step.Line < 1 || step.Line > lineCount {
 			return fmt.Errorf(
 				"transcript_propose/next_steps: expectation %d cites line %d, and this transcript has lines 1 to %d",
-				i+1, step.Line, lineCount)
+				i+1, step.Line, lineCount,
+			)
 		}
 	}
 	return nil
@@ -213,13 +218,15 @@ func (c *transcriptProposeCase) disagreements(payload transcriptPayload) []strin
 		}
 		if !matched {
 			out = append(out, fmt.Sprintf(
-				"the reply proposes a next step from %s, which the transcript does not state", citedLines(step)))
+				"the reply proposes a next step from %s, which the transcript does not state", citedLines(step),
+			))
 		}
 	}
 	for line := range wanted {
 		if !answered[line] {
 			out = append(out, fmt.Sprintf(
-				"the transcript states a next step on line %d and the reply does not propose it", line))
+				"the transcript states a next step on line %d and the reply does not propose it", line,
+			))
 		}
 	}
 	// Map iteration is unordered, and a detail line that reshuffles between

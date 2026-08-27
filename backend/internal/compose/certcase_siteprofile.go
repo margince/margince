@@ -96,7 +96,8 @@ func (siteProfileCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 		if !page.Kind.Valid() {
 			return nil, fmt.Errorf(
 				"site_extract/profile: page %d is of kind %q, which the crawler never classifies a page as",
-				i+1, page.Kind)
+				i+1, page.Kind,
+			)
 		}
 		pages = append(pages, crawlPage{URL: page.URL, Kind: page.Kind, Text: page.Text})
 	}
@@ -106,7 +107,8 @@ func (siteProfileCases) Prepare(fixture, expected json.RawMessage) (aitasks.Prep
 	idx := newSnippetIndex(profileExcerptPages(pages))
 	if len(idx.refs) == 0 {
 		return nil, errors.New(
-			"site_extract/profile: the fixture's pages yield no passage, and the deep read calls no model without one")
+			"site_extract/profile: the fixture's pages yield no passage, and the deep read calls no model without one",
+		)
 	}
 	want, err := parseSiteProfileExpectation(expected)
 	if err != nil {
@@ -151,7 +153,8 @@ func parseSiteProfileExpectation(expected json.RawMessage) (siteProfileExpectati
 	var keyed map[string]json.RawMessage
 	if err := json.Unmarshal(expected, &keyed); err != nil {
 		return siteProfileExpectation{}, fmt.Errorf(
-			"site_extract/profile: the expected answer is not a mapping: %w", err)
+			"site_extract/profile: the expected answer is not a mapping: %w", err,
+		)
 	}
 	_, hasGrounded := keyed[siteProfileGroundedKey]
 	_, hasNotGrounded := keyed[siteProfileNotGroundedKey]
@@ -160,7 +163,8 @@ func parseSiteProfileExpectation(expected json.RawMessage) (siteProfileExpectati
 		if err := json.Unmarshal(expected, &bare); err != nil {
 			return siteProfileExpectation{}, fmt.Errorf(
 				"site_extract/profile: the expected answer is neither a field to value map nor a %s/%s mapping: %w",
-				siteProfileGroundedKey, siteProfileNotGroundedKey, err)
+				siteProfileGroundedKey, siteProfileNotGroundedKey, err,
+			)
 		}
 		return siteProfileExpectation{grounded: bare}, nil
 	}
@@ -173,7 +177,8 @@ func parseSiteProfileExpectation(expected json.RawMessage) (siteProfileExpectati
 	if err := dec.Decode(&explicit); err != nil {
 		return siteProfileExpectation{}, fmt.Errorf(
 			"site_extract/profile: the expected answer carries %s or %s but is not that form: %w",
-			siteProfileGroundedKey, siteProfileNotGroundedKey, err)
+			siteProfileGroundedKey, siteProfileNotGroundedKey, err,
+		)
 	}
 	return siteProfileExpectation{grounded: explicit.Grounded, notGrounded: explicit.NotGrounded}, nil
 }
@@ -207,31 +212,37 @@ func parseSiteProfileExpectation(expected json.RawMessage) (siteProfileExpectati
 func refuseUngroundableExpectation(want siteProfileExpectation, idx snippetIndex) error {
 	if len(want.grounded) == 0 && len(want.notGrounded) == 0 {
 		return errors.New(
-			"site_extract/profile: the scenario requires no field and forbids none, so no reply could disagree with it")
+			"site_extract/profile: the scenario requires no field and forbids none, so no reply could disagree with it",
+		)
 	}
 	for _, name := range slices.Sorted(maps.Keys(want.grounded)) {
 		value := want.grounded[name]
 		switch {
 		case !slices.Contains(extractionFieldNames, name):
 			return fmt.Errorf(
-				"site_extract/profile: the scenario expects %q, which this prompt never offers the model", name)
+				"site_extract/profile: the scenario expects %q, which this prompt never offers the model", name,
+			)
 		case strings.TrimSpace(value) == "":
 			return fmt.Errorf(
-				"site_extract/profile: the scenario expects an empty value for %q, which the gate drops", name)
+				"site_extract/profile: the scenario expects an empty value for %q, which the gate drops", name,
+			)
 		case hardGateProfileFields[name] && !citableInSomePassage(idx, value):
 			return fmt.Errorf(
 				"site_extract/profile: the scenario expects %q to read %q, which no passage of this fixture contains, "+
-					"and the gate demands a verbatim-shaped value appear in the passage cited for it", name, value)
+					"and the gate demands a verbatim-shaped value appear in the passage cited for it", name, value,
+			)
 		}
 	}
 	for _, name := range slices.Sorted(slices.Values(want.notGrounded)) {
 		switch {
 		case !slices.Contains(extractionFieldNames, name):
 			return fmt.Errorf(
-				"site_extract/profile: the scenario forbids %q, which this prompt never offers the model", name)
+				"site_extract/profile: the scenario forbids %q, which this prompt never offers the model", name,
+			)
 		case want.grounded[name] != "":
 			return fmt.Errorf(
-				"site_extract/profile: the scenario both expects and forbids %q, and no reply can satisfy both", name)
+				"site_extract/profile: the scenario both expects and forbids %q, and no reply can satisfy both", name,
+			)
 		}
 	}
 	return nil
@@ -343,7 +354,8 @@ func forbiddenGroundings(forbidden []string, grounded map[string]string) []strin
 	for _, name := range slices.Sorted(slices.Values(forbidden)) {
 		if value, survived := grounded[name]; survived {
 			out = append(out, fmt.Sprintf(
-				"%s reads %q, which the scenario says this crawl grounds no value for", name, value))
+				"%s reads %q, which the scenario says this crawl grounds no value for", name, value,
+			))
 		}
 	}
 	return out

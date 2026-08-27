@@ -303,7 +303,8 @@ func readStagedApproval(as context.Context, t *testing.T, e *integration.Env, id
 			       target_version IS NOT NULL, proposed_change::text, diff_hash
 			FROM approval WHERE id = $1`, id).Scan(
 			&row.kind, &row.status, &row.targetType, &row.targetID, &row.pinned, &row.proposedChange,
-			&row.diffHash)
+			&row.diffHash,
+		)
 	}); err != nil {
 		t.Fatalf("reading staged approval %s: %v", id, err)
 	}

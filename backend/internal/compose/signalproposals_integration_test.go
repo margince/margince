@@ -135,7 +135,8 @@ func TestAcceptingTheOfferMovesTheAccountAndSettlesTheSignal(t *testing.T) {
 
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil); err != nil {
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil,
+	); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
 	}
 
@@ -160,7 +161,8 @@ func TestARefusedOfferIsNotAskedAgain(t *testing.T) {
 	proposePass(t, e)
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), false, nil); err != nil {
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), false, nil,
+	); err != nil {
 		t.Fatalf("declining the offer: %v", err)
 	}
 
@@ -227,7 +229,8 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 
 	_, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
-		ids.From[ids.ApprovalKind](approvalID), true, nil)
+		ids.From[ids.ApprovalKind](approvalID), true, nil,
+	)
 	if !errors.Is(err, apperrors.ErrVersionSkew) {
 		t.Fatalf("accepting a stale offer returned %v, want a version conflict — a decider "+
 			"acting on a record that moved under them must be told, not obeyed", err)
@@ -267,7 +270,8 @@ func TestAcceptingSettlesEveryOpenContradictionOnTheAccount(t *testing.T) {
 	proposePass(t, e)
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, integration.AdminWithSignals),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil); err != nil {
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil,
+	); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
 	}
 
@@ -320,7 +324,8 @@ func TestAcceptingSettlesOnlyTheContradictionsTheDeciderCanSee(t *testing.T) {
 	proposePass(t, e)
 	if _, err := approvalsServiceWithEffects(e.Pool).Decide(
 		e.As(e.Rep1, nil, teamScopedDecider),
-		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil); err != nil {
+		ids.From[ids.ApprovalKind](stagedOffer(t, e, org)), true, nil,
+	); err != nil {
 		t.Fatalf("accepting the offer: %v", err)
 	}
 

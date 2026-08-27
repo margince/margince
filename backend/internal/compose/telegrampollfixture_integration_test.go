@@ -225,7 +225,8 @@ func telegramPrivateUpdate(updateID, senderID, messageID int64, text string) jso
 		`{"update_id":%d,"message":{"message_id":%d,"chat":{"id":%d,"type":"private"},`+
 			`"from":{"id":%d,"username":"sender%d","first_name":"Sender %d"},`+
 			`"date":1785000000,"text":%q}}`,
-		updateID, messageID, senderID, senderID, senderID, senderID, text))
+		updateID, messageID, senderID, senderID, senderID, senderID, text,
+	))
 }
 
 // telegramGroupUpdate renders a message in a GROUP chat — out of scope by design
@@ -234,7 +235,8 @@ func telegramGroupUpdate(updateID, senderID int64) json.RawMessage {
 	return json.RawMessage(fmt.Sprintf(
 		`{"update_id":%d,"message":{"message_id":9,"chat":{"id":-100%d,"type":"group"},`+
 			`"from":{"id":%d,"username":"grouper"},"date":1785000000,"text":"group chatter"}}`,
-		updateID, senderID, senderID))
+		updateID, senderID, senderID,
+	))
 }
 
 // telegramStoredPollOffset reads the connection's cursor through a

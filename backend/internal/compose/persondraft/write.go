@@ -124,7 +124,8 @@ func Write(
 // surface cannot drift from the other two about what a rejected phrase is or
 // how many chances the model gets to fix one.
 func writeChecked(ctx context.Context, lane Completer, in Input) (Draft, error) {
-	return draftcore.CorrectOnce(ctx, in.Envelope.Lang(), in.Envelope.Band(),
+	return draftcore.CorrectOnce(
+		ctx, in.Envelope.Lang(), in.Envelope.Band(),
 		func(ctx context.Context, correction string) (Draft, error) {
 			return writeWithModel(ctx, lane, in, correction)
 		},

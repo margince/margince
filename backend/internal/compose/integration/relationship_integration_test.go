@@ -223,7 +223,8 @@ func TestAFlooredEdgeArchiveStagesWithItsVersionPinned(t *testing.T) {
 	}
 
 	_, err := flooredArchiveInvoker(t, e.AppEnv, minted.Token)(
-		`{"record_type":"relationship","id":"` + edge.ID + `"}`)
+		`{"record_type":"relationship","id":"` + edge.ID + `"}`,
+	)
 	if !errors.Is(err, apperrors.ErrRequiresApproval) {
 		t.Fatalf("a floored edge archive answered %v, want the confirm-first refusal", err)
 	}

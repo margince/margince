@@ -76,7 +76,8 @@ func TestChooseRouteAlwaysPrefersADirectRelationship(t *testing.T) {
 				From: userNodeID(uuidFor(2)), To: personNodeID(uuidFor(3)),
 				Interactions90d: 40, Inbound90d: intp(20), Outbound90d: intp(20), LastAt: daysBefore(1),
 			},
-		})
+		},
+	)
 
 	route := chooseRoute(graph, graphNow)
 	if route == nil {
@@ -102,7 +103,8 @@ func TestChooseRouteNamesTheIntermediaryWhenTheHopIsIndirect(t *testing.T) {
 		[]crmcontracts.PersonGraphEdge{{
 			From: userNodeID(uuidFor(2)), To: personNodeID(uuidFor(3)),
 			Interactions90d: 12, Inbound90d: intp(6), Outbound90d: intp(6), LastAt: daysBefore(2),
-		}})
+		}},
+	)
 
 	route := chooseRoute(graph, graphNow)
 	if route == nil {
@@ -134,7 +136,8 @@ func TestChooseRoutePrefersAnExchangeOverAOneSidedRelationship(t *testing.T) {
 				From: userNodeID(uuidFor(2)), To: anchor,
 				Interactions90d: 6, Inbound90d: intp(3), Outbound90d: intp(3), LastAt: daysBefore(3),
 			},
-		})
+		},
+	)
 
 	route := chooseRoute(graph, graphNow)
 	if route == nil {

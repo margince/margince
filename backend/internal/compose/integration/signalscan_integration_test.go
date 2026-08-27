@@ -180,7 +180,8 @@ func openSignalKindsAs(t *testing.T, e *Env, user ids.UUID, org ids.UUID) []stri
 		rows, err := tx.Query(ctx, fmt.Sprintf(
 			`SELECT s.kind FROM signal s
 			  WHERE s.resolved_org_id = $%d AND s.status = 'open'
-			    AND s.archived_at IS NULL AND %s`, orgPos, clause), args...)
+			    AND s.archived_at IS NULL AND %s`, orgPos, clause,
+		), args...)
 		if err != nil {
 			return err
 		}

@@ -80,7 +80,8 @@ func (counterpartyVerdictCases) Prepare(fixture, expected json.RawMessage) (aita
 	var want string
 	if err := json.Unmarshal(expected, &want); err != nil {
 		return nil, fmt.Errorf(
-			"capture_counterparty_verdict/verdict: the expected answer is not a verdict token: %w", err)
+			"capture_counterparty_verdict/verdict: the expected answer is not a verdict token: %w", err,
+		)
 	}
 	// An expectation outside the closed vocabulary is unreachable: the validator
 	// refuses every reply that could satisfy it, so the scenario would measure
@@ -88,7 +89,8 @@ func (counterpartyVerdictCases) Prepare(fixture, expected json.RawMessage) (aita
 	// parse; finding it later costs a paid run.
 	if _, known := statusForKind(want); !known {
 		return nil, fmt.Errorf(
-			"capture_counterparty_verdict/verdict: the scenario expects %q, which is not a sender kind", want)
+			"capture_counterparty_verdict/verdict: the scenario expects %q, which is not a sender kind", want,
+		)
 	}
 	return &counterpartyVerdictCase{
 		row: capture.PendingCounterparty{

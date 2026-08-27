@@ -33,7 +33,8 @@ import (
 // needs: the certified turn runs against the same struct the transport calls.
 func TestCompanyMessageCaseRunsWhatProductionRuns(t *testing.T) {
 	clickExpectation := companyMessageExpectationJSON(
-		t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"})
+		t, "correction", map[string]string{fieldLegalName: "Acme Robotics GmbH"},
+	)
 	cases := []struct {
 		name     string
 		fixture  onboardingCompanyMessageFixture

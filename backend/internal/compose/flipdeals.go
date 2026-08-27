@@ -139,7 +139,8 @@ func (w *flipWriters) settleAdoptedDeal(ctx context.Context, dealID ids.DealID, 
 		return migration.EnsureResult{}, fmt.Errorf("flip import: closing adopted deal %s: %w", row.ExternalID, err)
 	}
 	return migration.EnsureResult{Unchanged: true, Disclosure: fmt.Sprintf(
-		"deal %s was recovered from an interrupted attempt and closed on this one", row.ExternalID)}, nil
+		"deal %s was recovered from an interrupted attempt and closed on this one", row.ExternalID,
+	)}, nil
 }
 
 // adoptedDealNeedsClosing is the idempotency rule behind

@@ -73,7 +73,8 @@ func writeEvidence[T any](
 	if !ok || actor.UserID == (ids.UUID{}) {
 		return out, fmt.Errorf(
 			"confirming a claim records who agreed, and this call carries no user: %w",
-			apperrors.ErrPermissionDenied)
+			apperrors.ErrPermissionDenied,
+		)
 	}
 
 	err := s.tx(ctx, func(tx pgx.Tx) error {

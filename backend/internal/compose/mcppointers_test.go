@@ -66,7 +66,8 @@ func publishedDocumentURIs(t *testing.T) map[string]bool {
 	t.Helper()
 	provider := composeResources(
 		mcpResourceProviders(agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})),
-			search.NewQuerySchemaResource(queryVocabulary(nil)), nil)...)
+			search.NewQuerySchemaResource(queryVocabulary(nil)), nil)...,
+	)
 	if provider == nil {
 		t.Fatal("the composition published no resource provider, so no tool could name a document")
 	}
@@ -162,7 +163,8 @@ func TestNoToolOrdersTheModelToReadADocument(t *testing.T) {
 func TestNoPublishedDocumentOrdersItsOwnReading(t *testing.T) {
 	provider := composeResources(
 		mcpResourceProviders(agents.NewCapabilitiesResource(NewRegistry(nil, SendPath{})),
-			search.NewQuerySchemaResource(queryVocabulary(nil)), nil)...)
+			search.NewQuerySchemaResource(queryVocabulary(nil)), nil)...,
+	)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:pointer-gate", OnBehalfOf: ids.NewV7(),

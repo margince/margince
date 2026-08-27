@@ -290,7 +290,8 @@ func TestApprovingAnyStageableKindLeavesItsRunTerminal(t *testing.T) {
 			// Asking-only kinds finish through the decision consumer, which the
 			// relay drives; write-proposing kinds finish inside their executor.
 			if err := NewWorkflowEngine(e.DB()).HandleApprovalDecided(
-				context.Background(), decidedEnvelope(t, id, "approved", kind)); err != nil {
+				context.Background(), decidedEnvelope(t, id, "approved", kind),
+			); err != nil {
 				t.Fatal(err)
 			}
 			if got := runStatus(t, e, handler); got == "requires_approval" {

@@ -386,7 +386,8 @@ func actingUser(ctx context.Context) (ids.UserID, error) {
 	if !ok || p.UserID == (ids.UUID{}) {
 		return ids.UserID{}, fmt.Errorf(
 			"this company assembly is written per reader and the call carries no user: %w",
-			apperrors.ErrPermissionDenied)
+			apperrors.ErrPermissionDenied,
+		)
 	}
 	return ids.From[ids.UserKind](p.UserID), nil
 }

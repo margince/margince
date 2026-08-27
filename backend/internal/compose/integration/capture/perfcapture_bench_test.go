@@ -79,7 +79,8 @@ func TestCaptureToTimelineLatencyBudget(t *testing.T) {
 	// leave the published page green while the build went red.
 	integration.WritePerfRecord(t, "bench-capture", capturePostgresVersion(t, env.e),
 		[]integration.BudgetMeasurement{integration.MeasurementFrom(
-			"CAP-PARAM-1", stats.Query, stats.P50, stats.P95, stats.P99, stats.Budget, stats.Samples)})
+			"CAP-PARAM-1", stats.Query, stats.P50, stats.P95, stats.P99, stats.Budget, stats.Samples,
+		)})
 
 	report := search.BenchReport{Tier: search.BenchTierSMB, Queries: []search.QueryStats{stats}}
 	if err := report.Gate(); err != nil {
@@ -115,7 +116,8 @@ func captureOneThread(t *testing.T, env captureEnv, sample int) time.Duration {
 	followUp := "in" + strconv.Itoa(sample) + "b@acme.example"
 
 	receipt := time.Now()
-	env.syncSent(t, map[string]bool{reply: true},
+	env.syncSent(
+		t, map[string]bool{reply: true},
 		benchEmailAt(counterparty, "Alice Example", captureOwner, inbound, "", receipt),
 		benchEmailAt(captureOwner, "", counterparty, reply, inbound, receipt),
 		benchEmailAt(counterparty, "Alice Example", captureOwner, followUp, inbound, receipt),

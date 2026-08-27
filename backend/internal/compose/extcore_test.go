@@ -243,7 +243,8 @@ func TestTheRuntimeBindsTheUnitsAttribution(t *testing.T) {
 	invocation := principal.WithWorkspaceID(
 		principal.WithActor(context.Background(), principal.Principal{
 			Type: principal.PrincipalHuman, ID: "the-caller",
-		}), ids.NewV7())
+		}), ids.NewV7(),
+	)
 
 	// The binding a served call has, minus a database: scoped refuses on an
 	// unwired ROLE before it binds anything, and &pgxpool.Pool{} is a handle

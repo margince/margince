@@ -45,8 +45,14 @@ type linkedPair struct {
 // seedEmployment creates the person, the organization and the link between them
 // through the product's own endpoints. Seeding the edge any other way would
 // prove nothing about the audit row this reversal reads.
-func seedEmploymentOverHTTP(t *testing.T, e *apptest.AppEnv, role string) linkedPair {
+//
+// seededEdgeRole is the role every edge here is created with — a constant, since
+// no case varies it and the reversal does not read the role's value.
+const seededEdgeRole = "cto"
+
+func seedEmploymentOverHTTP(t *testing.T, e *apptest.AppEnv) linkedPair {
 	t.Helper()
+	role := seededEdgeRole
 	var person personRecord
 	if status := e.Call(t, "POST", "/v1/people",
 		apptest.AnyMap{"full_name": "Ada Employed"}, nil, &person); status != 201 {
@@ -137,7 +143,7 @@ func liveEdgesOf(t *testing.T, e *apptest.AppEnv, person string) []relationshipR
 func TestEndToEnd_anEdgeIsUnlinkedByReversingTheLineThatMadeIt(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pair := seedEmploymentOverHTTP(t, e, "cto")
+	pair := seedEmploymentOverHTTP(t, e)
 
 	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
 	if !entry.Undoable.Undoable {
@@ -164,7 +170,7 @@ func TestEndToEnd_anEdgeIsUnlinkedByReversingTheLineThatMadeIt(t *testing.T) {
 func TestEndToEnd_anEdgeIsReversibleFromTheOtherEndToo(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pair := seedEmploymentOverHTTP(t, e, "cto")
+	pair := seedEmploymentOverHTTP(t, e)
 
 	entry := theEdgeEntry(t, readHistory(t, e, "organization", pair.org), "create")
 	var org struct {
@@ -195,7 +201,7 @@ func TestEndToEnd_anEdgeIsReversibleFromTheOtherEndToo(t *testing.T) {
 func TestEndToEnd_aLinkAlreadyPutBackSaysSoOnTheNextRead(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pair := seedEmploymentOverHTTP(t, e, "cto")
+	pair := seedEmploymentOverHTTP(t, e)
 
 	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
 	person := readPerson(t, e, pair.person)
@@ -215,7 +221,7 @@ func TestEndToEnd_aLinkAlreadyPutBackSaysSoOnTheNextRead(t *testing.T) {
 func TestEndToEnd_reversingAnUnlinkRefusesByNameAndWritesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pair := seedEmploymentOverHTTP(t, e, "cto")
+	pair := seedEmploymentOverHTTP(t, e)
 	if status := e.Call(t, "DELETE", "/v1/relationships/"+pair.edge.ID, nil,
 		map[string]string{"If-Match": fmt.Sprint(pair.edge.Version)}, nil); status != 200 {
 		t.Fatalf("unlink → %d", status)
@@ -296,7 +302,7 @@ func TestEndToEnd_reversingAProjectCompanyRefusesByNameAndWritesNothing(t *testi
 func TestEndToEnd_reversingAnEdgeChangeReplaysWhatTheLinkHeld(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pair := seedEmploymentOverHTTP(t, e, "cto")
+	pair := seedEmploymentOverHTTP(t, e)
 	var patched relationshipRecord
 	if status := e.Call(t, "PATCH", "/v1/relationships/"+pair.edge.ID,
 		apptest.AnyMap{"role": "coo"}, map[string]string{"If-Match": fmt.Sprint(pair.edge.Version)},
@@ -330,7 +336,7 @@ func TestEndToEnd_reversingAnEdgeChangeReplaysWhatTheLinkHeld(t *testing.T) {
 func TestEndToEnd_anEdgeReverseDoesNotMoveEitherRecordsVersion(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pair := seedEmploymentOverHTTP(t, e, "cto")
+	pair := seedEmploymentOverHTTP(t, e)
 
 	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
 	before := readPerson(t, e, pair.person)
@@ -360,7 +366,7 @@ func TestEndToEnd_anEdgeReverseDoesNotMoveEitherRecordsVersion(t *testing.T) {
 func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pair := seedEmploymentOverHTTP(t, e, "cto")
+	pair := seedEmploymentOverHTTP(t, e)
 
 	fromPerson := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
 	fromOrg := theEdgeEntry(t, readHistory(t, e, "organization", pair.org), "create")
@@ -418,7 +424,7 @@ func TestEndToEnd_twoReversesOfOneLinkFromOppositeEndsLeaveExactlyOne(t *testing
 func TestEndToEnd_reversingALinkFromAStaleRecordScreenIsRefusedAndWritesNothing(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
-	pair := seedEmploymentOverHTTP(t, e, "cto")
+	pair := seedEmploymentOverHTTP(t, e)
 
 	entry := theEdgeEntry(t, readHistory(t, e, "person", pair.person), "create")
 	stale := readPerson(t, e, pair.person)

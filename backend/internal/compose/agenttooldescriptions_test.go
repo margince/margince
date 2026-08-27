@@ -334,7 +334,8 @@ func listingOverBudget(agent string, specs []mcp.ToolSpec) string {
 		"agent %q offers a tool listing of ~%d tokens against the %d it may take of a %d-token "+
 			"window — the listing is never elided, so what grows here comes out of the observations "+
 			"this run is reasoning over",
-		agent, tokens, budget, runner.PromptTokenCeiling)
+		agent, tokens, budget, runner.PromptTokenCeiling,
+	)
 }
 
 // The bound is only worth having if it fires. The whole catalog is ~16,829

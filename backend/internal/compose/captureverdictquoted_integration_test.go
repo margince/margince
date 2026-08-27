@@ -49,7 +49,8 @@ func (b *literalConfidenceBrain) Complete(_ context.Context, req model.Request) 
 	}
 	return model.Response{Text: fmt.Sprintf(
 		`{"results":[{"id":%q,"verdict":%q,"confidence":%s}]}`,
-		askedFor[0], b.verdict, b.confidence)}, nil
+		askedFor[0], b.verdict, b.confidence,
+	)}, nil
 }
 
 func TestVerdictDecidesOnAQuotedConfidence(t *testing.T) {

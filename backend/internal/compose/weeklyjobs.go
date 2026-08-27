@@ -168,7 +168,8 @@ func (w *weeklyGenerateWorkspaceWorker) measureWorkspace(
 		// what may be read and sent, the running job decides how long there is
 		// to do it and when to stop.
 		sendCtx := principal.WithCorrelationID(
-			principal.WithActor(ctx, ready.rep), ids.NewV7())
+			principal.WithActor(ctx, ready.rep), ids.NewV7(),
+		)
 		w.mailWeekly(sendCtx, ready.reviewID, now)
 	}
 	if len(failures) > 0 {
