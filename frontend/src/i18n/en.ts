@@ -2188,6 +2188,11 @@ export const en = {
   "home.deck.bundleMembers": "Show the {count} items",
   "home.brief.rank": "Rank",
   "home.brief.composite": "Score",
+  // A deal the rep dismissed, come back. The suppression rule holds a dismissed
+  // deal out until a linked activity arrives after the mark, so the sentence
+  // states that rule rather than guessing: it can only ever name an activity.
+  "home.brief.previouslyDismissed": "Flagged {day} — you dismissed it.",
+  "home.brief.returnedWith": "It came back with activity on",
   "home.brief.resurfaces": "Back",
   "home.evidenceNone": "no evidence recorded",
   "home.snooze": "Snooze",

@@ -68,6 +68,10 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 			EvidenceIDs: []ids.UUID{evidence}, State: "snoozed",
 			StateAt: &stateAt, SnoozedUntil: &snoozedUntil,
 			Finding: "He asked about the delivery date yesterday.",
+			Lineage: &briefs.ItemLineage{
+				DismissedOn:  time.Date(2026, 8, 5, 0, 0, 0, 0, time.UTC),
+				ReturnedWith: time.Date(2026, 8, 7, 9, 15, 0, 0, time.UTC),
+			},
 		}},
 	}
 
@@ -101,6 +105,7 @@ func TestEveryPersistedBriefFieldIsServedOrNamedAsWithheld(t *testing.T) {
 		"EvidenceIDs": `"evidence_ids":["` + evidence.String(), "State": `"state":"snoozed"`,
 		"StateAt": `"state_at":"2026-08-08T07:33:00Z"`, "SnoozedUntil": `"snoozed_until":"2026-08-09T08:44:00Z"`,
 		"Finding": "He asked about the delivery date yesterday.",
+		"Lineage": `"dismissed_on":"2026-08-05"`,
 	}, string(served))
 	// An entry no field reached names something that is gone, which reads as a
 	// deliberate omission while certifying nothing.

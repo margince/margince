@@ -28626,6 +28626,8 @@ components:
         state: { type: string, enum: [new, acted, dismissed, snoozed], description: The acting rep's queue state for this item. }
         state_at: { type: [string, 'null'], format: date-time, description: When the rep acted/dismissed/snoozed; null while new. }
         snoozed_until: { type: [string, 'null'], format: date-time, description: 'When a snoozed item re-surfaces (A77/AC-home-6); set exactly while state=snoozed, null otherwise.' }
+        lineage:
+          $ref: '#/components/schemas/MorningBriefItemLineage'
         finding:
           type: [string, 'null']
           description: |
@@ -28633,6 +28635,35 @@ components:
             and the one next move. Null when no pass has annotated this run. It is agent-authored
             prose and the surface marks it as such; the rank beside it stays the deterministic
             engine's, which no annotation can change.
+
+    MorningBriefItemLineage:
+      type: [object, 'null']
+      additionalProperties: false
+      description: |
+        Why this deal is back after the rep dismissed it. Absent on an item that was never
+        dismissed, which is the ordinary case.
+
+        The suppression rule holds a dismissed deal out of every later queue until a linked
+        activity occurs after the mark — so a deal that reappears is always one the rep waved
+        away and that has since moved. That is what makes the pair honest rather than a guess:
+        it is the rule that put the deal back, stated.
+      required: [dismissed_on, returned_with_activity_at]
+      properties:
+        dismissed_on:
+          type: string
+          format: date
+          description: |
+            The local day the rep dismissed this deal, in the installation reporting timezone —
+            the same zone `local_day` is stamped in, so "you dismissed it Tuesday" and "this is
+            Thursday's brief" are measured the same way. A date, not an instant: the sentence
+            names a day.
+        returned_with_activity_at:
+          type: string
+          format: date-time
+          description: |
+            When the activity that re-qualified the deal occurred. An instant, because it names a
+            specific event. It is the EARLIEST activity after the dismissal: a later one did not
+            bring the deal back, it arrived once the deal was already coming.
 
     AnnotateBriefRequest:
       type: object
