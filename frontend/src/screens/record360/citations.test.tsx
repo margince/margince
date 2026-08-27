@@ -5,7 +5,13 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
-import { Citations, type Cited, citationChips } from "./citations";
+import {
+  type BriefSentence,
+  Citations,
+  type Cited,
+  citationChips,
+  SentenceList,
+} from "./citations";
 
 // A citation names the record it rests on. The kind is what it falls back to,
 // never what it prefers: a verdict citing an emailed promise rendered the bare
@@ -165,5 +171,46 @@ describe("Citations", () => {
       true,
     );
     expect(screen.getByRole("button", { name: "2 facts" })).toBeTruthy();
+  });
+});
+
+describe("SentenceList leading claim", () => {
+  function sentence(text: string, nature: BriefSentence["nature"]) {
+    return { text, nature, evidence: [] } satisfies BriefSentence;
+  }
+
+  function renderList(sentences: BriefSentence[]) {
+    render(
+      <LocaleProvider initial="en">
+        <SentenceList sentences={sentences} leadWithJudgement />
+      </LocaleProvider>,
+    );
+  }
+
+  it("puts the judgement first, whatever order it was written in", () => {
+    // The facts are already on the cards above. What the block adds is what
+    // Margince makes of them, so that is the sentence a scanner must meet.
+    renderList([
+      sentence("Two deals are open.", "fact"),
+      sentence("The account is drifting.", "assessment"),
+      sentence("Call them this week.", "recommendation"),
+    ]);
+    const lead = screen.getByText(/The account is drifting/);
+    expect(lead.className).toContain("co-brief-lead");
+    // Promoted, never duplicated: the list under it holds the other two.
+    expect(screen.getAllByRole("listitem")).toHaveLength(2);
+  });
+
+  it("leads with the first line when nothing judges", () => {
+    // The deterministic fallback writes no assessments. An empty lead slot
+    // would read as a sentence that failed to load.
+    renderList([
+      sentence("Two deals are open.", "fact"),
+      sentence("They pay on time.", "fact"),
+    ]);
+    expect(screen.getByText(/Two deals are open/).className).toContain(
+      "co-brief-lead",
+    );
+    expect(screen.getAllByRole("listitem")).toHaveLength(1);
   });
 });

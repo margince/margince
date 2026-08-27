@@ -4,6 +4,7 @@
 // The record-360 kit's public surface. Deal360, Company360 and Person360 all
 // import from here; see README.md for what belongs in it.
 
+export { BriefTitle } from "./brieftitle";
 export {
   type BriefSentence,
   type CitationChip,
@@ -24,6 +25,13 @@ export {
   SectionCard,
 } from "./shells";
 export {
+  RecordSpine,
+  type SpineCommercial,
+  type SpineSource,
+} from "./spine";
+export {
+  type Grounding,
+  Proof,
   type Signal,
   SignalStrip,
   type SignalTone,

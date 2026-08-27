@@ -1,0 +1,252 @@
+/* The account's story as a time axis, running ACROSS the card. Tokens only
+   (make ds-purity).
+
+   Horizontal because the reading is a shape rather than a list: what happened,
+   how long nothing did, what is dated next, taken in one glance. A stacked
+   list gives the same facts and none of the proportion — and proportion is the
+   whole reason the gap stop exists. */
+
+/* The block pays its own air. The card's boundary under it is a full-bleed
+   rule at the next section, not a body's padding, so with none of its own the
+   last stop's detail sat on that line. */
+.co-spine {
+  padding-block: 0 var(--space-5);
+}
+
+/* It scrolls rather than wraps. A time axis that wrapped onto a second line
+   would put a later stop to the LEFT of an earlier one, which is the one thing
+   an axis may not do. */
+.co-spine-scroll {
+  overflow-x: auto;
+  /* No rule above it. The call and the thread it was read from are one
+     statement about the account — the axis is the evidence for the sentence
+     over it — and a hairline between them made the reading two things where
+     the card already draws a boundary at every place it becomes one. */
+  padding-top: var(--space-4);
+}
+
+.co-spine-track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  /* The columns come from the stops themselves (spine.tsx): the gap
+     takes half again the width of its neighbours, because on this axis the
+     width IS the waiting. */
+  column-gap: var(--space-3);
+  min-inline-size: 100%;
+  /* The four rows of a stop live on the TRACK, not inside each stop: when,
+     rail, title, detail. Every stop then draws its rule on the one line the
+     whole axis shares, however tall its own date is set — the gap stop's
+     number is twice the size of a date beside it, and stops that each sized
+     their own rows put its dashes below the solid rule they continue. */
+  grid-template-rows: auto auto auto 1fr;
+}
+
+/* One stop: when it was, its stretch of the rule, what happened, and the
+   detail under it. Rows rather than a stack so every stop's rule sits on the
+   same line across the axis however tall its title runs. */
+.co-spine-stop {
+  display: grid;
+  grid-row: span 4;
+  grid-template-rows: subgrid;
+  min-inline-size: 0;
+}
+
+/* Every date sits on ONE line across the axis, whatever size it is set at.
+   The track's row gives them a common height; they align to its FOOT, so the
+   gap stop's big number and a stop's small date sit on one baseline rather
+   than one hanging from the top of the row and the other from the bottom. */
+.co-spine-when {
+  display: flex;
+  align-items: flex-end;
+  min-block-size: var(--space-6);
+  padding-block-end: var(--space-1);
+  font-size: var(--fs-meta);
+  line-height: 1;
+  color: var(--textMeta);
+  white-space: nowrap;
+}
+
+/* This stop's own stretch of the axis, with its dot at the left edge — the dot
+   marks where the stop STARTS, so the rule to its right is the span it
+   covers. */
+/* The axis sits clear of the dates above it. Set tight against them the date
+   read as a label ON the rule rather than as the moment the rule reaches, and
+   the gap stop's own large number touched the line it measures. */
+.co-spine-rail {
+  position: relative;
+  display: block;
+  block-size: 13px;
+  margin-block-start: var(--space-2);
+  /* Behind today the axis is SOLID and carries the accent: this is time the
+     record accounts for, and the tone is the one the product gives to work
+     people did. Ahead of today it goes dotted and grey — those stops have not
+     happened, and a solid rule to a date nobody has reached draws the future
+     as firmly as the past. */
+  border-block-start: 2px solid var(--accentMed);
+}
+.co-spine-dot {
+  position: absolute;
+  inset-block-start: -6px;
+  inset-inline-start: 0;
+  inline-size: 9px;
+  block-size: 9px;
+  border-radius: 50%;
+  /* A filed stop is something a person did, so its mark carries the tone the
+     rest of the product gives to human work. Grey, it read as chrome on an
+     axis whose whole job is to say which moments count. */
+  background: var(--accent);
+  border: 2px solid var(--accent);
+}
+
+.co-spine-title {
+  display: block;
+  font-size: var(--fs-sm);
+  line-height: 1.4;
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+
+.co-spine-detail {
+  display: block;
+  font-size: var(--fs-meta);
+  line-height: 1.45;
+  margin-block-start: var(--space-1);
+  color: var(--textMeta);
+  text-wrap: pretty;
+}
+
+/* THE WAITING — the one stop with no record behind it, and the reason this
+   shape exists. The day count is the largest thing on the axis because it is
+   the fact a reader must not be able to skim past, and the rule dashes through
+   it so the silence LOOKS like a broken thread rather than one more entry on
+   an unbroken one. No dot: nothing happened, so there is nothing to mark.
+
+   Amber, not indigo. The waiting is a warning about the account, not a thing
+   Margince authored, and indigo means authorship everywhere else here. */
+.co-spine-gap .co-spine-when {
+  font-size: var(--fs-h1);
+  font-weight: var(--fw-semibold);
+  color: var(--warn);
+}
+.co-spine-gap .co-spine-rail {
+  border-block-start-style: dashed;
+  border-block-start-color: var(--warnBorder);
+}
+.co-spine-gap .co-spine-dot {
+  display: none;
+}
+.co-spine-gap .co-spine-title {
+  font-weight: var(--fw-medium);
+  color: var(--warn);
+}
+.co-spine-gap .co-spine-detail {
+  color: var(--warn);
+}
+
+/* PAST ITS DATE — a commitment that has slipped. Same tone as the gap, since
+   both are somebody being kept waiting. */
+.co-spine-overdue .co-spine-dot {
+  background: var(--warnBorder);
+  border-color: var(--warnBorder);
+}
+.co-spine-overdue .co-spine-detail {
+  color: var(--warn);
+}
+
+/* AHEAD — dated and not yet happened. A hollow dot, because the difference
+   between a thing that has occurred and a thing that is merely scheduled is
+   the whole point of putting them on one axis. */
+.co-spine-ahead .co-spine-dot {
+  background: var(--bgElevated);
+  border-color: var(--accentMed);
+}
+.co-spine-ahead .co-spine-when {
+  color: var(--textPrimary);
+  font-weight: var(--fw-medium);
+}
+
+/* The newest stop says two things: what was said, and what kind of exchange
+   said it. Two lines, because a reader scanning the thread for a subject they
+   remember has to be able to find it — run into one caption with a separator,
+   the subject stopped reading as a subject. */
+.co-spine-said,
+.co-spine-relation {
+  display: block;
+}
+.co-spine-relation {
+  /* --textMeta, the AA small-text role, never the muted one: this line carries
+     the kind of exchange and the people on it, which is the half of the stop a
+     reader is scanning for. Set lighter it failed contrast AND buried the
+     fact. */
+  color: var(--textMeta);
+}
+
+/* AHEAD OF TODAY — dotted and grey. Nothing has happened here yet, and the
+   axis says so before the reader has read a date. */
+.co-spine-ahead .co-spine-rail {
+  border-block-start-style: dotted;
+  border-block-start-color: var(--borderSubtle);
+}
+
+/* The marker pays its own room on the right, and pays it from the LABEL rather
+   than from the column. Its column is only as wide as what is in it, so without
+   the room the next stop's date began where the countdown ended and the two read
+   as one squeezed block — but padding the column would end the dotted rail short
+   of its own edge, leaving a longer blank before the next dot than any other
+   stretch of the axis has. */
+.co-spine-now .co-spine-title {
+  padding-inline-end: var(--space-5);
+}
+
+/* TODAY, as a bar across the axis rather than a stop on it.
+   Nothing happened today — a stop here would be an event the record does not
+   hold — so this marks the boundary itself: everything left of it happened,
+   everything right of it is owed. A short hard bar rather than a rule down the
+   whole card, which read as a border between two halves instead of a moment on
+   one axis. */
+.co-spine-now .co-spine-rail {
+  /* The dotted future starts AT the bar and runs on from it: the axis does not
+     stop at today, it stops being certain. Its own column carries the first
+     stretch so the dots begin where the boundary is rather than at the next
+     stop's dot. */
+  border-block-start: 2px dotted var(--borderSubtle);
+}
+.co-spine-now .co-spine-rail::before {
+  content: "";
+  position: absolute;
+  inset-block-start: -6px;
+  inset-inline-start: 0;
+  inline-size: 2px;
+  block-size: 15px;
+  border-radius: var(--r-full);
+  background: var(--textPrimary);
+}
+.co-spine-now .co-spine-dot {
+  display: none;
+}
+
+/* The word and the date, stacked under the bar and set small. They sit on the
+   headline row rather than the date row above, because this is not a moment
+   the record reached: it is where the reader is standing while they read it. */
+.co-spine-now .co-spine-title {
+  display: flex;
+  flex-direction: column;
+  /* The word and its date are ONE label on two lines, so they sit tighter than
+     the smallest step on the scale — an interval a reader can see turns them
+     into two facts. */
+  gap: 1px; /* ds:ignore two lines of one label, tighter than --space-1 */
+  white-space: nowrap;
+}
+.co-spine-now-word {
+  font-size: var(--fs-eyebrow);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--textPrimary);
+}
+.co-spine-now-date {
+  font-size: var(--fs-eyebrow);
+  color: var(--textMeta);
+}
