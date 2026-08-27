@@ -116,7 +116,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `uniquenessclaimscorpus_test.go` | H2 | WHERE the claim sweep looks, as against what it looks for. |
 | `vaultwriters_test.go` | H2 | Every writer of the installation's ciphertext store records its act somewhere. |
 
-## Reachability (14)
+## Reachability (15)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -125,6 +125,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `composerowscope_test.go` | H2 | Review-loop rule 3 as a fitness function over the compose tier: anything that returns a record is a read, so a query that hands back a REFERENCE to a row-scoped record applies that record's row scope. |
 | `consentproof_test.go` | H2 | The Art. 7(1) demonstrability invariant as a fitness function: every write that sets a person\_consent STATE appends a consent\_event proof row in the same function (data-model §3.4 — the current state is always backed by an append-only event saying when, how, and by whom). |
 | `dedupespine_test.go` | H2 | The identity-spine fitness functions. |
+| `liveprobelock_test.go` | H2 | A live-probed write of a HELD row locks its subject. |
 | `moduleaudits_test.go` | H2 | A module that owns tables writes their history. |
 | `orgrenamerecheck_test.go` | H2 | A company's NAME is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
 | `personscrub_test.go` | H2 | Erasing a person and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
@@ -135,7 +136,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `writeauthorityreach_test.go` | H2 | Every write of a shareable record reaches a write-authority probe. |
 | `writeshape_test.go` | H2 | The write-shape obligation as a fitness function: every mutation that writes an audit row commits a paired outbox event on the same static call path (data-model §11, events.md §4.2 — spelled once in storekit), across modules AND the composition layer. |
 
-## Shape (19)
+## Shape (20)
 
 | Gate | Hardness | What it holds |
 |---|---|---|
@@ -154,6 +155,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `promptversionderived_test.go` | H2 | A cached answer is keyed by a fingerprint, and the fingerprint has to move when the prompt that produced the answer moves. |
 | `resetwireshape_test.go` | H2 | The reset-data 200 body as a fitness function. |
 | `rowgatespelling_test.go` | H2 | A module's READ spelling of a row gate is not a licence to write through it. |
+| `subjectlockorder_test.go` | H2 | The subject lock is the FIRST row a transaction takes. |
 | `tableownership_test.go` | H1 | Table ownership as a fitness function: the import DAG is enforced three ways, but nothing in the import graph stops a package from writing SQL against a table it does not own. |
 | `updateguard_test.go` | H2 | The concurrency-guard obligation as a fitness function: every single-row-by-id UPDATE of a mutable entity carries SOME guard — the optimistic version (storekit.ApplyWithVersion / ApplyGuarded), a held row lock (LockRow / LockPair + ApplyLocked), an advisory lock, an in-statement FOR UPDATE, or a checked conditional write (the RowsAffected CAS shape). |
 | `userrecordviewwriter_test.go` | H2 | user\_record\_view carries one fact per (user, record): the moment that human last said "I have seen this". |

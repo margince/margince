@@ -86,9 +86,14 @@ func (s *Store) SetLeadManualSignal(ctx context.Context, leadID ids.LeadID, in S
 
 	var out crmcontracts.LeadManualSignal
 	err := s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
+		if err := auth.HoldWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}
+		// And held: Art. 17 anonymization DELETEs the lead's score history and
+		// manual signals, so a row written after that commit restores the
+		// erased subject's scoring — a factors JSON carrying the ids of
+		// activities they took part in, or a colleague's written judgement
+		// naming them. The probe reads a snapshot; this holds the row.
 		// The auto value wins (ADR-0105 §4), so a factor the model already
 		// fetches cannot be hand-set: accepting it would let an estimate
 		// outrank a fact one request after the rule says otherwise. A rep who
@@ -221,9 +226,10 @@ func (s *Store) ClearLeadManualSignal(ctx context.Context, leadID ids.LeadID, fa
 		return &UnknownLeadFactorError{Factor: factor}
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
+		if err := auth.HoldWritableLive(ctx, tx, "lead", leadID.UUID); err != nil {
 			return err
 		}
+		// And held, for the reason SetLeadManualSignal states.
 		tag, err := tx.Exec(ctx,
 			`DELETE FROM lead_manual_signal WHERE lead_id = $1 AND factor = $2 AND superseded_at IS NULL`,
 			leadID, factor)

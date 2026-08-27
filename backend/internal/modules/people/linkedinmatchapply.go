@@ -152,9 +152,18 @@ func (s *Store) ApplyLinkedInMatch(ctx context.Context, connectionID, personID i
 		return err
 	}
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
-		if err := auth.EnsureWritableLive(ctx, tx, entityPerson, personID); err != nil {
+		if err := auth.HoldWritableLive(ctx, tx, entityPerson, personID); err != nil {
 			return err
 		}
+		// And HELD, before the connection row below. person_social is a declared
+		// PII table Art. 17 erasure deletes, so a handle written after that
+		// commit puts the erased person's public profile straight back.
+		//
+		// Taken HERE rather than beside that write, because the erasure goes
+		// person-then-linkedin_connection and this transaction locks the
+		// connection two statements down. Person second would close a cycle
+		// against it — the same ordering the DOI issuer takes, and for the same
+		// reason.
 		// The prior values come from the write itself, through a pre-write
 		// self-join: a separate read would be a different look at the same row,
 		// and the audit row would attest to something other than what this
@@ -273,6 +282,11 @@ func writeLinkedInHandle(ctx context.Context, tx pgx.Tx, connectionID, personID 
 	if handle == nil || *handle == "" {
 		return false, nil
 	}
+	// No lock here: ApplyLinkedInMatch holds this subject from the top of its
+	// transaction, ahead of the connection row, and re-taking it below that
+	// would be the ordering the eraser deadlocks against. person_social is a
+	// declared PII table Art. 17 deletes, and the hold is what stops a handle
+	// landing after the erasure cleared it.
 	tag, err := tx.Exec(ctx, `
 		INSERT INTO person_social (person_id, platform, handle)
 		VALUES ($1, $3, $2)
