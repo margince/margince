@@ -211,10 +211,10 @@ emitters at once.
 
 | Obligation | Held by |
 |---|---|
-| Every task names the source that reports it, and every `SourceNoOccurrence` owes a defensible reason | `TestEveryAITaskNamesTheSourceThatReportsIt` (`backend/aitaskrailcensus_test.go`) |
+| Every task names the source that reports it, and every `SourceNoOccurrence` owes a defensible reason | `TestEveryAITaskNamesTheSourceThatReportsIt` (`backend/gates/aitaskrailcensus_test.go`) |
 | The registry names no task the contract dropped | `TestTheRailRegistryNamesNoTaskTheContractDropped` |
 | A carrier's source literal is one something really emits | `TestEveryCarrierOverrideNamesASourceThatIsReallyEmitted` |
-| Every kind something produces is one the contract enum can express | `TestEveryKindSomethingProducesIsOneTheContractCanExpress` (`backend/aiactivitycatalogparity_test.go`) — its failure prints an `align:` line naming the file, the schema and exactly what to add |
+| Every kind something produces is one the contract enum can express | `TestEveryKindSomethingProducesIsOneTheContractCanExpress` (`backend/gates/aiactivitycatalogparity_test.go`) — its failure prints an `align:` line naming the file, the schema and exactly what to add |
 | Every contract kind has something that produces it | `TestEveryContractKindHasSomethingThatProducesIt` |
 | The read's text caps are the ones the contract publishes | `TestTheReadsTextCapsAreTheOnesTheContractPublishes` |
 | Every spec name can be a message-key segment | `TestEverySpecNameCanBeAMessageKeySegment` |
@@ -291,7 +291,7 @@ reporting nothing at all.
 | The wire | `AiActivity` / `AiActivityKind` / `AiActivityItem` + `GET /me/ai-activity` (`backend/api/crm.yaml`) |
 | What is drawn, and what is not | `frontend/src/app/ai-activity-lines.ts` |
 | The rail component + poll | `frontend/src/app/agentrail.tsx`, `ai-activity.ts` |
-| The census gate | `backend/aiactivitycatalogparity_test.go` |
+| The census gate | `backend/gates/aiactivitycatalogparity_test.go` |
 
 **Related:** [ai-runtime.md](ai-runtime.md) (the task contract and the Router
 gate) · [write-backbone.md](write-backbone.md) (the outbox the facts ride) ·

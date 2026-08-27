@@ -27,7 +27,7 @@
 // currency over.
 //
 // So the table below MIRRORS shared/kernel/values/minorunits.go, exactly, and
-// TestTheFrontendMinorUnitTableMatchesTheGoOne (backend/frontendminorunits_test.go)
+// TestTheFrontendMinorUnitTableMatchesTheGoOne (backend/gates/frontendminorunits_test.go)
 // fails when the two drift apart in either direction. Intl is still the right
 // tool for DISPLAY — grouping, symbol placement, the reader's own conventions —
 // and format.ts uses it for that. It is the wrong tool for deciding an integer

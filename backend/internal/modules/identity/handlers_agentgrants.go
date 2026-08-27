@@ -50,7 +50,7 @@ const overnightPassportLabel = "overnight brief"
 // silently, at 2am. The gate below derives the requirement from the tool specs
 // themselves, so this map cannot drift from what the agents actually call.
 //
-// Held by: TestEveryGrantFundsTheToolsItsAgentDeclares (backend/agentgrantscopes_test.go)
+// Held by: TestEveryGrantFundsTheToolsItsAgentDeclares (backend/gates/agentgrantscopes_test.go)
 var grantScopes = map[string][]string{
 	// Reads deals and activities, ranks them, writes nothing.
 	"morning_brief": {"read"},

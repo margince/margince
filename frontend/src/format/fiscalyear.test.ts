@@ -5,7 +5,7 @@ import { monthName } from "./format";
 // The label an admin is shown before they save a fiscal start, and the two
 // things about it that can be silently wrong.
 //
-// `backend/frontendfiscalyear_test.go` holds this against the SQL the server
+// `backend/gates/frontendfiscalyear_test.go` holds this against the SQL the server
 // actually cuts reports with. This file holds the values themselves, which that
 // gate cannot see: it reads shape out of both sources and cannot execute the
 // SQL, so an off-by-one here would pass it.

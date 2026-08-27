@@ -4,7 +4,7 @@
  * A DELIBERATE MIRROR of the server, not a second answer: every model named
  * here must carry a rate row in `SeedModelRates`, or a call on it reports
  * UNPRICED — a materially different signal from free, and a poor thing to hand
- * somebody in their first five minutes. `backend/frontendsetupproviders_test.go`
+ * somebody in their first five minutes. `backend/gates/frontendsetupproviders_test.go`
  * compares both directions.
  *
  * WHY ONLY TWO. A routing document REQUIRES an embeddings binding, and the two

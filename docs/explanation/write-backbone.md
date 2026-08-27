@@ -225,7 +225,7 @@ partition only by stream, the workspace and actor filters run in-process.
 **What each group does — and which are live.** Thirteen are wired to a subscriber today; the other four
 are catalog-declared placeholders with no consumer yet (honest status — the streams carry events, but
 nothing reads these groups). `TestEveryDeclaredConsumerGroupIsSubscribedSomewhere` in
-`backend/consumerlanes_test.go` holds the split: a new group with neither a lane nor a place in the
+`backend/gates/consumerlanes_test.go` holds the split: a new group with neither a lane nor a place in the
 reserved set fails the gate, because a group nothing reads is a feature that is absent rather than
 broken and nothing at runtime says a word about it.
 

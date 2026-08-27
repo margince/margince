@@ -4,7 +4,7 @@
 // Package idlebase is the one spelling of "when did this record last show a
 // sign of life".
 //
-// Held by: TestTheIdleBaseIsSpelledOnce (backend/oneidlebase_test.go)
+// Held by: TestTheIdleBaseIsSpelledOnce (backend/gates/oneidlebase_test.go)
 //
 // Deal, project, organization and person all carry the same pair: a
 // last_activity_at maintained from the timeline, and the created_at that is
@@ -24,7 +24,7 @@
 // scanned values, the SQL one a caller embeds in an ORDER BY, a WHERE or a
 // projection. The frontend's copy is a declared mirror of SQL's column order,
 // held by TestTheDealBoardMeasuresIdleTheWayTheServerDoes
-// (backend/frontendidlebase_test.go).
+// (backend/gates/frontendidlebase_test.go).
 //
 // Stdlib-only and in kernel because the callers are three different modules
 // plus two compose subpackages, and a module never imports a sibling

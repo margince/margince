@@ -10,7 +10,7 @@ package webhooks
 // rather than letting a breaking wire change slip through unnoticed. The
 // cross-cutting registry gates it used to pair with — whole-catalog payload
 // coverage, no-orphan, and version agreement with events.VersionOf — now
-// live in the authoritative root fitness test backend/publicevents_test.go.
+// live in the authoritative root fitness test backend/gates/publicevents_test.go.
 
 import (
 	"encoding/json"

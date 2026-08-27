@@ -51,7 +51,7 @@ import (
 
 // The audit keys a merge writes, spelled once so the person, organization
 // and lead merges cannot drift apart in what they record.
-// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/claimedspelling_test.go)
+// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const (
 	auditKeyMergedInto = "merged_into_id"
 	auditKeyFilled     = "filled"

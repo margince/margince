@@ -66,7 +66,7 @@ func parseOrgDomains(domains []OrgDomainInput) error {
 // second copy of an existence-hiding rule is where a leak appears, because
 // nothing fails when one copy stops asking.
 //
-// Held by: TestEveryDomainClaimAnswersThroughOneProbe (backend/domainclaimprobe_test.go)
+// Held by: TestEveryDomainClaimAnswersThroughOneProbe (backend/gates/domainclaimprobe_test.go)
 // — it censuses every statement in the tree that reads organization_domain to
 // decide whether a domain is taken, and fails on a second one.
 // It returns the typed error itself rather than a (value, error) pair: `nil,

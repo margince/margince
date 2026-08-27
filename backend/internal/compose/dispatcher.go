@@ -214,7 +214,7 @@ func (d *Dispatcher) queryOverlayMode(ctx context.Context, wsID ids.UUID) (bool,
 // It takes a QUERIER rather than a pool, which is what lets the port ask the
 // question on the transaction it is already inside. Reaching for a second
 // connection there is the deadlock shape this repo removed once already
-// (backend/txseamacquire_test.go): under a saturated pool the borrowed
+// (backend/gates/txseamacquire_test.go): under a saturated pool the borrowed
 // transaction holds its connection while the new acquire waits for one, in the
 // same goroutine, and PostgreSQL sees two unrelated sessions rather than a
 // cycle it can break.

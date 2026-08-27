@@ -12,6 +12,6 @@
 /composition/                       @lstrojny
 /fixtures/extensions/               @lstrojny
 /backend/tools/gen-composition/     @lstrojny
-/backend/extensions_arch_test.go    @lstrojny
+/backend/gates/extensions_arch_test.go    @lstrojny
 /docs/how-to/add-an-extension.md    @lstrojny
 /docs/explanation/extensibility.md  @lstrojny

@@ -29,7 +29,7 @@ import (
 // logoFieldName is how the logo is spelled in field_provenance and in the
 // audit/event delta. One spelling, so the provenance display and the write
 // cannot disagree about which field was set.
-// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/claimedspelling_test.go)
+// Held by: TestAClaimedSpellingIsTheOnlySpellingWhereItIsUsed (backend/gates/claimedspelling_test.go)
 const logoFieldName = "logo"
 
 // SetOrganizationLogo records a resolved company mark: the storage key its

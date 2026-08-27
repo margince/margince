@@ -255,13 +255,13 @@ func (s *RetentionService) eraseActivityContent(ctx context.Context, tx pgx.Tx, 
 // their lead rows and scores, their preference tokens, their deal-room seats.
 //
 // What survives is written down per table in
-// TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go),
+// TestErasingAndAnonymizingClearTheSameTables (backend/gates/personscrub_test.go),
 // which fails when the gap widens in either direction. That test compares which
 // TABLES each act writes and cannot see two acts clearing one table to
 // different depths, which is why the custom columns above are nulled here
 // deliberately rather than left for it to notice.
 //
-// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/personscrub_test.go)
+// Held by: TestErasingAndAnonymizingClearTheSameTables (backend/gates/personscrub_test.go)
 func anonymizePersonRecord(ctx context.Context, tx pgx.Tx, id ids.UUID) error {
 	// The subject's addresses, read BEFORE person_email is deleted
 	// below. The graph structures name them by raw address as well as

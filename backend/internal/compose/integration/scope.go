@@ -22,7 +22,7 @@ import (
 // The actor is a SYSTEM principal, which no row-scope clause narrows, so this
 // scope cannot be denied — which makes it the wrong instrument for any assertion
 // about who may SEE a row. Such a test would pass whatever the row scope was. That
-// is not left to this comment: backend/retentionscope_test.go holds the fixture to
+// is not left to this comment: backend/gates/retentionscope_test.go holds the fixture to
 // the retention engine as its only sink, and fails a use that is anything else.
 func RetentionPassCtx(ws ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), ws)

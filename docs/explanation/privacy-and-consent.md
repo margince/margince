@@ -54,7 +54,7 @@ into consent's handlers.
 `linkedin_connection`, `comms_outbound`, `deal`, `attachment`, `embedding`, `raw_capture`,
 `field_provenance`, `preference_token`, `capture_pending_counterparty`, `voice_learning_signal`,
 `ai_call` and `ai_call_payload`. The ratified list is the cross-writer map in
-`backend/tableownership_test.go`, which gates it — that file, not this page, is the authority.
+`backend/gates/tableownership_test.go`, which gates it — that file, not this page, is the authority.
 
 Four of those are worth naming for *why* nothing else can reach them. A **channel identity** is the key
 an inbound message would re-bind the subject by, so it must die in the same commit that hashes it onto
@@ -70,7 +70,7 @@ obligation must reach **every** store that holds the subject, in **one transacti
 routing each purge through the owning module would trade away the atomicity that is the guarantee.
 
 This is the one sanctioned exception to "a module writes only its own tables." Every such write is
-**ratified per table** in `backend/tableownership_test.go` with a self-contained rationale; a reasonless
+**ratified per table** in `backend/gates/tableownership_test.go` with a self-contained rationale; a reasonless
 or stale waiver fails the test. See
 [reference/modules.md](../reference/modules.md) for the ownership map and
 [write-backbone.md](write-backbone.md) for the write shape these purges still ride.
@@ -110,5 +110,5 @@ have with a supervisory authority, and destruction is irreversible.
 | Art. 17 erasure | `internal/modules/privacy/erasure.go` (`NewEraser`, `ErasePerson`) |
 | Art. 15 SAR | `internal/modules/privacy/sar.go` (`AssembleSAR`) |
 | Retention evaluator | `internal/modules/privacy/retention.go` (`EvaluateWorkspace`), fanned out per workspace by `internal/compose/jobs_privacyretention.go` in `cmd/worker` |
-| Cross-store ratification | `backend/tableownership_test.go` |
+| Cross-store ratification | `backend/gates/tableownership_test.go` |
 | Jurisdiction packs | `internal/shared/ports/jurisdiction/`, `extensions/de/` |

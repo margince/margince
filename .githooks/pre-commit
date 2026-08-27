@@ -16,4 +16,4 @@ if [ -n "$staged_go" ]; then
 	fi
 fi
 
-cd "$root/backend" && go test -run TestEveryHandWrittenGoFileCarriesTheLicenseHeader -count=1 .
+cd "$root/backend" && go test -run TestEveryHandWrittenGoFileCarriesTheLicenseHeader -count=1 ./gates

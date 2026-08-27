@@ -325,7 +325,7 @@ func ActiveConnection(ctx context.Context, pool *pgxpool.Pool) (DueOverlayConnec
 //
 // Spelled once because three callers asked the same question three ways.
 //
-// Held by: TestFleetEnumerationOnlyAtRatifiedSites (backend/jobfleetscan_test.go),
+// Held by: TestFleetEnumerationOnlyAtRatifiedSites (backend/gates/jobfleetscan_test.go),
 // which counts the workspace-collection reads each file makes and ratifies them
 // by name — a second spelling in this package raises the count and fails.
 func overlayModeWorkspaces(ctx context.Context, pool *pgxpool.Pool) ([]ids.UUID, error) {

@@ -64,7 +64,7 @@ type Job struct {
 	// instead would mean this package rendering its own copy of the rule, which
 	// is the second spelling that package exists to prevent.
 	//
-	// Held by: TestOnlyPromptlangSpellsTheLanguageRule (backend/promptlanguage_test.go)
+	// Held by: TestOnlyPromptlangSpellsTheLanguageRule (backend/gates/promptlanguage_test.go)
 	//
 	// EMPTY MEANS NO RULE, and it is what the certification lane's Job carries:
 	// a cert grades a fixed corpus, so a rule that moved with an installation's

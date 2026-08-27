@@ -88,7 +88,7 @@ func modelPathFor(ctx context.Context, cfg ai.RoutingConfig, spec modelPathSpec,
 	// The bindings this boot may run on, best first. A list rather than a switch
 	// because the second entry is a FALLBACK from the first — reached only when
 	// the stored binding cannot be built — and a role resolves its model path in
-	// exactly one place (backend/arch_test.go holds that), so trying two
+	// exactly one place (backend/gates/arch_test.go holds that), so trying two
 	// candidates cannot mean two construction sites.
 	//
 	// The fallback is not generosity. A dev stack's bootstrap seeds a cloud

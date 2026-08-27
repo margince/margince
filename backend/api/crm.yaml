@@ -24795,7 +24795,7 @@ components:
         separately (oapi-codegen emits nothing for a top-level standalone string enum, so there
         are no generated Go constants to derive from), and a typo there is an ordinary runtime
         value, not a compile error. What keeps the two honest is a merge-blocking parity test,
-        `backend/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this
+        `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this
         enum alone changes what clients can express, never what the server enforces — change
         both, and the gate will say so if you do not.
       enum:

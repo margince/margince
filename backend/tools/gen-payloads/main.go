@@ -200,7 +200,7 @@ func structifyEmptyEventPayloads(body string, spec *openapi3.T) (string, error) 
 // single generated source of truth both the coverage gate (every
 // subscribable event type must be a key) and the version gate (the catalog's
 // VersionOf must agree with the value) read — both in
-// backend/publicevents_test.go, as TestEverySubscribableEventHasAPayloadSchema
+// backend/gates/publicevents_test.go, as TestEverySubscribableEventHasAPayloadSchema
 // and TestPayloadVersionsMatchCatalog.
 func eventMethodsAndVersions(spec *openapi3.T, versionsVar string) (methods, versions string, err error) {
 	if spec.Components == nil {

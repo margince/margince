@@ -3,7 +3,7 @@
 
 // Package retryafter is the one reading of the Retry-After header.
 //
-// Held by: TestTheRetryAfterReadingIsSpelledOnce (backend/oneretryafter_test.go)
+// Held by: TestTheRetryAfterReadingIsSpelledOnce (backend/gates/oneretryafter_test.go)
 //
 // It was spelled six times: four byte-identical copies under capture (Gmail,
 // the Google connector base, Graph, the OAuth flow), the geocoder's own, and

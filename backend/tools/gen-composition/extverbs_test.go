@@ -13,7 +13,7 @@ import (
 
 // digestEncoding is how digestBytes spells a hash, which is what a fragment
 // hash is checked against here. The gate over the COMMITTED manifests lives in
-// the product module (backend/manifestdigest_test.go), because it reads files
+// the product module (backend/gates/manifestdigest_test.go), because it reads files
 // this module's test cache cannot key.
 var digestEncoding = regexp.MustCompile(`^sha256:[0-9a-f]{64}$`)
 

@@ -6,7 +6,7 @@ package people
 // CurrentPrimarySlotSQL mirrors uq_rel_current_primary_employer, and this is
 // what holds it to the index rather than to somebody's memory of the index.
 //
-// It lives beside the helper and not with the census in backendarch because
+// It lives beside the helper and not with the census in gates because
 // the root package may not import a module (ADR-0054): the census reads the
 // tree as text and needs no import, while a mirror has to CALL the function.
 

@@ -81,7 +81,7 @@ something (or deciding where new code goes):
 | SQL migrations | `backend/migrations/core/` (upstream) · `custom/` (fork) |
 | The three process binaries | `backend/cmd/{api,worker,migrate}/` |
 | Codegen tools | `backend/tools/` (its own Go module) |
-| The architecture gates (fitness tests) | `backend/*_test.go` (see below) |
+| The architecture gates (fitness tests) | `backend/gates/*_test.go` (see below) |
 
 **The rule you'll hit first:** a module in `internal/modules/` **never imports a sibling module**.
 If capability A needs capability B, the edge is injected in `internal/compose/`, never by importing B.

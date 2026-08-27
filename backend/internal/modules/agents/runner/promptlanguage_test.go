@@ -12,7 +12,7 @@ package runner
 // the duplication that package exists to prevent. What THIS package owes is
 // narrow and worth holding — that a rule it was handed reaches the prompt, and
 // that being handed none produces no rule rather than a blank line where one
-// belongs. The whole-tree gate in backend/promptlanguage_test.go reads one file
+// belongs. The whole-tree gate in backend/gates/promptlanguage_test.go reads one file
 // at a time and cannot follow a string across the package boundary, which is
 // what the waiver on asRequest says and what these two tests stand in for.
 

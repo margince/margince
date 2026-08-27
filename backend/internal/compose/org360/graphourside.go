@@ -84,7 +84,7 @@ func (g *graphAssembly) drawnContactIDs() []ids.UUID {
 // tell a rep who to ask for an intro, and a former colleague is not an answer
 // to that question.
 //
-// Held by: TestOnlyOneSpellingOfALiveMember (backend/livemember_test.go)
+// Held by: TestOnlyOneSpellingOfALiveMember (backend/gates/livemember_test.go)
 var liveMemberWhere = identity.LiveMemberSQL("u")
 
 // readAccountOwner reads the live workspace member the account is assigned to.

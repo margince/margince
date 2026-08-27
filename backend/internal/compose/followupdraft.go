@@ -57,7 +57,7 @@ const followUpDraftPurpose = "business_correspondence"
 // happens to spell the same word.
 //
 // Held by: TestEveryStagingNamesItsDealTargetThroughOneConstant
-// (backend/dealtargettype_test.go)
+// (backend/gates/dealtargettype_test.go)
 const approvalTargetDeal = "deal"
 
 // followUpReplySeam composes the reply and resolves who it answers.

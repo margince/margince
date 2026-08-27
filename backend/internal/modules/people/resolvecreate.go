@@ -23,7 +23,7 @@ package people
 // unchanged — these run on the caller's transaction, so domain row, audit and
 // outbox still commit together.
 //
-// `backend/dedupespine_test.go` is what keeps this the only door.
+// `backend/gates/dedupespine_test.go` is what keeps this the only door.
 
 import (
 	"context"

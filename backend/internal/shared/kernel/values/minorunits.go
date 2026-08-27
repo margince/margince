@@ -52,7 +52,7 @@ var currencyMinorDigits = map[string]int{
 // MinorUnitExceptions is a copy of the table above, for the ONE caller that
 // needs to compare it rather than use it: the gate asserting that the browser's
 // mirror of this table has not drifted from it
-// (backend/frontendminorunits_test.go).
+// (backend/gates/frontendminorunits_test.go).
 //
 // A copy and not the map itself, because a caller holding the real one could
 // change what every money figure in the product scales by, from anywhere.

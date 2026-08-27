@@ -15,7 +15,7 @@ import "slices"
 // that explains why the pair was raised.
 //
 // Held by: TestEveryDedupeEvidenceFieldIsNameableOnTheWire
-// (backend/dedupeevidencefields_test.go), which fails in BOTH directions
+// (backend/gates/dedupeevidencefields_test.go), which fails in BOTH directions
 // against the contract's own enum.
 func DedupeEvidenceFields() []string {
 	fields := []string{
@@ -41,7 +41,7 @@ func DedupeEvidenceFields() []string {
 // recognised and its signal is not, and the row is dropped either way.
 //
 // Held by: TestEveryDedupeEvidenceSignalIsNameableOnTheWire
-// (backend/dedupeevidencefields_test.go), which fails in BOTH directions
+// (backend/gates/dedupeevidencefields_test.go), which fails in BOTH directions
 // against the contract's own enum.
 func DedupeEvidenceSignals() []string {
 	signals := []string{

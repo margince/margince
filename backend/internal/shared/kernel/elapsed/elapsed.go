@@ -3,7 +3,7 @@
 
 // Package elapsed is the one spelling of "how many days of silence".
 //
-// Held by: TestOnlyElapsedCountsDaysOfSilence (backend/elapsedonespelling_test.go)
+// Held by: TestOnlyElapsedCountsDaysOfSilence (backend/gates/elapsedonespelling_test.go)
 //
 // Two surfaces answered this and they disagreed on screen. The deal card's
 // move said "They wrote 96 days ago"; the coverage chip beside it said "95

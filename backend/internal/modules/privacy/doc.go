@@ -19,7 +19,7 @@
 // each purge through its owning
 // module's API would trade the atomicity that IS the guarantee for
 // boundary hygiene. Those writes are ratified per table in the
-// table-ownership fitness test (backend/tableownership_test.go).
+// table-ownership fitness test (backend/gates/tableownership_test.go).
 //
 // Imports shared + platform only; never a sibling module. Retention
 // floors come from the compiled-in jurisdiction packs via
