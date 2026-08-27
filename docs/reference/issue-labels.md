@@ -5,6 +5,14 @@ Every issue in this repository carries **exactly one `priority:` and exactly one
 labels apply. This page is the full taxonomy; the binding short form is in
 `AGENTS.md`.
 
+The label set itself lives in [`.github/labels.yml`](../../.github/labels.yml),
+which is the source rather than another copy: `scripts/sync-labels.sh`
+reconciles the repository's own labels from it, and
+`backend/gates/issuelabels_test.go` fails `make check` if a section below and
+that file stop naming the same set. So editing this page alone changes nothing,
+and editing the file alone fails the gate — which is the point. Adding a label
+is one edit to the file and one to the section it belongs in.
+
 ## Why an unlabeled issue is worse than no issue
 
 The labels protect one invariant: **unlabeled means nobody has looked at it yet.**
