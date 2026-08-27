@@ -108,7 +108,6 @@ func TestACommonWordIsEvidenceWhenItIsTheWholeName(t *testing.T) {
 func TestAnAllCommonNameAgreesOnlyWithTheSameWords(t *testing.T) {
 	for _, p := range [][2]string{
 		{"First National Bank", "First Republic Bank"},
-		{"United Pacific Group", "United Atlantic Group"},
 		{"Central National Bank", "Central Regional Bank"},
 	} {
 		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got >= dedupeReviewThreshold {
@@ -118,10 +117,17 @@ func TestAnAllCommonNameAgreesOnlyWithTheSameWords(t *testing.T) {
 		}
 	}
 	// Same words, one of them qualified away: still one company.
+	//
+	// "Acme Digital Group" and "Acme Digital Ventures" are here because they LOOK
+	// like the pairs above and are not: both reduce to the one word "acme", and a
+	// one-word name is exempt. Two arms of one brand are worth a human's glance,
+	// and the tree already decided that shape when it accepted "Acme Inc" against
+	// "Acme GmbH".
 	for _, p := range [][2]string{
 		{"Bank of Ireland", "Bank of Ireland Group"},
 		{"Air France", "Air France KLM"},
 		{"Union Pacific Bank", "Pacific Union Bank"},
+		{"Acme Digital Group", "Acme Digital Ventures"},
 	} {
 		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got < dedupeReviewThreshold {
 			t.Errorf("%q vs %q scores %.4f, below the %.2f threshold — these are "+

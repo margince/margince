@@ -70,23 +70,6 @@ func weakEvidenceWord(word string) bool {
 	return ambiguousFormWord[word] || orgCommonNameWords[word]
 }
 
-// agreeEntirely answers whether the shorter name appears whole in the longer,
-// and whatever the longer adds is a word that names something rather than one
-// every company shares.
-//
-// A MULTISET TEST, not a subsequence one — word order is not consulted, because
-// a registry and a letterhead disagree about it more often than two companies
-// do. "Union Pacific Bank" and "Pacific Union Bank" therefore agree.
-//
-// The condition on the LEFTOVER is what separates a qualified brand from two
-// unrelated names: "Sun Microsystems" adds a brand to "Sun", while "Bank of the
-// West" adds only "west" to "Bank", and a pair whose every word is market
-// vocabulary has nothing left to be identified by.
-//
-// A MULTISET TEST, not a subsequence one — word order is not consulted, because
-// a registry and a letterhead disagree about it more often than two companies
-// do. "Union Pacific Bank" and "Pacific Union Bank" therefore agree entirely,
-// which is the answer a human would give.
 // anyStrongWord answers whether a name has a word of its own — one that is not
 // vocabulary every company shares.
 func anyStrongWord(fields []string) bool {
@@ -98,6 +81,19 @@ func anyStrongWord(fields []string) bool {
 	return false
 }
 
+// agreeEntirely answers whether the shorter name appears whole in the longer,
+// and whatever the longer adds is a word that names something rather than one
+// every company shares.
+//
+// A MULTISET TEST, not a subsequence one — word order is not consulted, because
+// a registry and a letterhead disagree about it more often than two companies
+// do. "Union Pacific Bank" and "Pacific Union Bank" therefore agree, which is
+// the answer a human would give.
+//
+// The condition on the LEFTOVER is what separates a qualified brand from two
+// unrelated names: "Sun Microsystems" adds a brand to "Sun", while "Bank of the
+// West" adds only "west" to "Bank", and a pair whose every word is market
+// vocabulary has nothing left to be identified by.
 func agreeEntirely(shorter, longer []string) bool {
 	if len(shorter) == 0 {
 		return false
@@ -111,6 +107,10 @@ func agreeEntirely(shorter, longer []string) bool {
 	//
 	// A one-word name is exempt, because a company called "Sun" has said all it
 	// has to say and "Sun Microsystems" is that name qualified.
+	//
+	// Comparing LENGTHS is enough to mean "a subset rather than the same words":
+	// two names of equal length that differ in a word are rejected by the
+	// containment loop below, which needs every word of the shorter to be found.
 	if len(shorter) > 1 && !anyStrongWord(shorter) && len(shorter) != len(longer) {
 		return false
 	}
