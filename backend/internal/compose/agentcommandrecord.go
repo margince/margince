@@ -19,8 +19,8 @@ package compose
 import (
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // mergeCommand decodes POST /v1/people/{id}/merge and

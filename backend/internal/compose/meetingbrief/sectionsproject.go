@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // projectHeaderLine names the engagement and where it stands. The key rides

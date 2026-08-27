@@ -19,11 +19,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/modules/search"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // schemaURIPattern finds every margince:// document a tool's text names.

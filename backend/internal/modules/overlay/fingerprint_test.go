@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay"
 )
 
 // baseMapping is the shape every mutation below perturbs by exactly one

@@ -10,10 +10,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/modules/webhooks"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/webhooks"
+	"github.com/margince/margince/backend/internal/platform/database"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // newWebhookHandlers builds the outbound-webhook transport (E10/S-E10.6,

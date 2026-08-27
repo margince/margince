@@ -12,9 +12,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/gradionhq/margince/backend/internal/shared/schema"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // The request is the whole security perimeter of this site, and it carries

@@ -17,8 +17,8 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 const approveRoute = "POST /v1/approvals/{id}/approve"

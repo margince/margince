@@ -44,13 +44,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
 	liveMemberHelper = "LiveMemberSQL"
 	liveMemberOwner  = "internal/modules/identity/livemember.go"
-	identityPath     = "github.com/gradionhq/margince/backend/internal/modules/identity"
+	identityPath     = "github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // cannotReachIdentity ratifies the statements that spell the predicate out

@@ -23,7 +23,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // The refusal classes a poll acts on. A provider is a remote party, so what

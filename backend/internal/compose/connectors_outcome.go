@@ -15,9 +15,9 @@ import (
 	"log/slog"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture/googleconn"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/oauthflow"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // landingURL is the OAuth-return deep link. The SPA is hash-routed, so the

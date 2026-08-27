@@ -16,8 +16,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // Deterministic writes the brief without a model. Every sentence cites the

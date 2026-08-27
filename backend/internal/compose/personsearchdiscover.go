@@ -32,9 +32,9 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/websearch"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/websearch"
 )
 
 // profileHosts maps a professional platform to the person_profile_field the

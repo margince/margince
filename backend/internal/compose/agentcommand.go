@@ -18,8 +18,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // restCommandDeps is what a decoder needs to build its command's resolver.

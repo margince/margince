@@ -22,10 +22,10 @@ import (
 	"fmt"
 	"strconv"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // ProviderName is the registry's stable id for this provider, spelled ONCE in

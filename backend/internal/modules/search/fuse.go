@@ -9,7 +9,7 @@ import (
 	"log/slog"
 	"sort"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // rrfK is the reciprocal-rank-fusion constant (the literature default;

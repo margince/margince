@@ -14,8 +14,8 @@ import (
 	"testing"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A fixed clock: the freshness window is a real boundary in this formula, so

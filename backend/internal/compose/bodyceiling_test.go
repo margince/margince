@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // The security property, stated once: a body's ceiling is decided by the route

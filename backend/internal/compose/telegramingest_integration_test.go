@@ -22,13 +22,13 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // telegramIngestFixture seeds one connected channel_connection (bot "42")

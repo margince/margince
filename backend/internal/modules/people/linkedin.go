@@ -7,7 +7,7 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // One key keeps every refusal below reporting the same field, so a client can

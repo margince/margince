@@ -7,6 +7,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -122,3 +123,96 @@ func TestEnsureAdminPasswordDisclosesOnlyOnFirstRun(t *testing.T) {
 		}
 	})
 }
+
+// TestConfiguredAdminEmailAgreesWithTheFileTheLauncherWrites pins the pair that
+// must agree: ensureConfig writes an address into margince.yaml, and the start
+// message offers one to sign in with. Derived from one constant, a launcher
+// cannot create an account under a name it will not go on to report.
+func TestConfiguredAdminEmailAgreesWithTheFileTheLauncherWrites(t *testing.T) {
+	l := newTestLayout(t)
+	if _, err := l.ensureConfig(); err != nil {
+		t.Fatalf("write the config: %v", err)
+	}
+
+	if got := l.configuredAdminEmail(); got != defaultAdminEmail {
+		t.Fatalf("the launcher wrote a config its own start message cannot read back:\n"+
+			"  announce would say %q\n  margince.yaml names %q", got, defaultAdminEmail)
+	}
+}
+
+// TestConfiguredAdminEmailReadsTheInstallationsOwnAddress covers the case that
+// matters: margince.yaml is write-once and the organization is bootstrapped from
+// it, so an operator who names the admin before the first run owns that name for
+// good and the start message follows the file rather than its own default.
+func TestConfiguredAdminEmailReadsTheInstallationsOwnAddress(t *testing.T) {
+	for name, yaml := range map[string]string{
+		"a plain value": "" +
+			"version: 1\n\nbootstrap_admin:\n  email: admin@demo.test\n  display_name: Owner\n",
+		"a quoted value": "" +
+			"version: 1\n\nbootstrap_admin:\n  email: \"admin@demo.test\"\n",
+		"a trailing comment": "" +
+			"version: 1\n\nbootstrap_admin:\n  email: admin@demo.test # the demo account\n",
+		// The block test is what stops an `email:` belonging to some other
+		// section being reported as the sign-in address.
+		"an email under another key first": "" +
+			"organization:\n  email: billing@example.com\n\nbootstrap_admin:\n  email: admin@demo.test\n",
+		// '#' is legal in the local part of an address (RFC 5322 atext), so a
+		// reader that cut at every one would announce a truncated address —
+		// the failure this whole function exists to prevent.
+		"a hash inside the address": "" +
+			"bootstrap_admin:\n  email: admin#demo@demo.test\n",
+		"a quoted hash inside the address": "" +
+			"bootstrap_admin:\n  email: \"admin#demo@demo.test\"\n",
+	} {
+		t.Run(name, func(t *testing.T) {
+			l := newTestLayout(t)
+			if err := os.WriteFile(l.configPath(), []byte(yaml), 0o600); err != nil {
+				t.Fatalf("write config: %v", err)
+			}
+			want := "admin@demo.test"
+			if strings.Contains(yaml, "admin#demo") {
+				want = "admin#demo@demo.test"
+			}
+			if got := l.configuredAdminEmail(); got != want {
+				t.Fatalf("start message would name %q, but margince.yaml bootstraps %q", got, want)
+			}
+		})
+	}
+}
+
+// TestConfiguredAdminEmailFallsBackRatherThanFailing keeps the address
+// informational. Reading it must never decide whether a launcher can report
+// where the app is running, so every shape this reader cannot follow answers
+// with the address the launcher would itself have written.
+func TestConfiguredAdminEmailFallsBackRatherThanFailing(t *testing.T) {
+	for name, yaml := range map[string]*string{
+		"no file at all":             nil,
+		"no bootstrap_admin block":   ptr("version: 1\n\norganization:\n  name: Margince\n"),
+		"the block names no email":   ptr("bootstrap_admin:\n  display_name: Owner\n"),
+		"the email is commented out": ptr("bootstrap_admin:\n  # email: admin@demo.test\n"),
+		"the value is empty":         ptr("bootstrap_admin:\n  email:\n"),
+		// bootstrap_admin.contact.email is not bootstrap_admin.email. Announcing
+		// a nested address would name an account nothing bootstrapped.
+		"only a nested email": ptr("bootstrap_admin:\n  contact:\n    email: ops@demo.test\n"),
+		// A double-quoted scalar may carry YAML escapes, and decoding them is a
+		// parser's job. Returning the literal would announce an address nothing
+		// bootstrapped, so an escaped value is declined.
+		"a double-quoted value carrying an escape": ptr(
+			"bootstrap_admin:\n  email: \"admin\\u0040demo.test\"\n"),
+	} {
+		t.Run(name, func(t *testing.T) {
+			l := newTestLayout(t)
+			if yaml != nil {
+				if err := os.WriteFile(l.configPath(), []byte(*yaml), 0o600); err != nil {
+					t.Fatalf("write config: %v", err)
+				}
+			}
+			if got := l.configuredAdminEmail(); got != defaultAdminEmail {
+				t.Fatalf("answered %q; an unreadable config must fall back to %q rather than\n"+
+					"reporting an address no one can sign in with", got, defaultAdminEmail)
+			}
+		})
+	}
+}
+
+func ptr(s string) *string { return &s }

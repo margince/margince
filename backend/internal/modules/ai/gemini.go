@@ -14,7 +14,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // geminiClient is the native Google Gemini adapter (BYOK, ADR-0020) speaking

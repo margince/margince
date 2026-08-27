@@ -1,3 +1,3 @@
-module github.com/gradionhq/margince/extensions/de
+module github.com/margince/margince/extensions/de
 
 go 1.26.6

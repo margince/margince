@@ -17,8 +17,8 @@ package compose
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // Where the object names come from: an extension operation declares one with

@@ -13,9 +13,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture/oauthflow"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // fakeOAuth is a stub Google OAuth2 handshake for the Authenticate tests.

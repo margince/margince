@@ -30,8 +30,8 @@ import (
 
 	"github.com/go-pdf/fpdf"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // pdfLabels holds one locale's label set for the rendered PDF.

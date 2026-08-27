@@ -3,7 +3,7 @@ package golden
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/cli/craft/gate"
+	"github.com/margince/margince/cli/craft/gate"
 )
 
 func outcome(kind Kind, want, got gate.Verdict) Outcome {

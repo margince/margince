@@ -33,7 +33,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // laneConnBudgetEnv carries the number scripts/test-integration-parallel.sh

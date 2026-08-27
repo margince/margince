@@ -33,7 +33,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // auditActionDBOnly: verbs the audit_log_action_check CHECK allows that the

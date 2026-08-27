@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 func TestTriageVerdictStopsTheCrawlOnlyWhenItIsSureAndNegative(t *testing.T) {

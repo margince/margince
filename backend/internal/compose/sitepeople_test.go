@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestSiteLeadSourceIDIsOrgStableAcrossPagesAndNameReflow(t *testing.T) {

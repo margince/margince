@@ -39,7 +39,7 @@ const (
 	backendTree = "."
 
 	// gatekitImportPath is the waiver machinery every rule here is about.
-	gatekitImportPath = "github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	gatekitImportPath = "github.com/margince/margince/backend/internal/shared/gatekit"
 
 	// fixtureMarker declares that a package-level reason map is deliberately NOT
 	// a waiver, and the text after it says what the map is instead — expected
@@ -186,7 +186,7 @@ func TestEveryWaiversDeclarationIsSweptForStalenessExactlyOnce(t *testing.T) {
 // The walk covers every non-test Go file in the backend tree — internal/, cmd/,
 // pkg/, migrations/ and the tools module — which is the whole population able to
 // reach gatekit at all. The workspace's other modules (composition, cli/craft,
-// extensions/*) sit outside the github.com/gradionhq/margince/backend/ prefix,
+// extensions/*) sit outside the github.com/margince/margince/backend/ prefix,
 // so the toolchain's internal-package rule refuses them the import before this
 // walk would have to.
 func TestGatekitServesTestsOnly(t *testing.T) {

@@ -15,7 +15,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // envelopeField is the single stream-entry field holding the envelope

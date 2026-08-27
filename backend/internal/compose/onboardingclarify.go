@@ -19,10 +19,10 @@ import (
 	"log/slog"
 	"strings"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // onboardingClarifyOptionLimit mirrors the contract's options maxItems:

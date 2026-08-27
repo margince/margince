@@ -30,12 +30,12 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
-	"github.com/gradionhq/margince/backend/internal/modules/automation"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // draftRecipient is the one counterparty every fixture here answers, named once

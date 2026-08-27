@@ -20,8 +20,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // stagedEnvelope is one event_outbox row a write staged.

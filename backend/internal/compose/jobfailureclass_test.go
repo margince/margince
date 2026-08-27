@@ -12,8 +12,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // providerUnavailable is a well-formed declared class, used as the thing that

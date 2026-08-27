@@ -18,12 +18,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/modules/migration"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The reasons a disclosed (non-applied) edge carries in the run report.

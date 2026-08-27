@@ -19,8 +19,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // writeZip packs the collected members into the bundle: a CSV per object,

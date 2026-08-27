@@ -21,10 +21,10 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func writeAndDecode(t *testing.T, err error) (int, map[string]any) {

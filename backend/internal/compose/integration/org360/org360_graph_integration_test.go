@@ -26,11 +26,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	org360svc "github.com/gradionhq/margince/backend/internal/compose/org360"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	org360svc "github.com/margince/margince/backend/internal/compose/org360"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // withSignalRead copies a permission set and adds the signal read grant the

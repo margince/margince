@@ -8,11 +8,11 @@ package integration
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/compose/installseam"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/installseam"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // DB is the harness's pool bound to THIS env's workspace.

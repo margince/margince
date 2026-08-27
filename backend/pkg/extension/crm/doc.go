@@ -36,6 +36,6 @@ package crm
 // and a pruning pass would empty the package while the manifest still looked
 // right.
 
-//go:generate go run github.com/gradionhq/margince/backend/tools/contract-subset -in ../../../api/crm.yaml -out .build/subset31.yaml -schemas Activity,CreateActivityRequest
-//go:generate go run github.com/gradionhq/margince/backend/tools/contract-overlay -in .build/subset31.yaml -out .build/subset30.yaml
+//go:generate go run github.com/margince/margince/backend/tools/contract-subset -in ../../../api/crm.yaml -out .build/subset31.yaml -schemas Activity,CreateActivityRequest
+//go:generate go run github.com/margince/margince/backend/tools/contract-overlay -in .build/subset31.yaml -out .build/subset30.yaml
 //go:generate go run github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen@v2.7.1 --config oapi.yaml .build/subset30.yaml

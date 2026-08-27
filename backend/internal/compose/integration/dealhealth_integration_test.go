@@ -18,8 +18,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // healthClock is the fixed evaluation instant every seeded timestamp is

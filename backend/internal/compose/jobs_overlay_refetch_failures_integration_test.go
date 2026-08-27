@@ -28,15 +28,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay/fake"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay/hubspot"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/platform/overlaybudget"
-	"github.com/gradionhq/margince/backend/internal/platform/overlaybudget/budgettest"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay/fake"
+	"github.com/margince/margince/backend/internal/modules/overlay/hubspot"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/overlaybudget"
+	"github.com/margince/margince/backend/internal/platform/overlaybudget/budgettest"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // refetchFixture stands up the state a webhook signal arrives into: a

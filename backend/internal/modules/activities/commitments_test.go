@@ -18,7 +18,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // openTasksWhere builds the predicate for one input, failing the test on any

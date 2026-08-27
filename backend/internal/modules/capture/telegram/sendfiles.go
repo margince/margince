@@ -44,8 +44,8 @@ import (
 	"time"
 	"unicode/utf8"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // The three bounds this connector declares it can carry, each measured against

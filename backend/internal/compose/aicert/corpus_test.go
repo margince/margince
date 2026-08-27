@@ -22,9 +22,9 @@ package aicert_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/aicert"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/aicert"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 func TestLoadCorpusCoversEveryShippedSite(t *testing.T) {

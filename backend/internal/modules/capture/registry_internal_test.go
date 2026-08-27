@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // resolveCredential's two credential sources are unit-tested here without a

@@ -11,20 +11,21 @@ package compose
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/retrieval"
+	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/retrieval"
 )
 
 // RunWallClock is the §4 wall-clock guarantee (RATIFY default 15 min):
@@ -131,21 +132,68 @@ func (s *RunnerService) Tick(ctx context.Context, now time.Time) error {
 	// and the rail would silently never learn that the 06:00 brief was queued.
 	ctx = schedulerContext(ctx)
 	s.reapAbandonedRuns(ctx)
+	// Seeding failures are collected, NOT returned here. Claiming is what makes
+	// already-queued work run, and it is independent of whether tonight's
+	// seeding succeeded — so returning early would let one seat whose seeding
+	// keeps failing stop every other seat's queued brief from executing, on
+	// every tick, for as long as the fault lasts. The pass still reports the
+	// failure at the end, on its own job row, which is where an operator reads
+	// it.
+	var seeding []error
 	for _, spec := range mustScheduledAgents() {
 		if due := spec.DueAt(now); !now.Before(due) {
-			// Cron-seeded jobs carry no passport yet: execution fails
-			// loudly rather than running with ambient authority.
-			if err := s.store.EnqueueJob(ctx, spec.Name, spec.TriggerRef(now), nil, due); err != nil {
-				return err
+			if err := s.seedSeats(ctx, spec, now, due); err != nil {
+				seeding = append(seeding, err)
 			}
 		}
 	}
 	jobs, err := s.store.ClaimDueJobs(ctx, claimBatch)
 	if err != nil {
-		return err
+		return errors.Join(append(seeding, err)...)
 	}
 	for _, job := range jobs {
 		s.executeJob(ctx, job)
+	}
+	return errors.Join(seeding...)
+}
+
+// seedSeats queues tonight's occurrence of one spec for every rep who granted
+// it, each job carrying that rep's own passport.
+//
+// WHY THE GRANTS DRIVE THE LOOP. An agent run acts as a person, and the only
+// credential it may act with is one that person minted for themselves. There
+// is no workspace-wide authority to fall back on and deliberately so, so a
+// spec with no live grants has nothing to run tonight — that is a workspace
+// where nobody has said yes yet, not a fault, and it queues nothing.
+//
+// A rep whose seeding fails does not cost the others theirs. The loop records
+// the failure and carries on, then returns them joined: stopping at the first
+// would leave a whole team unseeded because one seat's row was bad, and the
+// next tick would arrive at the same seat first and stop there again.
+func (s *RunnerService) seedSeats(ctx context.Context, spec runner.AgentSpec, now, due time.Time) error {
+	grants, err := s.store.LiveGrantsFor(ctx, spec.Name)
+	if err != nil {
+		return fmt.Errorf("read who granted %s: %w", spec.Name, err)
+	}
+	var failures []error
+	for _, grant := range grants {
+		// Live() is the reader's guarantee, asserted rather than assumed: the
+		// passport is what authorizes the run, and a job seeded against a dead
+		// one is a run that can only fail in the small hours with nobody
+		// watching. The query already filters for this; the check is here so
+		// that a later edit loosening the query cannot quietly widen the
+		// fan-out to credentials that stopped working.
+		if !grant.Live() || grant.PassportID == nil {
+			continue
+		}
+		passportID := *grant.PassportID
+		if err := s.store.EnqueueJob(ctx, spec.Name, spec.TriggerRef(now, grant.UserID), &passportID, due); err != nil {
+			failures = append(failures, fmt.Errorf("seat %s: %w", grant.UserID, err))
+		}
+	}
+	if len(failures) > 0 {
+		return fmt.Errorf("seeding %s for %d of %d seats: %w",
+			spec.Name, len(failures), len(grants), errors.Join(failures...))
 	}
 	return nil
 }

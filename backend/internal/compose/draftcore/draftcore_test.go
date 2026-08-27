@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/draftcore"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/convstate"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/compose/draftcore"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // draft is a stand-in for whatever shape a surface returns. The loop only ever

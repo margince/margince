@@ -21,7 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/pipelinetrace"
+	"github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
 )
 
 func ownerConn(t *testing.T) *pgx.Conn {

@@ -7,7 +7,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
 
 var resolvedAt = time.Date(2026, 8, 14, 9, 0, 0, 0, time.UTC)

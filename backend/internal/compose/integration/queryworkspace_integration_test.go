@@ -22,10 +22,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The Stuttgart question, end to end: deals of a certain size at an

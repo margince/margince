@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // openFXStages is one pipeline with one open stage, which is all these cases

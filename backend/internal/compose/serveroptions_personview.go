@@ -13,7 +13,7 @@ package compose
 import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/compose/persondraft"
 )
 
 // WithPersonDraft binds the lane that writes an email to one contact — the

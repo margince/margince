@@ -26,14 +26,14 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/compose/installseam"
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	org360svc "github.com/gradionhq/margince/backend/internal/compose/org360"
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/installseam"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	org360svc "github.com/margince/margince/backend/internal/compose/org360"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // countingTracer counts the statements one pool issues, ignoring the

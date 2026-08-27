@@ -26,8 +26,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestEveryGeocodeStatementRunsAgainstTheRealSchema(t *testing.T) {

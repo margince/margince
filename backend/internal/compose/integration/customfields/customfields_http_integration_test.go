@@ -36,9 +36,9 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // customFieldWire mirrors the contract's CustomField field by field,

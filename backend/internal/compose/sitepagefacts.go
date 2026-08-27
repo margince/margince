@@ -21,12 +21,12 @@ import (
 	"strings"
 	"unicode"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
-	"github.com/gradionhq/margince/backend/internal/shared/schema"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // pageMenu is what one page kind is asked for: the fact fields it may

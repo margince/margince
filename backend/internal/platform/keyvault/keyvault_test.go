@@ -10,8 +10,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The memory fake carries the Vault contract for hermetic unit tests; the

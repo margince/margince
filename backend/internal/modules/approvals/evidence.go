@@ -19,7 +19,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // evidenceSourceTypes is the closed set crm.yaml's Approval.evidence[].source_type

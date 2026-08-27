@@ -7,7 +7,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/schema"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // decode renders a node and unmarshals it to a generic map so assertions read

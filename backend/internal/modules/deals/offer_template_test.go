@@ -10,7 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // TestOfferTemplateUniqueViolation_TranslatesRacingConstraints proves

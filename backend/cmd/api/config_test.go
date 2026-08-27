@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 const testDSN = "postgres://localhost/margince_test"

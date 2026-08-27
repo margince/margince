@@ -20,14 +20,14 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/extsecrets"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/provenance"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/extsecrets"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // errExtensionRuntimeUnwired refuses a capability call on a role that never

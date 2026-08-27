@@ -18,10 +18,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/modules/agents/apps"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/modules/agents/apps"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // mcpResourceProviders is the list of document providers a hosted request

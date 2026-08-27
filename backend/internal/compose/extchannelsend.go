@@ -23,10 +23,10 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/modules/comms"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // unitTransport is one composed unit channel, resolved by provider: which unit

@@ -31,7 +31,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose"
 )
 
 // keyShape mirrors the CHECK on setting.key. Both exist on purpose: the

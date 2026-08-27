@@ -15,7 +15,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 type userWire struct {

@@ -25,10 +25,10 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/modules/aiactivity"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/aiactivity"
 )
 
 // documentReadingKind is the one kind that is not a scheduled spec: a human

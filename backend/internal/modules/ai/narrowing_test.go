@@ -12,7 +12,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The intent the field exists for on a native provider: keep scanned invoices

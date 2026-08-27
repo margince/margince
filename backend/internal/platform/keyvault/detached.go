@@ -8,7 +8,7 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // CleanupTimeout bounds every credential delete that runs outside a request's

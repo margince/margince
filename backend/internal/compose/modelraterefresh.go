@@ -15,15 +15,15 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/modules/approvals"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
-	"github.com/gradionhq/margince/backend/internal/shared/schema"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/approvals"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // rateExtractSystem is the verbatim production prompt — kept identical to the

@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // The catalog is published so an agent can call run_report without guessing, so

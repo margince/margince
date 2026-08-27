@@ -19,9 +19,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/idlebase"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/idlebase"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // stalledDeal is one stalled open deal as the suggestion rules cite it.

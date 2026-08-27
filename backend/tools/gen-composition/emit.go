@@ -16,13 +16,13 @@ import (
 
 	"golang.org/x/mod/modfile"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // compositionModule is the constant import path the role binaries wire
 // (backend/go.mod resolves it to the committed vanilla stub; the
 // generated go.work overrides it with build/composition/backend).
-const compositionModule = "github.com/gradionhq/margince/composition"
+const compositionModule = "github.com/margince/margince/composition"
 
 // extensionsGenHeader is shared by the vanilla stub and every composed
 // output — the vanilla body below it must stay byte-identical to
@@ -41,7 +41,7 @@ import (
 // encoding/json line above it is emitted only when a verb actually carries a
 // schema, because an unused import does not compile and the vanilla lane has
 // none.
-const extensionsGenSurfaceImport = "\t\"github.com/gradionhq/margince/backend/pkg/extension\"\n"
+const extensionsGenSurfaceImport = "\t\"github.com/margince/margince/backend/pkg/extension\"\n"
 
 const extensionsGenDoc = `
 // Extensions returns the composed extension set for this installation;

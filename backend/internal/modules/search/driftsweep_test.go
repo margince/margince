@@ -7,7 +7,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestSweepWorkspaceEmbeddingDriftNoOpsOnAnUnboundEmbedLane(t *testing.T) {

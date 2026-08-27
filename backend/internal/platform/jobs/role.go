@@ -6,7 +6,7 @@ package jobs
 import (
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // WorkspaceScoped is implemented by job args whose work belongs to exactly

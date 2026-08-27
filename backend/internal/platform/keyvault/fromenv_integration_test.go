@@ -19,9 +19,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // An installation that has sealed nothing is the ordinary case — every

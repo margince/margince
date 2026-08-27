@@ -12,8 +12,8 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The fan-out is ONE insert, not a loop of them. A partial fan-out that then

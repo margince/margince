@@ -23,9 +23,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 // The replies these runs are about. Written as text rather than marshalled so a

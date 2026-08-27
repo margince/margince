@@ -337,6 +337,13 @@ export function PersonPageV2({
               research: t(TAB_LABEL_KEYS.research),
               documents: t(TAB_LABEL_KEYS.documents),
             }}
+            // A provider is connected and nobody has bought anything for this
+            // contact yet, so there is a lookup waiting behind the tab. A
+            // CANCELLED run reads as never_run too, and the dot coming back is
+            // right: nothing was bought either way.
+            marks={{
+              research: view.data.provider_profile?.state === "never_run",
+            }}
           />
         </div>
 

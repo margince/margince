@@ -7,7 +7,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/ratelimit"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 // SendPolicy decides whether a delivery may transmit NOW. It cannot refuse a

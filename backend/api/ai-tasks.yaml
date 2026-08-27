@@ -1,6 +1,6 @@
 # ai-tasks.yaml — the AI task contract (spec §1.2, ai-operational-spec.md).
 #
-# Authority relationship (ratified: margince-poc-v1 AI runtime contract +
+# Authority relationship (ratified: this repository's AI runtime contract +
 # certification arc): THIS file is the normative authority for the AI task
 # DECLARATION — the task list, its tiers, each task's fallback ladder, execution
 # mode (interactive | background), budget-exhaustion posture (degrade | queue),

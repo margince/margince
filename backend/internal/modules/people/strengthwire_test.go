@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 func TestStrengthBucketToWireCoversTheDomainVocabulary(t *testing.T) {

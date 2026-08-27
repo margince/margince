@@ -19,7 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration"
 )
 
 // A provider is a transport and names no interaction kind, so channel_provider

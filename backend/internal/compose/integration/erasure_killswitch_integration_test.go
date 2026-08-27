@@ -28,13 +28,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/comms"
-	"github.com/gradionhq/margince/backend/internal/modules/consent"
-	"github.com/gradionhq/margince/backend/internal/modules/privacy"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/internal/modules/consent"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // refusingMailbox is the mailbox seam AND the sender behind it, and it fails

@@ -17,7 +17,7 @@ package compose
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
 func refinePrediction(ctx context.Context, source *migration.CSVSource, writers *csvWriters, object string, report migration.Report) (migration.Report, error) {

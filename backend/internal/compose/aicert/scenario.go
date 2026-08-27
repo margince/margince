@@ -23,8 +23,8 @@ import (
 
 	"gopkg.in/yaml.v3"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // sourceHandAuthored is the only Source value this loader accepts today.

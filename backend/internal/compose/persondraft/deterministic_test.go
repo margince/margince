@@ -7,10 +7,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/persondraft"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/convstate"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/draftfloor"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/compose/persondraft"
+	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
+	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // envelopeFor builds the envelope a resolved correspondence would produce,

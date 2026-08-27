@@ -459,7 +459,6 @@ internal/modules/people/geocode.go#var organizationAddressColumns
 internal/modules/people/handlers_projectstakeholder.go#const block at const ProjectStakeholderKind
 internal/modules/people/lead_list.go#const block at const leadNameColumn
 internal/modules/people/lead_read.go#const liveOnlyClause
-internal/modules/people/leadslaworkflow.go#func humanLoggedNote
 internal/modules/people/leadstatus.go#method LeadStatus.Open
 internal/modules/people/linkedinmatch.go#method Store.MatchLinkedInConnections
 internal/modules/people/linkedinmatch.go#var suggestNameEmployerMatchSQL
@@ -468,14 +467,8 @@ internal/modules/people/linkedinrenormalize.go#func matchRank
 internal/modules/people/linkedinrenormalize.go#var matchRankOrder
 internal/modules/people/listfilters.go#const block at const filterOwnerID
 internal/modules/people/listpage.go#func aiWrittenClause
-internal/modules/people/listpage.go#func capturedByKindClause
-internal/modules/people/mapping.go#type LeadUpdateRequest
-internal/modules/people/organization_counts.go#func fillOpenDealCounts
 internal/modules/people/organization_profile_field_write.go#const block at const auditKeyValue
-internal/modules/people/organization_profile_field_write.go#method Store.writeProfileField
 internal/modules/people/projectstakeholder.go#method Store.PersonNames
-internal/modules/people/projectstakeholder.go#method Store.ensureProjectWritable
-internal/modules/people/promotepreview.go#method Store.previewTarget
 internal/modules/people/provider.go#func pageOf
 internal/modules/people/relationship_conflict_test.go#func TestRelationshipUniquenessRefusalKeepsBothTheSentinelAndTheConstraint
 internal/modules/people/resolve.go#func exactOrganizationOwners

@@ -9,7 +9,7 @@ package agentquota
 import (
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // Counter is one per-Passport quota. The string value is part of the Redis key,

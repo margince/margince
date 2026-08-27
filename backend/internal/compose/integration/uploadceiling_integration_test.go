@@ -26,11 +26,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
 )
 
 // uploadCeiling is the shipped attachment default, read from the deployment

@@ -20,11 +20,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestAttemptRefusesWithoutAUsableSecret(t *testing.T) {

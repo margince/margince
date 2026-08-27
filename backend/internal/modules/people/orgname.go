@@ -12,7 +12,7 @@ package people
 // overwrite it, gated by organization.name_source (nameSourceDomain marks a
 // name still provisional).
 
-import "github.com/gradionhq/margince/backend/internal/platform/freemail"
+import "github.com/margince/margince/backend/internal/platform/freemail"
 
 // The organization.name_source provenance values (0120). Ordered weakest to
 // strongest: a stronger source may overwrite a weaker one, never the reverse,

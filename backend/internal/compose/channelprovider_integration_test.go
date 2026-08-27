@@ -12,11 +12,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/modules/comms"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/comms"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // A core connector not already seeded is inserted, with transport='core'.

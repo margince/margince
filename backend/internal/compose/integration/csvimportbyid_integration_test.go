@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // createOrgReturningID makes one company and answers its id.

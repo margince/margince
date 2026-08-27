@@ -35,9 +35,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/platform/events"
-	"github.com/gradionhq/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/events"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 // The listener's own time bounds. Every request it serves is a probe or a

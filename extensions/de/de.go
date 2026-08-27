@@ -8,12 +8,14 @@
 // classes; further obligations (the XRechnung/ZUGFeRD fiscal formats,
 // the CRA conformity regime) return to the seam when their work packages
 // land. Core code never contains a jurisdiction string — this unit is
-// where Germany lives.
+// where Germany lives. The legal position behind the product's German and
+// European compliance posture, including why no scraping-based enrichment
+// ships, is docs/explanation/data-enrichment-position.md.
 package de
 
 import (
-	"github.com/gradionhq/margince/backend/pkg/extension"
-	"github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+	"github.com/margince/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
 )
 
 // New returns the unit's declaration (the ADR-0069 §4 constructor

@@ -11,7 +11,7 @@
 // NOT all of it is offline any more: extmigrategate opens database
 // connections (pgx), which is why this module now carries a driver. It is
 // still tooling — nothing here ships in a binary a customer runs.
-module github.com/gradionhq/margince/backend/tools
+module github.com/margince/margince/backend/tools
 
 go 1.26.6
 
@@ -19,7 +19,7 @@ tool github.com/oapi-codegen/oapi-codegen/v2/cmd/oapi-codegen
 
 require (
 	github.com/getkin/kin-openapi v0.146.0
-	github.com/gradionhq/margince/backend v0.0.0
+	github.com/margince/margince/backend v0.0.0
 	github.com/jackc/pgx/v5 v5.10.0
 	github.com/oapi-codegen/oapi-codegen/v2 v2.8.0
 	golang.org/x/crypto v0.55.0
@@ -28,7 +28,7 @@ require (
 	gopkg.in/yaml.v3 v3.0.1
 )
 
-replace github.com/gradionhq/margince/backend => ../
+replace github.com/margince/margince/backend => ../
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect

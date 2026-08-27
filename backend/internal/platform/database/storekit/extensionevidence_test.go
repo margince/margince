@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // The attribution is added from the CONTEXT, so an ordinary core write — a

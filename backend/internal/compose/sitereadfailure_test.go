@@ -19,8 +19,8 @@ import (
 	"net"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 func TestDiagnoseCrawlFailureNamesTheCauseAndItsRetryPolicy(t *testing.T) {

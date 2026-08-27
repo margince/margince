@@ -13,7 +13,7 @@ import (
 	"strings"
 	"unicode"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // corpusLegalEntity is one entity a legal page names, with the identity

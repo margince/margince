@@ -28,7 +28,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // GoogleAppKey is the settings key the app's credentials are stored under.

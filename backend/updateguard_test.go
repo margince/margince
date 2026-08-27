@@ -31,7 +31,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // byIDUpdate matches a single-row-by-primary-key UPDATE inside one SQL
@@ -635,7 +635,7 @@ func (c scopeCloser) Visit(node ast.Node) ast.Visitor {
 
 // modulePrefix is the backend module's own import path. An import outside it is
 // a dependency whose statements are not this tree's to judge.
-const modulePrefix = "github.com/gradionhq/margince/backend/"
+const modulePrefix = "github.com/margince/margince/backend/"
 
 // inModuleImportDirs are the directories of the backend packages a file imports,
 // which is where a qualified statement name can have been declared.

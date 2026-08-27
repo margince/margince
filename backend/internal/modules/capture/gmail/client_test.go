@@ -15,7 +15,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // googleStub routes the handful of Google/Gmail endpoints the client calls

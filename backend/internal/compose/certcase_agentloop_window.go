@@ -32,7 +32,7 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // agentLoopCatalogSpelling is the word a fixture uses in place of a tool list to

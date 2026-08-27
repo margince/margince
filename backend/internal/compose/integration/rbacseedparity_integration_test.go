@@ -54,10 +54,10 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
-	"github.com/gradionhq/margince/backend/migrations"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/migrations"
 )
 
 // seededDefaults is the matrix identity seeds, as identity itself renders it.

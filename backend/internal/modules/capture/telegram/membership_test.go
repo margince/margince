@@ -11,7 +11,7 @@ package telegram
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // telegramBlockedFixture is what Telegram actually posts when customer 556

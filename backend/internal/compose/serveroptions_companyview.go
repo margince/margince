@@ -22,11 +22,11 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/compose/accountdraft"
-	"github.com/gradionhq/margince/backend/internal/compose/dealstatus"
-	"github.com/gradionhq/margince/backend/internal/compose/meetingbrief"
-	"github.com/gradionhq/margince/backend/internal/compose/orgbrief"
-	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/accountdraft"
+	"github.com/margince/margince/backend/internal/compose/dealstatus"
+	"github.com/margince/margince/backend/internal/compose/meetingbrief"
+	"github.com/margince/margince/backend/internal/compose/orgbrief"
+	"github.com/margince/margince/backend/internal/compose/orgdossier"
 )
 
 // WithAccountDraft binds the lane that writes an account-started email

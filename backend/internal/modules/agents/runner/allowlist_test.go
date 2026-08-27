@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // readsOnlyEntry is a catalog entry in the shape the scope model forces one on

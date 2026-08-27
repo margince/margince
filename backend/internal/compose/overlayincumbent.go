@@ -15,9 +15,9 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // resolveOverlayIncumbent builds the per-request live-incumbent resolver

@@ -199,7 +199,7 @@ per-client throttling at the proxy.
   rejected by the database, not merely hidden. Both invariants are
   fitness functions derived from the live schema, not maintained lists.
 - **Layout** (spec ADR-0054/A69):
-  one Go module under `backend/` (`github.com/gradionhq/margince/backend`)
+  one Go module under `backend/` (`github.com/margince/margince/backend`)
   as the `internal/{modules,platform,shared}` triad —
   `shared/{kernel,apperrors,ports}` (stdlib-only leaves), `platform/*`
   (plumbing, owns no domain), twenty `modules/` (identity, people,

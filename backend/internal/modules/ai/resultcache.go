@@ -7,8 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // resultCache is the §6 result cache: workspace_id is part of the key

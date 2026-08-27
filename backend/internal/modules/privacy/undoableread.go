@@ -15,8 +15,8 @@ import (
 	"context"
 	"log/slog"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // UndoabilityAnswer is the evaluator's verdict for one audit row.

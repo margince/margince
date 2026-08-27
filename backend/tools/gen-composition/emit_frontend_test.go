@@ -11,7 +11,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // The SPA's half of the two-lane bind, tested on the same terms as the Go

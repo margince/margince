@@ -14,7 +14,7 @@ import (
 
 	"golang.org/x/mod/modfile"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // extensionUnit is one enabled extension: a directory under extensions/.

@@ -22,9 +22,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/modules/search"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // TestReembedReembedsAllLiveEntitiesAndIsResumable seeds 3 people

@@ -12,7 +12,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/jurisdiction"
+	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
 
 // correspondenceFloorPredicate is the WHERE fragment that shields commercial

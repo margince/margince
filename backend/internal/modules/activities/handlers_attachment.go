@@ -9,9 +9,9 @@ import (
 	"log/slog"
 	"net/http"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // multipartSpillBytes is how much of an upload is held in memory before the

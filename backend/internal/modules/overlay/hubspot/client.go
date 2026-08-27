@@ -24,7 +24,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // httpTimeout bounds every HubSpot call so a stalled request can't pin an

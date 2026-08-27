@@ -20,7 +20,7 @@ package identity
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // callerChosenExpiry ratifies the one deadline here that is nobody's clock of

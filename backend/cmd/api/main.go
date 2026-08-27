@@ -9,10 +9,6 @@
 package main
 
 import (
-	// Embedded tzdata: workspace timezones must resolve on scratch
-	// containers that ship no zoneinfo.
-	_ "time/tzdata"
-
 	"context"
 	"errors"
 	"fmt"
@@ -23,23 +19,26 @@ import (
 	"os/signal"
 	"strings"
 	"syscall"
+	// Embedded tzdata: workspace timezones must resolve on scratch
+	// containers that ship no zoneinfo.
+	_ "time/tzdata"
 
 	// The composed extension set (ADR-0069): the generated module under
 	// build/composition/ in a composed build, the committed vanilla stub
 	// in a bare one — same import path either way.
-	"github.com/gradionhq/margince/composition"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/margince/margince/composition"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/platform/agentquota"
-	"github.com/gradionhq/margince/backend/internal/platform/blobstore"
-	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/deployconfig"
-	"github.com/gradionhq/margince/backend/internal/platform/httpserver"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/platform/licensecheck"
-	"github.com/gradionhq/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/deployconfig"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/platform/mailer"
 )
 
 func main() {

@@ -16,7 +16,7 @@ import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // noteEntity is what the LEDGER calls this unit's table, and noteTable is what

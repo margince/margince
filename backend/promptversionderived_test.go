@@ -49,7 +49,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // promptConstantName is this tree's own naming for a model instruction — every

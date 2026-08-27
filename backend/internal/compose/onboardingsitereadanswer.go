@@ -13,10 +13,10 @@ package compose
 import (
 	"encoding/json"
 
-	"github.com/gradionhq/margince/backend/internal/compose/promptvoice"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/compose/promptvoice"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // companyReadAnswerRequest builds the ONE call this site sends: the dossier

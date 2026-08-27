@@ -20,9 +20,9 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAnAmountRestoreIsRefusedWhenTheCurrencyMovedUnderIt(t *testing.T) {

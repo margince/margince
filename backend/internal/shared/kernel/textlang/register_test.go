@@ -6,7 +6,7 @@ package textlang_test
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // Real correspondence, and the case that made this necessary: Frank Miller's

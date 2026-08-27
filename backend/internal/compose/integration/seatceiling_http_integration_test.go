@@ -20,9 +20,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	"github.com/gradionhq/margince/backend/internal/platform/licensecheck"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/licensecheck"
 )
 
 // licenseEntitlement is the GET /installation/license body, named here rather

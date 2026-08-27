@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // reply is the ordinary channel message every case here sends: a reply to a chat

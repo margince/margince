@@ -8,11 +8,11 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/deals"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // claimHandlers is the one HTTP door for claiming a customer record. The

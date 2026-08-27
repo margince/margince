@@ -41,7 +41,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The doors into audit_log, and which of them carries a before-image.
@@ -308,7 +308,7 @@ func resolveString(expr ast.Expr, consts map[string]string) (string, bool) {
 // storekitPath is the package whose doors this gate judges. The subject
 // predicate, the qualifier resolution and the direct-INSERT sweep all read it,
 // so they cannot come to mean different packages.
-const storekitPath = "github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+const storekitPath = "github.com/margince/margince/backend/internal/platform/database/storekit"
 
 // fileReachesAnAuditDoor is the Scope subject, asked identically inside the
 // roots and outside them: a file that calls a door, or that writes audit_log

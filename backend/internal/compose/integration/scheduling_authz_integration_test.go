@@ -17,9 +17,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestBookingAnotherHostNeedsTheAdminRole(t *testing.T) {

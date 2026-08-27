@@ -24,7 +24,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // connectedClient is a connector that finished the handshake: the harness, the

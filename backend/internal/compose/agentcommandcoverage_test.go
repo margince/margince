@@ -31,7 +31,7 @@ import (
 
 	chi "github.com/go-chi/chi/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // agentReachableMutations is the subject set, derived: every route an agent

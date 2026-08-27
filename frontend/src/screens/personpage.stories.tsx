@@ -24,6 +24,7 @@ import {
 } from "./personprovider.fixtures";
 import { PersonRail } from "./personrail";
 import { PersonStrip } from "./personstrip";
+import type { PersonTab } from "./persontab";
 import {
   PersonDealsTab,
   PersonMeetingsTab,
@@ -666,9 +667,11 @@ const unreachable: View = {
 function Page({
   view = populated,
   guardEntries = guardAllowsMail,
+  tab = "overview",
 }: Readonly<{
   view?: View;
   guardEntries?: components["schemas"]["PersonConsentGuardEntry"][];
+  tab?: PersonTab;
 }>) {
   installFetchStub({
     // The page mounts capability-aware chrome, so the session has to be routed:
@@ -713,12 +716,47 @@ function Page({
   });
   return (
     <StoryProviders>
-      <PersonPageV2 id="p-1" tab="overview" />
+      <PersonPageV2 id="p-1" tab={tab} />
     </StoryProviders>
   );
 }
 
 export const PageStory: Story = { name: "Page", render: () => <Page /> };
+
+// A provider is connected and nobody has looked this contact up, so the tab
+// strip carries a dot on "Data & tools". The dot is decorative — the panel
+// behind it says the same thing in words — so this story is about whether the
+// invitation is VISIBLE from a page the reader is already on.
+const neverBought: View = {
+  ...populated,
+  provider_profile: {
+    ...providerCompletedProfile,
+    state: "never_run",
+    provider: undefined,
+    retrieved_at: null,
+    emails: [],
+    mobile_phones: [],
+    linkedin_url: null,
+    current_employment: undefined,
+    job_history: [],
+    location: null,
+    departments: [],
+    seniorities: [],
+    latest_run: undefined,
+    contributing_runs: undefined,
+    categories_not_requested: [],
+  },
+};
+
+export const PageLookupWaiting: Story = {
+  name: "Page · a lookup nobody has run",
+  render: () => <Page view={neverBought} />,
+};
+
+export const PageDataAndTools: Story = {
+  name: "Page · Data & tools tab",
+  render: () => <Page view={neverBought} tab="research" />,
+};
 
 // The lead verb names the transport the composer would pick, so the header
 // reads differently for every shape of reachability — and that is exactly what

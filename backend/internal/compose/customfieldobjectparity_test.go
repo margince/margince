@@ -17,7 +17,7 @@ import (
 
 	"github.com/getkin/kin-openapi/openapi3"
 
-	"github.com/gradionhq/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 )
 
 // customFieldObjectEnums reads every `object` enum the contract declares for a

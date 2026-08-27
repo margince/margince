@@ -18,9 +18,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The derived reading is computed against TODAY by the store's own clock, so a

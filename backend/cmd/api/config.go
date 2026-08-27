@@ -10,10 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/platform/cliflags"
-	"github.com/gradionhq/margince/backend/internal/platform/config"
-	"github.com/gradionhq/margince/backend/internal/shared/runtimeenv"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/cliflags"
+	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // apiConfig is the parsed boot configuration of the api process.

@@ -25,7 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/provider"
+	"github.com/margince/margince/backend/internal/shared/ports/provider"
 )
 
 // seedSpendRun writes one run with one reservation, in a named state and

@@ -11,7 +11,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/runtimeenv"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // recheckInterval is how often a running process re-resolves its posture. A

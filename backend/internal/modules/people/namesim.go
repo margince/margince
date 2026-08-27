@@ -12,7 +12,7 @@ import (
 	"golang.org/x/text/transform"
 	"golang.org/x/text/unicode/norm"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // The string metric behind the dedupe fuzzy tier (PO-F-1/PO-F-2

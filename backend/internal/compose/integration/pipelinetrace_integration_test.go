@@ -24,13 +24,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose/pipelinetrace"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	trace "github.com/gradionhq/margince/backend/internal/shared/kernel/pipelinetrace"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	trace "github.com/margince/margince/backend/internal/shared/kernel/pipelinetrace"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func ladderAssembler(e *Env, payloads bool) *pipelinetrace.Assembler {

@@ -13,9 +13,9 @@ package orgdossier
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/compose/claims"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/claims"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Facts is the read seam over the company's factual sidecars. It is an

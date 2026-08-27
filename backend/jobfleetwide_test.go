@@ -71,7 +71,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // fleetWideDispatcherFloor guards against a vacuous pass. This gate resolves an

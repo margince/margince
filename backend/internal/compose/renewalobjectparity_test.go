@@ -17,8 +17,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/automation"
-	"github.com/gradionhq/margince/backend/internal/modules/customfields"
+	"github.com/margince/margince/backend/internal/modules/automation"
+	"github.com/margince/margince/backend/internal/modules/customfields"
 )
 
 func TestRenewalReminderObjectsMatchesFieldObjectsExactly(t *testing.T) {

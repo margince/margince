@@ -10,7 +10,7 @@ package ai
 // different lifetimes now that the second can change under the first.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // binding is everything about a Router that comes from the routing config: the

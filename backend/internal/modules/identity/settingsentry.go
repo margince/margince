@@ -22,10 +22,10 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/values"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // installationSettingsObject is the RBAC object gating the installation

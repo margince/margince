@@ -25,8 +25,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // hopBinding is the resolved traversal: which record type the hop lands on,

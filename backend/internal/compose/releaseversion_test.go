@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/buildinfo"
+	"github.com/margince/margince/backend/internal/shared/buildinfo"
 )
 
 // TestRefuseMixedReleaseOnlyRefusesAKnownDifference pins the whole decision the

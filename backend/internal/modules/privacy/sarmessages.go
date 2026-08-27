@@ -9,7 +9,7 @@ package privacy
 // addresses may be disclosed to whom — and it is easier to check when it is not
 // interleaved with the identity and provenance sections.
 
-import "github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+import "github.com/margince/margince/backend/internal/shared/kernel/ids"
 
 // sarMessagingSections gather both directions of the messaging boundary: what
 // capture decided about mail arriving from the subject, and what this

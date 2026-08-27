@@ -7,8 +7,8 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A saved view and a dynamic list are the two stored filter sources

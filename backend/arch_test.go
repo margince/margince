@@ -24,7 +24,7 @@ import (
 	"testing"
 )
 
-const modulePath = "github.com/gradionhq/margince/backend"
+const modulePath = "github.com/margince/margince/backend"
 
 // packagesUnder walks root and returns the import-path-relative directory
 // of every Go package beneath it (root itself included when it holds Go

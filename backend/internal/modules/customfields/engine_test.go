@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 func TestValidate_UnsupportedObjectRejected(t *testing.T) {

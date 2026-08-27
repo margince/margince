@@ -13,10 +13,10 @@ package integration
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/privacy"
-	"github.com/gradionhq/margince/backend/internal/modules/projects"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/modules/projects"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 func TestProjectHistoryListsThePhaseTransitionAndWhoMadeIt(t *testing.T) {

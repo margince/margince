@@ -8,8 +8,8 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/overlaybudget"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/overlaybudget"
 )
 
 // budgetI64 dereferences a generated *int64 wire field, returning -1 for a nil

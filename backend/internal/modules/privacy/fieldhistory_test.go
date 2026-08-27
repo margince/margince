@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func fhRow(actorType string, before, after map[string]any) auditDiffRow {

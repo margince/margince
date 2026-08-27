@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // An expectation the site could never satisfy, and a fixture describing a call

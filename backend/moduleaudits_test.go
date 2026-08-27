@@ -35,7 +35,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // modulesThatWriteNoHistory are the table-owning modules that call no audit
@@ -253,7 +253,7 @@ func TestEveryTableOwningModuleWritesAnAuditRow(t *testing.T) {
 // and whether the file imports it at all. A file that does not import it can
 // hold no audit call, whatever it happens to name a local variable.
 func storekitQualifier(file *ast.File) (string, bool) {
-	const storekitPath = `"github.com/gradionhq/margince/backend/internal/platform/database/storekit"`
+	const storekitPath = `"github.com/margince/margince/backend/internal/platform/database/storekit"`
 	for _, imp := range file.Imports {
 		if imp.Path.Value != storekitPath {
 			continue

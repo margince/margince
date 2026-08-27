@@ -20,7 +20,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 func TestAnUnknownReportFieldIsAClassifiedCallerFault(t *testing.T) {

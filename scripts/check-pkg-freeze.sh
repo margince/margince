@@ -131,7 +131,7 @@ removals="$EXPORT_DIR/removals"
 count=0
 for pkg in $OLD_PKGS; do
   count=$((count + 1))
-  rel="${pkg#github.com/gradionhq/margince/backend/}"
+  rel="${pkg#github.com/margince/margince/backend/}"
   if [[ ! -d "backend/$rel" ]]; then
     echo "$pkg: package removed" >> "$removals"
     continue

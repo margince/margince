@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // The Dossier field was declared on the input, advertised in the prompt as a

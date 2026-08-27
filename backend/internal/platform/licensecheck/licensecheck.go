@@ -29,7 +29,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"github.com/gradionhq/margince/backend/internal/shared/runtimeenv"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // The identity of the grant this build accepts, fixed at compile time.

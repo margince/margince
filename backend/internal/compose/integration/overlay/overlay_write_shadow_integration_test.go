@@ -38,13 +38,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	overlaymod "github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay/fake"
-	"github.com/gradionhq/margince/backend/internal/platform/keyvault"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	overlaymod "github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay/fake"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // overlayWriteEnv is the ready fixture every test in this file starts from:

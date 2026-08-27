@@ -16,8 +16,8 @@ import (
 	"strings"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestUpdateOrganizationProfileFieldHandler(t *testing.T) {

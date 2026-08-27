@@ -25,11 +25,11 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
-	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // setBaseLanguage writes the setting through settings.SeedValue, which is the

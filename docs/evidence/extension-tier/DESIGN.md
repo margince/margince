@@ -173,7 +173,7 @@ misleads in the other direction. Each of these is a property some gate would fai
   registry sits deliberately outside the generated tree so it cannot perturb the gate. This survived
   thirteen tasks of accretion **and** three new generated artifacts.
 - **Core is unreachable except through published interfaces.** The compiler's, not a convention: a unit
-  is its own Go module (`module github.com/gradionhq/margince/extensions/notes`) outside the backend
+  is its own Go module (`module github.com/margince/margince/extensions/notes`) outside the backend
   module, so `internal/**` cannot be imported. This is the one wall in the tier that holds against
   hostile code.
 

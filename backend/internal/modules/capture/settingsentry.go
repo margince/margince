@@ -14,7 +14,7 @@ package capture
 // of where the value lives, not of who may change it.
 
 import (
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // captureSettingsObject is the RBAC object gating the capture-settings

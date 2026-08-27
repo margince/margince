@@ -18,8 +18,8 @@ package overlay
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // TestWriteLedgerClassifiesEchoGenuineAndWindow drives the echo, non-echo, and

@@ -17,7 +17,7 @@ import (
 func handleUnitSource(handleExpr string) string {
 	return `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func quote() {}
 
@@ -93,7 +93,7 @@ func TestHandleMustBePlainIdentifier(t *testing.T) {
 // init(), alongside an otherwise-valid New().
 const initUnitSource = `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func init() {}
 
@@ -121,7 +121,7 @@ func TestPackageInitIsRejected(t *testing.T) {
 // init() — nothing distinguishes them for this purpose.
 const callBearingVarUnitSource = `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 var conn = mustDial()
 
@@ -150,7 +150,7 @@ func TestCallBearingVarInitializerIsRejected(t *testing.T) {
 func TestLiteralOnlyPackageVarIsAccepted(t *testing.T) {
 	src := `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 var names = []string{"a", "b"}
 
@@ -170,7 +170,7 @@ func New() extension.Extension {
 func TestLocalVarCallIsNotRejected(t *testing.T) {
 	src := `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func helper() int {
 	v := compute()
@@ -205,7 +205,7 @@ func TestSubpackageGoFilesAreRejected(t *testing.T) {
 import (
 	_ "example.test/ext/x/internal/live"
 
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func New() extension.Extension {
@@ -241,7 +241,7 @@ func TestUnbuiltCapabilityLayersStayExemptFromTheSubpackageWalk(t *testing.T) {
 				"go.mod": "module example.test/ext/x\n\ngo 1.26.5\n",
 				"x.go": `package x
 
-import "github.com/gradionhq/margince/backend/pkg/extension"
+import "github.com/margince/margince/backend/pkg/extension"
 
 func New() extension.Extension {
 	return extension.Extension{Name: "x", Version: "0.1.0"}

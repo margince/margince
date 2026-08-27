@@ -14,10 +14,10 @@ import (
 	"strings"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // hostPages serves a distinct fixture per URL — the multi-page twin of

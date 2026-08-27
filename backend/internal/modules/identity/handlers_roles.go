@@ -11,8 +11,8 @@ package identity
 import (
 	"net/http"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // ListRoles (GET /roles): the editor's read.

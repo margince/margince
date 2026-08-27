@@ -34,9 +34,9 @@ tier owner's review.
    ≤32 chars (lower-case segments joined by single hyphens); the name keys SQL identifiers and URL
    paths, so anything else is refused at boot.
 
-2. **Add its `go.mod`** — its own module, path `github.com/gradionhq/margince/extensions/<name>`:
+2. **Add its `go.mod`** — its own module, path `github.com/margince/margince/extensions/<name>`:
    ```text
-   module github.com/gradionhq/margince/extensions/<name>
+   module github.com/margince/margince/extensions/<name>
 
    go 1.26.6
    ```
@@ -54,8 +54,8 @@ tier owner's review.
    package fr
 
    import (
-   	"github.com/gradionhq/margince/backend/pkg/extension"
-   	"github.com/gradionhq/margince/backend/pkg/extension/jurisdiction"
+   	"github.com/margince/margince/backend/pkg/extension"
+   	"github.com/margince/margince/backend/pkg/extension/jurisdiction"
    )
 
    func New() extension.Extension {

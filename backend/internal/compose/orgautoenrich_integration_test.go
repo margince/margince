@@ -17,9 +17,9 @@ import (
 	"log/slog"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAnOrganizationEventQueuesTheEnrichPassNow(t *testing.T) {

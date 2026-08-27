@@ -6,7 +6,7 @@ package attention
 import (
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // Handlers is the feed's HTTP surface: one read, no verbs.

@@ -4,7 +4,7 @@
 package compose
 
 // The auto-executed arm's half of the approval loop
-// (gradionhq/margince/backend — margince/margince#812).
+// (margince/margince/backend — margince/margince#812).
 //
 // A staged 🟡 call can resolve 🟢 on its retry: the record moved, or the
 // per-field split staged an otherwise auto-execute patch. The token that retry
@@ -27,12 +27,12 @@ import (
 
 	"github.com/go-chi/chi/v5"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/platform/agentquota"
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/platform/agentquota"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // countingRedeemer is the approvals engine as this door uses it: it records what

@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // A group's legal notice states the same entity more than once: every

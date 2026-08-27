@@ -8,7 +8,7 @@ import (
 	"math"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/schema"
+	"github.com/margince/margince/backend/internal/shared/schema"
 )
 
 // A provider that honours the declared `type: number` and one that returns the

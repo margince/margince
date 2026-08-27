@@ -23,8 +23,8 @@ import (
 
 	"github.com/riverqueue/river"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // transientClass is the class these cases postpone on, spelled once. It is the

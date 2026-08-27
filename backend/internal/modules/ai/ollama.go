@@ -13,7 +13,7 @@ import (
 	"log/slog"
 	"net/http"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // ollamaClient is the local/self-host adapter (B-EP06.3): an Ollama

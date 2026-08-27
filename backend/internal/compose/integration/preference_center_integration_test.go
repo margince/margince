@@ -25,7 +25,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // sendMarketing issues an authenticated send-email and returns the status

@@ -18,7 +18,7 @@ package activities
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // SenderNameReader answers what the human behind this call is called.

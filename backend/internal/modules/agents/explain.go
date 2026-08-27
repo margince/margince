@@ -19,9 +19,9 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // explain turns the sentinel taxonomy into messages an agent can act on —

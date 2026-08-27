@@ -15,7 +15,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/collections"
+	"github.com/margince/margince/backend/internal/modules/collections"
 )
 
 func TestTagToolSchemasAdmitEveryTaggableRecordType(t *testing.T) {

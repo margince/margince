@@ -17,7 +17,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // TestSchema_amountMinorBaseIsDatabaseGenerated is the fitness function for

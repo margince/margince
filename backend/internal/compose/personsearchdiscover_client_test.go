@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/websearch"
+	"github.com/margince/margince/backend/internal/shared/ports/websearch"
 )
 
 var discoverNow = time.Date(2026, 8, 4, 12, 0, 0, 0, time.UTC)

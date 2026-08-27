@@ -19,8 +19,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
-	"github.com/gradionhq/margince/backend/pkg/extension"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/pkg/extension"
 )
 
 // enterTx claims one open transaction, and REFUSES while an ingest is in

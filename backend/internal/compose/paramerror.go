@@ -6,8 +6,8 @@ package compose
 import (
 	"net/http"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // paramParseError maps a generated request-parameter parse failure onto

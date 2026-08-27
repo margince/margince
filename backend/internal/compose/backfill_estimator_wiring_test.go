@@ -6,8 +6,8 @@ package compose
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/capture"
 )
 
 // TestWithBackfillEstimatorWiresThePromotedField locks the composition-root wiring

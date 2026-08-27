@@ -14,7 +14,7 @@ import (
 
 	"github.com/redis/go-redis/v9"
 
-	"github.com/gradionhq/margince/backend/internal/platform/testdb"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 )
 
 // How many logical databases exist, and who owns which, is stated in four

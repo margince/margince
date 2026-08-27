@@ -709,7 +709,7 @@ up)
     # skew path is exercised deliberately, since a matching pair proves only the
     # quiet case.
     ( cd backend && GOWORK="$PWD/../build/composition/go.work" \
-        go build -ldflags "-X github.com/gradionhq/margince/backend/internal/shared/buildinfo.Revision=${MARGINCE_BUILD_REVISION}" \
+        go build -ldflags "-X github.com/margince/margince/backend/internal/shared/buildinfo.Revision=${MARGINCE_BUILD_REVISION}" \
         -o ../bin/api ./cmd/api )
     echo "=== servers ==="
   } > >(log_as boot) 2>&1

@@ -15,10 +15,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	"github.com/gradionhq/margince/backend/internal/compose/promptlang"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/promptfence"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/compose/promptlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 // The claim this case makes is that it certifies the shipped path. The proof is

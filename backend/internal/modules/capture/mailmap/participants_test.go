@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // roleOf finds the role a participant list gives an address, so a test can

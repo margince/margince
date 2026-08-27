@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // A transient failure must NOT settle the address.

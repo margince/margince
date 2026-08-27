@@ -19,8 +19,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration"
-	"github.com/gradionhq/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/modules/identity"
 )
 
 func TestTheDispatcherResolvesTheSeatBootstrapMinted(t *testing.T) {

@@ -23,9 +23,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/platform/cliflags"
-	"github.com/gradionhq/margince/backend/internal/platform/httpserver"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/platform/cliflags"
+	"github.com/margince/margince/backend/internal/platform/httpserver"
 )
 
 type siteReadFlags struct {

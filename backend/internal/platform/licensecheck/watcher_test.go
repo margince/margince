@@ -12,7 +12,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/runtimeenv"
+	"github.com/margince/margince/backend/internal/shared/runtimeenv"
 )
 
 // fixedClock is the injected now: a test never reads the wall clock, so a

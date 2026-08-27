@@ -33,8 +33,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
-	kevents "github.com/gradionhq/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
+	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 )
 
 // reservedGroups are declared with no subscriber ON PURPOSE — placeholders the

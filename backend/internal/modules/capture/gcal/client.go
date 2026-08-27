@@ -20,8 +20,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/modules/capture/googleconn"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/oauthflow"
+	"github.com/margince/margince/backend/internal/modules/capture/googleconn"
+	"github.com/margince/margince/backend/internal/modules/capture/oauthflow"
 )
 
 // calendarAPIBase is Google's Calendar v3 root; overridable via NewAPI for

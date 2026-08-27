@@ -21,9 +21,9 @@ import (
 	"maps"
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/identity/internal/policy"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/identity/internal/policy"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // registerForTest registers objects and unregisters them afterwards, so one

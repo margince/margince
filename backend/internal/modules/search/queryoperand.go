@@ -18,7 +18,7 @@ import (
 	"encoding/json"
 	"strconv"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // checkOperand checks the clause's value against the operator's arity and the

@@ -6,7 +6,7 @@ package automation
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // The RC-11 vocabulary, pinned verbatim from the spec. The registry is the

@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/fieldcatalog"
+	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
 // fakeFieldCatalog is a DB-free stand-in for fieldcatalog.Reader: it

@@ -31,15 +31,15 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/capture"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/gcal"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/gmail"
-	"github.com/gradionhq/margince/backend/internal/modules/capture/graph"
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/authz"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/capture/gcal"
+	"github.com/margince/margince/backend/internal/modules/capture/gmail"
+	"github.com/margince/margince/backend/internal/modules/capture/graph"
+	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/authz"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // connectStateTTL bounds the consent round-trip: generous for a human to

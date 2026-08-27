@@ -20,7 +20,7 @@ package approvals
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestEveryApprovalExpiryWriteTakesTheDatabaseClock(t *testing.T) {

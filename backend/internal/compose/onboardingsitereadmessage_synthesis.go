@@ -3,7 +3,7 @@
 
 package compose
 
-import "github.com/gradionhq/margince/backend/internal/modules/people"
+import "github.com/margince/margince/backend/internal/modules/people"
 
 // Factual identity fields deliberately do not appear here: a legal name,
 // address, registration, VAT number, or display name must occur in its cited

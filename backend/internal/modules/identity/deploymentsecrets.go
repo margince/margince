@@ -42,7 +42,7 @@ package identity
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/platform/settings"
+	"github.com/margince/margince/backend/internal/platform/settings"
 )
 
 // SMTPPasswordRefKey and LicenseTokenRefKey are the storage keys. Named

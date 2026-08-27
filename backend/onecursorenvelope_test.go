@@ -34,7 +34,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // cursorEnvelopeScope claims the envelope lives in storekit and nowhere else.

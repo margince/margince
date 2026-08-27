@@ -18,7 +18,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
-	"github.com/gradionhq/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database"
 )
 
 // This file gives the lane one pool per DSN per test PROCESS, rather than one

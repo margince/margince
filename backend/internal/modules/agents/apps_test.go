@@ -11,7 +11,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // The identifiers cross the wire, so they are asserted against the

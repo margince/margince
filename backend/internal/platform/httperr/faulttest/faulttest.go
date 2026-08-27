@@ -17,7 +17,7 @@ import (
 	"net/http"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // AssertNamesField asserts that err is a 4xx the caller can act on, whose

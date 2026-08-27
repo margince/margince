@@ -21,9 +21,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/redis/go-redis/v9"
 
-	"github.com/gradionhq/margince/backend/internal/compose"
-	"github.com/gradionhq/margince/backend/internal/modules/commissions"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/modules/commissions"
+	"github.com/margince/margince/backend/internal/modules/people"
 )
 
 // startCommissionAccrual subscribes the consumer that turns a won deal into

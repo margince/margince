@@ -13,7 +13,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // PrincipalType distinguishes the actor classes the audit log and event

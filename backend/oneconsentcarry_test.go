@@ -47,7 +47,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // consentStateStatement matches the writes a carry makes: the withdrawal flip,

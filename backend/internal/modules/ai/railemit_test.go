@@ -6,7 +6,7 @@ package ai
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // A settled occurrence's state is read off the terminal attempt, and the one

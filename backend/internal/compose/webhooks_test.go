@@ -7,7 +7,7 @@ import (
 	"encoding/base64"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/webhooks"
+	"github.com/margince/margince/backend/internal/modules/webhooks"
 )
 
 // TestWithWebhookKey covers the key-string → Option decode: a valid 32-byte

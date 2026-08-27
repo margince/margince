@@ -3,8 +3,8 @@ package upstream
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/cli/craft/gate"
-	"github.com/gradionhq/margince/cli/craft/rubric"
+	"github.com/margince/margince/cli/craft/gate"
+	"github.com/margince/margince/cli/craft/rubric"
 )
 
 func block(seq int, cats ...string) Record {

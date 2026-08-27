@@ -10,7 +10,7 @@ package principal
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestHumanUserIDReadsAPersonAndOnlyAPerson(t *testing.T) {

@@ -6,7 +6,7 @@ package migration
 import (
 	"fmt"
 
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // ReasonIncumbentUnreachable is the blocking reason OVA-AC-6(a) names in

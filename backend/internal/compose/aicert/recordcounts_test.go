@@ -11,8 +11,8 @@ package aicert
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // A run that came back accepted where the scenario demanded an abstention is a

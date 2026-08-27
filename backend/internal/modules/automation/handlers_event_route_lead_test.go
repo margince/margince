@@ -9,10 +9,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/mcp"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/workflow"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 // fakeCreateRecorder is a DB-free stand-in for the Provider seam: records

@@ -19,8 +19,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/agents"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/modules/agents"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // derivedColumns never travel in a restore even when the image carries them.

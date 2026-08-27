@@ -17,7 +17,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/search"
+	"github.com/margince/margince/backend/internal/modules/search"
 )
 
 // A plan with no `version` is refused for its version, and the answer names the

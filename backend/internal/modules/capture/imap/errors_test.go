@@ -7,7 +7,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // The registry schedules by the shared vocabulary; a package sentinel that

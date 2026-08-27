@@ -22,7 +22,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 )
 
 // approve is one consent decision that LENDS a named passport: the GET arms the

@@ -32,9 +32,9 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/modules/activities"
-	"github.com/gradionhq/margince/backend/internal/modules/agents/runner"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/agents/runner"
+	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
 // gatekit:fixture the carriers' own source constants, read from the packages that emit them

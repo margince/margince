@@ -8,7 +8,7 @@ import (
 	"net/http/httptest"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
 // The provider-connection PATCH reads its precondition through

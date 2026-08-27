@@ -15,10 +15,10 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/modules/dealrooms"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/events"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/dealrooms"
+	"github.com/margince/margince/backend/internal/shared/kernel/events"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // roomPayload is what the three Deal Room events put on the bus, plus the

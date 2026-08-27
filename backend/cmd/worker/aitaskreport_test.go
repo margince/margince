@@ -8,10 +8,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/compose/aitasks"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/platform/webread"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/model"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/platform/webread"
+	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
 
 func TestHitCapIsTheCeilingReached(t *testing.T) {

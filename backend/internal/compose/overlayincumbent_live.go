@@ -6,8 +6,8 @@
 package compose
 
 import (
-	"github.com/gradionhq/margince/backend/internal/modules/overlay"
-	"github.com/gradionhq/margince/backend/internal/modules/overlay/hubspot"
+	"github.com/margince/margince/backend/internal/modules/overlay"
+	"github.com/margince/margince/backend/internal/modules/overlay/hubspot"
 )
 
 // liveIncumbentFactory builds a HubSpot adapter over one connection's own

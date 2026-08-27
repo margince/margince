@@ -10,10 +10,10 @@ import (
 	"context"
 	"errors"
 
-	"github.com/gradionhq/margince/backend/internal/compose/orgdossier"
-	"github.com/gradionhq/margince/backend/internal/modules/ai"
-	"github.com/gradionhq/margince/backend/internal/modules/people"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/compose/orgdossier"
+	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/people"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // offeringConfirmed reports whether this installation has described what it

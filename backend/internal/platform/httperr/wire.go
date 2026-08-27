@@ -20,7 +20,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/datasource"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 // MaxBodyBytes bounds every JSON request body (1 MiB): no contract

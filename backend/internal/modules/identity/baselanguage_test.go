@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/textlang"
+	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
 // The base language is what a model is told to write in when what it writes is

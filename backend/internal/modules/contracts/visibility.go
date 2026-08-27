@@ -20,8 +20,8 @@ package contracts
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/platform/auth"
-	"github.com/gradionhq/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // VisibleClause renders the SQL predicate that admits the contracts this

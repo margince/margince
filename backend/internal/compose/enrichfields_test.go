@@ -6,7 +6,7 @@ package compose
 import (
 	"testing"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 )
 
 // The extraction vocabulary feeds the model prompt and the schema `field`

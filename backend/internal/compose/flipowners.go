@@ -14,8 +14,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/gradionhq/margince/backend/internal/modules/migration"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // resolveOwner maps the row's incumbent owner id onto the mapped

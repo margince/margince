@@ -6,7 +6,7 @@ package gcal
 import (
 	"testing"
 
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // A meeting's parties were folded into body text because there was nowhere

@@ -25,7 +25,7 @@ package auth
 import (
 	"context"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // EdgeReadScope admits a caller to read relationship edges and returns the

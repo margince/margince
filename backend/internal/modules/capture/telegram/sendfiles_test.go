@@ -32,8 +32,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/platform/jobs"
-	"github.com/gradionhq/margince/backend/internal/shared/ports/connector"
+	"github.com/margince/margince/backend/internal/platform/jobs"
+	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
 // recordedFile is one file part as it arrived: the field name a media item

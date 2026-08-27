@@ -19,8 +19,8 @@ import (
 	"errors"
 	"time"
 
-	crmcontracts "github.com/gradionhq/margince/backend/internal/contracts"
-	"github.com/gradionhq/margince/backend/internal/shared/apperrors"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // optionalLane is one such lane: whether it is bound, how to read it, and where

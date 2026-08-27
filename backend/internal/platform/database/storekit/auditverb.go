@@ -8,8 +8,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/auditverb"
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/auditverb"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // AuditVerb is shared/kernel/auditverb.Verb under this package's name. The type

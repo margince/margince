@@ -9,7 +9,7 @@ package comms
 import (
 	"time"
 
-	"github.com/gradionhq/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // Delivery is one staged message as the dispatcher sees it, in EITHER shape:
