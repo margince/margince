@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+package people
+
+import "testing"
+
+// TWO COMPANIES THAT SHARE ONE ORDINARY WORD ARE NOT ONE COMPANY.
+//
+// The gate counts a shared word as evidence of identity, which is right when the
+// word is a brand and wrong when it is the vocabulary of a whole market. Every
+// pair here shares exactly one such word and scored above the review threshold
+// on it: "Bank of the West" against "Bank of the East" at 0.9750, "Union
+// Pacific" against "Union Carbide" at 0.8547.
+func TestTwoCompaniesSharingOneOrdinaryWordStayApart(t *testing.T) {
+	for _, p := range [][2]string{
+		{"Bank of the West", "Bank of the East"},
+		{"Union Pacific", "Union Carbide"},
+		{"Central Park Media", "Central Valley Media"},
+		{"Pacific Gas", "Pacific Life"},
+		{"Royal Bank", "Royal Mail"},
+		{"North Star", "South Star"},
+		{"Standard Bank", "Standard Life"},
+		{"Premier Foods", "Premier Energy"},
+		// A country is the same kind of word: it says where a company works,
+		// not which company it is.
+		{"SIA Rimi Latvia", "SIA Maxima Latvija"},
+		{"Acme Deutschland", "Beta Deutschland"},
+		{"Foo France", "Bar France"},
+	} {
+		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got >= dedupeReviewThreshold {
+			t.Errorf("%q vs %q scores %.4f, at or above the %.2f review threshold "+
+				"— they share market vocabulary, not a company",
+				p[0], p[1], got, dedupeReviewThreshold)
+		}
+	}
+}
+
+// AND A COMMON WORD IS STILL EVIDENCE WHEN IT IS THE WHOLE NAME.
+//
+// Discounting a word must not stop a company finding itself. "Bank of Ireland"
+// is ordinary words end to end, and "Bank" is a real company name; refusing them
+// their only evidence would leave each matching nothing.
+//
+// The escape is that the shorter name appears WHOLE inside the longer one. "Bank
+// of Ireland" and "Bank of Ireland Group" agree on every word they have, while
+// "Bank of the West" and "Bank of the East" agree on one and disagree on the
+// word that names them.
+func TestACommonWordIsEvidenceWhenItIsTheWholeName(t *testing.T) {
+	for _, p := range [][2]string{
+		{"Bank of Ireland", "Bank of Ireland Group"},
+		{"Air France", "Air France KLM"},
+		{"Bank", "Bank Ltd"},
+		{"Star", "Star GmbH"},
+		{"Central", "Central Inc"},
+		{"France", "France SA"},
+		{"Bank of America", "Bank of America Corp"},
+	} {
+		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got < dedupeReviewThreshold {
+			t.Errorf("%q vs %q scores %.4f, below the %.2f review threshold — one "+
+				"of these names is the whole of the other",
+				p[0], p[1], got, dedupeReviewThreshold)
+		}
+	}
+}
+
+// The discount must not reach a name built from rare words, which is where one
+// shared word really is nearly the whole of the evidence.
+func TestARareSharedWordIsStillEvidence(t *testing.T) {
+	for _, p := range [][2]string{
+		{"Arvato", "Arvato Systems"},
+		{"Amazon AWS", "Amazon Web Services"},
+		{"Siemens", "Siemens Energy"},
+		{"Bosch", "Bosch Rexroth"},
+		{"Deloitte", "Deloitte Consulting"},
+		{"Fenwick Software", "Fenwick Software Pty Ltd"},
+		{"TLC Healthcare", "TLC Health Care"},
+		{"PT Solutions Physical Therapy", "PT Solutions"},
+	} {
+		if got := bestOrgNamePairing(p[0], "", p[1], "").Confidence; got < dedupeReviewThreshold {
+			t.Errorf("%q vs %q scores %.4f, below the %.2f review threshold — this "+
+				"is one company and the word they share is its name",
+				p[0], p[1], got, dedupeReviewThreshold)
+		}
+	}
+}
+
+// Every entry must be written the way a folded name is written, or it can never
+// fire and no other test would notice.
+func TestCommonNameWordsMatchTheirOwnNormalization(t *testing.T) {
+	if len(orgCommonNameWords) == 0 {
+		t.Fatal("no common words declared — the census would pass against nothing")
+	}
+	for word := range orgCommonNameWords {
+		if got := NormalizeOrgName(word); got != word {
+			t.Errorf("%q normalizes to %q — written this way it can never match a "+
+				"word in a real name", word, got)
+		}
+		// A word here must not ALSO be a stopword: the two lists mean different
+		// things, and a word in both is deleted before this one is consulted,
+		// which makes its entry here dead.
+		if orgNameStopwords[word] {
+			t.Errorf("%q is both a stopword and a common word — the stopword "+
+				"deletes it first, so the entry here never fires", word)
+		}
+	}
+}
