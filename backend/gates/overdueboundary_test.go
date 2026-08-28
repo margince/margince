@@ -162,9 +162,9 @@ func TestOnlyOnePlaceDecidesWhetherSomethingIsLate(t *testing.T) {
 				return readErr
 			}
 			judged++
-			for _, statement := range sqlStatementsIn(t, path, string(source)) {
+			for _, statement := range gatekit.SQLStatementsIn(t, path, string(source)) {
 				if anyAsksIfLate(statement) && !schedulerClaims.Waived(t, rel) {
-					inSQL = append(inSQL, rel+": "+firstSQLStatementLine(statement))
+					inSQL = append(inSQL, rel+": "+gatekit.FirstLineOf(statement))
 				}
 			}
 			file, parseErr := parser.ParseFile(fset, path, nil, 0)

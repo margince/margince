@@ -28,6 +28,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // downgradeFuncName is the one guarded primitive this gate hardcodes —
@@ -185,20 +187,11 @@ func isExecLikeCall(call *ast.CallExpr) bool {
 // a string literal naming an INSERT or UPDATE against custom_field.
 func callHasTenantTableLiteral(call *ast.CallExpr) bool {
 	for _, arg := range call.Args {
-		found := false
-		ast.Inspect(arg, func(n ast.Node) bool {
-			lit, ok := n.(*ast.BasicLit)
-			if !ok || lit.Kind != token.STRING {
+		for _, statement := range gatekit.SQLStatementsOf(arg) {
+			sql := strings.ToUpper(statement)
+			if strings.Contains(sql, "INSERT INTO CUSTOM_FIELD") || strings.Contains(sql, "UPDATE CUSTOM_FIELD") {
 				return true
 			}
-			sql := strings.ToUpper(lit.Value)
-			if strings.Contains(sql, "INSERT INTO CUSTOM_FIELD") || strings.Contains(sql, "UPDATE CUSTOM_FIELD") {
-				found = true
-			}
-			return true
-		})
-		if found {
-			return true
 		}
 	}
 	return false

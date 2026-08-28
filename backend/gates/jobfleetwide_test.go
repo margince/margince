@@ -289,16 +289,11 @@ func tenantWriteIn(literal string) string {
 func writesIn(bodies []*ast.BlockStmt) []string {
 	var verbs []string
 	for _, body := range bodies {
-		ast.Inspect(body, func(n ast.Node) bool {
-			lit, ok := n.(*ast.BasicLit)
-			if !ok || lit.Kind != token.STRING {
-				return true
-			}
-			if verb := tenantWriteIn(lit.Value); verb != "" {
+		for _, statement := range gatekit.SQLStatementsOf(body) {
+			if verb := tenantWriteIn(statement); verb != "" {
 				verbs = append(verbs, verb)
 			}
-			return true
-		})
+		}
 	}
 	return verbs
 }

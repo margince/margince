@@ -106,7 +106,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 				return readErr
 			}
 			judged++
-			for _, statement := range sqlStatementsIn(t, path, string(source)) {
+			for _, statement := range gatekit.SQLStatementsIn(t, path, string(source)) {
 				if !readsDomainClaim.MatchString(statement) {
 					continue
 				}
@@ -117,7 +117,7 @@ func TestEveryDomainClaimAnswersThroughOneProbe(t *testing.T) {
 				if domainResolvers.Waived(t, rel) {
 					continue
 				}
-				findings = append(findings, rel+": "+firstSQLStatementLine(statement))
+				findings = append(findings, rel+": "+gatekit.FirstLineOf(statement))
 			}
 			return nil
 		})
@@ -171,7 +171,7 @@ func TestTheDomainClaimCensusSeesWhatItClaimsTo(t *testing.T) {
 var q = "SELECT organization_id " +
 	"FROM organization_domain " +
 	"WHERE domain = lower($1)"`
-	joined := sqlStatementsIn(t, "concat.go", concatenated)
+	joined := gatekit.SQLStatementsIn(t, "concat.go", concatenated)
 	if len(joined) != 1 || !readsDomainClaim.MatchString(joined[0]) {
 		t.Errorf("a probe assembled with `+` is not read as one statement: %q", joined)
 	}
@@ -179,7 +179,7 @@ var q = "SELECT organization_id " +
 	// Source text keeps the backslash, so a pattern asking for `\s` matches
 	// nothing unless the literal is decoded first.
 	escaped := "package p\nvar q = \"SELECT organization_id\\nFROM organization_domain\\nWHERE domain = lower($1)\""
-	decoded := sqlStatementsIn(t, "escaped.go", escaped)
+	decoded := gatekit.SQLStatementsIn(t, "escaped.go", escaped)
 	if len(decoded) != 1 || !readsDomainClaim.MatchString(decoded[0]) {
 		t.Errorf("a probe whose whitespace is escaped is not decoded: %q", decoded)
 	}

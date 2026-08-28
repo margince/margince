@@ -35,6 +35,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // gatekit:fixture the carriers' own source constants, read from the packages that emit them
@@ -151,9 +152,8 @@ func taskConstantValues(file *ast.File) []string {
 				continue
 			}
 			for _, expr := range value.Values {
-				lit, ok := expr.(*ast.BasicLit)
-				if ok && lit.Kind == token.STRING {
-					out = append(out, strings.Trim(lit.Value, `"`))
+				if text, isString := gatekit.LiteralText(expr); isString {
+					out = append(out, text)
 				}
 			}
 		}

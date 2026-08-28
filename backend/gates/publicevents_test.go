@@ -424,7 +424,7 @@ func switchCaseStrings(t *testing.T, file *ast.File, funcName string) map[string
 			}
 			for _, expr := range cc.List { // empty for the default clause
 				if lit, ok := expr.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-					out[strings.Trim(lit.Value, `"`)] = true
+					out[gatekit.TextOf(lit)] = true
 				}
 			}
 			return true
@@ -445,7 +445,7 @@ func stringLit(t *testing.T, expr ast.Expr) string {
 	if !ok || lit.Kind != token.STRING {
 		t.Fatalf("%s: expected a string-literal map key, got %T", deliveryVisibilityPath, expr)
 	}
-	return strings.Trim(lit.Value, `"`)
+	return gatekit.TextOf(lit)
 }
 
 // TestNoRawEmitForSubscribableEvent is the invariant that catches a missed
@@ -499,7 +499,7 @@ func TestNoRawEmitForSubscribableEvent(t *testing.T) {
 			if !ok || lit.Kind != token.STRING {
 				return true
 			}
-			eventType := strings.Trim(lit.Value, `"`)
+			eventType := gatekit.TextOf(lit)
 			if subscribable[eventType] {
 				t.Errorf("%s: storekit.Emit(..., %q, ...) stages a SUBSCRIBABLE event through the untyped seam — route it through storekit.EmitEvent / EmitEventForEntity with its PublicEvent%s payload builder so the schema is enforced at the call site (BYO-EVT-4 / schema conformance)",
 					path, eventType, eventType)

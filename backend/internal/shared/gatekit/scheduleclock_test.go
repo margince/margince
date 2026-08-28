@@ -50,6 +50,23 @@ func TestAnAssignmentBoundFromTheAppClockIsReported(t *testing.T) {
 	}
 }
 
+// The same write, in a DOUBLE-QUOTED literal. Every other fixture here spells
+// its SQL in backticks, so the reader's escape decoding had never been
+// exercised where the reader is most sensitive to it: sqlOf joins statements with
+// "\n" and assignmentsTo splits on "\n", and reading the source text back gave
+// a statement whose newlines were a backslash and an `n` — one line, whose
+// whole SET list read as a single expression.
+//
+// The Go source below is assembled so the FIXTURE holds a double-quoted Go
+// literal: \" opens it, \\n is the two characters an escape is written with.
+func TestAStatementWrittenInDoubleQuotesIsStillRead(t *testing.T) {
+	const source = "package store\n\nconst q = \"\\nUPDATE sync_state SET next_sync_at = $2\\nWHERE id = $1\"\n"
+	got := reportOn(t, source, "next_sync_at")
+	if !strings.Contains(got, "`next_sync_at = $2`") {
+		t.Errorf("a write written in double quotes was not reported: %q", got)
+	}
+}
+
 // A statement written on ONE line is judged on the same rule as the tree's
 // usual clause-per-line SQL: the expression ends at the SET list's comma or at
 // the clause that follows it, so the WHERE is not read as part of the value.

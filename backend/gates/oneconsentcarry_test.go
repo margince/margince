@@ -62,7 +62,7 @@ func writesConsentState(_ string, file *ast.File) bool {
 	found := false
 	ast.Inspect(file, func(n ast.Node) bool {
 		lit, ok := n.(*ast.BasicLit)
-		if !ok || lit.Kind != token.STRING || !consentStateStatement.MatchString(lit.Value) {
+		if !ok || lit.Kind != token.STRING || !consentStateStatement.MatchString(gatekit.TextOf(lit)) {
 			return !found
 		}
 		found = true
@@ -213,7 +213,7 @@ func holdsAConsentStatement(body *ast.BlockStmt) bool {
 	found := false
 	ast.Inspect(body, func(n ast.Node) bool {
 		lit, ok := n.(*ast.BasicLit)
-		if ok && lit.Kind == token.STRING && consentStateStatement.MatchString(lit.Value) {
+		if ok && lit.Kind == token.STRING && consentStateStatement.MatchString(gatekit.TextOf(lit)) {
 			found = true
 		}
 		return !found
@@ -226,7 +226,7 @@ func holdsMatchingLiteral(file *ast.File, pattern *regexp.Regexp) bool {
 	found := false
 	ast.Inspect(file, func(n ast.Node) bool {
 		lit, ok := n.(*ast.BasicLit)
-		if ok && lit.Kind == token.STRING && pattern.MatchString(lit.Value) {
+		if ok && lit.Kind == token.STRING && pattern.MatchString(gatekit.TextOf(lit)) {
 			found = true
 		}
 		return !found

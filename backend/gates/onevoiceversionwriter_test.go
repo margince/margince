@@ -108,7 +108,7 @@ func insertCounter(table string) func(*ast.File) int {
 			switch node := n.(type) {
 			case *ast.BasicLit:
 				if node.Kind == token.STRING {
-					total += len(pattern.FindAllString(node.Value, -1))
+					total += len(pattern.FindAllString(gatekit.TextOf(node), -1))
 				}
 			case *ast.BinaryExpr:
 				if inner[node] {
@@ -150,7 +150,7 @@ func literalsOf(expr ast.Expr) string {
 	var parts []string
 	ast.Inspect(expr, func(n ast.Node) bool {
 		if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-			parts = append(parts, strings.Trim(lit.Value, "`\""))
+			parts = append(parts, gatekit.TextOf(lit))
 		}
 		return true
 	})
@@ -163,7 +163,7 @@ func holdsWholeMatch(expr ast.Expr, pattern *regexp.Regexp) bool {
 	found := false
 	ast.Inspect(expr, func(n ast.Node) bool {
 		lit, ok := n.(*ast.BasicLit)
-		if ok && lit.Kind == token.STRING && pattern.MatchString(lit.Value) {
+		if ok && lit.Kind == token.STRING && pattern.MatchString(gatekit.TextOf(lit)) {
 			found = true
 		}
 		return !found

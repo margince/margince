@@ -249,7 +249,7 @@ func TestNeitherFilterCompilerDropsAnUnsetRowFromNeq(t *testing.T) {
 		if err != nil {
 			t.Fatalf("reading %s: %v", path, err)
 		}
-		for _, statement := range sqlStatementsIn(t, path, string(source)) {
+		for _, statement := range gatekit.SQLStatementsIn(t, path, string(source)) {
 			for _, spelling := range nullDroppingInequality {
 				if strings.Contains(statement, spelling) {
 					findings = append(findings, path+": "+statement)

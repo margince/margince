@@ -20,6 +20,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // flattenSQL renders a string expression as the text it builds, marking every
@@ -47,7 +49,7 @@ func flattenSQL(n ast.Node, seen map[ast.Node]bool, owner helperScope) (string, 
 			return "", false
 		}
 		seen[n] = true
-		return strings.Trim(v.Value, "`\""), true
+		return gatekit.TextOf(v), true
 	case *ast.BinaryExpr:
 		if v.Op != token.ADD {
 			return "", false

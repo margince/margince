@@ -41,6 +41,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The two files that spell the one id, and the constants in them. Named
@@ -175,7 +177,7 @@ func exprName(expr ast.Expr) string {
 		if text, err := strconv.Unquote(value.Value); err == nil {
 			return strconv.Quote(text)
 		}
-		return value.Value
+		return gatekit.TextOf(value)
 	}
 	return ""
 }

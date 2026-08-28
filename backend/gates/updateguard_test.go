@@ -398,7 +398,7 @@ func (l *lexicalStatements) foldAppend(target, addition ast.Expr) {
 	if !named {
 		return
 	}
-	added, readable := concatenatedString(addition)
+	added, readable := gatekit.ConcatenatedString(addition)
 	if !readable {
 		return
 	}
@@ -412,7 +412,7 @@ func (l *lexicalStatements) seedLocal(target, value ast.Expr) {
 	if !named {
 		return
 	}
-	if seed, readable := concatenatedString(value); readable {
+	if seed, readable := gatekit.ConcatenatedString(value); readable {
 		l.locals[name.Name] = seed
 	}
 }
@@ -519,7 +519,7 @@ func (l *lexicalStatements) Visit(node ast.Node) ast.Visitor {
 		// walk continues into the parts as well — adding a reading can only
 		// widen what is judged.
 		if n.Op == token.ADD {
-			if folded, readable := concatenatedString(n); readable {
+			if folded, readable := gatekit.ConcatenatedString(n); readable {
 				l.out = append(l.out, folded)
 			}
 		}

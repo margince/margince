@@ -24,9 +24,6 @@ package gatekit
 // write sites are derived from source, and only the column is named.
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"os"
 	"path/filepath"
 	"slices"
@@ -214,26 +211,19 @@ func packageSourceFiles(t testing.TB, dir string) []string {
 	return files
 }
 
-// sqlOf returns file's string literals, newline-separated — the statements the
+// sqlOf returns file's statements, newline-separated — the statements the
 // package actually sends, and nothing else. Reading the raw text instead would
 // judge prose: a comment describing the schedule ("next_sync_at = success +
 // interval") is not a write, and a gate that reports one teaches its readers to
 // reword comments to stay green.
+//
+// Through the shared reader, which is what makes assignmentsTo's split on "\n"
+// mean what it says. Reading ast.BasicLit.Value instead gave back SOURCE text,
+// so a statement written in double quotes arrived as one line with a backslash
+// and an `n` in it, and its whole SET list was read as a single expression.
 func sqlOf(t testing.TB, file string) string {
 	t.Helper()
-	parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
-	if err != nil {
-		t.Errorf("parsing %s: %v", file, err)
-		return ""
-	}
-	var literals []string
-	ast.Inspect(parsed, func(n ast.Node) bool {
-		if lit, ok := n.(*ast.BasicLit); ok && lit.Kind == token.STRING {
-			literals = append(literals, lit.Value)
-		}
-		return true
-	})
-	return strings.Join(literals, "\n")
+	return SQLTextOf(t, file)
 }
 
 // assignmentsTo returns the right-hand side of every `column = ...` in text.
