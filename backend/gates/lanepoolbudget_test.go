@@ -37,15 +37,14 @@ package gates
 //     boots — and a census that judged it would report the boot. The door
 //     itself is held instead, by gates/modulepoolsharing_test.go, which is
 //     where a new pool constructor has to be declared.
-//   - a call reached through something other than the qualified reference:
-//     reflection, a function value read out of a map, a constructor handed in
-//     from another package. Every one of those is visible in review as an
-//     unusual way to open a pool; a suite that simply calls the constructor,
-//     however it spells the call, is not.
+//   - a call reached through something other than a reference to the
+//     constructor: reflection, a function value read out of a map, a
+//     constructor handed in from another package. Every one of those is visible
+//     in review as an unusual way to open a pool; a suite that simply names the
+//     constructor, however it spells the call, is not.
 
 import (
 	"fmt"
-	"go/ast"
 	"go/build"
 	"go/parser"
 	"go/token"
@@ -71,6 +70,7 @@ var unboundedPoolDoors = map[string][]string{
 // laneBudgetExempt ratifies the files that may open a pool the ceiling does not
 // bound. Each is a file whose SUBJECT is the pool itself.
 var laneBudgetExempt = gatekit.Waive(map[string]string{
+	"internal/platform/database/idtypes_integration_test.go":      "the constructor's own test: its subject is that NewPool registers the uuid and uuid[] OIDs on every connection it hands out, which only NewPool can be asked — a pool opened through testdb would prove testdb's wrapper instead",
 	"internal/platform/testdb/pool_integration_test.go":           "the ceiling's own test: it asserts what testdb.Pool does to a DSN, which it can only do by opening one the other way and comparing",
 	"internal/platform/testdb/laneconnbudget_integration_test.go": "the lane arithmetic's own test — it opens pools to count them, which is the measurement",
 	"internal/platform/testdb/quiesce_integration_test.go":        "the quiesce probe's own test: it needs a pool it can leave busy, which the shared one must never be",
@@ -210,61 +210,20 @@ func unboundedPoolsIn(src gatekit.ParsedFile) []string {
 				", and this gate cannot then tell its constructor from a local function of the same name")
 			continue
 		}
-		if qualifier == "" {
-			continue
+		// No early return on an empty qualifier: References also answers for a
+		// file INSIDE the door's own package, which reaches the constructor
+		// with no import at all.
+		spelling := qualifier
+		if spelling == "" {
+			spelling = path.Base(importPath)
 		}
 		for _, name := range names {
-			if referencesQualified(src.File, qualifier, name) {
-				offences = append(offences, src.Path+" opens a pool with "+qualifier+"."+name)
+			if gatekit.References(src.File, importPath, name) {
+				offences = append(offences, src.Path+" opens a pool with "+spelling+"."+name)
 			}
 		}
 	}
 	return offences
-}
-
-// referencesQualified reports pkg.name appearing in the file's CODE, in any
-// position. Comments are not part of the syntax tree, so a suite that names the
-// constructor while explaining something is not judged for it.
-//
-// The reference rather than the call, and that widening is the fix for a real
-// hole. Matching a call meant matching one spelling of one: `(database.NewPool)
-// (ctx, dsn)` puts a *ast.ParenExpr where the check wanted a selector, and
-// `open := database.NewPool` followed by `open(ctx, dsn)` puts a bare
-// *ast.Ident there. Both open an unbounded pool and both read green, which is
-// the forbidden direction — a prohibition that misses is indistinguishable
-// from a tree that complies.
-//
-// Naming the constructor without calling it is not a shape this rule needs to
-// permit: a lane test that mentions it in code is routing something through it,
-// and the one file that legitimately does has a waiver. Over-reporting fails
-// loudly and is answered with a reason; under-reporting is answered with
-// nothing at all.
-func referencesQualified(file *ast.File, pkg, name string) bool {
-	found := false
-	ast.Inspect(file, func(node ast.Node) bool {
-		selector, isSelector := node.(*ast.SelectorExpr)
-		if !isSelector || selector.Sel.Name != name {
-			return !found
-		}
-		if base, isIdent := unparen(selector.X).(*ast.Ident); isIdent && base.Name == pkg {
-			found = true
-		}
-		return !found
-	})
-	return found
-}
-
-// unparen strips the parentheses Go allows around any expression. They change
-// nothing about what the expression means, so a check that reads through them
-// judges the same code the compiler does.
-func unparen(expr ast.Expr) ast.Expr {
-	for {
-		paren, wrapped := expr.(*ast.ParenExpr)
-		if !wrapped {
-			return expr
-		}
-		expr = paren.X
-	}
 }
 
 // TestTheLaneCensusReadsBuildConstraintsTheWayGoDoes holds the census's
@@ -327,13 +286,20 @@ func TestTheLaneCensusReadsBuildConstraintsTheWayGoDoes(t *testing.T) {
 	}
 }
 
-// TestTheDoorIsRecognisedHoweverTheCallIsSpelled holds the recogniser against
-// the spellings that mean the same thing to the compiler.
+// TestTheDoorIsRecognisedHoweverTheCallIsSpelled holds this gate's recognition
+// against the spellings that mean the same thing to the compiler.
 //
-// The first version matched one shape — `qualifier.Name(` — and the other three
-// below were how a suite could open an unbounded pool while this gate read
-// green. That is the failure mode a prohibition cannot have: nothing is
+// The first version of this gate matched one shape — `qualifier.Name(` — and
+// the other three below were how a suite could open an unbounded pool while it
+// read green. That is the failure mode a prohibition cannot have: nothing is
 // reported either way, so the tree looks compliant whether it is or not.
+//
+// The recognition is gatekit.References, which three peer gates already rely on
+// and which encodes exactly this — naming is enough, because following a
+// function value needs type information a fitness test does not have. This test
+// is not a second copy of gatekit's own: it holds the answer THIS gate depends
+// on, for the door THIS gate names, so a change to the shared helper is
+// reported against the rule that would silently stop being enforced.
 //
 // Synthetic sources, because the point is the next file somebody writes rather
 // than the ones this tree happens to contain.
@@ -360,11 +326,7 @@ func TestTheDoorIsRecognisedHoweverTheCallIsSpelled(t *testing.T) {
 			if err != nil {
 				t.Fatalf("parsing the probe: %v", err)
 			}
-			qualifier, dotImported := gatekit.ImportedAs(file, door)
-			if dotImported {
-				t.Fatalf("the probe dot-imports %s, which it does not", door)
-			}
-			if got := referencesQualified(file, qualifier, "NewPool"); got != probe.reachedIt {
+			if got := gatekit.References(file, door, "NewPool"); got != probe.reachedIt {
 				t.Errorf("%s: the recogniser answered %t, want %t — %q", probe.what, got, probe.reachedIt, probe.body)
 			}
 		})
