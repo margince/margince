@@ -1,0 +1,424 @@
+# SPDX-License-Identifier: BUSL-1.1
+# SPDX-FileCopyrightText: 2026 Gradion
+#
+# openchannel's contract fragment. The FILENAME names the core contract it
+# extends (crm.yaml); gen-composition merges it into
+# build/composition/api/crm.yaml, and that merged file is what the operator
+# manifest, the client types, the mounted routes and the docs read. So this
+# document — not the Go — is where every operation's risk tier, Passport scope,
+# RBAC object, prose and I/O schemas are declared.
+#
+# FIVE OPERATIONS, all about the CALLER's own endpoint. None of them takes a
+# user id, and that absence is the load-bearing part of this document: the owner
+# recorded on an endpoint is whose sealed secret verifies every request that
+# arrives on it and whose authority the payload is eventually acted under, so an
+# operation that let one member open, re-point or read ANOTHER member's endpoint
+# would hand a stranger's name to whatever a remote party sends. The member is
+# taken from the invocation, exactly as captured_by is.
+#
+# TWO RBAC OBJECTS, held by no seeded role. ext_openchannel_endpoint is the
+# WRITE object: holding it means being able to open a path into this
+# installation that carries no session, so an operator grants it deliberately
+# rather than an install granting it for them. ext_openchannel_inbound is the
+# read object over what arrived.
+#
+# THE SIGNING SECRET IS RETURNED BY EXACTLY ONE OPERATION, ONCE. Nothing else
+# here returns it, masked or otherwise: a credential a governed surface can read
+# back is one every holder of that surface's object holds, and holding this one
+# is indistinguishable from being the sender.
+overlay: 1.0.0
+info:
+  title: openchannel
+  version: "1.0.0"
+actions:
+  - target: $.paths['/ext/openchannel/endpoint']
+    update:
+      # PUT, because opening the same endpoint twice is the same endpoint: the
+      # row is unique on the member and on the declared slug, so there is one to
+      # claim and re-asking for it answers the one that exists. A POST would
+      # publish "create another one" for an operation that cannot.
+      put:
+        operationId: openchannelOpenEndpoint
+        summary: Open this member's inbound endpoint.
+        tags: [Extensions]
+        x-rbac-object: ext_openchannel_endpoint
+        x-rbac-action: create
+        x-mcp-tool:
+          verb: openchannel_open
+          version: 1.0.0
+          title: Open an inbound endpoint
+          # 🟢 write: it writes one row of the unit's own table. It mints no
+          # credential and opens nothing a sender can yet use — an endpoint
+          # with no signing secret admits nothing at all.
+          tier: auto_execute
+          scope: write
+          description: >-
+            Open the calling person's own inbound endpoint, so a remote system
+            can be pointed at this CRM. It always opens the endpoint of whoever
+            is calling: there is no way to open somebody else's. Opening does
+            not by itself let anything in — until a signing secret is minted,
+            every request that arrives is refused, because the secret is the
+            only thing that admits one. Asking twice returns the same endpoint
+            rather than a second one.
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                # NO MEMBERS AT ALL, and the empty object is the declaration
+                # rather than an oversight: the endpoint this acts on is the
+                # caller's own, so there is nothing to name. additionalProperties
+                # false is what turns a client that tries to name somebody else
+                # into a refusal instead of a silently ignored field.
+                properties: {}
+        responses:
+          '200':
+            description: The caller's endpoint.
+            content:
+              application/json:
+                schema:
+                  # Restated rather than $ref'd, and the same rule a sibling
+                  # unit's fragment records: a fragment is merged into the core
+                  # document, and this generator resolves no references — an
+                  # unresolved one would be advertised to a model as the shape.
+                  # Several copies to reconcile by hand is the cost; a unit
+                  # writing into the core's component space is what it buys out
+                  # of.
+                  type: object
+                  additionalProperties: false
+                  required: [id, user_id, slug, url, enabled, inbound_received, outbound_sent, version]
+                  description: >-
+                    One member's inbound endpoint: which anonymous path it is, who owns
+                    it, where this connector talks back to, and what has passed through
+                    it. It carries no signing secret — that is sealed in the unit's
+                    secret namespace and only the minting operation ever returns one.
+                  properties:
+                    id: { type: string, format: uuid }
+                    user_id:
+                      type: string
+                      format: uuid
+                      description: >-
+                        The member who owns this endpoint: whose sealed secret verifies
+                        every request that arrives on it, and whose authority the payload
+                        is eventually acted under.
+                    slug:
+                      type: string
+                      description: >-
+                        The last segment of the public path senders post to. It is not a
+                        credential — the path appears in access logs, and only the signing
+                        secret admits a request.
+                    url:
+                      type: string
+                      description: >-
+                        Where this connector talks back to, empty until a member registers
+                        one. Empty is the ordinary state of an endpoint that only receives.
+                    enabled:
+                      type: boolean
+                      description: >-
+                        Whether the edge is currently accepting. A paused endpoint keeps
+                        its owner and its sealed secret, so pausing and resuming are
+                        inverses of each other.
+                    inbound_received: { type: integer, format: int64 }
+                    outbound_sent: { type: integer, format: int64 }
+                    last_inbound_at: { type: string, format: date-time }
+                    last_outbound_at: { type: string, format: date-time }
+                    version: { type: integer }
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
+          # Declared because this operation genuinely answers it: the
+          # installation's one anonymous path for this unit can be held by one
+          # member, so a second member asking for it is refused rather than
+          # given a duplicate. `extension.ErrConflict` is what the unit raises.
+          '409': { $ref: '#/components/responses/Conflict' }
+
+  - target: $.paths['/ext/openchannel/endpoint/secret']
+    update:
+      # POST, and it is the one method that fits: every call produces a NEW
+      # secret and invalidates the previous one, so it is neither idempotent nor
+      # a read.
+      post:
+        operationId: openchannelMintSecret
+        summary: Mint this member's signing secret, returned once.
+        tags: [Extensions]
+        x-rbac-object: ext_openchannel_endpoint
+        x-rbac-action: update
+        x-mcp-tool:
+          verb: openchannel_mint_secret
+          version: 1.0.0
+          title: Mint a signing secret
+          # 🟢 write: it seals a credential in the unit's own namespace and
+          # bumps the unit's own row. Nothing leaves the workspace, and what it
+          # breaks — senders holding the previous secret — is what the caller
+          # asked for.
+          tier: auto_execute
+          scope: write
+          description: >-
+            Mint the signing secret for the calling person's own inbound
+            endpoint and return it once. The same operation opens and rotates,
+            because after either every secret that endpoint previously issued
+            stops working: any sender already configured has to be given the new
+            one. The secret is shown in this response and never again — no
+            operation reads it back, so a lost one is re-minted rather than
+            recovered.
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                # NO MEMBERS AT ALL, and the empty object is the declaration
+                # rather than an oversight: the endpoint this acts on is the
+                # caller's own, so there is nothing to name. additionalProperties
+                # false is what turns a client that tries to name somebody else
+                # into a refusal instead of a silently ignored field.
+                properties: {}
+        responses:
+          '200':
+            description: The new secret, and the endpoint it belongs to.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [signing_secret, endpoint]
+                  properties:
+                    signing_secret:
+                      type: string
+                      description: >-
+                        The hex-encoded key a sender signs with. It appears here and
+                        nowhere else, ever — store it where the sender is configured.
+                    endpoint:
+                      type: object
+                      additionalProperties: false
+                      required: [id, user_id, slug, url, enabled, inbound_received, outbound_sent, version]
+                      description: >-
+                        The endpoint this secret admits requests to. See the open
+                        operation for what each member means.
+                      properties:
+                        id: { type: string, format: uuid }
+                        user_id: { type: string, format: uuid }
+                        slug: { type: string }
+                        url: { type: string }
+                        enabled: { type: boolean }
+                        inbound_received: { type: integer, format: int64 }
+                        outbound_sent: { type: integer, format: int64 }
+                        last_inbound_at: { type: string, format: date-time }
+                        last_outbound_at: { type: string, format: date-time }
+                        version: { type: integer }
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
+          # Minting for an endpoint that was never opened is refused rather than
+          # opening one: material sealed under a member who owns no endpoint is
+          # a credential this surface has no operation to withdraw.
+          '404': { $ref: '#/components/responses/NotFound' }
+
+  - target: $.paths['/ext/openchannel/endpoint/enabled']
+    update:
+      # PUT: the body states the state to be in, so sending it twice is the same
+      # as sending it once.
+      put:
+        operationId: openchannelSetEnabled
+        summary: Pause or resume this member's inbound endpoint.
+        tags: [Extensions]
+        x-rbac-object: ext_openchannel_endpoint
+        x-rbac-action: update
+        x-mcp-tool:
+          verb: openchannel_set_enabled
+          version: 1.0.0
+          title: Pause or resume an inbound endpoint
+          # 🟢 write: one column of the unit's own row.
+          tier: auto_execute
+          scope: write
+          description: >-
+            Pause or resume the calling person's own inbound endpoint. A paused
+            endpoint refuses everything that arrives while keeping its owner and
+            its signing secret, so resuming it puts every already-configured
+            sender straight back to work — nothing has to be re-issued. Requests
+            that arrive while it is paused are not held anywhere; the sender is
+            refused and it is theirs to resend.
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [enabled]
+                # No user member, deliberately. See the header.
+                properties:
+                  enabled:
+                    type: boolean
+                    description: True to accept requests, false to refuse them.
+        responses:
+          '200':
+            description: The endpoint in its new state.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [id, user_id, slug, url, enabled, inbound_received, outbound_sent, version]
+                  description: >-
+                    See the open operation for what each member means.
+                  properties:
+                    id: { type: string, format: uuid }
+                    user_id: { type: string, format: uuid }
+                    slug: { type: string }
+                    url: { type: string }
+                    enabled: { type: boolean }
+                    inbound_received: { type: integer, format: int64 }
+                    outbound_sent: { type: integer, format: int64 }
+                    last_inbound_at: { type: string, format: date-time }
+                    last_outbound_at: { type: string, format: date-time }
+                    version: { type: integer }
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
+          '404': { $ref: '#/components/responses/NotFound' }
+
+  - target: $.paths['/ext/openchannel/endpoint/url']
+    update:
+      put:
+        operationId: openchannelRegisterUrl
+        summary: Register where this connector talks back to.
+        tags: [Extensions]
+        x-rbac-object: ext_openchannel_endpoint
+        x-rbac-action: update
+        x-mcp-tool:
+          verb: openchannel_register_url
+          version: 1.0.0
+          title: Register an outward address
+          # 🟢 write: one column of the unit's own row. The address is checked
+          # here and dialed elsewhere; recording it transmits nothing.
+          tier: auto_execute
+          scope: write
+          description: >-
+            Record the https address this connector should post to when it has
+            something to send for the calling person. It must be https and name
+            a host rather than an address literal, and it may not carry
+            credentials — those would ride every request. Registering an address
+            sends nothing by itself.
+        requestBody:
+          required: true
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [url]
+                properties:
+                  url:
+                    type: string
+                    format: uri
+                    maxLength: 2048
+                    description: >-
+                      The https URL to post to, e.g. https://example.com/hooks/crm.
+        responses:
+          '200':
+            description: The endpoint with its address registered.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [id, user_id, slug, url, enabled, inbound_received, outbound_sent, version]
+                  description: >-
+                    See the open operation for what each member means.
+                  properties:
+                    id: { type: string, format: uuid }
+                    user_id: { type: string, format: uuid }
+                    slug: { type: string }
+                    url: { type: string }
+                    enabled: { type: boolean }
+                    inbound_received: { type: integer, format: int64 }
+                    outbound_sent: { type: integer, format: int64 }
+                    last_inbound_at: { type: string, format: date-time }
+                    last_outbound_at: { type: string, format: date-time }
+                    version: { type: integer }
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
+          '404': { $ref: '#/components/responses/NotFound' }
+          # An address that is not https, names an address literal rather than a
+          # host, or carries credentials is refused before it is ever stored.
+          '422': { $ref: '#/components/responses/ValidationError' }
+
+  - target: $.paths['/ext/openchannel/inbound']
+    update:
+      # GET, and it takes no arguments at all: the queue it reports is the
+      # caller's own, so there is nothing to name.
+      get:
+        operationId: openchannelListInbound
+        summary: List what arrived on this member's endpoint.
+        tags: [Extensions]
+        x-rbac-object: ext_openchannel_inbound
+        x-rbac-action: read
+        x-mcp-tool:
+          verb: openchannel_list_inbound
+          version: 1.0.0
+          title: List received requests
+          # 🟢 read: it reads the unit's own rows and changes nothing.
+          tier: auto_execute
+          scope: read
+          description: >-
+            List the most recent requests that arrived on the calling person's
+            own inbound endpoint, newest first, and what became of each: whether
+            it is still waiting, how many times it has been attempted, and why
+            it stopped. It reports that person's own endpoint only. The payloads
+            themselves are deliberately not returned — only their size — because
+            they are bytes an anonymous remote party chose.
+        responses:
+          '200':
+            description: The most recent arrivals, newest first.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [entries]
+                  properties:
+                    entries:
+                      type: array
+                      description: >-
+                        Empty when nothing has arrived, and also when the caller has not
+                        opened an endpoint — neither is an error.
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required: [id, nonce, state, attempts, body_bytes, sent_at, received_at]
+                        properties:
+                          id: { type: string, format: uuid }
+                          nonce:
+                            type: string
+                            description: >-
+                              The value the sender chose and signed. It is what makes a
+                              redelivery land nothing rather than a second copy.
+                          state:
+                            type: string
+                            enum: [pending, ingested, failed]
+                            description: >-
+                              `pending` is waiting to be acted on, `ingested` has been, and
+                              `failed` is one nothing will retry.
+                          attempts: { type: integer }
+                          last_error_class:
+                            type: string
+                            description: >-
+                              Why it stopped, in this unit's own vocabulary. A remote
+                              party's own message is deliberately not carried.
+                          body_bytes:
+                            type: integer
+                            description: How large the received payload is.
+                          sent_at:
+                            type: string
+                            format: date-time
+                            description: The instant the sender signed.
+                          received_at:
+                            type: string
+                            format: date-time
+                            description: >-
+                              This installation's own clock when it arrived. Both are kept so
+                              a sender whose clock is drifting can be seen rather than
+                              inferred.
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
