@@ -126,23 +126,25 @@ func (c *pageProgress) Observed(ctx context.Context, scanned, captured, skipped 
 // as it appears leaves no batch anywhere to be dropped, double-credited, or
 // fenced off.
 //
-// What this guarantees, exactly, and what it does not:
+// A LEDGER ROW, not an increment, and that is what makes the reported number a
+// count rather than a floor.
 //
-//   - It never DOUBLE-counts. A row is created once, and this runs on that
-//     single outcome; nothing retries the write, so nothing can apply it twice.
-//   - It is not exactly-once. The row is created in the resolver's transaction
-//     and counted in this one, so a failed write loses the count of the creation
-//     it was about, permanently — capture's idempotency means no replay re-offers
-//     that row to anyone.
-//   - The loss is per failure, and NOTHING caps the total. A database fault
-//     spanning a page loses one count for every creation inside it. Calling it
-//     "one row" would be true only of a single blip.
+// It used to be `SET col = col + 1` in a transaction of its own, after the row
+// it was counting had already committed elsewhere. That addition can fail and
+// nothing replays it — capture is idempotent, so no retry ever re-offers the
+// message to the resolver — so a database fault spanning a page lost one count
+// for every creation inside it, permanently. The columns were a floor, and
+// nothing downstream said so: they drive a progress display and divide into the
+// cost estimator's ratios, where a floor understates cost.
 //
-// So the committed columns are a floor on what the run created, never an
-// overcount. Closing the gap takes a ledger keyed on the created row's id,
-// idempotent under retry, with the counts derived from it rather than
-// accumulated; the number feeds a progress display and the cost estimator's
-// ratios. Open in #2479 rather than papered over here.
+// The ledger is keyed on WHAT WAS CREATED — a person's row id, or the domain a
+// verdict was opened on — so writing the same creation twice writes it once.
+// That is what makes the write RETRYABLE, and the retry is what shrinks the
+// loss window from "any failure" to "a failure that outlives it".
+//
+// The columns are then a projection of the ledger, recomputed in the same
+// transaction, so calling this twice for one creation reports the same number
+// as calling it once.
 //
 // Unfenced on the run's liveness and on the connection's generation. The row
 // exists; a cancelled run and a rebound connection do not un-create it, and
@@ -154,35 +156,125 @@ func (c *pageProgress) counted(ctx context.Context, outcome EnsureOutcome) {
 	if c == nil {
 		return
 	}
-	people, companies := 0, 0
-	if outcome.PersonCreated {
-		people = 1
-	}
-	// The company column counts domains this run QUEUED for a verdict, not
-	// companies it created — capture creates none. A run that met twelve new
-	// domains did that work whether or not the crawls have answered yet, and
-	// reporting zero would hide it.
-	if outcome.CompanyQueued {
-		companies = 1
-	}
-	if people == 0 && companies == 0 {
+	created := createdSubjects(outcome)
+	if len(created) == 0 {
 		// Resolved onto rows that already existed — on a widen re-import that is
 		// nearly every message.
 		return
 	}
 	countCtx, cancel := detachedWrite(ctx)
 	defer cancel()
-	err := c.registry.db.Tx(countCtx, func(tx pgx.Tx) error {
-		_, execErr := tx.Exec(countCtx, `
-			UPDATE capture_backfill
-			SET people_created = people_created + $2, organizations_created = organizations_created + $3
-			WHERE id = $1`, c.backfillID, people, companies)
-		return execErr
-	})
-	if err != nil {
-		slog.ErrorContext(ctx, "capture: a counterparty this backfill created was not counted on the run — its reported reach is one row short",
-			"backfill_id", c.backfillID, "err", err)
+	var err error
+	for attempt := range countAttempts {
+		err = c.recordCreations(countCtx, created)
+		if err == nil {
+			return
+		}
+		// Retryable only because the write is idempotent. Backing off between
+		// attempts, because the fault this is riding out is a database one and
+		// an immediate retry meets the same moment.
+		if attempt < countAttempts-1 {
+			sleepFor(countCtx, countRetryBackoff)
+		}
 	}
+	slog.ErrorContext(ctx, "capture: a counterparty this backfill created was not counted on the run — its reported reach is one row short",
+		"backfill_id", c.backfillID, "attempts", countAttempts, "err", err)
+}
+
+// countAttempts and countRetryBackoff bound the retry. Three and a short pause,
+// because this is riding out a blip rather than waiting for an outage: a run
+// that stalled its page on a database that is down would trade the capture for
+// the counter, which is the trade the flush path already refuses.
+const (
+	countAttempts     = 3
+	countRetryBackoff = 200 * time.Millisecond
+)
+
+// sleepFor waits, or returns early if the context ends first.
+func sleepFor(ctx context.Context, d time.Duration) {
+	timer := time.NewTimer(d)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+	case <-timer.C:
+	}
+}
+
+// createdSubject is one thing a run made, as the ledger keys it.
+type createdSubject struct {
+	kind    string
+	subject string
+}
+
+// createdSubjects names what one outcome created, or nothing.
+func createdSubjects(outcome EnsureOutcome) []createdSubject {
+	var out []createdSubject
+	if outcome.PersonCreated && outcome.PersonID != (ids.UUID{}) {
+		out = append(out, createdSubject{kind: "person", subject: outcome.PersonID.String()})
+	}
+	// The company kind counts domains this run QUEUED for a verdict, not
+	// companies it created — capture creates none. A run that met twelve new
+	// domains did that work whether or not the crawls have answered yet, and
+	// reporting zero would hide it.
+	if outcome.CompanyQueued && outcome.QueuedDomain != "" {
+		out = append(out, createdSubject{kind: "organization_queued", subject: outcome.QueuedDomain})
+	}
+	return out
+}
+
+// recordCreations writes the ledger rows and refreshes the run's columns from
+// it, in one transaction.
+//
+// Refreshed rather than incremented: the columns are then a PROJECTION of the
+// ledger, so a second call for the same creation — which the retry above can
+// produce — leaves them where they were, and a count read off the run row is
+// the number of rows behind it.
+//
+// Never DOWN, though, and that is not a hedge against the ledger. A run still
+// paging while this ships is walked by the old binary, which counts in the
+// column and writes no ledger row; the migration seeds the ledger from a
+// snapshot taken before those increments, so the first recompute after the
+// rollout would otherwise discard them. `greatest` costs nothing in steady
+// state — the ledger only grows, so the projection alone never lowers the
+// number — and it is what makes the deploy window safe without draining every
+// backfill first.
+//
+// The run row is LOCKED first, and the lock is what makes the projection safe
+// under concurrency. A page may walk its messages in parallel — nothing in the
+// connector contract forbids it — and at READ COMMITTED two recomputes running
+// at once each count a snapshot without the other's uncommitted row, so the
+// later committer writes a total that is missing the earlier one. An increment
+// could not lose that; a projection can, and no later creation repairs it once
+// the run has no creations left to make. Taken BEFORE the inserts, so the whole
+// write is one queue rather than a race between the insert and the count.
+func (c *pageProgress) recordCreations(ctx context.Context, created []createdSubject) error {
+	return c.registry.db.Tx(ctx, func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx,
+			`SELECT 1 FROM capture_backfill WHERE id = $1 FOR UPDATE`, c.backfillID); err != nil {
+			return err
+		}
+		for _, made := range created {
+			if _, err := tx.Exec(ctx, `
+				INSERT INTO capture_backfill_creation (backfill_id, kind, subject)
+				VALUES ($1, $2, $3)
+				ON CONFLICT (backfill_id, kind, subject) DO NOTHING`,
+				c.backfillID, made.kind, made.subject); err != nil {
+				return err
+			}
+		}
+		_, err := tx.Exec(ctx, `
+			UPDATE capture_backfill b
+			SET people_created = greatest(counted.people, b.people_created),
+			    organizations_created = greatest(counted.organizations, b.organizations_created)
+			FROM (
+				SELECT count(*) FILTER (WHERE kind = 'person') AS people,
+				       count(*) FILTER (WHERE kind = 'organization_queued') AS organizations
+				  FROM capture_backfill_creation
+				 WHERE backfill_id = $1
+			) counted
+			WHERE b.id = $1`, c.backfillID)
+		return err
+	})
 }
 
 // flushPacing says whether a write may be dropped for being too soon. Only the

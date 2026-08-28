@@ -36,12 +36,21 @@ type CounterpartyEnsurer interface {
 // guess credits it with every other connection's captures.
 type EnsureOutcome struct {
 	PersonCreated bool
+	// PersonID is the row that was created, and it is what makes the count a
+	// count. The ledger is keyed on it, so writing the same creation twice
+	// writes it once — which is what lets the write be RETRIED, where an
+	// accumulated `+ 1` could only be lost.
+	PersonID ids.UUID
 	// CompanyQueued reports that this counterparty's domain was put in the
 	// queue for an organization verdict. Capture no longer creates companies
 	// itself — it withholds one until a site read says the domain deserves it —
 	// so counting creations here would report zero for every run and hide the
 	// work it actually did.
 	CompanyQueued bool
+	// QueuedDomain identifies that work, and it is a DOMAIN rather than a row
+	// id because there is no row: the verdict is what was opened. It keys the
+	// ledger for the same reason PersonID does.
+	QueuedDomain string
 }
 
 // EnsureRequest names one captured message's counterparty for the resolver.
