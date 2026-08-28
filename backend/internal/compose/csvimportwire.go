@@ -163,6 +163,7 @@ func withSkippedLines(report migration.Report, object string, skipped []migratio
 		for _, s := range skipped {
 			report.Objects[i].Skipped = append(report.Objects[i].Skipped, migration.SkippedRow{
 				ExternalID: fmt.Sprintf("line %d", s.Line),
+				Line:       s.Line,
 				Reason:     s.Reason,
 			})
 		}
@@ -245,21 +246,22 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 		for _, s := range o.Skipped {
 			// The same row skipped by the dry run and again by the commit is
 			// ONE row the human must go fix, named by its line.
-			// Keyed on the EXTERNAL ID, which is what identifies a row — not on
-			// the line lineOf derives from it, which answers 0 for every id not
-			// shaped `line N`. A file carrying its own key column has no such
-			// ids at all, so every skipped row in it collapsed onto the first:
-			// two refused rows reported as one skip and one phantom `unchanged`,
-			// and the four counts then summed to less than rows_read. That is
-			// the disposition "hiding something" its own contract warns about.
+			// Keyed on the EXTERNAL ID, which is what identifies a row. Keyed
+			// on the line instead, every skipped row in a file that carries its
+			// own key column collapsed onto the first — the line was derived
+			// from the id's text shape back then and answered 0 for all of them
+			// — so two refused rows were reported as one skip and one phantom
+			// `unchanged`, and the four counts summed to less than rows_read.
+			// The line is carried now and would no longer collide, but the id
+			// is still the right key: it is what a row IS, where a line is
+			// where it happened to sit.
 			if seen[s.ExternalID] {
 				continue
 			}
 			seen[s.ExternalID] = true
-			line := lineOf(s.ExternalID)
 			out.Disposition.Skipped++
 			out.Issues = append(out.Issues, crmcontracts.ImportRowIssue{
-				Line:   line,
+				Line:   s.Line,
 				Reason: s.Reason,
 			})
 		}
@@ -272,9 +274,8 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 				continue
 			}
 			seen[c.ExternalID] = true
-			line := lineOf(c.ExternalID)
 			out.Issues = append(out.Issues, crmcontracts.ImportRowIssue{
-				Line:   line,
+				Line:   c.Line,
 				Reason: c.Reason,
 			})
 		}
@@ -403,16 +404,6 @@ func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks
 	}
 	links.Unresolved = &unresolved
 	return &links
-}
-
-// lineOf recovers the file line a skip named. The source records skips as
-// "line N" because a row it could not identify has no external id to carry.
-func lineOf(externalID string) int {
-	var line int
-	if _, err := fmt.Sscanf(externalID, "line %d", &line); err != nil {
-		return 0
-	}
-	return line
 }
 
 // readImportUpload takes the multipart body apart under the deployment's import

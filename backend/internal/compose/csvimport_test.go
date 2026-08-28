@@ -453,7 +453,7 @@ func TestSkippedLinesReachTheObjectsReport(t *testing.T) {
 	if len(out.Objects[0].Skipped) != 1 {
 		t.Fatalf("skips = %+v, want the source's own disclosure", out.Objects[0].Skipped)
 	}
-	if got := lineOf(out.Objects[0].Skipped[0].ExternalID); got != 7 {
+	if got := out.Objects[0].Skipped[0].Line; got != 7 {
 		t.Fatalf("line = %d, want 7 — the report must send a human to the right line", got)
 	}
 	// An object the report does not carry cannot silently swallow them either.

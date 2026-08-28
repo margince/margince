@@ -39,6 +39,15 @@ type Row struct {
 	// worth creating, and the writer would land a nameless native row.
 	OwnerExternalID string
 	LastSyncedAt    time.Time
+	// Line is the file line this row came from, for a source that has one.
+	//
+	// CARRIED rather than derived. It used to be recovered from the external
+	// id's text shape, because a row the source could not identify is disclosed
+	// as "line N" — but a file with its own key column gives every row a real
+	// id, so that parse failed and every issue in such a file reported line 0.
+	// Zero for a source with no file behind it, which is the honest answer
+	// there.
+	Line int
 }
 
 // Assoc is one detangled source edge, applied after both endpoints
@@ -122,7 +131,10 @@ type Writers interface {
 // SkippedRow is one disclosed skip in the run report.
 type SkippedRow struct {
 	ExternalID string `json:"external_id"`
-	Reason     string `json:"reason"`
+	// Line is the file line the row came from, so the person reading the report
+	// can go to it. Zero when the source has no file behind it.
+	Line   int    `json:"line,omitempty"`
+	Reason string `json:"reason"`
 }
 
 // skipReasonEmptyPayload marks a source row with no fields at all — the
@@ -230,7 +242,7 @@ func (e *Engine) DryRun(ctx context.Context, src Source) (Report, error) {
 			}
 			for _, row := range rows {
 				if len(row.Fields) == 0 {
-					or.Skipped = append(or.Skipped, SkippedRow{ExternalID: row.ExternalID, Reason: skipReasonEmptyPayload})
+					or.Skipped = append(or.Skipped, SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: skipReasonEmptyPayload})
 					continue
 				}
 				exists, err := e.w.Exists(ctx, object, row.ExternalID)
@@ -361,7 +373,7 @@ func (e *Engine) importObject(ctx context.Context, runID RunID, src Source, obje
 			if err != nil {
 				return ObjectReport{}, 0, e.fail(ctx, runID, withPartial(*rep, or), err)
 			}
-			or.record(row.ExternalID, res)
+			or.record(row, res)
 			cursor++
 			if err := e.runs.advanceCheckpoint(ctx, runID, cursor); err != nil {
 				return ObjectReport{}, 0, e.fail(ctx, runID, withPartial(*rep, or), err)
@@ -375,10 +387,10 @@ func (e *Engine) importObject(ctx context.Context, runID RunID, src Source, obje
 }
 
 // record folds one row's outcome into the class's disposition.
-func (or *ObjectReport) record(externalID string, res EnsureResult) {
+func (or *ObjectReport) record(row Row, res EnsureResult) {
 	switch {
 	case res.Skipped:
-		or.Skipped = append(or.Skipped, SkippedRow{ExternalID: externalID, Reason: res.SkipReason})
+		or.Skipped = append(or.Skipped, SkippedRow{ExternalID: row.ExternalID, Line: row.Line, Reason: res.SkipReason})
 	case res.Unchanged:
 		or.Unchanged++
 	case res.Created:
