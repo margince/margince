@@ -397,7 +397,7 @@ scenarios: $RUN_URL
 No scenario is known to be failing, and none is known to pass — the lane did not
 get far enough to say. Nothing here is evidence about the product.
 
-Likely causes, in the order they occur: ANTHROPIC_API_KEY is unset or rejected,
+Likely causes, in the order they occur: the credential is unset or rejected,
 the Claude CLI failed to install, the dev stack did not boot, or the fixture
 seed could not write. The last one is loud by design — \`create_or_die\` prints
 the server's response and stops — so the job log names it directly.

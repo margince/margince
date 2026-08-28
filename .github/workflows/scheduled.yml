@@ -65,7 +65,7 @@ on:
         type: boolean
         default: false
       llm:
-        description: "Also run the six use cases against a real model (COSTS TOKENS; needs ANTHROPIC_API_KEY)"
+        description: "Also run the six use cases against a real model (COSTS TOKENS; needs CLAUDE_CODE_OAUTH_TOKEN)"
         type: boolean
         default: false
 
@@ -310,13 +310,17 @@ jobs:
   # defect. A job that demanded 3/3 would be red most weeks and would teach
   # everyone to ignore it.
   #
-  # The secret is ANTHROPIC_API_KEY — an API key, billed to the project. A
-  # personal subscription token is an OAuth bearer belonging to one human and
-  # has no business in a public repository's secrets, so the runner accepts
-  # either but this job supplies only the key. If the secret is absent the job
-  # SKIPS rather than fails: a lane nobody has funded yet must not turn main red
-  # every Monday, and a skipped job says "not configured" where a red one says
-  # "broken".
+  # The secret is CLAUDE_CODE_OAUTH_TOKEN — a subscription token minted by
+  # `claude setup-token`, which is the credential the Claude CLI accepts for a
+  # subscription outside an interactive login. Know what that means before
+  # re-pointing it: the lane bills one human's subscription, and anybody with
+  # write access can spend it by dispatching this workflow. The runner also
+  # accepts ANTHROPIC_API_KEY, and a Console key billed to the project is the
+  # better answer the day there is one — but this job supplies exactly one
+  # credential either way, for the reason given at the step. If the secret is
+  # absent the job SKIPS rather than fails: a lane nobody has funded yet must
+  # not turn main red every Monday, and a skipped job says "not configured"
+  # where a red one says "broken".
   llm-use-cases:
     name: use cases, driven by a model (weekly)
     outputs:
@@ -346,26 +350,26 @@ jobs:
       # The secret gate, and it is a STEP rather than a job-level `if` because a
       # job condition cannot read `secrets` — GitHub does not expose that context
       # to `jobs.<id>.if`, so a job guarded on it would evaluate the secret to an
-      # empty string and skip forever, including after somebody adds the key.
+      # empty string and skip forever, including after somebody adds it.
       # Checked here, where the context exists, and reported as a skip rather
       # than a failure: an unfunded lane must not turn main red every Monday.
       - name: Is the model lane funded?
         id: funded
         env:
-          KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          KEY: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
         run: |
           if [ -z "${KEY:-}" ]; then
             echo "configured=no" >> "$GITHUB_OUTPUT"
             {
               echo "### The model-driven use cases did not run"
               echo
-              echo "\`ANTHROPIC_API_KEY\` is not set for this repository, so there is"
-              echo "nothing to drive the assistant with. This is a SKIP, not a failure:"
+              echo "\`CLAUDE_CODE_OAUTH_TOKEN\` is not set for this repository, so there"
+              echo "is nothing to drive the assistant with. This is a SKIP, not a failure:"
               echo "the lane costs real tokens and nobody has funded it yet."
               echo
-              echo "To turn it on, add the secret. It must be an API key billed to the"
-              echo "project — a personal subscription token is an OAuth bearer belonging"
-              echo "to one human and does not belong in a public repository's secrets."
+              echo "To turn it on, add the secret: a subscription token from"
+              echo "\`claude setup-token\`. It bills the account that minted it, and"
+              echo "anybody with write access can spend it by dispatching this workflow."
             } >> "$GITHUB_STEP_SUMMARY"
           else
             echo "configured=yes" >> "$GITHUB_OUTPUT"
@@ -409,12 +413,17 @@ jobs:
       # The distinction is taken from the runner's own words: it prints
       # "scenarios: N passed, M failed" only once every scenario has actually
       # been driven. No such line means the lane never got that far.
+      #
+      # Exactly ONE credential reaches the CLI. Adding ANTHROPIC_API_KEY beside
+      # the token would not be a fallback: the CLI ranks the key above the
+      # token, so the token would go unused, and a stale key would then fail
+      # every run while the summary above named the token as what funds it.
       - name: The six use cases (MARGINCE_E2E_LLM=1 make e2e-llm)
         id: lane
         if: steps.funded.outputs.configured == 'yes'
         working-directory: .
         env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          CLAUDE_CODE_OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           MARGINCE_E2E_LLM: "1"
           E2E_LLM_SLUG: ci
         run: |
