@@ -32,8 +32,8 @@
         "read"
       ],
       "tier": "auto_execute",
-      "fragment_hash": "sha256:9d54d795989b4daa10f2d1995d802652157ac772b9240709e5ba75a36199d598",
-      "digest": "sha256:31a869ccf6a03def10695abe2af125dc39a36ef66ff213714e81bacfedb977a5"
+      "fragment_hash": "sha256:ac280cee1e2abbb35179938867181fb62e0aa8aa0358b9c50b37c1d641cf7fda",
+      "digest": "sha256:f368c1515f9f6e2cbf75f4a8be2428fcea6ba7b5ded86ddf246c9746694db954"
     },
     {
       "id": "tool/openchannel_list_outbound",

@@ -479,10 +479,12 @@ actions:
                               redelivery land nothing rather than a second copy.
                           state:
                             type: string
-                            enum: [pending, ingested, failed]
+                            enum: [pending, ingested, failed, withdrawn]
                             description: >-
-                              `pending` is waiting to be acted on, `ingested` has been, and
-                              `failed` is one nothing will retry.
+                              `pending` is waiting to be acted on, `ingested` has been,
+                              `failed` is one nothing will retry, and `withdrawn` is one
+                              whose timeline entry has since been archived — the row is
+                              kept as evidence of what arrived rather than deleted.
                           attempts: { type: integer }
                           last_error_class:
                             type: string
