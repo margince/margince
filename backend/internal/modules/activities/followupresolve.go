@@ -28,22 +28,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// taskSourceSystem is activity.source as the automation engine's create
-// executor stamps it (automation's systemSource — spelled again here
+// systemSource is activity.source as the automation engine's create
+// executor stamps it (automation's own systemSource — spelled again here
 // because a module cannot import a sibling's constant). Never trusted
 // alone, and deliberately NOT reserved at the create wire: the engine's
 // own creates flow through the same mapper as a client's
 // (LogActivityInputFrom), so a value-level refusal there would refuse the
-// engine itself. A caller can spell it — every selector below therefore
-// pairs it with systemCapturedBy, which no client can write, and that
-// pairing is the security boundary.
-const taskSourceSystem = "system"
+// engine itself. A caller can spell it — so every selector over it in
+// this package (the follow-up resolver below, the last-touch scan's
+// genuine-engagement exclusion) pairs it with systemCapturedBy, which no
+// client can write, and that PAIRING is the security boundary. The one
+// pair of constants for the package, so the next selector cannot copy
+// half the predicate.
+const systemSource = "system"
 
 // systemCapturedBy is captured_by as the workflow engine's runs stamp it:
 // storekit.CapturedBy writes the authenticated principal's ID, and the
 // engine binds the system principal with ID "system" (automation's
 // HandleEvent). captured_by never comes from a request body, so it is the
-// unforgeable half of the "the system minted this task" predicate.
+// unforgeable half of the "the system wrote this row" predicate.
 const systemCapturedBy = "system"
 
 // FollowUpWorkflows returns the system handlers that complete open system
@@ -173,8 +176,8 @@ func (w followUpAutoResolve) linkedLeads(ctx context.Context, activityID ids.Act
 // task no longer matches the open filter.
 //
 // "System-minted" is decided by source AND captured_by together: source
-// rides the client create wire (and is merely refused there, not
-// impossible), while captured_by is stamped from the authenticated
+// rides the client create wire verbatim (any caller can spell "system" —
+// see systemSource's doc), while captured_by is stamped from the authenticated
 // principal — a planted source alone hands nothing to this path. It
 // answers a COUNT rather than rows, so nothing about which records exist
 // leaves a call that takes no read gate of its own; each completion's
@@ -188,7 +191,7 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
 			  AND a.captured_by = $4
 			  AND a.is_done = false AND a.archived_at IS NULL
-			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), taskSourceSystem, systemCapturedBy)
+			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), systemSource, systemCapturedBy)
 		if err != nil {
 			return err
 		}
