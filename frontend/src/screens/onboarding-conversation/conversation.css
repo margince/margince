@@ -2983,10 +2983,17 @@
   background: var(--bgElevated);
 }
 
+/* The one control that decides whether a found fact is kept, so it is the last
+   thing in this card that may be hard to hit: the box takes the 24px floor WCAG
+   2.2 AA 2.5.8 sets while the tick stays 15px, because the mark's size is what
+   keeps a column of them reading as ticks beside values rather than as buttons. */
 .ob-triage-fact-toggle {
   display: inline-flex;
   flex: none;
   align-items: center;
+  justify-content: center;
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
   padding: 0;
   border: 0;
   background: none;

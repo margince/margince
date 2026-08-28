@@ -188,6 +188,25 @@ it("stays open when the item it just ran opened a dialog", async () => {
   expect(trigger.getAttribute("aria-expanded")).toBe("true");
 });
 
+// The trigger's own geometry, asserted here because this is the design system's
+// own primitive: it draws the ellipsis on every record header in the product, so
+// a rectangle here is a rectangle everywhere at once. `btn-icon` is what makes a
+// button square and drops the width floor a WORD needs, and the trigger has no
+// word — it was a bare `.btn.btn-sm` with a padding rule of its own, which is
+// how a 32px square came to be drawn 30px or 36px wide depending on which of two
+// equal-specificity rules the sheet order happened to put last.
+it("draws its trigger as the square the icon-only button defines", () => {
+  render(
+    <OverflowMenu label="More actions">
+      <button type="button">Merge</button>
+    </OverflowMenu>,
+  );
+
+  const trigger = screen.getByRole("button", { name: "More actions" });
+  expect(trigger.classList.contains("btn-icon")).toBe(true);
+  expect(trigger.classList.contains("btn-sm")).toBe(true);
+});
+
 // The panel is FIXED, so the viewport is all the room there is: a menu placed
 // below a trigger near the bottom edge puts its actions where no page scrolling
 // reaches them. Stated over the measurements themselves, because jsdom gives

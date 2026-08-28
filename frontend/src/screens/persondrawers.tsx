@@ -494,8 +494,13 @@ function ComposerHead({
         <h2 id="person-composer-title">
           {t("person.composer.title", { name })}
         </h2>
-        <Button small onClick={onClose} aria-label={t("person.drawer.close")}>
-          <X size={16} aria-hidden="true" />
+        <Button
+          small
+          iconOnly
+          onClick={onClose}
+          aria-label={t("person.drawer.close")}
+        >
+          <X aria-hidden="true" />
         </Button>
       </div>
       {/* The consent verdict leads, with its reason. A rep about to write
@@ -938,8 +943,13 @@ export function PersonResearchDrawer({
           <h2 id="person-research-title">
             {t("person.research.title", { name: personName })}
           </h2>
-          <Button small onClick={onClose} aria-label={t("person.drawer.close")}>
-            <X size={16} aria-hidden="true" />
+          <Button
+            small
+            iconOnly
+            onClick={onClose}
+            aria-label={t("person.drawer.close")}
+          >
+            <X aria-hidden="true" />
           </Button>
         </div>
         <Badge>{t("person.research.publicOnly")}</Badge>
@@ -1122,8 +1132,13 @@ export function PersonMeetingBrief({
       <div className="drawer-head">
         <div className="pe-drawer-title">
           <h2 id="person-meeting-title">{t("person.meeting.title")}</h2>
-          <Button small onClick={onClose} aria-label={t("person.drawer.close")}>
-            <X size={16} aria-hidden="true" />
+          <Button
+            small
+            iconOnly
+            onClick={onClose}
+            aria-label={t("person.drawer.close")}
+          >
+            <X aria-hidden="true" />
           </Button>
         </div>
       </div>

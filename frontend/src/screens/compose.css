@@ -216,7 +216,16 @@
   background: var(--bgHover);
   color: var(--textContent);
 }
+/* Removing a recipient is a mistake nobody wants to make twice, and at the size
+   of its own 14px cross it was a target a third of the 24px WCAG 2.2 AA 2.5.8
+   asks for. The box takes the floor; the mark keeps its size, so the chip still
+   reads as a chip with a small cross rather than as a button with a word in it. */
 .recipient-field .chips button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
   border: 0;
   background: none;
   color: var(--textMeta);

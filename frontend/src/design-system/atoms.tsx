@@ -1902,10 +1902,15 @@ export function OverflowMenu({
           in a list, and the announcement still has to describe what the
           keyboard will really do. Announcing a menu we do not implement is
           worse than announcing the expandable region we do. */}
-      <button
-        type="button"
+      {/* `iconOnly`, and not a class of this component's own: the ellipsis is
+          the whole label, so the control is the --control-h-sm square the
+          catalog defines and drops the width floor a WORD needs. Geometry
+          belongs to the button — a padding rule beside it is a second author
+          of one box, and which of the two wins is a fact about sheet order. */}
+      <Button
+        small
+        iconOnly
         ref={trigger}
-        className="btn btn-ghost btn-sm overflow-menu-trigger"
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={label}
@@ -1915,8 +1920,8 @@ export function OverflowMenu({
           setOpen((was) => !was);
         }}
       >
-        <MoreHorizontal aria-hidden="true" size={16} />
-      </button>
+        <MoreHorizontal aria-hidden="true" />
+      </Button>
       {/* Hidden, never unmounted. The items own their own dialogs, so
           unmounting them on close would throw away the dialog the click just
           opened. `hidden` also takes them out of the tab order, so a closed

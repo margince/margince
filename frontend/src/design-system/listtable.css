@@ -264,7 +264,11 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
+  /* Square by construction, not by arithmetic. The row stretches this segment
+   * to its own inner height; the ratio turns that into the width, so the "⋮"
+   * cannot become a rectangle when the row's height or its border moves. A
+   * written-down width could only agree with a written-down height by luck. */
+  aspect-ratio: 1;
   border: 0;
   border-left: 1px solid var(--borderSubtle);
   background: transparent;

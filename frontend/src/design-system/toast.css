@@ -132,6 +132,12 @@
 .toast-dismiss {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
+  /* The 24px floor WCAG 2.2 AA 2.5.8 sets, around a 14px mark that stays 14px:
+     this is the only way out of a sticky toast, so it has to be hittable, and a
+     cross drawn to the size of the target would out-shout the sentence. */
+  min-inline-size: var(--space-6);
+  min-block-size: var(--space-6);
   flex: none;
   margin-left: var(--space-1);
   border: 0;

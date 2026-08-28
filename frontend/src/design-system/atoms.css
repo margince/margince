@@ -1329,9 +1329,6 @@
   position: relative;
   display: inline-flex;
 }
-.overflow-menu-trigger {
-  padding-inline: var(--space-2);
-}
 /* Fixed and portalled to the body: the panel is positioned against the
    trigger's viewport rectangle by the component, so it is not clipped by a
    card that hides its own overflow and cannot be trapped by a stacking context

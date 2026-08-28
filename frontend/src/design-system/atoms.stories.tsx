@@ -996,8 +996,10 @@ function OverflowMenuDemo({
       return;
     }
     pressed.current = true;
+    // The trigger is the only element the wrapper holds — the panel is
+    // portalled to the body — so its own container names it.
     wrap.current
-      ?.querySelector<HTMLButtonElement>(".overflow-menu-trigger")
+      ?.querySelector<HTMLButtonElement>(".overflow-menu > button")
       ?.click();
   }, [openOnMount]);
   return (
