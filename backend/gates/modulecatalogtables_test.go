@@ -55,6 +55,11 @@ var tableName = regexp.MustCompile(`^[a-z][a-z0-9_]*$`)
 // is checking.
 const ownsTablesColumn = 3
 
+// modulePrefix is what a tableOwners value looks like when the owner IS a
+// module. Everything else in that map is a compose package with a table of its
+// own, which this page does not catalogue.
+const catalogModulePrefix = "internal/modules/"
+
 func TestTheModuleCatalogsOwnedTablesAreTheOwnershipMap(t *testing.T) {
 	t.Parallel()
 	page, err := os.ReadFile(moduleCatalog)
@@ -62,9 +67,17 @@ func TestTheModuleCatalogsOwnedTablesAreTheOwnershipMap(t *testing.T) {
 		t.Fatalf("reading %s: %v", moduleCatalog, err)
 	}
 
+	// MODULES only. tableOwners also names compose subpackages that own a table
+	// of their own — a card's cache, a brief's rows — and this page is the
+	// module catalog: a compose package is not a module and has no row here by
+	// design. Judging them would report the page for not listing something it
+	// does not claim to.
 	declared := map[string]map[string]bool{}
 	for table, owner := range tableOwners {
-		module := strings.TrimPrefix(owner, "internal/modules/")
+		module, isModule := strings.CutPrefix(owner, catalogModulePrefix)
+		if !isModule {
+			continue
+		}
 		if declared[module] == nil {
 			declared[module] = map[string]bool{}
 		}
@@ -90,12 +103,28 @@ func TestTheModuleCatalogsOwnedTablesAreTheOwnershipMap(t *testing.T) {
 			moduleCatalog)
 	}
 
-	for _, module := range sortedModules(documented) {
+	// The UNION, not the catalog's own rows. Iterating what the page lists
+	// asks the page to nominate its own subjects, so a module with tables in
+	// the map and no row at all is never visited — which is the
+	// under-recognition this gate exists to catch, in its most complete form:
+	// a reader cannot discover the owner of those tables from the catalog at
+	// all, and nothing says so.
+	for _, module := range unionOf(documented, declared) {
 		owned, mapped := declared[module]
 		if !mapped {
-			// A module that owns no table at all. Nothing to compare, and not a
-			// finding: engine modules that write through a sibling's store are
-			// a real shape here.
+			// A module that owns no table. Not a finding on its own — engine
+			// modules that write through a sibling's store are a real shape
+			// here — but a row CLAIMING tables is, because nothing enforces it.
+			if claimed := namesOnlyIn(documented[module], nil); len(claimed) > 0 {
+				t.Errorf("the %s row names %v and the ownership map gives that module no table at all — "+
+					"a claim about ownership nothing enforces", module, claimed)
+			}
+			continue
+		}
+		if _, listed := documented[module]; !listed {
+			t.Errorf("%s owns %v and %s has no row for it. The catalog is where a reader looks up which "+
+				"module owns a table, so a module missing from it is one whose tables have no discoverable "+
+				"owner", module, namesOnlyIn(owned, nil), moduleCatalog)
 			continue
 		}
 		if len(documented[module]) == 0 {
@@ -142,9 +171,19 @@ func namesOnlyIn(in, other map[string]bool) []string {
 	return out
 }
 
-func sortedModules(in map[string]map[string]bool) []string {
-	out := make([]string, 0, len(in))
-	for module := range in {
+// unionOf merges the module names both sides carry, sorted. Both sides are
+// read because the two absences fail differently and neither is visible from
+// the other's list.
+func unionOf(documented, declared map[string]map[string]bool) []string {
+	seen := map[string]bool{}
+	for module := range documented {
+		seen[module] = true
+	}
+	for module := range declared {
+		seen[module] = true
+	}
+	out := make([]string, 0, len(seen))
+	for module := range seen {
 		out = append(out, module)
 	}
 	sort.Strings(out)
