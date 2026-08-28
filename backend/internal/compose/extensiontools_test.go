@@ -127,18 +127,49 @@ func TestBuildExtensionToolsAdaptsHandlerBearingTools(t *testing.T) {
 	}
 }
 
-// TestBuildExtensionToolsRejectsServedConfirmationRequired: a
-// handler-bearing 🟡 tool cannot be served — the gate would refuse it on
-// every call with no way to stage an approval — so building the set fails
-// closed rather than registering a dead capability. (A handler-less 🟡
-// tool is a manifest request, not served, and is fine.)
-func TestBuildExtensionToolsRejectsServedConfirmationRequired(t *testing.T) {
+// TestBuildExtensionToolsRejectsAServedConfirmationRequiredToolWithNoSubject:
+// a handler-bearing 🟡 tool the gate cannot park a refused call for is a dead
+// capability — refused on every call with no approval to redeem — so building
+// the set fails closed rather than registering one. What makes it parkable is
+// the declaration saying which argument names the row and which unit table it
+// lives in; without that this is the same dead capability it always was.
+// (A handler-less 🟡 tool is a manifest request, not served, and is fine.)
+func TestBuildExtensionToolsRejectsAServedConfirmationRequiredToolWithNoSubject(t *testing.T) {
 	_, err := buildExtensionTools([]extension.Extension{{
 		Name: "demo", Version: "1.0.0",
 		Tools: []extension.Tool{{Name: "archive", Handle: servedHandle}},
 	}}, []extension.Verb{unitVerb("demo", "archive", extension.TierConfirmationRequired, extension.ScopeWrite)})
-	if err == nil || !strings.Contains(err.Error(), "confirmation-required tool is not yet supported") {
-		t.Fatalf("err = %v, want the served-🟡 rejection", err)
+	if err == nil || !strings.Contains(err.Error(), "must declare what it stages against") {
+		t.Fatalf("err = %v, want the missing-subject rejection", err)
+	}
+}
+
+// TestAServedConfirmationRequiredToolWithASubjectIsAdapted: the other half.
+// A 🟡 tool that says what it stages against IS servable, and the adapted tool
+// implements the registry's staging seam — which is the whole difference
+// between an approval that lands in somebody's inbox and a call refused
+// forever.
+func TestAServedConfirmationRequiredToolWithASubjectIsAdapted(t *testing.T) {
+	verb := unitVerb("demo", "archive", extension.TierConfirmationRequired, extension.ScopeWrite)
+	verb.InputSchema = json.RawMessage(`{"type":"object","required":["record_id"],
+		"properties":{"record_id":{"type":"string","format":"uuid"}}}`)
+	verb.Subject = extension.Subject{Arg: "record_id", Table: "ext_demo_record"}
+	tools, err := buildExtensionTools([]extension.Extension{{
+		Name: "demo", Version: "1.0.0",
+		Tools: []extension.Tool{{Name: "archive", Handle: servedHandle}},
+	}}, []extension.Verb{verb})
+	if err != nil {
+		t.Fatalf("a confirm-first tool naming its subject must be servable: %v", err)
+	}
+	if len(tools) != 1 {
+		t.Fatalf("adapted %d tools, want 1", len(tools))
+	}
+	if _, stageable := tools[0].(agents.Stager); !stageable {
+		t.Error("the adapted tool does not implement the staging seam, so the gate has nowhere to park " +
+			"a refused call and every call would be refused with no approval to redeem")
+	}
+	if tools[0].Spec().Tier != mcp.TierConfirmationRequired {
+		t.Errorf("tier = %v, want confirmation_required", tools[0].Spec().Tier)
 	}
 }
 

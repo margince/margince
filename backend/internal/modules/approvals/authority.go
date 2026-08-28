@@ -436,6 +436,14 @@ func decisionGrantsFor(kind string, targetType *string) ([]grantRequirement, err
 	fixed, hasFixed := decisionGrants[kind]
 	action, resolvedFromTarget := targetResolvedGrants[kind]
 	if !hasFixed && !resolvedFromTarget {
+		// A verb a composed extension set registered at boot (extensionkinds.go).
+		// Its grant is the one the operation itself gates on, which is the same
+		// rule every entry above follows: deciding takes the grant performing
+		// it takes. Consulted only AFTER the static maps, so a unit can never
+		// answer for a core kind.
+		if ext, registered := extensionKind(kind); registered {
+			return []grantRequirement{{ext.RbacObject, ext.RbacAction}}, nil
+		}
 		return nil, fmt.Errorf("crmapprovals: kind %q has no decision-grant mapping", kind)
 	}
 	if !resolvedFromTarget {

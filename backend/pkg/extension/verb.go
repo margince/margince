@@ -85,6 +85,11 @@ type Verb struct {
 	// invocation before the handler runs.
 	RbacObject string
 
+	// Subject is the row a CONFIRM-FIRST operation stages its approval
+	// against; the zero value for every other tier. See verbsubject.go for
+	// why both halves are declared rather than derived.
+	Subject Subject
+
 	// RbacAction is the verb the grant must carry, and it is declared rather
 	// than derived because nothing available here could derive it. The
 	// requested Scope is a Passport verb CLASS (read/draft/write/send/enrich)
@@ -240,6 +245,12 @@ func (v Verb) validateGovernance() error {
 		if err := validateQueryEncodable(v.Method, v.InputSchema); err != nil {
 			return fmt.Errorf("operation %s: %w", v.OperationID, err)
 		}
+	}
+	// AFTER the tier and the schemas, because it reads both: a subject is owed
+	// by the confirm-first tier and names a property of the input schema, so an
+	// author with a typo'd tier would otherwise be told about their subject.
+	if err := v.validateSubject(); err != nil {
+		return err
 	}
 	// The NAMESPACE only. The object-name grammar and the collision rules
 	// against the core vocabulary belong to the module that owns that

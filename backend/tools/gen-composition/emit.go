@@ -427,6 +427,13 @@ func writeVerbLiterals(b *strings.Builder, verbs []declaredVerb) {
 		writeSchemaLiteral(b, "InputSchema", v.InputSchema)
 		writeSchemaLiteral(b, "OutputSchema", v.OutputSchema)
 		fmt.Fprintf(b, "\t\t\tRbacObject:     %q,\n", v.RbacObject)
+		if !v.Subject.IsZero() {
+			// Emitted only when declared, so the generated literal reads the
+			// way the fragment does: a tier that never stages carries no
+			// subject, and a zero struct written out would look like one that
+			// was declared empty.
+			fmt.Fprintf(b, "\t\t\tSubject:        extension.Subject{Arg: %q, Table: %q},\n", v.Subject.Arg, v.Subject.Table)
+		}
 		fmt.Fprintf(b, "\t\t\tRbacAction:     %q,\n", string(v.RbacAction))
 		b.WriteString("\t\t},\n")
 	}
