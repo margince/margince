@@ -34,7 +34,9 @@ import tempfile
 # E2E_LLM_SCENARIOS/E2E_LLM_RECORDS can move the first, and the mktemp name is
 # different on every run — so the check is containment in one of the two
 # roots, not an exact match.
-_REPO_ROOT = os.path.realpath(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+_REPO_ROOT = os.path.realpath(
+    os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+)
 _TEMP_ROOT = os.path.realpath(tempfile.gettempdir())
 
 
