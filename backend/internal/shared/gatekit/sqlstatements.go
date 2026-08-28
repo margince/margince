@@ -62,7 +62,14 @@ func SQLStatementsOf(node ast.Node) []string {
 			}
 			if joined, ok := ConcatenatedString(typed); ok {
 				out = append(out, joined)
-				// Do not descend: the parts are this statement, already read.
+				// The literal parts are this statement, already read. The parts
+				// that are NOT literals are still walked: `"x " + fmt.Sprintf(
+				// "SELECT …")` folds the readable half and would otherwise take
+				// the whole Sprintf subtree with it — a statement the
+				// per-literal readers this replaced could all see.
+				for _, opaque := range opaqueOperands(typed) {
+					out = append(out, SQLStatementsOf(opaque)...)
+				}
 				return false
 			}
 		case *ast.BasicLit:
@@ -99,6 +106,22 @@ func ConcatenatedString(expr ast.Expr) (string, bool) {
 		return left + right, leftOK || rightOK
 	default:
 		return " ", false
+	}
+}
+
+// opaqueOperands are the parts of a `+` chain ConcatenatedString could not
+// read — everything that is neither a string literal nor another `+`.
+func opaqueOperands(expr ast.Expr) []ast.Expr {
+	switch typed := expr.(type) {
+	case *ast.BasicLit:
+		return nil
+	case *ast.BinaryExpr:
+		if typed.Op != token.ADD {
+			return []ast.Expr{typed}
+		}
+		return append(opaqueOperands(typed.X), opaqueOperands(typed.Y)...)
+	default:
+		return []ast.Expr{expr}
 	}
 }
 

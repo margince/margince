@@ -183,6 +183,9 @@ func readLiteralValues(node ast.Node, bound map[string]bool, out *[]string) {
 		readLiteralValues(typed.Body, withLiteralParams(bound, typed.Type), out)
 		return
 	case *ast.BlockStmt:
+		if typed == nil {
+			return
+		}
 		// Statements in order, carrying each binding forward: a literal bound
 		// on one line is read on the next, and a walk that scoped the binding
 		// to the assignment itself would see none of them.
@@ -216,6 +219,9 @@ func readLiteralValues(node ast.Node, bound map[string]bool, out *[]string) {
 		readLiteralValues(typed.Body, bound, out)
 		return
 	case *ast.CaseClause:
+		if typed == nil {
+			return
+		}
 		for _, statement := range typed.Body {
 			readLiteralValues(statement, bound, out)
 			if assign, isAssign := statement.(*ast.AssignStmt); isAssign {
@@ -361,10 +367,15 @@ func decodesALiteral(call *ast.CallExpr) bool {
 	return false
 }
 
-// reportsALiteral reports whether the call PRINTS its arguments rather than
-// matching them. The source text is the right thing to put in a failure — it is
-// what the author will search for — so a read that only ever reaches a message
-// is not this census's business.
+// reportsALiteral reports whether the call is a TERMINAL message sink. The
+// source text is the right thing to put in a failure — it is what the author
+// will search for — so a read that only ever reaches a message is not this
+// census's business.
+//
+// Sprintf and its siblings are deliberately absent. They RETURN a string, and
+// `sql := fmt.Sprintf("… %s", lit.Value)` builds a statement out of the source
+// text like any other read; treating them as sinks would let exactly that
+// through, which is a census failing short in the words of one passing.
 func reportsALiteral(call *ast.CallExpr) bool {
 	name := ""
 	switch fun := call.Fun.(type) {
@@ -374,24 +385,29 @@ func reportsALiteral(call *ast.CallExpr) bool {
 		name = fun.Name
 	}
 	switch name {
-	case "Errorf", "Fatalf", "Logf", "Skipf", "Printf", "Sprintf", "Error", "Fatal", "Log", "Sprint", "Sprintln", "Println":
+	case "Errorf", "Fatalf", "Logf", "Skipf", "Printf", "Println", "Print", "Error", "Fatal", "Log":
 		return true
 	}
 	return false
 }
 
-// isBasicLitType matches `*ast.BasicLit`, which is how this tree spells it.
+// isBasicLitType matches a BasicLit type, however it is spelled.
+//
+// The star is optional and the package identifier is not checked: a file that
+// aliases the import (`import goast "go/ast"`) or holds the literal by value
+// spells the same type, and a matcher that insisted on `*ast.` would leave that
+// file unjudged — which is the under-recognition this census exists to stop,
+// standing in the census's own subject test.
 func isBasicLitType(expr ast.Expr) bool {
-	star, isStar := expr.(*ast.StarExpr)
-	if !isStar {
+	if star, isStar := expr.(*ast.StarExpr); isStar {
+		expr = star.X
+	}
+	selector, isSelector := expr.(*ast.SelectorExpr)
+	if !isSelector {
 		return false
 	}
-	selector, isSelector := star.X.(*ast.SelectorExpr)
-	if !isSelector || selector.Sel.Name != "BasicLit" {
-		return false
-	}
-	pkg, isIdent := selector.X.(*ast.Ident)
-	return isIdent && pkg.Name == "ast"
+	_, qualified := selector.X.(*ast.Ident)
+	return qualified && selector.Sel.Name == "BasicLit"
 }
 
 // The detector, from the other end. A census over censuses that stopped seeing
@@ -447,6 +463,26 @@ func TestTheReaderCensusSeesEachShapeARawReadIsWrittenIn(t *testing.T) {
 			source: "package p\nimport (\n\t\"go/ast\"\n\t\"testing\"\n)\nfunc f(t *testing.T, lit *ast.BasicLit) {\n" +
 				"\tt.Errorf(\"unreadable: %s\", lit.Value)\n}\n",
 			want: 0,
+		},
+		{
+			// Sprintf RETURNS the text, so a read that reaches one is building
+			// something, not reporting it.
+			name: "a read that builds a string with Sprintf is a match",
+			source: "package p\nimport (\n\t\"fmt\"\n\t\"go/ast\"\n)\nfunc f(lit *ast.BasicLit) string {\n" +
+				"\treturn fmt.Sprintf(\"%s AND 1=1\", lit.Value)\n}\n",
+			want: 1,
+		},
+		{
+			// A file that aliases the import spells the same type, and a
+			// matcher that missed it would leave the file unjudged.
+			name:   "an aliased import is the same type",
+			source: "package p\nimport goast \"go/ast\"\nfunc f(lit *goast.BasicLit) string {\n\treturn lit.Value\n}\n",
+			want:   1,
+		},
+		{
+			name:   "a declaration with no body does not panic the walk",
+			source: "package p\nimport \"go/ast\"\nfunc f(lit *ast.BasicLit) string\n",
+			want:   0,
 		},
 		{
 			name: "the shared reader is not a raw read",
