@@ -1,3 +1,6 @@
+/* The page gutter is `.wrap` (app/shell.css) one level up, around the query's
+ * states rather than around the loaded room, so a skeleton is inset too. What is
+ * left here is the rhythm between the room's own blocks. */
 .roompage {
   display: flex;
   flex-direction: column;

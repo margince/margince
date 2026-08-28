@@ -3,10 +3,25 @@
  *
  * The Filters & views screen. Layout only — every colour and space is a token. */
 
+/* The root wears `.wrap` (app/shell.css): the page gutter is the shell's one
+ * spelling of the inset, so the screen starts on the same line as the page head
+ * above it, and the arrival stagger comes with it — `.wrap` IS an arrival stack
+ * (design-system/enter.css), so a second stack class here would be a second
+ * spelling of one fact. */
 .filters-screen {
   display: flex;
   flex-direction: column;
   gap: var(--space-4);
+}
+
+/* `.wrap > .card + .card` is the shell's fallback rhythm for a screen that drops
+ * cards straight into the gutter with no row gap. This screen has one, so the
+ * fallback would land on top of it and space two cards twice as far apart as
+ * every other pair on the page. Specificity, not source order: the shell's rule
+ * is three classes and so is a bare `.filters-screen >` one, and a tie is
+ * decided by which stylesheet the bundler happened to emit last. */
+.wrap.filters-screen > .card + .card {
+  margin-top: 0;
 }
 
 /* The object tabs on a row of their own. The shell's page head names the page

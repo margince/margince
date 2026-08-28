@@ -45,14 +45,20 @@ export function DealRoomPage({ dealId }: Readonly<{ dealId: string }>) {
   const t = useT();
   const roomQuery = useDealRoom(dealId);
   const room = roomQuery.data?.data?.[0];
+  // The gutter is the PAGE's, so it wears `.wrap` (app/shell.css) OUTSIDE the
+  // query's states: a skeleton or a refusal flush against the scroller's edge is
+  // the same defect as a loaded room flush against it, and only the outer
+  // element is on screen for all three.
   return (
-    <QueryStates query={roomQuery} pendingLines={6}>
-      {room ? (
-        <RoomPage room={room} dealId={dealId} />
-      ) : roomQuery.isSuccess ? (
-        <Callout tone="info">{t("roompage.none")}</Callout>
-      ) : null}
-    </QueryStates>
+    <div className="wrap">
+      <QueryStates query={roomQuery} pendingLines={6}>
+        {room ? (
+          <RoomPage room={room} dealId={dealId} />
+        ) : roomQuery.isSuccess ? (
+          <Callout tone="info">{t("roompage.none")}</Callout>
+        ) : null}
+      </QueryStates>
+    </div>
   );
 }
 
