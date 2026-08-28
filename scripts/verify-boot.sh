@@ -62,22 +62,137 @@ session="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/
 echo "  OK: logged in as $ADMIN_EMAIL, session captured"
 
 echo "== verify-boot 2/4: seeded people are visible =="
-people_status="$(curl -sS --max-time 15 -o "$workdir/people.json" -w '%{http_code}' \
-  "$API_BASE/v1/people?limit=100" \
-  --cookie "crm_session=$session" || true)"
-if [ "$people_status" != "200" ]; then
-  echo "  response body:" >&2
-  cat "$workdir/people.json" >&2
-  fail "GET /v1/people returned HTTP $people_status (expected 200)"
-fi
-for name in "Alice Müller" "Bob Schmidt" "Carol Wagner"; do
-  if ! jq -e --arg n "$name" '.data[] | select(.full_name == $n)' "$workdir/people.json" >/dev/null; then
-    echo "  full /v1/people response:" >&2
-    cat "$workdir/people.json" >&2
-    fail "seeded person '$name' missing from GET /v1/people — seed absent or stale (make seed-dev)"
+# The rule the product reads an employment by, spelled the same way
+# scripts/seed-dev.sh writes it: primary, and not ended. `ended_at` is a date and
+# ISO dates compare as strings, so a future end is still current — the reading
+# the server's own predicate takes.
+CURRENT_PRIMARY_JQ='.is_current_primary and (.ended_at == null or (.ended_at | tostring) >= $today)'
+TODAY="$(date -u +%F)"
+# Looked up record by record rather than scanned off the first page of a list.
+# The page held 100 rows and the seeded three were on it as long as the dev seed
+# was all that had run — on a stack that also carries the demo dataset they are
+# not, and a check that reads a smaller set than it means reports a pass it did
+# not earn. So every lookup here names its record, and follows the cursor to
+# exhaustion: `q` is a full-text query, and a page of its matches can be all the
+# people who merely share a word with the one being looked for.
+#
+# `select` is a jq filter over ONE row, and any further arguments go to jq — a
+# name is an `--arg`, never spliced into the filter. `$today` is bound for the
+# callers that ask about employment currency.
+find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
+  local path="$1" select="$2" cursor="" status row
+  shift 2
+  while :; do
+    status="$(curl -sS --max-time 15 -o "$workdir/page.json" -w '%{http_code}' \
+      --get --data-urlencode "limit=100" ${cursor:+--data-urlencode "cursor=$cursor"} \
+      "$API_BASE/v1$path" \
+      --cookie "crm_session=$session" || true)"
+    if [ "$status" != "200" ]; then
+      echo "  response body:" >&2
+      cat "$workdir/page.json" >&2
+      fail "GET /v1$path returned HTTP $status (expected 200)"
+    fi
+    row="$(jq -c --arg today "$TODAY" "$@" "first(.data[] | select($select)) // empty" "$workdir/page.json")"
+    if [ -n "$row" ]; then
+      printf '%s' "$row"
+      return
+    fi
+    cursor="$(jq -r 'if .page.has_more then (.page.next_cursor // "") else "" end' "$workdir/page.json")"
+    # Absent is an ANSWER, not a failure: every caller asks "is this here?" and
+    # handles no for itself. A bare `return` here carries the test's own exit
+    # status, which is 1 when the cursor is empty — and under `set -e` that
+    # killed the whole script the first time a lookup legitimately found nothing.
+    [ -n "$cursor" ] || return 0
+  done
+}
+
+find_person() { # find_person <full-name> <email> — the row, empty when absent
+  # `q` is full-text over name and title only, so the name narrows and the EMAIL
+  # decides. Two people can share a full name, and the address is the key the
+  # seeded row was created with — checking whichever row the query answered with
+  # first would report on somebody else's record and call it this one's.
+  find_first "/people?q=$(jq -rn --arg v "$1" '$v|@uri')" \
+    '.full_name == $name and any(.emails[]?; .email == $email)' \
+    --arg name "$1" --arg email "$2"
+}
+
+# The seeded records, read from the seeder's own payloads rather than listed
+# here, so a record added there is checked the day it is added instead of the day
+# somebody remembers to widen a list. A census that matched nothing would turn
+# the whole step into a pass, so each one is asserted non-empty before it is
+# walked.
+#
+# awk rather than sed: the payload is the line AFTER the one naming the record,
+# and the portable sed spelling for that is not the same on both platforms this
+# script runs on.
+seeded_payloads() { # seeded_payloads <resource> — one JSON body per line
+  awk -v want_prefix="ensure \"$1 " '
+    index($0, want_prefix) == 1 { want = 1; next }
+    want { sub(/^  ./, ""); sub(/.$/, ""); print; want = 0 }
+  ' "$REPO_DIR/scripts/seed-dev.sh"
+}
+
+seeded_people="$(seeded_payloads person)"
+[ -n "$seeded_people" ] || fail "found no 'ensure \"person …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+
+while IFS= read -r body; do
+  name="$(printf '%s' "$body" | jq -r '.full_name')"
+  email="$(printf '%s' "$body" | jq -r 'first(.emails[]?.email) // empty')"
+  [ -n "$email" ] || fail "the seeder creates '$name' with no email, so this check cannot tell them from a namesake"
+  person="$(find_person "$name" "$email")"
+  if [ -z "$person" ]; then
+    fail "seeded person '$name' <$email> missing from GET /v1/people — seed absent or stale (make seed-dev)"
   fi
-  echo "  OK: found '$name'"
-done
+  # And employed somewhere, on the edge the PRODUCT reads. A person who works
+  # nowhere shows on no company page, which is the demo dataset's own verify rule
+  # ("people work somewhere") — and the rule these records used to break, so
+  # `make verify-demo` could not pass after `make seed-dev` in the order the
+  # runbook prescribes.
+  #
+  # The current-primary rule rather than mere existence, and this is STRICTER
+  # than the demo verifier, which counts any employment row: an ended or
+  # secondary edge satisfies that census and still leaves the contact off the
+  # company page, so a boot proof that accepted one would be proving something
+  # nobody can see.
+  person_id="$(printf '%s' "$person" | jq -r '.id')"
+  if [ -z "$(find_first "/relationships?kind=employment&person_id=$person_id" "$CURRENT_PRIMARY_JQ")" ]; then
+    echo "  their employment rows:" >&2
+    cat "$workdir/page.json" >&2
+    fail "seeded person '$name' has no current primary employment — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
+  fi
+  echo "  OK: found '$name' <$email>, currently employed"
+done <<< "$seeded_people"
+
+# The other rule the seeded records used to break: an account left on the
+# default makes "who are our customers?" answer with everything.
+#
+# Looked up by the DOMAIN the seeder writes, from the seeder's own line, for the
+# same reason the people above are looked up by name: `/v1/organizations` is a
+# page, this installation may carry hundreds of companies from the demo dataset,
+# and a check that reads the first hundred of them is a check that stops finding
+# what it is looking for the day the dataset grows.
+seeded_org_bodies="$(seeded_payloads organization)"
+[ -n "$seeded_org_bodies" ] || fail "found no 'ensure \"organization …\"' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+
+# The stage the seeder actually writes, read from the seeder. "Anything but the
+# default" would accept a stage nobody wrote — a boot proof reads the state the
+# seed produces, not a range of states it might have.
+seeded_lifecycle="$(sed -n 's/.*{"lifecycle":"\([a-z_]*\)"}.*/\1/p' "$REPO_DIR/scripts/seed-dev.sh" | head -1)"
+[ -n "$seeded_lifecycle" ] || fail "scripts/seed-dev.sh writes no {\"lifecycle\":\"…\"} body — this check has no stage to hold the account to"
+
+while IFS= read -r body; do
+  org_name="$(printf '%s' "$body" | jq -r '.display_name')"
+  org_domain="$(printf '%s' "$body" | jq -r 'first(.domains[]?.domain) // empty')"
+  [ -n "$org_domain" ] || fail "the seeder creates '$org_name' with no domain, so this check has no way to find it"
+  org="$(find_first "/organizations?domain=$(jq -rn --arg v "$org_domain" '$v|@uri')" \
+    '.display_name == $name' --arg name "$org_name")"
+  if [ -z "$org" ]; then
+    fail "seeded account '$org_name' missing from GET /v1/organizations — seed absent or stale (make seed-dev)"
+  fi
+  lifecycle="$(printf '%s' "$org" | jq -r '.lifecycle // "unknown"')"
+  [ "$lifecycle" = "$seeded_lifecycle" ] || fail "seeded account '$org_name' stands at '$lifecycle' where the seed writes '$seeded_lifecycle' — an account off the stage it was seeded to answers the wrong question about who the customers are, and the demo dataset's verify pass refuses a default lifecycle outright"
+  echo "  OK: '$org_name' stands at '$lifecycle'"
+done <<< "$seeded_org_bodies"
 
 echo "== verify-boot 3/4: every composed unit's transport is registered =="
 # The boot proof for the channel registry, and it belongs HERE rather than in a

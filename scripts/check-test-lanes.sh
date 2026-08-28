@@ -46,7 +46,7 @@ while IFS= read -r f; do
     continue
   fi
   code="$(strip_comments "$f")"
-  if printf '%s\n' "$code" | grep -Eq "$real"; then
+  if grep -Eq "$real" <<<"$code"; then
     echo "VIOLATION (unit test opens real infra — add //go:build integration, or fake the boundary): $f"
     # Reported against the ORIGINAL line, so the number is the one an author
     # opens and the text is what they wrote — the stripped copy only decides
