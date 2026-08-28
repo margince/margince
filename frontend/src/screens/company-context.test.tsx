@@ -243,7 +243,11 @@ const SELECTABLE = 2;
 //
 // It costs nothing on a green run: onTimeout is called only on the failing
 // path, and what it returns is the error vitest then reports.
-function diagnose(stub: ReturnType<typeof backend>, awaited: string) {
+function diagnose(
+  stub: ReturnType<typeof backend>,
+  card: HTMLElement,
+  awaited: string,
+) {
   return (error: Error): Error => {
     const calls = stub.mock.calls
       .map(([input]) => {
@@ -252,19 +256,25 @@ function diagnose(stub: ReturnType<typeof backend>, awaited: string) {
         return `  ${method} ${new URL(request).pathname}`;
       })
       .join("\n");
-    // The card's own words, trimmed: a rendered error state, a spinner, or an
-    // empty shell each read differently here, and which of the three it is
-    // decides where to look next.
-    const rendered = (document.body.textContent ?? "")
-      .replace(/\s+/g, " ")
-      .trim()
-      .slice(0, 600);
+    // The card's own words: a rendered error state, a spinner, or an empty
+    // shell each read differently here, and which of the three it is decides
+    // where to look next.
+    //
+    // Read off the render's own container rather than document.body, and kept
+    // from BOTH ends rather than trimmed to the first n. The review renders
+    // AFTER the facts and source sections, so a head-only excerpt is exactly
+    // the excerpt that cannot contain the thing being waited for — the heading,
+    // the comparison rows, or the error rendered where they should be. The
+    // middle is what a reader can afford to lose.
+    const rendered = excerpt(
+      (card.textContent ?? "").replace(/\s+/g, " ").trim(),
+    );
     error.message = [
       error.message,
       "",
       `--- ${awaited} never arrived ---`,
       "",
-      `the card rendered: ${rendered || "(nothing)"}`,
+      `the card rendered: ${rendered}`,
       "",
       calls
         ? `the fetch stub was called:\n${calls}`
@@ -272,6 +282,18 @@ function diagnose(stub: ReturnType<typeof backend>, awaited: string) {
     ].join("\n");
     return error;
   };
+}
+
+// excerpt keeps a failure readable without losing the end of the card, which is
+// where everything these waiters wait for renders.
+const EXCERPT_HEAD = 300;
+const EXCERPT_TAIL = 700;
+
+function excerpt(text: string): string {
+  if (text.length <= EXCERPT_HEAD + EXCERPT_TAIL) {
+    return text || "(nothing)";
+  }
+  return `${text.slice(0, EXCERPT_HEAD)} … ${text.slice(-EXCERPT_TAIL)}`;
 }
 
 // Renders the card and drives it to the review step, where the comparison
@@ -282,7 +304,7 @@ async function renderReview() {
   // cannot be asked what it was called with.
   const stub = backend();
   vi.stubGlobal("fetch", stub);
-  render(
+  const { container } = render(
     <Providers>
       <CompanyContextCard />
     </Providers>,
@@ -295,13 +317,19 @@ async function renderReview() {
   const refresh = await screen.findByRole(
     "button",
     { name: "Refresh from website" },
-    { timeout: SETTLE_MS, onTimeout: diagnose(stub, "the refresh button") },
+    {
+      timeout: SETTLE_MS,
+      onTimeout: diagnose(stub, container, "the refresh button"),
+    },
   );
   fireEvent.click(refresh);
   await screen.findByRole(
     "heading",
     { name: "Review what changed" },
-    { timeout: SETTLE_MS, onTimeout: diagnose(stub, "the review heading") },
+    {
+      timeout: SETTLE_MS,
+      onTimeout: diagnose(stub, container, "the review heading"),
+    },
   );
   // The heading is not the last thing to arrive: the comparison cards commit
   // from the site read that the heading only announces, so waiting on the
@@ -310,7 +338,10 @@ async function renderReview() {
   // test is settled rather than merely started.
   await waitFor(
     () => expect(screen.getAllByRole("checkbox")).toHaveLength(SELECTABLE),
-    { timeout: SETTLE_MS, onTimeout: diagnose(stub, "the comparison rows") },
+    {
+      timeout: SETTLE_MS,
+      onTimeout: diagnose(stub, container, "the comparison rows"),
+    },
   );
 }
 
