@@ -291,9 +291,13 @@ function LegalEntityChoice({
                 {entity.registered_address ? (
                   <span>{entity.registered_address}</span>
                 ) : null}
+                {/* Both numbers, because either may be the only one a notice
+                    printed — and this is the moment a person tells two
+                    candidates apart. */}
                 {entity.register_number ? (
                   <small>{entity.register_number}</small>
                 ) : null}
+                {entity.vat_number ? <small>{entity.vat_number}</small> : null}
               </span>
             </button>
           );

@@ -246,8 +246,8 @@ describe("a field the read did not return", () => {
   });
 
   // The notice is a claim about what the crawl DID, and the wire accounts for
-  // exactly one group of fields: the legal trio, through the pages and
-  // candidates the read reports. For every other blank field it carries
+  // exactly one group of fields: the ones a legal page grounds, through the
+  // pages and candidates the read reports. For every other blank field it carries
   // silence — which covers a crawl that stopped early, an extraction that
   // abstained, and a value the read proposed that the human then cleared. A
   // box over that silence would name a cause the read never gave, which is
@@ -260,6 +260,7 @@ describe("a field the read did not return", () => {
     );
     expect(omitted.sort()).toEqual([
       "ob-triage-row-legal_name",
+      "ob-triage-row-register_number",
       "ob-triage-row-register_vat",
       "ob-triage-row-registered_address",
     ]);

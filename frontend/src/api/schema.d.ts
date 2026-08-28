@@ -19937,8 +19937,10 @@ export interface components {
             name: string;
             /** @description Its registered address as printed; absent when the page states none for this entity. */
             registered_address?: string;
-            /** @description Its registration, VAT, UID or tax number as printed; absent when the page states none for this entity. */
+            /** @description Its commercial-register entry as printed (HRB/HRA or the local equivalent); absent when the page states none for this entity. A dossier read before the two numbers were told apart may hold a VAT ID here. */
             register_number?: string;
+            /** @description Its VAT, UID or tax number as printed; absent when the page states none for this entity. */
+            vat_number?: string;
             evidence_snippet?: string;
             /** Format: uri */
             source_url: string;

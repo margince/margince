@@ -344,6 +344,7 @@ func siteReadLegalEntities(entities []corpusLegalEntity) []people.SiteReadLegalE
 			Name:              e.Name,
 			RegisteredAddress: e.RegisteredAddress,
 			RegisterNumber:    e.RegisterNumber,
+			VatNumber:         e.VatNumber,
 			EvidenceSnippet:   e.EvidenceSnippet,
 			SourceURL:         e.SourceURL,
 		})

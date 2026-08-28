@@ -182,7 +182,7 @@ describe("useClarifyAnswers — the legal-entity fill", () => {
     expect(draftRef.current.values.registered_address).toBe(
       gradionEntity.registered_address,
     );
-    expect(draftRef.current.values.register_vat).toBe(
+    expect(draftRef.current.values.register_number).toBe(
       gradionEntity.register_number,
     );
     // Grounded, not typed by hand — the review must show this as the site's
@@ -212,7 +212,7 @@ describe("useClarifyAnswers — the legal-entity fill", () => {
     for (const field of [
       "legal_name",
       "registered_address",
-      "register_vat",
+      "register_number",
     ] as const) {
       expect(draftRef.current.grounded[field]).toMatchObject({
         source_kind: "url",
@@ -307,7 +307,9 @@ describe("useClarifyAnswers — the legal-entity fill", () => {
     expect(draftRef.current.values.registered_address).toBe(
       padded.registered_address,
     );
-    expect(draftRef.current.values.register_vat).toBe(padded.register_number);
+    expect(draftRef.current.values.register_number).toBe(
+      padded.register_number,
+    );
     expect(draftRef.current.edited.has("legal_name")).toBe(false);
   });
 
@@ -342,7 +344,9 @@ describe("useClarifyAnswers — the legal-entity fill", () => {
     expect(draftRef.current.values.registered_address).toBe(
       doubled.registered_address,
     );
-    expect(draftRef.current.values.register_vat).toBe(doubled.register_number);
+    expect(draftRef.current.values.register_number).toBe(
+      doubled.register_number,
+    );
     expect(draftRef.current.grounded.registered_address).toMatchObject({
       source_kind: "url",
       source_url: doubled.source_url,
@@ -400,7 +404,7 @@ describe("useClarifyAnswers — the legal-entity fill", () => {
     ]);
     // Nothing of the nameless candidate's own block reaches the draft.
     expect(draftRef.current.values.registered_address).toBe("");
-    expect(draftRef.current.values.register_vat).toBe("");
+    expect(draftRef.current.values.register_number).toBe("");
   });
 
   it("never triggers the entity fill for a clarify over a different field, even when the value happens to match a candidate's name", async () => {

@@ -129,7 +129,9 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 		Fields: map[string]*string{
 			fieldOfferSummary: trimOptional(req.Profile.OfferSummary), fieldLegalName: trimOptional(req.Profile.LegalName),
 			fieldRegisteredAddress: trimOptional(req.Profile.RegisteredAddress), fieldRegisterVat: trimOptional(req.Profile.RegisterVat),
-			fieldIndustry: trimOptional(req.Profile.Industry), fieldICP: trimOptional(req.Profile.Icp),
+			fieldLegalForm: trimOptional(req.Profile.LegalForm), fieldRegisterCourt: trimOptional(req.Profile.RegisterCourt),
+			fieldRegisterNumber: trimOptional(req.Profile.RegisterNumber),
+			fieldIndustry:       trimOptional(req.Profile.Industry), fieldICP: trimOptional(req.Profile.Icp),
 			fieldValueProposition: trimOptional(req.Profile.ValueProposition), fieldUSP: trimOptional(req.Profile.Usp),
 			fieldCustomerPains: trimOptional(req.Profile.CustomerPains), fieldDesiredOutcomes: trimOptional(req.Profile.DesiredOutcomes),
 			fieldBuyingCenter: trimOptional(req.Profile.BuyingCenter), fieldBuyingIntents: trimOptional(req.Profile.BuyingIntents),
@@ -373,6 +375,9 @@ func contractSiteReadLegalEntities(entities []people.SiteReadLegalEntity) []crmc
 		}
 		if entity.RegisterNumber != "" {
 			wire.RegisterNumber = &entity.RegisterNumber
+		}
+		if entity.VatNumber != "" {
+			wire.VatNumber = &entity.VatNumber
 		}
 		if entity.EvidenceSnippet != "" {
 			wire.EvidenceSnippet = &entity.EvidenceSnippet
