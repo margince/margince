@@ -288,6 +288,21 @@ describe("the openchannel screen", () => {
     expect(recipe).toContain(`"message_id":"demo-1"`);
   });
 
+  // openssl's HMAC option takes the key on its command line, so the recipe
+  // cannot avoid putting the secret in argv — the page has to say so instead
+  // of leaving a shared-host reader to discover it the hard way.
+  it("warns that the secret rides the curl command's argv", async () => {
+    const { fetchStub } = stubTransport(FULL_GRANT, {
+      ...QUIET,
+      "GET /ext/openchannel/endpoint": () => OPENED,
+    });
+    vi.stubGlobal("fetch", vi.fn(fetchStub));
+
+    renderScreen();
+    await screen.findByTestId("openchannel-curl");
+    expect(screen.getByText(/visible to them in the process list/)).toBeTruthy();
+  });
+
   // The secret exists on a screen exactly once, and the sentence saying so is
   // beside it: a reader who has to hover to learn it has already moved on.
   it("shows a minted secret once, and says it is the only time", async () => {
@@ -443,7 +458,26 @@ describe("the openchannel screen", () => {
     ).toBeTruthy();
     // Both rows carry the same payload size, and both are drawn: a listing
     // that collapsed them would hide a redelivery.
-    expect(screen.getAllByText("168")).toHaveLength(2);
+    expect(screen.getAllByText(/168/)).toHaveLength(2);
+  });
+
+  // Attempts and byte counts render through the same locale-aware formatters
+  // as the rest of the app, not as raw numbers: a thousands separator missing
+  // here is the same defect one screen over, just unnoticed because nothing
+  // held it.
+  it("groups a large attempt count for the reader's own locale", async () => {
+    const { fetchStub } = stubTransport(FULL_GRANT, {
+      ...QUIET,
+      "GET /ext/openchannel/endpoint": () => OPENED,
+      "GET /ext/openchannel/inbound": () => ({
+        entries: [{ ...INBOUND_ROW, attempts: 12_345 }],
+      }),
+    });
+    vi.stubGlobal("fetch", vi.fn(fetchStub));
+
+    renderScreen();
+    expect(await screen.findByText("12,345")).toBeTruthy();
+    expect(screen.queryByText("12345")).toBeNull();
   });
 
   // The contract publishes three inbound states and the table writes a fourth

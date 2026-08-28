@@ -1,5 +1,11 @@
 import { api, QueryStates, throwProblem } from "@margince/frontend/api";
-import { formatDateTime, useLocale, useT } from "@margince/frontend/app";
+import {
+  formatBytes,
+  formatDateTime,
+  formatNumber,
+  useLocale,
+  useT,
+} from "@margince/frontend/app";
 import {
   Badge,
   DataTable,
@@ -134,12 +140,12 @@ export function InboundList({ canRead }: Readonly<{ canRead: boolean }>) {
                 {
                   key: "attempts",
                   header: t("extOpenchannel.inbound.attempts"),
-                  render: (row) => row.attempts,
+                  render: (row) => formatNumber(row.attempts, locale),
                 },
                 {
                   key: "bytes",
                   header: t("extOpenchannel.inbound.bytes"),
-                  render: (row) => row.body_bytes,
+                  render: (row) => formatBytes(row.body_bytes, locale),
                 },
                 {
                   key: "why",
@@ -223,7 +229,7 @@ export function OutboundList({ canRead }: Readonly<{ canRead: boolean }>) {
                 {
                   key: "attempt",
                   header: t("extOpenchannel.outboundList.attempt"),
-                  render: (row) => row.attempt,
+                  render: (row) => formatNumber(row.attempt, locale),
                 },
                 {
                   key: "when",

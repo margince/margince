@@ -147,6 +147,26 @@ func TestBothEndsOfAMessageAreNamed(t *testing.T) {
 	}
 }
 
+// An unidentifiable sender — neither account nor email — must not leave the
+// record naming only OUR OWN member's address. A set with just that one
+// address is exactly what the internal-message gate reads as "every party is
+// on our own domain", and it would drop a message from a real outside sender
+// this connector simply could not identify. The empty set is the case the
+// core's own comment describes: "could not enumerate the parties" — not "we
+// enumerated one and it was ours".
+func TestAnUnidentifiableSenderNamesNoAddresses(t *testing.T) {
+	t.Parallel()
+	doc := landableArrival()
+	doc.From = party{Name: "Someone Outside"}
+	rec, err := recordFor(ownerRef, arrivalJSON(t, doc), signedAt)
+	if err != nil {
+		t.Fatalf("building a record: %v", err)
+	}
+	if len(rec.Addresses) != 0 {
+		t.Fatalf("the record names addresses %v for a sender it could not identify at all — the recipient's own address alone would read as wholly internal and get the message dropped", rec.Addresses)
+	}
+}
+
 // An account outranks an address: it is the key a reply is routed on, so a
 // record carrying one is repliable and a record carrying only an address is not.
 // The address rides along as corroboration where this connector holds both.

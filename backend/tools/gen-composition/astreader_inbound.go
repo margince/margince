@@ -28,6 +28,15 @@ var timeUnits = map[string]time.Duration{
 	"Hour":        time.Hour,
 }
 
+// timePkgPath is the standard library import this reader resolves a duration
+// unit against — through the file's own alias for it, the same way ext is
+// resolved for extensionPkgPath, rather than the literal identifier "time".
+// A unit is free to alias it (`t "time"`) for any ordinary Go reason, and a
+// literal-name check would refuse that source; a unit that aliases the
+// EXTENSION package to the identifier "time" would, with a literal check,
+// have its own selectors misread as standard-library units instead.
+const timePkgPath = "time"
+
 // readInbound reads an Inbound field's slice literal into the manifest's
 // declared endpoints.
 //
@@ -41,10 +50,11 @@ func (r *unitReader) readInbound(expr ast.Expr, file *ast.File) ([]inboundEndpoi
 		return nil, r.errAt(expr, "Inbound must be a slice literal")
 	}
 	ext := importAlias(file, extensionPkgPath)
+	timePkg := importAlias(file, timePkgPath)
 	out := make([]inboundEndpoint, 0, len(lit.Elts))
 	seen := map[string]bool{}
 	for _, elt := range lit.Elts {
-		endpoint, err := r.readInboundEndpoint(elt, ext)
+		endpoint, err := r.readInboundEndpoint(elt, ext, timePkg)
 		if err != nil {
 			return nil, err
 		}
@@ -64,7 +74,7 @@ func (r *unitReader) readInbound(expr ast.Expr, file *ast.File) ([]inboundEndpoi
 // readInboundEndpoint reads one extension.InboundEndpoint literal and validates
 // it through the same published grammar the boot preflight runs, so a
 // declaration this generator accepts is one the boot accepts too.
-func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext string) (inboundEndpoint, error) {
+func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext, timePkg string) (inboundEndpoint, error) {
 	lit, ok := elt.(*ast.CompositeLit)
 	if !ok || (lit.Type != nil && !isSelector(lit.Type, ext, "InboundEndpoint")) {
 		return inboundEndpoint{}, r.errAt(elt, "an Inbound entry must be an extension.InboundEndpoint literal")
@@ -93,9 +103,9 @@ func (r *unitReader) readInboundEndpoint(elt ast.Expr, ext string) (inboundEndpo
 		case "MaxBody":
 			endpoint.MaxBody, err = r.intLit(kv.Value, "InboundEndpoint.MaxBody")
 		case "Skew":
-			endpoint.SkewSeconds, err = r.durationSeconds(kv.Value, ext, "InboundEndpoint.Skew")
+			endpoint.SkewSeconds, err = r.durationSeconds(kv.Value, ext, timePkg, "InboundEndpoint.Skew")
 		case "Rate":
-			endpoint.Rate, err = r.readInboundRate(kv.Value, ext)
+			endpoint.Rate, err = r.readInboundRate(kv.Value, ext, timePkg)
 		case "Handle":
 			// A nil spelling is caught HERE rather than left to be merely
 			// "present": unlike a Tool's or a Job's, an InboundEndpoint has
@@ -150,7 +160,7 @@ func isStaticallyNilInboundHandle(expr ast.Expr, ext string) bool {
 }
 
 // readInboundRate reads the two metering buckets.
-func (r *unitReader) readInboundRate(expr ast.Expr, ext string) (inboundRate, error) {
+func (r *unitReader) readInboundRate(expr ast.Expr, ext, timePkg string) (inboundRate, error) {
 	lit, ok := expr.(*ast.CompositeLit)
 	if !ok || (lit.Type != nil && !isSelector(lit.Type, ext, "InboundRate")) {
 		return inboundRate{}, r.errAt(expr, "InboundEndpoint.Rate must be an extension.InboundRate literal")
@@ -168,9 +178,9 @@ func (r *unitReader) readInboundRate(expr ast.Expr, ext string) (inboundRate, er
 		var err error
 		switch k.Name {
 		case "PerIP":
-			rate.PerIP, err = r.readRate(kv.Value, ext, "InboundRate.PerIP")
+			rate.PerIP, err = r.readRate(kv.Value, ext, timePkg, "InboundRate.PerIP")
 		case "PerEndpoint":
-			rate.PerEndpoint, err = r.readRate(kv.Value, ext, "InboundRate.PerEndpoint")
+			rate.PerEndpoint, err = r.readRate(kv.Value, ext, timePkg, "InboundRate.PerEndpoint")
 		default:
 			err = r.errAt(kv, "InboundRate field %s is not derivable by this generator", k.Name)
 		}
@@ -182,7 +192,7 @@ func (r *unitReader) readInboundRate(expr ast.Expr, ext string) (inboundRate, er
 }
 
 // readRate reads one allowance.
-func (r *unitReader) readRate(expr ast.Expr, ext, field string) (rateRequest, error) {
+func (r *unitReader) readRate(expr ast.Expr, ext, timePkg, field string) (rateRequest, error) {
 	lit, ok := expr.(*ast.CompositeLit)
 	if !ok || (lit.Type != nil && !isSelector(lit.Type, ext, "Rate")) {
 		return rateRequest{}, r.errAt(expr, "%s must be an extension.Rate literal", field)
@@ -204,7 +214,7 @@ func (r *unitReader) readRate(expr ast.Expr, ext, field string) (rateRequest, er
 			limit, err = r.intLit(kv.Value, field+".Limit")
 			out.Limit = int(limit)
 		case "Window":
-			out.WindowSeconds, err = r.durationSeconds(kv.Value, ext, field+".Window")
+			out.WindowSeconds, err = r.durationSeconds(kv.Value, ext, timePkg, field+".Window")
 		default:
 			err = r.errAt(kv, "%s field %s is not derivable by this generator", field, k.Name)
 		}
@@ -288,8 +298,8 @@ func (r *unitReader) intLit(expr ast.Expr, field string) (int64, error) {
 // document a human reads is a number nobody checks. A sub-second value is
 // refused rather than rounded — rounding a skew of 500ms to zero would publish
 // "no freshness bound" for a declaration that asked for one.
-func (r *unitReader) durationSeconds(expr ast.Expr, ext, field string) (int64, error) {
-	total, err := r.duration(expr, ext, field)
+func (r *unitReader) durationSeconds(expr ast.Expr, ext, timePkg, field string) (int64, error) {
+	total, err := r.duration(expr, ext, timePkg, field)
 	if err != nil {
 		return 0, err
 	}
@@ -299,12 +309,12 @@ func (r *unitReader) durationSeconds(expr ast.Expr, ext, field string) (int64, e
 	return int64(total / time.Second), nil
 }
 
-func (r *unitReader) duration(expr ast.Expr, ext, field string) (time.Duration, error) {
+func (r *unitReader) duration(expr ast.Expr, ext, timePkg, field string) (time.Duration, error) {
 	switch v := expr.(type) {
 	case *ast.ParenExpr:
-		return r.duration(v.X, ext, field)
+		return r.duration(v.X, ext, timePkg, field)
 	case *ast.SelectorExpr:
-		return r.timeUnit(v, ext, field)
+		return r.timeUnit(v, timePkg, field)
 	case *ast.BinaryExpr:
 		if v.Op != token.MUL {
 			return 0, r.errAt(expr, "%s must be written as N * time.Unit", field)
@@ -312,14 +322,14 @@ func (r *unitReader) duration(expr ast.Expr, ext, field string) (time.Duration, 
 		// Either order — `5 * time.Minute` and `time.Minute * 5` are the same
 		// declaration and a generator that read one and refused the other would
 		// be a style rule wearing a grammar's clothes.
-		if unit, err := r.timeUnitOrNil(v.Y, ext); err == nil && unit != 0 {
+		if unit, err := r.timeUnitOrNil(v.Y, timePkg); err == nil && unit != 0 {
 			n, err := r.intLit(v.X, field)
 			if err != nil {
 				return 0, err
 			}
 			return time.Duration(n) * unit, nil
 		}
-		if unit, err := r.timeUnitOrNil(v.X, ext); err == nil && unit != 0 {
+		if unit, err := r.timeUnitOrNil(v.X, timePkg); err == nil && unit != 0 {
 			n, err := r.intLit(v.Y, field)
 			if err != nil {
 				return 0, err
@@ -331,7 +341,7 @@ func (r *unitReader) duration(expr ast.Expr, ext, field string) (time.Duration, 
 		// literal by a time unit" sends an author looking at the wrong operand.
 		for _, operand := range []ast.Expr{v.X, v.Y} {
 			if sel, ok := operand.(*ast.SelectorExpr); ok {
-				if pkg, ok := sel.X.(*ast.Ident); ok && pkg.Name == "time" {
+				if pkg, ok := sel.X.(*ast.Ident); ok && timePkg != "" && pkg.Name == timePkg {
 					return 0, r.errAt(operand, "%s names time.%s, and this generator reads only the time package's units of duration", field, sel.Sel.Name)
 				}
 			}
@@ -341,8 +351,8 @@ func (r *unitReader) duration(expr ast.Expr, ext, field string) (time.Duration, 
 	return 0, r.errAt(expr, "%s must be a duration written as N * time.Unit", field)
 }
 
-func (r *unitReader) timeUnit(sel *ast.SelectorExpr, ext, field string) (time.Duration, error) {
-	unit, err := r.timeUnitOrNil(sel, ext)
+func (r *unitReader) timeUnit(sel *ast.SelectorExpr, timePkg, field string) (time.Duration, error) {
+	unit, err := r.timeUnitOrNil(sel, timePkg)
 	if err != nil || unit == 0 {
 		return 0, r.errAt(sel, "%s names %s, and this generator reads only the time package's units", field, sel.Sel.Name)
 	}
@@ -352,7 +362,7 @@ func (r *unitReader) timeUnit(sel *ast.SelectorExpr, ext, field string) (time.Du
 // timeUnitOrNil answers the unit a selector names, or zero when the selector is
 // not a time unit at all. It reports an error only for a malformed selector,
 // so the caller can try the other operand of a multiplication.
-func (r *unitReader) timeUnitOrNil(expr ast.Expr, ext string) (time.Duration, error) {
+func (r *unitReader) timeUnitOrNil(expr ast.Expr, timePkg string) (time.Duration, error) {
 	sel, ok := expr.(*ast.SelectorExpr)
 	if !ok {
 		return 0, nil
@@ -361,9 +371,13 @@ func (r *unitReader) timeUnitOrNil(expr ast.Expr, ext string) (time.Duration, er
 	if !ok {
 		return 0, nil
 	}
-	// The time package, never the extension package: a published extension
-	// constant that happened to be named Minute would otherwise resolve here.
-	if pkg.Name != "time" || pkg.Name == ext {
+	// The file's own alias for the standard library "time" package, resolved
+	// the same way ext is resolved for the extension package — never the
+	// literal identifier "time". A unit may alias the import for any ordinary
+	// Go reason (`t "time"`), and a unit that aliases some OTHER package to
+	// the identifier "time" must not have that package's selectors misread as
+	// standard-library duration units just because they spell the same name.
+	if timePkg == "" || pkg.Name != timePkg {
 		return 0, nil
 	}
 	return timeUnits[sel.Sel.Name], nil

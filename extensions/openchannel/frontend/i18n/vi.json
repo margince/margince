@@ -52,6 +52,7 @@
   "extOpenchannel.recipe.demoBody": "Một tin nhắn gửi từ bên ngoài, để chứng minh điểm nhận có kiểm tra chữ ký.",
   "extOpenchannel.recipe.demoFrom": "Một người bên ngoài",
   "extOpenchannel.recipe.demoSubject": "Xin chào từ bên ngoài",
+  "extOpenchannel.recipe.secretInProcessArgs": "Lệnh này truyền khóa bí mật cho openssl dưới dạng đối số dòng lệnh. Trên một máy chủ dùng chung với người khác, đối số đó hiển thị trong danh sách tiến trình cho họ trong suốt thời gian lệnh chạy — tùy chọn HMAC của openssl không có cách nào đọc khóa từ biến môi trường hay từ đầu vào chuẩn. Chỉ chạy lệnh này trên máy chủ không dùng chung, hoặc ký yêu cầu bằng cách khác.",
   "extOpenchannel.recipe.secretPlaceholder": "dán khóa ký vào đây",
   "extOpenchannel.recipe.signedOver": "Chữ ký là HMAC-SHA256 của {material}, mã hóa hex, dùng khóa ký. Gửi nó dưới dạng sha256=<hex>. Dấu thời gian là giây unix và phải còn mới; nonce chỉ được dùng một lần.",
   "extOpenchannel.recipe.sub": "Hãy trỏ hệ thống gửi tới địa chỉ bên dưới và ký nội dung nó đăng. Mọi yêu cầu không mang chữ ký hợp lệ đều bị từ chối, bất kể ai gửi.",

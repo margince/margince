@@ -12,11 +12,13 @@ package openchannel
 // installation talks back to. That is precisely the class of fact somebody asks
 // about after the event.
 //
-// The one write that is NOT recorded is the anonymous inbound path's touch on
-// the traffic counters, and that exemption is stated where it is taken
-// (inbound.go): a counter moving is not a decision anybody made, and a ledger
-// row per arriving request would turn the audit trail into a traffic log that
-// buries the decisions in it.
+// TWO writes are NOT recorded, and each exemption is stated where it is taken:
+// the anonymous inbound path's touch on the traffic counters (inbound.go), and
+// recordAttempt's touch on the same endpoint's outbound_sent counter
+// (outbound.go). Both move a traffic column rather than a decision anybody
+// made — the decision to send a message was recorded by the product where
+// somebody made it, and a ledger row per arriving or departing request would
+// turn the audit trail into a traffic log that buries the decisions in it.
 
 import (
 	"context"

@@ -27,7 +27,11 @@ export { useCan, useCanWrite } from "../app/capability";
 // only alternative left to a unit would be `String(n)` — which groups for
 // nobody. A surface that narrows the parameter without exporting the formatter
 // has told the unit to write the defect a different way.
-export { formatDateTime, formatNumber } from "../format/format";
+// `formatBytes` for the same reason, one step further: a unit screen that
+// reports a stored payload's size in bytes has no locale-aware unit scale of
+// its own to reach for, and inventing one per unit is the same defect
+// `formatNumber`'s note describes, one abstraction level up.
+export { formatBytes, formatDateTime, formatNumber } from "../format/format";
 // LocaleProvider is here for the TESTS: a unit's screen calls useT, so a test
 // that renders it without the provider the app mounts around it renders
 // nothing useful. Exporting the provider is what lets a unit test its own

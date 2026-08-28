@@ -53,7 +53,10 @@ func registrableURL(raw string) (string, error) {
 	switch {
 	case parsed.Scheme != "https":
 		return "", fmt.Errorf("%w: the address must be https — what this connector sends rides it", extension.ErrInvalid)
-	case parsed.Host == "":
+	case parsed.Host == "", parsed.Hostname() == "":
+		// A port-only authority such as "https://:443/hook" leaves Host
+		// non-empty (":443") while naming no host at all — Hostname() is what
+		// actually strips the port, so it is what must be checked.
 		return "", fmt.Errorf("%w: the address names no host", extension.ErrInvalid)
 	case parsed.User != nil:
 		return "", fmt.Errorf("%w: the address carries credentials, which would be sent on every request", extension.ErrInvalid)

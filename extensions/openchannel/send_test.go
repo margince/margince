@@ -428,6 +428,23 @@ func TestLiveAnswersWithoutSpendingTheCredential(t *testing.T) {
 	}
 }
 
+// A stored URL that no longer passes registrableURL — for instance one saved
+// before the rule tightened to refuse an address literal — must answer FALSE,
+// not true: every send dials through newSender, which runs the same check and
+// would refuse it, so a "yes" here is a channel the product advertises as
+// working and every attempt through it immediately fails.
+func TestLiveRefusesAStoredURLThatNoLongerPassesTheGrammar(t *testing.T) {
+	t.Parallel()
+	rt := sendableEndpoint("https://10.0.0.5/hook")
+	answered, err := live(context.Background(), rt, ownerUserID)
+	if err != nil {
+		t.Fatalf("asking whether this member may send: %v", err)
+	}
+	if answered {
+		t.Fatal("a stored address that fails registrableURL was reported live — every send through it dials newSender, which refuses the same address")
+	}
+}
+
 // A failure to FIND OUT is an error rather than a verdict. Asserting a capability
 // nobody could read is how a rep learns at transmission what they should have
 // been told at the composer.

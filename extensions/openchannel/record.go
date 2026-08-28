@@ -155,7 +155,20 @@ func threadOf(doc arrival) string {
 // Blanks are dropped rather than carried because the core's internal-message
 // gate skips what it cannot read: a blank element is the same hole an empty set
 // is, one party at a time.
+//
+// A SENDER NAMED BY NEITHER ACCOUNT NOR EMAIL forces the whole set empty, even
+// though `to` is almost always present: the gate reads every address in the set
+// as one of the parties to the message, and a set holding only OUR OWN member's
+// address is indistinguishable from "every party is on our own domain" — it
+// would judge a message from a real, merely-unidentifiable outside sender as
+// wholly internal and drop it. The empty set is the case the core already
+// reserves for exactly this: "could not enumerate the parties", which keeps the
+// record rather than passing it through a domain check it cannot honestly
+// answer.
 func addressesOf(doc arrival) []string {
+	if strings.TrimSpace(doc.From.Account) == "" && strings.TrimSpace(doc.From.Email) == "" {
+		return nil
+	}
 	var found []string
 	for _, address := range []string{doc.From.Email, doc.To.Email} {
 		if trimmed := strings.TrimSpace(address); trimmed != "" {

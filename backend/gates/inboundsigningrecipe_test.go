@@ -72,10 +72,14 @@ func TestTheSigningScopeIsSpelledTheSameOnBothSidesOfTheWire(t *testing.T) {
 // side, a separator changed, a trailing newline after the body — makes these two
 // disagree here instead of in a member's terminal.
 //
-// What this does NOT hold is that the two field ORDERS match, which no static
-// comparison of a Go format against a shell format can see. The screen's own
-// test pins the emitted argument list verbatim, which is where that belongs:
-// it asserts against what curlRecipe RETURNS, not against the file's bytes.
+// THE TWO FIELD ORDERS ARE HELD TOO, by TestTheSignedFieldsAreOrderedTheSameWay
+// below: SigningPayload's call reaches its arguments by AST the same way this
+// test reaches its format literal, so the identifiers `scope, slug, ref,
+// at.Unix(), nonce` are as readable here as the format string itself is. What
+// this test does NOT hold is the shell's own argument SPELLING — a member
+// pastes `${SCOPE_LITERAL} "$SLUG" "$REF" "$TS" "$NONCE" "$BODY"` verbatim, and
+// pinning that exact list is the screen's own test's job, over what curlRecipe
+// RETURNS rather than over this file's bytes.
 func TestTheGeneratedCommandSignsTheSameShapeTheVerifierBuilds(t *testing.T) {
 	goFormat := signingPayloadFormat(t)
 	shellFormat := recipePrintfFormat(t)
@@ -100,6 +104,167 @@ func TestTheGeneratedCommandSignsTheSameShapeTheVerifierBuilds(t *testing.T) {
 			t.Errorf("format %q joins its fields with something other than a newline", format)
 		}
 	}
+}
+
+// TestTheSignedFieldsAreOrderedTheSameWay holds what the shape comparison above
+// admits it cannot see: the two sides could agree on how many fields there are
+// and still sign them in a different ORDER, which produces the identical opaque
+// 401 every other drift here does. SigningPayload's Sprintf call names its
+// fields as ARGUMENT IDENTIFIERS after the format string, in the order they are
+// bound to it — reading them is the same AST walk signingPayloadFormat already
+// does one field over, not a second copy of the verifier's rule.
+func TestTheSignedFieldsAreOrderedTheSameWay(t *testing.T) {
+	goOrder := signingPayloadArgOrder(t)
+	shellOrder := recipeArgOrder(t)
+	if len(shellOrder) == 0 || shellOrder[len(shellOrder)-1] != "body" {
+		t.Fatalf("the screen's argument list %v does not end with the body — this gate reads the wrong shape", shellOrder)
+	}
+	shellFields := shellOrder[:len(shellOrder)-1]
+	if len(goOrder) != len(shellFields) {
+		// The count mismatch this implies is already held by
+		// TestTheGeneratedCommandSignsTheSameShapeTheVerifierBuilds; here it
+		// would only make the order comparison below meaningless.
+		t.Fatalf("the verifier signs %d fields before the body (%v) and the screen's command signs %d (%v) — "+
+			"a field-count drift, not an ordering one", len(goOrder), goOrder, len(shellFields), shellFields)
+	}
+	for i, field := range goOrder {
+		if shellFields[i] != field {
+			t.Errorf("the verifier signs field %d as %q and the screen's command signs it as %q — the two "+
+				"sides agree on shape and disagree on order, which produces the same opaque 401 a wrong "+
+				"secret does: goOrder=%v shellOrder=%v", i, field, shellFields[i], goOrder, shellFields)
+			return
+		}
+	}
+}
+
+// signingPayloadArgOrder reads the field order SigningPayload's Sprintf call
+// binds to its format, as the canonical name each argument identifier stands
+// for — "scope", "slug", "ref", "timestamp" (bound as `at.Unix()`), "nonce".
+func signingPayloadArgOrder(t *testing.T) []string {
+	t.Helper()
+	const seamFile = "pkg/extension/inbound.go"
+	file, err := parser.ParseFile(token.NewFileSet(), seamFile, nil, 0)
+	if err != nil {
+		t.Fatalf("parsing %s: %v", seamFile, err)
+	}
+	var order []string
+	ast.Inspect(file, func(n ast.Node) bool {
+		fn, ok := n.(*ast.FuncDecl)
+		if !ok || fn.Name.Name != "SigningPayload" {
+			return true
+		}
+		ast.Inspect(fn.Body, func(inner ast.Node) bool {
+			call, ok := inner.(*ast.CallExpr)
+			if !ok || len(call.Args) == 0 {
+				return true
+			}
+			sel, ok := call.Fun.(*ast.SelectorExpr)
+			if !ok || sel.Sel.Name != "Sprintf" {
+				return true
+			}
+			for _, arg := range call.Args[1:] {
+				order = append(order, canonicalSigningField(t, seamFile, arg))
+			}
+			return false
+		})
+		return false
+	})
+	if order == nil {
+		t.Fatalf("%s no longer builds SigningPayload's head with one Sprintf format — this gate reads that "+
+			"shape, so a different one leaves the two sides of the signature unheld", seamFile)
+	}
+	return order
+}
+
+// canonicalSigningField names what a Sprintf argument stands for: its own
+// identifier for a bare one (`scope`, `slug`, `ref`, `nonce`), or the RECEIVER
+// of a one-argument method call (`at.Unix()` reads as `at`, the timestamp).
+// Anything else fails the test outright — a shape this gate cannot name is one
+// it must not silently skip over.
+func canonicalSigningField(t *testing.T, seamFile string, expr ast.Expr) string {
+	t.Helper()
+	switch e := expr.(type) {
+	case *ast.Ident:
+		return e.Name
+	case *ast.CallExpr:
+		if sel, ok := e.Fun.(*ast.SelectorExpr); ok {
+			if recv, ok := sel.X.(*ast.Ident); ok {
+				return recv.Name
+			}
+		}
+	}
+	t.Fatalf("%s: SigningPayload signs a field this gate cannot name (%T) — the order comparison cannot see it either", seamFile, expr)
+	return ""
+}
+
+// recipeArgOrder reads the positional argument list the screen's printf binds
+// to its format, as the same canonical field names signingPayloadArgOrder
+// answers, plus a trailing "body" for the argument the Go side does not sign
+// through Sprintf at all (it is appended to the payload separately).
+func recipeArgOrder(t *testing.T) []string {
+	t.Helper()
+	source, err := os.ReadFile(recipeFile)
+	if err != nil {
+		t.Fatalf("reading %s: %v", recipeFile, err)
+	}
+	for _, line := range strings.Split(string(source), "\n") {
+		const marker = "printf '"
+		start := strings.Index(line, marker)
+		if start == -1 {
+			continue
+		}
+		rest := line[start+len(marker):]
+		end := strings.Index(rest, "'")
+		if end == -1 {
+			continue
+		}
+		args := rest[end+1:]
+		// The line ends with a template-literal backtick and a line-continuing
+		// backslash, neither of them an argument — cut everything from the
+		// backtick on, then trim what is left.
+		if backtick := strings.IndexByte(args, '`'); backtick != -1 {
+			args = args[:backtick]
+		}
+		fields := strings.Fields(strings.TrimRight(strings.TrimSpace(args), `\`))
+		order := make([]string, 0, len(fields))
+		for _, field := range fields {
+			order = append(order, canonicalShellField(t, field))
+		}
+		return order
+	}
+	t.Fatalf("%s no longer emits a `printf '<format>' <args>` on one line — this gate reads that shape, "+
+		"so a different one leaves the argument order unheld", recipeFile)
+	return nil
+}
+
+// canonicalShellField names what one shell token binds to the format, in the
+// same vocabulary canonicalSigningField answers: strip the token down to its
+// bare shell-variable name and translate it to the field it stands for. An
+// unrecognised name fails the test rather than being silently skipped — a
+// renamed shell variable is exactly the drift this gate exists to catch.
+func canonicalShellField(t *testing.T, token string) string {
+	t.Helper()
+	name := strings.Trim(token, `"`)
+	name = strings.TrimPrefix(name, "$")
+	name = strings.TrimPrefix(name, "{")
+	name = strings.TrimSuffix(name, "}")
+	switch name {
+	case "SCOPE_LITERAL":
+		return "scope"
+	case "SLUG":
+		return "slug"
+	case "REF":
+		return "ref"
+	case "TS":
+		return "at"
+	case "NONCE":
+		return "nonce"
+	case "BODY":
+		return "body"
+	}
+	t.Fatalf("the recipe's printf binds a shell variable %q this gate does not recognise — the order "+
+		"comparison cannot see it either", token)
+	return ""
 }
 
 // signingPayloadFormat reads the format literal SigningPayload builds its head

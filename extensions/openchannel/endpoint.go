@@ -168,6 +168,13 @@ func open(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.R
 // member undoes, and the alternative — deleting the endpoint — would destroy
 // the credential every registered sender already holds, so a pause and a
 // resume would not be inverses of each other.
+//
+// ASKING FOR THE STATE IT ALREADY HAS IS A NO-OP, matching how `open` is
+// documented to behave when asked twice: nothing is written, no version is
+// bumped, and no ledger row is appended for a change that never happened. A
+// retried pause landing as a fresh write would drift the version out from
+// under a screen that read it moments before, and would tell an auditor a
+// state change occurred at a moment nothing changed.
 func setEnabled(ctx context.Context, rt extension.Runtime, in json.RawMessage) (json.RawMessage, error) {
 	args, err := extension.DecodeArgs[struct {
 		Enabled bool `json:"enabled"`
@@ -179,7 +186,8 @@ func setEnabled(ctx context.Context, rt extension.Runtime, in json.RawMessage) (
 	if !args.Enabled {
 		verb = eventDisabled
 	}
-	stored, err := updateOwnEndpoint(ctx, rt, "", verb, "enabled = $2", args.Enabled)
+	stored, err := updateOwnEndpoint(ctx, rt, "", verb, "enabled = $2", args.Enabled,
+		func(before endpoint) bool { return before.Enabled == args.Enabled })
 	if err != nil {
 		return nil, err
 	}
@@ -202,7 +210,7 @@ func registerURL(ctx context.Context, rt extension.Runtime, in json.RawMessage) 
 	if err != nil {
 		return nil, err
 	}
-	stored, err := updateOwnEndpoint(ctx, rt, args.EndpointID, eventURLRegistered, "url = $2", dialable)
+	stored, err := updateOwnEndpoint(ctx, rt, args.EndpointID, eventURLRegistered, "url = $2", dialable, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -229,7 +237,13 @@ func registerURL(ctx context.Context, rt extension.Runtime, in json.RawMessage) 
 // the caller's own before anything is written: a mismatch answers exactly as
 // no endpoint at all, because an operation that told a caller "that one exists
 // but is not yours" would be confirming a stranger's endpoint id back to them.
-func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtime, expectedID, verb, assignment string, value T) (endpoint, error) {
+//
+// noop, when not nil, is asked of the locked before-image: a true answer skips
+// the UPDATE, the version bump and the ledger row entirely and returns that
+// same before-image, because the caller asked for a state the row is already
+// in. registerURL passes nil — a re-registration is not this file's call to
+// judge idempotent, and its own test pins that it always writes.
+func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtime, expectedID, verb, assignment string, value T, noop func(before endpoint) bool) (endpoint, error) {
 	member, err := callingMember(rt, "changing an endpoint")
 	if err != nil {
 		return endpoint{}, err
@@ -245,6 +259,10 @@ func updateOwnEndpoint[T bool | string](ctx context.Context, rt extension.Runtim
 		}
 		if expectedID != "" && before.ID != expectedID {
 			return errNoEndpoint()
+		}
+		if noop != nil && noop(*before) {
+			stored = *before
+			return nil
 		}
 		stored, err = scanEndpoint(tx.QueryRow(ctx,
 			`UPDATE `+endpointTable+` SET `+assignment+`, version = version + 1, updated_at = now()

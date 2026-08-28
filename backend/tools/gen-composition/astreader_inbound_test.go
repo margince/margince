@@ -89,6 +89,128 @@ func TestInboundManifestOmitsTheHandler(t *testing.T) {
 	}
 }
 
+// aliasedTimeUnitSource is inboundUnitSource with the "time" import given an
+// alias, so a duration written as `t.Minute` names the standard library
+// package under a different identifier than the literal "time".
+func aliasedTimeUnitSource(entries string) string {
+	return `package x
+
+import (
+	"context"
+	t "time"
+
+	"github.com/margince/margince/backend/pkg/extension"
+)
+
+func receive(context.Context, extension.Runtime, extension.InboundRequest) (extension.InboundOutcome, error) {
+	return extension.InboundAccepted, nil
+}
+
+var _ = t.Minute
+
+func New() extension.Extension {
+	return extension.Extension{
+		Name:    "x",
+		Version: "0.1.0",
+		Inbound: []extension.InboundEndpoint{
+` + entries + `
+		},
+	}
+}
+`
+}
+
+const wholeEndpointAliasedTime = `			{
+				Slug:    "capture",
+				Secret:  "inbound",
+				MaxBody: 64 << 10,
+				Rate: extension.InboundRate{
+					PerIP:       extension.Rate{Limit: 60, Window: t.Minute},
+					PerEndpoint: extension.Rate{Limit: 120, Window: t.Minute},
+				},
+				Skew:   5 * t.Minute,
+				Handle: receive,
+			},
+`
+
+// An aliased "time" import must resolve exactly like the unaliased one: the
+// reader already follows the file's own alias for the extension package (ext
+// :=importAlias(file, extensionPkgPath)), and a literal "time" comparison for
+// the standard library package is the same shortcut for the other import —
+// one this unit's own author is free to alias for any ordinary Go reason.
+func TestInboundDerivesADurationThroughAnAliasedTimeImport(t *testing.T) {
+	derived, err := deriveSynthetic(t, "x", aliasedTimeUnitSource(wholeEndpointAliasedTime))
+	if err != nil {
+		t.Fatalf("a duration spelled through an aliased time import was refused: %v", err)
+	}
+	s := string(derived)
+	for _, want := range []string{
+		`"skew_seconds": 300`,
+		`"window_seconds": 60`,
+	} {
+		if !strings.Contains(s, want) {
+			t.Errorf("derived manifest misses %s:\n%s", want, s)
+		}
+	}
+}
+
+// shadowedTimeUnitSource imports the extension package UNDER THE NAME "time",
+// which shadows the standard library package's usual identifier: a reader
+// that matched the literal "time" would misread ext.Minute (were such a
+// constant to exist) as a duration unit, or — as exercised here — would wrongly
+// accept a Skew field that names no real time unit at all because the
+// identifier "time" no longer refers to the standard library.
+func shadowedTimeUnitSource(entries string) string {
+	return `package x
+
+import (
+	"context"
+
+	time "github.com/margince/margince/backend/pkg/extension"
+)
+
+func receive(context.Context, time.Runtime, time.InboundRequest) (time.InboundOutcome, error) {
+	return time.InboundAccepted, nil
+}
+
+func New() time.Extension {
+	return time.Extension{
+		Name:    "x",
+		Version: "0.1.0",
+		Inbound: []time.InboundEndpoint{
+` + entries + `
+		},
+	}
+}
+`
+}
+
+const wholeEndpointShadowedTime = `			{
+				Slug:    "capture",
+				Secret:  "inbound",
+				MaxBody: 64 << 10,
+				Rate: time.InboundRate{
+					PerIP:       time.Rate{Limit: 60, Window: time.Minute},
+					PerEndpoint: time.Rate{Limit: 120, Window: time.Minute},
+				},
+				Skew:   5 * time.Minute,
+				Handle: receive,
+			},
+`
+
+// With "time" shadowed by the extension package's own import alias, `time.Minute`
+// names no standard-library duration unit at all — this generator must refuse
+// it rather than silently resolve the wrong package's selector as a minute.
+func TestInboundRefusesATimeUnitWhenTimeIsShadowed(t *testing.T) {
+	_, err := deriveSynthetic(t, "x", shadowedTimeUnitSource(wholeEndpointShadowedTime))
+	if err == nil {
+		t.Fatal("a duration spelled through a shadowed \"time\" identifier was derived as though it named a real time unit")
+	}
+	if !strings.Contains(err.Error(), "time package's units") {
+		t.Fatalf("refused for the wrong reason: %v", err)
+	}
+}
+
 func TestNoInboundOmitsTheField(t *testing.T) {
 	derived, err := deriveSynthetic(t, "x", toolUnitSource("\t\t\tName: \"t\","),
 		syntheticVerb("x", "t", "auto_execute", "read"))

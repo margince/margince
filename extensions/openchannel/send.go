@@ -195,6 +195,14 @@ func sendable(ctx context.Context, rt extension.Runtime, member extension.UserID
 	case mine.URL == "":
 		return endpoint{}, nil, fmt.Errorf("%w: this member has registered no address for this connector to post to", extension.ErrNotFound)
 	}
+	// The same grammar newSender dials through, asked here too: a stored URL
+	// that no longer passes it — one saved before the rule tightened — must not
+	// read as sendable. Live calls this and reports it as a definite "yes",
+	// which the product takes as a channel that works; every attempt through it
+	// would fail at dial time regardless.
+	if _, err := registrableURL(mine.URL); err != nil {
+		return endpoint{}, nil, fmt.Errorf("%w: this member's registered address no longer names a postable host", extension.ErrNotFound)
+	}
 	secret, err := rt.Secrets().GetUser(ctx, member, inboundSecretKey)
 	if err != nil {
 		if errors.Is(err, extension.ErrSecretNotFound) {

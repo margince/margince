@@ -52,6 +52,7 @@
   "extOpenchannel.recipe.demoBody": "A message posted from outside, to prove the endpoint verifies.",
   "extOpenchannel.recipe.demoFrom": "Someone Outside",
   "extOpenchannel.recipe.demoSubject": "Hello from outside",
+  "extOpenchannel.recipe.secretInProcessArgs": "This command passes the secret to openssl as a command-line argument. On a host you share with anyone else, that argument is visible to them in the process list for as long as the command runs — openssl's HMAC option has no way to read the key from an environment variable or from stdin instead. Run it only on a host you do not share, or sign the request some other way.",
   "extOpenchannel.recipe.secretPlaceholder": "paste the signing secret here",
   "extOpenchannel.recipe.signedOver": "The signature is the HMAC-SHA256 of {material}, hex-encoded, under the signing secret. Send it as sha256=<hex>. The timestamp is unix seconds and must be recent; the nonce may be used once.",
   "extOpenchannel.recipe.sub": "Point a sender at the address below and sign what it posts. Every request that carries no valid signature is refused, whoever sent it.",

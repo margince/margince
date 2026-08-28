@@ -134,6 +134,13 @@ export function Recipe({ endpoint }: Readonly<{ endpoint: Endpoint }>) {
           body,
         )}
       </pre>
+      {/* openssl's -hmac option takes the key only on its command line — there
+          is no environment-variable or stdin form to route it through instead
+          — so a shared host really does show it in the process list for as
+          long as the command runs. Said here rather than left silent. */}
+      <Callout tone="warn">
+        {t("extOpenchannel.recipe.secretInProcessArgs")}
+      </Callout>
     </>
   );
 }

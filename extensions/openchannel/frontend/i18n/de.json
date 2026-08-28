@@ -52,6 +52,7 @@
   "extOpenchannel.recipe.demoBody": "Eine von außen gesendete Nachricht, die zeigt, dass der Endpunkt prüft.",
   "extOpenchannel.recipe.demoFrom": "Jemand von außen",
   "extOpenchannel.recipe.demoSubject": "Hallo von außen",
+  "extOpenchannel.recipe.secretInProcessArgs": "Dieser Befehl übergibt das Geheimnis an openssl als Kommandozeilenargument. Auf einem Host, den Sie mit anderen teilen, ist dieses Argument dort für die Dauer des Befehls in der Prozessliste sichtbar — die HMAC-Option von openssl kann den Schlüssel nicht aus einer Umgebungsvariablen oder von der Standardeingabe lesen. Führen Sie den Befehl nur auf einem nicht geteilten Host aus, oder signieren Sie die Anfrage auf einem anderen Weg.",
   "extOpenchannel.recipe.secretPlaceholder": "hier das Signaturgeheimnis einsetzen",
   "extOpenchannel.recipe.signedOver": "Die Signatur ist der HMAC-SHA256 über {material}, hexadezimal kodiert, unter dem Signaturgeheimnis. Senden Sie ihn als sha256=<hex>. Der Zeitstempel sind Unix-Sekunden und muss aktuell sein; die Nonce darf nur einmal verwendet werden.",
   "extOpenchannel.recipe.sub": "Richten Sie ein sendendes System auf die Adresse unten und signieren Sie, was es sendet. Jede Anfrage ohne gültige Signatur wird abgelehnt, gleich von wem sie kommt.",

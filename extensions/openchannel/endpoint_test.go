@@ -220,6 +220,39 @@ func TestEveryEndpointOperationRefusesAnInvocationWithNobodyBehindIt(t *testing.
 	}
 }
 
+// Retrying set_enabled with the state the endpoint already has must write
+// NOTHING — matching how `open` is documented to behave when asked twice.
+// Bumping the version and appending a ledger entry for a change that never
+// happened would drift the version out from under a screen that just read it,
+// and would tell an auditor a state change occurred at a moment nothing
+// changed.
+func TestSetEnabledWithTheStateItAlreadyHasIsANoOp(t *testing.T) {
+	t.Parallel()
+	rt := newRuntime()
+	rt.tx.singleRows = [][]any{
+		endpointRow(endpointID, ownerUserID, "", true),
+	}
+
+	out, err := setEnabled(context.Background(), rt, json.RawMessage(`{"enabled":true}`))
+	if err != nil {
+		t.Fatalf("asking for the state it already has: %v", err)
+	}
+	if !jsonOf[endpoint](t, out).Enabled {
+		t.Fatal("the answer must still report the endpoint's actual (unchanged) state")
+	}
+	for _, sql := range rt.tx.statements {
+		if strings.HasPrefix(sql, "UPDATE") {
+			t.Fatalf("a no-op ask still wrote:\n%s", sql)
+		}
+	}
+	if len(rt.tx.audited) != 0 {
+		t.Fatalf("a no-op ask appended %d ledger rows, want 0", len(rt.tx.audited))
+	}
+	if len(rt.tx.published) != 0 {
+		t.Fatalf("a no-op ask published %d events, want 0", len(rt.tx.published))
+	}
+}
+
 func TestPausingRecordsBothImagesAgainstTheOwnersRow(t *testing.T) {
 	t.Parallel()
 	rt := newRuntime()

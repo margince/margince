@@ -75,6 +75,10 @@ describe("the published frontend surface", () => {
     ]);
     expect(Object.keys(appSurface).sort()).toEqual([
       "LocaleProvider",
+      // formatBytes: a unit reporting a stored payload's size has no
+      // locale-aware byte scale of its own, one level past formatNumber's own
+      // note below.
+      "formatBytes",
       "formatDateTime",
       // formatNumber: `useT` refuses a raw number, so without it a unit's only
       // way to put a figure in a sentence is `String(n)` — ungrouped for every
