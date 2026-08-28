@@ -28,11 +28,13 @@ package gates
 // about a rule they keep.
 
 import (
+	"fmt"
 	"go/ast"
-	"go/build/constraint"
+	"go/build"
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"os"
 	"path"
 	"path/filepath"
 	"sort"
@@ -94,13 +96,24 @@ func TestNoIntegrationSuiteOpensAnUnboundedPool(t *testing.T) {
 	}
 }
 
-// integrationSuitesUnder parses every Go test file in the integration lane
-// under these roots.
+// integrationSuitesUnder parses every Go test file the integration lane would
+// build under these roots.
 //
-// Keyed on the build TAG rather than the filename: the tag is what puts a file
-// in the lane, and a suite could be named anything. Comments are parsed because
-// the tag is one — the only place in this gate where a comment is read on
-// purpose.
+// The lane decision is go/build's, not this file's. A hand-rolled reading of
+// the constraint gets two things wrong in the direction a prohibition must
+// never be wrong — it EXCLUDES files, so their pool constructors go unjudged
+// and the gate reads green:
+//
+//   - `//go:build integration && linux` is false unless linux is set too, and
+//     the lane is linux. Evaluating with the integration tag alone drops every
+//     platform-qualified suite.
+//   - two legacy `// +build` lines are combined by Go with AND. Reading them
+//     one at a time and taking the first that passes is OR, which admits files
+//     Go would not build and, worse, is a different rule from the one the
+//     compiler applies.
+//
+// MatchFile also applies the `_linux.go` / `_test.go` filename rules, which is
+// a third thing worth not reimplementing.
 func integrationSuitesUnder(t *testing.T, roots ...string) []gatekit.ParsedFile {
 	t.Helper()
 	fset := token.NewFileSet()
@@ -113,12 +126,16 @@ func integrationSuitesUnder(t *testing.T, roots ...string) []gatekit.ParsedFile 
 			if entry.IsDir() || !strings.HasSuffix(p, "_test.go") {
 				return nil
 			}
+			built, err := laneWouldBuild(filepath.Dir(p), entry.Name())
+			if err != nil {
+				return err
+			}
+			if !built {
+				return nil
+			}
 			file, parseErr := parser.ParseFile(fset, p, nil, parser.ParseComments)
 			if parseErr != nil {
 				return parseErr
-			}
-			if !inIntegrationLane(file) {
-				return nil
 			}
 			suites = append(suites, gatekit.ParsedFile{Path: filepath.ToSlash(p), File: file})
 			return nil
@@ -130,36 +147,40 @@ func integrationSuitesUnder(t *testing.T, roots ...string) []gatekit.ParsedFile 
 	return suites
 }
 
-// inIntegrationLane reports whether Go would BUILD this file with the
-// integration tag set.
+// laneContexts are the build contexts the integration lane runs in.
 //
-// Parsed with go/build/constraint rather than matched as text, because the two
-// answers differ in both directions. `//go:build !integration` contains the
-// word and is the file Go EXCLUDES when the tag is on — judging it would report
-// a unit-lane file for a rule it is not under. And a `//go:build` line below
-// the package clause is not a constraint at all; Go ignores it, and so must
-// this, or a sentence in a doc comment could enrol a file in a lane it never
-// runs in.
-func inIntegrationLane(file *ast.File) bool {
-	for _, group := range file.Comments {
-		// Constraints sit ABOVE the package clause. A group starting after it
-		// is prose, whatever it says.
-		if group.Pos() > file.Package {
-			break
+// TWO, and a file matching EITHER is judged. The lane runs on linux with cgo,
+// which is the authoritative one — a suite this gate must judge is one CI would
+// build. The local context is asked as well so a developer running the gate on
+// another platform still judges the platform-qualified suites their own machine
+// builds, rather than getting a quieter answer than CI's from the same command.
+//
+// Judging MORE files is the safe direction for a prohibition: the cost of an
+// extra file is a finding somebody reads, and the cost of a missing one is the
+// gate reading green over the thing it exists to refuse.
+func laneContexts() []build.Context {
+	lane := build.Default
+	lane.GOOS, lane.GOARCH, lane.CgoEnabled = "linux", "amd64", true
+	lane.BuildTags = append([]string{"integration"}, build.Default.BuildTags...)
+
+	local := build.Default
+	local.CgoEnabled = true
+	local.BuildTags = append([]string{"integration"}, build.Default.BuildTags...)
+	return []build.Context{lane, local}
+}
+
+// laneWouldBuild reports whether the integration lane compiles this file.
+func laneWouldBuild(dir, name string) (bool, error) {
+	for _, ctxt := range laneContexts() {
+		match, err := ctxt.MatchFile(dir, name)
+		if err != nil {
+			return false, fmt.Errorf("reading %s's build constraint: %w", filepath.Join(dir, name), err)
 		}
-		for _, line := range group.List {
-			expr, err := constraint.Parse(line.Text)
-			if err != nil {
-				continue
-			}
-			// Evaluated with the tag ON, which is the question: would this file
-			// be built in the integration lane.
-			if expr.Eval(func(tag string) bool { return tag == "integration" }) {
-				return true
-			}
+		if match {
+			return true, nil
 		}
 	}
-	return false
+	return false, nil
 }
 
 // unboundedPoolsIn names each call in one suite that opens a pool the lane's
@@ -205,4 +226,64 @@ func callsQualified(file *ast.File, pkg, name string) bool {
 		return !found
 	})
 	return found
+}
+
+// TestTheLaneCensusReadsBuildConstraintsTheWayGoDoes holds the census's
+// membership rule against go/build's.
+//
+// Membership is where a prohibition like this fails quietly: a file the census
+// does not judge is not reported, and a gate that judged fewer files than it
+// claims reads exactly like a clean tree. Every case below was wrong in an
+// earlier version that evaluated the constraint by hand — `integration &&
+// linux` came out false because only the integration tag was set, and two
+// legacy lines were read as OR where Go combines them with AND.
+//
+// Synthetic files, because the shapes that matter are ones this tree does not
+// happen to contain, and a census over what it happens to contain proves
+// nothing about the next file somebody writes.
+func TestTheLaneCensusReadsBuildConstraintsTheWayGoDoes(t *testing.T) {
+	t.Parallel()
+	dir := t.TempDir()
+	for _, probe := range []struct {
+		what       string
+		constraint string
+		built      bool
+	}{
+		{"the plain lane tag", "//go:build integration\n", true},
+		// The lane runs on linux, so a suite qualified to it IS one this gate
+		// must judge. Evaluating with the integration tag alone made this false
+		// and dropped every platform-qualified suite.
+		{"qualified to the lane's platform", "//go:build integration && linux\n", true},
+		{"qualified to cgo, which the lane enables", "//go:build integration && cgo\n", true},
+		// The file Go EXCLUDES when the tag is on. It contains the word, which
+		// is why a text match reported it.
+		{"negated", "//go:build !integration\n", false},
+		// Go combines separate legacy lines with AND. Reading them one at a
+		// time and taking the first that passes is OR.
+		{"two legacy lines, both satisfied", "// +build integration\n// +build linux\n", true},
+		{"two legacy lines, the second unsatisfiable", "// +build integration\n// +build ignoreme\n", false},
+		// An unconstrained file is built under EVERY tag set, the lane's
+		// included, so it is judged here — and that is the right answer twice
+		// over: it does run in the lane, and it also runs in the unit lane,
+		// where check-test-lanes.sh forbids it a real connection at all. A file
+		// that cannot legitimately open a pool costs this census nothing.
+		{"no constraint at all — built in every lane", "", true},
+	} {
+		t.Run(probe.what, func(t *testing.T) {
+			name := "probe_test.go"
+			source := probe.constraint + "\npackage probe\n"
+			if err := os.WriteFile(filepath.Join(dir, name), []byte(source), 0o600); err != nil {
+				t.Fatal(err)
+			}
+			built, err := laneWouldBuild(dir, name)
+			if err != nil {
+				t.Fatalf("reading the constraint: %v", err)
+			}
+			if built != probe.built {
+				t.Errorf("the lane builds it = %t, want %t — a file this census does not judge is a file "+
+					"whose pool constructors go unreported, and the gate then reads like a clean tree",
+					built, probe.built)
+			}
+		})
+	}
 }
