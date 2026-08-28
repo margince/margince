@@ -42,6 +42,12 @@ describe("the published frontend surface", () => {
       "Callout",
       "Card",
       "ChoiceList",
+      // DataTable: a unit had a primitive for one record's facts (FactList) and
+      // none at all for a LIST of records — and a unit ships no stylesheet, so
+      // the bare `<table>` it was left with drew unaligned and took the page
+      // sideways with it. Not ListTable: that one is a record list with
+      // server-backed dials a caller owes state to.
+      "DataTable",
       "EmptyState",
       // FactList: a unit screen had no other way to draw a label→value pair,
       // because no extension ships a stylesheet — so both connector screens
