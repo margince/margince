@@ -59,7 +59,7 @@ func (a tagAdapter) EnsureTag(ctx context.Context, name string) (ids.UUID, error
 		return ids.UUID{}, findErr
 	}
 	if !ok {
-		return ids.UUID{}, fmt.Errorf("a tag named %q exists but is archived; restore it or use another name: %w",
+		return ids.UUID{}, fmt.Errorf("a tag named %q exists but is archived and is not reused; use a different name: %w",
 			name, err)
 	}
 	return found, nil
