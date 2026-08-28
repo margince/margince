@@ -35,6 +35,13 @@ const (
 	eventEnabled       = "enabled"
 	eventDisabled      = "disabled"
 	eventURLRegistered = "url_registered"
+	// The two facts about a QUEUED request that somebody asks about afterwards:
+	// this installation accepted a message and will now never act on it, and a
+	// message it did act on is no longer on any timeline. Neither is derivable
+	// from the endpoint's counters, which is why they are the queue table's own
+	// verbs rather than more of the endpoint's.
+	eventRequestParked    = "request_parked"
+	eventRequestWithdrawn = "request_withdrawn"
 )
 
 // recordEndpoint writes the ledger row and the event for one endpoint write, in
@@ -93,4 +100,61 @@ func endpointImage(e *endpoint) (json.RawMessage, error) {
 		return nil, nil
 	}
 	return json.Marshal(e)
+}
+
+// recordParked writes the ledger row for a request the drain has stopped
+// attempting, in the caller's transaction.
+//
+// WHY A QUEUE ROW EARNS ONE WHEN AN ARRIVAL DOES NOT. An arrival is not a
+// decision anybody made — the file header says why recording one per anonymous
+// request would bury the decisions. Parking is: this installation accepted a
+// message, told the sender so, and has now decided that nothing further will be
+// done with it. "This connector has been parking every request since Tuesday" is
+// a question somebody has to be able to answer.
+//
+// It carries a DETAIL and no images. The images would be the row's own fields —
+// the state and the attempt count — which the audit action and this detail
+// already say, while what a reader actually wants is why it stopped, and that is
+// context about the write rather than a field of the record.
+func recordParked(ctx context.Context, tx extension.Tx, req queued, class extension.FailureClass) error {
+	detail, err := json.Marshal(struct {
+		Class    string `json:"class"`
+		Attempts int    `json:"attempts"`
+	}{Class: class.Class, Attempts: req.attempts + 1})
+	if err != nil {
+		return err
+	}
+	return tx.Record(ctx,
+		extension.Change{
+			Action: extension.AuditArchive,
+			Entity: inboundEntity,
+			ID:     req.id,
+			Detail: detail,
+		},
+		extension.Event{Verb: eventRequestParked, Payload: detail})
+}
+
+// recordWithdrawn writes the ledger row for a request whose timeline entry has
+// been archived, in the caller's transaction.
+//
+// The CAUSE goes in the detail rather than in an image: the row's own fields do
+// not record why they changed, and a reader asking who withdrew this is asking
+// about the event, not about the row.
+func recordWithdrawn(ctx context.Context, tx extension.Tx, requestID string, d extension.Delivery) error {
+	detail, err := json.Marshal(struct {
+		Cause      string `json:"cause"`
+		ActivityID string `json:"activity_id"`
+		EventID    string `json:"event_id"`
+	}{Cause: d.Type, ActivityID: d.Entity.ID, EventID: d.EventID})
+	if err != nil {
+		return err
+	}
+	return tx.Record(ctx,
+		extension.Change{
+			Action: extension.AuditArchive,
+			Entity: inboundEntity,
+			ID:     requestID,
+			Detail: detail,
+		},
+		extension.Event{Verb: eventRequestWithdrawn, Payload: detail})
 }

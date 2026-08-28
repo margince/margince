@@ -176,8 +176,8 @@ func enqueue(ctx context.Context, rt extension.Runtime, target inboundTarget, re
 	err := rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 		var pending int64
 		if err := tx.QueryRow(ctx,
-			`SELECT count(*) FROM `+inboundTable+` WHERE endpoint_id = $1::uuid AND state = 'pending'`,
-			target.id).Scan(&pending); err != nil {
+			`SELECT count(*) FROM `+inboundTable+` WHERE endpoint_id = $1::uuid AND state = $2`,
+			target.id, stateWaiting).Scan(&pending); err != nil {
 			return err
 		}
 		if pending >= maxPendingInbound {

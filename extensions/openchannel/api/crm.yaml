@@ -8,7 +8,7 @@
 # document — not the Go — is where every operation's risk tier, Passport scope,
 # RBAC object, prose and I/O schemas are declared.
 #
-# SIX OPERATIONS, all about the CALLER's own endpoint. None of them takes a
+# SEVEN OPERATIONS, all about the CALLER's own endpoint. None of them takes a
 # user id, and that absence is the load-bearing part of this document: the owner
 # recorded on an endpoint is whose sealed secret verifies every request that
 # arrives on it and whose authority the payload is eventually acted under, so an
@@ -25,11 +25,14 @@
 # says so wherever a ref is returned, because a member who believes the URL is
 # the secret will paste it somewhere.
 #
-# TWO RBAC OBJECTS, held by no seeded role. ext_openchannel_endpoint is the
+# THREE RBAC OBJECTS, held by no seeded role. ext_openchannel_endpoint is the
 # WRITE object: holding it means being able to open a path into this
 # installation that carries no session, so an operator grants it deliberately
-# rather than an install granting it for them. ext_openchannel_inbound is the
-# read object over what arrived.
+# rather than an install granting it for them. ext_openchannel_inbound and
+# ext_openchannel_outbound are the read objects over what arrived and what left
+# — separate, because who has been messaging a member and who that member has
+# been messaging are two questions an operator may want to answer for two
+# different sets of people.
 #
 # THE SIGNING SECRET IS RETURNED BY EXACTLY ONE OPERATION, ONCE. Nothing else
 # here returns it, masked or otherwise: a credential a governed surface can read
@@ -500,5 +503,86 @@ actions:
                               This installation's own clock when it arrived. Both are kept so
                               a sender whose clock is drifting can be seen rather than
                               inferred.
+          '401': { $ref: '#/components/responses/Unauthorized' }
+          '403': { $ref: '#/components/responses/Forbidden' }
+
+  - target: $.paths['/ext/openchannel/outbound']
+    update:
+      # The mirror of the inbound listing, and it takes no arguments for the same
+      # reason: the attempts it reports are the caller's own.
+      get:
+        operationId: openchannelListOutbound
+        summary: List what this connector posted for this member.
+        tags: [Extensions]
+        x-rbac-object: ext_openchannel_outbound
+        x-rbac-action: read
+        x-mcp-tool:
+          verb: openchannel_list_outbound
+          version: 1.0.0
+          title: List sent messages
+          # 🟢 read: it reads the unit's own rows and changes nothing. It sends
+          # nothing and posts nowhere — this is the record of attempts that
+          # already happened.
+          tier: auto_execute
+          scope: read
+          description: >-
+            List the most recent messages this connector posted to the calling
+            person's own registered address, newest first, and what became of
+            each: accepted, refused by the receiving system, or left with no
+            answer ever coming back. It reports that person's own endpoint only.
+            The message bodies are deliberately not repeated here — they are on
+            the CRM records the messages were sent from.
+        responses:
+          '200':
+            description: The most recent attempts, newest first.
+            content:
+              application/json:
+                schema:
+                  type: object
+                  additionalProperties: false
+                  required: [attempts]
+                  properties:
+                    attempts:
+                      type: array
+                      description: >-
+                        Empty when nothing has been sent, and also when the caller has not
+                        opened an endpoint — neither is an error.
+                      items:
+                        type: object
+                        additionalProperties: false
+                        required: [id, delivery_key, attempt, recipient, outcome, created_at]
+                        properties:
+                          id: { type: string, format: uuid }
+                          delivery_key:
+                            type: string
+                            description: >-
+                              The CRM's own id for the delivery. Several attempts of one
+                              message share it, which is what makes them recognisable as one
+                              message rather than several.
+                          attempt:
+                            type: integer
+                            description: Which try this was, counting from one.
+                          recipient:
+                            type: string
+                            description: >-
+                              The account this connector addressed, as the CRM resolved it.
+                          outcome:
+                            type: string
+                            enum: [sent, refused, unknown]
+                            description: >-
+                              `sent` was accepted by the receiving system, `refused` is one
+                              that answered and declined, and `unknown` is a message that
+                              left with no answer ever coming back — it may or may not have
+                              arrived, and it is deliberately not sent again, because a
+                              repeat would deliver twice with nothing able to detect it.
+                          error_class:
+                            type: string
+                            description: >-
+                              Why it did not go through, in this connector's own vocabulary.
+                              The receiving system's own message is deliberately not carried.
+                          created_at:
+                            type: string
+                            format: date-time
+                            description: When the attempt was made.
           '401': { $ref: '#/components/responses/Unauthorized' }
           '403': { $ref: '#/components/responses/Forbidden' }

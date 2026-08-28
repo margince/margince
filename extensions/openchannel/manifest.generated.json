@@ -4,6 +4,22 @@
   "version": "1.0.0",
   "risk_tiers": [
     {
+      "id": "job/drain",
+      "unit": "openchannel",
+      "kind": "extension_job",
+      "contract": "jobs.yaml",
+      "operation": "extension.job.tick",
+      "operation_id": "ext_openchannel_drain",
+      "route": "",
+      "method": "",
+      "scopes": [
+        "write"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:4693c9e28c3fd5d7640e57e0488ca756c3354cbb0b4568d2dd8da5b0203a2913",
+      "digest": "sha256:e28077bf6e8bd60e372b7a31a8636dd021d9b960b5ebd18d89e8d0d0510bf7d4"
+    },
+    {
       "id": "tool/openchannel_list_inbound",
       "unit": "openchannel",
       "kind": "agent_tool",
@@ -18,6 +34,22 @@
       "tier": "auto_execute",
       "fragment_hash": "sha256:9d54d795989b4daa10f2d1995d802652157ac772b9240709e5ba75a36199d598",
       "digest": "sha256:31a869ccf6a03def10695abe2af125dc39a36ef66ff213714e81bacfedb977a5"
+    },
+    {
+      "id": "tool/openchannel_list_outbound",
+      "unit": "openchannel",
+      "kind": "agent_tool",
+      "contract": "crm.yaml",
+      "operation": "agent.tool.invoke",
+      "operation_id": "openchannelListOutbound",
+      "route": "/ext/openchannel/outbound",
+      "method": "GET",
+      "scopes": [
+        "read"
+      ],
+      "tier": "auto_execute",
+      "fragment_hash": "sha256:919140974d9294eea4daafe75df196dac2da57703cc5e91f034b53d463947dce",
+      "digest": "sha256:91c3fd2dcec812a06b7f633579e887e4fb78e4debffb62bd5c623721f069c3e9"
     },
     {
       "id": "tool/openchannel_mint_secret",
@@ -104,6 +136,31 @@
     {
       "key": "inbound",
       "scope": "user"
+    }
+  ],
+  "subscriptions": [
+    {
+      "name": "withdraw_captured",
+      "events": [
+        "activity.archived"
+      ]
+    }
+  ],
+  "ingress": [
+    {
+      "system": "openchannel",
+      "lands": [
+        "activity"
+      ],
+      "merges": [
+        "email"
+      ]
+    }
+  ],
+  "channels": [
+    {
+      "provider": "openchannel",
+      "supplies_transport": true
     }
   ],
   "inbound": [

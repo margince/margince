@@ -49,6 +49,15 @@ type fakeRuntime struct {
 	// expired Runtime, an unwired role — which every handler must propagate
 	// rather than answer over.
 	txErr error
+
+	// What the drain handed the capture port, in order, and what the port
+	// answered. The two scripts are consumed in step with the calls, so a test
+	// scripts the third call's refusal without scripting the first two.
+	ingested      []extension.Record
+	ingestedFor   []extension.UserID
+	ingestedAfter []int
+	results       []extension.Result
+	ingestErrs    []error
 }
 
 func newRuntime() *fakeRuntime {
@@ -79,12 +88,37 @@ func (r *fakeRuntime) Tx(ctx context.Context, fn func(context.Context, extension
 	return fn(ctx, r.tx)
 }
 
-// Ingest is refused outright: this unit lands nothing through the ingress port
-// — its whole design is that an anonymous request buys a queue row and nothing
-// else — and a fake that answered one would let a handler start using a port
-// the declaration does not request.
-func (r *fakeRuntime) Ingest(context.Context, extension.UserID, extension.Record) (extension.Result, error) {
-	return extension.Result{}, extension.ErrIngressNotDeclared
+// Ingest records what was handed to the core and answers what the test
+// scripted, one entry per call.
+//
+// IT REFUSES A NESTED CALL exactly as the core does, and that refusal is the
+// whole reason this fake is not a stub returning success: the drain's central
+// rule is that a record is ingested with none of the unit's transactions open,
+// and a fake that accepted one would let the suite agree with the bug that
+// hangs a small connection pool in production.
+func (r *fakeRuntime) Ingest(_ context.Context, on extension.UserID, rec extension.Record) (extension.Result, error) {
+	if r.tx.open {
+		return extension.Result{}, extension.ErrNestedIngest
+	}
+	r.ingested = append(r.ingested, rec)
+	r.ingestedFor = append(r.ingestedFor, on)
+	// How many statements had been issued when this record was handed over. It
+	// is what lets a test assert the ORDER the drain's whole safety argument
+	// rests on: no row is advanced before the core has answered for it.
+	r.ingestedAfter = append(r.ingestedAfter, len(r.tx.statements))
+	// Both scripts are consumed in step, so an entry answers the call at its own
+	// position rather than the first one that asks.
+	var (
+		result extension.Result
+		err    error
+	)
+	if len(r.results) > 0 {
+		result, r.results = r.results[0], r.results[1:]
+	}
+	if len(r.ingestErrs) > 0 {
+		err, r.ingestErrs = r.ingestErrs[0], r.ingestErrs[1:]
+	}
+	return result, err
 }
 
 // fakeSecrets is the unit's namespace, user scope only — the installation scope
@@ -288,6 +322,12 @@ func scanInto(dest, values []any) error {
 			got, ok := value.(int)
 			if !ok {
 				return errScripted{at: at, want: "int", got: value}
+			}
+			*t = got
+		case *[]byte:
+			got, ok := value.([]byte)
+			if !ok {
+				return errScripted{at: at, want: "[]byte", got: value}
 			}
 			*t = got
 		case *int64:

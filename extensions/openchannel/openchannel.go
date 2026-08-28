@@ -38,7 +38,60 @@ func New() extension.Extension {
 			{Name: "openchannel_set_enabled", Handle: setEnabled},
 			{Name: "openchannel_register_url", Handle: registerURL},
 			{Name: "openchannel_list_inbound", Handle: listInbound},
+			{Name: "openchannel_list_outbound", Handle: listOutbound},
 		},
+		// The declaration that lets this unit reach core capture at all, and the
+		// source every request it drains is attributed to. A record naming
+		// anything else is refused at the call rather than landed under an
+		// invented provenance namespace.
+		//
+		// The email merge key is declared because an arriving document names both
+		// ends of the message, and the address on the far end is what lets a
+		// counterparty already known from mail be recognised as the same human
+		// rather than quietly becoming a second contact. It is VOUCHED FOR only
+		// as far as the sender's own signature goes — which is the honest bound,
+		// and why a message carrying an account id is resolved by that instead.
+		Ingress: []extension.IngressSource{
+			{
+				System: "openchannel",
+				Lands:  []extension.RecordKind{extension.KindActivity},
+				Merges: []extension.MergeKey{extension.MergeKeyEmail},
+			},
+		},
+		// The transport this unit supplies. A message it carries lands as kind
+		// `message` with `openchannel` on the provider column — the unit names the
+		// TRANSPORT and never the kind, which is what keeps the two axes separate
+		// from outside the core.
+		//
+		// Live is required because Send is present: a transport that can transmit
+		// must be able to say whether it still may, or the core has to guess at
+		// the one moment guessing is unrecoverable.
+		//
+		// A literal rather than the `provider` constant, for the reason the
+		// ingress source above is one: the manifest is derived STATICALLY,
+		// without compiling the unit, so a constant here would be a name the
+		// generator cannot resolve. The two are the same string on purpose and a
+		// test holds them equal.
+		Channels: []extension.Channel{
+			{Provider: "openchannel", Send: send, Live: live},
+		},
+		Jobs: []extension.Job{
+			{Name: "drain", Handle: drain},
+		},
+		// A landed request's timeline entry can be archived by a person, and
+		// nothing in the core knows this unit's queue claims to have produced it.
+		// Without this subscription that claim stays true forever about an entry
+		// nobody can see.
+		Subscriptions: []extension.Subscription{
+			{Name: "withdraw_captured", Events: []string{"activity.archived"}, Handle: withdrawCaptured},
+		},
+		// The ways the drain fails, in this unit's own words (failureclasses.go).
+		// Declaring them is what lets an operator reading a dead job see that the
+		// capture pipeline was unreachable rather than that the failure could not
+		// be classified — and the list is named rather than inlined because the
+		// same values are what the drain returns and what the queue rows record,
+		// so the declared set and the recorded class cannot become two sets.
+		FailureClasses: failureClasses,
 		// User scope, and it is the whole authority story for the anonymous
 		// edge: the secret an arriving request is verified against is the
 		// OWNER's, so a request that verifies is one that member agreed to
@@ -115,5 +168,25 @@ const inboundSlug = "receive"
 const (
 	endpointEntity = "ext_openchannel_endpoint"
 	endpointTable  = "ext." + endpointEntity
-	inboundTable   = "ext.ext_openchannel_inbound"
+	inboundEntity  = "ext_openchannel_inbound"
+	inboundTable   = "ext." + inboundEntity
+	outboundTable  = "ext.ext_openchannel_outbound"
+)
+
+// Where a received request is in the queue.
+//
+// They are the CHECK constraint's own vocabulary and the contract's published
+// enum, which is why they are constants rather than literals at each call site:
+// three spellings of one word is how a drain comes to look for rows in a state
+// nothing ever writes.
+//
+// `pending` is waiting to be acted on; `ingested` has been landed on the
+// timeline; `failed` is one the drain has stopped attempting, which stays visible
+// rather than being deleted; and `withdrawn` is one whose timeline entry has
+// since been archived.
+const (
+	stateWaiting   = "pending"
+	stateLanded    = "ingested"
+	stateParked    = "failed"
+	stateWithdrawn = "withdrawn"
 )
