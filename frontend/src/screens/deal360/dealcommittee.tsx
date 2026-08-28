@@ -93,9 +93,17 @@ export function DealCommitteeMap({
   const state = overlay
     ? ("unsupported" as const)
     : sectionState(
-        withheld
-          ? { sections_omitted: ["stakeholders"] }
-          : { sections_omitted: [] },
+        // undefined WHILE PENDING, because that is the only input from which
+        // sectionState can answer "loading": it reads the flag solely on the
+        // `!view` arm. Handing it a literal either way made `pending` dead
+        // here, and a read still in flight rendered "unavailable" — the same
+        // sentence a FAILED read gets, which is the distinction the comment
+        // above says this primitive exists to keep.
+        pending
+          ? undefined
+          : withheld
+            ? { sections_omitted: ["stakeholders"] }
+            : { sections_omitted: [] },
         "stakeholders",
         Boolean(coverage),
         seats.length,

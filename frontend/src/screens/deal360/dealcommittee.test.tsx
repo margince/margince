@@ -66,7 +66,12 @@ afterEach(cleanup);
 
 describe("the buying committee, drawn", () => {
   it("names every seat it draws, engaged or not", () => {
-    draw({ coverage: coverage(), withheld: false, pending: false, overlay: false });
+    draw({
+      coverage: coverage(),
+      withheld: false,
+      pending: false,
+      overlay: false,
+    });
     // The accessible list is the assertion rather than the SVG: a reader on a
     // screen reader gets the rows, and a map that drew shapes for seats it did
     // not name would pass any check that counted only circles.
@@ -74,17 +79,59 @@ describe("the buying committee, drawn", () => {
     expect(screen.getByText("Ines Kraft")).toBeTruthy();
   });
 
-  it("draws no seats for a withheld read, and says the lane is withheld", () => {
-    draw({ coverage: undefined, withheld: true, pending: false, overlay: false });
-    // Not merely "no names": an empty read draws no names either, so asserting
-    // absence alone would pass for both and this is the pair the map exists to
-    // tell apart.
+  // Each of the three no-seat states asserts ITS OWN sentence, not merely the
+  // absence of seats. Absence is what all three share, so a check built on it
+  // passes for every one of them — a withheld lane that regressed into an empty
+  // one would say "no stakeholder is recorded" to a reader who is simply not
+  // allowed to know, and every absence-only assertion would stay green.
+  it("says the lane is withheld rather than showing it as empty", () => {
+    draw({
+      coverage: undefined,
+      withheld: true,
+      pending: false,
+      overlay: false,
+    });
+    expect(
+      screen.getByText("Hidden — your role cannot read this"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("No stakeholder is recorded on this deal"),
+    ).toBeNull();
     expect(screen.queryByText("Dana Weiss")).toBeNull();
-    expect(document.querySelector(".dc-legend")).toBeNull();
   });
 
-  it("draws no seats while the read is still pending", () => {
-    draw({ coverage: undefined, withheld: false, pending: true, overlay: false });
+  it("says the read is still loading rather than showing it as empty", () => {
+    draw({
+      coverage: undefined,
+      withheld: false,
+      pending: true,
+      overlay: false,
+    });
+    // The busy region rather than its label: the label lands in an sr-only
+    // span or a visible note depending on the caller, and asserting the one
+    // this caller happens to choose would break on a presentational change
+    // that leaves the state correct.
+    expect(
+      document.querySelector('[role="status"][aria-busy="true"]'),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("No stakeholder is recorded on this deal"),
+    ).toBeNull();
     expect(screen.queryByText("Dana Weiss")).toBeNull();
+  });
+
+  it("says the deal has no stakeholders when the read is simply empty", () => {
+    draw({
+      coverage: coverage({ stakeholders: [] }),
+      withheld: false,
+      pending: false,
+      overlay: false,
+    });
+    expect(
+      screen.getByText("No stakeholder is recorded on this deal"),
+    ).toBeTruthy();
+    expect(
+      screen.queryByText("Hidden — your role cannot read this"),
+    ).toBeNull();
   });
 });
