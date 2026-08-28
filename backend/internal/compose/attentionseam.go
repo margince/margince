@@ -344,24 +344,28 @@ type attentionBriefing struct {
 	now    attention.Clock
 }
 
-// Queue serves the acting rep's unanswered briefing entries for today.
+// Queue serves the acting rep's unanswered briefing entries for today, and
+// whether a run exists at all.
 //
-// No run for today reads as an EMPTY lane, not a refusal. LatestRun answers
-// ErrNotFound both when the night has not produced one and when a rep is new,
-// and neither is a permission problem — reporting them as a withheld lane
-// would tell the rep something was hidden from her when nothing was.
+// No run for today reads as an EMPTY lane with ran=false, not a refusal.
+// LatestRun answers ErrNotFound both when the night has not produced one and
+// when a rep is new, and neither is a permission problem — reporting them as
+// a withheld lane would tell the rep something was hidden from her when
+// nothing was. ran is what lets the feed tell that emptiness from a morning
+// the rep finished: a found run counts as ran even with zero unanswered
+// entries.
 //
 // Answered entries are dropped here rather than in the feed, because what the
 // states mean belongs to the brief. The engine already resolves an expired
 // snooze on this read, so an item whose set-aside has run out comes back
 // actionable without anything here knowing that rule either.
-func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, error) {
+func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, bool, error) {
 	run, err := a.engine.LatestRun(ctx, a.now())
 	if errors.Is(err, apperrors.ErrNotFound) {
-		return nil, nil
+		return nil, false, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	entries := make([]attention.BriefEntry, 0, len(run.Items))
 	for _, item := range run.Items {
@@ -372,7 +376,7 @@ func (a attentionBriefing) Queue(ctx context.Context) ([]attention.BriefEntry, e
 			ID: item.ID, DealID: item.DealID, Rank: item.Rank,
 		})
 	}
-	return entries, nil
+	return entries, true, nil
 }
 
 // newAttentionHandlers assembles the surface for the API role.
@@ -395,7 +399,16 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionTasks{store: activities.NewStore(db)},
 		attentionReceipts{svc: svc},
 		attentionBriefing{engine: briefs.NewBriefEngine(pool, people.NewStore(db)), now: now},
-		attentionCommitments{store: people.NewStore(db)},
+		// Commitments is deliberately UNBOUND: the lane's production writer —
+		// the extraction task that reads promises out of captured
+		// conversations — does not exist yet (issue #849), so no real
+		// installation can put a row behind it, and a lane fed only by demo
+		// seeds would show every real customer an empty promise list dressed
+		// as a feature. A nil binding renders the lane ABSENT (the contract's
+		// honest "this feed does not do commitments"), and rebinding is the
+		// one-line attentionCommitments{store: people.NewStore(db)} when #849
+		// lands. The seam type below stays, tested, ready for that day.
+		nil,
 		attentionAtRisk{lister: quietDealLister(pool, deals.QuietThresholdDays)},
 		attentionDecay{pool: pool, store: people.NewStore(db), now: now},
 		attentionMeetings{store: activities.NewStore(db)},

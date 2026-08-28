@@ -30,10 +30,17 @@ import (
 // raw flags plus the fields that evidence them. The TOOL decides what is
 // presentable — a flag without its grounding field is dropped here.
 type SlippingDeal struct {
-	DealID            ids.UUID
-	Name              string
-	AmountMinor       *int64
-	Currency          *string
+	DealID      ids.UUID
+	Name        string
+	AmountMinor *int64
+	Currency    *string
+	// StageID and OwnerID ride the same row-scoped list read as the rest:
+	// the attention card states value, stage and ownership without a
+	// second read per deal, and nothing here widens what the list already
+	// showed the caller. Nil where the row carries none (an overlay-mirror
+	// deal has no native stage; a deal can be ownerless).
+	StageID           *ids.UUID
+	OwnerID           *ids.UUID
 	Stalled           bool
 	CloseOverdue      bool
 	LastActivityAt    *time.Time

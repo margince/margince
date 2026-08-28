@@ -90,6 +90,10 @@ func (a attentionAtRisk) Quiet(ctx context.Context) ([]attention.RiskyDeal, erro
 		risky = append(risky, attention.RiskyDeal{
 			DealID:            deal.DealID,
 			Name:              deal.Name,
+			StageID:           deal.StageID,
+			OwnerID:           deal.OwnerID,
+			AmountMinor:       deal.AmountMinor,
+			Currency:          deal.Currency,
 			QuietDays:         idleDaysOf(deal, now),
 			CloseOverdue:      deal.CloseOverdue,
 			ExpectedCloseDate: deal.ExpectedCloseDate,

@@ -88,10 +88,11 @@ func (s *Service) Assemble(ctx context.Context) (crmcontracts.Attention, error) 
 	}
 	var omitted []crmcontracts.AttentionLanesOmitted
 
-	morning, err := s.thisMorning(ctx)
+	morning, morningState, err := s.thisMorning(ctx)
 	omitted, err = fill(omitted, "this_morning", err, func() {
 		out.ThisMorning = morning
 		out.Counts.ThisMorning = len(morning)
+		out.ThisMorningState = &morningState
 	})
 	if err != nil {
 		return crmcontracts.Attention{}, err
@@ -155,16 +156,27 @@ type laneCount struct {
 // this lane is a worklist that must be finishable and a row that cannot be
 // removed is the opposite of finishing. Home still shows what was answered,
 // which is where a rep looks to see what she did.
-func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem, error) {
-	queue, err := s.briefing.Queue(ctx)
+func (s *Service) thisMorning(ctx context.Context) ([]crmcontracts.AttentionItem, crmcontracts.AttentionThisMorningState, error) {
+	queue, ran, err := s.briefing.Queue(ctx)
 	if err != nil {
-		return nil, err
+		return nil, "", err
 	}
 	items := make([]crmcontracts.AttentionItem, 0, len(queue))
 	for _, entry := range queue {
 		items = append(items, briefItem(entry))
 	}
-	return items, nil
+	// The state names WHY the lane holds what it holds. A run that ranked
+	// nothing reads all_answered too: "nothing worth your first hour" and
+	// "you answered everything" are the same message to a reader — nothing
+	// to do here — while no_run_today is the one that must not wear a tick.
+	state := crmcontracts.ItemsWaiting
+	switch {
+	case !ran:
+		state = crmcontracts.NoRunToday
+	case len(items) == 0:
+		state = crmcontracts.AllAnswered
+	}
+	return items, state, nil
 }
 
 // decisions is the needs_you lane: staged approvals and open duplicate pairs,

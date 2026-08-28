@@ -130,7 +130,12 @@ type Receipt struct {
 // case, and reserves apperrors.ErrPermissionDenied for a caller who may not
 // read the queue at all.
 type Briefing interface {
-	Queue(ctx context.Context) ([]BriefEntry, error)
+	// Queue answers the unanswered entries AND whether a run exists at all:
+	// ran=false means the night produced nothing for this reader, ran=true
+	// with no entries means every item is answered. The two render as the
+	// same empty lane, and only the second has earned a tick — so the seam
+	// states which rather than leaving the feed to infer it from emptiness.
+	Queue(ctx context.Context) (entries []BriefEntry, ran bool, err error)
 }
 
 // BriefEntry is one UNANSWERED queue entry: what it is about, and where it
@@ -202,6 +207,13 @@ type AtRisk interface {
 type RiskyDeal struct {
 	DealID ids.UUID
 	Name   string
+	// The card's facts, carried so the client draws value, stage and
+	// ownership without a second read per row. All optional: a deal can be
+	// ownerless, unpriced, or an overlay mirror with no native stage.
+	StageID     *ids.UUID
+	OwnerID     *ids.UUID
+	AmountMinor *int64
+	Currency    *string
 	// QuietDays is how long the deal has been idle, which is the number the
 	// card says out loud. Zero for a deal admitted only by its close date.
 	QuietDays int

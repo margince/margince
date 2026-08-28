@@ -1264,6 +1264,27 @@ func (e AttentionLanesOmitted) Valid() bool {
 	}
 }
 
+// Defines values for AttentionThisMorningState.
+const (
+	AllAnswered  AttentionThisMorningState = "all_answered"
+	ItemsWaiting AttentionThisMorningState = "items_waiting"
+	NoRunToday   AttentionThisMorningState = "no_run_today"
+)
+
+// Valid indicates whether the value is a known member of the AttentionThisMorningState enum.
+func (e AttentionThisMorningState) Valid() bool {
+	switch e {
+	case AllAnswered:
+		return true
+	case ItemsWaiting:
+		return true
+	case NoRunToday:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AttentionItemActions.
 const (
 	AttentionItemActionsAct      AttentionItemActions = "act"
@@ -13638,10 +13659,26 @@ type Attention struct {
 	// it is optional. Merging them would put "nothing is waiting on you" and
 	// "nothing was worth flagging" behind one number.
 	ThisMorning []AttentionItem `json:"this_morning"`
+
+	// ThisMorningState Why `this_morning` holds what it holds: the night produced no run for this
+	// reader; a run exists and every item is answered; or items are waiting (and
+	// the lane carries them). Named because the lane's emptiness is ambiguous on
+	// its own — "the night found nothing" and "you finished the morning" render
+	// identically as zero rows, and only one of them has earned a tick. Absent
+	// when the lane itself was withheld (`lanes_omitted` names it).
+	ThisMorningState *AttentionThisMorningState `json:"this_morning_state,omitempty"`
 }
 
 // AttentionLanesOmitted defines model for Attention.LanesOmitted.
 type AttentionLanesOmitted string
+
+// AttentionThisMorningState Why `this_morning` holds what it holds: the night produced no run for this
+// reader; a run exists and every item is answered; or items are waiting (and
+// the lane carries them). Named because the lane's emptiness is ambiguous on
+// its own — "the night found nothing" and "you finished the morning" render
+// identically as zero rows, and only one of them has earned a tick. Absent
+// when the lane itself was withheld (`lanes_omitted` names it).
+type AttentionThisMorningState string
 
 // AttentionCounts How many items each lane holds for THIS caller. `duplicates_open` is the dedupe
 // queue's own count under its both-sides-visible rule, kept separate because the
@@ -13668,6 +13705,20 @@ type AttentionCounts struct {
 	ThisMorning int `json:"this_morning"`
 }
 
+// AttentionDealFacts The deal behind a `deal_at_risk` item: the facts its card states, so a client
+// draws value and ownership without a second read per row. Sent only for
+// `source: deal_at_risk`. The stage travels as its id rather than a label — the
+// client already holds the pipelines vocabulary and writes the label in the
+// reader's own language; a label composed server-side would not be.
+type AttentionDealFacts struct {
+	AmountMinor *int64              `json:"amount_minor,omitempty"`
+	Currency    *string             `json:"currency,omitempty"`
+	OwnerId     *openapi_types.UUID `json:"owner_id,omitempty"`
+
+	// StageId The deal's current stage; null for an overlay-mirror deal, whose stage lives with the incumbent.
+	StageId *openapi_types.UUID `json:"stage_id,omitempty"`
+}
+
 // AttentionItem One thing waiting, in the words a reader recognises, with a typed reference back to
 // the record that owns it. The client routes a verb to that owner's endpoint — this
 // feed adds no decision authority of its own, exactly as the second approvals door
@@ -13686,6 +13737,13 @@ type AttentionItem struct {
 
 	// Confidence How sure the detector was, 0..1, where an item rests on a detection rather than a rule.
 	Confidence *float32 `json:"confidence,omitempty"`
+
+	// Deal The deal behind a `deal_at_risk` item: the facts its card states, so a client
+	// draws value and ownership without a second read per row. Sent only for
+	// `source: deal_at_risk`. The stage travels as its id rather than a label — the
+	// client already holds the pipelines vocabulary and writes the label in the
+	// reader's own language; a label composed server-side would not be.
+	Deal *AttentionDealFacts `json:"deal,omitempty"`
 
 	// Detail One supporting line: what changed, or what the evidence said.
 	Detail *string `json:"detail,omitempty"`
