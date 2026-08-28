@@ -299,7 +299,7 @@ type Extension struct {
 	// the unit's own vocabulary, each with what an operator does about it.
 	//
 	// It exists because a job failure reaches a human through river_job.errors,
-	// which has no workspace and so no RLS — so the job layer persists only
+	// a fleet-wide column every admin reads — so the job layer persists only
 	// sentences from a closed vocabulary and substitutes everything else. A unit
 	// that declares its classes here gets its own classification into that
 	// vocabulary, and its jobs return extension.Failure to speak it.

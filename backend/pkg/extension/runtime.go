@@ -49,12 +49,12 @@ var ErrNoRows = errors.New("extension: the query matched no rows")
 // OR OTHERWISE TRUSTED code. The composed set IS the trust boundary — the
 // vanilla tree ships only first-party units and an installation adds one
 // deliberately. Every wall documented here is DEFENCE IN DEPTH AGAINST
-// MISTAKES: it makes the accidental cross-tenant query, the forgotten scope,
-// the retained handle into a loud failure instead of a silent one. None of it
-// is a sandbox against a hostile unit, and running an untrusted unit in a
-// composed build is outside what this design supports. Issue #628 (a per-unit
-// database role) is the first change that would move any part of this from
-// convention to enforcement, and even that bounds only the database.
+// MISTAKES: it makes the query that reaches past a unit's own tables, the
+// forgotten scope, the retained handle into a loud failure instead of a silent
+// one. None of it is a sandbox against a hostile unit, and running an untrusted
+// unit in a composed build is outside what this design supports. Issue #628 (a
+// per-unit database role) is the first change that would move any part of this
+// from convention to enforcement, and even that bounds only the database.
 //
 // The core constructs it and knows which unit it is invoking, which is why
 // nothing here takes a unit name or re-scopes to one — a handler holds
@@ -71,14 +71,14 @@ type Runtime interface {
 	// Secrets is the unit's own secret namespace in the calling workspace.
 	Secrets() Secrets
 
-	// Tx runs fn inside ONE database transaction, already pinned to the
-	// workspace the invocation belongs to. The core takes that workspace
-	// from the INVOCATION, not from the ctx passed here: everything else
-	// this ctx carries is honoured — a shorter deadline, a cancellation, the
-	// values a handler put on it — but the tenant is re-bound from the call
-	// the Runtime was minted for. So a handler cannot widen its own scope,
-	// and it cannot do it by building a context either. The tenant policies
-	// then hold whatever SQL it writes to that workspace.
+	// Tx runs fn inside ONE database transaction on the workspace the
+	// invocation belongs to. The core takes that workspace from the
+	// INVOCATION, not from the ctx passed here: everything else this ctx
+	// carries is honoured — a shorter deadline, a cancellation, the values a
+	// handler put on it — but the workspace comes from the call the Runtime
+	// was minted for, so a handler cannot name a different one by building a
+	// context. What bounds the SQL inside is the unit's own tables and grants,
+	// not a policy; see Tx.
 	//
 	// fn returning an error rolls the transaction back; returning nil
 	// commits it. The Tx handed to fn is valid only for that call — it is
@@ -187,8 +187,9 @@ type Caller struct {
 	IsAgent bool
 }
 
-// Tx is a workspace-pinned database transaction, and the whole of it: the
-// three verbs a unit's own tables need — write a row, read one, read many.
+// Tx is a database transaction on the installation's workspace, and the whole
+// of it: the three verbs a unit's own tables need — write a row, read one,
+// read many.
 // It deliberately does NOT mirror a driver's API. Batching, copy protocols,
 // savepoints, listen/notify and connection-level state are all absent
 // because none of them can be handed to extension code without also handing
@@ -200,45 +201,41 @@ type Caller struct {
 // DATABASE's, and this is where the tier's threat model (see Runtime) has to be
 // stated concretely, because the honest answer differs by reader.
 //
-// AGAINST MISTAKES, which is what this is for, the tenant pin holds. The
-// transaction is bound to the calling workspace before fn runs — from the
-// INVOCATION, never from a context the handler supplies — and the
-// row-level-security policies key on that binding. A unit's query that forgets
-// a workspace predicate returns its own tenant's rows and nothing else, and a
-// write that names another tenant's id is refused by the policy. That is a real
-// property and it is the one this seam is designed around.
+// THERE IS NO TENANT WALL HERE, and the honest reason is that there is nothing
+// left for one to separate. An installation holds exactly one workspace —
+// identity.Service.InstallationWorkspace refuses a second rather than choosing
+// between them — so no table in this database carries workspace_id and no
+// row-level-security policy exists, in core or in the tier. What bounds a unit's
+// SQL is what its own migrations created and the grants they carry, and
+// extmigrategate refuses a unit table that declares the column or a policy over
+// it. If the product ever becomes multi-tenant the column returns to CORE first
+// and the tier follows it, in that order.
 //
-// AGAINST HOSTILE CODE, it does not hold, and neither does anything else here.
-// The pin is a transaction-scoped GUC (app.workspace_id), and a unit can rebind
-// it by executing `SELECT set_config('app.workspace_id', …, true)` through the
-// very verbs below — after which the policies read the new value. This was
-// verified against the shipped schema, not assumed. It is not fixable at this
-// layer: re-binding before every statement is defeated by ONE statement (a CTE
-// that rebinds and a sibling scan that reads under the new value, in the same
-// query), and a PostgreSQL GUC cannot be made immutable for a session. The real
-// answer is that RLS must key on something a unit cannot set — a per-unit
-// database ROLE, tracked as issue #628 — and until that lands the tenant wall
-// is defence in depth, not a boundary.
-//
-// WHAT IS NOT WALLED AT ALL, today, within one tenant:
+// WHAT IS NOT WALLED, therefore:
 //   - the CORE's tables. This runs on the shared application role, so a unit's
 //     SQL can address any table that role can.
 //   - OTHER UNITS' tables. Every unit's migration grants the same application
 //     role DML on its own ext_<name>_* tables, so unit A can read, rewrite or
 //     delete unit B's rows.
-//   - extension_secret. It is workspace-RLS'd and nothing more, so the secret
-//     namespacing Secrets enforces at the PORT is reachable around it through
-//     these three verbs — and because a unit runs in-process it can also read
-//     the keyvault root key from the environment and decrypt the ciphertext
-//     directly. "Sovereign inside its namespace, powerless outside it" is a
-//     property of polite units, not of this transaction.
+//   - extension_secret. The wall around it is structural in Go — every read and
+//     write goes through platform/extsecrets, which closes over the invoking
+//     unit's namespace — so the namespacing Secrets enforces at the PORT is
+//     reachable around it through these three verbs. And because a unit runs
+//     in-process it can also read the keyvault root key from the environment and
+//     decrypt the ciphertext directly. "Sovereign inside its namespace,
+//     powerless outside it" is a property of polite units, not of this
+//     transaction.
 //
-// All four are the same missing thing (#628) and all four are inside the
-// trusted-unit threat model above. A static gate does refuse the first two
-// where it can SEE them — backend/gates/extensionsqlscope_test.go reads the SQL a
-// unit's source spells out and holds it to that unit's own ext_<name>_* tables
-// — but a scanner is defence against mistakes by construction: it reads text,
-// and this seam takes whatever string a unit assembles.
+// All three are the same missing thing — a per-unit database ROLE, which would
+// bound a unit by grant rather than by convention, tracked as issue #628 — and
+// all three are inside the trusted-unit threat model above. Read that issue as
+// grant containment on its own argument; the tenant isolation it was once also
+// expected to carry is not a property this schema has to lose. A static gate does
+// refuse the first two where it can SEE them —
+// backend/gates/extensionsqlscope_test.go reads the SQL a unit's source spells
+// out and holds it to that unit's own ext_<name>_* tables — but a scanner is
+// defence against mistakes by construction: it reads text, and this seam takes
+// whatever string a unit assembles.
 //
 // args is ...any because SQL arguments are genuinely heterogeneous — a
 // statement's parameters are whatever its placeholders are — and every
