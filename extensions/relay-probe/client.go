@@ -20,7 +20,6 @@ import (
 	"net/url"
 	"strconv"
 	"strings"
-	"syscall"
 	"time"
 
 	"github.com/margince/margince/backend/pkg/extension"
@@ -102,26 +101,26 @@ type client struct {
 // THE GUARD IS THE POINT OF THIS CONSTRUCTOR. base_url is text a member typed:
 // without a control hook, `https://<name-that-resolves-to-169.254.169.254>`
 // makes this installation's own worker fetch its cloud metadata endpoint and
-// hand the answer to whoever asked. The core has exactly this guard
-// (internal/platform/netguard) and a unit cannot import it — the published
-// surface is stdlib-only and reaches nothing under internal, and an extensions/
-// module is its own Go module besides, so not even a fitness test can hold the
-// two side by side. What stands in for that is a table of addresses this
-// package refuses, kept in client_test.go and worth reading as the guard's real
-// definition. Publishing a guarded HTTP client on the tier's own surface is the
-// fix that removes the copy (#1194).
+// hand the answer to whoever asked.
+//
+// The guard is the INSTALLATION'S, reached rather than reproduced:
+// extension.OutboundTransport carries the same denylist the core dials through
+// and runs it after resolution. This unit used to restate the hook and the
+// predicate, with a table of addresses standing in for a fitness function that
+// could not cross the module boundary. It can now: the surface publishes the
+// client, the addresses moved to its own tests, and a gate refuses a unit that
+// writes its own.
 func newClient(base, token string) (*client, error) {
 	parsed, err := parseBaseURL(base)
 	if err != nil {
 		return nil, err
 	}
-	dialer := &net.Dialer{Timeout: requestTimeout, Control: refusePrivate}
 	return &client{
 		base:  parsed,
 		token: token,
 		http: &http.Client{
 			Timeout:   requestTimeout,
-			Transport: &http.Transport{DialContext: dialer.DialContext},
+			Transport: extension.OutboundTransport(),
 			// A redirect is another host, chosen by the provider rather than
 			// by the member — and the guard would still hold for it, which is
 			// exactly why refusing is cheap here. An API that answers a
@@ -170,50 +169,6 @@ func hostOnly(host string) string {
 		return h
 	}
 	return host
-}
-
-// refusePrivate refuses to dial anything that is not a globally routable
-// unicast address, on the CONCRETE address the resolver returned — so a DNS
-// answer pointing at the deployment's own network cannot bypass it, which
-// checking the name could not prevent.
-//
-// It is the core's netguard.RefusePrivate rule, restated because a unit cannot
-// import it (see newClient). TestTheEgressGuardRefusesEveryNonPublicAddress is
-// what holds this copy honest.
-func refusePrivate(_, address string, _ syscall.RawConn) error {
-	host, _, err := net.SplitHostPort(address)
-	if err != nil {
-		return fmt.Errorf("relay: the address %q is not host:port", address)
-	}
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return fmt.Errorf("relay: %q did not resolve to an address", host)
-	}
-	if !publicIP(ip) {
-		return fmt.Errorf("relay: refusing to dial %s — it is not a public address, and a member-supplied host must not become a probe of this deployment's own network", ip)
-	}
-	return nil
-}
-
-// publicIP reports whether ip is a globally routable unicast address.
-//
-// A CIDR this package cannot parse is treated as MATCHING, which is the safe
-// direction: a typo in the list above makes the guard refuse more, never less.
-func publicIP(ip net.IP) bool {
-	if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() ||
-		ip.IsMulticast() || ip.IsUnspecified() {
-		return false
-	}
-	// The core's own denylist, read from the published surface rather than
-	// restated here. A hand-copy drifts, and a range the core refuses while this
-	// unit admits it is a member-supplied host reaching an internal address —
-	// which is why the surface publishes it and why nothing below is a literal.
-	for _, reserved := range extension.ReservedNets() {
-		if reserved.Contains(ip) {
-			return false
-		}
-	}
-	return true
 }
 
 // providerUser is a Relay account, as both /auth/me and the batch lookup
