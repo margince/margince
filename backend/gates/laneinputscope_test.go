@@ -262,31 +262,25 @@ func scriptsUnder(targets map[string]*recipeTarget, vars map[string]string, root
 // line to OPEN with $(MAKE) followed neither half of the merge gate and judged
 // it against one timer script.
 func delegatedTargets(command string) []string {
-	body, isSubMake := strings.CutPrefix(
-		stripEnvironment(strings.TrimLeft(strings.TrimPrefix(command, "\t"), " \t@+-")), "$(MAKE)")
-	if !isSubMake || strings.Contains(body, " -C ") {
+	// Split into words first, because make separates a recipe's words with a tab
+	// as readily as with a space and neither the prefix nor the `-C` is found by
+	// matching a literal " ". A reader that missed one silently dropped a whole
+	// half of the merge gate from the census.
+	words := strings.Fields(strings.TrimLeft(command, " \t@+-"))
+	for len(words) > 0 && environmentAssignment.MatchString(words[0]) {
+		words = words[1:]
+	}
+	if len(words) == 0 || words[0] != "$(MAKE)" || slices.Contains(words, "-C") {
 		return nil
 	}
 	var targets []string
-	for _, token := range strings.Fields(body) {
-		if strings.HasPrefix(token, "-") || strings.ContainsAny(token, "$()") {
+	for _, word := range words[1:] {
+		if strings.HasPrefix(word, "-") || strings.ContainsAny(word, "$()") {
 			continue
 		}
-		targets = append(targets, token)
+		targets = append(targets, word)
 	}
 	return targets
-}
-
-// stripEnvironment drops the `NAME=value ` words a recipe sets for the command
-// that follows, which is where a recursive make often begins.
-func stripEnvironment(body string) string {
-	for {
-		first, rest, found := strings.Cut(body, " ")
-		if !found || !environmentAssignment.MatchString(first) {
-			return body
-		}
-		body = strings.TrimLeft(rest, " \t")
-	}
 }
 
 func sorted(set map[string]bool) []string {

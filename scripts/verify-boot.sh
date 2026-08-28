@@ -68,25 +68,43 @@ echo "== verify-boot 2/4: seeded people are visible =="
 # the server's own predicate takes.
 CURRENT_PRIMARY_JQ='.is_current_primary and (.ended_at == null or (.ended_at | tostring) >= $today)'
 TODAY="$(date -u +%F)"
-# Looked up by NAME rather than scanned off the first page of /v1/people. The
-# page held 100 rows and the seeded three were on it as long as the dev seed was
-# all that had run — on a stack that also carries the demo dataset they are not,
-# and a check that reads a smaller set than it means reports a pass it did not
-# earn. `q` is the API's own full-text lookup, so the read is exact whatever else
-# is in the installation.
+# Looked up record by record rather than scanned off the first page of a list.
+# The page held 100 rows and the seeded three were on it as long as the dev seed
+# was all that had run — on a stack that also carries the demo dataset they are
+# not, and a check that reads a smaller set than it means reports a pass it did
+# not earn. So every lookup here names its record, and follows the cursor to
+# exhaustion: `q` is a full-text query, and a page of its matches can be all the
+# people who merely share a word with the one being looked for.
+#
+# `select` is a jq filter over ONE row, and any further arguments go to jq — a
+# name is an `--arg`, never spliced into the filter. `$today` is bound for the
+# callers that ask about employment currency.
+find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
+  local path="$1" select="$2" cursor="" status row
+  shift 2
+  while :; do
+    status="$(curl -sS --max-time 15 -o "$workdir/page.json" -w '%{http_code}' \
+      --get --data-urlencode "limit=100" ${cursor:+--data-urlencode "cursor=$cursor"} \
+      "$API_BASE/v1$path" \
+      --cookie "crm_session=$session" || true)"
+    if [ "$status" != "200" ]; then
+      echo "  response body:" >&2
+      cat "$workdir/page.json" >&2
+      fail "GET /v1$path returned HTTP $status (expected 200)"
+    fi
+    row="$(jq -c --arg today "$TODAY" "$@" "first(.data[] | select($select)) // empty" "$workdir/page.json")"
+    if [ -n "$row" ]; then
+      printf '%s' "$row"
+      return
+    fi
+    cursor="$(jq -r 'if .page.has_more then (.page.next_cursor // "") else "" end' "$workdir/page.json")"
+    [ -n "$cursor" ] || return
+  done
+}
+
 find_person() { # find_person <full-name> — prints the matching row, empty when absent
-  local name="$1" status
-  status="$(curl -sS --max-time 15 -o "$workdir/people.json" -w '%{http_code}' \
-    --get --data-urlencode "q=$name" --data-urlencode "limit=50" \
-    "$API_BASE/v1/people" \
-    --cookie "crm_session=$session" || true)"
-  if [ "$status" != "200" ]; then
-    echo "  response body:" >&2
-    cat "$workdir/people.json" >&2
-    fail "GET /v1/people?q= returned HTTP $status (expected 200)"
-  fi
   # Matched on the whole name: `q` answers with everything that shares a word.
-  jq -c --arg n "$name" 'first(.data[] | select(.full_name == $n)) // empty' "$workdir/people.json"
+  find_first "/people?q=$(jq -rn --arg v "$1" '$v|@uri')" '.full_name == $name' --arg name "$1"
 }
 
 # Read from the seeder rather than listed here, so a record added there is
@@ -99,8 +117,6 @@ seeded_people="$(sed -n 's/^ensure "person \(.*\)" \/people \\$/\1/p' "$REPO_DIR
 while IFS= read -r name; do
   person="$(find_person "$name")"
   if [ -z "$person" ]; then
-    echo "  full /v1/people response:" >&2
-    cat "$workdir/people.json" >&2
     fail "seeded person '$name' missing from GET /v1/people — seed absent or stale (make seed-dev)"
   fi
   # And employed somewhere, on the edge the PRODUCT reads. A person who works
@@ -115,17 +131,9 @@ while IFS= read -r name; do
   # company page, so a boot proof that accepted one would be proving something
   # nobody can see.
   person_id="$(printf '%s' "$person" | jq -r '.id')"
-  rel_status="$(curl -sS --max-time 15 -o "$workdir/employment.json" -w '%{http_code}' \
-    "$API_BASE/v1/relationships?kind=employment&person_id=$person_id&limit=50" \
-    --cookie "crm_session=$session" || true)"
-  if [ "$rel_status" != "200" ]; then
-    echo "  response body:" >&2
-    cat "$workdir/employment.json" >&2
-    fail "GET /v1/relationships returned HTTP $rel_status (expected 200)"
-  fi
-  if ! jq -e --arg today "$TODAY" "any(.data[]; $CURRENT_PRIMARY_JQ)" "$workdir/employment.json" >/dev/null; then
-    echo "  employment rows:" >&2
-    cat "$workdir/employment.json" >&2
+  if [ -z "$(find_first "/relationships?kind=employment&person_id=$person_id" "$CURRENT_PRIMARY_JQ")" ]; then
+    echo "  their employment rows:" >&2
+    cat "$workdir/page.json" >&2
     fail "seeded person '$name' has no current primary employment — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
   fi
   echo "  OK: found '$name', currently employed"
@@ -152,19 +160,9 @@ while IFS= read -r body; do
   org_name="$(printf '%s' "$body" | jq -r '.display_name')"
   org_domain="$(printf '%s' "$body" | jq -r 'first(.domains[]?.domain) // empty')"
   [ -n "$org_domain" ] || fail "the seeder creates '$org_name' with no domain, so this check has no way to find it"
-  orgs_status="$(curl -sS --max-time 15 -o "$workdir/orgs.json" -w '%{http_code}' \
-    --get --data-urlencode "domain=$org_domain" --data-urlencode "limit=50" \
-    "$API_BASE/v1/organizations" \
-    --cookie "crm_session=$session" || true)"
-  if [ "$orgs_status" != "200" ]; then
-    echo "  response body:" >&2
-    cat "$workdir/orgs.json" >&2
-    fail "GET /v1/organizations?domain= returned HTTP $orgs_status (expected 200)"
-  fi
-  org="$(jq -c --arg n "$org_name" 'first(.data[] | select(.display_name == $n)) // empty' "$workdir/orgs.json")"
+  org="$(find_first "/organizations?domain=$(jq -rn --arg v "$org_domain" '$v|@uri')" \
+    '.display_name == $name' --arg name "$org_name")"
   if [ -z "$org" ]; then
-    echo "  full /v1/organizations response:" >&2
-    cat "$workdir/orgs.json" >&2
     fail "seeded account '$org_name' missing from GET /v1/organizations — seed absent or stale (make seed-dev)"
   fi
   lifecycle="$(printf '%s' "$org" | jq -r '.lifecycle // "unknown"')"

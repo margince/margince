@@ -265,18 +265,44 @@ echo "== seed-dev: demo employment =="
 CURRENT_PRIMARY_JQ='.is_current_primary and (.ended_at == null or (.ended_at | tostring) >= $today)'
 TODAY="$(date -u +%F)"
 
-person_id() { # person_id <full-name> — prints the id, empty when absent
-  local name="$1" status
-  status="$(api GET "/people?q=$(url_encode "$name")&limit=50")"
-  [ "$status" = "200" ] || fail "GET /v1/people?q= returned HTTP $status"
-  # Matched on the whole name rather than taken from the first hit: `q` is a
-  # full-text query, so it answers with everything that shares a word.
-  jq -r --arg n "$name" 'first(.data[] | select(.full_name == $n) | .id) // empty' "$workdir/body"
+# The first row of a list that matches, across EVERY page of it.
+#
+# One page was enough while the dev seed was the only thing in the installation.
+# It is not enough on a stack that also carries the demo dataset: `q` is a
+# full-text query, so a page of matches can be all the people who share a word
+# with the one being looked for, and a lookup that reads the first hundred of
+# them reports "absent" for a record that is present. That is the failure a
+# census must never have — it stops finding what it is looking for and says so
+# in the voice of a pass — so the cursor is followed to exhaustion.
+#
+# `select` is a jq filter over ONE row, and any further arguments are handed to
+# jq — a name goes in as `--arg`, never spliced into the filter. `$today` is
+# bound for the callers that ask about employment currency.
+find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
+  local path="$1" select="$2" cursor="" sep status row
+  shift 2
+  while :; do
+    case "$path" in *\?*) sep="&" ;; *) sep="?" ;; esac
+    status="$(api GET "$path${sep}limit=100${cursor:+&cursor=$(url_encode "$cursor")}")"
+    [ "$status" = "200" ] || fail "GET /v1${path} returned HTTP $status"
+    row="$(jq -c --arg today "$TODAY" "$@" "first(.data[] | select($select)) // empty" "$workdir/body")"
+    if [ -n "$row" ]; then
+      printf '%s' "$row"
+      return
+    fi
+    cursor="$(jq -r 'if .page.has_more then (.page.next_cursor // "") else "" end' "$workdir/body")"
+    [ -n "$cursor" ] || return
+  done
 }
 
-status="$(api GET '/organizations?domain=demo.test&limit=50')"
-[ "$status" = "200" ] || fail "GET /v1/organizations?domain= returned HTTP $status"
-org_id="$(jq -r 'first(.data[] | select(.display_name == "Demo GmbH") | .id) // empty' "$workdir/body")"
+person_id() { # person_id <full-name> — prints the id, empty when absent
+  # Matched on the whole name rather than taken from the first hit: `q` is a
+  # full-text query, so it answers with everything that shares a word.
+  find_first "/people?q=$(url_encode "$1")" '.full_name == $name' --arg name "$1" \
+    | jq -r '.id // empty'
+}
+
+org_id="$(find_first '/organizations?domain=demo.test' '.display_name == "Demo GmbH"' | jq -r '.id // empty')"
 [ -n "$org_id" ] || fail "Demo GmbH is not in the installation the seed just wrote to"
 
 # The roles are the demo's own: a company page whose three contacts have no
@@ -294,19 +320,17 @@ org_id="$(jq -r 'first(.data[] | select(.display_name == "Demo GmbH") | .id) // 
 # person is re-hired with a new edge instead, which is also what happened in the
 # story the demo tells.
 employ() { # employ <full-name> <role>
-  local name="$1" role="$2" id status standing rel_id rel_version
+  local name="$1" role="$2" id edges standing rel_id rel_version status
   id="$(person_id "$name")"
   [ -n "$id" ] || fail "$name is not in the installation the seed just wrote to"
-  status="$(api GET "/relationships?kind=employment&person_id=$id&limit=50")"
-  [ "$status" = "200" ] || fail "GET /v1/relationships returned HTTP $status"
-  if jq -e --arg o "$org_id" --arg today "$TODAY" \
-    "any(.data[]; .organization_id == \$o and $CURRENT_PRIMARY_JQ)" "$workdir/body" >/dev/null; then
+  edges="/relationships?kind=employment&person_id=$id"
+  if [ -n "$(find_first "$edges" ".organization_id == \$org and $CURRENT_PRIMARY_JQ" --arg org "$org_id")" ]; then
     echo "  OK: $name already employed at Demo GmbH"
     return
   fi
-  standing="$(jq -c --arg o "$org_id" --arg today "$TODAY" \
-    "first(.data[] | select(.organization_id == \$o and (.ended_at == null or (.ended_at | tostring) >= \$today))) // empty" \
-    "$workdir/body")"
+  standing="$(find_first "$edges" \
+    '.organization_id == $org and (.ended_at == null or (.ended_at | tostring) >= $today)' \
+    --arg org "$org_id")"
   if [ -n "$standing" ]; then
     rel_id="$(printf '%s' "$standing" | jq -r '.id')"
     rel_version="$(printf '%s' "$standing" | jq -r '.version // ""')"
