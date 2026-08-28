@@ -27,9 +27,21 @@ import (
 // They are the write path's own output, not a person's decision, and replaying
 // one would state a stamp nobody made.
 //
-//nolint:goconst // the four stamps, spelled where they are judged
+// PROVENANCE stamps are here for the same reason and matter more, because
+// leaving them out is what makes their records reversible at all. A rename the
+// signature reader promoted records `name_source`, and a lifecycle move records
+// `source`; neither is a field a person can spell in an update, so an image
+// carrying one filtered to nothing spellable and the whole entry refused with
+// not_restorable_by_this_path. That made every such change permanently
+// un-undoable — the same limit the address folding below exists to avoid, and a
+// worse one now that the product applies some of those changes without asking.
+// Undo puts the VALUE back; what wrote it is history, and history is not
+// restored.
+//
+//nolint:goconst // the stamps, spelled where they are judged
 var derivedColumns = map[string]bool{
 	"updated_at": true, "created_at": true, "id": true, "version": true,
+	"name_source": true, "source": true,
 }
 
 // addressColumns maps the address_* columns an audit image carries onto the

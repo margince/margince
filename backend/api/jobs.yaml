@@ -874,6 +874,32 @@ kinds:
       every row this pass did not reach is still due then. A backing-off row
       would only suppress that tick.
 
+  approval_auto_apply:
+    role: worker
+    go_type: ApprovalAutoApplyArgs
+    queue: default
+    timeout: 2m
+    max_attempts: 1
+    opts_owner: args
+    cadence: 1m
+    reason: >-
+      A proposal a rep has put on automatic is one they have already answered,
+      so every minute it sits pending is a minute the product asks a question
+      it was told not to ask. A minute is the shortest cadence worth having
+      here: the pass is one indexed scan over pending rows of three kinds, and
+      the apply itself is the same audited transaction a human's click runs.
+
+      It is a sweep rather than a call at staging time because the answer can
+      change after a proposal is made. A rep who turns automatic on today
+      should not have to re-stage yesterday's suggestions to see them applied,
+      and staging happens at nineteen call sites — a rule spread across all of
+      them is a rule one of them will forget.
+
+      One attempt, not three: the retry is the next tick, a minute away, and a
+      row this pass did not apply is still pending then. A row that failed
+      because its owner has gone or lost the grants is not a fault to retry at
+      all — it is a proposal waiting for a person, which is where it stays.
+
   # One job, not a dispatcher and a child (ADR-0103 §1). The delete it runs was
   # already table-wide once agent_task lost its tenant column, so the fan-out
   # was N identical passes over the same rows.

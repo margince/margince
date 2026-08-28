@@ -39,7 +39,7 @@ func (e *InvalidEditError) Unwrap() error { return e.Cause }
 // UUID may take. An undecidable approval reads as absent, exactly like
 // Get, so Decide never becomes the lookup oracle the inbox filter closed.
 func (s *Service) Decide(ctx context.Context, id ids.ApprovalID, approve bool, reason *string) (row, error) {
-	return s.decide(ctx, id, approve, reason, nil)
+	return s.decide(ctx, id, approve, reason, nil, decidedByPerson)
 }
 
 // DecideEdited is the ADR-0036 §4 modify-then-approve arm: the human's
@@ -65,10 +65,22 @@ func (s *Service) DecideEdited(ctx context.Context, id ids.ApprovalID, edited js
 	if len(edited) == 0 {
 		return row{}, &InvalidEditError{Cause: errors.New("empty payload")}
 	}
-	return s.decide(ctx, id, true, nil, edited)
+	return s.decide(ctx, id, true, nil, edited, decidedByPerson)
 }
 
-func (s *Service) decide(ctx context.Context, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage) (row, error) {
+// decider says whether a person answered this or the product applied it under
+// a rep's standing policy. It is a parameter rather than something read off the
+// context because it is a claim the receipt makes to a reader — "nobody was
+// asked" — and a claim that travels invisibly is one a future call site sets
+// wrongly without noticing.
+type decider bool
+
+const (
+	decidedByPerson decider = false
+	decidedBySystem decider = true
+)
+
+func (s *Service) decide(ctx context.Context, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
 	if err := actingForAHuman(ctx); err != nil {
 		return row{}, err
 	}
@@ -80,7 +92,7 @@ func (s *Service) decide(ctx context.Context, id ids.ApprovalID, approve bool, r
 	var a row
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
-		a, err = s.decideInTx(ctx, tx, p, id, approve, reason, edited)
+		a, err = s.decideInTx(ctx, tx, p, id, approve, reason, edited, by)
 		if err != nil {
 			return err
 		}
@@ -250,7 +262,7 @@ func serverProposed(a row) bool { return a.PassportID == nil }
 // modify-then-approve edit, the status write, and the write shape. It
 // returns the re-read row so the follow-on effect runs against committed
 // state.
-func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage) (row, error) {
+func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Principal, id ids.ApprovalID, approve bool, reason *string, edited json.RawMessage, by decider) (row, error) {
 	// The row lock makes the pending pre-read and the status write below
 	// one race-free unit: two concurrent decisions cannot both pass the
 	// pending guard. Taken raw — the approval table has no archived_at,
@@ -319,9 +331,10 @@ func (s *Service) decideInTx(ctx context.Context, tx pgx.Tx, p principal.Princip
 		}
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE approval SET status = $2, decided_by = $3, decided_at = now(), decision_reason = $4
+		`UPDATE approval SET status = $2, decided_by = $3, decided_at = now(), decision_reason = $4,
+		        decided_by_system = $5
 		 WHERE id = $1`,
-		id, status, p.UserID, reason); err != nil {
+		id, status, p.UserID, reason, bool(by)); err != nil {
 		return row{}, err
 	}
 	// The track record the autonomy ladder is earned on, counted in the same
@@ -413,4 +426,28 @@ func (s *Service) emitKindDecided(ctx context.Context, tx pgx.Tx, p principal.Pr
 		build = echo.approved
 	}
 	return s.emit(ctx, tx, p, auditID, id, build(openapi_types.UUID(id), openapi_types.UUID(p.UserID)))
+}
+
+// ApplyUnderPolicy approves a proposal because the rep it belongs to has put
+// this kind on automatic, rather than because anybody was asked.
+//
+// It is the SAME decision path a person takes — one entry point, so the
+// registered effect, the audit row, the outbox event and the track record are
+// all written exactly as they are for a human. A second execution route would
+// be a second answer to "what does approving this do", and the two would drift.
+//
+// What differs is only what the receipt claims: decided_by_system marks the row
+// so the day's "Done for you" lane can say nobody was asked. The authority is
+// NOT the system principal — the caller binds an agent principal carrying the
+// owner's own grants, seat and row scope, so an automatic apply is bounded by
+// exactly what that rep could have done by hand. compose/autoapply.go builds
+// it, and refuses to apply at all when the owner cannot be resolved or is no
+// longer live.
+//
+// The caller checks the mode. This does not read the policy itself because the
+// decision to apply is made where the owner is resolved: reading it again here
+// would be a second answer to whether this may run, from the place with less
+// context about whose policy was consulted.
+func (s *Service) ApplyUnderPolicy(ctx context.Context, id ids.ApprovalID) (row, error) {
+	return s.decide(ctx, id, true, nil, nil, decidedBySystem)
 }
