@@ -162,7 +162,6 @@ internal/compose/integration/recordhistory_http_integration_test.go#const record
 internal/compose/integration/requiredbodyids_http_integration_test.go#func requiredIDCases
 internal/compose/integration/scheduledsend_integration_test.go#method preflightEnv.seedConsentedRecipient
 internal/compose/integration/seatmatrix_integration_test.go#func seededRoles
-internal/compose/integration/webhooks/webhooks_integration_test.go#method webhookEnv.inWorkspaceTx
 internal/compose/integration/workflow_replay_integration_test.go#const block at const routeLeadHandler
 internal/compose/integration/writeauthorityreview_integration_test.go#func TestAReadShareOfADealCannotRewriteItsContracts
 internal/compose/integrationswiring.go#func NewProviderRunService

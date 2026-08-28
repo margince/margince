@@ -48,7 +48,6 @@ backend/gates/piicoverage_test.go core 0244
 backend/gates/piicoverage_test.go core 0245
 backend/gates/rbacgate_test.go core 0217
 backend/gates/rlsclaims_test.go core 0217
-backend/gates/rlsclaims_test.go migration 0217
 backend/gates/tableownership_test.go migration 0219
 backend/gates/tableownershipwaivers_test.go core 0245
 backend/internal/compose/accountdraft/input.go core 0203
@@ -68,7 +67,6 @@ backend/internal/compose/datasweep.go core 0062
 backend/internal/compose/datasweep.go migration 0289
 backend/internal/compose/embedreindextransport.go migration 0115
 backend/internal/compose/erasurequotations_integration_test.go core 0244
-backend/internal/compose/extruntimetx.go core 0217
 backend/internal/compose/idempotencyretention.go migration 0033
 backend/internal/compose/integration/activitycontext_integration_test.go core 0038
 backend/internal/compose/integration/agentaccess/oauth_lend_integration_test.go migration 0172
@@ -107,7 +105,6 @@ backend/internal/modules/activities/lasttouch.go migration 1787032690
 backend/internal/modules/activities/lifecycle.go migration 1787320003
 backend/internal/modules/activities/participantbackfill.go migration 0157
 backend/internal/modules/activities/relinkbatch.go migration 0008
-backend/internal/modules/activities/scheduledsendfire.go core 0217
 backend/internal/modules/activities/scheduledsendfire.go core 0242
 backend/internal/modules/activities/scheduledsendprovenance.go core 0260
 backend/internal/modules/activities/threadwire_integration_test.go migration 0093
@@ -193,8 +190,6 @@ backend/internal/platform/auth/captureprivacy_test.go migration 1787320003
 backend/internal/platform/auth/rowscope.go migration 0095
 backend/internal/platform/auth/rowscope.go migration 1787320003
 backend/internal/platform/auth/tableclass_test.go migration 1787320003
-backend/internal/platform/database/database.go core 0217
-backend/internal/platform/database/db.go core 0217
 backend/internal/platform/database/storekit/suppression.go core 0217
 backend/internal/platform/database/storekit/suppression.go core 0255
 backend/internal/platform/dbmigrate/dbmigrate_test.go core 0002
@@ -219,7 +214,6 @@ backend/tools/seed-demo/comms.go migration 0282
 desktop/build/build-postgres.sh core 0032
 desktop/build/build-postgres.sh core 0052
 docs/deployment.md migration 0015
-docs/evidence/extension-tier/DESIGN.md migration 0014
 docs/evidence/extension-tier/DESIGN.md migration 0213
 docs/explanation/ai-runtime.md migration 0088
 docs/explanation/ai-runtime.md migration 0100
@@ -271,7 +265,6 @@ frontend/src/screens/persondrawers.tsx migration 0188
 frontend/src/screens/relationships.test.tsx migration 0007
 frontend/src/screens/relationships.tsx migration 0007
 frontend/src/screens/settings-nav.test.tsx migration 0261
-scripts/check-rls-store-path.sh core 0217
 scripts/deploy/db-bootstrap.sql migration 0015
 scripts/lib-testdb.sh migration 0015
 scripts/test-migration-versions.sh core 0002
