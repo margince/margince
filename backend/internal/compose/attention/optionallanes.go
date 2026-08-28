@@ -95,6 +95,14 @@ func (s *Service) optionalLanes(
 			into: &out.Commitments, count: &out.Counts.Commitments,
 		},
 		{
+			name: "did_not_run", bound: s.failed != nil,
+			read: func() ([]crmcontracts.AttentionItem, error) {
+				undone, err := s.failed.Failed(ctx, doneCap)
+				return renderEach(undone, failedItem), err
+			},
+			into: &out.DidNotRun, count: &out.Counts.DidNotRun,
+		},
+		{
 			name: "relationship_decay", bound: s.decay != nil,
 			read: func() ([]crmcontracts.AttentionItem, error) {
 				lapsed, err := s.decay.Lapsed(ctx)

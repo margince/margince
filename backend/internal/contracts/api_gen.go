@@ -1232,6 +1232,7 @@ func (e AttachmentReadStartedStatus) Valid() bool {
 const (
 	AttentionLanesOmittedAtRisk            AttentionLanesOmitted = "at_risk"
 	AttentionLanesOmittedCommitments       AttentionLanesOmitted = "commitments"
+	AttentionLanesOmittedDidNotRun         AttentionLanesOmitted = "did_not_run"
 	AttentionLanesOmittedDoneForYou        AttentionLanesOmitted = "done_for_you"
 	AttentionLanesOmittedMeetings          AttentionLanesOmitted = "meetings"
 	AttentionLanesOmittedNeedsYou          AttentionLanesOmitted = "needs_you"
@@ -1246,6 +1247,8 @@ func (e AttentionLanesOmitted) Valid() bool {
 	case AttentionLanesOmittedAtRisk:
 		return true
 	case AttentionLanesOmittedCommitments:
+		return true
+	case AttentionLanesOmittedDidNotRun:
 		return true
 	case AttentionLanesOmittedDoneForYou:
 		return true
@@ -1328,6 +1331,7 @@ const (
 	AttentionItemSourceConversationClaim AttentionItemSource = "conversation_claim"
 	AttentionItemSourceDealAtRisk        AttentionItemSource = "deal_at_risk"
 	AttentionItemSourceDedupeCandidate   AttentionItemSource = "dedupe_candidate"
+	AttentionItemSourceFailedApproval    AttentionItemSource = "failed_approval"
 	AttentionItemSourceMeeting           AttentionItemSource = "meeting"
 	AttentionItemSourceRelationshipDecay AttentionItemSource = "relationship_decay"
 	AttentionItemSourceTask              AttentionItemSource = "task"
@@ -1345,6 +1349,8 @@ func (e AttentionItemSource) Valid() bool {
 	case AttentionItemSourceDealAtRisk:
 		return true
 	case AttentionItemSourceDedupeCandidate:
+		return true
+	case AttentionItemSourceFailedApproval:
 		return true
 	case AttentionItemSourceMeeting:
 		return true
@@ -13302,6 +13308,15 @@ type Approval struct {
 	// DiffHash Hash of the staged proposed_change; the minted approval_token is bound to this hash so a token cannot authorize a different effect.
 	DiffHash *string `json:"diff_hash,omitempty"`
 
+	// EffectFailedAt When the work an APPROVED decision released failed to run. Absent on every
+	// row whose effect ran — an approved row carrying this is a decision a person
+	// made whose promised work never happened.
+	EffectFailedAt *time.Time `json:"effect_failed_at,omitempty"`
+
+	// EffectFailure The sentence a reader is shown about that failure — written for them, never
+	// copied from the executor's error. Present exactly when `effect_failed_at` is.
+	EffectFailure *string `json:"effect_failure,omitempty"`
+
 	// Evidence Per-claim evidence (snippet + source id) backing the proposal.
 	Evidence *[]ApprovalEvidence `json:"evidence,omitempty"`
 
@@ -13607,6 +13622,20 @@ type Attention struct {
 	// lane shows a bounded slice of it.
 	Counts AttentionCounts `json:"counts"`
 
+	// DidNotRun Decisions THIS reader approved whose released work then failed, reading
+	// the queue newest-staged first. The row is not pending (it was decided) and not a receipt
+	// (a person decided it), so no other lane can carry it; without this one the
+	// person who pressed Accept is the last to learn nothing happened.
+	//
+	// Each card carries the server's own sentence about what did not run, and
+	// `open` when the decision named a record. Re-driving the failed work is a
+	// separate decision the product has not made yet; this lane only ends the
+	// silence.
+	//
+	// Absent — not empty — on an installation whose feed does not read approvals'
+	// failure marks.
+	DidNotRun *[]AttentionItem `json:"did_not_run,omitempty"`
+
 	// DoneForYou What the system did on its own, most recent first. Receipts, not questions.
 	DoneForYou []AttentionItem `json:"done_for_you"`
 
@@ -13693,6 +13722,9 @@ type AttentionCounts struct {
 
 	// Commitments How many promises this lane is CARRYING, which is the bounded page rather than every promise due — the same bound `planned` reports under. A rep past the bound sees the soonest-due ones, which is the order the lane is in.
 	Commitments *int `json:"commitments,omitempty"`
+
+	// DidNotRun How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report.
+	DidNotRun *int `json:"did_not_run,omitempty"`
 
 	// DuplicatesOpen Open duplicate pairs both of whose sides this caller can see.
 	DuplicatesOpen *int `json:"duplicates_open,omitempty"`

@@ -41,7 +41,7 @@ func TestAQuietDealSaysHowLongItHasBeenQuiet(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
 		stubAtRisk{rows: []RiskyDeal{{DealID: deal, Name: "Fleet retrofit", QuietDays: 19}}}, nil,
-		nil,
+		nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -79,7 +79,7 @@ func TestADealPastItsCloseDateReportsThatGroundRatherThanSilence(t *testing.T) {
 			DealID: ids.NewV7(), Name: "Closing last month",
 			QuietDays: 2, CloseOverdue: true, ExpectedCloseDate: &closed,
 		}}}, nil,
-		nil,
+		nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -104,7 +104,7 @@ func TestAWithheldRiskLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil,
 		stubAtRisk{err: apperrors.ErrPermissionDenied}, nil,
-		nil,
+		nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -129,7 +129,7 @@ func TestAWithheldRiskLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 func TestAFeedWithNoRiskReaderSendsNoRiskLane(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
-		nil,
+		nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -155,7 +155,7 @@ func TestALapsedRelationshipCarriesItsSpanAndItsLastExchange(t *testing.T) {
 		&stubDecay{rows: []QuietRelationship{
 			{PersonID: person, Name: "Dana Weiss", QuietDays: 63, LastAt: spoke},
 		}},
-		nil,
+		nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -198,7 +198,7 @@ func TestAWithheldDecayLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil,
 		&stubDecay{err: apperrors.ErrPermissionDenied},
-		nil,
+		nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {
@@ -223,7 +223,7 @@ func TestAWithheldDecayLaneIsNamedRatherThanReportedEmpty(t *testing.T) {
 func TestAFeedWithNoDecayReaderSendsNoDecayLane(t *testing.T) {
 	svc := NewService(
 		stubApprovals{}, stubDuplicates{}, &stubTasks{}, stubReceipts{}, stubBriefing{}, nil, nil, nil,
-		nil,
+		nil, nil,
 		fixedClock)
 	out, err := svc.Assemble(context.Background())
 	if err != nil {

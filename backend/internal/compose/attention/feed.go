@@ -54,17 +54,18 @@ type Service struct {
 	// an installation can warn about deals without deriving relationships.
 	decay    Decay
 	meetings Meetings
+	failed   FailedEffects
 	now      Clock
 }
 
 // NewService binds the feed to its readers.
 func NewService(
 	a Approvals, d Duplicates, t Tasks, r Receipts, b Briefing,
-	c Commitments, k AtRisk, q Decay, m Meetings, now Clock,
+	c Commitments, k AtRisk, q Decay, m Meetings, f FailedEffects, now Clock,
 ) *Service {
 	return &Service{
 		approvals: a, duplicates: d, tasks: t, receipts: r,
-		briefing: b, commitments: c, atRisk: k, decay: q, meetings: m, now: now,
+		briefing: b, commitments: c, atRisk: k, decay: q, meetings: m, failed: f, now: now,
 	}
 }
 

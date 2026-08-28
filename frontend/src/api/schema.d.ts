@@ -20437,6 +20437,18 @@ export interface components {
             decided_by?: string | null;
             /** Format: date-time */
             decided_at?: string | null;
+            /**
+             * Format: date-time
+             * @description When the work an APPROVED decision released failed to run. Absent on every
+             *     row whose effect ran — an approved row carrying this is a decision a person
+             *     made whose promised work never happened.
+             */
+            effect_failed_at?: string | null;
+            /**
+             * @description The sentence a reader is shown about that failure — written for them, never
+             *     copied from the executor's error. Present exactly when `effect_failed_at` is.
+             */
+            effect_failure?: string | null;
             /** Format: date-time */
             created_at: string;
         };
@@ -22684,8 +22696,23 @@ export interface components {
             relationship_decay?: components["schemas"]["AttentionItem"][];
             /** @description What the system did on its own, most recent first. Receipts, not questions. */
             done_for_you: components["schemas"]["AttentionItem"][];
+            /**
+             * @description Decisions THIS reader approved whose released work then failed, reading
+             *     the queue newest-staged first. The row is not pending (it was decided) and not a receipt
+             *     (a person decided it), so no other lane can carry it; without this one the
+             *     person who pressed Accept is the last to learn nothing happened.
+             *
+             *     Each card carries the server's own sentence about what did not run, and
+             *     `open` when the decision named a record. Re-driving the failed work is a
+             *     separate decision the product has not made yet; this lane only ends the
+             *     silence.
+             *
+             *     Absent — not empty — on an installation whose feed does not read approvals'
+             *     failure marks.
+             */
+            did_not_run?: components["schemas"]["AttentionItem"][];
             /** @description Lanes withheld because the caller may not read what they contain. Never returned empty instead. */
-            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay")[];
+            lanes_omitted?: ("this_morning" | "needs_you" | "planned" | "done_for_you" | "commitments" | "at_risk" | "meetings" | "relationship_decay" | "did_not_run")[];
             counts: components["schemas"]["AttentionCounts"];
         };
         /**
@@ -22708,6 +22735,8 @@ export interface components {
             commitments?: number;
             /** @description How many lapsed relationships this lane is CARRYING — the bounded page, as the other lanes report. A rep past the bound sees the longest silences, which is the order the lane is in. */
             relationship_decay?: number;
+            /** @description How many failed decisions this lane is CARRYING — the bounded page, as the other lanes report. */
+            did_not_run?: number;
         };
         /**
          * @description One thing waiting, in the words a reader recognises, with a typed reference back to
@@ -22722,7 +22751,7 @@ export interface components {
              * @description Which producer raised it, and therefore which endpoint its verbs go to.
              * @enum {string}
              */
-            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay";
+            source: "approval" | "dedupe_candidate" | "task" | "brief_item" | "conversation_claim" | "deal_at_risk" | "meeting" | "relationship_decay" | "failed_approval";
             /** @description The producer's own sub-type (an approval kind, a dedupe entity type) — for the icon and the label, never for authority. */
             kind?: string;
             /**

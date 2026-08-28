@@ -384,7 +384,7 @@ func receiptItem(receipt Receipt) crmcontracts.AttentionItem {
 	summary := receipt.Summary
 	subject := subjectOf(receipt.TargetType, receipt.TargetID)
 	actions := []crmcontracts.AttentionItemActions{}
-	if subject != nil {
+	if openableSubject(subject) {
 		actions = append(actions, actionOpen)
 	}
 	return crmcontracts.AttentionItem{
@@ -419,6 +419,30 @@ func dealFacts(deal RiskyDeal) *crmcontracts.AttentionDealFacts {
 	return facts
 }
 
+// failedItem is one approved decision whose released work did not run,
+// carried back to the person who approved it. The sentence was written for
+// the reader when the failure was recorded; `open` is offered only when the
+// decision named a record the client can route to.
+func failedItem(failed FailedEffect) crmcontracts.AttentionItem {
+	kind := failed.Kind
+	sentence := failed.Sentence
+	occurred := failed.FailedAt
+	subject := subjectOf(failed.TargetType, failed.TargetID)
+	actions := []crmcontracts.AttentionItemActions{}
+	if openableSubject(subject) {
+		actions = append(actions, actionOpen)
+	}
+	return crmcontracts.AttentionItem{
+		Id:         failed.ID.String(),
+		Source:     crmcontracts.AttentionItemSource("failed_approval"),
+		Kind:       &kind,
+		Title:      &sentence,
+		Subject:    subject,
+		OccurredAt: &occurred,
+		Actions:    actions,
+	}
+}
+
 // subjectOf names the record an item concerns, when the producer named one.
 //
 // The label is deliberately absent here: resolving a display name is a read of
@@ -444,4 +468,19 @@ var subjectKinds = map[string]crmcontracts.AttentionSubjectType{
 	"lead":         "lead",
 	"activity":     "activity",
 	"project":      "project",
+}
+
+// openableSubject reports whether a subject names a record with a page of its
+// own — the only kind `open` may be offered on. An activity is a timeline
+// entry: naming it on the card is honest, promising navigation to it is not,
+// and the client's router answers exactly this set.
+func openableSubject(subject *crmcontracts.AttentionSubject) bool {
+	if subject == nil {
+		return false
+	}
+	switch subject.Type {
+	case "organization", "person", "deal", "lead", "project":
+		return true
+	}
+	return false
 }

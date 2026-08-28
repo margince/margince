@@ -179,6 +179,8 @@ export const vi = {
     "Không có gì phải quyết định — {count} việc theo kế hoạch hôm nay.",
   "day.lead.promises": "Bạn đã hứa {count} việc — những việc đó trước tiên.",
   "day.lead.meetings": "{count} cuộc họp trên lịch hôm nay.",
+  "day.lead.didNotRun":
+    "{count} việc bạn đã duyệt không chạy. Hãy xem những việc đó trước.",
   "day.lead.atRisk": "{count} đang lặng đi. Không còn gì khác chờ bạn.",
   "day.lead.decay":
     "{count} bạn đã lâu không trao đổi. Không có gì đang chờ bạn.",
@@ -198,6 +200,8 @@ export const vi = {
   "day.atRisk": "Đang lặng đi",
   "day.atRisk.empty": "Không có thương vụ nào trôi đi.",
   "day.risk.quiet": "Không liên hệ trong {days} ngày.",
+  "day.didNotRun": "Đã duyệt nhưng chưa chạy",
+  "day.didNotRun.empty": "Mọi việc bạn đã duyệt đều đã chạy.",
   "day.decay": "Những mối quan hệ đang nguội dần",
   "day.decay.empty":
     "Bạn vẫn giữ liên lạc với tất cả những người từng trao đổi.",
