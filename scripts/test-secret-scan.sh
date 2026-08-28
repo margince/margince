@@ -370,7 +370,7 @@ fi
 # reporting a plant that never tripped anything.
 CONTROL="backend/internal/modules/people/person.go"
 TARGETED="$(for i in $(indices); do field "$i" rule; done | LC_ALL=C sort -u)"
-if printf '%s\n' "$TARGETED" | grep -qx "$FOREIGN_RULE"; then
+if grep -qx "$FOREIGN_RULE" <<<"$TARGETED"; then
 	fail "an allowlist now targets $FOREIGN_RULE, which this suite uses as the rule every allowlist is foreign to. Property (a) would stop being tested for it. Pick a different FOREIGN_RULE."
 fi
 for rule in $(printf '%s\n%s\n' "$FOREIGN_RULE" "$TARGETED" | LC_ALL=C sort -u); do

@@ -98,7 +98,11 @@ find_first() { # find_first <path> <jq-row-filter> [jq-arg...]
       return
     fi
     cursor="$(jq -r 'if .page.has_more then (.page.next_cursor // "") else "" end' "$workdir/page.json")"
-    [ -n "$cursor" ] || return
+    # Absent is an ANSWER, not a failure: every caller asks "is this here?" and
+    # handles no for itself. A bare `return` here carries the test's own exit
+    # status, which is 1 when the cursor is empty — and under `set -e` that
+    # killed the whole script the first time a lookup legitimately found nothing.
+    [ -n "$cursor" ] || return 0
   done
 }
 
