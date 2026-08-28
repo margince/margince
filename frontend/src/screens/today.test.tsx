@@ -241,7 +241,9 @@ describe("what the day's surface offers", () => {
 
     stub({ ...emptyDay, counts: { ...emptyDay.counts, dsr: 2 } });
     renderToday();
-    await screen.findByText("2 privacy requests are on the clock. Those first.");
+    await screen.findByText(
+      "2 privacy requests are on the clock. Those first.",
+    );
   });
 
   // A lane the reader may not see must SAY so, and the page must stop claiming
