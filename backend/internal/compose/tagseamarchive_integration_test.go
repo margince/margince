@@ -17,11 +17,21 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
+
+// The harness's own AdminPerms deliberately narrows `tag` to Read only (it
+// is not a mirror of the seeded admin role), so creating and archiving the
+// fixture here needs its own grant.
+var tagAdminPerms = principal.Permissions{
+	RoleKeys: []string{"admin"},
+	Objects:  map[string]principal.ObjectGrant{"tag": {Create: true, Read: true, Update: true, Delete: true}},
+	RowScope: principal.RowScopeAll,
+}
 
 func TestEnsureTagOnAnArchivedNameDoesNotPromiseARestoreThatDoesNotExist(t *testing.T) {
 	e := integration.Setup(t)
-	ctx := e.Admin()
+	ctx := e.As(e.AdminUser, nil, tagAdminPerms)
 	store := collections.NewStore(InstallationDB(e.Pool))
 
 	created, err := store.NewTag(ctx, "Repro Tag", "")
