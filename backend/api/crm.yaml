@@ -455,13 +455,15 @@ paths:
             to tell "nothing to delete" from "this build cannot tell you". This file is the
             authority and the build follows it; the note is here so the next reader meets the
             divergence rather than re-deriving it.
-
-            The schema is inline rather than a `$ref`, so oapi-codegen synthesizes no Go type and
-            the hand-written `resetDataResponse` is the only Go-side wire shape. What keeps the
-            two together is `gates/resetwireshape_test.go`, which derives both sides — this
-            `required` list and the struct's json tags — so a field added to one and forgotten in
-            the other fails there rather than shipping a 200 body missing a key every client is
-            told is required.
+          # A YAML comment and not part of the description above: this is for whoever EDITS the
+          # schema, and a description renders in client-facing docs.
+          #
+          # The schema is inline rather than a $ref, so oapi-codegen synthesizes no Go type for it
+          # and the hand-written resetDataResponse is the only Go-side wire shape. What keeps the
+          # two together is gates/resetwireshape_test.go, which derives both sides — this required
+          # list and the struct's json tags — so a field added to one and forgotten in the other
+          # fails there rather than shipping a 200 body missing a key every client is told is
+          # required.
           content:
             application/json:
               schema:

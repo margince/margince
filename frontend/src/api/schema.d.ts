@@ -23743,7 +23743,6 @@ export interface operations {
             /**
              * @description Installation reset to first-boot state.
              *     Five of these fields — `jobs_deleted`, `streams_purged`, `cache_keys_deleted`, `objects_deleted` and `drain_timed_out` — exist here and not in the retired upstream copy of this contract, and that is deliberate rather than drift anyone should reconcile away. A reset clears the job queue, the event bus, the Redis counters and the object bytes, and an operator who is told only how many table rows went has no way to tell "nothing to delete" from "this build cannot tell you". This file is the authority and the build follows it; the note is here so the next reader meets the divergence rather than re-deriving it.
-             *     The schema is inline rather than a `$ref`, so oapi-codegen synthesizes no Go type and the hand-written `resetDataResponse` is the only Go-side wire shape. What keeps the two together is `gates/resetwireshape_test.go`, which derives both sides — this `required` list and the struct's json tags — so a field added to one and forgotten in the other fails there rather than shipping a 200 body missing a key every client is told is required.
              */
             200: {
                 headers: {
