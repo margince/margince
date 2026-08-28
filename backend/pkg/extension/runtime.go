@@ -141,6 +141,11 @@ type Runtime interface {
 	// unattended run is the only one where the member above is the single
 	// authority in play. A unit offering an on-demand sync enqueues its job.
 	Ingest(ctx context.Context, on UserID, rec Record) (Result, error)
+
+	// SyncNow asks this unit's own declared job to run soon for the calling
+	// workspace, and answers when it is QUEUED rather than when it has run.
+	// See syncnow.go for what it promises and what it cannot do.
+	SyncNow(ctx context.Context, job JobName) error
 }
 
 // CallerType is which kind of principal an invocation is running as. It mirrors
