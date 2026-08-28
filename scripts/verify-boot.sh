@@ -62,22 +62,100 @@ session="$(sed -n 's/^[Ss]et-[Cc]ookie: crm_session=\([^;]*\).*/\1/p' "$workdir/
 echo "  OK: logged in as $ADMIN_EMAIL, session captured"
 
 echo "== verify-boot 2/4: seeded people are visible =="
-people_status="$(curl -sS --max-time 15 -o "$workdir/people.json" -w '%{http_code}' \
-  "$API_BASE/v1/people?limit=100" \
-  --cookie "crm_session=$session" || true)"
-if [ "$people_status" != "200" ]; then
-  echo "  response body:" >&2
-  cat "$workdir/people.json" >&2
-  fail "GET /v1/people returned HTTP $people_status (expected 200)"
-fi
-for name in "Alice Müller" "Bob Schmidt" "Carol Wagner"; do
-  if ! jq -e --arg n "$name" '.data[] | select(.full_name == $n)' "$workdir/people.json" >/dev/null; then
+# Looked up by NAME rather than scanned off the first page of /v1/people. The
+# page held 100 rows and the seeded three were on it as long as the dev seed was
+# all that had run — on a stack that also carries the demo dataset they are not,
+# and a check that reads a smaller set than it means reports a pass it did not
+# earn. `q` is the API's own full-text lookup, so the read is exact whatever else
+# is in the installation.
+find_person() { # find_person <full-name> — prints the matching row, empty when absent
+  local name="$1" status
+  status="$(curl -sS --max-time 15 -o "$workdir/people.json" -w '%{http_code}' \
+    --get --data-urlencode "q=$name" --data-urlencode "limit=50" \
+    "$API_BASE/v1/people" \
+    --cookie "crm_session=$session" || true)"
+  if [ "$status" != "200" ]; then
+    echo "  response body:" >&2
+    cat "$workdir/people.json" >&2
+    fail "GET /v1/people?q= returned HTTP $status (expected 200)"
+  fi
+  # Matched on the whole name: `q` answers with everything that shares a word.
+  jq -c --arg n "$name" 'first(.data[] | select(.full_name == $n)) // empty' "$workdir/people.json"
+}
+
+# Read from the seeder rather than listed here, so a record added there is
+# checked the day it is added instead of the day somebody remembers to widen
+# this list. A grep that matched nothing would turn this whole step into a pass,
+# so the count is asserted first.
+seeded_people="$(sed -n 's/^ensure "person \(.*\)" \/people \\$/\1/p' "$REPO_DIR/scripts/seed-dev.sh")"
+[ -n "$seeded_people" ] || fail "found no 'ensure \"person …\" /people' lines in scripts/seed-dev.sh — this step would pass by reading nothing"
+
+while IFS= read -r name; do
+  person="$(find_person "$name")"
+  if [ -z "$person" ]; then
     echo "  full /v1/people response:" >&2
     cat "$workdir/people.json" >&2
     fail "seeded person '$name' missing from GET /v1/people — seed absent or stale (make seed-dev)"
   fi
-  echo "  OK: found '$name'"
-done
+  # And employed somewhere. A person who works nowhere shows on no company page,
+  # which is the demo dataset's own verify rule ("people work somewhere") — and
+  # the rule these records used to break, so `make verify-demo` could not pass
+  # after `make seed-dev` in the order the runbook prescribes.
+  person_id="$(printf '%s' "$person" | jq -r '.id')"
+  rel_status="$(curl -sS --max-time 15 -o "$workdir/employment.json" -w '%{http_code}' \
+    "$API_BASE/v1/relationships?kind=employment&person_id=$person_id&limit=50" \
+    --cookie "crm_session=$session" || true)"
+  if [ "$rel_status" != "200" ]; then
+    echo "  response body:" >&2
+    cat "$workdir/employment.json" >&2
+    fail "GET /v1/relationships returned HTTP $rel_status (expected 200)"
+  fi
+  if ! jq -e '.data | length > 0' "$workdir/employment.json" >/dev/null; then
+    fail "seeded person '$name' is employed nowhere — they show on no company page, and the demo dataset's verify pass refuses the installation for it"
+  fi
+  echo "  OK: found '$name', employed"
+done <<< "$seeded_people"
+
+# The other rule the seeded records used to break: an account left on the
+# default makes "who are our customers?" answer with everything.
+#
+# Looked up by the DOMAIN the seeder writes, from the seeder's own line, for the
+# same reason the people above are looked up by name: `/v1/organizations` is a
+# page, this installation may carry hundreds of companies from the demo dataset,
+# and a check that reads the first hundred of them is a check that stops finding
+# what it is looking for the day the dataset grows.
+# awk rather than sed: the payload is the line AFTER the one that matches, and
+# the portable sed spelling for that is not the same on both platforms this
+# script runs on.
+seeded_org_bodies="$(awk '
+  /^ensure "organization / { want = 1; next }
+  want { sub(/^  ./, ""); sub(/.$/, ""); print; want = 0 }
+' "$REPO_DIR/scripts/seed-dev.sh")"
+[ -n "$seeded_org_bodies" ] || fail "found no 'ensure \"organization …\" /organizations' payloads in scripts/seed-dev.sh — this step would pass by reading nothing"
+
+while IFS= read -r body; do
+  org_name="$(printf '%s' "$body" | jq -r '.display_name')"
+  org_domain="$(printf '%s' "$body" | jq -r 'first(.domains[]?.domain) // empty')"
+  [ -n "$org_domain" ] || fail "the seeder creates '$org_name' with no domain, so this check has no way to find it"
+  orgs_status="$(curl -sS --max-time 15 -o "$workdir/orgs.json" -w '%{http_code}' \
+    --get --data-urlencode "domain=$org_domain" --data-urlencode "limit=50" \
+    "$API_BASE/v1/organizations" \
+    --cookie "crm_session=$session" || true)"
+  if [ "$orgs_status" != "200" ]; then
+    echo "  response body:" >&2
+    cat "$workdir/orgs.json" >&2
+    fail "GET /v1/organizations?domain= returned HTTP $orgs_status (expected 200)"
+  fi
+  org="$(jq -c --arg n "$org_name" 'first(.data[] | select(.display_name == $n)) // empty' "$workdir/orgs.json")"
+  if [ -z "$org" ]; then
+    echo "  full /v1/organizations response:" >&2
+    cat "$workdir/orgs.json" >&2
+    fail "seeded account '$org_name' missing from GET /v1/organizations — seed absent or stale (make seed-dev)"
+  fi
+  lifecycle="$(printf '%s' "$org" | jq -r '.lifecycle // "unknown"')"
+  [ "$lifecycle" != "unknown" ] || fail "seeded account '$org_name' is still on the default lifecycle — the demo dataset's verify pass refuses the installation for it"
+  echo "  OK: '$org_name' stands at '$lifecycle'"
+done <<< "$seeded_org_bodies"
 
 echo "== verify-boot 3/4: every composed unit's transport is registered =="
 # The boot proof for the channel registry, and it belongs HERE rather than in a
