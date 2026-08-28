@@ -66,7 +66,6 @@ const driftShape = "cannot-drift"
 // from "second writer", and only naming the other subject does that.
 var sharedSpellings = gatekit.Waive(map[string]string{
 	"internal/modules/ai/feedback.go:fieldSubjectType":           "the second is the same word as a key in the AuditEvent image, where it names a column of the ledger row rather than the request field a refusal points at",
-	"internal/modules/automation/engine.go:systemSource":         "the second is the actor id on principal.Principal, which identifies WHO acted; systemSource is the provenance stamped on what was written",
 	"internal/modules/search/queryjoins.go:objectRelationship":   "the second is the relationship TABLE's name in the join spec beside it, not the RBAC object governing it — the two agree today and are free to diverge",
 	"internal/shared/ports/datasource/shapewords.go:objectShape": "the second is the same two words inside a rendered sentence, where they are English rather than the shape word this constant names",
 })
