@@ -90,7 +90,10 @@ import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
-import { useObjectCustomFields } from "./customfields.form";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "./customfields.form";
 import { DealCommitteeMap } from "./deal360/dealcommittee";
 import { DealFacts } from "./deal360/dealfacts";
 import { DealPulse } from "./deal360/dealpulse";
@@ -2088,19 +2091,22 @@ function dealSurfaceChips({
 // screen's dials.
 function DealCreateAction({
   pipeline,
+  cf,
   openStages,
   orgs,
   partnerOptions,
   startOpen,
 }: Readonly<{
   pipeline?: Pipeline;
+  // Read at screen level and handed down, so the schema request runs beside the
+  // screen's own rather than waiting for the pipelines this form is gated on.
+  cf: ObjectCustomFields;
   openStages: Stage[];
   orgs: Organization[];
   partnerOptions: { value: string; label: string }[];
   startOpen: boolean;
 }>) {
   const t = useT();
-  const cf = useObjectCustomFields("deal");
   // The picker asks the server for ONE company's projects, so the form's chosen
   // company is what it is keyed on: a project is worked by several companies,
   // and only the server can say which of them this one is on.
@@ -2336,6 +2342,7 @@ export function DealsScreen({
   const t = useT();
   const { locale } = useLocale();
   const recordZone = useRecordZone();
+  const cf = useObjectCustomFields("deal");
   const overlay = useSorMode() === "overlay";
   const pipelinesQuery = usePipelines(!overlay);
   const meQuery = useMe();
@@ -2425,6 +2432,7 @@ export function DealsScreen({
   const createAction = !overlay && openStages.length > 0 && (
     <DealCreateAction
       pipeline={effectivePipeline}
+      cf={cf}
       openStages={openStages}
       orgs={orgsQuery.data?.data ?? []}
       partnerOptions={partnerOptions}

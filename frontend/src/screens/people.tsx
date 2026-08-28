@@ -33,7 +33,10 @@ import { ConsentSection } from "./consent";
 import { RecordContextPanel } from "./context";
 import { CreateAction, type CreateField, type FormRows } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
-import { useObjectCustomFields } from "./customfields.form";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "./customfields.form";
 import { EditAction } from "./edit";
 import { EntityRef } from "./entityref";
 import { RecordHistoryTab } from "./history";
@@ -495,15 +498,20 @@ type PersonTab = (typeof PERSON_TABS)[number];
 // whole page.
 function PersonActionBadges({
   person,
+  cf,
   archivedReasonId,
 }: Readonly<{
   person: Person;
+  // Read at screen level and handed down, so the schema request runs BESIDE the
+  // person's rather than after it. Started here, it would begin only once the
+  // record had landed and the strip first rendered — and an edit opened in that
+  // gap would offer a form with no custom fields on it.
+  cf: ObjectCustomFields;
   // Minted once for the page by the caller, because the archive is a fact
   // about the record rather than about any one verb that refuses.
   archivedReasonId: string;
 }>) {
   const t = useT();
-  const cf = useObjectCustomFields("person");
   const overlay = useSorMode() === "overlay";
   const viewerId = useViewerId();
   const id = person.id;
@@ -694,6 +702,7 @@ function PersonTabPanels({
 export function PersonScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const recordZone = useRecordZone();
+  const cf = useObjectCustomFields("person");
   // ONE sentence about this contact being archived, minted here and pointed at
   // by every verb the archive refuses. Said once for the page rather than
   // beside each of four buttons.
@@ -746,6 +755,7 @@ export function PersonScreen({ id }: Readonly<{ id: string }>) {
             badges={
               <PersonActionBadges
                 person={person}
+                cf={cf}
                 archivedReasonId={archivedReasonId}
               />
             }
