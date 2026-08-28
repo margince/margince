@@ -68,10 +68,10 @@ Columns:
   (`relink_activity`, `relink_thread`, `relink_activities` — the table below
   lists the first) read the destination record type (filing under a project is
   🟡 — it classifies every named activity as commercial correspondence, which is
-  write-once and cannot be undone by relinking away). **🟢 / 🟡** means the tier depends on the record
-  type the call names: 🟢 for the seven the tool enumerates, 🟡 for
-  `custom_field` and `webhook_subscription`, which the contract still declares
-  confirm-first.
+  write-once and cannot be undone by relinking away).
+  **🟢 / 🟡** means the tier depends on the record type the call names: 🟢 for
+  the seven the tool enumerates, 🟡 for `custom_field` and
+  `webhook_subscription`, which the contract still declares confirm-first.
 - Consequential verbs read 🟢 here because ADR-0055 stopped them staging by
   default: a passport carries the granting human's own seat, grants and row
   scope, so a verb it can spend is one its holder could spend unaided, and a
