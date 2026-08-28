@@ -65,6 +65,11 @@ func TestAStagingFaultDoesNotStopTheOtherCards(t *testing.T) {
 	if staged != 2 {
 		t.Errorf("the loop stopped after the fault: %d of 2 cards offered", staged)
 	}
+}
 
-	Handlers{}.stageVCardReviews(context.Background(), entries, results)
+// A role with no stager wired stages nothing and fails nothing — the guard
+// is the nil check, and the failure mode this proves absent is the panic.
+func TestNoStagerWiredMeansNoStagingAndNoFault(t *testing.T) {
+	results := []VCardResult{{Index: 0, Outcome: VCardNeedsReview}}
+	Handlers{}.stageVCardReviews(context.Background(), []VCardEntry{{FullName: "First"}}, results)
 }

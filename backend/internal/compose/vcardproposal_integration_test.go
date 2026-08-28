@@ -86,8 +86,16 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 	if len(rows) != 1 {
 		t.Fatalf("pending vcard_create proposals = %d, want the one joined question", len(rows))
 	}
-	if rows[0].TargetEntityId == nil || ids.UUID(*rows[0].TargetEntityId) != candidate.UUID {
-		t.Errorf("the proposal targets %v, want the near-match candidate", rows[0].TargetEntityId)
+	// The uploaded card is one member's own address book: a colleague with
+	// every create grant still reads nothing. Self-only is what keeps a
+	// third party's contact data from becoming workspace-readable by upload.
+	colleague := e.As(e.Rep1, nil, integration.AdminPerms)
+	overShoulder, _, err := svc.ListWire(colleague, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
+	if err != nil {
+		t.Fatalf("listing as a colleague: %v", err)
+	}
+	if len(overShoulder) != 0 {
+		t.Errorf("a colleague read %d of the importer's card proposals, want none", len(overShoulder))
 	}
 
 	if _, err := svc.Decide(ctx, ids.From[ids.ApprovalKind](ids.UUID(rows[0].Id)), true, nil); err != nil {
@@ -101,6 +109,20 @@ func TestAVCardNearMatchBecomesOneDurableProposal(t *testing.T) {
 	}
 	if created != 1 {
 		t.Errorf("people holding the card's own address %s = %d, want exactly the approved create", reviewedCardEmail, created)
+	}
+	// The other half of the release: the employer edge, through to the
+	// organization the card named.
+	var employed int
+	if err := e.Pool.QueryRow(ctx, `
+		SELECT count(*) FROM relationship r
+		  JOIN organization o ON o.id = r.organization_id
+		  JOIN person_email pe ON pe.person_id = r.person_id
+		 WHERE r.kind = 'employment' AND lower(pe.email) = $1
+		   AND o.display_name = 'Weber Consulting'`, reviewedCardEmail).Scan(&employed); err != nil {
+		t.Fatalf("counting the employment edge: %v", err)
+	}
+	if employed != 1 {
+		t.Errorf("employment edges to Weber Consulting = %d, want the card's one", employed)
 	}
 }
 
@@ -134,5 +156,47 @@ func TestADeclinedVCardReviewIsNotReAsked(t *testing.T) {
 	}
 	if len(rows) != 0 {
 		t.Errorf("a declined card was re-proposed: %d pending rows", len(rows))
+	}
+}
+
+// The modify-then-approve arm can rewrite the payload, and the generic edit
+// gate only pins entity references — so the kind's own precheck must refuse
+// an edit that dropped the card, while the proposal is still pending and
+// re-decidable. Without it the approval would commit and create a person
+// with no name.
+func TestAnEditThatDropsTheCardIsRefusedWhileStillPending(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.Admin()
+	candidate := seedNearMatch(ctx, t, e)
+	stage := vcardCreateStager(e.Pool)
+	if err := stage(ctx, reviewedCard(), candidate); err != nil {
+		t.Fatalf("staging the review: %v", err)
+	}
+	svc := approvalsServiceWithEffects(e.Pool)
+	status, kind := "pending", vcardCreateKind
+	rows, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
+	if err != nil || len(rows) != 1 {
+		t.Fatalf("staged reviews = %d (err %v), want 1", len(rows), err)
+	}
+	id := ids.From[ids.ApprovalKind](ids.UUID(rows[0].Id))
+
+	gutted := []byte(`{"full_name":"anna weber","emails":"` + reviewedCardEmail + `"}`)
+	if _, err := svc.DecideEdited(ctx, id, gutted); err == nil {
+		t.Fatal("an edit with no card was approved")
+	}
+	after, _, err := svc.ListWire(ctx, approvals.ListInput{Status: &status, Kind: &kind, Limit: 10})
+	if err != nil {
+		t.Fatalf("re-listing: %v", err)
+	}
+	if len(after) != 1 {
+		t.Errorf("the refused edit left %d pending rows, want the proposal still decidable", len(after))
+	}
+	var nameless int
+	if err := e.Pool.QueryRow(ctx,
+		`SELECT count(*) FROM person WHERE trim(full_name) = ''`).Scan(&nameless); err != nil {
+		t.Fatal(err)
+	}
+	if nameless != 0 {
+		t.Errorf("a person with no name exists: %d", nameless)
 	}
 }

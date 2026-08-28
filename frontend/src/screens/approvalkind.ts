@@ -372,10 +372,16 @@ export const DISPLAY_FIELDS: Readonly<Record<string, readonly DisplayField[]>> =
     // an old→new comparison already; the normalization key is internal.
     org_name_promotion: [],
     // An imported card the dedupe pass refused to create beside its
-    // near-match. The card's own facts are the decision.
+    // near-match. Every field the approval would write is captioned: the
+    // decider must see the whole create, not its headline.
     vcard_create: [
       { field: "full_name", label: "approval.field.name", as: "text" },
       { field: "emails", label: "approval.field.email", as: "text" },
+      { field: "organization", label: "approval.field.company", as: "text" },
+      { field: "title", label: "approval.field.title", as: "text" },
+      { field: "phones", label: "approval.field.phone", as: "text" },
+      { field: "url", label: "approval.field.url", as: "text" },
+      { field: "address", label: "approval.field.address", as: "text" },
     ],
     // A price the provider published. Both are decimal strings, already values a
     // reader recognises.

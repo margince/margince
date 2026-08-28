@@ -132,21 +132,24 @@ func (h Handlers) ImportVCards(w http.ResponseWriter, r *http.Request) {
 
 // stageVCardReviews turns each near-match the import refused to create into a
 // durable proposal, so the question outlives the upload response instead of
-// dying with it. A staging fault is logged and the import's own answer stands:
-// the cards are already written or refused, the report is already honest, and
-// failing the whole upload for a queueing fault would un-tell the reader what
-// DID happen. The card can be re-imported, which re-stages.
+// dying with it. A staging fault does not fail the upload — the cards are
+// already written or refused, and failing now would un-tell the reader what
+// DID happen — but it is not silent either: the card's own result line says
+// the review could not be queued and that re-importing retries, because a 200
+// that quietly dropped the promised review is the invisibility this staging
+// exists to end.
 func (h Handlers) stageVCardReviews(ctx context.Context, entries []VCardEntry, results []VCardResult) {
 	if h.stageVCardReview == nil {
 		return
 	}
-	for _, result := range results {
-		if result.Outcome != VCardNeedsReview {
+	for i := range results {
+		if results[i].Outcome != VCardNeedsReview {
 			continue
 		}
-		if err := h.stageVCardReview(ctx, entries[result.Index], result.PersonID); err != nil {
+		if err := h.stageVCardReview(ctx, entries[results[i].Index], results[i].PersonID); err != nil {
 			slog.ErrorContext(ctx, "people: a vCard near-match could not be proposed for review",
-				"card_index", result.Index, "err", err)
+				"card_index", results[i].Index, "err", err)
+			results[i].Reason = "this card resembles an existing contact, and the review could not be queued; import the card again to retry"
 		}
 	}
 }

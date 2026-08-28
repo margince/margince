@@ -197,10 +197,19 @@ var decisionGrants = map[string][]grantRequirement{
 	// needs both create grants, exactly as if the approver had typed them in.
 	"capture_counterparty": {{tablePerson, principal.ActionCreate}, {tableOrganization, principal.ActionCreate}},
 	// Accepting a vcard_create proposal (an imported card the dedupe pass
-	// refused to create beside its near-match) creates the person and their
-	// employer edge — so deciding it needs the create grant, exactly as if
-	// the approver had typed the card in.
-	"vcard_create": {{tablePerson, principal.ActionCreate}},
+	// refused to create beside its near-match) creates the person; when the
+	// card names an employer, also the employment edge (relationship create
+	// plus the person-anchor update that edge takes), and when nobody holds
+	// that employer yet, the organization behind them. Deciding needs every
+	// grant the release can spend, exactly as if the approver had typed the
+	// card in — a shorter list would show the card to an approver whose
+	// approval then fails partway.
+	"vcard_create": {
+		{tablePerson, principal.ActionCreate},
+		{tablePerson, principal.ActionUpdate},
+		{tableOrganization, principal.ActionCreate},
+		{targetRelationship, principal.ActionCreate},
+	},
 	// Accepting an org_name_promotion proposal (PO-F-2a: one employee's
 	// signature naming their company, with nothing corroborating it) renames
 	// the organization — the same update authority the name editor needs.
@@ -370,6 +379,11 @@ var selfOnlyKinds = map[string]bool{
 	kindLinkedInMatch:     true,
 	KindQuotaRelease:      true,
 	KindScheduledSendHeld: true,
+	// A vCard review is one member's own uploaded address book, exactly the
+	// LinkedIn-match shape: the staged card names a third party who never
+	// agreed to be in this CRM, and a shared inbox would hand every
+	// person:create holder a readable copy of a colleague's contacts.
+	"vcard_create": true,
 }
 
 // decidable is the ONE visibility-and-authority predicate for the inbox

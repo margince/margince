@@ -348,25 +348,24 @@ func vcardEvidence(entry VCardEntry) string {
 	return strings.Join(parts, " · ")
 }
 
-// CreateFromVCardReview creates the person a reviewed card proposed, after a
-// human decided the near-match is somebody else.
+// CreateFromVCardReviewTx creates the person a reviewed card proposed, after
+// a human decided the near-match is somebody else. It writes in the CALLER's
+// transaction so the approval's redemption and the create it releases commit
+// together — an approval consumed without its person, or a person without its
+// consumed approval, are both states nothing can repair.
 //
 // The dedupe pass deliberately does NOT run again: the decision being executed
 // IS the answer to the question that pass would re-ask, and re-asking it would
 // stage a second review of a review. The creating authority is the caller's —
 // the deciding human — so the store's own create gate answers for them.
-func (s *Store) CreateFromVCardReview(ctx context.Context, entry VCardEntry) (ids.PersonID, error) {
-	var created ids.PersonID
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		person, err := s.CreatePersonTx(ctx, tx, personFromVCard(entry))
-		if err != nil {
-			return err
-		}
-		created = ids.From[ids.PersonKind](ids.UUID(person.Id))
-		return s.attachVCardEmployer(ctx, tx, created, entry)
-	})
+func (s *Store) CreateFromVCardReviewTx(ctx context.Context, tx pgx.Tx, entry VCardEntry) (ids.PersonID, error) {
+	person, err := s.CreatePersonTx(ctx, tx, personFromVCard(entry))
 	if err != nil {
 		return ids.PersonID{}, fmt.Errorf("people: creating the reviewed card's person: %w", err)
+	}
+	created := ids.From[ids.PersonKind](ids.UUID(person.Id))
+	if err := s.attachVCardEmployer(ctx, tx, created, entry); err != nil {
+		return ids.PersonID{}, fmt.Errorf("people: attaching the reviewed card's employer: %w", err)
 	}
 	return created, nil
 }
