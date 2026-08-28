@@ -70,7 +70,11 @@ func singleConnPool(t *testing.T) *pgxpool.Pool {
 	if err != nil {
 		t.Fatalf("parsing the app DSN: %v", err)
 	}
-	cfg.MaxConns, cfg.MinConns = 1, 1
+	// MaxConns alone: one connection is the whole point of this fixture, and
+	// MinConns is the owner constructor's to set — it holds every owned test
+	// pool at 0 so nothing is dialled until a test asks, so naming it here
+	// would read as an instruction that is not followed.
+	cfg.MaxConns = 1
 	pool, err := testdb.OwnPoolFromConfig(ctx, cfg)
 	if err != nil {
 		t.Fatalf("opening the single-connection pool: %v", err)

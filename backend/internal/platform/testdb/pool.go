@@ -211,7 +211,7 @@ func Pool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 }
 
 // OwnPool opens a pool the CALLER owns and closes, tuned by the same lane
-// ceiling the shared one takes.
+// ceiling the shared one takes, and dials nothing until the caller uses it.
 //
 // Most suites want Pool: one pool per DSN per process, memoized, which is the
 // cheapest thing that works. A few genuinely cannot — a suite that asserts what
@@ -244,70 +244,23 @@ func OwnPool(ctx context.Context, dsn string) (*pgxpool.Pool, error) {
 	if err != nil {
 		return nil, err
 	}
-	tuned, err = capToLaneCeiling(tuned)
+	// The CONFIG, not the pool: nothing is dialled until a test asks. A suite
+	// that owns its pool rather than sharing one is often owning it precisely
+	// because it asserts what happens when the pool is broken — a DSN pointing
+	// at a closed port, so that Close and the failure modes around it have
+	// something to be true of — and a constructor that pinged would refuse
+	// those suites during setup, before they could assert anything at all.
+	// Everything else a pool of this product is, it still gets: the ID type
+	// registration, the JIT setting, the operational limits.
+	cfg, err := database.PoolConfig(tuned)
 	if err != nil {
 		return nil, err
 	}
-	pool, err := database.NewPool(ctx, tuned)
+	pool, err := OwnPoolFromConfig(ctx, cfg)
 	if err != nil {
 		return nil, fmt.Errorf("opening a caller-owned test pool: %w", err)
 	}
 	return pool, nil
-}
-
-// capToLaneCeiling lowers a DSN's own pool_max_conns to the lane's when the DSN
-// asks for more.
-//
-// withTestPoolParams fills what a DSN leaves out and never overrides what it
-// names, which is right for every other parameter: whoever sized the pool
-// explicitly wins. It is wrong for THIS one. The lane's budget is stated in
-// terms of the ceiling, so a DSN naming a larger number is not a caller's
-// preference — it is the budget being wrong by exactly that much, quietly, in
-// the one parameter the lane rather than the caller decides.
-//
-// A DSN asking for FEWER keeps its own: a suite that wants a single-connection
-// pool is asking for something the ceiling does not forbid.
-func capToLaneCeiling(dsn string) (string, error) {
-	params, err := poolParams()
-	if err != nil {
-		return "", err
-	}
-	ceiling, declared := params["pool_max_conns"]
-	if !declared {
-		return dsn, nil
-	}
-	u, err := url.Parse(dsn)
-	if err != nil {
-		return "", fmt.Errorf("parsing the test DSN: %w", err)
-	}
-	q := u.Query()
-	asked := q.Get("pool_max_conns")
-	if asked == "" {
-		return dsn, nil
-	}
-	lower, err := lowerCount(asked, ceiling)
-	if err != nil {
-		return "", err
-	}
-	q.Set("pool_max_conns", lower)
-	u.RawQuery = q.Encode()
-	return u.String(), nil
-}
-
-// lowerCount answers the smaller of two connection counts, as text.
-func lowerCount(a, b string) (string, error) {
-	first, err := strconv.Atoi(a)
-	if err != nil {
-		return "", fmt.Errorf("testdb: pool_max_conns=%q is not a connection count: %w", a, err)
-	}
-	second, err := strconv.Atoi(b)
-	if err != nil {
-		return "", fmt.Errorf("testdb: pool_max_conns=%q is not a connection count: %w", b, err)
-	}
-	if first <= second {
-		return a, nil
-	}
-	return b, nil
 }
 
 // OwnPoolFromConfig opens a caller-owned pool from a config the caller built,

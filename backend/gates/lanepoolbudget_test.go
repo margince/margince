@@ -26,6 +26,22 @@ package gates
 // constructor honours, one describing what its pool is built through. A gate
 // that made those authors reword true sentences would teach the wrong lesson
 // about a rule they keep.
+//
+// WHAT IT DOES NOT SEE, stated because a prohibition that under-reports reads
+// exactly like a clean tree:
+//
+//   - a pool opened for a suite by a NON-test file. The census is the lane's
+//     _test.go files, so a shared helper in a product package that opened one
+//     would not be reported here. That is deliberate rather than overlooked:
+//     product code legitimately calls database.NewPool — it is how the server
+//     boots — and a census that judged it would report the boot. The door
+//     itself is held instead, by gates/modulepoolsharing_test.go, which is
+//     where a new pool constructor has to be declared.
+//   - a call reached through something other than the qualified reference:
+//     reflection, a function value read out of a map, a constructor handed in
+//     from another package. Every one of those is visible in review as an
+//     unusual way to open a pool; a suite that simply calls the constructor,
+//     however it spells the call, is not.
 
 import (
 	"fmt"
@@ -198,7 +214,7 @@ func unboundedPoolsIn(src gatekit.ParsedFile) []string {
 			continue
 		}
 		for _, name := range names {
-			if callsQualified(src.File, qualifier, name) {
+			if referencesQualified(src.File, qualifier, name) {
 				offences = append(offences, src.Path+" opens a pool with "+qualifier+"."+name)
 			}
 		}
@@ -206,26 +222,49 @@ func unboundedPoolsIn(src gatekit.ParsedFile) []string {
 	return offences
 }
 
-// callsQualified reports a call to pkg.name — the CALL, not a mention. Comments
-// are not part of the syntax tree, so a suite that names the constructor while
-// explaining something is not judged for it.
-func callsQualified(file *ast.File, pkg, name string) bool {
+// referencesQualified reports pkg.name appearing in the file's CODE, in any
+// position. Comments are not part of the syntax tree, so a suite that names the
+// constructor while explaining something is not judged for it.
+//
+// The reference rather than the call, and that widening is the fix for a real
+// hole. Matching a call meant matching one spelling of one: `(database.NewPool)
+// (ctx, dsn)` puts a *ast.ParenExpr where the check wanted a selector, and
+// `open := database.NewPool` followed by `open(ctx, dsn)` puts a bare
+// *ast.Ident there. Both open an unbounded pool and both read green, which is
+// the forbidden direction — a prohibition that misses is indistinguishable
+// from a tree that complies.
+//
+// Naming the constructor without calling it is not a shape this rule needs to
+// permit: a lane test that mentions it in code is routing something through it,
+// and the one file that legitimately does has a waiver. Over-reporting fails
+// loudly and is answered with a reason; under-reporting is answered with
+// nothing at all.
+func referencesQualified(file *ast.File, pkg, name string) bool {
 	found := false
 	ast.Inspect(file, func(node ast.Node) bool {
-		call, isCall := node.(*ast.CallExpr)
-		if !isCall {
-			return !found
-		}
-		selector, isSelector := call.Fun.(*ast.SelectorExpr)
+		selector, isSelector := node.(*ast.SelectorExpr)
 		if !isSelector || selector.Sel.Name != name {
 			return !found
 		}
-		if base, isIdent := selector.X.(*ast.Ident); isIdent && base.Name == pkg {
+		if base, isIdent := unparen(selector.X).(*ast.Ident); isIdent && base.Name == pkg {
 			found = true
 		}
 		return !found
 	})
 	return found
+}
+
+// unparen strips the parentheses Go allows around any expression. They change
+// nothing about what the expression means, so a check that reads through them
+// judges the same code the compiler does.
+func unparen(expr ast.Expr) ast.Expr {
+	for {
+		paren, wrapped := expr.(*ast.ParenExpr)
+		if !wrapped {
+			return expr
+		}
+		expr = paren.X
+	}
 }
 
 // TestTheLaneCensusReadsBuildConstraintsTheWayGoDoes holds the census's
@@ -283,6 +322,50 @@ func TestTheLaneCensusReadsBuildConstraintsTheWayGoDoes(t *testing.T) {
 				t.Errorf("the lane builds it = %t, want %t — a file this census does not judge is a file "+
 					"whose pool constructors go unreported, and the gate then reads like a clean tree",
 					built, probe.built)
+			}
+		})
+	}
+}
+
+// TestTheDoorIsRecognisedHoweverTheCallIsSpelled holds the recogniser against
+// the spellings that mean the same thing to the compiler.
+//
+// The first version matched one shape — `qualifier.Name(` — and the other three
+// below were how a suite could open an unbounded pool while this gate read
+// green. That is the failure mode a prohibition cannot have: nothing is
+// reported either way, so the tree looks compliant whether it is or not.
+//
+// Synthetic sources, because the point is the next file somebody writes rather
+// than the ones this tree happens to contain.
+func TestTheDoorIsRecognisedHoweverTheCallIsSpelled(t *testing.T) {
+	t.Parallel()
+	const door = "github.com/margince/margince/backend/internal/platform/database"
+	for _, probe := range []struct {
+		what      string
+		body      string
+		reachedIt bool
+	}{
+		{"a plain call", "func f() { database.NewPool(ctx, dsn) }", true},
+		{"a parenthesised call", "func f() { (database.NewPool)(ctx, dsn) }", true},
+		{"the constructor stored and called later", "func f() { open := database.NewPool; open(ctx, dsn) }", true},
+		{"the constructor handed to something else", "func f() { withPool(database.NewPool) }", true},
+		{"a different function of the same package", "func f() { database.EnsureSchema(ctx) }", false},
+		{"a local function of the same name", "func f() { NewPool(ctx, dsn) }", false},
+		{"the name in a comment only", "// database.NewPool is what testdb wraps.\nfunc f() {}", false},
+	} {
+		t.Run(probe.what, func(t *testing.T) {
+			t.Parallel()
+			src := "package p\n\nimport \"" + door + "\"\n\n" + probe.body + "\n"
+			file, err := parser.ParseFile(token.NewFileSet(), "probe.go", src, parser.ParseComments)
+			if err != nil {
+				t.Fatalf("parsing the probe: %v", err)
+			}
+			qualifier, dotImported := gatekit.ImportedAs(file, door)
+			if dotImported {
+				t.Fatalf("the probe dot-imports %s, which it does not", door)
+			}
+			if got := referencesQualified(file, qualifier, "NewPool"); got != probe.reachedIt {
+				t.Errorf("%s: the recogniser answered %t, want %t — %q", probe.what, got, probe.reachedIt, probe.body)
 			}
 		})
 	}
