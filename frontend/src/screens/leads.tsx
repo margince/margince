@@ -3,6 +3,7 @@ import { type ReactNode, useEffect, useId, useRef, useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
+import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { navigate, useRoute } from "../app/router";
 import { activityTimeline } from "../design-system/activitytimeline";
 import {
@@ -1604,15 +1605,18 @@ function LeadRecord({
         ) : null
       }
       actions={
-        <LeadActions
-          lead={lead}
-          id={id}
-          cf={cf}
-          overlay={overlay}
-          terminalReasonId={terminalReasonId}
-          onQualify={() => setDialog("qualify")}
-          onDisqualify={() => setDialog("disqualify")}
-        />
+        <>
+          <LeadActions
+            lead={lead}
+            id={id}
+            cf={cf}
+            overlay={overlay}
+            terminalReasonId={terminalReasonId}
+            onQualify={() => setDialog("qualify")}
+            onDisqualify={() => setDialog("disqualify")}
+          />
+          <PageAsideToggle />
+        </>
       }
       actionsInline
       // The shell stamps timeline rows in this zone. The viewer's own is the
@@ -1669,17 +1673,6 @@ function LeadRecord({
           )}
         </>
       }
-      railLabel={t("lead.railTitle")}
-      // The rail carries what a rep CONSULTS — who owns this and why it scores
-      // what it scores — so the column beside it can stay the work.
-      rail={
-        <LeadRail
-          lead={lead}
-          id={id}
-          writer={writer}
-          terminalReasonId={terminalReasonId}
-        />
-      }
       // The same strip every record in the product carries: a place a reader
       // navigates, drawn as a rule with the open body underlined, rather than
       // a pill that offers a setting.
@@ -1695,6 +1688,18 @@ function LeadRecord({
         />
       }
     >
+      {/* What a rep CONSULTS — who owns this and why it scores what it scores
+          — in the PAGE's own column, so the column beside it can stay the work
+          and the context does not move when the tab does. Same column, same
+          fold and same memory of it as every other record page. */}
+      <PageAside>
+        <LeadRail
+          lead={lead}
+          id={id}
+          writer={writer}
+          terminalReasonId={terminalReasonId}
+        />
+      </PageAside>
       {tab === "overview" && (
         <LeadOverviewPane
           lead={lead}

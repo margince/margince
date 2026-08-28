@@ -121,7 +121,7 @@ export function FiltersScreen({ id }: Readonly<{ id?: string }>) {
   };
 
   return (
-    <div className="filters-screen arrive-stack">
+    <div className="wrap filters-screen">
       {/* The object control alone. The page's name and its subtitle belong to
           the shell's page head, which names every rail destination — a screen
           that printed them again would put two page titles in one document, and

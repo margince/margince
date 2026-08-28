@@ -2657,7 +2657,6 @@ export const vi = {
   "docs.add.errNoFile": "Hãy chọn một tệp để tải lên.",
   "docs.add.errNoDeal": "Hãy chọn thương vụ để gắn tài liệu này vào.",
   "docs.add.errRefused": "Bạn không được thêm tài liệu vào bản ghi này.",
-  "docs.add.errInFlight": "Tài liệu này vẫn đang được tải lên.",
   "docs.add.errTooLarge":
     "Tệp này lớn hơn {size}, là mức tối đa bản cài đặt này nhận. Hãy chọn tệp nhỏ hơn.",
   "docs.add.failedTitle": "Tải lên không thành công",
@@ -6298,7 +6297,6 @@ export const vi = {
   "person.action.meetings": "Xem lịch hẹn",
   "person.action.addTask": "Thêm việc",
   "person.action.research": "Nghiên cứu",
-  "person.action.more": "Thao tác khác",
 
   "person.strip.lastInbound": "Nhận gần nhất",
   "person.strip.lastOutbound": "Gửi gần nhất",
@@ -6812,7 +6810,6 @@ export const vi = {
   "project.archiveConfirm":
     "Lưu trữ sẽ đưa dự án này ra khỏi danh sách đang hoạt động và giải phóng mã của nó. Không thể hoàn tác từ giao diện.",
   "project.archivedReadOnly": "Dự án này đã lưu trữ và không nhận thay đổi.",
-  "project.railLabel": "Hồ sơ dự án",
   "project.phaseLabel": "Giai đoạn",
   "project.filterPhaseAll": "Mọi giai đoạn",
   "project.viewDelivering": "Đang triển khai",

@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { userEvent, within } from "storybook/test";
+import { expect, userEvent, waitFor, within } from "storybook/test";
 import { en } from "../i18n/en";
 import {
   type CompanyFieldName,
@@ -24,8 +24,10 @@ import { StoryProviders } from "./story-utils";
 
 // Three questions refuse an empty answer — `display_name`, `offer_summary`
 // and `icp` — and every one of them sits early in the run. So a story that
-// walks forward has to have answered at least those, or `advance` refuses
-// silently and the story stops on a question its own name does not claim.
+// walks forward has to have answered at least those, or the screen refuses the
+// step by doing nothing and the story stops on a question its own name does not
+// claim. The optional fields are left empty on purpose: an interview whose every
+// answer is filled in cannot show the state a skippable question is in.
 const ANSWERS: Partial<Record<CompanyFieldName, string>> = {
   legal_name: "Brandt Automotive GmbH",
   registered_address: "Werkstraße 14, 70565 Stuttgart",
@@ -65,18 +67,52 @@ function interview(values: CompanyForm) {
   );
 }
 
-// Advancing needs the current question ANSWERED when it is a required one, so
-// the stories that walk forward start from a filled form. Named from the
-// catalog rather than restated: the verb has been reworded before, and a story
-// that failed for the wording would be reporting on the copy rather than on
-// the step.
-async function advance(canvasElement: HTMLElement, times: number) {
+type Walker = ReturnType<typeof userEvent.setup>;
+
+// The one button that moves the interview on — and it is not one word. A
+// question that is optional and still empty offers "Add later" where an
+// answered or a required one offers "Next question", and skipping an optional
+// question IS moving forward. Named from the catalog rather than restated: the
+// verbs have been reworded before, and a walk that failed for the wording would
+// be reporting on the copy rather than on the step.
+function forwardVerb(canvasElement: HTMLElement): HTMLElement | null {
   const canvas = within(canvasElement);
+  return (
+    canvas.queryByRole("button", { name: en["ob.manualNext"] }) ??
+    canvas.queryByRole("button", { name: en["ob.manualLater"] })
+  );
+}
+
+function prompt(canvasElement: HTMLElement): string {
+  const canvas = within(canvasElement);
+  return canvas.getByRole("heading", { level: 1 }).textContent ?? "";
+}
+
+// One question forward, or a failure naming where the walk stuck.
+//
+// The screen refuses to leave a required question nobody has answered, and it
+// refuses by doing nothing at all. A walk that took that for a step would go on
+// counting and describe the wrong question; one that waited for it to pass
+// would spin until the story timed out with nothing to read. So a step that
+// leaves the same prompt on screen is reported as what it is.
+async function step(canvasElement: HTMLElement, user: Walker): Promise<void> {
+  const before = prompt(canvasElement);
+  const verb = forwardVerb(canvasElement);
+  if (!verb) {
+    throw new Error(`the interview offers no way on from "${before}"`);
+  }
+  await user.click(verb);
+  await waitFor(() => {
+    expect(prompt(canvasElement)).not.toBe(before);
+  });
+}
+
+// Advancing needs the current question ANSWERED when it is a required one, so
+// the stories that walk forward start from a filled form.
+async function advance(canvasElement: HTMLElement, times: number) {
   const user = userEvent.setup();
-  for (let step = 0; step < times; step += 1) {
-    await user.click(
-      await canvas.findByRole("button", { name: en["ob.manualNext"] }),
-    );
+  for (let taken = 0; taken < times; taken += 1) {
+    await step(canvasElement, user);
   }
 }
 
@@ -84,16 +120,24 @@ async function advance(canvasElement: HTMLElement, times: number) {
 // statement of how many questions there are, and it goes wrong the day one is
 // added — which is how this story first failed, looking for a verb that had
 // already become "Review my answers". The condition cannot: the run is over
-// exactly when the next-question verb is gone.
+// exactly when neither forward verb is on screen and only the review is left.
 async function advanceToLast(canvasElement: HTMLElement) {
-  const canvas = within(canvasElement);
   const user = userEvent.setup();
-  for (;;) {
-    const next = canvas.queryByRole("button", { name: en["ob.manualNext"] });
-    if (!next) {
-      return;
-    }
-    await user.click(next);
+  while (forwardVerb(canvasElement)) {
+    await step(canvasElement, user);
+  }
+}
+
+// To the first question the interview will take an empty answer for, by the
+// SIGN of one rather than by a count: the verb reading "Add later" is exactly
+// what makes a question skippable here, so asking for that verb is asking for
+// the state the story is named after. A step count would have to be re-derived
+// every time a question moves, and the walk would land quietly on a neighbour.
+async function advanceToOptional(canvasElement: HTMLElement) {
+  const user = userEvent.setup();
+  const canvas = within(canvasElement);
+  while (!canvas.queryByRole("button", { name: en["ob.manualLater"] })) {
+    await step(canvasElement, user);
   }
 }
 
@@ -121,7 +165,7 @@ export const LastQuestion: Story = {
  *  Next look the same until it does. */
 export const OptionalQuestion: Story = {
   render: interview(form(ANSWERS)),
-  play: async ({ canvasElement }) => advance(canvasElement, 6),
+  play: async ({ canvasElement }) => advanceToOptional(canvasElement),
 };
 
 /** The German interview: the same step, the longer prompts, and the position

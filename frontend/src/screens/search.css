@@ -1,13 +1,13 @@
 .search-bar {
-  margin: 12px 0 18px;
+  margin: var(--space-3) 0 var(--space-5);
 }
 .search-groups {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--space-4);
 }
 .search-group {
-  padding: 14px 16px;
+  padding: var(--space-3) var(--space-4);
 }
 .search-group h2 {
   margin-bottom: 8px;
@@ -16,7 +16,7 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: var(--space-3);
 }
 .search-hit {
   display: flex;

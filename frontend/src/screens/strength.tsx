@@ -86,7 +86,13 @@ export function StrengthCard({
     >
       {overlay && <OverlayUnavailable />}
       {!overlay && query.isPending && (
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: "var(--space-3)",
+          }}
+        >
           <Skeleton width="40%" />
           <Skeleton width="90%" />
         </div>
@@ -138,7 +144,7 @@ function StrengthBody({
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 10,
+          gap: "var(--space-2)",
           flexWrap: "wrap",
           marginBottom: 12,
         }}
@@ -174,7 +180,7 @@ function StrengthBody({
           );
         })}
       </div>
-      <p className="t-caption" style={{ marginTop: 10 }}>
+      <p className="t-caption" style={{ marginTop: "var(--space-2)" }}>
         {strength.last_interaction
           ? t("strength.lastInteraction", {
               when: formatDateTime(

@@ -828,9 +828,11 @@ export function RecordFormBody({
           small
           variant="primary"
           type="submit"
-          disabled={pending || requiredMissing || refusals.size > 0}
+          disabled={!pending && (requiredMissing || refusals.size > 0)}
+          pending={pending}
+          busyLabel={t("create.saving")}
         >
-          {pending ? t("create.saving") : t(submitLabelKey)}
+          {t(submitLabelKey)}
         </Button>
       </div>
     </form>

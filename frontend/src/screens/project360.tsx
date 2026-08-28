@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useId, useState } from "react";
 import { api } from "../api/client";
 import { ifMatch, requireVersion } from "../api/version";
+import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { OverflowMenu } from "../design-system/atoms";
@@ -111,7 +112,13 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
         </>
       }
       actions={
-        <ProjectActions project={project} refusedReasonId={refusedByArchive} />
+        <>
+          <ProjectActions
+            project={project}
+            refusedReasonId={refusedByArchive}
+          />
+          <PageAsideToggle />
+        </>
       }
       // In the header row, where a reader looks for a record's verbs — as the
       // company, contact and lead pages already put them. Without it the row
@@ -135,13 +142,19 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <RollupsStrip view={view} />
         </div>
       }
-      // WHO is on this work comes first, then the paperwork. The rail used to
-      // open with the phase history — a log of moves the stepper above already
-      // shows the current state of — so a reader scanning for "whose project is
-      // this" read a changelog first. The three record-keeping cards below
-      // answer questions a reader comes looking for on purpose; the two above
-      // answer the one they arrive with.
-      rail={
+      {...chronology}
+    >
+      {/* WHO is on this work comes first, then the paperwork. The column used
+          to open with the phase history — a log of moves the stepper above
+          already shows the current state of — so a reader scanning for "whose
+          project is this" read a changelog first. The three record-keeping
+          cards below answer questions a reader comes looking for on purpose;
+          the two above answer the one they arrive with.
+
+          It is the PAGE's own column, beside the work rather than inside the
+          record's grid: same column, same fold and same memory of it as every
+          other record page. */}
+      <PageAside>
         <div className="project-rail">
           <ProjectCompanies
             projectId={project.id}
@@ -157,10 +170,7 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
           <ProjectDocumentsCard view={view} />
           <PhaseHistoryCard view={view} />
         </div>
-      }
-      railLabel={t("project.railLabel")}
-      {...chronology}
-    >
+      </PageAside>
       <div className="project-main">
         <ProjectDealsCard
           view={view}

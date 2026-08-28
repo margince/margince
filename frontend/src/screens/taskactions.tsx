@@ -8,7 +8,13 @@ import { useId } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useRecordZone } from "../app/recordzone";
-import { Badge, Button, Modal, Skeleton } from "../design-system/atoms";
+import {
+  Badge,
+  Button,
+  Checkbox,
+  Modal,
+  Skeleton,
+} from "../design-system/atoms";
 import { formatDate, formatDateTime } from "../format/format";
 import { viewerZone } from "../format/timezone";
 import { useLocale, useT } from "../i18n";
@@ -89,12 +95,13 @@ export function TaskCompleteCheck({
   const failed = update.isError && isThisTask;
   return (
     <>
-      <input
-        type="checkbox"
-        className="co-task-check"
+      {/* The row already names the task beside it, so the tick's own name is
+          screen-reader-only — the words are not repeated on screen, and the
+          box still announces what ticking it does. */}
+      <Checkbox
+        label={<span className="sr-only">{t("tasks.complete")}</span>}
         checked={false}
         disabled={pending}
-        aria-label={t("tasks.complete")}
         onChange={() =>
           update.mutate({ id: activityId, body: { is_done: true } })
         }

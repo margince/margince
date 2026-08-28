@@ -645,9 +645,11 @@ function InstallationProfileDialog({
             small
             type="submit"
             variant="primary"
-            disabled={!canManage || !dirty || pending}
+            disabled={!pending && (!canManage || !dirty)}
+            pending={pending}
+            busyLabel={t("common.saving")}
           >
-            {pending ? t("common.saving") : t("installationSettings.save")}
+            {t("installationSettings.save")}
           </Button>
         </div>
       </form>

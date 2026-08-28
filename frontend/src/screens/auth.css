@@ -347,7 +347,7 @@
   background: var(--dangerBg);
   border: 1px solid var(--danger);
   border-radius: var(--r-sm);
-  padding: 11px 13px;
+  padding: var(--space-3);
 }
 .auth-error .ae-t {
   font-size: 13px;
@@ -357,7 +357,7 @@
 .auth-error .ae-m {
   font-size: 12.5px;
   color: var(--textMeta);
-  margin-top: 3px;
+  margin-top: var(--space-1);
   line-height: 1.45;
 }
 .auth-error:focus-visible {
@@ -373,7 +373,7 @@
   background: var(--bgCard);
   border: 1px solid var(--borderSubtle);
   border-radius: var(--r-sm);
-  padding: 10px 13px;
+  padding: var(--space-3);
 }
 /* The locale switcher: a CONTROL, so it belongs to the card column and stays
    inside `.auth-task-in` (row 1 of the task grid). `.auth-legal` below is the
@@ -658,7 +658,7 @@
   display: inline-block;
   width: 2px;
   height: 0.85em;
-  margin-left: 3px;
+  margin-left: var(--space-1);
   vertical-align: -0.08em;
   background: var(--accent);
   animation: auth-caret 1s steps(1) infinite;
@@ -726,7 +726,7 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: 5px 9px;
+  padding: var(--space-1) var(--space-2);
   border: 1px solid var(--borderControl);
   border-radius: var(--r-full);
   background: var(--bgCard);

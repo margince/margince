@@ -164,10 +164,11 @@ export function TechnicalProfileCard({
         canRead ? (
           <Button
             small
-            disabled={start.isPending}
+            pending={start.isPending}
+            busyLabel={t("co.tech.reading")}
             onClick={() => start.mutate(orgId)}
           >
-            {start.isPending ? t("co.tech.reading") : t("co.tech.read")}
+            {t("co.tech.read")}
           </Button>
         ) : undefined
       }

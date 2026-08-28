@@ -1568,17 +1568,25 @@ function PassportCard() {
                 small
                 type="submit"
                 variant="primary"
-                disabled={scopes.size === 0 || mint.isPending}
                 // A passport with no scope is a credential that can do nothing,
                 // so the button says why it is refused rather than sitting pale
-                // with nothing to offer.
+                // with nothing to offer. The sentence refuses the press on its
+                // own, so there is no `disabled` beside it saying the same
+                // thing in a spelling that carries no explanation.
+                // And only while nobody is minting: `reason` outranks `pending`
+                // in Button, so a scope cleared after the press would take the
+                // spinner and `aria-busy` off a request still in flight — the
+                // reader would be told the press was refused while the write
+                // they made is running.
                 reason={
-                  scopes.size === 0
+                  scopes.size === 0 && !mint.isPending
                     ? t("settings.passportScopesRequired")
                     : undefined
                 }
+                pending={mint.isPending}
+                busyLabel={t("settings.minting")}
               >
-                {mint.isPending ? t("settings.minting") : t("settings.mint")}
+                {t("settings.mint")}
               </Button>
             </div>
           </form>

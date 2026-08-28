@@ -336,9 +336,11 @@ export function LogActivityForm({
           small
           variant="primary"
           type="submit"
-          disabled={log.isPending || !draft.subject.trim()}
+          disabled={!log.isPending && !draft.subject.trim()}
+          pending={log.isPending}
+          busyLabel={t("log.saving")}
         >
-          {log.isPending ? t("log.saving") : t("log.save")}
+          {t("log.save")}
         </Button>
       </div>
     </form>

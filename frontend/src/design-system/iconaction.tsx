@@ -39,6 +39,7 @@ export function IconAction({
   reason,
   reasonId,
   pending,
+  pressed,
   onClick,
   testId,
 }: Readonly<{
@@ -56,6 +57,15 @@ export function IconAction({
    */
   reasonId?: string;
   pending?: boolean;
+  /**
+   * For a glyph that SETS rather than does — a switch over a region, a filter
+   * left on. Drawn as `aria-pressed`, which is what tells a reader a control
+   * they have used from one they have not: two states of one switch look
+   * identical otherwise, and a glyph has no label to carry the difference.
+   * Omitted on a verb, where "pressed" would claim a state the control has not
+   * got.
+   */
+  pressed?: boolean;
   onClick?: () => void;
   /** Passed through, for a control a test already reaches by its own handle. */
   testId?: string;
@@ -71,6 +81,7 @@ export function IconAction({
         reasonId={reasonId}
         pending={pending}
         aria-label={label}
+        aria-pressed={pressed}
         data-testid={testId}
         onClick={onClick}
       >

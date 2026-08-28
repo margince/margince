@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
+import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { Button, OverflowMenu } from "../design-system/atoms";
@@ -300,26 +301,20 @@ export function PersonPageV2({
         subtitle={<PersonSubtitle view={view.data} />}
         pulse={<PersonIdentityLine view={view.data} />}
         actions={
-          <PersonActions
-            view={view.data}
-            consentAllows={emailAllowed}
-            consentKnown={guard.data !== undefined}
-            personId={id}
-            onWrite={() => openComposer("")}
-            onResearch={() => setDrawer("research")}
-          />
+          <>
+            <PersonActions
+              view={view.data}
+              consentAllows={emailAllowed}
+              consentKnown={guard.data !== undefined}
+              personId={id}
+              onWrite={() => openComposer("")}
+              onResearch={() => setDrawer("research")}
+            />
+            <PageAsideToggle />
+          </>
         }
         actionsInline
         zone={recordZone}
-        railLabel={t("person.page.asideLabel")}
-        rail={
-          <PersonRail
-            view={view.data}
-            guard={guard.data}
-            firstName={firstName}
-            onExplain={() => navigate({ screen: "contacts", id })}
-          />
-        }
         tabs={
           <RecordTabs
             options={PERSON_TABS}
@@ -347,6 +342,20 @@ export function PersonPageV2({
           />
         }
       >
+        {/* The contact's context goes to the PAGE's own column, beside the
+            work rather than inside the record's grid — so it runs the full
+            height past the header and the tab strip, and does not move when a
+            tab changes. What is true of the PERSON does not belong to
+            whichever part of them is open. Same column, same fold and same
+            memory of it as every other record page. */}
+        <PageAside>
+          <PersonRail
+            view={view.data}
+            guard={guard.data}
+            firstName={firstName}
+            onExplain={() => navigate({ screen: "contacts", id })}
+          />
+        </PageAside>
         {tab === "overview" && (
           <div className="record-stack">
             {/* The readings lead the overview, under the strip that chose it —
@@ -631,7 +640,7 @@ function PersonActions({
           in here because a magnifier reads as "search" and this verb is not
           search, and the timeline gets the honest name the product already uses
           for it everywhere else. */}
-      <OverflowMenu label={t("person.action.more")}>
+      <OverflowMenu label={t("record.moreActions")}>
         <Button small onClick={onResearch}>
           <Search size={15} aria-hidden="true" /> {t("person.action.research")}
         </Button>

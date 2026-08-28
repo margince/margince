@@ -2673,7 +2673,6 @@ export const de = {
     "Wählen Sie den Deal, dem das Dokument zugeordnet werden soll.",
   "docs.add.errRefused":
     "Sie dürfen zu diesem Datensatz keine Dokumente hinzufügen.",
-  "docs.add.errInFlight": "Dieses Dokument wird noch hochgeladen.",
   "docs.add.errTooLarge":
     "Diese Datei ist größer als {size} — mehr nimmt diese Installation nicht an. Bitte eine kleinere wählen.",
   "docs.add.failedTitle": "Der Upload ist fehlgeschlagen",
@@ -6355,7 +6354,6 @@ export const de = {
   "person.action.meetings": "Termine ansehen",
   "person.action.addTask": "Aufgabe",
   "person.action.research": "Recherche",
-  "person.action.more": "Weitere Aktionen",
 
   "person.strip.lastInbound": "Zuletzt eingehend",
   "person.strip.lastOutbound": "Zuletzt ausgehend",
@@ -6868,7 +6866,6 @@ export const de = {
     "Durch das Archivieren verschwindet dieses Projekt aus der aktiven Liste und sein Kürzel wird frei. Dies kann in der Oberfläche nicht rückgängig gemacht werden.",
   "project.archivedReadOnly":
     "Dieses Projekt ist archiviert und nimmt keine Änderungen an.",
-  "project.railLabel": "Projektprofil",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "Alle Phasen",
   "project.viewDelivering": "In Umsetzung",
@@ -6936,7 +6933,7 @@ export const de = {
   "project.advance.reasonRequired":
     "Ein abgeschlossenes Projekt braucht eine Begründung.",
   "deal.project": "Projekt",
-  "deal.projectNew": "Neues Projekt …",
+  "deal.projectNew": "Neues Projekt…",
   "deal.projectWithheld": "Projekt nicht sichtbar",
   "deal.projectNeedsCompany":
     "Wähle zuerst das Unternehmen des Deals — ein Projekt wird an einem Unternehmen gestartet.",

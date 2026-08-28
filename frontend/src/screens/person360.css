@@ -489,9 +489,15 @@
   min-width: 0;
 }
 
+/* Set on one line, and min-width: 0 is what makes the ellipsis reachable: the
+   `auto` track's floor is the value's own min-content width, so without it the
+   longest reading sizes the rail's column instead of truncating inside it. */
 .pe-rail-value {
+  min-width: 0;
   color: var(--textPrimary);
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .pe-rail-value-good {

@@ -166,7 +166,7 @@
   border: 0;
   background: none;
   outline: 0;
-  padding: 13px var(--space-3) 13px 0;
+  padding: var(--space-3) var(--space-3) var(--space-3) 0;
   font-family: var(--f-body);
   font-size: var(--fs-lead);
   color: var(--textPrimary);
@@ -242,7 +242,7 @@
 .ob-gate-link {
   background: transparent;
   border: 0;
-  padding: 2px;
+  padding: var(--space-1);
   cursor: pointer;
   font-family: var(--f-body);
   font-size: var(--fs-sm);

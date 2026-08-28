@@ -102,18 +102,17 @@ export type ListSelection<Row> = {
  * not open the row.
  */
 function RowSelect<Row>({
-  identity,
   row,
   rowKey,
   selection,
 }: Readonly<{
-  /** Only the identity cell carries the checkbox. */
-  identity: boolean;
   row: Row;
   rowKey: (row: Row) => string;
   selection?: ListSelection<Row>;
 }>) {
-  if (!selection || !identity || selection.selectable?.(row) === false) {
+  // No `identity` flag any more: only the identity cell renders this, and a
+  // prop that is true at its one call site is a claim the caller can get wrong.
+  if (!selection || selection.selectable?.(row) === false) {
     return null;
   }
   return (
@@ -124,6 +123,54 @@ function RowSelect<Row>({
       onChange={() => selection.onToggle(row)}
       onClick={(event) => event.stopPropagation()}
     />
+  );
+}
+
+/**
+ * The identity cell's own row: the selection box and the name side by side,
+ * centred on each other.
+ *
+ * A row of its own because the two are otherwise an inline-grid label followed
+ * by a link, and a name long enough to wrap put the checkbox on a line ABOVE the
+ * name it selects — which reads as a control belonging to the row above it.
+ *
+ * The identity cell ONLY. Every other column returns whatever its own renderer
+ * returns, blocks included, and a flex `<span>` around those would both invent a
+ * layout contract they never asked for and put a `<div>` inside a `<span>`.
+ */
+function IdentityCell<Row>({
+  row,
+  rowKey,
+  rowHref,
+  selection,
+  cell,
+}: Readonly<{
+  row: Row;
+  rowKey: (row: Row) => string;
+  rowHref?: (row: Row) => string;
+  selection?: ListSelection<Row>;
+  cell: (row: Row) => ReactNode;
+}>) {
+  return (
+    <span className="lt-identity-row">
+      <RowSelect row={row} rowKey={rowKey} selection={selection} />
+      {rowHref ? (
+        // The identity cell is a real link, so the row can be opened the ways a
+        // link can: a new tab, a new window, a bookmark, or the keyboard. Only
+        // the default click is stopped from reaching the row's own handler —
+        // preventing the anchor instead would navigate the current page while
+        // the new tab opens too.
+        <a
+          className="lt-cellink"
+          href={rowHref(row)}
+          onClick={(event) => event.stopPropagation()}
+        >
+          {cell(row)}
+        </a>
+      ) : (
+        cell(row)
+      )}
+    </span>
   );
 }
 
@@ -1103,26 +1150,14 @@ export function ListTable<Row>({
                         // cell is the card's heading and needs none.
                         data-label={column.fixed ? undefined : column.header}
                       >
-                        <RowSelect
-                          identity={Boolean(column.fixed)}
-                          row={row}
-                          rowKey={rowKey}
-                          selection={selection}
-                        />
-                        {column.fixed && rowHref ? (
-                          // The identity cell is a real link, so the row can be
-                          // opened the ways a link can: a new tab, a new window,
-                          // a bookmark, or the keyboard. Only the default click
-                          // is stopped from reaching the row's own handler —
-                          // preventing the anchor instead would navigate the
-                          // current page while the new tab opens too.
-                          <a
-                            className="lt-cellink"
-                            href={rowHref(row)}
-                            onClick={(event) => event.stopPropagation()}
-                          >
-                            {column.cell(row)}
-                          </a>
+                        {column.fixed ? (
+                          <IdentityCell
+                            row={row}
+                            rowKey={rowKey}
+                            rowHref={rowHref}
+                            selection={selection}
+                            cell={column.cell}
+                          />
                         ) : (
                           column.cell(row)
                         )}

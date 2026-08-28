@@ -7,6 +7,9 @@
  * both themes without a second set of rules.
  */
 
+/* The root wears `.wrap` (app/shell.css): the page gutter is the shell's one
+ * spelling of the inset, so the lanes start on the same line as the page head
+ * above them. What is left here is the rhythm BETWEEN the lanes. */
 .today {
   display: flex;
   flex-direction: column;

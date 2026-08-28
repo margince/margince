@@ -20,13 +20,6 @@
   margin-inline: calc(-1 * var(--pageGutter));
 }
 
-@container work (min-width: 0) {
-  .recordtabs {
-    inline-size: 100cqi;
-    margin-inline: calc((100cqi - 100%) / -2);
-  }
-}
-
 /* A record with a RAIL is the exception, and it has to be: the rail is a
    column INSIDE the work container, so a strip that centres itself on the
    container runs underneath it, and the rail's cards are drawn over the tabs.
@@ -44,26 +37,59 @@
 .page-zones-both .recordtabs {
   inline-size: auto;
   margin-inline: 0;
+  /* No breakout, so nothing to come back from: the inset below that re-aligns
+     the tabs to the column would push them off the middle of it instead. */
+  padding-inline: 0;
 }
 
-/* And its tabs start at the column's own edge. The row centres itself in the
-   record measure so the first tab lands under the record's mark; inside a
-   column that measure is wider than the column, so centring pushed the first
-   tabs off the left of it and the strip opened part-way along. */
+/* And its tabs take no gutter of their own here: with no breakout the strip
+   already stands on the reading column, so a gutter inside it would open the
+   first tab part-way along the column instead of at its edge. */
 .page-zones-rail .recordtabs-row,
 .page-zones-both .recordtabs-row {
-  max-inline-size: none;
   padding-inline: 0;
 }
 
 /* The tabs themselves keep the record's own column, so the first tab sits
    under the record's mark rather than against the window's edge. Only the
-   RULES cross the page; the tabs belong to the document under them. */
+   RULES cross the page; the tabs belong to the document under them.
+
+   One gutter and no measure of its own. A cap here — the record's reading
+   measure, centred — was a second answer to how wide a record reads, and it
+   disagreed with the first on every surface that does not carry one: a lead, a
+   deal and a project read the full width of the column, so their tabs centred
+   themselves half the difference away from the record they belong to. The
+   record's column is the only thing that decides that width; this row starts
+   where it starts. */
 .recordtabs-row {
-  max-inline-size: var(--recordColumn);
-  margin-inline: auto;
   padding-inline: var(--pageGutter);
   inline-size: 100%;
+}
+
+@container work (min-width: 0) {
+  /* The strip breaks out by half the difference on each side and gives exactly
+     that back as padding, so its BORDER spans the work column while its content
+     box is the reading column — the tabs then start where the record's name
+     does, and neither half can drift, because both are the same expression.
+
+     The padding is what the box needs and not a nicety: `cqi` counts the
+     scroller's gutter, the column inside it does not, so a strip sized against
+     the container sits half a scrollbar off the column it belongs to. Without
+     this the tabs rode that offset out past the column's edge, and the first one
+     lost its first glyph.
+
+     `100%` is the reading column here because that is this element's containing
+     block. One level down, in the row, the same expression would resolve against
+     the strip and cancel to nothing. */
+  .recordtabs {
+    inline-size: 100cqi;
+    margin-inline: calc((100cqi - 100%) / -2);
+    padding-inline: calc((100cqi - 100%) / 2);
+  }
+
+  .recordtabs-row {
+    padding-inline: 0;
+  }
 }
 
 /* It scrolls rather than wraps. A second row of tabs pushes the record's own

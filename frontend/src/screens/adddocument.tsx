@@ -394,7 +394,6 @@ export function AddDocumentDialog({
     file,
     parent,
     permitted,
-    pending: upload.isPending,
     maxBytes: maxUploadBytes,
   });
 
@@ -510,13 +509,15 @@ export function AddDocumentDialog({
         <Button
           variant="primary"
           reason={refusal ? t(refusal, { size: limitLabel }) : undefined}
+          pending={upload.isPending}
+          busyLabel={t("docs.add.uploading")}
           onClick={() => {
             if (file && parent) {
               upload.mutate({ parent, category, title, file });
             }
           }}
         >
-          {t(upload.isPending ? "docs.add.uploading" : "docs.add.submit")}
+          {t("docs.add.submit")}
         </Button>
       </div>
     </Modal>
@@ -549,24 +550,19 @@ function staleAfterUpload(anchor: DocumentAnchor): readonly QueryKey[] {
 }
 
 // Why the upload cannot be offered, in the order the reader can act on: a
-// missing file is theirs to fix, a missing grant is not, and an upload already
-// in flight is neither — it is the same press arriving twice.
-//
-// The in-flight case is a REFUSAL and not merely a label change, because the
-// request it would repeat has already left: a second press lands a second copy
-// of the document on the record, and nothing downstream can tell that from two
-// deliberate uploads of the same file.
+// missing file is theirs to fix and a missing grant is not. A request already
+// in flight is NOT one of these — it is a wait rather than a refusal, so it is
+// the button's `pending`, which swallows the second press that would land a
+// second copy of the document without taking the control away from the reader.
 function uploadRefusal({
   file,
   parent,
   permitted,
-  pending,
   maxBytes,
 }: Readonly<{
   file: File | undefined;
   parent: AttachmentParent | null;
   permitted: boolean;
-  pending: boolean;
   maxBytes: number | undefined;
 }>): MessageKey | null {
   if (!permitted) {
@@ -581,9 +577,6 @@ function uploadRefusal({
   // be read for deal fields.
   if (!parent) {
     return "docs.add.errNoDeal";
-  }
-  if (pending) {
-    return "docs.add.errInFlight";
   }
   // Only when the server has SAID what it accepts. An unanswered installation
   // read leaves the upload to be refused where it always was — sending a file

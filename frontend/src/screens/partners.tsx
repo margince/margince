@@ -237,7 +237,7 @@ function PartnerForm({
         event.preventDefault();
         mutation.mutate(partner);
       }}
-      style={{ display: "flex", flexDirection: "column", gap: 10 }}
+      className="form-stack"
     >
       <Field label={t("partner.role")} required>
         {(control) => (
@@ -371,9 +371,10 @@ function PartnerForm({
           small
           variant="primary"
           type="submit"
-          disabled={mutation.isPending}
+          pending={mutation.isPending}
+          busyLabel={t("create.saving")}
         >
-          {mutation.isPending ? t("create.saving") : t(submitLabel)}
+          {t(submitLabel)}
         </Button>
       </div>
     </form>

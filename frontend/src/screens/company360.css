@@ -10,7 +10,7 @@
 }
 
 .co-card {
-  padding: 12px 14px;
+  padding: var(--space-3);
 }
 
 /* The left rail: the account's context beside the work (mockup State A).
@@ -47,7 +47,11 @@
 .co-reading {
   display: flex;
   flex-direction: column;
-  gap: var(--space-2);
+  /* The page's own rhythm, not a tighter one of this group's. Two panels 8px
+     apart here and 16px apart everywhere else on the same page is the reader
+     being told these two are a closer pair than they are — the group's heading
+     already says they belong together. */
+  gap: var(--space-4);
 }
 
 /* The header of the group, unboxed and outside the first card. It names the
@@ -71,7 +75,11 @@
 .co-reading-pair {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 27rem), 1fr));
-  gap: var(--space-2);
+  /* The page's own rhythm in both directions. Once these two fold into one
+     column the gap between them is a gap between stacked cards like any other,
+     and 8px there was the same card 8px from its neighbour on a page that puts
+     16px everywhere else. */
+  gap: var(--space-4);
   align-items: start;
 }
 /* What this account is worth to us. The panel is one reading in five parts —
@@ -140,7 +148,7 @@
 .co-row {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: var(--space-1);
   font-size: var(--fs-sm);
   color: var(--textPrimary);
 }
@@ -149,13 +157,15 @@
 .co-row-main {
   display: inline-flex;
   align-items: center;
-  gap: 6px; /* ds:ignore matches .co-row-meta below, which the same row aligns to */
+  gap: var(
+    --space-1
+  ); /* matches .co-row-meta below, which the same row aligns to */
 }
 
 .co-row-meta {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--space-1);
   flex-wrap: wrap;
   font-size: var(--fs-meta);
   color: var(--textMeta);
@@ -224,7 +234,7 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 6px; /* ds:ignore matches .co-row-meta, the same row-end chip rhythm */
+  gap: var(--space-1); /* matches .co-row-meta, the same row-end chip rhythm */
   flex-wrap: wrap;
   flex: 0 0 auto;
   margin-left: auto;
@@ -241,7 +251,7 @@
 }
 
 .co-since {
-  padding: 12px 14px;
+  padding: var(--space-3);
   margin-bottom: 12px;
 }
 
@@ -310,7 +320,7 @@
   list-style: none;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--space-2);
   margin: 0;
   font-size: var(--fs-sm);
   line-height: 1.55;
@@ -490,13 +500,6 @@
   align-items: flex-start;
   gap: var(--space-3);
 }
-.co-task-check {
-  flex: 0 0 auto;
-  width: 16px;
-  height: 16px;
-  margin-top: var(--space-1);
-  accent-color: var(--accent);
-}
 .co-task-body {
   display: flex;
   flex-direction: column;
@@ -527,7 +530,7 @@
   margin: 8px 0 0;
 }
 .co-ask-asked {
-  margin: 10px 0 0;
+  margin: var(--space-2) 0 0;
   font-size: var(--fs-meta);
   font-weight: 600;
   color: var(--textMeta);

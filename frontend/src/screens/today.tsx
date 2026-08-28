@@ -565,7 +565,7 @@ export function TodayScreen() {
   // arriving would be wrong on every slow connection.
   const state = day.isPending ? "loading" : day.isError ? "failed" : "ready";
   return (
-    <div className="today">
+    <div className="wrap today">
       <SurfaceState
         label={t("day.title")}
         labelLevel="h3"
