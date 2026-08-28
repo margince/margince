@@ -340,3 +340,37 @@ func TestAMessageLandsAsAMessageOnThisUnitsTransport(t *testing.T) {
 		t.Fatalf("a message that arrived here landed as %q", rec.Activity.Direction)
 	}
 }
+
+// AN ACCOUNT-ONLY SENDER IS THE CASE THIS CONNECTOR EXISTS FOR, and it is the
+// one a partial guard drops. With a sender named by an opaque account and no
+// address, the only address left on the record is the MEMBER's own — and the
+// core reads a party set that is entirely its own domains as colleagues
+// talking, and drops it. Naming the sender by an account does not save them:
+// the gate reads addresses, so an empty set is what keeps the message.
+func TestAnAccountOnlySenderNamesNoAddresses(t *testing.T) {
+	t.Parallel()
+	doc := arrival{
+		MessageID: "m-1",
+		From:      party{Account: "acct-77", Name: "Someone Outside"},
+		To:        party{Email: "rep@margince.test"},
+	}
+	if got := addressesOf(doc); len(got) != 0 {
+		t.Fatalf("a sender identified only by an account left %v on the record — the member's own address "+
+			"alone reads to the core as a wholly-internal message, which it drops", got)
+	}
+}
+
+// And a sender who DID name an address still contributes both, or the gate it
+// feeds has nothing to judge and every message looks unenumerable.
+func TestASenderWithAnAddressNamesBothParties(t *testing.T) {
+	t.Parallel()
+	doc := arrival{
+		MessageID: "m-1",
+		From:      party{Account: "acct-77", Email: "outside@example.net"},
+		To:        party{Email: "rep@margince.test"},
+	}
+	got := addressesOf(doc)
+	if len(got) != 2 || got[0] != "outside@example.net" || got[1] != "rep@margince.test" {
+		t.Fatalf("addressesOf named %v, want both parties", got)
+	}
+}

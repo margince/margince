@@ -156,7 +156,7 @@ func threadOf(doc arrival) string {
 // gate skips what it cannot read: a blank element is the same hole an empty set
 // is, one party at a time.
 //
-// A SENDER NAMED BY NEITHER ACCOUNT NOR EMAIL forces the whole set empty, even
+// A SENDER WHO NAMED NO ADDRESS forces the whole set empty, even
 // though `to` is almost always present: the gate reads every address in the set
 // as one of the parties to the message, and a set holding only OUR OWN member's
 // address is indistinguishable from "every party is on our own domain" — it
@@ -166,7 +166,19 @@ func threadOf(doc arrival) string {
 // record rather than passing it through a domain check it cannot honestly
 // answer.
 func addressesOf(doc arrival) []string {
-	if strings.TrimSpace(doc.From.Account) == "" && strings.TrimSpace(doc.From.Email) == "" {
+	// THE SENDER'S ADDRESS DECIDES WHETHER THERE IS A SET AT ALL, and an account
+	// does not stand in for it. The core reads this set to ask whether every
+	// party is on the installation's own domains, and answers "yes" for a set
+	// holding only the member's own address — so a sender who named no address
+	// would have their message read as colleagues talking and dropped, however
+	// well identified they are by anything else.
+	//
+	// An account-only sender is not a degenerate case here, it is the case this
+	// connector exists for: a party a remote system knows by an opaque id and
+	// nothing more. Empty is the answer that keeps them, because the core
+	// documents an empty set as "this connector could not enumerate the
+	// parties" and keeps the record rather than judging it.
+	if strings.TrimSpace(doc.From.Email) == "" {
 		return nil
 	}
 	var found []string

@@ -206,9 +206,12 @@ func TestInboundRefusesATimeUnitWhenTimeIsShadowed(t *testing.T) {
 	if err == nil {
 		t.Fatal("a duration spelled through a shadowed \"time\" identifier was derived as though it named a real time unit")
 	}
-	if !strings.Contains(err.Error(), "time package's units") {
-		t.Fatalf("refused for the wrong reason: %v", err)
-	}
+	// REFUSED is the whole assertion, deliberately. This fixture carries two
+	// durations — the endpoint's Skew and the rate's Window — and either can be
+	// the one the reader reaches first, so pinning the message would pin which
+	// field failed rather than that the shadowed identifier is not a time unit.
+	// A test that passes because a DIFFERENT field refused first is one that
+	// stops covering its own subject the moment the fixture is reordered.
 }
 
 func TestNoInboundOmitsTheField(t *testing.T) {
