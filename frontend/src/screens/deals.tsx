@@ -6,6 +6,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query";
 import {
+  type ComponentProps,
   type Dispatch,
   type DragEvent,
   type ReactNode,
@@ -89,7 +90,10 @@ import { RecordContextPanel } from "./context";
 import type { CreateField } from "./create";
 import { CreateAction } from "./create";
 import { CustomFieldsCard } from "./customfields.card";
-import { useObjectCustomFields } from "./customfields.form";
+import {
+  type ObjectCustomFields,
+  useObjectCustomFields,
+} from "./customfields.form";
 import { DealCommitteeMap } from "./deal360/dealcommittee";
 import { DealFacts } from "./deal360/dealfacts";
 import { DealPulse } from "./deal360/dealpulse";
@@ -112,6 +116,7 @@ import { EditAction } from "./edit";
 import { EntityRef, useEntityName } from "./entityref";
 import { RecordHistoryTab } from "./history";
 import {
+  type FilterSpec,
   LIST_PAGE_SIZES,
   type ListQuery,
   type ListState,
@@ -1734,204 +1739,112 @@ function DealViewTools({
   );
 }
 
-// biome-ignore lint/complexity/noExcessiveCognitiveComplexity: this screen was already at the ceiling; overlay support adds one necessary mode branch (board is unavailable over a stage-less mirror). The header is already extracted; a full DealsScreen split is tracked in issue 2480.
-export function DealsScreen({
-  startCreating = false,
-}: Readonly<{ startCreating?: boolean }>) {
+// The board surface's body, drawn only while the board is showing.
+//
+// Its own component because the choice it makes is three deep — a pipeline to
+// draw in, a first load that has not landed, then the board itself — and read
+// inside the screen that choice sat under every other dial the screen holds.
+function DealBoardBody({
+  dealsQuery,
+  pipelinesQuery,
+  effectivePipeline,
+  loadedDeals,
+  stageTotalsQuery,
+  orgs,
+  orgsSettled,
+  openDeal,
+  cardDragHandlers,
+  columnDropHandlers,
+}: Readonly<{
+  dealsQuery: ReturnType<typeof useDeals>;
+  pipelinesQuery: ReturnType<typeof usePipelines>;
+  effectivePipeline?: Pipeline;
+  loadedDeals: Deal[];
+  stageTotalsQuery: ReturnType<typeof useStageTotals>;
+  orgs: Organization[];
+  orgsSettled: boolean;
+  openDeal: ComponentProps<typeof PipelineBoard>["onOpen"];
+  cardDragHandlers: ComponentProps<typeof PipelineBoard>["cardDragHandlers"];
+  columnDropHandlers: ComponentProps<
+    typeof PipelineBoard
+  >["columnDropHandlers"];
+}>) {
   const t = useT();
   const { locale } = useLocale();
-  const recordZone = useRecordZone();
-  const cf = useObjectCustomFields("deal");
-  const overlay = useSorMode() === "overlay";
-  const pipelinesQuery = usePipelines(!overlay);
-  const meQuery = useMe();
-  const savedViews = useSavedViewTabs("deals");
-  // Every dial on this screen lives in the ADDRESS, the way the shared list
-  // stack's do (screens/listquery.tsx) — this screen hand-rolls its ListQuery
-  // because it drives a board as well as a table, so it reaches for the same
-  // codec rather than growing a second answer to what a narrowed list's URL
-  // looks like.
+  // Every company the CARDS name. The picker's capped page answers most of them
+  // for free; the rest are resolved by id (useOrgMarks), so no card is left
+  // standing over a company the board simply failed to look up.
   //
-  // `pipeline_id` and `view` sit beside the query's own dials: the first is
-  // already a wire parameter name, and the second is the one dial here that is
-  // about DRAWING rather than about which deals exist.
-  const [params, setParams] = useUrlParams();
-  const opening = useMemo<ListQuery>(
-    () => ({
-      q: "",
-      sort: "",
-      includeArchived: false,
-      filters: {},
-      // The deal list reads its own fixed page (the board is capped at 100 and
-      // documented as such), so this is the shape's default rather than a dial
-      // the footer offers.
-      perPage: LIST_PAGE_SIZES[0],
-    }),
-    [],
+  // Only the board asks: the table names its companies through the same
+  // per-record reference every other cross-record cell uses, and handing it
+  // this map as well would read each company twice.
+  const orgMarks = useOrgMarks(loadedDeals, orgs, orgsSettled);
+  return (
+    <>
+      {dealsQuery.data && (
+        <p className="t-caption">
+          {t("board.count", {
+            count: formatNumber(loadedDeals.length, locale),
+          })}
+        </p>
+      )}
+      <QueryGate query={pipelinesQuery}>
+        {() =>
+          effectivePipeline ? (
+            // Only the INITIAL load goes through the gate. An infinite
+            // query reports isError when ANY page fails, later ones
+            // included, so keeping the gate around a loaded board would
+            // let one failed "load more" throw away every card already on
+            // screen. Past the first page the board stands and the button
+            // retries — exactly what OverlayDealsTable does above, and for
+            // the same reason.
+            (dealsQuery.data?.pages ?? []).length === 0 ? (
+              <QueryGate query={dealsQuery}>{() => null}</QueryGate>
+            ) : (
+              <>
+                <PipelineBoard
+                  columns={buildColumns(
+                    effectivePipeline.stages ?? [],
+                    loadedDeals,
+                    stageTotalsQuery.data ?? new Map(),
+                    orgMarks,
+                  )}
+                  onOpen={openDeal}
+                  cardDragHandlers={cardDragHandlers}
+                  columnDropHandlers={columnDropHandlers}
+                />
+                <LoadMoreButton query={dealsQuery} />
+              </>
+            )
+          ) : null
+        }
+      </QueryGate>
+    </>
   );
-  const query = useMemo(
-    () =>
-      listQueryFromParams(
-        withoutScreenDials(params, DEAL_SCREEN_DIALS),
-        opening,
-        true,
-      ),
-    [params, opening],
-  );
-  const setQuery = (update: SetStateAction<ListQuery>) => {
-    const live = currentParams();
-    const next =
-      typeof update === "function"
-        ? update(
-            listQueryFromParams(
-              withoutScreenDials(live, DEAL_SCREEN_DIALS),
-              opening,
-              true,
-            ),
-          )
-        : update;
-    setParams(
-      mergeScreenDials(
-        // The rendered page is carried across rather than dropped, exactly as
-        // useListQuery carries it: the codec does not compute it, so a write
-        // that rebuilt the address from the query alone would take the page out
-        // of an address a reader had been sent to. A write that really is a
-        // narrowing still resets it — the table's own reset fires next.
-        withListPage(paramsFromListQuery(next, opening), listPageOf(live)),
-        live,
-        DEAL_SCREEN_DIALS,
-      ),
-    );
-  };
-  const pipelineId = params.get(PIPELINE_PARAM) ?? "";
-  const setPipelineId = (next: string) =>
-    setParams(withDialSet(currentParams(), PIPELINE_PARAM, next));
-  const effectivePipeline: Pipeline | undefined =
-    pipelinesQuery.data?.find((p) => p.id === pipelineId) ??
-    pipelinesQuery.data?.find((p) => p.is_default) ??
-    pipelinesQuery.data?.[0];
-  const dealFilters: DealFilters = {
-    pipelineId: effectivePipeline?.id ?? "",
-    sort: query.sort,
-    includeArchived: query.includeArchived,
-    filters: query.filters,
-    overlay,
-  };
-  const dealsQuery = useDeals(dealFilters);
-  // The board's column totals: a per-stage server aggregate
-  // over EVERY matching deal, not just the capped page useDeals fetches —
-  // built from the SAME filter dials so cards and totals never disagree
-  // about which deals are in view.
-  const stageTotalsQuery = useStageTotals(dealFilters);
-  // A stage-keyed board cannot place a mirror deal (its pipeline/stage is the
-  // null pipeline/stage), so overlay mode opens on the flat table and hides the toggle
-  // (below) — the mode is fixed for the page's life, so a static initial value
-  // is enough.
-  const view: "board" | "table" =
-    overlay || params.get(VIEW_PARAM) === "table" ? "table" : "board";
-  const setView = (next: "board" | "table") =>
-    setParams(
-      withDialSet(currentParams(), VIEW_PARAM, next === "table" ? next : ""),
-    );
-  const [pending, setPending] = useState<PendingAdvance | null>(null);
-  // Bulk selection, by deal id. Cleared after any bulk run except for the rows
-  // that refused, since every other row's version has moved.
-  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+}
+
+// Everything the board does when it is touched: the drag it started, the drop
+// it landed, and the click that is a click rather than the tail of a drag.
+//
+// A hook rather than four callbacks in the screen. They share the two refs
+// that tell a drag from a click and nothing else on the screen reads those,
+// so holding them out here is what keeps the drag protocol readable in one
+// place instead of interleaved with the screen's dials.
+function useBoardInteractions({
+  stages,
+  loadedDeals,
+  advance,
+  setPending,
+}: Readonly<{
+  stages: Stage[];
+  loadedDeals: Deal[];
+  advance: ReturnType<typeof useAdvanceDeal>;
+  setPending: (pending: PendingAdvance) => void;
+}>) {
+  // Which card is in flight, and when the last drag ended — a drop and a click
+  // arrive as the same event pair, so the board tells them apart by time.
   const dragging = useRef<string | null>(null);
   const lastDragEnd = useRef(0);
-
-  const advance = useAdvanceDeal();
-
-  const stages = effectivePipeline?.stages ?? [];
-  const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
-  // Only ids the list currently holds count as selected: a row that left the
-  // result set (refetched away, filtered out, archived by this very run) must
-  // not linger as an invisible selection nobody can clear.
-  // Every page walked so far, in one list. The board draws its columns from
-  // this and the table renders it directly, so both surfaces grow together as
-  // the reader asks for more.
-  const loadedDeals = (dealsQuery.data?.pages ?? []).flatMap(
-    (page) => page.data,
-  );
-  const selectedRows = loadedDeals.filter((deal) => selected.has(deal.id));
-  const liveSelection = new Set(selectedRows.map((deal) => deal.id));
-
-  // The table's own dials over the same keyset walk the board reads, so
-  // "load more" on either surface advances both.
-  const dealsListState: ListState<Deal> = {
-    rows: loadedDeals,
-    query,
-    setQuery,
-    isPending: dealsQuery.isPending,
-    isError: dealsQuery.isError,
-    error: dealsQuery.error,
-    refetch: () => dealsQuery.refetch(),
-    hasMore: dealsQuery.hasNextPage,
-    loadMore: () => {
-      dealsQuery.fetchNextPage();
-    },
-  };
-
-  const orgsQuery = useQuery({
-    queryKey: ["organizations"],
-    queryFn: async () => {
-      const { data, error } = await api.GET("/organizations", {
-        params: { query: { limit: 50 } },
-      });
-      if (error) {
-        throwProblem(error);
-      }
-      return data;
-    },
-  });
-
-  const partnerOptions = usePartnerOptions(orgsQuery.data?.data ?? []);
-
-  // The picker asks the server for ONE company's projects, so the form's chosen
-  // company is what it is keyed on: a project is worked by several companies,
-  // and only the server can say which of them this one is on.
-  //
-  // The company comes from the OPEN FORM rather than from anything on this
-  // screen, because there is nothing else it could come from: a create form has
-  // no record, and the reader picks the company inside the same dialog. The
-  // form publishes its answers (CreateAction's onValuesChange) and the query
-  // follows them, which is the read `optionsFor` cannot do — it is a pure
-  // function of the values, so it can only filter a list already fetched, and a
-  // project list row names only its anchor company, so nothing in the browser
-  // can compute which projects a company is on.
-  const [formCompany, setFormCompany] = useState("");
-  const openProjects = useProjectsOfCompany(formCompany || undefined);
-
-  const createDeal = async (values: Record<string, string>) => {
-    const pipeline = effectivePipeline;
-    if (!pipeline) {
-      throwProblem(null);
-    }
-    // A project asked for on the form is born first, on the deal's company,
-    // so the deal can name it at birth.
-    const projectId = await resolveDealProject(
-      values,
-      values.organization_id?.trim() || null,
-      t,
-    );
-    const { data, error } = await api.POST("/deals", {
-      body: {
-        ...mapDealCreate(
-          { ...values, project_id: projectId ?? "" },
-          pipeline.id,
-        ),
-        ...cf.toBody(values),
-      },
-    });
-    if (error) {
-      throwProblem(error, t);
-    }
-    return data;
-  };
-
-  // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
-  // won/lost are reached through the confirmed advance, never at create.
-  const openStages = stages.filter((stage) => stage.semantic === "open");
 
   const requestAdvance = (dealId: string, stageId: string) => {
     const toStage = stages.find((stage) => stage.id === stageId);
@@ -1988,17 +1901,260 @@ export function DealsScreen({
     },
   });
 
-  // Create writes a native deal — the mirror refuses it (unsupported_by_sor),
-  // so the affordance is hidden in overlay, matching the board mutations.
-  // Shared between the board and the table surface: whichever view is
-  // showing, the action lives in the surface's own header, not a wrap sibling.
-  const createAction = !overlay && openStages.length > 0 && (
+  return { openDeal, cardDragHandlers, columnDropHandlers };
+}
+
+// Every dial on this screen, read from and written to the ADDRESS.
+//
+// A hook of its own because this screen hand-rolls what screens/listquery.tsx
+// does for every other list — it drives a board as well as a table, so it
+// reaches for the same codec rather than growing a second answer to what a
+// narrowed list's URL looks like — and the hand-rolling is the part worth
+// reading in one piece.
+//
+// `pipeline_id` and `view` sit beside the query's own dials: the first is
+// already a wire parameter name, and the second is the one dial here that is
+// about DRAWING rather than about which deals exist.
+function useDealScreenDials({
+  overlay,
+  pipelines,
+}: Readonly<{ overlay: boolean; pipelines?: Pipeline[] }>) {
+  const [params, setParams] = useUrlParams();
+  const opening = useMemo<ListQuery>(
+    () => ({
+      q: "",
+      sort: "",
+      includeArchived: false,
+      filters: {},
+      // The deal list reads its own fixed page (the board is capped at 100 and
+      // documented as such), so this is the shape's default rather than a dial
+      // the footer offers.
+      perPage: LIST_PAGE_SIZES[0],
+    }),
+    [],
+  );
+  const query = useMemo(
+    () =>
+      listQueryFromParams(
+        withoutScreenDials(params, DEAL_SCREEN_DIALS),
+        opening,
+        true,
+      ),
+    [params, opening],
+  );
+  const setQuery = (update: SetStateAction<ListQuery>) => {
+    const live = currentParams();
+    const next =
+      typeof update === "function"
+        ? update(
+            listQueryFromParams(
+              withoutScreenDials(live, DEAL_SCREEN_DIALS),
+              opening,
+              true,
+            ),
+          )
+        : update;
+    setParams(
+      mergeScreenDials(
+        // The rendered page is carried across rather than dropped, exactly as
+        // useListQuery carries it: the codec does not compute it, so a write
+        // that rebuilt the address from the query alone would take the page out
+        // of an address a reader had been sent to. A write that really is a
+        // narrowing still resets it — the table's own reset fires next.
+        withListPage(paramsFromListQuery(next, opening), listPageOf(live)),
+        live,
+        DEAL_SCREEN_DIALS,
+      ),
+    );
+  };
+  const pipelineId = params.get(PIPELINE_PARAM) ?? "";
+  const setPipelineId = (next: string) =>
+    setParams(withDialSet(currentParams(), PIPELINE_PARAM, next));
+  const effectivePipeline: Pipeline | undefined =
+    pipelines?.find((p) => p.id === pipelineId) ??
+    pipelines?.find((p) => p.is_default) ??
+    pipelines?.[0];
+  const dealFilters: DealFilters = {
+    pipelineId: effectivePipeline?.id ?? "",
+    sort: query.sort,
+    includeArchived: query.includeArchived,
+    filters: query.filters,
+    overlay,
+  };
+
+  const view: "board" | "table" =
+    overlay || params.get(VIEW_PARAM) === "table" ? "table" : "board";
+  const setView = (next: "board" | "table") =>
+    setParams(
+      withDialSet(currentParams(), VIEW_PARAM, next === "table" ? next : ""),
+    );
+
+  return {
+    query,
+    setQuery,
+    pipelineId,
+    setPipelineId,
+    effectivePipeline,
+    dealFilters,
+    view,
+    setView,
+  };
+}
+
+// The surface's own narrowing chips, beside the stage and company ones
+// dealFilterChips builds.
+//
+// A function because two of the four are CONDITIONAL, and the condition is
+// the interesting part of each: a chip offered before its options are known
+// reads as "clear this filter" to the table, and a chip withdrawn while its
+// filter is applied leaves the list narrowed with no dial to clear it.
+function dealSurfaceChips({
+  me,
+  partnerOptions,
+  partnerApplied,
+}: Readonly<{
+  me?: ReturnType<typeof useMe>["data"];
+  partnerOptions: { value: string; label: string }[];
+  partnerApplied?: string;
+}>): FilterSpec[] {
+  return [
+    {
+      key: "stalled",
+      label: "deals.filterStalled",
+      allLabel: "deals.filterStalledAll",
+      options: [{ value: "true", label: "deals.filterStalled" }],
+    },
+    // Offered only once the viewer's own id is known. An option whose
+    // value is still "" reads as "clear this filter" to the table, so
+    // picking "Only mine" mid-load would quietly narrow nothing.
+    ...(me
+      ? [
+          {
+            key: "owner_id",
+            label: "deals.filterOwnerMe" as const,
+            allLabel: "deals.filterOwnerAll" as const,
+            options: [
+              {
+                value: me.user.id,
+                label: "deals.filterOwnerMe" as const,
+              },
+            ],
+          },
+        ]
+      : []),
+    {
+      key: "partner_sourced",
+      label: "deals.filterPartnerSourced",
+      allLabel: "deals.filterPartnerAll",
+      options: [{ value: "true", label: "deals.filterPartnerSourced" }],
+    },
+    // Which partner, not just whether there is one. Absent entirely
+    // when the installation has made no company a partner: a picker
+    // with nothing in it asks a question that has no answers, the same
+    // rule the deal form's own partner fields follow.
+    //
+    // The options come from usePartnerOptions, so a partner whose
+    // company this reader cannot open is not offered — picking it
+    // would name a company the screen could not then show them.
+    // Present whenever there are partners to pick OR one is already
+    // applied. A saved view can restore a partner_org_id after the
+    // programme was wound down or while the options are still in
+    // flight, and hiding the chip then would leave the list narrowed
+    // by a filter with no dial to see or clear it.
+    ...(partnerOptions.length > 0 || partnerApplied
+      ? [
+          {
+            key: "partner_org_id" as const,
+            label: "deals.filterPartner" as const,
+            allLabel: "deals.filterPartnerAnyOne" as const,
+            // `text`, not `label`: a partner's name is the server's
+            // data, not this screen's vocabulary, and FilterOption's
+            // union exists for exactly that. Every other chip here
+            // names a message key because its options are a fixed set
+            // somebody wrote; a company name has nothing to translate.
+            options: partnerOptions.map((option) => ({
+              value: option.value,
+              text: option.label,
+            })),
+          },
+        ]
+      : []),
+  ];
+}
+
+// The create form, with the one question it has to ask the server: which
+// projects the company named in the OPEN FORM is on.
+//
+// Its own component because that question is the form's and not the screen's.
+// The company comes from the form's own values, so the state that holds it
+// and the query that follows it belong beside the form rather than among the
+// screen's dials.
+function DealCreateAction({
+  pipeline,
+  cf,
+  openStages,
+  orgs,
+  partnerOptions,
+  startOpen,
+}: Readonly<{
+  pipeline?: Pipeline;
+  // Read at screen level and handed down, so the schema request runs beside the
+  // screen's own rather than waiting for the pipelines this form is gated on.
+  cf: ObjectCustomFields;
+  openStages: Stage[];
+  orgs: Organization[];
+  partnerOptions: { value: string; label: string }[];
+  startOpen: boolean;
+}>) {
+  const t = useT();
+  // The picker asks the server for ONE company's projects, so the form's chosen
+  // company is what it is keyed on: a project is worked by several companies,
+  // and only the server can say which of them this one is on.
+  //
+  // The company comes from the OPEN FORM rather than from anything on this
+  // screen, because there is nothing else it could come from: a create form has
+  // no record, and the reader picks the company inside the same dialog. The
+  // form publishes its answers (CreateAction's onValuesChange) and the query
+  // follows them, which is the read `optionsFor` cannot do — it is a pure
+  // function of the values, so it can only filter a list already fetched, and a
+  // project list row names only its anchor company, so nothing in the browser
+  // can compute which projects a company is on.
+  const [formCompany, setFormCompany] = useState("");
+  const openProjects = useProjectsOfCompany(formCompany || undefined);
+
+  const createDeal = async (values: Record<string, string>) => {
+    if (!pipeline) {
+      throwProblem(null);
+    }
+    // A project asked for on the form is born first, on the deal's company,
+    // so the deal can name it at birth.
+    const projectId = await resolveDealProject(
+      values,
+      values.organization_id?.trim() || null,
+      t,
+    );
+    const { data, error } = await api.POST("/deals", {
+      body: {
+        ...mapDealCreate(
+          { ...values, project_id: projectId ?? "" },
+          pipeline.id,
+        ),
+        ...cf.toBody(values),
+      },
+    });
+    if (error) {
+      throwProblem(error, t);
+    }
+    return data;
+  };
+
+  return (
     <CreateAction
       label={t("create.deal")}
       invalidate="deals"
       screen="deals"
       create={createDeal}
-      startOpen={startCreating}
+      startOpen={startOpen}
       onValuesChange={(values) => setFormCompany(values.organization_id ?? "")}
       fields={[
         { key: "name", label: "create.dealName", required: true },
@@ -2027,7 +2183,7 @@ export function DealsScreen({
           key: "organization_id",
           label: "create.organization",
           type: "select",
-          options: (orgsQuery.data?.data ?? []).map((org) => ({
+          options: orgs.map((org) => ({
             value: org.id,
             label: org.display_name,
           })),
@@ -2051,108 +2207,259 @@ export function DealsScreen({
       ]}
     />
   );
+}
 
-  // The board/table switch and the pipeline/stage/org pickers, shared between
-  // the two non-overlay surfaces so the reader sees the same dials whichever
-  // view is showing.
-  const dealTools = (
+// The bulk-selection contract the table is handed, and the board is not.
+//
+// The row checkboxes live inside the grid's identity cell, and the board draws
+// no rows to put one in. Offered while the board is showing, the bulk bar would
+// name rows the reader can neither see nor deselect.
+function dealRowSelection({
+  view,
+  liveSelection,
+  selectedRows,
+  stages,
+  setSelected,
+  t,
+}: Readonly<{
+  view: "board" | "table";
+  liveSelection: ReadonlySet<string>;
+  selectedRows: Deal[];
+  stages: Stage[];
+  setSelected: Dispatch<SetStateAction<ReadonlySet<string>>>;
+  t: ReturnType<typeof useT>;
+}>): ListSelection<Deal> | undefined {
+  return view === "board"
+    ? undefined
+    : {
+        selected: liveSelection,
+        // A closed or archived deal takes no bulk write: archiving it is
+        // done or meaningless, and moving it between open stages would be
+        // the silent reopen the stepper already refuses.
+        selectable: (deal) =>
+          deal.archived_at == null && deal.status === "open",
+        onToggle: (deal) =>
+          setSelected((prev) => {
+            const next = new Set(prev);
+            if (next.has(deal.id)) {
+              next.delete(deal.id);
+            } else {
+              next.add(deal.id);
+            }
+            return next;
+          }),
+        label: (deal) => t("deals.bulkSelectRow", { name: deal.name }),
+        bar: (
+          <DealBulkBar
+            deals={selectedRows}
+            stages={stages}
+            // The rows that went through leave the selection; the ones that
+            // refused stay in it, named, so the reader can retry them once
+            // the list has refetched their versions.
+            onDone={(outcomes) =>
+              setSelected(
+                new Set(
+                  outcomes
+                    .filter((outcome) => outcome.error)
+                    .map((outcome) => outcome.id),
+                ),
+              )
+            }
+          />
+        ),
+      };
+}
+
+// A saved view of this list, with the pipeline folded in.
+//
+// The pipeline goes in as a filter because it is the strongest dial on this
+// screen and it lives in its own state, outside `query`. Left out, a view saved
+// while looking at one pipeline would restore against whichever pipeline
+// happened to be showing — a different list under the saved name.
+//
+// Folded in only once the reader has narrowed something else. A pipeline is
+// always selected, so folding it in unconditionally would make every list look
+// narrowed and offer to save the default view, which is the clutter
+// SaveViewAction's own check exists to prevent.
+function savableDealQuery(query: ListQuery, pipelineId: string): ListQuery {
+  return narrowsTheDealList(query)
+    ? { ...query, filters: { ...query.filters, pipeline_id: pipelineId } }
+    : query;
+}
+
+// The dials that sit above whichever non-overlay surface is showing.
+//
+// The board/table switch and the pipeline picker are shared, so the reader
+// sees the same dials either way. The SAVE action is not: a view holds a sort
+// as well as its filters, and the board offers no way to see or change a sort
+// — its order is the pipeline's stage order. Saving from there would pin an
+// ordering the reader never chose into a view they will restore on the table.
+function DealSurfaceTools({
+  view,
+  setView,
+  pipelines,
+  pipeline,
+  setPipelineId,
+  query,
+  setQuery,
+}: Readonly<{
+  view: "board" | "table";
+  setView: (next: "board" | "table") => void;
+  pipelines: Pipeline[];
+  pipeline?: Pipeline;
+  setPipelineId: (next: string) => void;
+  query: ListQuery;
+  setQuery: (update: SetStateAction<ListQuery>) => void;
+}>) {
+  const pipelineId = pipeline?.id ?? "";
+  const dials = (
     <DealViewTools
       view={view}
       setView={setView}
-      pipelines={pipelinesQuery.data ?? []}
-      pipelineId={effectivePipeline?.id ?? ""}
+      pipelines={pipelines}
+      pipelineId={pipelineId}
       setPipelineId={setPipelineId}
       setQuery={setQuery}
     />
   );
-
-  // The save action rides beside the dials on the table only, while READING a
-  // saved view works on both: a view holds a sort as well as its filters, and
-  // the board offers no way to see or change a sort — its order is the
-  // pipeline's stage order. Saving from there would pin an ordering the reader
-  // never chose into a view they will restore on the table.
-  //
-  // The pipeline goes in as a filter because it is the strongest dial on this
-  // screen and it lives in its own state, outside `query`. Left out, a view
-  // saved while looking at one pipeline would restore against whichever
-  // pipeline happened to be showing — a different list under the saved name.
-  //
-  // It is added only once the reader has narrowed something else. A pipeline is
-  // always selected, so folding it in unconditionally would make every list
-  // look narrowed and offer to save the default view, which is the clutter
-  // SaveViewAction's own check exists to prevent.
-  const savableQuery = narrowsTheDealList(dealsListState.query)
-    ? {
-        ...dealsListState.query,
-        filters: {
-          ...dealsListState.query.filters,
-          pipeline_id: effectivePipeline?.id ?? "",
-        },
-      }
-    : dealsListState.query;
-  const tableTools = (
+  if (view === "board") {
+    return dials;
+  }
+  return (
     <>
-      {dealTools}
-      <SaveViewAction resource="deals" query={savableQuery} />
+      {dials}
+      <SaveViewAction
+        resource="deals"
+        query={savableDealQuery(query, pipelineId)}
+      />
     </>
   );
-  const dealChips = dealFilterChips(stages, t);
-  // Every company the CARDS name. The picker's capped page answers most of them
-  // for free; the rest are resolved by id (useOrgMarks), so no card is left
-  // standing over a company the board simply failed to look up.
-  //
-  // Only the board asks: the table names its companies through the same
-  // per-record reference every other cross-record cell uses, and handing it
-  // this map as well would read each company twice.
-  const orgMarks = useOrgMarks(
-    view === "board" ? loadedDeals : [],
-    orgsQuery.data?.data ?? [],
-    orgsQuery.isSuccess,
+}
+
+export function DealsScreen({
+  startCreating = false,
+}: Readonly<{ startCreating?: boolean }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const recordZone = useRecordZone();
+  const cf = useObjectCustomFields("deal");
+  const overlay = useSorMode() === "overlay";
+  const pipelinesQuery = usePipelines(!overlay);
+  const meQuery = useMe();
+  const savedViews = useSavedViewTabs("deals");
+  const {
+    query,
+    setQuery,
+    setPipelineId,
+    effectivePipeline,
+    dealFilters,
+    view,
+    setView,
+  } = useDealScreenDials({ overlay, pipelines: pipelinesQuery.data });
+  const dealsQuery = useDeals(dealFilters);
+  // The board's column totals: a per-stage server aggregate
+  // over EVERY matching deal, not just the capped page useDeals fetches —
+  // built from the SAME filter dials so cards and totals never disagree
+  // about which deals are in view.
+  const stageTotalsQuery = useStageTotals(dealFilters);
+  // A stage-keyed board cannot place a mirror deal (its pipeline/stage is the
+  // null pipeline/stage), so overlay mode opens on the flat table and hides the toggle
+  // (below) — the mode is fixed for the page's life, so a static initial value
+  // is enough.
+  const [pending, setPending] = useState<PendingAdvance | null>(null);
+  // Bulk selection, by deal id. Cleared after any bulk run except for the rows
+  // that refused, since every other row's version has moved.
+  const [selected, setSelected] = useState<ReadonlySet<string>>(new Set());
+
+  const advance = useAdvanceDeal();
+
+  const stages = effectivePipeline?.stages ?? [];
+  const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
+  // Only ids the list currently holds count as selected: a row that left the
+  // result set (refetched away, filtered out, archived by this very run) must
+  // not linger as an invisible selection nobody can clear.
+  // Every page walked so far, in one list. The board draws its columns from
+  // this and the table renders it directly, so both surfaces grow together as
+  // the reader asks for more.
+  const loadedDeals = (dealsQuery.data?.pages ?? []).flatMap(
+    (page) => page.data,
+  );
+  const selectedRows = loadedDeals.filter((deal) => selected.has(deal.id));
+  const liveSelection = new Set(selectedRows.map((deal) => deal.id));
+
+  // The table's own dials over the same keyset walk the board reads, so
+  // "load more" on either surface advances both.
+  const dealsListState: ListState<Deal> = {
+    rows: loadedDeals,
+    query,
+    setQuery,
+    isPending: dealsQuery.isPending,
+    isError: dealsQuery.isError,
+    error: dealsQuery.error,
+    refetch: () => dealsQuery.refetch(),
+    hasMore: dealsQuery.hasNextPage,
+    loadMore: () => {
+      dealsQuery.fetchNextPage();
+    },
+  };
+
+  const orgsQuery = useQuery({
+    queryKey: ["organizations"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/organizations", {
+        params: { query: { limit: 50 } },
+      });
+      if (error) {
+        throwProblem(error);
+      }
+      return data;
+    },
+  });
+
+  const partnerOptions = usePartnerOptions(orgsQuery.data?.data ?? []);
+
+  // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
+  // won/lost are reached through the confirmed advance, never at create.
+  const openStages = stages.filter((stage) => stage.semantic === "open");
+
+  const { openDeal, cardDragHandlers, columnDropHandlers } =
+    useBoardInteractions({ stages, loadedDeals, advance, setPending });
+
+  // Create writes a native deal — the mirror refuses it (unsupported_by_sor),
+  // so the affordance is hidden in overlay, matching the board mutations.
+  // Shared between the board and the table surface: whichever view is
+  // showing, the action lives in the surface's own header, not a wrap sibling.
+  const createAction = !overlay && openStages.length > 0 && (
+    <DealCreateAction
+      pipeline={effectivePipeline}
+      cf={cf}
+      openStages={openStages}
+      orgs={orgsQuery.data?.data ?? []}
+      partnerOptions={partnerOptions}
+      startOpen={startCreating}
+    />
   );
 
-  // The row checkboxes live inside the grid's identity cell, and the board
-  // draws no rows to put one in. Offered while the board is showing, the bulk
-  // bar would name rows the reader can neither see nor deselect.
-  const rowSelection: ListSelection<Deal> | undefined =
-    view === "board"
-      ? undefined
-      : {
-          selected: liveSelection,
-          // A closed or archived deal takes no bulk write: archiving it is
-          // done or meaningless, and moving it between open stages would be
-          // the silent reopen the stepper already refuses.
-          selectable: (deal) =>
-            deal.archived_at == null && deal.status === "open",
-          onToggle: (deal) =>
-            setSelected((prev) => {
-              const next = new Set(prev);
-              if (next.has(deal.id)) {
-                next.delete(deal.id);
-              } else {
-                next.add(deal.id);
-              }
-              return next;
-            }),
-          label: (deal) => t("deals.bulkSelectRow", { name: deal.name }),
-          bar: (
-            <DealBulkBar
-              deals={selectedRows}
-              stages={stages}
-              // The rows that went through leave the selection; the ones that
-              // refused stay in it, named, so the reader can retry them once
-              // the list has refetched their versions.
-              onDone={(outcomes) =>
-                setSelected(
-                  new Set(
-                    outcomes
-                      .filter((outcome) => outcome.error)
-                      .map((outcome) => outcome.id),
-                  ),
-                )
-              }
-            />
-          ),
-        };
+  const tools = (
+    <DealSurfaceTools
+      view={view}
+      setView={setView}
+      pipelines={pipelinesQuery.data ?? []}
+      pipeline={effectivePipeline}
+      setPipelineId={setPipelineId}
+      query={dealsListState.query}
+      setQuery={setQuery}
+    />
+  );
+  const dealChips = dealFilterChips(stages, t);
+  const rowSelection = dealRowSelection({
+    view,
+    liveSelection,
+    selectedRows,
+    stages,
+    setSelected,
+    t,
+  });
 
   // The board is the surface's alternate BODY, not a surface of its own. The
   // saved views, the chips and the archived toggle all describe the ONE query
@@ -2166,46 +2473,18 @@ export function DealsScreen({
   // once rather than a page of them.
   const boardBody =
     view === "board" ? (
-      <>
-        {dealsQuery.data && (
-          <p className="t-caption">
-            {t("board.count", {
-              count: formatNumber(loadedDeals.length, locale),
-            })}
-          </p>
-        )}
-        <QueryGate query={pipelinesQuery}>
-          {() =>
-            effectivePipeline ? (
-              // Only the INITIAL load goes through the gate. An infinite
-              // query reports isError when ANY page fails, later ones
-              // included, so keeping the gate around a loaded board would
-              // let one failed "load more" throw away every card already on
-              // screen. Past the first page the board stands and the button
-              // retries — exactly what OverlayDealsTable does above, and for
-              // the same reason.
-              (dealsQuery.data?.pages ?? []).length === 0 ? (
-                <QueryGate query={dealsQuery}>{() => null}</QueryGate>
-              ) : (
-                <>
-                  <PipelineBoard
-                    columns={buildColumns(
-                      effectivePipeline.stages ?? [],
-                      loadedDeals,
-                      stageTotalsQuery.data ?? new Map(),
-                      orgMarks,
-                    )}
-                    onOpen={openDeal}
-                    cardDragHandlers={cardDragHandlers}
-                    columnDropHandlers={columnDropHandlers}
-                  />
-                  <LoadMoreButton query={dealsQuery} />
-                </>
-              )
-            ) : null
-          }
-        </QueryGate>
-      </>
+      <DealBoardBody
+        dealsQuery={dealsQuery}
+        pipelinesQuery={pipelinesQuery}
+        effectivePipeline={effectivePipeline}
+        loadedDeals={loadedDeals}
+        stageTotalsQuery={stageTotalsQuery}
+        orgs={orgsQuery.data?.data ?? []}
+        orgsSettled={orgsQuery.isSuccess}
+        openDeal={openDeal}
+        cardDragHandlers={cardDragHandlers}
+        columnDropHandlers={columnDropHandlers}
+      />
     ) : undefined;
 
   // Overlay mode draws the flat, keyset-paginated mirror table — no pipeline
@@ -2229,7 +2508,7 @@ export function DealsScreen({
         rowRoute={(deal) => ({ screen: "deals", id: deal.id })}
         searchable={false}
         action={createAction}
-        tools={view === "board" ? dealTools : tableTools}
+        tools={tools}
         body={overlayBody ?? boardBody}
         bodyOwnsPaging={overlay || view === "board"}
         // The pipeline picker is screen state, not a filter, so switching it
@@ -2239,69 +2518,11 @@ export function DealsScreen({
         dataChips={dealChips}
         dataViews={savedViews}
         selection={rowSelection}
-        chips={[
-          {
-            key: "stalled",
-            label: "deals.filterStalled",
-            allLabel: "deals.filterStalledAll",
-            options: [{ value: "true", label: "deals.filterStalled" }],
-          },
-          // Offered only once the viewer's own id is known. An option whose
-          // value is still "" reads as "clear this filter" to the table, so
-          // picking "Only mine" mid-load would quietly narrow nothing.
-          ...(meQuery.data
-            ? [
-                {
-                  key: "owner_id",
-                  label: "deals.filterOwnerMe" as const,
-                  allLabel: "deals.filterOwnerAll" as const,
-                  options: [
-                    {
-                      value: meQuery.data.user.id,
-                      label: "deals.filterOwnerMe" as const,
-                    },
-                  ],
-                },
-              ]
-            : []),
-          {
-            key: "partner_sourced",
-            label: "deals.filterPartnerSourced",
-            allLabel: "deals.filterPartnerAll",
-            options: [{ value: "true", label: "deals.filterPartnerSourced" }],
-          },
-          // Which partner, not just whether there is one. Absent entirely
-          // when the installation has made no company a partner: a picker
-          // with nothing in it asks a question that has no answers, the same
-          // rule the deal form's own partner fields follow.
-          //
-          // The options come from usePartnerOptions, so a partner whose
-          // company this reader cannot open is not offered — picking it
-          // would name a company the screen could not then show them.
-          // Present whenever there are partners to pick OR one is already
-          // applied. A saved view can restore a partner_org_id after the
-          // programme was wound down or while the options are still in
-          // flight, and hiding the chip then would leave the list narrowed
-          // by a filter with no dial to see or clear it.
-          ...(partnerOptions.length > 0 || query.filters.partner_org_id
-            ? [
-                {
-                  key: "partner_org_id" as const,
-                  label: "deals.filterPartner" as const,
-                  allLabel: "deals.filterPartnerAnyOne" as const,
-                  // `text`, not `label`: a partner's name is the server's
-                  // data, not this screen's vocabulary, and FilterOption's
-                  // union exists for exactly that. Every other chip here
-                  // names a message key because its options are a fixed set
-                  // somebody wrote; a company name has nothing to translate.
-                  options: partnerOptions.map((option) => ({
-                    value: option.value,
-                    text: option.label,
-                  })),
-                },
-              ]
-            : []),
-        ]}
+        chips={dealSurfaceChips({
+          me: meQuery.data,
+          partnerOptions,
+          partnerApplied: query.filters.partner_org_id,
+        })}
         views={[{ label: "deals.sortNewest", sort: "-created_at" }]}
       />
       {advance.isError && (
