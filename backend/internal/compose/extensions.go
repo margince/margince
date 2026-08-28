@@ -9,6 +9,7 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
@@ -89,6 +90,19 @@ func RegisterExtensions(exts []extension.Extension, verbs []extension.Verb, jobD
 	// vocabulary must abort rather than serve a surface that silently
 	// declines to classify.
 	if err := jobs.RegisterComposedFailureClasses(composedFailureClasses(exts, composedSet)); err != nil {
+		return err
+	}
+	// The staged KINDS follow the tools, and for the same reason the failure
+	// vocabulary follows the job specs: a confirm-first verb the registry
+	// serves and the inbox cannot decide is a call that parks an approval
+	// nobody may release. Registering both halves in one boot order is what
+	// keeps "can stage" and "can be decided" from drifting apart.
+	//
+	// It can refuse the set — a unit's verb may collide with a core kind, or
+	// two verbs may stage against one table demanding different grants — and
+	// the error aborts the boot rather than serving a surface that stages into
+	// a dead end.
+	if err := approvals.RegisterExtensionKinds(extensionStagingKinds(tools)); err != nil {
 		return err
 	}
 	setComposedJobs(composedSet)

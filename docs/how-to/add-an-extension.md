@@ -201,6 +201,32 @@ Copy `extensions/notes/api/crm.yaml`. The rules that will otherwise bite:
 - **`x-rbac-object` / `x-rbac-action`** declare the object grant the caller must hold. The object is
   registered into the RBAC vocabulary `/me` serves and must be named `ext_<name>_*`. Declare both or
   neither.
+- **A 🟡 operation declares what it stages against**, under `x-mcp-tool.subject`:
+
+  ```yaml
+  x-mcp-tool:
+    verb: forget_note
+    tier: confirmation_required
+    scope: write
+    subject:
+      arg: note_id            # the argument carrying the row's id, as a uuid string
+      table: ext_notes_note   # the unit table that row lives in
+  ```
+
+  A confirm-first call is refused and **parked** as an approval, and an approval is a judgment about a
+  *thing*: the inbox shows the row, the decision authority is derived from it, and the person answering
+  has to be someone who may see it. Core verbs answer that from the record they name; your operation
+  names nothing the core knows about, so you say which argument carries the subject's id and which of
+  your own tables the row is in. `arg` must be a property your own request schema declares, and `table`
+  must be inside your unit's namespace — a unit may put its own rows in front of a human and no others.
+
+  Deciding one of your staged calls requires **the grant the operation itself gates on**, so a 🟡
+  operation must also declare `x-rbac-object` and `x-rbac-action`: deciding takes the grant performing
+  it takes, and an operation with no object would be releasable by any seat that can see the inbox.
+
+  A 🟡 operation with **no handler** needs no subject — it publishes a route that answers 501 and stages
+  nothing. One your unit *serves* is refused at boot without one, because the gate would have nowhere to
+  park the call it refuses and every call would fail with no approval to redeem.
 - **Schemas are inline — no `$ref`, at any depth.** The composer does not resolve references, and the
   request/response schemas it reads are emitted verbatim as the MCP tool's input and output schemas: a
   client has no document to resolve a reference against, so an unresolved one would be advertised to a

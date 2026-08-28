@@ -226,6 +226,24 @@ type toolAnnotation struct {
 	Tier        string `yaml:"tier"`
 	Scope       string `yaml:"scope"`
 	Description string `yaml:"description"`
+	// Subject is what a CONFIRM-FIRST operation stages its approval against.
+	// Nested rather than two more flat keys because the two halves are one
+	// declaration — an argument with no table names a row nothing can find,
+	// and a table with no argument names no row — and extension.Verb refuses
+	// either alone. Absent on every other tier, which is why it is a pointer:
+	// a zero struct and an omitted key are the same fact here, and the strict
+	// decode above already refuses a misspelled member inside it.
+	Subject *subjectAnnotation `yaml:"subject"`
+}
+
+// subjectAnnotation is the extension spelling of the staged subject, read
+// strictly for the same reason the annotation around it is: a typo'd `table`
+// would fall back to nothing and be refused, but a typo'd `arg` on a unit that
+// meant `note_id` would name no argument and be refused too — both loudly,
+// rather than one of them silently staging against the wrong row.
+type subjectAnnotation struct {
+	Arg   string `yaml:"arg"`
+	Table string `yaml:"table"`
 }
 
 func readOperation(base, unit, route, method string, node *yaml.Node) (declaredVerb, error) {
@@ -273,6 +291,7 @@ func readOperation(base, unit, route, method string, node *yaml.Node) (declaredV
 		OutputSchema:   output,
 		RbacObject:     op.RbacObject,
 		RbacAction:     extension.RbacAction(op.RbacAction),
+		Subject:        subjectOf(ann.Subject),
 	}
 	// The SAME Validate the boot runs, so a fragment this generator accepts
 	// can never be one the composed process then refuses to serve.
@@ -382,4 +401,14 @@ func operationHash(node *yaml.Node) (string, error) {
 		return "", err
 	}
 	return digestBytes(buf.Bytes()), nil
+}
+
+// subjectOf reads the staged subject an annotation declared, or the zero value
+// when it declared none. Verb.Validate decides whether that is right for the
+// tier — this reader only carries what was written.
+func subjectOf(ann *subjectAnnotation) extension.Subject {
+	if ann == nil {
+		return extension.Subject{}
+	}
+	return extension.Subject{Arg: ann.Arg, Table: ann.Table}
 }

@@ -107,13 +107,23 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 	if err != nil {
 		return extensionTool{}, err
 	}
-	// A served 🟡 tool would be refused on every call: the admission gate
-	// stages a confirm-first approval only for tools that implement the
-	// registry's staging seam, which this data-only adapter cannot. Serving
-	// one is a dead capability, so reject it until the staging seam is wired.
-	// A handler-LESS 🟡 tool is fine — it is a manifest request, not served.
-	if tier == mcp.TierConfirmationRequired {
-		return extensionTool{}, errors.New("a served confirmation-required tool is not yet supported (its approvals could never be staged)")
+	// A served 🟡 tool is refused on every call unless it can describe what it
+	// would put in front of a human: the admission gate stages a confirm-first
+	// approval only for a tool implementing the registry's staging seam, and
+	// serving one that cannot is a dead capability.
+	//
+	// The adapter CAN stage now, on one condition — the declaration says which
+	// argument carries the subject's id and which unit table the row lives in
+	// (extensionstaging.go). Without that it is the same dead capability as
+	// before and is refused in the same place, now naming what is missing
+	// rather than the tier.
+	//
+	// A handler-LESS 🟡 tool is untouched: it is a manifest request, not
+	// served, and stages nothing either way.
+	if tier == mcp.TierConfirmationRequired && verb.Subject.IsZero() {
+		return extensionTool{}, errors.New("a served confirmation-required tool must declare what it stages " +
+			"against (x-mcp-tool.subject: arg + table) — without it the gate has nowhere to park a refused " +
+			"call, and every call would be refused with no approval to redeem")
 	}
 	scope, err := mcpScope(verb.RequestedScope)
 	if err != nil {
@@ -211,6 +221,7 @@ func adaptExtensionTool(unit extension.Name, tool extension.Tool, verb extension
 		},
 		unit:    string(unit),
 		version: verb.Version,
+		subject: verb.Subject,
 		handle:  tool.Handle,
 	}, nil
 }
@@ -350,7 +361,12 @@ type extensionTool struct {
 	// operation needs, or both empty for a tool that owns no records.
 	rbacObject string
 	rbacAction extension.RbacAction
-	handle     extension.ToolHandler
+	// subject is the row a CONFIRM-FIRST verb stages its approval against, and
+	// the zero value for every other tier. It is what makes this adapter a
+	// Stager (extensionstaging.go) — see there for why it comes from the
+	// declaration and never from the handler.
+	subject extension.Subject
+	handle  extension.ToolHandler
 }
 
 func (t extensionTool) Spec() mcp.ToolSpec { return t.spec }

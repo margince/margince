@@ -17,8 +17,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"maps"
-	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -106,23 +104,6 @@ var targetProbes = func() map[string]targetProbe {
 	}
 	return probes
 }()
-
-// probeFor classifies one staged target type. An unlisted type answers
-// probeNoRule (the zero value) and fails closed.
-func probeFor(targetType string) targetProbe { return targetProbes[targetType] }
-
-// ClassifiedTargetTypes returns every staged target type this package has a
-// visibility rule for, sorted.
-//
-// Exported for the composition layer's parity gate against the webhook fan-out's
-// own classification of the same vocabulary. That gate cannot take its subject
-// set from the contract's agent-policy table alone: a target type staged by a
-// server-side proposal flow rather than by an agent's call — an effective-dated
-// rate sheet is one — appears in no agent policy at all, so a gate reading only
-// that table reads green over exactly the drift it exists to catch.
-func ClassifiedTargetTypes() []string {
-	return slices.Sorted(maps.Keys(targetProbes))
-}
 
 // targetShape is a staged target reduced to which halves it carries, which is
 // all the shape rule below needs — and naming the two at every call site is what
@@ -446,6 +427,11 @@ var existenceProbes = map[string]string{
 
 func targetExists(ctx context.Context, tx pgx.Tx, targetType string, targetID ids.UUID) (bool, error) {
 	query, ok := existenceProbes[targetType]
+	if !ok {
+		if ext, registered := extensionTarget(targetType); registered {
+			query, ok = extensionExistenceQuery(ext.TargetTable), true
+		}
+	}
 	if !ok {
 		// Unreachable while probeFor derives its existence arm from this map,
 		// and total so it stays that way: a type answered against some other
