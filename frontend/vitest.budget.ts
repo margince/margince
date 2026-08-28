@@ -76,7 +76,7 @@ export const ASYNC_UTIL_TIMEOUT_MS = 1_000;
  * ceiling that test actually runs under, so a suite cannot quietly join this one
  * while spending like the other.
  */
-export const MAX_DEFAULT_WAITER_BUDGET_MS = 10_000;
+export const MAX_DEFAULT_WAITER_BUDGET_MS = 7_000;
 
 /**
  * The slowest single test measured under deliberate load, in milliseconds —

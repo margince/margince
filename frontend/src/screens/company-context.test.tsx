@@ -11,6 +11,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { SLOWEST_MEASURED_TEST_MS } from "../../vitest.budget";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
 import { CompanyContextCard } from "./company-context";
@@ -216,6 +217,23 @@ const TEST_MS = SETTLE_MS * 4;
 // ceiling that covers the waiters, not waiters trimmed to fit a ceiling.
 const DIALOG_MS = SETTLE_MS * 3;
 
+// The budget for the two write-posture cases, which drive `renderAs` — one
+// waiter at SETTLE_MS — and then assert about a loaded card.
+//
+// Stated rather than left on the suite default, and that is the whole point of
+// it. These two raised their waiters FILE-WIDE (SETTLE_MS is 10s here, where
+// every other test in the default population sits at 7s or below) and said
+// nothing, so they stayed in the population the suite ceiling is measured over
+// and dragged it up with them: testTimeout was 13437ms rather than 10437ms,
+// and a genuinely stuck test anywhere in the suite took three seconds longer to
+// go red — including the deliberately fast-red cases in this same file.
+//
+// A test that deliberately raises its own waiters owes its own ceiling and then
+// leaves that population. That is what read-conclusion, onboarding-restore,
+// voice-act, integrations-provider and onboarding all do; these two were the
+// exception, and the only ones.
+const POSTURE_TEST_MS = SETTLE_MS + SLOWEST_MEASURED_TEST_MS;
+
 // The fixture's two selectable changes — the `new` and `machine_change` rows.
 // The human_conflict row is decided by radio and the unchanged row offers
 // nothing, so neither carries a checkbox.
@@ -393,29 +411,37 @@ describe("CompanyContextCard write posture", () => {
     });
   }
 
-  it("withholds both writes from a seat that holds none, and says so", async () => {
-    await renderAs(ME_READER);
+  it(
+    "withholds both writes from a seat that holds none, and says so",
+    async () => {
+      await renderAs(ME_READER);
 
-    // The read is granted, so the data is there to read — as the row's own
-    // answer now rather than as the contents of an input.
-    expect(screen.getByText(COMPANY.offer_summary ?? "")).toBeTruthy();
-    // Stated once, at the surface, rather than annotated onto each absent
-    // control.
-    expect(screen.getByText(READ_ONLY)).toBeTruthy();
-    expect(screen.queryByRole("button", { name: EDIT_OFFER })).toBeNull();
-    expect(screen.queryByRole("button", { name: REFRESH })).toBeNull();
-  });
+      // The read is granted, so the data is there to read — as the row's own
+      // answer now rather than as the contents of an input.
+      expect(screen.getByText(COMPANY.offer_summary ?? "")).toBeTruthy();
+      // Stated once, at the surface, rather than annotated onto each absent
+      // control.
+      expect(screen.getByText(READ_ONLY)).toBeTruthy();
+      expect(screen.queryByRole("button", { name: EDIT_OFFER })).toBeNull();
+      expect(screen.queryByRole("button", { name: REFRESH })).toBeNull();
+    },
+    POSTURE_TEST_MS,
+  );
 
-  it("offers both writes to a seat that may author the profile", async () => {
-    await renderAs(ME_EDITOR);
+  it(
+    "offers both writes to a seat that may author the profile",
+    async () => {
+      await renderAs(ME_EDITOR);
 
-    // Without this arm the test above would pass on a card that renders no
-    // buttons for anybody.
-    expect(screen.getByRole("button", { name: EDIT_OFFER })).toBeTruthy();
-    expect(screen.getByRole("button", { name: REFRESH })).toBeTruthy();
-    // A reader who may write is told nothing about a posture they do not have.
-    expect(screen.queryByText(READ_ONLY)).toBeNull();
-  });
+      // Without this arm the test above would pass on a card that renders no
+      // buttons for anybody.
+      expect(screen.getByRole("button", { name: EDIT_OFFER })).toBeTruthy();
+      expect(screen.getByRole("button", { name: REFRESH })).toBeTruthy();
+      // A reader who may write is told nothing about a posture they do not have.
+      expect(screen.queryByText(READ_ONLY)).toBeNull();
+    },
+    POSTURE_TEST_MS,
+  );
 
   // One PUT writes this profile, so there is one form and one Save — and both
   // are behind a row's verb rather than standing on the card. A row states an
