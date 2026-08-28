@@ -360,7 +360,7 @@ func TestSplitConfirmedProfileKeepsSelectedLegalEntityWebsiteGrounding(t *testin
 	entities := []SiteReadLegalEntity{
 		{Name: "Gradion Pte. Ltd.", SourceURL: "https://gradion.com/imprint"},
 		{
-			Name: "NFQ Solutions GmbH", RegisteredAddress: address, RegisterNumber: vat,
+			Name: "NFQ Solutions GmbH", RegisteredAddress: address, VatNumber: vat,
 			EvidenceSnippet: "NFQ Solutions GmbH, Deliusstraße 7, VAT DE346175276",
 			SourceURL:       "https://gradion.com/de/imprint",
 		},

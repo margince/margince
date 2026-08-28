@@ -374,6 +374,9 @@ func contractSiteReadLegalEntities(entities []people.SiteReadLegalEntity) []crmc
 		if entity.RegisterNumber != "" {
 			wire.RegisterNumber = &entity.RegisterNumber
 		}
+		if entity.VatNumber != "" {
+			wire.VatNumber = &entity.VatNumber
+		}
 		if entity.EvidenceSnippet != "" {
 			wire.EvidenceSnippet = &entity.EvidenceSnippet
 		}

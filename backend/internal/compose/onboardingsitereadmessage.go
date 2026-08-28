@@ -418,6 +418,9 @@ func companyReadEvidenceSet(read people.SiteRead) []companyReadEvidence {
 		if entity.RegisterNumber != "" {
 			parts = append(parts, entity.RegisterNumber)
 		}
+		if entity.VatNumber != "" {
+			parts = append(parts, entity.VatNumber)
+		}
 		value := strings.Join(parts, " · ")
 		add("legal_entity", "legal_identity", value, entity.EvidenceSnippet, entity.SourceURL)
 	}

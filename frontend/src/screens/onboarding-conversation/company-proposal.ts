@@ -258,7 +258,8 @@ export function draftWithLegalEntity(
   const candidates: ReadonlyArray<[ColdField["field"], string | undefined]> = [
     ["legal_name", entity.name],
     ["registered_address", entity.registered_address],
-    ["register_vat", entity.register_number],
+    ["register_number", entity.register_number],
+    ["register_vat", entity.vat_number],
   ];
   for (const [field, value] of candidates) {
     if (edited.has(field) || value === undefined || value.trim() === "") {
@@ -308,19 +309,21 @@ export function draftWithSoleLegalEntity(
     registered_address: unanswered("registered_address")
       ? entity.registered_address
       : undefined,
-    register_number: unanswered("register_vat")
+    register_number: unanswered("register_number")
       ? entity.register_number
       : undefined,
+    vat_number: unanswered("register_vat") ? entity.vat_number : undefined,
   });
 }
 
-// The three fields only a legal/imprint page can ground — the same trio
+// The fields only a legal/imprint page can ground — the same set
 // draftWithLegalEntity fills and the server's own legal gate governs. A
 // blank display_name or offer_summary carries no such page to have checked,
-// so this stays scoped to the trio rather than every empty field.
-const LEGAL_TRIO_FIELDS: ReadonlySet<CompanyFieldName> = new Set([
+// so this stays scoped to these rather than every empty field.
+const LEGAL_PAGE_FIELDS: ReadonlySet<CompanyFieldName> = new Set([
   "legal_name",
   "registered_address",
+  "register_number",
   "register_vat",
 ]);
 
@@ -351,7 +354,7 @@ export function legalFieldGap(
   draft: CompanyDraft,
   entities?: readonly LegalEntity[],
 ): LegalFieldGap | null {
-  if (!LEGAL_TRIO_FIELDS.has(field) || pages === undefined) {
+  if (!LEGAL_PAGE_FIELDS.has(field) || pages === undefined) {
     return null;
   }
   const candidates = entities ?? [];
@@ -378,7 +381,7 @@ export function legalFieldGap(
 // the entity the choice landed on — including when the cleared box is the very
 // name it was picked by.
 function legalBlockChosen(draft: CompanyDraft): boolean {
-  for (const field of LEGAL_TRIO_FIELDS) {
+  for (const field of LEGAL_PAGE_FIELDS) {
     const grounding = provenanceOf(draft, field);
     if (grounding !== null && grounding.confidence === undefined) {
       return true;
@@ -393,6 +396,8 @@ function entityCarries(entity: LegalEntity, field: CompanyFieldName): boolean {
       ? entity.name
       : field === "registered_address"
         ? entity.registered_address
-        : entity.register_number;
+        : field === "register_number"
+          ? entity.register_number
+          : entity.vat_number;
   return carried !== undefined && carried.trim() !== "";
 }

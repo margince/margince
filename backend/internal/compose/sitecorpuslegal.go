@@ -25,10 +25,16 @@ import (
 // stated, which is the one thing this read exists to prevent.
 type corpusLegalEntity struct {
 	Name string `json:"name"`
-	// RegisteredAddress and RegisterNumber are empty when the page states
-	// the entity but not that detail — never guessed to fill the block.
+	// RegisteredAddress, RegisterNumber and VatNumber are empty when the page
+	// states the entity but not that detail — never guessed to fill the block.
+	//
+	// The two numbers are separate because the authorities behind them are: a
+	// court issues the register entry and a tax office issues the VAT ID, and
+	// a company states both. Reading them into one field meant whichever the
+	// page printed first stood for the other.
 	RegisteredAddress string `json:"registered_address,omitempty"`
 	RegisterNumber    string `json:"register_number,omitempty"`
+	VatNumber         string `json:"vat_number,omitempty"`
 	EvidenceSnippet   string `json:"evidence_snippet,omitempty"`
 	SourceURL         string `json:"source_url"`
 }
@@ -122,8 +128,10 @@ func removeBrandOnlyLegalAliases(entities []corpusLegalEntity) []corpusLegalEnti
 // enrichLegalEntitiesFromProfile shares already-gated legal trio values
 // with the single legal choice shown to the human. Both lanes cite shallow
 // legal pages and the census has established that there is only one entity;
-// this avoids asking the user to retype a VAT number one lane recovered when
-// the entity lane's 300-rune block ended between the address and identifier.
+// this avoids asking the user to retype a number one lane recovered when the
+// entity lane's 300-rune block ended between the address and the identifiers.
+// Each field fills its own: a register entry recovered elsewhere cannot stand
+// in for a VAT ID the page never printed.
 func enrichLegalEntitiesFromProfile(entities []corpusLegalEntity, fields []evidencedField) []corpusLegalEntity {
 	if len(entities) != 1 {
 		return entities
@@ -135,9 +143,13 @@ func enrichLegalEntitiesFromProfile(entities []corpusLegalEntity, fields []evide
 			if out[0].RegisteredAddress == "" {
 				out[0].RegisteredAddress = field.Value
 			}
-		case string(crmcontracts.ColdStartFieldFieldRegisterVat):
+		case string(crmcontracts.ColdStartFieldFieldRegisterNumber):
 			if out[0].RegisterNumber == "" {
 				out[0].RegisterNumber = field.Value
+			}
+		case string(crmcontracts.ColdStartFieldFieldRegisterVat):
+			if out[0].VatNumber == "" {
+				out[0].VatNumber = field.Value
 			}
 		}
 	}
@@ -194,7 +206,8 @@ func fillLegalTrioFromCensus(fields []evidencedField, entities []corpusLegalEnti
 	}{
 		{string(crmcontracts.ColdStartFieldFieldLegalName), entity.Name},
 		{string(crmcontracts.ColdStartFieldFieldRegisteredAddress), entity.RegisteredAddress},
-		{string(crmcontracts.ColdStartFieldFieldRegisterVat), entity.RegisterNumber},
+		{string(crmcontracts.ColdStartFieldFieldRegisterNumber), entity.RegisterNumber},
+		{string(crmcontracts.ColdStartFieldFieldRegisterVat), entity.VatNumber},
 	} {
 		if present[candidate.field] || strings.TrimSpace(candidate.value) == "" {
 			continue
@@ -228,7 +241,7 @@ const censusFieldConfidence = 1
 // printed — the tie-break when the same entity is seen twice.
 func legalEntityDetail(entity corpusLegalEntity) int {
 	filled := 0
-	for _, value := range []string{entity.RegisteredAddress, entity.RegisterNumber} {
+	for _, value := range []string{entity.RegisteredAddress, entity.RegisterNumber, entity.VatNumber} {
 		if strings.TrimSpace(value) != "" {
 			filled++
 		}

@@ -78,13 +78,17 @@ func TestDedupeLegalEntitiesKeepsTheOnlyBareLegalName(t *testing.T) {
 
 func TestEnrichSingleLegalEntityFromGatedProfile(t *testing.T) {
 	entities := []corpusLegalEntity{{Name: "Acme GmbH", SourceURL: seedURL + "/imprint"}}
+	// Each number fills its OWN field. A register entry recovered by the
+	// profile lane cannot stand in for a VAT ID the page never printed, and
+	// the two authorities behind them are why.
 	fields := []evidencedField{
 		{Field: "registered_address", Value: "Deliusstrasse 7, 24114 Kiel"},
-		{Field: "register_vat", Value: "HRB 123456"},
+		{Field: "register_number", Value: "HRB 123456"},
+		{Field: "register_vat", Value: "DE123456789"},
 	}
 	got := enrichLegalEntitiesFromProfile(entities, fields)
-	if got[0].RegisteredAddress == "" || got[0].RegisterNumber != "HRB 123456" {
-		t.Fatalf("the single legal choice must reuse the already-gated trio: %+v", got)
+	if got[0].RegisteredAddress == "" || got[0].RegisterNumber != "HRB 123456" || got[0].VatNumber != "DE123456789" {
+		t.Fatalf("the single legal choice must reuse the already-gated fields: %+v", got)
 	}
 	if entities[0].RegisteredAddress != "" {
 		t.Fatal("enrichment must not mutate the source slice")
@@ -186,6 +190,7 @@ func TestCensusFillsTheAddressTheProfileLaneMissed(t *testing.T) {
 		Name:              "communicode GmbH",
 		RegisteredAddress: "Wittekindstr. 1a, 45131 Essen",
 		RegisterNumber:    "HRB 37643",
+		VatNumber:         "DE216235279",
 		EvidenceSnippet:   "Impressum communicode GmbH, Wittekindstr. 1a in 45131 Essen",
 		SourceURL:         impressum,
 	}}
@@ -204,8 +209,14 @@ func TestCensusFillsTheAddressTheProfileLaneMissed(t *testing.T) {
 	if got["legal_name"] != "communicode GmbH" {
 		t.Errorf("legal_name = %q", got["legal_name"])
 	}
-	if got["register_vat"] != "HRB 37643" {
-		t.Errorf("register_vat = %q", got["register_vat"])
+	// The court's entry and the tax office's number reach their own fields.
+	// One field for both meant an imprint printing an HRB number filed it as
+	// a VAT ID, and the field added for it stayed empty.
+	if got["register_number"] != "HRB 37643" {
+		t.Errorf("register_number = %q, want the register entry the census proved", got["register_number"])
+	}
+	if got["register_vat"] != "DE216235279" {
+		t.Errorf("register_vat = %q, want the VAT ID and not the register entry", got["register_vat"])
 	}
 	// Every filled field must carry the evidence and the page, so the legal
 	// gate can judge it exactly as it judges a profile-lane field.
@@ -216,6 +227,40 @@ func TestCensusFillsTheAddressTheProfileLaneMissed(t *testing.T) {
 		if f.EvidenceSnippet == "" || f.SourceURL != impressum {
 			t.Errorf("%s arrived without evidence or a source page", f.Field)
 		}
+	}
+}
+
+// A register entry never lands in the VAT field, and a VAT ID never lands in
+// the register field.
+//
+// The two numbers come from different authorities — a court issues the
+// register entry, a tax office the VAT ID — and a company states both. While
+// the census carried one identifier, an imprint printing an HRB number filed
+// it as the VAT ID, so register_number stayed empty on every read and an
+// accepted refresh could overwrite a real VAT ID with a court entry.
+//
+// The case is stated in both directions on purpose: an implementation that
+// simply swapped the two destinations would pass a test that checked one.
+func TestEachLegalNumberReachesItsOwnField(t *testing.T) {
+	const impressum = "https://example.com/impressum"
+	kinds := map[string]crmcontracts.SiteReadPageKind{impressum: crmcontracts.SiteReadPageKindImpressum}
+	entities := []corpusLegalEntity{{
+		Name:            "Acme GmbH",
+		RegisterNumber:  "HRB 12345 B",
+		VatNumber:       "DE123456789",
+		EvidenceSnippet: "Acme GmbH, HRB 12345 B, USt-IdNr. DE123456789",
+		SourceURL:       impressum,
+	}}
+
+	got := map[string]string{}
+	for _, f := range fillLegalTrioFromCensus(nil, entities, kinds, false) {
+		got[f.Field] = f.Value
+	}
+	if got["register_number"] != "HRB 12345 B" {
+		t.Errorf("register_number = %q, want the court's entry", got["register_number"])
+	}
+	if got["register_vat"] != "DE123456789" {
+		t.Errorf("register_vat = %q, want the tax number", got["register_vat"])
 	}
 }
 
@@ -306,9 +351,10 @@ func TestCensusFillIsDeterministic(t *testing.T) {
 	kinds := map[string]crmcontracts.SiteReadPageKind{impressum: crmcontracts.SiteReadPageKindImpressum}
 	entities := []corpusLegalEntity{{
 		Name: "Order GmbH", RegisteredAddress: "Weg 1 11111 Ort", RegisterNumber: "HRB 999",
-		EvidenceSnippet: "Order GmbH Weg 1 11111 Ort HRB 999", SourceURL: impressum,
+		VatNumber:       "DE999999999",
+		EvidenceSnippet: "Order GmbH Weg 1 11111 Ort HRB 999 DE999999999", SourceURL: impressum,
 	}}
-	want := []string{"legal_name", "registered_address", "register_vat"}
+	want := []string{"legal_name", "registered_address", "register_number", "register_vat"}
 	for range 20 {
 		out := fillLegalTrioFromCensus(nil, entities, kinds, false)
 		if len(out) != len(want) {

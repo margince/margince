@@ -79,12 +79,18 @@ type SiteRead struct {
 // SiteReadLegalEntity is one legal entity a legal notice states, with the
 // identity details printed alongside it. A group publishes several, and
 // the read refuses to guess which one an installation belongs to — so it
-// keeps them all and the human picks. Address and register number are
-// empty when the page named the entity without them.
+// keeps them all and the human picks. Address, register number and VAT
+// number are empty when the page named the entity without them.
+//
+// A dossier written before the two numbers were told apart carries only
+// RegisterNumber, holding whichever of the two its page printed. Nothing
+// rewrites those: which one it holds cannot be recovered without parsing,
+// and the read that replaces it will fill both fields honestly.
 type SiteReadLegalEntity struct {
 	Name              string `json:"name"`
 	RegisteredAddress string `json:"registered_address,omitempty"`
 	RegisterNumber    string `json:"register_number,omitempty"`
+	VatNumber         string `json:"vat_number,omitempty"`
 	EvidenceSnippet   string `json:"evidence_snippet,omitempty"`
 	SourceURL         string `json:"source_url"`
 }

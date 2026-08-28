@@ -15261,12 +15261,15 @@ type CompanySiteReadLegalEntity struct {
 	// Name The entity's registered name exactly as the legal notice prints it.
 	Name string `json:"name"`
 
-	// RegisterNumber Its registration, VAT, UID or tax number as printed; absent when the page states none for this entity.
+	// RegisterNumber Its commercial-register entry as printed (HRB/HRA or the local equivalent); absent when the page states none for this entity. A dossier read before the two numbers were told apart may hold a VAT ID here.
 	RegisterNumber *string `json:"register_number,omitempty"`
 
 	// RegisteredAddress Its registered address as printed; absent when the page states none for this entity.
 	RegisteredAddress *string `json:"registered_address,omitempty"`
 	SourceUrl         string  `json:"source_url"`
+
+	// VatNumber Its VAT, UID or tax number as printed; absent when the page states none for this entity.
+	VatNumber *string `json:"vat_number,omitempty"`
 }
 
 // CompanySiteReadMessageReply defines model for CompanySiteReadMessageReply.
