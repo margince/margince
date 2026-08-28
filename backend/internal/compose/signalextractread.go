@@ -18,7 +18,6 @@ package compose
 import (
 	"context"
 	"fmt"
-	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -191,7 +190,13 @@ var dueThreadsQuery = `
 		       CASE WHEN c.shared THEN NULL ELSE c.private_owner::uuid END,
 		       -- The two ends a previous read reached, so this one can tell new
 		       -- mail from a backfill. Both null on a thread never scanned.
-		       s.last_activity_at, s.scanned_from
+		       --
+		       -- NULLIF over -infinity, which is what a REFUSAL writes: the row
+		       -- exists to hold the refusal count, and no read has happened, so
+		       -- "how far did reading get" has the same answer as a thread with
+		       -- no row at all. It is also not a time.Time, so scanning it
+		       -- would fail the whole pass.
+		       NULLIF(s.last_activity_at, '-infinity'), s.scanned_from
 		  FROM conversation c
 		  LEFT JOIN signal_thread_scan s ON s.thread_key = c.thread_key
 		 WHERE c.org_count = 1
@@ -293,92 +298,6 @@ func dueThreads(ctx context.Context, tx pgx.Tx, now time.Time, limit int) ([]set
 		due[i].Messages = messages
 	}
 	return due, nil
-}
-
-// threadMessages reads one window of a conversation, oldest first, so the
-// prompt reads in the order the exchange happened.
-//
-// WHICH window is the whole of this function's judgement, and it used to have
-// none: it always read the newest six. A backfill made the thread due again —
-// the count changed — the same newest six were re-read, and the new count was
-// recorded. The inserted older messages never reached the model and the thread
-// then looked read, which is the bad direction: the state says handled, nothing
-// errored, and nothing says content was skipped.
-//
-// Two ends, asked in this order:
-//
-//   - NEW MAIL FIRST. Messages newer than the last read are why the
-//     conversation is interesting now, and a thread that walked backwards
-//     through its history while a reply sat unread would be reading the least
-//     useful end of it.
-//   - THEN THE UNREAD OLDER RANGE. With nothing new, a message older than where
-//     reading started is a backfill, and the window is the newest of THOSE — so
-//     a long thread walks backwards one window per pass until its history is
-//     covered, rather than never reaching it.
-//
-// Neither end left: the newest window, which is what a thread with no scan row
-// gets and what every thread got before.
-func threadMessages(ctx context.Context, tx pgx.Tx, thread *settledThread) ([]threadMessage, error) {
-	// The upper bound of the window. Nothing to read older means the newest
-	// end; a backfill below where reading started means walk back from there.
-	var olderThan *time.Time
-	if thread.ReadTo != nil && !thread.Newest.After(*thread.ReadTo) && thread.ReadFrom != nil {
-		olderThan = thread.ReadFrom
-	}
-	// The remainder is measured in the same statement that cuts the body:
-	// asked for afterwards it would be a second read of a row that may have
-	// changed, and the number would then describe a different message from the
-	// one in the prompt.
-	rows, err := tx.Query(ctx, `
-		SELECT id, coalesce(direction, ''), coalesce(subject, ''),
-		       coalesce(left(body, $1), ''),
-		       greatest(coalesce(char_length(body), 0) - $1, 0), occurred_at
-		  FROM (SELECT id, direction, subject, body, occurred_at
-		          FROM activity
-		         WHERE thread_key = $2 AND kind = 'email' AND archived_at IS NULL
-		           -- Null means no bound: the newest window, which is the
-		           -- ordinary case and the one a thread starts from.
-		           AND ($4::timestamptz IS NULL OR occurred_at < $4)
-		         ORDER BY occurred_at DESC, id DESC
-		         LIMIT $3) tail
-		 ORDER BY occurred_at, id`, extractBodyLimit, thread.Key, extractThreadMessages, olderThan)
-	if err != nil {
-		return nil, fmt.Errorf("read the conversation: %w", err)
-	}
-	defer rows.Close()
-	var out []threadMessage
-	unread, cut := 0, 0
-	for rows.Next() {
-		var message threadMessage
-		if err := rows.Scan(&message.ID, &message.Direction, &message.Subject,
-			&message.Body, &message.UnreadRunes, &message.At); err != nil {
-			return nil, err
-		}
-		if message.UnreadRunes > 0 {
-			unread += message.UnreadRunes
-			cut++
-		}
-		out = append(out, message)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	if len(out) > 0 {
-		// The window's own lower end, reported so the mark can lower the
-		// cursor to it. Rows come back oldest first, so it is the first.
-		oldest := out[0].At
-		thread.ReadFromNow = &oldest
-	}
-	if cut > 0 {
-		// Said once per conversation rather than once per message: what a
-		// reader needs is how much of THIS exchange the reading was drawn
-		// from, and a line per body would bury that under the long threads it
-		// is most true of.
-		slog.WarnContext(ctx, "part of this conversation was not read; the events extracted from it are drawn from the head of each mail and anything stated below the cut is absent rather than judged",
-			"thread_key", thread.Key, "messages_cut", cut, "messages_read", len(out),
-			"body_limit", extractBodyLimit, "unread_runes", unread)
-	}
-	return out, nil
 }
 
 // recordThreadRefusal counts one refused reading of this exact conversation

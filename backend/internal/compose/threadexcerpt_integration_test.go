@@ -208,3 +208,42 @@ func read(t *testing.T, e *integration.Env, thread *settledThread) {
 		t.Fatalf("reading the conversation: %v", err)
 	}
 }
+
+// TestNothingOlderLeftFallsBackToTheNewestWindow holds the case the cursor got
+// wrong first.
+//
+// "Nothing NEWER than the last read" is not "nothing to read". A conversation
+// grows at the same instant as its newest message — the count moves and the
+// clock does not, which is the whole reason signal_thread_scan records a count
+// — and a thread whose history is fully covered has an empty older window every
+// pass. Sending either backwards reads nothing and the model is never called,
+// which is the defect this change exists to fix, reintroduced at the other end.
+func TestNothingOlderLeftFallsBackToTheNewestWindow(t *testing.T) {
+	e := integration.Setup(t)
+	key := "sameinstant-" + ids.NewV7().String()
+
+	at := time.Date(2026, 8, 20, 9, 0, 0, 0, time.UTC)
+	seedThreadMailAt(t, e, key, at)
+
+	first := settledThread{Key: key, Newest: at, Count: 1}
+	read(t, e, &first)
+	if len(first.Messages) != 1 {
+		t.Fatalf("the first read took %d messages, want the one on the thread", len(first.Messages))
+	}
+	firstOldest := *first.ReadFromNow
+
+	// A second message at the SAME instant: the thread grew and the clock did
+	// not, so nothing is newer than what was read and nothing is older than
+	// where reading started.
+	seedThreadMailAt(t, e, key, at)
+
+	second := settledThread{
+		Key: key, Newest: at, Count: 2,
+		ReadTo: timePtr(at), ReadFrom: &firstOldest,
+	}
+	read(t, e, &second)
+	if len(second.Messages) != 2 {
+		t.Errorf("the read took %d messages, want both — with nothing older left the window is the newest "+
+			"end, and a read that takes nothing never reaches the model at all", len(second.Messages))
+	}
+}
