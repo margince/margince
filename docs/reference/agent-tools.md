@@ -64,10 +64,11 @@ Columns:
 - **Tier** — 🟢 runs immediately; 🟡 refused until a human releases the staged
   approval; **dynamic** resolves per call, from what the call is aimed at, and
   may only ever *raise*. Two resolvers carry it: the deal pair reads the target
-  stage's semantic (`open` → 🟢, won/lost → 🟡), and the relink pair reads the
-  destination record type (filing under a project is 🟡 — it classifies every
-  named activity as commercial correspondence, which is write-once and cannot be
-  undone by relinking away). **🟢 / 🟡** means the tier depends on the record
+  stage's semantic (`open` → 🟢, won/lost → 🟡), and the three relink verbs
+  (`relink_activity`, `relink_thread`, `relink_activities` — the table below
+  lists the first) read the destination record type (filing under a project is
+  🟡 — it classifies every named activity as commercial correspondence, which is
+  write-once and cannot be undone by relinking away). **🟢 / 🟡** means the tier depends on the record
   type the call names: 🟢 for the seven the tool enumerates, 🟡 for
   `custom_field` and `webhook_subscription`, which the contract still declares
   confirm-first.

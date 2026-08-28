@@ -11,17 +11,13 @@ package gates
 //
 // docs/reference/agent-tools.md is what somebody deciding whether to hand an
 // agent a passport reads — not agentpolicy_gen.go. It states, per tool, whether
-// the verb RUNS or waits for a human, and it is hand-kept.
-//
-// It drifted the moment a tier annotation changed, and nothing reported it: ten
-// rows disagreed with the contract, eight of them in the dangerous direction —
-// the catalog told a reader that archiving, merging and disqualifying wait for a
-// human when they run immediately. That survived a merge, a review and a day of
-// CI (#2432, #2460).
+// the verb RUNS or waits for a human, and it is hand-kept. A wrong tier there
+// tells somebody a consequential verb waits for them when it does not, which is
+// worse than telling them nothing.
 //
 // So both sides are DERIVED and compared. agentPolicies is generated from
 // crm.yaml, which means an annotation change binds this page by regeneration
-// rather than by anyone remembering.
+// rather than by anyone remembering to edit it.
 //
 // THE MIXED CASE IS THE POINT, not an exception to skip. create_record and
 // update_record resolve per record type, so no single mark can be right for
@@ -139,9 +135,14 @@ func TestTheToolCatalogsTiersAreTheContractsTiers(t *testing.T) {
 				catalogPage, tool, documented[tool], want)
 		}
 	}
-	// A comparison of nothing passes exactly like a correct page. The floor is
-	// far below the real count, so it catches a broken scan rather than a
-	// changing catalog.
+	// A comparison of nothing passes exactly like a correct page.
+	//
+	// The floor is CLOSE to the real count — twenty-one rows carry a contract
+	// tier today — so it is not a robustness margin and must not be read as
+	// one. It trips when the scan breaks or the governed corpus shrinks, and
+	// either is a thing to look at: the first is this gate reading a table
+	// shape that has moved, the second is verbs leaving the contract's
+	// governance, which is not a change to make quietly.
 	if compared < 20 {
 		t.Fatalf("only %d row(s) were compared against a contract tier, so this gate covered almost "+
 			"nothing — the table shape or the policy table has moved", compared)
