@@ -71,11 +71,16 @@ have a tool carries `x-agent-access: human-only` instead.
 Columns:
 
 - **Tier** — 🟢 runs immediately; 🟡 refused until a human releases the staged
-  approval; **dynamic** resolves per call from the target stage's semantic
-  (`open` → 🟢, won/lost → 🟡), and may only ever *raise*. **🟢 / 🟡** means the
-  tier depends on the record type the call names: 🟢 for the seven the tool
-  enumerates, 🟡 for `custom_field` and `webhook_subscription`, which the
-  contract still declares confirm-first.
+  approval; **dynamic** resolves per call, from what the call is aimed at, and
+  may only ever *raise*. Two resolvers carry it: the deal pair reads the target
+  stage's semantic (`open` → 🟢, won/lost → 🟡), and the three relink verbs
+  (`relink_activity`, `relink_thread`, `relink_activities` — the table below
+  lists the first) read the destination record type (filing under a project is
+  🟡 — it classifies every named activity as commercial correspondence, which is
+  write-once and cannot be undone by relinking away).
+  **🟢 / 🟡** means the tier depends on the record type the call names: 🟢 for
+  the seven the tool enumerates, 🟡 for `custom_field` and
+  `webhook_subscription`, which the contract still declares confirm-first.
 - Consequential verbs read 🟢 here because ADR-0055 stopped them staging by
   default: a passport carries the granting human's own seat, grants and row
   scope, so a verb it can spend is one its holder could spend unaided, and a
@@ -117,7 +122,7 @@ Columns:
 | `read_brief` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `read_record` | 🟢 | `read` | — | Mirror-backed; result carries `trust_tier: external` |
 | `query_workspace` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
-| `relink_activity` | 🟢 | `write` | — | Runs: a link row is not an SoR record write, so it is available in either mode |
+| `relink_activity` | dynamic | `write` | — | Runs: a link row is not an SoR record write, so it is available in either mode |
 | `resolve_entities` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |
 | `run_report` | 🟢 | `read` | — | `unsupported_by_sor` (no incumbent analogue) |
 | `search_context` | 🟢 | `read` | — | `unsupported_by_sor` (native-only guard) |

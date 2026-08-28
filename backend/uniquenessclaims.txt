@@ -100,7 +100,7 @@ internal/compose/costestimate/rules.go#type unitRule
 internal/compose/csvfields.go#const fieldFullName
 internal/compose/datasweep.go#const credentialHandleSuffix
 internal/compose/dbhandle.go#func ProjectsStore
-internal/compose/dealstatus/model.go#func knownIDs
+internal/compose/dealstatus/grounding.go#func knownIDs
 internal/compose/deepread_integration_test.go#func TestDeepReadAttributesItsWritesToTheRequesterTheRowNames
 internal/compose/deploymentsecretseal.go#func resolveSecret
 internal/compose/deploymentsecretseal.go#method vaultBinding.open

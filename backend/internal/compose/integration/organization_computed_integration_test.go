@@ -57,19 +57,33 @@ func freezeDealFX(t *testing.T, owner *pgx.Conn, dealID ids.UUID) {
 // for the view's honest "nothing to sum" case (no row at all).
 func directOpenPipelineRead(ctx context.Context, t *testing.T, e *Env, orgID ids.UUID) (minor *int64, count int, found bool) {
 	t.Helper()
+	minor, count, _, found = directOpenPipelineReadPriced(ctx, t, e, orgID)
+	return minor, count, found
+}
+
+// directOpenPipelineReadPriced is the same read plus priced_deal_count, for the
+// tests whose subject is which deals REACHED the sum.
+//
+// Separate rather than a fourth return on every caller, because most of them
+// are about the total and the count of deals; a test that wants to know how
+// many were priced is asking a different question and says so by asking this.
+func directOpenPipelineReadPriced(
+	ctx context.Context, t *testing.T, e *Env, orgID ids.UUID,
+) (minor *int64, count, priced int, found bool) {
+	t.Helper()
 	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
-			`SELECT open_pipeline_minor_base, open_deal_count
+			`SELECT open_pipeline_minor_base, open_deal_count, priced_deal_count
 			 FROM organization_open_pipeline_rollup WHERE organization_id = $1`,
-			orgID).Scan(&minor, &count)
+			orgID).Scan(&minor, &count, &priced)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, 0, false
+		return nil, 0, 0, false
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
-	return minor, count, true
+	return minor, count, priced, true
 }
 
 // computedFieldByKey indexes the assembled rows for the reason/floor
@@ -426,3 +440,148 @@ func TestOrganizationComputed_UngatedPrincipal_ComputedFieldsKeyAbsentFromWire(t
 // orgIDPtr matches int64Ptr/strPtr's convention (orgrollup_integration_test.go
 // / authz_integration_test.go): the *ids.OrganizationID CreateDealInput wants.
 func orgIDPtr(id ids.OrganizationID) *ids.OrganizationID { return &id }
+
+// TestOrganizationComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord
+// is the case that took a whole company record down.
+//
+// The view cast its converted amount straight to bigint, and Postgres raises
+// `numeric field overflow` on a result that does not fit — which failed the
+// statement, which failed GetOrganization, which made the organization
+// unreadable. One implausible amount against a large rate, and the record it
+// sits on could not be opened at all.
+//
+// The deal now contributes nothing and stays counted, exactly as a deal with no
+// usable rate does, and the record opens.
+func TestOrganizationComputed_AnUnrepresentableDeal_RefusesOneFigureNotTheRecord(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	orgID := e.SeedOrg(t, "Overflow Logistics", nil)
+
+	// The largest rate the column can hold, against an amount near the top of
+	// its own range. Neither is a number anyone would type on purpose — which
+	// is the point: a data-entry mistake is precisely the input that must not
+	// be able to take a record offline.
+	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.Admin(), `
+			INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
+			VALUES ('JPY', (SELECT (value #>> '{}')::text FROM setting WHERE key = 'installation.base_currency'),
+			        9999999999, CURRENT_DATE)
+			ON CONFLICT DO NOTHING`)
+		return err
+	}); err != nil {
+		t.Fatalf("seeding the outsized rate: %v", err)
+	}
+
+	for _, deal := range []struct {
+		name     string
+		amount   int64
+		currency string
+	}{
+		// Converts to roughly 9.2e27, which no bigint holds.
+		{"Unrepresentable deal", 9_200_000_000_000_000_000, "JPY"},
+		// And one in the installation's own base currency (harnessinstallation.go
+		// seeds EUR), so a partial total has something to be partial ABOUT — a
+		// test where nothing converts would pass on a view that refused
+		// everything.
+		{"Ordinary deal", 125_000, "EUR"},
+	} {
+		in := deals.CreateDealInput{
+			Name: deal.name, AmountMinor: int64Ptr(deal.amount),
+			PipelineID: pipeline, StageID: open,
+			OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
+		}
+		in.Currency = strPtr(deal.currency)
+		if _, err := e.Deals.CreateDeal(e.Admin(), in); err != nil {
+			t.Fatalf("seeding %s: %v", deal.name, err)
+		}
+	}
+
+	// The read that used to fail outright.
+	org, err := e.People.GetOrganization(e.Admin(), orgIDOf(orgID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("the organization could not be read at all: %v — one deal the view cannot represent "+
+			"must refuse one figure, never the record", err)
+	}
+
+	_, count, found := directOpenPipelineRead(e.Admin(), t, e, orgID)
+	if !found {
+		t.Fatal("the view returned no row for an organization with two open deals")
+	}
+	if count != 2 {
+		t.Errorf("open_deal_count = %d, want 2 — a deal that cannot be priced is still a deal", count)
+	}
+
+	// A total covering one of two deals is not a total. The field floors, and
+	// it floors to PARTIAL_PIPELINE rather than awaiting_fx: one deal was
+	// priced, so this is a short sum and not an absent one, and the two reasons
+	// are what tells a reader which. Asserted rather than left to Computable,
+	// because "some deals could not be priced" and "none could" are different
+	// sentences on the page.
+	open0 := computedFieldByKey(*org.ComputedFields, "open_pipeline")
+	if open0.Computable {
+		t.Errorf("open_pipeline reads computable with one of two deals priced: %+v — a short total is "+
+			"worse than no total", open0)
+	}
+	if open0.Reason == nil || *open0.Reason != "partial_pipeline" {
+		t.Errorf("open_pipeline.reason = %v, want \"partial_pipeline\" — one deal reached the sum and "+
+			"one could not be represented, which is a short figure rather than no figure", open0.Reason)
+	}
+	if open0.ValueMinor != nil {
+		t.Errorf("open_pipeline.value_minor = %v, want absent — a short sum is not published as a total",
+			open0.ValueMinor)
+	}
+}
+
+// TestOrganizationComputed_ATotalThatCannotBeRepresented_RefusesTheFigure is the
+// same hazard one level up.
+//
+// Guarding each deal and not the total would have moved the failure rather than
+// removed it: sum(bigint) answers in numeric, so a set of individually
+// representable deals can add to a figure no bigint holds — and the reader
+// scans that column into an int64. The record would have been unreadable
+// because the deals are large rather than because one of them is.
+func TestOrganizationComputed_ATotalThatCannotBeRepresented_RefusesTheFigure(t *testing.T) {
+	e := Setup(t)
+	pipeline, open := pipelineFixtureFor(e.Admin(), t, e.Deals)
+	orgID := e.SeedOrg(t, "Big Numbers GmbH", nil)
+
+	// Two deals, each a legal bigint, whose sum is not. No conversion is
+	// involved — both are in the installation's own currency — so this is the
+	// aggregate's bound and nothing else.
+	for _, amount := range []int64{9_000_000_000_000_000_000, 9_000_000_000_000_000_000} {
+		if _, err := e.Deals.CreateDeal(e.Admin(), deals.CreateDealInput{
+			Name: "Large deal", AmountMinor: int64Ptr(amount), Currency: strPtr("EUR"),
+			PipelineID: pipeline, StageID: open, OrganizationID: orgIDPtr(orgIDOf(orgID)), Source: "manual",
+		}); err != nil {
+			t.Fatalf("seeding a large deal: %v", err)
+		}
+	}
+
+	org, err := e.People.GetOrganization(e.Admin(), orgIDOf(orgID), storekit.IncludeArchived)
+	if err != nil {
+		t.Fatalf("the organization could not be read at all: %v — a total nobody can represent must "+
+			"refuse the figure, never the record", err)
+	}
+
+	minor, count, priced, found := directOpenPipelineReadPriced(e.Admin(), t, e, orgID)
+	if !found {
+		t.Fatal("the view returned no row for an organization with two open deals")
+	}
+	if count != 2 {
+		t.Errorf("open_deal_count = %d, want 2", count)
+	}
+	// BOTH deals reached the sum, which is what makes this a test about the
+	// AGGREGATE. Without it the case passes on a view where neither converted:
+	// a null total and a non-computable field look identical whether the sum
+	// overflowed or nothing was priced at all.
+	if priced != 2 {
+		t.Fatalf("priced_deal_count = %d, want 2 — both deals are in the installation's own currency, so "+
+			"a lower count means this test is measuring something other than the sum's bound", priced)
+	}
+	if minor != nil {
+		t.Errorf("open_pipeline_minor_base = %d, want NULL — a sum that does not fit is not a sum", *minor)
+	}
+	if open0 := computedFieldByKey(*org.ComputedFields, "open_pipeline"); open0.Computable {
+		t.Errorf("open_pipeline reads computable over a total that cannot be represented: %+v", open0)
+	}
+}

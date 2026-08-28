@@ -14,6 +14,7 @@ package activities
 import (
 	"context"
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -424,5 +425,138 @@ func TestTheLinkBoundHoldsAtTheWriteItself(t *testing.T) {
 	var tooMany *TooManyLinksError
 	if !errors.As(err, &tooMany) {
 		t.Fatalf("logging an activity with %d links = %v, want a TooManyLinksError", len(links), err)
+	}
+}
+
+// TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames is
+// the gap the field closes.
+//
+// A reply inherits the anchor's links, which is right for the people and the
+// deal a conversation is about — and wrong for a record attached to the deal
+// AFTER the conversation started. A deal whose project was filed later has an
+// anchor with no project link, so every reply in that thread went out unfiled:
+// the composer said "this will be filed under X" and the sent message carried
+// no link to X. The project's timeline was missing the outbound half until the
+// customer answered and a subject tag brought their reply back.
+func TestAReplyIsFiledUnderTheRecordsItsAnchorCarriesPlusTheOnesTheCallerNames(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	inherited := e.linkPerson(t, anchor, "Mara Vogt")
+	// The record the anchor does not carry — the shape a project attached to
+	// the deal after the conversation began takes.
+	late := e.seedOrganization(t)
+
+	sent, err := e.store(stubUnsubscribeLinker{}).SendEmail(
+		e.as(principal.RowScopeAll),
+		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "organization", EntityID: late}}),
+		sendInput("transactional"), stubConsentGate{}, &recordingStager{})
+	if err != nil {
+		t.Fatalf("reply SendEmail: %v", err)
+	}
+
+	filed := map[string]bool{}
+	if sent.Links != nil {
+		for _, l := range *sent.Links {
+			filed[string(l.EntityType)+"/"+ids.UUID(l.EntityId).String()] = true
+		}
+	}
+	if !filed["person/"+inherited.String()] {
+		t.Errorf("the reply lost a link its anchor carried; filed = %v — naming a record must ADD to the "+
+			"conversation's own filing, never replace it", filed)
+	}
+	if !filed["organization/"+late.String()] {
+		t.Errorf("the reply was not filed under the record the caller named; filed = %v", filed)
+	}
+}
+
+// A named record the caller cannot see must refuse exactly as an
+// account-started send's does, and for the same reason: the probe runs before
+// the consent gate, which answers about the RECIPIENTS — so reaching it would
+// tell a caller who guessed a UUID whether strangers had consented, and would
+// answer 409 where the row-scope verdict is 404.
+func TestAReplyRefusesAnAddedLinkTheCallerCannotSee(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	stager := &recordingStager{}
+	gate := &countingConsentGate{}
+	unseen := ids.NewV7()
+
+	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
+		e.as(principal.RowScopeAll),
+		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "organization", EntityID: unseen}}),
+		sendInput("transactional"), gate, stager)
+
+	if !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("a reply naming an invisible record = %v, want ErrNotFound (existence-hiding)", err)
+	}
+	if gate.calls != 0 {
+		t.Fatalf("the consent gate answered %d times for a caller who named a record they cannot see; that answer is about the recipients, not the link", gate.calls)
+	}
+	if len(stager.staged) != 0 {
+		t.Fatalf("a refused send staged %d deliveries, want none", len(stager.staged))
+	}
+}
+
+// Naming a record the anchor already carries is a caller being explicit about
+// what they expect. It is not an error, and it is not a second link — the
+// activity_link unique constraint would refuse the write.
+func TestAReplyNamingALinkItsAnchorAlreadyCarriesFilesItOnce(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	inherited := e.linkPerson(t, anchor, "Mara Vogt")
+
+	sent, err := e.store(stubUnsubscribeLinker{}).SendEmail(
+		e.as(principal.RowScopeAll),
+		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "person", EntityID: inherited}}),
+		sendInput("transactional"), stubConsentGate{}, &recordingStager{})
+	if err != nil {
+		t.Fatalf("reply SendEmail: %v", err)
+	}
+
+	seen := 0
+	if sent.Links != nil {
+		for _, l := range *sent.Links {
+			if string(l.EntityType) == "person" && ids.UUID(l.EntityId) == inherited {
+				seen++
+			}
+		}
+	}
+	if seen != 1 {
+		t.Errorf("the person is filed %d times, want once", seen)
+	}
+}
+
+// TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound holds the bound
+// against what will be WRITTEN rather than against what the caller named.
+//
+// probeLinkTargets bounds the additions alone, so an anchor already at the
+// limit plus one more passed it and failed inside the staging transaction —
+// after the consent gate had answered, after the message was prepared, and on a
+// scheduled send days after the caller could have shortened anything.
+func TestAReplyIsRefusedWhenItsAdditionsPushTheAnchorPastTheBound(t *testing.T) {
+	e := setupSend(t)
+	anchor := e.seedAnchor(t, "", "")
+	for i := 0; i < maxActivityLinks; i++ {
+		e.linkPerson(t, anchor, fmt.Sprintf("Person %d", i))
+	}
+	org := e.seedOrganization(t)
+	gate := &countingConsentGate{}
+	stager := &recordingStager{}
+
+	_, err := e.store(stubUnsubscribeLinker{}).SendEmail(
+		e.as(principal.RowScopeAll),
+		FromActivity(anchor).AlsoFiledUnder([]ActivityLinkInput{{EntityType: "organization", EntityID: org}}),
+		sendInput("transactional"), gate, stager)
+
+	var tooMany *TooManyLinksError
+	if !errors.As(err, &tooMany) {
+		t.Fatalf("a reply whose additions push it past the bound = %v, want a TooManyLinksError", err)
+	}
+	if gate.calls != 0 {
+		t.Errorf("the consent gate answered %d times for a send that cannot be written; the caller is told "+
+			"what to shorten before anyone is asked about consent", gate.calls)
+	}
+	if len(stager.staged) != 0 {
+		t.Fatalf("a refused send staged %d deliveries, want none", len(stager.staged))
 	}
 }

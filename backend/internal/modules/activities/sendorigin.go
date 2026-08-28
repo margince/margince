@@ -39,12 +39,35 @@ type SendOrigin struct {
 	// supplied explicitly because there is no anchor to inherit them from.
 	// Each is row-scope probed at insert by insertActivityLinks.
 	links []ActivityLinkInput
+	// also are records a REPLY is filed under beyond what its anchor carries.
+	//
+	// Added rather than substituted, and that is the whole shape of it: a reply
+	// belongs to the same people and the same deal as the conversation it
+	// continues, so a caller that could replace the inherited set could detach
+	// a thread from the records it is about. What it is for is the link the
+	// anchor cannot have — a deal whose project was attached after the
+	// conversation started leaves every reply in that thread unfiled.
+	//
+	// Ignored on an account origin, which names its whole set in links.
+	also []ActivityLinkInput
 }
 
 // FromActivity is the reply origin: the anchor is read, its threading chain
 // is continued, and the new activity inherits its record links.
 func FromActivity(anchor ids.ActivityID) SendOrigin {
 	return SendOrigin{anchor: anchor}
+}
+
+// AlsoFiledUnder adds records to a reply beyond the ones its anchor carries.
+//
+// A method on the origin rather than a parameter of FromActivity, because it is
+// the uncommon case and every existing caller means "the anchor's own links".
+// It returns a new value: an origin is a description of one send, and a
+// constructor that could be mutated after the fact is one a later reader has to
+// trace to know what was actually filed.
+func (o SendOrigin) AlsoFiledUnder(links []ActivityLinkInput) SendOrigin {
+	o.also = append([]ActivityLinkInput(nil), links...)
+	return o
 }
 
 // FromAccount is the account-started origin: no anchor, a fresh thread
@@ -92,7 +115,50 @@ func (o SendOrigin) resolve(ctx context.Context, s *Store) ([]ActivityLinkInput,
 	if err != nil {
 		return nil, err
 	}
-	return inheritedLinks(anchor), nil
+	inherited := inheritedLinks(anchor)
+	if len(o.also) == 0 {
+		return inherited, nil
+	}
+	// Probed HERE, before the consent gate, for the reason the account origin's
+	// links are: deferring to the insert would let a caller name a record they
+	// cannot see and still reach a gate that answers about the RECIPIENTS, so
+	// the refusal they got back would disclose whether strangers had consented
+	// — and it would be a 409 where the row-scope answer is 404.
+	if err := s.probeLinkTargets(ctx, o.also); err != nil {
+		return nil, err
+	}
+	merged := mergedLinks(inherited, o.also)
+	// The bound applies to what will be WRITTEN, not to what the caller named.
+	// probeLinkTargets bounds the additions alone, and an anchor already at the
+	// limit plus one more passes that and then fails inside the staging
+	// transaction — after the consent gate has answered, after the message is
+	// prepared, and on a scheduled send days after the caller could have
+	// shortened anything. The write's own check stays; this one is what makes
+	// the refusal arrive while the sender is still at the keyboard.
+	if len(merged) > maxActivityLinks {
+		return nil, &TooManyLinksError{Count: len(merged)}
+	}
+	return merged, nil
+}
+
+// mergedLinks adds the caller's records to the anchor's, once each.
+//
+// The inherited links come FIRST and keep their order, so the reply's timeline
+// row reads as the conversation's own filing with an addition — not as a set
+// the caller composed. A duplicate is collapsed rather than inserted twice:
+// naming a record the anchor already carries is a caller being explicit about
+// what they expect, which is not an error and not a second link.
+func mergedLinks(inherited, also []ActivityLinkInput) []ActivityLinkInput {
+	seen := make(map[ActivityLinkInput]bool, len(inherited)+len(also))
+	out := make([]ActivityLinkInput, 0, len(inherited)+len(also))
+	for _, link := range append(append([]ActivityLinkInput(nil), inherited...), also...) {
+		if seen[link] {
+			continue
+		}
+		seen[link] = true
+		out = append(out, link)
+	}
+	return out
 }
 
 // lockAnchorLive re-reads the anchor under a row lock inside the writing

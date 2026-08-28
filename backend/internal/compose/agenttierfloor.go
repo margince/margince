@@ -18,6 +18,7 @@ package compose
 // tool door by regeneration and not by anyone remembering.
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -146,3 +147,44 @@ func tierFloor(tool, recordType string) (mcp.RiskTier, bool) {
 // composed api surface passes it; the integration lane is what proves that, since
 // a comment cannot.
 func withContractTierFloor() agents.RegistryOption { return agents.WithTierFloor(tierFloor) }
+
+// AgentToolTiers answers, per tool verb, which contract tiers its operations
+// resolve to — sorted and deduplicated.
+//
+// NOT every registered tool, and the difference is the thing to know before
+// reading its answer: a native read tool is registered by the MCP registry and
+// backs no crm.yaml operation, so agentPolicies holds no tier for it and it is
+// absent here. The subject is what the CONTRACT governs.
+//
+// Exported for one reader — the gate holding docs/reference/agent-tools.md's
+// Tier column against this table — and shaped for the question that page
+// answers rather than for the table's own key. agentPolicies is keyed by ROUTE,
+// because that is what the dispatcher looks a call up by; a catalog row is per
+// TOOL, and a tool reached by several routes may resolve differently on each.
+//
+// Which is the interesting case rather than an inconvenience: create_record and
+// update_record carry one tier for the record types they enumerate and another
+// for the two the contract still declares confirm-first. This answers with
+// both and leaves what to say about it to the caller.
+func AgentToolTiers() map[string][]string {
+	byTool := map[string]map[string]bool{}
+	for _, policy := range agentPolicies {
+		if policy.Tool == "" || policy.Tier == "" {
+			continue
+		}
+		if byTool[policy.Tool] == nil {
+			byTool[policy.Tool] = map[string]bool{}
+		}
+		byTool[policy.Tool][string(policy.Tier)] = true
+	}
+	out := make(map[string][]string, len(byTool))
+	for tool, tiers := range byTool {
+		list := make([]string, 0, len(tiers))
+		for tier := range tiers {
+			list = append(list, tier)
+		}
+		sort.Strings(list)
+		out[tool] = list
+	}
+	return out
+}

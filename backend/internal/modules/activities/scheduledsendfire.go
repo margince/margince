@@ -179,8 +179,12 @@ type claimedSend struct {
 	OriginKind  string
 	Anchor      *ids.UUID
 	OriginLinks []byte
-	Payload     []byte
-	Version     int
+	// AlsoLinks are the records a reply was told to file itself under beyond
+	// its anchor's. Frozen at composition because nothing at fire could work
+	// out which ones the caller meant.
+	AlsoLinks []byte
+	Payload   []byte
+	Version   int
 	// RowVersion is the scheduled row's own optimistic-concurrency version, as
 	// the claim saw it. A caller that acts on this row LATER, outside the claim's
 	// transaction, binds to this so it cannot act on a newer intention.
@@ -205,7 +209,20 @@ func (c claimedSend) replay() (SendOrigin, SendEmailInput, error) {
 		if c.Anchor == nil {
 			return SendOrigin{}, SendEmailInput{}, errors.New("scheduled send: a reply with no anchor")
 		}
-		return FromActivity(ids.ActivityID{UUID: *c.Anchor}), in, nil
+		origin := FromActivity(ids.ActivityID{UUID: *c.Anchor})
+		if len(c.AlsoLinks) == 0 {
+			return origin, in, nil
+		}
+		var also []ActivityLinkInput
+		if err := json.Unmarshal(c.AlsoLinks, &also); err != nil {
+			return SendOrigin{}, SendEmailInput{}, fmt.Errorf(
+				"scheduled send: reading the frozen added record links: %w", err)
+		}
+		// Re-probed at fire by resolve, like every other link on this path: a
+		// record the scheduler could read when they composed may be one they
+		// cannot read now, and a scheduled send runs the whole guard sequence
+		// again for exactly that reason.
+		return origin.AlsoFiledUnder(also), in, nil
 	}
 	var links []ActivityLinkInput
 	if err := json.Unmarshal(c.OriginLinks, &links); err != nil {
@@ -219,7 +236,7 @@ func (c claimedSend) replay() (SendOrigin, SendEmailInput, error) {
 func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claimedSend, bool, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT scheduled_at, origin_kind, anchor_activity_id,
-		       origin_links, payload, payload_version, version
+		       origin_links, also_links, payload, payload_version, version
 		  FROM scheduled_send
 		 WHERE id = $1 AND status = 'scheduled'
 		 FOR UPDATE`, id)
@@ -237,7 +254,7 @@ func (s *Store) claimForFire(ctx context.Context, tx pgx.Tx, id ids.UUID) (claim
 	}
 	var c claimedSend
 	if err := rows.Scan(&c.ScheduledAt, &c.OriginKind, &c.Anchor,
-		&c.OriginLinks, &c.Payload, &c.Version, &c.RowVersion); err != nil {
+		&c.OriginLinks, &c.AlsoLinks, &c.Payload, &c.Version, &c.RowVersion); err != nil {
 		return claimedSend{}, false, fmt.Errorf("scheduled send: claiming: %w", err)
 	}
 	return c, true, nil

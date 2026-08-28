@@ -18,6 +18,8 @@ package deals
 import (
 	"fmt"
 	"time"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 )
 
 // HealthReason is one factor's number and the fact behind it.
@@ -41,16 +43,33 @@ func HealthReasons(h DealHealth, now time.Time) []HealthReason {
 	}
 }
 
+// recencyReason says how long ago the last activity was, BY THE CALENDAR.
+//
+// Not by elapsed hours, and the difference is one a reader can catch the
+// product in. The deal status card is cached on a fingerprint that includes the
+// UTC day, so a sentence whose words change on the elapsed clock changes while
+// the key stands still: last activity at 14:00 on the 20th, a card written at
+// 09:00 on the 22nd says "1 days ago", and at 14:00 that afternoon the sentence
+// is wrong and stays wrong until midnight because nothing has invalidated it.
+//
+// Counting the same way the key does means the wording can only change when the
+// key does. It is also how a reader looking at two dates counts: 23:00 Monday
+// to 01:00 Tuesday is one day, not zero.
+//
+// The SCORE is a separate question and keeps its fractional elapsed count
+// (health.daysBetween). A number that measures how stale a deal is should move
+// continuously; a sentence a reader can check against a timestamp should not
+// move between cache writes.
 func recencyReason(last *time.Time, stalled bool, now time.Time) string {
 	if last == nil {
 		return "No activity has been logged on this deal."
 	}
-	days := int(now.Sub(*last).Hours() / 24)
+	days := elapsed.Days(*last, now)
 	when := fmt.Sprintf("%d days ago", days)
-	switch days {
-	case 0:
+	switch {
+	case days <= 0:
 		when = "today"
-	case 1:
+	case days == 1:
 		when = "yesterday"
 	}
 	if stalled {

@@ -138,9 +138,9 @@ describe("the step rail", () => {
     expect(rail.querySelector("button")).toBeNull();
     expect(rail.querySelector("a")).toBeNull();
     expect(stops.map((stop) => stop.className)).toEqual([
-      "mw-step is-done",
-      "mw-step is-now",
-      "mw-step is-todo",
+      "mw-step t-eyebrow is-done",
+      "mw-step t-eyebrow is-now",
+      "mw-step t-eyebrow is-todo",
     ]);
   });
 

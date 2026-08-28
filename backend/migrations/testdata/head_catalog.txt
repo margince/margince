@@ -2951,14 +2951,13 @@ END;
 
 public.organization_open_pipeline_rollup acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.organization_id,
-    sum(
         CASE
-            WHEN ((d.currency)::text = base.code) THEN d.amount_minor
-            ELSE (round(((d.amount_minor)::numeric * live.rate)))::bigint
-        END) AS open_pipeline_minor_base,
+            WHEN ((sum(conv.minor_base) >= ('-9223372036854775808'::bigint)::numeric) AND (sum(conv.minor_base) <= ('9223372036854775807'::bigint)::numeric)) THEN sum(conv.minor_base)
+            ELSE NULL::numeric
+        END AS open_pipeline_minor_base,
     count(*) AS open_deal_count,
-    count(*) FILTER (WHERE ((d.amount_minor IS NOT NULL) AND (((d.currency)::text = base.code) OR (live.rate IS NOT NULL)))) AS priced_deal_count
-   FROM ((deal d
+    count(*) FILTER (WHERE (conv.minor_base IS NOT NULL)) AS priced_deal_count
+   FROM (((deal d
      LEFT JOIN LATERAL ( SELECT (setting.value #>> '{}'::text[]) AS code
            FROM setting
           WHERE (setting.key = 'installation.base_currency'::text)) base ON (true))
@@ -2967,6 +2966,12 @@ public.organization_open_pipeline_rollup opts=security_invoker=true  SELECT d.or
           WHERE (((d.currency)::text IS DISTINCT FROM base.code) AND (r.from_currency = d.currency) AND ((r.to_currency)::text = base.code) AND (r.rate_date <= CURRENT_DATE))
           ORDER BY r.rate_date DESC
          LIMIT 1) live ON (true))
+     LEFT JOIN LATERAL ( SELECT
+                CASE
+                    WHEN ((d.currency)::text = base.code) THEN d.amount_minor
+                    WHEN ((live.rate IS NOT NULL) AND ((round(((d.amount_minor)::numeric * live.rate)) >= ('-9223372036854775808'::bigint)::numeric) AND (round(((d.amount_minor)::numeric * live.rate)) <= ('9223372036854775807'::bigint)::numeric))) THEN (round(((d.amount_minor)::numeric * live.rate)))::bigint
+                    ELSE NULL::bigint
+                END AS minor_base) conv ON (true))
   WHERE ((d.status = 'open'::text) AND (d.organization_id IS NOT NULL) AND (d.archived_at IS NULL))
   GROUP BY d.organization_id;
 public.organization_open_pipeline_rollup.open_deal_count bigint gen=- def=-
@@ -3800,6 +3805,7 @@ public.scheduled_send.activity_id uuid gen=- def=-
 public.scheduled_send.agent_actor_id text gen=- def=-
 public.scheduled_send.agent_on_behalf_of uuid gen=- def=-
 public.scheduled_send.agent_passport_id uuid gen=- def=-
+public.scheduled_send.also_links jsonb gen=- def=-
 public.scheduled_send.anchor_activity_id uuid gen=- def=-
 public.scheduled_send.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.delivery_id uuid gen=- def=-
@@ -3815,6 +3821,7 @@ public.scheduled_send.scheduled_by uuid NOT NULL gen=- def=-
 public.scheduled_send.scheduled_send_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE RESTRICT
 public.scheduled_send.scheduled_send_agent_on_behalf_of_fkey FOREIGN KEY (agent_on_behalf_of) REFERENCES app_user(id) ON DELETE SET NULL
 public.scheduled_send.scheduled_send_agent_provenance_shape CHECK ((((principal_kind = 'agent'::text) AND (agent_actor_id IS NOT NULL)) OR ((agent_actor_id IS NULL) AND (agent_passport_id IS NULL) AND (agent_on_behalf_of IS NULL))))
+public.scheduled_send.scheduled_send_also_links_shape CHECK (((also_links IS NULL) OR ((origin_kind = 'reply'::text) AND (jsonb_typeof(also_links) = 'array'::text))))
 public.scheduled_send.scheduled_send_anchor_activity_id_fkey FOREIGN KEY (anchor_activity_id) REFERENCES activity(id) ON DELETE CASCADE
 public.scheduled_send.scheduled_send_delivery_id_fkey FOREIGN KEY (delivery_id) REFERENCES comms_outbound(id) ON DELETE RESTRICT
 public.scheduled_send.scheduled_send_held_shape CHECK ((((status = 'held'::text) AND (held_reason IS NOT NULL)) OR ((status <> 'held'::text) AND (held_reason IS NULL))))
@@ -3950,8 +3957,11 @@ public.signal_thread_scan.refused_activity_at timestamp with time zone gen=- def
 public.signal_thread_scan.refused_message_count integer gen=- def=-
 public.signal_thread_scan.resolved_org_id uuid gen=- def=-
 public.signal_thread_scan.scanned_at timestamp with time zone NOT NULL gen=- def=now()
+public.signal_thread_scan.scanned_from timestamp with time zone gen=- def=-
+public.signal_thread_scan.scanned_from_id uuid gen=- def=-
 public.signal_thread_scan.signal_thread_scan_pkey PRIMARY KEY (thread_key)
 public.signal_thread_scan.signal_thread_scan_resolved_org_fkey FOREIGN KEY (resolved_org_id) REFERENCES organization(id) ON DELETE SET NULL (resolved_org_id)
+public.signal_thread_scan.signal_thread_scan_scanned_from_shape CHECK (((scanned_from IS NULL) = (scanned_from_id IS NULL)))
 public.signal_thread_scan.thread_key text NOT NULL gen=- def=-
 public.signal_thread_scan_pkey CREATE UNIQUE INDEX signal_thread_scan_pkey ON public.signal_thread_scan USING btree (thread_key)
 public.signing_key acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false

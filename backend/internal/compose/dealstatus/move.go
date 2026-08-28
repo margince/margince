@@ -257,10 +257,22 @@ func lastContactEvidence(f facts) []crmcontracts.DealNextBestActionEvidence {
 	return []crmcontracts.DealNextBestActionEvidence{evidenceOf(last, "Last contact: "+subjectOf(last))}
 }
 
+// evidenceOf points the card at one record. A ZERO timestamp answers nil
+// rather than a date.
+//
+// occurred_at is nullable on the wire because some records genuinely have no
+// moment: an open task with no due date is the case, and taking the address of
+// its zero value renders `0001-01-01T00:00:00Z` — a date no reader can act on
+// and none of them chose. "There is no date" is what nil says, and it is the
+// truth about that row.
 func evidenceOf(a crmcontracts.Activity, text string) crmcontracts.DealNextBestActionEvidence {
 	id := a.Id
-	at := a.OccurredAt
-	return crmcontracts.DealNextBestActionEvidence{Text: text, ActivityId: &id, OccurredAt: &at}
+	out := crmcontracts.DealNextBestActionEvidence{Text: text, ActivityId: &id}
+	if !a.OccurredAt.IsZero() {
+		at := a.OccurredAt
+		out.OccurredAt = &at
+	}
+	return out
 }
 
 // subjectOf names a row for a reader. A withheld row is named by its kind:
