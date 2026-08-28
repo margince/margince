@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
-import { RecordShell } from "../app/testing/recordshell";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import {

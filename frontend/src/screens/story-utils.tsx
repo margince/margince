@@ -4,7 +4,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { type GrantSpec, meFixture } from "../app/mefixture";
-import { RecordShell } from "../app/testing/recordshell";
+import { RecordShell } from "../app/testing/recordshell.testkit";
 import { type Locale, LocaleProvider } from "../i18n";
 
 // Shared Storybook rendering harness for the screens/* modules (fe-uat

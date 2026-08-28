@@ -13,10 +13,11 @@ import { PageAsideProvider, PageAsideRegion } from "../pageaside";
 // need exactly this pair, and a copy per suite is six places to fix when the
 // shell's column changes shape.
 //
-// It is NOT a *.test.* file, on purpose, for the same reason
-// src/app/testing/shellharness.tsx is not: the design-system and lint gates skip
+// Named `.testkit.` rather than `.test.`: the design-system and lint gates skip
 // test files, and a helper the real chrome is mounted through answers to the
-// app's rules.
+// app's rules. The suffix is also what tells fe-uat this is not a component
+// owing a story — it renders no surface, only the provider and region a record
+// screen needs around it, and a story of it would picture nothing.
 
 /**
  * A record screen with the shell's context column around it.
