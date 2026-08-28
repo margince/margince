@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { meFixture } from "../app/mefixture";
-import { PageAsideProvider, PageAsideRegion } from "../app/pageaside";
+import { RecordShell } from "../app/testing/recordshell";
 import { LocaleProvider } from "../i18n";
 import { taskWriteKeys } from "./activitykeys";
 import {
@@ -249,10 +249,7 @@ function render(ui: ReactNode) {
   return rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial="en">
-        <PageAsideProvider>
-          {ui}
-          <PageAsideRegion />
-        </PageAsideProvider>
+        <RecordShell>{ui}</RecordShell>
       </LocaleProvider>
     </QueryClientProvider>,
   );

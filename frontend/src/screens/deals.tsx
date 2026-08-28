@@ -19,6 +19,7 @@ import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { ifMatch, requireVersion } from "../api/version";
 import { approvalDotTier, useAgentTierMap, verbTier } from "../app/autonomy";
+import { PageAside, PageAsideToggle } from "../app/pageaside";
 import { useRecordZone } from "../app/recordzone";
 import { navigate } from "../app/router";
 import { useInstallationSettings } from "../app/uploadlimit";
@@ -3638,13 +3639,16 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 </>
               }
               actions={
-                <DealActions
-                  deal={deal}
-                  orgs={orgs.data?.data ?? []}
-                  meId={me.data?.user.id ?? ""}
-                  openStages={openStages}
-                  archivedReasonId={archivedReasonId}
-                />
+                <>
+                  <DealActions
+                    deal={deal}
+                    orgs={orgs.data?.data ?? []}
+                    meId={me.data?.user.id ?? ""}
+                    openStages={openStages}
+                    archivedReasonId={archivedReasonId}
+                  />
+                  <PageAsideToggle />
+                </>
               }
               pulse={dealPulse({
                 card: statusQuery.data,
@@ -3678,33 +3682,35 @@ export function DealScreen({ id }: Readonly<{ id: string }>) {
                 { overlay, pending: timelineQuery.isPending },
                 t,
               )}
-              aside={
-                <>
-                  {/* Context first: who these people are, before the verbs
-                      that act on them. The seats moved out of the main
-                      column when the readings band started counting them —
-                      the same two facts were reaching a reader three times
-                      on one screen. */}
-                  {/* Present in overlay mode too, stating the refusal. Dropping
-                      the whole rail there took the seats away silently, which
-                      reads as "nobody is on this deal" — the deal rooms and the
-                      mail aside stay out because they are actions rather than a
-                      withheld fact. */}
-                  <DealSeats
-                    coverage={coverageRead.coverage}
-                    withheld={coverageRead.withheld}
-                    pending={coverageRead.pending}
-                    overlay={overlay}
-                  />
-                  {!overlay && (
-                    <>
-                      <DealRoomAside dealId={id} dealName={deal.name} />
-                      <DealEmailAside dealId={id} />
-                    </>
-                  )}
-                </>
-              }
             >
+              {/* Context first: who these people are, before the verbs that act
+                  on them. The seats moved out of the main column when the
+                  readings band started counting them — the same two facts were
+                  reaching a reader three times on one screen.
+
+                  DealSeats is present in overlay mode too, stating the refusal.
+                  Dropping the whole column there took the seats away silently,
+                  which reads as "nobody is on this deal" — the deal rooms and
+                  the mail aside stay out because they are actions rather than a
+                  withheld fact.
+
+                  It is the PAGE's own column, beside the work rather than
+                  inside the record's grid: same column, same fold and same
+                  memory of it as every other record page. */}
+              <PageAside>
+                <DealSeats
+                  coverage={coverageRead.coverage}
+                  withheld={coverageRead.withheld}
+                  pending={coverageRead.pending}
+                  overlay={overlay}
+                />
+                {!overlay && (
+                  <>
+                    <DealRoomAside dealId={id} dealName={deal.name} />
+                    <DealEmailAside dealId={id} />
+                  </>
+                )}
+              </PageAside>
               {/* The same strip every record carries: a place a reader
                   navigates, drawn as a rule with the open body underlined. */}
               <RecordTabs

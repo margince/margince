@@ -13,6 +13,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { RecordShell } from "../app/testing/recordshell";
 import { LocaleProvider } from "../i18n";
 import { jsonResponse } from "./company.fixtures";
 import { ProjectScreen } from "./project360";
@@ -36,7 +37,9 @@ function render(ui: ReactNode) {
   });
   return rtlRender(
     <QueryClientProvider client={client}>
-      <LocaleProvider initial="en">{ui}</LocaleProvider>
+      <LocaleProvider initial="en">
+        <RecordShell>{ui}</RecordShell>
+      </LocaleProvider>
     </QueryClientProvider>,
   );
 }

@@ -31,6 +31,15 @@
   initial-value: 64px;
 }
 
+/* The context column's width, registered for the same reason --railW is: the
+   two ends of a fold are 320px and 34px, and an unregistered property would
+   jump between them at the halfway mark rather than travel. */
+@property --asideTrack {
+  syntax: "<length>";
+  inherits: true;
+  initial-value: 320px;
+}
+
 /* App shell — a labeled sidebar collapsing to the canonical 64px rail, and the
  * content column beside it. The chrome is WHITE, not §2b's deep ink-green field:
  * the founder ruling of 2026-07-23 makes the product surface white, so rail icons
@@ -105,8 +114,13 @@
   padding-left: env(safe-area-inset-left);
   padding-right: env(safe-area-inset-right);
   /* Collapsing animates the grid column so the sidebar and the content edge
-     move together; labels cross-fade with it. */
-  transition: --railW var(--dur-move) var(--ease-out);
+     move together; labels cross-fade with it. The context column folds on the
+     same duration and the same curve, because both are the same gesture — a
+     column of the window opening or closing — and two speeds would read as two
+     unrelated mechanisms. */
+  transition:
+    --railW var(--dur-move) var(--ease-out),
+    --asideTrack var(--dur-move) var(--ease-out);
 }
 /* The frame every screen sits in, INCLUDING the rail-less auth surface — which
    sizes itself in dvh for a reason (screens/auth.css: on iOS, 100vh subtracts the
@@ -1583,23 +1597,62 @@
 .app {
   --asideW: 320px;
   --asideStubW: 34px;
+  --asideTrack: var(--asideW);
+}
+.app:has(> .pageaside.collapsed) {
+  --asideTrack: var(--asideStubW);
 }
 .app:has(> .pageaside:not([hidden])) {
-  grid-template-columns: var(--railW) minmax(0, 1fr) var(--asideW);
-}
-.app:has(> .pageaside-stub) {
-  grid-template-columns: var(--railW) minmax(0, 1fr) var(--asideStubW);
+  grid-template-columns: var(--railW) minmax(0, 1fr) var(--asideTrack);
 }
 .pageaside {
   min-width: 0;
   height: 100vh;
   overflow-y: auto;
+  /* The body keeps the open column's width while the track narrows, so the
+     fold clips it instead of re-laying it out on every frame of the tween. */
+  overflow-x: hidden;
   border-left: 1px solid var(--borderSubtle);
   background: var(--bgElevated);
   padding: var(--space-3) var(--space-4) var(--space-6);
   display: flex;
   flex-direction: column;
   gap: var(--space-3);
+}
+.pageaside-body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  /* Sized to the OPEN column rather than to the track it is in, for the reason
+     above: a percentage would reflow the cards inside it sixty times a second
+     while the column closes. */
+  width: calc(var(--asideW) - 2 * var(--space-4));
+}
+/* Folded, the column is a strip rather than nothing: a reader can still see
+   that something is there and how to get it back. The strip IS the control —
+   a 34px column with a small button in it would be a target most of which
+   does nothing. */
+.pageaside.collapsed {
+  overflow: hidden;
+  padding-inline: 0;
+}
+.pageaside.collapsed .pageaside-head {
+  flex: 1;
+  padding-bottom: 0;
+}
+.pageaside.collapsed .pageaside-title,
+.pageaside.collapsed .pageaside-foldlabel,
+.pageaside.collapsed .pageaside-body {
+  display: none;
+}
+.pageaside.collapsed .pageaside-fold {
+  inline-size: 100%;
+  block-size: 100%;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--space-4) 0 0;
+  border: 0;
+  border-radius: 0;
 }
 /* The column's own head: what this column IS, and the control that folds it.
    Sticky to the column rather than the page, so a reader who has scrolled deep
@@ -1616,7 +1669,7 @@
   background: var(--bgElevated);
   color: var(--textTertiary);
 }
-.pageaside-hide {
+.pageaside-fold {
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
@@ -1631,37 +1684,18 @@
   color: var(--textMeta);
   cursor: pointer;
 }
-.pageaside-hide:hover {
+.pageaside-fold:hover {
   background: var(--bgHover);
 }
-.pageaside-hide svg {
+.pageaside-fold svg {
   width: 13px;
   height: 13px;
 }
-/* Folded, the column is a strip rather than nothing: a reader can still see
-   that something is there and how to get it back. */
-.pageaside-stub {
-  min-width: 0;
-  height: 100vh;
-  border: 0;
-  border-left: 1px solid var(--borderSubtle);
-  background: var(--bgElevated);
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding-top: var(--space-4);
-  color: var(--textMeta);
-  cursor: pointer;
-}
-.pageaside-stub:hover {
-  background: var(--bgHover);
-}
-.pageaside-stub svg {
+.pageaside.collapsed .pageaside-fold svg {
   width: 15px;
   height: 15px;
 }
-.pageaside-hide:focus-visible,
-.pageaside-stub:focus-visible {
+.pageaside-fold:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: -2px;
 }
@@ -1685,8 +1719,7 @@
    rather than a track: at this width the work column is already the whole
    screen, and a 320px column beside it leaves neither readable. */
 @media (max-width: 1100px) {
-  .app:has(> .pageaside:not([hidden])),
-  .app:has(> .pageaside-stub) {
+  .app:has(> .pageaside:not([hidden])) {
     grid-template-columns: var(--railW) minmax(0, 1fr);
   }
   /* It lands under the work column rather than beside it, and it keeps its
@@ -1701,9 +1734,10 @@
     border-inline-start: 0;
     border-block-start: 1px solid var(--borderSubtle);
   }
-  /* The stub is the folded column's own edge, and there is no column beside
-     the work to fold at this width. */
-  .pageaside-stub {
+  /* The strip is the folded column's own edge, and there is no column beside
+     the work to fold at this width — folded here means the block is simply not
+     drawn, and the record header's toggle is what brings it back. */
+  .pageaside.collapsed {
     display: none;
   }
   /* Sticky belongs to a column that scrolls on its own. Here the page scrolls,
