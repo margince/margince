@@ -49,6 +49,22 @@ const systemSource = "system"
 // unforgeable half of the "the system wrote this row" predicate.
 const systemCapturedBy = "system"
 
+// systemCapturedByPattern is the LIKE pattern that matches every system
+// principal, because captured_by carries the principal's ID and those IDs
+// are NAMESPACED: the bus binds a bare "system", while every job binds its
+// own "system:<job>" — "system:time-scan", "system:brief-overnight",
+// "system:comms-send" and thirty-odd more.
+//
+// Comparing against the bare literal alone is what let a reminder task the
+// TIME SCAN minted count as a genuine engagement: it carries
+// captured_by "system:time-scan", the equality missed it, and the row the
+// engine wrote reset the very clock the engine reads. A prefix match is a
+// spelling test and would normally be refused here — it earns its place
+// because the ':' namespace IS the convention every system actor is bound
+// under, and because captured_by is server-stamped from the principal, so
+// no caller can reach this pattern by writing one.
+const systemCapturedByPattern = systemCapturedBy + ":%"
+
 // FollowUpWorkflows returns the system handlers that complete open system
 // follow-up tasks when the follow-up demonstrably happened: a real
 // activity lands on the lead, or the lead leaves the open pool (promoted
@@ -189,9 +205,10 @@ func (s *Store) CompleteOpenSystemTasksForLead(ctx context.Context, leadID ids.L
 			SELECT a.id FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
 			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
-			  AND a.captured_by = $4
+			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL
-			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), systemSource, systemCapturedBy)
+			ORDER BY a.id`, leadID, string(crmcontracts.ActivityKindTask), systemSource,
+			systemCapturedBy, systemCapturedByPattern)
 		if err != nil {
 			return err
 		}

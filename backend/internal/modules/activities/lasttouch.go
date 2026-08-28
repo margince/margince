@@ -47,16 +47,20 @@ type LastTouchCandidate struct {
 // the link-id coalesce, and the organization walk — and it sits apart from the
 // scan so the scan reads as what it does with the rows.
 //
-// $1/$4 are the source and captured_by the automation engine stamps —
-// excluded only TOGETHER, since source alone is a client's to spell —
-// $2 the cutoff, $3 the cap.
+// $1/$4/$5 are the source and captured_by the automation engine stamps —
+// excluded only TOGETHER, since source alone is a client's to spell. $5 is
+// the namespaced form: captured_by carries the principal's ID and every job
+// binds its own ("system:time-scan"), so matching the bare "system" alone
+// missed the engine's own writes and let a reminder reset the clock it
+// reads. $2 the cutoff, $3 the cap.
 func lastTouchCandidateQuery() string {
 	return storekit.SQLf(`
 			WITH genuine AS (
 				SELECT a.id, a.occurred_at
 				FROM activity a
 				WHERE a.archived_at IS NULL
-				  AND NOT (a.source = $1 AND a.captured_by = $4)
+				  AND NOT (a.source = $1
+				           AND (a.captured_by = $4 OR a.captured_by LIKE $5))
 			), direct AS (
 				SELECT al.entity_type AS entity_type,
 				       %[1]s AS entity_id,
@@ -192,7 +196,8 @@ func (s *Store) LastTouchBefore(ctx context.Context, cutoff time.Time, limit int
 		// vocabulary (linktarget.go), the same source the coalesce
 		// expression is built from, so a renamed record type cannot leave a
 		// stale string behind in this query.
-		rows, err := tx.Query(ctx, lastTouchCandidateQuery(), systemSource, cutoff, limit, systemCapturedBy)
+		rows, err := tx.Query(ctx, lastTouchCandidateQuery(), systemSource, cutoff, limit,
+			systemCapturedBy, systemCapturedByPattern)
 		if err != nil {
 			return err
 		}
