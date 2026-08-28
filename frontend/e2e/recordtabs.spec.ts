@@ -96,29 +96,78 @@ test.describe("the record tab strip", () => {
   // swept anyway — if the lead ever joins that set, this is the assertion that
   // has to be true of it on the day it does, and a record left out of the sweep
   // is a record nobody notices is not being measured.
+  //
+  // 2200px is in the list because the reading column is CAPPED there
+  // (--recordColumn) while the work column keeps growing, and a record's column
+  // takes no auto margins — so above the cap the column sits at the start of the
+  // container rather than in the middle of it. A breakout that centres itself
+  // then misses by half the slack, which is tens of pixels and depends on
+  // nothing but the two widths. Below the cap the same error is only half a
+  // scrollbar wide and a runner with overlay scrollbars cannot see it at all.
   for (const record of RECORDS) {
-    test(`keeps the width of the column it sits in on a ${record.name}`, async ({
+    for (const width of [1440, 2200]) {
+      test(`keeps the width of the column it sits in on a ${record.name} at ${width}px`, async ({
+        page,
+      }) => {
+        await page.setViewportSize({ width, height: 900 });
+        await openRecord(page, record.route);
+
+        const strip = await page.locator(".recordtabs").boundingBox();
+        const column = await page.locator("main.main").boundingBox();
+        if (!strip || !column) {
+          throw new Error(
+            "the strip and its column are visible but one has no box",
+          );
+        }
+        // One pixel of tolerance: the boxes are laid out in fractional CSS pixels.
+        expect(
+          strip.x,
+          "the strip starts left of its column",
+        ).toBeGreaterThanOrEqual(column.x - 1);
+        expect(
+          strip.x + strip.width,
+          "the strip runs past its column's right edge, which is where it reached under the context",
+        ).toBeLessThanOrEqual(column.x + column.width + 1);
+      });
+    }
+  }
+
+  // And the first tab opens where the record's own column does.
+  //
+  // The rules cross the whole work column; the TABS belong to the document under
+  // them, so the row insets itself by one gutter and the first tab lands under
+  // the record's name. Both halves ride on the same breakout, which is why this
+  // is measured against the reading column's content edge rather than against
+  // the strip that carries it: when the breakout is misplaced the strip and the
+  // row move together, and the first tab opens outside the column — clipped by
+  // whatever draws the column's edge, which is how the defect was seen.
+  for (const record of RECORDS) {
+    test(`opens its first tab at the record column's own edge on a ${record.name}`, async ({
       page,
     }) => {
-      await page.setViewportSize({ width: 1440, height: 900 });
+      await page.setViewportSize({ width: 2200, height: 900 });
       await openRecord(page, record.route);
 
-      const strip = await page.locator(".recordtabs").boundingBox();
-      const column = await page.locator("main.main").boundingBox();
-      if (!strip || !column) {
-        throw new Error(
-          "the strip and its column are visible but one has no box",
-        );
+      const firstTab = await page
+        .locator(".recordtabs-tab")
+        .first()
+        .boundingBox();
+      const columnStart = await page
+        .locator(".wrap")
+        .first()
+        .evaluate((wrap) => {
+          const box = wrap.getBoundingClientRect();
+          return box.x + Number.parseFloat(getComputedStyle(wrap).paddingLeft);
+        });
+      if (!firstTab) {
+        throw new Error("the first tab is visible but has no box");
       }
-      // One pixel of tolerance: the boxes are laid out in fractional CSS pixels.
+      // One pixel, the same tolerance the width assertions take: the boxes are
+      // laid out in fractional CSS pixels.
       expect(
-        strip.x,
-        "the strip starts left of its column",
-      ).toBeGreaterThanOrEqual(column.x - 1);
-      expect(
-        strip.x + strip.width,
-        "the strip runs past its column's right edge, which is where it reached under the context",
-      ).toBeLessThanOrEqual(column.x + column.width + 1);
+        Math.abs(firstTab.x - columnStart),
+        "the first tab does not start where the record's column starts",
+      ).toBeLessThanOrEqual(1);
     });
   }
 });

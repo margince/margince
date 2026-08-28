@@ -1708,9 +1708,16 @@
 /* A named container, so a block inside the reading column can measure the WORK
    column it sits in. The record's tab strip needs it: its rules divide the
    page's chrome from its document and run the full width of the column, while
-   the column itself caps the record at a readable measure. Nothing else about
-   the layout changes — inline-size containment only lets a child ask how wide
-   this is. */
+   the column itself caps the record at a readable measure.
+
+   Nothing else about the layout changes — inline-size containment only lets a
+   child ask how wide this is.
+
+   The column and NOT the scroller inside it, even though a classic scrollbar
+   makes the two different widths: `cqi` counts the scrollbar's gutter either
+   way, so moving the container down one level buys a child nothing. What that
+   difference does to the tab strip is corrected where it lands, in
+   design-system/recordtabs.css. */
 .main-record {
   container-type: inline-size;
   container-name: work;
