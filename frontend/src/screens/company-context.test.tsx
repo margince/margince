@@ -221,10 +221,67 @@ const DIALOG_MS = SETTLE_MS * 3;
 // nothing, so neither carries a checkbox.
 const SELECTABLE = 2;
 
+// diagnose turns a waiter's timeout into an answer instead of another sighting.
+//
+// The refresh-review chain has failed in CI across five PRs, and every
+// occurrence reported the same sentence:
+//
+//	TestingLibraryElementError: Unable to find role="heading" and name "Review what changed"
+//
+// which says the heading is absent and NOTHING about why — whether the POST
+// that starts the read ever landed, whether the GET that fetches it returned,
+// whether the query is still pending, or whether the card rendered an error
+// where the review should be. All of that is already in the fixture: the stub
+// is a vi.fn, so its call log is readable, and the container is rendered.
+//
+// Measurement is why this is the fix rather than a bigger budget: the chain
+// costs about a second and does not move under four times the CPU
+// oversubscription, so a timeout here is a HANG and not a slow settle. Nothing
+// about a busy runner explains ten seconds of work that takes 0.9. A larger
+// SETTLE_MS, a retry or a sleep would each make the next occurrence quieter
+// without making it answerable.
+//
+// It costs nothing on a green run: onTimeout is called only on the failing
+// path, and what it returns is the error vitest then reports.
+function diagnose(stub: ReturnType<typeof backend>, awaited: string) {
+  return (error: Error): Error => {
+    const calls = stub.mock.calls
+      .map(([input]) => {
+        const request = input instanceof Request ? input.url : String(input);
+        const method = input instanceof Request ? input.method : "GET";
+        return `  ${method} ${new URL(request).pathname}`;
+      })
+      .join("\n");
+    // The card's own words, trimmed: a rendered error state, a spinner, or an
+    // empty shell each read differently here, and which of the three it is
+    // decides where to look next.
+    const rendered = (document.body.textContent ?? "")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 600);
+    error.message = [
+      error.message,
+      "",
+      `--- ${awaited} never arrived ---`,
+      "",
+      `the card rendered: ${rendered || "(nothing)"}`,
+      "",
+      calls
+        ? `the fetch stub was called:\n${calls}`
+        : "the fetch stub was never called",
+    ].join("\n");
+    return error;
+  };
+}
+
 // Renders the card and drives it to the review step, where the comparison
 // cards live.
 async function renderReview() {
-  vi.stubGlobal("fetch", backend());
+  // The stub is held rather than passed straight to stubGlobal: its call log is
+  // half of what diagnose reports, and a stub nothing kept a reference to
+  // cannot be asked what it was called with.
+  const stub = backend();
+  vi.stubGlobal("fetch", stub);
   render(
     <Providers>
       <CompanyContextCard />
@@ -238,13 +295,13 @@ async function renderReview() {
   const refresh = await screen.findByRole(
     "button",
     { name: "Refresh from website" },
-    { timeout: SETTLE_MS },
+    { timeout: SETTLE_MS, onTimeout: diagnose(stub, "the refresh button") },
   );
   fireEvent.click(refresh);
   await screen.findByRole(
     "heading",
     { name: "Review what changed" },
-    { timeout: SETTLE_MS },
+    { timeout: SETTLE_MS, onTimeout: diagnose(stub, "the review heading") },
   );
   // The heading is not the last thing to arrive: the comparison cards commit
   // from the site read that the heading only announces, so waiting on the
@@ -253,7 +310,7 @@ async function renderReview() {
   // test is settled rather than merely started.
   await waitFor(
     () => expect(screen.getAllByRole("checkbox")).toHaveLength(SELECTABLE),
-    { timeout: SETTLE_MS },
+    { timeout: SETTLE_MS, onTimeout: diagnose(stub, "the comparison rows") },
   );
 }
 
