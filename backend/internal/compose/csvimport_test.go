@@ -509,3 +509,17 @@ func assertNonFieldTarget(t *testing.T, object, target string, targets []string,
 		t.Errorf("%s: %q is not an accepted column, so %s", object, target, absenceHarm)
 	}
 }
+
+// A report STORED before the line was carried still reads. Its JSON has no
+// `line` field, so it decodes as zero — and for a skip the source disclosed,
+// the id still spells "line N", which is where the line used to come from.
+func TestAStoredReportsSkipStillNamesItsLine(t *testing.T) {
+	if got := lineOf(migration.SkippedRow{ExternalID: "line 7"}); got != 7 {
+		t.Errorf("line = %d, want 7 — a report written before the line was carried must still read", got)
+	}
+	// The carried line wins, which is what makes a file with its own key column
+	// answer at all: its ids are real, and the old parse returned 0 for them.
+	if got := lineOf(migration.SkippedRow{ExternalID: "b@x.test", Line: 4}); got != 4 {
+		t.Errorf("line = %d, want the carried 4", got)
+	}
+}

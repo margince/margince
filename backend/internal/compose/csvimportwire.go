@@ -261,7 +261,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 			seen[s.ExternalID] = true
 			out.Disposition.Skipped++
 			out.Issues = append(out.Issues, crmcontracts.ImportRowIssue{
-				Line:   s.Line,
+				Line:   lineOf(s),
 				Reason: s.Reason,
 			})
 		}
@@ -275,7 +275,7 @@ func toContractImportReport(run migration.Run) crmcontracts.ImportRunReport {
 			}
 			seen[c.ExternalID] = true
 			out.Issues = append(out.Issues, crmcontracts.ImportRowIssue{
-				Line:   c.Line,
+				Line:   lineOf(c),
 				Reason: c.Reason,
 			})
 		}
@@ -404,6 +404,26 @@ func linksOf(rep *migration.Report, committed bool) *crmcontracts.ImportRunLinks
 	}
 	links.Unresolved = &unresolved
 	return &links
+}
+
+// lineOf is the file line a skip names, from the row itself.
+//
+// The fallback is for reports STORED before the line was carried. Their JSON
+// has no `line` field, so it decodes as zero — and for the skips the source
+// disclosed, the id still spells "line N", which is where the line used to be
+// read from for every skip. Deriving it only when the carried one is absent
+// keeps those reports readable through a rollout without putting the old
+// parse back in the path: a row that carries its own id answers 0 there, which
+// is the defect this replaced.
+func lineOf(skip migration.SkippedRow) int {
+	if skip.Line != 0 {
+		return skip.Line
+	}
+	var line int
+	if _, err := fmt.Sscanf(skip.ExternalID, "line %d", &line); err != nil {
+		return 0
+	}
+	return line
 }
 
 // readImportUpload takes the multipart body apart under the deployment's import
