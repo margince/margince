@@ -78,8 +78,8 @@ func TestAGroundedReplyIsKept(t *testing.T) {
 	if got.Verdict.Standing != "drifting" || len(got.Verdict.Because) != 1 {
 		t.Fatalf("verdict = %+v, want drifting with one grounded reason", got.Verdict)
 	}
-	if got.MoveReason != "Sending it is what the call promised." {
-		t.Fatalf("move reason = %q", got.MoveReason)
+	if got.MoveReason.Text != "Sending it is what the call promised." || len(got.MoveReason.Evidence) != 1 {
+		t.Fatalf("move reason = %+v, want the sentence with the record it cites", got.MoveReason)
 	}
 }
 
@@ -351,8 +351,8 @@ func TestAnUngroundedMoveReasonDoesNotReachTheReader(t *testing.T) {
 			if err != nil {
 				t.Fatalf("a card grounded everywhere else was refused whole: %v", err)
 			}
-			if got.MoveReason != "" {
-				t.Errorf("an ungrounded move reason reached the reader: %q", got.MoveReason)
+			if got.MoveReason.Text != "" {
+				t.Errorf("an ungrounded move reason reached the reader: %q", got.MoveReason.Text)
 			}
 			if len(got.Story) != 1 {
 				t.Errorf("the rest of the card did not survive: story = %+v", got.Story)
@@ -383,10 +383,43 @@ func TestTheOlderMoveReasonShapeDegradesRatherThanPassing(t *testing.T) {
 	if parseErr != nil {
 		t.Fatalf("the older shape was refused whole rather than degraded: %v", parseErr)
 	}
-	if got.MoveReason != "" {
-		t.Errorf("a bare-string move reason passed the grounding check it predates: %q", got.MoveReason)
+	if got.MoveReason.Text != "" {
+		t.Errorf("a bare-string move reason passed the grounding check it predates: %q", got.MoveReason.Text)
 	}
 	if len(got.Story) != 1 {
 		t.Errorf("the rest of the reply did not survive: story = %+v", got.Story)
+	}
+}
+
+// TestTheMoveReasonKeepsItsOwnBound holds the tighter limit through the shared
+// filter.
+//
+// The reason sits inside the move block rather than in a section, and it has
+// always been the shorter field. Routing it through keepGrounded put it behind
+// the sentence bound, which is a third longer — a widening nobody asked for,
+// invisible until a card rendered a paragraph where a sentence belongs.
+func TestTheMoveReasonKeepsItsOwnBound(t *testing.T) {
+	in := inputWithTimeline()
+	story := []map[string]any{line("The offer was promised and never sent.", "act-1")}
+	// Longer than the move's own bound, shorter than a section sentence's.
+	overlong := strings.Repeat("a", maxMoveReason+1)
+	if len(overlong) >= maxSentenceLen {
+		t.Fatalf("the probe is %d runes, which a section would refuse too — it must sit between the two bounds",
+			len(overlong))
+	}
+
+	if _, err := ParseStatus(reply(draft{
+		story:      story,
+		moveReason: []map[string]any{line(overlong, "act-1")},
+	}), in); err == nil {
+		t.Error("a move reason longer than its own bound was accepted")
+	}
+
+	// And the same text IS accepted where the longer bound applies, so the test
+	// is about the move reason's bound rather than about length in general.
+	if _, err := ParseStatus(reply(draft{
+		story: []map[string]any{line(overlong, "act-1")},
+	}), in); err != nil {
+		t.Errorf("a section sentence within its own bound was refused: %v", err)
 	}
 }

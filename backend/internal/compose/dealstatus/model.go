@@ -233,7 +233,7 @@ type WrittenStatus struct {
 	Blocker    []WrittenLine
 	Buyer      []WrittenLine
 	Verdict    WrittenVerdict
-	MoveReason string
+	MoveReason WrittenLine
 }
 
 // WrittenVerdict is the call and what it rests on. An empty Standing means the

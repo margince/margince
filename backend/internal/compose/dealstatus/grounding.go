@@ -46,7 +46,7 @@ func keepSections(parsed replyShape, known, citable map[string]bool) (WrittenSta
 		{"buyer", parsed.Buyer, maxBuyerRows, &out.Buyer},
 		{"verdict", parsed.Verdict.Because, maxBecauseRows, &out.Verdict.Because},
 	} {
-		kept, err := keepGrounded(section.lines, known, citable, section.limit)
+		kept, err := keepGrounded(section.lines, known, citable, section.limit, maxSentenceLen)
 		if err != nil {
 			return WrittenStatus{}, fmt.Errorf("%s: %w", section.name, err)
 		}
@@ -82,7 +82,10 @@ func keepSections(parsed replyShape, known, citable map[string]bool) (WrittenSta
 // line, which this filter drops. So the old shape degrades to the
 // deterministic reason instead of passing the check it predates.
 func keepMoveReason(out *WrittenStatus, parsed replyShape, known, citable map[string]bool) error {
-	kept, err := keepGrounded(parsed.MoveReason, known, citable, 1)
+	// maxMoveReason, not the sentence bound: the reason sits inside the move
+	// block rather than in a section, and it has always been the shorter field.
+	// Routing it through the shared filter must not quietly widen it.
+	kept, err := keepGrounded(parsed.MoveReason, known, citable, 1, maxMoveReason)
 	if err != nil {
 		return fmt.Errorf("move reason: %w", err)
 	}
@@ -92,7 +95,7 @@ func keepMoveReason(out *WrittenStatus, parsed replyShape, known, citable map[st
 		// sentence about the same move rather than a blank line.
 		return nil
 	}
-	out.MoveReason = kept[0].Text
+	out.MoveReason = kept[0]
 	return nil
 }
 
@@ -128,7 +131,7 @@ func (r *replyLines) UnmarshalJSON(raw []byte) error {
 	}
 	var bare string
 	if err := json.Unmarshal(raw, &bare); err != nil {
-		return fmt.Errorf("verdict.because is neither a list of sentences nor a string: %w", err)
+		return fmt.Errorf("a cited-sentence field is neither a list of sentences nor a string: %w", err)
 	}
 	if strings.TrimSpace(bare) == "" {
 		*r = nil
@@ -143,7 +146,7 @@ func (r *replyLines) UnmarshalJSON(raw []byte) error {
 // ungrounded sentence is one bad claim among good ones, while an oversized or
 // id-leaking one says the reply is not the shape the prompt asked for.
 func keepGrounded(
-	lines []replyLine, known, citable map[string]bool, limit int,
+	lines []replyLine, known, citable map[string]bool, limit, maxRunes int,
 ) ([]WrittenLine, error) {
 	out := make([]WrittenLine, 0, len(lines))
 	for _, line := range lines {
@@ -151,7 +154,7 @@ func keepGrounded(
 		if text == "" {
 			continue
 		}
-		if len([]rune(text)) > maxSentenceLen {
+		if len([]rune(text)) > maxRunes {
 			return nil, errors.New("a sentence exceeds the card's bounds")
 		}
 		if err := refuseIDsInReaderText(text, known); err != nil {
