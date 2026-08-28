@@ -152,6 +152,12 @@ func auditRunWrites(t *testing.T, fset *token.FileSet, file *ast.File, consts ma
 			expr = node
 		case *ast.BinaryExpr:
 			expr = node
+		case *ast.CallExpr:
+			// `string(runUpdate)` is a call, and the reader folds that
+			// conversion as the identity on its argument. Without this arm the
+			// walk descended past the call to the bare name and judged nothing,
+			// so a statement spelled that way was invisible.
+			expr = node
 		default:
 			return true
 		}
@@ -181,7 +187,7 @@ func auditRunWrites(t *testing.T, fset *token.FileSet, file *ast.File, consts ma
 // collectStringConsts adds one file's string constants to consts, so a
 // statement assembled from a shared fragment resolves to what the database
 // actually receives. A const may be built FROM another const, so it resolves
-// through sqlOf and the caller repeats until the map stops growing — a
+// through gatekit.StringExpr and the caller repeats until the map stops growing — a
 // fragment that resolved to nothing would make every statement using it look
 // like it settles no tally.
 func collectStringConsts(file *ast.File, consts map[string]string) {

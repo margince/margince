@@ -81,6 +81,20 @@ func TestTheStringReaderAnswersBothQuestionsItIsAsked(t *testing.T) {
 			totalText: "SELECT " + gatekit.ComputedFragment, totalIs: true,
 		},
 		{
+			// Both halves unreadable is two HOLES, not nothing. Returning
+			// nothing let a surrounding concatenation close over the gap —
+			// `"a" + (x + y) + "b"` folding to `ab` — and a census then reads a
+			// word the source does not contain.
+			name: "a concatenation with neither half readable", expr: `x + y`,
+			strictText: "", strictIs: false,
+			totalText: gatekit.ComputedFragment + gatekit.ComputedFragment, totalIs: false,
+		},
+		{
+			name: "a hole inside a chain does not fuse its neighbours", expr: `"a" + (x + y) + "b"`,
+			strictText: "", strictIs: false,
+			totalText: "a" + gatekit.ComputedFragment + gatekit.ComputedFragment + "b", totalIs: true,
+		},
+		{
 			name: "a non-string literal", expr: `42`,
 			strictText: "", strictIs: false,
 			totalText: "", totalIs: false,

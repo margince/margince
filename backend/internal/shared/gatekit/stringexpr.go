@@ -122,10 +122,13 @@ func concatString(expr *ast.BinaryExpr, consts map[string]string, fold StringFol
 		// One readable half is enough: a statement assembled from a literal and
 		// a variable is still judged on the literal, which is the half that
 		// carries the words a census looks for.
-		if !leftIsString && !rightIsString {
-			return "", false
-		}
-		return left + right, true
+		//
+		// With NEITHER half readable the text is still both holes, not empty.
+		// Returning "" there let a surrounding concatenation close over the gap
+		// — `"a" + (x + y) + "b"` folding to `ab` — and a census then reads a
+		// word the source does not contain, which is the one way a total fold
+		// can be worse than no fold at all.
+		return left + right, leftIsString || rightIsString
 	}
 	if !leftIsString || !rightIsString {
 		return "", false

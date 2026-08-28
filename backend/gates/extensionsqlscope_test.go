@@ -334,7 +334,12 @@ func sqlStrings(file *ast.File, consts map[string]string) []foldedSQL {
 			return true
 		}
 		switch expr.(type) {
-		case *ast.BasicLit, *ast.BinaryExpr, *ast.ParenExpr:
+		// A CALL is here because `string(sqlConst)` is one. The reader folds
+		// that conversion as the identity on its argument, and a walk that only
+		// offered it the literal shapes descended past the call to the bare name
+		// below and judged nothing — so a statement spelled that way left
+		// through the door the fold exists to close.
+		case *ast.BasicLit, *ast.BinaryExpr, *ast.ParenExpr, *ast.CallExpr:
 		default:
 			// A bare name is not a statement even when it resolves to one. The
 			// fold answers for a name so a concatenation can be read through it;

@@ -27,6 +27,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -87,13 +88,18 @@ const goFileFloor = 2000
 // conversion are where the two readers gave different answers, and a helper
 // that never descends into either has no answer of its own to give.
 func stringFoldersIn(file *ast.File) []string {
+	syntax := astAlias(file)
+	if syntax == "" {
+		// A file that does not import go/ast reads no Go syntax.
+		return nil
+	}
 	var out []string
 	for _, decl := range file.Decls {
 		fn, isFunc := decl.(*ast.FuncDecl)
 		if !isFunc || fn.Body == nil || fn.Recv != nil {
 			continue
 		}
-		if !takesASyntaxNode(fn.Type) || !answersStringAndBool(fn.Type) || !callsItself(fn) {
+		if !takesASyntaxNode(fn.Type, syntax) || !answersStringAndBool(fn.Type) || !callsItself(fn) {
 			continue
 		}
 		out = append(out, "func "+fn.Name.Name)
@@ -101,12 +107,34 @@ func stringFoldersIn(file *ast.File) []string {
 	return out
 }
 
-func takesASyntaxNode(sig *ast.FuncType) bool {
+// astAlias is the local name this file binds go/ast to, or "" if it does not
+// import it.
+//
+// Resolved rather than assumed. Matching the package identifier as the literal
+// `ast` misses a file that aliases the import; matching ANY identifier reads
+// `yaml.Node` as a syntax node, and a walk over a YAML document is not a second
+// answer to what string a Go expression holds. The import is what tells them
+// apart, and the file already carries it.
+func astAlias(file *ast.File) string {
+	for _, spec := range file.Imports {
+		path, err := strconv.Unquote(spec.Path.Value)
+		if err != nil || path != "go/ast" {
+			continue
+		}
+		if spec.Name != nil {
+			return spec.Name.Name
+		}
+		return "ast"
+	}
+	return ""
+}
+
+func takesASyntaxNode(sig *ast.FuncType, syntax string) bool {
 	if sig.Params == nil {
 		return false
 	}
 	for _, param := range sig.Params.List {
-		if isSyntaxNodeType(param.Type) {
+		if isSyntaxNodeType(param.Type, syntax) {
 			return true
 		}
 	}
@@ -115,7 +143,13 @@ func takesASyntaxNode(sig *ast.FuncType) bool {
 
 // isSyntaxNodeType matches ast.Expr, ast.Node and *ast.BasicLit — the three
 // spellings a reader of this shape takes.
-func isSyntaxNodeType(expr ast.Expr) bool {
+//
+// The package identifier is the file's own alias for go/ast, resolved from its
+// imports. As the literal `ast` it missed a file that aliases the import — a
+// clean tree over exactly the shape this census exists to find. As ANY
+// identifier it read `yaml.Node` as a syntax node, and a walk over a YAML
+// document is not a second answer to what string a Go expression holds.
+func isSyntaxNodeType(expr ast.Expr, syntax string) bool {
 	if star, isStar := expr.(*ast.StarExpr); isStar {
 		expr = star.X
 	}
@@ -123,8 +157,7 @@ func isSyntaxNodeType(expr ast.Expr) bool {
 	if !isSelector {
 		return false
 	}
-	pkg, isIdent := selector.X.(*ast.Ident)
-	if !isIdent || pkg.Name != "ast" {
+	if pkg, qualified := selector.X.(*ast.Ident); !qualified || pkg.Name != syntax {
 		return false
 	}
 	switch selector.Sel.Name {
@@ -132,6 +165,59 @@ func isSyntaxNodeType(expr ast.Expr) bool {
 		return true
 	}
 	return false
+}
+
+// TestNothingShadowsTheStringConversion holds the premise gatekit.StringExpr's
+// conversion arm rests on.
+//
+// It folds `string(x)` as the identity, matching the callee by NAME because a
+// syntactic reader has no types to ask. `string` is a predeclared identifier
+// rather than a keyword, so a package could declare its own — and the reader
+// would then read that function's result as its argument's text. Nothing here
+// does, and this is what says so instead of the reader assuming it.
+func TestNothingShadowsTheStringConversion(t *testing.T) {
+	t.Parallel()
+	var findings []string
+	eachGoFileInTheModule(t, func(path string, file *ast.File) {
+		for _, decl := range file.Decls {
+			if named := declaresString(decl); named != "" {
+				findings = append(findings, path+": "+named)
+			}
+		}
+	})
+	if len(findings) > 0 {
+		t.Errorf("%d declaration(s) shadow `string`:\n\t%s\n\n"+
+			"gatekit.StringExpr folds `string(x)` as the identity on its argument, matching the "+
+			"callee by name because a syntactic reader has no types to ask. A package that "+
+			"declares its own `string` makes that fold read a function's RESULT as its "+
+			"argument's text.", len(findings), strings.Join(findings, "\n\t"))
+	}
+}
+
+// declaresString names the declaration if it binds the identifier `string`.
+func declaresString(decl ast.Decl) string {
+	switch typed := decl.(type) {
+	case *ast.FuncDecl:
+		if typed.Recv == nil && typed.Name.Name == "string" {
+			return "func string"
+		}
+	case *ast.GenDecl:
+		for _, spec := range typed.Specs {
+			switch bound := spec.(type) {
+			case *ast.ValueSpec:
+				for _, name := range bound.Names {
+					if name.Name == "string" {
+						return typed.Tok.String() + " string"
+					}
+				}
+			case *ast.TypeSpec:
+				if bound.Name.Name == "string" {
+					return "type string"
+				}
+			}
+		}
+	}
+	return ""
 }
 
 func answersStringAndBool(sig *ast.FuncType) bool {
@@ -200,6 +286,14 @@ func TestTheFolderCensusSeesEachShapeASecondReaderIsWrittenIn(t *testing.T) {
 			source: "package p\nimport \"go/ast\"\nfunc text(e ast.Expr) (string, bool) {\n" +
 				"\tlit, ok := e.(*ast.BasicLit)\n\treturn lit.Value, ok\n}\n",
 			want: 0,
+		},
+		{
+			// A file that aliases the import spells the same type, and a
+			// matcher that missed it would leave that reader invisible.
+			name: "an aliased import is the same syntax node",
+			source: "package p\nimport goast \"go/ast\"\nfunc fold(e goast.Expr) (string, bool) {\n" +
+				"\treturn fold(e)\n}\n",
+			want: 1,
 		},
 		{
 			name: "a recursive walk that answers something else is not a reader",
